@@ -5,8 +5,16 @@ COHORTS = {
     'Cohort 1': ['M246782', 'M249123', 'M258174', 'M250783', 'M250786','M258196'],
     'Cohort 2': ['M258173', 'M258089', 'M258276', 'M261584', 'M258274','M258275'],
     'Cohort 3': ['M272465','M265158','M271966','M265154','M258194','M265166'],
-    'Cohort 4': ['M272464','M271733','M271728','M276951','M276950','M276600',]
+    'Cohort 4': ['M272464','M271733','M271728','M276951','M276950','M276600',],
+    # 'Rylan': ['M261874','M261876',],
 }
+
+day_zero = {
+    'Cohort 1': '2016-08-22',
+    'Cohort 2': '2016-09-19',
+    'Cohort 3': '2016-10-10',
+    'Cohort 4': '2016-10-31',
+    }
 
 def get_cohort_assignment(cohorts):
     for c,m_list in cohorts.iteritems():
@@ -14,6 +22,7 @@ def get_cohort_assignment(cohorts):
             yield dict(
                 cohort=c,
                 mouse_id=m,
+                day_zero=day_zero[c],
             )
 
 
