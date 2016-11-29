@@ -138,8 +138,8 @@ class DoC(object):
                 .set_index('training_day')
                 )
 
-    def update_params(self):
-        with open(os.path.join(self.mouse_dir,'adjustments'))
+    # def update_params(self):
+    #     with open(os.path.join(self.mouse_dir,'adjustments'))
 
     def _save_state(self):
         with open(self.state_txt,'wb') as f:
