@@ -9,7 +9,6 @@ Created on Wed Jun 08 15:09:08 2016
 import numpy as np
 import pickle
 from zro import Publisher
-import click
 import time
 
 default_pkl = '/data/neuralcoding/Behavior/Data/M258173/output/170105150329-task=DoC_MNIST_stage=0v1_probes_n=3_mouse=M258173.pkl'
@@ -42,12 +41,14 @@ class MockSession(Publisher):
             time.sleep(1.0)
         self.publish({'index': -2})
     
-@click.command()
-@click.option('--pkl',default=default_pkl)
-def simulate(pkl):
-    mock = MockSession(pkl)
-    time.sleep(10)
-    mock.run_session()
-    
 if __name__ == "__main__":
-    simulate()
+
+    import sys
+    if len(sys.argv)>1:
+        pkl = sys.argv[1]
+    else:
+        pkl = default_pkl
+
+    mock = MockSession(pkl)
+    time.sleep(5)
+    mock.run_session()
