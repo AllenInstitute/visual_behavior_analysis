@@ -13,7 +13,14 @@ setuptools.setup(
 
     packages=setuptools.find_packages(),
 
-    install_requires=[],
+    install_requires=[
+        'Click',
+    ],
+
+    entry_points='''
+        [console_scripts]
+        summary_csv=braintv_pilot.summary:load_and_save
+    ''',
 
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',

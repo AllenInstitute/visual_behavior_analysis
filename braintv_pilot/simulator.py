@@ -13,32 +13,43 @@ import time
 
 default_pkl = '/data/neuralcoding/Behavior/Data/M258173/output/170105150329-task=DoC_MNIST_stage=0v1_probes_n=3_mouse=M258173.pkl'
 
+DELAY = 0.2
+
 class MockSession(Publisher):
-    def __init__(self,pkl, rep_port=12000, pub_port=12001):
+    def __init__(self,pkl, rep_port=12000, pub_port=9998):
         super(MockSession, self).__init__(rep_port=rep_port,
                                        pub_port=pub_port)
+        self.data = None
         
-        with open(pkl,'rb') as f:
-            data = pickle.load(f)
+    def load(self):
+
+        if self.data is None:
+            with open(pkl,'rb') as f:
+                self.data = pickle.load(f)
 
         header = {
             'index':-1,
             'init_data': {
-                'task_id': data['task'],
-                'mouse_id': data['mouseid'],
-                }
+                # 'task_id': data['task'],
+                'task_id': 'DetectionOfChange_Test',
+                'mouse_id': 'MICKEY',
+                },
+            'params': self.data['params']
             }
         self.publish(header)
-        self.trials = data['triallog']
 
     def publish(self,data):
         print data
         super(MockSession, self).publish(data)
         
     def run_session(self):
-        for trial in self.trials:
+        self.load()
+        for trial in self.data['triallog']:
             self.publish(trial)
-            time.sleep(1.0)
+            time.sleep(DELAY)
+        self.close()
+
+    def close(self):
         self.publish({'index': -2})
     
 if __name__ == "__main__":
@@ -49,6 +60,10 @@ if __name__ == "__main__":
     else:
         pkl = default_pkl
 
+    loop = True
+
     mock = MockSession(pkl)
-    time.sleep(5)
     mock.run_session()
+
+    while loop:
+        mock.run_session()
