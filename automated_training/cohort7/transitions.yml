@@ -1,9 +1,0 @@
-- trigger: progress
-  source: static_full_field_gratings
-  dest: windowed_gratings
-  conditions: two_out_of_three_aint_bad
-
-- trigger: progress
-  source: flash_100ms
-  dest: flash_500ms
-  conditions: two_out_of_three_aint_bad

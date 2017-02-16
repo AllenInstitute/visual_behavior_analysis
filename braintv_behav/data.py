@@ -15,15 +15,14 @@ cohort_assignment = cohort_assignment.merge(
 def get_training_day(df_in):
     '''adds a column to the dataframe with the number of unique training days up to that point
          '''
-    day_zero = {r['mouse']:r['day_zero'] for _,r in cohort_assignment.iterrows()}
+    day_zero = {r['mouse']:r['day_zero'].strftime("%Y-%m-%d") for _,r in cohort_assignment.iterrows()}
     coh = cohort_assignment.set_index('mouse')['cohort']
-#     print coh
 
     training_day_lookup = {}
     for mouse, group in df_in.groupby('mouse_id'):
         dates = np.sort(group['date'].unique())
         try:
-            dz = day_zero[coh[mouse]]
+            dz = day_zero[mouse]
             offset = np.argwhere(dates==dz)[0][0]
         except KeyError:
             print 'day zero not found for {}'.format(mouse)
@@ -31,9 +30,7 @@ def get_training_day(df_in):
         except IndexError:
             print 'day zero ({}) not found in dates'.format(dz)
             offset = 0
-        print offset
         training_day_lookup[mouse] = {date:training_day-offset for training_day,date in enumerate(dates)}
-        print mouse,dates
     return df_in.apply(lambda row: training_day_lookup[row['mouse_id']][row['date']],axis=1)
 
 

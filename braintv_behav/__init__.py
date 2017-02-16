@@ -1,4 +1,3 @@
-
 import platform
 
 if platform.system() == 'Linux':

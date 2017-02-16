@@ -1,9 +1,9 @@
 ## sklearn-style discrimination metrics
+from dro import utilities as dro
 
 import numpy as np
 from sklearn import metrics
 from scipy import stats
-from dro import utilities as dro
 
 def d_prime(y_true,y_pred,eps=None):
 

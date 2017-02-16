@@ -11,7 +11,7 @@ setuptools.setup(
     description="project for analyzing pilot behavior for BrainTV",
     long_description=open('README.md').read(),
 
-    packages=setuptools.find_packages(),
+    packages=setuptools.find_packages(exclude=['data','figures','notebooks']),
 
     install_requires=[
         'Click',

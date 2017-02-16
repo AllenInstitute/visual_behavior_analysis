@@ -11,9 +11,11 @@ import pickle
 from zro import Publisher
 import time
 
+
 default_pkl = '/data/neuralcoding/Behavior/Data/M258173/output/170105150329-task=DoC_MNIST_stage=0v1_probes_n=3_mouse=M258173.pkl'
 
-DELAY = 0.2
+
+DELAY = 2.0
 
 class MockSession(Publisher):
     def __init__(self,pkl, rep_port=12000, pub_port=9998):
