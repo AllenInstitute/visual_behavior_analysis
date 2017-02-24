@@ -97,4 +97,4 @@ def earned_water(behav_df):
 def peak_dprime(group):
     mask = (group['trial_type']!='aborted')
     _,_,dp = dro.get_response_rates(group[mask],sliding_window=mask.sum())
-    return np.nanmax(dp[int(len(dp)/3):])
+    return np.nanmax(dp[50:])
