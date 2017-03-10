@@ -54,6 +54,8 @@ def annotate_trials(trials):
 
     ## calculate reaction times
 
+    trials['change_time'] = trials['change_time'].map(lambda x: np.nan if x is None else x)
+
     trials['reaction_time'] = trials['lick_times'].map(lambda x: x[0] if len(x)>0 else np.nan)
     trials['reaction_time'] = trials.apply(lambda row: row['reaction_time'] - row['change_time'],axis=1)
 
