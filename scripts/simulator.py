@@ -15,7 +15,7 @@ import time
 default_pkl = '/data/neuralcoding/Behavior/Data/M258173/output/170105150329-task=DoC_MNIST_stage=0v1_probes_n=3_mouse=M258173.pkl'
 
 
-DELAY = 2.0
+fast_forward = 4
 
 class MockSession(Publisher):
     def __init__(self,pkl, rep_port=12000, pub_port=9998):
@@ -46,13 +46,26 @@ class MockSession(Publisher):
         
     def run_session(self):
         self.load()
-        for trial in self.data['triallog']:
-            self.publish(trial)
-            time.sleep(DELAY)
+
+        t0 = time.time()
+        while len(self.data['triallog'])>0:
+            trial = self.data['triallog'].pop(0)
+            try:
+                next_trial = self.data['triallog'][0]
+                publish_time = next_trial['starttime'] / fast_forward
+                print publish_time
+                while (time.time()-t0) < publish_time:
+                    time.sleep(0.1)
+            except IndexError:
+                pass
+            finally:
+                self.publish(trial)
+            # time.sleep(DELAY)
         self.close()
 
     def close(self):
         self.publish({'index': -2})
+        self.data = None
     
 if __name__ == "__main__":
 
@@ -65,7 +78,7 @@ if __name__ == "__main__":
     loop = True
 
     mock = MockSession(pkl)
-    mock.run_session()
 
     while loop:
+        # mock = MockSession(pkl)
         mock.run_session()

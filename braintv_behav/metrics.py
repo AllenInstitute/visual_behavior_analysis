@@ -96,8 +96,16 @@ def earned_water(behav_df):
 
 def peak_dprime(group):
     mask = (group['trial_type']!='aborted')
-    _,_,dp = dro.get_response_rates(group[mask],sliding_window=mask.sum())
+    _,_,dp = dro.get_response_rates(group[mask],sliding_window=100)
     try:
         return np.nanmax(dp[50:])
     except ValueError:
         return np.nan
+
+def fraction_time_aborted(group):
+
+    trial_fractions = group.groupby('trial_type')['trial_length'].sum() / group['trial_length'].sum()
+    try:
+        return trial_fractions['aborted']
+    except KeyError:
+        return 0.0
