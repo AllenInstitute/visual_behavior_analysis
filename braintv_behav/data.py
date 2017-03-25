@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
-from dro.utilities import load_from_folder
-from .cohorts import basepath, cohort_assignment, mouse_info
+from braintv_behav.utilities import load_from_folder
+from braintv_behav.cohorts import basepath, cohort_assignment, mouse_info
 
 mouse_df = cohort_assignment['mouse'].apply(lambda mouse: pd.Series(mouse_info(mouse)))
 cohort_assignment = cohort_assignment.merge(

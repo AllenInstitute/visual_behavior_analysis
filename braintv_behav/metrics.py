@@ -1,9 +1,10 @@
 ## sklearn-style discrimination metrics
-from dro import utilities as dro
 
 import numpy as np
 from sklearn import metrics
 from scipy import stats
+
+from braintv_behav.utilities import get_response_rates
 
 def d_prime(y_true,y_pred,eps=None):
 
@@ -96,7 +97,7 @@ def earned_water(behav_df):
 
 def peak_dprime(group):
     mask = (group['trial_type']!='aborted')
-    _,_,dp = dro.get_response_rates(group[mask],sliding_window=100)
+    _,_,dp = get_response_rates(group[mask],sliding_window=100)
     try:
         return np.nanmax(dp[50:])
     except ValueError:

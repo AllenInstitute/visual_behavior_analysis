@@ -9,26 +9,15 @@ import sys
 import getpass
 try:
     import seaborn as sns
-except:
+    sns.set_style('white')
+except ImportError:
     pass
 
 import imaging_behavior.core.utilities as ut
 import imaging_behavior.plotting.plotting_functions as pf
 import imaging_behavior.plotting.utilities as pu
 
-if platform.system()=='Linux':
-    dro_path = os.path.dirname(os.path.realpath(__file__))
-    imp.load_source('dro',os.path.join(dro_path,'utilities.py'))
-    import dro
-elif getpass.getuser() == 'dougo':
-    import dro
-else:
-    dro_path = '//aibsdata2/nc-ophys/BehaviorCode/dro'
-    imp.load_source('dro',os.path.join(dro_path,'utilities.py'))
-    import dro
-
-
-
+from braintv_behav import utilities as dro
 
 def make_daily_figure(df_in,mouse_id=None,reward_window=None,sliding_window=100,mouse_image_before=None,mouse_image_after=None):
     '''

@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from . import basepath
+from braintv_behav import basepath
 
 def get_cohort_assignment(cohorts):
     for c,m_list in cohorts.iteritems():

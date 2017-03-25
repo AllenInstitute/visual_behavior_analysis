@@ -8,12 +8,8 @@ from fnmatch import fnmatch
 import socket
 import warnings
 
-try:
-    import imaging_behavior.core.utilities as ut
-    import imaging_behavior.plotting.plotting_functions as pf
-    import imaging_behavior.plotting.utilities as pu
-except:
-    pass
+import imaging_behavior.core.utilities as ut
+import imaging_behavior.plotting.utilities as pu
 
 
 def create_doc_dataframe(filename):

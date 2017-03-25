@@ -3,8 +3,8 @@
 import os
 import shutil
 # import logging
-from . import basepath
-from .cohorts import cohort_assignment
+from braintv_behav import basepath
+from braintv_behav.cohorts import cohort_assignment
 
 
 network_dir = basepath
