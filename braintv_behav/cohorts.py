@@ -16,6 +16,7 @@ def mouse_info(mouse):
     ------
     info_txt : dictionary containing key:value pairs in mouse's info.txt file
     '''
+def mouse_info(mouse):
     info_txt = Mouse(mouse).info_txt
     info_txt.update(mouse_id=mouse)
     return info_txt
