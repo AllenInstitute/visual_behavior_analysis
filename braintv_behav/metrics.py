@@ -4,6 +4,7 @@ import numpy as np
 from sklearn import metrics
 from scipy import stats
 
+from braintv_behav import masks
 from braintv_behav.utilities import get_response_rates
 
 def d_prime(y_true,y_pred,eps=None):
@@ -39,16 +40,7 @@ def discrim_p(y_true,y_pred):
     except ValueError:
         return 1.0
     
-# change detection metrics
-
-def _trial_types_mask(trial_types,behav_df):
-    
-    if trial_types is not None and len(trial_types)>0:
-        return behav_df['trial_type'].isin(trial_types)
-    else:
-        return np.ones((len(behav_df),),dtype=bool)
-    
-def discrim(behav_df,change,detect,trial_types=('go','catch'),metric=None,metric_kws=None):
+def discrim(trials,change,detect,trial_types=('go','catch'),metric=None,metric_kws=None):
     
     if metric is None:
         metric = d_prime
@@ -56,56 +48,56 @@ def discrim(behav_df,change,detect,trial_types=('go','catch'),metric=None,metric
     if metric_kws is None:
         metric_kws = dict()
         
-    mask = _trial_types_mask(trial_types,behav_df)
+    mask = masks.trial_types(trials,trial_types)
         
-    y_true = behav_df[mask]['change']
-    y_pred = behav_df[mask]['detect']
+    y_true = trials[mask]['change']
+    y_pred = trials[mask]['detect']
         
     return metric(y_true,y_pred,**metric_kws)
 
-def response_bias(behav_df,detect,trial_types=('go','catch')):
-    mask = _trial_types_mask(trial_types,behav_df)
+def response_bias(trials,detect,trial_types=('go','catch')):
+    mask = masks.trial_types(trials,trial_types)
     
-    return behav_df[mask][detect].mean()
+    return trials[mask][detect].mean()
 
-def num_trials(behav_df):
-    return len(behav_df)
+def num_trials(trials):
+    return len(trials)
 
 
-def num_contingent_trials(behav_df):
-    return behav_df['trial_type'].isin(['go','catch']).sum()
+def num_contingent_trials(trials):
+    return trials['trial_type'].isin(['go','catch']).sum()
 
-def reaction_times(behav_df,percentile=50,trial_types=('go',)):
+def reaction_times(trials,percentile=50,trial_types=('go',)):
     """
     reaction times to GO trials
     
     """
-    mask = _trial_types_mask(trial_types,behav_df)
-    quantile = behav_df[mask]['reaction_time'].dropna().quantile(percentile/100.0)
+    mask = masks.trial_types(trials,trial_types)
+    quantile = trials[mask]['reaction_time'].dropna().quantile(percentile/100.0)
     
     return quantile
 
-def total_water(behav_df,trial_types=()):
+def total_water(trials,trial_types=()):
     
-    mask = _trial_types_mask(trial_types,behav_df)
+    mask = masks.trial_types(trials,trial_types)
     
-    return behav_df[mask][(behav_df['reward_times'].map(len)>0)]['reward_volume'].sum()
+    return trials[mask][(trials['reward_times'].map(len)>0)]['reward_volume'].sum()
 
-def earned_water(behav_df):
+def earned_water(trials):
     
-    return total_water(behav_df,('go',))
+    return total_water(trials,('go',))
 
-def peak_dprime(group):
-    mask = (group['trial_type']!='aborted')
-    _,_,dp = get_response_rates(group[mask],sliding_window=100)
+def peak_dprime(trials):
+    mask = (trials['trial_type']!='aborted')
+    _,_,dp = get_response_rates(trials[mask],sliding_window=100)
     try:
         return np.nanmax(dp[50:])
     except ValueError:
         return np.nan
 
-def fraction_time_aborted(group):
+def fraction_time_aborted(trials):
 
-    trial_fractions = group.groupby('trial_type')['trial_length'].sum() / group['trial_length'].sum()
+    trial_fractions = trials.trialsby('trial_type')['trial_length'].sum() / trials['trial_length'].sum()
     try:
         return trial_fractions['aborted']
     except KeyError:

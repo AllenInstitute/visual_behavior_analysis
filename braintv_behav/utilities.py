@@ -608,19 +608,6 @@ def get_licktimes(df,reference="change"):
 
     return licktimes
 
-# def rectify(input_vals,ceiling=0.99,floor=0.01):
-#     '''
-#     sets values of input_vals that are above ceiling or below floor to ceiling or floor
-#     '''
-
-#     if isinstance(input_vals,int) or isinstance(input_vals,float):
-#         return np.max((np.min((input_vals,ceiling)),floor))
-#     else:
-#         v = np.array(input_vals)
-#         v[v>ceiling]=ceiling
-#         v[v<floor]=floor
-#         return v
-
 
 def dprime(hit_rate,fa_rate,limits = (0.01,0.99)):
     from scipy.stats import norm
