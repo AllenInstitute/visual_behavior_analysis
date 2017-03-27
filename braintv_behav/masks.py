@@ -1,4 +1,5 @@
-# change detection metrics
+import numpy as np
+
 
 def trial_types(trials,trial_types):
     

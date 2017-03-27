@@ -581,7 +581,6 @@ def get_licktimes(df,reference="change"):
     return licktimes
 
 
-# -> metrics
 def dprime(hit_rate,fa_rate,limits = (0.01,0.99)):
     from scipy.stats import norm
     Z = norm.ppf
