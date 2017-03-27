@@ -1,7 +1,9 @@
 import pandas as pd
 import numpy as np
 from braintv_behav.utilities import load_from_folder
-from braintv_behav.cohorts import basepath, cohort_assignment, mouse_info
+from braintv_behav.cohorts import basepath, load_cohort_assignment, mouse_info
+
+cohort_assignment = load_cohort_assignment()
 
 mouse_df = cohort_assignment['mouse'].apply(lambda mouse: pd.Series(mouse_info(mouse)))
 cohort_assignment = cohort_assignment.merge(
@@ -35,6 +37,7 @@ def get_training_day(df_in):
 
 
 def annotate_trials(trials):
+
 
     trials = trials.merge(
         cohort_assignment,

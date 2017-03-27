@@ -8,10 +8,7 @@ from fnmatch import fnmatch
 import socket
 import warnings
 
-import imaging_behavior.core.utilities as ut
-import imaging_behavior.plotting.utilities as pu
-
-
+# -> io.py
 def create_doc_dataframe(filename):
     data = pd.read_pickle(filename)
     df = pd.DataFrame(data['triallog'])
@@ -97,29 +94,16 @@ def create_doc_dataframe(filename):
 
     return df
 
+
+# -> DEPRECATE
 def get_mouse_info(mouse_id):
     '''
     Gets data from the info.txt file in each mouse's folder on aibsdata
     '''
-    basepath = ut.check_network_path_syntax('//aibsdata/neuralcoding/Behavior/Data')
-    
-    #make sure mouse ID is prepended by 'M'
-    if str(mouse_id)[0].lower() != 'm':
-        mouse_id = 'M'+str(mouse_id)
-    path = os.path.join(basepath,str(mouse_id))
+    from braintv_behav.cohorts import mouse_info
+    return mouse_info(mouse_id)
 
-    info = {}
-    #open and parse info.txt if it exists
-    if 'info.txt' in os.listdir(path):
-        with open(os.path.join(basepath,str(mouse_id),'info.txt')) as f:
-            content = f.readlines()
-            content = [x.strip() for x in content] 
-        #pack content into a dictionary
-        for v in content:
-            info[v.split(':')[0].strip()] = v.split(':')[1].strip()
-
-    return info
-
+# -> analyze.py
 def get_lick_frames(df_in,data):
     """
     returns a list of arrays of lick frames, with one entry per trial
@@ -132,6 +116,7 @@ def get_lick_frames(df_in,data):
 
     return local_licks
 
+# -> analyze.py
 def get_last_licktimes(df_in,data):
     '''
     get time of most recent lick before every change
@@ -159,6 +144,7 @@ def get_last_licktimes(df_in,data):
 
 
 
+# -> analyze.py
 def remove_repeated_licks(df_in):
     """
     the stimulus code records one lick for each frame in which the tongue was in contact with the spout
@@ -190,6 +176,7 @@ def remove_repeated_licks(df_in):
     df_in['lick_times'] = lt
     df_in['lick_frames'] = lf
 
+# -> io.py
 def load_from_folder(foldername,load_existing_dataframe=True,save_dataframe=True,filename_contains='*'):
     '''
     Loads all PKL files in a given directory
@@ -229,40 +216,13 @@ def load_from_folder(foldername,load_existing_dataframe=True,save_dataframe=True
 
     return df
 
+# -> devices.py
 def get_rig_id(in_val,input_type='computer_name'):
     '''
     This provides a map between the computer name and the rig ID
     Will need updated if computers are swapped out
     '''
-    rig_dict = {'W7DTMJ19R2F':'A1',
-                'W7DTMH35Y0T':'A2',
-                'W7DTMJ03J70R':'Dome',
-                'W7VS-SYSLOGIC2':'A3',
-                'W7VS-SYSLOGIC3':'A4',
-                'W7VS-SYSLOGIC4':'A5',
-                'W7VS-SYSLOGIC5':'A6',
-                'W7VS-SYSLOGIC7':'B1',
-                'W7VS-SYSLOGIC8':'B2',
-                'W7VS-SYSLOGIC9':'B3',
-                'W7VS-SYSLOGIC10':'B4',
-                'W7VS-SYSLOGIC11':'B5',
-                'W7VS-SYSLOGIC12':'B6',
-                'W7VS-SYSLOGIC13':'C1',
-                'W7VS-SYSLOGIC14':'C2',
-                'W7VS-SYSLOGIC15':'C3',
-                'W7VS-SYSLOGIC16':'C4',
-                'W7VS-SYSLOGIC17':'C5',
-                'W7VS-SYSLOGIC18':'C6',
-                'W7VS-SYSLOGIC19':'D1',
-                'W7VS-SYSLOGIC20':'D2',
-                'W7VS-SYSLOGIC21':'D3',
-                'W7VS-SYSLOGIC22':'D4',
-                'W7VS-SYSLOGIC23':'D5',
-                'W7VS-SYSLOGIC24':'D6',
-                'W7VS-SYSLOGIC26':'Widefield-329',
-                'OSXLTTF6T6.local':'DougLaptop',
-                'W7DTMJ026LUL':'DougPC',
-                }
+    from devices import RIGS as rig_dict
 
     computer_dict = dict((v,k) for k,v in rig_dict.iteritems())
     if input_type == 'computer_name' and in_val in rig_dict.keys():
@@ -272,6 +232,9 @@ def get_rig_id(in_val,input_type='computer_name'):
     else:
         return 'unknown'
 
+
+
+# -> devices.py
 def return_reward_volumes(cluster_id):
     '''
     Prints a report to the console window telling the user how much water the animals
@@ -355,6 +318,7 @@ def get_datafile(mouse_id,year=None,month=None,day=None,return_longest=True,loca
         else:
             return None
 
+# -> plotting.py
 def save_figure(fig, fname, formats = ['.png'],transparent=False,dpi=300,**kwargs):
     import matplotlib as mpl
     mpl.rcParams['pdf.fonttype'] = 42
@@ -365,7 +329,7 @@ def save_figure(fig, fname, formats = ['.png'],transparent=False,dpi=300,**kwarg
     for f in formats:
         fig.savefig(fname + f, transparent = transparent, orientation = 'landscape',dpi=dpi)
 
-
+# -> analyze
 def calculate_reward_rate(df,window=1.0,trial_window=25,remove_aborted=False):
     #written by Dan Denman (stolen from http://stash.corp.alleninstitute.org/users/danield/repos/djd/browse/calculate_reward_rate.py)
     #add a column called reward_rate to the input dataframe
@@ -424,7 +388,7 @@ def flatten_list(in_list):
     return out_list
 
 
-
+# -> analyze
 def calculate_latency(df_in):
     # For each trial, calculate the difference between each stimulus change and the next lick (response lick)
     for idx in df_in.index:
@@ -441,6 +405,7 @@ def calculate_latency(df_in):
 
     return df_in
 
+# -> analyze
 def calculate_trial_length(df_in):
     trial_length = np.zeros(len(df_in))
     for ii,idx in enumerate(df_in.index):
@@ -454,6 +419,7 @@ def calculate_trial_length(df_in):
 
     return trial_length
 
+# -> analyze
 def get_end_frame(df_in,last_frame=None):
 
 
@@ -467,6 +433,23 @@ def get_end_frame(df_in,last_frame=None):
     return end_frames.astype(np.int32)
     
 
+# -> analyze
+def categorize_trial(row):
+    if (len(row['lick_times'])>0) and pd.isnull(row['change_time']):
+        return 'aborted'
+
+    elif (pd.isnull(row['change_time'])==False) and (row['rewarded'] == True):
+        return 'go'
+
+    elif (pd.isnull(row['change_time'])==False) and (row['rewarded'] == 0):
+        return 'catch'
+
+    elif (pd.isnull(row['change_time'])==False) and (row['auto_rewarded'] == True):
+        return 'autorewarded'
+
+    else:
+        return 'other'
+
 def categorize_trials(df_in):
     '''trial types:
          'aborted' = lick before stimulus
@@ -477,26 +460,10 @@ def categorize_trials(df_in):
 
          adds a column called 'trial_type' to the input dataframe
          '''
-
-    def cat(row):
-        if (len(row['lick_times'])>0) and pd.isnull(row['change_time']):
-            return 'aborted'
-
-        elif (pd.isnull(row['change_time'])==False) and (row['rewarded'] == True):
-            return 'go'
-
-        elif (pd.isnull(row['change_time'])==False) and (row['rewarded'] == 0):
-            return 'catch'
-
-        elif (pd.isnull(row['change_time'])==False) and (row['auto_rewarded'] == True):
-            return 'autorewarded'
-
-        else:
-            return 'other'
-
-    return df_in.apply(cat,axis=1)
+    return df_in.apply(categorize_trials,axis=1)
 
 
+# -> analyze
 def get_training_day(df_in):
     '''adds a column to the dataframe with the number of unique training days up to that point
          '''
@@ -508,6 +475,7 @@ def get_training_day(df_in):
     return df_in.apply(lambda row: training_day_lookup[row['mouse_id']][row['date']],axis=1)
 
 
+# -> analyze
 def get_response_type(df_in):
 
     response_type = []
@@ -525,6 +493,7 @@ def get_response_type(df_in):
 
     return response_type
 
+# -> analyze
 def assign_color(df_in):
 
     color = [None]*len(df_in)
@@ -559,6 +528,7 @@ def assign_color(df_in):
     return color
 
 
+# -> analyze
 def check_responses(df_in,reward_window=None):
     '''trial types:
          'aborted' = lick before stimulus
@@ -588,6 +558,7 @@ def check_responses(df_in,reward_window=None):
 
     return did_respond
 
+# -> analyze
 def get_reward_window(df_in):
     try:
         reward_window = df_in.iloc[0].response_window
@@ -596,6 +567,7 @@ def get_reward_window(df_in):
     return reward_window
 
 
+# -> analyze
 def get_licktimes(df,reference="change"):
     if reference == 'start':
         licktimes = []
@@ -609,6 +581,7 @@ def get_licktimes(df,reference="change"):
     return licktimes
 
 
+# -> metrics
 def dprime(hit_rate,fa_rate,limits = (0.01,0.99)):
     from scipy.stats import norm
     Z = norm.ppf
@@ -621,6 +594,7 @@ def dprime(hit_rate,fa_rate,limits = (0.01,0.99)):
 
 
 
+# -> analyze
 def get_response_rates(df_in2,sliding_window=100,reward_window=None):
 
     df_in = df_in2.copy()
@@ -649,6 +623,7 @@ def make_response_df(df_in,parameter='delta_ori',additional_columns=None,respons
 
     "additional columns" can be dictionary containing key/value pairs for additional columns desired in the output dictionary
     '''
+    from statsmodels.stats.proportion import proportion_confint
 
     if response_window is None:
         response_window = df_in.iloc[0].response_window
@@ -675,7 +650,7 @@ def make_response_df(df_in,parameter='delta_ori',additional_columns=None,respons
                                                    (df_in['response_latency']<response_window[1])&
                                                    (df_in['response_latency']>response_window[0])])
 
-        response_dict['CI'] = pu.binomialCI(response_dict['successes'],response_dict['attempts'],alpha=0.05)
+        response_dict['CI'] = proportion_confint(response_dict['successes'],response_dict['attempts'],alpha=0.05,method='beta')
         response_dict['response_probability'] = float(response_dict['successes'])/float(response_dict['attempts'])
 
         # add a column containing d_prime
