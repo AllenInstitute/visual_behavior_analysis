@@ -30,7 +30,7 @@ def num_trials(session_trials):
     return len(session_trials)
 
 
-def num_contingent_trials(trials):
+def num_contingent_trials(session_trials):
     return session_trials['trial_type'].isin(['go','catch']).sum()
 
 def reaction_times(session_trials,percentile=50,trial_types=('go',)):
@@ -63,7 +63,7 @@ def peak_dprime(session_trials):
 
 def fraction_time_aborted(session_trials):
 
-    trial_fractions = session_trials.trialsby('trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
+    trial_fractions = session_trials.groupby('trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
     try:
         return trial_fractions['aborted']
     except KeyError:

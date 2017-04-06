@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from braintv_behav.utilities import load_from_folder
+# from braintv_behav.utilities import load_from_folder
 from braintv_behav.cohorts import basepath, load_cohort_assignment, mouse_info
 
 cohort_assignment = load_cohort_assignment()

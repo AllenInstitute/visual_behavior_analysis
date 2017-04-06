@@ -4,7 +4,8 @@ import os
 import shutil
 # import logging
 from braintv_behav import basepath
-from braintv_behav.cohorts import cohort_assignment
+from braintv_behav.cohorts import load_cohort_assignment
+cohort_assignment = load_cohort_assignment()
 
 
 network_dir = basepath

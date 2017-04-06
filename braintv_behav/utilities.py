@@ -8,67 +8,126 @@ from fnmatch import fnmatch
 import socket
 import warnings
 
-# -> io.py
-def create_doc_dataframe(filename):
-    data = pd.read_pickle(filename)
-    df = pd.DataFrame(data['triallog'])
+from braintv_behav.io import load_trials
 
+from functools import wraps
 
-    #add some columns to the dataframe
-    keydict = {'mouse_id':'mouseid',
-               'response_window':'response_window',
-               'task':'task',
-               'session_duration':'stoptime',
-               'user_id':'userid',
-               'LDT_mode':'lick_detect_training_mode',
-               'blank_screen_timeout':'blankscreen_on_timeout',
-               'stim_duration':'stim_duration',
-               'blank_duration_range':'blank_duration_range',
-               'prechange_minimum':'delta_minimum',
-               'stimulus_distribution':'stimulus_distribution',
-               'stimulus':'stimulus',
-               'distribution_mean':'delta_mean',
-               'trial_duration':'trial_duration',
-               'computer_name':'computer_name',}
-    for key,value in keydict.iteritems():
+def inplace(func):
+
+    @wraps(func)
+    def df_wrapper(df,*args,**kwargs):
+
         try:
-            df[key] = [data[value]]*len(df)
-        except Exception as e:
-            df[key] = None
+            inplace = kwargs.pop('inplace')
+        except KeyError:
+            inplace = False
 
-    # add some columns that require datetime manipulations
-    df['startdatetime'] = pd.to_datetime(data['startdatetime'])
+        if inplace==False:
+            df = df.copy()
+
+        func(df,*args,**kwargs)
+
+        if inplace==False:
+            return df
+        else:
+            return None
+
+    return df_wrapper
+
+
+@inplace
+def annotate_parameters(trials,data,keydict=None):
+    if keydict is None:
+        return
+    else:
+        for key,value in keydict.iteritems():
+            try:
+                trials[key] = [data[value]]*len(trials)
+            except KeyError as e:
+                trials[key] = None
+
+@inplace
+def explode_startdatetime(df):
     df['date'] = df['startdatetime'].dt.date.astype(str)
-    df['year']=df['startdatetime'].dt.year
-    df['month']=df['startdatetime'].dt.month
-    df['day']=df['startdatetime'].dt.day
-    df['hour']=df['startdatetime'].dt.hour
-    df['dayofweek']=df['startdatetime'].dt.weekday
+    df['year'] = df['startdatetime'].dt.year
+    df['month'] = df['startdatetime'].dt.month
+    df['day'] = df['startdatetime'].dt.day
+    df['hour'] = df['startdatetime'].dt.hour
+    df['dayofweek'] = df['startdatetime'].dt.weekday
 
-
+@inplace
+def annotate_n_rewards(df):
     try:
         df['number_of_rewards'] = df['reward_times'].map(len)
     except KeyError:
         df['number_of_rewards'] = None
 
-
+@inplace
+def annotate_rig_id(df,data):
     #get the rig_id that the session was run on 
-    if 'rig_id' in data.keys():
+    try:
         df['rig_id'] = data['rig_id']
-    else:
+    except KeyError:
         df['rig_id'] = get_rig_id(df['computer_name'][0])
+
+@inplace
+def annotate_startdatetime(df,data):
+
+    df['startdatetime'] = pd.to_datetime(data['startdatetime'])
+
+@inplace
+def annotate_cumulative_reward(trials,data):
 
     #calculate cumulative volume
     try:
-        df['cumulative_volume'] = df['reward_volume'].cumsum()
+        trials['cumulative_volume'] = trials['reward_volume'].cumsum()
     except:
-        df['reward_volume'] = data['rewardvol']
-        df['cumulative_volume'] = data['rewardvol']*df['number_of_rewards'].cumsum()
-    print 'Loading '+filename
+        trials['reward_volume'] = data['rewardvol']*trials['number_of_rewards']
+        trials['cumulative_volume'] = trials['reward_volume'].cumsum()
+
+@inplace
+def annotate_filename(df,filename):
     df['filepath'] = os.path.split(filename)[0]
     df['filename'] = os.path.split(filename)[-1]
 
+@inplace
+def fix_autorearded(df):
     df.rename(columns={'auto_rearded': 'auto_rewarded'}, inplace=True)
+
+# -> io.py
+def create_doc_dataframe(filename):
+    data = pd.read_pickle(filename)
+
+    df = load_trials(data)
+
+    #add some columns to the dataframe
+    keydict = {
+        'mouse_id': 'mouseid',
+        'response_window': 'response_window',
+        'task': 'task',
+        'session_duration': 'stoptime',
+        'user_id': 'userid',
+        'LDT_mode': 'lick_detect_training_mode',
+        'blank_screen_timeout': 'blankscreen_on_timeout',
+        'stim_duration': 'stim_duration',
+        'blank_duration_range': 'blank_duration_range',
+        'prechange_minimum': 'delta_minimum',
+        'stimulus_distribution': 'stimulus_distribution',
+        'stimulus': 'stimulus',
+        'distribution_mean': 'delta_mean',
+        'trial_duration': 'trial_duration',
+        'computer_name': 'computer_name',
+        }
+    
+    annotate_parameters(df,data,keydict=keydict,inplace=True)
+    annotate_startdatetime(df,data,inplace=True)
+    explode_startdatetime(df,inplace=True)
+    annotate_n_rewards(df,inplace=True)
+    annotate_rig_id(df,data,inplace=True)
+    fix_autorearded(df,inplace=True)
+    annotate_cumulative_reward(df,data,inplace=True)
+    annotate_filename(df,filename,inplace=True)
+
 
     for col in ('auto_rewarded','change_time'):
         if col not in df.columns:
@@ -77,6 +136,7 @@ def create_doc_dataframe(filename):
     #add some columns that require calculation
     calculate_latency(df)
     calculate_reward_rate(df)
+
     df['trial_type'] = categorize_trials(df)
     df['response'] = check_responses(df)
     df['trial_length'] = calculate_trial_length(df)
@@ -84,7 +144,8 @@ def create_doc_dataframe(filename):
     df['color'] = assign_color(df)
     df['response_type'] = get_response_type(df)
     df['lick_frames'] = get_lick_frames(df,data)
-    df['last_lick'] = get_last_licktimes(df,data)
+    # df['last_lick'] = get_last_licktimes(df,data)
+
     try:
         remove_repeated_licks(df)
     except Exception as e:
@@ -100,6 +161,11 @@ def get_mouse_info(mouse_id):
     '''
     Gets data from the info.txt file in each mouse's folder on aibsdata
     '''
+    import warnings
+    warnings.warn(
+        "this function is deprecated. please use the `mouse_info` package",
+        DeprecationWarning
+    )
     from braintv_behav.cohorts import mouse_info
     return mouse_info(mouse_id)
 
@@ -434,21 +500,27 @@ def get_end_frame(df_in,last_frame=None):
     
 
 # -> analyze
-def categorize_trial(row):
-    if (len(row['lick_times'])>0) and pd.isnull(row['change_time']):
-        return 'aborted'
+def categorize_one_trial(row):
 
-    elif (pd.isnull(row['change_time'])==False) and (row['rewarded'] == True):
-        return 'go'
-
-    elif (pd.isnull(row['change_time'])==False) and (row['rewarded'] == 0):
-        return 'catch'
-
-    elif (pd.isnull(row['change_time'])==False) and (row['auto_rewarded'] == True):
-        return 'autorewarded'
-
+    if pd.isnull(row['change_time']):
+        if (len(row['lick_times'])>0):
+            trial_type = 'aborted'
+        else:
+            trial_type = 'other'
     else:
-        return 'other'
+        if (row['rewarded'] == True):
+            return 'go'
+
+        elif (row['rewarded'] == 0):
+            return 'catch'
+
+        elif (row['auto_rewarded'] == True):
+            return 'autorewarded'
+
+        else:
+            return 'other'
+
+    return trial_type
 
 def categorize_trials(df_in):
     '''trial types:
@@ -460,7 +532,7 @@ def categorize_trials(df_in):
 
          adds a column called 'trial_type' to the input dataframe
          '''
-    return df_in.apply(categorize_trials,axis=1)
+    return df_in.apply(categorize_one_trial,axis=1)
 
 
 # -> analyze
