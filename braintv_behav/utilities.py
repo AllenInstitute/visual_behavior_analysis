@@ -10,89 +10,9 @@ import warnings
 
 from braintv_behav.io import load_trials
 
-from functools import wraps
-
-def inplace(func):
-
-    @wraps(func)
-    def df_wrapper(df,*args,**kwargs):
-
-        try:
-            inplace = kwargs.pop('inplace')
-        except KeyError:
-            inplace = False
-
-        if inplace==False:
-            df = df.copy()
-
-        func(df,*args,**kwargs)
-
-        if inplace==False:
-            return df
-        else:
-            return None
-
-    return df_wrapper
-
-
-@inplace
-def annotate_parameters(trials,data,keydict=None):
-    if keydict is None:
-        return
-    else:
-        for key,value in keydict.iteritems():
-            try:
-                trials[key] = [data[value]]*len(trials)
-            except KeyError as e:
-                trials[key] = None
-
-@inplace
-def explode_startdatetime(df):
-    df['date'] = df['startdatetime'].dt.date.astype(str)
-    df['year'] = df['startdatetime'].dt.year
-    df['month'] = df['startdatetime'].dt.month
-    df['day'] = df['startdatetime'].dt.day
-    df['hour'] = df['startdatetime'].dt.hour
-    df['dayofweek'] = df['startdatetime'].dt.weekday
-
-@inplace
-def annotate_n_rewards(df):
-    try:
-        df['number_of_rewards'] = df['reward_times'].map(len)
-    except KeyError:
-        df['number_of_rewards'] = None
-
-@inplace
-def annotate_rig_id(df,data):
-    #get the rig_id that the session was run on 
-    try:
-        df['rig_id'] = data['rig_id']
-    except KeyError:
-        df['rig_id'] = get_rig_id(df['computer_name'][0])
-
-@inplace
-def annotate_startdatetime(df,data):
-
-    df['startdatetime'] = pd.to_datetime(data['startdatetime'])
-
-@inplace
-def annotate_cumulative_reward(trials,data):
-
-    #calculate cumulative volume
-    try:
-        trials['cumulative_volume'] = trials['reward_volume'].cumsum()
-    except:
-        trials['reward_volume'] = data['rewardvol']*trials['number_of_rewards']
-        trials['cumulative_volume'] = trials['reward_volume'].cumsum()
-
-@inplace
-def annotate_filename(df,filename):
-    df['filepath'] = os.path.split(filename)[0]
-    df['filename'] = os.path.split(filename)[-1]
-
-@inplace
-def fix_autorearded(df):
-    df.rename(columns={'auto_rearded': 'auto_rewarded'}, inplace=True)
+from braintv_behav.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
+from braintv_behav.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
+from braintv_behav.data import annotate_filename, fix_autorearded
 
 # -> io.py
 def create_doc_dataframe(filename):
