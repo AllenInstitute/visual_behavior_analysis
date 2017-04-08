@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 # from braintv_behav.utilities import load_from_folder
@@ -96,18 +97,21 @@ def annotate_cohort_info(trials):
     trials = trials.merge(
         cohort_assignment,
         how='left',
-        on='mouse_id',
+        left_on='mouse_id',
+        right_on='mouse',
     )
 
 @inplace
 def annotate_mouse_info(trials):
 
-    mouse_df = trials['mouse_id'].unique().apply(lambda mouse: pd.Series(mouse_info(mouse)))
+    mouse_df = pd.Series(
+        trials['mouse_id'].unique()
+        ).apply(lambda mouse: pd.Series(mouse_info(mouse)))
 
     trials = trials.merge(
         mouse_df,
         how='left',
-        left_on='mouse',
+        left_on='mouse_id',
         right_on='mouse_id'
     )
 
@@ -151,13 +155,13 @@ def fix_change_time(trials):
     trials['change_time'] = trials['change_time'].map(lambda x: np.nan if x is None else x)
 
 @inplace
-def explode_response_window(trials)
+def explode_response_window(trials):
     trials['response_window_lower'] = trials['response_window'].map(lambda x: x[0])
     trials['response_window_upper'] = trials['response_window'].map(lambda x: x[1])
 
 
 @inplace
-def annotate_trials_jk_style(trials):
+def annotate_trials(trials):
 
     annotate_mouse_info(trials,inplace=True)
     annotate_cohort_info(trials,inplace=True)
