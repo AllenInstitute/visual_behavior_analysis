@@ -520,3 +520,53 @@ def DoC_PsychometricCurve(input,ax=None,parameter='delta_ori',title="",linecolor
                         fontsize=fontsize)
 
     return ax
+
+def plot_first_licks(pkl):
+    """
+    plots distribution of first lick times for a file.
+
+    tries to gues about flasht times (but might not be very trustworthy)
+    author: justin
+
+
+    """
+    
+    trials = dro.create_doc_dataframe(pkl)
+    
+    trials['first_lick'] = trials['lick_times'].map(lambda l: l[0] if len(l)>0 else np.nan)
+    trials['first_lick'] = trials['first_lick'] - trials['starttime']
+    
+    aborted = (
+        trials['trial_type'].isin(['aborted',])
+        & ~pd.isnull(trials['first_lick'])
+        )
+    catch = (
+        trials['trial_type'].isin(['catch',])
+        & ~pd.isnull(trials['first_lick'])
+        )
+    go = (
+        trials['trial_type'].isin(['go',])
+        & ~pd.isnull(trials['first_lick'])
+        )
+    
+    f,ax = plt.subplots(1,figsize=(8,4),sharex=True)
+  
+    bar_width = 0.1
+    bins=np.arange(0,6,bar_width)
+    
+    x1,_ = np.histogram(trials[aborted]['first_lick'].values,bins)
+    x2,_ = np.histogram(trials[catch]['first_lick'].values,bins)
+    x3,_ = np.histogram(trials[go]['first_lick'].values,bins)
+    
+    ax.bar(bins[:-1],x1,width=bar_width,edgecolor='none',color='indianred')
+    ax.bar(bins[:-1],x2,width=bar_width,edgecolor='none',color='orange',bottom=x1)
+    ax.bar(bins[:-1],x3,width=bar_width,edgecolor='none',color='limegreen',bottom=x1+x2)
+
+    ax.set_title(pkl.split('/')[-1])
+    
+    if ('500ms' in pkl) or ('NaturalImages' in pkl):
+        for flash in (np.arange(0,6,0.7)+0.2):
+            ax.axvspan(flash,flash+0.2,color='lightblue',zorder=-10)
+    ax.set_xlim(0,6)
+    
+    return f,ax

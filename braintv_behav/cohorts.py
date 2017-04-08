@@ -3,8 +3,24 @@ import pandas as pd
 from braintv_behav import basepath
 from mouse_info import Mouse
 
-def mouse_info(mouse):
-    return Mouse(mouse).info_txt
+def mouse_info(mouse):    
+    '''
+    Returns the info found in mouse's info.txt file
+    
+    Parameters
+    ------
+    mouse : str
+        mouse identifier
+    
+    Returns
+    ------
+    info_txt : dictionary containing key:value pairs in mouse's info.txt file
+    '''
+    info_txt = Mouse(mouse).info_txt
+    info_txt.update(mouse_id=mouse)
+    return info_txt
 
-_spreadsheet_path = os.path.join(basepath,"VisualBehaviorDevelopment_CohortIDs.xlsx")
-cohort_assignment = pd.read_excel(_spreadsheet_path)
+
+def load_cohort_assignment():
+    _spreadsheet_path = os.path.join(basepath,"VisualBehaviorDevelopment_CohortIDs.xlsx")
+    return pd.read_excel(_spreadsheet_path)
