@@ -202,23 +202,7 @@ def load_from_folder(foldername,load_existing_dataframe=True,save_dataframe=True
 
     return df
 
-# -> devices.py
-def get_rig_id(in_val,input_type='computer_name'):
-    '''
-    This provides a map between the computer name and the rig ID
-    Will need updated if computers are swapped out
-    '''
-    from devices import RIGS as rig_dict
-
-    computer_dict = dict((v,k) for k,v in rig_dict.iteritems())
-    if input_type == 'computer_name' and in_val in rig_dict.keys():
-        return rig_dict[in_val]
-    elif input_type == 'rig_id' and in_val in computer_dict.keys():
-        return computer_dict[in_val]
-    else:
-        return 'unknown'
-
-
+from braintv_behav.devices import get_rig_id
 
 # -> devices.py
 def return_reward_volumes(cluster_id):
@@ -812,3 +796,29 @@ class Progress_Bar_Text(object):
     def __str__(self):
         return str(self.prog_bar)
 
+
+class RisingEdge():
+    """
+    This object implements a "rising edge" detector on a boolean array.
+    
+    It takes advantage of how pandas applies functions in order.
+    
+    For example, if the "criteria" column in the `df` dataframe consists of booleans indicating
+    whether the row meets a criterion, we can detect the first run of three rows above criterion
+    with the following
+    
+        first_run_of_three = (
+            df['criteria']
+            .rolling(center=False,window=3)
+            .apply(func=RisingEdge().check)
+            )
+    
+    ```
+    
+    """
+    def __init__(self):
+        self.firstall = False
+    def check(self,arr):
+        if arr.all():
+            self.firstall = True
+        return self.firstall

@@ -12,7 +12,7 @@ def continent_trials(trials):
     """ GO & CATCH trials only """
     return trial_types(trials,('go','catch'))
 
-def motivated(trials,reward_rate_thresh=2.0):
+def reward_rate(trials,thresh=2.0):
     """ masks trials where the reward rate (per minute) is below some threshold.
 
     This de facto omits trials in which the animal was not licking for extended periods
@@ -20,5 +20,5 @@ def motivated(trials,reward_rate_thresh=2.0):
 
     """
 
-    mask = trials['reward_rate']>reward_rate_thresh
+    mask = trials['reward_rate']>thresh
     return mask

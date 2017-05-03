@@ -16,8 +16,8 @@ def discrim(session_trials,change,detect,trial_types=('go','catch'),metric=None,
         
     mask = masks.trial_types(session_trials,trial_types)
         
-    y_true = session_trials[mask]['change']
-    y_pred = session_trials[mask]['detect']
+    y_true = session_trials[mask][change]
+    y_pred = session_trials[mask][detect]
         
     return metric(y_true,y_pred,**metric_kws)
 
@@ -28,6 +28,12 @@ def response_bias(session_trials,detect,trial_types=('go','catch')):
 
 def num_trials(session_trials):
     return len(session_trials)
+
+def num_usable_trials(session_trials):
+
+    usable_trials = session_trials[masks.reward_rate(session_trials)]
+
+    return num_contingent_trials(usable_trials)
 
 
 def num_contingent_trials(session_trials):

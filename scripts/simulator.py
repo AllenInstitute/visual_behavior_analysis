@@ -15,18 +15,19 @@ import time
 default_pkl = '/data/neuralcoding/Behavior/Data/M258173/output/170105150329-task=DoC_MNIST_stage=0v1_probes_n=3_mouse=M258173.pkl'
 
 
-fast_forward = 4
+fast_forward = 20
 
 class MockSession(Publisher):
     def __init__(self,pkl, rep_port=12000, pub_port=9998):
         super(MockSession, self).__init__(rep_port=rep_port,
                                        pub_port=pub_port)
+        self.pkl = pkl
         self.data = None
         
     def load(self):
 
         if self.data is None:
-            with open(pkl,'rb') as f:
+            with open(self.pkl,'rb') as f:
                 self.data = pickle.load(f)
 
         header = {
@@ -64,7 +65,7 @@ class MockSession(Publisher):
         self.close()
 
     def close(self):
-        self.publish({'index': -2})
+        self.publish({'index': -2,'pkl': self.pkl})
         self.data = None
     
 if __name__ == "__main__":

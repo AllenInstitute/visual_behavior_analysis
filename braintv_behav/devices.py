@@ -1,4 +1,4 @@
-RIGS = {
+rig_dict = {
     'W7DTMJ19R2F':'A1',
     'W7DTMH35Y0T':'A2',
     'W7DTMJ03J70R':'Dome',
@@ -28,3 +28,19 @@ RIGS = {
     'OSXLTTF6T6.local':'DougLaptop',
     'W7DTMJ026LUL':'DougPC',
     }
+
+
+# -> devices.py
+def get_rig_id(in_val,input_type='computer_name'):
+    '''
+    This provides a map between the computer name and the rig ID
+    Will need updated if computers are swapped out
+    '''
+
+    computer_dict = dict((v,k) for k,v in rig_dict.iteritems())
+    if input_type == 'computer_name' and in_val in rig_dict.keys():
+        return rig_dict[in_val]
+    elif input_type == 'rig_id' and in_val in computer_dict.keys():
+        return computer_dict[in_val]
+    else:
+        return 'unknown'
