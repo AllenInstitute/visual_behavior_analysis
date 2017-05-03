@@ -109,7 +109,7 @@ def new_session(data):
         if data['index']==-1:
             mouse_started(
                 data['init_data']['mouse_id'],
-                data['params']['userid'],
+                data['params']['user_id'],
                 data['rig_name'],
             )
     except KeyError:
