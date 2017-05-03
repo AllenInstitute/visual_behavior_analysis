@@ -40,7 +40,6 @@ CLUSTER = defaultdict(lambda: '#cluster_x')
 for c,n in itertools.product('ABCDEF',range(6)):
     CLUSTER['{}{}'.format(c,n+1)] = '#cluster_{}'.format(c.lower())
 
-print CLUSTER
 
 def mouse_started(mouse,user,rig=None):
     sc.api_call(
