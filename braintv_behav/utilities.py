@@ -19,6 +19,7 @@ def create_doc_dataframe(filename):
     data = pd.read_pickle(filename)
 
     df = load_trials(data)
+    df = df[~pd.isnull(df['reward_times'])].reset_index()
 
     #add some columns to the dataframe
     keydict = {
@@ -38,6 +39,7 @@ def create_doc_dataframe(filename):
         'trial_duration': 'trial_duration',
         'computer_name': 'computer_name',
         }
+    
     
     annotate_parameters(df,data,keydict=keydict,inplace=True)
     annotate_startdatetime(df,data,inplace=True)
