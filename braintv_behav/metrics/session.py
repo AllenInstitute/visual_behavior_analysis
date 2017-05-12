@@ -7,27 +7,33 @@ from braintv_behav import masks
 from braintv_behav.utilities import get_response_rates
 
 def discrim(session_trials,change,detect,trial_types=('go','catch'),metric=None,metric_kws=None):
-    
+
     if metric is None:
         metric = d_prime
-    
+
     if metric_kws is None:
         metric_kws = dict()
-        
+
     mask = masks.trial_types(session_trials,trial_types)
-        
-    y_true = session_trials[mask]['change']
-    y_pred = session_trials[mask]['detect']
-        
+
+    y_true = session_trials[mask][change]
+    y_pred = session_trials[mask][detect]
+
     return metric(y_true,y_pred,**metric_kws)
 
 def response_bias(session_trials,detect,trial_types=('go','catch')):
     mask = masks.trial_types(session_trials,trial_types)
-    
+
     return session_trials[mask][detect].mean()
 
 def num_trials(session_trials):
     return len(session_trials)
+
+def num_usable_trials(session_trials):
+
+    usable_trials = session_trials[masks.reward_rate(session_trials)]
+
+    return num_contingent_trials(usable_trials)
 
 
 def num_contingent_trials(session_trials):
@@ -36,21 +42,21 @@ def num_contingent_trials(session_trials):
 def reaction_times(session_trials,percentile=50,trial_types=('go',)):
     """
     reaction times to GO trials
-    
+
     """
     mask = masks.trial_types(session_trials,trial_types)
     quantile = session_trials[mask]['response_latency'].dropna().quantile(percentile/100.0)
-    
+
     return quantile
 
 def total_water(session_trials,trial_types=()):
-    
+
     mask = masks.trial_types(session_trials,trial_types)
-    
+
     return session_trials[mask][(session_trials['reward_times'].map(len)>0)]['reward_volume'].sum()
 
 def earned_water(session_trials):
-    
+
     return total_water(session_trials,('go',))
 
 def peak_dprime(session_trials):
