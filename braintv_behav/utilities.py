@@ -16,6 +16,19 @@ from braintv_behav.data import annotate_filename, fix_autorearded
 
 # -> io.py
 def create_doc_dataframe(filename):
+
+    """ creates a trials dataframe from a detection-of-change session
+
+    Parameters
+    ----------
+    filename : str
+        file path of a pickled detection-of-change session
+
+    Returns
+    -------
+    trials : pandas DataFrame
+
+    """
     data = pd.read_pickle(filename)
 
     df = load_trials(data)
@@ -39,8 +52,8 @@ def create_doc_dataframe(filename):
         'trial_duration': 'trial_duration',
         'computer_name': 'computer_name',
         }
-    
-    
+
+
     annotate_parameters(df,data,keydict=keydict,inplace=True)
     annotate_startdatetime(df,data,inplace=True)
     explode_startdatetime(df,inplace=True)
@@ -82,6 +95,11 @@ def create_doc_dataframe(filename):
 def get_mouse_info(mouse_id):
     '''
     Gets data from the info.txt file in each mouse's folder on aibsdata
+
+    .. note:: Deprecated
+              `utilities.get_mouse_info` will be removed in a future release,
+              it is replaced by `cohorts.mouse_info`
+
     '''
     import warnings
     warnings.warn(
@@ -112,10 +130,10 @@ def get_last_licktimes(df_in,data):
     time_arr = np.hstack((0,np.cumsum(data['vsyncintervals'])/1000.))
 
     licks = time_arr[data['lickData'][0]]
-    
+
     #get times of all changes in this dataset
     change_frames = df_in.change_frame.values
-    
+
     change_times = np.zeros(len(change_frames))*np.nan
     last_lick = np.zeros(len(change_frames))*np.nan
     for ii,frame in enumerate(change_frames):
@@ -142,7 +160,7 @@ def remove_repeated_licks(df_in):
     lt = []
     lf = []
     for idx,row in df_in.iterrows():
-        
+
         #get licks for this frame
         lick_frames_on_this_trial = row.lick_frames
         lick_times_on_this_trial = row.lick_times
@@ -159,7 +177,7 @@ def remove_repeated_licks(df_in):
         else:
             lt.append([])
             lf.append([])
-            
+
     #replace the appropriate rows of the dataframe
     df_in['lick_times'] = lt
     df_in['lick_frames'] = lf
@@ -234,7 +252,7 @@ def return_reward_volumes(cluster_id):
             print "failed to get data"
             print e
         print ""
-        
+
 
 def get_reward_volume_last_session(mouse_id):
     '''
@@ -261,7 +279,7 @@ def get_datafile(mouse_id,year=None,month=None,day=None,return_longest=True,loca
 
     if year == None or day == None or month == None:
         # if any of the date arguments are none, return the newest
-        fnames = glob.glob('{}/*.pkl'.format(location)) 
+        fnames = glob.glob('{}/*.pkl'.format(location))
         fnames_lim = [fn for fn in fnames if not os.path.basename(fn).endswith('df.pkl')]
         newest = max(fnames_lim, key=os.path.getctime)
         return newest
@@ -316,12 +334,12 @@ def calculate_reward_rate(df,window=1.0,trial_window=25,remove_aborted=False):
             warnings.warn("Don't use remove_aborted yet. Code needs work")
             df_temp = df[(df.startdatetime==startdatetime)&(df.trial_type != 'aborted')].reset_index()
         else:
-            df_temp = df[df.startdatetime==startdatetime]  
+            df_temp = df[df.startdatetime==startdatetime]
         trial_number = 0
         for trial in range(len(df_temp)):
             if trial_number <10 :                                        # if in first 10 trials of experiment
                 reward_rate_on_this_lap = np.inf                         # make the reward rate infinite, so that you include the first trials automatically.
-            else:                     
+            else:
                 #ensure that we don't run off the ends of our dataframe                                   # get the correct response rate around the trial
                 min_index = np.max((0,trial-trial_window))
                 max_index = np.min((trial+trial_window,len(df_temp)))
@@ -329,7 +347,7 @@ def calculate_reward_rate(df,window=1.0,trial_window=25,remove_aborted=False):
 
 
                 correct = len(df_roll[df_roll.response_latency<window])    # get a rolling number of correct trials
-                time_elapsed = df_roll.starttime.iloc[-1] - df_roll.starttime.iloc[0]  # get the time elapsed over the trials 
+                time_elapsed = df_roll.starttime.iloc[-1] - df_roll.starttime.iloc[0]  # get the time elapsed over the trials
                 reward_rate_on_this_lap= correct / time_elapsed          # calculate the reward rate
 
             reward_rate[c]=reward_rate_on_this_lap                       # store the rolling average
@@ -403,7 +421,7 @@ def get_end_frame(df_in,last_frame=None):
         end_frames[-1] = int(last_frame)
 
     return end_frames.astype(np.int32)
-    
+
 
 # -> analyze
 def categorize_one_trial(row):
@@ -684,7 +702,7 @@ class Progress_Bar_Widget(object):
     '''
     Progress bar for jupyter notebook
     DRO - 6/13/16
-    mashup of code from: https://github.com/ipython/ipywidgets/issues/624 
+    mashup of code from: https://github.com/ipython/ipywidgets/issues/624
                                     &
                          https://github.com/alexanderkuk/log-progress/blob/master/test.ipynb
     '''
@@ -736,13 +754,13 @@ class Progress_Bar_Widget(object):
         self.progress.value = self.count
         self.progress.bar_style = 'info'
         self.progress.description = self.message + " "+"0%"
-        
+
 
 class Progress_Bar_Text(object):
     """
     Shamelessly stolen, with slight modification, from: https://gist.github.com/minrk/2211026
     """
-    
+
     def __init__(self, iterations,display_count=False,message=""):
 
 
@@ -802,21 +820,21 @@ class Progress_Bar_Text(object):
 class RisingEdge():
     """
     This object implements a "rising edge" detector on a boolean array.
-    
+
     It takes advantage of how pandas applies functions in order.
-    
+
     For example, if the "criteria" column in the `df` dataframe consists of booleans indicating
     whether the row meets a criterion, we can detect the first run of three rows above criterion
     with the following
-    
+
         first_run_of_three = (
             df['criteria']
             .rolling(center=False,window=3)
             .apply(func=RisingEdge().check)
             )
-    
+
     ```
-    
+
     """
     def __init__(self):
         self.firstall = False
