@@ -29,7 +29,7 @@ RIG_NAME = {
     'W7DTMJ026LUL':'DougPC',
     }
 
-COMPUTER_NAME = dict((v,k) for k,v in rig_dict.iteritems())
+COMPUTER_NAME = dict((v,k) for k,v in RIG_NAME.iteritems())
 
 # -> devices.py
 def get_rig_id(in_val,input_type='computer_name'):
@@ -51,8 +51,8 @@ def get_rig_id(in_val,input_type='computer_name'):
     '''
 
     if input_type == 'computer_name' and in_val in RIG_NAME.keys():
-        return rig_dict[in_val]
+        return RIG_NAME[in_val]
     elif input_type == 'rig_id' and in_val in COMPUTER_NAME.keys():
-        return computer_dict[in_val]
+        return COMPUTER_NAME[in_val]
     else:
         return 'unknown'
