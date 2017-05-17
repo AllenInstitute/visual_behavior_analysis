@@ -1,7 +1,7 @@
 import os
 import shutil
 import pandas as pd
-from braintv_behav import basepath, project_dir
+from visual_behavior import basepath, project_dir
 from mouse_info import Mouse
 
 def mouse_info(mouse):

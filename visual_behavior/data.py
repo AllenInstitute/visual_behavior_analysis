@@ -1,8 +1,8 @@
 import os
 import pandas as pd
 import numpy as np
-# from braintv_behav.utilities import load_from_folder
-from braintv_behav.cohorts import basepath, load_cohort_assignment, mouse_info
+# from visual_behavior.utilities import load_from_folder
+from visual_behavior.cohorts import basepath, load_cohort_assignment, mouse_info
 
 from functools import wraps
 
@@ -120,7 +120,7 @@ def annotate_rig_id(df,data):
     try:
         df['rig_id'] = data['rig_id']
     except KeyError:
-        from braintv_behav.devices import get_rig_id
+        from visual_behavior.devices import get_rig_id
         df['rig_id'] = get_rig_id(df['computer_name'][0])
 
 @inplace

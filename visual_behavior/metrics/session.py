@@ -3,8 +3,8 @@
 import numpy as np
 from scipy import stats
 
-from braintv_behav import masks
-from braintv_behav.utilities import get_response_rates
+from visual_behavior import masks
+from visual_behavior.utilities import get_response_rates
 
 def discrim(session_trials,change,detect,trial_types=('go','catch'),metric=None,metric_kws=None):
 

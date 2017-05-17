@@ -1,14 +1,14 @@
 import setuptools
 
 setuptools.setup(
-    name="braintv_behav",
+    name="visual_behavior",
     version="0.1.0",
-    url="http://stash.corp.alleninstitute.org/users/justink/repos/braintv_behavior_piloting/browse",
+    url="http://stash.corp.alleninstitute.org/users/justink/repos/visual_behavior/browse",
 
     author="Justin Kiggins",
     author_email="justink@alleninstitute.org",
 
-    description="project for analyzing pilot behavior for BrainTV",
+    description="analysis package for visual behavior",
     long_description=open('README.md').read(),
 
     packages=setuptools.find_packages(exclude=['data','figures','notebooks','scripts']),

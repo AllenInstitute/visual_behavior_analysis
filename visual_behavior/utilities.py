@@ -8,11 +8,11 @@ from fnmatch import fnmatch
 import socket
 import warnings
 
-from braintv_behav.io import load_trials
+from visual_behavior.io import load_trials
 
-from braintv_behav.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
-from braintv_behav.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
-from braintv_behav.data import annotate_filename, fix_autorearded
+from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
+from visual_behavior.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
+from visual_behavior.data import annotate_filename, fix_autorearded
 
 # -> io.py
 def create_doc_dataframe(filename):
@@ -106,7 +106,7 @@ def get_mouse_info(mouse_id):
         "this function is deprecated. please use the `mouse_info` package",
         DeprecationWarning
     )
-    from braintv_behav.cohorts import mouse_info
+    from visual_behavior.cohorts import mouse_info
     return mouse_info(mouse_id)
 
 # -> analyze.py
@@ -222,7 +222,7 @@ def load_from_folder(foldername,load_existing_dataframe=True,save_dataframe=True
 
     return df
 
-from braintv_behav.devices import get_rig_id
+from visual_behavior.devices import get_rig_id
 
 # -> devices.py
 def return_reward_volumes(cluster_id):

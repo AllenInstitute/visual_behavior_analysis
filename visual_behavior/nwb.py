@@ -4,7 +4,7 @@ import pandas as pd
 
 import nwb
 
-from braintv_behav.io import data_or_pkl, load_time
+from visual_behavior.io import data_or_pkl, load_time
 
 @data_or_pkl
 def create_settings(data):

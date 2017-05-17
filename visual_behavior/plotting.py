@@ -17,7 +17,7 @@ import imaging_behavior.core.utilities as ut
 import imaging_behavior.plotting.plotting_functions as pf
 import imaging_behavior.plotting.utilities as pu
 
-from braintv_behav import utilities as dro
+from visual_behavior import utilities as dro
 
 def make_daily_figure(df_in,mouse_id=None,reward_window=None,sliding_window=100,mouse_image_before=None,mouse_image_after=None):
     '''
