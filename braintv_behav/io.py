@@ -93,6 +93,31 @@ def load_licks(data):
     return licks
 
 @data_or_pkl
+def load_rewards(data):
+    """ Returns each reward in an experiment.
+
+    Parameters
+    ----------
+    data : dict, unpickled experiment (or path to pickled object)
+
+    Returns
+    -------
+    rewards : numpy array
+
+    """
+    try:
+        reward_frames = data['rewards'][:,1].astype(int) - 1
+    except IndexError:
+        reward_frames = np.array([],dtype=int)
+    time = load_time(data)
+    rewards = pd.DataFrame(dict(
+            frame = reward_frames,
+            time = time[reward_frames],
+    ))
+    return rewards
+
+
+@data_or_pkl
 def load_flashes(data):
     """ Returns the stimulus flashes in an experiment.
 
@@ -148,10 +173,6 @@ def load_flashes(data):
 
     # then we find the licks
     licks = load_licks(data)
-
-    # for arr in flashes['frame'].values,licks['frame'].values:
-    #     print len(arr)
-
     licks['flash'] = np.searchsorted(flashes['frame'].values,licks['frame'].values) - 1
 
 
@@ -183,13 +204,8 @@ def load_flashes(data):
     flashes['last_lick'] = flashes['lick'].map(Counter().count_it)
 
     #then we find the rewards
-    reward_frames = data['rewards'][:,1].astype(int) - 1
-
-    rewards = pd.DataFrame(dict(
-            frame = reward_frames,
-            time = data['vsyncintervals'].cumsum()[reward_frames],
-            flash = np.searchsorted(flashes['frame'].values,reward_frames) - 1,
-    ))
+    rewards = load_rewards(data)
+    rewards['flash'] = np.searchsorted(flashes['frame'].values,rewards['frame'].values) - 1
 
     # then we merge in the rewards
     flashes = flashes.merge(
