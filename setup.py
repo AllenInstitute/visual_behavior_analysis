@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    name="braintv_pilot",
+    name="braintv_behav",
     version="0.1.0",
     url="http://stash.corp.alleninstitute.org/users/justink/repos/braintv_behavior_piloting/browse",
 

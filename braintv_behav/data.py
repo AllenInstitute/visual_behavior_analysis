@@ -3,11 +3,13 @@ import pandas as pd
 import numpy as np
 # from braintv_behav.utilities import load_from_folder
 from braintv_behav.cohorts import basepath, load_cohort_assignment, mouse_info
-from braintv_behav.devices import get_rig_id
 
 from functools import wraps
 
 def inplace(func):
+    """ decorator which allows functions that modify a dataframe inplace
+    to use a copy instead
+    """
 
     @wraps(func)
     def df_wrapper(df,*args,**kwargs):
@@ -32,6 +34,23 @@ def inplace(func):
 
 @inplace
 def annotate_parameters(trials,data,keydict=None):
+    """ annotates a dataframe with session parameters
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials (or flashes)
+    data : unpickled session
+    keydict : dict
+        {'column': 'parameter'}
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    io.load_flashes
+    """
     if keydict is None:
         return
     else:
@@ -43,6 +62,19 @@ def annotate_parameters(trials,data,keydict=None):
 
 @inplace
 def explode_startdatetime(df):
+    """ explodes the 'startdatetime' column into date/year/month/day/hour/dayofweek
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials (or flashes)
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
     df['date'] = df['startdatetime'].dt.date.astype(str)
     df['year'] = df['startdatetime'].dt.year
     df['month'] = df['startdatetime'].dt.month
@@ -52,6 +84,19 @@ def explode_startdatetime(df):
 
 @inplace
 def annotate_n_rewards(df):
+    """ computes the number of rewards from the 'reward_times' column
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
     try:
         df['number_of_rewards'] = df['reward_times'].map(len)
     except KeyError:
@@ -59,21 +104,59 @@ def annotate_n_rewards(df):
 
 @inplace
 def annotate_rig_id(df,data):
-    #get the rig_id that the session was run on 
+    """ adds a column with rig id
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
     try:
         df['rig_id'] = data['rig_id']
     except KeyError:
+        from braintv_behav.devices import get_rig_id
         df['rig_id'] = get_rig_id(df['computer_name'][0])
 
 @inplace
 def annotate_startdatetime(df,data):
+    """ adds a column with the session's `startdatetime`
 
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    data : pickled session
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
     df['startdatetime'] = pd.to_datetime(data['startdatetime'])
 
 @inplace
 def annotate_cumulative_reward(trials,data):
+    """ adds a column with the session's cumulative volume
 
-    #calculate cumulative volume
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    data : pickled session
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
     try:
         trials['cumulative_volume'] = trials['reward_volume'].cumsum()
     except:
@@ -82,16 +165,56 @@ def annotate_cumulative_reward(trials,data):
 
 @inplace
 def annotate_filename(df,filename):
+    """ adds `filename` and `filepath` columns to dataframe
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    filename : full filename & path of session's pickle file
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
     df['filepath'] = os.path.split(filename)[0]
     df['filename'] = os.path.split(filename)[-1]
 
 @inplace
 def fix_autorearded(df):
+    """ renames `auto_rearded` columns to `auto_rewarded`
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
     df.rename(columns={'auto_rearded': 'auto_rewarded'}, inplace=True)
 
 
 @inplace
 def annotate_cohort_info(trials):
+    """ adds cohort metadata to the dataframe
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
 
     cohort_assignment = load_cohort_assignment()
 
@@ -104,6 +227,19 @@ def annotate_cohort_info(trials):
 
 @inplace
 def annotate_mouse_info(trials):
+    """ adds mouse_info metadata to the dataframe
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
 
     mouse_df = pd.Series(
         trials['mouse_id'].unique()
@@ -118,14 +254,30 @@ def annotate_mouse_info(trials):
 
 @inplace
 def annotate_change_detect(trials):
+    """ adds `change` and `detect` columns to dataframe
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
 
     trials['change'] = trials['trial_type']=='go'
     trials['detect'] = trials['response']==1.0
 
 
 def get_training_day(df_in):
-    '''adds a column to the dataframe with the number of unique training days up to that point
-         '''
+    """returns a column with the number of unique training days in the dataframe
+
+    NOTE: training days calculated from unique dates in dataframe, so this is
+    unreliable if not all sessions are loaded into the dataframe
+    """
 
     cohort_assignment = load_cohort_assignment()
 
@@ -149,20 +301,82 @@ def get_training_day(df_in):
 
 @inplace
 def annotate_training_day(trials):
+    """adds a column to the dataframe with the number of unique training days
+
+    NOTE: training days calculated from unique dates in dataframe, so this is
+    unreliable if not all sessions are loaded into the dataframe
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
     trials['training_day'] = get_training_day(trials)
 
 @inplace
 def fix_change_time(trials):
+    """ forces `None` values in the `change_time` column to numpy NaN
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
     trials['change_time'] = trials['change_time'].map(lambda x: np.nan if x is None else x)
 
 @inplace
 def explode_response_window(trials):
+    """ explodes the `response_window` column in lower & upper columns
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
     trials['response_window_lower'] = trials['response_window'].map(lambda x: x[0])
     trials['response_window_upper'] = trials['response_window'].map(lambda x: x[1])
 
 
 @inplace
 def annotate_trials(trials):
+    """ performs multiple annotatations:
+
+    - annotate_mouse_info
+    - annotate_cohort_info
+    - annotate_training_day
+    - annotate_change_detect
+    - fix_change_time
+    - explode_response_window
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
 
     annotate_mouse_info(trials,inplace=True)
     annotate_cohort_info(trials,inplace=True)
