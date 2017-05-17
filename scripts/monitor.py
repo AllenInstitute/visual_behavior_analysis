@@ -7,13 +7,19 @@ from slackclient import SlackClient
 from behavior_subscriber import BehaviorSubscriber
 from zro import ZroError
 
+with open('/local1/SECRET.txt','rb') as f:
+    PASSWD = f.readlines()[0].strip()
+
+from jira import JIRA
+jira = JIRA(server='http://jira.corp.alleninstitute.org',basic_auth=('justink', PASSWD))
+
 
 slack_token = "xoxb-149706607461-B3uHZ3maGsyQQIJotdnqVx4T"
 sc = SlackClient(slack_token)
 
 ## setup error logging
 LOG_FILE = '/local1/slackitall.log'
-logger = logging.getLogger('behavior_monitor')
+logger = logging.getLogger('slackitall')
 logger.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -26,7 +32,7 @@ eh = logging.handlers.SMTPHandler(
     mailhost=('aicas-1.corp.alleninstitute.org', 25), 
     fromaddr='justink@alleninstitute.org', 
     toaddrs='justink@alleninstitute.org', 
-    subject='autotrain error', 
+    subject='slackitall error', 
     )
 eh.setLevel(logging.ERROR)
 eh.setFormatter(formatter)
@@ -41,11 +47,11 @@ for c,n in itertools.product('ABCDEF',range(6)):
     CLUSTER['{}{}'.format(c,n+1)] = '#cluster_{}'.format(c.lower())
 
 
-def mouse_started(mouse,user,rig=None):
+def mouse_started(mouse,rig=None):
     sc.api_call(
         "chat.postMessage",
         channel=CLUSTER[rig],
-        text=":tv: :mouse: {} has started {} on {}".format(user,mouse,rig),
+        text=":mouse: {} has started on {} :tv:".format(mouse,rig),
     )
 
 def mouse_finished(mouse,rig,pkl):
@@ -57,7 +63,7 @@ def mouse_finished(mouse,rig,pkl):
     sc.api_call(
         "chat.postMessage",
         channel=CLUSTER[rig],
-        text=":tada: {} finished on {} & received *{:0.2f}uL* water :droplet:".format(mouse,rig,water),
+        text=":tada: {} finished on {} & received *{:0.3f}uL* water :droplet:".format(mouse,rig,water),
     )
 
 def mouse_not_licking(mouse='M999999',rig=None):
@@ -87,21 +93,36 @@ def update_active(data):
             logging.debug('{} starting on {}'.format(data['init_data']['mouse_id'],data['rig_name']))
             ACTIVE[data['rig_name']] = data['init_data']['mouse_id']
 
-        elif data['rig_name'] not in ACTIVE.keys():
+        elif (data['rig_name'] not in ACTIVE.keys()) and (data['rig_name']!='WF1'):
             try:
                 header = sub.proxy.get_current_header(data['rig_name'])
             except ZroError as e:
                 logger.error(e)
                 header = {'mouse_id': 'unknown'}
+                issue = jira.create_issue(
+                    project='VB',
+                    summary=str(e),
+                    components=[{'name':'accumulator'}],
+                    description=str(e),
+                    issuetype={'name':'Bug'},
+                )
+                try: 
+                    jira.add_remote_link(
+                        issue,
+                        jira.issue('VB-92'),
+                        relationship='duplicates',
+                    )
+                except:
+                    pass
 
             ACTIVE[data['rig_name']] = header['mouse_id']
             logger.info('updated ACTIVE status: {}'.format(dict(ACTIVE)))
 
-        if (data['index'] % 10) == 0:
-            logger.debug('rig {}, mouse {},index {}'.format(data['rig_name'],ACTIVE[data['rig_name']],data['index']))
+        if (data['index'] % 25) == 0:
+            logger.info('rig {}, mouse {},index {}'.format(data['rig_name'],ACTIVE[data['rig_name']],data['index']))
 
     except KeyError:
-        logger.info(data)
+        logger.error(data)
 
 @sub.data_hook("*")
 def new_session(data):
@@ -109,11 +130,10 @@ def new_session(data):
         if data['index']==-1:
             mouse_started(
                 data['init_data']['mouse_id'],
-                data['params']['user_id'],
                 data['rig_name'],
             )
     except KeyError:
-        logger.info(data)
+        logger.error(data)
 
 
 @sub.data_hook("*")
@@ -145,7 +165,7 @@ def check_for_licks(data):
                 mouse_not_licking(mouse,data['rig_name'])
                 LICKED[data['rig_name']] = True
     except KeyError:
-        logger.info(data)
+        logger.error(data)
 
 
 if __name__ == "__main__":
