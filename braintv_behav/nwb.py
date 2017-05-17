@@ -4,7 +4,7 @@ import pandas as pd
 
 import nwb
 
-from braintv_behav.io import data_or_pkl
+from braintv_behav.io import data_or_pkl, load_time
 
 @data_or_pkl
 def create_settings(data):
@@ -89,10 +89,6 @@ def save_image_templates(image_templates,borg):
     template.finalize()
     return template
 
-@data_or_pkl
-def load_basetime(data):
-    vsync = np.hstack((0,data['vsyncintervals']))
-    return (vsync.cumsum()) / 1000.0
 
 @data_or_pkl
 def create_nwb(data):

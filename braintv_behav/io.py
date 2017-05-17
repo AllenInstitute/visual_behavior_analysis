@@ -68,7 +68,8 @@ def load_time(data):
     time : numpy array
 
     """
-    return data['vsyncintervals'].cumsum()
+    vsync = np.hstack((0,data['vsyncintervals']))
+    return (vsync.cumsum()) / 1000.0
 
 @data_or_pkl
 def load_licks(data):
@@ -83,7 +84,7 @@ def load_licks(data):
     licks : numpy array
 
     """
-    lick_frames = data['lickData'][0]-1
+    lick_frames = data['lickData'][0]
     time = load_time(data)
 
     licks = pd.DataFrame(dict(
@@ -106,7 +107,7 @@ def load_rewards(data):
 
     """
     try:
-        reward_frames = data['rewards'][:,1].astype(int) - 1
+        reward_frames = data['rewards'][:,1].astype(int)
     except IndexError:
         reward_frames = np.array([],dtype=int)
     time = load_time(data)
@@ -173,7 +174,7 @@ def load_flashes(data):
 
     # then we find the licks
     licks = load_licks(data)
-    licks['flash'] = np.searchsorted(flashes['frame'].values,licks['frame'].values) - 1
+    licks['flash'] = np.searchsorted(flashes['frame'].values,licks['frame'].values)
 
 
     licks = licks[licks['frame'].diff()!=1] # filter out redundant licks
@@ -205,7 +206,7 @@ def load_flashes(data):
 
     #then we find the rewards
     rewards = load_rewards(data)
-    rewards['flash'] = np.searchsorted(flashes['frame'].values,rewards['frame'].values) - 1
+    rewards['flash'] = np.searchsorted(flashes['frame'].values,rewards['frame'].values)
 
     # then we merge in the rewards
     flashes = flashes.merge(
@@ -223,7 +224,7 @@ def load_flashes(data):
         trial_bounds = [dict(index=tr_index,startframe=tr['startframe']) for tr_index,tr in enumerate(data['triallog']) if 'startframe' in tr]
 
     trial_bounds = pd.DataFrame(trial_bounds)
-    flashes['trial'] = np.searchsorted(trial_bounds['startframe'].values,flashes['frame'].values) - 1
+    flashes['trial'] = np.searchsorted(trial_bounds['startframe'].values,flashes['frame'].values)
 
     flashes['flashed'] = data['blank_duration_range'][1]>0
 
