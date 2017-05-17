@@ -1,11 +1,11 @@
-braintv_behavior_piloting
+Visual Behavior
 ==============================
 
 Package for analyzing behavioral data from the BrainTV Visual Behavior Project.
 
 ## Quickstart
 
-    pip install git+http://justink@stash.corp.alleninstitute.org/scm/~justink/braintv_behavior_piloting.git
+    pip install git+http://justink@stash.corp.alleninstitute.org/scm/~justink/visual_behavior.git
 
 ## Installation
 
@@ -42,7 +42,7 @@ Here's a quick overview of each of the files:
 
 ## Contributing
 
-Pull requests are welcome. 
+Pull requests are welcome.
 
 1. Fork the repo
 2. Create a feature branch
@@ -60,4 +60,3 @@ Pull requests are welcome.
 
 - [BrainTV Visual Behavior Project Page](http://confluence.corp.alleninstitute.org/display/CP/Brain+Observatory%3A+Visual+Behavior)
 - [Details on Cohort Training](http://confluence.corp.alleninstitute.org/display/CP/_EXPERIMENTS)
-
