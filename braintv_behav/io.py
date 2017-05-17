@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from functools import wraps
@@ -89,9 +90,7 @@ def load_licks(data):
             frame = lick_frames,
             time = time[lick_frames],
     ))
-
-
-
+    return licks
 
 @data_or_pkl
 def load_flashes(data):
@@ -113,7 +112,14 @@ def load_flashes(data):
 
     """
 
+    time = load_time(data)
+
     stimdf = pd.DataFrame(data['stimuluslog'])
+
+    # for some reason, we sometimes have stim frames with no corresponding time in the vsyncintervals.
+    # we should probably fix the problem, but for now, let's just delete them.
+    stimdf = stimdf[stimdf['frame']<len(time)]
+    # assert stimdf['frame'].max() < len(time)
 
     # first we find the flashes
     try:
@@ -128,21 +134,26 @@ def load_flashes(data):
 
         flashes['change'] = flashes['image_category_change']
     except (AssertionError,KeyError) as e:
-        print "error in {}: {}".format(pkl,e)
+        # print "error in {}: {}".format(pkl,e)
         flashes = stimdf[stimdf['state'].astype(int).diff()>0].reset_index()[['ori','frame']]
         flashes['prior_ori'] = flashes['ori'].shift()
         flashes['ori_change'] = flashes['ori'].ne(flashes['prior_ori']).astype(int)
 
         flashes['change'] = flashes['ori_change']
 
-    time = load_time(data)
+    if len(flashes)==0:
+        return flashes
 
     flashes['time'] = time[flashes['frame']]
 
-
     # then we find the licks
     licks = load_licks(data)
-    licks['flash'] = np.searchsorted(flashes['frame'].values,licks['frame'].values) - 1,
+
+    # for arr in flashes['frame'].values,licks['frame'].values:
+    #     print len(arr)
+
+    licks['flash'] = np.searchsorted(flashes['frame'].values,licks['frame'].values) - 1
+
 
     licks = licks[licks['frame'].diff()!=1] # filter out redundant licks
     licks = licks[licks['flash'].diff()>0] # get first lick from each flash
@@ -191,9 +202,9 @@ def load_flashes(data):
 
     # finally, we assign the trials
     try:
-        trial_bounds = [dict(index=tr['index'],startframe=tr['startframe']) for tr in data['triallog']]
+        trial_bounds = [dict(index=tr['index'],startframe=tr['startframe']) for tr in data['triallog'] if 'startframe' in tr]
     except KeyError:
-        trial_bounds = [dict(index=tr_index,startframe=tr['startframe']) for tr_index,tr in enumerate(data['triallog'])]
+        trial_bounds = [dict(index=tr_index,startframe=tr['startframe']) for tr_index,tr in enumerate(data['triallog']) if 'startframe' in tr]
 
     trial_bounds = pd.DataFrame(trial_bounds)
     flashes['trial'] = np.searchsorted(trial_bounds['startframe'].values,flashes['frame'].values) - 1
