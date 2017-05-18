@@ -91,6 +91,9 @@ def load_licks(data):
             frame = lick_frames,
             time = time[lick_frames],
     ))
+
+    licks[licks['frame'].diff()!=1]
+
     return licks
 
 @data_or_pkl
@@ -175,9 +178,6 @@ def load_flashes(data):
     # then we find the licks
     licks = load_licks(data)
     licks['flash'] = np.searchsorted(flashes['frame'].values,licks['frame'].values)
-
-
-    licks = licks[licks['frame'].diff()!=1] # filter out redundant licks
     licks = licks[licks['flash'].diff()>0] # get first lick from each flash
 
     # then we merge in the licks
