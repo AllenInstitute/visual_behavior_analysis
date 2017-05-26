@@ -490,36 +490,48 @@ def get_response_type(df_in):
     return response_type
 
 # -> analyze
-def assign_color(df_in):
+def assign_color(df_in,palette='default'):
 
     color = [None]*len(df_in)
     for idx in df_in.index:
 
         if df_in.loc[idx]['trial_type'] == 'aborted':
-            # color[idx] = 'lightgray'
-            color[idx] = 'red'
+            if palette.lower() == 'marina':
+                color[idx] = 'lightgray'
+            else:
+                color[idx] = 'red'
 
         elif df_in.loc[idx]['auto_rewarded'] == True:
-            # color[idx]='darkblue'
-            color[idx]='blue'
+            if palette.lower() == 'marina':
+                color[idx]='darkblue'
+            else:
+                color[idx]='blue'
 
         elif df_in.loc[idx]['trial_type'] == 'go':
             if df_in.loc[idx]['response'] == 1:
-                # color[idx]='#55a868'
-                color[idx] = 'darkgreen'
+                if palette.lower() == 'marina':
+                    color[idx]='#55a868'
+                else:
+                    color[idx] = 'darkgreen'
 
             elif df_in.loc[idx]['response'] != 1:
-                # color[idx]='#ccb974'
-                color[idx] = 'lightgreen'
+                if palette.lower() == 'marina':
+                    color[idx]='#ccb974'
+                else:
+                    color[idx] = 'lightgreen'
 
         elif df_in.loc[idx]['trial_type'] == 'catch':
             if df_in.loc[idx]['response'] == 1:
-                # color[idx]='#c44e52'
-                color[idx] = 'darkorange'
+                if palette.lower() == 'marina':
+                    color[idx]='#c44e52'
+                else:
+                    color[idx] = 'darkorange'
 
             elif df_in.loc[idx]['response'] != 1:
-                # color[idx]='#4c72b0'
-                color[idx] = 'yellow'
+                if palette.lower() == 'marina':
+                    color[idx]='#4c72b0'
+                else:
+                    color[idx] = 'yellow'
 
     return color
 
