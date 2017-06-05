@@ -29,10 +29,10 @@ fh.setLevel(logging.INFO)
 fh.setFormatter(formatter)
 
 eh = logging.handlers.SMTPHandler(
-    mailhost=('aicas-1.corp.alleninstitute.org', 25), 
-    fromaddr='justink@alleninstitute.org', 
-    toaddrs='justink@alleninstitute.org', 
-    subject='slackitall error', 
+    mailhost=('aicas-1.corp.alleninstitute.org', 25),
+    fromaddr='justink@alleninstitute.org',
+    toaddrs='justink@alleninstitute.org',
+    subject='slackitall error',
     )
 eh.setLevel(logging.ERROR)
 eh.setFormatter(formatter)
@@ -57,7 +57,7 @@ def mouse_started(mouse,rig=None):
 def mouse_finished(mouse,rig,pkl):
     try:
         water = reward_volume(pkl)
-    
+
     except IndexError:
         water = np.nan
     sc.api_call(
@@ -72,7 +72,7 @@ def mouse_not_licking(mouse='M999999',rig=None):
         channel=CLUSTER[rig],
         text=":rotating_light: :warning: {} hasn't licked at all this session! check for a hardware failure in {} :warning: :rotating_light:".format(mouse,rig),
     )
-    
+
 import numpy as np
 import pandas as pd
 def reward_volume(pkl):
@@ -106,7 +106,7 @@ def update_active(data):
                     description=str(e),
                     issuetype={'name':'Bug'},
                 )
-                try: 
+                try:
                     jira.add_remote_link(
                         issue,
                         jira.issue('VB-92'),
@@ -138,11 +138,14 @@ def new_session(data):
 
 @sub.data_hook("*")
 def tadaaa(data):
-    if data["index"] == -2:
-        mouse = ACTIVE[data['rig_name']]
-        logger.info('{} finished on {}'.format(mouse,data['rig_name']))
-        mouse_finished(mouse,data['rig_name'],data['pkl'])
-        ACTIVE.pop(data['rig_name'])
+    try:
+        if data["index"] == -2:
+            mouse = ACTIVE[data['rig_name']]
+            logger.info('{} finished on {}'.format(mouse,data['rig_name']))
+            mouse_finished(mouse,data['rig_name'],data['pkl'])
+            ACTIVE.pop(data['rig_name'])
+    except KeyError as e:
+        logger.error(e)
 
 LICKED = defaultdict(lambda: None)
 
