@@ -27,6 +27,7 @@ RIG_NAME = {
     'W7VS-SYSLOGIC26':'Widefield-329',
     'OSXLTTF6T6.local':'DougLaptop',
     'W7DTMJ026LUL':'DougPC',
+    'W7DTMJ036PSL':'Marina2P_Sutter'
     }
 
 COMPUTER_NAME = dict((v,k) for k,v in RIG_NAME.iteritems())
