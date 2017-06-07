@@ -5,7 +5,7 @@ Package for analyzing behavioral data from the BrainTV Visual Behavior Project.
 
 ## Quickstart
 
-    pip install git+http://justink@stash.corp.alleninstitute.org/scm/~justink/visual_behavior.git
+    pip install git+http://stash.corp.alleninstitute.org/scm/~justink/visual_behavior.git
 
 ## Installation
 
