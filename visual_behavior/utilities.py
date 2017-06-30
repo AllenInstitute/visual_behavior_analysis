@@ -854,3 +854,36 @@ class RisingEdge():
         if arr.all():
             self.firstall = True
         return self.firstall
+
+import smtplib
+from email.mime.text import MIMEText
+
+def send_email(subject,message,sender,recipients):
+    """
+
+    NOTE: McAfee may prevent the connection to the smtp server.
+
+    If you get a socket.error, try adding "python.exe" to the exclude
+    list described here:
+
+    http://stackoverflow.com/a/25331615/1002170
+
+    """
+
+
+
+    msg = MIMEText(message,'plain')
+    msg['Subject'] = subject
+    msg['From'] = sender
+    msg['Reply-To'] = sender
+
+    if isinstance(recipients, basestring):
+        recipients = [recipients,]
+    recipients = ', '.join(recipients)
+    msg['To'] = recipients
+
+    server = smtplib.SMTP('aicas-1.corp.alleninstitute.org', 25)
+    server.starttls()
+
+    server.sendmail(sender, recipients, msg.as_string())
+    server.quit()
