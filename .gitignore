@@ -59,6 +59,6 @@ target/
 
 # data & analysis
 data/
-notebooks/
+# notebooks/
 notebooks/.ipynb_checkpoints/
 figures/
