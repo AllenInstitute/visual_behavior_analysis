@@ -280,6 +280,7 @@ def get_training_day(df_in):
     """
 
     cohort_assignment = load_cohort_assignment()
+    cohort_assignment = cohort_assignment[~pd.isnull(cohort_assignment['day_zero'])]
 
     day_zero = {r['mouse']:r['day_zero'].strftime("%Y-%m-%d") for _,r in cohort_assignment.iterrows()}
     coh = cohort_assignment.set_index('mouse')['cohort']
