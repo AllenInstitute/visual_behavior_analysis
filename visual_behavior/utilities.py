@@ -605,7 +605,11 @@ def dprime(hit_rate,fa_rate,limits = (0.01,0.99)):
 def get_response_rates(df_in2,sliding_window=100,reward_window=None):
 
     df_in = df_in2.copy()
-    df_in.reset_index(inplace=True)
+    try:
+        df_in.reset_index(inplace=True)
+    except ValueError:
+        del df_in['level_0']
+        df_in.reset_index(inplace=True)
 
     go_responses = pd.Series([np.nan]*len(df_in))
     go_responses[df_in[(df_in.trial_type=='go')&(df_in.response==1)].index] = 1
