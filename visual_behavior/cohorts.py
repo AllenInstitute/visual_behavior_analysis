@@ -34,7 +34,7 @@ def load_cohort_assignment():
     _spreadsheet_path = os.path.join(basepath,"VisualBehaviorDevelopment_CohortIDs.xlsx")
     return pd.read_excel(_spreadsheet_path)
 
-def copy_latest(destination=None):
+def copy_latest(destination=None,cohort_assignment=None):
     """ copies all of the latest pkl files for cohort mice to a local directory
 
     Parameters
@@ -43,8 +43,8 @@ def copy_latest(destination=None):
         destination to copy all of the cohort data file to
 
     """
-
-    cohort_assignment = load_cohort_assignment()
+    if cohort_assignment is None:
+        cohort_assignment = load_cohort_assignment()
     network_dir = basepath
 
     if destination is None:
