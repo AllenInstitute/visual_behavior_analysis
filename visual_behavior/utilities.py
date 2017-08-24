@@ -275,7 +275,7 @@ def get_datafile(mouse_id,year=None,month=None,day=None,return_longest=True,loca
     if location is None and sys.platform == 'darwin':
         location = os.path.join('/Volumes/neuralcoding/behavior/data',mouse_id,'output')
     elif location is None and sys.platform != 'darwin':
-        location = os.path.join('//aibsdata/neuralcoding/behavior/data',mouse_id,'output')
+        location = os.path.join('//allen/programs/braintv/workgroups/neuralcoding/behavior/data',mouse_id,'output')
 
     if year == None or day == None or month == None:
         # if any of the date arguments are none, return the newest
