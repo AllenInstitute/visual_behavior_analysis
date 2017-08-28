@@ -145,7 +145,8 @@ def tadaaa(data):
             mouse_finished(mouse,data['rig_name'],data['pkl'])
             ACTIVE.pop(data['rig_name'])
     except KeyError as e:
-        logger.error(e)
+        # logger.warning(e)
+        pass
 
 LICKED = defaultdict(lambda: None)
 
@@ -168,7 +169,8 @@ def check_for_licks(data):
                 mouse_not_licking(mouse,data['rig_name'])
                 LICKED[data['rig_name']] = True
     except KeyError:
-        logger.error(data)
+        # logger.error(data)
+        pass
 
 
 if __name__ == "__main__":
