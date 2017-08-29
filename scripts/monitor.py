@@ -178,7 +178,7 @@ def check_for_licks(data):
 WARNING_TIMES = [2,5,10,20]
 DEFAULT_LAST_CHANGE = dict(
     last_change = 0,
-    'warnings' = {t:False for t in WARNING_TIMES},
+    warnings = {t:False for t in WARNING_TIMES},
 )
 LAST_CHANGE = defaultdict(lambda: DEFAULT_LAST_CHANGE)
 
@@ -207,13 +207,13 @@ def check_for_last_change(data):
         elif np.isnan(data['change_time'])==False:
 
             last_change = data['change_time']
-            LAST_CHANGE[] = DEFAULT_LAST_CHANGE
+            LAST_CHANGE[rig] = DEFAULT_LAST_CHANGE
             LAST_CHANGE[rig]['last_change'] = data['change_time']
             ## change_detected, reset warning flags
         else:
-            minutes_since_last_change = data['starttime']-last_change)/60.
+            minutes_since_last_change = (data['starttime']-last_change)/60.
 
-            for minutes in [t in WARNING_TIMES if LAST_CHANGE[rig][t]==False]:
+            for minutes in [t for t in WARNING_TIMES if LAST_CHANGE[rig][t]==False]:
                 if minutes_since_last_change > minutes:
 
                     no_changes_happening(
