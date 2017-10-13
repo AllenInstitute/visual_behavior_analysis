@@ -31,7 +31,7 @@ def find_filenames(path,mouse_id):
         ('eye_video_timestamps',['-1.h5']),
         ('face_video',['-2.avi']),
         ('face_video_timestamps',['-2.h5']),
-        ('sync_file',['sync','.h5']),
+        ('sync_file',['ync','.h5']),
         ('behavior_pkl',[mouse_id,'.pkl']),
         ('traces',['races','.csv']),
         ('tif_list',['ecording','.tif']),
@@ -53,7 +53,7 @@ def find_filenames(path,mouse_id):
         if len(filename_dict[key])==0:
             #nothing was found, return None
             filename_dict[key]=None
-        elif len(filename_dict[key])==1:
+        elif len(filename_dict[key])==1 and key is not 'tif_list':
             #only one thing was found, return just the element in the list
             filename_dict[key]=filename_dict[key][0]
 
@@ -89,7 +89,7 @@ def save_h5(data,filename,dtype=float,keyname='data'):
     save an h5 file
     '''
     h5f = h5py.File(filename, 'w')
-    h5f.create_dataset(keyname, data=downsampled_movie,dtype=dtype)
+    h5f.create_dataset(keyname, data=data,dtype=dtype)
     h5f.close()
 
 def load_h5(filename,keyname='data'):
