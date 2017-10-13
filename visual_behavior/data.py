@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-# from visual_behavior.utilities import load_from_folder
 
 
 from functools import wraps
