@@ -678,8 +678,8 @@ def get_response_rates(df_in2,sliding_window=100,reward_window=None):
         df_in.reset_index(inplace=True)
 
     go_responses = pd.Series([np.nan]*len(df_in))
-    go_responses[df_in[(df_in.trial_type=='go')&(df_in.response==1)].index] = 1
-    go_responses[df_in[(df_in.trial_type=='go')&((df_in.response==0)|np.isnan(df_in.response))].index] = 0
+    go_responses[df_in[(df_in.trial_type=='go')&(df_in.response==1)&(df_in.auto_rewarded!=True)].index] = 1
+    go_responses[df_in[(df_in.trial_type=='go')&((df_in.response==0)|np.isnan(df_in.response))&(df_in.auto_rewarded!=True)].index] = 0
     hit_rate = go_responses.rolling(window=100,min_periods=0).mean()
 
     catch_responses = pd.Series([np.nan]*len(df_in))
