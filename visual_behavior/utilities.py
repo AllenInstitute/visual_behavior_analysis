@@ -91,6 +91,72 @@ def create_doc_dataframe(filename):
     return df
 
 
+def load_behavior_data(mice,progressbar=True,save_dataframe=True):
+    """ Loads DoC behavior dataframe for all mice in a list
+
+    Parameters
+    ----------
+    mice : list of strings
+        list of mice to extract data for
+
+    progressbar : boolean (optional argument, default True)
+        optionally displays progress bar during loading process 
+        (can be slow, so it's good to track progress. Maybe this is a good time to go get a coffee?)
+
+    save_dataframe : boolean (optional argument, default True)
+        will save a cached dataframe for each mouse as it loads. This will make the next load faster
+
+    Returns
+    -------
+    trials : pandas DataFrame for all mice
+
+    """
+
+    if type(mice) == 'str':
+        mice = [mice]
+    df = pd.DataFrame()
+    basepath = '//allen/programs/braintv/workgroups/neuralcoding/Behavior/Data'
+    unloaded= []
+    if progressbar == True:
+        pb = progress(len(mice))
+    for mouse in mice:
+        
+        dft = load_from_folder(os.path.join(basepath,mouse,'output'),save_dataframe=save_dataframe)
+        cohort = get_cohort_info(mouse)
+        dft['cohort'] = cohort
+        unloaded.append(dft)
+        if progressbar == True:
+            pb.update(message="{}, C{}".format(mouse,cohort))
+    df = pd.concat([df,]+unloaded,ignore_index=True)
+    
+    return df
+
+
+def get_cohort_info(mouse_id):
+    """ uses cohort spreadsheet to get cohort identity for a mouse
+        (does mouse_info do this?)
+
+    Parameters
+    ----------
+    mouse_id : string
+        mouse of interest
+
+    Returns
+    -------
+    cohort : integer, or None if not found
+
+    """
+    cohorts_path = "//allen/programs/braintv/workgroups/neuralcoding/Behavior/Data/VisualBehaviorDevelopment_CohortIDs.xlsx"
+    cohorts = pd.read_excel(cohorts_path)
+    try:
+        cohort = int(cohorts[cohorts.mouse==mouse_id].cohort.values[0])
+    except:
+        cohort = None
+
+    return cohort
+
+
+
 # -> DEPRECATE
 def get_mouse_info(mouse_id):
     '''

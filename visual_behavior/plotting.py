@@ -573,7 +573,7 @@ def plot_first_licks(pkl):
 
 
 def initialize_legend(ax,colors,linewidth=1,linestyle='-',marker=None,markersize=8,alpha=1):
-        """ initializes a legend on an axis to ensure that first entries match desired line colors
+    """ initializes a legend on an axis to ensure that first entries match desired line colors
 
     Parameters
     ----------
