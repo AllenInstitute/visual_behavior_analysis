@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from visual_behavior.data import inplace
 from visual_behavior.cohorts import load_cohort_assignment, mouse_info
