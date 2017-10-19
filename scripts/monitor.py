@@ -2,6 +2,7 @@
 import subprocess
 import itertools
 import logging, traceback
+import numpy as np
 from collections import defaultdict
 from slackclient import SlackClient
 from behavior_subscriber import BehaviorSubscriber
@@ -145,7 +146,8 @@ def tadaaa(data):
             mouse_finished(mouse,data['rig_name'],data['pkl'])
             ACTIVE.pop(data['rig_name'])
     except KeyError as e:
-        logger.error(e)
+        # logger.warning(e)
+        pass
 
 LICKED = defaultdict(lambda: None)
 
@@ -168,7 +170,64 @@ def check_for_licks(data):
                 mouse_not_licking(mouse,data['rig_name'])
                 LICKED[data['rig_name']] = True
     except KeyError:
-        logger.error(data)
+        # logger.error(data)
+        pass
+
+
+
+WARNING_TIMES = [2,5,10,20]
+DEFAULT_LAST_CHANGE = dict(
+    last_change = 0,
+    warnings = {t:False for t in WARNING_TIMES},
+)
+LAST_CHANGE = defaultdict(lambda: DEFAULT_LAST_CHANGE)
+
+def no_changes_happening(mouse,rig,starttime,minutes_since_last_change):
+    message = "{} is {} minutes into the session and it's been {} minutes since the last change, is everything OK?".format(
+        mouse,
+        starttime,
+        minutes_since_last_change,
+        )
+    sc.api_call(
+        "chat.postMessage",
+        channel=CLUSTER[rig],
+        text=":rotating_light: :warning: {} :warning: :rotating_light:".format(message),
+    )
+
+@sub.data_hook("*")
+def check_for_last_change(data):
+    rig = data['rig_name']
+    try:
+        if data['index']==-1:
+            LAST_CHANGE[rig] = DEFAULT_LAST_CHANGE
+
+        elif data["index"] == -2:
+            LAST_CHANGE.pop(rig)
+
+        elif np.isnan(data['change_time'])==False:
+
+            last_change = data['change_time']
+            LAST_CHANGE[rig] = DEFAULT_LAST_CHANGE
+            LAST_CHANGE[rig]['last_change'] = data['change_time']
+            ## change_detected, reset warning flags
+        else:
+            minutes_since_last_change = (data['starttime']-last_change)/60.
+
+            for minutes in [t for t in WARNING_TIMES if LAST_CHANGE[rig][t]==False]:
+                if minutes_since_last_change > minutes:
+
+                    no_changes_happening(
+                        mouse,
+                        rig,
+                        data['starttime']/60.,
+                        minutes_since_last_change,
+                        )
+                    LAST_CHANGE[rig][minutes] = True
+
+    except KeyError:
+        # logger.error(data)
+        pass
+
 
 
 if __name__ == "__main__":
