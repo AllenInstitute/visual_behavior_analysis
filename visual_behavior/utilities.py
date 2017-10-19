@@ -39,6 +39,7 @@ def create_doc_dataframe(filename):
         'mouse_id': 'mouseid',
         'response_window': 'response_window',
         'task': 'task',
+        'stage': 'stage',
         'session_duration': 'stoptime',
         'user_id': 'userid',
         'LDT_mode': 'lick_detect_training_mode',
@@ -100,7 +101,7 @@ def load_behavior_data(mice,progressbar=True,save_dataframe=True):
         list of mice to extract data for
 
     progressbar : boolean (optional argument, default True)
-        optionally displays progress bar during loading process 
+        optionally displays progress bar during loading process
         (can be slow, so it's good to track progress. Maybe this is a good time to go get a coffee?)
 
     save_dataframe : boolean (optional argument, default True)
@@ -120,7 +121,7 @@ def load_behavior_data(mice,progressbar=True,save_dataframe=True):
     if progressbar == True:
         pb = progress(len(mice))
     for mouse in mice:
-        
+
         dft = load_from_folder(os.path.join(basepath,mouse,'output'),save_dataframe=save_dataframe)
         cohort = get_cohort_info(mouse)
         dft['cohort'] = cohort
@@ -128,7 +129,7 @@ def load_behavior_data(mice,progressbar=True,save_dataframe=True):
         if progressbar == True:
             pb.update(message="{}, C{}".format(mouse,cohort))
     df = pd.concat([df,]+unloaded,ignore_index=True)
-    
+
     return df
 
 

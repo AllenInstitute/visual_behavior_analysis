@@ -1,3 +1,5 @@
+import numpy as np
+import pandas as pd
 from visual_behavior.data import inplace
 from visual_behavior.cohorts import load_cohort_assignment, mouse_info
 
@@ -110,7 +112,7 @@ def annotate_training_info(trials):
     - annotate_mouse_info
     - annotate_cohort_info
     - annotate_training_day
-    
+
     Parameters
     ----------
     trials : pandas DataFrame
