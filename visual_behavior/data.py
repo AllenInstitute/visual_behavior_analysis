@@ -82,27 +82,6 @@ def explode_startdatetime(df):
     df['dayofweek'] = df['startdatetime'].dt.weekday
 
 @inplace
-def fix_oris(df):
-    """ 
-    simplifies the representation of the orientation by representing as ORI modulo 360
-    also changes the column name 'change_ori' to 'final_ori', which is a more accurate label
-
-    Parameters
-    ----------
-    df : pandas DataFrame
-        dataframe of trials (or flashes)
-    inplace : bool, optional
-        modify `trials` in place. if False, returns a copy. default: True
-
-    See Also
-    --------
-    io.load_trials
-    """
-    df['initial_ori'] = df['initial_ori']%360
-    df['final_ori'] = df['change_ori']%360
-    df.drop('change_ori', axis=1,inplace=True)
-
-@inplace
 def annotate_n_rewards(df):
     """ computes the number of rewards from the 'reward_times' column
 
