@@ -13,11 +13,7 @@ try:
 except ImportError:
     pass
 
-import imaging_behavior.core.utilities as ut
-import imaging_behavior.plotting.plotting_functions as pf
-import imaging_behavior.plotting.utilities as pu
-
-from visual_behavior import utilities as dro
+from visual_behavior import utilities as vbu
 
 def make_daily_figure(df_in,mouse_id=None,reward_window=None,sliding_window=100,mouse_image_before=None,mouse_image_after=None):
     '''
@@ -30,7 +26,7 @@ def make_daily_figure(df_in,mouse_id=None,reward_window=None,sliding_window=100,
 
     if reward_window == None:
         try:
-            reward_window = dro.get_reward_window(df_in)
+            reward_window = vbu.get_reward_window(df_in)
         except:
             reward_window = [0.15,1]
     if sliding_window == None:
@@ -39,14 +35,14 @@ def make_daily_figure(df_in,mouse_id=None,reward_window=None,sliding_window=100,
     fig = plt.figure(figsize=(12,8))
 
     #place axes
-    ax = pu.placeAxesOnGrid(fig,dim=(1,4),xspan=(0,1),yspan=(0.425,1),sharey=True)
-    ax_timeline = pu.placeAxesOnGrid(fig,xspan=(0.5,1),yspan=(0.225,0.3))
-    ax_table = pu.placeAxesOnGrid(fig,xspan=(0.1,0.6),yspan=(0,0.25),frameon=False)
+    ax = placeAxesOnGrid(fig,dim=(1,4),xspan=(0,1),yspan=(0.425,1),sharey=True)
+    ax_timeline = placeAxesOnGrid(fig,xspan=(0.5,1),yspan=(0.225,0.3))
+    ax_table = placeAxesOnGrid(fig,xspan=(0.1,0.6),yspan=(0,0.25),frameon=False)
 
     if mouse_image_before is not None:
         try:
             titles = ['before session','after session']
-            ax_image = pu.placeAxesOnGrid(fig,dim=(1,2),xspan=(0.5,1),yspan=(0,0.18),frameon=False)
+            ax_image = placeAxesOnGrid(fig,dim=(1,2),xspan=(0.5,1),yspan=(0,0.18),frameon=False)
             for index,im in enumerate([mouse_image_before,mouse_image_after]):
                 if im is not None:
                     ax_image[index].imshow(im,cmap='gray')
@@ -66,9 +62,9 @@ def make_daily_figure(df_in,mouse_id=None,reward_window=None,sliding_window=100,
     #make trial-based plots
     make_lick_raster_plot(df_nonaborted,ax[0],reward_window=reward_window)
     make_cumulative_volume_plot(df_nonaborted,ax[1])
-    hit_rate,fa_rate,d_prime = dro.get_response_rates(df_nonaborted,sliding_window=sliding_window,reward_window=reward_window)
+    hit_rate,fa_rate,d_prime = vbu.get_response_rates(df_nonaborted,sliding_window=sliding_window,reward_window=reward_window)
     make_rolling_response_probability_plot(hit_rate,fa_rate,ax[2])
-    mean_rate = np.mean(dro.check_responses(df_nonaborted,reward_window=reward_window)==1.0)
+    mean_rate = np.mean(vbu.check_responses(df_nonaborted,reward_window=reward_window)==1.0)
     ax[2].axvline(mean_rate,color='0.5',linestyle=':')
     make_rolling_dprime_plot(d_prime,ax[3])
 
@@ -89,11 +85,11 @@ def make_summary_figure(df,mouse_id):
     #fig,ax=plt.subplots(1,5,sharey=True,figsize=(11.5,8))
     fig = plt.figure(figsize=(11.5,8))
     ax = []
-    ax.append(pu.placeAxesOnGrid(fig,xspan=(0,0.2),yspan=(0,1)))
-    ax.append(pu.placeAxesOnGrid(fig,xspan=(0.22,0.4),yspan=(0,1)))
-    ax.append(pu.placeAxesOnGrid(fig,xspan=(0.42,0.6),yspan=(0,1)))
-    ax.append(pu.placeAxesOnGrid(fig,xspan=(0.62,0.8),yspan=(0,1)))
-    ax.append(pu.placeAxesOnGrid(fig,xspan=(0.82,1),yspan=(0,1)))
+    ax.append(placeAxesOnGrid(fig,xspan=(0,0.2),yspan=(0,1)))
+    ax.append(placeAxesOnGrid(fig,xspan=(0.22,0.4),yspan=(0,1)))
+    ax.append(placeAxesOnGrid(fig,xspan=(0.42,0.6),yspan=(0,1)))
+    ax.append(placeAxesOnGrid(fig,xspan=(0.62,0.8),yspan=(0,1)))
+    ax.append(placeAxesOnGrid(fig,xspan=(0.82,1),yspan=(0,1)))
 
     make_ILI_plot(dfm,session_dates,ax[0])
 
@@ -149,7 +145,7 @@ def make_lick_raster_plot(df_in,ax,reward_window=None):
 
     if reward_window == None:
         try:
-            reward_window = dro.get_reward_window(df_in)
+            reward_window = vbu.get_reward_window(df_in)
         except:
             reward_window = [0.15,1]
 
@@ -172,8 +168,8 @@ def make_lick_raster_plot(df_in,ax,reward_window=None):
 
         ax.axhspan(ii-0.5,ii+0.5, facecolor=df_in.loc[idx]['color'], alpha=0.5)
 
-    ax.plot(ut.flatten_list(lick_x),ut.flatten_list(lick_y),'.k')
-    ax.plot(ut.flatten_list(reward_x),ut.flatten_list(reward_y),'o',color='blue')
+    ax.plot(vbu.flatten_list(lick_x),vbu.flatten_list(lick_y),'.k')
+    ax.plot(vbu.flatten_list(reward_x),vbu.flatten_list(reward_y),'o',color='blue')
 
     ax.set_xlim(-1,5)
     ax.set_ylim(-0.5,ii+0.5)
@@ -233,7 +229,7 @@ def make_info_table(df,ax):
     #make the table
     table = ax.table(cellText=cell_text,
                           rowLabels=[x[0] for x in data],
-                          rowColours=dro.flatten_list(row_colors)[:len(data)],
+                          rowColours=vbu.flatten_list(row_colors)[:len(data)],
                           colLabels=None,
                           loc='center',
                           cellLoc='left',
@@ -274,9 +270,9 @@ def make_session_timeline_plot(df_in,ax):
                color=df_in.iloc[trial-1]['color'],
                alpha=0.75)
 
-    rewards = np.array(ut.flatten_list(rewards))
-    licks = np.array(ut.flatten_list(licks))
-    stimuli = np.array(ut.flatten_list(stimuli))
+    rewards = np.array(vbu.flatten_list(rewards))
+    licks = np.array(vbu.flatten_list(licks))
+    stimuli = np.array(vbu.flatten_list(stimuli))
 
     ax.plot(licks,np.ones_like(licks),'.',color='black')
     ax.plot(rewards,1.1*np.ones_like(rewards),'o',
@@ -314,7 +310,7 @@ def make_ILI_plot(dfm,session_dates,ax):
         df1 = dfm[(dfm.startdatetime == date)]
         dates.append(df1.startdatetime.iloc[0].strftime('%Y-%m-%d'))
 
-        ILI = np.diff(np.array(ut.flatten_list(list(df1.lick_times))))
+        ILI = np.diff(np.array(vbu.flatten_list(list(df1.lick_times))))
         ILI = ILI[ILI>0.500]
         #if no licks are recorded, this will keep the violin plot from failing below
         if len(ILI) == 0:
@@ -391,7 +387,7 @@ def make_performance_plot(df_in,ax,reward_window=None,sliding_window=None):
         if calculate_sliding_window == True:
             sliding_window = len(df1)
 
-        hit_rate,fa_rate,d_prime = dro.get_response_rates(df1,sliding_window=sliding_window,reward_window=reward_window)
+        hit_rate,fa_rate,d_prime = vbu.get_response_rates(df1,sliding_window=sliding_window,reward_window=reward_window)
 
         max_hit_rates.append(np.nanmax(hit_rate[int(len(hit_rate)/3):]))
         max_false_alarm_rates.append(np.nanmax(fa_rate[int(len(hit_rate)/3):]))
@@ -432,7 +428,7 @@ def make_dprime_plot(df_in,ax,reward_window=None,return_vals=False,sliding_windo
         if calculate_sliding_window == True:
             sliding_window = len(df1)
 
-        hit_rate,fa_rate,d_prime = dro.get_response_rates(df1,sliding_window=sliding_window,reward_window=reward_window)
+        hit_rate,fa_rate,d_prime = vbu.get_response_rates(df1,sliding_window=sliding_window,reward_window=reward_window)
 
         max_hit_rates.append(np.nanmax(hit_rate[int(len(hit_rate)/3):]))
         max_false_alarm_rates.append(np.nanmax(fa_rate[int(len(hit_rate)/3):]))
@@ -484,12 +480,12 @@ def DoC_PsychometricCurve(input,ax=None,parameter='delta_ori',title="",linecolor
 
     if isinstance(input,str):
         #if a string is input, assume it's a filname. Load it
-        df = dro.create_doc_dataframe(input)
-        response_df = dro.make_response_df(df[((df.trial_type=='go')|(df.trial_type=='catch'))])
+        df = vbu.create_doc_dataframe(input)
+        response_df = vbu.make_response_df(df[((df.trial_type=='go')|(df.trial_type=='catch'))])
     elif isinstance(input,pd.DataFrame) and 'response_probability' not in input.columns:
         #this would mean that a response_probability dataframe has not been passed. Create it
         df = input
-        response_df = dro.make_response_df(df[((df.trial_type=='go')|(df.trial_type=='catch'))])
+        response_df = vbu.make_response_df(df[((df.trial_type=='go')|(df.trial_type=='catch'))])
     elif isinstance(input,pd.DataFrame) and 'response_probability' in input.columns:
         response_df = input
     else:
@@ -503,7 +499,7 @@ def DoC_PsychometricCurve(input,ax=None,parameter='delta_ori',title="",linecolor
     else:
         xlabel=parameter
 
-    pf.plotPsychometric(response_df[parameter],
+    plot_psychometric(response_df[parameter],
                         response_df['response_probability'],
                         CI=response_df['CI'],
                         xlim=xlim,
@@ -521,6 +517,188 @@ def DoC_PsychometricCurve(input,ax=None,parameter='delta_ori',title="",linecolor
 
     return ax
 
+def plot_psychometric(x,y,initial_guess=(0.1,1,0.5,0.5),alpha=1,xval_jitter=0,**kwargs):
+    '''
+    Uses the psychometric plotting function in psy to make a psychometric curve with a fit
+    '''
+
+    ax = kwargs.get('ax', defaults['ax'])
+    ylabel = kwargs.get('ylabel','Respone Probability')
+    title = kwargs.get('title',defaults['title'])
+    show_line = kwargs.get('show_line',True)
+    show_points = kwargs.get('show_points',True)
+    linecolor = kwargs.get('linecolor',defaults['linecolor'])
+    linewidth = kwargs.get('linewidth',defaults['linewidth'])
+    linestyle = kwargs.get('linestyle','-')
+    fontsize = kwargs.get('fontsize',defaults['fontsize'])
+    yerr = kwargs.get('yerr',None)
+    CI = kwargs.get('CI',None)
+    logscale = kwargs.get('logscale',False)
+    marker = kwargs.get('marker','o')
+    markersize = kwargs.get('markersize',9)
+    fittype = kwargs.get('fittype','Weibull')
+    returnvals = kwargs.get('returnvals',False)
+    showXLabel = kwargs.get('showXLabel',True)
+    showYLabel = kwargs.get('showYLabel',True)
+    xticks = kwargs.get('xticks',None)
+    xlim = kwargs.get('xlim',[-0.1,1.1])
+    minval = kwargs.get('minval',None)
+    zorder = kwargs.get("zorder",np.inf)
+    linealpha = alpha
+
+    x = np.array(x,dtype=np.float)
+
+    if logscale == True:
+        xlabel = kwargs.get('xlabel','Contrast (log scale)')
+    else:
+        xlabel = kwargs.get('xlabel','Contrast')
+
+    # turn confidence intervals into lower and upper errors
+    if CI is not None:
+        lerr = []
+        uerr = []
+        for i in range(len(x)):
+            lerr.append(y[i]-CI[i][0])
+            uerr.append(CI[i][1]-y[i])
+        yerr = [lerr,uerr]
+
+    if ax == None:
+        fig, ax = plt.subplots(1, 1)
+
+    if logscale == True:
+
+        if xticks == None:
+            minval = 0.03 if minval==None else minval
+            ax.set_xticks(np.log10([minval,0.05,0.1,0.25,0.5,1]))
+            ax.set_xticklabels([0,0.05,0.1,0.25,0.5,1])
+        else:
+            minval = 0.03 if minval==None else minval
+            ax.set_xticks(np.log10([minval]+xticks[1:]))
+            ax.set_xticklabels(xticks)
+
+
+        ax.set_xlim([np.log10(minval-0.001),np.log10(xlim[1])])
+    else:
+        if xticks == None:
+            ax.set_xlim(xlim)
+            ax.set_xticks([0,0.2,0.4,0.6,0.8,1])
+        else:
+            ax.set_xticks(xticks)
+            ax.set_xticklabels(xticks)
+
+        ax.set_xlim(xlim)
+
+    #because the log of 0 is -inf, we need to replace a 0 contrast with a small positive number to avoid an error
+    if logscale == True and x[0] == 0:
+        x[0]=minval
+
+    
+    x = np.float64(x)
+    y = np.float64(y)
+    if logscale == False and show_points is True:
+        xvals_to_plot = x
+        if xval_jitter != 0:
+            xvals_to_plot = [xval_jitter*np.random.randn()+v for v in xvals_to_plot]
+        l = ax.plot(xvals_to_plot,y,marker=marker,markersize=markersize,color=linecolor,linestyle='None',zorder=zorder,alpha=linealpha )
+    elif logscale == True and show_points is True:
+        xvals_to_plot = np.log10(x)
+        if xval_jitter != 0:
+            xvals_to_plot = [xval_jitter*np.random.randn()+v for v in xvals_to_plot]
+        l = ax.plot(xvals_to_plot,y,marker=marker,markersize=markersize,color=linecolor,linestyle='None',zorder=zorder,alpha=linealpha )
+    else:
+        l = None
+    try:
+        # Plot error bars
+        if 'yerr' is not None and show_points is True:
+            # Plot error on data points
+            if logscale == False:
+                (l_err, caps, _)  = ax.errorbar(xvals_to_plot,y,markersize=markersize,yerr=yerr,color=linecolor,linestyle='None',zorder=zorder,alpha=linealpha )
+            else:
+                (l_err, caps, _)  = ax.errorbar(xvals_to_plot,y,markersize=markersize,yerr=yerr,color=linecolor,linestyle='None',zorder=zorder,alpha=linealpha )
+            for cap in caps:
+                cap.set_markeredgewidth(0)
+                cap.set_linewidth(2)
+        else:
+            l_err = 'None'
+    except Exception,e:
+        print "failed to add error bars",e
+    if show_line == True:
+        try:
+            # Fit with either 'Weibull' for 'Logistic'     
+            p_guess=initial_guess
+            #NOTE: changed to scipy.optimize.leastsquares on 2/15/17 to allow bounds to be explicitly passed
+            result = sp.optimize.least_squares(residuals,
+                                               p_guess,
+                                               args=(x,y,fittype),
+                                               bounds=([-np.inf,-np.inf,0,0],[np.inf,np.inf,1,1]))
+            p = result.x
+            alpha, beta, Lambda, Gamma = p
+            # Plot curve fit
+            xp = np.linspace(min(x), max(x), 1001)
+            pxp = curve_fit(p,xp,fittype)
+            if logscale == False:
+                l_fit = ax.plot(xp, pxp,linestyle=linestyle,linewidth=linewidth,color=linecolor,alpha=linealpha )
+            else:
+                l_fit = ax.plot(np.log10(xp), pxp, linestyle=linestyle,linewidth=linewidth,color=linecolor,alpha=linealpha)
+        except Exception,e:
+            print "failed to plot sigmoid",e
+    
+
+
+    if showYLabel == True:
+        ax.set_ylabel(ylabel,fontsize=fontsize)
+    else:
+        ax.set_yticklabels([])
+    if showXLabel == True:
+        ax.set_xlabel(xlabel,fontsize=fontsize)
+    else:
+        ax.set_xticklabels([])
+
+    ax.set_ylim([-0.05,1.05])
+    ax.set_title(title,fontsize=fontsize+1)
+    ax.tick_params(labelsize=fontsize-1)
+
+    if returnvals == True:
+        # c50 = np.true_divide(np.diff(pxp[:1:-1]),2)[0]
+        # print "C50:",c50
+        # closest_idx = (np.abs(pxp-c50)).argmin()
+        # c50_xval = xp[closest_idx]
+        (c50_xval,c50)=getThreshold(p,criterion=0.5,fittype='Weibull')
+        return ax,l,l_err,l_fit,p,(c50_xval,c50)
+    else:
+        return ax
+
+def curve_fit(p,x,fittype='Weibull'):
+    
+    x = np.array(x)
+    if fittype.lower() == 'logistic': 
+        alpha,beta,Lambda,Gamma=p   
+        y = Gamma + (1 - Gamma - Lambda)*(1/(1+np.exp(-(x-alpha)/beta)))
+    elif fittype.lower() == 'weibull':
+        alpha,beta,Lambda,Gamma=p
+        y = Gamma + (1 - Gamma - Lambda)*(1-np.exp(-(x/alpha)**beta))
+    elif fittype.lower() == 'gaussian_like':
+        mu,sigma,a=p
+        y = a*np.exp(-(x-mu)**2/(2*sigma**2))
+    else:
+        print "NO FIT TYPE DEFINED"
+    return y
+    
+def residuals(p,x,y,fittype='Weibull'):
+    res = y - curve_fit(p,x,fittype)
+    return res
+
+def getThreshold(p,criterion=0.5,fittype='Weibull'):
+    '''
+    given fit parameters for a sigmoid, returns the contrast and response probability corresponding to a particular criterion
+    '''
+    x = np.linspace(0,1,1001)
+    y = curve_fit(p,x,fittype=fittype)
+    
+    yval = criterion*(1-p[2]-p[3])+p[3]
+    xval = np.interp(yval, y,x)
+    return xval,yval
+
 def plot_first_licks(pkl):
     """
     plots distribution of first lick times for a file.
@@ -531,7 +709,7 @@ def plot_first_licks(pkl):
 
     """
     
-    trials = dro.create_doc_dataframe(pkl)
+    trials = vbu.create_doc_dataframe(pkl)
     
     trials['first_lick'] = trials['lick_times'].map(lambda l: l[0] if len(l)>0 else np.nan)
     trials['first_lick'] = trials['first_lick'] - trials['starttime']
@@ -595,3 +773,67 @@ def initialize_legend(ax,colors,linewidth=1,linestyle='-',marker=None,markersize
     """
     for color in colors:
         ax.plot(np.nan,np.nan,color=color,linewidth=linewidth,linestyle=linestyle,marker=marker,markersize=markersize,alpha=alpha)
+
+
+def placeAxesOnGrid(fig,dim=[1,1],xspan=[0,1],yspan=[0,1],wspace=None,hspace=None,sharex=False,sharey=False,
+                    frameon=True):
+    '''
+    Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
+    DRO
+    
+    Takes as arguments:
+        fig: figure handle - required
+        dim: number of rows and columns in the subaxes - defaults to 1x1
+        xspan: fraction of figure that the subaxes subtends in the x-direction (0 = left edge, 1 = right edge)
+        yspan: fraction of figure that the subaxes subtends in the y-direction (0 = top edge, 1 = bottom edge)
+        wspace and hspace: white space between subaxes in vertical and horizontal directions, respectively
+        
+    returns:
+        subaxes handles
+    '''
+    import matplotlib.gridspec as gridspec
+
+    outer_grid = gridspec.GridSpec(100,100)
+    inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0],dim[1],
+                                                  subplot_spec=outer_grid[int(100*yspan[0]):int(100*yspan[1]),int(100*xspan[0]):int(100*xspan[1])],
+                                                  wspace=wspace, hspace=hspace)
+    
+    #NOTE: A cleaner way to do this is with list comprehension:
+    # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
+    inner_ax = dim[0]*[dim[1]*[fig]] #filling the list with figure objects prevents an error when it they are later replaced by axis handles
+    inner_ax = np.array(inner_ax)
+    idx = 0
+    for row in range(dim[0]):
+        for col in range(dim[1]):
+            if row > 0 and sharex == True:
+                share_x_with = inner_ax[0][col]
+            else:
+                share_x_with = None
+
+            if col > 0 and sharey == True:
+                share_y_with = inner_ax[row][0]
+            else:
+                share_y_with = None
+
+            inner_ax[row][col] = plt.Subplot(fig, 
+                                            inner_grid[idx],
+                                            sharex=share_x_with,
+                                            sharey=share_y_with,
+                                            frameon=frameon,
+                                            )
+
+            if row == dim[0]-1 and sharex == True:
+                inner_ax[row][col].xaxis.set_ticks_position('bottom')
+            elif row < dim[0] and sharex == True:
+                plt.setp(inner_ax[row][col].get_xticklabels(), visible=False)
+
+            if col == 0 and sharey == True:
+                inner_ax[row][col].yaxis.set_ticks_position('left')
+            elif col > 0 and sharey == True:
+                plt.setp(inner_ax[row][col].get_yticklabels(), visible=False)
+
+            fig.add_subplot(inner_ax[row,col])
+            idx += 1
+
+    inner_ax = np.array(inner_ax).squeeze().tolist() #remove redundant dimension
+    return inner_ax
