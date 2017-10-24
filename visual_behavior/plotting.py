@@ -7,6 +7,7 @@ import time
 import platform
 import sys
 import getpass
+from scipy import optimize
 try:
     import seaborn as sns
     sns.set_style('white')
@@ -522,15 +523,15 @@ def plot_psychometric(x,y,initial_guess=(0.1,1,0.5,0.5),alpha=1,xval_jitter=0,**
     Uses the psychometric plotting function in psy to make a psychometric curve with a fit
     '''
 
-    ax = kwargs.get('ax', defaults['ax'])
+    ax = kwargs.get('ax', None)
     ylabel = kwargs.get('ylabel','Respone Probability')
-    title = kwargs.get('title',defaults['title'])
+    title = kwargs.get('title','')
     show_line = kwargs.get('show_line',True)
     show_points = kwargs.get('show_points',True)
-    linecolor = kwargs.get('linecolor',defaults['linecolor'])
-    linewidth = kwargs.get('linewidth',defaults['linewidth'])
+    linecolor = kwargs.get('linecolor','k')
+    linewidth = kwargs.get('linewidth',2)
     linestyle = kwargs.get('linestyle','-')
-    fontsize = kwargs.get('fontsize',defaults['fontsize'])
+    fontsize = kwargs.get('fontsize',10)
     yerr = kwargs.get('yerr',None)
     CI = kwargs.get('CI',None)
     logscale = kwargs.get('logscale',False)
@@ -627,10 +628,12 @@ def plot_psychometric(x,y,initial_guess=(0.1,1,0.5,0.5),alpha=1,xval_jitter=0,**
             # Fit with either 'Weibull' for 'Logistic'     
             p_guess=initial_guess
             #NOTE: changed to scipy.optimize.leastsquares on 2/15/17 to allow bounds to be explicitly passed
-            result = sp.optimize.least_squares(residuals,
-                                               p_guess,
-                                               args=(x,y,fittype),
-                                               bounds=([-np.inf,-np.inf,0,0],[np.inf,np.inf,1,1]))
+            result = optimize.least_squares(
+                residuals,
+                p_guess,
+                args=(x,y,fittype),
+                bounds=([-np.inf,-np.inf,0,0],[np.inf,np.inf,1,1])
+                )
             p = result.x
             alpha, beta, Lambda, Gamma = p
             # Plot curve fit
