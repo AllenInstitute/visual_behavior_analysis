@@ -63,6 +63,7 @@ def make_daily_figure(df_in,mouse_id=None,reward_window=None,sliding_window=100,
     #make trial-based plots
     make_lick_raster_plot(df_nonaborted,ax[0],reward_window=reward_window)
     make_cumulative_volume_plot(df_nonaborted,ax[1])
+    #note (DRO - 10/31/17): after removing the autorewarded trials from the calculation, will these vectors be of different length than the lick raster?
     hit_rate,fa_rate,d_prime = vbu.get_response_rates(df_nonaborted,sliding_window=sliding_window,reward_window=reward_window)
     make_rolling_response_probability_plot(hit_rate,fa_rate,ax[2])
     mean_rate = np.mean(vbu.check_responses(df_nonaborted,reward_window=reward_window)==1.0)
@@ -474,11 +475,16 @@ def make_total_volume_plot(df_in,ax):
     ax.set_ylim(-1,len(dates))
     ax.invert_yaxis()
 
-def DoC_PsychometricCurve(input,ax=None,parameter='delta_ori',title="",linecolor='black',
-    xval_jitter=0,initial_guess=(0.1,1,0.2,0.2),fontsize=14,logscale=True,minval=0.4,
-    xticks=[0.0,1.0,2.5,5.0,10.0,20.0,45.0,90.0],xlim=(0,90)):
+def DoC_PsychometricCurve(input,ax=None,parameter='delta_ori',title="",linecolor='black',linewidth=2,alpha=0.75,
+    xval_jitter=0,initial_guess=(np.log10(20),1,0.2,0.2),fontsize=14,logscale=True,minval=0.4,
+    xticks=[0.0,1.0,2.5,5.0,10.0,20.0,45.0,90.0],xlim=(0,90),returnvals=False,mintrials=20,**kwargs):
 
+    '''
+    A specialized function for plotting psychometric curves in the delta_orientation versinon of the detection of change task
+    Makes some specific assumptions about plotting parameters
 
+    Important note: the 'mintrials' argument will disregard any datapoints with fewer observations than its set value
+    '''
     if isinstance(input,str):
         #if a string is input, assume it's a filname. Load it
         df = vbu.create_doc_dataframe(input)
@@ -500,9 +506,9 @@ def DoC_PsychometricCurve(input,ax=None,parameter='delta_ori',title="",linecolor
     else:
         xlabel=parameter
 
-    plot_psychometric(response_df[parameter],
-                        response_df['response_probability'],
-                        CI=response_df['CI'],
+    params = plot_psychometric(response_df[response_df.attempts>=mintrials][parameter].values,
+                        response_df[response_df.attempts>=mintrials]['response_probability'].values,
+                        CI=response_df[response_df.attempts>=mintrials]['CI'].values,
                         xlim=xlim,
                         xlabel=xlabel,
                         xticks = xticks,
@@ -511,12 +517,14 @@ def DoC_PsychometricCurve(input,ax=None,parameter='delta_ori',title="",linecolor
                         logscale = logscale,
                         ax = ax,
                         linecolor = linecolor,
-                        alpha=0.75,
+                        linewidth=linewidth,
+                        alpha=alpha,
                         xval_jitter=xval_jitter,
                         initial_guess=initial_guess,
-                        fontsize=fontsize)
+                        fontsize=fontsize,
+                        returnvals=returnvals)
 
-    return ax
+    return params
 
 def plot_psychometric(x,y,initial_guess=(0.1,1,0.5,0.5),alpha=1,xval_jitter=0,**kwargs):
     '''
@@ -646,8 +654,6 @@ def plot_psychometric(x,y,initial_guess=(0.1,1,0.5,0.5),alpha=1,xval_jitter=0,**
         except Exception,e:
             print "failed to plot sigmoid",e
     
-
-
     if showYLabel == True:
         ax.set_ylabel(ylabel,fontsize=fontsize)
     else:
@@ -666,7 +672,7 @@ def plot_psychometric(x,y,initial_guess=(0.1,1,0.5,0.5),alpha=1,xval_jitter=0,**
         # print "C50:",c50
         # closest_idx = (np.abs(pxp-c50)).argmin()
         # c50_xval = xp[closest_idx]
-        (c50_xval,c50)=getThreshold(p,criterion=0.5,fittype='Weibull')
+        (c50_xval,c50)=getThreshold(p,x,criterion=0.5,fittype='Weibull')
         return ax,l,l_err,l_fit,p,(c50_xval,c50)
     else:
         return ax
@@ -691,11 +697,10 @@ def residuals(p,x,y,fittype='Weibull'):
     res = y - curve_fit(p,x,fittype)
     return res
 
-def getThreshold(p,criterion=0.5,fittype='Weibull'):
+def getThreshold(p,x=np.linspace(0,1,1001),criterion=0.5,fittype='Weibull'):
     '''
-    given fit parameters for a sigmoid, returns the contrast and response probability corresponding to a particular criterion
+    given fit parameters for a sigmoid, returns the x and y values corresponding to a particular criterion
     '''
-    x = np.linspace(0,1,1001)
     y = curve_fit(p,x,fittype=fittype)
     
     yval = criterion*(1-p[2]-p[3])+p[3]
