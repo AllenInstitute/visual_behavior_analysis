@@ -16,9 +16,9 @@ def data_or_pkl(func):
     def pkl_wrapper(first_arg,*args,**kwargs):
 
         if isinstance(first_arg, basestring):
-            return func(pd.read_pickle(first_arg))
+            return func(pd.read_pickle(first_arg),*args,**kwargs)
         else:
-            return func(first_arg)
+            return func(first_arg,*args,**kwargs)
 
 
     return pkl_wrapper
@@ -72,12 +72,14 @@ def load_time(data):
     return (vsync.cumsum()) / 1000.0
 
 @data_or_pkl
-def load_licks(data):
+def load_licks(data,time=None):
     """ Returns each lick in an experiment.
 
     Parameters
     ----------
     data : dict, unpickled experiment (or path to pickled object)
+    time : np.array, optional
+        array of times for each stimulus frame
 
     Returns
     -------
@@ -85,7 +87,8 @@ def load_licks(data):
 
     """
     lick_frames = data['lickData'][0]
-    time = load_time(data)
+    if time is None:
+        time = load_time(data)
 
     licks = pd.DataFrame(dict(
             frame = lick_frames,
@@ -97,12 +100,14 @@ def load_licks(data):
     return licks
 
 @data_or_pkl
-def load_rewards(data):
+def load_rewards(data,time=None):
     """ Returns each reward in an experiment.
 
     Parameters
     ----------
-    data : dict, unpickled experiment (or path to pickled object)
+    data : dict, unpickled experiment (or path to pickled object))
+    time : np.array, optional
+        array of times for each stimulus frame
 
     Returns
     -------
@@ -113,7 +118,8 @@ def load_rewards(data):
         reward_frames = data['rewards'][:,1].astype(int)
     except IndexError:
         reward_frames = np.array([],dtype=int)
-    time = load_time(data)
+    if time is None:
+        time = load_time(data)
     rewards = pd.DataFrame(dict(
             frame = reward_frames,
             time = time[reward_frames],
@@ -122,14 +128,16 @@ def load_rewards(data):
 
 
 @data_or_pkl
-def load_flashes(data):
+def load_flashes(data,time=None):
     """ Returns the stimulus flashes in an experiment.
 
     NOTE: Currently only works for images & gratings.
 
     Parameters
     ----------
-    data : dict, unpickled experiment (or path to pickled object)
+    data : dict, unpickled experiment (or path to pickled object))
+    time : np.array, optional
+        array of times for each stimulus frame
 
     Returns
     -------
@@ -140,8 +148,9 @@ def load_flashes(data):
     load_trials : loads trials
 
     """
-
-    time = load_time(data)
+    if time is None:
+        print '`time` not passed. using vsync from pkl file'
+        time = load_time(data)
 
     stimdf = pd.DataFrame(data['stimuluslog'])
 
