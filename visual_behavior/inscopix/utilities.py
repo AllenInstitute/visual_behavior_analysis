@@ -36,14 +36,17 @@ def find_filenames(path,mouse_id):
         ('traces',['races','.csv']),
         ('tif_list',['ecording','.tif']),
         ('downsampled_movie',['ownsampled','.h5']),
-        ('zscored_movie',['scored','.h5'])
+        ('zscored_movie',['scored','.h5']),
+        ('IC_list',['IC','.tif'])
     ]
 
+    #initialize the filename dictionary
     filename_dict={}
     for file_description,string_list in things_to_look_for:
         filename_dict[file_description]=[]
-        #is there a way to avoid walking down the directory path every time?
-        for directory, dirnames, filenames in os.walk(path):
+
+    for directory, dirnames, filenames in os.walk(path):
+        for file_description,string_list in things_to_look_for:
             for fn in filenames:
                 bools = [fn.find(s)>0 for s in string_list]
                 if sum(bools)==len(bools):
@@ -63,6 +66,9 @@ def find_filenames(path,mouse_id):
     if filename_dict['tif_list'] is not None:
         filename_dict['tif_list']=sorted(filename_dict['tif_list'])
         filename_dict['tif_list']=[filename_dict['tif_list'][-1]]+filename_dict['tif_list'][:-1]
+
+    if filename_dict['IC_list'] is not None:
+        filename_dict['IC_list']=sorted(filename_dict['IC_list'])
 
 
     return filename_dict
