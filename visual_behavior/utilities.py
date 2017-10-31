@@ -119,7 +119,7 @@ def load_behavior_data(mice,progressbar=True,save_dataframe=True):
     basepath = '//allen/programs/braintv/workgroups/neuralcoding/Behavior/Data'
     unloaded= []
     if progressbar == True:
-        pb = progress(len(mice))
+        pb = Progress_Bar_Text(len(mice))
     for mouse in mice:
 
         dft = load_from_folder(os.path.join(basepath,mouse,'output'),save_dataframe=save_dataframe)
