@@ -1,5 +1,6 @@
+import six
 import pandas as pd
-from visual_behavior import metrics
+from visual_behavior.metrics import session
 from visual_behavior.metrics import classification
 
 def create_summarizer(**kwargs):
@@ -29,19 +30,20 @@ def create_summarizer(**kwargs):
 #                       task=get_task,
 #                       )
 
+
 def session_level_summary(trials,**kwargs):
 
     summarizer = create_summarizer(
-        d_prime_peak = metrics.peak_dprime,
-        d_prime = lambda grp: metrics.discrim(grp,'change','detect',metric=classification.d_prime),
-        discrim_p = lambda grp: metrics.discrim(grp,'change','detect',metric=classification.discrim_p),
-        response_bias = lambda grp: metrics.response_bias(grp,'detect'),
-        earned_water = metrics.earned_water,
-        num_contingent_trials = metrics.num_contingent_trials,
-        lick_latency_median = session.reaction_times,
-        fraction_time_aborted = metrics.fraction_time_aborted,
-        hit_rate = lambda grp: metrics.discrim(grp,'change','detect',metric=classification.hit_rate),
-        false_alarm_rate = lambda grp: metrics.discrim(grp,'change','detect',metric=classification.false_alarm_rate),
+        d_prime_peak = session.peak_dprime,
+        d_prime = lambda grp: session.discrim(grp,'change','detect',metric=classification.d_prime),
+        discrim_p = lambda grp: session.discrim(grp,'change','detect',metric=classification.discrim_p),
+        response_bias = lambda grp: session.response_bias(grp,'detect'),
+        earned_water = session.earned_water,
+        num_contingent_trials = session.num_contingent_trials,
+        lick_latency_median = session.lick_latency,
+        fraction_time_aborted = session.fraction_time_aborted,
+        hit_rate = lambda grp: session.discrim(grp,'change','detect',metric=classification.hit_rate),
+        false_alarm_rate = lambda grp: session.discrim(grp,'change','detect',metric=classification.false_alarm_rate),
         **kwargs
     )
 
@@ -57,13 +59,13 @@ def session_level_summary(trials,**kwargs):
 def epoch_level_summary(trials,epoch_length=5.0):
 
     summarizer = create_summarizer(
-        d_prime = lambda grp: metrics.discrim(grp,'change','detect',metric=classification.d_prime),
-        response_bias = lambda grp: metrics.response_bias(grp,'detect'),
-        earned_water = metrics.earned_water,
+        d_prime = lambda grp: session.discrim(grp,'change','detect',metric=classification.d_prime),
+        response_bias = lambda grp: session.response_bias(grp,'detect'),
+        earned_water = session.earned_water,
         lick_latency_median = session.reaction_times,
-        fraction_time_aborted = metrics.fraction_time_aborted,
-        hit_rate = lambda grp: metrics.discrim(grp,'change','detect',metric=classification.hit_rate),
-        false_alarm_rate = lambda grp: metrics.discrim(grp,'change','detect',metric=classification.false_alarm_rate),
+        fraction_time_aborted = session.fraction_time_aborted,
+        hit_rate = lambda grp: session.discrim(grp,'change','detect',metric=classification.hit_rate),
+        false_alarm_rate = lambda grp: session.discrim(grp,'change','detect',metric=classification.false_alarm_rate),
     )
 
     epoch_summary = (
