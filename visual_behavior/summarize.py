@@ -8,8 +8,6 @@ def create_summarizer(**kwargs):
     importantly, this function is specially formed to be used in the "apply"
     method after a groupby.
 
-
-
     """
 
     def apply_func(group):
@@ -19,8 +17,20 @@ def create_summarizer(**kwargs):
     return apply_func
 
 
+# def calc_minimum_delta_ori(dft):
+#     # doug's code
+#     return minimum_delta_ori
+#
+# def get_task(dft):
+#     return dft.iloc[0].task
+#
+# session_level_summary(trials,
+#                       minimum_delta_ori=calc_minimum_delta_ori,
+#                       task=get_task,
+#                       )
 
-def session_level_summary(trials):
+def session_level_summary(trials,**kwargs):
+
     summarizer = create_summarizer(
         d_prime_peak = metrics.peak_dprime,
         d_prime = lambda grp: metrics.discrim(grp,'change','detect',metric=classification.d_prime),
@@ -32,12 +42,13 @@ def session_level_summary(trials):
         fraction_time_aborted = metrics.fraction_time_aborted,
         hit_rate = lambda grp: metrics.discrim(grp,'change','detect',metric=classification.hit_rate),
         false_alarm_rate = lambda grp: metrics.discrim(grp,'change','detect',metric=classification.false_alarm_rate),
+        **kwargs
     )
 
     session_summary = (
         trials
         .groupby(['mouse','startdatetime'])
-        .apply(compute_metrics)
+        .apply(summarizer)
         .reset_index()
         )
 
