@@ -299,8 +299,8 @@ def annotate_lick_vigor(trials):
     io.load_trials
     """
 
-    df['number_of_licks'] = df['lick_times'].map(len)
-    df['lick_rate'] = df['lick_times'].map(lambda arr: np.diff(arr).mean())
+    trials['number_of_licks'] = trials['lick_times'].map(len)
+    trials['lick_rate'] = trials['lick_times'].map(lambda arr: np.diff(arr).mean())
 
 @inplace
 def annotate_trials(trials):
