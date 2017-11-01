@@ -39,14 +39,24 @@ def num_usable_trials(session_trials):
 def num_contingent_trials(session_trials):
     return session_trials['trial_type'].isin(['go','catch']).sum()
 
-def reaction_times(session_trials,percentile=50,trial_types=('go',)):
+def lick_latency(session_trials,percentile=50,trial_types=('go',)):
     """
-    reaction times to GO trials
+    median (or some other %ile) time to first lick to GO trials
 
     """
     mask = masks.trial_types(session_trials,trial_types)
     quantile = session_trials[mask]['response_latency'].dropna().quantile(percentile/100.0)
 
+    return quantile
+
+def lick_rate(session_trials,percentile=50,trial_types=('go',)):
+    mask = masks.trial_types(session_trials,trial_types)
+    quantile = session_trials[mask]['lick_rate'].dropna().quantile(percentile/100.0)
+    return quantile
+
+def lick_quantity(session_trials,trial_types=('go',)):
+    mask = masks.trial_types(session_trials,trial_types)
+    quantile = session_trials[mask]['number_of_licks'].mean()
     return quantile
 
 def total_water(session_trials,trial_types=()):
