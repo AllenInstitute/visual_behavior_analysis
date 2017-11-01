@@ -255,6 +255,52 @@ def explode_response_window(trials):
     trials['response_window_lower'] = trials['response_window'].map(lambda x: x[0])
     trials['response_window_upper'] = trials['response_window'].map(lambda x: x[1])
 
+@inplace
+def annotate_epochs(trials,epoch_length=5.0):
+    """ annotates the dataframe with an additional column which designates
+    the "epoch" from session start
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    epoch_length : float
+        length of epochs in seconds
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
+
+    trials['epoch'] = (
+        trials['change_time']
+        .map(lambda x: x / (60 * epoch_length))
+        .round()
+        .map(lambda x: x * epoch_length)
+        .map(lambda x: "{:0.1f} min".format(x))
+    )
+
+@inplace
+def annotate_lick_vigor(trials):
+    """ annotates the dataframe with two columns that indicate the number of
+    licks and mean interlick interval
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
+
+    df['number_of_licks'] = df['lick_times'].map(len)
+    df['lick_rate'] = df['lick_times'].map(lambda arr: np.diff(arr).mean())
 
 @inplace
 def annotate_trials(trials):
