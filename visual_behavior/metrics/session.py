@@ -2,9 +2,10 @@
 
 import numpy as np
 from scipy import stats
+import pandas as pd
 
 from visual_behavior import masks
-from visual_behavior.utilities import get_response_rates
+from visual_behavior.utilities import get_response_rates,flatten_list
 
 def discrim(session_trials,change,detect,trial_types=('go','catch'),metric=None,metric_kws=None):
 
@@ -77,6 +78,23 @@ def peak_dprime(session_trials):
     except ValueError:
         return np.nan
 
+def peak_hit_rate(session_trials):
+    mask = (session_trials['trial_type']!='aborted')
+    hr,_,_ = get_response_rates(session_trials[mask],sliding_window=100)
+    try:
+        return np.nanmax(hr[50:])
+    except ValueError:
+        return np.nan
+
+
+def peak_false_alarm_rate(session_trials):
+    mask = (session_trials['trial_type']!='aborted')
+    _,far,_ = get_response_rates(session_trials[mask],sliding_window=100)
+    try:
+        return np.nanmax(far[50:])
+    except ValueError:
+        return np.nan
+
 def fraction_time_aborted(session_trials):
 
     trial_fractions = session_trials.groupby('trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
@@ -84,3 +102,50 @@ def fraction_time_aborted(session_trials):
         return trial_fractions['aborted']
     except KeyError:
         return 0.0
+
+def total_number_of_licks(session_trials):
+    '''
+    total number of licks in the session
+    if too low (<~50), could signal lick detection trouble
+    '''
+    return len(flatten_list(session_trials.lick_frames.values))
+
+def session_id(session_trials):
+
+    return session_trials.iloc[0].session_id
+
+def blank_duration(session_trials):
+    '''blank screen duration between each stimulus flash'''
+    if not pd.isnull(session_trials.iloc[0].blank_duration_range):
+        return session_trials.iloc[0].blank_duration_range[0]
+    else:
+        return np.nan
+
+def session_duration(session_trials):
+
+    return session_trials['trial_length'].sum()
+
+def day_of_week(session_trials):
+
+    return session_trials['dayofweek'].iloc[0]
+
+def change_time_distribution(session_trials):
+
+    return session_trials['stimulus_distribution'].iloc[0]
+
+def trial_duration(session_trials):
+
+    return session_trials['trial_duration'].iloc[0]
+
+def user_id(session_trials):
+
+    return session_trials.iloc[0].user_id
+
+def filename(session_trials):
+
+    return session_trials.iloc[0].filename
+
+def stimulus(session_trials):
+
+    return session_trials['stimulus'].iloc[0]
+
