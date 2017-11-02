@@ -186,17 +186,21 @@ def load_flashes(data,time=None):
 
     # then we find the licks
     licks = load_licks(data)
-    licks['flash'] = np.searchsorted(flashes['frame'].values,licks['frame'].values)
-    licks = licks[licks['flash'].diff()>0] # get first lick from each flash
+    licks['flash_index'] = np.searchsorted(
+        flashes['frame'].values,
+        licks['frame'].values,
+        side='right',
+        ) - 1
+    licks = licks[licks['flash_index'].diff()>0] # get first lick from each flash
 
     # then we merge in the licks
     flashes = flashes.merge(
         licks,
         left_index=True,
-        right_on='flash',
+        right_on='flash_index',
         suffixes=('','_lick'),
         how='left'
-    ).set_index('flash')
+    ).set_index('flash_index')
 
 
     flashes['lick'] = ~pd.isnull(flashes['time_lick'])
@@ -215,16 +219,22 @@ def load_flashes(data,time=None):
 
     #then we find the rewards
     rewards = load_rewards(data)
-    rewards['flash'] = np.searchsorted(flashes['frame'].values,rewards['frame'].values)
+    rewards['flash_index'] = np.searchsorted(
+        flashes['frame'].values,
+        rewards['frame'].values,
+        side='right',
+        ) - 1
 
     # then we merge in the rewards
     flashes = flashes.merge(
         rewards,
         left_index=True,
-        right_on='flash',
+        right_on='flash_index',
         suffixes=('','_reward'),
         how='left',
-    ).set_index('flash')
+    ).set_index('flash_index')
+
+    flashes['reward'] = ~pd.isnull(flashes['time_reward'])
 
     # finally, we assign the trials
     try:
@@ -233,7 +243,11 @@ def load_flashes(data,time=None):
         trial_bounds = [dict(index=tr_index,startframe=tr['startframe']) for tr_index,tr in enumerate(data['triallog']) if 'startframe' in tr]
 
     trial_bounds = pd.DataFrame(trial_bounds)
-    flashes['trial'] = np.searchsorted(trial_bounds['startframe'].values,flashes['frame'].values)
+    flashes['trial'] = np.searchsorted(
+        trial_bounds['startframe'].values,
+        flashes['frame'].values,
+        side='right',
+        ) - 1
 
     flashes['flashed'] = data['blank_duration_range'][1]>0
 
