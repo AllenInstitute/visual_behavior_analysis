@@ -141,6 +141,25 @@ def annotate_startdatetime(df,data):
     df['startdatetime'] = pd.to_datetime(data['startdatetime'])
 
 @inplace
+def assign_session_id(df_in):
+    """ adds a column with a unique ID for the session defined as 
+            a combination of the mouse ID and startdatetime
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
+    df_in['session_id'] = df_in['mouse_id']+'_'+df_in['startdatetime'].map(lambda x: x.isoformat())
+
+
+@inplace
 def annotate_cumulative_reward(trials,data):
     """ adds a column with the session's cumulative volume
 
@@ -255,6 +274,52 @@ def explode_response_window(trials):
     trials['response_window_lower'] = trials['response_window'].map(lambda x: x[0])
     trials['response_window_upper'] = trials['response_window'].map(lambda x: x[1])
 
+@inplace
+def annotate_epochs(trials,epoch_length=5.0):
+    """ annotates the dataframe with an additional column which designates
+    the "epoch" from session start
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    epoch_length : float
+        length of epochs in seconds
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
+
+    trials['epoch'] = (
+        trials['change_time']
+        .map(lambda x: x / (60 * epoch_length))
+        .round()
+        .map(lambda x: x * epoch_length)
+        .map(lambda x: "{:0.1f} min".format(x))
+    )
+
+@inplace
+def annotate_lick_vigor(trials):
+    """ annotates the dataframe with two columns that indicate the number of
+    licks and mean interlick interval
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
+
+    trials['number_of_licks'] = trials['lick_times'].map(len)
+    trials['lick_rate'] = trials['lick_times'].map(lambda arr: np.diff(arr).mean())
 
 @inplace
 def annotate_trials(trials):
@@ -278,6 +343,9 @@ def annotate_trials(trials):
 
     ## build arrays for change detection
     annotate_change_detect(trials,inplace=True)
+
+    #assign a session ID to each row
+    assign_session_id(trials,inplace=True)
 
     ## calculate reaction times
     fix_change_time(trials,inplace=True)

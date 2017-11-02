@@ -12,7 +12,7 @@ from visual_behavior.io import load_trials
 
 from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
 from visual_behavior.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
-from visual_behavior.data import annotate_filename, fix_autorearded
+from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor
 
 # -> io.py
 def create_doc_dataframe(filename):
@@ -63,6 +63,7 @@ def create_doc_dataframe(filename):
     fix_autorearded(df,inplace=True)
     annotate_cumulative_reward(df,data,inplace=True)
     annotate_filename(df,filename,inplace=True)
+    annotate_lick_vigor(df,inplace=True)
 
 
     for col in ('auto_rewarded','change_time'):
