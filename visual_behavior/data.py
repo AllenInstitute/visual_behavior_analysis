@@ -141,6 +141,25 @@ def annotate_startdatetime(df,data):
     df['startdatetime'] = pd.to_datetime(data['startdatetime'])
 
 @inplace
+def assign_session_id(df_in):
+    """ adds a column with a unique ID for the session defined as 
+            a combination of the mouse ID and startdatetime
+
+    Parameters
+    ----------
+    trials : pandas DataFrame
+        dataframe of trials
+    inplace : bool, optional
+        modify `trials` in place. if False, returns a copy. default: True
+
+    See Also
+    --------
+    io.load_trials
+    """
+    df_in['session_id'] = df_in['mouse_id']+'_'+df_in['startdatetime'].map(lambda x: x.isoformat())
+
+
+@inplace
 def annotate_cumulative_reward(trials,data):
     """ adds a column with the session's cumulative volume
 
@@ -324,6 +343,9 @@ def annotate_trials(trials):
 
     ## build arrays for change detection
     annotate_change_detect(trials,inplace=True)
+
+    #assign a session ID to each row
+    assign_session_id(trials,inplace=True)
 
     ## calculate reaction times
     fix_change_time(trials,inplace=True)
