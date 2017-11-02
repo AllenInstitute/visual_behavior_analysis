@@ -189,6 +189,7 @@ def load_flashes(data,time=None):
     licks['flash_index'] = np.searchsorted(
         flashes['frame'].values,
         licks['frame'].values,
+        side='right',
         ) - 1
     licks = licks[licks['flash_index'].diff()>0] # get first lick from each flash
 
@@ -199,7 +200,7 @@ def load_flashes(data,time=None):
         right_on='flash_index',
         suffixes=('','_lick'),
         how='left'
-    ).set_index('flash')
+    ).set_index('flash_index')
 
 
     flashes['lick'] = ~pd.isnull(flashes['time_lick'])
@@ -221,6 +222,7 @@ def load_flashes(data,time=None):
     rewards['flash_index'] = np.searchsorted(
         flashes['frame'].values,
         rewards['frame'].values,
+        side='right',
         ) - 1
 
     # then we merge in the rewards
@@ -230,7 +232,9 @@ def load_flashes(data,time=None):
         right_on='flash_index',
         suffixes=('','_reward'),
         how='left',
-    ).set_index('flash')
+    ).set_index('flash_index')
+
+    flashes['reward'] = ~pd.isnull(flashes['time_reward'])
 
     # finally, we assign the trials
     try:
@@ -242,6 +246,7 @@ def load_flashes(data,time=None):
     flashes['trial'] = np.searchsorted(
         trial_bounds['startframe'].values,
         flashes['frame'].values,
+        side='right',
         ) - 1
 
     flashes['flashed'] = data['blank_duration_range'][1]>0
