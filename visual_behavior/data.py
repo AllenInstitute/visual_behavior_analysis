@@ -142,7 +142,7 @@ def annotate_startdatetime(df,data):
 
 @inplace
 def assign_session_id(df_in):
-    """ adds a column with a unique ID for the session defined as 
+    """ adds a column with a unique ID for the session defined as
             a combination of the mouse ID and startdatetime
 
     Parameters
@@ -298,7 +298,7 @@ def annotate_epochs(trials,epoch_length=5.0):
         .map(lambda x: x / (60 * epoch_length))
         .round()
         .map(lambda x: x * epoch_length)
-        .map(lambda x: "{:0.1f} min".format(x))
+        # .map(lambda x: "{:0.1f} min".format(x))
     )
 
 @inplace
