@@ -210,3 +210,21 @@ def make_traces_plot(data,N_ICs=60,spread_factor=1,scale_factor=0.25,pad=1,title
         return fig,ax
     else:
         return ax
+
+def heat_plot(traces,t=None,ax=None,colorbar=True,clim=[1,5],cmap='magma',label='z-scored activity'):
+    if ax == None:
+        fig,ax=plt.subplots(figsize=(9,5))
+    if type(traces)==pd.core.frame.DataFrame:
+        t=traces['Time (s)'].values
+        heatmap=traces[[col for col in traces.columns if 'Time' not in col]].values.T
+    else:
+        heatmap=traces
+    extent = [t[0],t[-1],np.shape(heatmap)[0],0]
+    im=ax.imshow(heatmap,aspect='auto',extent=extent,clim=clim,cmap=cmap,interpolation='none')
+    if colorbar==True:
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size = "5%", pad = 0.05, aspect=2.3/0.15)
+        plt.colorbar(im, cax = cax, extendfrac=20,label=label)
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('IC Number')
