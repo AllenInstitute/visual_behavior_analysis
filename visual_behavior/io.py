@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from scipy.signal import medfilt
+
 
 from functools import wraps
 def data_or_pkl(func):
@@ -272,3 +274,26 @@ def load_flashes(data,time=None):
             pass
 
     return flashes
+
+
+@data_or_pkl
+def load_running_speed(data,smooth=True,time=None):
+
+    if time is None:
+        print '`time` not passed. using vsync from pkl file'
+        time = load_time(data)
+
+    dx = data['dx']
+    dx_filt = medfilt(dx, kernel_size=5)  # remove big, single frame spikes in encoder values
+    theta_raw = np.cumsum(np.array(dx_filt))  # wheel rotations
+    time_array = np.hstack((0, np.cumsum(self.pkl['vsyncintervals']) / 1000.))  # vsync frames
+    speed_rad_per_s = np.hstack((np.diff(theta_raw[:len(time_array)]) / np.mean(np.diff(time_array)), 0))
+    wheel_diameter = 6.5 * 2.54  # 6.5" wheel diameter
+    running_radius = 0.5 * (
+        2.0 * wheel_diameter / 3.0)  # assume the animal runs at 2/3 the distance from the wheel center
+    running_speed_cm_per_sec = np.pi * speed_rad_per_s * running_radius / 180.
+    if smooth:
+        running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
+
+    running_speed = pd.DataFrame({'speed (cm/s)':running_speed_cm_per_sec,'time':time})
+    return running_speed
