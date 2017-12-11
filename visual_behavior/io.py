@@ -298,14 +298,14 @@ def load_running_speed(data,smooth=False,time=None):
         raise NotImplementedError
 
     accel = calc_deriv(speed,time)
-    # jerk = calc_deriv(accel,time)
+    jerk = calc_deriv(accel,time)
 
 
     running_speed = pd.DataFrame(
         {
             'speed (cm/s)':speed,
             'acceleration (cm/s^2)': accel,
-            # 'jerk (cm/s^3)': jerk,
+            'jerk (cm/s^3)': jerk,
             },
         index=time,
         )
