@@ -285,7 +285,7 @@ def load_running_speed(data,smooth=False,time=None):
         time = load_time(data)
 
     dx = np.array(data['dx'])
-    dx = signal.medfilt(dx, kernel_size=5)  # remove big, single frame spikes in encoder values
+    dx = medfilt(dx, kernel_size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
 
     time = time[:len(dx)]
