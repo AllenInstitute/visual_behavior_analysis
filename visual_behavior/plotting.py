@@ -757,6 +757,51 @@ def plot_first_licks(pkl):
     
     return f,ax
 
+def show_image(img,x=None,y=None,figsize=(10,10),ax=None,cmin=None,cmax=None,cmap=None,colorbar=False,colorbarlabel="",fontcolor='black',show_grid=False,
+    colorbarticks=None,colorbarlocation='right',title=None,alpha=1,origin='upper',hide_ticks=True,aspect=1,interpolation='none',fontsize=16,returnval='image'):
+    '''
+    A simple image display function
+    '''
+    if cmin==None:
+        cmin=np.min(img)
+    if cmax==None:
+        cmax=np.max(img)
+    if ax is None:
+        fig,ax = plt.subplots(figsize=figsize)
+    if cmap == None:
+        cmap=cm.gray
+    im = ax.imshow(img, cmap=cmap,clim=[cmin,cmax],alpha=alpha,origin=origin,aspect=aspect,interpolation=interpolation)
+    ax.grid(show_grid)
+    if hide_ticks == True:
+        ax.set_xticks([])
+        ax.set_yticks([])
+    if title is not None:
+        ax.set_title(title,color=fontcolor)
+
+    if colorbar==True:
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+        divider = make_axes_locatable(ax)
+        if colorbarlocation == 'right':
+            cax = divider.append_axes("right", size = "5%", pad = 0.05, aspect=2.3*aspect/0.05)
+            cbar = plt.colorbar(im, cax = cax, extendfrac=20,label=colorbarlabel,orientation='vertical')
+            cbar.set_alpha(1)
+            cbar.set_label(colorbarlabel,size=fontsize,rotation=90)
+            cbar.draw_all()
+
+        elif colorbarlocation == 'bottom':
+            cax = divider.append_axes("bottom", size = "5%", pad = 0.05, aspect=1/(2.3*aspect/0.05))
+            cbar = plt.colorbar(im, cax = cax, extendfrac=20,label=colorbarlabel,orientation='horizontal')
+            cbar.solids.set_edgecolor("face")
+            cbar.set_label(colorbarlabel,size=fontsize)
+        if colorbarticks is not None:
+            cbar.set_ticks(colorbarticks)
+
+
+    if returnval == 'axis':
+        return ax
+    elif returnval == 'image':
+        return im
+
 
 def initialize_legend(ax,colors,linewidth=1,linestyle='-',marker=None,markersize=8,alpha=1):
     """ initializes a legend on an axis to ensure that first entries match desired line colors

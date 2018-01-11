@@ -3,8 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import h5py
 import os
+import warnings
 
-def find_filenames(path,mouse_id):
+def find_filenames(path,mouse_id=None,camera_config='widefield'):
     """ searches a path and returns a dictionary containing all of the necessary 
         files to analyze an inscopix recording sessino
 
@@ -21,24 +22,45 @@ def find_filenames(path,mouse_id):
 
     """
 
+    if not mouse_id:
+        mouse_id='none'
+        warnings.warn('No mouse ID specified. Will not be able to locate mouse-specific files such as the behavior log file')
+
     #a list of tuples, with each tuple of the form (v0,v1) where:
     #   v0 = descriptive name of file
     #   v1 = list of strings to search for that uniquely identify the file
+
+    if camera_config == 'widefield':
+        camera_list = [
+            ('behavior_video',['-0.avi']),
+            ('behavior_video_timestamps',['-0.h5']),
+            ('eye_video',['-1.avi']),
+            ('eye_video_timestamps',['-1.h5']),
+            ('face_video',['-2.avi']),
+            ('face_video_timestamps',['-2.h5']),
+        ]
+    elif camera_config == 'laptop':
+        camera_list = [
+            ('laptop_video',['-0.avi']),
+            ('laptop_video_timestamps',['-0.h5']),
+            ('webcam_video',['-1.avi']),
+            ('webcam_video_timestamps',['-1.h5']),
+        ]
+    else:
+        camera_list = []
+
     things_to_look_for = [
-        ('behavior_video',['-0.avi']),
-        ('behavior_video_timestamps',['-0.h5']),
-        ('eye_video',['-1.avi']),
-        ('eye_video_timestamps',['-1.h5']),
-        ('face_video',['-2.avi']),
-        ('face_video_timestamps',['-2.h5']),
         ('sync_file',['ync','.h5']),
+        ('xml_file',['.xml']),
         ('behavior_pkl',[mouse_id,'.pkl']),
         ('traces',['races','.csv']),
         ('tif_list',['ecording','.tif']),
         ('downsampled_movie',['ownsampled','.h5']),
         ('zscored_movie',['scored','.h5']),
         ('IC_list',['IC','.tif'])
-    ]
+    ] + camera_list
+
+
 
     #initialize the filename dictionary
     filename_dict={}
@@ -73,6 +95,12 @@ def find_filenames(path,mouse_id):
 
     return filename_dict
 
+def mkdir(path):
+    folder = os.path.split(path)[-1]
+    basedir = os.path.split(path)[0]
+    if folder not in os.listdir(basedir):
+        os.mkdir(os.path.join(basedir,folder))
+
 def quadratic_func(x, a, b, c):
     return a*x**2 + b*x + c
 
@@ -88,7 +116,25 @@ def detrend_movie(movie):
         print i,j
     return detrended_movie
 
-
+def parse_xml(xmlfile):
+    '''
+    Pulls attributes from auto-saved xml file, turns into Python dictionary
+    '''
+    attributes = {}
+    f=open(xmlfile,'r')
+    for line in f.readlines():
+        if 'attr name' in line:
+            key = line.split('"')[1]
+            value = line.split('"')[2].split('</attr')[0][1:]
+            attributes[key]=value
+    
+    #try turning attributes into floats
+    for attritube in attributes.keys():
+        try:
+            attributes[attritube] = float(attributes[attritube])
+        except Exception as e:
+            pass
+    return attributes
 
 def save_h5(data,filename,dtype=float,keyname='data'):
     '''
@@ -116,6 +162,8 @@ def downsample_and_concatenate_tifs(tif_list,spatial_downsample_factor=4,tempora
     from skimage.measure import block_reduce
     from skimage import io as skio
     fsmall=[]
+    if type(tif_list)==str:
+        tif_list=[tif_list]
     for tif in tif_list:
         print 'loading ',tif
         f = skio.imread(tif)
@@ -162,3 +210,21 @@ def make_traces_plot(data,N_ICs=60,spread_factor=1,scale_factor=0.25,pad=1,title
         return fig,ax
     else:
         return ax
+
+def heat_plot(traces,t=None,ax=None,colorbar=True,clim=[1,5],cmap='magma',label='z-scored activity'):
+    if ax == None:
+        fig,ax=plt.subplots(figsize=(9,5))
+    if type(traces)==pd.core.frame.DataFrame:
+        t=traces['Time (s)'].values
+        heatmap=traces[[col for col in traces.columns if 'Time' not in col]].values.T
+    else:
+        heatmap=traces
+    extent = [t[0],t[-1],np.shape(heatmap)[0],0]
+    im=ax.imshow(heatmap,aspect='auto',extent=extent,clim=clim,cmap=cmap,interpolation='none')
+    if colorbar==True:
+        from mpl_toolkits.axes_grid1 import make_axes_locatable
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size = "5%", pad = 0.05, aspect=2.3/0.15)
+        plt.colorbar(im, cax = cax, extendfrac=20,label=label)
+    ax.set_xlabel('Time (s)')
+    ax.set_ylabel('IC Number')
