@@ -303,10 +303,10 @@ def load_running_speed(data,smooth=False,time=None):
 
     running_speed = pd.DataFrame(
         {
+            'time': time,
             'speed (cm/s)':speed,
             'acceleration (cm/s^2)': accel,
             'jerk (cm/s^3)': jerk,
             },
-        index=time,
         )
     return running_speed
