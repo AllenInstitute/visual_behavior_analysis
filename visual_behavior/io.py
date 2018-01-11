@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+from scipy.signal import medfilt
+from .analyze import calc_deriv, rad_to_dist
+
 
 from functools import wraps
 def data_or_pkl(func):
@@ -272,3 +275,38 @@ def load_flashes(data,time=None):
             pass
 
     return flashes
+
+
+@data_or_pkl
+def load_running_speed(data,smooth=False,time=None):
+
+    if time is None:
+        print '`time` not passed. using vsync from pkl file'
+        time = load_time(data)
+
+    dx = np.array(data['dx'])
+    dx = medfilt(dx, kernel_size=5)  # remove big, single frame spikes in encoder values
+    dx = np.cumsum(dx)  # wheel rotations
+
+    time = time[:len(dx)]
+
+    speed = calc_deriv(dx,time)
+    speed = rad_to_dist(speed)
+
+    if smooth:
+        #running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
+        raise NotImplementedError
+
+    accel = calc_deriv(speed,time)
+    jerk = calc_deriv(accel,time)
+
+
+    running_speed = pd.DataFrame(
+        {
+            'time': time,
+            'speed (cm/s)':speed,
+            'acceleration (cm/s^2)': accel,
+            'jerk (cm/s^3)': jerk,
+            },
+        )
+    return running_speed
