@@ -78,6 +78,7 @@ def create_doc_dataframe(filename):
     df['response'] = check_responses(df)
     df['trial_length'] = calculate_trial_length(df)
     df['endframe'] = get_end_frame(df,last_frame = len(data['vsyncintervals']))
+    df['endtime'] = get_end_time(df,last_time=np.sum(data['vsyncintervals']))
     df['color'] = assign_color(df)
     df['response_type'] = get_response_type(df)
     df['lick_frames'] = get_lick_frames(df,data)
@@ -476,6 +477,16 @@ def calculate_trial_length(df_in):
             pass
 
     return trial_length
+
+def get_end_time(df_in,last_time=np.nan):
+    '''creates a vector of end times for each trial, which is just the start time for the next trial'''
+    end_times = np.zeros_like(df_in.index)*np.nan
+    for ii,row in df_in.iterrows():
+        if ii>0:
+            end_times[ii-1]=row['starttime']
+    end_times[ii]=last_time
+    return end_times
+
 
 # -> analyze
 def get_end_frame(df_in,last_frame=None):
