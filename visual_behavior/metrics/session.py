@@ -50,13 +50,13 @@ def lick_latency(session_trials,percentile=50,trial_types=('go',)):
 
     return quantile
 
-def lick_rate(session_trials,percentile=50,trial_types=('go',)):
-    mask = masks.trial_types(session_trials,trial_types)
-    quantile = session_trials[mask]['lick_rate'].dropna().quantile(percentile/100.0)
+def hit_lick_rate(session_trials):
+    mask = session_trials['change'] & session_trials['detect']
+    quantile = session_trials[mask]['lick_rate_Hz'].dropna().mean()
     return quantile
 
-def lick_quantity(session_trials,trial_types=('go',)):
-    mask = masks.trial_types(session_trials,trial_types)
+def hit_lick_quantity(session_trials):
+    mask = session_trials['change'] & session_trials['detect']
     quantile = session_trials[mask]['number_of_licks'].mean()
     return quantile
 
@@ -148,4 +148,3 @@ def filename(session_trials):
 def stimulus(session_trials):
 
     return session_trials['stimulus'].iloc[0]
-
