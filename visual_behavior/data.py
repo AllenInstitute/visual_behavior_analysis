@@ -304,7 +304,7 @@ def annotate_epochs(trials,epoch_length=5.0):
 @inplace
 def annotate_lick_vigor(trials):
     """ annotates the dataframe with two columns that indicate the number of
-    licks and mean interlick interval
+    licks and lick rate in 1/s
 
     Parameters
     ----------
@@ -319,7 +319,7 @@ def annotate_lick_vigor(trials):
     """
 
     trials['number_of_licks'] = trials['lick_times'].map(len)
-    trials['lick_rate'] = trials['lick_times'].map(lambda arr: np.diff(arr).mean())
+    trials['lick_rate_Hz'] = trials['lick_times'].map(lambda arr: 1.0 / np.diff(arr).mean())
 
 @inplace
 def annotate_trials(trials):

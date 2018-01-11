@@ -84,20 +84,26 @@ def session_level_summary(trials,**kwargs):
 
 def epoch_level_summary(trials,epoch_length=5.0):
 
+    from visual_behavior.data import annotate_epochs
+    trials = annotate_epochs(trials,epoch_length)
+
     summarizer = create_summarizer(
+        num_contingent_trials = session.num_contingent_trials,
         d_prime = lambda grp: session.discrim(grp,'change','detect',metric=classification.d_prime),
         response_bias = lambda grp: session.response_bias(grp,'detect'),
         earned_water = session.earned_water,
-        lick_latency_median = session.reaction_times,
+        lick_latency_median = session.lick_latency,
         fraction_time_aborted = session.fraction_time_aborted,
         hit_rate = lambda grp: session.discrim(grp,'change','detect',metric=classification.hit_rate),
         false_alarm_rate = lambda grp: session.discrim(grp,'change','detect',metric=classification.false_alarm_rate),
+        hit_lick_rate = session.hit_lick_rate,
+        hit_lick_quantity = session.hit_lick_quantity,
     )
 
     epoch_summary = (
         trials
-        .groupby(['mouse','startdatetime','epoch'])
-        .apply(compute_metrics)
+        .groupby(['mouse_id','session_id','epoch'])
+        .apply(summarizer)
         .reset_index()
         )
 
