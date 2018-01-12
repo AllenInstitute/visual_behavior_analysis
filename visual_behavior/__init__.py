@@ -1,6 +1,10 @@
 import platform
 import os
 
+
+__version__ = "0.1.0"
+
+
 if platform.system() == 'Linux':
     basepath = "/allen/programs/braintv/workgroups/neuralcoding/Behavior/Data"
 else:
