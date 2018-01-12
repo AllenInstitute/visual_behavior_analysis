@@ -124,7 +124,7 @@ def load_behavior_data(mice,progressbar=True,save_dataframe=True):
         pb = Progress_Bar_Text(len(mice))
     for mouse in mice:
 
-        dft = load_from_folder(os.path.join(basepath,mouse,'output'),save_dataframe=save_dataframe)
+        dft = load_from_folder(os.path.join(basepath,mouse,'output'),load_existing_dataframe=load_existing_dataframe,save_dataframe=save_dataframe)
         cohort = get_cohort_info(mouse)
         dft['cohort'] = cohort
         unloaded.append(dft)
@@ -183,7 +183,13 @@ def get_lick_frames(df_in,data):
     """
     returns a list of arrays of lick frames, with one entry per trial
     """
-    lick_frames = data['lickData'][0]
+    #Note: [DRO - 1/12/18] it used to be the case that the lick sensor was polled on every frame in the stimulus code, giving
+    #      a 1:1 correspondence between the frame number and the index in the 'lickData' array. However, that assumption was
+    #      violated when we began displaying a frame at the beginning of the session without a corresponding call the 'checkLickSensor'
+    #      method. Using the 'responselog' instead will provide a more accurate measure of actual like frames and times.
+    # lick_frames = data['lickData'][0]
+    responsedf=pd.DataFrame(data['responselog'])
+    lick_frames = responsedf.frame.values
     local_licks = []
     for idx,row in df_in.iterrows():
         local_licks.append(lick_frames[np.logical_and(lick_frames>=int(row['startframe']),
@@ -198,7 +204,9 @@ def get_last_licktimes(df_in,data):
     '''
     time_arr = np.hstack((0,np.cumsum(data['vsyncintervals'])/1000.))
 
-    licks = time_arr[data['lickData'][0]]
+    # licks = time_arr[data['lickData'][0]]
+    responsedf=pd.DataFrame(data['responselog'])
+    licks = responsedf.time.values
 
     #get times of all changes in this dataset
     change_frames = df_in.change_frame.values
@@ -240,6 +248,7 @@ def remove_repeated_licks(df_in):
             else:
                 lick_intervals = np.array([np.inf])
 
+            print 'Lick Intervals:',lick_intervals
             #only keep licks that are preceded by at least one frame without a lick
             lf.append(list(np.array(lick_frames_on_this_trial)[lick_intervals>1]))
             lt.append(list(np.array(lick_times_on_this_trial)[lick_intervals[:len(lick_times_on_this_trial)]>1]))
