@@ -89,7 +89,8 @@ def load_licks(data,time=None):
     licks : numpy array
 
     """
-    lick_frames = data['lickData'][0]
+    responsedf=pd.DataFrame(data['responselog'])
+    lick_frames = responsedf.frame.values
     if time is None:
         time = load_time(data)
 
