@@ -1,3 +1,4 @@
+from __future import print_function
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -70,14 +71,14 @@ def get_event_frames(stim_df,behavior_frame_times,f_frame_times):
         if row['stim_type']=='visual':
             behavior_frame_times[row['startframe']]+0.035
             visual_events.append(ut.find_nearest_index(behavior_frame_times[row['startframe']]+0.035,f_frame_times))
-            
+
     auditory_events=[]
     for i,row in stim_df.iterrows():
     #     print row['stim_type']
         if row['stim_type']=='auditory':
             behavior_frame_times[row['startframe']]+0.035
             auditory_events.append(ut.find_nearest_index(behavior_frame_times[row['startframe']]+0.035,f_frame_times))
-            
+
     visual_auditory_events=[]
     for i,row in stim_df.iterrows():
     #     print row['stim_type']
@@ -108,7 +109,7 @@ def make_IC_plots(path,events,traces,IC_masks,figsize=(9,6)):
         ax_ev_trig_avg.append(vbp.placeAxesOnGrid(fig,xspan=(0,0.3),yspan=(0.57,1)))
         ax_ev_trig_avg.append(vbp.placeAxesOnGrid(fig,xspan=(0.356,0.656),yspan=(0.57,1)))
         ax_ev_trig_avg.append(vbp.placeAxesOnGrid(fig,xspan=(0.7,1),yspan=(0.57,1)))
-        
+
     #     ax_IC_mask.imshow(IC_masks[IC_num],cmap='gray')
         pf.show_image(
             IC_masks[IC_num],
@@ -121,25 +122,25 @@ def make_IC_plots(path,events,traces,IC_masks,figsize=(9,6)):
         )
         ax_IC_mask.axis('off')
         ax_IC_mask.set_title('IC Mask',fontweight="bold")
-        
+
         trace = traces['IC trace {} (s.d.)'.format(int(IC_num))].values
         ax_IC_ts.plot(traces['Time (s)']/60.,trace)
         ax_IC_ts.set_ylabel('z-scored activity')
         ax_IC_ts.set_xlabel('time (min)')
         ax_IC_ts.set_ylim(-5,20)
         ax_IC_ts.set_title('full timeseries',fontweight="bold")
-        
+
         dat_vis=ut.event_triggered_average(trace,mask=None,events=visual_events,frame_before=20,frame_after=100,sampling_rate=20,
                                                        output='f',progressbar=False)
         dat_aud=ut.event_triggered_average(trace,mask=None,events=auditory_events,frame_before=20,frame_after=100,sampling_rate=20,
                                                        output='f',progressbar=False)
         dat_vis_aud=ut.event_triggered_average(trace,mask=None,events=visual_auditory_events,frame_before=20,frame_after=100,sampling_rate=20,
                                                        output='f',progressbar=False)
-        
+
         pf.plot_event_triggered_timeseries(dat_vis,ax=ax_ev_trig_avg[0])
         pf.plot_event_triggered_timeseries(dat_aud,ax=ax_ev_trig_avg[1])
         pf.plot_event_triggered_timeseries(dat_vis_aud,ax=ax_ev_trig_avg[2])
-        
+
         titles = ['visual triggered avg','auditory triggered avg','vis/aud triggered avg']
         for jj in range(3):
             ax_ev_trig_avg[jj].set_title(titles[jj],fontweight="bold")
@@ -147,12 +148,12 @@ def make_IC_plots(path,events,traces,IC_masks,figsize=(9,6)):
             ax_ev_trig_avg[jj].set_ylim(-5,20)
             ax_ev_trig_avg[jj].axvline(0,alpha=0.5,linewidth=3,color='red',zorder=-1)
         ax_ev_trig_avg[0].set_ylabel('z-scored activity')
-        
+
         fig.suptitle('IC Number {}'.format(int(IC_num)),fontweight="bold")
         plt.subplots_adjust(top=0.90)
-            
+
         vbp.save_figure(fig,os.path.join(savepath,'IC{}'.format(IC_num)),formats=['.png'],figsize=figsize)
-        
+
         gc.collect
 
         pb.update()
@@ -161,20 +162,19 @@ def make_IC_plots(path,events,traces,IC_masks,figsize=(9,6)):
 def run(path):
 
     mouse_id = get_mouse_id(path)
-    print "gathering filenames for mouse {}".format(mouse_id)
+    print("gathering filenames for mouse {}".format(mouse_id))
     filename_dict = get_filename_dict(path,mouse_id)
-    print "extracting sync data"
+    print("extracting sync data")
     behavior_frame_times,f_frame_times = extract_sync_data(filename_dict)
-    print "opening event log"
+    print("opening event log")
     stim_df = load_pkl(filename_dict)
-    print "opening traces"
+    print("opening traces")
     traces = iu.open_traces(filename_dict['traces'])
-    print "opening IC mask files"
+    print("opening IC mask files")
     IC_masks = load_IC_masks(filename_dict)
     event_frames = get_event_frames(stim_df,behavior_frame_times,f_frame_times)
-    print "making IC plots"
+    print("making IC plots")
     make_IC_plots(path,event_frames,traces,IC_masks)
 
 if __name__ == '__main__':
-    print "can't run as main"
-
+    print("can't run as main")

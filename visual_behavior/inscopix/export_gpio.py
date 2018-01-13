@@ -1,4 +1,4 @@
-
+from __future__ import print_function
 import h5py, sys, argparse
 
 parser = argparse.ArgumentParser(description="Convert raw gpio data.")
@@ -8,17 +8,17 @@ parser.add_argument ( "--ots", help=
     """,
     action="store_true", dest="ots")
 
-parser.add_argument ( "--all", help="Output all records even if no signals changed", 
+parser.add_argument ( "--all", help="Output all records even if no signals changed",
     action="store_true", dest="output_all" )
 
 parser.add_argument ( "--ofn", help="Output original frame number instead of incrementing with the sync signal.",
     action="store_true" )
-        
 
-parser.add_argument ( "--sync", help="Output the sync signal", action="store_true") 
-parser.add_argument ( "--trigger", help="Output the trigger signal", action="store_true") 
-parser.add_argument ( "--io1", help="Output the gpio1 signal", action="store_true") 
-parser.add_argument ( "--io2", help="Output the gpio2 signal", action="store_true") 
+
+parser.add_argument ( "--sync", help="Output the sync signal", action="store_true")
+parser.add_argument ( "--trigger", help="Output the trigger signal", action="store_true")
+parser.add_argument ( "--io1", help="Output the gpio1 signal", action="store_true")
+parser.add_argument ( "--io2", help="Output the gpio2 signal", action="store_true")
 
 parser.add_argument ( "gpio_file", help="The gpio file to convert." )
 parser.add_argument ( "txt_file", help="Output file to store results." )
@@ -31,7 +31,7 @@ o=open(args.txt_file,'w')
 
 if not args.sync and not args.trigger and not args.io1 and not args.io2:
     parser.print_help()
-    print "At least one of sync, trigger, io1 or io2 should be selected."
+    print("At least one of sync, trigger, io1 or io2 should be selected.")
     sys.exit(1)
 
 # header
@@ -47,23 +47,23 @@ if args.io2:
 o.write ( "\n" )
 
 firsttime = f['timestamp'][0]
-lastcacheline = "" 
+lastcacheline = ""
 ms_time=0
 last_frame=f['frame'][0]-1
 sync_frame=last_frame
 last_sync=0
 for i,frame in enumerate(f['frame']):
     basetime = f['timestamp'][i]
-    last_frame += 1 
+    last_frame += 1
     if frame != last_frame :
-        print "WARN handle dropped frame", last_frame
+        print("WARN handle dropped frame", last_frame)
         ms_time += basetime - f['timestamp'][i-1]
         sync_frame += frame-last_frame
     for j in range(f['anc_data_count'][i]):
-        sample=f['anc_data'][i][j] 
+        sample=f['anc_data'][i][j]
         # for subsamples per sample
         for l in range(4):
-            io1 = sample & 1 
+            io1 = sample & 1
             sample >>= 1
             io2 = sample & 1
             sample >>= 1
@@ -93,7 +93,7 @@ for i,frame in enumerate(f['frame']):
                 cacheline += ", %d" % io1
             if args.io2:
                 cacheline += ", %d" % io2
- 
+
             if cacheline != lastcacheline or args.output_all:
                 o.write ( "%d, %0.4f" %
                     (fn,
@@ -110,5 +110,3 @@ for i,frame in enumerate(f['frame']):
             lastcacheline = cacheline
             basetime += .001 # 1ms sample interval
             ms_time += .001
-
-

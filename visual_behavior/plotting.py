@@ -1,3 +1,4 @@
+from __future__ import print_function
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -48,7 +49,7 @@ def make_daily_figure(df_in,mouse_id=None,reward_window=None,sliding_window=100,
                 if im is not None:
                     ax_image[index].imshow(im,cmap='gray')
                 ax_image[index].grid(False)
-                print index
+                print(index)
                 ax_image[index].axis('off')
                 ax_image[index].set_title(titles[index],fontsize=14)
         except:
@@ -141,7 +142,7 @@ def make_rolling_dprime_plot(d_prime,ax,format='vertical'):
         ax.plot(np.arange(len(d_prime)),d_prime,color='black',linewidth=2)
         ax.set_ylabel("d'",fontsize=14)
     ax.set_title("Rolling d'",fontsize=16)
-    
+
 
 def make_lick_raster_plot(df_in,ax,reward_window=None):
 
@@ -496,7 +497,7 @@ def DoC_PsychometricCurve(input,ax=None,parameter='delta_ori',title="",linecolor
     elif isinstance(input,pd.DataFrame) and 'response_probability' in input.columns:
         response_df = input
     else:
-        print "can't deal with input"
+        print("can't deal with input")
 
     if ax == None:
         fig,ax=plt.subplots()
@@ -601,7 +602,7 @@ def plot_psychometric(x,y,initial_guess=(0.1,1,0.5,0.5),alpha=1,xval_jitter=0,**
     if logscale == True and x[0] == 0:
         x[0]=minval
 
-    
+
     x = np.float64(x)
     y = np.float64(y)
     if logscale == False and show_points is True:
@@ -629,11 +630,11 @@ def plot_psychometric(x,y,initial_guess=(0.1,1,0.5,0.5),alpha=1,xval_jitter=0,**
                 cap.set_linewidth(2)
         else:
             l_err = 'None'
-    except Exception,e:
-        print "failed to add error bars",e
+    except Exception as e:
+        print("failed to add error bars",e)
     if show_line == True:
         try:
-            # Fit with either 'Weibull' for 'Logistic'     
+            # Fit with either 'Weibull' for 'Logistic'
             p_guess=initial_guess
             #NOTE: changed to scipy.optimize.leastsquares on 2/15/17 to allow bounds to be explicitly passed
             result = optimize.least_squares(
@@ -651,9 +652,9 @@ def plot_psychometric(x,y,initial_guess=(0.1,1,0.5,0.5),alpha=1,xval_jitter=0,**
                 l_fit = ax.plot(xp, pxp,linestyle=linestyle,linewidth=linewidth,color=linecolor,alpha=linealpha )
             else:
                 l_fit = ax.plot(np.log10(xp), pxp, linestyle=linestyle,linewidth=linewidth,color=linecolor,alpha=linealpha)
-        except Exception,e:
-            print "failed to plot sigmoid",e
-    
+        except Exception as e:
+            print("failed to plot sigmoid",e)
+
     if showYLabel == True:
         ax.set_ylabel(ylabel,fontsize=fontsize)
     else:
@@ -678,10 +679,10 @@ def plot_psychometric(x,y,initial_guess=(0.1,1,0.5,0.5),alpha=1,xval_jitter=0,**
         return ax
 
 def curve_fit(p,x,fittype='Weibull'):
-    
+
     x = np.array(x)
-    if fittype.lower() == 'logistic': 
-        alpha,beta,Lambda,Gamma=p   
+    if fittype.lower() == 'logistic':
+        alpha,beta,Lambda,Gamma=p
         y = Gamma + (1 - Gamma - Lambda)*(1/(1+np.exp(-(x-alpha)/beta)))
     elif fittype.lower() == 'weibull':
         alpha,beta,Lambda,Gamma=p
@@ -690,9 +691,9 @@ def curve_fit(p,x,fittype='Weibull'):
         mu,sigma,a=p
         y = a*np.exp(-(x-mu)**2/(2*sigma**2))
     else:
-        print "NO FIT TYPE DEFINED"
+        print("NO FIT TYPE DEFINED")
     return y
-    
+
 def residuals(p,x,y,fittype='Weibull'):
     res = y - curve_fit(p,x,fittype)
     return res
@@ -702,7 +703,7 @@ def getThreshold(p,x=np.linspace(0,1,1001),criterion=0.5,fittype='Weibull'):
     given fit parameters for a sigmoid, returns the x and y values corresponding to a particular criterion
     '''
     y = curve_fit(p,x,fittype=fittype)
-    
+
     yval = criterion*(1-p[2]-p[3])+p[3]
     xval = np.interp(yval, y,x)
     return xval,yval
@@ -716,12 +717,12 @@ def plot_first_licks(pkl):
 
 
     """
-    
+
     trials = vbu.create_doc_dataframe(pkl)
-    
+
     trials['first_lick'] = trials['lick_times'].map(lambda l: l[0] if len(l)>0 else np.nan)
     trials['first_lick'] = trials['first_lick'] - trials['starttime']
-    
+
     aborted = (
         trials['trial_type'].isin(['aborted',])
         & ~pd.isnull(trials['first_lick'])
@@ -734,27 +735,27 @@ def plot_first_licks(pkl):
         trials['trial_type'].isin(['go',])
         & ~pd.isnull(trials['first_lick'])
         )
-    
+
     f,ax = plt.subplots(1,figsize=(8,4),sharex=True)
-  
+
     bar_width = 0.1
     bins=np.arange(0,6,bar_width)
-    
+
     x1,_ = np.histogram(trials[aborted]['first_lick'].values,bins)
     x2,_ = np.histogram(trials[catch]['first_lick'].values,bins)
     x3,_ = np.histogram(trials[go]['first_lick'].values,bins)
-    
+
     ax.bar(bins[:-1],x1,width=bar_width,edgecolor='none',color='indianred')
     ax.bar(bins[:-1],x2,width=bar_width,edgecolor='none',color='orange',bottom=x1)
     ax.bar(bins[:-1],x3,width=bar_width,edgecolor='none',color='limegreen',bottom=x1+x2)
 
     ax.set_title(pkl.split('/')[-1])
-    
+
     if ('500ms' in pkl) or ('NaturalImages' in pkl):
         for flash in (np.arange(0,6,0.7)+0.2):
             ax.axvspan(flash,flash+0.2,color='lightblue',zorder=-10)
     ax.set_xlim(0,6)
-    
+
     return f,ax
 
 def show_image(img,x=None,y=None,figsize=(10,10),ax=None,cmin=None,cmax=None,cmap=None,colorbar=False,colorbarlabel="",fontcolor='black',show_grid=False,
@@ -833,14 +834,14 @@ def placeAxesOnGrid(fig,dim=[1,1],xspan=[0,1],yspan=[0,1],wspace=None,hspace=Non
     '''
     Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
     DRO
-    
+
     Takes as arguments:
         fig: figure handle - required
         dim: number of rows and columns in the subaxes - defaults to 1x1
         xspan: fraction of figure that the subaxes subtends in the x-direction (0 = left edge, 1 = right edge)
         yspan: fraction of figure that the subaxes subtends in the y-direction (0 = top edge, 1 = bottom edge)
         wspace and hspace: white space between subaxes in vertical and horizontal directions, respectively
-        
+
     returns:
         subaxes handles
     '''
@@ -850,7 +851,7 @@ def placeAxesOnGrid(fig,dim=[1,1],xspan=[0,1],yspan=[0,1],wspace=None,hspace=Non
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0],dim[1],
                                                   subplot_spec=outer_grid[int(100*yspan[0]):int(100*yspan[1]),int(100*xspan[0]):int(100*xspan[1])],
                                                   wspace=wspace, hspace=hspace)
-    
+
     #NOTE: A cleaner way to do this is with list comprehension:
     # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
     inner_ax = dim[0]*[dim[1]*[fig]] #filling the list with figure objects prevents an error when it they are later replaced by axis handles
@@ -868,7 +869,7 @@ def placeAxesOnGrid(fig,dim=[1,1],xspan=[0,1],yspan=[0,1],wspace=None,hspace=Non
             else:
                 share_y_with = None
 
-            inner_ax[row][col] = plt.Subplot(fig, 
+            inner_ax[row][col] = plt.Subplot(fig,
                                             inner_grid[idx],
                                             sharex=share_x_with,
                                             sharey=share_y_with,

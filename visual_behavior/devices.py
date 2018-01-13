@@ -1,3 +1,6 @@
+from six import iteritems
+
+
 RIG_NAME = {
     'W7DTMJ19R2F':'A1',
     'W7DTMH35Y0T':'A2',
@@ -30,7 +33,7 @@ RIG_NAME = {
     'W7DTMJ036PSL':'Marina2P_Sutter'
     }
 
-COMPUTER_NAME = dict((v,k) for k,v in RIG_NAME.iteritems())
+COMPUTER_NAME = dict((v,k) for k,v in iteritems(RIG_NAME))
 
 # -> devices.py
 def get_rig_id(in_val,input_type='computer_name'):

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import shutil
 import pandas as pd
@@ -58,5 +59,5 @@ def copy_latest(destination=None,cohort_assignment=None):
         for fn in os.listdir(src):
             if os.path.exists(os.path.join(destination,fn)) == False:
                 # logging.info("copying {}".format(fn))
-                print "copying {}".format(fn)
+                print("copying {}".format(fn))
                 shutil.copy(os.path.join(src,fn),os.path.join(destination,fn))
