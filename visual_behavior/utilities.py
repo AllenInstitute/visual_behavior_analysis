@@ -249,7 +249,6 @@ def remove_repeated_licks(df_in):
             else:
                 lick_intervals = np.array([np.inf])
 
-            print('Lick Intervals:',lick_intervals)
             #only keep licks that are preceded by at least one frame without a lick
             lf.append(list(np.array(lick_frames_on_this_trial)[lick_intervals>1]))
             lt.append(list(np.array(lick_times_on_this_trial)[lick_intervals[:len(lick_times_on_this_trial)]>1]))
