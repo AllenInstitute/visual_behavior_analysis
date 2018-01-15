@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 from scipy.signal import medfilt
@@ -153,7 +154,7 @@ def load_flashes(data,time=None):
 
     """
     if time is None:
-        print '`time` not passed. using vsync from pkl file'
+        print('`time` not passed. using vsync from pkl file')
         time = load_time(data)
 
     stimdf = pd.DataFrame(data['stimuluslog'])
@@ -282,7 +283,7 @@ def load_flashes(data,time=None):
 def load_running_speed(data,smooth=False,time=None):
 
     if time is None:
-        print '`time` not passed. using vsync from pkl file'
+        print('`time` not passed. using vsync from pkl file')
         time = load_time(data)
 
     dx = np.array(data['dx'])

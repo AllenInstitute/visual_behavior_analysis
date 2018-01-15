@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 from visual_behavior.data import inplace
@@ -77,10 +78,10 @@ def get_training_day(df_in):
             dz = day_zero[mouse]
             offset = np.argwhere(dates==dz)[0][0]
         except KeyError:
-            print 'day zero not found for {}'.format(mouse)
+            print('day zero not found for {}'.format(mouse))
             offset = 0
         except IndexError:
-            print 'day zero ({}) not found in dates'.format(dz)
+            print('day zero ({}) not found in dates'.format(dz))
             offset = 0
         training_day_lookup[mouse] = {date:training_day-offset for training_day,date in enumerate(dates)}
     return df_in.apply(lambda row: training_day_lookup[row['mouse_id']][row['date']],axis=1)

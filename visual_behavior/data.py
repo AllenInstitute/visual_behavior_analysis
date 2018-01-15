@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+from six import iteritems
 
 
 from functools import wraps
@@ -53,7 +54,7 @@ def annotate_parameters(trials,data,keydict=None):
     if keydict is None:
         return
     else:
-        for key,value in keydict.iteritems():
+        for key,value in iteritems(keydict):
             try:
                 trials[key] = [data[value]]*len(trials)
             except KeyError as e:

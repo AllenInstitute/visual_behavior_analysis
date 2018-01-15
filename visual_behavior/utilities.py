@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy as np
 import pandas as pd
 import os
@@ -87,8 +88,8 @@ def create_doc_dataframe(filename):
     try:
         remove_repeated_licks(df)
     except Exception as e:
-        print 'FAILED TO REMOVE REPEATED LICKS'
-        print e
+        print('FAILED TO REMOVE REPEATED LICKS')
+        print(e)
 
 
     return df
@@ -285,7 +286,7 @@ def load_from_folder(foldername,load_existing_dataframe=True,save_dataframe=True
                 dft = create_doc_dataframe(os.path.join(foldername,filename))
                 unloaded.append(dft)
             except Exception as e:
-                print "error loading file {}: {}".format(filename,e)
+                print("error loading file {}: {}".format(filename,e))
                 continue
     df = pd.concat([df,]+unloaded,ignore_index=True)
     #count unique days of training for each session
@@ -312,23 +313,23 @@ def return_reward_volumes(cluster_id):
     from zro import Proxy
     for rig in range(1,7):
         computer_name = get_rig_id('{}{}'.format(cluster_id,rig),input_type='rig_id')
-        print 'Rig {}{}'.format(cluster_id,rig)
+        print('Rig {}{}'.format(cluster_id,rig))
         try:
             agent = Proxy('{}:5000'.format(computer_name),timeout=2)
     #         print agent.status
             if agent.status['running'] == True:
-                print "mouse {} is currently running in this rig".format(agent.status['mouse_id'])
+                print("mouse {} is currently running in this rig".format(agent.status['mouse_id']))
                 session =Proxy('{}:12000'.format(computer_name),timeout=2)
                 N,V = len(np.array(session.rewards)[:,0]),np.sum(np.array(session.rewards)[:,3])
             elif agent.status['running'] == False:
-                print "getting data for last session from mouse: {}".format(agent.status['mouse_id'])
+                print("getting data for last session from mouse: {}".format(agent.status['mouse_id']))
                 N,V = get_reward_volume_last_session(agent.status['mouse_id'])
-            print "number of rewards = {}".format(N)
-            print "total volume = {} mL".format(V)
+            print("number of rewards = {}".format(N))
+            print("total volume = {} mL".format(V))
         except Exception as e:
-            print "failed to get data"
-            print e
-        print ""
+            print("failed to get data")
+            print(e)
+        print("")
 
 
 def get_reward_volume_last_session(mouse_id):
@@ -898,7 +899,7 @@ class Progress_Bar_Text(object):
         except Exception:
             # terminal IPython has no clear_output
             pass
-        print '\r', self,
+        print('\r', self)
         sys.stdout.flush()
         self.update_iteration(iter + 1)
 

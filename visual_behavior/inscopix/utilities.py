@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,7 +7,7 @@ import os
 import warnings
 
 def find_filenames(path,mouse_id=None,camera_config='widefield'):
-    """ searches a path and returns a dictionary containing all of the necessary 
+    """ searches a path and returns a dictionary containing all of the necessary
         files to analyze an inscopix recording sessino
 
     Parameters
@@ -113,7 +114,7 @@ def detrend_movie(movie):
             xdata=np.arange(len(ydata))
             popt, pcov = curve_fit(quadratic_func, xdata, ydata)
             detrended_movie[:,i,j]=ydata-quadratic_func(xdata, *popt)
-        print i,j
+        print(i,j)
     return detrended_movie
 
 def parse_xml(xmlfile):
@@ -127,7 +128,7 @@ def parse_xml(xmlfile):
             key = line.split('"')[1]
             value = line.split('"')[2].split('</attr')[0][1:]
             attributes[key]=value
-    
+
     #try turning attributes into floats
     for attritube in attributes.keys():
         try:
@@ -165,16 +166,16 @@ def downsample_and_concatenate_tifs(tif_list,spatial_downsample_factor=4,tempora
     if type(tif_list)==str:
         tif_list=[tif_list]
     for tif in tif_list:
-        print 'loading ',tif
+        print('loading ',tif)
         f = skio.imread(tif)
-        print 'downsampling'
+        print('downsampling')
         fsmall.append((block_reduce(f,block_size=(temporal_downsample_factor,spatial_downsample_factor,spatial_downsample_factor),func=np.mean)))
-        
-    print 'concatenating'
+
+    print('concatenating')
     dat=np.array(fsmall[0])
     for i in range(1,len(fsmall)):
         dat=np.concatenate((dat,fsmall[i]),axis=0)
-        
+
     return dat
 
 def open_traces(datapath):
@@ -194,7 +195,7 @@ def make_traces_plot(data,N_ICs=60,spread_factor=1,scale_factor=0.25,pad=1,title
         fig,ax=plt.subplots(figsize=(9,9*height_scale))
 
     ICs = [col for col in data.columns if 's.d.' in col]
-    
+
     for col,IC in enumerate(ICs[:N_ICs]):
         color=colors[col%len(colors)]
         ax.plot(data['Time (s)']/60.,spread_factor*col+scale_factor*data[IC],color=color)
@@ -205,7 +206,7 @@ def make_traces_plot(data,N_ICs=60,spread_factor=1,scale_factor=0.25,pad=1,title
     ax.set_yticks([])
     if title:
         ax.set_title(title)
-    
+
     if ax is None:
         return fig,ax
     else:
