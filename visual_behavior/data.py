@@ -2,9 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 from six import iteritems
-
-
 from functools import wraps
+
 
 def inplace(func):
     """ decorator which allows functions that modify a dataframe inplace
@@ -12,19 +11,19 @@ def inplace(func):
     """
 
     @wraps(func)
-    def df_wrapper(df,*args,**kwargs):
+    def df_wrapper(df, *args, **kwargs):
 
         try:
             inplace = kwargs.pop('inplace')
         except KeyError:
             inplace = False
 
-        if inplace==False:
+        if inplace is False:
             df = df.copy()
 
-        func(df,*args,**kwargs)
+        func(df, *args, **kwargs)
 
-        if inplace==False:
+        if inplace is False:
             return df
         else:
             return None
@@ -33,7 +32,7 @@ def inplace(func):
 
 
 @inplace
-def annotate_parameters(trials,data,keydict=None):
+def annotate_parameters(trials, data, keydict=None):
     """ annotates a dataframe with session parameters
 
     Parameters
@@ -54,11 +53,12 @@ def annotate_parameters(trials,data,keydict=None):
     if keydict is None:
         return
     else:
-        for key,value in iteritems(keydict):
+        for key, value in iteritems(keydict):
             try:
-                trials[key] = [data[value]]*len(trials)
-            except KeyError as e:
+                trials[key] = [data[value]] * len(trials)
+            except KeyError:
                 trials[key] = None
+
 
 @inplace
 def explode_startdatetime(df):
@@ -82,6 +82,7 @@ def explode_startdatetime(df):
     df['hour'] = df['startdatetime'].dt.hour
     df['dayofweek'] = df['startdatetime'].dt.weekday
 
+
 @inplace
 def annotate_n_rewards(df):
     """ computes the number of rewards from the 'reward_times' column
@@ -102,8 +103,9 @@ def annotate_n_rewards(df):
     except KeyError:
         df['number_of_rewards'] = None
 
+
 @inplace
-def annotate_rig_id(df,data):
+def annotate_rig_id(df, data):
     """ adds a column with rig id
 
     Parameters
@@ -123,8 +125,9 @@ def annotate_rig_id(df,data):
         from visual_behavior.devices import get_rig_id
         df['rig_id'] = get_rig_id(df['computer_name'][0])
 
+
 @inplace
-def annotate_startdatetime(df,data):
+def annotate_startdatetime(df, data):
     """ adds a column with the session's `startdatetime`
 
     Parameters
@@ -140,6 +143,7 @@ def annotate_startdatetime(df,data):
     io.load_trials
     """
     df['startdatetime'] = pd.to_datetime(data['startdatetime'])
+
 
 @inplace
 def assign_session_id(df_in):
@@ -157,11 +161,11 @@ def assign_session_id(df_in):
     --------
     io.load_trials
     """
-    df_in['session_id'] = df_in['mouse_id']+'_'+df_in['startdatetime'].map(lambda x: x.isoformat())
+    df_in['session_id'] = df_in['mouse_id'] + '_' + df_in['startdatetime'].map(lambda x: x.isoformat())
 
 
 @inplace
-def annotate_cumulative_reward(trials,data):
+def annotate_cumulative_reward(trials, data):
     """ adds a column with the session's cumulative volume
 
     Parameters
@@ -178,12 +182,13 @@ def annotate_cumulative_reward(trials,data):
     """
     try:
         trials['cumulative_volume'] = trials['reward_volume'].cumsum()
-    except:
-        trials['reward_volume'] = data['rewardvol']*trials['number_of_rewards']
+    except Exception:
+        trials['reward_volume'] = data['rewardvol'] * trials['number_of_rewards']
         trials['cumulative_volume'] = trials['reward_volume'].cumsum()
 
+
 @inplace
-def annotate_filename(df,filename):
+def annotate_filename(df, filename):
     """ adds `filename` and `filepath` columns to dataframe
 
     Parameters
@@ -200,6 +205,7 @@ def annotate_filename(df,filename):
     """
     df['filepath'] = os.path.split(filename)[0]
     df['filename'] = os.path.split(filename)[-1]
+
 
 @inplace
 def fix_autorearded(df):
@@ -235,9 +241,8 @@ def annotate_change_detect(trials):
     io.load_trials
     """
 
-    trials['change'] = trials['trial_type']=='go'
-    trials['detect'] = trials['response']==1.0
-
+    trials['change'] = trials['trial_type'] == 'go'
+    trials['detect'] = trials['response'] == 1.0
 
 
 @inplace
@@ -257,6 +262,7 @@ def fix_change_time(trials):
     """
     trials['change_time'] = trials['change_time'].map(lambda x: np.nan if x is None else x)
 
+
 @inplace
 def explode_response_window(trials):
     """ explodes the `response_window` column in lower & upper columns
@@ -275,8 +281,9 @@ def explode_response_window(trials):
     trials['response_window_lower'] = trials['response_window'].map(lambda x: x[0])
     trials['response_window_upper'] = trials['response_window'].map(lambda x: x[1])
 
+
 @inplace
-def annotate_epochs(trials,epoch_length=5.0):
+def annotate_epochs(trials, epoch_length=5.0):
     """ annotates the dataframe with an additional column which designates
     the "epoch" from session start
 
@@ -302,6 +309,7 @@ def annotate_epochs(trials,epoch_length=5.0):
         # .map(lambda x: "{:0.1f} min".format(x))
     )
 
+
 @inplace
 def annotate_lick_vigor(trials):
     """ annotates the dataframe with two columns that indicate the number of
@@ -322,6 +330,7 @@ def annotate_lick_vigor(trials):
     trials['number_of_licks'] = trials['lick_times'].map(len)
     trials['lick_rate_Hz'] = trials['lick_times'].map(lambda arr: 1.0 / np.diff(arr).mean())
 
+
 @inplace
 def annotate_trials(trials):
     """ performs multiple annotatations:
@@ -341,15 +350,14 @@ def annotate_trials(trials):
     --------
     io.load_trials
     """
+    # build arrays for change detection
+    annotate_change_detect(trials, inplace=True)
 
-    ## build arrays for change detection
-    annotate_change_detect(trials,inplace=True)
+    # assign a session ID to each row
+    assign_session_id(trials, inplace=True)
 
-    #assign a session ID to each row
-    assign_session_id(trials,inplace=True)
+    # calculate reaction times
+    fix_change_time(trials, inplace=True)
 
-    ## calculate reaction times
-    fix_change_time(trials,inplace=True)
-
-    ## unwrap the response window
-    explode_response_window(trials,inplace=True)
+    # unwrap the response window
+    explode_response_window(trials, inplace=True)
