@@ -1,86 +1,101 @@
-## sklearn-style discrimination metrics
+# sklearn-style discrimination metrics
 
 import numpy as np
-from scipy import stats
 import pandas as pd
 
 from visual_behavior import masks
-from visual_behavior.utilities import get_response_rates,flatten_list
+from visual_behavior.utilities import get_response_rates, flatten_list
 
-def discrim(session_trials,change,detect,trial_types=('go','catch'),metric=None,metric_kws=None):
 
+def discrim(
+        session_trials,
+        change,
+        detect,
+        trial_types=('go', 'catch'),
+        metric=None,
+        metric_kws=None
+):
     if metric is None:
         metric = d_prime
 
     if metric_kws is None:
         metric_kws = dict()
 
-    mask = masks.trial_types(session_trials,trial_types)
+    mask = masks.trial_types(session_trials, trial_types)
 
     y_true = session_trials[mask][change]
     y_pred = session_trials[mask][detect]
 
-    return metric(y_true,y_pred,**metric_kws)
+    return metric(y_true, y_pred, **metric_kws)
 
-def response_bias(session_trials,detect,trial_types=('go','catch')):
-    mask = masks.trial_types(session_trials,trial_types)
+
+def response_bias(session_trials, detect, trial_types=('go', 'catch')):
+    mask = masks.trial_types(session_trials, trial_types)
 
     return session_trials[mask][detect].mean()
+
 
 def num_trials(session_trials):
     return len(session_trials)
 
-def num_usable_trials(session_trials):
 
+def num_usable_trials(session_trials):
     usable_trials = session_trials[masks.reward_rate(session_trials)]
 
     return num_contingent_trials(usable_trials)
 
 
 def num_contingent_trials(session_trials):
-    return session_trials['trial_type'].isin(['go','catch']).sum()
+    return session_trials['trial_type'].isin(['go', 'catch']).sum()
 
-def lick_latency(session_trials,percentile=50,trial_types=('go',)):
+
+def lick_latency(session_trials, percentile=50, trial_types=('go', )):
     """
     median (or some other %ile) time to first lick to GO trials
 
     """
-    mask = masks.trial_types(session_trials,trial_types)
-    quantile = session_trials[mask]['response_latency'].dropna().quantile(percentile/100.0)
+    mask = masks.trial_types(session_trials, trial_types)
+    quantile = session_trials[mask]['response_latency']\
+        .dropna() \
+        .quantile(percentile / 100.0)
 
     return quantile
+
 
 def hit_lick_rate(session_trials):
     mask = session_trials['change'] & session_trials['detect']
     quantile = session_trials[mask]['lick_rate_Hz'].dropna().mean()
     return quantile
 
+
 def hit_lick_quantity(session_trials):
     mask = session_trials['change'] & session_trials['detect']
     quantile = session_trials[mask]['number_of_licks'].mean()
     return quantile
 
-def total_water(session_trials,trial_types=()):
 
-    mask = masks.trial_types(session_trials,trial_types)
+def total_water(session_trials, trial_types=()):
+    mask = masks.trial_types(session_trials, trial_types)
 
-    return session_trials[mask][(session_trials['reward_times'].map(len)>0)]['reward_volume'].sum()
+    return session_trials[mask][(session_trials['reward_times'].map(len) > 0)]['reward_volume'].sum()
+
 
 def earned_water(session_trials):
+    return total_water(session_trials, ('go', ))
 
-    return total_water(session_trials,('go',))
 
 def peak_dprime(session_trials):
-    mask = (session_trials['trial_type']!='aborted')
-    _,_,dp = get_response_rates(session_trials[mask],sliding_window=100)
+    mask = (session_trials['trial_type'] != 'aborted')
+    _, _, dp = get_response_rates(session_trials[mask], sliding_window=100)
     try:
         return np.nanmax(dp[50:])
     except ValueError:
         return np.nan
 
+
 def peak_hit_rate(session_trials):
-    mask = (session_trials['trial_type']!='aborted')
-    hr,_,_ = get_response_rates(session_trials[mask],sliding_window=100)
+    mask = (session_trials['trial_type'] != 'aborted')
+    hr, _, _ = get_response_rates(session_trials[mask], sliding_window=100)
     try:
         return np.nanmax(hr[50:])
     except ValueError:
@@ -88,20 +103,21 @@ def peak_hit_rate(session_trials):
 
 
 def peak_false_alarm_rate(session_trials):
-    mask = (session_trials['trial_type']!='aborted')
-    _,far,_ = get_response_rates(session_trials[mask],sliding_window=100)
+    mask = (session_trials['trial_type'] != 'aborted')
+    _, far, _ = get_response_rates(session_trials[mask], sliding_window=100)
     try:
         return np.nanmax(far[50:])
     except ValueError:
         return np.nan
 
-def fraction_time_aborted(session_trials):
 
+def fraction_time_aborted(session_trials):
     trial_fractions = session_trials.groupby('trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
     try:
         return trial_fractions['aborted']
     except KeyError:
         return 0.0
+
 
 def total_number_of_licks(session_trials):
     '''
@@ -110,15 +126,17 @@ def total_number_of_licks(session_trials):
     '''
     return len(flatten_list(session_trials.lick_frames.values))
 
-def session_id(session_trials):
 
+def session_id(session_trials):
     return session_trials.iloc[0].session_id
+
 
 def isnull(a):
     try:
         return pd.isnull(a).any()
     except AttributeError:
         return pd.isnull(a)
+
 
 def blank_duration(session_trials):
     '''blank screen duration between each stimulus flash'''
@@ -130,30 +148,30 @@ def blank_duration(session_trials):
     else:
         return np.nan
 
-def session_duration(session_trials):
 
+def session_duration(session_trials):
     return session_trials['trial_length'].sum()
 
-def day_of_week(session_trials):
 
+def day_of_week(session_trials):
     return session_trials['dayofweek'].iloc[0]
 
-def change_time_distribution(session_trials):
 
+def change_time_distribution(session_trials):
     return session_trials['stimulus_distribution'].iloc[0]
 
-def trial_duration(session_trials):
 
+def trial_duration(session_trials):
     return session_trials['trial_duration'].iloc[0]
 
-def user_id(session_trials):
 
+def user_id(session_trials):
     return session_trials.iloc[0].user_id
 
-def filename(session_trials):
 
+def filename(session_trials):
     return session_trials.iloc[0].filename
 
-def stimulus(session_trials):
 
+def stimulus(session_trials):
     return session_trials['stimulus'].iloc[0]

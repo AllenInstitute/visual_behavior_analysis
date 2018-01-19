@@ -5,6 +5,7 @@ import pandas as pd
 from visual_behavior import basepath, project_dir
 from mouse_info import Mouse
 
+
 def mouse_info(mouse):
     '''
     Returns the info found in mouse's info.txt file
@@ -32,10 +33,14 @@ def load_cohort_assignment():
 
     """
 
-    _spreadsheet_path = os.path.join(basepath,"VisualBehaviorDevelopment_CohortIDs.xlsx")
+    _spreadsheet_path = os.path.join(
+        basepath,
+        "VisualBehaviorDevelopment_CohortIDs.xlsx"
+    )
     return pd.read_excel(_spreadsheet_path)
 
-def copy_latest(destination=None,cohort_assignment=None):
+
+def copy_latest(destination=None, cohort_assignment=None):
     """ copies all of the latest pkl files for cohort mice to a local directory
 
     Parameters
@@ -49,15 +54,18 @@ def copy_latest(destination=None,cohort_assignment=None):
     network_dir = basepath
 
     if destination is None:
-        destination = os.path.join(project_dir,'data','raw')
+        destination = os.path.join(project_dir, 'data', 'raw')
 
-    if os.path.exists(destination)==False:
+    if os.path.exists(destination) is False:
         os.mkdir(destination)
-    for rr,row in cohort_assignment.iterrows():
+    for rr, row in cohort_assignment.iterrows():
         mouse = row['mouse']
-        src = os.path.join(network_dir,mouse,'output')
+        src = os.path.join(network_dir, mouse, 'output')
         for fn in os.listdir(src):
-            if os.path.exists(os.path.join(destination,fn)) == False:
+            if os.path.exists(os.path.join(destination, fn)) is False:
                 # logging.info("copying {}".format(fn))
                 print("copying {}".format(fn))
-                shutil.copy(os.path.join(src,fn),os.path.join(destination,fn))
+                shutil.copy(
+                    os.path.join(src, fn),
+                    os.path.join(destination, fn)
+                )
