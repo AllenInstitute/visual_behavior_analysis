@@ -14,6 +14,9 @@ def _check_syntax(path):
         for fname in os.listdir(path):
             _check_syntax(os.path.join(path, fname))
     elif os.path.isfile(path):
+        if os.path.splitext(path)[1] == ".pyc":  # don't process .pyc
+            return
+            
         with open(path, "rb") as sstream:
             ast.parse(sstream.read(), filename=path)
     else:
