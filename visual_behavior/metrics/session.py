@@ -176,3 +176,13 @@ def filename(session_trials):
 
 def stimulus(session_trials):
     return session_trials['stimulus'].iloc[0]
+
+
+def reward_rate(session_trials, epoch_length):
+
+    mask = (
+        masks.trial_types(session_trials,('go',))
+        & (session_trials['reward_times'].map(len)>0)
+    )
+
+    return mask.sum() / epoch_length
