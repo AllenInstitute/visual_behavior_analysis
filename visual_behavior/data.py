@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from six import iteritems
 from functools import wraps
+from .io import load_licks
 
 
 def inplace(func):
@@ -311,7 +312,7 @@ def annotate_epochs(trials, epoch_length=5.0):
 
 
 @inplace
-def annotate_lick_vigor(trials):
+def annotate_lick_vigor(trials,data,window=2.0):
     """ annotates the dataframe with two columns that indicate the number of
     licks and lick rate in 1/s
 
@@ -319,6 +320,7 @@ def annotate_lick_vigor(trials):
     ----------
     trials : pandas DataFrame
         dataframe of trials
+    window : window relative to reward time for licks to include
     inplace : bool, optional
         modify `trials` in place. if False, returns a copy. default: True
 
@@ -327,8 +329,30 @@ def annotate_lick_vigor(trials):
     io.load_trials
     """
 
-    trials['number_of_licks'] = trials['lick_times'].map(len)
-    trials['lick_rate_Hz'] = trials['lick_times'].map(lambda arr: 1.0 / np.diff(arr).mean())
+    licks = load_licks(data)
+
+
+    def find_licks(reward_times):
+        try:
+            reward_time = reward_times[0]
+        except IndexError:
+            return None
+
+        reward_lick_mask = (
+            (licks['time'] > reward_time)
+            & (licks['time'] < (reward_time + window))
+        )
+
+        return licks[reward_lick_mask]
+
+
+    def number_of_licks(licks):
+        return len(licks)
+
+
+
+    trials['number_of_licks'] = trials['reward_times'].map(find_licks)
+    trials['lick_rate_Hz'] = trials['number_of_licks'].map(lambda n: n / window)
 
 
 @inplace
