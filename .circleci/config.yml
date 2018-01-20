@@ -21,15 +21,12 @@ jobs:
       - checkout
 
       # Download and cache dependencies
-      - restore_cache:
       - run:
           name: install dependencies
           command: |
-            virtualenv venv
+            python3 -m venv venv
             . venv/bin/activate
-            pip flake8
-
-      - save_cache:
+            pip install flake8
 
       # lint code
       - run:
