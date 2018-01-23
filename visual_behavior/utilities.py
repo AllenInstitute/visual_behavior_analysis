@@ -1017,7 +1017,7 @@ def send_email(subject, message, sender, recipients):
     msg['From'] = sender
     msg['Reply-To'] = sender
 
-    if isinstance(recipients, basestring):
+    if isinstance(recipients, str):
         recipients = [recipients, ]
     recipients = ', '.join(recipients)
     msg['To'] = recipients

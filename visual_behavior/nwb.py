@@ -12,12 +12,12 @@ def create_settings(data):
     start_time = data['startdatetime']  # ISO 8601? or other standard?
     start_time_dt = pd.to_datetime(start_time)  # NOQA: F841
 
-    filename = '{}-{}.nwb'.format(mouse, session_dt.strftime("%Y%m%d%H%M%S"))
+    filename = '{}-{}.nwb'.format(mouse, start_time_dt.strftime("%Y%m%d%H%M%S"))
     identifier = nwb.create_identifier(filename[:-4])
     description = '{} performing the task "{}" on {}.'.format(mouse, task, start_time)
 
     return dict(
-        filename=os.path.join(save_dir, filename),
+        filename=filename,
         identifier=identifier,
         description=description,
         start_time=start_time,
@@ -71,7 +71,8 @@ def create_image_templates(data):
     return image_templates
 
 
-def save_image_templates(image_templates, borg):
+def save_image_templates(data, image_templates, borg):
+    template_df = load_template_df(data)
     template = borg.create_timeseries("TimeSeries", "categorical_image_stack", "template")
 
     template.set_description('images that were presented in this session')
@@ -98,4 +99,4 @@ def create_nwb(data):
     borg = nwb.NWB(**settings)
 
     image_templates = create_image_templates(data)
-    save_image_templates(image_templates, borg)
+    save_image_templates(data, image_templates, borg)
