@@ -1,0 +1,5 @@
+# normalize line-endings
+* text=auto
+# don't do this for pkl obv 
+*.pkl binary
+*.csv text
