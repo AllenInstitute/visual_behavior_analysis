@@ -891,7 +891,7 @@ def show_image(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     if cmap == None:  # NOQA: E711
-        cmap = cm.gray
+        cmap = plt.cm.gray
     im = ax.imshow(
         img,
         cmap=cmap,
