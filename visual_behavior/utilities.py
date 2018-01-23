@@ -1,12 +1,13 @@
 from __future__ import print_function
-import numpy as np
-import pandas as pd
 import os
-import glob
 import sys
-from fnmatch import fnmatch
+import glob
 import warnings
 import smtplib
+import six
+import numpy as np
+import pandas as pd
+from fnmatch import fnmatch
 from email.mime.text import MIMEText
 
 from visual_behavior.io import load_trials
@@ -1017,7 +1018,7 @@ def send_email(subject, message, sender, recipients):
     msg['From'] = sender
     msg['Reply-To'] = sender
 
-    if isinstance(recipients, str):
+    if isinstance(recipients, six.string_types):
         recipients = [recipients, ]
     recipients = ', '.join(recipients)
     msg['To'] = recipients

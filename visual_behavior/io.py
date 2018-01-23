@@ -1,4 +1,5 @@
 from __future__ import print_function
+import six
 import numpy as np
 import pandas as pd
 from scipy.signal import medfilt
@@ -17,7 +18,7 @@ def data_or_pkl(func):
     """
     @wraps(func)
     def pkl_wrapper(first_arg, *args, **kwargs):
-        if isinstance(first_arg, str):
+        if isinstance(first_arg, six.string_types):
             return func(pd.read_pickle(first_arg), *args, **kwargs)
         else:
             return func(first_arg, *args, **kwargs)
