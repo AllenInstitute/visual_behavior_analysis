@@ -2,9 +2,9 @@ from six import iteritems
 
 
 RIG_NAME = {
+    'W7DTMJ03J70R': 'Dome',
     'W7DTMJ19R2F': 'A1',
     'W7DTMH35Y0T': 'A2',
-    'W7DTMJ03J70R': 'Dome',
     'W7VS-SYSLOGIC2': 'A3',
     'W7VS-SYSLOGIC3': 'A4',
     'W7VS-SYSLOGIC4': 'A5',
@@ -27,10 +27,19 @@ RIG_NAME = {
     'W7VS-SYSLOGIC22': 'D4',
     'W7VS-SYSLOGIC23': 'D5',
     'W7VS-SYSLOGIC24': 'D6',
+    'W7VS-SYSLOGIC31': 'E1',
+    'W7VS-SYSLOGIC32': 'E2',
+    'W7VS-SYSLOGIC33': 'E3',
+    'W7VS-SYSLOGIC34': 'E4',
+    'W7VS-SYSLOGIC35': 'E5',
+    'W7VS-SYSLOGIC36': 'E6',
     'W7VS-SYSLOGIC26': 'Widefield-329',
     'OSXLTTF6T6.local': 'DougLaptop',
     'W7DTMJ026LUL': 'DougPC',
     'W7DTMJ036PSL': 'Marina2P_Sutter',
+    'W7DT2PNC1STIM': '2P6',
+    'W7DTMJ234MG': 'peterl_2p',
+    'W7DT2P3STIM': '2P3',
 }
 
 COMPUTER_NAME = dict((v, k) for k, v in iteritems(RIG_NAME))
