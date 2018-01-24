@@ -1,4 +1,5 @@
 from __future__ import print_function
+import six
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -536,7 +537,7 @@ def DoC_PsychometricCurve(
 
     Important note: the 'mintrials' argument will disregard any datapoints with fewer observations than its set value
     '''
-    if isinstance(input, str):
+    if isinstance(input, six.string_types):
         # if a string is input, assume it's a filname. Load it
         df = vbu.create_doc_dataframe(input)
         response_df = vbu.make_response_df(df[((df.trial_type == 'go') | (df.trial_type == 'catch'))])
@@ -891,7 +892,7 @@ def show_image(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
     if cmap == None:  # NOQA: E711
-        cmap = cm.gray
+        cmap = plt.cm.gray
     im = ax.imshow(
         img,
         cmap=cmap,

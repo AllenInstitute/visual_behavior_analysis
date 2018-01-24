@@ -1,4 +1,5 @@
 from __future__ import print_function
+import six
 import numpy as np
 import pandas as pd
 from scipy.signal import medfilt
@@ -17,7 +18,7 @@ def data_or_pkl(func):
     """
     @wraps(func)
     def pkl_wrapper(first_arg, *args, **kwargs):
-        if isinstance(first_arg, basestring):
+        if isinstance(first_arg, six.string_types):
             return func(pd.read_pickle(first_arg), *args, **kwargs)
         else:
             return func(first_arg, *args, **kwargs)
@@ -91,7 +92,7 @@ def load_licks(data, time=None):
     licks : numpy array
 
     """
-    responsedf=pd.DataFrame(data['responselog'])
+    responsedf = pd.DataFrame(data['responselog'])
     lick_frames = responsedf.frame.values
     if time is None:
         time = load_time(data)
@@ -168,7 +169,7 @@ def load_flashes(data, time=None):
 
     # first we find the flashes
     try:
-        assert pd.isnull(stimdf['image_category']).any() == False
+        assert pd.isnull(stimdf['image_category']).any() is False
         flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['image_category', 'image_name', 'frame']]
         # flashes['change'] = (flashes['image_category'].diff()!=0)
         flashes['prior_image_category'] = flashes['image_category'].shift()
@@ -180,7 +181,7 @@ def load_flashes(data, time=None):
         flashes['change'] = flashes['image_category_change']
     except (AssertionError, KeyError) as e:
         # print "error in {}: {}".format(pkl,e)
-        flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['ori','frame']]
+        flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['ori', 'frame']]
         flashes['prior_ori'] = flashes['ori'].shift()
         flashes['ori_change'] = flashes['ori'].ne(flashes['prior_ori']).astype(int)
 
@@ -198,7 +199,7 @@ def load_flashes(data, time=None):
         licks['frame'].values,
         side='right',
     ) - 1
-    licks = licks[licks['flash_index'].diff() > 0] # get first lick from each flash
+    licks = licks[licks['flash_index'].diff() > 0]  # get first lick from each flash
 
     # then we merge in the licks
     flashes = flashes.merge(
@@ -209,23 +210,25 @@ def load_flashes(data, time=None):
         how='left'
     ).set_index('flash_index')
 
-
     flashes['lick'] = ~pd.isnull(flashes['time_lick'])
 
     class Counter():
         def __init__(self):
             self.count = np.nan
+
         def count_it(self, val):
             count = self.count
+
             if val > 0:
                 self.count = 1
             else:
                 self.count += 1
+
             return count
 
     flashes['last_lick'] = flashes['lick'].map(Counter().count_it)
 
-    #then we find the rewards
+    # then we find the rewards
     rewards = load_rewards(data)
     rewards['flash_index'] = np.searchsorted(
         flashes['frame'].values,
@@ -298,16 +301,15 @@ def load_running_speed(data, smooth=False, time=None):
     speed = rad_to_dist(speed)
 
     if smooth:
-        #running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
+        # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
         raise NotImplementedError
 
     accel = calc_deriv(speed, time)
     jerk = calc_deriv(accel, time)
 
-
     running_speed = pd.DataFrame({
         'time': time,
-        'speed (cm/s)':speed,
+        'speed (cm/s)': speed,
         'acceleration (cm/s^2)': accel,
         'jerk (cm/s^3)': jerk,
     })
