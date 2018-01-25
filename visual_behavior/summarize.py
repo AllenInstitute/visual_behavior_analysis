@@ -114,7 +114,6 @@ def epoch_level_summary(trials, epoch_length=5.0, **kwargs):
         .reset_index()
     )
 
-
     epoch_summary['mean(HR,FA)'] = (
         epoch_summary['hit_rate']
         + epoch_summary['false_alarm_rate']

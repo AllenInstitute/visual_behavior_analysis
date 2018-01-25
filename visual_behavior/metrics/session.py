@@ -181,8 +181,8 @@ def stimulus(session_trials):
 def reward_rate(session_trials, epoch_length):
 
     mask = (
-        masks.trial_types(session_trials,('go',))
-        & (session_trials['reward_times'].map(len)>0)
+        masks.trial_types(session_trials, ('go',))
+        & (session_trials['reward_times'].map(len) > 0)
     )
 
     return mask.sum() / epoch_length
