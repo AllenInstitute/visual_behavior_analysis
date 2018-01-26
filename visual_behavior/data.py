@@ -355,7 +355,15 @@ def annotate_lick_vigor(trials,data,window=3.5):
     trials['reward_lick_count'] = trials['reward_licks'].map(lambda lks: len(lks) if lks is not None else None)
     # trials['reward_lick_rate'] = trials['reward_lick_number'].map(lambda n: n / window)
 
-    trials['reward_lick_latency'] = trials['reward_licks'].map(lambda lks: np.min(lks) if lks is not None else None)
+    def min_licks(lks):
+        if lks is None:
+            return None
+        elif len(lks)==0:
+            return None
+        else:
+            return len(lks)
+
+    trials['reward_lick_latency'] = trials['reward_licks'].map(min_licks)
 
 
 @inplace
