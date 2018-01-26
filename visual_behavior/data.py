@@ -343,16 +343,19 @@ def annotate_lick_vigor(trials,data,window=2.0):
             & (licks['time'] < (reward_time + window))
         )
 
-        return licks[reward_lick_mask]
+        tr_licks = licks[reward_lick_mask]
+        tr_licks['time'] -= reward_time
+        return tr_licks
 
 
     def number_of_licks(licks):
         return len(licks)
 
+    trials_reward_licks = trials['reward_times'].map(find_licks)
+    trials['reward_lick_number'] = trials_reward_licks.map(len)
+    trials['reward_lick_rate'] = trials['reward_lick_number'].map(lambda n: n / window)
 
-
-    trials['number_of_licks'] = trials['reward_times'].map(find_licks)
-    trials['lick_rate_Hz'] = trials['number_of_licks'].map(lambda n: n / window)
+    trials['reward_lick_latency'] = trials_reward_licks.map(lamda lks: return lks['time'].min())
 
 
 @inplace
