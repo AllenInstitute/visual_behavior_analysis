@@ -63,7 +63,7 @@ def create_doc_dataframe(filename):
     fix_autorearded(df, inplace=True)
     annotate_cumulative_reward(df, data, inplace=True)
     annotate_filename(df, filename, inplace=True)
-    annotate_lick_vigor(df, inplace=True)
+    annotate_lick_vigor(df, data, inplace=True)
 
     for col in ('auto_rewarded', 'change_time', ):
         if col not in df.columns:
@@ -92,7 +92,7 @@ def create_doc_dataframe(filename):
     return df
 
 
-def load_behavior_data(mice, progressbar=True, save_dataframe=True):
+def load_behavior_data(mice, progressbar=True, save_dataframe=True,load_existing_dataframe=True):
     """ Loads DoC behavior dataframe for all mice in a list
 
     Parameters
