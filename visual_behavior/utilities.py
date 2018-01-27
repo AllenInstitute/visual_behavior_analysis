@@ -10,15 +10,15 @@ import pandas as pd
 from fnmatch import fnmatch
 from email.mime.text import MIMEText
 
-from visual_behavior.io import load_trials, load_licks
+from visual_behavior.io import load_trials, load_licks, load_time
 from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
 from visual_behavior.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
-from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor
+from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor, update_times
 from visual_behavior.devices import get_rig_id
 
 
 # -> io.py
-def create_doc_dataframe(filename):
+def create_doc_dataframe(filename,time=None):
     """ creates a trials dataframe from a detection-of-change session
 
     Parameters
@@ -32,8 +32,11 @@ def create_doc_dataframe(filename):
     """
     data = pd.read_pickle(filename)
 
-    df = load_trials(data)
-    df = df[~pd.isnull(df['reward_times'])].reset_index()
+    if time is None:
+        time = load_time(data)
+
+    df = load_trials(data,time=time)
+    df = df[~pd.isnull(df['reward_times'])].reset_index(drop=True)
 
     # add some columns to the dataframe
     keydict = {
@@ -63,25 +66,28 @@ def create_doc_dataframe(filename):
     fix_autorearded(df, inplace=True)
     annotate_cumulative_reward(df, data, inplace=True)
     annotate_filename(df, filename, inplace=True)
-    annotate_lick_vigor(df, data, inplace=True)
 
     for col in ('auto_rewarded', 'change_time', ):
         if col not in df.columns:
             df[col] = None
 
     # add some columns that require calculation
-    calculate_latency(df)
-    calculate_reward_rate(df)
 
     df['trial_type'] = categorize_trials(df)
     df['response'] = check_responses(df)
     df['trial_length'] = calculate_trial_length(df)
-    df['endframe'] = get_end_frame(df, last_frame=len(data['vsyncintervals']))
-    df['endtime'] = get_end_time(df, last_time=np.sum(data['vsyncintervals']))
+    df['endframe'] = get_end_frame(df, data)
+    df['endtime'] = get_end_time(df, data, time=time)
     df['color'] = assign_color(df)
     df['response_type'] = get_response_type(df)
     df['lick_frames'] = get_lick_frames(df, data)
     # df['last_lick'] = get_last_licktimes(df,data)
+
+    update_times(df,data,time=time,inplace=True)
+
+    annotate_lick_vigor(df, data, inplace=True)
+    calculate_latency(df)
+    calculate_reward_rate(df)
 
     try:
         remove_repeated_licks(df)
@@ -530,18 +536,20 @@ def calculate_trial_length(df_in):
     return trial_length
 
 
-def get_end_time(df_in, last_time=np.nan):
+def get_end_time(df_in, data, time=None):
     '''creates a vector of end times for each trial, which is just the start time for the next trial'''
-    end_times = np.zeros_like(df_in.index) * np.nan
-    for ii, row in df_in.iterrows():
-        if ii > 0:
-            end_times[ii - 1] = row['starttime']
-    end_times[ii] = last_time
+    if time is None:
+        time = load_time(data)
+
+    end_times = df_in['endframe'].map(lambda fr: time[int(fr)])
     return end_times
 
 
 # -> analyze
-def get_end_frame(df_in, last_frame=None):
+def get_end_frame(df_in, data):
+
+    last_frame = len(data['vsyncintervals'])
+
     end_frames = np.zeros_like(df_in.index) * np.nan
 
     for ii, index in enumerate(df_in.index[:-1]):

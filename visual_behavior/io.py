@@ -43,7 +43,7 @@ def load_params(data):
 
 
 @data_or_pkl
-def load_trials(data):
+def load_trials(data,time=None):
     """ Returns the trials generated in an experiment.
 
     Parameters
@@ -99,7 +99,7 @@ def load_licks(data, time=None):
 
     licks['time'] = time[licks['frame']]
 
-    # licks[licks['frame'].diff() != 1]
+    licks = licks[licks['frame'].diff() != 1]
 
     return licks
 

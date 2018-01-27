@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from six import iteritems
 from functools import wraps
-from .io import load_licks
+from .io import load_licks, load_time
 
 
 def inplace(func):
@@ -361,7 +361,7 @@ def annotate_lick_vigor(trials,data,window=3.5):
         elif len(lks)==0:
             return None
         else:
-            return len(lks)
+            return np.min(lks)
 
     trials['reward_lick_latency'] = trials['reward_licks'].map(min_licks)
 
@@ -397,3 +397,32 @@ def annotate_trials(trials):
     # unwrap the response window
     explode_response_window(trials, inplace=True)
 
+@inplace
+def update_times(trials,data,time=None):
+
+    if time is None:
+        time = load_time(data)
+
+    time_frame_map = {
+        'change_time': 'change_frame',
+        'starttime': 'startframe',
+        'endtime': 'endframe',
+        'lick_times': 'lick_frames',
+        'reward_times': 'reward_frames',
+    }
+
+    def update(fr):
+        try:
+            if pd.isnull(fr)==True: # this should catch np.nans
+                return None
+            else: # this should be for floats
+                return time[int(fr)]
+        except (TypeError,ValueError): # this should catch lists
+            return time[fr]
+
+    for time_col, frame_col in iteritems(time_frame_map):
+        try:
+            trials[time_col] = trials[frame_col].map(update)
+        except KeyError:
+            print('oops! {} does not exist'.format(frame_col))
+            pass
