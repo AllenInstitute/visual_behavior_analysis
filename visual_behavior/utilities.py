@@ -750,12 +750,12 @@ def get_response_rates(df_in2, sliding_window=100, reward_window=None):
     go_responses = pd.Series([np.nan] * len(df_in))
     go_responses[df_in[(df_in.trial_type == 'go') & (df_in.response == 1) & (df_in.auto_rewarded is not True)].index] = 1
     go_responses[df_in[(df_in.trial_type == 'go') & ((df_in.response == 0) | np.isnan(df_in.response)) & (df_in.auto_rewarded is not True)].index] = 0
-    hit_rate = go_responses.rolling(window=100, min_periods=0).mean()
+    hit_rate = go_responses.rolling(window=sliding_window, min_periods=0).mean()
 
     catch_responses = pd.Series([np.nan] * len(df_in))
     catch_responses[df_in[(df_in.trial_type == 'catch') & (df_in.response == 1)].index] = 1
     catch_responses[df_in[(df_in.trial_type == 'catch') & ((df_in.response == 0) | np.isnan(df_in.response))].index] = 0
-    catch_rate = catch_responses.rolling(window=100, min_periods=0).mean()
+    catch_rate = catch_responses.rolling(window=sliding_window, min_periods=0).mean()
 
     d_prime = dprime(hit_rate, catch_rate)
 
