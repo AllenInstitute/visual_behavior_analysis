@@ -129,7 +129,7 @@ def load_behavior_data(mice, progressbar=True, save_dataframe=True,load_existing
     for mouse in mice:
         dft = load_from_folder(
             os.path.join(basepath, mouse, 'output'),
-            load_existing_dataframe=load_existing_dataframe,  # NOQA: F821
+            load_existing_dataframe=load_existing_dataframe,
             save_dataframe=save_dataframe
         )
         cohort = get_cohort_info(mouse)
