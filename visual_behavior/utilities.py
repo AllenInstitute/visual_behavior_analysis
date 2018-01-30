@@ -752,14 +752,14 @@ def get_response_rates(df_in2, sliding_window=100, reward_window=None):
         df_in[
             (df_in.trial_type == 'go')
             & (df_in.response == 1)
-            & (df_in.auto_rewarded is not True)
+            & (df_in.auto_rewarded != True)
         ].index
     ] = 1
     go_responses[
         df_in[
             (df_in.trial_type == 'go')
             & ((df_in.response == 0) | np.isnan(df_in.response))
-            & (df_in.auto_rewarded is not True)
+            & (df_in.auto_rewarded != True)
         ].index
     ] = 0
 
