@@ -24,9 +24,9 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            virtualenv venv
+            python3 -m venv venv
             . venv/bin/activate
-            pip flake8
+            pip install flake8
 
       # lint code
       - run:
