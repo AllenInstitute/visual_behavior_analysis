@@ -63,20 +63,14 @@ jobs:
           command: |
             virtualenv venv
             . venv/bin/activate
-            pip install -r requirements.txt
-            pip install -r requirements_dev.txt
-
-      - save_cache:
-          paths:
-            - ./venv
-          key: py27-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "requirements_dev.txt"}}
+            pip install tox
 
       # run tests!
       - run:
           name: run tests
           command: |
             . venv/bin/activate
-            pytest
+            tox -e py27
 
       - store_artifacts:
           path: test-reports
