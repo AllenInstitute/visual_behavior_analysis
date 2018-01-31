@@ -83,6 +83,6 @@ def test_create_doc_dataframe(
     annotated_trials_df_fixture
 ):
     assert_frames_equal(
-        utilities.create_doc_dataframe(behavioral_session_output_pickle_fixture),
-        annotated_trials_df_fixture
+        utilities.create_doc_dataframe(behavioral_session_output_pickle_fixture).drop(columns=["filepath", "filename", ], index=1),
+        annotated_trials_df_fixture.drop(columns=["filepath", "filename", ], index=1)
     )
