@@ -1,4 +1,0 @@
-pytest>=3.3.2
-bumpversion==0.5.3
-flake8>=3.5.0
-pytest-cov
