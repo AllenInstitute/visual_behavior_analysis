@@ -7,7 +7,6 @@ setuptools.setup(
     author="Justin Kiggins",
     author_email="justink@alleninstitute.org",
     description="analysis package for visual behavior",
-    long_description=open('README.md').read(),
     packages=setuptools.find_packages(exclude=['data', 'figures', 'notebooks', 'scripts']),
     # install_requires=[
     #     'Click',
