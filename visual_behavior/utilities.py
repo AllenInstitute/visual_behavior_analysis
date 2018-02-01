@@ -692,8 +692,8 @@ def check_responses(df_in, reward_window=None):
     did_respond = np.zeros(len(df_in))
     for ii, idx in enumerate(df_in.index):
         if reward_window is None:
-            rw_low = df_in.iloc[idx]['response_window'][0]
-            rw_high = df_in.iloc[idx]['response_window'][1]
+            rw_low = df_in.loc[idx]['response_window'][0]
+            rw_high = df_in.loc[idx]['response_window'][1]
         if pd.isnull(df_in.loc[idx]['change_time']) is False and \
                 pd.isnull(df_in.loc[idx]['response_latency']) is False and \
                 df_in.loc[idx]['response_latency'] >= rw_low and \
