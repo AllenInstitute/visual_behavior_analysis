@@ -25,7 +25,11 @@ from visual_behavior import data
     ),
 ])
 def test_annotate_parameters(df, pickle_data, keydict, expected):
-    data.annotate_parameters(df, pickle_data, keydict).equals(expected)
+    pd.testing.assert_frame_equal(
+        data.annotate_parameters(df, pickle_data, keydict),
+        expected,
+        check_like=True
+    )
 
 
 @pytest.mark.parametrize("df, expected", [
@@ -53,7 +57,7 @@ def test_annotate_parameters(df, pickle_data, keydict, expected):
     ),
 ])
 def test_explode_startdatetime(df, expected):
-    assert data.explode_startdatetime(df).equals(expected)
+    pd.testing.assert_frame_equal(data.explode_startdatetime(df), expected)
 
 
 @pytest.mark.parametrize("df, expected", [
@@ -68,7 +72,7 @@ def test_explode_startdatetime(df, expected):
     )
 ])
 def test_annotate_n_rewards(df, expected):
-    assert data.annotate_n_rewards(df).equals(expected)
+    pd.testing.assert_frame_equal(data.annotate_n_rewards(df), expected)
 
 
 @pytest.mark.parametrize("df, pickled_data, expected", [
@@ -84,7 +88,10 @@ def test_annotate_n_rewards(df, expected):
     ),
 ])
 def test_annotate_rig_id(df, pickled_data, expected):
-    assert data.annotate_rig_id(df, pickled_data).equals(expected)
+    pd.testing.assert_frame_equal(
+        data.annotate_rig_id(df, pickled_data),
+        expected
+    )
 
 
 @pytest.mark.parametrize("df, pickled_data, expected", [
@@ -100,7 +107,10 @@ def test_annotate_rig_id(df, pickled_data, expected):
     ),
 ])
 def test_annotate_startdatetime(df, pickled_data, expected):
-    assert data.annotate_startdatetime(df, pickled_data).equals(expected)
+    pd.testing.assert_frame_equal(
+        data.annotate_startdatetime(df, pickled_data),
+        expected
+    )
 
 
 @pytest.mark.parametrize("df, pickled_data, expected", [
@@ -129,7 +139,10 @@ def test_annotate_startdatetime(df, pickled_data, expected):
     )
 ])
 def test_annotate_cumulative_reward(df, pickled_data, expected):
-    assert data.annotate_cumulative_reward(df, pickled_data).equals(expected)
+    pd.testing.assert_frame_equal(
+        data.annotate_cumulative_reward(df, pickled_data),
+        expected
+    )
 
 
 @pytest.mark.parametrize("df, filename, expected", [
@@ -144,7 +157,10 @@ def test_annotate_cumulative_reward(df, pickled_data, expected):
     ),
 ])
 def test_annotate_filename(df, filename, expected):
-    assert data.annotate_filename(df, filename).equals(expected)
+    pd.testing.assert_frame_equal(
+        data.annotate_filename(df, filename),
+        expected
+    )
 
 
 @pytest.mark.parametrize("df, expected", [
@@ -158,7 +174,7 @@ def test_annotate_filename(df, filename, expected):
     ),
 ])
 def test_fix_autorearded(df, expected):
-    assert data.fix_autorearded(df).equals(expected)
+    pd.testing.assert_frame_equal(data.fix_autorearded(df), expected)
 
 
 @pytest.mark.parametrize("df, expected", [

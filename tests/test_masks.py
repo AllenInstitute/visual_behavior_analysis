@@ -15,7 +15,10 @@ from visual_behavior import masks
 )
 def test_trial_types(annotated_trials_df_fixture, trial_types, expected):
     if isinstance(expected, pd.Series):
-        assert masks.trial_types(annotated_trials_df_fixture, trial_types).iloc[:5].equals(expected)
+        pd.testing.assert_series_equal(
+            masks.trial_types(annotated_trials_df_fixture, trial_types).iloc[:5],
+            expected
+        )
     else:
         np.testing.assert_equal(
             masks.trial_types(annotated_trials_df_fixture, trial_types)[:5],
@@ -24,8 +27,11 @@ def test_trial_types(annotated_trials_df_fixture, trial_types, expected):
 
 
 def test_contingent_trials(annotated_trials_df_fixture):
-    assert masks.contingent_trials(annotated_trials_df_fixture).iloc[:5] \
-        .equals(pd.Series(data=[False, False, False, False, False, ], name="trial_type", dtype="bool"))
+    pd.testing.assert_series_equal(
+        masks.contingent_trials(annotated_trials_df_fixture).iloc[:5],
+        pd.Series(data=[False, False, False, False, False, ], name="trial_type", dtype="bool"),
+        obj=pd.Series
+    )
 
 
 @pytest.mark.parametrize("thresh, expected", [
@@ -39,4 +45,7 @@ def test_contingent_trials(annotated_trials_df_fixture):
     ),
 ])
 def test_reward_rate(annotated_trials_df_fixture, thresh, expected):
-    assert masks.reward_rate(annotated_trials_df_fixture, thresh).iloc[:5].equals(expected)
+    pd.testing.assert_series_equal(
+        masks.reward_rate(annotated_trials_df_fixture, thresh).iloc[:5],
+        expected,
+    )

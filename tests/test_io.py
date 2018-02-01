@@ -8,54 +8,6 @@ from six.moves import cPickle as pickle
 from visual_behavior import io
 
 
-def assert_frames_equal(actual, expected, use_close=False):
-    """
-    Compare DataFrame items by index and column and
-    raise AssertionError if any item is not equal.
-
-    Ordering is unimportant, items are compared only by label.
-    NaN and infinite values are supported.
-
-    Parameters
-    ----------
-    actual : pandas.DataFrame
-    expected : pandas.DataFrame
-    use_close : bool, optional
-        If True, use numpy.testing.assert_allclose instead of
-        numpy.testing.assert_equal.
-
-    Notes
-    -----
-    - stolen from:
-        https://gist.github.com/jiffyclub/ac2e7506428d5e1d587b
-    """
-    if use_close:
-        comp = np.testing.assert_allclose
-    else:
-        comp = np.testing.assert_equal
-
-    assert (isinstance(actual, pd.DataFrame) and
-            isinstance(expected, pd.DataFrame)), \
-        'Inputs must both be pandas DataFrames.'
-
-    for i, exp_row in expected.iterrows():
-        assert i in actual.index, 'Expected row {!r} not found.'.format(i)
-
-        act_row = actual.loc[i]
-
-        for j, exp_item in exp_row.iteritems():
-            assert j in act_row.index, \
-                'Expected column {!r} not found.'.format(j)
-
-            act_item = act_row[j]
-
-            try:
-                comp(act_item, exp_item)
-            except AssertionError as e:
-                raise AssertionError(
-                    e.message + '\n\nColumn: {!r}\nRow: {!r}'.format(j, i))
-
-
 @pytest.mark.parametrize("value, to_pickle", [
     (pd.DataFrame(data={"foo": {0: 1, 1: 2, }, }), False, ),
     (pd.DataFrame(data={"foo": {0: 1, 1: 2, }, }), True, ),
@@ -64,15 +16,21 @@ def test_data_or_pkl(tmpdir, value, to_pickle):
     if to_pickle:
         pickle_path = os.path.join(str(tmpdir), "test.pkl")
         value.to_pickle(pickle_path)
-        assert io.data_or_pkl(lambda value: value)(pickle_path).equals(value)
+        pd.testing.assert_frame_equal(
+            io.data_or_pkl(lambda value: value)(pickle_path).sort_index(axis=1),
+            value.sort_index(axis=1)
+        )
     else:
-        assert io.data_or_pkl(lambda value: value)(value).equals(value)
+        pd.testing.assert_frame_equal(
+            io.data_or_pkl(lambda value: value)(value).sort_index(axis=1),
+            value.sort_index(axis=1)
+        )
 
 
 def test_load_trials(behavioral_session_output_fixture, trials_df_fixture):
-    assert_frames_equal(
-        io.load_trials(behavioral_session_output_fixture),
-        trials_df_fixture
+    pd.testing.assert_frame_equal(
+        io.load_trials(behavioral_session_output_fixture).sort_index(axis=1),
+        trials_df_fixture.sort_index(axis=1)
     )
 
 
@@ -131,50 +89,44 @@ def test_load_licks(behavioral_session_output_fixture):
 
 
 def test_load_rewards(behavioral_session_output_fixture):
-    assert_frames_equal(
+    pd.testing.assert_frame_equal(
         io.load_rewards(behavioral_session_output_fixture).iloc[:10],
         pd.DataFrame(data={
             "frame": {
-                0: 600, 1: 980, 2: 2080, 3: 2440, 4: 3200, 5: 4133, 6: 6731,
-                7: 7854, 8: 10709, 9: 10944,
+                0.0: 600, 1.0: 980, 2.0: 2080, 3.0: 2440, 4.0: 3200, 5.0: 4133,
+                6.0: 6731, 7.0: 7854, 8.0: 10709, 9.0: 10944,
             },
             "time": {
-                0: 22.9355107285,
-                1: 37.4975822689,
-                2: 79.5989893544,
-                3: 93.3269995861,
-                4: 122.417696304,
-                5: 158.180579774,
-                6: 257.612732749,
-                7: 300.564845749,
-                8: 409.78845397,
-                9: 418.779212811,
+                0.0: 22.9355107285, 1.0: 37.4975822689, 2.0: 79.5989893544,
+                3.0: 93.3269995861, 4.0: 122.417696304, 5.0: 158.180579774,
+                6.0: 257.612732749, 7.0: 300.564845749, 8.0: 409.78845397,
+                9.0: 418.779212811,
             },
         }, columns=["frame", "time", ]),
-        use_close=True
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
     )
 
-    assert_frames_equal(
+    pd.testing.assert_frame_equal(
         io.load_rewards(behavioral_session_output_fixture, io.load_time(behavioral_session_output_fixture)).iloc[:10],
         pd.DataFrame(data={
             "frame": {
-                0: 600, 1: 980, 2: 2080, 3: 2440, 4: 3200, 5: 4133, 6: 6731,
-                7: 7854, 8: 10709, 9: 10944,
+                0.0: 600, 1.0: 980, 2.0: 2080, 3.0: 2440, 4.0: 3200, 5.0: 4133,
+                6.0: 6731, 7.0: 7854, 8.0: 10709, 9.0: 10944,
             },
             "time": {
-                0: 22.9355107285,
-                1: 37.4975822689,
-                2: 79.5989893544,
-                3: 93.3269995861,
-                4: 122.417696304,
-                5: 158.180579774,
-                6: 257.612732749,
-                7: 300.564845749,
-                8: 409.78845397,
-                9: 418.779212811,
+                0.0: 22.9355107285, 1.0: 37.4975822689, 2.0: 79.5989893544,
+                3.0: 93.3269995861, 4.0: 122.417696304, 5.0: 158.180579774,
+                6.0: 257.612732749, 7.0: 300.564845749, 8.0: 409.78845397,
+                9.0: 418.779212811,
             },
         }, columns=["frame", "time", ]),
-        use_close=True
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
     )
 
 
@@ -207,7 +159,7 @@ def test_load_flashes(behavioral_session_output_fixture):
             'reward': {0.0: False, 1.0: False, 2.0: False, 3.0: False, 4.0: False, 5.0: False},
             'trial_duration': {0.0: 8.25, 1.0: 8.25, 2.0: 8.25, 3.0: 8.25, 4.0: 8.25, 5.0: 8.25},
         },
-        index=pd.Float64Index(
+        index=pd.Int64Index(
             [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, ],
             dtype="float64",
             name="flash_index"
@@ -221,14 +173,22 @@ def test_load_flashes(behavioral_session_output_fixture):
         ]
     )  # bleh
 
-    assert_frames_equal(
+    pd.testing.assert_frame_equal(
         io.load_flashes(behavioral_session_output_fixture).iloc[:6],  # i hate pandas...why does this replace normal slicing in just p27!?
-        EXPECTED_FLASHES_DF
+        EXPECTED_FLASHES_DF,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
     )
 
-    assert_frames_equal(
+    pd.testing.assert_frame_equal(
         io.load_flashes(behavioral_session_output_fixture, io.load_time(behavioral_session_output_fixture)).iloc[:6],
-        EXPECTED_FLASHES_DF
+        EXPECTED_FLASHES_DF,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
     )
 
 
@@ -270,12 +230,14 @@ def test_load_running_speed(behavioral_session_output_fixture):
         ]
     )
 
-    assert_frames_equal(
+    pd.testing.assert_frame_equal(
         io.load_running_speed(behavioral_session_output_fixture).iloc[:5],
-        EXPECTED_RUNNING_DF
+        EXPECTED_RUNNING_DF,
+        check_like=True
     )
 
-    assert_frames_equal(
+    pd.testing.assert_frame_equal(
         io.load_running_speed(behavioral_session_output_fixture, time=io.load_time(behavioral_session_output_fixture)).iloc[:5],
-        EXPECTED_RUNNING_DF
+        EXPECTED_RUNNING_DF,
+        check_like=True
     )
