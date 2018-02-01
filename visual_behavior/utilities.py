@@ -10,7 +10,7 @@ import pandas as pd
 from fnmatch import fnmatch
 from email.mime.text import MIMEText
 
-from visual_behavior.io import load_trials
+from visual_behavior.io import load_trials, load_licks
 from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
 from visual_behavior.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
 from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor
@@ -180,7 +180,7 @@ def get_mouse_info(mouse_id):
 
 
 # -> analyze.py
-def get_lick_frames(df_in, data):
+def get_lick_frames(df_in, data, time=None):
     """
     returns a list of arrays of lick frames, with one entry per trial
     """
@@ -189,8 +189,9 @@ def get_lick_frames(df_in, data):
     #      violated when we began displaying a frame at the beginning of the session without a corresponding call the 'checkLickSensor'
     #      method. Using the 'responselog' instead will provide a more accurate measure of actual like frames and times.
     # lick_frames = data['lickData'][0]
-    responsedf = pd.DataFrame(data['responselog'])
-    lick_frames = responsedf.frame.values
+
+    lick_frames = load_licks(data, time=time)['frame']
+
     local_licks = []
     for idx, row in df_in.iterrows():
         local_licks.append(
