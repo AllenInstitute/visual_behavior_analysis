@@ -319,7 +319,8 @@ def save_figure(fig, fname, formats=['.pdf'], transparent=False, dpi=300, faceco
     elif 'figsize' in kwargs.keys():
         fig.set_size_inches(kwargs['figsize'])
     else:
-        fig.set_size_inches(11, 8.5)
+        fig.set_size_inches(fig.get_figwidth(), fig.get_figheight())
+        # fig.set_size_inches(11, 8.5)
     for f in formats:
         fig.savefig(
             fname + f,
