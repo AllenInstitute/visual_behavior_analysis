@@ -426,3 +426,15 @@ def update_times(trials,data,time=None):
         except KeyError:
             print('oops! {} does not exist'.format(frame_col))
             pass
+
+
+    def make_array(val):
+        try:
+            len(val)
+        except TypeError as e:
+            val = [val,]
+        return val
+
+    must_be_arrays = ('lick_times','reward_times')
+    for col in must_be_arrays:
+        trials[col] = trials[col].map(make_array)
