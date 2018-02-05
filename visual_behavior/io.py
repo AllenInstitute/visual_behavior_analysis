@@ -43,7 +43,7 @@ def load_params(data):
 
 
 @data_or_pkl
-def load_trials(data):
+def load_trials(data,time=None):
     """ Returns the trials generated in an experiment.
 
     Parameters
@@ -92,17 +92,14 @@ def load_licks(data, time=None):
     licks : numpy array
 
     """
-    responsedf = pd.DataFrame(data['responselog'])
-    lick_frames = responsedf.frame.values
+    licks = pd.DataFrame(data['responselog'], columns=['frame', 'time'])
+
     if time is None:
         time = load_time(data)
 
-    licks = pd.DataFrame(dict(
-        frame=lick_frames,
-        time=time[lick_frames],
-    ))
+    licks['time'] = time[licks['frame']]
 
-    licks[licks['frame'].diff() != 1]
+    licks = licks[licks['frame'].diff() != 1]
 
     return licks
 
