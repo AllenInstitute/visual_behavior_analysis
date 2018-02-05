@@ -418,7 +418,7 @@ def update_times(trials,data,time=None):
             else: # this should be for floats
                 return time[int(fr)]
         except (TypeError,ValueError): # this should catch lists
-            return time[fr]
+            return time[int(fr)]
 
     for time_col, frame_col in iteritems(time_frame_map):
         try:
