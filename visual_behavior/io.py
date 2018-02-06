@@ -166,7 +166,7 @@ def load_flashes(data, time=None):
 
     # first we find the flashes
     try:
-        assert pd.isnull(stimdf['image_category']).any() is False
+        assert pd.isnull(stimdf['image_category']).any()==False
         flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['image_category', 'image_name', 'frame']]
         # flashes['change'] = (flashes['image_category'].diff()!=0)
         flashes['prior_image_category'] = flashes['image_category'].shift()
