@@ -150,14 +150,15 @@ def make_rolling_dprime_plot(d_prime, ax, format='vertical'):
     ax.set_title("Rolling d'", fontsize=16)
 
 
-def make_lick_raster_plot(df_in, ax, reward_window=None):
+def make_lick_raster_plot(df_in, ax, reward_window=None, xlims=(-1,5),show_reward_window=True):
     if reward_window is None:
         try:
             reward_window = vbu.get_reward_window(df_in)
         except Exception:
             reward_window = [0.15, 1]
 
-    ax.axvspan(reward_window[0], reward_window[1], facecolor='k', alpha=0.5)
+    if show_reward_window==True:
+        ax.axvspan(reward_window[0], reward_window[1], facecolor='k', alpha=0.5)
     lick_x = []
     lick_y = []
 
@@ -179,7 +180,7 @@ def make_lick_raster_plot(df_in, ax, reward_window=None):
     ax.plot(vbu.flatten_list(lick_x), vbu.flatten_list(lick_y), '.k')
     ax.plot(vbu.flatten_list(reward_x), vbu.flatten_list(reward_y), 'o', color='blue')
 
-    ax.set_xlim(-1, 5)
+    ax.set_xlim(xlims[0],xlims[1])
     ax.set_ylim(-0.5, ii + 0.5)
     ax.invert_yaxis()
 
