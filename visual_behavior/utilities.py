@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from fnmatch import fnmatch
 from email.mime.text import MIMEText
+from scipy.interpolate import interp1d
 
 from visual_behavior.io import load_trials, load_licks, load_time
 from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
@@ -701,6 +702,11 @@ def check_responses(df_in, reward_window=None):
             did_respond[ii] = True
 
     return did_respond
+
+def resample(t,y,new_t):
+    f = interp1d(t,y,bounds_error=False)
+    return f(new_t)
+
 
 
 # -> analyze
