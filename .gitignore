@@ -43,6 +43,7 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
+.pytest_cache/
 
 # Translations
 *.mo
@@ -63,4 +64,5 @@ data/
 notebooks/.ipynb_checkpoints/
 figures/
 
-\.idea/
+# vs code
+.idea/
