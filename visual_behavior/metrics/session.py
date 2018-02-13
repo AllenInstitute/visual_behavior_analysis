@@ -63,15 +63,13 @@ def lick_latency(session_trials, percentile=50, trial_types=('go', )):
     return quantile
 
 
-def hit_lick_rate(session_trials):
-    mask = session_trials['change'] & session_trials['detect']
-    quantile = session_trials[mask]['lick_rate_Hz'].dropna().mean()
+def reward_lick_count(session_trials):
+    quantile = session_trials['reward_lick_count'].mean()
     return quantile
 
 
-def hit_lick_quantity(session_trials):
-    mask = session_trials['change'] & session_trials['detect']
-    quantile = session_trials[mask]['number_of_licks'].mean()
+def reward_lick_latency(session_trials):
+    quantile = session_trials['reward_lick_latency'].mean()
     return quantile
 
 

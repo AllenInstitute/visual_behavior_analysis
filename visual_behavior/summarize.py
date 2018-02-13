@@ -102,8 +102,8 @@ def epoch_level_summary(trials, epoch_length=5.0, **kwargs):
         fraction_time_aborted=session.fraction_time_aborted,
         hit_rate=lambda grp: session.discrim(grp, 'change', 'detect', metric=classification.hit_rate),
         false_alarm_rate=lambda grp: session.discrim(grp, 'change', 'detect', metric=classification.false_alarm_rate),
-        hit_lick_rate=session.hit_lick_rate,
-        hit_lick_quantity=session.hit_lick_quantity,
+        # reward_lick_count=session.reward_lick_count,
+        # reward_lick_latency=session.reward_lick_latency,
         **kwargs
     )
 
