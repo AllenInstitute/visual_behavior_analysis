@@ -34,7 +34,7 @@ def make_daily_figure(
             reward_window = vbu.get_reward_window(df_in)
         except Exception:
             reward_window = [0.15, 1]
-    if sliding_window == None:  # NOQA: E712
+    if sliding_window is None:
         sliding_window = len(df_nonaborted)
 
     fig = plt.figure(figsize=(12, 8))
@@ -150,14 +150,14 @@ def make_rolling_dprime_plot(d_prime, ax, format='vertical'):
     ax.set_title("Rolling d'", fontsize=16)
 
 
-def make_lick_raster_plot(df_in, ax, reward_window=None, xlims=(-1,5),show_reward_window=True):
+def make_lick_raster_plot(df_in, ax, reward_window=None, xlims=(-1, 5), show_reward_window=True):
     if reward_window is None:
         try:
             reward_window = vbu.get_reward_window(df_in)
         except Exception:
             reward_window = [0.15, 1]
 
-    if show_reward_window==True:
+    if show_reward_window == True: # NOQA E712
         ax.axvspan(reward_window[0], reward_window[1], facecolor='k', alpha=0.5)
     lick_x = []
     lick_y = []
@@ -175,12 +175,12 @@ def make_lick_raster_plot(df_in, ax, reward_window=None, xlims=(-1,5),show_rewar
             reward_x.append(rt)
             reward_y.append(np.ones_like(rt) * ii)
 
-        ax.axhspan( ii - 0.5, ii + 0.5, facecolor=df_in.loc[idx]['color'], alpha=0.5)
+        ax.axhspan(ii - 0.5, ii + 0.5, facecolor=df_in.loc[idx]['color'], alpha=0.5)
 
     ax.plot(vbu.flatten_list(lick_x), vbu.flatten_list(lick_y), '.k')
-    ax.plot(vbu.flatten_list(reward_x), vbu.flatten_list(reward_y), 'o', color='blue',alpha=0.5)
+    ax.plot(vbu.flatten_list(reward_x), vbu.flatten_list(reward_y), 'o', color='blue', alpha=0.5)
 
-    ax.set_xlim(xlims[0],xlims[1])
+    ax.set_xlim(xlims[0], xlims[1])
     ax.set_ylim(-0.5, ii + 0.5)
     ax.invert_yaxis()
 
@@ -412,7 +412,7 @@ def make_performance_plot(df_in, ax, reward_window=None, sliding_window=None):
     for ii, date in enumerate(dates):
         df1 = df_in[(df_in.startdatetime == date) & (df_in.trial_type != 'aborted')]
 
-        if calculate_sliding_window == True:  # NOQA: E712
+        if calculate_sliding_window == True:
             sliding_window = len(df1)
 
         hit_rate, fa_rate, d_prime = vbu.get_response_rates(df1, sliding_window=sliding_window, reward_window=reward_window)
@@ -443,7 +443,7 @@ def make_dprime_plot(
         return_vals=False,
         sliding_window=None
 ):
-    if sliding_window == None:  # NOQA: E712
+    if sliding_window is None:
         calculate_sliding_window = True
     else:
         calculate_sliding_window = False
@@ -458,7 +458,7 @@ def make_dprime_plot(
     for ii, date in enumerate(dates):
         df1 = df_in[(df_in.startdatetime == date) & (df_in.trial_type != 'aborted')]
 
-        if calculate_sliding_window == True:  # NOQA: E712
+        if calculate_sliding_window == True:
             sliding_window = len(df1)
 
         hit_rate, fa_rate, d_prime = vbu.get_response_rates(
@@ -484,7 +484,7 @@ def make_dprime_plot(
     ax.set_xlim(0, 4.75)
     ax.set_ylim(-1, len(dates))
     ax.invert_yaxis()
-    if return_vals == True:  # NOQA: E712
+    if return_vals == True:
         return max_dprime
 
 
@@ -621,7 +621,7 @@ def plot_psychometric(
 
     x = np.array(x, dtype=np.float)
 
-    if logscale == True:  # NOQA: E712
+    if logscale == True:
         xlabel = kwargs.get('xlabel', 'Contrast (log scale)')
     else:
         xlabel = kwargs.get('xlabel', 'Contrast')
@@ -644,7 +644,7 @@ def plot_psychometric(
             ax.set_xticks(np.log10([minval, 0.05, 0.1, 0.25, 0.5, 1]))
             ax.set_xticklabels([0, 0.05, 0.1, 0.25, 0.5, 1])
         else:
-            minval = 0.03 if minval == None else minval  # NOQA: E712
+            minval = 0.03 if minval is None else minval
             ax.set_xticks(np.log10([minval] + xticks[1:]))
             ax.set_xticklabels(xticks)
 
@@ -679,7 +679,7 @@ def plot_psychometric(
             zorder=zorder,
             alpha=linealpha
         )
-    elif logscale == True and show_points is True:  # NOQA: E712
+    elif logscale == True and show_points is True:
         xvals_to_plot = np.log10(x)
         if xval_jitter != 0:
             xvals_to_plot = [
@@ -747,18 +747,18 @@ def plot_psychometric(
             # Plot curve fit
             xp = np.linspace(min(x), max(x), 1001)
             pxp = curve_fit(p, xp, fittype)
-            if logscale == False:  # NOQA: E712
+            if logscale == False:
                 l_fit = ax.plot(xp, pxp, linestyle=linestyle, linewidth=linewidth, color=linecolor, alpha=linealpha)
             else:
                 l_fit = ax.plot(np.log10(xp), pxp, linestyle=linestyle, linewidth=linewidth, color=linecolor, alpha=linealpha)
         except Exception as e:
             print("failed to plot sigmoid", e)
 
-    if showYLabel == True:  # NOQA: E712
+    if showYLabel == True:
         ax.set_ylabel(ylabel, fontsize=fontsize)
     else:
         ax.set_yticklabels([])
-    if showXLabel == True:  # NOQA: E712
+    if showXLabel == True:
         ax.set_xlabel(xlabel, fontsize=fontsize)
     else:
         ax.set_xticklabels([])
@@ -767,7 +767,7 @@ def plot_psychometric(
     ax.set_title(title, fontsize=fontsize + 1)
     ax.tick_params(labelsize=fontsize - 1)
 
-    if returnvals == True:  # NOQA: E712
+    if returnvals == True:
         # c50 = np.true_divide(np.diff(pxp[:1:-1]),2)[0]
         # print "C50:",c50
         # closest_idx = (np.abs(pxp-c50)).argmin()
@@ -905,13 +905,13 @@ def show_image(
         interpolation=interpolation
     )
     ax.grid(show_grid)
-    if hide_ticks == True:  # NOQA: E712
+    if hide_ticks == True:
         ax.set_xticks([])
         ax.set_yticks([])
     if title is not None:
         ax.set_title(title, color=fontcolor)
 
-    if colorbar == True:  # NOQA: E712
+    if colorbar == True:
         from mpl_toolkits.axes_grid1 import make_axes_locatable
         divider = make_axes_locatable(ax)
         if colorbarlocation == 'right':
@@ -1003,12 +1003,12 @@ def placeAxesOnGrid(
     idx = 0
     for row in range(dim[0]):
         for col in range(dim[1]):
-            if row > 0 and sharex == True:  # NOQA: E712
+            if row > 0 and sharex == True:
                 share_x_with = inner_ax[0][col]
             else:
                 share_x_with = None
 
-            if col > 0 and sharey == True:  # NOQA: E712
+            if col > 0 and sharey == True:
                 share_y_with = inner_ax[row][0]
             else:
                 share_y_with = None
@@ -1021,14 +1021,14 @@ def placeAxesOnGrid(
                 frameon=frameon,
             )
 
-            if row == dim[0] - 1 and sharex == True:  # NOQA: E712
+            if row == dim[0] - 1 and sharex == True:
                 inner_ax[row][col].xaxis.set_ticks_position('bottom')
-            elif row < dim[0] and sharex == True:  # NOQA: E712
-                plt.setp(inner_ax[row][col].get_xtick)  # NOQA: E712
+            elif row < dim[0] and sharex == True:
+                plt.setp(inner_ax[row][col].get_xtick)
 
-            if col == 0 and sharey == True:  # NOQA: E712
+            if col == 0 and sharey == True:
                 inner_ax[row][col].yaxis.set_ticks_position('left')
-            elif col > 0 and sharey == True:  # NOQA: E712
+            elif col > 0 and sharey == True:
                 plt.setp(inner_ax[row][col].get_yticklabels(), visible=False)
 
             fig.add_subplot(inner_ax[row, col])

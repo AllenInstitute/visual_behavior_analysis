@@ -312,7 +312,7 @@ def annotate_epochs(trials, epoch_length=5.0):
 
 
 @inplace
-def annotate_lick_vigor(trials,data,window=3.5):
+def annotate_lick_vigor(trials, data, window=3.5):
     """ annotates the dataframe with two columns that indicate the number of
     licks and lick rate in 1/s
 
@@ -331,7 +331,6 @@ def annotate_lick_vigor(trials,data,window=3.5):
 
     licks = load_licks(data)
 
-
     def find_licks(reward_times):
         try:
             reward_time = reward_times[0]
@@ -347,7 +346,6 @@ def annotate_lick_vigor(trials,data,window=3.5):
         tr_licks['time'] -= reward_time
         return tr_licks['time'].values
 
-
     def number_of_licks(licks):
         return len(licks)
 
@@ -358,7 +356,7 @@ def annotate_lick_vigor(trials,data,window=3.5):
     def min_licks(lks):
         if lks is None:
             return None
-        elif len(lks)==0:
+        elif len(lks) == 0:
             return None
         else:
             return np.min(lks)
@@ -397,8 +395,9 @@ def annotate_trials(trials):
     # unwrap the response window
     explode_response_window(trials, inplace=True)
 
+
 @inplace
-def update_times(trials,data,time=None):
+def update_times(trials, data, time=None):
 
     if time is None:
         time = load_time(data)
@@ -413,11 +412,11 @@ def update_times(trials,data,time=None):
 
     def update(fr):
         try:
-            if pd.isnull(fr)==True: # this should catch np.nans
+            if pd.isnull(fr) == True:  # this should catch np.nans
                 return None
-            else: # this should be for floats
+            else:  # this should be for floats
                 return time[int(fr)]
-        except (TypeError,ValueError): # this should catch lists
+        except (TypeError, ValueError):  # this should catch lists
             return time[[int(f) for f in fr]]
 
     for time_col, frame_col in iteritems(time_frame_map):
@@ -427,14 +426,13 @@ def update_times(trials,data,time=None):
             print('oops! {} does not exist'.format(frame_col))
             pass
 
-
     def make_array(val):
         try:
             len(val)
         except TypeError as e:
-            val = [val,]
+            val = [val, ]
         return val
 
-    must_be_arrays = ('lick_times','reward_times')
+    must_be_arrays = ('lick_times', 'reward_times')
     for col in must_be_arrays:
         trials[col] = trials[col].map(make_array)

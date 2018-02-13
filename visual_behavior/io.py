@@ -43,7 +43,7 @@ def load_params(data):
 
 
 @data_or_pkl
-def load_trials(data,time=None):
+def load_trials(data, time=None):
     """ Returns the trials generated in an experiment.
 
     Parameters
@@ -166,7 +166,7 @@ def load_flashes(data, time=None):
 
     # first we find the flashes
     try:
-        assert pd.isnull(stimdf['image_category']).any()==False
+        assert pd.isnull(stimdf['image_category']).any() == False
         flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['image_category', 'image_name', 'frame']]
         # flashes['change'] = (flashes['image_category'].diff()!=0)
         flashes['prior_image_category'] = flashes['image_category'].shift()

@@ -19,7 +19,7 @@ from visual_behavior.devices import get_rig_id
 
 
 # -> io.py
-def create_doc_dataframe(filename,time=None):
+def create_doc_dataframe(filename, time=None):
     """ creates a trials dataframe from a detection-of-change session
 
     Parameters
@@ -36,7 +36,7 @@ def create_doc_dataframe(filename,time=None):
     if time is None:
         time = load_time(data)
 
-    df = load_trials(data,time=time)
+    df = load_trials(data, time=time)
     df = df[~pd.isnull(df['reward_times'])].reset_index(drop=True)
 
     # add some columns to the dataframe
@@ -79,7 +79,7 @@ def create_doc_dataframe(filename,time=None):
     df['lick_frames'] = get_lick_frames(df, data)
     # df['last_lick'] = get_last_licktimes(df,data)
 
-    update_times(df,data,time=time,inplace=True)
+    update_times(df, data, time=time, inplace=True)
 
     annotate_lick_vigor(df, data, inplace=True)
     calculate_latency(df)
@@ -100,7 +100,7 @@ def create_doc_dataframe(filename,time=None):
     return df
 
 
-def load_behavior_data(mice, progressbar=True, save_dataframe=True,load_existing_dataframe=True):
+def load_behavior_data(mice, progressbar=True, save_dataframe=True, load_existing_dataframe=True):
     """ Loads DoC behavior dataframe for all mice in a list
 
     Parameters
@@ -615,13 +615,13 @@ def get_response_type(df_in):
 
     response_type = []
     for idx in df_in.index:
-        if (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response == 1): # NOQA: E712
+        if (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response == 1):
             response_type.append('HIT')
-        elif (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response != 1): # NOQA: E712
+        elif (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response != 1):
             response_type.append('MISS')
-        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response == 1): # NOQA: E712
+        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response == 1):
             response_type.append('FA')
-        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response != 1): # NOQA: E712
+        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response != 1):
             response_type.append('CR')
         else:
             response_type.append('other')
@@ -703,13 +703,12 @@ def check_responses(df_in, reward_window=None):
                 df_in.loc[idx]['response_latency'] <= rw_high:
             did_respond[ii] = True
 
-
     return did_respond
 
-def resample(t,y,new_t):
-    f = interp1d(t,y,bounds_error=False)
-    return f(new_t)
 
+def resample(t, y, new_t):
+    f = interp1d(t, y, bounds_error=False)
+    return f(new_t)
 
 
 # -> analyze
@@ -775,7 +774,7 @@ def get_response_rates(df_in2, sliding_window=100, reward_window=None):
     hit_rate = go_responses.rolling(
         window=sliding_window,
         min_periods=0,
-        ).mean()
+    ).mean()
 
     catch_responses = pd.Series([np.nan] * len(df_in))
     catch_responses[
@@ -794,7 +793,7 @@ def get_response_rates(df_in2, sliding_window=100, reward_window=None):
     catch_rate = catch_responses.rolling(
         window=sliding_window,
         min_periods=0,
-        ).mean()
+    ).mean()
 
     d_prime = dprime(hit_rate, catch_rate)
 
