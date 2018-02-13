@@ -75,12 +75,7 @@ def create_doc_dataframe(filename,time=None):
     # add some columns that require calculation
 
     df['trial_type'] = categorize_trials(df)
-    df['response'] = check_responses(df)
-    df['trial_length'] = calculate_trial_length(df)
     df['endframe'] = get_end_frame(df, data)
-    df['endtime'] = get_end_time(df, data, time=time)
-    df['color'] = assign_color(df)
-    df['response_type'] = get_response_type(df)
     df['lick_frames'] = get_lick_frames(df, data)
     # df['last_lick'] = get_last_licktimes(df,data)
 
@@ -89,6 +84,12 @@ def create_doc_dataframe(filename,time=None):
     annotate_lick_vigor(df, data, inplace=True)
     calculate_latency(df)
     calculate_reward_rate(df)
+
+    df['response'] = check_responses(df)
+    df['trial_length'] = calculate_trial_length(df)
+    df['endtime'] = get_end_time(df, data, time=time)
+    df['color'] = assign_color(df)
+    df['response_type'] = get_response_type(df)
 
     try:
         remove_repeated_licks(df)
