@@ -178,7 +178,7 @@ def make_lick_raster_plot(df_in, ax, reward_window=None, xlims=(-1,5),show_rewar
         ax.axhspan( ii - 0.5, ii + 0.5, facecolor=df_in.loc[idx]['color'], alpha=0.5)
 
     ax.plot(vbu.flatten_list(lick_x), vbu.flatten_list(lick_y), '.k')
-    ax.plot(vbu.flatten_list(reward_x), vbu.flatten_list(reward_y), 'o', color='blue')
+    ax.plot(vbu.flatten_list(reward_x), vbu.flatten_list(reward_y), 'o', color='blue',alpha=0.5)
 
     ax.set_xlim(xlims[0],xlims[1])
     ax.set_ylim(-0.5, ii + 0.5)
