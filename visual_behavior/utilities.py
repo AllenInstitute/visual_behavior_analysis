@@ -615,13 +615,13 @@ def get_response_type(df_in):
 
     response_type = []
     for idx in df_in.index:
-        if (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response == 1):
+        if (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response == 1): # NOQA: E712
             response_type.append('HIT')
-        elif (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response != 1):
+        elif (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response != 1): # NOQA: E712
             response_type.append('MISS')
-        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response == 1):
+        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response == 1): # NOQA: E712
             response_type.append('FA')
-        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response != 1):
+        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response != 1): # NOQA: E712
             response_type.append('CR')
         else:
             response_type.append('other')
