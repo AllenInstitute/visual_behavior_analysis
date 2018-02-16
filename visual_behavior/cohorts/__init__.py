@@ -3,7 +3,6 @@ import os
 import shutil
 import pandas as pd
 from visual_behavior import basepath, project_dir
-from mouse_info import Mouse
 
 
 def mouse_info(mouse):
@@ -19,6 +18,7 @@ def mouse_info(mouse):
     ------
     info_txt : dictionary containing key:value pairs in mouse's info.txt file
     '''
+    from mouse_info import Mouse
     info_txt = Mouse(mouse).info_txt
     info_txt.update(mouse_id=mouse)
     return info_txt
