@@ -8,7 +8,7 @@ from visual_behavior import data
 TIMESTAMP_ISO = "2018-01-22 08:47:09.440000"
 TIMESTAMP = pd.Timestamp(TIMESTAMP_ISO)
 
-def test_annotate_parameters(df):
+def test_annotate_parameters():
 
     df = pd.DataFrame(
         [
@@ -94,15 +94,20 @@ def test_annotate_n_rewards():
             {"reward_times": [37.50, ]},
             {"reward_times": [1.2, 37.50, ]},
             {"reward_times": []},
-            {"reward_times": None},
         ]
     )
 
-    expected_col = pd.Series([1,2,0,0],name='number_of_rewards')
+
+    expected_vals = [
+        1,
+        2,
+        0,
+    ]
+    expected_col = pd.Series(expected_vals,name='number_of_rewards')
 
     df_out = data.annotate_n_rewards(df)
 
-    pd.assert_series_equal(
+    pd.testing.assert_series_equal(
         df_out['number_of_rewards'],
         expected_col,
         )
@@ -155,7 +160,8 @@ def test_annotate_startdatetime():
 
     pd.testing.assert_frame_equal(
         df_out,
-        expected
+        expected,
+        check_like=True,
     )
 
 
@@ -206,7 +212,8 @@ def test_annotate_filename():
 
     pd.testing.assert_frame_equal(
         df_out,
-        expected
+        expected,
+        check_like=True,
     )
 
 
