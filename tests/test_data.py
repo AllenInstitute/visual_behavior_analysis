@@ -5,111 +5,163 @@ import pandas as pd
 
 from visual_behavior import data
 
+TIMESTAMP_ISO = "2018-01-22 08:47:09.440000"
+TIMESTAMP = pd.Timestamp(TIMESTAMP_ISO)
 
-@pytest.mark.parametrize("df, pickle_data, keydict, expected", [
-    (
-        pd.DataFrame(data={"test": {17: "test", 18: "value", }, }),
-        {"some_thing": "some_value", },
-        {"another_value": "some_thing", "doesnt_exist": "doesnt_exist", },
-        pd.DataFrame(data={
-            "test": {17: "test", 18: "value", },
-            "another_value": {17: "some_value", 18: "some_value", },
-            "doesnt_exist": {17: None, 18: None, },
-        }, columns=["test", "doesnt_exist", "another_value", ]),
-    ),
-    (
-        pd.DataFrame(data={"test": {17: "test", 18: "value", }, }),
-        {"some_thing": "some_value", },
-        None,
-        pd.DataFrame(data={"test": {17: "test", 18: "value", }, }),
-    ),
-])
-def test_annotate_parameters(df, pickle_data, keydict, expected):
+def test_annotate_parameters():
+
+    df = pd.DataFrame(
+        [
+            {"key0": 0},
+            {"key0": 3},
+            ]
+        )
+
+    keydict = {
+        # the column "another_value" should be filled with the values of "some_thing"
+        "another_value": "some_thing",
+        # the column "dne" should be filled with values of "dne", which doesn't exist
+        "dne": "dne",
+        }
+
+    pickled_data = {
+        "some_thing": "some_value",
+        }
+
+    expected = pd.DataFrame(
+        [
+            # since "dne" doesn't exist, it should be filled with None
+            {"key0": 0, "another_value": "some_value", "dne": None},
+            {"key0": 3, "another_value": "some_value", "dne": None},
+            ]
+        )
+
+    df_out = data.annotate_parameters(df, pickled_data, keydict)
+
     pd.testing.assert_frame_equal(
-        data.annotate_parameters(df, pickle_data, keydict),
+        df_out,
         expected,
-        check_like=True
+        check_like=True,
     )
 
+    # if no keydict is passed, we shouldn't modify the dataframe
+    df_out = data.annotate_parameters(df, pickled_data, None)
 
-@pytest.mark.parametrize("df, expected", [
-    (
-        pd.DataFrame(data={
-            "startdatetime": {17: pd.Timestamp("2018-01-22 08:47:09.440000"), },
-        }),
-        pd.DataFrame(data={
-            "startdatetime": {17: pd.Timestamp("2018-01-22 08:47:09.440000"), },
-            "date": {17: "2018-01-22", },
-            "year": {17: 2018, },
-            "month": {17: 1, },
-            "day": {17: 22, },
-            "hour": {17: 8, },
-            "dayofweek": {17: 0, },
-        }, columns=[
-            "startdatetime",
-            "date",
-            "year",
-            "month",
-            "day",
-            "hour",
-            "dayofweek",
-        ]),
-    ),
-])
-def test_explode_startdatetime(df, expected):
-    pd.testing.assert_frame_equal(data.explode_startdatetime(df), expected)
-
-
-@pytest.mark.parametrize("df, expected", [
-    (
-        pd.DataFrame(data={
-            "reward_times": {17: [37.507777565158904, ], },
-        }),
-        pd.DataFrame(data={
-            "reward_times": {17: [37.507777565158904, ], },
-            "number_of_rewards": {17: 1, },
-        }, columns=["reward_times", "number_of_rewards", ]),
-    )
-])
-def test_annotate_n_rewards(df, expected):
-    pd.testing.assert_frame_equal(data.annotate_n_rewards(df), expected)
-
-
-@pytest.mark.parametrize("df, pickled_data, expected", [
-    (
-        pd.DataFrame(data={
-            "test": {17: None, },
-        }),
-        {"rig_id": "test_rig", },
-        pd.DataFrame(data={
-            "test": {17: None, },
-            "rig_id": {17: "test_rig", },
-        }, columns=["test", "rig_id", ]),
-    ),
-])
-def test_annotate_rig_id(df, pickled_data, expected):
     pd.testing.assert_frame_equal(
-        data.annotate_rig_id(df, pickled_data),
+        df_out,
+        df_out,
+        check_like=True,
+    )
+
+def test_explode_startdatetime():
+
+
+    df = pd.DataFrame(
+        [
+            {
+            "startdatetime": TIMESTAMP,
+            },
+        ]
+    )
+
+    df_expected = pd.DataFrame(
+        [
+            {
+            "startdatetime": TIMESTAMP,
+            "date": "2018-01-22",
+            "year": 2018,
+            "month": 1,
+            "day": 22,
+            "hour": 8,
+            "dayofweek": 0,
+            },
+        ]
+    )
+
+    df_out = data.explode_startdatetime(df)
+
+    pd.testing.assert_frame_equal(
+        df_out,
+        df_expected,
+        check_like=True,
+        )
+
+
+
+def test_annotate_n_rewards():
+    df = pd.DataFrame(
+        [
+            {"reward_times": [37.50, ]},
+            {"reward_times": [1.2, 37.50, ]},
+            {"reward_times": []},
+        ]
+    )
+
+
+    expected_vals = [
+        1,
+        2,
+        0,
+    ]
+    expected_col = pd.Series(expected_vals,name='number_of_rewards')
+
+    df_out = data.annotate_n_rewards(df)
+
+    pd.testing.assert_series_equal(
+        df_out['number_of_rewards'],
+        expected_col,
+        )
+
+def test_annotate_rig_id():
+
+    df = pd.DataFrame(
+        [
+            {"key0": 0},
+            {"key0": 3},
+            ]
+        )
+
+    pickled_data = {
+        "rig_id": "TEST_RIG",
+        }
+
+    expected = pd.DataFrame(
+        [
+            # since "dne" doesn't exist, it should be filled with None
+            {"key0": 0, "rig_id": "TEST_RIG",},
+            {"key0": 3, "rig_id": "TEST_RIG",},
+            ]
+        )
+
+    df_out = data.annotate_rig_id(df, pickled_data)
+
+    pd.testing.assert_frame_equal(
+        df_out,
         expected
     )
 
+def test_annotate_startdatetime():
 
-@pytest.mark.parametrize("df, pickled_data, expected", [
-    (
-        pd.DataFrame(data={
-            "test": {17: None, },
-        }),
-        {"startdatetime": "2018-01-22 08:47:09.440000", },
-        pd.DataFrame(data={
-            "test": {17: None, },
-            "startdatetime": {17: pd.Timestamp("2018-01-22 08:47:09.440000"), },
-        }, columns=["test", "startdatetime", ]),
-    ),
-])
-def test_annotate_startdatetime(df, pickled_data, expected):
+    df = pd.DataFrame(
+        [
+            {"test": None,},
+        ],
+    )
+
+    pickled_data = {"startdatetime": TIMESTAMP_ISO, }
+
+    expected = pd.DataFrame(
+        [
+            {"test": None, "startdatetime": TIMESTAMP,},
+        ],
+    )
+
+    df_out = data.annotate_startdatetime(df, pickled_data)
+
     pd.testing.assert_frame_equal(
-        data.annotate_startdatetime(df, pickled_data),
-        expected
+        df_out,
+        expected,
+        check_like=True,
     )
 
 
@@ -144,50 +196,57 @@ def test_annotate_cumulative_reward(df, pickled_data, expected):
         expected
     )
 
+def test_annotate_filename():
 
-@pytest.mark.parametrize("df, filename, expected", [
-    (
-        pd.DataFrame(data={"test": {17: "test", }, }),
-        "test/path/fname.py",
-        pd.DataFrame(data={
-            "test": {17: "test", },
-            "filepath": {17: "test/path", },
-            "filename": {17: "fname.py", },
-        }, columns=["test", "filepath", "filename", ])
-    ),
-])
-def test_annotate_filename(df, filename, expected):
+
+    df = pd.DataFrame([{"test": "test"}])
+    filename = "test/path/fname.py"
+
+    expected = pd.DataFrame([{
+        "test": "test",
+        "filepath": "test/path",
+        "filename": "fname.py",
+        }])
+
+    df_out = data.annotate_filename(df, filename)
+
     pd.testing.assert_frame_equal(
-        data.annotate_filename(df, filename),
-        expected
+        df_out,
+        expected,
+        check_like=True,
     )
 
 
-@pytest.mark.parametrize("df, expected", [
-    (
-        pd.DataFrame(data={
-            "auto_rearded": {17, True, },
-        }),
-        pd.DataFrame(data={
-            "auto_rewarded": {17, True, },
-        }),
-    ),
-])
-def test_fix_autorearded(df, expected):
-    pd.testing.assert_frame_equal(data.fix_autorearded(df), expected)
+def test_fix_autorearded():
+
+    df = pd.DataFrame(
+        [
+            {"auto_rearded": True},
+            ]
+        )
+
+    expected = pd.DataFrame(
+        [
+            {"auto_rewarded": True},
+            ]
+        )
+
+    df_out = data.fix_autorearded(df)
+
+    pd.testing.assert_frame_equal(df_out, expected)
 
 
-@pytest.mark.parametrize("df, expected", [
-    (
-        pd.DataFrame(data={
-            "lick_times": {17: [0.1, 0.2, 0.3, 0.4, ], },
-        }),
-        pd.DataFrame(data={
-            "lick_times": {17: [0.1, 0.2, 0.3, 0.4, ], },
-            "number_of_licks": {17: 4, },
-            "lick_rate_Hz": {17: 10.0, },
-        }, columns=["lick_times", "number_of_licks", "lick_rate_Hz", ]),
-    ),
-])
-def test_annotate_lick_vigor(df, expected):
-    pd.util.testing.assert_almost_equal(data.annotate_lick_vigor(df), expected)
+# @pytest.mark.parametrize("df, expected", [
+#     (
+#         pd.DataFrame(data={
+#             "lick_times": {17: [0.1, 0.2, 0.3, 0.4, ], },
+#         }),
+#         pd.DataFrame(data={
+#             "lick_times": {17: [0.1, 0.2, 0.3, 0.4, ], },
+#             "number_of_licks": {17: 4, },
+#             "lick_rate_Hz": {17: 10.0, },
+#         }, columns=["lick_times", "number_of_licks", "lick_rate_Hz", ]),
+#     ),
+# ])
+# def test_annotate_lick_vigor(df, expected):
+#     pd.util.testing.assert_almost_equal(data.annotate_lick_vigor(df), expected)

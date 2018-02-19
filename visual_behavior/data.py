@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from six import iteritems
 from functools import wraps
+from .io import load_licks, load_time
 
 
 def inplace(func):
@@ -311,7 +312,7 @@ def annotate_epochs(trials, epoch_length=5.0):
 
 
 @inplace
-def annotate_lick_vigor(trials):
+def annotate_lick_vigor(trials, data, window=3.5):
     """ annotates the dataframe with two columns that indicate the number of
     licks and lick rate in 1/s
 
@@ -319,6 +320,7 @@ def annotate_lick_vigor(trials):
     ----------
     trials : pandas DataFrame
         dataframe of trials
+    window : window relative to reward time for licks to include
     inplace : bool, optional
         modify `trials` in place. if False, returns a copy. default: True
 
@@ -327,8 +329,39 @@ def annotate_lick_vigor(trials):
     io.load_trials
     """
 
-    trials['number_of_licks'] = trials['lick_times'].map(len)
-    trials['lick_rate_Hz'] = trials['lick_times'].map(lambda arr: 1.0 / np.diff(arr).mean())
+    licks = load_licks(data)
+
+    def find_licks(reward_times):
+        try:
+            reward_time = reward_times[0]
+        except IndexError:
+            return None
+
+        reward_lick_mask = (
+            (licks['time'] > reward_time)
+            & (licks['time'] < (reward_time + window))
+        )
+
+        tr_licks = licks[reward_lick_mask].copy()
+        tr_licks['time'] -= reward_time
+        return tr_licks['time'].values
+
+    def number_of_licks(licks):
+        return len(licks)
+
+    trials['reward_licks'] = trials['reward_times'].map(find_licks)
+    trials['reward_lick_count'] = trials['reward_licks'].map(lambda lks: len(lks) if lks is not None else None)
+    # trials['reward_lick_rate'] = trials['reward_lick_number'].map(lambda n: n / window)
+
+    def min_licks(lks):
+        if lks is None:
+            return None
+        elif len(lks) == 0:
+            return None
+        else:
+            return np.min(lks)
+
+    trials['reward_lick_latency'] = trials['reward_licks'].map(min_licks)
 
 
 @inplace
@@ -361,3 +394,45 @@ def annotate_trials(trials):
 
     # unwrap the response window
     explode_response_window(trials, inplace=True)
+
+
+@inplace
+def update_times(trials, data, time=None):
+
+    if time is None:
+        time = load_time(data)
+
+    time_frame_map = {
+        'change_time': 'change_frame',
+        'starttime': 'startframe',
+        'endtime': 'endframe',
+        'lick_times': 'lick_frames',
+        'reward_times': 'reward_frames',
+    }
+
+    def update(fr):
+        try:
+            if pd.isnull(fr) == True:  # this should catch np.nans
+                return None
+            else:  # this should be for floats
+                return time[int(fr)]
+        except (TypeError, ValueError):  # this should catch lists
+            return time[[int(f) for f in fr]]
+
+    for time_col, frame_col in iteritems(time_frame_map):
+        try:
+            trials[time_col] = trials[frame_col].map(update)
+        except KeyError:
+            print('oops! {} does not exist'.format(frame_col))
+            pass
+
+    def make_array(val):
+        try:
+            len(val)
+        except TypeError as e:
+            val = [val, ]
+        return val
+
+    must_be_arrays = ('lick_times', 'reward_times')
+    for col in must_be_arrays:
+        trials[col] = trials[col].map(make_array)

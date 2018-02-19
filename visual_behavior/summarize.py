@@ -49,6 +49,9 @@ def number_of_stim_mask_ISIs(session_trials):
 
 
 def session_level_summary(trials, **kwargs):
+    """ computes session-level summary table
+    """
+
     summarizer = create_summarizer(
         session_id=session.session_id,
         session_duration=session.session_duration,
@@ -86,7 +89,7 @@ def session_level_summary(trials, **kwargs):
     return session_summary
 
 
-def epoch_level_summary(trials, epoch_length=5.0):
+def epoch_level_summary(trials, epoch_length=5.0, **kwargs):
     from visual_behavior.data import annotate_epochs
     trials = annotate_epochs(trials, epoch_length)
 
@@ -99,8 +102,9 @@ def epoch_level_summary(trials, epoch_length=5.0):
         fraction_time_aborted=session.fraction_time_aborted,
         hit_rate=lambda grp: session.discrim(grp, 'change', 'detect', metric=classification.hit_rate),
         false_alarm_rate=lambda grp: session.discrim(grp, 'change', 'detect', metric=classification.false_alarm_rate),
-        hit_lick_rate=session.hit_lick_rate,
-        hit_lick_quantity=session.hit_lick_quantity,
+        reward_lick_count=session.reward_lick_count,
+        reward_lick_latency=session.reward_lick_latency,
+        **kwargs
     )
 
     epoch_summary = (
@@ -110,7 +114,7 @@ def epoch_level_summary(trials, epoch_length=5.0):
         .reset_index()
     )
 
-    epoch_summary['engagement'] = (
+    epoch_summary['mean(HR,FA)'] = (
         epoch_summary['hit_rate']
         + epoch_summary['false_alarm_rate']
     ) / 2

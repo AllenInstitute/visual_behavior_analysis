@@ -12,6 +12,11 @@ from visual_behavior import analyze
         None,
     ),
     (
+        {"hit_rate": 0.5, "fa_rate": 0.5, "limits": (0.01, 0.99, ), },
+        0.0,
+        None,
+    ),
+    (
         {"hit_rate": 0.2, "fa_rate": 0.2, "limits": (-0.01, 0.99, ), },
         0.22,
         AssertionError,

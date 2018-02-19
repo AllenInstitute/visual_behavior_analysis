@@ -9,16 +9,17 @@ import numpy as np
 import pandas as pd
 from fnmatch import fnmatch
 from email.mime.text import MIMEText
+from scipy.interpolate import interp1d
 
-from visual_behavior.io import load_trials
+from visual_behavior.io import load_trials, load_licks, load_time
 from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
 from visual_behavior.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
-from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor
+from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor, update_times
 from visual_behavior.devices import get_rig_id
 
 
 # -> io.py
-def create_doc_dataframe(filename):
+def create_doc_dataframe(filename, time=None):
     """ creates a trials dataframe from a detection-of-change session
 
     Parameters
@@ -32,8 +33,11 @@ def create_doc_dataframe(filename):
     """
     data = pd.read_pickle(filename)
 
-    df = load_trials(data)
-    df = df[~pd.isnull(df['reward_times'])].reset_index()
+    if time is None:
+        time = load_time(data)
+
+    df = load_trials(data, time=time)
+    df = df[~pd.isnull(df['reward_times'])].reset_index(drop=True)
 
     # add some columns to the dataframe
     keydict = {
@@ -63,25 +67,29 @@ def create_doc_dataframe(filename):
     fix_autorearded(df, inplace=True)
     annotate_cumulative_reward(df, data, inplace=True)
     annotate_filename(df, filename, inplace=True)
-    annotate_lick_vigor(df, inplace=True)
 
     for col in ('auto_rewarded', 'change_time', ):
         if col not in df.columns:
             df[col] = None
 
     # add some columns that require calculation
+
+    df['trial_type'] = categorize_trials(df)
+    df['endframe'] = get_end_frame(df, data)
+    df['lick_frames'] = get_lick_frames(df, data)
+    # df['last_lick'] = get_last_licktimes(df,data)
+
+    update_times(df, data, time=time, inplace=True)
+
+    annotate_lick_vigor(df, data, inplace=True)
     calculate_latency(df)
     calculate_reward_rate(df)
 
-    df['trial_type'] = categorize_trials(df)
     df['response'] = check_responses(df)
     df['trial_length'] = calculate_trial_length(df)
-    df['endframe'] = get_end_frame(df, last_frame=len(data['vsyncintervals']))
-    df['endtime'] = get_end_time(df, last_time=np.sum(data['vsyncintervals']))
+    df['endtime'] = get_end_time(df, data, time=time)
     df['color'] = assign_color(df)
     df['response_type'] = get_response_type(df)
-    df['lick_frames'] = get_lick_frames(df, data)
-    # df['last_lick'] = get_last_licktimes(df,data)
 
     try:
         remove_repeated_licks(df)
@@ -92,7 +100,7 @@ def create_doc_dataframe(filename):
     return df
 
 
-def load_behavior_data(mice, progressbar=True, save_dataframe=True):
+def load_behavior_data(mice, progressbar=True, save_dataframe=True, load_existing_dataframe=True):
     """ Loads DoC behavior dataframe for all mice in a list
 
     Parameters
@@ -123,7 +131,7 @@ def load_behavior_data(mice, progressbar=True, save_dataframe=True):
     for mouse in mice:
         dft = load_from_folder(
             os.path.join(basepath, mouse, 'output'),
-            load_existing_dataframe=load_existing_dataframe,  # NOQA: F821
+            load_existing_dataframe=load_existing_dataframe,
             save_dataframe=save_dataframe
         )
         cohort = get_cohort_info(mouse)
@@ -180,7 +188,7 @@ def get_mouse_info(mouse_id):
 
 
 # -> analyze.py
-def get_lick_frames(df_in, data):
+def get_lick_frames(df_in, data, time=None):
     """
     returns a list of arrays of lick frames, with one entry per trial
     """
@@ -189,8 +197,9 @@ def get_lick_frames(df_in, data):
     #      violated when we began displaying a frame at the beginning of the session without a corresponding call the 'checkLickSensor'
     #      method. Using the 'responselog' instead will provide a more accurate measure of actual like frames and times.
     # lick_frames = data['lickData'][0]
-    responsedf = pd.DataFrame(data['responselog'])
-    lick_frames = responsedf.frame.values
+
+    lick_frames = load_licks(data, time=time)['frame']
+
     local_licks = []
     for idx, row in df_in.iterrows():
         local_licks.append(
@@ -529,18 +538,20 @@ def calculate_trial_length(df_in):
     return trial_length
 
 
-def get_end_time(df_in, last_time=np.nan):
+def get_end_time(df_in, data, time=None):
     '''creates a vector of end times for each trial, which is just the start time for the next trial'''
-    end_times = np.zeros_like(df_in.index) * np.nan
-    for ii, row in df_in.iterrows():
-        if ii > 0:
-            end_times[ii - 1] = row['starttime']
-    end_times[ii] = last_time
+    if time is None:
+        time = load_time(data)
+
+    end_times = df_in['endframe'].map(lambda fr: time[int(fr)])
     return end_times
 
 
 # -> analyze
-def get_end_frame(df_in, last_frame=None):
+def get_end_frame(df_in, data):
+
+    last_frame = len(data['vsyncintervals'])
+
     end_frames = np.zeros_like(df_in.index) * np.nan
 
     for ii, index in enumerate(df_in.index[:-1]):
@@ -604,13 +615,13 @@ def get_response_type(df_in):
 
     response_type = []
     for idx in df_in.index:
-        if (df_in.loc[idx].rewarded is True) & (df_in.loc[idx].response == 1):
+        if (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response == 1):
             response_type.append('HIT')
-        elif (df_in.loc[idx].rewarded is True) & (df_in.loc[idx].response != 1):
+        elif (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response != 1):
             response_type.append('MISS')
-        elif (df_in.loc[idx].rewarded is False) & (df_in.loc[idx].response == 1):
+        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response == 1):
             response_type.append('FA')
-        elif (df_in.loc[idx].rewarded is False) & (df_in.loc[idx].response != 1):
+        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response != 1):
             response_type.append('CR')
         else:
             response_type.append('other')
@@ -682,16 +693,22 @@ def check_responses(df_in, reward_window=None):
 
     did_respond = np.zeros(len(df_in))
     for ii, idx in enumerate(df_in.index):
+
         if reward_window is None:
-            rw_low = df_in.iloc[idx]['response_window'][0]
-            rw_high = df_in.iloc[idx]['response_window'][1]
-        if pd.isnull(df_in.loc[idx]['change_time']) is False and \
-                pd.isnull(df_in.loc[idx]['response_latency']) is False and \
+            rw_low = df_in.loc[idx]['response_window'][0]
+            rw_high = df_in.loc[idx]['response_window'][1]
+        if pd.isnull(df_in.loc[idx]['change_time']) == False and \
+                pd.isnull(df_in.loc[idx]['response_latency']) == False and \
                 df_in.loc[idx]['response_latency'] >= rw_low and \
                 df_in.loc[idx]['response_latency'] <= rw_high:
             did_respond[ii] = True
 
     return did_respond
+
+
+def resample(t, y, new_t):
+    f = interp1d(t, y, bounds_error=False)
+    return f(new_t)
 
 
 # -> analyze
@@ -739,14 +756,44 @@ def get_response_rates(df_in2, sliding_window=100, reward_window=None):
         df_in.reset_index(inplace=True)
 
     go_responses = pd.Series([np.nan] * len(df_in))
-    go_responses[df_in[(df_in.trial_type == 'go') & (df_in.response == 1) & (df_in.auto_rewarded is not True)].index] = 1
-    go_responses[df_in[(df_in.trial_type == 'go') & ((df_in.response == 0) | np.isnan(df_in.response)) & (df_in.auto_rewarded is not True)].index] = 0
-    hit_rate = go_responses.rolling(window=100, min_periods=0).mean()
+    go_responses[
+        df_in[
+            (df_in.trial_type == 'go')
+            & (df_in.response == 1)
+            & (df_in.auto_rewarded != True)
+        ].index
+    ] = 1
+    go_responses[
+        df_in[
+            (df_in.trial_type == 'go')
+            & ((df_in.response == 0) | np.isnan(df_in.response))
+            & (df_in.auto_rewarded != True)
+        ].index
+    ] = 0
+
+    hit_rate = go_responses.rolling(
+        window=sliding_window,
+        min_periods=0,
+    ).mean()
 
     catch_responses = pd.Series([np.nan] * len(df_in))
-    catch_responses[df_in[(df_in.trial_type == 'catch') & (df_in.response == 1)].index] = 1
-    catch_responses[df_in[(df_in.trial_type == 'catch') & ((df_in.response == 0) | np.isnan(df_in.response))].index] = 0
-    catch_rate = catch_responses.rolling(window=100, min_periods=0).mean()
+    catch_responses[
+        df_in[
+            (df_in.trial_type == 'catch')
+            & (df_in.response == 1)
+        ].index
+    ] = 1
+    catch_responses[
+        df_in[
+            (df_in.trial_type == 'catch')
+            & ((df_in.response == 0) | np.isnan(df_in.response))
+        ].index
+    ] = 0
+
+    catch_rate = catch_responses.rolling(
+        window=sliding_window,
+        min_periods=0,
+    ).mean()
 
     d_prime = dprime(hit_rate, catch_rate)
 
