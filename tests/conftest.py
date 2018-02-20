@@ -7,6 +7,8 @@ from shutil import copyfile
 from collections import Mapping
 from six.moves import cPickle as pickle
 
+from visual_behavior.pizza import we_can_unpizza_that  # this is terrible but hopefully will be an external dependency very soon
+
 
 TESTING_DIR = os.path.realpath(os.path.dirname(__file__))
 TESTING_RES_DIR = os.path.join(TESTING_DIR, "res")
@@ -41,3 +43,8 @@ def trials_df_pickle_fixture():
 @pytest.fixture(scope="module")
 def annotated_trials_df_pickle_fixture():
     return os.path.join(TESTING_RES_DIR, "trials_annotated.pkl")
+
+
+@pytest.fixture(scope="session")
+def pizza_data_fixture():
+    return we_can_unpizza_that(os.path.join(TESTING_RES_DIR, "180215110844176000.h5"))
