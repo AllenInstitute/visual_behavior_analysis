@@ -2,5 +2,6 @@
 * text=auto
 # don't do this for pkl obv
 *.pkl binary
+*.h5 binary
 *.csv text
 tests/180122094711-task=DoC_NaturalImages_CAMMatched_n=8_stage=natural_images_mouse=M363894.pkl binary
