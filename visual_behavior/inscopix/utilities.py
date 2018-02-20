@@ -152,12 +152,12 @@ def save_h5(data, filename, dtype=float, keyname='data'):
     h5f.close()
 
 
-def load_h5(filename, keyname='data'):
+def load_h5(filename, dtype=float, keyname='data'):
     '''
     load an h5 file
     '''
     h5f = h5py.File(filename, 'r')
-    data = h5f['data'][:].astype(float)
+    data = h5f['data'][:].astype(dtype)
     h5f.close()
     return data
 
