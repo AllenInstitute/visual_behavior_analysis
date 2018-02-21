@@ -72,7 +72,7 @@ def get_licks(exp_data, time=None):
     """
     lick_frames = [
         trial["licks"][0][1]
-        for trial in get_trials(exp_data)
+        for (idx, trial) in get_trials(exp_data).iterrows()
         if trial["licks"]
     ]
 
@@ -124,7 +124,7 @@ def get_rewards(exp_data):
     return pd.DataFrame(
         data=np.array([
             trial["rewards"][0]
-            for trial in get_trials(exp_data)
+            for (idx, trial) in get_trials(exp_data).iterrows()
             if trial["rewards"]
         ], dtype=np.float),
         columns=["time", "frame", ]
@@ -240,15 +240,16 @@ def get_trials(exp_data):
 
     Returns
     -------
-    list of dictionaries
-        each dictionary represents a trial in an experiment session, they are
-        ordered in ascending trial number
+    pandas dataframe
+        each row represents a trial in an experiment session
 
     Notes
     -----
     - asssumes data is in the Foraging2 format
     """
-    return behavior_items_or_top_level(exp_data).get("trial_log", [])
+    return pd.DataFrame(
+        behavior_items_or_top_level(exp_data).get("trial_log", [])
+    )
 
 
 def get_vsyncs(exp_data):

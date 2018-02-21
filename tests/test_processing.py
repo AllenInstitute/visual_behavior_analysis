@@ -37,7 +37,7 @@ def test_get_params(pizza_data_fixture):
 
 
 def test_get_trials(pizza_data_fixture):
-    expected = [
+    expected = pd.DataFrame([
         {
             'index': 0,
             'cumulative_rewards': 0,
@@ -61,8 +61,16 @@ def test_get_trials(pizza_data_fixture):
                 ['timeout', 'exit', 7.935412104883654, 25]
             ]
         }
-    ]
-    assert processing.get_trials(pizza_data_fixture)[:1] == expected
+    ])
+
+    pd.testing.assert_frame_equal(
+        processing.get_trials(pizza_data_fixture).iloc[:1],
+        expected,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
+    )
 
 
 def test_get_time(pizza_data_fixture):
@@ -81,12 +89,12 @@ def test_get_rewards(pizza_data_fixture):
     """numpy array of [<time>, <frame number>]
     """
     expected = pd.DataFrame(data={
-        "frame": np.array([25., 844., 1074., 1257., 1488., ]),
-        "time": np.array([416.96787951514125, 14128.407060168684, 17981.629601912573, 21034.25351413898, 24904.09280906897, ])
+        "frame": np.array([230.0, 828.0, 1472.0, 1932.0, 2622.0, ]),
+        "time": np.array([11.338415383077212, 21.346828706937707, 32.12227642104162, 39.82892841937571, 51.37191175428711])
     })
 
     pd.testing.assert_frame_equal(
-        processing.get_licks(pizza_data_fixture).iloc[:5],
+        processing.get_rewards(pizza_data_fixture).iloc[:5],
         expected,
         check_column_type=False,
         check_index_type=False,
