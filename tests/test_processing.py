@@ -80,17 +80,18 @@ def test_get_time(pizza_data_fixture):
 def test_get_rewards(pizza_data_fixture):
     """numpy array of [<time>, <frame number>]
     """
-    expected = np.array([
-        [11.33841538, 230. ],
-        [21.34682871, 828. ],
-        [32.12227642, 1472. ],
-        [39.82892842, 1932. ],
-        [51.37191175, 2622. ]
-    ])
+    expected = pd.DataFrame(data={
+        "frame": np.array([25., 844., 1074., 1257., 1488., ]),
+        "time": np.array([416.96787951514125, 14128.407060168684, 17981.629601912573, 21034.25351413898, 24904.09280906897, ])
+    })
 
-    np.testing.assert_almost_equal(
-        processing.get_rewards(pizza_data_fixture)[:5],
-        expected
+    pd.testing.assert_frame_equal(
+        processing.get_licks(pizza_data_fixture).iloc[:5],
+        expected,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
     )
 
 
