@@ -11,7 +11,7 @@ from fnmatch import fnmatch
 from email.mime.text import MIMEText
 from scipy.interpolate import interp1d
 
-from visual_behavior.io import load_trials, load_licks, load_time
+from .processing import get_trials, get_licks, get_time
 from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
 from visual_behavior.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
 from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor, update_times
@@ -34,9 +34,9 @@ def create_doc_dataframe(filename, time=None):
     data = pd.read_pickle(filename)
 
     if time is None:
-        time = load_time(data)
+        time = get_time(data)
 
-    df = load_trials(data, time=time)
+    df = get_trials(data, time=time)
     df = df[~pd.isnull(df['reward_times'])].reset_index(drop=True)
 
     # add some columns to the dataframe
@@ -198,7 +198,7 @@ def get_lick_frames(df_in, data, time=None):
     #      method. Using the 'responselog' instead will provide a more accurate measure of actual like frames and times.
     # lick_frames = data['lickData'][0]
 
-    lick_frames = load_licks(data, time=time)['frame']
+    lick_frames = get_licks(data, time=time)['frame']
 
     local_licks = []
     for idx, row in df_in.iterrows():
@@ -541,7 +541,7 @@ def calculate_trial_length(df_in):
 def get_end_time(df_in, data, time=None):
     '''creates a vector of end times for each trial, which is just the start time for the next trial'''
     if time is None:
-        time = load_time(data)
+        time = get_time(data)
 
     end_times = df_in['endframe'].map(lambda fr: time[int(fr)])
     return end_times

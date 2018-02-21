@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from six import iteritems
 from functools import wraps
-from .io import load_licks, load_time
+from .processing import get_licks, get_time
 
 
 def inplace(func):
@@ -329,7 +329,7 @@ def annotate_lick_vigor(trials, data, window=3.5):
     io.load_trials
     """
 
-    licks = load_licks(data)
+    licks = get_licks(data)
 
     def find_licks(reward_times):
         try:
@@ -400,7 +400,7 @@ def annotate_trials(trials):
 def update_times(trials, data, time=None):
 
     if time is None:
-        time = load_time(data)
+        time = get_time(data)
 
     time_frame_map = {
         'change_time': 'change_frame',
