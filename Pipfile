@@ -1,0 +1,23 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+
+[dev-packages]
+
+bumpversion = "*"
+tox = "*"
+coverage = "*"
+pytest = "*"
+pytest-cov = "*"
+
+[packages]
+
+six = "*"
+numpy = "*"
+pandas = "*"
+scipy = "*"
+matplotlib = "*"
+sklearn = "*"
