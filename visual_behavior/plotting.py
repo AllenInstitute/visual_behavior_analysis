@@ -861,24 +861,23 @@ def plot_first_licks(pkl):
 
 
 def animate_array(array,
-                  figsize=(9,5),
+                  figsize=(9, 5),
                   clim=None,
                   cmap='gray',
                   saveloc=None,
                   dpi=300,
                   fps=10,
                   annotation=None,
-                  annotation_location=(10,30),
+                  annotation_location=(10, 30),
                   fontsize=10,
                   fontcolor='orange',
                   fontweight='normal',
                   axis='off',
                   repeat=False
-                 ):
-    
+                  ):
     '''
     takes in array (shape = NFrames x ROWS x COLUMNS), creates animation in axis
-    
+
     Optional arguments:
         figsize,
         clim: range of colormap
@@ -888,25 +887,25 @@ def animate_array(array,
         fps: speed of playback, both for saving and local display
         annotation: list of text values to print on frames
         annotation_location: location to print annotation text
-        
+
     returns: nothing
     '''
     import matplotlib.pyplot as plt
     import matplotlib.animation as animation
 
-    n_frames=np.shape(array)[0]
+    n_frames = np.shape(array)[0]
 
     if annotation is not None:
-        assert len(annotation)==n_frames, 'length of annotation must equal frame number'
+        assert len(annotation) == n_frames, 'length of annotation must equal frame number'
 
     def update_array(frame):
         # check if animation is at the last frame, and if so, stop the animation
-        
-        if frame == n_frames: 
+
+        if frame == n_frames:
             anim.event_source.stop()
         else:
             ax.cla()
-            ax.imshow(array[frame,:,:],cmap=cmap,clim=clim)
+            ax.imshow(array[frame, :, :], cmap=cmap, clim=clim)
             if annotation is not None:
                 ax.text(
                     annotation_location[0],
@@ -917,13 +916,18 @@ def animate_array(array,
                     fontweight=fontweight
                 )
             ax.axis(axis)
-    
-    fig,ax=plt.subplots(figsize=figsize)
-    anim = animation.FuncAnimation(fig, update_array, frames=n_frames, interval=1000./fps,repeat=repeat)
+
+    fig, ax = plt.subplots(figsize=figsize)
+    anim = animation.FuncAnimation(
+        fig,
+        update_array,
+        frames=n_frames,
+        interval=1000. / fps,
+        repeat=repeat,
+    )
 
     if saveloc is not None:
-        anim.save(saveloc,writer='ffmpeg',fps=fps,dpi=dpi)
-
+        anim.save(saveloc, writer='ffmpeg', fps=fps, dpi=dpi)
 
 
 def show_image(
