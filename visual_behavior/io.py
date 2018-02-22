@@ -167,7 +167,14 @@ def load_flashes(data, time=None):
     # first we find the flashes
     try:
         assert pd.isnull(stimdf['image_category']).any() == False
-        flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['image_category', 'image_name', 'frame']]
+        if len(data['omitted_flash_frame_log']) > 0:
+            omitted_flash = pd.DataFrame(data['omitted_flash_frame_log'], columns=['frame'])
+            omitted_flash['omitted'] = True
+            stimdf = pd.merge(stimdf, omitted_flash, how='left', on='frame')
+            flashes = stimdf[(stimdf['state'].astype(int).diff() > 0) | (pd.isnull(stimdf['omitted'])==False)].reset_index()[['image_category', 'image_name', 'frame', 'omitted']]
+        else:
+            flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['image_category', 'image_name', 'frame']]
+        
         # flashes['change'] = (flashes['image_category'].diff()!=0)
         flashes['prior_image_category'] = flashes['image_category'].shift()
         flashes['image_category_change'] = flashes['image_category'].ne(flashes['prior_image_category']).astype(int)
