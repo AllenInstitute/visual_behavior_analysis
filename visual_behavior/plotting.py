@@ -371,7 +371,7 @@ def make_ILI_plot(dfm, session_dates, ax):
 def make_trial_type_plot(dfm, session_dates, ax):
     sums = dfm.groupby(['startdatetime', 'color', ]).sum()
     colors = ['blue', 'red', 'darkgreen', 'lightgreen', 'darkorange', 'yellow']
-    dates = [] #dfm.startdatetime.unique()
+    dates = []
     all_vals = []
     for ii, date in enumerate(session_dates[:]):
 
@@ -443,7 +443,7 @@ def make_performance_plot(df_in, session_dates, ax, reward_window=None, sliding_
 
 def make_dprime_plot(
         df_in,
-        session_dates, 
+        session_dates,
         ax,
         reward_window=None,
         return_vals=False,
