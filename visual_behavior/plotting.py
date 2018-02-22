@@ -103,13 +103,13 @@ def make_summary_figure(df, mouse_id):
 
     make_ILI_plot(dfm, session_dates, ax[0])
 
-    make_trial_type_plot(dfm, ax[1])
+    make_trial_type_plot(dfm, session_dates, ax[1])
 
-    make_performance_plot(dfm, ax[2])
+    make_performance_plot(dfm, session_dates, ax[2])
 
-    make_dprime_plot(dfm, ax[3])
+    make_dprime_plot(dfm, session_dates, ax[3])
 
-    make_total_volume_plot(dfm, ax[4])
+    make_total_volume_plot(dfm, session_dates, ax[4])
 
     for i in range(1, len(ax)):
         ax[i].set_yticklabels([])
@@ -368,12 +368,14 @@ def make_ILI_plot(dfm, session_dates, ax):
         patch.set_color('black'), patch.set_alpha(0.5)
 
 
-def make_trial_type_plot(dfm, ax):
+def make_trial_type_plot(dfm, session_dates, ax):
     sums = dfm.groupby(['startdatetime', 'color', ]).sum()
     colors = ['blue', 'red', 'darkgreen', 'lightgreen', 'darkorange', 'yellow']
-    dates = dfm.startdatetime.unique()
+    dates = [] #dfm.startdatetime.unique()
     all_vals = []
-    for date in dates:
+    for ii, date in enumerate(session_dates[:]):
+
+        dates.append(dfm[(dfm.startdatetime == date)].startdatetime.iloc[0].strftime('%Y-%m-%d'))
         total_dur = sums.loc[date]['trial_length'].sum()
         vals = []
         for color in colors:
@@ -396,20 +398,23 @@ def make_trial_type_plot(dfm, ax):
     ax.invert_yaxis()
 
 
-def make_performance_plot(df_in, ax, reward_window=None, sliding_window=None):
+def make_performance_plot(df_in, session_dates, ax, reward_window=None, sliding_window=None):
     if sliding_window == None:  # NOQA: E711
         calculate_sliding_window = True  # NOQA: F841
     else:
         caclulate_sliding_window = False  # NOQA: F841
 
-    dates = df_in.startdatetime.unique()
+    dates = []
     max_hit_rates = []
     mean_hit_rates = []
     max_false_alarm_rates = []
     mean_false_alarm_rates = []
     max_dprime = []
     mean_dprime = []
-    for ii, date in enumerate(dates):
+    for ii, date in enumerate(session_dates[:]):
+
+        dates.append(df_in[(df_in.startdatetime == date)].startdatetime.iloc[0].strftime('%Y-%m-%d'))
+
         df1 = df_in[(df_in.startdatetime == date) & (df_in.trial_type != 'aborted')]
 
         if calculate_sliding_window == True:
@@ -438,6 +443,7 @@ def make_performance_plot(df_in, ax, reward_window=None, sliding_window=None):
 
 def make_dprime_plot(
         df_in,
+        session_dates, 
         ax,
         reward_window=None,
         return_vals=False,
@@ -448,14 +454,17 @@ def make_dprime_plot(
     else:
         calculate_sliding_window = False
 
-    dates = df_in.startdatetime.unique()
+    dates = []
     max_hit_rates = []
     mean_hit_rates = []
     max_false_alarm_rates = []
     mean_false_alarm_rates = []
     max_dprime = []
     mean_dprime = []
-    for ii, date in enumerate(dates):
+    for ii, date in enumerate(session_dates[:]):
+
+        dates.append(df_in[(df_in.startdatetime == date)].startdatetime.iloc[0].strftime('%Y-%m-%d'))
+
         df1 = df_in[(df_in.startdatetime == date) & (df_in.trial_type != 'aborted')]
 
         if calculate_sliding_window == True:
@@ -488,11 +497,13 @@ def make_dprime_plot(
         return max_dprime
 
 
-def make_total_volume_plot(df_in, ax):
-    dates = df_in.startdatetime.unique()
+def make_total_volume_plot(df_in, session_dates, ax):
+    dates = []
     total_volume = []
     number_correct = []
-    for ii, date in enumerate(dates):
+    for ii, date in enumerate(session_dates[:]):
+
+        dates.append(df_in[(df_in.startdatetime == date)].startdatetime.iloc[0].strftime('%Y-%m-%d'))
         df1 = df_in[(df_in.startdatetime == date) & (df_in.trial_type != 'aborted')]
 
         total_volume.append(df1.number_of_rewards.sum() * df1.reward_volume.max())
