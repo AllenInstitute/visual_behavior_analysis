@@ -872,7 +872,8 @@ def animate_array(array,
                   fontsize=10,
                   fontcolor='orange',
                   fontweight='normal',
-                  axis='off'
+                  axis='off',
+                  repeat=False
                  ):
     
     '''
@@ -894,14 +895,16 @@ def animate_array(array,
     import matplotlib.animation as animation
 
     n_frames=np.shape(array)[0]
+
     if annotation is not None:
         assert len(annotation)==n_frames, 'length of annotation must equal frame number'
 
     def update_array(frame):
-        # check if animation is at the last frame, and if so, stop the animation a
+        # check if animation is at the last frame, and if so, stop the animation
+        
         if frame == n_frames: 
             anim.event_source.stop()
-        elif frame < n_frames:
+        else:
             ax.cla()
             ax.imshow(array[frame,:,:],cmap=cmap,clim=clim)
             if annotation is not None:
@@ -914,10 +917,10 @@ def animate_array(array,
                     fontweight=fontweight
                 )
             ax.axis(axis)
-        
-    fig,ax=plt.subplots(figsize=figsize)
-    anim = animation.FuncAnimation(fig, update_array, interval=1000./fps)
     
+    fig,ax=plt.subplots(figsize=figsize)
+    anim = animation.FuncAnimation(fig, update_array, frames=n_frames, interval=1000./fps,repeat=repeat)
+
     if saveloc is not None:
         anim.save(saveloc,writer='ffmpeg',fps=fps,dpi=dpi)
 
