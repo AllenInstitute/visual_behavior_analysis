@@ -5,7 +5,8 @@ import numpy as np
 import h5py
 import os
 import warnings
-
+import tables as tb
+import visual_behavior.utilities as vbu
 
 def find_filenames(path, mouse_id=None, camera_config='widefield'):
     """ searches a path and returns a dictionary containing all of the necessary
@@ -152,43 +153,85 @@ def save_h5(data, filename, dtype=float, keyname='data'):
     h5f.close()
 
 
-def load_h5(filename, dtype=float, keyname='data'):
+def load_h5(filename, keyname='data',open_as='array'):
     '''
     load an h5 file
     '''
-    h5f = h5py.File(filename, 'r')
-    data = h5f['data'][:].astype(dtype)
-    h5f.close()
+    if open_as == 'array':
+        h5f = h5py.File(filename, 'r')
+        data = h5f['data'][:].astype(float)
+        h5f.close()
+        
+    else:
+        file_obj = tb.open_file(filename, 'r')
+        data = file_obj.root.data
+        print('Opening as a pytables object to allow slicing\nBe sure to call the .close() method on this object when done')
+
     return data
 
 
 def downsample_and_concatenate_tifs(
         tif_list,
         spatial_downsample_factor=4,
-        temporal_downsample_factor=1
+        temporal_downsample_factor=1,
+        output_filename=None,
+        progress=False
 ):
     """
     opens each tif
     downsamples by downsample factor
-    returns concatenated array
+    if output_filename is None, returns concatenated array to memory.
+    if output_filename is specified, writes h5 file to disk using pytables
     """
     from skimage.measure import block_reduce
     from skimage import io as skio
-    fsmall = []
+
+    #either append output to a list memory, or set up an output file location
+    if output_filename is None:
+        fsmall = []
+    else:
+        fd = tb.open_file(output_filename, 'w')
+
+    if progress == True:
+        pb = vbu.progress(len(tif_list))
+
     if type(tif_list) == str:
         tif_list = [tif_list]
-    for tif in tif_list:
-        print('loading ', tif)
-        f = skio.imread(tif)
-        print('downsampling')
-        fsmall.append((block_reduce(f, block_size=(temporal_downsample_factor, spatial_downsample_factor, spatial_downsample_factor), func=np.mean)))
 
-    print('concatenating')
-    dat = np.array(fsmall[0])
-    for i in range(1, len(fsmall)):
-        dat = np.concatenate((dat, fsmall[i]), axis=0)
+    for i,tif in enumerate(tif_list):
+        mov = skio.imread(tif)
+        downsampled_stack = block_reduce(mov, block_size=(temporal_downsample_factor, spatial_downsample_factor, spatial_downsample_factor), func=np.mean)
 
-    return dat
+        # if we're writing to an output file, use pytables create_earray to make an extensible array along the frame dimension
+        # write each downsampled tiff stack to the array
+        if output_filename is not None:
+            if i==0:
+                h5_movie = fd.create_earray(fd.root, 
+                        'data', 
+                        tb.UInt16Atom(), 
+                        expectedrows = int(downsampled_stack.shape[0])*len(tif_list),
+                        shape=(0, int(downsampled_stack.shape[1]),int(downsampled_stack.shape[2])))
+            #write each frame to the extensible h5 file
+            for frame in range(np.shape(downsampled_stack)[0]):
+                h5_movie.append(downsampled_stack[frame,:,:][None])
+
+        elif output_filename is None:
+            fsmall.append((downsampled_stack))
+
+        pb.update()
+
+    if output_filename is not None:
+        fd.close()
+
+    #if not writing to disk, concatenate all of the arrays in the list into one long array
+    if output_filename is None:
+        dat = np.array(fsmall[0])
+        for i in range(1, len(fsmall)):
+            dat = np.concatenate((dat, fsmall[i]), axis=0)
+
+        return dat
+    else:
+        return output_filename
 
 
 def open_traces(datapath):
