@@ -7,6 +7,7 @@ import os
 import warnings
 import tables as tb
 import visual_behavior.utilities as vbu
+import cv2 #Note: tested on openCV 3.2.0
 
 def find_filenames(path, mouse_id=None, camera_config='widefield'):
     """ searches a path and returns a dictionary containing all of the necessary
@@ -113,13 +114,14 @@ def quadratic_func(x, a, b, c):
 def detrend_movie(movie):
     from scipy.optimize import curve_fit
     detrended_movie = np.empty(np.shape(movie))
-    for i in range(np.shape(movie)[0]):
-        for j in range(np.shape(movie)[1]):
+    for i in range(np.shape(movie)[1]):
+        for j in range(np.shape(movie)[2]):
+            # print(i, j)
             ydata = movie[:, i, j]
             xdata = np.arange(len(ydata))
             popt, pcov = curve_fit(quadratic_func, xdata, ydata)
             detrended_movie[:, i, j] = ydata - quadratic_func(xdata, *popt)
-        print(i, j)
+        
     return detrended_movie
 
 
@@ -129,11 +131,15 @@ def parse_xml(xmlfile):
     '''
     attributes = {}
     f = open(xmlfile, 'r')
+    number_of_TIF_files=0
     for line in f.readlines():
         if 'attr name' in line:
             key = line.split('"')[1]
             value = line.split('"')[2].split('</attr')[0][1:]
             attributes[key] = value
+        if 'file frames=' in line:
+            number_of_TIF_files+=1
+    attributes['number_of_TIF_files']=number_of_TIF_files
 
     # try turning attributes into floats
     for attritube in attributes.keys():
@@ -153,7 +159,7 @@ def save_h5(data, filename, dtype=float, keyname='data'):
     h5f.close()
 
 
-def load_h5(filename, keyname='data',open_as='array'):
+def load_h5(filename, keyname='data',open_as='array',dtype=float):
     '''
     load an h5 file
     '''
@@ -322,3 +328,248 @@ def heat_plot(
         plt.colorbar(im, cax=cax, extendfrac=20, label=label)
     ax.set_xlabel('Time (s)')
     ax.set_ylabel('IC Number')
+
+
+def get_camera_timestamps(sync_data,filename_dict,
+                          sync_line_names=['behavior_camera','face_camera','eye_camera'],
+                          filename_keys=['behavior_video_timestamps','face_video_timestamps','eye_video_timestamps']):
+    
+    sample_freq = sync_data.meta_data['ni_daq']['counter_output_freq']
+    
+    video_timestamps = {}
+    for ii,video_name in enumerate(sync_line_names):
+        #load timestamps from sync
+        timestamps_from_sync = sync_data.get_rising_edges(video_name)/sample_freq
+        
+        #load timestamps from file
+        print(filename_keys[ii])
+        timestamp_file = h5py.File(filename_dict[filename_keys[ii]])
+        timestamps_from_file = np.hstack((0,np.cumsum(timestamp_file['frame_intervals'])))
+        
+        if len(timestamps_from_sync)!=len(timestamps_from_file):
+            warnings.warn('NONMATCHING timestamp counts\nThere are {} timestamps in sync and {} timestamps in the associated camera file\nthese should match'.format(len(timestamps_from_sync),len(timestamps_from_file)))
+            
+        video_timestamps[video_name.split('_')[0]]=timestamps_from_sync
+        
+    return video_timestamps
+
+def get_movie_objects(filename_dict,names=['behavior_video','face_video','eye_video'],):
+    '''
+    returns openCV VideoCapture objects
+    '''
+    movie_dict={}
+    for name in names:
+        if filename_dict[name] is not None:
+            filepath = filename_dict[name]
+
+            movie_dict[name]=cv2.VideoCapture(filepath)
+        else:
+            movie_dict[name]=None
+    return movie_dict
+
+
+def get_movie_frame(movie_object,frame=None,time=None,timestamps=None):
+    '''
+    returns frame from avi, opened as openCV VideoCapture object
+    '''
+    if frame is not None and time is not None:
+        warnings.warn("Can't specify frame AND time, returning None")
+        return None
+    elif frame is None and time is None:
+        warnings.warn("Must specify either frame OR time, returning None")
+        return None
+    elif frame is not None and time is None:
+        pass
+    elif time is not None and frame is None:
+        if timestamps is not None:
+            frame = find_nearest_index(time,timestamps)+1 #why +1? seems to be necessary to get things to line up
+        else:
+            warnings.warn("Must enter a timestamp array, returning None")
+            return None
+        
+    movie_object.set(cv2.CAP_PROP_POS_FRAMES,frame)
+    found_frame,frame_array = movie_object.read()
+    if found_frame==True:
+        return frame_array
+    else:
+        warnings.warn("Couldn't find frame {}, returning None".format(frame))
+        return None
+
+
+def find_nearest_index(val,time_array):
+    '''
+    Takes an input (can be a scalar, list, or array) and a time_array
+    Returns the index or indices of the time points in time_array that are closest to val
+    '''
+    if hasattr(val, "__len__"):
+        idx = np.empty(len(val))*np.nan
+        for i,v in enumerate(val):
+            tmp = np.abs(v-np.array(time_array))
+            idx[i] = int(np.where(np.isclose(tmp,np.min(tmp)))[0][0])
+    else:
+        tmp = np.abs(val-np.array(time_array))
+        idx = int(np.where(np.isclose(tmp,np.min(tmp)))[0][0])
+    return idx
+
+def pad_vector(dat, win):
+    tlen = dat.shape[0]      
+    pad_start = dat[0:win]+(dat[0]-dat[win])
+    pad_end = dat[tlen-win:]+(dat[-1]-dat[tlen-win])
+    dat_pad = np.append(np.append(pad_start, dat), pad_end)
+    return dat_pad
+
+def normalize_movie(mov,output='dff',exposure=50,window=60,show_progress=False):    
+    import scipy.signal as sig
+
+    expose = np.float(exposure/1000.) #convert exposure from ms to s
+    win = np.float(window) # window in seconds
+    win = win/expose
+    win = int(np.ceil(win))
+    if win > mov.shape[0]/2:
+        print("length of window is: {}".format(win))
+        print('please choose a window smaller than half the length of time you are analyzing')
+
+    kernel = sig.gaussian(win, win/8)
+    padsize = mov.shape[0] + (win*2) - 1
+    ts_pad = np.zeros([padsize], dtype=(float))
+
+    output_mov = np.zeros([mov.shape[0], mov.shape[1], mov.shape[2]], dtype=(float)) 
+
+    if show_progress == True:
+        pb = vbu.progress(np.shape(mov)[2]*np.shape(mov)[1],message="")
+
+    for x in range(np.shape(mov)[2]):
+        for y in range(np.shape(mov)[1]):
+            ts = mov[:,y,x].flatten().astype(float)
+            ts_pad = pad_vector(ts, int(win))
+            # moving average by convolution
+            ts_0 = sig.fftconvolve(ts_pad, kernel/kernel.sum(), mode='valid')
+
+            # cut off pad
+            ts_0 = ts_0[win/2:(-win/2)-1]
+            # ts_0 = ts_0.astype('float32')
+            ts_0 = ts_0.astype(float)
+
+            if output.lower() == 'dff':
+                output_mov[:,y,x] = (ts - ts_0)/ts_0
+            elif output.lower() == 'df':
+                output_mov[:,y,x] = (ts - ts_0)
+            elif output.lower() == 'f0':
+                output_mov[:,y,x] = ts_0
+
+            if show_progress == True:
+                pb.update()
+            # pb.update(message="creating baseline movie, x="+str(x)+", y="+str(y)+'__max of ts='+str(np.max(output_mov[:,y,x]))+'__maskval='+str(mask[y,x]))
+
+    return output_mov
+
+
+class check_data_integrity(object):
+    
+
+    def __init__(self,datapath,mouse_id):
+
+
+        self.datapath=datapath
+        self.mouse_id=mouse_id
+        
+        self.filename_dict=find_filenames(datapath,mouse_id)
+
+        self.test_all()
+
+    def test_all(self):
+        self.inscopix_files()
+        n_behavior_frames=self.behavior_pkl()
+        self.sync_file(n_behavior_frames)
+        self.videos()
+
+
+    def inscopix_files(self):
+        '''
+        Are there TIF files present?
+        Is the XML file present?
+        '''
+
+        if self.filename_dict['xml_file'] is None:
+            print('No Inscopix camera XML file found')
+        else:
+            xml=parse_xml(self.filename_dict['xml_file'])
+            print('Inscopix camera XML file found')
+            print('\tNumber of discrete TIF files generated: {}'.format(xml['number_of_TIF_files']))
+            print('\tNumber of acquired frames: {} Hz'.format(xml['frames']))
+            print('\tAcquisition Frame Rate: {} Hz'.format(xml['fps']))
+
+        if self.filename_dict['tif_list'] is None:
+            print('No Inscopix camera TIF files found')
+        else:
+            print('{} Inscopix camera TIF files found'.format(len(self.filename_dict['tif_list'])))
+            if len(self.filename_dict['tif_list']) == xml['number_of_TIF_files']:
+                print('The number of TIF files matches the expected number')
+            else:
+                print('WARNING: The number of TIF files DOES NOT match the expected number')
+
+
+        print()
+        
+        
+    def behavior_pkl(self,):
+        '''
+        is behavior PKL file present and, if so, how many frames are represented within it
+        '''
+        if self.filename_dict['behavior_pkl'] is None:
+            print('WARNING: Behavior PKL file is missing')
+        else:
+            data=pd.read_pickle(self.filename_dict['behavior_pkl'])
+            nframes=len(data['vsyncintervals'])+1
+            nlicks=len(data['lickData'][0])
+            print('Behavior PKL file found')
+            print('\tFile has {} frames'.format(nframes))
+            print('\tFile has {} licks'.format(nlicks))
+            print('')
+        return nframes
+
+
+    def sync_file(self,expected_behavior_frames):
+        '''
+        check for presence and integrity of sync file
+        '''
+        from sync import Dataset
+        if self.filename_dict['sync_file'] is None:
+            print('WARNING: Sync file is missing')
+        else:
+            print('Sync file present, checking integrity...')
+            sync_data = Dataset(self.filename_dict['sync_file'])
+            sample_freq = sync_data.meta_data['ni_daq']['counter_output_freq']
+
+            line_labels = [label for label in sync_data.meta_data['line_labels'] if label != '']
+            print('\tSummary of line labels that are present and the detected number of edges:')
+            for line_label in line_labels:
+                edges = sync_data.get_rising_edges(line_label)/sample_freq
+                print('\tline:{}   edges:{}'.format(line_label,len(edges)))
+
+        print('')
+
+            
+        
+    def videos(
+        self,
+        video_names=['behavior_video','face_video','eye_video'],
+        make_plot=True):
+        '''
+        check for presence of all 3 expected video monitoring cameras
+        display a sample frame from each
+        '''
+        print('Checking to see that all video files are present...')
+        issue_flag=False
+        for video_name in video_names:
+            if self.filename_dict[video_name] is None:
+                print('\tWARNING: {} is missing'.format(video_name))
+                issue_flag=True
+            if self.filename_dict[video_name+'_timestamps'] is None:
+                print('\tWARNING: {}_timestamps are missing'.format(video_name))
+                issue_flag=True
+        if issue_flag == False:
+            print('  everything present')
+        print('')
+
+        movies=get_movie_objects(self.filename_dict)
