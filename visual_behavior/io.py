@@ -133,6 +133,17 @@ def load_rewards(data, time=None):
 
 
 @data_or_pkl
+def load_stimulus_log(data):
+    return pd.DataFrame(data['stimuluslog'])
+
+
+@data_or_pkl
+def load_omitted_flashes(data):
+    omitted_flash = pd.DataFrame(data['omitted_flash_frame_log'], columns=['frame'])
+    omitted_flash['omitted'] = True
+    return omitted_flash
+
+@data_or_pkl
 def load_flashes(data, time=None):
     """ Returns the stimulus flashes in an experiment.
 
@@ -157,7 +168,7 @@ def load_flashes(data, time=None):
         print('`time` not passed. using vsync from pkl file')
         time = load_time(data)
 
-    stimdf = pd.DataFrame(data['stimuluslog'])
+    stimdf = load_stimulus_log(data)
 
     # for some reason, we sometimes have stim frames with no corresponding time in the vsyncintervals.
     # we should probably fix the problem, but for now, let's just delete them.
@@ -167,13 +178,7 @@ def load_flashes(data, time=None):
     # first we find the flashes
     try:
         assert pd.isnull(stimdf['image_category']).any() == False
-        if len(data['omitted_flash_frame_log']) > 0:
-            omitted_flash = pd.DataFrame(data['omitted_flash_frame_log'], columns=['frame'])
-            omitted_flash['omitted'] = True
-            stimdf = pd.merge(stimdf, omitted_flash, how='left', on='frame')
-            flashes = stimdf[(stimdf['state'].astype(int).diff() > 0) | (pd.isnull(stimdf['omitted']) == False)].reset_index()[['image_category', 'image_name', 'frame', 'omitted']]
-        else:
-            flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['image_category', 'image_name', 'frame']]
+        flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['image_category', 'image_name', 'frame']]
 
         # flashes['change'] = (flashes['image_category'].diff()!=0)
         flashes['prior_image_category'] = flashes['image_category'].shift()
@@ -183,7 +188,7 @@ def load_flashes(data, time=None):
         flashes['image_name_change'] = flashes['image_name'].ne(flashes['prior_image_name']).astype(int)
 
         flashes['change'] = flashes['image_category_change']
-    except (AssertionError, KeyError) as e:
+    except AssertionError as e:
         # print "error in {}: {}".format(pkl,e)
         flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['ori', 'frame']]
         flashes['prior_ori'] = flashes['ori'].shift()
