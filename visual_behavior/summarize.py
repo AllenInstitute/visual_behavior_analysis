@@ -48,9 +48,11 @@ def number_of_stim_mask_ISIs(session_trials):
     return len(session_trials.ISI.unique())
 
 
-def session_level_summary(trials, **kwargs):
+def session_level_summary(trials,groupby=('mouse_id', 'startdatetime'), **kwargs):
     """ computes session-level summary table
     """
+    
+    groupby = list(groupby)
 
     summarizer = create_summarizer(
         session_id=session.session_id,
@@ -81,7 +83,7 @@ def session_level_summary(trials, **kwargs):
 
     session_summary = (
         trials
-        .groupby(['mouse_id', 'startdatetime'])
+        .groupby(groupby)
         .apply(summarizer)
         .reset_index()
     )
