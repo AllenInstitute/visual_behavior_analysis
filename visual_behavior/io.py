@@ -143,6 +143,7 @@ def load_omitted_flashes(data):
     omitted_flash['omitted'] = True
     return omitted_flash
 
+
 @data_or_pkl
 def load_flashes(data, time=None):
     """ Returns the stimulus flashes in an experiment.
