@@ -222,14 +222,14 @@ def test_load_running_speed(behavioral_session_output_fixture):
                 2: 0.099998492747545242,
                 3: 0.1500439215451479,
                 4: 0.2000794094055891
-            }
+            },
             'frame': {
                 0: 0,
                 1: 1,
                 2: 2,
                 3: 3,
                 4: 4,
-            }
+            },
         },
         columns=[
             u'acceleration (cm/s^2)', u'jerk (cm/s^3)', u'speed (cm/s)',
