@@ -231,10 +231,6 @@ def test_load_running_speed(behavioral_session_output_fixture):
                 4: 4,
             },
         },
-        columns=[
-            u'acceleration (cm/s^2)', u'jerk (cm/s^3)', u'speed (cm/s)',
-            u'time',
-        ]
     )
 
     pd.testing.assert_frame_equal(
