@@ -176,8 +176,16 @@ def load_flashes(data, time=None):
     stimdf = stimdf[stimdf['frame'] < len(time)]
     # assert stimdf['frame'].max() < len(time)
 
+    if 'image_category' in stimdf.columns:
+        stim_type = 'images'
+    elif 'ori' in stimdf.columns:
+        stim_type = 'gratings'
+    else:
+        raise NotImplementedError('this function only support orientations and natural images')
+
+
     # first we find the flashes
-    try:
+    if stim_type == 'images':
         assert pd.isnull(stimdf['image_category']).any() == False
         flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['image_category', 'image_name', 'frame']]
 
@@ -189,7 +197,7 @@ def load_flashes(data, time=None):
         flashes['image_name_change'] = flashes['image_name'].ne(flashes['prior_image_name']).astype(int)
 
         flashes['change'] = flashes['image_category_change']
-    except AssertionError as e:
+    elif stim_type == 'gratings':
         # print "error in {}: {}".format(pkl,e)
         flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['ori', 'frame']]
         flashes['prior_ori'] = flashes['ori'].shift()
