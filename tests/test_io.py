@@ -195,21 +195,21 @@ def test_load_rewards(behavioral_session_output_fixture):
 def test_load_running_speed(behavioral_session_output_fixture):
     EXPECTED_RUNNING_DF = pd.DataFrame(
         data={
-            'acceleration (cm/s^2)': {
+            'acceleration': {
                 0: 2.9123735258347376,
                 1: 1.4561867629173688,
                 2: -0.00053134947429403175,
                 3: -0.00053134947429403175,
                 4: -10.038109468389708
             },
-            'jerk (cm/s^3)': {
+            'jerk': {
                 0: -29.134639877456738,
                 1: -29.129489658054311,
                 2: -14.562169719325942,
                 3: -100.3045892838318,
                 4: -218.06477955362016
             },
-            'speed (cm/s)': {
+            'speed': {
                 0: 0.0,
                 1: 0.14556417360329282,
                 2: 0.14556417360329282,
@@ -222,6 +222,13 @@ def test_load_running_speed(behavioral_session_output_fixture):
                 2: 0.099998492747545242,
                 3: 0.1500439215451479,
                 4: 0.2000794094055891
+            }
+            'frame': {
+                0: 0,
+                1: 1,
+                2: 2,
+                3: 3,
+                4: 4,
             }
         },
         columns=[
