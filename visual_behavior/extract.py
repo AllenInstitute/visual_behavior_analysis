@@ -8,6 +8,12 @@ from .analyze import calc_deriv, rad_to_dist
 
 logger = logging.getLogger(__name__)
 
+"""extracts a series (pandas Series) or feature (object) doesn't affect
+supplied experiment data object
+
+series are guaranteed to be syncronized across the same timebase
+(or whatever quantity)
+"""
 
 """Most of these are from Derric's translator object in camstim
 

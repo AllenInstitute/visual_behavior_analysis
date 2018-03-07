@@ -3,7 +3,7 @@ from six import b
 import numpy as np
 import pandas as pd
 
-from visual_behavior import processing
+from visual_behavior import extract
 
 
 @pytest.mark.parametrize("data, expected", [
@@ -11,11 +11,11 @@ from visual_behavior import processing
     ({"wut": "wew", }, {"wut": "wew", }, ),
 ])
 def test_behavior_items_or_top_level(data, expected):
-    assert processing.behavior_items_or_top_level(data) == expected
+    assert extract.behavior_items_or_top_level(data) == expected
 
 
 def test_get_params(pizza_data_fixture):
-    assert processing.get_params(pizza_data_fixture) == {
+    assert extract.get_params(pizza_data_fixture) == {
         'auto_reward_volume': 0.007,
         'catch_freq': 0.125,
         'failure_repeats': 5,
@@ -64,7 +64,7 @@ def test_get_trials(pizza_data_fixture):
     ])
 
     pd.testing.assert_frame_equal(
-        processing.get_trials(pizza_data_fixture).iloc[:1],
+        extract.get_trials(pizza_data_fixture).iloc[:1],
         expected,
         check_column_type=False,
         check_index_type=False,
@@ -80,7 +80,7 @@ def test_get_time(pizza_data_fixture):
     ])
 
     np.testing.assert_almost_equal(
-        processing.get_time(pizza_data_fixture)[:10],
+        extract.get_time(pizza_data_fixture)[:10],
         expected
     )
 
@@ -94,7 +94,7 @@ def test_get_rewards(pizza_data_fixture):
     })
 
     pd.testing.assert_frame_equal(
-        processing.get_rewards(pizza_data_fixture).iloc[:5],
+        extract.get_rewards(pizza_data_fixture).iloc[:5],
         expected,
         check_column_type=False,
         check_index_type=False,
@@ -110,7 +110,7 @@ def test_get_vsyncs(pizza_data_fixture):
     ])
 
     np.testing.assert_almost_equal(
-        processing.get_vsyncs(pizza_data_fixture)[:10],
+        extract.get_vsyncs(pizza_data_fixture)[:10],
         expected
     )
 
@@ -119,7 +119,7 @@ def test_get_dx(pizza_data_fixture):
     expected = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     np.testing.assert_almost_equal(
-        processing.get_dx(pizza_data_fixture)[:10],
+        extract.get_dx(pizza_data_fixture)[:10],
         expected
     )
 
@@ -131,7 +131,7 @@ def test_get_licks(pizza_data_fixture):
     })
 
     pd.testing.assert_frame_equal(
-        processing.get_licks(pizza_data_fixture).iloc[:5],
+        extract.get_licks(pizza_data_fixture).iloc[:5],
         expected,
         check_column_type=False,
         check_index_type=False,
@@ -153,7 +153,7 @@ def test_get_licks(pizza_data_fixture):
 ])
 def test_get_running_speed(pizza_data_fixture, kwargs, expected):
     pd.testing.assert_frame_equal(
-        processing.get_running_speed(pizza_data_fixture, **kwargs).iloc[:5],
+        extract.get_running_speed(pizza_data_fixture, **kwargs).iloc[:5],
         expected,
         check_column_type=False,
         check_index_type=False,
@@ -164,6 +164,6 @@ def test_get_running_speed(pizza_data_fixture, kwargs, expected):
 
 def test_get_stimulus_log(pizza_data_fixture):
     np.testing.assert_equal(
-        processing.get_stimulus_log(pizza_data_fixture)[:10],
+        extract.get_stimulus_log(pizza_data_fixture)[:10],
         np.array([True, True, True, True, True, True, True, True, True, True, ])
     )

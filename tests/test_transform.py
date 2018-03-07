@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 
-from visual_behavior import data
+from visual_behavior import transform
 from visual_behavior.processing import get_trials
 
 
@@ -92,7 +92,7 @@ def test_annotate_parameters(trials_fixture, pizza_data_fixture):
 
     # raise ValueError(pizza_data_fixture.keys())
     pd.testing.assert_frame_equal(
-        data.annotate_parameters(trials_fixture, pizza_data_fixture).iloc[:3],
+        transform.annotate_parameters(trials_fixture, pizza_data_fixture).iloc[:3],
         expected_df_0,
         check_column_type=False,
         check_index_type=False,
@@ -101,7 +101,7 @@ def test_annotate_parameters(trials_fixture, pizza_data_fixture):
     )
 
     pd.testing.assert_frame_equal(
-        data.annotate_parameters(trials_fixture, pizza_data_fixture, test_key_dict).iloc[:3],
+        transform.annotate_parameters(trials_fixture, pizza_data_fixture, test_key_dict).iloc[:3],
         expected_df_1,
         check_column_type=False,
         check_index_type=False,
@@ -119,7 +119,7 @@ def test_annotate_n_rewards(trials_fixture):
     expected_df_1["number_of_rewards"] = [0, 1, 1, ]
 
     pd.testing.assert_frame_equal(
-        data.annotate_n_rewards(trials_fixture).iloc[:3],
+        transform.annotate_n_rewards(trials_fixture).iloc[:3],
         expected_df_1,
         check_column_type=False,
         check_index_type=False,
@@ -137,7 +137,7 @@ def test_annotate_reward_volume(trials_fixture, pizza_data_fixture):
     expected_df_1["reward_volume"] = [0, 0.007, 0.007, ]
 
     pd.testing.assert_frame_equal(
-        data.annotate_reward_volume(trials_fixture, pizza_data_fixture).iloc[:3],
+        transform.annotate_reward_volume(trials_fixture, pizza_data_fixture).iloc[:3],
         expected_df_1,
         check_column_type=False,
         check_index_type=False,
@@ -152,7 +152,7 @@ def test_annotate_change_detect(trials_fixture):
     expected_df_1["detect"] = [False, False, False, ]
 
     pd.testing.assert_frame_equal(
-        data.annotate_change_detect(trials_fixture).iloc[:3],
+        transform.annotate_change_detect(trials_fixture).iloc[:3],
         expected_df_1,
         check_column_type=False,
         check_index_type=False,

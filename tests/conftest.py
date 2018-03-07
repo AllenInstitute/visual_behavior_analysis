@@ -48,3 +48,8 @@ def annotated_trials_df_pickle_fixture():
 @pytest.fixture(scope="session")
 def pizza_data_fixture():
     return we_can_unpizza_that(os.path.join(TESTING_RES_DIR, "180215110844176000.h5"))
+
+
+@pytest.fixture(scope="session")
+def foraging2_data_fixture(pizza_data_fixture):
+    return pizza_data_fixture
