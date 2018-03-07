@@ -1,252 +1,161 @@
 import pytest
-import datetime
-import numpy as np
 import pandas as pd
 
 from visual_behavior import data
+from visual_behavior.processing import get_trials
 
-TIMESTAMP_ISO = "2018-01-22 08:47:09.440000"
-TIMESTAMP = pd.Timestamp(TIMESTAMP_ISO)
 
-def test_annotate_parameters():
+@pytest.fixture
+def trials_fixture(pizza_data_fixture):
+    return get_trials(pizza_data_fixture)
 
-    df = pd.DataFrame(
+
+expected_df_0 = pd.DataFrame(data={
+    "cumulative_rewards": [0, 1, 2, ],
+    "cumulative_volume": [0.000, 0.007, 0.014, ],
+    "index": pd.RangeIndex(start=0, stop=3, step=1),
+    "events": [
         [
-            {"key0": 0},
-            {"key0": 3},
-            ]
-        )
-
-    keydict = {
-        # the column "another_value" should be filled with the values of "some_thing"
-        "another_value": "some_thing",
-        # the column "dne" should be filled with values of "dne", which doesn't exist
-        "dne": "dne",
-        }
-
-    pickled_data = {
-        "some_thing": "some_value",
-        }
-
-    expected = pd.DataFrame(
+            ['initial_blank', 'enter', 7.513004185308317, 0],
+            ['initial_blank', 'exit', 7.5131104567819404, 0],
+            ['pre_change', 'enter', 7.513202823576774, 0],
+            ['early_response', '', 7.935050252171282, 25],
+            ['abort', '', 7.935161158537837, 25],
+            ['timeout', 'enter', 7.935301198517099, 25],
+            ['timeout', 'exit', 7.935412104883654, 25],
+        ],
         [
-            # since "dne" doesn't exist, it should be filled with None
-            {"key0": 0, "another_value": "some_value", "dne": None},
-            {"key0": 3, "another_value": "some_value", "dne": None},
-            ]
-        )
-
-    df_out = data.annotate_parameters(df, pickled_data, keydict)
-
-    pd.testing.assert_frame_equal(
-        df_out,
-        expected,
-        check_like=True,
-    )
-
-    # if no keydict is passed, we shouldn't modify the dataframe
-    df_out = data.annotate_parameters(df, pickled_data, None)
-
-    pd.testing.assert_frame_equal(
-        df_out,
-        df_out,
-        check_like=True,
-    )
-
-def test_explode_startdatetime():
-
-
-    df = pd.DataFrame(
+            ['initial_blank', 'enter', 8.268973099743558, 46],
+            ['initial_blank', 'exit', 8.269071425686445, 46],
+            ['pre_change', 'enter', 8.269162137162374, 46],
+            ['pre_change', 'exit', 10.536494153744696, 181],
+            ['stimulus_window', 'enter', 10.536653395423242, 181],
+            ['stimulus_changed', '', 11.338332948195802, 230],
+            ['auto_reward', '', 11.3384018094622, 230],
+            ['response_window', 'enter', 11.503911849633479, 238],
+            ['response_window', 'exit', 12.1045244500534, 274],
+            ['stimulus_window', 'exit', 16.541491561515294, 540],
+            ['no_lick', 'exit', 16.5417219819067, 540]
+        ],
         [
-            {
-            "startdatetime": TIMESTAMP,
-            },
-        ]
-    )
-
-    df_expected = pd.DataFrame(
+            ['initial_blank', 'enter', 16.72633605754683, 552],
+            ['initial_blank', 'exit', 16.7264621928473, 552],
+            ['pre_change', 'enter', 16.726556546024817, 552],
+            ['pre_change', 'exit', 18.993592591587138, 686],
+            ['stimulus_window', 'enter', 18.99372799667347, 686],
+            ['stimulus_changed', '', 21.346745609928735, 828],
+            ['auto_reward', '', 21.346815795450258, 828],
+            ['response_window', 'enter', 21.495668361492516, 835],
+            ['response_window', 'exit', 22.112903674344476, 872],
+            ['stimulus_window', 'exit', 24.998558548298565, 1044],
+            ['no_lick', 'exit', 24.99879227932778, 1044],
+        ],
+    ],
+    "licks": [
+        [(7.934872470921013, 25), ],
+        [],
         [
-            {
-            "startdatetime": TIMESTAMP,
-            "date": "2018-01-22",
-            "year": 2018,
-            "month": 1,
-            "day": 22,
-            "hour": 8,
-            "dayofweek": 0,
-            },
-        ]
-    )
-
-    df_out = data.explode_startdatetime(df)
-
-    pd.testing.assert_frame_equal(
-        df_out,
-        df_expected,
-        check_like=True,
-        )
-
-
-
-def test_annotate_n_rewards():
-    df = pd.DataFrame(
-        [
-            {"reward_times": [37.50, ]},
-            {"reward_times": [1.2, 37.50, ]},
-            {"reward_times": []},
-        ]
-    )
-
-
-    expected_vals = [
-        1,
-        2,
-        0,
+            (21.646282848975986, 844),
+            (21.796896343268116, 853),
+            (22.0132746644172, 866),
+            (22.129987227559337, 873),
+            (22.22999994040852, 879),
+            (22.363486181066726, 887),
+            (22.46347903008906, 893),
+        ],
+    ],
+    "rewards": [
+        [],
+        [(11.338415383077212, 230), ],
+        [(21.346828706937707, 828), ],
+    ],
+    "stimulus_changes": [
+        [],
+        [("im065", "im063", "im063", 229, 11.338229987359984)],
+        [("im063", "im065", "im065", 827, 21.346641655901575)],
+    ],
+    "success": [False, True, True, ],
+    "trial_params": [
+        {'catch': False, 'auto_reward': True, 'change_time': 0.7802031782835195},
+        {'catch': False, 'auto_reward': True, 'change_time': 0.7802031782835195},
+        {'catch': False, 'auto_reward': True, 'change_time': 1.9704493509311094},
     ]
-    expected_col = pd.Series(expected_vals,name='number_of_rewards')
+})
 
-    df_out = data.annotate_n_rewards(df)
 
-    pd.testing.assert_series_equal(
-        df_out['number_of_rewards'],
-        expected_col,
-        )
+def test_annotate_parameters(trials_fixture, pizza_data_fixture):
+    test_key_dict = {"test_trial_count": "trial_count", }
 
-def test_annotate_rig_id():
+    expected_df_1 = expected_df_0.copy(deep=True)
 
-    df = pd.DataFrame(
-        [
-            {"key0": 0},
-            {"key0": 3},
-            ]
-        )
+    expected_df_1["test_trial_count"] = [pizza_data_fixture["trial_count"]] * 3
 
-    pickled_data = {
-        "rig_id": "TEST_RIG",
-        }
-
-    expected = pd.DataFrame(
-        [
-            # since "dne" doesn't exist, it should be filled with None
-            {"key0": 0, "rig_id": "TEST_RIG",},
-            {"key0": 3, "rig_id": "TEST_RIG",},
-            ]
-        )
-
-    df_out = data.annotate_rig_id(df, pickled_data)
+    # raise ValueError(pizza_data_fixture.keys())
+    pd.testing.assert_frame_equal(
+        data.annotate_parameters(trials_fixture, pizza_data_fixture).iloc[:3],
+        expected_df_0,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
+    )
 
     pd.testing.assert_frame_equal(
-        df_out,
-        expected
+        data.annotate_parameters(trials_fixture, pizza_data_fixture, test_key_dict).iloc[:3],
+        expected_df_1,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
     )
 
-def test_annotate_startdatetime():
 
-    df = pd.DataFrame(
-        [
-            {"test": None,},
-        ],
-    )
+# def test_explode_startdatetime(trials_fixture, pizza_data_fixture):
+#     pass  # can't find start_time in pizza
 
-    pickled_data = {"startdatetime": TIMESTAMP_ISO, }
 
-    expected = pd.DataFrame(
-        [
-            {"test": None, "startdatetime": TIMESTAMP,},
-        ],
-    )
-
-    df_out = data.annotate_startdatetime(df, pickled_data)
+def test_annotate_n_rewards(trials_fixture):
+    expected_df_1 = expected_df_0.copy(deep=True)
+    expected_df_1["number_of_rewards"] = [0, 1, 1, ]
 
     pd.testing.assert_frame_equal(
-        df_out,
-        expected,
-        check_like=True,
+        data.annotate_n_rewards(trials_fixture).iloc[:3],
+        expected_df_1,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
     )
 
 
-@pytest.mark.parametrize("df, pickled_data, expected", [
-    (
-        pd.DataFrame(data={
-            "number_of_rewards": {17: 2, },
-        }),
-        {"rewardvol": 0.005, },
-        pd.DataFrame(data={
-            "reward_volume": {17: 0.01, },
-            "number_of_rewards": {17: 2, },
-            "cumulative_volume": {17: 0.01, },
-        }, columns=["number_of_rewards", "reward_volume", "cumulative_volume", ]),
-    ),
-    (
-        pd.DataFrame(data={
-            "reward_volume": {17: 0.005, },
-            "number_of_rewards": {17: 2, },
-        }),
-        {"rewardvol": 0.005, },
-        pd.DataFrame(data={
-            "reward_volume": {17: 0.005, },
-            "number_of_rewards": {17: 2, },
-            "cumulative_volume": {17: 0.005, },
-        }, columns=["number_of_rewards", "reward_volume", "cumulative_volume", ]),
-    )
-])
-def test_annotate_cumulative_reward(df, pickled_data, expected):
-    pd.testing.assert_frame_equal(
-        data.annotate_cumulative_reward(df, pickled_data),
-        expected
-    )
-
-def test_annotate_filename():
+# def test_annotate_rig_id(trials_fixture, pizza_data_fixture):
+#     pass  # no rig id
 
 
-    df = pd.DataFrame([{"test": "test"}])
-    filename = "test/path/fname.py"
-
-    expected = pd.DataFrame([{
-        "test": "test",
-        "filepath": "test/path",
-        "filename": "fname.py",
-        }])
-
-    df_out = data.annotate_filename(df, filename)
+def test_annotate_reward_volume(trials_fixture, pizza_data_fixture):
+    expected_df_1 = expected_df_0.copy(deep=True)
+    expected_df_1["reward_volume"] = [0, 0.007, 0.007, ]
 
     pd.testing.assert_frame_equal(
-        df_out,
-        expected,
-        check_like=True,
+        data.annotate_reward_volume(trials_fixture, pizza_data_fixture).iloc[:3],
+        expected_df_1,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
     )
 
 
-def test_fix_autorearded():
+def test_annotate_change_detect(trials_fixture):
+    expected_df_1 = expected_df_0.copy(deep=True)
+    expected_df_1["change"] = [True, True, True, ]
+    expected_df_1["detect"] = [False, False, False, ]
 
-    df = pd.DataFrame(
-        [
-            {"auto_rearded": True},
-            ]
-        )
-
-    expected = pd.DataFrame(
-        [
-            {"auto_rewarded": True},
-            ]
-        )
-
-    df_out = data.fix_autorearded(df)
-
-    pd.testing.assert_frame_equal(df_out, expected)
-
-
-# @pytest.mark.parametrize("df, expected", [
-#     (
-#         pd.DataFrame(data={
-#             "lick_times": {17: [0.1, 0.2, 0.3, 0.4, ], },
-#         }),
-#         pd.DataFrame(data={
-#             "lick_times": {17: [0.1, 0.2, 0.3, 0.4, ], },
-#             "number_of_licks": {17: 4, },
-#             "lick_rate_Hz": {17: 10.0, },
-#         }, columns=["lick_times", "number_of_licks", "lick_rate_Hz", ]),
-#     ),
-# ])
-# def test_annotate_lick_vigor(df, expected):
-#     pd.util.testing.assert_almost_equal(data.annotate_lick_vigor(df), expected)
+    pd.testing.assert_frame_equal(
+        data.annotate_change_detect(trials_fixture).iloc[:3],
+        expected_df_1,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
+    )
