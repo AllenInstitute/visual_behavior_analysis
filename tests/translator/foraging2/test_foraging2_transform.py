@@ -1,10 +1,16 @@
 import pytest
 import pandas as pd
 
-from visual_behavior.change_detection import translator
+from visual_behavior.translator.foraging2 import transform
+from visual_behavior.translator.foraging2.extract import get_trials
 
 
-EXPECTED_DF = pd.DataFrame(data={
+@pytest.fixture
+def trials_fixture(pizza_data_fixture):
+    return get_trials(pizza_data_fixture)
+
+
+expected_df_0 = pd.DataFrame(data={
     "cumulative_rewards": [0, 1, 2, ],
     "cumulative_volume": [0.000, 0.007, 0.014, ],
     "index": pd.RangeIndex(start=0, stop=3, step=1),
@@ -73,18 +79,101 @@ EXPECTED_DF = pd.DataFrame(data={
         {'catch': False, 'auto_reward': True, 'change_time': 0.7802031782835195},
         {'catch': False, 'auto_reward': True, 'change_time': 0.7802031782835195},
         {'catch': False, 'auto_reward': True, 'change_time': 1.9704493509311094},
-    ],
-    "number_of_rewards": [0, 1, 1, ],
-    "change": [True, True, True, ],
-    "detect": [False, False, False, ],
-    "reward_volume": [0, 0.007, 0.007, ]
+    ]
 })
 
+EXPECTED_TRIAL_LENGTH = 3
 
-def test_dataframe_translator(foraging2_data_fixture):
+
+def test_annotate_parameters(trials_fixture, pizza_data_fixture):
+    trials_0 = trials_fixture.copy(deep=True)
+    trials_1 = trials_fixture.copy(deep=True)
+
+    test_key_dict = {"test_trial_count": "trial_count", }
+
+    expected_df_1 = expected_df_0.copy(deep=True)
+
+    expected_df_1["test_trial_count"] = [pizza_data_fixture["trial_count"]] * EXPECTED_TRIAL_LENGTH
+
+    transform.annotate_parameters(trials_0, pizza_data_fixture)
+
     pd.testing.assert_frame_equal(
-        translator.dataframe_translator(foraging2_data_fixture).iloc[:3],
-        EXPECTED_DF,
+        trials_0.iloc[:EXPECTED_TRIAL_LENGTH],
+        expected_df_0,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
+    )
+
+    transform.annotate_parameters(trials_1, pizza_data_fixture, test_key_dict)
+
+    pd.testing.assert_frame_equal(
+        trials_1.iloc[:EXPECTED_TRIAL_LENGTH],
+        expected_df_1,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
+    )
+
+
+# def test_explode_startdatetime(trials_fixture, pizza_data_fixture):
+#     pass  # can't find start_time in pizza
+
+
+def test_annotate_n_rewards(trials_fixture):
+    trials_0 = trials_fixture.copy(deep=True)
+
+    expected_df_1 = expected_df_0.copy(deep=True)
+    expected_df_1["number_of_rewards"] = [0, 1, 1, ]
+
+    transform.annotate_n_rewards(trials_0)
+
+    pd.testing.assert_frame_equal(
+        trials_0.iloc[:EXPECTED_TRIAL_LENGTH],
+        expected_df_1,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
+    )
+
+
+# def test_annotate_rig_id(trials_fixture, pizza_data_fixture):
+#     pass  # no rig id
+
+
+def test_annotate_reward_volume(trials_fixture, pizza_data_fixture):
+    trials_0 = trials_fixture.copy(deep=True)
+
+    expected_df_1 = expected_df_0.copy(deep=True)
+    expected_df_1["reward_volume"] = [0, 0.007, 0.007, ]
+
+    transform.annotate_reward_volume(trials_0, pizza_data_fixture)
+
+    pd.testing.assert_frame_equal(
+        trials_0.iloc[:EXPECTED_TRIAL_LENGTH],
+        expected_df_1,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
+    )
+
+
+def test_annotate_change_detect(trials_fixture):
+    trials_0 = trials_fixture.copy(deep=True)
+
+    expected_df_1 = expected_df_0.copy(deep=True)
+    expected_df_1["change"] = [True, True, True, ]
+    expected_df_1["detect"] = [False, False, False, ]
+
+    transform.annotate_change_detect(trials_0)
+
+    pd.testing.assert_frame_equal(
+        trials_0.iloc[:EXPECTED_TRIAL_LENGTH],
+        expected_df_1,
         check_column_type=False,
         check_index_type=False,
         check_dtype=False,

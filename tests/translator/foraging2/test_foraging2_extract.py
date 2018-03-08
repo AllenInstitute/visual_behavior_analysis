@@ -3,7 +3,7 @@ from six import b
 import numpy as np
 import pandas as pd
 
-from visual_behavior import extract
+from visual_behavior.translator.foraging2 import extract
 
 
 @pytest.mark.parametrize("data, expected", [
