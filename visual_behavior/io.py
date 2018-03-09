@@ -3,7 +3,7 @@ import six
 import numpy as np
 import pandas as pd
 from scipy.signal import medfilt
-from .analyze import calc_deriv, rad_to_dist
+from .utilities import calc_deriv, rad_to_dist
 from functools import wraps
 
 
@@ -35,6 +35,21 @@ def load_metadata(data):
         'startdatetime',
         'rewardvol',
         'params',
+        'mouseid',
+        'response_window',
+        'task',
+        'stage',
+        'stoptime',
+        'userid',
+        'lick_detect_training_mode',
+        'blankscreen_on_timeout',
+        'stim_duration',
+        'blank_duration_range',
+        'delta_minimum',
+        'stimulus_distribution',
+        'stimulus',
+        'delta_mean',
+        'trial_duration',
     )
     metadata = {}
 
@@ -43,6 +58,8 @@ def load_metadata(data):
             metadata[field] = data[field]
         except KeyError:
             metadata[field] = None
+
+    metadata['n_stimulus_frames'] = len(data['vsyncintervals'])
 
     return metadata
 
@@ -135,169 +152,6 @@ def load_rewards(data, time=None):
         time=time[reward_frames],
     ))
     return rewards
-
-
-@data_or_pkl
-def load_stimulus_log(data):
-    return pd.DataFrame(data['stimuluslog'])
-
-
-@data_or_pkl
-def load_omitted_flashes(data):
-    omitted_flash = pd.DataFrame(data['omitted_flash_frame_log'], columns=['frame'])
-    omitted_flash['omitted'] = True
-    return omitted_flash
-
-
-@data_or_pkl
-def load_flashes(data, time=None):
-    """ Returns the stimulus flashes in an experiment.
-
-    NOTE: Currently only works for images & gratings.
-
-    Parameters
-    ----------
-    data : dict, unpickled experiment (or path to pickled object))
-    time : np.array, optional
-        array of times for each stimulus frame
-
-    Returns
-    -------
-    flashes : pandas DataFrame
-
-    See Also
-    --------
-    load_trials : loads trials
-
-    """
-    if time is None:
-        print('`time` not passed. using vsync from pkl file')
-        time = load_time(data)
-
-    stimdf = load_stimulus_log(data)
-
-    # for some reason, we sometimes have stim frames with no corresponding time in the vsyncintervals.
-    # we should probably fix the problem, but for now, let's just delete them.
-    stimdf = stimdf[stimdf['frame'] < len(time)]
-    # assert stimdf['frame'].max() < len(time)
-
-    # first we find the flashes
-    try:
-        assert pd.isnull(stimdf['image_category']).any() == False
-        flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['image_category', 'image_name', 'frame']]
-
-        # flashes['change'] = (flashes['image_category'].diff()!=0)
-        flashes['prior_image_category'] = flashes['image_category'].shift()
-        flashes['image_category_change'] = flashes['image_category'].ne(flashes['prior_image_category']).astype(int)
-
-        flashes['prior_image_name'] = flashes['image_name'].shift()
-        flashes['image_name_change'] = flashes['image_name'].ne(flashes['prior_image_name']).astype(int)
-
-        flashes['change'] = flashes['image_category_change']
-    except AssertionError as e:
-        # print "error in {}: {}".format(pkl,e)
-        flashes = stimdf[stimdf['state'].astype(int).diff() > 0].reset_index()[['ori', 'frame']]
-        flashes['prior_ori'] = flashes['ori'].shift()
-        flashes['ori_change'] = flashes['ori'].ne(flashes['prior_ori']).astype(int)
-
-        flashes['change'] = flashes['ori_change']
-
-    if len(flashes) == 0:
-        return flashes
-
-    flashes['time'] = time[flashes['frame']]
-
-    # then we find the licks
-    licks = load_licks(data)
-    licks['flash_index'] = np.searchsorted(
-        flashes['frame'].values,
-        licks['frame'].values,
-        side='right',
-    ) - 1
-    licks = licks[licks['flash_index'].diff() > 0]  # get first lick from each flash
-
-    # then we merge in the licks
-    flashes = flashes.merge(
-        licks,
-        left_index=True,
-        right_on='flash_index',
-        suffixes=('', '_lick'),
-        how='left'
-    ).set_index('flash_index')
-
-    flashes['lick'] = ~pd.isnull(flashes['time_lick'])
-
-    class Counter():
-        def __init__(self):
-            self.count = np.nan
-
-        def count_it(self, val):
-            count = self.count
-
-            if val > 0:
-                self.count = 1
-            else:
-                self.count += 1
-
-            return count
-
-    flashes['last_lick'] = flashes['lick'].map(Counter().count_it)
-
-    # then we find the rewards
-    rewards = load_rewards(data)
-    rewards['flash_index'] = np.searchsorted(
-        flashes['frame'].values,
-        rewards['frame'].values,
-        side='right',
-    ) - 1
-
-    # then we merge in the rewards
-    flashes = flashes.merge(
-        rewards,
-        left_index=True,
-        right_on='flash_index',
-        suffixes=('', '_reward'),
-        how='left',
-    ).set_index('flash_index')
-
-    flashes['reward'] = ~pd.isnull(flashes['time_reward'])
-
-    # finally, we assign the trials
-    try:
-        trial_bounds = [dict(index=tr['index'], startframe=tr['startframe']) for tr in data['triallog'] if 'startframe' in tr]
-    except KeyError:
-        trial_bounds = [dict(index=tr_index, startframe=tr['startframe']) for tr_index, tr in enumerate(data['triallog']) if 'startframe' in tr]
-
-    trial_bounds = pd.DataFrame(trial_bounds)
-    flashes['trial'] = np.searchsorted(
-        trial_bounds['startframe'].values,
-        flashes['frame'].values,
-        side='right',
-    ) - 1
-
-    flashes['flashed'] = data['blank_duration_range'][1] > 0
-
-    flashes['mouse_id'] = data['mouseid']
-    flashes['datetime'] = data['startdatetime']
-    flashes['task'] = data['task']
-    flashes['stage'] = data['stage']
-
-    session_params = [
-        'initial_blank',
-        'delta_minimum',
-        'delta_mean',
-        'stimulus_distribution',
-        'trial_duration',
-        'stimulus',
-    ]
-
-    for param in session_params:
-        try:
-            flashes[param] = data[param]
-        except KeyError:
-            pass
-
-    return flashes
 
 
 @data_or_pkl

@@ -33,7 +33,7 @@ def inplace(func):
 
 
 @inplace
-def annotate_parameters(trials, data, keydict=None):
+def annotate_parameters(trials, metadata, keydict=None):
     """ annotates a dataframe with session parameters
 
     Parameters
@@ -52,11 +52,11 @@ def annotate_parameters(trials, data, keydict=None):
     io.load_flashes
     """
     if keydict is None:
-        return
+        return None
     else:
         for key, value in iteritems(keydict):
             try:
-                trials[key] = [data[value]] * len(trials)
+                trials[key] = [metadata[value]] * len(trials)
             except KeyError:
                 trials[key] = None
 
@@ -106,7 +106,7 @@ def annotate_n_rewards(df):
 
 
 @inplace
-def annotate_rig_id(df, metadata):
+def annotate_rig_id(trials, metadata):
     """ adds a column with rig id
 
     Parameters
@@ -121,14 +121,14 @@ def annotate_rig_id(df, metadata):
     io.load_trials
     """
     try:
-        df['rig_id'] = metadata['rig_id']
+        trials['rig_id'] = metadata['rig_id']
     except KeyError:
         from visual_behavior.devices import get_rig_id
-        df['rig_id'] = get_rig_id(df['computer_name'][0])
+        trials['rig_id'] = get_rig_id(trials['computer_name'][0])
 
 
 @inplace
-def annotate_startdatetime(df, data):
+def annotate_startdatetime(trials, metadata):
     """ adds a column with the session's `startdatetime`
 
     Parameters
@@ -143,7 +143,7 @@ def annotate_startdatetime(df, data):
     --------
     io.load_trials
     """
-    df['startdatetime'] = pd.to_datetime(metadata['startdatetime'])
+    trials['startdatetime'] = pd.to_datetime(metadata['startdatetime'])
 
 
 @inplace
@@ -312,7 +312,7 @@ def annotate_epochs(trials, epoch_length=5.0):
 
 
 @inplace
-def annotate_lick_vigor(trials, data, window=3.5):
+def annotate_lick_vigor(trials, licks, window=3.5):
     """ annotates the dataframe with two columns that indicate the number of
     licks and lick rate in 1/s
 
@@ -328,8 +328,6 @@ def annotate_lick_vigor(trials, data, window=3.5):
     --------
     io.load_trials
     """
-
-    licks = load_licks(data)
 
     def find_licks(reward_times):
         try:
@@ -397,10 +395,7 @@ def annotate_trials(trials):
 
 
 @inplace
-def update_times(trials, data, time=None):
-
-    if time is None:
-        time = load_time(data)
+def update_times(trials, time):
 
     time_frame_map = {
         'change_time': 'change_frame',
@@ -473,9 +468,9 @@ def categorize_trials(trials):
     return trials.apply(categorize_one_trial, axis=1)
 
 
-def get_end_frame(trials, data):
+def get_end_frame(trials, metadata):
 
-    last_frame = len(data['vsyncintervals'])
+    last_frame = metadata['n_stimulus_frames']
 
     end_frames = np.zeros_like(trials.index) * np.nan
 
@@ -486,7 +481,7 @@ def get_end_frame(trials, data):
 
     return end_frames.astype(np.int32)
 
-def get_lick_frames(trials, data, time=None):
+def get_lick_frames(trials, licks):
     """
     returns a list of arrays of lick frames, with one entry per trial
     """
@@ -496,7 +491,7 @@ def get_lick_frames(trials, data, time=None):
     #      method. Using the 'responselog' instead will provide a more accurate measure of actual like frames and times.
     # lick_frames = data['lickData'][0]
 
-    lick_frames = load_licks(data, time=time)['frame']
+    lick_frames = licks['frame']
 
     local_licks = []
     for idx, row in trials.iterrows():
@@ -605,52 +600,50 @@ def calculate_trial_length(trials):
 
     return trial_length
 
-def get_end_time(df_in, data, time=None):
+def get_end_time(trials, time):
     '''creates a vector of end times for each trial, which is just the start time for the next trial'''
-    if time is None:
-        time = load_time(data)
 
-    end_times = df_in['endframe'].map(lambda fr: time[int(fr)])
+    end_times = trials['endframe'].map(lambda fr: time[int(fr)])
     return end_times
 
 
-def assign_color(df_in, palette='default'):
-    color = [None] * len(df_in)
-    for idx in df_in.index:
+def assign_color(trials, palette='default'):
+    color = [None] * len(trials)
+    for idx in trials.index:
 
-        if df_in.loc[idx]['trial_type'] == 'aborted':
+        if trials.loc[idx]['trial_type'] == 'aborted':
             if palette.lower() == 'marina':
                 color[idx] = 'lightgray'
             else:
                 color[idx] = 'red'
 
-        elif df_in.loc[idx]['auto_rewarded'] is True:
+        elif trials.loc[idx]['auto_rewarded'] is True:
             if palette.lower() == 'marina':
                 color[idx] = 'darkblue'
             else:
                 color[idx] = 'blue'
 
-        elif df_in.loc[idx]['trial_type'] == 'go':
-            if df_in.loc[idx]['response'] == 1:
+        elif trials.loc[idx]['trial_type'] == 'go':
+            if trials.loc[idx]['response'] == 1:
                 if palette.lower() == 'marina':
                     color[idx] = '#55a868'
                 else:
                     color[idx] = 'darkgreen'
 
-            elif df_in.loc[idx]['response'] != 1:
+            elif trials.loc[idx]['response'] != 1:
                 if palette.lower() == 'marina':
                     color[idx] = '#ccb974'
                 else:
                     color[idx] = 'lightgreen'
 
-        elif df_in.loc[idx]['trial_type'] == 'catch':
-            if df_in.loc[idx]['response'] == 1:
+        elif trials.loc[idx]['trial_type'] == 'catch':
+            if trials.loc[idx]['response'] == 1:
                 if palette.lower() == 'marina':
                     color[idx] = '#c44e52'
                 else:
                     color[idx] = 'darkorange'
 
-            elif df_in.loc[idx]['response'] != 1:
+            elif trials.loc[idx]['response'] != 1:
                 if palette.lower() == 'marina':
                     color[idx] = '#4c72b0'
                 else:
@@ -659,17 +652,17 @@ def assign_color(df_in, palette='default'):
     return color
 
 
-def get_response_type(df_in):
+def get_response_type(trials):
 
     response_type = []
-    for idx in df_in.index:
-        if (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response == 1):
+    for idx in trials.index:
+        if (trials.loc[idx].rewarded == True) & (trials.loc[idx].response == 1):
             response_type.append('HIT')
-        elif (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response != 1):
+        elif (trials.loc[idx].rewarded == True) & (trials.loc[idx].response != 1):
             response_type.append('MISS')
-        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response == 1):
+        elif (trials.loc[idx].rewarded == False) & (trials.loc[idx].response == 1):
             response_type.append('FA')
-        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response != 1):
+        elif (trials.loc[idx].rewarded == False) & (trials.loc[idx].response != 1):
             response_type.append('CR')
         else:
             response_type.append('other')
@@ -677,7 +670,7 @@ def get_response_type(df_in):
     return response_type
 
 @inplace
-def remove_repeated_licks(df_in):
+def remove_repeated_licks(trials):
     """
     the stimulus code records one lick for each frame in which the tongue was in contact with the spout
     if a single lick spans multiple frames, it'll be recorded as multiple licks
@@ -685,7 +678,7 @@ def remove_repeated_licks(df_in):
     """
     lt = []
     lf = []
-    for idx, row in df_in.iterrows():
+    for idx, row in trials.iterrows():
 
         # get licks for this frame
         lick_frames_on_this_trial = row.lick_frames
@@ -705,5 +698,5 @@ def remove_repeated_licks(df_in):
             lf.append([])
 
     # replace the appropriate rows of the dataframe
-    df_in['lick_times'] = lt
-    df_in['lick_frames'] = lf
+    trials['lick_times'] = lt
+    trials['lick_frames'] = lf
