@@ -15,7 +15,7 @@ from visual_behavior.io import load_trials, load_licks, load_time
 from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
 from visual_behavior.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
 from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor, update_times
-from visual_behavior.data import categorize_trials
+from visual_behavior.data import categorize_trials, get_end_frame
 from visual_behavior.devices import get_rig_id
 
 
@@ -547,23 +547,6 @@ def get_end_time(df_in, data, time=None):
 
     end_times = df_in['endframe'].map(lambda fr: time[int(fr)])
     return end_times
-
-
-# -> analyze
-def get_end_frame(df_in, data):
-
-    last_frame = len(data['vsyncintervals'])
-
-    end_frames = np.zeros_like(df_in.index) * np.nan
-
-    for ii, index in enumerate(df_in.index[:-1]):
-        end_frames[ii] = int(df_in.loc[index + 1].startframe - 1)
-    if last_frame is not None:
-        end_frames[-1] = int(last_frame)
-
-    return end_frames.astype(np.int32)
-
-
 
 
 # -> analyze

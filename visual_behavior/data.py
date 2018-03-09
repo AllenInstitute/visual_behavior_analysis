@@ -459,7 +459,7 @@ def categorize_one_trial(tr):
 
     return trial_type
 
-@inplace
+
 def categorize_trials(trials):
     '''trial types:
          'aborted' = lick before stimulus
@@ -468,6 +468,20 @@ def categorize_trials(trials):
          'catch' = no stimulus delivered
          'other' = uncategorized (shouldn't be any of these, but this allows me to find trials that don't meet this conditions)
 
-         adds a column called 'trial_type' to the input dataframe
+         returns a series with trial types
          '''
     return trials.apply(categorize_one_trial, axis=1)
+
+
+def get_end_frame(trials, data):
+
+    last_frame = len(data['vsyncintervals'])
+
+    end_frames = np.zeros_like(trials.index) * np.nan
+
+    for ii, index in enumerate(trials.index[:-1]):
+        end_frames[ii] = int(trials.loc[index + 1].startframe - 1)
+    if last_frame is not None:
+        end_frames[-1] = int(last_frame)
+
+    return end_frames.astype(np.int32)
