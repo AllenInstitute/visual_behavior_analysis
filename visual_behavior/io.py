@@ -176,13 +176,12 @@ def load_flashes(data, time=None):
     stimdf = stimdf[stimdf['frame'] < len(time)]
     # assert stimdf['frame'].max() < len(time)
 
-    if 'image_category' in stimdf.columns:
+    if pd.isnull(stimdf['image_category']).any() == False: #'image_category' in stimdf.columns:
         stim_type = 'images'
     elif 'ori' in stimdf.columns:
         stim_type = 'gratings'
     else:
         raise NotImplementedError('this function only support orientations and natural images')
-
 
     # first we find the flashes
     if stim_type == 'images':
