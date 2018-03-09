@@ -55,7 +55,73 @@ def load_trials(data, time=None):
     trials : pandas DataFrame
 
     """
-    trials = pd.DataFrame(data['triallog'])
+
+    columns = (
+        'auto_rewarded',
+        'change_contrast',
+        'change_frame',
+        'change_image_category',
+        'change_image_name',
+        'change_ori',
+        'change_time',
+        'cumulative_reward_number',
+        'cumulative_volume',
+        'delta_ori',
+        'index',
+        'initial_contrast',
+        'initial_image_category',
+        'initial_image_name',
+        'initial_ori',
+        'lick_times',
+        'optogenetics',
+        'publish_time',
+        'response_latency',
+        'response_time',
+        'response_type',
+        'reward_frames',
+        'reward_times',
+        'reward_volume',
+        'rewarded',
+        'scheduled_change_time',
+        'startframe',
+        'starttime',
+        'stim_on_frames',
+    )
+
+    forced_types = {
+        'initial_ori': float,
+        'change_ori': float,
+        'delta_ori': float,
+        'initial_contrast': float,
+        'change_contrast': float,
+    }
+
+    trials = (
+        pd.DataFrame(data['triallog'],columns=columns)
+        .astype(dtype=forced_types)
+    )
+
+    forced_string = (
+        'initial_image_category',
+        'initial_image_name',
+        'change_image_category',
+        'change_image_name',
+    )
+
+    def stringify(x):
+        try:
+            if np.isfinite(x)==True:
+                return str(x)
+            else:
+                return ''
+        except TypeError:
+            if x is None:
+                return ''
+
+        return str(x)
+
+    for col in forced_string:
+        trials[col] = trials[col].map(stringify)
 
     return trials
 
