@@ -25,21 +25,26 @@ def data_or_pkl(func):
 
     return pkl_wrapper
 
-
 @data_or_pkl
-def load_params(data):
-    """ Returns the parameters passed in to an experiment.
+def load_metadata(data):
 
-    Parameters
-    ----------
-    data : dict, unpickled experiment (or path to pickled object)
+    fields = (
+        'startdatetime',
+        'rig_id',
+        'computer_name',
+        'startdatetime',
+        'rewardvol',
+        'params',
+    )
+    metadata = {}
 
-    Returns
-    -------
-    params : dict
+    for field in fields:
+        try:
+            metadata[field] = data[field]
+        except KeyError:
+            pass
 
-    """
-    return data['params']
+    return metadata
 
 
 @data_or_pkl

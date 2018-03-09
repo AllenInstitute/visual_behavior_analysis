@@ -106,7 +106,7 @@ def annotate_n_rewards(df):
 
 
 @inplace
-def annotate_rig_id(df, data):
+def annotate_rig_id(df, metadata):
     """ adds a column with rig id
 
     Parameters
@@ -121,7 +121,7 @@ def annotate_rig_id(df, data):
     io.load_trials
     """
     try:
-        df['rig_id'] = data['rig_id']
+        df['rig_id'] = metadata['rig_id']
     except KeyError:
         from visual_behavior.devices import get_rig_id
         df['rig_id'] = get_rig_id(df['computer_name'][0])
@@ -143,7 +143,7 @@ def annotate_startdatetime(df, data):
     --------
     io.load_trials
     """
-    df['startdatetime'] = pd.to_datetime(data['startdatetime'])
+    df['startdatetime'] = pd.to_datetime(metadata['startdatetime'])
 
 
 @inplace
@@ -166,7 +166,7 @@ def assign_session_id(df_in):
 
 
 @inplace
-def annotate_cumulative_reward(trials, data):
+def annotate_cumulative_reward(trials, metadata):
     """ adds a column with the session's cumulative volume
 
     Parameters
@@ -184,7 +184,7 @@ def annotate_cumulative_reward(trials, data):
     try:
         trials['cumulative_volume'] = trials['reward_volume'].cumsum()
     except Exception:
-        trials['reward_volume'] = data['rewardvol'] * trials['number_of_rewards']
+        trials['reward_volume'] = metadata['rewardvol'] * trials['number_of_rewards']
         trials['cumulative_volume'] = trials['reward_volume'].cumsum()
 
 
