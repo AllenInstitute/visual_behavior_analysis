@@ -42,7 +42,7 @@ def load_metadata(data):
         try:
             metadata[field] = data[field]
         except KeyError:
-            pass
+            metadata[field] = None
 
     return metadata
 
