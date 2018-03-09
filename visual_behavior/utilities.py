@@ -12,10 +12,10 @@ from email.mime.text import MIMEText
 from scipy.interpolate import interp1d
 
 from visual_behavior.io import load_trials, load_licks, load_time
-from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
-from visual_behavior.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
-from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor, update_times
-from visual_behavior.data import categorize_trials, get_end_frame
+from visual_behavior.trials.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
+from visual_behavior.trials.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
+from visual_behavior.trials.data import annotate_filename, fix_autorearded, annotate_lick_vigor, update_times
+from visual_behavior.trials.data import categorize_trials, get_end_frame
 from visual_behavior.devices import get_rig_id
 
 
