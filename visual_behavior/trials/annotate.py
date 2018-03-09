@@ -147,7 +147,7 @@ def annotate_startdatetime(df, data):
 
 
 @inplace
-def assign_session_id(df_in):
+def assign_session_id(trials):
     """ adds a column with a unique ID for the session defined as
             a combination of the mouse ID and startdatetime
 
@@ -162,7 +162,7 @@ def assign_session_id(df_in):
     --------
     io.load_trials
     """
-    df_in['session_id'] = df_in['mouse_id'] + '_' + df_in['startdatetime'].map(lambda x: x.isoformat())
+    trials['session_id'] = trials['mouse_id'] + '_' + trials['startdatetime'].map(lambda x: x.isoformat())
 
 
 @inplace
@@ -485,3 +485,226 @@ def get_end_frame(trials, data):
         end_frames[-1] = int(last_frame)
 
     return end_frames.astype(np.int32)
+
+def get_lick_frames(trials, data, time=None):
+    """
+    returns a list of arrays of lick frames, with one entry per trial
+    """
+    # Note: [DRO - 1/12/18] it used to be the case that the lick sensor was polled on every frame in the stimulus code, giving
+    #      a 1:1 correspondence between the frame number and the index in the 'lickData' array. However, that assumption was
+    #      violated when we began displaying a frame at the beginning of the session without a corresponding call the 'checkLickSensor'
+    #      method. Using the 'responselog' instead will provide a more accurate measure of actual like frames and times.
+    # lick_frames = data['lickData'][0]
+
+    lick_frames = load_licks(data, time=time)['frame']
+
+    local_licks = []
+    for idx, row in trials.iterrows():
+        local_licks.append(
+            lick_frames[np.logical_and(lick_frames >= int(row['startframe']), lick_frames <= int(row['endframe']))]
+        )
+
+    return local_licks
+
+
+@inplace
+def calculate_latency(trials):
+    # For each trial, calculate the difference between each stimulus change and the next lick (response lick)
+    for idx in trials.index:
+        if pd.isnull(trials['change_time'][idx]) is False and len(trials['lick_times'][idx]) > 0:
+            licks = np.array(trials['lick_times'][idx])
+
+            post_stimulus_licks = licks - trials['change_time'][idx]
+
+            post_window_licks = post_stimulus_licks[post_stimulus_licks > trials.loc[idx]['response_window'][0]]
+
+            if len(post_window_licks) > 0:
+                trials.loc[idx, 'response_latency'] = post_window_licks[0]
+
+@inplace
+def calculate_reward_rate(
+        df,
+        window=1.0,
+        trial_window=25,
+        remove_aborted=False
+):
+    # written by Dan Denman (stolen from http://stash.corp.alleninstitute.org/users/danield/repos/djd/browse/calculate_reward_rate.py)
+    # add a column called reward_rate to the input dataframe
+    # the reward_rate column contains a rolling average of rewards/min
+    # window sets the window in which a response is considered correct, so a window of 1.0 means licks before 1.0 second are considered correct
+    # remove_aborted flag needs work, don't use it for now
+    reward_rate = np.zeros(np.shape(df.change_time))
+    c = 0
+    for startdatetime in df.startdatetime.unique():  # go through the dataframe by each behavior session
+        # get a dataframe for just this session
+        if remove_aborted is True:
+            warnings.warn("Don't use remove_aborted yet. Code needs work")
+            df_temp = df[(df.startdatetime == startdatetime) & (df.trial_type != 'aborted')].reset_index()
+        else:
+            df_temp = df[df.startdatetime == startdatetime]
+        trial_number = 0
+        for trial in range(len(df_temp)):
+            if trial_number < 10:  # if in first 10 trials of experiment
+                reward_rate_on_this_lap = np.inf  # make the reward rate infinite, so that you include the first trials automatically.
+            else:
+                # ensure that we don't run off the ends of our dataframe # get the correct response rate around the trial
+                min_index = np.max((0, trial - trial_window))
+                max_index = np.min((trial + trial_window, len(df_temp)))
+                df_roll = df_temp.iloc[min_index:max_index]
+
+                correct = len(df_roll[df_roll.response_latency < window])  # get a rolling number of correct trials
+                time_elapsed = df_roll.starttime.iloc[-1] - df_roll.starttime.iloc[0]  # get the time elapsed over the trials
+                reward_rate_on_this_lap = correct / time_elapsed  # calculate the reward rate
+
+            reward_rate[c] = reward_rate_on_this_lap  # store the rolling average
+            c += 1
+            trial_number += 1  # increment some dumb counters
+    df['reward_rate'] = reward_rate * 60.  # convert to rewards/min
+
+
+
+def check_responses(trials, reward_window=None):
+    '''trial types:
+         'aborted' = lick before stimulus
+         'autorewarded' = reward autodelivered at time of stimulus
+         'go' = stimulus delivered, rewarded if lick emitted within 1 second
+         'catch' = no stimulus delivered
+         'other' = uncategorized (shouldn't be any of these, but this allows me to find trials that don't meet this conditions)
+
+         adds a column called 'response' to the input dataframe
+         '''
+
+    if reward_window is not None:
+        rw_low = reward_window[0]
+        rw_high = reward_window[1]
+
+    did_respond = np.zeros(len(trials))
+    for ii, idx in enumerate(trials.index):
+
+        if reward_window is None:
+            rw_low = trials.loc[idx]['response_window'][0]
+            rw_high = trials.loc[idx]['response_window'][1]
+        if pd.isnull(trials.loc[idx]['change_time']) == False and \
+                pd.isnull(trials.loc[idx]['response_latency']) == False and \
+                trials.loc[idx]['response_latency'] >= rw_low and \
+                trials.loc[idx]['response_latency'] <= rw_high:
+            did_respond[ii] = True
+
+    return did_respond
+
+
+def calculate_trial_length(trials):
+    trial_length = np.zeros(len(trials))
+    for ii, idx in enumerate(trials.index):
+        try:
+            tl = trials.loc[idx + 1].starttime - trials.loc[idx].starttime
+            if tl < 0 or tl > 1000:
+                tl = np.nan
+            trial_length[ii] = tl
+        except Exception:
+            pass
+
+    return trial_length
+
+def get_end_time(df_in, data, time=None):
+    '''creates a vector of end times for each trial, which is just the start time for the next trial'''
+    if time is None:
+        time = load_time(data)
+
+    end_times = df_in['endframe'].map(lambda fr: time[int(fr)])
+    return end_times
+
+
+def assign_color(df_in, palette='default'):
+    color = [None] * len(df_in)
+    for idx in df_in.index:
+
+        if df_in.loc[idx]['trial_type'] == 'aborted':
+            if palette.lower() == 'marina':
+                color[idx] = 'lightgray'
+            else:
+                color[idx] = 'red'
+
+        elif df_in.loc[idx]['auto_rewarded'] is True:
+            if palette.lower() == 'marina':
+                color[idx] = 'darkblue'
+            else:
+                color[idx] = 'blue'
+
+        elif df_in.loc[idx]['trial_type'] == 'go':
+            if df_in.loc[idx]['response'] == 1:
+                if palette.lower() == 'marina':
+                    color[idx] = '#55a868'
+                else:
+                    color[idx] = 'darkgreen'
+
+            elif df_in.loc[idx]['response'] != 1:
+                if palette.lower() == 'marina':
+                    color[idx] = '#ccb974'
+                else:
+                    color[idx] = 'lightgreen'
+
+        elif df_in.loc[idx]['trial_type'] == 'catch':
+            if df_in.loc[idx]['response'] == 1:
+                if palette.lower() == 'marina':
+                    color[idx] = '#c44e52'
+                else:
+                    color[idx] = 'darkorange'
+
+            elif df_in.loc[idx]['response'] != 1:
+                if palette.lower() == 'marina':
+                    color[idx] = '#4c72b0'
+                else:
+                    color[idx] = 'yellow'
+
+    return color
+
+
+def get_response_type(df_in):
+
+    response_type = []
+    for idx in df_in.index:
+        if (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response == 1):
+            response_type.append('HIT')
+        elif (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response != 1):
+            response_type.append('MISS')
+        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response == 1):
+            response_type.append('FA')
+        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response != 1):
+            response_type.append('CR')
+        else:
+            response_type.append('other')
+
+    return response_type
+
+@inplace
+def remove_repeated_licks(df_in):
+    """
+    the stimulus code records one lick for each frame in which the tongue was in contact with the spout
+    if a single lick spans multiple frames, it'll be recorded as multiple licks
+    this method will throw out the lick times and lick frames after the initial contact
+    """
+    lt = []
+    lf = []
+    for idx, row in df_in.iterrows():
+
+        # get licks for this frame
+        lick_frames_on_this_trial = row.lick_frames
+        lick_times_on_this_trial = row.lick_times
+        if len(lick_frames_on_this_trial) > 0:
+            # use the number of frames between each lick to determine which to keep
+            if len(lick_frames_on_this_trial) > 1:
+                    lick_intervals = np.hstack((np.inf, np.diff(lick_frames_on_this_trial)))
+            else:
+                lick_intervals = np.array([np.inf])
+
+            # only keep licks that are preceded by at least one frame without a lick
+            lf.append(list(np.array(lick_frames_on_this_trial)[lick_intervals > 1]))
+            lt.append(list(np.array(lick_times_on_this_trial)[lick_intervals[:len(lick_times_on_this_trial)] > 1]))
+        else:
+            lt.append([])
+            lf.append([])
+
+    # replace the appropriate rows of the dataframe
+    df_in['lick_times'] = lt
+    df_in['lick_frames'] = lf

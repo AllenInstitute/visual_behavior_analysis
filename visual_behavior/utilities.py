@@ -11,96 +11,6 @@ from fnmatch import fnmatch
 from email.mime.text import MIMEText
 from scipy.interpolate import interp1d
 
-from visual_behavior.io import load_trials, load_licks, load_time
-from visual_behavior.trials.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
-from visual_behavior.trials.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
-from visual_behavior.trials.data import annotate_filename, fix_autorearded, annotate_lick_vigor, update_times
-from visual_behavior.trials.data import categorize_trials, get_end_frame
-from visual_behavior.devices import get_rig_id
-
-
-# -> io.py
-def create_doc_dataframe(filename, time=None):
-    """ creates a trials dataframe from a detection-of-change session
-
-    Parameters
-    ----------
-    filename : str
-        file path of a pickled detection-of-change session
-
-    Returns
-    -------
-    trials : pandas DataFrame
-    """
-    data = pd.read_pickle(filename)
-
-    if time is None:
-        time = load_time(data)
-
-    df = load_trials(data, time=time)
-    df = df[~pd.isnull(df['reward_times'])].reset_index(drop=True)
-
-    # add some columns to the dataframe
-    keydict = {
-        'mouse_id': 'mouseid',
-        'response_window': 'response_window',
-        'task': 'task',
-        'stage': 'stage',
-        'session_duration': 'stoptime',
-        'user_id': 'userid',
-        'LDT_mode': 'lick_detect_training_mode',
-        'blank_screen_timeout': 'blankscreen_on_timeout',
-        'stim_duration': 'stim_duration',
-        'blank_duration_range': 'blank_duration_range',
-        'prechange_minimum': 'delta_minimum',
-        'stimulus_distribution': 'stimulus_distribution',
-        'stimulus': 'stimulus',
-        'distribution_mean': 'delta_mean',
-        'trial_duration': 'trial_duration',
-        'computer_name': 'computer_name',
-    }
-
-    annotate_parameters(df, data, keydict=keydict, inplace=True)
-    annotate_startdatetime(df, data, inplace=True)
-    explode_startdatetime(df, inplace=True)
-    annotate_n_rewards(df, inplace=True)
-    annotate_rig_id(df, data, inplace=True)
-    fix_autorearded(df, inplace=True)
-    annotate_cumulative_reward(df, data, inplace=True)
-    annotate_filename(df, filename, inplace=True)
-
-    for col in ('auto_rewarded', 'change_time', ):
-        if col not in df.columns:
-            df[col] = None
-
-    # add some columns that require calculation
-
-    df['trial_type'] = categorize_trials(df)
-    df['endframe'] = get_end_frame(df, data)
-    df['lick_frames'] = get_lick_frames(df, data)
-    # df['last_lick'] = get_last_licktimes(df,data)
-
-    update_times(df, data, time=time, inplace=True)
-
-    annotate_lick_vigor(df, data, inplace=True)
-    calculate_latency(df)
-    calculate_reward_rate(df)
-
-    df['response'] = check_responses(df)
-    df['trial_length'] = calculate_trial_length(df)
-    df['endtime'] = get_end_time(df, data, time=time)
-    df['color'] = assign_color(df)
-    df['response_type'] = get_response_type(df)
-
-    try:
-        remove_repeated_licks(df)
-    except Exception as e:
-        print('FAILED TO REMOVE REPEATED LICKS')
-        print(e)
-
-    return df
-
-
 
 def load_behavior_data(mice, progressbar=True, save_dataframe=True, load_existing_dataframe=True):
     """ Loads DoC behavior dataframe for all mice in a list
@@ -190,28 +100,6 @@ def get_mouse_info(mouse_id):
 
 
 # -> analyze.py
-def get_lick_frames(df_in, data, time=None):
-    """
-    returns a list of arrays of lick frames, with one entry per trial
-    """
-    # Note: [DRO - 1/12/18] it used to be the case that the lick sensor was polled on every frame in the stimulus code, giving
-    #      a 1:1 correspondence between the frame number and the index in the 'lickData' array. However, that assumption was
-    #      violated when we began displaying a frame at the beginning of the session without a corresponding call the 'checkLickSensor'
-    #      method. Using the 'responselog' instead will provide a more accurate measure of actual like frames and times.
-    # lick_frames = data['lickData'][0]
-
-    lick_frames = load_licks(data, time=time)['frame']
-
-    local_licks = []
-    for idx, row in df_in.iterrows():
-        local_licks.append(
-            lick_frames[np.logical_and(lick_frames >= int(row['startframe']), lick_frames <= int(row['endframe']))]
-        )
-
-    return local_licks
-
-
-# -> analyze.py
 def get_last_licktimes(df_in, data):
     '''
     get time of most recent lick before every change
@@ -238,40 +126,6 @@ def get_last_licktimes(df_in, data):
                 pass
 
     return last_lick
-
-
-# -> analyze.py
-def remove_repeated_licks(df_in):
-    """
-    the stimulus code records one lick for each frame in which the tongue was in contact with the spout
-    if a single lick spans multiple frames, it'll be recorded as multiple licks
-    this method will throw out the lick times and lick frames after the initial contact
-    """
-    lt = []
-    lf = []
-    for idx, row in df_in.iterrows():
-
-        # get licks for this frame
-        lick_frames_on_this_trial = row.lick_frames
-        lick_times_on_this_trial = row.lick_times
-        if len(lick_frames_on_this_trial) > 0:
-            # use the number of frames between each lick to determine which to keep
-            if len(lick_frames_on_this_trial) > 1:
-                    lick_intervals = np.hstack((np.inf, np.diff(lick_frames_on_this_trial)))
-            else:
-                lick_intervals = np.array([np.inf])
-
-            # only keep licks that are preceded by at least one frame without a lick
-            lf.append(list(np.array(lick_frames_on_this_trial)[lick_intervals > 1]))
-            lt.append(list(np.array(lick_times_on_this_trial)[lick_intervals[:len(lick_times_on_this_trial)] > 1]))
-        else:
-            lt.append([])
-            lf.append([])
-
-    # replace the appropriate rows of the dataframe
-    df_in['lick_times'] = lt
-    df_in['lick_frames'] = lf
-
 
 # -> io.py
 def load_from_folder(
@@ -444,47 +298,6 @@ def save_figure(
         )
 
 
-# -> analyze
-def calculate_reward_rate(
-        df,
-        window=1.0,
-        trial_window=25,
-        remove_aborted=False
-):
-    # written by Dan Denman (stolen from http://stash.corp.alleninstitute.org/users/danield/repos/djd/browse/calculate_reward_rate.py)
-    # add a column called reward_rate to the input dataframe
-    # the reward_rate column contains a rolling average of rewards/min
-    # window sets the window in which a response is considered correct, so a window of 1.0 means licks before 1.0 second are considered correct
-    # remove_aborted flag needs work, don't use it for now
-    reward_rate = np.zeros(np.shape(df.change_time))
-    c = 0
-    for startdatetime in df.startdatetime.unique():  # go through the dataframe by each behavior session
-        # get a dataframe for just this session
-        if remove_aborted is True:
-            warnings.warn("Don't use remove_aborted yet. Code needs work")
-            df_temp = df[(df.startdatetime == startdatetime) & (df.trial_type != 'aborted')].reset_index()
-        else:
-            df_temp = df[df.startdatetime == startdatetime]
-        trial_number = 0
-        for trial in range(len(df_temp)):
-            if trial_number < 10:  # if in first 10 trials of experiment
-                reward_rate_on_this_lap = np.inf  # make the reward rate infinite, so that you include the first trials automatically.
-            else:
-                # ensure that we don't run off the ends of our dataframe # get the correct response rate around the trial
-                min_index = np.max((0, trial - trial_window))
-                max_index = np.min((trial + trial_window, len(df_temp)))
-                df_roll = df_temp.iloc[min_index:max_index]
-
-                correct = len(df_roll[df_roll.response_latency < window])  # get a rolling number of correct trials
-                time_elapsed = df_roll.starttime.iloc[-1] - df_roll.starttime.iloc[0]  # get the time elapsed over the trials
-                reward_rate_on_this_lap = correct / time_elapsed  # calculate the reward rate
-
-            reward_rate[c] = reward_rate_on_this_lap  # store the rolling average
-            c += 1
-            trial_number += 1  # increment some dumb counters
-    df['reward_rate'] = reward_rate * 60.  # convert to rewards/min
-
-
 def flatten_array(in_array):
     out_array = np.array([])
     for entry in in_array:
@@ -508,46 +321,6 @@ def flatten_list(in_list):
     return out_list
 
 
-# -> analyze
-def calculate_latency(df_in):
-    # For each trial, calculate the difference between each stimulus change and the next lick (response lick)
-    for idx in df_in.index:
-        if pd.isnull(df_in['change_time'][idx]) is False and len(df_in['lick_times'][idx]) > 0:
-            licks = np.array(df_in['lick_times'][idx])
-
-            post_stimulus_licks = licks - df_in['change_time'][idx]
-
-            post_window_licks = post_stimulus_licks[post_stimulus_licks > df_in.loc[idx]['response_window'][0]]
-
-            if len(post_window_licks) > 0:
-                df_in.loc[idx, 'response_latency'] = post_window_licks[0]
-
-    return df_in
-
-
-# -> analyze
-def calculate_trial_length(df_in):
-    trial_length = np.zeros(len(df_in))
-    for ii, idx in enumerate(df_in.index):
-        try:
-            tl = df_in.loc[idx + 1].starttime - df_in.loc[idx].starttime
-            if tl < 0 or tl > 1000:
-                tl = np.nan
-            trial_length[ii] = tl
-        except Exception:
-            pass
-
-    return trial_length
-
-
-def get_end_time(df_in, data, time=None):
-    '''creates a vector of end times for each trial, which is just the start time for the next trial'''
-    if time is None:
-        time = load_time(data)
-
-    end_times = df_in['endframe'].map(lambda fr: time[int(fr)])
-    return end_times
-
 
 # -> analyze
 def get_training_day(df_in):
@@ -559,102 +332,6 @@ def get_training_day(df_in):
         dates = np.sort(group['date'].unique())
         training_day_lookup[key] = {date: training_day for training_day, date in enumerate(dates)}
     return df_in.apply(lambda row: training_day_lookup[row['mouse_id']][row['date']], axis=1)
-
-
-# -> analyze
-def get_response_type(df_in):
-
-    response_type = []
-    for idx in df_in.index:
-        if (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response == 1):
-            response_type.append('HIT')
-        elif (df_in.loc[idx].rewarded == True) & (df_in.loc[idx].response != 1):
-            response_type.append('MISS')
-        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response == 1):
-            response_type.append('FA')
-        elif (df_in.loc[idx].rewarded == False) & (df_in.loc[idx].response != 1):
-            response_type.append('CR')
-        else:
-            response_type.append('other')
-
-    return response_type
-
-
-# -> analyze
-def assign_color(df_in, palette='default'):
-    color = [None] * len(df_in)
-    for idx in df_in.index:
-
-        if df_in.loc[idx]['trial_type'] == 'aborted':
-            if palette.lower() == 'marina':
-                color[idx] = 'lightgray'
-            else:
-                color[idx] = 'red'
-
-        elif df_in.loc[idx]['auto_rewarded'] is True:
-            if palette.lower() == 'marina':
-                color[idx] = 'darkblue'
-            else:
-                color[idx] = 'blue'
-
-        elif df_in.loc[idx]['trial_type'] == 'go':
-            if df_in.loc[idx]['response'] == 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#55a868'
-                else:
-                    color[idx] = 'darkgreen'
-
-            elif df_in.loc[idx]['response'] != 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#ccb974'
-                else:
-                    color[idx] = 'lightgreen'
-
-        elif df_in.loc[idx]['trial_type'] == 'catch':
-            if df_in.loc[idx]['response'] == 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#c44e52'
-                else:
-                    color[idx] = 'darkorange'
-
-            elif df_in.loc[idx]['response'] != 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#4c72b0'
-                else:
-                    color[idx] = 'yellow'
-
-    return color
-
-
-# -> analyze
-def check_responses(df_in, reward_window=None):
-    '''trial types:
-         'aborted' = lick before stimulus
-         'autorewarded' = reward autodelivered at time of stimulus
-         'go' = stimulus delivered, rewarded if lick emitted within 1 second
-         'catch' = no stimulus delivered
-         'other' = uncategorized (shouldn't be any of these, but this allows me to find trials that don't meet this conditions)
-
-         adds a column called 'response' to the input dataframe
-         '''
-
-    if reward_window is not None:
-        rw_low = reward_window[0]
-        rw_high = reward_window[1]
-
-    did_respond = np.zeros(len(df_in))
-    for ii, idx in enumerate(df_in.index):
-
-        if reward_window is None:
-            rw_low = df_in.loc[idx]['response_window'][0]
-            rw_high = df_in.loc[idx]['response_window'][1]
-        if pd.isnull(df_in.loc[idx]['change_time']) == False and \
-                pd.isnull(df_in.loc[idx]['response_latency']) == False and \
-                df_in.loc[idx]['response_latency'] >= rw_low and \
-                df_in.loc[idx]['response_latency'] <= rw_high:
-            did_respond[ii] = True
-
-    return did_respond
 
 
 def resample(t, y, new_t):
