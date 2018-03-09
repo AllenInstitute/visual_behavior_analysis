@@ -3,7 +3,7 @@
 import numpy as np
 import pandas as pd
 
-from visual_behavior import masks
+from visual_behavior.trials import masks
 from visual_behavior.utilities import get_response_rates, flatten_list
 from .classification import d_prime
 

@@ -562,7 +562,6 @@ def calculate_reward_rate(
     df['reward_rate'] = reward_rate * 60.  # convert to rewards/min
 
 
-
 def check_responses(trials, reward_window=None):
     '''trial types:
          'aborted' = lick before stimulus

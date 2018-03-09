@@ -339,14 +339,6 @@ def resample(t, y, new_t):
     return f(new_t)
 
 
-# -> analyze
-def get_reward_window(df_in):
-    try:
-        reward_window = df_in.iloc[0].response_window
-    except Exception:
-        reward_window = [0.15, 1]
-    return reward_window
-
 
 # -> analyze
 def get_licktimes(df, reference="change"):
