@@ -436,3 +436,38 @@ def update_times(trials, data, time=None):
     must_be_arrays = ('lick_times', 'reward_times')
     for col in must_be_arrays:
         trials[col] = trials[col].map(make_array)
+
+
+def categorize_one_trial(tr):
+    if pd.isnull(tr['change_time']):
+        if (len(tr['lick_times']) > 0):
+            trial_type = 'aborted'
+        else:
+            trial_type = 'other'
+    else:
+        if (tr['rewarded'] is True):
+            return 'go'
+
+        elif (tr['rewarded'] == 0):
+            return 'catch'
+
+        elif (tr['auto_rewarded'] is True):
+            return 'autorewarded'
+
+        else:
+            return 'other'
+
+    return trial_type
+
+@inplace
+def categorize_trials(trials):
+    '''trial types:
+         'aborted' = lick before stimulus
+         'autorewarded' = reward autodelivered at time of stimulus
+         'go' = stimulus delivered, rewarded if lick emitted within 1 second
+         'catch' = no stimulus delivered
+         'other' = uncategorized (shouldn't be any of these, but this allows me to find trials that don't meet this conditions)
+
+         adds a column called 'trial_type' to the input dataframe
+         '''
+    return trials.apply(categorize_one_trial, axis=1)

@@ -15,6 +15,7 @@ from visual_behavior.io import load_trials, load_licks, load_time
 from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
 from visual_behavior.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
 from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor, update_times
+from visual_behavior.data import categorize_trials
 from visual_behavior.devices import get_rig_id
 
 
@@ -98,6 +99,7 @@ def create_doc_dataframe(filename, time=None):
         print(e)
 
     return df
+
 
 
 def load_behavior_data(mice, progressbar=True, save_dataframe=True, load_existing_dataframe=True):
@@ -562,40 +564,6 @@ def get_end_frame(df_in, data):
     return end_frames.astype(np.int32)
 
 
-# -> analyze
-def categorize_one_trial(row):
-    if pd.isnull(row['change_time']):
-        if (len(row['lick_times']) > 0):
-            trial_type = 'aborted'
-        else:
-            trial_type = 'other'
-    else:
-        if (row['rewarded'] is True):
-            return 'go'
-
-        elif (row['rewarded'] == 0):
-            return 'catch'
-
-        elif (row['auto_rewarded'] is True):
-            return 'autorewarded'
-
-        else:
-            return 'other'
-
-    return trial_type
-
-
-def categorize_trials(df_in):
-    '''trial types:
-         'aborted' = lick before stimulus
-         'autorewarded' = reward autodelivered at time of stimulus
-         'go' = stimulus delivered, rewarded if lick emitted within 1 second
-         'catch' = no stimulus delivered
-         'other' = uncategorized (shouldn't be any of these, but this allows me to find trials that don't meet this conditions)
-
-         adds a column called 'trial_type' to the input dataframe
-         '''
-    return df_in.apply(categorize_one_trial, axis=1)
 
 
 # -> analyze
