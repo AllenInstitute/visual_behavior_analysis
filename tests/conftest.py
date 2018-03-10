@@ -52,4 +52,6 @@ def pizza_data_fixture():
 
 @pytest.fixture(scope="session")
 def foraging2_data_fixture(pizza_data_fixture):
-    return pizza_data_fixture
+    with open(os.path.join(TESTING_RES_DIR, "foraging2_chris.pkl"), "rb") as \
+            pstream:
+        return pickle.load(pstream)
