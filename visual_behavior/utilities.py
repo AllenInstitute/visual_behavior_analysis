@@ -11,32 +11,36 @@ from fnmatch import fnmatch
 from email.mime.text import MIMEText
 from scipy.interpolate import interp1d
 
-from .processing import get_trials, get_licks, get_time
-from visual_behavior.data import annotate_parameters, explode_startdatetime, annotate_n_rewards
-from visual_behavior.data import annotate_rig_id, annotate_startdatetime, annotate_cumulative_reward
-from visual_behavior.data import annotate_filename, fix_autorearded, annotate_lick_vigor, update_times
-from visual_behavior.devices import get_rig_id
+from .devices import get_rig_id
+
+
+"""DEPRECIATED DO NOT WASTE TIME HERE...
+"""
 
 
 # -> io.py
-def create_doc_dataframe(filename, time=None):
+def create_doc_dataframe(data, time=None, legacy=False):
     """ creates a trials dataframe from a detection-of-change session
 
     Parameters
     ----------
-    filename : str
-        file path of a pickled detection-of-change session
+    data: Mapping
+        experiment data
 
     Returns
     -------
     trials : pandas DataFrame
     """
-    data = pd.read_pickle(filename)
+    if legacy:
+        if time is None:
+            time = get_time_legacy(data)
+        get_licks = get_licks_legacy
+        df = get_trials_legacy(data, time=time)
+    else:
+        if time is None:
+            time = get_time(data)
+        df = get_trials(data)
 
-    if time is None:
-        time = get_time(data)
-
-    df = get_trials(data, time=time)
     df = df[~pd.isnull(df['reward_times'])].reset_index(drop=True)
 
     # add some columns to the dataframe

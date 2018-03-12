@@ -5,19 +5,19 @@ from numpy import nan
 import pandas as pd
 from six.moves import cPickle as pickle
 
-from visual_behavior import legacy_processing
+from visual_behavior.translator.foraging import extract
 
 
 def test_load_trials(behavioral_session_output_fixture, trials_df_fixture):
     pd.testing.assert_frame_equal(
-        legacy_processing.load_trials(behavioral_session_output_fixture).sort_index(axis=1),
+        extract.load_trials(behavioral_session_output_fixture).sort_index(axis=1),
         trials_df_fixture.sort_index(axis=1)
     )
 
 
 def test_load_time(behavioral_session_output_fixture):
     np.testing.assert_almost_equal(
-        legacy_processing.load_time(behavioral_session_output_fixture)[:11],
+        extract.load_time(behavioral_session_output_fixture)[:11],
         np.array([
             0., 0.04998129, 0.09999849, 0.15004392, 0.20007941, 0.23343854,
             0.26680312, 0.30016385, 0.33352555, 0.36688468, 0.40024766,
@@ -27,7 +27,7 @@ def test_load_time(behavioral_session_output_fixture):
 
 def test_load_rewards(behavioral_session_output_fixture):
     pd.testing.assert_frame_equal(
-        legacy_processing.load_rewards(behavioral_session_output_fixture).iloc[:10],
+        extract.load_rewards(behavioral_session_output_fixture).iloc[:10],
         pd.DataFrame(data={
             "frame": {
                 0.0: 600, 1.0: 980, 2.0: 2080, 3.0: 2440, 4.0: 3200, 5.0: 4133,
@@ -47,7 +47,7 @@ def test_load_rewards(behavioral_session_output_fixture):
     )
 
     pd.testing.assert_frame_equal(
-        legacy_processing.load_rewards(behavioral_session_output_fixture, legacy_processing.load_time(behavioral_session_output_fixture)).iloc[:10],
+        extract.load_rewards(behavioral_session_output_fixture, extract.load_time(behavioral_session_output_fixture)).iloc[:10],
         pd.DataFrame(data={
             "frame": {
                 0.0: 600, 1.0: 980, 2.0: 2080, 3.0: 2440, 4.0: 3200, 5.0: 4133,
@@ -106,13 +106,13 @@ def test_load_running_speed(behavioral_session_output_fixture):
     )
 
     pd.testing.assert_frame_equal(
-        legacy_processing.load_running_speed(behavioral_session_output_fixture).iloc[:5],
+        extract.load_running_speed(behavioral_session_output_fixture).iloc[:5],
         EXPECTED_RUNNING_DF,
         check_like=True
     )
 
     pd.testing.assert_frame_equal(
-        legacy_processing.load_running_speed(behavioral_session_output_fixture, time=legacy_processing.load_time(behavioral_session_output_fixture)).iloc[:5],
+        extract.load_running_speed(behavioral_session_output_fixture, time=extract.load_time(behavioral_session_output_fixture)).iloc[:5],
         EXPECTED_RUNNING_DF,
         check_like=True
     )

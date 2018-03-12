@@ -2,9 +2,9 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 from scipy.signal import medfilt
-from .analyze import calc_deriv, rad_to_dist
 
-from .io import data_or_pkl
+from ...analyze import calc_deriv, rad_to_dist
+from ...io import data_or_pkl
 
 
 @data_or_pkl

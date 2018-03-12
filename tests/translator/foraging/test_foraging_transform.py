@@ -3,14 +3,14 @@ import datetime
 import numpy as np
 import pandas as pd
 
-from visual_behavior import legacy_data
+from visual_behavior.translator.foraging import transform
+
 
 TIMESTAMP_ISO = "2018-01-22 08:47:09.440000"
 TIMESTAMP = pd.Timestamp(TIMESTAMP_ISO)
 
 
 def test_annotate_parameters():
-
     df = pd.DataFrame(
         [
             {"key0": 0},
@@ -37,7 +37,7 @@ def test_annotate_parameters():
             ]
         )
 
-    df_out = legacy_data.annotate_parameters(df, pickled_data, keydict)
+    df_out = transform.annotate_parameters(df, pickled_data, keydict)
 
     pd.testing.assert_frame_equal(
         df_out,
@@ -46,7 +46,7 @@ def test_annotate_parameters():
     )
 
     # if no keydict is passed, we shouldn't modify the dataframe
-    df_out = legacy_data.annotate_parameters(df, pickled_data, None)
+    df_out = transform.annotate_parameters(df, pickled_data, None)
 
     pd.testing.assert_frame_equal(
         df_out,
@@ -54,9 +54,8 @@ def test_annotate_parameters():
         check_like=True,
     )
 
+
 def test_explode_startdatetime():
-
-
     df = pd.DataFrame(
         [
             {
@@ -79,14 +78,13 @@ def test_explode_startdatetime():
         ]
     )
 
-    df_out = legacy_data.explode_startdatetime(df)
+    df_out = transform.explode_startdatetime(df)
 
     pd.testing.assert_frame_equal(
         df_out,
         df_expected,
         check_like=True,
         )
-
 
 
 def test_annotate_n_rewards():
@@ -98,7 +96,6 @@ def test_annotate_n_rewards():
         ]
     )
 
-
     expected_vals = [
         1,
         2,
@@ -106,15 +103,15 @@ def test_annotate_n_rewards():
     ]
     expected_col = pd.Series(expected_vals,name='number_of_rewards')
 
-    df_out = legacy_data.annotate_n_rewards(df)
+    df_out = transform.annotate_n_rewards(df)
 
     pd.testing.assert_series_equal(
         df_out['number_of_rewards'],
         expected_col,
         )
 
-def test_annotate_rig_id():
 
+def test_annotate_rig_id():
     df = pd.DataFrame(
         [
             {"key0": 0},
@@ -134,15 +131,15 @@ def test_annotate_rig_id():
             ]
         )
 
-    df_out = legacy_data.annotate_rig_id(df, pickled_data)
+    df_out = transform.annotate_rig_id(df, pickled_data)
 
     pd.testing.assert_frame_equal(
         df_out,
         expected
     )
 
-def test_annotate_startdatetime():
 
+def test_annotate_startdatetime():
     df = pd.DataFrame(
         [
             {"test": None,},
@@ -157,7 +154,7 @@ def test_annotate_startdatetime():
         ],
     )
 
-    df_out = legacy_data.annotate_startdatetime(df, pickled_data)
+    df_out = transform.annotate_startdatetime(df, pickled_data)
 
     pd.testing.assert_frame_equal(
         df_out,
@@ -193,13 +190,12 @@ def test_annotate_startdatetime():
 ])
 def test_annotate_cumulative_reward(df, pickled_data, expected):
     pd.testing.assert_frame_equal(
-        legacy_data.annotate_cumulative_reward(df, pickled_data),
+        transform.annotate_cumulative_reward(df, pickled_data),
         expected
     )
 
+
 def test_annotate_filename():
-
-
     df = pd.DataFrame([{"test": "test"}])
     filename = "test/path/fname.py"
 
@@ -209,7 +205,7 @@ def test_annotate_filename():
         "filename": "fname.py",
         }])
 
-    df_out = legacy_data.annotate_filename(df, filename)
+    df_out = transform.annotate_filename(df, filename)
 
     pd.testing.assert_frame_equal(
         df_out,
@@ -219,7 +215,6 @@ def test_annotate_filename():
 
 
 def test_fix_autorearded():
-
     df = pd.DataFrame(
         [
             {"auto_rearded": True},
@@ -232,7 +227,7 @@ def test_fix_autorearded():
             ]
         )
 
-    df_out = legacy_data.fix_autorearded(df)
+    df_out = transform.fix_autorearded(df)
 
     pd.testing.assert_frame_equal(df_out, expected)
 
