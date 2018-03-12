@@ -5,9 +5,10 @@ from .transform import annotate_parameters, explode_startdatetime, \
     annotate_n_rewards, annotate_rig_id, annotate_startdatetime, \
     annotate_cumulative_reward, annotate_filename, fix_autorearded, \
     annotate_lick_vigor, update_times
-from ...utils import get_lick_frames, remove_repeated_licks, calculate_latency, \
-    calculate_reward_rate, categorize_trials, get_end_frame, check_responses, \
-    calculate_trial_length, get_end_time, assign_color, get_response_type
+from ...utilities import get_lick_frames, remove_repeated_licks, \
+    calculate_latency, calculate_reward_rate, categorize_trials, get_end_frame, \
+    check_responses, calculate_trial_length, get_end_time, assign_color, \
+    get_response_type
 
 
 def data_to_monolith(data, time=None):

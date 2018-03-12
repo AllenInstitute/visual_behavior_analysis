@@ -12,6 +12,8 @@ from email.mime.text import MIMEText
 from scipy.interpolate import interp1d
 
 from .devices import get_rig_id
+from .translator.foraging.extract import load_licks as get_licks, \
+    load_time as get_time
 
 
 """DEPRECIATED DO NOT WASTE TIME HERE...

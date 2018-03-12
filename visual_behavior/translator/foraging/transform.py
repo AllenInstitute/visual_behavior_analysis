@@ -329,7 +329,7 @@ def annotate_lick_vigor(trials, data, window=3.5):
     io.load_trials
     """
 
-    licks = get_licks(data)
+    licks = load_licks(data)
 
     def find_licks(reward_times):
         try:
@@ -400,7 +400,7 @@ def annotate_trials(trials):
 def update_times(trials, data, time=None):
 
     if time is None:
-        time = get_time(data)
+        time = load_time(data)
 
     time_frame_map = {
         'change_time': 'change_frame',

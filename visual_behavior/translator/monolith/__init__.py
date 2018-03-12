@@ -1,2 +1,2 @@
-def monolith_to_mtrain_trials_list():
+def monolith_to_mtrain_trials_list(monolith_data):
     pass

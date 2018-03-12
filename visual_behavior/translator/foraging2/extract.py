@@ -1,6 +1,7 @@
 import logging
 import numpy as np
 import pandas as pd
+from six import iteritems
 
 from scipy.signal import medfilt
 from ...analyze import calc_deriv, rad_to_dist
@@ -23,6 +24,323 @@ downstream can handle time pairing
 or maybe just use time...this was more complex than i realized? frame to time
 relationship might not be the same for
 """
+
+
+def annotate_licks(trial):
+    """Annotate lick information
+
+    Parameters
+    ----------
+    trial: Mapping
+        foraging2 shape trial from trial_log
+
+    Returns
+    -------
+    dict
+        lick_times: list of float
+            times (s) in which a lick occured
+        lick_frames: list of int
+            frame indices in which a lick occurred
+
+    Notes
+    -----
+    - time is seconds since start of experiment
+    """
+    return {
+        "lick_times": [lick[0] for lick in trial["licks"]],
+        "lick_frames": [lick[1] for lick in trial["licks"]],
+    }
+
+
+def annotate_optogenetics(trial):
+    """Annotate optogenetics information
+
+    Parameters
+    ----------
+    trial: Mapping
+        foraging2 shape trial from trial_log
+
+    Returns
+    -------
+    dict
+        optogenetics: bool or None
+            whether or not optogenetics was used for the trial, or None if optogenetics
+            isnt enabled
+
+    Notes
+    -----
+    - this idea of existance checking wasn't my choice...
+    """
+    return {
+        "optogenetics": trial["trial_params"].get("optogenetics"),
+    }
+
+
+def annotate_responses(trial):
+    """Annotate response-related information
+
+    Parameters
+    ----------
+    trial: Mapping
+        foraging2 shape trial from trial_log
+
+    Returns
+    -------
+    dict
+        response_frame: integer
+            frame index of the response
+        response_time: float
+            time (s) of the response
+        response_type: str
+            type of response
+        response_latency: float, np.nan, np.inf
+            difference between stimulus change and response, np.nan if a change doesn't
+            occur, np.inf if a change occurs but a response doesn't occur
+
+    Notes
+    -----
+    - time is seconds since start of experiment
+    - 03/13/18: justin did not know what to use for `response_type` key so it will be None
+    """
+    try:
+        change_frame, change_time = trial["stimulus_changes"][0][2:4]  # assume one stimulus change per trial, idx 3, 4 will have the frame, time
+    except IndexError:
+        return {
+            "response_frame": None,
+            "response_time": None,
+            "response_type": None,
+            "response_latency": np.nan,
+        }
+
+    for (idx, (name, direction, time, frame), ) in enumerate(trial["events"]):
+        if name == "hit":
+            return {
+                "response_frame": frame,
+                "response_time": time,
+                "response_latency": time - change_time,
+                "response_type": None,
+            }
+    else:
+        return {
+            "response_frame": None,
+            "response_time": None,
+            "response_latency": None,
+            "response_latency": np.inf,
+        }
+
+
+def annotate_rewards(trial):
+    """Annotate rewards-related information
+
+    Parameters
+    ----------
+    trial: Mapping
+        foraging2 shape trial from trial_log
+
+    Returns
+    -------
+    dict
+        auto_rewarded_trial: bool
+            whether or not the trial is autorewarded
+        cumulative_volume: float
+            cumulative water volume dispensed relative to start of experiment
+        cumulative_reward_number: int
+            cumulative reward number dispensed relative to start of experiment
+        reward_times: list of float
+            times (s) in which rewards occurred
+        reward_frames: list of int
+            frame indices in which rewards occurred
+        rewarded: bool
+            whether or not it's a rewarded trial
+
+    Notes
+    -----
+    - time is seconds since start of experiment
+    """
+    return {
+        "auto_rewarded_trial": trial["trial_params"]["auto_reward"],
+        "cumulative_volume": trial["cumulative_volume"],
+        "cumulative_reward_number": trial["cumulative_rewards"],
+        "reward_volume": trial.get("volume_dispensed"),  # this doesn't exist in our current iteration of foraging2 outputs but should exist very soon
+        "reward_times": [reward[0] for reward in trial["rewards"]],
+        "reward_frames": [reward[1] for reward in trial["rewards"]],
+        "rewarded": trial["trial_params"]["catch"] is not True,  # justink said: assume go trials are catch != True, assume go trials are the only type of rewarded trials
+    }
+
+
+def annotate_schedule_time(trial, pre_change_time):
+    """Annotate time/scheduling-related information
+
+    Parameters
+    ----------
+    trial: Mapping
+        foraging2 shape trial from trial_log
+    pre_change_time: float
+        minimum time before a stimulus change occurs in the trial
+
+    Returns
+    -------
+    dict
+        start_time: float
+            time (s) of the start of the trial
+        start_frame: int
+            frame index of the start of the trial
+        scheduled_change_time: float
+            time (s) scheduled for the change to occur
+        end_time: float
+            time (s) of the end of the trial
+        end_frame: int
+            frame index of the end of the trial
+
+    Notes
+    -----
+    - time is seconds since start of experiment
+    - as of 03/13/18 scheduled_change_time isn't retrievable and will be None
+    """
+    try:
+        start_time, start_frame = trial["events"][0][2:4]
+        end_time, end_frame = trial["events"][-1][2:4]
+    except IndexError:
+        return {
+            "start_time": None,
+            "start_frame": None,
+            "scheduled_change_time": None,
+            "end_time": None,
+            "end_frame": None,
+        }
+
+    return {
+        "start_time": start_time,
+        "start_frame": start_frame,
+        "scheduled_change_time": None,
+        "end_time": end_time,
+        "end_frame": end_frame,
+    }
+
+
+
+def annotate_stimuli(trial, stimuli):
+    """Annotate stimuli-related information
+
+    Parameters
+    ----------
+    trial: Mapping
+        foraging2 shape trial from trial_log
+    stimuli: Mapping
+        foraging2 shape stimuli mapping
+
+    Returns
+    -------
+    dict
+        initial_image_name: str
+            name of the initial image
+        initial_image_category: str
+            category of the initial image
+        change_image_name: str
+            name of the change image
+        change_image_category: str
+            category of the change image
+        change_frame: int
+            frame index of "change event"
+        change_time: float
+            time (s) of the "change event"
+        change_orientation: float
+            the orientation of the change image
+        change_contrast: float
+            the contrast of the change image
+        initial_orientation: float
+            the orientation of the initial image
+        initial_contrast: float
+            the contrast of the initial image
+        delta_orientation: float
+            difference in orientation between the initial image and the change image
+        stimulus_on_frames: list of int
+            frame indices of whether or not the stimulus was drawn
+
+    Notes
+    -----
+    - time is seconds since start of experiment
+    - assumes the only type of stimuli are "natural_scenes"
+    - the initial image is the image shown before the "change event" occurs
+    - the change image is the image shown after the "change event" occurs
+    - as of 03/13/18 the following aren't retrievable and will be None:
+        - change_orientation
+        - change_contrast
+        - initial_orientation
+        - initial_contrast
+        - delta_orientation
+    """
+    draw_log = stimuli["draw_log"]
+
+    try:
+        start_frame = trial["events"][0][3]
+        end_frame = trial["events"][-1][3]
+        stimulus_on_frames = [
+            was_drawn == 1
+            for was_drawn in draw_log[start_frame:end_frame + 1]
+        ]
+    except IndexError:
+        stimulus_on_frames = []
+
+    try:
+        stimulus_changes = trial["stimulus_changes"][0]  # assume one stimulus change per trial
+    except IndexError:
+        return {
+            "initial_image_category": None,
+            "initial_image_name": None,
+            "change_image_name": None,
+            "change_image_category": None,
+            "change_frame": None,
+            "change_time": None,
+            "change_orientation": None,
+            "change_contrast": None,
+            "initial_orientation": None,
+            "initial_contrast": None,
+            "delta_orientation": None,
+            "stimulus_on_frames": stimulus_on_frames,
+        }
+    else:
+        return {
+            "initial_image_category": stimulus_changes[0][0],
+            "initial_image_name": stimulus_changes[0][1],
+            "change_image_name": stimulus_changes[1][1],
+            "change_image_category": stimulus_changes[1][0],
+            "change_frame": stimulus_changes[2],
+            "change_time": stimulus_changes[3],
+            "change_orientation": None,
+            "change_contrast": None,
+            "initial_orientation": None,
+            "initial_contrast": None,
+            "delta_orientation": None,
+            "stimulus_on_frames": stimulus_on_frames,
+        }
+
+
+def annotate_trials(trial):
+    """Annotate trial information
+
+    Parameters
+    ----------
+    trial: Mapping
+        foraging2 shape trial from trial_log
+
+    Returns
+    -------
+    dict
+        trial_type: str
+            "go" or "catch"
+        trial_duration: float or None
+            duration of trial in seconds or None if fails
+    """
+    try:
+        trial_duration = trial["events"][-1][2] - trial["events"][0][2]
+    except IndexError:
+        trial_duration = None
+
+    return {
+        "trial_type": "catch" if trial["trial_params"]["catch"] else "go",
+        "trial_duration": trial_duration,
+    }
 
 
 def behavior_items_or_top_level(exp_data):
@@ -90,7 +408,7 @@ def get_licks(exp_data, time=None):
 
 
 def get_params(exp_data):
-    """Get params
+    """Get params dict supplied to a foraging2 experiment
 
     Parameters
     ---------
@@ -135,6 +453,27 @@ def get_rewards(exp_data):
         ], dtype=np.float),
         columns=["time", "frame", ]
     )
+
+
+def get_response_window(data):
+    """Get response window set for all trials
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    tuple:
+        float
+            minimum time in seconds after a change in which a response should occur
+        float
+            maximum time in seconds after a change in which a response should occur
+    """
+    return data["items"]["behavior"] \
+        .get("params", {}) \
+        .get("response_window")
 
 
 def get_running_speed(exp_data, smooth=False, time=None):
@@ -281,3 +620,354 @@ def get_vsyncs(exp_data):
         "intervalsms",
         [16.0] * behavior_items_or_top_level(exp_data)["update_count"]
     )  # less stable but that coverage tho...
+
+
+def get_datetime_info(exp_data):
+    """Get all datetime information from exp data
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        experiment data
+
+    Returns
+    -------
+    dict
+        startdatetime: datetime.datetime
+            start datetime for the experiment
+        date: datetime.date
+            lower precision
+        year: int
+        month: int
+        day: int
+        hour: int
+        dayofweek: int
+            based in Monday
+    Notes
+    -----
+    - "explodes" datetime because scientist(s) want it
+    """
+    startdatetime = exp_data.get("start_time")
+
+    if startdatetime is not None:
+        return {
+            "startdatetime": startdatetime,
+            "year": startdatetime.year,
+            "month": startdatetime.month,
+            "day": startdatetime.day,
+            "hour": startdatetime.hour,
+            "date": startdatetime.date(),
+            "dayofweek": startdatetime.weekday(),
+        }
+    else:
+        return {
+            "startdatetime": startdatetime,
+            "year": None,
+            "month": None,
+            "day": None,
+            "hour": None,
+            "date": None,
+            "dayofweek": None,
+        }
+
+
+def get_mouse_id(exp_data):
+    """Gets the id of the mouse
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    str or None
+        id of the mouse or None if not found
+    """
+    return behavior_items_or_top_level(exp_data) \
+        .get("config", {}) \
+        .get("behavior", {}) \
+        .get("mouse_id")
+
+
+def get_pre_change_time(data):
+    """Gets the prechange time associated with an experiment
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    float
+        time (s) of the prechange time
+    """
+    return behavior_items_or_top_level(data) \
+        .get("config", {}) \
+        .get("DoC", {}) \
+        .get("pre_change_time", 0)
+
+
+def get_blank_duration_range(exp_data):
+    """Gets the range of the blank duration
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    tuple
+        float
+            time (s) of start of the blank duration
+        float
+            time (s) of end of the blank duration
+
+    Notes
+    -----
+    - the blank duration occurs at the very start of a trial and starts/ends before the
+    prechange window
+    """
+    return behavior_items_or_top_level(exp_data) \
+        .get("config", {}) \
+        .get("DoC", {}) \
+        .get("blank_duration_range")
+
+
+def get_user_id(exp_data):
+    """Gets the id of the user associated with the experiment
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    str or None
+        the id of the user or None if not found
+    """
+    return behavior_items_or_top_level(exp_data) \
+        .get("cl_params", {}) \
+        .get("user_id")
+
+
+def get_session_id(exp_data):
+    """Gets the id associated with the experiment session
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    int or None
+        id of experiment session or None if not found
+    """
+    return behavior_items_or_top_level(exp_data).get("session_id")
+
+
+def get_stimuli(data):
+    """Get stimuli mapping
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    Mapping
+        stimuli mapping
+
+    Notes
+    -----
+    - assumes that the only type of stimuli will be "natural_scenes" stimuli
+    """
+    return behavior_items_or_top_level(data)["stimuli"]["natural_scenes"]
+
+
+def get_filename(exp_data):
+    """Gets the filename associated with the experiment data
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    str or None
+        filename or None if not found
+    """
+    return behavior_items_or_top_level(exp_data).get("behavior_path")
+
+
+def get_device_name(exp_data):
+    """Get the name of the device on which the experiment was run
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    str or None
+        name of the device or None if not found
+
+    Notes
+    -----
+    - the device is assumed to be the device running the agent process that runs the
+    experiment
+    - 03/13/18: device_name is not yet accessible and will be None
+    """
+    logger.warn("get_device_name is not working and will return None...")
+    return behavior_items_or_top_level(exp_data) \
+        .get("platform_info", {}) \
+        .get("device_name")
+
+
+def get_image_path(data):
+    """Get path to pickle that stores images to be drawn
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    str or None
+        path to the pickle or None if not found
+    """
+    return behavior_items_or_top_level(data) \
+        .get("stimuli", {}) \
+        .get("natural_scenes", {}) \
+        .get("image_path")
+
+
+def get_session_duration(exp_data):
+    """Gets the actual duration of the experiment session
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    float
+        duration of the experiment session in time (s)
+
+    Notes
+    -----
+    - time is seconds since start of experiment
+    """
+    time = get_time(exp_data)
+    return time[-1] - time[0]
+
+
+def get_stimulus_duration(exp_data):
+    """Gets the configured stimulus duration set for each trial
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    float or None
+        configured stimulus duration in time (s)
+
+    Notes
+    -----
+    - time is seconds since start of experiment
+    """
+    return behavior_items_or_top_level(exp_data) \
+        .get("config", {}) \
+        .get("DoC", {}) \
+        .get("stimulus_window")
+
+
+def get_stimulus_times(exp_data):
+    """I don't think I'm using this...
+    """
+    events = behavior_items_or_top_level(exp_data) \
+        .get("trial_log", [])
+
+    stimulus_events = []
+
+    for trial in trial_log:
+        pass
+    for (from_group, to_group, img_name, frame, time, ) in events:
+        stimulus_events.append({
+            "index": time,
+            "stimulus": img_name,
+            "frame": frame,
+        })
+
+
+def get_trial_log(data):
+    """Get a trial log mapping from foraging2 shaped data
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    Mapping
+        foraging2 shaped trial log
+    """
+    return behavior_items_or_top_level(data)["trial_log"]
+
+
+def get_stimulus_on_frames(exp_data):
+    """pd.Series frame, boolean whether shown
+    """
+    draw_log = behavior_items_or_top_level(exp_data)["stimuli"]["natural_scenes"]["draw_log"]  # bleh
+
+    return pd.Series([was_drawn == 1 for was_drawn in draw_log])
+
+
+def get_task_id(data):
+    """Get task id
+
+    Parameters
+    ----------
+    data : Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    str or None
+        task id or None if not found
+    """
+    return behavior_items_or_top_level(data) \
+        .get("config", {}) \
+        .get("behavior", {}) \
+        .get("task_id")
+
+
+def get_scheduled_trial_duration(data):
+    """Get scheduled trial duration
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float or None
+        trial duration in seconds or None if not found
+    """
+    return behavior_items_or_top_level(data) \
+        .get("params", {}) \
+        .get("trial_duration")
