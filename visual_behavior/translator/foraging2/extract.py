@@ -424,7 +424,10 @@ def get_params(exp_data):
     -----
     - asssumes data is in the Foraging2 format
     """
-    return exp_data.get("params", {})
+    return {
+        **exp_data["items"]["behavior"].get("params", {}),
+        **exp_data["items"]["behavior"].get("cl_params", {}),
+    }
 
 
 def get_rewards(exp_data):
@@ -548,7 +551,7 @@ def get_stimulus_log(exp_data):
     - asssumes data is in the Foraging2 format
     """
     return np.array(
-        behavior_items_or_top_level(exp_data)["stimuli"]["natual_scenes"]["draw_log"],
+        behavior_items_or_top_level(exp_data)["stimuli"]["natural_scenes"]["draw_log"],
         dtype=np.bool
     )  # will likely break in the future, explicit is better here tho...
 

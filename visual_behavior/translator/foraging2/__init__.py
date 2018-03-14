@@ -5,10 +5,22 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, annotate_l
     annotate_stimuli, get_datetime_info, get_user_id, get_mouse_id, \
     get_blank_duration_range, get_session_id, get_filename, get_device_name, \
     get_session_duration, get_stimulus_duration, get_task_id, get_image_path, \
-    get_scheduled_trial_duration, annotate_trials, get_response_window
+    get_scheduled_trial_duration, annotate_trials, get_response_window, get_licks, \
+    get_running_speed, get_params, get_time
 
 
-EXPECTED_TRIAL_5 = {}
+def expand_dict(out_dict, from_dict, index):
+    """there is obviously a better way...
+    """
+    for k, v in from_dict.items():
+        if not out_dict.get(k):
+            out_dict[k] = {}
+
+        out_dict.get(k)[index] = v
+
+
+def data_to_licks(data):
+    return get_licks(data)
 
 
 def data_to_monolith(data):
@@ -49,11 +61,13 @@ def data_to_monolith(data):
     return pd.DataFrame(data=monolith)
 
 
-def expand_dict(out_dict, from_dict, index):
-    """there is obviously a better way...
-    """
-    for k, v in from_dict.items():
-        if not out_dict.get(k):
-            out_dict[k] = {}
+def data_to_params(data):
+    return get_params(data)
 
-        out_dict.get(k)[index] = v
+
+def data_to_running_speed(data):
+    return get_running_speed(data)
+
+
+def data_to_time(data):
+    return get_time(data)

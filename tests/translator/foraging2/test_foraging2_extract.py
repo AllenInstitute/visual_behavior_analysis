@@ -133,57 +133,62 @@ def test_behavior_items_or_top_level(data, expected):
     assert extract.behavior_items_or_top_level(data) == expected
 
 
-def test_get_params(pizza_data_fixture):
-    assert extract.get_params(pizza_data_fixture) == {
+def test_get_params(foraging2_data_fixture):
+    assert extract.get_params(foraging2_data_fixture) == {
         'auto_reward_volume': 0.007,
         'catch_freq': 0.125,
         'failure_repeats': 5,
         'max_task_duration_min': 60.0,
-        'mouse_id': 'M347745',
-        'nidevice': b'Dev1',
+        'nidevice': 'Dev1',
         'periodic_flash': (0.25, 0.5),
         'pre_change_time': 2.25,
-        'response_window': (0.15, 0.75),
+        'response_window': (0.15, 2.0),
         'reward_volume': 0.007,
-        'script': 'c:\\users\\svc_nc~1\\appdata\\local\\temp\\tmpulwuhh\\M347745 - spmuoq.py',
         'stimulus_window': 6.0,
-        'task_id': b'DoC',
-        'trial_translator': True,
-        'user_id': 'kylam',
-        'volume_limit': 5,
-        'warm_up_trials': 5,
+        'sync_sqr': True,
+        'task_id': 'DoC',
+        'volume_limit': 1.5,
+        'warm_up_trials': 0,
     }
 
 
-def test_get_trials(pizza_data_fixture):
-    expected = pd.DataFrame([
-        {
-            'index': 0,
-            'cumulative_rewards': 0,
-            'cumulative_volume': 0.0,
-            'stimulus_changes': [],
-            'success': False,
-            'licks': [(7.934872470921013, 25)],
-            'trial_params': {
-                'catch': False,
-                'auto_reward': True,
-                'change_time': 0.7802031782835195
-            },
-            'rewards': [],
-            'events': [
-                ['initial_blank', 'enter', 7.513004185308317, 0],
-                ['initial_blank', 'exit', 7.5131104567819404, 0],
-                ['pre_change', 'enter', 7.513202823576774, 0],
-                ['early_response', '', 7.935050252171282, 25],
-                ['abort', '', 7.935161158537837, 25],
-                ['timeout', 'enter', 7.935301198517099, 25],
-                ['timeout', 'exit', 7.935412104883654, 25]
-            ]
-        }
-    ])
+def test_get_trials(foraging2_data_fixture):
+    expected = pd.DataFrame(data=[{
+        'index': 0,
+        'cumulative_rewards': 1,
+        'cumulative_volume': 0.008,
+        'stimulus_changes': [
+            (('im111', 'im111'), ('im037', 'im037'), 413, 12.00008911471998)
+        ],
+        'success': True,
+        'licks': [
+            (12.215056513123665, 426)
+        ],
+        'trial_params': {
+            'catch': False,
+            'auto_reward': False,
+            'change_time': 4.32909793498625
+        },
+        'rewards': [
+            (12.215641293879314, 426)
+        ],
+        'events': [
+            ['initial_blank', 'enter', 5.056719305237289, 0],
+            ['initial_blank', 'exit', 5.056973641969159, 0],
+            ['pre_change', 'enter', 5.057221059856309, 0],
+            ['pre_change', 'exit', 7.361711943586507, 135],
+            ['stimulus_window', 'enter', 7.362480212104104, 135],
+            ['stimulus_changed', '', 12.000634319683837, 414],
+            ['response_window', 'enter', 12.165425149170293, 423],
+            ['hit', '', 12.215603378610254, 426],
+            ['stimulus_window', 'exit', 13.366606334340718, 495],
+            ['no_lick', 'exit', 13.368076173712819, 495],
+            ['response_window', 'exit', 14.01708539514906, 534]
+        ],
+    }, ])
 
     pd.testing.assert_frame_equal(
-        extract.get_trials(pizza_data_fixture).iloc[:1],
+        extract.get_trials(foraging2_data_fixture).iloc[:1],
         expected,
         check_column_type=False,
         check_index_type=False,
@@ -192,28 +197,26 @@ def test_get_trials(pizza_data_fixture):
     )
 
 
-def test_get_time(pizza_data_fixture):
-    expected = np.array([
-         0. , 16.7038231, 33.3285219, 50.0144676, 66.6954472, 83.341334,
-         100.0696558, 116.7347444, 133.4120824, 150.1053114,
-    ])
-
+def test_get_time(foraging2_data_fixture):
     np.testing.assert_almost_equal(
-        extract.get_time(pizza_data_fixture)[:10],
-        expected
+        extract.get_time(foraging2_data_fixture)[:10],
+        np.array([
+            0., 16.5396367, 33.2287204, 49.9249997, 66.5601165, 83.2115617,
+            99.9150366, 116.5919431, 133.2821339, 150.0199263,
+        ])
     )
 
 
-def test_get_rewards(pizza_data_fixture):
+def test_get_rewards(foraging2_data_fixture):
     """numpy array of [<time>, <frame number>]
     """
     expected = pd.DataFrame(data={
-        "frame": np.array([230.0, 828.0, 1472.0, 1932.0, 2622.0, ]),
-        "time": np.array([11.338415383077212, 21.346828706937707, 32.12227642104162, 39.82892841937571, 51.37191175428711])
+        "frame": np.array([426.0, 793.0, 1253.0, ]),
+        "time": np.array([12.215641, 18.337148, 26.010165, ])
     })
 
     pd.testing.assert_frame_equal(
-        extract.get_rewards(pizza_data_fixture).iloc[:5],
+        extract.get_rewards(foraging2_data_fixture),
         expected,
         check_column_type=False,
         check_index_type=False,
@@ -222,35 +225,31 @@ def test_get_rewards(pizza_data_fixture):
     )
 
 
-def test_get_vsyncs(pizza_data_fixture):
-    expected = np.array([
-        16.7038231, 16.6246988, 16.6859457, 16.6809796, 16.6458868, 16.7283218,
-        16.6650886, 16.677338 , 16.693229 , 16.688263
-    ])
-
+def test_get_vsyncs(foraging2_data_fixture):
     np.testing.assert_almost_equal(
-        extract.get_vsyncs(pizza_data_fixture)[:10],
-        expected
+        extract.get_vsyncs(foraging2_data_fixture)[:10],
+        np.array([
+            16.5396367, 16.6890837, 16.6962793, 16.6351167, 16.6514452,
+            16.7034749, 16.6769066, 16.6901907, 16.7377924, 16.6788438,
+        ])
     )
 
 
-def test_get_dx(pizza_data_fixture):
-    expected = np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-
+def test_get_dx(foraging2_data_fixture):
     np.testing.assert_almost_equal(
-        extract.get_dx(pizza_data_fixture)[:10],
-        expected
+        extract.get_dx(foraging2_data_fixture)[:10],
+        np.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     )
 
 
-def test_get_licks(pizza_data_fixture):
+def test_get_licks(foraging2_data_fixture):
     expected = pd.DataFrame(data={
-        "frame": np.array([25, 844, 1074, 1257, 1488, ]),
-        "time": np.array([416.96787951514125, 14128.407060168684, 17981.629601912573, 21034.25351413898, 24904.09280906897])
+        "frame": np.array([426, 793, 1253, ]),
+        "time": np.array([7105.795778, 13227.606467, 20900.418728, ])
     })
 
     pd.testing.assert_frame_equal(
-        extract.get_licks(pizza_data_fixture).iloc[:5],
+        extract.get_licks(foraging2_data_fixture),
         expected,
         check_column_type=False,
         check_index_type=False,
@@ -263,16 +262,16 @@ def test_get_licks(pizza_data_fixture):
     (
         {},
         pd.DataFrame(data={
-            "time": np.array([0.0, 16.70382311567664, 33.328521880321205, 50.01446756068617, 66.69544719625264]),
+            "time": np.array([0.0, 16.539636677407543, 33.22872040098446, 49.924999722861685, 66.56011645827675]),
             "speed (cm/s)": np.array([0, 0, 0, 0, 0]),
             "acceleration (cm/s^2)": np.array([0, 0, 0, 0, 0]),
             "jerk (cm/s^3)": np.array([0, 0, 0, 0, 0]),
         }),
     ),
 ])
-def test_get_running_speed(pizza_data_fixture, kwargs, expected):
+def test_get_running_speed(foraging2_data_fixture, kwargs, expected):
     pd.testing.assert_frame_equal(
-        extract.get_running_speed(pizza_data_fixture, **kwargs).iloc[:5],
+        extract.get_running_speed(foraging2_data_fixture, **kwargs).iloc[:5],
         expected,
         check_column_type=False,
         check_index_type=False,
@@ -281,9 +280,9 @@ def test_get_running_speed(pizza_data_fixture, kwargs, expected):
     )
 
 
-def test_get_stimulus_log(pizza_data_fixture):
+def test_get_stimulus_log(foraging2_data_fixture):
     np.testing.assert_equal(
-        extract.get_stimulus_log(pizza_data_fixture)[:10],
+        extract.get_stimulus_log(foraging2_data_fixture)[:10],
         np.array([True, True, True, True, True, True, True, True, True, True, ])
     )
 
