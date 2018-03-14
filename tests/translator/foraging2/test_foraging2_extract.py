@@ -357,8 +357,8 @@ def test_annotate_optogenetics(foraging2_data_fixture):
         {"optogenetics": None, }
 
 
-def test_annotate_responses(foraging2_data_fixture):
-    assert extract.annotate_responses(extract.get_trial_log(foraging2_data_fixture)[0]) == \
+def test_annotate_responses(foraging2_trial_fixture):
+    assert extract.annotate_responses(foraging2_trial_fixture) == \
         {
             'response_frame': 426,
             'response_time': 12.215603378610254,
@@ -367,8 +367,8 @@ def test_annotate_responses(foraging2_data_fixture):
         }
 
 
-def test_annotate_rewards(foraging2_data_fixture):
-    assert extract.annotate_rewards(extract.get_trial_log(foraging2_data_fixture)[0]) == \
+def test_annotate_rewards(foraging2_trial_fixture):
+    assert extract.annotate_rewards(foraging2_trial_fixture) == \
         {
             'auto_rewarded_trial': False,
             'cumulative_volume': 0.008,
@@ -380,9 +380,9 @@ def test_annotate_rewards(foraging2_data_fixture):
         }
 
 
-def test_annotate_schedule_time(foraging2_data_fixture):
+def test_annotate_schedule_time(foraging2_data_fixture, foraging2_trial_fixture):
     pre_change_time = extract.get_pre_change_time(foraging2_data_fixture)
-    assert extract.annotate_schedule_time(extract.get_trial_log(foraging2_data_fixture)[0], pre_change_time) == \
+    assert extract.annotate_schedule_time(foraging2_trial_fixture, pre_change_time) == \
         {
             'scheduled_change_time': None,
             'start_frame': 0,
@@ -464,10 +464,8 @@ def test_annotate_stimuli(foraging2_trial_fixture, foraging2_stimuli_fixture):
     }
 
 
-def test_annotate_trials(foraging2_data_fixture):
-    trial_log = extract.get_trial_log(foraging2_data_fixture)
-
-    assert extract.annotate_trials(trial_log[0]) == {
+def test_annotate_trials(foraging2_trial_fixture):
+    assert extract.annotate_trials(foraging2_trial_fixture) == {
         "trial_type": "go",
         "trial_duration": 8.960366089911771,
     }
