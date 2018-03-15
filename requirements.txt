@@ -5,3 +5,4 @@ scipy>=1.0.0
 matplotlib>=2.1.1
 sklearn
 deepdish>=0.3.6
+python-datetuil>=2.6.1
