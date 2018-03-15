@@ -1,6 +1,45 @@
 from marshmallow import Schema, fields
 
 
+class ChangeDetectionSessionCoreSchema(Schema):
+    """ This is the set of core data assets in a change detection session.
+
+    """
+    metadata = fields.Nested(
+        MetadataSchema,
+        description='metadata for the session (dict)',
+        required=True
+    )
+    time = fields.List(
+        fields.Float,
+        description='array of start times for each stimulus frame (list)',
+        required=True,
+    )
+    licks = DataFrameField(
+        description='dataframe of observed licks (pandas.DataFrame)',
+        row_schema=LickSchema,
+        required=True,
+    )
+    trials = DataFrameField(
+        row_schema=TrialSchema,
+        required=True,
+    )
+    running = DataFrameField(
+        description='dataframe of running speed'
+        row_schema=RunningSchema,
+        required=True,
+    )
+    rewards = DataFrameField(
+        description='dataframe of observed licks'
+        row_schema=RewardSchema,
+        required=True,
+    )
+    visual_stimuli = DataFrameField(
+        description='dataframe of presented stimuli'
+        row_schema=StimulusSchema,
+        required=True,
+    )
+
 class TimeSeriesSchema(Schema):
     """ base schema for all timeseries
     """
@@ -300,43 +339,6 @@ class MetadataSchema(Schema):
         description='total number of stimulus frames',
         required=True,
     )
-
-class ChangeDetectionSessionCoreSchema(Schema):
-    metadata = fields.Nested(
-        MetadataSchema,
-        description='metadata for the session',
-        required=True
-    )
-    time = fields.List(
-        fields.Float,
-        description='array of start times for each stimulus frame',
-        required=True,
-    )
-    licks = DataFrameField(
-        description='dataframe of observed licks'
-        row_schema=LickSchema,
-        required=True,
-    )
-    trials = DataFrameField(
-        row_schema=TrialSchema,
-        required=True,
-    )
-
-    # running = DataFrameField(
-    #     description='dataframe of running speed'
-    #     row_schema=RunningSchema,
-    #     required=True,
-    # )
-    # rewards = DataFrameField(
-    #     description='dataframe of observed licks'
-    #     row_schema=RewardSchema,
-    #     required=True,
-    # )
-    # stimuli = DataFrameField(
-    #     description='dataframe of presented stimuli'
-    #     row_schema=StimulusSchema,
-    #     required=True,
-    # )
 
 
 def dataframe_validator(row, schema):
