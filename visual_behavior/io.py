@@ -1,9 +1,10 @@
-from __future__ import print_function
 import six
-import numpy as np
 import pandas as pd
+<<<<<<< HEAD
+=======
 from scipy.signal import medfilt
 from .utilities import calc_deriv, rad_to_dist
+>>>>>>> upstream/foraging-2
 from functools import wraps
 
 
@@ -24,6 +25,8 @@ def data_or_pkl(func):
             return func(first_arg, *args, **kwargs)
 
     return pkl_wrapper
+<<<<<<< HEAD
+=======
 
 @data_or_pkl
 def load_metadata(data):
@@ -183,3 +186,4 @@ def load_running_speed(data, smooth=False, time=None):
         'jerk (cm/s^3)': jerk,
     })
     return running_speed
+>>>>>>> upstream/foraging-2

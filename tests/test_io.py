@@ -1,9 +1,6 @@
 import pytest
 import os
-import numpy as np
-from numpy import nan
 import pandas as pd
-from six.moves import cPickle as pickle
 
 from visual_behavior import io
 
@@ -25,6 +22,8 @@ def test_data_or_pkl(tmpdir, value, to_pickle):
             io.data_or_pkl(lambda value: value)(value).sort_index(axis=1),
             value.sort_index(axis=1)
         )
+<<<<<<< HEAD
+=======
 
 
 def test_load_trials(behavioral_session_output_fixture, trials_df_fixture):
@@ -244,3 +243,4 @@ def test_load_running_speed(behavioral_session_output_fixture):
         EXPECTED_RUNNING_DF,
         check_like=True
     )
+>>>>>>> upstream/foraging-2
