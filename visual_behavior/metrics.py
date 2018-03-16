@@ -5,7 +5,7 @@ the metrics contained in this module conform to scikit-learn styled `metric(y_tr
 import numpy as np
 from scipy import stats
 from sklearn.metrics import confusion_matrix
-from visual_behavior.utilities import dprime as __dprime
+from .utilities import dprime as __dprime
 
 
 def hit_rate(y_true, y_pred):
