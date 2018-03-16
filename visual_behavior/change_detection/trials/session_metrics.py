@@ -3,9 +3,9 @@
 import numpy as np
 import pandas as pd
 
-from visual_behavior import masks
-from visual_behavior.utilities import get_response_rates, flatten_list
-from .classification import d_prime
+from ..trials import masks
+from ...utilities import get_response_rates, flatten_list
+from ...metrics import d_prime
 
 
 def discrim(

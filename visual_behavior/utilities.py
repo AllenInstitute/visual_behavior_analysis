@@ -1,12 +1,7 @@
 from __future__ import print_function
-import os
-import sys
-import glob
-import warnings
-import smtplib
-import six
 import numpy as np
 import pandas as pd
+<<<<<<< HEAD
 from fnmatch import fnmatch
 from email.mime.text import MIMEText
 from scipy.interpolate import interp1d
@@ -495,6 +490,9 @@ def flatten_array(in_array):
         if len(entry) > 0:
             out_array = np.hstack((out_array, entry))
     return out_array
+=======
+from scipy.stats import norm
+>>>>>>> upstream/foraging-2
 
 
 def flatten_list(in_list):
@@ -512,6 +510,7 @@ def flatten_list(in_list):
     return out_list
 
 
+<<<<<<< HEAD
 # -> analyze
 def calculate_latency(df_in):
     # For each trial, calculate the difference between each stimulus change and the next lick (response lick)
@@ -752,6 +751,8 @@ def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
 
 
 # -> analyze
+=======
+>>>>>>> upstream/foraging-2
 def get_response_rates(df_in2, sliding_window=100, reward_window=None):
 
     df_in = df_in2.copy()
@@ -806,227 +807,6 @@ def get_response_rates(df_in2, sliding_window=100, reward_window=None):
     return hit_rate.values, catch_rate.values, d_prime
 
 
-def make_response_df(
-        df_in,
-        parameter='delta_ori',
-        additional_columns=None,
-        response_window=None,
-        pool_opposite_signs=True
-):
-    '''
-    Pools all values in the input dataframe sharing the value specified in 'parameter'
-    Returns a dataframe summarizing performance across the desired parameter
-
-    "additional columns" can be dictionary containing key/value pairs for additional columns desired in the output dictionary
-    '''
-    from statsmodels.stats.proportion import proportion_confint
-
-    if response_window is None:
-        response_window = df_in.iloc[0].response_window
-    if pool_opposite_signs is True:
-        xvals = np.abs(df_in[parameter]).unique()
-    else:
-        xvals = df_in[parameter].unique()
-
-    response_dict_list = []
-    for X in np.sort(xvals):
-        response_dict = {}
-        response_dict[parameter] = X
-
-        if pool_opposite_signs is True:
-            response_dict['attempts'] = len(df_in[(np.abs(df_in[parameter]) == X)])
-            # successes = df_in[(df_in[parameter]==X)].response.sum()
-            response_dict['successes'] = len(df_in[(np.abs(df_in[parameter]) == X) &
-                                                   (df_in['response_latency'] < response_window[1]) &
-                                                   (df_in['response_latency'] > response_window[0])])
-        else:
-            response_dict['attempts'] = len(df_in[(df_in[parameter] == X)])
-            # successes = df_in[(df_in[parameter]==X)].response.sum()
-            response_dict['successes'] = len(df_in[(df_in[parameter] == X) &
-                                                   (df_in['response_latency'] < response_window[1]) &
-                                                   (df_in['response_latency'] > response_window[0])])
-
-        response_dict['CI'] = proportion_confint(
-            response_dict['successes'],
-            response_dict['attempts'],
-            alpha=0.05,
-            method='beta'
-        )
-        response_dict['response_probability'] = float(response_dict['successes']) / float(response_dict['attempts'])
-
-        # add a column containing d_prime
-        # treat the FAs different than the HITS
-        if X == 0:
-            response_dict['dprime'] = np.nan
-            FA_rate = response_dict['response_probability']
-        else:
-            response_dict['dprime'] = dprime(response_dict['response_probability'], FA_rate)
-
-        if additional_columns is not None:
-            response_dict = dict(response_dict.items() + additional_columns.items())
-
-        response_dict_list.append(response_dict)
-
-    return pd.DataFrame(response_dict_list)
-
-
-def gsheet_to_dataframe(input_url):
-    """
-    Modifies the URL of a google spreadsheet to make it into a downloadable CSV that is readable by Pandas
-    Requires the full URL, starting with https://
-
-    IMPORTANT: The URL must be retrieved by clicking on 'Share', the 'Get shareable link'
-               Simply copying the URL directly from the browser will result in error
-    """
-
-    modified_url = input_url.split('edit')[0] + 'export?gid=0&format=csv'
-    return pd.read_csv(modified_url)
-
-
-def ProgressBar_Test(iterations):
-    pbar = Progress_Bar_Text(iterations)
-    for i in range(iterations):
-        pbar.update()
-
-
-def pbar(iterations, display_count=False, message=''):
-    '''
-    tries to return html widet based progress bar, returns text-based progress bar on failure
-    '''
-    try:
-        return Progress_Bar_Widget(iterations, display_count=False, message='')
-    except Exception:
-        return Progress_Bar_Text(iterations, display_count=False, message='')
-
-
-def progress(iterations, display_count=False, message=''):
-    return Progress_Bar_Widget(iterations, display_count=False, message='')
-
-
-def ProgressBar(iterations, display_count=False, message=''):
-    return Progress_Bar_Text(iterations, display_count=False, message='')
-
-
-class Progress_Bar_Widget(object):
-    '''
-    Progress bar for jupyter notebook
-    DRO - 6/13/16
-    mashup of code from: https://github.com/ipython/ipywidgets/issues/624
-                                    &
-                         https://github.com/alexanderkuk/log-progress/blob/master/test.ipynb
-    '''
-    def __init__(self, iterations, display_count=False, message=''):
-        from ipywidgets import IntProgress, HTML, VBox
-        from IPython.display import display
-
-        self.display = display
-        self.display_count = display_count
-        self.message = message
-        # self.iterations = iterations
-        self.progress = IntProgress(
-            min=0,
-            max=iterations,
-            description=self.message
-        )
-        # self.progress.bar_style = 'info'
-
-        self.label = HTML()
-        self.box = VBox(children=[self.label, self.progress])
-
-        self.initialize(iterations=iterations)
-
-        self.display(self.box)
-        # self.count = 0
-
-    def change_message(self, message):
-        self.message = message
-        self.progress.description = self.message
-
-    def update(self, message=None, step=1, force_count=None):
-        if message is not None:
-            self.message = message
-        if force_count is None:
-            self.count += step
-        else:
-            self.count = int(force_count)
-        self.progress.value = self.count
-        self.progress.description = self.message + " " + str(round(100.0 * self.count / self.iterations)) + "%"
-        if self.display_count:
-            self.label.value = u'{index} / {total}'.format(
-                index=self.count,
-                total=self.iterations
-            )
-
-        if self.count >= self.iterations:
-            self.progress.bar_style = 'success'
-
-    def initialize(self, iterations=None):
-        if iterations is not None:
-            self.iterations = iterations
-        self.count = 0
-        self.progress.max = iterations
-        self.progress.value = self.count
-        self.progress.bar_style = 'info'
-        self.progress.description = self.message + " " + "0%"
-
-
-class Progress_Bar_Text(object):
-    """
-    Shamelessly stolen, with slight modification, from: https://gist.github.com/minrk/2211026
-    """
-
-    def __init__(self, iterations, display_count=False, message=""):
-        self.iterations = iterations
-        self.message = message
-        self.prog_bar = '[]'
-        self.fill_char = '*'
-        self.width = 40
-        self.__update_amount(0)
-        # if self.have_ipython:
-        self.animate = self.animate_ipython
-        self.count = 0
-        self.animate(self.count)
-        self.endstop = False
-        # else:
-        #     self.animate = self.animate_noipython
-
-    def update(self, message=None):
-        self.count += 1
-        self.animate(self.count)
-        if message is not None:
-            self.message = message
-        # if self.count >= self.iterations and self.endstop is False:
-        #     print ""
-        #     self.endstop = True #prevent this progress bar from being overwritting by the next print statement
-
-    def animate_ipython(self, iter):
-        try:
-            clear_output()  # NOQA: F821
-        except Exception:
-            # terminal IPython has no clear_output
-            pass
-        print('\r', self)
-        sys.stdout.flush()
-        self.update_iteration(iter + 1)
-
-    def update_iteration(self, elapsed_iter):
-        self.__update_amount((elapsed_iter / float(self.iterations)) * 100.0)
-        self.prog_bar += '  %d of %s complete' % (elapsed_iter, self.iterations)
-
-    def __update_amount(self, new_amount):
-        percent_done = int(round((new_amount / 100.0) * 100.0))
-        all_full = self.width - 2
-        num_hashes = int(round((percent_done / 100.0) * all_full))
-        self.prog_bar = self.message + ' [' + self.fill_char * num_hashes + ' ' * (all_full - num_hashes) + ']'
-        pct_place = (len(self.prog_bar) / 2) - len(str(percent_done)) + (len(self.message) + 2) / 2
-        pct_string = '%d%%' % percent_done
-        self.prog_bar = self.prog_bar[0:pct_place] + \
-            (pct_string + self.prog_bar[pct_place + len(pct_string):])
-
-    def __str__(self):
-        return str(self.prog_bar)
-
-
 class RisingEdge():
     """
     This object implements a "rising edge" detector on a boolean array.
@@ -1055,29 +835,53 @@ class RisingEdge():
         return self.firstall
 
 
-def send_email(subject, message, sender, recipients):
+# -> metrics
+def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
+    """ calculates the d-prime for a given hit rate and false alarm rate
+
+    https://en.wikipedia.org/wiki/Sensitivity_index
+
+    Parameters
+    ----------
+    hit_rate : float
+        rate of hits in the True class
+    fa_rate : float
+        rate of false alarms in the False class
+    limits : tuple, optional
+        limits on extreme values, which distort. default: (0.01,0.99)
+
+    Returns
+    -------
+    d_prime
+
     """
+    assert limits[0] > 0.0, 'limits[0] must be greater than 0.0'
+    assert limits[1] < 1.0, 'limits[1] must be less than 1.0'
+    Z = norm.ppf
 
-    NOTE: McAfee may prevent the connection to the smtp server.
+    # Limit values in order to avoid d' infinity
+    hit_rate = np.clip(hit_rate, limits[0], limits[1])
+    fa_rate = np.clip(fa_rate, limits[0], limits[1])
 
-    If you get a socket.error, try adding "python.exe" to the exclude
-    list described here:
+    return Z(hit_rate) - Z(fa_rate)
 
-    http://stackoverflow.com/a/25331615/1002170
 
-    """
-    msg = MIMEText(message, 'plain')
-    msg['Subject'] = subject
-    msg['From'] = sender
-    msg['Reply-To'] = sender
+def calc_deriv(x, time):
+    dx = np.diff(x)
+    dt = np.diff(time)
+    dxdt_rt = np.hstack((np.nan, dx / dt))
+    dxdt_lt = np.hstack((dx / dt, np.nan))
 
-    if isinstance(recipients, six.string_types):
-        recipients = [recipients, ]
-    recipients = ', '.join(recipients)
-    msg['To'] = recipients
+    dxdt = np.vstack((dxdt_rt, dxdt_lt))
 
-    server = smtplib.SMTP('aicas-1.corp.alleninstitute.org', 25)
-    server.starttls()
+    dxdt = np.nanmean(dxdt, axis=0)
 
-    server.sendmail(sender, recipients, msg.as_string())
-    server.quit()
+    return dxdt
+
+
+def rad_to_dist(speed_rad_per_s):
+    wheel_diameter = 6.5 * 2.54  # 6.5" wheel diameter
+    running_radius = 0.5 * (
+        2.0 * wheel_diameter / 3.0)  # assume the animal runs at 2/3 the distance from the wheel center
+    running_speed_cm_per_sec = np.pi * speed_rad_per_s * running_radius / 180.
+    return running_speed_cm_per_sec

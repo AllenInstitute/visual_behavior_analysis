@@ -1,5 +1,11 @@
 import setuptools
 
+with open('requirements.txt', 'r') as f:
+    requirements = f.read().splitlines()
+
+with open('requirements_dev.txt', 'r') as f:
+    requirements_dev = f.read().splitlines()
+
 setuptools.setup(
     name="visual_behavior",
     version="0.1.0",
@@ -16,6 +22,8 @@ setuptools.setup(
     #     [console_scripts]
     #     summary_csv=braintv_pilot.summary:load_and_save
     # ''',
+    tests_require=requirements_dev,
+    install_requires=requirements,
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Programming Language :: Python',
