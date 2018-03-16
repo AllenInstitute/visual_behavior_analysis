@@ -306,6 +306,7 @@ def load_running_speed(data, smooth=False, time=None):
     dx = np.cumsum(dx)  # wheel rotations
 
     time = time[:len(dx)]
+    frame = range(len(dx))
 
     speed = calc_deriv(dx, time)
     speed = rad_to_dist(speed)
@@ -319,8 +320,9 @@ def load_running_speed(data, smooth=False, time=None):
 
     running_speed = pd.DataFrame({
         'time': time,
-        'speed (cm/s)': speed,
-        'acceleration (cm/s^2)': accel,
-        'jerk (cm/s^3)': jerk,
+        'frame': frame,
+        'speed': speed,
+        'acceleration': accel,
+        'jerk': jerk,
     })
     return running_speed
