@@ -343,6 +343,50 @@ def annotate_trials(trial):
     }
 
 
+# def annotate_visual_stimuli(trial, stim_table, times):
+#     draw_log = stim_table["draw_log"]
+#     trial_start_frame = trial["events"][0][3]
+#     trial_stop_frame = trial["events"][-1][3]
+#
+#     stim_change = trial["stimulus_changes"]
+#
+#     initial_stimulus_category, initial_stimulus_name = stim_change[0]
+#     change_stimulus_category, change_stimulus_name = stim_change[1]
+#     stim_change_frame = stim_change[2]
+#
+#     display_array = []
+#     previous_draw = None
+#
+#     draw_log = draw_log.copy()
+#
+#
+#     change_arr = np.where(np.diff(draw_log, axis=0))
+#     np.insert(change_arr, 0, 0)
+#     np.append(change_arr, len(change_arr) - 1)
+#
+#
+#     for idx, draw_frame in \
+#             enumerate(draw_log[trial_start_frame:trial_stop_frame + 1]):
+#         if draw_frame != previous_draw:
+#             if idx < stimulus_change_frame:
+#                 display_array.append(
+#                     (idx, initial_stimulus_category, initial_stimulus_name)
+#                 )
+#             else:
+#                 display_array.append(
+#                     (idx, change_stimulus_category, change_stimulus_name)
+#                 )
+#
+#
+# def _get_stimuli_intervals(stim_table):
+#     draw_log = stim_table["draw_log"]
+#
+#     change_arr = np.diff(np.where(draw_log), axis=0)
+#
+#     start_stim = np.where(change_arr == 1)
+#     end_stim = np.where(change_arr == -1)
+
+
 def behavior_items_or_top_level(exp_data):
     """Some kind of weird thing related to derrics output...TODO ask him to stop
     """
