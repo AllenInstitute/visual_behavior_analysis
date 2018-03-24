@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from visual_behavior.plotting import placeAxesOnGrid
 from visual_behavior.utilities import flatten_list, get_response_rates
-from visual_behavior.trials.annotate import check_responses
+from ..annotate import check_responses
 
 
 def get_reward_window(extended_trials):

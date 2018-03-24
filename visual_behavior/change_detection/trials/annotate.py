@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from six import iteritems
 from functools import wraps
-from .io import load_licks, load_time
+# from .io import load_licks, load_time
 
 
 def inplace(func):

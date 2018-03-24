@@ -1,21 +1,21 @@
 import pandas as pd
 
-from ...io import load_trials, load_time, load_metadata, load_licks
+# from ...io import load_trials, load_time, load_metadata, load_licks
 from . import annotate
 
 
-def create_doc_dataframe(filename,time=None):
-
-    data = pd.read_pickle(filename)
-
-    if time is None:
-        time = load_time(data)
-
-    licks = load_licks(data, time=time)
-    trials = load_trials(data, time=time)
-    metadata = load_metadata(data)
-
-    return create_extended_dataframe(trials, metadata, licks, time)
+# def create_doc_dataframe(filename,time=None):
+#
+#     data = pd.read_pickle(filename)
+#
+#     if time is None:
+#         time = load_time(data)
+#
+#     licks = load_licks(data, time=time)
+#     trials = load_trials(data, time=time)
+#     metadata = load_metadata(data)
+#
+#     return create_extended_dataframe(trials, metadata, licks, time)
 
 def create_extended_dataframe(trials, metadata, licks, time):
     """ creates a trials dataframe from a detection-of-change session
