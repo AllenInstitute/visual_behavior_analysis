@@ -24,9 +24,6 @@ def _check_syntax(path):
 
 
 @pytest.mark.parametrize("path", [
-    os.path.join(VISUAL_BEHAVIOR_DIR, "cohorts"),
-    os.path.join(VISUAL_BEHAVIOR_DIR, "inscopix"),
-    os.path.join(VISUAL_BEHAVIOR_DIR, "metrics"),
     os.path.join(VISUAL_BEHAVIOR_DIR, "__init__.py"),
     os.path.join(VISUAL_BEHAVIOR_DIR, "analyze.py"),
     os.path.join(VISUAL_BEHAVIOR_DIR, "devices.py"),
