@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
+
 def flatten_list(in_list):
     out_list = []
     for i in range(len(in_list)):
@@ -16,7 +17,6 @@ def flatten_list(in_list):
             out_list.append(in_list[i])
 
     return out_list
-
 
 
 def get_response_rates(df_in2, sliding_window=100, reward_window=None):

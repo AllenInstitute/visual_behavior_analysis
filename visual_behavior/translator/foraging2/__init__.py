@@ -1,13 +1,12 @@
 import pandas as pd
 from dateutil import tz
 
-from .extract import get_trial_log, get_stimuli, get_pre_change_time, annotate_licks,\
-    annotate_rewards, annotate_optogenetics, annotate_responses, annotate_schedule_time, \
-    annotate_stimuli, get_datetime_info, get_user_id, get_mouse_id, \
-    get_blank_duration_range, get_session_id, get_filename, get_device_name, \
-    get_session_duration, get_stimulus_duration, get_task_id, get_image_path, \
-    get_scheduled_trial_duration, annotate_trials, get_response_window, get_licks, \
-    get_running_speed, get_params, get_time, get_trials
+from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
+    annotate_licks, annotate_rewards, annotate_optogenetics, annotate_responses, \
+    annotate_schedule_time, annotate_stimuli, get_user_id, get_mouse_id, \
+    get_blank_duration_range, get_device_name, get_session_duration, \
+    get_stimulus_duration, get_task_id, annotate_trials, get_response_window, \
+    get_licks, get_running_speed, get_params, get_time, get_trials
 
 
 def data_to_change_detection_core(data):
@@ -321,6 +320,6 @@ def data_to_trials(data):
 
 
 def data_to_visual_stimuli(data):
-    stimuli = get_stimuli(data)
-    times = get_times(data)
+    # stimuli = get_stimuli(data)
+    # times = get_times(data)
     raise NotImplementedError("maybe never...")

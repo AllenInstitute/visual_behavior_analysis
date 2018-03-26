@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.stats import norm
 
 
 def calc_deriv(x, time):

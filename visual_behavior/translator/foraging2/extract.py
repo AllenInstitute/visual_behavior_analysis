@@ -1,7 +1,6 @@
 import logging
 import numpy as np
 import pandas as pd
-from six import iteritems
 from copy import deepcopy
 
 from scipy.signal import medfilt
@@ -125,7 +124,7 @@ def annotate_responses(trial):
         return {
             "response_frame": None,
             "response_time": None,
-            "response_latency": None,
+            "response_type": None,
             "response_latency": np.inf,
         }
 
@@ -217,7 +216,6 @@ def annotate_schedule_time(trial, pre_change_time):
         "end_time": end_time,
         "end_frame": end_frame,
     }
-
 
 
 def annotate_stimuli(trial, stimuli):
@@ -949,8 +947,6 @@ def get_stimulus_times(exp_data):
 
     stimulus_events = []
 
-    for trial in trial_log:
-        pass
     for (from_group, to_group, img_name, frame, time, ) in events:
         stimulus_events.append({
             "index": time,
