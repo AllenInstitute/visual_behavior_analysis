@@ -1,11 +1,10 @@
-import six
 import pandas as pd
 import numpy as np
 from scipy.signal import medfilt
 from ...utilities import calc_deriv, rad_to_dist
 
 
-def data_to_change_detection_core(data,time=None):
+def data_to_change_detection_core(data, time=None):
     """Core data structure to be used across all analysis code?
 
     Parameters
@@ -29,15 +28,15 @@ def data_to_change_detection_core(data,time=None):
     return {
         "time": time,
         "metadata": load_metadata(data),
-        "licks": load_licks(data,time=time),
-        "trials": load_trials(data,time=time),
-        "running": load_running_speed(data,time=time),
-        "rewards": load_rewards(data,time=time),
+        "licks": load_licks(data, time=time),
+        "trials": load_trials(data, time=time),
+        "running": load_running_speed(data, time=time),
+        "rewards": load_rewards(data, time=time),
         "visual_stimuli": None,  # not yet implemented
     }
 
-def load_metadata(data):
 
+def load_metadata(data):
     fields = (
         'startdatetime',
         'rig_id',
@@ -178,8 +177,8 @@ def load_running_speed(data, smooth=False, time=None):
         # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
         raise NotImplementedError
 
-    accel = calc_deriv(speed, time)
-    jerk = calc_deriv(accel, time)
+    # accel = calc_deriv(speed, time)
+    # jerk = calc_deriv(accel, time)
 
     running_speed = pd.DataFrame({
         'time': time,

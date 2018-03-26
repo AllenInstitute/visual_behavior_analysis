@@ -1,4 +1,5 @@
 import os
+import warnings
 import pandas as pd
 import numpy as np
 from six import iteritems
@@ -481,6 +482,7 @@ def get_end_frame(trials, metadata):
 
     return end_frames.astype(np.int32)
 
+
 def get_lick_frames(trials, licks):
     """
     returns a list of arrays of lick frames, with one entry per trial
@@ -515,6 +517,7 @@ def calculate_latency(trials):
 
             if len(post_window_licks) > 0:
                 trials.loc[idx, 'response_latency'] = post_window_licks[0]
+
 
 @inplace
 def calculate_reward_rate(
@@ -600,6 +603,7 @@ def calculate_trial_length(trials):
 
     return trial_length
 
+
 def get_end_time(trials, time):
     '''creates a vector of end times for each trial, which is just the start time for the next trial'''
 
@@ -668,6 +672,7 @@ def get_response_type(trials):
             response_type.append('other')
 
     return response_type
+
 
 @inplace
 def remove_repeated_licks(trials):

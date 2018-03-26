@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 import pandas as pd
-from six import iteritems
+from copy import deepcopy
 
 from scipy.signal import medfilt
 from ...analyze import calc_deriv, rad_to_dist
@@ -124,7 +124,7 @@ def annotate_responses(trial):
         return {
             "response_frame": None,
             "response_time": None,
-            "response_latency": None,
+            "response_type": None,
             "response_latency": np.inf,
         }
 
@@ -216,7 +216,6 @@ def annotate_schedule_time(trial, pre_change_time):
         "end_time": end_time,
         "end_frame": end_frame,
     }
-
 
 
 def annotate_stimuli(trial, stimuli):
@@ -468,10 +467,9 @@ def get_params(exp_data):
     -----
     - asssumes data is in the Foraging2 format
     """
-    return {
-        **exp_data["items"]["behavior"].get("params", {}),
-        **exp_data["items"]["behavior"].get("cl_params", {}),
-    }
+    params = deepcopy(exp_data["items"]["behavior"].get("params", {}))
+    params.update(exp_data["items"]["behavior"].get("cl_params", {}))
+    return params
 
 
 def get_rewards(exp_data):
@@ -949,8 +947,6 @@ def get_stimulus_times(exp_data):
 
     stimulus_events = []
 
-    for trial in trial_log:
-        pass
     for (from_group, to_group, img_name, frame, time, ) in events:
         stimulus_events.append({
             "index": time,

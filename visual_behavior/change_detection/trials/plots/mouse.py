@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from visual_behavior.plotting import placeAxesOnGrid
 from visual_behavior.utilities import flatten_list, get_response_rates
 
+
 def make_ILI_plot(dfm, session_dates, ax):
     ILIs = []
     positions = []
