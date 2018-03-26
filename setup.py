@@ -1,14 +1,6 @@
-import os
 import setuptools
 
-
-here = os.path.dirname(os.path.realpath(__file__))
-
-with open(os.path.join(here, "requirements.txt"), 'r') as f:
-    requirements = f.read().splitlines()
-
-with open(os.path.join(here, "requirements_dev.txt"), 'r') as f:
-    requirements_dev = f.read().splitlines()
+# https://packaging.python.org/discussions/install-requires-vs-requirements/ this is the way i think it should be -Chris
 
 setuptools.setup(
     name="visual_behavior",
@@ -18,23 +10,28 @@ setuptools.setup(
     author_email="justink@alleninstitute.org",
     description="analysis package for visual behavior",
     packages=setuptools.find_packages(exclude=['data', 'figures', 'notebooks', 'scripts']),
-    # install_requires=[
-    #     'Click',
-    # ],
-
-    # entry_points='''
-    #     [console_scripts]
-    #     summary_csv=braintv_pilot.summary:load_and_save
-    # ''',
-    tests_require=requirements_dev,
-    install_requires=requirements,
+    install_requires=[
+        "matplotlib",
+        "pandas",
+        "six",
+        "sklearn",  # should be pinned but versioning looks broken right now...
+        "scipy>=1.0.0",
+        "deepdish>=0.3.6",
+        "numpy>=1.9.0",  # for science some packages need to be pinned
+        "python-dateutil",
+    ],
+    tests_require=[
+        "flake8",
+        "pytest",
+        "pytest-cov",
+    ],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
-        # 'Programming Language :: Python :: 3',
-        # 'Programming Language :: Python :: 3.4',
-        # 'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
     ],
 )
