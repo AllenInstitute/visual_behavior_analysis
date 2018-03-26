@@ -161,21 +161,21 @@ def test_data_to_metadata(foraging2_data_fixture):
         }
 
 
-def test_data_to_monolith(foraging2_data_fixture):
-    monolith = foraging2.data_to_monolith(foraging2_data_fixture)
-
-    assert monolith.stimulus_on_frames.notnull().all(), "stimulus_on_frame is not what we expect..."
-
-    monolith.stimulus_on_frames = None
-
-    pd.testing.assert_frame_equal(
-        monolith,
-        EXPECTED_MONOLITH,
-        check_column_type=False,
-        check_index_type=False,
-        check_dtype=False,
-        check_like=True
-    )
+# def test_data_to_monolith(foraging2_data_fixture):
+#     monolith = foraging2.data_to_monolith(foraging2_data_fixture)
+#
+#     assert monolith.stimulus_on_frames.notnull().all(), "stimulus_on_frame is not what we expect..."
+#
+#     monolith.stimulus_on_frames = None
+#
+#     pd.testing.assert_frame_equal(
+#         monolith,
+#         EXPECTED_MONOLITH,
+#         check_column_type=False,
+#         check_index_type=False,
+#         check_dtype=False,
+#         check_like=True
+#     )
 
 
 def test_data_to_rewards(foraging2_data_fixture):
