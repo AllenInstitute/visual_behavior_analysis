@@ -2,6 +2,7 @@ import logging
 import numpy as np
 import pandas as pd
 from six import iteritems
+from copy import deepcopy
 
 from scipy.signal import medfilt
 from ...analyze import calc_deriv, rad_to_dist
@@ -468,10 +469,9 @@ def get_params(exp_data):
     -----
     - asssumes data is in the Foraging2 format
     """
-    return {
-        **exp_data["items"]["behavior"].get("params", {}),
-        **exp_data["items"]["behavior"].get("cl_params", {}),
-    }
+    params = deepcopy(exp_data["items"]["behavior"].get("params", {}))
+    params.update(exp_data["items"]["behavior"].get("cl_params", {}))
+    return params
 
 
 def get_rewards(exp_data):
