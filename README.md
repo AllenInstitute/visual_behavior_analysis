@@ -52,8 +52,10 @@ Pull requests are welcome.
 
 ## Contributors:
 
+- Christopher Mochizuki - chrim@alleninstitute.org
 - Doug Ollerenshaw - dougo@alleninstitute.org
 - Justin Kiggins - justink@alleninstitute.org
+- Sahar Manavi - saharm@alleninstitute.org
 
 
 ## Additional Links
