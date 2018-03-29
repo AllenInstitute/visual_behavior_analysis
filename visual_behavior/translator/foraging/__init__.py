@@ -184,6 +184,31 @@ def load_time(data):
     return (vsync.cumsum()) / 1000.0
 
 
+class EndOfLickFinder(object):
+    def __init__(self):
+        self.end_frame = None
+
+    def check(self, resp):
+        if self.end_frame is None:
+            self.end_frame = resp['frame']
+            return self.end_frame
+        elif (self.end_frame - resp['frame']) > 1:
+            self.end_frame = resp['frame']
+
+        return self.end_frame
+
+
+def find_lick_ends(responselog):
+    # first, grab a copy of the reversed dataframe
+    responselog = responselog.sort_values('frame', ascending=False)
+
+    responselog['end_frame'] = responselog.apply(EndOfLickFinder().check, axis=1)
+    responselog['end_frame'] += 1
+
+    responselog = responselog.sort_values('frame', ascending=True)
+    return responselog
+
+
 def load_licks(data, time=None):
     """ Returns each lick in an experiment.
 
@@ -195,17 +220,21 @@ def load_licks(data, time=None):
 
     Returns
     -------
-    licks : numpy array
+    licks : pandas DataFrame
 
     """
-    licks = pd.DataFrame(data['responselog'], columns=['frame', 'time'])
+    licks = pd.DataFrame(data['responselog'])
 
     if time is None:
         time = load_time(data)
 
+    licks = find_lick_ends(licks)
     licks['time'] = time[licks['frame']]
-
-    licks = licks[licks['frame'].diff() != 1]
+    licks['end_time'] = time[licks['end_frame']]
+    licks['duration'] = licks['end_time'] - licks['time']
+    licks['diff'] = licks['frame'].diff().fillna(np.inf)
+    licks = licks[licks['diff'] > 1]
+    licks = licks[['time', 'duration', 'frame', 'end_frame']]
 
     return licks
 
