@@ -628,6 +628,31 @@ def get_response_type(df_in):
 
     return response_type
 
+def trial_type_color(trial_type,palette='default'):
+    if trial_type=='correct_reject':
+        trial_type='cr'
+    if trial_type=='false_alarm':
+        trial_type='fa'
+
+    if palette == 'default':
+        color_pal = {
+            'aborted':'red',
+            'auto_rewarded':'blue',
+            'hit':'darkgreen',
+            'miss':'lightgreen',
+            'fa':'darkorange',
+            'cr':'yellow'
+        }
+    elif palette.lower() == 'marina':
+        color_pal = {
+                'aborted':'lightgray',
+                'auto_rewarded':'darkblue',
+                'hit':'#55a868',
+                'miss':'#ccb974',
+                'fa':'#c44e52',
+                'cr':'#4c72b0'
+            }
+    return color_pal[trial_type.lower()]
 
 # -> analyze
 def assign_color(df_in, palette='default'):
@@ -635,42 +660,23 @@ def assign_color(df_in, palette='default'):
     for idx in df_in.index:
 
         if df_in.loc[idx]['trial_type'] == 'aborted':
-            if palette.lower() == 'marina':
-                color[idx] = 'lightgray'
-            else:
-                color[idx] = 'red'
-
+            color[idx]=trial_type_color('aborted',palette=palette)
         elif df_in.loc[idx]['auto_rewarded'] is True:
-            if palette.lower() == 'marina':
-                color[idx] = 'darkblue'
-            else:
-                color[idx] = 'blue'
+            color[idx]=trial_type_color('auto_rewarded',palette=palette)
 
         elif df_in.loc[idx]['trial_type'] == 'go':
             if df_in.loc[idx]['response'] == 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#55a868'
-                else:
-                    color[idx] = 'darkgreen'
+                color[idx]=trial_type_color('hit',palette=palette)
 
             elif df_in.loc[idx]['response'] != 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#ccb974'
-                else:
-                    color[idx] = 'lightgreen'
+                color[idx]=trial_type_color('miss',palette=palette)
 
         elif df_in.loc[idx]['trial_type'] == 'catch':
             if df_in.loc[idx]['response'] == 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#c44e52'
-                else:
-                    color[idx] = 'darkorange'
+                color[idx]=trial_type_color('fa',palette=palette)
 
             elif df_in.loc[idx]['response'] != 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#4c72b0'
-                else:
-                    color[idx] = 'yellow'
+                color[idx]=trial_type_color('cr',palette=palette)
 
     return color
 
