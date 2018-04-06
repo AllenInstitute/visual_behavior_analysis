@@ -17,7 +17,7 @@ TEST_SESSION_FNAME = "180122094711-task=DoC_NaturalImages_CAMMatched_n=8_stage=n
 
 
 if PY3:
-    load_pickle = lambda pstream: pickle.load(pstream, encoding="latin1", protocol=2)
+    load_pickle = lambda pstream: pickle.load(pstream, encoding="latin1")
 else:
     load_pickle = lambda pstream: pickle.load(pstream)
 
