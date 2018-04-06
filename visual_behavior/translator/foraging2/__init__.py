@@ -205,9 +205,6 @@ def data_to_rewards(data):
     pandas.DataFrame
         rewards data structure
     """
-    volume_per_reward = data["items"]["behavior"]["params"]["reward_volume"]
-    volume_per_auto_reward = data["items"]["behavior"]["params"]["auto_reward_volume"]
-
     rewards_dict = {
         "frame": {},
         "time": {},

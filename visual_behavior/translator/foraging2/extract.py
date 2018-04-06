@@ -104,7 +104,7 @@ def annotate_responses(trial):
     - 03/13/18: justin did not know what to use for `response_type` key so it will be None
     """
     try:
-        change_time, change_frame  = trial["stimulus_changes"][0][2:4]  # assume one stimulus change per trial, idx 3, 4 will have the frame, time
+        change_time, change_frame = trial["stimulus_changes"][0][2:4]  # assume one stimulus change per trial, idx 3, 4 will have the frame, time
     except IndexError:
         return {
             "response_frame": None,
@@ -262,63 +262,6 @@ def annotate_stimuli(trial, stimuli):
     - time is seconds since start of experiment
     - the initial image is the image shown before the "change event" occurs
     - the change image is the image shown after the "change event" occurs
-    - as of 03/13/18 the following aren't retrievable and will be None:
-        - change_orientation
-        - change_contrast
-        - initial_orientation
-        - initial_contrast
-        - delta_orientation
-    """
-    draw_log = stimuli["draw_log"]
-
-    try:
-        start_frame = trial["events"][0][3]
-        end_frame = trial["events"][-1][3]
-        stimulus_on_frames = [
-            was_drawn == 1
-            for was_drawn in draw_log[start_frame:end_frame + 1]
-        ]
-    except IndexError:
-        stimulus_on_frames = []
-
-    try:
-        stimulus_changes = trial["stimulus_changes"][0]  # assume one stimulus change per trial
-    except IndexError:
-        return {
-            "initial_image_category": None,
-            "initial_image_name": None,
-            "change_image_name": None,
-            "change_image_category": None,
-            "change_frame": None,
-            "change_time": None,
-            "change_orientation": None,
-            "change_contrast": None,
-            "initial_orientation": None,
-            "initial_contrast": None,
-            "delta_orientation": None,
-            "stimulus_on_frames": stimulus_on_frames,
-        }
-    else:
-        return {
-            "initial_image_category": stimulus_changes[0][0],
-            "initial_image_name": stimulus_changes[0][1],
-            "change_image_name": stimulus_changes[1][1],
-            "change_image_category": stimulus_changes[1][0],
-            "change_frame": stimulus_changes[2],
-            "change_time": stimulus_changes[3],
-            "change_orientation": None,
-            "change_contrast": None,
-            "initial_orientation": None,
-            "initial_contrast": None,
-            "delta_orientation": None,
-            "stimulus_on_frames": stimulus_on_frames,
-        }
-
-
-def annotate_stimuli(trial, stimuli):
-    """
-    Notes
-    -----
     - assumes only one stimulus change can occur in a single trial and that
     each change will only be intra-classification (ie: "natural_images",
     "gratings", etc.)
@@ -421,6 +364,18 @@ def _get_stimulus_attr_changes(stim_dict, change_frame, first_frame, last_frame)
 
 
 def _get_trial_frame_bounds(trial):
+    """Get start, stop frame for a trial
+
+    Parameters
+    ----------
+    trial: Mapping
+        foraging2 style trial_log trial
+
+    Notes
+    -----
+    - assumes the first frame is the frame of the first event and the last frame
+    is the frame of the last event
+    """
     return trial["events"][0][-1], trial["events"][-1][-1]
 
 
