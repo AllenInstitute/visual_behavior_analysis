@@ -435,75 +435,42 @@ def test_annotate_schedule_time(foraging2_data_fixture, foraging2_trial_fixture)
 
 
 def test_annotate_stimuli(foraging2_trial_fixture, foraging2_stimuli_fixture):
-    assert extract.annotate_stimuli(foraging2_trial_fixture, foraging2_stimuli_fixture) == {
-        'initial_image_category': 'im111',
-        'initial_image_name': 'im111',
-        'change_image_name': 'im037',
-        'change_image_category': 'im037',
-        'change_frame': 413,
-        'change_time': 12.00008911471998,
-        'change_orientation': None,
+    annotated_stimuli = extract.annotate_stimuli(
+        foraging2_trial_fixture,
+        foraging2_stimuli_fixture
+    )
+
+    annotated_stimuli["stimulus_on_frames"] = []  # testing stimulus_on_frames too annoying for now...
+
+    assert annotated_stimuli == {
+        'initial_image_category': None,
+        'initial_image_name': None,
+        'change_image_name': None,
+        'change_image_category': None,
+        'change_frame': 183,
+        'change_time': 6.511695924235673,
+        'change_orientation': 90,
         'change_contrast': None,
         'initial_orientation': None,
         'initial_contrast': None,
-        "delta_orientation": None,
-        "stimulus_on_frames": [
-            True, True, True, True, True, True, True, True, True, True, True,
-            True, True, True, True, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, True, True, True, True,
-            True, True, True, True, True, True, True, True, True, True, True,
-            True, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, True, True, True, True, True, True, True, True,
-            True, True, True, True, True, True, True, True, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, True, True, True,
-            True, True, True, True, True, True, True, True, True, True, True,
-            True, True, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, True, True, True, True, True, True, True, True, True,
-            True, True, True, True, True, True, True, False, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, True, True, True, True,
-            True, True, True, True, True, True, True, True, True, True, True,
-            True, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, True, True, True, True, True, True, True, True,
-            True, True, True, True, True, True, True, True, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, True, True, True,
-            True, True, True, True, True, True, True, True, True, True, True,
-            True, True, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, True, True, True, True, True, True, True, True, True,
-            True, True, True, True, True, True, True, False, False, False, False,
-            False, False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, True, True,
-            True, True, True, True, True, True, True, True, True, True, True,
-            True, True, True, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, True, True, True, True, True,
-            True, True, True, True, True, True, True, True, True, True, True,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False, False, True, True, True, True, True, True, True, True,
-            True, True, True, True, True, True, True, True, False, False, False,
-            False, False, False, False, False, False, False, False, False,
-            False, False,
-        ],
+        "delta_orientation": np.nan,
+        "stimulus_on_frames": [],
     }
+
+
+def test__get_trial_frame_bounds(foraging2_trial_fixture):
+    assert extract._get_trial_frame_bounds(foraging2_trial_fixture) == \
+        (0, 516, )
+
+
+def test__resolve_stimulus_dict(foraging2_stimuli_fixture):
+    assert extract._resolve_stimulus_dict(foraging2_stimuli_fixture, "group0") == \
+        ("gratings", foraging2_stimuli_fixture["gratings"], )
+
+
+def test__get_stimulus_attr_changes(foraging2_stimuli_fixture):
+    assert extract._get_stimulus_attr_changes(foraging2_stimuli_fixture["gratings"], 183, 0, 516) == \
+        ({}, {'ori': 90}, )
 
 
 def test_annotate_trials(foraging2_trial_fixture):

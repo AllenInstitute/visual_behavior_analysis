@@ -319,7 +319,123 @@ def annotate_stimuli(trial, stimuli):
     """
     Notes
     -----
+    - assumes only one stimulus change can occur in a single trial and that
+    each change will only be intra-classification (ie: "natural_images",
+    "gratings", etc.)
+    - currently only supports the following stimuli types and none of their
+    subclasses: DoCGratingStimulus, DoCImageStimulus
+    - if you are mixing more than one classification of stimulus, it will
+    resolve the first group_name, stimulus_name pair it encounters...so maybe
+    name things uniquely everywhere...
     """
+    try:
+        stimulus_change = trial["stimulus_changes"][0]
+    except IndexError:
+        return {
+            "initial_image_category": None,
+            "initial_image_name": None,
+            "change_image_name": None,
+            "change_image_category": None,
+            "change_frame": None,
+            "change_time": None,
+            "change_orientation": None,
+            "change_contrast": None,
+            "initial_orientation": None,
+            "initial_contrast": None,
+            "delta_orientation": None,
+            "stimulus_on_frames": None,
+        }
+
+    (from_group, from_name, ), (to_group, to_name), time, frame = stimulus_change
+    _, stim_dict = _resolve_stimulus_dict(stimuli, from_group)
+    implied_type = stim_dict["obj_type"]
+
+    # initial is like ori before, contrast before...etc
+    # type is image or grating, changes is a dictionary of changes make sure each change type is lowerccase string...
+
+    if implied_type in ("DoCGratingStimulus", ):
+        first_frame, last_frame = _get_trial_frame_bounds(trial)
+        initial_changes, change_changes = _get_stimulus_attr_changes(
+            stim_dict, frame, first_frame, last_frame
+        )
+
+        initial_orientation = initial_changes.get("ori")
+        change_orientation = change_changes.get("ori")
+
+        if initial_orientation and change_orientation:
+            delta_orientation = initial_orientation - change_orientation
+        else:
+            delta_orientation = np.nan
+
+        return {
+            "initial_image_category": None,
+            "initial_image_name": None,
+            "change_image_name": None,
+            "change_image_category": None,
+            "change_frame": frame,
+            "change_time": time,
+            "change_orientation": change_orientation,
+            "change_contrast": change_changes.get("constrast"),
+            "initial_orientation": initial_orientation,
+            "initial_contrast": initial_changes.get("contrast"),
+            "delta_orientation": delta_orientation,
+            "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
+        }
+    elif implied_type in ("DoCImageStimulus", ):
+        return {
+            "initial_image_category": from_group,
+            "initial_image_name": from_name,
+            "change_image_name": to_name,
+            "change_image_category": to_group,
+            "change_frame": frame,
+            "change_time": time,
+            "change_orientation": None,
+            "change_contrast": None,
+            "initial_contrast": None,
+            "delta_orientation": None,
+            "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
+        }
+    else:
+        raise ValueError("invalid implied type: {}".format(implied_type))
+
+
+def _get_stimulus_attr_changes(stim_dict, change_frame, first_frame, last_frame):
+    """
+    Notes
+    -----
+    - assumes only two stimuli are ever shown
+    - converts attr_names to lowercase
+    """
+    initial_attr = {}
+    change_attr = {}
+
+    for attr_name, set_value, set_frame, set_time in stim_dict["set_log"]:
+        if first_frame <= set_frame < change_frame:
+            initial_attr[attr_name.lower()] = set_value
+        elif change_frame <= set_frame < last_frame:
+            change_attr[attr_name.lower()] = set_value
+        else:
+            pass
+
+    return initial_attr, change_attr
+
+
+def _get_trial_frame_bounds(trial):
+    return trial["events"][0][-1], trial["events"][-1][-1]
+
+
+def _resolve_stimulus_dict(stimuli, group_name):
+    """
+    Notes
+    -----
+    - will return the first stimulus dict with group_name present in its list of
+    stim_groups
+    """
+    for classification_name, stim_dict in iteritems(stimuli):
+        if group_name in stim_dict["stim_groups"]:
+            return classification_name, stim_dict
+    else:
+        raise ValueError("unable to resolve stimulus_dict from group_name...")
 
 
 def annotate_trials(trial):
