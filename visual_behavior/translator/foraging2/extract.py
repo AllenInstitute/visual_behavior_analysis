@@ -629,7 +629,6 @@ def get_running_speed(exp_data, smooth=False, time=None):
     dx = get_dx(exp_data)
     dx = medfilt(dx, kernel_size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
-    dx = np.insert(dx, 0, np.nan, axis=0)  # prepend np.nan for first trial where nothing changes
 
     if len(time) != len(dx):
         raise ValueError("dx and time must be the same length")
