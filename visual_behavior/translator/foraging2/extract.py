@@ -697,7 +697,7 @@ def get_time(exp_data):
     -----
     - asssumes data is in the Foraging2 format
     """
-    return np.hstack((0, get_vsyncs(exp_data))).cumsum()  # cumulative time
+    return np.hstack((0, get_vsyncs(exp_data))).cumsum() / 1000.0  # cumulative time
 
 
 def get_trials(exp_data):
