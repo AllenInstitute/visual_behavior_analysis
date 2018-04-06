@@ -2,6 +2,7 @@ import logging
 import numpy as np
 import pandas as pd
 from copy import deepcopy
+from six import iteritems
 
 from scipy.signal import medfilt
 from ...analyze import calc_deriv, rad_to_dist
@@ -103,7 +104,7 @@ def annotate_responses(trial):
     - 03/13/18: justin did not know what to use for `response_type` key so it will be None
     """
     try:
-        change_frame, change_time = trial["stimulus_changes"][0][2:4]  # assume one stimulus change per trial, idx 3, 4 will have the frame, time
+        change_time, change_frame  = trial["stimulus_changes"][0][2:4]  # assume one stimulus change per trial, idx 3, 4 will have the frame, time
     except IndexError:
         return {
             "response_frame": None,
@@ -162,8 +163,8 @@ def annotate_rewards(trial):
         "cumulative_volume": trial["cumulative_volume"],
         "cumulative_reward_number": trial["cumulative_rewards"],
         "reward_volume": trial.get("volume_dispensed"),  # this doesn't exist in our current iteration of foraging2 outputs but should exist very soon
-        "reward_times": [reward[0] for reward in trial["rewards"]],
-        "reward_frames": [reward[1] for reward in trial["rewards"]],
+        "reward_times": [reward[1] for reward in trial["rewards"]],
+        "reward_frames": [reward[2] for reward in trial["rewards"]],
         "rewarded": trial["trial_params"]["catch"] is not True,  # justink said: assume go trials are catch != True, assume go trials are the only type of rewarded trials
     }
 
@@ -259,7 +260,6 @@ def annotate_stimuli(trial, stimuli):
     Notes
     -----
     - time is seconds since start of experiment
-    - assumes the only type of stimuli are "natural_scenes"
     - the initial image is the image shown before the "change event" occurs
     - the change image is the image shown after the "change event" occurs
     - as of 03/13/18 the following aren't retrievable and will be None:
@@ -313,6 +313,13 @@ def annotate_stimuli(trial, stimuli):
             "delta_orientation": None,
             "stimulus_on_frames": stimulus_on_frames,
         }
+
+
+def annotate_stimuli(trial, stimuli):
+    """
+    Notes
+    -----
+    """
 
 
 def annotate_trials(trial):
@@ -492,7 +499,7 @@ def get_rewards(exp_data):
     """
     return pd.DataFrame(
         data=np.array([
-            trial["rewards"][0]
+            (trial["rewards"][0][1], trial["rewards"][0][2], )
             for (idx, trial) in get_trials(exp_data).iterrows()
             if trial["rewards"]
         ], dtype=np.float),
@@ -542,6 +549,7 @@ def get_running_speed(exp_data, smooth=False, time=None):
     Notes
     -----
     - asssumes data is in the Foraging2 format
+    - the first value of speed is assumed to be nan
     """
     if time is None:
         time = get_time(exp_data)
@@ -550,6 +558,7 @@ def get_running_speed(exp_data, smooth=False, time=None):
     dx = get_dx(exp_data)
     dx = medfilt(dx, kernel_size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
+    dx = np.insert(dx, 0, np.nan, axis=0)  # prepend np.nan for first trial where nothing changes
 
     if len(time) != len(dx):
         raise ValueError("dx and time must be the same length")
@@ -592,10 +601,10 @@ def get_stimulus_log(exp_data):
     -----
     - asssumes data is in the Foraging2 format
     """
-    return np.array(
-        behavior_items_or_top_level(exp_data)["stimuli"]["natural_scenes"]["draw_log"],
-        dtype=np.bool
-    )  # will likely break in the future, explicit is better here tho...
+    return {
+        k: np.array(stim_dict["draw_log"], dtype=np.bool)
+        for k, stim_dict in iteritems(exp_data["items"]["behavior"]["stimuli"])
+    }
 
 
 def get_time(exp_data):
@@ -663,7 +672,7 @@ def get_vsyncs(exp_data):
     """
     return behavior_items_or_top_level(exp_data).get(
         "intervalsms",
-        [16.0] * behavior_items_or_top_level(exp_data)["update_count"]
+        [None] * behavior_items_or_top_level(exp_data)["update_count"]
     )  # less stable but that coverage tho...
 
 
@@ -832,7 +841,7 @@ def get_stimuli(data):
     -----
     - assumes that the only type of stimuli will be "natural_scenes" stimuli
     """
-    return behavior_items_or_top_level(data)["stimuli"]["natural_scenes"]
+    return data["items"]["behavior"]["stimuli"]
 
 
 def get_filename(exp_data):
@@ -886,13 +895,17 @@ def get_image_path(data):
 
     Returns
     -------
-    str or None
-        path to the pickle or None if not found
+    dict
+        stimulus_name, image_path
+
+    Notes
+    -----
+    - image_path is None if image_path couldnt be found
     """
-    return behavior_items_or_top_level(data) \
-        .get("stimuli", {}) \
-        .get("natural_scenes", {}) \
-        .get("image_path")
+    return {
+        s_name: s_dict.get("image_path")
+        for s_name, s_dict in iteritems(data["items"]["behavior"]["stimuli"])
+    }
 
 
 def get_session_duration(exp_data):
@@ -974,9 +987,10 @@ def get_trial_log(data):
 def get_stimulus_on_frames(exp_data):
     """pd.Series frame, boolean whether shown
     """
-    draw_log = behavior_items_or_top_level(exp_data)["stimuli"]["natural_scenes"]["draw_log"]  # bleh
-
-    return pd.Series([was_drawn == 1 for was_drawn in draw_log])
+    return pd.Series([
+        was_drawn == 1
+        for was_drawn in get_unified_draw_log(exp_data)
+    ])
 
 
 def get_task_id(data):
@@ -1014,3 +1028,19 @@ def get_scheduled_trial_duration(data):
     return behavior_items_or_top_level(data) \
         .get("params", {}) \
         .get("trial_duration")
+
+
+def get_unified_draw_log(data):
+    unified_draw_log = []
+    stimuli = data["items"]["behavior"]["stimuli"]
+    stimuli_names = tuple(stimuli.keys())
+
+    try:
+        unified_draw_log = np.array(stimuli[stimuli_names[0]]["draw_log"])  # more efficient adds for large draw logs
+
+        for stim_name in stimuli_names[1:]:
+            unified_draw_log += np.array(stimuli[stim_name]["draw_log"])
+    except IndexError:
+        pass
+
+    return unified_draw_log

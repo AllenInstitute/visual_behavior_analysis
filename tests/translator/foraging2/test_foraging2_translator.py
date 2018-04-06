@@ -122,7 +122,7 @@ def test_data_to_metadata(foraging2_data_fixture):
 
     assert foraging2.data_to_metadata(foraging2_data_fixture) == \
         {
-            'startdatetime': '2018-03-10T00:06:59.199000+00:00',
+            'startdatetime': '2018-04-04T22:20:53.665000+00:00',
             'rig_id': None,
             'computer_name': None,
             'reward_vol': 0.007,
@@ -133,21 +133,21 @@ def test_data_to_metadata(foraging2_data_fixture):
                 'task_id': 'DoC',
                 'failure_repeats': 5,
                 'volume_limit': 1.5,
-                'catch_freq': 0.125,
+                'catch_freq': 0.5,
                 'max_task_duration_min': 60.0,
                 'periodic_flash': [0.25, 0.5],
                 'nidevice': 'Dev1',
                 'stimulus_window': 6.0,
                 'pre_change_time': 2.25,
                 'response_window': [0.15, 2.0],
-                'sync_sqr': True,
-                'warm_up_trials': 0
+                'trial_translator': True,
+                'warm_up_trials': 1
             },
             'mouse_id': 'testmouse',
             'response_window': [0.15, 2.0],
             'task': 'DoC',
             'stage': None,
-            'stop_time': 28406.585909910973,
+            'stop_time': 27232.0,
             'user_id': None,
             'lick_detect_training_mode': False,
             'blank_screen_on_timeout': None,
@@ -157,7 +157,7 @@ def test_data_to_metadata(foraging2_data_fixture):
             'stimulus_distribution': None,
             'delta_mean': None,
             'trial_duration': None,
-            'n_stimulus_frames': 593,
+            'n_stimulus_frames': 592,
         }
 
 
@@ -180,8 +180,8 @@ def test_data_to_metadata(foraging2_data_fixture):
 
 def test_data_to_rewards(foraging2_data_fixture):
     expected = pd.DataFrame(data={
-        "frame": {0: 426, 1: 793, 2: 1253, },
-        "time": {0: 12.215641, 1: 18.337148, 2: 26.010165, },
+        "frame": {0: 184, 1: 886, 2: 1392, },
+        "time": {0: 6.513225269904879, 1: 17.755238825342968, 2: 25.84674329077771, },
         "volume": {0: 0.007, 1: 0.007, 2: 0.007, },
         "lickspout": {0: None, 1: None, 2: None, },
     })
@@ -214,20 +214,29 @@ def test_data_to_running(foraging2_data_fixture):
     )
 
 
-def test_data_to_time(foraging2_data_fixture):
+def test_data_to_time(monkeypatch, foraging2_data_fixture):
+    monkeypatch.setattr(
+        foraging2.extract,
+        "get_vsyncs",
+        lambda data: [16] * data["items"]["behavior"]["update_count"]
+    )
+
     np.testing.assert_almost_equal(
         foraging2.data_to_time(foraging2_data_fixture)[:10],
-        np.array([
-            0., 16.53963668, 33.2287204, 49.92499972, 66.56011646, 83.21156167,
-            99.91503659, 116.59194314, 133.28213388, 150.01992627,
-        ])
+        np.array([0.,  16.,  32.,  48.,  64.,  80.,  96., 112., 128., 144.])
     )
 
 
-def test_data_to_licks(foraging2_data_fixture):
+def test_data_to_licks(monkeypatch, foraging2_data_fixture):
+    monkeypatch.setattr(
+        foraging2.extract,
+        "get_vsyncs",
+        lambda data: [16] * data["items"]["behavior"]["update_count"]
+    )
+
     expected = pd.DataFrame(data={
-        "frame": {0: 426, 1: 793, 2: 1253, },
-        "time": {0: 7105.795778, 1: 13227.606467, 2: 20900.418728, },
+        "frame": {0: 196, 1: 886, 2: 1392, },
+        "time": {0: 3136.0, 1: 14176.0, 2: 22272.0, },
     })
 
     pd.testing.assert_frame_equal(

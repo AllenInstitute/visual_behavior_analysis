@@ -219,13 +219,10 @@ def data_to_rewards(data):
         rewards = trial["rewards"]  # as i write this there can only ever be one reward per trial
 
         if rewards:
-            rewards_dict["time"][idx], rewards_dict["frame"][idx] = rewards[0]  # as of writing this...there will only ever be one tuple
+            rewards_dict["volume"][idx] = rewards[0][0]
+            rewards_dict["time"][idx] = rewards[0][1]
+            rewards_dict["frame"][idx] = rewards[0][2]
             rewards_dict["lickspout"][idx] = None  # not yet implemented in the foraging2 output
-
-            if trial["trial_params"]["auto_reward"]:
-                rewards_dict["volume"][idx] = volume_per_auto_reward
-            else:
-                rewards_dict["volume"][idx] = volume_per_reward
 
     return pd.DataFrame(data=rewards_dict)
 
