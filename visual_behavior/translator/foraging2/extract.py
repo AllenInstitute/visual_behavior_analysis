@@ -292,7 +292,7 @@ def annotate_stimuli(trial, stimuli):
             "stimulus_on_frames": None,
         }
 
-    (from_group, from_name, ), (to_group, to_name), time, frame = stimulus_change
+    (from_group, from_name, ), (to_group, to_name), frame, time = stimulus_change
     _, stim_dict = _resolve_stimulus_dict(stimuli, from_group)
     implied_type = stim_dict["obj_type"]
 
