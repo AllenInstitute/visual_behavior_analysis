@@ -161,7 +161,7 @@ def annotate_rewards(trial):
     - time is seconds since start of experiment
     """
     return {
-        "auto_rewarded_trial": trial["trial_params"]["auto_reward"],
+        "auto_rewarded_trial": trial["trial_params"]["auto_reward"] if trial['trial_params']['catch']==False else None,
         "cumulative_volume": trial["cumulative_volume"],
         "cumulative_reward_number": trial["cumulative_rewards"],
         "reward_volume": trial.get("volume_dispensed"),  # this doesn't exist in our current iteration of foraging2 outputs but should exist very soon

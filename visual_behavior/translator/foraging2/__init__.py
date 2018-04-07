@@ -177,8 +177,8 @@ def data_to_metadata(data):
         "blank_screen_on_timeout": None,  # not obtainable
         "stim_duration": get_stimulus_duration(data) * 1000,  # seconds to milliseconds
         "blank_duration_range": [
-            get_blank_duration_range(data)[0] * 1000,
-            get_blank_duration_range(data)[1] * 1000,
+            get_blank_duration_range(data)[0],
+            get_blank_duration_range(data)[1],
         ],  # seconds to miliseconds
         "delta_minimum": get_pre_change_time(data),
         "stimulus_distribution": None,  # not obtainable
