@@ -105,7 +105,7 @@ def annotate_responses(trial):
     - 03/13/18: justin did not know what to use for `response_type` key so it will be None
     """
     try:
-        change_frame, change_timee = trial["stimulus_changes"][0][2:4]  # assume one stimulus change per trial, idx 3, 4 will have the frame, time
+        change_frame, change_time = trial["stimulus_changes"][0][2:4]  # assume one stimulus change per trial, idx 3, 4 will have the frame, time
     except IndexError:
         return {
             # "response_frame": None,
