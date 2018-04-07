@@ -167,7 +167,7 @@ def annotate_rewards(trial):
         "reward_volume": trial.get("volume_dispensed"),  # this doesn't exist in our current iteration of foraging2 outputs but should exist very soon
         "reward_times": [reward[1] for reward in trial["rewards"]],
         "reward_frames": [reward[2] for reward in trial["rewards"]],
-        "rewarded": trial["trial_params"]["catch"] is not True,  # justink said: assume go trials are catch != True, assume go trials are the only type of rewarded trials
+        "rewarded": trial["trial_params"]["catch"]==False,  # justink said: assume go trials are catch != True, assume go trials are the only type of rewarded trials
     }
 
 
