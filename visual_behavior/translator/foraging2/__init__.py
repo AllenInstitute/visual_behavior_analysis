@@ -52,10 +52,6 @@ def expand_dict(out_dict, from_dict, index):
         out_dict.get(k)[index] = v
 
 
-def data_to_extended_trials(data):
-    raise NotImplementedError("maybe never...")
-
-
 def data_to_licks(data):
     """Get a dataframe of licks
 
@@ -299,7 +295,7 @@ def data_to_trials(data):
         expand_dict(trials, annotate_responses(trial), index)
         expand_dict(trials, annotate_schedule_time(trial, pre_change_time), index)
         expand_dict(trials, annotate_stimuli(trial, stimuli), index)
-        expand_dict(trials, annotate_trials(trial), index)
+        # expand_dict(trials, annotate_trials(trial), index)
         expand_dict(trials, experiment_params, index)
 
     trials = pd.DataFrame(data=trials)
@@ -309,8 +305,12 @@ def data_to_trials(data):
             "start_time": "starttime",
             "start_frame": "startframe",
             "delta_orientation": "delta_ori",
+            "auto_rewarded_trial": "auto_rewarded",
+            "change_orientation": "change_ori",
+            "initial_orientation": "initial_ori",
+            "stimulus_on_frames": "stim_on_frames",
         }
-    )
+    ).reset_index()
 
 
 def data_to_visual_stimuli(data):

@@ -1,4 +1,5 @@
 import logging
+import warnings
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -49,7 +50,7 @@ def annotate_licks(trial):
     """
     return {
         "lick_times": [lick[0] for lick in trial["licks"]],
-        "lick_frames": [lick[1] for lick in trial["licks"]],
+        # "lick_frames": [lick[1] for lick in trial["licks"]],
     }
 
 
@@ -107,23 +108,24 @@ def annotate_responses(trial):
         change_time, change_frame = trial["stimulus_changes"][0][2:4]  # assume one stimulus change per trial, idx 3, 4 will have the frame, time
     except IndexError:
         return {
-            "response_frame": None,
+            # "response_frame": None,
             "response_time": None,
             "response_type": None,
             "response_latency": np.nan,
         }
 
+    
     for (idx, (name, direction, time, frame), ) in enumerate(trial["events"]):
         if name == "hit":
             return {
-                "response_frame": frame,
+                # "response_frame": frame,
                 "response_time": time,
                 "response_latency": time - change_time,
                 "response_type": None,
             }
     else:
         return {
-            "response_frame": None,
+            # "response_frame": None,
             "response_time": None,
             "response_type": None,
             "response_latency": np.inf,
@@ -198,9 +200,10 @@ def annotate_schedule_time(trial, pre_change_time):
     - time is seconds since start of experiment
     - as of 03/13/18 scheduled_change_time isn't retrievable and will be None
     """
+    warnings.warn("`scheduled_change_time` isn't retrievable and will be None")
     try:
         start_time, start_frame = trial["events"][0][2:4]
-        end_time, end_frame = trial["events"][-1][2:4]
+        # end_time, end_frame = trial["events"][-1][2:4]
     except IndexError:
         return {
             "start_time": None,
@@ -214,8 +217,8 @@ def annotate_schedule_time(trial, pre_change_time):
         "start_time": start_time,
         "start_frame": start_frame,
         "scheduled_change_time": None,
-        "end_time": end_time,
-        "end_frame": end_frame,
+        # "end_time": end_time,
+        # "end_frame": end_frame,
     }
 
 
