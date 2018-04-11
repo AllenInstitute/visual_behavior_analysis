@@ -303,27 +303,22 @@ class MetadataSchema(Schema):
     )
 
 
-class ChangeDetectionSessionCoreSchema(Schema):
-    """ This is the set of core data assets in a change detection session.
-
-    """
-    metadata = fields.Nested(
-        MetadataSchema,
-        description='metadata for the session (dict)',
-        required=True
-    )
-    time = fields.List(
-        fields.Float,
-        description='array of start times for each stimulus frame (list)',
-        required=True,
-    )
-    licks = DataFrameField(description='dataframe of observed licks (pandas.DataFrame)', row_schema=LickSchema, required=True, )  # noqa: F821
-    trials = DataFrameField(row_schema=TrialSchema, required=True, )  # noqa: F821
-    running = DataFrameField(description='dataframe of running speed', row_schema=RunningSchema, required=True, )  # noqa: F821
-    rewards = DataFrameField(description='dataframe of observed licks', row_schema=RewardSchema, required=True, )  # noqa: F821
-    visual_stimuli = DataFrameField(description='dataframe of presented stimuli', row_schema=StimulusSchema, required=True, )  # noqa: F821
-
-
-def dataframe_validator(row, schema):
-    errors = schema.validate(row)
-    return (len(errors) == 0)
+# class ChangeDetectionSessionCoreSchema(Schema):
+#     """ This is the set of core data assets in a change detection session.
+#
+#     """
+#     metadata = fields.Nested(
+#         MetadataSchema,
+#         description='metadata for the session (dict)',
+#         required=True
+#     )
+#     time = fields.List(
+#         fields.Float,
+#         description='array of start times for each stimulus frame (list)',
+#         required=True,
+#     )
+#     licks = DataFrameField(description='dataframe of observed licks (pandas.DataFrame)', row_schema=LickSchema, required=True, )  # noqa: F821
+#     trials = DataFrameField(row_schema=TrialSchema, required=True, )  # noqa: F821
+#     running = DataFrameField(description='dataframe of running speed', row_schema=RunningSchema, required=True, )  # noqa: F821
+#     rewards = DataFrameField(description='dataframe of observed licks', row_schema=RewardSchema, required=True, )  # noqa: F821
+#     visual_stimuli = DataFrameField(description='dataframe of presented stimuli', row_schema=StimulusSchema, required=True, )  # noqa: F821
