@@ -24,10 +24,6 @@ def validate_trials(trials):
         trials.apply(validator, axis=0)
 
 
-def validate_schema(trials):
-    assert is_valid_dataframe(trials, TrialSchema())
-
-
 def validate(trials):
-    validate_schema(trials)
+    assert_is_valid_dataframe(trials, TrialSchema())
     validate_trials(trials)
