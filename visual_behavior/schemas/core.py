@@ -60,7 +60,7 @@ class TrialSchema(Schema):
     )
 
     # timing paramters
-    change_frame = fields.Int(
+    change_frame = fields.Float(
         description='The stimulus frame when the change occured on this trial',
         required=True,
     )
@@ -77,10 +77,12 @@ class TrialSchema(Schema):
     initial_image_category = fields.String(
         description='The category of the initial images on this trial',
         required=True,
+        allow_none=True,
     )
     initial_image_name = fields.String(
         description='The name of the last initial image before the change on this trial',
         required=True,
+        allow_none=True,
     )
     change_image_category = fields.String(
         description='The category of the change images on this trial',
