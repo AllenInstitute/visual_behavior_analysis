@@ -99,22 +99,27 @@ class TrialSchema(Schema):
     initial_contrast = fields.Float(
         description='The contrast of the initial orientation on this trial',
         required=True,
+        allow_none=True,
     )
     change_contrast = fields.Float(
         description='The contrast of the change orientation on this trial',
         required=True,
+        allow_none=True,
     )
     initial_ori = fields.Float(
         description='The orientation of the initial orientation on this trial',
         required=True,
+        allow_none=True,
     )
     change_ori = fields.Float(
         description='The orientation of the change orientation on this trial',
         required=True,
+        allow_none=True,
     )
     delta_ori = fields.Float(
         description='The difference between the initial and change orientations on this trial',
         required=True,
+        allow_none=True,
     )
 
     # general stimulus info
@@ -184,6 +189,7 @@ class TrialSchema(Schema):
     publish_time = fields.Str(
         description='the time that this trial was published',
         required=True,
+        allow_none=True,
     )
 
 
