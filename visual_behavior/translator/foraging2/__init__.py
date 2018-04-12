@@ -134,7 +134,6 @@ def data_to_metadata(data):
     Notes
     -----
     - as of 03/15/2018 the following were not obtainable:
-        - rig_id
         - device_name
         - stage
         - lick_detect_training_mode
@@ -181,7 +180,7 @@ def data_to_metadata(data):
             get_blank_duration_range(data)[1],
         ],  # seconds to miliseconds
         "delta_minimum": get_pre_change_time(data),
-        "stimulus_distribution": None,  # not obtainable
+        "stimulus_distribution": 'exponential',  # not obtainable
         "delta_mean": None,  # not obtainable
         "trial_duration": None,  # not obtainable
         "n_stimulus_frames": n_stimulus_frames,
@@ -295,7 +294,7 @@ def data_to_trials(data):
         expand_dict(trials, annotate_responses(trial), index)
         expand_dict(trials, annotate_schedule_time(trial, pre_change_time), index)
         expand_dict(trials, annotate_stimuli(trial, stimuli), index)
-        # expand_dict(trials, annotate_trials(trial), index)
+        #expand_dict(trials, annotate_trials(trial), index)
         expand_dict(trials, experiment_params, index)
 
     trials = pd.DataFrame(data=trials)

@@ -89,8 +89,6 @@ def annotate_responses(trial):
     Returns
     -------
     dict
-        response_frame: integer
-            frame index of the response
         response_time: float
             time (s) of the response
         response_type: str
@@ -98,38 +96,97 @@ def annotate_responses(trial):
         response_latency: float, np.nan, np.inf
             difference between stimulus change and response, np.nan if a change doesn't
             occur, np.inf if a change occurs but a response doesn't occur
+        rewarded: boolean, None
+            
 
     Notes
     -----
     - time is seconds since start of experiment
     - 03/13/18: justin did not know what to use for `response_type` key so it will be None
     """
-    try:
-        change_frame, change_time = trial["stimulus_changes"][0][2:4]  # assume one stimulus change per trial, idx 3, 4 will have the frame, time
-    except IndexError:
-        return {
-            # "response_frame": None,
-            "response_time": None,
-            "response_type": None,
-            "response_latency": np.nan,
+    
+    for event in trial['events']:
+        if event[0]=='stimulus_changed':
+            change_event = event
+            break
+        elif event[0]=='sham_change':
+            change_event = event
+            break
+        else:
+            change_event = None
+            
+    for event in trial['events']:
+        if event[0]=='hit':
+            response_event = event
+            break
+        elif event[0]=='false_alarm':
+            response_event = event
+            break
+        else:
+            response_event = None
+            
+    if change_event is None:
+        # aborted
+        return  {
+            # "response_frame": frame,
+            "response_type": [],
+            "response_time": [],
+            "response_latency": None,
+            "change_frame": None,
+            "change_time": None,
         }
 
-    
-    for (idx, (name, direction, time, frame), ) in enumerate(trial["events"]):
-        if name == "hit":
-            return {
+    elif change_event[0]=='stimulus_changed':
+        if response_event is None:
+            # miss
+            return  {
                 # "response_frame": frame,
-                "response_time": time,
-                "response_latency": time - change_time,
-                "response_type": None,
+                "response_type": [],
+                "response_time": [],
+                "change_time": change_event[2],
+                "change_frame": change_event[3],
+                "response_latency": np.inf,
             }
+        elif response_event[0]=='hit':
+            # hit
+            return  {
+                # "response_frame": frame,
+                "response_type": [],
+                "response_time": [],
+                "change_time": change_event[2],
+                "change_frame": change_event[3],
+                "response_latency": response_event[2]-change_event[2],
+            }
+            
+        else:
+            raise Exception('something went wrong')
+    elif change_event[0]=='sham_change':
+        if response_event is None:
+            # correct reject
+            return  {
+                # "response_frame": frame,
+                "response_type": [],
+                "response_time": [],
+                "change_time": change_event[2],
+                "change_frame": change_event[3],
+                "response_latency": np.inf,
+            }
+        elif response_event[0]=='false_alarm':
+            # false alarm
+            return  {
+                # "response_frame": frame,
+                "response_type": [],
+                "response_time": [],
+                "change_time": change_event[2],
+                "change_frame": change_event[3],
+                "response_latency": response_event[2]-change_event[2],
+            }
+        else:
+            raise Exception('something went wrong')    
     else:
-        return {
-            # "response_frame": None,
-            "response_time": None,
-            "response_type": None,
-            "response_latency": np.inf,
-        }
+        raise Exception('something went wrong')
+
+
 
 
 def annotate_rewards(trial):
@@ -160,11 +217,17 @@ def annotate_rewards(trial):
     -----
     - time is seconds since start of experiment
     """
+    
+    if len(trial['rewards'])>0:
+        volume_dispensed = sum([r[0] for r in trial['rewards']])
+    else:
+        volume_dispensed = 0.0
+    
     return {
         "auto_rewarded_trial": trial["trial_params"]["auto_reward"] if trial['trial_params']['catch']==False else None,
         "cumulative_volume": trial["cumulative_volume"],
         "cumulative_reward_number": trial["cumulative_rewards"],
-        "reward_volume": trial.get("volume_dispensed"),  # this doesn't exist in our current iteration of foraging2 outputs but should exist very soon
+        "reward_volume": volume_dispensed,
         "reward_times": [reward[1] for reward in trial["rewards"]],
         "reward_frames": [reward[2] for reward in trial["rewards"]],
         "rewarded": trial["trial_params"]["catch"]==False,  # justink said: assume go trials are catch != True, assume go trials are the only type of rewarded trials
@@ -243,10 +306,6 @@ def annotate_stimuli(trial, stimuli):
             name of the change image
         change_image_category: str
             category of the change image
-        change_frame: int
-            frame index of "change event"
-        change_time: float
-            time (s) of the "change event"
         change_orientation: float
             the orientation of the change image
         change_contrast: float
@@ -282,14 +341,12 @@ def annotate_stimuli(trial, stimuli):
             "initial_image_name": None,
             "change_image_name": None,
             "change_image_category": None,
-            "change_frame": None,
-            "change_time": None,
             "change_orientation": None,
             "change_contrast": None,
             "initial_orientation": None,
             "initial_contrast": None,
             "delta_orientation": None,
-            "stimulus_on_frames": None,
+            "stimulus_on_frames": [],
         }
 
     (from_group, from_name, ), (to_group, to_name), frame, time = stimulus_change
@@ -318,8 +375,6 @@ def annotate_stimuli(trial, stimuli):
             "initial_image_name": None,
             "change_image_name": None,
             "change_image_category": None,
-            "change_frame": frame,
-            "change_time": time,
             "change_orientation": change_orientation,
             "change_contrast": change_changes.get("constrast"),
             "initial_orientation": initial_orientation,
@@ -333,8 +388,6 @@ def annotate_stimuli(trial, stimuli):
             "initial_image_name": from_name,
             "change_image_name": to_name,
             "change_image_category": to_group,
-            "change_frame": frame,
-            "change_time": time,
             "change_orientation": None,
             "change_contrast": None,
             "initial_contrast": None,
@@ -417,8 +470,13 @@ def annotate_trials(trial):
     except IndexError:
         trial_duration = None
 
+        
+    if any([ev[0]=='abort' for ev in trial['events']]):
+        trial_type = 'aborted'
+    else:
+        trial_type = "catch" if trial["trial_params"]["catch"] else "go"
     return {
-        "trial_type": "catch" if trial["trial_params"]["catch"] else "go",
+        "trial_type": trial_type,
         "trial_duration": trial_duration,
     }
 

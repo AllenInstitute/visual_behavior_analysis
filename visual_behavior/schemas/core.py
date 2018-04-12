@@ -184,6 +184,7 @@ class TrialSchema(Schema):
     optogenetics = fields.Bool(
         description='whether optogenetic stimulation was applied on this trial',
         required=True,
+        allow_none=True,
     )
 
     publish_time = fields.Str(
@@ -227,9 +228,6 @@ class MetadataSchema(Schema):
     startdatetime = fields.String(
         description='Start time of visual behavior session in ISO 8601',
         required=True,
-    )
-    rig_id = fields.String(
-        description='short name of rig',
     )
     computer_name = fields.String(
         description='hostname of stimulus computer',
