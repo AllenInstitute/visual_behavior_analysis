@@ -154,6 +154,10 @@ def load_trials(data, time=None):
         trials[col] = trials[col].map(stringify)
 
     trials['change_frame'] = trials['change_frame'].map(lambda x: int(x) if np.isfinite(x) else None)
+    trials["change_image_category"] = trials["change_image_category"].apply(lambda x: x if x else np.nan)  # use np.nan instead of NoneType
+    trials["change_image_name"] = trials["change_image_name"].apply(lambda x: x if x else np.nan)  # use np.nan instead of NoneType
+    trials["initial_image_category"] = trials["initial_image_category"].apply(lambda x: x if x else np.nan)  # use np.nan instead of NoneType
+    trials["initial_image_name"] = trials["initial_image_name"].apply(lambda x: x if x else np.nan)  # use np.nan instead of NoneType
 
     return trials
 

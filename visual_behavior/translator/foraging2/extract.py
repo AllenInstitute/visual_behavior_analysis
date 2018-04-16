@@ -50,7 +50,6 @@ def annotate_licks(trial):
     """
     return {
         "lick_times": [lick[0] for lick in trial["licks"]],
-        # "lick_frames": [lick[1] for lick in trial["licks"]],
     }
 
 
@@ -97,14 +96,14 @@ def annotate_responses(trial):
             difference between stimulus change and response, np.nan if a change doesn't
             occur, np.inf if a change occurs but a response doesn't occur
         rewarded: boolean, None
-            
+
 
     Notes
     -----
     - time is seconds since start of experiment
     - 03/13/18: justin did not know what to use for `response_type` key so it will be None
     """
-    
+
     for event in trial['events']:
         if event[0]=='stimulus_changed':
             change_event = event
@@ -114,7 +113,7 @@ def annotate_responses(trial):
             break
         else:
             change_event = None
-            
+
     for event in trial['events']:
         if event[0]=='hit':
             response_event = event
@@ -124,7 +123,7 @@ def annotate_responses(trial):
             break
         else:
             response_event = None
-            
+
     if change_event is None:
         # aborted
         return  {
@@ -136,7 +135,7 @@ def annotate_responses(trial):
             "change_time": None,
         }
 
-    elif change_event[0]=='stimulus_changed':
+    elif change_event[0] == 'stimulus_changed':
         if response_event is None:
             # miss
             return  {
@@ -147,7 +146,7 @@ def annotate_responses(trial):
                 "change_frame": change_event[3],
                 "response_latency": np.inf,
             }
-        elif response_event[0]=='hit':
+        elif response_event[0] == 'hit':
             # hit
             return  {
                 # "response_frame": frame,
@@ -155,12 +154,12 @@ def annotate_responses(trial):
                 "response_time": [],
                 "change_time": change_event[2],
                 "change_frame": change_event[3],
-                "response_latency": response_event[2]-change_event[2],
+                "response_latency": response_event[2] - change_event[2],
             }
-            
+
         else:
             raise Exception('something went wrong')
-    elif change_event[0]=='sham_change':
+    elif change_event[0] == 'sham_change':
         if response_event is None:
             # correct reject
             return  {
@@ -171,7 +170,7 @@ def annotate_responses(trial):
                 "change_frame": change_event[3],
                 "response_latency": np.inf,
             }
-        elif response_event[0]=='false_alarm':
+        elif response_event[0] == 'false_alarm':
             # false alarm
             return  {
                 # "response_frame": frame,
@@ -179,10 +178,10 @@ def annotate_responses(trial):
                 "response_time": [],
                 "change_time": change_event[2],
                 "change_frame": change_event[3],
-                "response_latency": response_event[2]-change_event[2],
+                "response_latency": response_event[2] - change_event[2],
             }
         else:
-            raise Exception('something went wrong')    
+            raise Exception('something went wrong')
     else:
         raise Exception('something went wrong')
 
@@ -217,20 +216,14 @@ def annotate_rewards(trial):
     -----
     - time is seconds since start of experiment
     """
-    
-    if len(trial['rewards'])>0:
-        volume_dispensed = sum([r[0] for r in trial['rewards']])
-    else:
-        volume_dispensed = 0.0
-    
     return {
-        "auto_rewarded_trial": trial["trial_params"]["auto_reward"] if trial['trial_params']['catch']==False else None,
+        "auto_rewarded_trial": trial["trial_params"]["auto_reward"] if trial['trial_params']['catch'] == False else None,
         "cumulative_volume": trial["cumulative_volume"],
         "cumulative_reward_number": trial["cumulative_rewards"],
-        "reward_volume": volume_dispensed,
+        "reward_volume": sum([r[0] for r in trial.get("rewards", [])]),
         "reward_times": [reward[1] for reward in trial["rewards"]],
         "reward_frames": [reward[2] for reward in trial["rewards"]],
-        "rewarded": trial["trial_params"]["catch"]==False,  # justink said: assume go trials are catch != True, assume go trials are the only type of rewarded trials
+        "rewarded": trial["trial_params"]["catch"] == False,  # justink said: assume go trials are catch != True, assume go trials are the only type of rewarded trials
     }
 
 
@@ -266,7 +259,7 @@ def annotate_schedule_time(trial, pre_change_time):
     warnings.warn("`scheduled_change_time` isn't retrievable and will be None")
     try:
         start_time, start_frame = trial["events"][0][2:4]
-        # end_time, end_frame = trial["events"][-1][2:4]
+        end_time, end_frame = trial["events"][-1][2:4]
     except IndexError:
         return {
             "start_time": None,
@@ -279,9 +272,9 @@ def annotate_schedule_time(trial, pre_change_time):
     return {
         "start_time": start_time,
         "start_frame": start_frame,
-        "scheduled_change_time": None,
-        # "end_time": end_time,
-        # "end_frame": end_frame,
+        "scheduled_change_time": trial["trial_params"].get("change_time"),
+        "end_time": end_time,
+        "end_frame": end_frame,
     }
 
 
@@ -356,6 +349,8 @@ def annotate_stimuli(trial, stimuli):
     # initial is like ori before, contrast before...etc
     # type is image or grating, changes is a dictionary of changes make sure each change type is lowerccase string...
 
+    change_time, change_frame = trial["stimulus_changes"][0][2:4]
+
     if implied_type in ("DoCGratingStimulus", ):
         first_frame, last_frame = _get_trial_frame_bounds(trial)
         initial_changes, change_changes = _get_stimulus_attr_changes(
@@ -381,6 +376,8 @@ def annotate_stimuli(trial, stimuli):
             "initial_contrast": initial_changes.get("contrast"),
             "delta_orientation": delta_orientation,
             "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
+            "change_time": change_time,
+            "change_frame": change_frame,
         }
     elif implied_type in ("DoCImageStimulus", ):
         return {
@@ -393,6 +390,8 @@ def annotate_stimuli(trial, stimuli):
             "initial_contrast": None,
             "delta_orientation": None,
             "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
+            "change_time": change_time,
+            "change_frame": change_frame,
         }
     else:
         raise ValueError("invalid implied type: {}".format(implied_type))
@@ -470,7 +469,7 @@ def annotate_trials(trial):
     except IndexError:
         trial_duration = None
 
-        
+
     if any([ev[0]=='abort' for ev in trial['events']]):
         trial_type = 'aborted'
     else:
@@ -869,10 +868,9 @@ def get_mouse_id(exp_data):
     str or None
         id of the mouse or None if not found
     """
-    return behavior_items_or_top_level(exp_data) \
-        .get("config", {}) \
-        .get("behavior", {}) \
-        .get("mouse_id")
+    behavior_items = behavior_items_or_top_level(exp_data)
+    return behavior_items.get("config", {}).get("behavior", {}).get("mouse_id") or \
+        behavior_items.get("cl_params", {}).get("mouse_id")
 
 
 def get_pre_change_time(data):
@@ -934,9 +932,9 @@ def get_user_id(exp_data):
     str or None
         the id of the user or None if not found
     """
-    return behavior_items_or_top_level(exp_data) \
-        .get("cl_params", {}) \
-        .get("user_id")
+    behavior_items = behavior_items_or_top_level(exp_data)
+    return behavior_items.get("config", {}).get("behavior", {}).get("user_id") or \
+        behavior_items.get("cl_params", {}).get("user_id")
 
 
 def get_session_id(exp_data):
@@ -1175,3 +1173,35 @@ def get_unified_draw_log(data):
         pass
 
     return unified_draw_log
+
+
+def get_stimulus_distribution(data):
+    """Get stimulus distribution type
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    str or None
+        distribution type or None if not found
+    """
+    return data["items"]["behavior"]["config"].get("change_time_dist")
+
+
+def get_delta_mean(data):
+    """Get delta mean
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float or None
+        delta mean or None if not found
+    """
+    return data["items"]["behavior"].get("DoC", {}).get("change_time_scale")

@@ -222,7 +222,7 @@ def test_get_time(monkeypatch, foraging2_data_fixture):
 
     np.testing.assert_almost_equal(
         extract.get_time(foraging2_data_fixture)[:10],
-        np.array([0.,  16.,  32.,  48.,  64.,  80.,  96., 112., 128., 144.])
+        np.array([0.0 , 0.016, 0.032, 0.048, 0.064, 0.08, 0.096, 0.112, 0.128, 0.144])
     )
 
 
@@ -265,7 +265,7 @@ def test_get_licks(monkeypatch, foraging2_data_fixture):
 
     expected = pd.DataFrame(data={
         "frame": np.array([196, 886, 1392, ]),
-        "time": np.array([3136.0, 14176.0, 22272.0, ])
+        "time": np.array([3.136, 14.176, 22.272, ]),
     })
 
     pd.testing.assert_frame_equal(
@@ -282,10 +282,10 @@ def test_get_licks(monkeypatch, foraging2_data_fixture):
     (
         {},
         pd.DataFrame(data={
-            "time": np.array([0.0, 16.0, 32.0, 48.0, 64.0]),
-            "speed (cm/s)": np.array([np.nan, 0, 0, 0, 0, ]),
-            "acceleration (cm/s^2)": np.array([np.nan, 0, 0, 0, 0]),
-            "jerk (cm/s^3)": np.array([np.nan, 0, 0, 0, 0]),
+            "time": np.array([0.0, 0.016, 0.032, 0.048, 0.064, ]),
+            "speed (cm/s)": np.array([0, 0, 0, 0, 0, ]),
+            "acceleration (cm/s^2)": np.array([0, 0, 0, 0, 0, ]),
+            "jerk (cm/s^3)": np.array([0, 0, 0, 0, 0, ]),
         }),
     ),
 ])
@@ -293,7 +293,7 @@ def test_get_running_speed(monkeypatch, foraging2_data_fixture, kwargs, expected
     monkeypatch.setattr(
         extract,
         "get_vsyncs",
-        lambda data: [16] * data["items"]["behavior"]["update_count"]
+        lambda data: [16] * (data["items"]["behavior"]["update_count"] - 1)  # n vsyncs should be update_count - 1
     )
 
     pd.testing.assert_frame_equal(
@@ -309,7 +309,8 @@ def test_get_running_speed(monkeypatch, foraging2_data_fixture, kwargs, expected
 def test_get_stimulus_log(foraging2_data_fixture):
     expected = {
         "gratings": np.array([
-            True, True, True, True, True, True, True, True, True, True,
+            True, True, True, True, True,
+            True, True, True, True, True,
         ]),
     }
 
@@ -364,7 +365,7 @@ def test_get_session_duration(monkeypatch, foraging2_data_fixture):
         lambda data: [16] * data["items"]["behavior"]["update_count"]
     )
 
-    assert extract.get_session_duration(foraging2_data_fixture) == 27232.0
+    assert extract.get_session_duration(foraging2_data_fixture) == 27.232
 
 
 def test_get_stimulus_duration(foraging2_data_fixture):
@@ -388,7 +389,6 @@ def test_get_stimuli(foraging2_data_fixture, foraging2_stimuli_fixture):
 def test_annotate_licks(foraging2_trial_fixture):
     assert extract.annotate_licks(foraging2_trial_fixture) == {
         "lick_times": [6.7089195225430425],
-        "lick_frames": [196],
     }
 
 
@@ -402,10 +402,11 @@ def test_annotate_responses(foraging2_data_fixture):
 
     assert extract.annotate_responses(trial) == \
         {
-            'response_frame': 886,
-            'response_time': 17.755205614796406,
-            'response_latency': 0.2036553741583198,
-            'response_type': None
+            'response_time': [],
+            'response_latency': 0.2031074001400377,
+            'response_type': [],
+            'change_time': 17.552098214656368,
+            'change_frame': 874,
         }
 
 
@@ -415,7 +416,7 @@ def test_annotate_rewards(foraging2_trial_fixture):
             'auto_rewarded_trial': True,
             'cumulative_volume': 0.008,
             'cumulative_reward_number': 1,
-            'reward_volume': None,
+            'reward_volume': 0.007,
             'reward_times': [6.513225269904879],
             'reward_frames': [184],
             'rewarded': True
@@ -426,7 +427,7 @@ def test_annotate_schedule_time(foraging2_data_fixture, foraging2_trial_fixture)
     pre_change_time = extract.get_pre_change_time(foraging2_data_fixture)
     assert extract.annotate_schedule_time(foraging2_trial_fixture, pre_change_time) == \
         {
-            'scheduled_change_time': None,
+            'scheduled_change_time': 0.0960600196801137,
             'start_frame': 0,
             'start_time': 3.564911950538426,
             'end_frame': 516,

@@ -6,7 +6,8 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     annotate_schedule_time, annotate_stimuli, get_user_id, get_mouse_id, \
     get_blank_duration_range, get_device_name, get_session_duration, \
     get_stimulus_duration, get_task_id, annotate_trials, get_response_window, \
-    get_licks, get_running_speed, get_params, get_time, get_trials
+    get_licks, get_running_speed, get_params, get_time, get_trials, \
+    get_stimulus_distribution, get_delta_mean
 
 
 def data_to_change_detection_core(data):
@@ -159,11 +160,18 @@ def data_to_metadata(data):
     params["response_window"] = list(params["response_window"])  # tuple to list
     params["periodic_flash"] = list(params["periodic_flash"])  # tuple to list
 
+    # ugly python3 compat dict key iterating...
+    try:
+        stimulus_category = next(iter(stim_tables))
+    except StopIteration:
+        stimulus_category = None
+
     return {
         "startdatetime": start_time_datetime.astimezone(tz.gettz("UTC")).isoformat(),
         "rig_id": None,  # not obtainable because device_name is not obtainable
         "computer_name": device_name,
         "reward_vol": params["reward_volume"],
+        "rewardvol": params["reward_volume"],  # for compatibility with legacy code
         "auto_reward_vol": params["auto_reward_volume"],
         "params": params,
         "mouse_id": get_mouse_id(data),
@@ -173,17 +181,18 @@ def data_to_metadata(data):
         "stop_time": get_session_duration(data),
         "user_id": get_user_id(data),
         "lick_detect_training_mode": False,  # currently no choice
-        "blank_screen_on_timeout": None,  # not obtainable
+        "blank_screen_on_timeout": False,  # always false for now 041318
         "stim_duration": get_stimulus_duration(data) * 1000,  # seconds to milliseconds
         "blank_duration_range": [
             get_blank_duration_range(data)[0],
             get_blank_duration_range(data)[1],
         ],  # seconds to miliseconds
         "delta_minimum": get_pre_change_time(data),
-        "stimulus_distribution": 'exponential',  # not obtainable
-        "delta_mean": None,  # not obtainable
+        "stimulus_distribution": get_stimulus_distribution(data),  # not obtainable
+        "delta_mean": get_delta_mean(data),  # not obtainable
         "trial_duration": None,  # not obtainable
         "n_stimulus_frames": n_stimulus_frames,
+        "stimulus": stimulus_category,  # needs to be a string so we will just grab the first stimulus category we find even though there can be many
     }
 
 
