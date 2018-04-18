@@ -246,10 +246,6 @@ def annotate_schedule_time(trial, pre_change_time):
             frame index of the start of the trial
         scheduled_change_time: float
             time (s) scheduled for the change to occur
-        end_time: float
-            time (s) of the end of the trial
-        end_frame: int
-            frame index of the end of the trial
 
     Notes
     -----
@@ -259,22 +255,17 @@ def annotate_schedule_time(trial, pre_change_time):
     warnings.warn("`scheduled_change_time` isn't retrievable and will be None")
     try:
         start_time, start_frame = trial["events"][0][2:4]
-        end_time, end_frame = trial["events"][-1][2:4]
     except IndexError:
         return {
             "start_time": None,
             "start_frame": None,
             "scheduled_change_time": None,
-            "end_time": None,
-            "end_frame": None,
         }
 
     return {
         "start_time": start_time,
         "start_frame": start_frame,
         "scheduled_change_time": trial["trial_params"].get("change_time"),
-        "end_time": end_time,
-        "end_frame": end_frame,
     }
 
 
