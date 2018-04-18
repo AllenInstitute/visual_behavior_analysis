@@ -272,7 +272,7 @@ def annotate_schedule_time(trial, pre_change_time):
     return {
         "start_time": start_time,
         "start_frame": start_frame,
-        "scheduled_change_time": trial["trial_params"].get("change_time"),
+        "scheduled_change_time": start_time + trial["trial_params"].get("change_time"),  # adding start time will put this in time relative to start of exp
         "end_time": end_time,
         "end_frame": end_frame,
     }
@@ -342,19 +342,17 @@ def annotate_stimuli(trial, stimuli):
             "stimulus_on_frames": [],
         }
 
-    (from_group, from_name, ), (to_group, to_name), frame, time = stimulus_change
+    (from_group, from_name, ), (to_group, to_name), change_time, change_frame = stimulus_change
     _, stim_dict = _resolve_stimulus_dict(stimuli, from_group)
     implied_type = stim_dict["obj_type"]
 
     # initial is like ori before, contrast before...etc
     # type is image or grating, changes is a dictionary of changes make sure each change type is lowerccase string...
 
-    change_time, change_frame = trial["stimulus_changes"][0][2:4]
-
     if implied_type in ("DoCGratingStimulus", ):
         first_frame, last_frame = _get_trial_frame_bounds(trial)
         initial_changes, change_changes = _get_stimulus_attr_changes(
-            stim_dict, frame, first_frame, last_frame
+            stim_dict, change_frame, first_frame, last_frame
         )
 
         initial_orientation = initial_changes.get("ori")
@@ -655,7 +653,8 @@ def get_response_window(data):
             maximum time in seconds after a change in which a response should occur
     """
     return data["items"]["behavior"] \
-        .get("params", {}) \
+        .get("config", {}) \
+        .get("DoC", {}) \
         .get("response_window")
 
 
@@ -1154,9 +1153,9 @@ def get_scheduled_trial_duration(data):
     float or None
         trial duration in seconds or None if not found
     """
-    return behavior_items_or_top_level(data) \
-        .get("params", {}) \
-        .get("trial_duration")
+    doc_config = behavior_items_or_top_level(data).get("DoC", {})
+    return  doc_config["stimulus_window"] + doc_config["pre_change_time"] \
+        + doc_config["initial_blank"]  # we probably want to hard-fail if one of these isnt present
 
 
 def get_unified_draw_log(data):
