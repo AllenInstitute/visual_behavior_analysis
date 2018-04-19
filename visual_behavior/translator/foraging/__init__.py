@@ -127,7 +127,7 @@ def load_trials(data, time=None):
     }
 
     trials = (
-        pd.DataFrame(data['triallog'],columns=columns)
+        pd.DataFrame(data['triallog'], columns=columns)
         .astype(dtype=forced_types)
     )
 
@@ -140,7 +140,7 @@ def load_trials(data, time=None):
 
     def stringify(x):
         try:
-            if np.isfinite(x)==True:
+            if np.isfinite(x) == True:
                 return str(x)
             else:
                 return ''

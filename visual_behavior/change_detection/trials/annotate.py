@@ -425,7 +425,7 @@ def update_times(trials, time):
     def make_array(val):
         try:
             len(val)
-        except TypeError as e:
+        except TypeError:
             val = [val, ]
         return val
 
