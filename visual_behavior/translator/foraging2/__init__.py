@@ -5,8 +5,8 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     annotate_licks, annotate_rewards, annotate_optogenetics, annotate_responses, \
     annotate_schedule_time, annotate_stimuli, get_user_id, get_mouse_id, \
     get_blank_duration_range, get_device_name, get_session_duration, \
-    get_stimulus_duration, get_task_id, annotate_trials, get_response_window, \
-    get_licks, get_running_speed, get_params, get_time, get_trials, \
+    get_stimulus_duration, get_task_id, get_response_window, get_licks, \
+    get_running_speed, get_params, get_time, get_trials, \
     get_stimulus_distribution, get_delta_mean
 
 
@@ -303,7 +303,7 @@ def data_to_trials(data):
         expand_dict(trials, annotate_responses(trial), index)
         expand_dict(trials, annotate_schedule_time(trial, pre_change_time), index)
         expand_dict(trials, annotate_stimuli(trial, stimuli), index)
-        #expand_dict(trials, annotate_trials(trial), index)
+        # expand_dict(trials, annotate_trials(trial), index)
         expand_dict(trials, experiment_params, index)
 
     trials = pd.DataFrame(data=trials)
