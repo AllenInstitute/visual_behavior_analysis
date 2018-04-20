@@ -16,7 +16,7 @@ def _check_syntax(path):
     elif os.path.isfile(path):
         if os.path.splitext(path)[1] == ".pyc":  # don't process .pyc
             return
-            
+
         with open(path, "rb") as sstream:
             ast.parse(sstream.read(), filename=path)
     else:
@@ -24,19 +24,11 @@ def _check_syntax(path):
 
 
 @pytest.mark.parametrize("path", [
-    os.path.join(VISUAL_BEHAVIOR_DIR, "cohorts"),
-    os.path.join(VISUAL_BEHAVIOR_DIR, "inscopix"),
-    os.path.join(VISUAL_BEHAVIOR_DIR, "metrics"),
     os.path.join(VISUAL_BEHAVIOR_DIR, "__init__.py"),
     os.path.join(VISUAL_BEHAVIOR_DIR, "analyze.py"),
-    os.path.join(VISUAL_BEHAVIOR_DIR, "core.py"),
-    os.path.join(VISUAL_BEHAVIOR_DIR, "data.py"),
     os.path.join(VISUAL_BEHAVIOR_DIR, "devices.py"),
     os.path.join(VISUAL_BEHAVIOR_DIR, "io.py"),
-    os.path.join(VISUAL_BEHAVIOR_DIR, "masks.py"),
-    os.path.join(VISUAL_BEHAVIOR_DIR, "nwb.py"),
     os.path.join(VISUAL_BEHAVIOR_DIR, "plotting.py"),
-    os.path.join(VISUAL_BEHAVIOR_DIR, "summarize.py"),
     os.path.join(VISUAL_BEHAVIOR_DIR, "utilities.py"),
 ])
 def test_syntax(path):
