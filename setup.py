@@ -4,7 +4,7 @@ import setuptools
 
 setuptools.setup(
     name="visual_behavior",
-    version="0.2.0",
+    version="0.3.0",
     url="http://stash.corp.alleninstitute.org/users/justink/repos/visual_behavior/browse",
     author="Justin Kiggins",
     author_email="justink@alleninstitute.org",
