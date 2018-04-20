@@ -36,7 +36,7 @@ def make_info_table(extended_trials, ax):
             ['Training Day', 'training_day'],
             ['Time', 'extended_trials.iloc[0].startdatetime.strftime("%H:%M")'],
             ['Duration (minutes)', 'round(extended_trials.iloc[0]["session_duration"]/60.,2)'],
-            ['Total water received (ml)', 'df["cumulative_volume"].max()'],
+            ['Total water received (ml)', 'extended_trials["cumulative_volume"].max()'],
             ['Mouse ID', 'extended_trials.iloc[0]["mouse_id"]'],
             ['Task ID', 'extended_trials.iloc[0]["task"]'],
             ['Trained by', 'user_id'],
