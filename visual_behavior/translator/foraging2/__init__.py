@@ -174,14 +174,14 @@ def data_to_metadata(data):
         "rewardvol": params["reward_volume"],  # for compatibility with legacy code
         "auto_reward_vol": params["auto_reward_volume"],
         "params": params,
-        "mouse_id": get_mouse_id(data),
+        "mouseid": get_mouse_id(data),
         "response_window": list(get_response_window(data)),  # tuple to list
         "task": get_task_id(data),
         "stage": None,  # not implemented currently
-        "stop_time": get_session_duration(data),
-        "user_id": get_user_id(data),
+        "stoptime": get_session_duration(data),
+        "userid": get_user_id(data),
         "lick_detect_training_mode": False,  # currently no choice
-        "blank_screen_on_timeout": False,  # always false for now 041318
+        "blankscreen_on_timeout": False,  # always false for now 041318
         "stim_duration": get_stimulus_duration(data) * 1000,  # seconds to milliseconds
         "blank_duration_range": [
             get_blank_duration_range(data)[0],
