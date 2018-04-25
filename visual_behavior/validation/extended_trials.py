@@ -375,3 +375,19 @@ def test_number_aborted_trial_repeats(trials,failure_repeats,tolerance=0.01):
 
     #return True if all blocks matched
     return all(block_has_matching_scheduled_change_time)
+
+def test_ignore_false_alarms(trials,ignore_false_alarms):
+    '''
+    If `ignore_false_alarms` is True, no aborted trials or timeout periods should occur.
+    This is used on the 'day 0' session, where we don't want to penalize exploratory licking
+    '''
+    if ignore_false_alarms==True:
+        #if ignore_false_alarms is True, there should be 0 aborted trials
+        #Of course, this depends on the aborted trials having been properly identified
+        if len(trials[trials.trial_type=='aborted']) == 0:
+            return True
+        else:
+            return False
+    #test is only valid if the 'ignore_false_alarms' parameter is True. If not the case, just pass the test
+    else:
+        return True
