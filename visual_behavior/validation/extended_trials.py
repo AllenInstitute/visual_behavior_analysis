@@ -210,6 +210,10 @@ def test_min_change_time(trials,pre_change_time):
     '''change time in trial should never be less than pre_change_time'''
     return np.nanmin((trials['change_time']-trials['starttime']).values)>pre_change_time
 
+def test_max_change_time(trials,pre_change_time,stimulus_window):
+    '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
+    return np.nanmax((trials['change_time']-trials['starttime']).values)<(pre_change_time+stimulus_window)
+
 def test_reward_follows_first_lick_in_window(trials,tolerance=0.001):
     '''reward should happen immediately (within tolerance) of first lick in window on non-autorewarded go trials'''
     #get all go_trials without auto_rewards
