@@ -21,10 +21,9 @@ class ChangeDetectionDailyPlotSchema(ArgSchema):
     )
 
 
-def main():
-    mod = ArgSchemaParser(schema_type=ChangeDetectionDailyPlotSchema)
+def make_and_save_plot(data_path,figure_path):
 
-    data = pd.read_pickle(mod.args['data_path'])
+    data = pd.read_pickle(data_path)
 
     try:
         core_data = foraging.data_to_change_detection_core(data)
@@ -42,10 +41,19 @@ def main():
     fig = make_daily_figure(extended_trials)
     fig.set_size_inches(11, 8.5)
     fig.savefig(
-        mod.args['figure_path'],
+        figure_path,
         transparent=False,
         orientation='landscape',
         dpi=300,
+    )
+    return fig
+
+
+def main():
+    mod = ArgSchemaParser(schema_type=ChangeDetectionDailyPlotSchema)
+    make_and_save_plot(
+        data_path=mod.args['data_path'],
+        figure_path=mod.args['figure_path'],
     )
 
 
