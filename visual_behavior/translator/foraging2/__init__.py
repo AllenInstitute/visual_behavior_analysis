@@ -7,7 +7,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_blank_duration_range, get_device_name, get_session_duration, \
     get_stimulus_duration, get_task_id, get_response_window, get_licks, \
     get_running_speed, get_params, get_time, get_trials, \
-    get_stimulus_distribution, get_delta_mean
+    get_stimulus_distribution, get_delta_mean, get_stage
 
 
 def data_to_change_detection_core(data):
@@ -177,7 +177,7 @@ def data_to_metadata(data):
         "mouseid": get_mouse_id(data),
         "response_window": list(get_response_window(data)),  # tuple to list
         "task": get_task_id(data),
-        "stage": None,  # not implemented currently
+        "stage": get_stage(data),  # not implemented currently
         "stoptime": get_session_duration(data),
         "userid": get_user_id(data),
         "lick_detect_training_mode": False,  # currently no choice
