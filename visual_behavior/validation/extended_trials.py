@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .core import validate_trials
+from .trials import validate_trials
 from ..schemas.extended_trials import ExtendedTrialSchema
 from ..validation import is_valid_dataframe
 
@@ -66,7 +66,7 @@ def get_first_lick_in_response_window(row):
         return licks_in_window[0]
     else:
         return np.nan
-    
+
 def get_first_lick_relative_to_change(row):
     '''returns first lick relative to scheduled change time, nan if no such lick exists'''
     licks = np.array(row['lick_times'])-row['change_time']
@@ -74,7 +74,7 @@ def get_first_lick_relative_to_change(row):
         return licks[0]
     else:
         return np.nan
-    
+
 def get_first_lick_relative_to_scheduled_change(row):
     '''returns first lick relative to scheduled change time, nan if no such lick exists'''
     licks = np.array(row['lick_times'])-row['scheduled_change_time']
@@ -119,30 +119,30 @@ def identify_consecutive_aborted_blocks(trials,failure_repeats):
 
     #get scheduled change time relative to trial start
     trials['scheduled_change_time_trial_time']=trials['scheduled_change_time']-trials['starttime']
-    
+
     return trials
-    
+
 
 ## test functions:
 def validate_autoreward_volume(trials,auto_reward_volume):
     '''Each dispense of water for autorewards should be `auto_reward_vol`.'''
-    
+
     #get all auto reward trials
     auto_reward_trials=get_autoreward_trials(trials)
     #check to see if any trials contain a reward volume that does not match expected volume
     return all(auto_reward_trials[auto_reward_trials.number_of_rewards>0].reward_volume == auto_reward_volume)
 
 def validate_number_of_warmup_trials(trials,expected_number_of_warmup_trials):
-    ''' 
+    '''
     The first `warmup_trials` go-trials (excluding aborted trials) of the session should be change trials
-    
-    The number of warmup trials should not exceed `warmup_trials` UNLESS `warmup_trials` is -1, 
+
+    The number of warmup trials should not exceed `warmup_trials` UNLESS `warmup_trials` is -1,
     in which case all non-aborted trials should be autoreward trials
     '''
-    
+
     #find all of the warmup trials
     warmup_trials = get_warmup_trials(trials)
-    
+
     #check to ensure that the number of GO warmup trials matches the expected number
     if expected_number_of_warmup_trials != -1:
         return len(warmup_trials[warmup_trials.trial_type=='go'])==expected_number_of_warmup_trials
@@ -151,13 +151,13 @@ def validate_number_of_warmup_trials(trials,expected_number_of_warmup_trials):
 
 def validate_reward_delivery_on_warmup_trials(trials,tolerance=0.001):
     '''all warmup trials should have rewards presented simultaneously with the change image'''
-    
+
     #find all of the warmup trials
     warmup_trials = get_warmup_trials(trials)
-    
+
     #find only go warmup trials
     go_warmup_trials = warmup_trials[warmup_trials.trial_type=='go']
-    
+
     #get time difference between each reward and change_time
     try:
         time_delta = [abs(rt[0]-ct) for rt,ct in zip(go_warmup_trials.reward_times,go_warmup_trials.change_time)]
@@ -166,12 +166,12 @@ def validate_reward_delivery_on_warmup_trials(trials,tolerance=0.001):
     except:
         #if the above fails, fail the test
         return False
-    
+
 def validate_autorewards_after_N_consecutive_misses(trials,autoreward_after_consecutive_misses=10):
     go_trials=trials[trials.trial_type=='go']
     auto_reward_when_expected = []
     consecutive_misses = 0
-    
+
     for idx,row in go_trials.iterrows():
         miss = 1 if row['response']==0 else 0
         auto_rewarded = 1 if row['auto_rewarded'] else 0
@@ -179,7 +179,7 @@ def validate_autorewards_after_N_consecutive_misses(trials,autoreward_after_cons
         if consecutive_misses > autoreward_after_consecutive_misses:
             #these are trials when an autoreward is expected
             auto_reward_when_expected.append(row['auto_rewarded'])
-    
+
     #all trials with expected autorewards should be True
     return all(auto_reward_when_expected)
 
@@ -325,7 +325,7 @@ def validate_duration_and_volume_limit(trials,expected_duration,volume_limit,tim
         else:
             #otherwise, return True
             return True
-        
+
 def validate_catch_frequency(trials,expected_catch_frequency,rejection_probability=0.05):
     '''
     non-aborted catch trials should comprise `catc_freq` of all non-aborted trials
@@ -341,7 +341,7 @@ def validate_catch_frequency(trials,expected_catch_frequency,rejection_probabili
         return True
     else:
         return False
-    
+
 def validate_stage_present(trials):
     '''
     The parameter `stage` should be recorded in the output file.
@@ -362,10 +362,10 @@ def validate_number_aborted_trial_repeats(trials,failure_repeats,tolerance=0.01)
     '''
     on aborted trials (e.g. early licks), the trial's stimulus parameters should be repeated `failure_repeats` times
     '''
-    
+
     #assign columns to the dataframe to make test possible
     trials=identify_consecutive_aborted_blocks(trials,failure_repeats)
-    
+
     #get all aborted trials
     aborted_trials = trials[trials['trial_type']=='aborted']
 
