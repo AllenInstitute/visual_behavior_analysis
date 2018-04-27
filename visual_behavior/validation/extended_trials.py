@@ -124,7 +124,7 @@ def identify_consecutive_aborted_blocks(trials,failure_repeats):
     
 
 ## test functions:
-def test_autoreward_volume(trials,auto_reward_volume):
+def validate_autoreward_volume(trials,auto_reward_volume):
     '''Each dispense of water for autorewards should be `auto_reward_vol`.'''
     
     #get all auto reward trials
@@ -132,7 +132,7 @@ def test_autoreward_volume(trials,auto_reward_volume):
     #check to see if any trials contain a reward volume that does not match expected volume
     return all(auto_reward_trials[auto_reward_trials.number_of_rewards>0].reward_volume == auto_reward_volume)
 
-def test_number_of_warmup_trials(trials,expected_number_of_warmup_trials):
+def validate_number_of_warmup_trials(trials,expected_number_of_warmup_trials):
     ''' 
     The first `warmup_trials` go-trials (excluding aborted trials) of the session should be change trials
     
@@ -149,7 +149,7 @@ def test_number_of_warmup_trials(trials,expected_number_of_warmup_trials):
     else:
         return len(warmup_trials[warmup_trials.trial_type=='go'])==len(trials[trials.trial_type=='go'])
 
-def test_reward_delivery_on_warmup_trials(trials,tolerance=0.001):
+def validate_reward_delivery_on_warmup_trials(trials,tolerance=0.001):
     '''all warmup trials should have rewards presented simultaneously with the change image'''
     
     #find all of the warmup trials
@@ -167,7 +167,7 @@ def test_reward_delivery_on_warmup_trials(trials,tolerance=0.001):
         #if the above fails, fail the test
         return False
     
-def test_autorewards_after_N_consecutive_misses(trials,autoreward_after_consecutive_misses=10):
+def validate_autorewards_after_N_consecutive_misses(trials,autoreward_after_consecutive_misses=10):
     go_trials=trials[trials.trial_type=='go']
     auto_reward_when_expected = []
     consecutive_misses = 0
@@ -183,7 +183,7 @@ def test_autorewards_after_N_consecutive_misses(trials,autoreward_after_consecut
     #all trials with expected autorewards should be True
     return all(auto_reward_when_expected)
 
-def test_change_on_all_go_trials(trials):
+def validate_change_on_all_go_trials(trials):
     '''ensure that either the orientation or the image_name changes on every go trial'''
     go_trials=trials[trials.trial_type=='go']
     for idx,row in go_trials.iterrows():
@@ -191,7 +191,7 @@ def test_change_on_all_go_trials(trials):
             return False
     return True
 
-def test_no_change_on_all_catch_trials(trials):
+def validate_no_change_on_all_catch_trials(trials):
     '''ensure that neither the orientation nor the image_name changes on every catch trial'''
     go_trials=trials[trials.trial_type=='catch']
     for idx,row in go_trials.iterrows():
@@ -199,22 +199,22 @@ def test_no_change_on_all_catch_trials(trials):
             return False
     return True
 
-def test_intial_and_final_in_non_aborted(trials):
+def validate_intial_and_final_in_non_aborted(trials):
     '''all non-aborted trials should have either an intial and final image OR an initial and final orientation'''
     non_aborted_trials = trials[trials.trial_type!='aborted']
     all_initial = all(~pd.isnull(non_aborted_trials['initial_image_name'])) or all(~pd.isnull(non_aborted_trials['initial_ori']))
     all_final = all(~pd.isnull(non_aborted_trials['change_image_name'])) or all(~pd.isnull(non_aborted_trials['change_ori']))
     return all_initial and all_final
 
-def test_min_change_time(trials,pre_change_time):
+def validate_min_change_time(trials,pre_change_time):
     '''change time in trial should never be less than pre_change_time'''
     return np.nanmin((trials['change_time']-trials['starttime']).values)>pre_change_time
 
-def test_max_change_time(trials,pre_change_time,stimulus_window):
+def validate_max_change_time(trials,pre_change_time,stimulus_window):
     '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
     return np.nanmax((trials['change_time']-trials['starttime']).values)<(pre_change_time+stimulus_window)
 
-def test_reward_follows_first_lick_in_window(trials,tolerance=0.001):
+def validate_reward_follows_first_lick_in_window(trials,tolerance=0.001):
     '''reward should happen immediately (within tolerance) of first lick in window on non-autorewarded go trials'''
     #get all go_trials without auto_rewards
     contingent_go_trials = trials[(trials.trial_type=='go')&(trials.auto_rewarded==False)]
@@ -239,11 +239,11 @@ def test_reward_follows_first_lick_in_window(trials,tolerance=0.001):
 
     return True
 
-def test_never_more_than_one_reward(trials):
+def validate_never_more_than_one_reward(trials):
     '''Only a maximum of one reward should be delivered per trial'''
     return np.max(trials['number_of_rewards'])<=1
 
-def test_lick_before_scheduled_on_aborted_trials(trials):
+def validate_lick_before_scheduled_on_aborted_trials(trials):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, every aborted trial should have a lick before the scheduled change time
@@ -253,7 +253,7 @@ def test_lick_before_scheduled_on_aborted_trials(trials):
     #don't use nanmax. If there's a nan, we expect this to fail
     return np.max(first_lick.values)<0
 
-def test_lick_after_scheduled_on_go_catch_trials(trials):
+def validate_lick_after_scheduled_on_go_catch_trials(trials):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, no non-aborted trials should have a lick before the scheduled change time
@@ -263,7 +263,7 @@ def test_lick_after_scheduled_on_go_catch_trials(trials):
     #use nanmin, it is possible
     return np.nanmin(first_lick.values)>0
 
-def test_initial_matches_final(trials):
+def validate_initial_matches_final(trials):
     trials_to_test=trials[trials['trial_type'].isin(['go','catch'])]
     last_trial_final_im = trials_to_test.iloc[0]['initial_image_name']
     last_trial_final_ori = trials_to_test.iloc[0]['initial_ori']
@@ -278,7 +278,7 @@ def test_initial_matches_final(trials):
 
     return all(image_match) and all(ori_match)
 
-def test_first_lick_after_change_on_nonaborted(trials):
+def validate_first_lick_after_change_on_nonaborted(trials):
     '''
     on GO and CATCH trials, licks should never be observed between the trial start and the first frame of an image change
     '''
@@ -286,7 +286,7 @@ def test_first_lick_after_change_on_nonaborted(trials):
     first_lick_relative_to_change=non_aborted_trials.apply(get_first_lick_relative_to_change,axis=1)
     return np.nanmin(first_lick_relative_to_change.values)>0
 
-def test_trial_ends_without_licks(trials,minimum_no_lick_time):
+def validate_trial_ends_without_licks(trials,minimum_no_lick_time):
     '''
     There should never be a lick within 'minimum_no_lick_time' of trial end
     Task logic should extend trial if mouse is licking near trial end
@@ -298,20 +298,20 @@ def test_trial_ends_without_licks(trials,minimum_no_lick_time):
             return False
     return True
 
-def test_session_within_expected_duration(trials,expected_duration_seconds,tolerance=30):
+def validate_session_within_expected_duration(trials,expected_duration_seconds,tolerance=30):
     '''
     ensure that last trial end time does not exceed expected duration by more than 30 seconds
     '''
     return trials['endtime'].values[-1]<expected_duration_seconds+tolerance
 
-def test_session_ends_at_max_cumulative_volume(trials,volume_limit,tolerance=0.01):
+def validate_session_ends_at_max_cumulative_volume(trials,volume_limit,tolerance=0.01):
     '''
     ensure that earned volume does not exceed volume limit
     build in a tolerance in case reward limit is not even multiple of reward volumes
     '''
     return trials['cumulative_volume'].max() <= volume_limit + tolerance
 
-def test_duration_and_volume_limit(trials,expected_duration,volume_limit,time_tolerance=30):
+def validate_duration_and_volume_limit(trials,expected_duration,volume_limit,time_tolerance=30):
     '''
     The length of a session should not be less than `duration` by more than 30 seconds UNLESS `volume_limit` has been met
     '''
@@ -326,7 +326,7 @@ def test_duration_and_volume_limit(trials,expected_duration,volume_limit,time_to
             #otherwise, return True
             return True
         
-def test_catch_frequency(trials,expected_catch_frequency,rejection_probability=0.05):
+def validate_catch_frequency(trials,expected_catch_frequency,rejection_probability=0.05):
     '''
     non-aborted catch trials should comprise `catc_freq` of all non-aborted trials
     uses scipy's binomial test to ensure that the null hypothesis (catch trials come from a binomial distribution drawn with catch_freq) is true with 95% probability
@@ -342,13 +342,13 @@ def test_catch_frequency(trials,expected_catch_frequency,rejection_probability=0
     else:
         return False
     
-def test_stage_present(trials):
+def validate_stage_present(trials):
     '''
     The parameter `stage` should be recorded in the output file.
     '''
     return all(~pd.isnull(trials['stage']))
 
-def test_task_id_present(trials):
+def validate_task_id_present(trials):
     '''
     The parameter `task_id` should be recorded in the output file.
     '''
@@ -358,7 +358,7 @@ def test_task_id_present(trials):
     except KeyError, e:
         return False
 
-def test_number_aborted_trial_repeats(trials,failure_repeats,tolerance=0.01):
+def validate_number_aborted_trial_repeats(trials,failure_repeats,tolerance=0.01):
     '''
     on aborted trials (e.g. early licks), the trial's stimulus parameters should be repeated `failure_repeats` times
     '''
@@ -380,7 +380,7 @@ def test_number_aborted_trial_repeats(trials,failure_repeats,tolerance=0.01):
     #return True if all blocks matched
     return all(block_has_matching_scheduled_change_time)
 
-def test_ignore_false_alarms(trials,ignore_false_alarms):
+def validate_ignore_false_alarms(trials,ignore_false_alarms):
     '''
     If `ignore_false_alarms` is True, no aborted trials or timeout periods should occur.
     This is used on the 'day 0' session, where we don't want to penalize exploratory licking
