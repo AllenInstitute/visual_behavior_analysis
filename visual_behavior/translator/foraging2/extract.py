@@ -224,7 +224,7 @@ def annotate_rewards(trial):
     }
 
 
-def annotate_schedule_time(trial, pre_change_time):
+def annotate_schedule_time(trial, pre_change_time, initial_blank_duration):
     """Annotate time/scheduling-related information
 
     Parameters
@@ -233,6 +233,8 @@ def annotate_schedule_time(trial, pre_change_time):
         foraging2 shape trial from trial_log
     pre_change_time: float
         minimum time before a stimulus change occurs in the trial
+    initial_blank_duration: float
+        time at start before the prechange window
 
     Returns
     -------
@@ -261,7 +263,12 @@ def annotate_schedule_time(trial, pre_change_time):
     return {
         "start_time": start_time,
         "start_frame": start_frame,
-        "scheduled_change_time": start_time + trial["trial_params"].get("change_time"),  # adding start time will put this in time relative to start of exp
+        "scheduled_change_time": (
+            start_time +
+            pre_change_time +
+            initial_blank_duration +
+            trial["trial_params"]["change_time"]
+        ),  # adding start time will put this in time relative to start of exp, change_time is relative to after prechange + initial_blank_duration, using () because of annoying flake8 bug + noqa directive not working for multiline
         "end_time": end_time,
         "end_frame": end_frame,
     }
@@ -1252,6 +1259,21 @@ def get_delta_mean(data):
         delta mean or None if not found
     """
     return data["items"]["behavior"].get("DoC", {}).get("change_time_scale")
+
+
+def get_initial_blank_duration(data):
+    """Get initial blank duration for each trial
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float or None
+        blank duration in seconds or None if not found
+    """
+    return data["items"]["behavior"].get("DoC", {}).get("initial_blank")
 
 
 def get_stage(data):

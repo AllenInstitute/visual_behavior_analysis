@@ -425,9 +425,9 @@ def test_annotate_rewards(foraging2_trial_fixture):
 
 def test_annotate_schedule_time(foraging2_data_fixture, foraging2_trial_fixture):
     pre_change_time = extract.get_pre_change_time(foraging2_data_fixture)
-    assert extract.annotate_schedule_time(foraging2_trial_fixture, pre_change_time) == \
+    assert extract.annotate_schedule_time(foraging2_trial_fixture, pre_change_time, 0) == \
         {
-            'scheduled_change_time': 3.6609719702185397,
+            'scheduled_change_time': 5.91097197021854,
             'start_frame': 0,
             'start_time': 3.564911950538426,
             'end_frame': 516,
@@ -502,6 +502,10 @@ def test_get_unified_draw_log(foraging2_data_fixture):
         extract.get_unified_draw_log(foraging2_data_fixture)[:20],
         np.array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
     )  # testing the first 20 items should be sufficient
+
+
+def test_get_initial_blank_duration(foraging2_data_fixture):
+    assert extract.get_initial_blank_duration(foraging2_data_fixture) == None
 
 
 @pytest.mark.parametrize("mock_data, expected, exception_type", [

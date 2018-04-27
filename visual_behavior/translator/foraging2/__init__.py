@@ -7,7 +7,8 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_blank_duration_range, get_device_name, get_session_duration, \
     get_stimulus_duration, get_task_id, get_response_window, get_licks, \
     get_running_speed, get_params, get_time, get_trials, \
-    get_stimulus_distribution, get_delta_mean, get_stage
+    get_stimulus_distribution, get_delta_mean, get_initial_blank_duration, \
+    get_stage
 
 
 def data_to_change_detection_core(data):
@@ -288,6 +289,7 @@ def data_to_trials(data):
     stimuli = get_stimuli(data)
     trial_log = get_trial_log(data)
     pre_change_time = get_pre_change_time(data)
+    initial_blank_duration = get_initial_blank_duration(data) or 0  # woohoo!
     experiment_params = {
         "publish_time": None,  # not obtainable
     }
@@ -301,7 +303,15 @@ def data_to_trials(data):
         expand_dict(trials, annotate_rewards(trial), index)
         expand_dict(trials, annotate_optogenetics(trial), index)
         expand_dict(trials, annotate_responses(trial), index)
-        expand_dict(trials, annotate_schedule_time(trial, pre_change_time), index)
+        expand_dict(
+            trials,
+            annotate_schedule_time(
+                trial,
+                pre_change_time,
+                initial_blank_duration
+            ),
+            index
+        )
         expand_dict(trials, annotate_stimuli(trial, stimuli), index)
         # expand_dict(trials, annotate_trials(trial), index)
         expand_dict(trials, experiment_params, index)
