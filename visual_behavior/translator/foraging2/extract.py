@@ -263,8 +263,12 @@ def annotate_schedule_time(trial, pre_change_time, initial_blank_duration):
     return {
         "start_time": start_time,
         "start_frame": start_frame,
-        "scheduled_change_time": start_time + pre_change_time + \
-            initial_blank_duration + trial["trial_params"]["change_time"],  # adding start time will put this in time relative to start of exp, change_time is relative to after prechange + initial_blank_duration
+        "scheduled_change_time": (
+            start_time +
+            pre_change_time +
+            initial_blank_duration +
+            trial["trial_params"]["change_time"]
+        ),  # adding start time will put this in time relative to start of exp, change_time is relative to after prechange + initial_blank_duration, using () because of annoying flake8 bug + noqa directive not working for multiline
         "end_time": end_time,
         "end_frame": end_frame,
     }
@@ -1257,7 +1261,6 @@ def get_delta_mean(data):
     return data["items"]["behavior"].get("DoC", {}).get("change_time_scale")
 
 
-
 def get_initial_blank_duration(data):
     """Get initial blank duration for each trial
     Parameters
@@ -1271,6 +1274,7 @@ def get_initial_blank_duration(data):
         blank duration in seconds or None if not found
     """
     return data["items"]["behavior"].get("DoC", {}).get("initial_blank")
+
 
 def get_stage(data):
     """Get stage name
