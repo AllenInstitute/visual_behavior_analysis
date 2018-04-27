@@ -28,3 +28,10 @@ def validate(extended_trials):
     validate_schema(extended_trials)
     validate_trials(extended_trials)
     validate_extended_trials(extended_trials)
+
+
+def validate_min_change_time(trial, pre_change_time):
+    '''change time in trial should never be less than pre_change_time'''
+    change_time = trial["change_time"]
+    return change_time - trial["starttime"] > pre_change_time \
+        if np.isfinite(change_time) else True  # check is not nan, inf
