@@ -67,3 +67,10 @@ def foraging_data_fixture():
 @pytest.fixture(scope="session")
 def foraging2_data_fixture():
     return pd.read_pickle(os.path.join(TESTING_RES_DIR, "foraging2_chris.pkl"))
+
+
+@pytest.fixture(scope="session")
+def foraging2_natural_images_data_fixture():
+    return pd.read_pickle(
+        os.path.join(TESTING_RES_DIR, "foraging2_natural_images.pkl")
+    )

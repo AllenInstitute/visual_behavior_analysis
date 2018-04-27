@@ -550,3 +550,39 @@ def test_get_stage(mock_data, expected, exception_type):
         assert extract.get_stage(mock_data) == expected
     else:
         pytest.raises(exception_type, extract.get_stage, mock_data)
+
+
+@pytest.mark.parametrize("start_frame, expected", [
+    (183, (None, None, None, ), ),
+    (184, ("gratings", "group1", 90, ), ),
+    (874, ("gratings", "group0", 0, ), ),
+    (900, ("gratings", "group0", 0, ), ),
+    (1380, ("gratings", "group1", 90, ), ),
+])
+def test__resolve_initial_image(foraging2_stimuli_fixture, start_frame, expected):
+    assert extract._resolve_initial_image(foraging2_stimuli_fixture, start_frame) == expected
+
+
+@pytest.mark.regression
+def test_regression_annotate_stimuli(foraging2_natural_images_data_fixture):
+    annotated_stimuli = extract.annotate_stimuli(
+        extract.get_trial_log(foraging2_natural_images_data_fixture)[1],
+        extract.get_stimuli(foraging2_natural_images_data_fixture)
+    )
+
+    annotated_stimuli["stimulus_on_frames"] = []  # testing stimulus_on_frames too annoying for now...
+
+    assert annotated_stimuli == {
+        'initial_image_category': 'im008',
+        'initial_image_name': 'im008',
+        'change_image_name': 'im008',
+        'change_image_category': 'im008',
+        'change_frame': np.nan,
+        'change_time': np.nan,
+        'change_orientation': None,
+        'change_contrast': None,
+        'initial_orientation': None,
+        'initial_contrast': None,
+        "delta_orientation": None,
+        "stimulus_on_frames": [],
+    }
