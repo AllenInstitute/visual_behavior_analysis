@@ -318,24 +318,40 @@ def annotate_stimuli(trial, stimuli):
     resolve the first group_name, stimulus_name pair it encounters...so maybe
     name things uniquely everywhere...
     """
+    is_catch = trial["trial_params"].get("catch") is True  # this function got janky real fast...
+
     try:
         stimulus_change = trial["stimulus_changes"][0]
+        (from_group, from_name, ), (to_group, to_name), change_time, change_frame = stimulus_change
+        _, stim_dict = _resolve_stimulus_dict(stimuli, from_group)
     except IndexError:
-        return {
-            "initial_image_category": None,
-            "initial_image_name": None,
-            "change_image_name": None,
-            "change_image_category": None,
-            "change_orientation": None,
-            "change_contrast": None,
-            "initial_orientation": None,
-            "initial_contrast": None,
-            "delta_orientation": None,
-            "stimulus_on_frames": [],
-        }
+        if is_catch:
+            trial_start_frame = trial["events"][0][3]
+            category, from_group, from_name = _resolve_initial_image(
+                stimuli,
+                trial_start_frame
+            )
+            to_group, to_name = from_group, from_name
+            change_time = np.nan
+            change_frame = np.nan
+            if category:
+                stim_dict = stimuli[category]
+            else:
+                stim_dict = {}
+        else:
+            return {
+                "initial_image_category": None,
+                "initial_image_name": None,
+                "change_image_name": None,
+                "change_image_category": None,
+                "change_orientation": None,
+                "change_contrast": None,
+                "initial_orientation": None,
+                "initial_contrast": None,
+                "delta_orientation": None,
+                "stimulus_on_frames": [],
+            }
 
-    (from_group, from_name, ), (to_group, to_name), change_time, change_frame = stimulus_change
-    _, stim_dict = _resolve_stimulus_dict(stimuli, from_group)
     implied_type = stim_dict["obj_type"]
 
     # initial is like ori before, contrast before...etc
@@ -343,17 +359,27 @@ def annotate_stimuli(trial, stimuli):
 
     if implied_type in ("DoCGratingStimulus", ):
         first_frame, last_frame = _get_trial_frame_bounds(trial)
-        initial_changes, change_changes = _get_stimulus_attr_changes(
-            stim_dict, change_frame, first_frame, last_frame
-        )
 
-        initial_orientation = initial_changes.get("ori")
-        change_orientation = change_changes.get("ori")
-
-        if initial_orientation and change_orientation:
-            delta_orientation = initial_orientation - change_orientation
+        if is_catch:
+            initial_orientation = to_name  # this is a hack that relies on the fact that to_name is the same as the orientation of the grating for DoCGratingStimulus
+            initial_contrast = None
+            change_orientation = to_name
+            change_contrast = None
+            delta_orientation = 0
         else:
-            delta_orientation = np.nan
+            initial_changes, change_changes = _get_stimulus_attr_changes(
+                stim_dict, change_frame, first_frame, last_frame
+            )
+
+            initial_orientation = initial_changes.get("ori")
+            initial_contrast = initial_changes.get("contrast")
+            change_orientation = change_changes.get("ori")
+            change_contrast = change_changes.get("constrast")
+
+            if initial_orientation and change_orientation:
+                delta_orientation = initial_orientation - change_orientation
+            else:
+                delta_orientation = np.nan
 
         return {
             "initial_image_category": None,
@@ -361,9 +387,9 @@ def annotate_stimuli(trial, stimuli):
             "change_image_name": None,
             "change_image_category": None,
             "change_orientation": change_orientation,
-            "change_contrast": change_changes.get("constrast"),
+            "change_contrast": change_contrast,
             "initial_orientation": initial_orientation,
-            "initial_contrast": initial_changes.get("contrast"),
+            "initial_contrast": initial_contrast,
             "delta_orientation": delta_orientation,
             "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
             "change_time": change_time,
@@ -377,6 +403,7 @@ def annotate_stimuli(trial, stimuli):
             "change_image_category": to_group,
             "change_orientation": None,
             "change_contrast": None,
+            "initial_orientation": None,
             "initial_contrast": None,
             "delta_orientation": None,
             "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
@@ -385,6 +412,41 @@ def annotate_stimuli(trial, stimuli):
         }
     else:
         raise ValueError("invalid implied type: {}".format(implied_type))
+
+
+def _resolve_initial_image(stimuli, start_frame):
+    """Attempts to resolve the initial image for a given start_frame for a trial
+
+    Parameters
+    ----------
+    stimuli: Mapping
+        foraging2 shape stimuli mapping
+    start_frame: int
+        start frame of the trial
+
+    Returns
+    -------
+    initial_image_category_name: str
+        stimulus category of initial image
+    initial_image_group: str
+        group name of the initial image
+    initial_image_name: str
+        name of the initial image
+    """
+    max_frame = float("-inf")
+    initial_image_group = None
+    initial_image_name = None
+    intial_image_category_name = None
+
+    for stim_category_name, stim_dict in iteritems(stimuli):
+        for change_event in stim_dict["change_log"]:
+            change_frame = change_event[3]
+            if change_frame < start_frame and change_frame > max_frame:
+                initial_image_group, initial_image_name = change_event[1]
+                intial_image_category_name = stim_category_name
+                max_frame = change_frame
+
+    return intial_image_category_name, initial_image_group, initial_image_name
 
 
 def _get_stimulus_attr_changes(stim_dict, change_frame, first_frame, last_frame):
@@ -1125,10 +1187,8 @@ def get_task_id(data):
     str or None
         task id or None if not found
     """
-    return behavior_items_or_top_level(data) \
-        .get("config", {}) \
-        .get("behavior", {}) \
-        .get("task_id")
+    return data["items"]["behavior"].get("config", {}).get("behavior", {}).get("task_id") or \
+        data["items"]["behavior"]["params"].get("task_id")
 
 
 def get_scheduled_trial_duration(data):
@@ -1197,9 +1257,9 @@ def get_delta_mean(data):
     return data["items"]["behavior"].get("DoC", {}).get("change_time_scale")
 
 
+
 def get_initial_blank_duration(data):
     """Get initial blank duration for each trial
-
     Parameters
     ----------
     data: Mapping
@@ -1211,3 +1271,18 @@ def get_initial_blank_duration(data):
         blank duration in seconds or None if not found
     """
     return data["items"]["behavior"].get("DoC", {}).get("initial_blank")
+
+def get_stage(data):
+    """Get stage name
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    str
+        stage name
+    """
+    return data["items"]["behavior"]["params"].get("stage")
