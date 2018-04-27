@@ -504,6 +504,54 @@ def test_get_unified_draw_log(foraging2_data_fixture):
     )  # testing the first 20 items should be sufficient
 
 
+@pytest.mark.parametrize("mock_data, expected, exception_type", [
+    (
+        {"items": {"behavior": {"params": {"task_id": "wut", }, }, }, },
+        "wut",
+        None,
+    ),
+    (
+        {"items": {"behavior": {"params": {}, }, }, },
+        None,
+        None,
+    ),
+    (
+        {"items": {"behavior": {}, }, },
+        None,
+        KeyError,
+    ),
+])
+def test_regression_get_task_id(mock_data, expected, exception_type):
+    if exception_type is None:
+        assert extract.get_task_id(mock_data) == expected
+    else:
+        pytest.raises(exception_type, extract.get_task_id, mock_data)
+
+
+@pytest.mark.parametrize("mock_data, expected, exception_type", [
+    (
+        {"items": {"behavior": {"params": {"stage": "wut", }, }, }, },
+        "wut",
+        None,
+    ),
+    (
+        {"items": {"behavior": {"params": {}, }, }, },
+        None,
+        None,
+    ),
+    (
+        {"items": {"behavior": {}, }, },
+        None,
+        KeyError,
+    ),
+])
+def test_get_stage(mock_data, expected, exception_type):
+    if exception_type is None:
+        assert extract.get_stage(mock_data) == expected
+    else:
+        pytest.raises(exception_type, extract.get_stage, mock_data)
+
+
 @pytest.mark.parametrize("start_frame, expected", [
     (183, (None, None, None, ), ),
     (184, ("gratings", "group1", 90, ), ),

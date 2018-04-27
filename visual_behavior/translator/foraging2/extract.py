@@ -1184,10 +1184,8 @@ def get_task_id(data):
     str or None
         task id or None if not found
     """
-    return behavior_items_or_top_level(data) \
-        .get("config", {}) \
-        .get("behavior", {}) \
-        .get("task_id")
+    return data["items"]["behavior"].get("config", {}).get("behavior", {}).get("task_id") or \
+        data["items"]["behavior"]["params"].get("task_id")
 
 
 def get_scheduled_trial_duration(data):
@@ -1254,3 +1252,19 @@ def get_delta_mean(data):
         delta mean or None if not found
     """
     return data["items"]["behavior"].get("DoC", {}).get("change_time_scale")
+
+
+def get_stage(data):
+    """Get stage name
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    str
+        stage name
+    """
+    return data["items"]["behavior"]["params"].get("stage")
