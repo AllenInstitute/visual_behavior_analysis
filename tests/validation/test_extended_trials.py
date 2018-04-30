@@ -44,3 +44,24 @@ def test_validate_stimulus_distribution_key():
         'stimulus_distribution':['exponential','not_exponential'],
     })
     assert validate_stimulus_distribution_key(BAD_TRIALS,expected_distribution_name)==False
+
+def test_validate_change_time_mean():
+    np.random.seed(seed=100)
+    simulated_change_times_good=np.random.exponential(scale=2,size=100,)
+    GOOD_TRIALS = pd.DataFrame({
+        'change_time':simulated_change_times_good,
+        'starttime':np.zeros_like(simulated_change_times_good),
+        'prechange_minimum':np.zeros_like(simulated_change_times_good)
+    })
+
+    assert validate_change_time_mean(GOOD_TRIALS,expected_mean,tolerance=0.5)==True
+
+    np.random.seed(seed=100)
+    simulated_change_times_bad=np.random.exponential(scale=3,size=100)
+    BAD_TRIALS = pd.DataFrame({
+        'change_time':simulated_change_times_bad,
+        'starttime':np.zeros_like(simulated_change_times_bad),
+        'prechange_minimum':np.zeros_like(simulated_change_times_bad),
+    })
+
+    assert validate_change_time_mean(BAD_TRIALS,expected_mean,tolerance=0.5)==False

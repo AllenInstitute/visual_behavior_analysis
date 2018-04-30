@@ -412,3 +412,10 @@ def validate_stimulus_distribution_key(trials,expected_distribution_name):
     stimulus_distribution:The distribution of change times should match the 'stimulus_distribution' (default='exponential')
     '''
     return all(trials['stimulus_distribution']==expected_distribution_name)
+
+def validate_change_time_mean(trials,expected_mean,tolerance=0.5):
+    '''
+    stimulus_distribution: the mean of the stimulus distribution should match the 'distribution_mean' parameter
+    '''
+    change_time_trial_referenced = trials['change_time']-trials['starttime']-trials['prechange_minimum']
+    return abs(change_time_trial_referenced[~np.isnan(change_time_trial_referenced)].mean() - expected_mean) <=tolerance
