@@ -17,4 +17,18 @@ def test_validate_autoreward_volume():
     )
     assert validate_autoreward_volume(BAD_TRIALS,TRUE_VOLUME)==False
     
-test_validate_autoreward_volume()
+def test_validate_trial_times_never_overlap():
+    GOOD_TRIALS = pd.DataFrame({
+        'starttime':[ 0.        ,  0.76716053,  6.9556934 ],
+        'endtime':[  0.75048087,   6.93895647,  12.32681855]
+    })
+    
+    assert validate_trial_times_never_overlap(GOOD_TRIALS)==True
+    
+    #bad trials have the second starttime before the first endtime
+    BAD_TRIALS = pd.DataFrame({
+        'starttime':[ 0.        ,  0.76716053-0.02,  6.9556934 ],
+        'endtime':[  0.75048087,   6.93895647,  12.32681855]
+    })
+    
+    assert validate_trial_times_never_overlap(BAD_TRIALS)==False

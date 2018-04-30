@@ -395,3 +395,15 @@ def validate_ignore_false_alarms(trials,ignore_false_alarms):
     #test is only valid if the 'ignore_false_alarms' parameter is True. If not the case, just pass the test
     else:
         return True
+
+def validate_trial_times_never_overlap(trials):
+    '''
+    a trial cannot start until the prior trial is complete
+    '''
+    previous_end=0
+    trial_start_greater_than_last_end=[]
+    for idx,row in trials.iterrows():
+        trial_start_greater_than_last_end.append(row['starttime']>=previous_end)
+        previous_end=row['endtime']
+    return all(trial_start_greater_than_last_end)
+    
