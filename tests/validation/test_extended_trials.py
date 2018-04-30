@@ -32,3 +32,15 @@ def test_validate_trial_times_never_overlap():
     })
     
     assert validate_trial_times_never_overlap(BAD_TRIALS)==False
+
+def test_validate_stimulus_distribution_key():
+    expected_distribution_name='exponential'
+    GOOD_TRIALS = pd.DataFrame({
+        'stimulus_distribution':['exponential','exponential'],
+    })
+    assert validate_stimulus_distribution_key(GOOD_TRIALS,expected_distribution_name)==True
+    
+    BAD_TRIALS = pd.DataFrame({
+        'stimulus_distribution':['exponential','not_exponential'],
+    })
+    assert validate_stimulus_distribution_key(BAD_TRIALS,expected_distribution_name)==False

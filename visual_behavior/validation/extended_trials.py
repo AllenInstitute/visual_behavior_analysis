@@ -407,3 +407,8 @@ def validate_trial_times_never_overlap(trials):
         previous_end=row['endtime']
     return all(trial_start_greater_than_last_end)
     
+def validate_stimulus_distribution_key(trials,expected_distribution_name):
+    '''
+    stimulus_distribution:The distribution of change times should match the 'stimulus_distribution' (default='exponential')
+    '''
+    return all(trials['stimulus_distribution']==expected_distribution_name)
