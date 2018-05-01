@@ -434,3 +434,28 @@ def validate_monotonically_decreasing_number_of_change_times(trials,expected_dis
         return all([first_val>=second_val for first_val,second_val in zip(nonzero_bins[:-1],nonzero_bins[1:])])
     else:
         return True
+
+def validate_no_abort_on_lick_before_response_window(trials):
+    '''
+    If licks occur between the change time and `response_window[0]`, the trial should continue.
+    Method ensures that all cases matching this condition are labeled as 'go' or 'catch', not 'aborted'
+    '''
+    def identify_first_lick_before_response_window(row):
+        '''
+        a method for identifying trials with licks between the change time and the start of the response window
+        '''
+        #get first lick from lick list if it isn't empty
+        first_lick = row['lick_times'][0] if len(row['lick_times'])>0 else np.nan
+        #get offset between first lick and change time
+        first_lick_relative_to_change = first_lick - row['change_time']
+        #return True if first lick is between the change time and the start of the response window, False otherwise
+        if np.logical_and(first_lick_relative_to_change>=0,first_lick_relative_to_change<row['response_window'][0]):
+            return True
+        else:
+            return False
+
+    #identify all trials with licks between the change time and the start of the response window
+    trials['response_before_response_window']=trials.apply(identify_first_lick_before_response_window,axis=1)
+
+    #ensure that all trials with first lick between the change time and the start of the response window are labeled as 'go' or 'catch' (not 'aborted')
+    return all(trials[trials['response_before_response_window']==True].trial_type.isin(['go','catch']))

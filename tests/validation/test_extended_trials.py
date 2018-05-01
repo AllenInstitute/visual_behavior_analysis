@@ -87,3 +87,27 @@ def test_validate_monotonically_decreasing_number_of_change_times():
     
     #Bad trials should pass if distribution is not exponential
     assert validate_monotonically_decreasing_number_of_change_times(BAD_TRIALS,'uniform') == True
+
+
+def test_validate_no_abort_on_lick_before_response_window():
+    #3 trials with first lick after change, but before response window. Correctly labeled as 'go' or 'catch'
+    #1 trial with first lick before change, correctly labeled as 'aborted'
+    GOOD_DATA = pd.DataFrame({
+        'trial_type':['go','go','catch','aborted'],
+        'change_time':[867.943295,2132.735950,2359.626023,2500],
+        'lick_times':[[868.07670185, 868.243553692, 868.343638907],[2132.8193812, 2133.00285741, 2134.73767532],[2359.72610696, 2359.95964697],[2499]],
+        'response_window':[[0.15, 0.75],[0.15, 0.75],[0.15, 0.75],[0.15, 0.75]]
+    })
+
+    assert validate_no_abort_on_lick_before_response_window(GOOD_DATA)==True
+    
+    #3 trials with first lick after change, but before response window. Correctly labeled as 'go' or 'catch'
+    #1 trial with first lick but before response window. Incorrectly labeled as 'aborted'
+    BAD_DATA = pd.DataFrame({
+        'trial_type':['go','go','catch','aborted'],
+        'change_time':[867.943295,2132.735950,2359.626023,2500],
+        'lick_times':[[868.07670185, 868.243553692, 868.343638907],[2132.8193812, 2133.00285741, 2134.73767532],[2359.72610696, 2359.95964697],[2500.1]],
+        'response_window':[[0.15, 0.75],[0.15, 0.75],[0.15, 0.75],[0.15, 0.75]]
+    })
+    
+    assert validate_no_abort_on_lick_before_response_window(BAD_DATA)==False
