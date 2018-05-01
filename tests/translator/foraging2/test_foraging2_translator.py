@@ -74,7 +74,7 @@ EXPECTED_MONOLITH = pd.DataFrame(data={
 EXPECTED_TRIALS = pd.DataFrame(data={
     "auto_rewarded": {0: True, 1: False, 2: False, },
     "change_contrast": {0: None, 1: None, 2: None, },
-    "change_frame": {0: 183, 1: 873, 2: 1379, },
+    "change_frame": {0: 184, 1: 874, 2: 1380, },
     "change_image_category": {0: None, 1: None, 2: None, },
     "change_image_name": {0: None, 1: None, 2: None, },
     "change_ori": {0: 90, 1: 0, 2: 90, },
@@ -300,5 +300,7 @@ def test_data_to_trials(foraging2_data_fixture):
         check_column_type=False,
         check_index_type=False,
         check_dtype=False,
-        check_like=True
+        check_like=True,
+        check_exact=False,
+        check_less_precise=3,
     )

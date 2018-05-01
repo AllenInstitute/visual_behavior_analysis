@@ -326,7 +326,7 @@ def annotate_stimuli(trial, stimuli):
 
     try:
         stimulus_change = trial["stimulus_changes"][0]
-        (from_group, from_name, ), (to_group, to_name), change_time, change_frame = stimulus_change
+        (from_group, from_name, ), (to_group, to_name), _, change_frame = stimulus_change
         _, stim_dict = _resolve_stimulus_dict(stimuli, from_group)
     except IndexError:
         if is_catch:
@@ -336,7 +336,6 @@ def annotate_stimuli(trial, stimuli):
                 trial_start_frame
             )
             to_group, to_name = from_group, from_name
-            change_time = np.nan
             change_frame = np.nan
             if category:
                 stim_dict = stimuli[category]
@@ -396,8 +395,6 @@ def annotate_stimuli(trial, stimuli):
             "initial_contrast": initial_contrast,
             "delta_orientation": delta_orientation,
             "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
-            "change_time": change_time,
-            "change_frame": change_frame,
         }
     elif implied_type in ("DoCImageStimulus", ):
         return {
@@ -411,8 +408,6 @@ def annotate_stimuli(trial, stimuli):
             "initial_contrast": None,
             "delta_orientation": None,
             "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
-            "change_time": change_time,
-            "change_frame": change_frame,
         }
     else:
         raise ValueError("invalid implied type: {}".format(implied_type))
