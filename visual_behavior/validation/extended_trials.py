@@ -419,3 +419,18 @@ def validate_change_time_mean(trials,expected_mean,tolerance=0.5):
     '''
     change_time_trial_referenced = trials['change_time']-trials['starttime']-trials['prechange_minimum']
     return abs(change_time_trial_referenced[~np.isnan(change_time_trial_referenced)].mean() - expected_mean) <=tolerance
+
+def validate_monotonically_decreasing_number_of_change_times(trials,expected_distribution):
+    '''
+    If stimulus_distribution is 'exponential', then the number of trials with changes on each flash should be monotonically decreasing from the first flash after the `min_change_time`
+    '''
+    if expected_distribution=='exponential':
+        change_times = (trials['change_time']-trials['starttime']).values
+        change_times=change_times[~np.isnan(change_times)]
+
+        nvals,edges = np.histogram(change_times,bins=np.arange(0,10,0.5))
+
+        nonzero_bins=nvals[nvals>0]
+        return all([first_val>=second_val for first_val,second_val in zip(nonzero_bins[:-1],nonzero_bins[1:])])
+    else:
+        return True

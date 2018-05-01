@@ -65,3 +65,25 @@ def test_validate_change_time_mean():
     })
 
     assert validate_change_time_mean(BAD_TRIALS,expected_mean,tolerance=0.5)==False
+
+def test_validate_monotonically_decreasing_number_of_change_times():
+    np.random.seed(10)
+    ## chose change times from an exponential distribution
+    exponential_change_times = np.random.exponential(3,5000)
+    GOOD_TRIALS = pd.DataFrame({
+        'change_time':exponential_change_times,
+        'starttime':np.zeros_like(exponential_change_times)
+    })
+    #exponentially distributed values should pass monotonocity test
+    assert validate_monotonically_decreasing_number_of_change_times(GOOD_TRIALS,'exponential') == True
+    
+    uniform_change_times = np.random.uniform(low=0,high=8,size=5000)
+    BAD_TRIALS = pd.DataFrame({
+        'change_time':uniform_change_times,
+        'starttime':np.zeros_like(uniform_change_times)
+    })
+    #uniformly distributed values should fail monotonocity test
+    assert validate_monotonically_decreasing_number_of_change_times(BAD_TRIALS,'exponential') == False
+    
+    #Bad trials should pass if distribution is not exponential
+    assert validate_monotonically_decreasing_number_of_change_times(BAD_TRIALS,'uniform') == True
