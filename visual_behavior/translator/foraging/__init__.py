@@ -350,7 +350,4 @@ def load_visual_stimuli(data,time=None):
         stimuli['image_category'] = None
         stimuli['image_name'] = None
 
-
-    stimuli = stimdf[onset_mask][cols]
-
     return stimuli
