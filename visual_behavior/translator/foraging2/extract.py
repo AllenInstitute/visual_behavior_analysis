@@ -1237,7 +1237,7 @@ def get_stimulus_distribution(data):
     str or None
         distribution type or None if not found
     """
-    return data["items"]["behavior"]["config"].get("change_time_dist")
+    return data["items"]["behavior"]["config"]["DoC"]["change_time_dist"]
 
 
 def get_delta_mean(data):
@@ -1253,7 +1253,7 @@ def get_delta_mean(data):
     float or None
         delta mean or None if not found
     """
-    return data["items"]["behavior"].get("DoC", {}).get("change_time_scale")
+    return data["items"]["behavior"]['config']["DoC"]["change_time_scale"]
 
 
 def get_initial_blank_duration(data):
