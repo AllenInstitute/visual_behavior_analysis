@@ -53,9 +53,9 @@ EXPECTED_TRIALS = pd.DataFrame(data={
     "reward_volume": {0: 0.007, 1: 0.008, 2: 0.008, },
     "rewarded": {0: True, 1: True, 2: True, },
     "scheduled_change_time": {
-        0: 5.91097197021854,
-        1: 16.838148855480398,
-        2: 25.403231616730107,
+        0: 2.346,
+        1: 4.437,
+        2: 4.1706,
     },
     "startframe": {0: 0, 1: 552, 2: 1104, },
     "starttime": {

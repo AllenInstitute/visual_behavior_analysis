@@ -427,7 +427,7 @@ def test_annotate_schedule_time(foraging2_data_fixture, foraging2_trial_fixture)
     pre_change_time = extract.get_pre_change_time(foraging2_data_fixture)
     assert extract.annotate_schedule_time(foraging2_trial_fixture, pre_change_time, 0) == \
         {
-            'scheduled_change_time': 5.91097197021854,
+            'scheduled_change_time': 2.3460600196801136,
             'start_frame': 0,
             'start_time': 3.564911950538426,
             'end_frame': 516,
