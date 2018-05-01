@@ -579,8 +579,6 @@ def test_regression_annotate_stimuli(foraging2_natural_images_data_fixture):
         'initial_image_name': 'im008',
         'change_image_name': 'im008',
         'change_image_category': 'im008',
-        'change_frame': np.nan,
-        'change_time': np.nan,
         'change_orientation': None,
         'change_contrast': None,
         'initial_orientation': None,
