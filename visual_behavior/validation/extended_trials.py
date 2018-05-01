@@ -63,6 +63,20 @@ def get_first_lick_in_response_window(row):
         return np.nan
 
 
+def get_first_lick_relative_to_scheduled_change(row):
+    """returns first lick relative to scheduled change time, nan if no such lick
+    exists
+    """
+    licks = np.array(row['lick_times']) - row['scheduled_change_time']
+    return licks[0] if len(licks) > 0 else np.nan
+
+
+def get_first_lick_relative_to_change(row):
+    '''returns first lick relative to scheduled change time, nan if no such lick exists'''
+    licks = np.array(row['lick_times']) - row['change_time']
+    return licks[0] if len(licks) > 0 else np.nan
+
+
 # TRIAL
 def validate_min_change_time(trial):
     '''change time in trial should never be less than pre_change_time'''
@@ -205,3 +219,118 @@ def validate_reward_follows_first_lick_in_window(trials, tolerance=0.001):
             return False
 
     return True
+
+
+def validate_never_more_than_one_reward(trials):
+    '''Only a maximum of one reward should be delivered per trial'''
+    return np.max(trials['number_of_rewards']) <= 1
+
+
+def validate_lick_before_scheduled_on_aborted_trials(trials):
+    '''if licks occur before a scheduled change time/flash, the trial ends
+    Therefore, every aborted trial should have a lick before the scheduled
+    change time
+    '''
+    aborted_trials = trials[trials.trial_type == 'aborted']
+    first_lick = aborted_trials.apply(
+        get_first_lick_relative_to_scheduled_change,
+        axis=1
+    )
+    # don't use nanmax. If there's a nan, we expect this to fail
+    return np.max(first_lick.values) < 0
+
+
+def validate_lick_after_scheduled_on_go_catch_trials(trials):
+    '''if licks occur before a scheduled change time/flash, the trial ends
+    Therefore, no non-aborted trials should have a lick before the scheduled
+    change time
+    '''
+    nonaborted_trials = trials[trials.trial_type != 'aborted']
+    first_lick = nonaborted_trials.apply(
+        get_first_lick_relative_to_scheduled_change,
+        axis=1
+    )
+    # use nanmin, it is possible
+    return np.nanmin(first_lick.values) > 0
+
+
+def validate_initial_matches_final(trials):
+    trials_to_test = trials[trials['trial_type'].isin(['go', 'catch'])]
+    last_trial_final_im = trials_to_test.iloc[0]['initial_image_name']
+    last_trial_final_ori = trials_to_test.iloc[0]['initial_ori']
+    image_match = []
+    ori_match = []
+    for idx, row in trials_to_test.iterrows():
+        image_match.append(
+            is_equal(row['initial_image_name'], last_trial_final_im)
+        )
+        ori_match.append(
+            is_equal(row['initial_ori'], last_trial_final_ori)
+        )
+
+        last_trial_final_im = row['change_image_name']
+        last_trial_final_ori = row['change_ori']
+
+    return all(image_match) and all(ori_match)
+
+
+def validate_first_lick_after_change_on_nonaborted(trials):
+    '''on GO and CATCH trials, licks should never be observed between the trial
+    start and the first frame of an image change
+    '''
+    non_aborted_trials = trials[trials.trial_type != 'aborted']
+    first_lick_relative_to_change=non_aborted_trials.apply(
+        get_first_lick_relative_to_change,
+        axis=1
+    )
+    return np.nanmin(first_lick_relative_to_change.values) > 0
+
+
+def validate_trial_ends_without_licks(trials, minimum_no_lick_time):
+    '''There should never be a lick within 'minimum_no_lick_time' of trial end
+    Task logic should extend trial if mouse is licking near trial end
+    '''
+    non_aborted_trials = trials[trials.trial_type.isin(['go', 'catch'])]
+    for idx, row in non_aborted_trials.iterrows():
+        # fail if the last lick is within 'minimum_no_lick_time' of the endtime
+        if len(row['lick_times']) > 0 and \
+                row['endtime'] - row['lick_times'][-1] < minimum_no_lick_time:
+            return False
+    return True
+
+
+def validate_session_within_expected_duration(
+        trials, expected_duration_seconds, tolerance=30
+):
+    '''ensure that last trial end time does not exceed expected duration by more
+    than 30 seconds
+    '''
+    return trials['endtime'].values[-1] < (expected_duration_seconds + tolerance)
+
+
+def validate_session_ends_at_max_cumulative_volume(
+        trials, volume_limit, tolerance=0.01
+):
+    '''ensure that earned volume does not exceed volume limit
+    build in a tolerance in case reward limit is not even multiple of reward
+    volumes
+    '''
+    return trials['cumulative_volume'].max() <= (volume_limit + tolerance)
+
+
+def validate_duration_and_volume_limit(
+        trials, expected_duration, volume_limit, time_tolerance=30
+):
+    '''The length of a session should not be less than `duration` by more than
+    30 seconds UNLESS `volume_limit` has been met
+    '''
+    if trials.cumulative_volume.max() > volume_limit:
+        # return True if volume limit is met
+        return True
+    else:
+        if trials['endtime'].values[-1] < (expected_duration - time_tolerance):
+            # return False if end time is less than duration by more than 30 seconds
+            return False
+        else:
+            # otherwise, return True
+            return True

@@ -341,10 +341,166 @@ def test_validate_intial_and_final_in_non_aborted_failure():
     assert extended_trials.validate_intial_and_final_in_non_aborted(bad_trials) is False
 
 
-def test_validate_reward_follows_first_lick_in_window_success(exemplar_extended_trials_fixture):
-    extended_trials.validate_reward_follows_first_lick_in_window(exemplar_extended_trials_fixture) is True
+# def test_validate_reward_follows_first_lick_in_window_success(exemplar_extended_trials_fixture):
+#     extended_trials.validate_reward_follows_first_lick_in_window(exemplar_extended_trials_fixture) is True
+#
+#
+# def test_validate_reward_follows_first_lick_in_window_failure():
+#     bad_trials = {}
+#     extended_trials.validate_reward_follows_first_lick_in_window(bad_trials) is False
 
 
-def test_validate_reward_follows_first_lick_in_window_failure():
-    bad_trials = {}
-    extended_trials.validate_reward_follows_first_lick_in_window(bad_trials) is False
+@pytest.mark.parametrize("trials, expected", [
+    (
+        pd.DataFrame(data={"number_of_rewards": [0, 0, 1, 1, 0, 1, ], }),
+        True,
+    ),
+    (
+        pd.DataFrame(data={"number_of_rewards": [0, 0, 1, 1, 0, 1, 2, ], }),
+        False,
+    ),
+])
+def test_validate_never_more_than_one_reward(trials, expected):
+    assert extended_trials.validate_never_more_than_one_reward(trials) == expected
+
+
+def test_validate_lick_before_scheduled_on_aborted_trials_success():
+    good_trials = pd.DataFrame(data={
+        "trial_type": ["go", "catch", "aborted", ],
+        "lick_times": [[0.55, 0.56, 0.57, ], [1.05, 1.06, 1.07, ], [1.55, 1.56, 1.57, ], ],
+        "scheduled_change_time": [0.45, 1.00, 2.55, ],
+    })
+
+    assert extended_trials.validate_lick_before_scheduled_on_aborted_trials(good_trials) == True
+
+
+def test_validate_lick_before_scheduled_on_aborted_trials_failure():
+    bad_trials = pd.DataFrame(data={
+        "trial_type": ["go", "catch", "aborted", ],
+        "lick_times": [[0.55, 0.56, 0.57, ], [1.05, 1.06, 1.07, ], [1.55, 1.56, 1.57, ], ],
+        "scheduled_change_time": [0.45, 1.00, 1.54, ],
+    })
+
+    assert extended_trials.validate_lick_before_scheduled_on_aborted_trials(bad_trials) == False
+
+
+def test_validate_lick_after_scheduled_on_go_catch_trials_success():
+    good_trials = pd.DataFrame(data={
+        "trial_type": ["go", "catch", "aborted", ],
+        "lick_times": [[0.55, 0.56, 0.57, ], [], [1.55, 1.56, 1.57, ], ],
+        "scheduled_change_time": [0.45, 1.00, 2.55, ],
+    })
+
+    assert extended_trials.validate_lick_after_scheduled_on_go_catch_trials(good_trials) == True
+
+
+def test_validate_lick_after_scheduled_on_go_catch_trials_failure():
+    bad_trials = pd.DataFrame(data={
+        "trial_type": ["go", "catch", "aborted", ],
+        "lick_times": [[0.43, 0.55, 0.56, 0.57, ], [], [1.55, 1.56, 1.57, ], ],
+        "scheduled_change_time": [0.45, 1.00, 2.55, ],
+    })
+
+    assert extended_trials.validate_lick_after_scheduled_on_go_catch_trials(bad_trials) == False
+
+
+def test_validate_initial_matches_final_success():
+    good_trials = pd.DataFrame(data={
+        "trial_type": ["go", "catch", "go", ],
+        "initial_image_name": ["im0", "im1", "im0", ],
+        "change_image_name": ["im1", "im0", "im1", ],
+        "initial_image_category": ["im0", "im1", "im0", ],
+        "change_image_category": ["im1", "im0", "im1", ],
+        "initial_ori": [None, None, None, ],
+        "change_ori": [None, None, None, ],
+    })
+
+    assert extended_trials.validate_initial_matches_final(good_trials) == True
+
+
+def test_validate_initial_matches_final_failure():
+    bad_trials = pd.DataFrame(data={
+        "trial_type": ["go", "catch", "go", ],
+        "initial_image_name": ["im0", "im0", "im0", ],
+        "change_image_name": ["im1", "im0", "im1", ],
+        "initial_image_category": ["im0", "im0", "im0", ],
+        "change_image_category": ["im1", "im0", "im1", ],
+        "initial_ori": [None, None, None, ],
+        "change_ori": [None, None, None, ],
+    })
+
+    assert extended_trials.validate_initial_matches_final(bad_trials) == False
+
+
+def test_validate_first_lick_after_change_on_nonaborted_success():
+    good_trials = pd.DataFrame(data={
+        "trial_type": ["go", "catch", "aborted", ],
+        "lick_times": [[0.55, 0.56, 0.57, ], [1.05, 1.06, 1.07, ], [1.55, 1.56, 1.57, ], ],
+        "change_time": [0.45, 1.00, 1.54, ],
+    })
+
+    assert extended_trials.validate_first_lick_after_change_on_nonaborted(good_trials) == True
+
+
+def test_validate_first_lick_after_change_on_nonaborted_failure():
+    bad_trials = pd.DataFrame(data={
+        "trial_type": ["go", "catch", "aborted", ],
+        "lick_times": [[0.43, 0.55, 0.56, 0.57, ], [], [1.55, 1.56, 1.57, ], ],
+        "change_time": [0.45, 1.00, 2.55, ],
+    })
+
+    assert extended_trials.validate_first_lick_after_change_on_nonaborted(bad_trials) == False
+
+
+def test_validate_trial_ends_without_licks_success():
+    MINIMUM_NO_LICK_TIME = 0.3  # 300ms according to dougo
+
+    good_trials = pd.DataFrame(data={
+        "trial_type": ["go", "catch", "aborted", ],
+        "lick_times": [[0.43, 0.55, 0.56, 0.57, ], [], [1.55, 1.56, 1.57, ], ],
+        "endtime": [1.00, 2.00, 2.55, ],
+    })
+
+    assert extended_trials.validate_trial_ends_without_licks(good_trials, MINIMUM_NO_LICK_TIME) == True
+
+
+def test_validate_trial_ends_without_licks_success():
+    MINIMUM_NO_LICK_TIME = 0.3  # 300ms according to dougo
+
+    bad_trials = pd.DataFrame(data={
+        "trial_type": ["go", "catch", "aborted", ],
+        "lick_times": [[0.43, 0.55, 0.56, 0.57, ], [], [1.55, 1.56, 1.57, ], ],
+        "endtime": [0.80, 2.00, 2.55, ],
+    })
+
+    assert extended_trials.validate_trial_ends_without_licks(bad_trials, MINIMUM_NO_LICK_TIME) == False
+
+
+@pytest.mark.parametrize("trials, expected_duration_seconds, tolerance, expected", [
+    (pd.DataFrame(data={"endtime": [5429, ], }), 5400, 30, True, ),
+    (pd.DataFrame(data={"endtime": [5430, ], }), 5400, 30, False, ),
+    (pd.DataFrame(data={"endtime": [5430, ], }), 5400, 15, False, ),
+    (pd.DataFrame(data={"endtime": [5430, ], }), 4400, 30, False, ),
+])
+def test_validate_session_within_expected_duration(trials, expected_duration_seconds, tolerance, expected):
+    assert extended_trials.validate_session_within_expected_duration(trials, expected_duration_seconds, tolerance) == expected
+
+
+@pytest.mark.parametrize("trials, volume_limit, tolerance, expected", [
+    (pd.DataFrame(data={"cumulative_volume": [1.00, ], }), 1.00, 0.01, True, ),
+    (pd.DataFrame(data={"cumulative_volume": [1.01, ], }), 1.00, 0.01, True, ),
+    (pd.DataFrame(data={"cumulative_volume": [1.00, ], }), 0.90, 0.01, False, ),
+    (pd.DataFrame(data={"cumulative_volume": [1.00, ], }), 0.90, 0.01, False, ),
+])
+def test_validate_session_ends_at_max_cumulative_volume(trials, volume_limit, tolerance, expected):
+    assert extended_trials.validate_session_ends_at_max_cumulative_volume(trials, volume_limit, tolerance) == expected
+
+
+@pytest.mark.parametrize("trials, expected_duration, volume_limit, time_tolerance, expected", [
+    (pd.DataFrame(data={"cumulative_volume": [1.00, ], "endtime": [5400, ], }), 5430, 1.00, 30, True, ),
+    (pd.DataFrame(data={"cumulative_volume": [1.00, ], "endtime": [5430, ], }), 5400, 1.00, 30, False, ),
+    (pd.DataFrame(data={"cumulative_volume": [1.00, ], "endtime": [5000, ], }), 5400, 1.00, 30, False, ),
+    (pd.DataFrame(data={"cumulative_volume": [0.90, ], "endtime": [5000, ], }), 5400, 1.00, 30, False, ),
+])
+def test_validate_duration_and_volume_limit(trials, expected_duration, volume_limit, time_tolerance, expected):
+    assert extended_trials.validate_duration_and_volume_limit(trials, expected_duration, volume_limit, time_tolerance) == expected
