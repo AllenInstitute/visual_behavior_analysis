@@ -448,8 +448,6 @@ def test_annotate_stimuli(foraging2_trial_fixture, foraging2_stimuli_fixture):
         'initial_image_name': None,
         'change_image_name': None,
         'change_image_category': None,
-        'change_frame': 183,
-        'change_time': 6.511695924235673,
         'change_orientation': 90,
         'change_contrast': None,
         'initial_orientation': None,
