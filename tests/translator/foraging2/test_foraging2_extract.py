@@ -595,3 +595,20 @@ def test_get_reward_volume(foraging2_data_fixture):
 
 def test_get_auto_reward_volume(foraging2_data_fixture):
     assert extract.get_auto_reward_volume(foraging2_data_fixture) == 0.007
+
+
+@pytest.mark.regression
+def test_regression_annotate_stimuli(foraging2_data_fixture_issue_73):
+    stimuli = extract.get_stimuli(foraging2_data_fixture_issue_73)
+    trials = extract.get_trials(foraging2_data_fixture_issue_73).copy(deep=True)
+
+    non_image_trial_count = 0
+
+    for _, trial in trials.iterrows():
+        trial_stim = extract.annotate_stimuli(trial, stimuli)
+        non_image_trial_count += trial_stim["initial_image_name"] is None or \
+            trial_stim["change_image_name"] is None or \
+            trial_stim["initial_image_category"] is None or \
+            trial_stim["change_image_category"] is None
+
+    assert non_image_trial_count == 0

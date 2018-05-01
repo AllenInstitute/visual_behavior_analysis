@@ -322,38 +322,24 @@ def annotate_stimuli(trial, stimuli):
     resolve the first group_name, stimulus_name pair it encounters...so maybe
     name things uniquely everywhere...
     """
-    is_catch = trial["trial_params"].get("catch") is True  # this function got janky real fast...
-
     try:
         stimulus_change = trial["stimulus_changes"][0]
         (from_group, from_name, ), (to_group, to_name), _, change_frame = stimulus_change
         _, stim_dict = _resolve_stimulus_dict(stimuli, from_group)
     except IndexError:
-        if is_catch:
-            trial_start_frame = trial["events"][0][3]
-            category, from_group, from_name = _resolve_initial_image(
-                stimuli,
-                trial_start_frame
-            )
-            to_group, to_name = from_group, from_name
-            change_frame = np.nan
-            if category:
-                stim_dict = stimuli[category]
-            else:
-                stim_dict = {}
+        trial_start_frame = trial["events"][0][3]
+        category, from_group, from_name = _resolve_initial_image(
+            stimuli,
+            trial_start_frame
+        )
+
+        to_group, to_name = from_group, from_name
+        change_frame = np.nan
+
+        if category:
+            stim_dict = stimuli[category]
         else:
-            return {
-                "initial_image_category": None,
-                "initial_image_name": None,
-                "change_image_name": None,
-                "change_image_category": None,
-                "change_orientation": None,
-                "change_contrast": None,
-                "initial_orientation": None,
-                "initial_contrast": None,
-                "delta_orientation": None,
-                "stimulus_on_frames": [],
-            }
+            stim_dict = {}
 
     implied_type = stim_dict["obj_type"]
 
@@ -363,26 +349,19 @@ def annotate_stimuli(trial, stimuli):
     if implied_type in ("DoCGratingStimulus", ):
         first_frame, last_frame = _get_trial_frame_bounds(trial)
 
-        if is_catch:
-            initial_orientation = to_name  # this is a hack that relies on the fact that to_name is the same as the orientation of the grating for DoCGratingStimulus
-            initial_contrast = None
-            change_orientation = to_name
-            change_contrast = None
-            delta_orientation = 0
+        initial_changes, change_changes = _get_stimulus_attr_changes(
+            stim_dict, change_frame, first_frame, last_frame
+        )
+
+        initial_orientation = initial_changes.get("ori")
+        initial_contrast = initial_changes.get("contrast")
+        change_orientation = change_changes.get("ori")
+        change_contrast = change_changes.get("constrast")
+
+        if initial_orientation and change_orientation:
+            delta_orientation = initial_orientation - change_orientation
         else:
-            initial_changes, change_changes = _get_stimulus_attr_changes(
-                stim_dict, change_frame, first_frame, last_frame
-            )
-
-            initial_orientation = initial_changes.get("ori")
-            initial_contrast = initial_changes.get("contrast")
-            change_orientation = change_changes.get("ori")
-            change_contrast = change_changes.get("constrast")
-
-            if initial_orientation and change_orientation:
-                delta_orientation = initial_orientation - change_orientation
-            else:
-                delta_orientation = np.nan
+            delta_orientation = np.nan
 
         return {
             "initial_image_category": None,
