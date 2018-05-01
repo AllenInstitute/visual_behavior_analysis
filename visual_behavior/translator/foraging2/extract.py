@@ -396,8 +396,6 @@ def annotate_stimuli(trial, stimuli):
             "initial_contrast": initial_contrast,
             "delta_orientation": delta_orientation,
             "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
-            "change_time": change_time,
-            "change_frame": change_frame,
         }
     elif implied_type in ("DoCImageStimulus", ):
         return {
@@ -411,8 +409,6 @@ def annotate_stimuli(trial, stimuli):
             "initial_contrast": None,
             "delta_orientation": None,
             "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
-            "change_time": change_time,
-            "change_frame": change_frame,
         }
     else:
         raise ValueError("invalid implied type: {}".format(implied_type))
