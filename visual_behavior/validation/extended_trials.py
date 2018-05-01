@@ -183,24 +183,24 @@ def validate_reward_follows_first_lick_in_window(trials, tolerance=0.001):
     '''reward should happen immediately (within tolerance) of first lick in window on
     non-autorewarded go trials
     '''
-    #get all go_trials without auto_rewards
+    # get all go_trials without auto_rewards
     contingent_go_trials = trials[(trials.trial_type == 'go') & (trials.auto_rewarded == False)]
 
-    #get first lick in response window, relative to change time
+    # get first lick in response window, relative to change time
     first_lick_in_window = contingent_go_trials.apply(get_first_lick_in_response_window, axis=1)
     first_lick_in_window.name = 'first_lick'
 
-    #get reward time, relative to change time
+    # get reward time, relative to change time
     reward_time = contingent_go_trials['reward_times'] - contingent_go_trials['change_time']
     reward_time.name = 'reward_time'
 
-    #check that, whenever a first lick exists, a reward was given with tolerance
+    # check that, whenever a first lick exists, a reward was given with tolerance
     for idx, row in pd.concat([first_lick_in_window, reward_time], axis=1).iterrows():
-        #if there was no lick, there should be no reward
+        # if there was no lick, there should be no reward
         if pd.isnull(row['first_lick']):
             if len(row['reward_time'] > 0):
                 return False
-        #if there was a lick, the reward should happen immediately
+        # if there was a lick, the reward should happen immediately
         elif abs(row['first_lick'] - row['reward_time'][0]) > tolerance:
             return False
 
