@@ -590,3 +590,11 @@ def test_regression_annotate_stimuli(foraging2_natural_images_data_fixture):
         "delta_orientation": None,
         "stimulus_on_frames": [],
     }
+
+
+def test_get_reward_volume(foraging2_data_fixture):
+    assert extract.get_reward_volume(foraging2_data_fixture) == 0.007
+
+
+def test_get_auto_reward_volume(foraging2_data_fixture):
+    assert extract.get_auto_reward_volume(foraging2_data_fixture) == 0.007

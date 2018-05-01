@@ -1290,3 +1290,35 @@ def get_stage(data):
         stage name
     """
     return data["items"]["behavior"]["params"].get("stage")
+
+
+def get_reward_volume(data):
+    """Get reward volume per reward for experiment
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float or None
+        reward volume per reward or None if not found
+    """
+    return data["items"]["behavior"]["config"]["reward"].get("reward_volume")
+
+
+def get_auto_reward_volume(data):
+    """Get reward volume per auto reward for experiment
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float or None
+        auto reward volume per reward or None if not found
+    """
+    return data["items"]["behavior"]["config"]["DoC"].get("auto_reward_volume")
