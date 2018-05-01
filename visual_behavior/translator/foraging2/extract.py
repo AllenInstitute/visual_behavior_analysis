@@ -438,12 +438,13 @@ def _resolve_initial_image(stimuli, start_frame):
     intial_image_category_name = None
 
     for stim_category_name, stim_dict in iteritems(stimuli):
-        for change_event in stim_dict["change_log"]:
-            change_frame = change_event[3]
-            if change_frame < start_frame and change_frame > max_frame:
-                initial_image_group, initial_image_name = change_event[1]
+        for set_event in stim_dict["set_log"]:
+            set_frame = set_event[1]
+            if set_frame <= start_frame and set_frame >= max_frame:
+                initial_image_group = initial_image_name = set_event[0]  # hack assumes initial_image_group == initial_image_name, only initial_image_name is present for natual_scenes
+                # initial_image_group, initial_image_name = change_event[0]
                 intial_image_category_name = stim_category_name
-                max_frame = change_frame
+                max_frame = set_frame
 
     return intial_image_category_name, initial_image_group, initial_image_name
 

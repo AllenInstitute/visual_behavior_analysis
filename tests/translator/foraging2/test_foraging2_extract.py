@@ -555,14 +555,15 @@ def test_get_stage(mock_data, expected, exception_type):
 
 
 @pytest.mark.parametrize("start_frame, expected", [
-    (183, (None, None, None, ), ),
-    (184, ("gratings", "group1", 90, ), ),
-    (874, ("gratings", "group0", 0, ), ),
-    (900, ("gratings", "group0", 0, ), ),
-    (1380, ("gratings", "group1", 90, ), ),
+    (183, ('natual_scenes', 'im065', 'im065'), ),
+    (184, ('natual_scenes', 'im065', 'im065'), ),
+    (874, ('natual_scenes', 'im077', 'im077'), ),
+    (900, ('natual_scenes', 'im077', 'im077'), ),
+    (1380, ('natual_scenes', 'im065', 'im065'), ),
 ])
-def test__resolve_initial_image(foraging2_stimuli_fixture, start_frame, expected):
-    assert extract._resolve_initial_image(foraging2_stimuli_fixture, start_frame) == expected
+def test__resolve_initial_image(foraging2_data_fixture_issue_73, start_frame, expected):
+    stimuli = extract.get_stimuli(foraging2_data_fixture_issue_73)
+    assert extract._resolve_initial_image(stimuli, start_frame) == expected
 
 
 @pytest.mark.regression
