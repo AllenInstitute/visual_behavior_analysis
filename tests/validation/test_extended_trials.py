@@ -464,7 +464,7 @@ def test_validate_trial_ends_without_licks_success():
     assert extended_trials.validate_trial_ends_without_licks(good_trials, MINIMUM_NO_LICK_TIME) == True
 
 
-def test_validate_trial_ends_without_licks_success():
+def test_validate_trial_ends_without_licks_failure():
     MINIMUM_NO_LICK_TIME = 0.3  # 300ms according to dougo
 
     bad_trials = pd.DataFrame(data={
@@ -498,8 +498,7 @@ def test_validate_session_ends_at_max_cumulative_volume(trials, volume_limit, to
 
 @pytest.mark.parametrize("trials, expected_duration, volume_limit, time_tolerance, expected", [
     (pd.DataFrame(data={"cumulative_volume": [1.00, ], "endtime": [5400, ], }), 5430, 1.00, 30, True, ),
-    (pd.DataFrame(data={"cumulative_volume": [1.00, ], "endtime": [5430, ], }), 5400, 1.00, 30, False, ),
-    (pd.DataFrame(data={"cumulative_volume": [1.00, ], "endtime": [5000, ], }), 5400, 1.00, 30, False, ),
+    (pd.DataFrame(data={"cumulative_volume": [1.00, ], "endtime": [5399, ], }), 5430, 1.00, 30, False, ),
     (pd.DataFrame(data={"cumulative_volume": [0.90, ], "endtime": [5000, ], }), 5400, 1.00, 30, False, ),
 ])
 def test_validate_duration_and_volume_limit(trials, expected_duration, volume_limit, time_tolerance, expected):
