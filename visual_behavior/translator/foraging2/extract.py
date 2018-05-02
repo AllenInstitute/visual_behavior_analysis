@@ -605,11 +605,7 @@ def get_licks(exp_data, time=None):
     -----
     - TODO remove the time thing, standardize where time evaluation occurs
     """
-    lick_frames = [
-        trial["licks"][0][1]
-        for (idx, trial) in get_trials(exp_data).iterrows()
-        if trial["licks"]
-    ]
+    lick_frames = exp_data['items']['behavior']['lick_sensors'][0]['lick_events']
 
     time = time or get_time(exp_data)  # that coverage syntax tho...
 
