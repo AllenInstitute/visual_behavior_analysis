@@ -117,6 +117,17 @@ def identify_consecutive_aborted_blocks(trials, failure_repeats):
     return trials
 
 
+def all_close(v, tolerance=0.01):
+    '''adapts the numpy allclose method to work on single array
+    - creates two arrays that are shifted versions of the input, pads with
+    initial and final values, compares.
+    - equivalent to iterating through v and comparing each element to the next
+    '''
+    a = np.concatenate(([v[0]], v, ))
+    b = np.concatenate((v, [v[-1]], ))
+    return np.allclose(a, b, rtol=tolerance)
+
+
 # TRIAL
 def validate_min_change_time(trial):
     '''change time in trial should never be less than pre_change_time'''

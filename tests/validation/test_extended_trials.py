@@ -542,20 +542,40 @@ def test_validate_task_id_present(trials, expected):
     assert extended_trials.validate_task_id_present(trials) == expected
 
 
-# @pytest.mark.parametrize("trials, failure_repeats, tolerance, expected", [
-#     (
-#         pd.DataFrame(data={
-#             "trial_type": ["aborted", "aborted", "aborted", ],
-#             "scheduled_change_time": [],
-#             "starttime": [],
-#         }),
-#         5,
-#         0.01,
-#         False,
-#     ),
-# ])
-# def test_validate_number_aborted_trial_repeats(trials, failure_repeats, tolerance, expected):
-#     assert extended_trials.validate_number_aborted_trial_repeats(trials, failure_repeats, tolerance) == expected
+@pytest.mark.parametrize("trials, failure_repeats, tolerance, expected", [
+    (
+        pd.DataFrame(data={
+            "trial_type": ["aborted", "aborted", "aborted", "aborted", ],
+            "scheduled_change_time": [1.5, 6.5, 11.5, 17.5, ],
+            "starttime": [0, 5, 10, 15, ],
+        }),  # 3 trial long aborted "block" next to start of new aborted "block"
+        3,
+        0.01,
+        False,
+    ),
+    (
+        pd.DataFrame(data={
+            "trial_type": ["aborted", "aborted", "aborted", "aborted", ],
+            "scheduled_change_time": [1.5, 6.5, 11.5, 16.5, ],
+            "starttime": [0, 5, 10, 15, ],
+        }),  # 4 trial long aborted "block"
+        3,
+        0.01,
+        False,
+    ),
+    (
+        pd.DataFrame(data={
+            "trial_type": ["aborted", "aborted", "aborted", "aborted", ],
+            "scheduled_change_time": [1.5, 6.5, 12.5, 17.5, ],
+            "starttime": [0, 5, 10, 15, ],
+        }),  # two trial long aborted "blocks" side by side
+        2,
+        0.01,
+        True,
+    ),
+])
+def test_validate_number_aborted_trial_repeats(trials, failure_repeats, tolerance, expected):
+    assert extended_trials.validate_number_aborted_trial_repeats(trials, failure_repeats, tolerance) == expected
 
 
 @pytest.mark.parametrize("trials, ignore_false_alarms, expected", [
