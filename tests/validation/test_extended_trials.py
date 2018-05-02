@@ -341,13 +341,21 @@ def test_validate_intial_and_final_in_non_aborted_failure():
     assert extended_trials.validate_intial_and_final_in_non_aborted(bad_trials) is False
 
 
-# def test_validate_reward_follows_first_lick_in_window_success(exemplar_extended_trials_fixture):
-#     extended_trials.validate_reward_follows_first_lick_in_window(exemplar_extended_trials_fixture) is True
-#
-#
-# def test_validate_reward_follows_first_lick_in_window_failure():
-#     bad_trials = {}
-#     extended_trials.validate_reward_follows_first_lick_in_window(bad_trials) is False
+def test_validate_reward_follows_first_lick_in_window_success(exemplar_extended_trials_fixture):
+    extended_trials.validate_reward_follows_first_lick_in_window(exemplar_extended_trials_fixture) is True
+
+
+def test_validate_reward_follows_first_lick_in_window_failure():
+    bad_trials = pd.DataFrame(data={
+        "trial_type": ["aborted", "go", ],
+        "auto_rewarded": [False, False, ],
+        "reward_times": [[], [3.34, ], ],
+        "change_time": [np.nan, 3.22, ],
+        "lick_times": [[], [3.33, 3.34, 3.35, 3.55, ], ],
+        "response_window": [[0.15, 1, ], [0.15, 1, ], ],
+    })
+
+    extended_trials.validate_reward_follows_first_lick_in_window(bad_trials) is False
 
 
 @pytest.mark.parametrize("trials, expected", [
@@ -503,3 +511,183 @@ def test_validate_session_ends_at_max_cumulative_volume(trials, volume_limit, to
 ])
 def test_validate_duration_and_volume_limit(trials, expected_duration, volume_limit, time_tolerance, expected):
     assert extended_trials.validate_duration_and_volume_limit(trials, expected_duration, volume_limit, time_tolerance) == expected
+
+
+# @pytest.mark.parametrize("trials, expected_catch_frequency, rejection_probability, expected", [
+#     (pd.DataFrame(data={"trial_type": ["catch", ] * 100, }), 0.49, 0.05, False, ),
+#     (pd.DataFrame(data={"trial_type": ["go", ] * 100}), 0.5, 0.05, False, ),
+#     (pd.DataFrame(data={"trial_type": (["go", ] * 45) + (["catch", ] * 55) }), 0.5, 0.05, True, ),
+#     (pd.DataFrame(data={"trial_type": ["go", "go", "catch", "catch", ]}), 0.5, 0.05, True, ),
+#     (pd.DataFrame(data={"trial_type": ["go", "go", "catch", "catch", ]}), 0.49, 0.05, False, ),
+# ])
+# def test_validate_catch_frequency(trials, expected_catch_frequency, rejection_probability, expected):
+#     assert extended_trials.validate_catch_frequency(trials, expected_catch_frequency, rejection_probability) == expected
+
+
+@pytest.mark.parametrize("trials, expected", [
+    (pd.DataFrame(data={"stage": [0, 1, 2, 3, 4, ], }), True, ),
+    (pd.DataFrame(data={"stage": [0, 1, 2, 3, None, ], }), False, ),
+    (pd.DataFrame(data={"stage": [0, 1, 2, 3, np.nan, ], }), False, ),
+])
+def test_validate_stage_present(trials, expected):
+    assert extended_trials.validate_stage_present(trials) == expected
+
+
+@pytest.mark.parametrize("trials, expected", [
+    (pd.DataFrame(data={"task_id": [0, "", "test", ], }), True, ),
+    (pd.DataFrame(data={"task_id": [0, "", "test", None, ], }), False, ),
+    (pd.DataFrame(data={"task_id": [0, "", "test", np.nan, ], }), False, ),
+])
+def test_validate_task_id_present(trials, expected):
+    assert extended_trials.validate_task_id_present(trials) == expected
+
+
+# @pytest.mark.parametrize("trials, failure_repeats, tolerance, expected", [
+#     (
+#         pd.DataFrame(data={
+#             "trial_type": ["aborted", "aborted", "aborted", ],
+#             "scheduled_change_time": [],
+#             "starttime": [],
+#         }),
+#         5,
+#         0.01,
+#         False,
+#     ),
+# ])
+# def test_validate_number_aborted_trial_repeats(trials, failure_repeats, tolerance, expected):
+#     assert extended_trials.validate_number_aborted_trial_repeats(trials, failure_repeats, tolerance) == expected
+
+
+@pytest.mark.parametrize("trials, ignore_false_alarms, expected", [
+    (pd.DataFrame(data={"trial_type": ["go", "go", "catch", ]}), True, True, ),
+    (pd.DataFrame(data={"trial_type": ["go", "aborted", "catch", ]}), True, False, ),
+    (pd.DataFrame(data={"trial_type": ["go", "aborted", "catch", ]}), False, True, ),
+])
+def test_validate_ignore_false_alarms(trials, ignore_false_alarms, expected):
+    assert extended_trials.validate_ignore_false_alarms(trials, ignore_false_alarms) == expected
+
+
+@pytest.mark.parametrize("trials, expected", [
+    (
+        pd.DataFrame(data={
+            "starttime": [0., 0.76716053, 6.9556934, ],
+            "endtime": [0.75048087, 6.93895647, 12.32681855, ],
+        }),
+        True,
+    ),
+    (
+        pd.DataFrame({
+            'starttime': [0., 0.76716053 - 0.02, 6.9556934, ],
+            'endtime': [0.75048087, 6.93895647, 12.32681855, ],
+        }),
+        False,
+    ),
+])
+def test_validate_trial_times_never_overlap(trials, expected):
+    assert extended_trials.validate_trial_times_never_overlap(trials) == expected
+
+
+@pytest.mark.parametrize("trials, expected_distribution_name, expected", [
+    (
+        pd.DataFrame(data={"stimulus_distribution": ["exponential", "exponential", ], }),
+        "exponential",
+        True,
+    ),
+    (
+        pd.DataFrame(data={"stimulus_distribution": ["exponential", "not_exponential", ], }),
+        "exponential",
+        False,
+    ),
+])
+def test_validate_stimulus_distribution_key(trials, expected_distribution_name, expected):
+    assert extended_trials.validate_stimulus_distribution_key(trials, expected_distribution_name) == expected
+
+
+# def test_validate_change_time_mean_success():
+#     np.random.seed(seed=100)
+#     simulated_change_times_good = np.random.exponential(scale=2, size=100)
+#
+#     GOOD_TRIALS = pd.DataFrame({
+#         'change_time': simulated_change_times_good,
+#         'starttime': np.zeros_like(simulated_change_times_good),
+#         'prechange_minimum': np.zeros_like(simulated_change_times_good),
+#     })
+#
+#     assert extended_trials.validate_change_time_mean(GOOD_TRIALS, expected_mean, tolerance=0.5) == True
+#
+#
+# def test_validate_change_time_mean_failure():
+#     np.random.seed(seed=100)
+#     simulated_change_times_bad = np.random.exponential(scale=3, size=100)
+#
+#     BAD_TRIALS = pd.DataFrame({
+#         'change_time': simulated_change_times_bad,
+#         'starttime': np.zeros_like(simulated_change_times_bad),
+#         'prechange_minimum': np.zeros_like(simulated_change_times_bad),
+#     })
+#
+#     assert extended_trials.validate_change_time_mean(BAD_TRIALS, expected_mean, tolerance=0.5) == False
+
+
+def test_validate_monotonically_decreasing_number_of_change_times_success():
+    np.random.seed(10)
+    ## chose change times from an exponential distribution
+    exponential_change_times = np.random.exponential(3, 5000)
+    GOOD_TRIALS = pd.DataFrame(data={
+        'change_time': exponential_change_times,
+        'starttime': np.zeros_like(exponential_change_times),
+    })
+    # exponentially distributed values should pass monotonocity test
+    assert extended_trials.validate_monotonically_decreasing_number_of_change_times(GOOD_TRIALS, 'exponential') == True
+
+
+
+
+def test_validate_monotonically_decreasing_number_of_change_times_failure():
+    np.random.seed(10)
+    uniform_change_times = np.random.uniform(low=0, high=8, size=5000)
+    BAD_TRIALS = pd.DataFrame({
+        'change_time': uniform_change_times,
+        'starttime': np.zeros_like(uniform_change_times),
+    })
+    # uniformly distributed values should fail monotonocity test
+    assert extended_trials.validate_monotonically_decreasing_number_of_change_times(BAD_TRIALS, 'exponential') == False
+
+    # Bad trials should pass if distribution is not exponential
+    assert extended_trials.validate_monotonically_decreasing_number_of_change_times(BAD_TRIALS, 'uniform') == True
+
+
+def test_validate_no_abort_on_lick_before_response_window_success():
+    # 3 trials with first lick after change, but before response window. Correctly labeled as 'go' or 'catch'
+    # 1 trial with first lick before change, correctly labeled as 'aborted'
+    GOOD_DATA = pd.DataFrame({
+        'trial_type':['go', 'go', 'catch', 'aborted', ],
+        'change_time':[867.943295, 2132.735950, 2359.626023, 2500, ],
+        'lick_times':[
+            [868.07670185, 868.243553692, 868.343638907],
+            [2132.8193812, 2133.00285741, 2134.73767532],
+            [2359.72610696, 2359.95964697],
+            [2499],
+        ],
+        'response_window':[[0.15, 0.75], [0.15, 0.75], [0.15, 0.75], [0.15, 0.75], ]
+    })
+
+    assert extended_trials.validate_no_abort_on_lick_before_response_window(GOOD_DATA) == True
+
+
+def test_validate_no_abort_on_lick_before_response_window_failure():
+    # 3 trials with first lick after change, but before response window. Correctly labeled as 'go' or 'catch'
+    # 1 trial with first lick but before response window. Incorrectly labeled as 'aborted'
+    BAD_DATA = pd.DataFrame({
+        'trial_type':['go', 'go', 'catch', 'aborted', ],
+        'change_time':[867.943295, 2132.735950, 2359.626023, 2500, ],
+        'lick_times':[
+            [868.07670185, 868.243553692, 868.343638907],
+            [2132.8193812, 2133.00285741, 2134.73767532],
+            [2359.72610696, 2359.95964697],
+            [2500.1],
+        ],
+        'response_window':[[0.15, 0.75], [0.15, 0.75], [0.15, 0.75], [0.15, 0.75], ]
+    })
+
+    assert extended_trials.validate_no_abort_on_lick_before_response_window(BAD_DATA) == False

@@ -1,7 +1,7 @@
 import logging
 import numpy as np
 import pandas as pd
-
+from scipy import stats
 
 from .trials import validate_trials
 # from ..schemas.extended_trials import ExtendedTrialSchema
@@ -75,6 +75,46 @@ def get_first_lick_relative_to_change(row):
     '''returns first lick relative to scheduled change time, nan if no such lick exists'''
     licks = np.array(row['lick_times']) - row['change_time']
     return licks[0] if len(licks) > 0 else np.nan
+
+
+def identify_consecutive_aborted_blocks(trials, failure_repeats):
+    '''adds columns to the dataframe that:
+        1 - track the number of consecutive aborted trials
+        2 - assigns a unique integer to each 'failure_repeats' long block of
+        aborted trials
+        3 - adjusts scheduled change time to be relative to trial start
+    '''
+    # instantiate some counters and empty lists
+    # first counter will keep track of consecutive aborted trials
+    consecutive_aborted = 0
+    consecutive_aborted_col = []
+    # this counter will assign a unique integer to every block aborted trials that are even multiples of 'failure_repeats'
+    consecutive_aborted_should_match = 0
+    consecutive_aborted_should_match_col = []
+
+    # iterate through trials
+    for idx, row in trials.iterrows():
+        # check whether or not to iterate consecutive aborted
+        if row['trial_type'] == 'aborted':
+            consecutive_aborted += 1
+        else:
+            consecutive_aborted = 0
+
+        # increment an integer that keeps track of which block of aborted trials should have matching change times
+        if consecutive_aborted % failure_repeats == 0: #a new block whenever modulus = 0
+            consecutive_aborted_should_match += 1
+
+        consecutive_aborted_col.append(consecutive_aborted)
+        consecutive_aborted_should_match_col.append(consecutive_aborted_should_match)
+
+    # append columns to dataframe to allow slicing
+    trials['consecutive_aborted'] = consecutive_aborted_col
+    trials['consecutive_aborted_should_match'] = consecutive_aborted_should_match_col
+
+    # get scheduled change time relative to trial start
+    trials['scheduled_change_time_trial_time'] = trials['scheduled_change_time'] - trials['starttime']
+
+    return trials
 
 
 # TRIAL
@@ -198,14 +238,21 @@ def validate_reward_follows_first_lick_in_window(trials, tolerance=0.001):
     non-autorewarded go trials
     '''
     # get all go_trials without auto_rewards
-    contingent_go_trials = trials[(trials.trial_type == 'go') & (trials.auto_rewarded == False)]
+    contingent_go_trials = trials[
+        (trials.trial_type == 'go') &
+        (trials.auto_rewarded == False)
+    ]
 
     # get first lick in response window, relative to change time
-    first_lick_in_window = contingent_go_trials.apply(get_first_lick_in_response_window, axis=1)
+    first_lick_in_window = contingent_go_trials.apply(
+        get_first_lick_in_response_window,
+        axis=1
+    )
     first_lick_in_window.name = 'first_lick'
 
     # get reward time, relative to change time
-    reward_time = contingent_go_trials['reward_times'] - contingent_go_trials['change_time']
+    reward_time = contingent_go_trials['reward_times'] - \
+        contingent_go_trials['change_time']
     reward_time.name = 'reward_time'
 
     # check that, whenever a first lick exists, a reward was given with tolerance
@@ -334,3 +381,173 @@ def validate_duration_and_volume_limit(
         else:
             # otherwise, return True
             return True
+
+
+def validate_catch_frequency(
+        trials, expected_catch_frequency, rejection_probability=0.05
+):
+    '''non-aborted catch trials should comprise `catc_freq` of all non-aborted
+    trials uses scipy's binomial test to ensure that the null hypothesis (catch
+    trials come from a binomial distribution drawn with catch_freq) is true with
+    95% probability
+    '''
+    go_trials = trials[trials['trial_type'] == 'go']
+    catch_trials = trials[trials['trial_type'] == 'catch']
+
+    probability_of_null_hypothesis = stats.binom_test(
+        len(catch_trials),
+        n=len(catch_trials) + len(go_trials),
+        p=expected_catch_frequency,
+    )
+
+    if probability_of_null_hypothesis < (1 - rejection_probability):
+        return True
+    else:
+        return False
+
+
+def validate_stage_present(trials):
+    '''The parameter `stage` should be recorded in the output
+    file.
+    '''
+    return all(~pd.isnull(trials['stage']))
+
+
+def validate_task_id_present(trials):
+    '''The parameter `task_id` should be recorded in the output
+    file.
+    '''
+    try:
+        return all(~pd.isnull(trials['task_id']))
+    except KeyError:
+        return False
+
+
+def validate_number_aborted_trial_repeats(
+        trials, failure_repeats, tolerance=0.01
+):
+    '''on aborted trials (e.g. early licks), the trial's stimulus
+    parameters should be repeated `failure_repeats` times
+    '''
+
+    # assign columns to the dataframe to make test possible
+    trials = identify_consecutive_aborted_blocks(trials, failure_repeats)
+
+    # get all aborted trials
+    aborted_trials = trials[trials['trial_type'] == 'aborted']
+
+    # identify all blocks which should have matching scheduled change times (blocks with lengths in multiples of 'failure_repeats')
+    block_ids = aborted_trials.consecutive_aborted_should_match.unique()
+
+    # check each block to make sure all scheduled change times are equal, within a tolerance
+    block_has_matching_scheduled_change_time = []
+    for block_id in block_ids:
+        block_has_matching_scheduled_change_time.append(
+            all_close(
+                aborted_trials[aborted_trials.consecutive_aborted_should_match == block_id]['scheduled_change_time_trial_time'].values,
+                tolerance=tolerance,
+            )
+        )
+
+    # return True if all blocks matched
+    return all(block_has_matching_scheduled_change_time)
+
+
+def validate_ignore_false_alarms(trials, ignore_false_alarms):
+    '''If `ignore_false_alarms` is True, no aborted trials or timeout periods
+    should occur. This is used on the 'day 0' session, where we don't want to
+    penalize exploratory licking
+    '''
+    # test is only valid if the 'ignore_false_alarms' parameter is True. If not the case, just pass the test
+    if not ignore_false_alarms:
+        return True
+
+    # if ignore_false_alarms is True, there should be 0 aborted trials
+    # Of course, this depends on the aborted trials having been properly identified
+    return len(trials[trials.trial_type == 'aborted']) == 0
+
+
+def validate_trial_times_never_overlap(trials):
+    '''a trial cannot start until the prior trial is complete
+    '''
+    previous_end = 0
+    trial_start_greater_than_last_end = []
+
+    for idx, row in trials.iterrows():
+        trial_start_greater_than_last_end.append(
+            row['starttime'] >= previous_end
+        )
+        previous_end = row['endtime']
+
+    return all(trial_start_greater_than_last_end)
+
+
+def validate_stimulus_distribution_key(trials, expected_distribution_name):
+    '''stimulus_distribution: The distribution of change times should match the
+    'stimulus_distribution' (default='exponential')
+    '''
+    return all(trials['stimulus_distribution'] == expected_distribution_name)
+
+
+def validate_change_time_mean(trials, expected_mean, tolerance=0.5):
+    '''stimulus_distribution: the mean of the stimulus distribution should match
+    the 'distribution_mean' parameter
+    '''
+    change_time_trial_referenced = trials['change_time'] - \
+        trials['starttime'] - \
+        trials['prechange_minimum']
+    return abs(change_time_trial_referenced[~np.isnan(change_time_trial_referenced)].mean() - expected_mean) <= tolerance
+
+
+def validate_monotonically_decreasing_number_of_change_times(
+        trials,
+        expected_distribution
+):
+    '''If stimulus_distribution is 'exponential', then the number of trials with
+    changes on each flash should be monotonically decreasing from the first
+    flash after the `min_change_time`
+    '''
+    if expected_distribution == 'exponential':
+        change_times = (trials['change_time'] - trials['starttime']).values
+        change_times = change_times[~np.isnan(change_times)]
+
+        nvals, edges = np.histogram(change_times, bins=np.arange(0, 10, 0.5))
+
+        nonzero_bins = nvals[nvals > 0]
+
+        return all([
+            first_val >= second_val
+            for first_val, second_val
+            in zip(nonzero_bins[:-1], nonzero_bins[1:])
+        ])
+    else:
+        return True
+
+
+def validate_no_abort_on_lick_before_response_window(trials):
+    '''If licks occur between the change time and `response_window[0]`, the
+    trial should continue. Method ensures that all cases matching this condition
+    are labeled as 'go' or 'catch', not 'aborted'
+    '''
+    def identify_first_lick_before_response_window(row):
+        '''a method for identifying trials with licks between the change time
+        and the start of the response window
+        '''
+        # get first lick from lick list if it isn't empty
+        first_lick = row['lick_times'][0] if len(row['lick_times']) > 0 else np.nan
+        # get offset between first lick and change time
+        first_lick_relative_to_change = first_lick - row['change_time']
+        # return True if first lick is between the change time and the start of the response window, False otherwise
+        if np.logical_and(first_lick_relative_to_change >= 0, first_lick_relative_to_change < row['response_window'][0]):
+            return True
+        else:
+            return False
+
+    # identify all trials with licks between the change time and the start of the response window
+    trials['response_before_response_window'] = trials.apply(
+        identify_first_lick_before_response_window,
+        axis=1
+    )
+
+    # ensure that all trials with first lick between the change time and the start of the response window are labeled as 'go' or 'catch' (not 'aborted')
+    return all(trials[trials['response_before_response_window'] == True].trial_type.isin(['go', 'catch']))
