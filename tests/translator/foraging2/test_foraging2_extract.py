@@ -264,9 +264,9 @@ def test_get_licks(monkeypatch, foraging2_data_fixture):
     )
 
     expected = pd.DataFrame(data={
-        "frame": np.array([196, 886, 1392, ]),
-        "time": np.array([3.136, 14.176, 22.272, ]),
-    })
+        "frame": np.array([]),
+        "time": np.array([]),
+    })  # the test data doesnt have lick sensor data so i guess this is more of a smoke test for now...?
 
     pd.testing.assert_frame_equal(
         extract.get_licks(foraging2_data_fixture),
