@@ -3,11 +3,11 @@ import pandas as pd
 
 from .trials import validate_trials
 from ..schemas.extended_trials import ExtendedTrialSchema
-from ..validation import is_valid_dataframe
+from ..validation import assert_is_valid_dataframe
 
 
 def validate_schema(extended_trials):
-    assert is_valid_dataframe(extended_trials, ExtendedTrialSchema())
+    assert_is_valid_dataframe(extended_trials, ExtendedTrialSchema())
 
 
 def validate_aborted_change_time(tr):
