@@ -74,7 +74,7 @@ EXPECTED_MONOLITH = pd.DataFrame(data={
 EXPECTED_TRIALS = pd.DataFrame(data={
     "auto_rewarded": {0: True, 1: False, 2: False, },
     "change_contrast": {0: None, 1: None, 2: None, },
-    "change_frame": {0: 183, 1: 873, 2: 1379, },
+    "change_frame": {0: 184, 1: 874, 2: 1380, },
     "change_image_category": {0: None, 1: None, 2: None, },
     "change_image_name": {0: None, 1: None, 2: None, },
     "change_ori": {0: 90, 1: 0, 2: 90, },
@@ -190,8 +190,8 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             'stim_duration': 6000.0,
             'blank_duration_range': [0.5, 0.5, ],
             'delta_minimum': 2.25,
-            'stimulus_distribution': None,
-            'delta_mean': None,
+            'stimulus_distribution': 'exponential',
+            'delta_mean': 2.0,
             'trial_duration': None,
             'n_stimulus_frames': 592,
             'stimulus': 'gratings',
@@ -272,9 +272,9 @@ def test_data_to_licks(monkeypatch, foraging2_data_fixture):
     )
 
     expected = pd.DataFrame(data={
-        "frame": {0: 196, 1: 886, 2: 1392, },
-        "time": {0: 3.136, 1: 14.176, 2: 22.272, },
-    })
+        "frame": np.array([]),
+        "time": np.array([]),
+    })  # the test data doesnt have lick sensor data so i guess this is more of a smoke test for now...?
 
     pd.testing.assert_frame_equal(
         foraging2.data_to_licks(foraging2_data_fixture),
@@ -300,5 +300,7 @@ def test_data_to_trials(foraging2_data_fixture):
         check_column_type=False,
         check_index_type=False,
         check_dtype=False,
-        check_like=True
+        check_like=True,
+        check_exact=False,
+        check_less_precise=3,
     )
