@@ -220,10 +220,6 @@ class StimulusSchema(TimeSeriesSchema):
     )
 
 
-class ExtendedTrialSchema(TrialSchema):
-    pass
-
-
 class MetadataSchema(Schema):
     startdatetime = fields.String(
         description='Start time of visual behavior session in ISO 8601',
