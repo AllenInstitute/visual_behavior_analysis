@@ -55,7 +55,7 @@ def is_equal(v1, v2):
     return v1 == v2
 
 
-def all_close(v,tolerance=0.01):
+def all_close(v, tolerance=0.01):
     '''
     adapts the numpy allclose method to work on single array
     creates two arrays that are shifted versions of the input, pads with
@@ -72,13 +72,13 @@ def get_first_lick_in_response_window(row):
     returns first lick that falls in response window, nan if no such lick
     exists
     '''
-    licks = np.array(row['lick_times'])-row['change_time']
+    licks = np.array(row['lick_times']) - row['change_time']
     licks_in_window = licks[
         np.logical_and(
             licks >= row['response_window'][0],
             licks <= row['response_window'][1],
-            )
-        ]
+        )
+    ]
     if len(licks_in_window) > 0:
         return licks_in_window[0]
     else:
@@ -90,7 +90,7 @@ def get_first_lick_relative_to_change(row):
     returns first lick relative to scheduled change time, nan if no such lick
     exists
     '''
-    licks = np.array(row['lick_times'])-row['change_time']
+    licks = np.array(row['lick_times']) - row['change_time']
     if len(licks) > 0:
         return licks[0]
     else:
@@ -102,14 +102,14 @@ def get_first_lick_relative_to_scheduled_change(row):
     returns first lick relative to scheduled change time, nan if no such lick
     exists
     '''
-    licks = np.array(row['lick_times'])-row['scheduled_change_time']
+    licks = np.array(row['lick_times']) - row['scheduled_change_time']
     if len(licks) > 0:
         return licks[0]
     else:
         return np.nan
 
 
-def identify_consecutive_aborted_blocks(trials,failure_repeats):
+def identify_consecutive_aborted_blocks(trials, failure_repeats):
     '''
     adds columns to the dataframe that:
         1 - track the number of consecutive aborted trials
@@ -200,7 +200,7 @@ def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
     # get time difference between each reward and change_time
     try:
         time_delta = [
-            abs(rt[0]-ct)
+            abs(rt[0] - ct)
             for rt, ct
             in zip(go_warmup_trials.reward_times, go_warmup_trials.change_time)
         ]
@@ -219,7 +219,7 @@ def validate_autorewards_after_N_consecutive_misses(trials, autoreward_after_con
     for idx, row in go_trials.iterrows():
         miss = 1 if row['response'] == 0 else 0
         auto_rewarded = 1 if row['auto_rewarded'] else 0
-        consecutive_misses = (consecutive_misses*miss+miss)*abs(1-auto_rewarded)
+        consecutive_misses = (consecutive_misses * miss + miss) * abs(1 - auto_rewarded)
         if consecutive_misses > autoreward_after_consecutive_misses:
             # these are trials when an autoreward is expected
             auto_reward_when_expected.append(row['auto_rewarded'])
@@ -263,12 +263,12 @@ def validate_intial_and_final_in_non_aborted(trials):
 
 def validate_min_change_time(trials, pre_change_time):
     '''change time in trial should never be less than pre_change_time'''
-    return np.nanmin((trials['change_time']-trials['starttime']).values) > pre_change_time
+    return np.nanmin((trials['change_time'] - trials['starttime']).values) > pre_change_time
 
 
 def validate_max_change_time(trials, pre_change_time, stimulus_window):
     '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
-    return np.nanmax((trials['change_time']-trials['starttime']).values) < (pre_change_time+stimulus_window)
+    return np.nanmax((trials['change_time'] - trials['starttime']).values) < (pre_change_time+stimulus_window)
 
 
 def validate_reward_follows_first_lick_in_window(trials, tolerance=0.001):
@@ -287,7 +287,7 @@ def validate_reward_follows_first_lick_in_window(trials, tolerance=0.001):
     first_lick_in_window.name = 'first_lick'
 
     # get reward time, relative to change time
-    reward_time = contingent_go_trials['reward_times']-contingent_go_trials['change_time']
+    reward_time = contingent_go_trials['reward_times'] - contingent_go_trials['change_time']
     reward_time.name = 'reward_time'
 
     # check that, whenever a first lick exists, a reward was given with tolerance
@@ -366,7 +366,7 @@ def validate_trial_ends_without_licks(trials, minimum_no_lick_time):
     non_aborted_trials = trials[trials.trial_type.isin(['go', 'catch'])]
     for idx, row in non_aborted_trials.iterrows():
         # fail if the last lick is within 'minimum_no_lick_time' of the endtime
-        if len(row['lick_times']) > 0 and row['endtime']-row['lick_times'][-1] < minimum_no_lick_time:
+        if len(row['lick_times']) > 0 and row['endtime'] - row['lick_times'][-1] < minimum_no_lick_time:
             return False
     return True
 
@@ -386,7 +386,7 @@ def validate_session_ends_at_max_cumulative_volume(trials, volume_limit, toleran
     return trials['cumulative_volume'].max() <= volume_limit + tolerance
 
 
-def validate_duration_and_volume_limit(trials,expected_duration,volume_limit,time_tolerance=30):
+def validate_duration_and_volume_limit(trials, expected_duration, volume_limit, time_tolerance=30):
     '''
     The length of a session should not be less than `duration` by more than 30 seconds UNLESS `volume_limit` has been met
     '''
@@ -413,11 +413,11 @@ def validate_catch_frequency(trials, expected_catch_frequency, rejection_probabi
 
     probability_of_null_hypothesis = stats.binom_test(
         len(catch_trials),
-        n=len(catch_trials)+len(go_trials),
+        n=len(catch_trials) + len(go_trials),
         p=expected_catch_frequency,
     )
 
-    if probability_of_null_hypothesis < (1-rejection_probability):
+    if probability_of_null_hypothesis < (1 - rejection_probability):
         return True
     else:
         return False
@@ -481,7 +481,7 @@ def validate_ignore_false_alarms(trials, ignore_false_alarms):
             return True
         else:
             return False
-    #test is only valid if the 'ignore_false_alarms' parameter is True. If not the case, just pass the test
+    # test is only valid if the 'ignore_false_alarms' parameter is True. If not the case, just pass the test
     else:
         return True
 
@@ -509,7 +509,7 @@ def validate_change_time_mean(trials, expected_mean, tolerance=0.5):
     '''
     stimulus_distribution: the mean of the stimulus distribution should match the 'distribution_mean' parameter
     '''
-    change_time_trial_referenced = trials['change_time']-trials['starttime']-trials['prechange_minimum']
+    change_time_trial_referenced = trials['change_time'] - trials['starttime'] - trials['prechange_minimum']
     return abs(change_time_trial_referenced[~np.isnan(change_time_trial_referenced)].mean() - expected_mean) <= tolerance
 
 
@@ -518,7 +518,7 @@ def validate_monotonically_decreasing_number_of_change_times(trials, expected_di
     If stimulus_distribution is 'exponential', then the number of trials with changes on each flash should be monotonically decreasing from the first flash after the `min_change_time`
     '''
     if expected_distribution == 'exponential':
-        change_times = (trials['change_time']-trials['starttime']).values
+        change_times = (trials['change_time'] - trials['starttime']).values
         change_times = change_times[~np.isnan(change_times)]
 
         nvals, edges = np.histogram(change_times, bins=np.arange(0, 10, 0.5))
@@ -549,7 +549,7 @@ def validate_no_abort_on_lick_before_response_window(trials):
         # get offset between first lick and change time
         first_lick_relative_to_change = first_lick - row['change_time']
         # return True if first lick is between the change time and the start of the response window, False otherwise
-        if np.logical_and(first_lick_relative_to_change >= 0, first_lick_relative_to_change<row['response_window'][0]):
+        if np.logical_and(first_lick_relative_to_change >= 0, first_lick_relative_to_change < row['response_window'][0]):
             return True
         else:
             return False
