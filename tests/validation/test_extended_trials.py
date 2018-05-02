@@ -47,6 +47,8 @@ def test_validate_stimulus_distribution_key():
     assert validate_stimulus_distribution_key(BAD_TRIALS,expected_distribution_name)==False
 
 def test_validate_change_time_mean():
+    EXPECTED_MEAN = 2
+
     np.random.seed(seed=100)
     simulated_change_times_good=np.random.exponential(scale=2,size=100,)
     GOOD_TRIALS = pd.DataFrame({
@@ -55,7 +57,7 @@ def test_validate_change_time_mean():
         'prechange_minimum':np.zeros_like(simulated_change_times_good)
     })
 
-    assert validate_change_time_mean(GOOD_TRIALS,expected_mean,tolerance=0.5)==True
+    assert validate_change_time_mean(GOOD_TRIALS,EXPECTED_MEAN,tolerance=0.5)==True
 
     np.random.seed(seed=100)
     simulated_change_times_bad=np.random.exponential(scale=3,size=100)
@@ -65,7 +67,7 @@ def test_validate_change_time_mean():
         'prechange_minimum':np.zeros_like(simulated_change_times_bad),
     })
 
-    assert validate_change_time_mean(BAD_TRIALS,expected_mean,tolerance=0.5)==False
+    assert validate_change_time_mean(BAD_TRIALS,EXPECTED_MEAN,tolerance=0.5)==False
 
 def test_validate_monotonically_decreasing_number_of_change_times():
     np.random.seed(10)
