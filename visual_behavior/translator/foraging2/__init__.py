@@ -8,7 +8,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stimulus_duration, get_task_id, get_response_window, get_licks, \
     get_running_speed, get_params, get_time, get_trials, \
     get_stimulus_distribution, get_delta_mean, get_initial_blank_duration, \
-    get_stage
+    get_stage, get_reward_volume, get_auto_reward_volume
 
 
 def data_to_change_detection_core(data):
@@ -171,9 +171,9 @@ def data_to_metadata(data):
         "startdatetime": start_time_datetime.astimezone(tz.gettz("UTC")).isoformat(),
         "rig_id": None,  # not obtainable because device_name is not obtainable
         "computer_name": device_name,
-        "reward_vol": params["reward_volume"],
-        "rewardvol": params["reward_volume"],  # for compatibility with legacy code
-        "auto_reward_vol": params["auto_reward_volume"],
+        "reward_vol": get_reward_volume(data),
+        "rewardvol": get_reward_volume(data),  # for compatibility with legacy code
+        "auto_reward_vol": get_auto_reward_volume(data),
         "params": params,
         "mouseid": get_mouse_id(data),
         "response_window": list(get_response_window(data)),  # tuple to list

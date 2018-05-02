@@ -1,7 +1,13 @@
+import warnings
 import pandas as pd
 import numpy as np
 from scipy.signal import medfilt
 from ...utilities import calc_deriv, rad_to_dist
+
+warnings.warn(
+    "support for the loading stimulus_code outputs will be deprecated in a future version",
+    PendingDeprecationWarning,
+)
 
 
 def data_to_change_detection_core(data, time=None):
