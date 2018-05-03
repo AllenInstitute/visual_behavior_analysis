@@ -7,4 +7,4 @@ sklearn
 tables==3.4.2
 deepdish>=0.3.6
 python-dateutil>=2.6.1
-marshmallow>=2
+marshmallow>=2.15.1
