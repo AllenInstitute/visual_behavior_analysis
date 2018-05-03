@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def validate_schema(extended_trials):
-    assert is_valid_dataframe(extended_trials, ExtendedTrialSchema())
+    assert_is_valid_dataframe(extended_trials, ExtendedTrialSchema())
 
 
 def validate_aborted_change_time(tr):
