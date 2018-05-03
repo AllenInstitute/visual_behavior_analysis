@@ -411,7 +411,7 @@ def validate_catch_frequency(
         p=expected_catch_frequency,
     )
 
-    if probability_of_null_hypothesis < (1 - rejection_probability):
+    if probability_of_null_hypothesis > rejection_probability:
         return True
     else:
         return False

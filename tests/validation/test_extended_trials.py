@@ -518,7 +518,7 @@ def test_validate_duration_and_volume_limit(trials, expected_duration, volume_li
 #     (pd.DataFrame(data={"trial_type": ["go", ] * 100}), 0.5, 0.05, False, ),
 #     (pd.DataFrame(data={"trial_type": (["go", ] * 45) + (["catch", ] * 55) }), 0.5, 0.05, True, ),
 #     (pd.DataFrame(data={"trial_type": ["go", "go", "catch", "catch", ]}), 0.5, 0.05, True, ),
-#     (pd.DataFrame(data={"trial_type": ["go", "go", "catch", "catch", ]}), 0.49, 0.05, False, ),
+#     (pd.DataFrame(data={"trial_type": ["go", "go", "catch", "catch", ]}), 0.49, 0.05, True, ),
 # ])
 # def test_validate_catch_frequency(trials, expected_catch_frequency, rejection_probability, expected):
 #     assert extended_trials.validate_catch_frequency(trials, expected_catch_frequency, rejection_probability) == expected
