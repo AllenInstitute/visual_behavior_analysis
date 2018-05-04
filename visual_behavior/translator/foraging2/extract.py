@@ -417,9 +417,9 @@ def _resolve_initial_image(stimuli, start_frame):
 
     for stim_category_name, stim_dict in iteritems(stimuli):
         for set_event in stim_dict["set_log"]:
-            set_frame = set_event[1]
+            set_frame = set_event[3]
             if set_frame <= start_frame and set_frame >= max_frame:
-                initial_image_group = initial_image_name = set_event[0]  # hack assumes initial_image_group == initial_image_name, only initial_image_name is present for natual_scenes
+                initial_image_group = initial_image_name = set_event[1]  # hack assumes initial_image_group == initial_image_name, only initial_image_name is present for natual_scenes
                 # initial_image_group, initial_image_name = change_event[0]
                 intial_image_category_name = stim_category_name
                 max_frame = set_frame
@@ -437,7 +437,7 @@ def _get_stimulus_attr_changes(stim_dict, change_frame, first_frame, last_frame)
     initial_attr = {}
     change_attr = {}
 
-    for attr_name, set_value, set_frame, set_time in stim_dict["set_log"]:
+    for attr_name, set_value, set_time, set_frame in stim_dict["set_log"]:
         if first_frame <= set_frame < change_frame:
             initial_attr[attr_name.lower()] = set_value
         elif change_frame <= set_frame < last_frame:
