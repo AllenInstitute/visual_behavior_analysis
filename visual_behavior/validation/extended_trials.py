@@ -153,6 +153,15 @@ def identify_consecutive_aborted_blocks(trials, failure_repeats):
 
     return trials
 
+def identify_licks_in_response_window(row):
+    '''a method for counting licks in the response window'''
+    if len(row['lick_times'])>0 and ~np.isnan(row['change_time']):
+        licks_relative_to_change = np.array(row['lick_times'])-row['change_time']
+        licks_in_window=licks_relative_to_change[np.logical_and(licks_relative_to_change>=row['response_window'][0],licks_relative_to_change<=row['response_window'][1])]
+        return len(licks_in_window)
+    else:
+        return 0
+
 
 # test functions
 def validate_autoreward_volume(trials, auto_reward_volume):
@@ -559,3 +568,25 @@ def validate_no_abort_on_lick_before_response_window(trials):
 
     # ensure that all trials with first lick between the change time and the start of the response window are labeled as 'go' or 'catch' (not 'aborted')
     return all(trials[trials['response_before_response_window'] == True].trial_type.isin(['go', 'catch']))
+
+def validate_licks_on_go_trials_earn_reward(trials):
+    '''
+    all go trials with licks in response window should have 1 reward
+    '''
+    number_of_licks_in_window = trials.apply(identify_licks_in_response_window,axis=1)
+    number_of_rewards_on_go_lick_trials=trials[
+        (number_of_licks_in_window>0)&
+        (trials['trial_type']=='go')
+    ]['number_of_rewards']
+    return all(number_of_rewards_on_go_lick_trials)==1
+
+def validate_licks_on_catch_trials_do_not_earn_reward(trials):
+    '''
+    all catch trials with licks in window should have 0 rewards
+    '''
+    number_of_licks_in_window = trials.apply(identify_licks_in_response_window,axis=1)
+    number_of_rewards_on_catch_lick_trials=trials[
+        (number_of_licks_in_window>0)&
+        (trials['trial_type']=='catch')
+    ]['number_of_rewards']
+    return all(number_of_rewards_on_catch_lick_trials)==0

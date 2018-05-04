@@ -114,3 +114,56 @@ def test_validate_no_abort_on_lick_before_response_window():
     })
 
     assert validate_no_abort_on_lick_before_response_window(BAD_DATA)==False
+
+def test_validate_licks_on_go_trials_earn_reward():
+    #3 trials with first lick after change, but before response window. Correctly labeled as 'go' or 'catch'
+    #1 trial with first lick before change, correctly labeled as 'aborted'
+    #Rewards only on 'go' trials
+    GOOD_DATA = pd.DataFrame({
+        'trial_type':['go','go','catch','aborted'],
+        'change_time':[867.943295,2132.735950,2359.626023,2500],
+        'lick_times':[[868.07670185, 868.243553692, 868.343638907],[2132.8193812, 2133.00285741, 2134.73767532],[2359.72610696, 2359.95964697],[2499]],
+        'response_window':[[0.15, 0.75],[0.15, 0.75],[0.15, 0.75],[0.15, 0.75]],
+        'number_of_rewards':[1,1,0,0]
+    })
+
+    assert validate_licks_on_go_trials_earn_reward(GOOD_DATA)==True
+
+    #3 trials with first lick after change, but before response window. Correctly labeled as 'go' or 'catch'
+    #1 'go' trial without reward
+    BAD_DATA = pd.DataFrame({
+        'trial_type':['go','go','catch'],
+        'change_time':[867.943295,2132.735950,2359.626023],
+        'lick_times':[[868.07670185, 868.243553692, 868.343638907],[2132.8193812, 2133.00285741, 2134.73767532],[2359.72610696, 2359.95964697]],
+        'response_window':[[0.15, 0.75],[0.15, 0.75],[0.15, 0.75]],
+        'number_of_rewards':[1,0,0]
+    })
+
+    assert validate_licks_on_go_trials_earn_reward(BAD_DATA) == False
+
+def test_validate_licks_on_catch_trials_do_not_earn_reward():
+    #3 trials with first lick after change, but before response window. Correctly labeled as 'go' or 'catch'
+    #1 trial with first lick before change, correctly labeled as 'aborted'
+    #Rewards only on 'go' trials
+    GOOD_DATA = pd.DataFrame({
+        'trial_type':['go','go','catch','aborted'],
+        'change_time':[867.943295,2132.735950,2359.626023,2500],
+        'lick_times':[[868.07670185, 868.243553692, 868.343638907],[2132.8193812, 2133.00285741, 2134.73767532],[2359.72610696, 2359.95964697],[2499]],
+        'response_window':[[0.15, 0.75],[0.15, 0.75],[0.15, 0.75],[0.15, 0.75]],
+        'number_of_rewards':[1,1,0,0]
+    })
+
+    assert validate_licks_on_catch_trials_do_not_earn_reward(GOOD_DATA)==True
+
+    #3 trials with first lick after change, but before response window. Correctly labeled as 'go' or 'catch'
+    #1 'catch' trial with reward
+    BAD_DATA = pd.DataFrame({
+        'trial_type':['go','go','catch'],
+        'change_time':[867.943295,2132.735950,2359.626023],
+        'lick_times':[[868.07670185, 868.243553692, 868.343638907],[2132.8193812, 2133.00285741, 2134.73767532],[2359.72610696, 2359.95964697]],
+        'response_window':[[0.15, 0.75],[0.15, 0.75],[0.15, 0.75]],
+        'number_of_rewards':[1,1,1]
+    })
+
+    assert validate_licks_on_catch_trials_do_not_earn_reward(BAD_DATA) == False
+
