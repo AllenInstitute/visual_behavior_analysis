@@ -165,6 +165,9 @@ def load_trials(data, time=None):
     trials["initial_image_category"] = trials["initial_image_category"].apply(lambda x: x if x else np.nan)  # use np.nan instead of NoneType
     trials["initial_image_name"] = trials["initial_image_name"].apply(lambda x: x if x else np.nan)  # use np.nan instead of NoneType
 
+    # make scheduled_change_time relative
+    trials["scheduled_change_time"] = trials["scheduled_change_time"] - trials['starttime']
+
     return trials
 
 
