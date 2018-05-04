@@ -464,6 +464,33 @@ def validate_number_aborted_trial_repeats(trials,failure_repeats,tolerance=0.01)
     #return True if all blocks matched
     return all(block_has_matching_scheduled_change_time)
 
+def validate_params_change_after_aborted_trial_repeats(trials,failure_repeats):
+    #     '''
+    #     failure_repeats: for the `failure_repeats`+2 aborted trial, new parameters should be sampled
+    #     '''
+
+    #assign columns to the dataframe to make test possible
+    trials=identify_consecutive_aborted_blocks(trials,failure_repeats)
+
+    #get all aborted trials
+    aborted_trials = trials[trials['trial_type']=='aborted']
+
+    #identify all blocks which should have matching scheduled change times (blocks with lengths in multiples of 'failure_repeats')
+    block_ids = aborted_trials.consecutive_aborted_should_match.unique()
+
+    #compare scheduled change times across blocks. They should be different
+    block_has_different_scheduled_change_time_than_last = []
+    for ii,block_id in enumerate(block_ids):
+        scheduled_times_this_block = aborted_trials[aborted_trials.consecutive_aborted_should_match==block_id]['scheduled_change_time'].values
+        first_change_time_in_block=scheduled_times_this_block[0]
+        if ii>0: #can't compare first block to anything
+            #ensure change time is different than last change time on last block
+            block_has_different_scheduled_change_time_than_last.append(first_change_time_in_block!=last_change_time_in_block)
+        last_change_time_in_block=scheduled_times_this_block[-1]
+
+    #return True if every block has different params than the last
+    return all(block_has_different_scheduled_change_time_than_last)
+
 
 def validate_ignore_false_alarms(trials, ignore_false_alarms):
     '''
