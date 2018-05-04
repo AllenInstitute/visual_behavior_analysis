@@ -577,3 +577,24 @@ def validate_licks_on_catch_trials_do_not_earn_reward(trials):
         (trials['trial_type']=='catch')
     ]['number_of_rewards']
     return all(number_of_rewards_on_catch_lick_trials)==0
+
+def validate_even_sampling(trials,even_sampling_enabled):
+    '''
+    if even_sampling mode is enabled, no stimulus change combinations (including catch conditions) are sampled more than one more time than any other.
+    Note that even sampling only applies to images, so this does not need to be written to deal with grating stimuli
+    '''
+    if even_sampling_enabled == True:
+        nonaborted_trials=trials[trials['trial_type']!='aborted']
+
+        #build a table with the counts of all combinations
+        transition_matrix = pd.pivot_table(
+            nonaborted_trials,
+            values='response',
+            index=['initial_image_name'],
+            columns=['change_image_name'],
+            aggfunc=np.size
+        )
+        # Return true if the range of max to min is less than or equal to 1
+        return abs(transition_matrix.values.max()-transition_matrix.values.min())<=1
+    else:
+        return True

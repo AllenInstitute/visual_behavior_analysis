@@ -183,3 +183,24 @@ def test_validate_number_aborted_trial_repeats():
         'scheduled_change_time':[3,4,2.5,2.5,2.5,2.5,4,4,5],
     })
     assert validate_number_aborted_trial_repeats(BAD_DATA,failure_repeats) == False
+
+
+def test_validate_even_sampling():
+
+    ## good data with 1 sample of 3 combinations, 2 samples of (a to b)
+    GOOD_DATA = pd.DataFrame({
+        'trial_type':['go','go','catch','go','catch'],
+        'initial_image_name':['a','b','a','a','b'],
+        'change_image_name':['b','a','a','b','b'],
+        'response':[0,0,0,0,0]
+    })
+    assert validate_even_sampling(GOOD_DATA,even_sampling_enabled=True) == True
+
+    ## good data with 1 sample of 3 combinations, 3 samples of (a to b)
+    BAD_DATA = pd.DataFrame({
+        'trial_type':['go','go','catch','go','catch','go'],
+        'initial_image_name':['a','b','a','a','b','a'],
+        'change_image_name':['b','a','a','b','b','b'],
+        'response':[0,0,0,0,0,0]
+    })
+    assert validate_even_sampling(BAD_DATA,even_sampling_enabled=True) == False
