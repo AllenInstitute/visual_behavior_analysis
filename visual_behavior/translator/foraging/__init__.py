@@ -315,7 +315,7 @@ def load_visual_stimuli(data,time=None):
         print('`time` not passed. using vsync from pkl file')
         time = load_time(data)
 
-    stimdf = pd.DataFrame(legacy_data['stimuluslog'])
+    stimdf = pd.DataFrame(data['stimuluslog'])
 
     stimdf = find_ends(stimdf)
     stimdf['end'] = stimdf['frames_to_end'] + stimdf['frame']
