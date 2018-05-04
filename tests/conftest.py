@@ -24,8 +24,12 @@ else:
 
 @pytest.fixture(scope="module")
 def trials_df_fixture():
-    return pd.read_pickle(os.path.join(TESTING_RES_DIR, "trials.pkl"))
-
+    trials = pd.read_pickle(os.path.join(TESTING_RES_DIR, "trials.pkl"))
+    trials["scheduled_change_time"] = trials.apply(
+        lambda row: row["scheduled_change_time"] - row["starttime"],
+        axis=1
+    )  # change scheduled_change_time from time relative to experiment start to time relative to trial start
+    return trials
 
 @pytest.fixture(scope="module")
 def annotated_trials_df_fixture():

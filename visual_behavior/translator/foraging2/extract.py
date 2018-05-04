@@ -264,7 +264,6 @@ def annotate_schedule_time(trial, pre_change_time, initial_blank_duration):
         "start_time": start_time,
         "start_frame": start_frame,
         "scheduled_change_time": (
-            start_time +
             pre_change_time +
             initial_blank_duration +
             trial["trial_params"]["change_time"]
