@@ -109,48 +109,38 @@ def get_first_lick_relative_to_scheduled_change(row):
         return np.nan
 
 
-def identify_consecutive_aborted_blocks(trials, failure_repeats):
+def identify_consecutive_aborted_blocks(trials,failure_repeats):
     '''
     adds columns to the dataframe that:
         1 - track the number of consecutive aborted trials
-        2 - assigns a unique integer to each 'failure_repeats' long block of
-        aborted trials
-        3 - adjusts scheduled change time to be relative to trial start
+        2 - assigns a unique integer to each 'failure_repeats' long block of aborted trials
     '''
-    # instantiate some counters and empty lists
-    # first counter will keep track of consecutive aborted trials
-    consecutive_aborted = 0
-    consecutive_aborted_col = []
-    # this counter will assign a unique integer to every block aborted trials
-    # that are even multiples of 'failure_repeats'
+    #instantiate some counters and empty lists
+    #first counter will keep track of consecutive aborted trials
+    consecutive_aborted=0
+    consecutive_aborted_col=[]
+    #this counter will assign a unique integer to every block aborted trials that are even multiples of 'failure_repeats'
     consecutive_aborted_should_match = 0
     consecutive_aborted_should_match_col = []
 
-    # iterate through trials
-    for idx, row in trials.iterrows():
-        # check whether or not to iterate consecutive aborted
-        if row['trial_type'] == 'aborted':
-            consecutive_aborted += 1
+    #iterate through trials
+    for idx,row in trials.iterrows():
+        #check whether or not to iterate consecutive aborted
+        if row['trial_type']=='aborted':
+            #increment an integer that keeps track of which block of aborted trials should have matching change times
+            if consecutive_aborted%(failure_repeats+1) == 0: #a new block whenever modulus = 0
+                consecutive_aborted_should_match+=1
+            consecutive_aborted+=1
         else:
-            consecutive_aborted = 0
-
-        # increment an integer that keeps track of which block of aborted
-        # trials should have matching change times
-        if consecutive_aborted % failure_repeats == 0:  # a new block whenever modulus = 0
-            consecutive_aborted_should_match += 1
+            consecutive_aborted=0
 
         consecutive_aborted_col.append(consecutive_aborted)
-        consecutive_aborted_should_match_col.append(
-            consecutive_aborted_should_match
-        )
+        consecutive_aborted_should_match_col.append(consecutive_aborted_should_match)
 
-    # append columns to dataframe to allow slicing
-    trials['consecutive_aborted'] = consecutive_aborted_col
-    trials['consecutive_aborted_should_match'] = consecutive_aborted_should_match_col
-
-    # get scheduled change time relative to trial start
-    trials['scheduled_change_time_trial_time'] = trials['scheduled_change_time'] - trials['starttime']
-
+    #append columns to dataframe to allow slicing
+    trials['consecutive_aborted']=consecutive_aborted_col
+    trials['consecutive_aborted_should_match']=consecutive_aborted_should_match_col
+    
     return trials
 
 def identify_licks_in_response_window(row):
@@ -450,31 +440,28 @@ def validate_task_id_present(trials):
         return False
 
 
-def validate_number_aborted_trial_repeats(trials, failure_repeats, tolerance=0.01):
+def validate_number_aborted_trial_repeats(trials,failure_repeats,tolerance=0.01):
     '''
     on aborted trials (e.g. early licks), the trial's stimulus parameters should be repeated `failure_repeats` times
     '''
+    
+    #assign columns to the dataframe to make test possible
+    trials=identify_consecutive_aborted_blocks(trials,failure_repeats)
+    
+    #get all aborted trials
+    aborted_trials = trials[trials['trial_type']=='aborted']
 
-    # assign columns to the dataframe to make test possible
-    trials = identify_consecutive_aborted_blocks(trials, failure_repeats)
-
-    # get all aborted trials
-    aborted_trials = trials[trials['trial_type'] == 'aborted']
-
-    # identify all blocks which should have matching scheduled change times (blocks with lengths in multiples of 'failure_repeats')
+    #identify all blocks which should have matching scheduled change times (blocks with lengths in multiples of 'failure_repeats')
     block_ids = aborted_trials.consecutive_aborted_should_match.unique()
 
-    # check each block to make sure all scheduled change times are equal, within a tolerance
+    #check each block to make sure all scheduled change times are equal, within a tolerance
     block_has_matching_scheduled_change_time = []
     for block_id in block_ids:
-        block_has_matching_scheduled_change_time.append(
-            all_close(
-                aborted_trials[aborted_trials.consecutive_aborted_should_match == block_id]['scheduled_change_time_trial_time'].values,
-                tolerance=tolerance,
-            )
-        )
+        scheduled_times_this_block = aborted_trials[aborted_trials.consecutive_aborted_should_match==block_id]['scheduled_change_time'].values
+        this_block_matches=all_close(scheduled_times_this_block,tolerance=tolerance)
+        block_has_matching_scheduled_change_time.append(this_block_matches)
 
-    # return True if all blocks matched
+    #return True if all blocks matched
     return all(block_has_matching_scheduled_change_time)
 
 
