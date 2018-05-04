@@ -167,3 +167,19 @@ def test_validate_licks_on_catch_trials_do_not_earn_reward():
 
     assert validate_licks_on_catch_trials_do_not_earn_reward(BAD_DATA) == False
 
+def test_validate_number_aborted_trial_repeats():
+    failure_repeats=2 #should repeat params twice after failure, for a total of 3 consecutive
+    ## good data with two blocks of 3 aborted trials with matching scheduled change times
+    GOOD_DATA = pd.DataFrame({
+        'trial_type':(["go", ] * 2) + (["aborted", ] * 7),
+        'scheduled_change_time':[3,4,2.5,2.5,2.5,4,4,4,5],
+    })
+    assert validate_number_aborted_trial_repeats(GOOD_DATA,failure_repeats) == True
+
+    failure_repeats=2 #should repeat params twice after failure, for a total of 3 consecutive
+    ## bad data with a block of 4 aborted trials with matching scheduled change times, followed by another block of 2
+    BAD_DATA = pd.DataFrame({
+        'trial_type':(["go", ] * 2) + (["aborted", ] * 7),
+        'scheduled_change_time':[3,4,2.5,2.5,2.5,2.5,4,4,5],
+    })
+    assert validate_number_aborted_trial_repeats(BAD_DATA,failure_repeats) == False
