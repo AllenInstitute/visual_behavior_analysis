@@ -312,3 +312,22 @@ def test_validate_one_stimulus_per_aborted_trial():
         'image_category':['a','b','a','a']
     })
     assert validate_one_stimulus_per_aborted_trial(BAD_DATA_TRIALS,BAD_DATA_VISUAL_STIMULI) == False
+
+def test_validate_change_frame_at_flash_onset():
+    #good data: changes coincide with flashes
+    GOOD_DATA_TRIALS = pd.DataFrame({
+        'change_frame':[10,20,30],
+    })
+    GOOD_DATA_VISUAL_STIMULI = pd.DataFrame({
+        'frame':[10,20,30],
+    })
+    assert validate_change_frame_at_flash_onset(GOOD_DATA_TRIALS,GOOD_DATA_VISUAL_STIMULI) == True
+                                                
+    #bad data: 3rd change does not coincide with flash
+    BAD_DATA_TRIALS = pd.DataFrame({
+        'change_frame':[10,20,31],
+    })
+    BAD_DATA_VISUAL_STIMULI = pd.DataFrame({
+        'frame':[10,20,30],
+    })
+    assert validate_change_frame_at_flash_onset(BAD_DATA_TRIALS,BAD_DATA_VISUAL_STIMULI) == False

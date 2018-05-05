@@ -686,3 +686,13 @@ def validate_one_stimulus_per_aborted_trial(trials,visual_stimuli):
     '''
     stimuli_per_trial=count_stimuli_per_trial(trials[trials['trial_type']=='aborted'],visual_stimuli)
     return all(stimuli_per_trial==1)
+
+def validate_change_frame_at_flash_onset(trials,visual_stimuli):
+    '''
+    if `periodic_flash` is not null, changes should always coincide with a stimulus onset
+    '''
+    #get all non-null change frames
+    change_frames = trials[~pd.isnull(trials['change_frame'])]['change_frame'].values
+    
+    #confirm that all change frames coincide with flash onsets in the visual stimulus log
+    return all(np.in1d(change_frames,visual_stimuli['frame']))
