@@ -709,3 +709,9 @@ def validate_running_data(core_data):
     all_same = all(running_data['speed'].values==running_data['speed'].values[0])
     
     return length_correct and not all_same
+
+def validate_licks(core_data):
+    '''
+    validate that licks exist
+    '''
+    return len(core_data['licks'])>0

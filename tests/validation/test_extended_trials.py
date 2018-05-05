@@ -356,3 +356,18 @@ def test_validate_running_data():
     })
     BAD_DATA['time']=np.array([1,2,3])
     assert validate_running_data(BAD_DATA)==False
+
+def test_validate_licks():
+    GOOD_DATA = {}
+    GOOD_DATA['licks']=pd.DataFrame({
+        'time':[10,20],
+        'frame':[1,2]
+    })
+    assert validate_licks(GOOD_DATA)==True
+    
+    BAD_DATA = {}
+    BAD_DATA['licks']=pd.DataFrame({
+        'time':[],
+        'frame':[]
+    })
+    assert validate_licks(BAD_DATA)==False
