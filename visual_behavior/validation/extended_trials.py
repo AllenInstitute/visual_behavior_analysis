@@ -672,3 +672,11 @@ def validate_two_stimuli_per_go_trial(trials,visual_stimuli):
     '''
     stimuli_per_trial=count_stimuli_per_trial(trials[trials['trial_type']=='go'],visual_stimuli)
     return all(stimuli_per_trial==2)
+
+def validate_one_stimulus_per_catch_trial(trials,visual_stimuli):
+    '''
+    all 'catch' trials should have one stimulus group
+    '''
+    stimuli_per_trial=count_stimuli_per_trial(trials[trials['trial_type']=='catch'],visual_stimuli)
+    return all(stimuli_per_trial==1)
+
