@@ -153,6 +153,26 @@ def identify_licks_in_response_window(row):
         return 0
 
 
+def count_stimuli_per_trial(trials,visual_stimuli):
+    '''
+    iterates over trials
+    counts stimulus groups in range of trial frames for each trial
+    returns vector with all numbers of stimuli per trial
+    '''
+    #preallocate array
+    stimuli_per_trial=np.empty(len(trials))
+    
+    #iterate over dataframe
+    for idx,trial in trials.reset_index().iterrows():
+        #get visual stimuli in range
+        stimuli = visual_stimuli[
+            (visual_stimuli['frame']>=trial['startframe'])&
+            (visual_stimuli['frame']<=trial['endframe'])
+        ]['image_category'].unique()
+        #add to array
+        stimuli_per_trial[idx]=len(stimuli)
+    return stimuli_per_trial
+
 # test functions
 def validate_autoreward_volume(trials, auto_reward_volume):
     '''Each dispense of water for autorewards should be `auto_reward_vol`.'''
@@ -646,3 +666,9 @@ def validate_flash_blank_durations(visual_stimuli,expected_flash_duration=0.25,e
     
     return blank_durations_consistent and flash_durations_consistent
 
+def validate_two_stimuli_per_go_trial(trials,visual_stimuli):
+    '''
+    all 'go' trials should have two stimulus groups
+    '''
+    stimuli_per_trial=count_stimuli_per_trial(trials[trials['trial_type']=='go'],visual_stimuli)
+    return all(stimuli_per_trial==2)

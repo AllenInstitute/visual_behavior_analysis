@@ -238,3 +238,28 @@ def test_validate_flash_blank_durations():
     })
     assert validate_flash_blank_durations(BAD_DATA)==False
 
+def test_validate_two_stimuli_per_go_trial():
+    #good data: two stimulus categoris per go trial
+    GOOD_DATA_TRIALS = pd.DataFrame({
+        'startframe':[1,3],
+        'endframe':[2,4],
+        'trial_type':['go','go']
+    })
+    GOOD_DATA_VISUAL_STIMULI = pd.DataFrame({
+        'frame':[1,2,3,4],
+        'image_category':['a','b','a','b']
+    })
+    assert validate_two_stimuli_per_go_trial(GOOD_DATA_TRIALS,GOOD_DATA_VISUAL_STIMULI) == True
+
+    #bad data: only one stimulus group on second go trial
+    BAD_DATA_TRIALS = pd.DataFrame({
+        'startframe':[1,3],
+        'endframe':[2,4],
+        'trial_type':['go','go']
+    })
+    BAD_DATA_VISUAL_STIMULI = pd.DataFrame({
+        'frame':[1,2,3,4],
+        'image_category':['a','b','a','a']
+    })
+    assert validate_two_stimuli_per_go_trial(BAD_DATA_TRIALS,BAD_DATA_VISUAL_STIMULI) == False
+
