@@ -331,3 +331,28 @@ def test_validate_change_frame_at_flash_onset():
         'frame':[10,20,30],
     })
     assert validate_change_frame_at_flash_onset(BAD_DATA_TRIALS,BAD_DATA_VISUAL_STIMULI) == False
+
+def test_validate_running_data():
+    #good data: length matches time and not all values the same
+    GOOD_DATA={}
+    GOOD_DATA['running']=pd.DataFrame({
+        'speed':[3,4,5]
+    })
+    GOOD_DATA['time']=np.array([1,2,3])
+    assert validate_running_data(GOOD_DATA)==True
+    
+    #bad data: length does not matche time
+    BAD_DATA={}
+    BAD_DATA['running']=pd.DataFrame({
+        'speed':[3,4,5,6]
+    })
+    BAD_DATA['time']=np.array([1,2,3])
+    assert validate_running_data(BAD_DATA)==False
+    
+    #bad data: all values of speed are zero
+    BAD_DATA={}
+    BAD_DATA['running']=pd.DataFrame({
+        'speed':[0,0,0]
+    })
+    BAD_DATA['time']=np.array([1,2,3])
+    assert validate_running_data(BAD_DATA)==False
