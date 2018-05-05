@@ -263,3 +263,28 @@ def test_validate_two_stimuli_per_go_trial():
     })
     assert validate_two_stimuli_per_go_trial(BAD_DATA_TRIALS,BAD_DATA_VISUAL_STIMULI) == False
 
+def test_validate_one_stimulus_per_catch_trial():
+    #good data: only one stimulus group per catch trial
+    GOOD_DATA_TRIALS = pd.DataFrame({
+        'startframe':[1,3],
+        'endframe':[2,4],
+        'trial_type':['catch','catch']
+    })
+    GOOD_DATA_VISUAL_STIMULI = pd.DataFrame({
+        'frame':[1,2,3,4],
+        'image_category':['a','a','a','a']
+    })
+    assert validate_one_stimulus_per_catch_trial(GOOD_DATA_TRIALS,GOOD_DATA_VISUAL_STIMULI) == True
+
+    #bad data: two stimulus group on first catch trial
+    BAD_DATA_TRIALS = pd.DataFrame({
+        'startframe':[1,3],
+        'endframe':[2,4],
+        'trial_type':['catch','catch']
+    })
+    BAD_DATA_VISUAL_STIMULI = pd.DataFrame({
+        'frame':[1,2,3,4],
+        'image_category':['a','b','a','a']
+    })
+    assert validate_one_stimulus_per_catch_trial(BAD_DATA_TRIALS,BAD_DATA_VISUAL_STIMULI) == False
+
