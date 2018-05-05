@@ -221,3 +221,20 @@ def test_validate_params_change_after_aborted_trial_repeats():
         'scheduled_change_time':[3,4,2.5,2.5,2.5,2.5,4,4,5],
     })
     assert validate_params_change_after_aborted_trial_repeats(BAD_DATA,failure_repeats) == False
+
+def test_validate_flash_blank_durations():
+    ## good data: flashes at ~250ms, blanks at ~500ms
+    GOOD_DATA=pd.DataFrame({
+        'time':[  1.66710466e-03,   7.68953469e-01,   1.53593739e+00, 2.30325807e+00,   3.07040749e+00],
+        'duration':[ 0.25189872,  0.25191379,  0.25223227,  0.25221559,  0.25236601]
+    })
+
+    assert validate_flash_blank_durations(GOOD_DATA)==True
+
+    ## bad data: flashes at ~250ms with one over 300ms, blanks at ~500ms
+    BAD_DATA=pd.DataFrame({
+        'time':[  1.66710466e-03,   7.68953469e-01,   1.53593739e+00, 2.30325807e+00,   3.07040749e+00],
+        'duration':[ 0.25189872,  0.25191379,  0.25223227,  0.30221559,  0.25236601]
+    })
+    assert validate_flash_blank_durations(BAD_DATA)==False
+

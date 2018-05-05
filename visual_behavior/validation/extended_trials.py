@@ -625,3 +625,24 @@ def validate_even_sampling(trials,even_sampling_enabled):
         return abs(transition_matrix.values.max()-transition_matrix.values.min())<=1
     else:
         return True
+
+def validate_flash_blank_durations(visual_stimuli,expected_flash_duration=0.25,expected_blank_duration=0.5,tolerance=0.05):
+    '''
+    The duty cycle of the stimulus onset/offset is maintained across trials 
+    (e.g., if conditions for ending a trial are met, the stimulus presentation is not truncated)
+
+    Takes core_data['visual_stimuli'] as input
+    '''
+    #get all blank durations
+    blank_durations = visual_stimuli['time'].diff()-visual_stimuli['duration']
+    blank_durations = blank_durations[~np.isnan(blank_durations)].values
+
+    #get all flash durations
+    flash_durations = visual_stimuli.duration.values
+
+    #make sure all flashes and blanks are within tolerance
+    blank_durations_consistent = all(np.logical_and(blank_durations>0.5-tolerance,blank_durations<0.5+tolerance))
+    flash_durations_consistent = all(np.logical_and(flash_durations>0.25-tolerance,flash_durations<0.25+tolerance))
+    
+    return blank_durations_consistent and flash_durations_consistent
+
