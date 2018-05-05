@@ -646,7 +646,7 @@ def validate_even_sampling(trials,even_sampling_enabled):
     else:
         return True
 
-def validate_flash_blank_durations(visual_stimuli,expected_flash_duration=0.25,expected_blank_duration=0.5,tolerance=0.05):
+def validate_flash_blank_durations(visual_stimuli,expected_flash_duration=0.25,expected_blank_duration=0.5,tolerance=0.02):
     '''
     The duty cycle of the stimulus onset/offset is maintained across trials 
     (e.g., if conditions for ending a trial are met, the stimulus presentation is not truncated)

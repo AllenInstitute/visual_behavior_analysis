@@ -229,14 +229,14 @@ def test_validate_flash_blank_durations():
         'duration':[ 0.25189872,  0.25191379,  0.25223227,  0.25221559,  0.25236601]
     })
 
-    assert validate_flash_blank_durations(GOOD_DATA)==True
+    assert validate_flash_blank_durations(GOOD_DATA,expected_flash_duration=0.25,expected_blank_duration=0.5)==True
 
     ## bad data: flashes at ~250ms with one over 300ms, blanks at ~500ms
     BAD_DATA=pd.DataFrame({
         'time':[  1.66710466e-03,   7.68953469e-01,   1.53593739e+00, 2.30325807e+00,   3.07040749e+00],
         'duration':[ 0.25189872,  0.25191379,  0.25223227,  0.30221559,  0.25236601]
     })
-    assert validate_flash_blank_durations(BAD_DATA)==False
+    assert validate_flash_blank_durations(BAD_DATA,expected_flash_duration=0.25,expected_blank_duration=0.5)==False
 
 def test_validate_two_stimuli_per_go_trial():
     #good data: two stimulus categoris per go trial
