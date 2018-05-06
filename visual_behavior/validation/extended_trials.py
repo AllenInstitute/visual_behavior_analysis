@@ -742,3 +742,11 @@ def validate_initial_blank(trials,visual_stimuli,initial_blank,tolerance=0.005):
         initial_blank_in_tolerance[idx]=np.isclose(first_stim_time_offset,initial_blank,atol=tolerance)
     #ensure all initial blanks were within tolerance
     return all(initial_blank_in_tolerance)
+
+def validate_new_params_on_nonaborted_trials(trials):
+    '''
+    new parameters should be sampled after any non-aborted trial
+    '''
+    nonaborted_trials=trials[trials['trial_type']!='aborted']
+    
+    return all(nonaborted_trials['scheduled_change_time']!=nonaborted_trials['scheduled_change_time'].shift())
