@@ -407,3 +407,18 @@ def test_validate_initial_blank():
         'time':[0.1,4.9,10.201,15.1]
     })
     assert validate_initial_blank(BAD_DATA_TRIALS,BAD_DATA_VISUAL_STIMULI,initial_blank) == False
+
+def test_validate_new_params_on_nonaborted_trials():
+    ## good data: new scheduled change time on every nonaborted trial
+    GOOD_DATA = pd.DataFrame({
+        'trial_type':['go','catch','aborted','aborted','go','go'],
+        'scheduled_change_time':[2.4,2.5,3,3,3,2.5],
+    })
+    assert validate_new_params_on_nonaborted_trials(GOOD_DATA) == True
+    
+    ## bad data: repeated scheduled change time on first two nonaborted trials
+    BAD_DATA = pd.DataFrame({
+        'trial_type':['go','catch','aborted','aborted','go','go'],
+        'scheduled_change_time':[2.4,2.4,3,3,3,2.5],
+    })
+    assert validate_new_params_on_nonaborted_trials(BAD_DATA) == False
