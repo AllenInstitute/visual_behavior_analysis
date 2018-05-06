@@ -485,9 +485,9 @@ def validate_number_aborted_trial_repeats(trials,failure_repeats,tolerance=0.01)
     return all(block_has_matching_scheduled_change_time)
 
 def validate_params_change_after_aborted_trial_repeats(trials,failure_repeats):
-    #     '''
-    #     failure_repeats: for the `failure_repeats`+2 aborted trial, new parameters should be sampled
-    #     '''
+    '''
+    failure_repeats: for the `failure_repeats`+2 aborted trial, new parameters should be sampled
+    '''
 
     #assign columns to the dataframe to make test possible
     trials=identify_consecutive_aborted_blocks(trials,failure_repeats)
