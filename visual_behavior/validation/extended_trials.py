@@ -722,3 +722,23 @@ def validate_frame_intervals_exists(data):
     takes full pickled data object as input
     '''
     return len(data['items']['behavior']['intervalsms'])>0
+
+def validate_initial_blank(trials,visual_stimuli,initial_blank,tolerance=0.005):
+    '''
+    iterates over trials
+    Verifies that there is a blank screen of duration `initial_blank` at the start of every trial.
+    If initial blank is 0, first frame of flash should be coincident with trial start
+    '''
+    #preallocate array
+    initial_blank_in_tolerance=np.empty(len(trials))
+    
+    #iterate over dataframe
+    for idx,trial in trials.reset_index().iterrows():
+        #get visual greater than initial frame
+        first_stim_index = visual_stimuli[visual_stimuli['frame']>=trial['startframe']].index[0]
+        #get offset between trial start and first stimulus of frame
+        first_stim_time_offset = visual_stimuli.loc[first_stim_index]['time']-trial['starttime']
+        #check to see if offset is within tolerance of expected blank
+        initial_blank_in_tolerance[idx]=np.isclose(first_stim_time_offset,initial_blank,atol=tolerance)
+    #ensure all initial blanks were within tolerance
+    return all(initial_blank_in_tolerance)

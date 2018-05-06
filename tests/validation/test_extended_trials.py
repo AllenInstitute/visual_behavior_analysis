@@ -383,3 +383,27 @@ def test_validate_frame_intervals_exists():
     #empty list should fail
     test_data['items']['behavior']['intervalsms']=[]
     assert validate_frame_intervals_exists(test_data)==False
+
+def test_validate_initial_blank():
+    initial_blank=0
+    #good data: stimuli coincident with onset frames
+    GOOD_DATA_TRIALS = pd.DataFrame({
+        'startframe':[0,5,10,15],
+        'starttime':[0.1,5.1,10.101,15.1]
+    })
+    GOOD_DATA_VISUAL_STIMULI = pd.DataFrame({
+        'frame':[0,5,10,15],
+        'time':[0.1,5.1,10.101,15.1]
+    })
+    assert validate_initial_blank(GOOD_DATA_TRIALS,GOOD_DATA_VISUAL_STIMULI,initial_blank) == True
+
+    #bad data: 2nd stimulus 200 ms early, 3rd stimulus 200 ms late
+    BAD_DATA_TRIALS = pd.DataFrame({
+        'startframe':[0,5,10,15],
+        'starttime':[0.1,5.1,10.101,15.1]
+    })
+    BAD_DATA_VISUAL_STIMULI = pd.DataFrame({
+        'frame':[0,5,10,15],
+        'time':[0.1,4.9,10.201,15.1]
+    })
+    assert validate_initial_blank(BAD_DATA_TRIALS,BAD_DATA_VISUAL_STIMULI,initial_blank) == False
