@@ -322,7 +322,7 @@ def test_validate_change_frame_at_flash_onset():
         'frame':[10,20,30],
     })
     assert validate_change_frame_at_flash_onset(GOOD_DATA_TRIALS,GOOD_DATA_VISUAL_STIMULI) == True
-                                                
+
     #bad data: 3rd change does not coincide with flash
     BAD_DATA_TRIALS = pd.DataFrame({
         'change_frame':[10,20,31],
@@ -332,57 +332,6 @@ def test_validate_change_frame_at_flash_onset():
     })
     assert validate_change_frame_at_flash_onset(BAD_DATA_TRIALS,BAD_DATA_VISUAL_STIMULI) == False
 
-def test_validate_running_data():
-    #good data: length matches time and not all values the same
-    GOOD_DATA={}
-    GOOD_DATA['running']=pd.DataFrame({
-        'speed':[3,4,5]
-    })
-    GOOD_DATA['time']=np.array([1,2,3])
-    assert validate_running_data(GOOD_DATA)==True
-    
-    #bad data: length does not matche time
-    BAD_DATA={}
-    BAD_DATA['running']=pd.DataFrame({
-        'speed':[3,4,5,6]
-    })
-    BAD_DATA['time']=np.array([1,2,3])
-    assert validate_running_data(BAD_DATA)==False
-    
-    #bad data: all values of speed are zero
-    BAD_DATA={}
-    BAD_DATA['running']=pd.DataFrame({
-        'speed':[0,0,0]
-    })
-    BAD_DATA['time']=np.array([1,2,3])
-    assert validate_running_data(BAD_DATA)==False
-
-def test_validate_licks():
-    GOOD_DATA = {}
-    GOOD_DATA['licks']=pd.DataFrame({
-        'time':[10,20],
-        'frame':[1,2]
-    })
-    assert validate_licks(GOOD_DATA)==True
-    
-    BAD_DATA = {}
-    BAD_DATA['licks']=pd.DataFrame({
-        'time':[],
-        'frame':[]
-    })
-    assert validate_licks(BAD_DATA)==False
-
-def test_validate_frame_intervals_exists():
-    test_data={}
-    test_data['items']={}
-    test_data['items']['behavior']={}
-    #populated list should pass
-    test_data['items']['behavior']['intervalsms']=[16,16]
-    assert validate_frame_intervals_exists(test_data)==True
-    
-    #empty list should fail
-    test_data['items']['behavior']['intervalsms']=[]
-    assert validate_frame_intervals_exists(test_data)==False
 
 def test_validate_initial_blank():
     initial_blank=0
@@ -415,7 +364,7 @@ def test_validate_new_params_on_nonaborted_trials():
         'scheduled_change_time':[2.4,2.5,3,3,3,2.5],
     })
     assert validate_new_params_on_nonaborted_trials(GOOD_DATA) == True
-    
+
     ## bad data: repeated scheduled change time on first two nonaborted trials
     BAD_DATA = pd.DataFrame({
         'trial_type':['go','catch','aborted','aborted','go','go'],
