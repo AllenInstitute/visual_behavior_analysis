@@ -2,7 +2,7 @@ from . import extended_trials as et
 from ..translator.core import create_extended_dataframe
 
 
-def generate_validation_metrics(core_data):
+def compute_qc_metrics(core_data, extended_trial_validators=()):
     """generate a set of validation metrics
 
     Parameters
@@ -22,7 +22,29 @@ def generate_validation_metrics(core_data):
         licks=core_data['licks'],
         time=core_data['time'],
     )
-    trial_validators = (
+
+    results = {
+        func.__name__: func(trials)
+        for func
+        in extended_trial_validators
+    }
+    return results
+
+
+def check_session_passes(qc_metrics):
+    """
+    determines whether a set of qc metrics "passes".
+
+    returns True/False
+
+    """
+
+    return all(qc_metrics.values())
+
+
+def generate_qc_report(core_data):
+
+    extended_trial_validators = (
 #         et.validate_schema,
         et.validate_reward_delivery_on_warmup_trials,
         et.validate_autorewards_after_N_consecutive_misses,
@@ -41,22 +63,11 @@ def generate_validation_metrics(core_data):
         et.validate_no_abort_on_lick_before_response_window,
     )
 
-    results = {
-        func.__name__: func(trials)
-        for func
-        in trial_validators
-    }
-    return results
+    results = compute_qc_metrics(
+        core_data,
+        extended_trial_validators,
+    )
 
-
-def check_session_passes(qc_results):
-
-    return all(qc_results.values())
-
-
-def generate_qc_report(core_data):
-
-    results = generate_validation_metrics(core_data)
     results['passes'] = check_session_passes(results)
 
     return results
