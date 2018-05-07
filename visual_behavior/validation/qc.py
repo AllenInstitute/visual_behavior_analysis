@@ -45,7 +45,7 @@ def check_session_passes(qc_metrics):
 def generate_qc_report(core_data):
 
     extended_trial_validators = (
-#         et.validate_schema,
+        # et.validate_schema,
         et.validate_reward_delivery_on_warmup_trials,
         et.validate_autorewards_after_N_consecutive_misses,
         et.validate_change_on_all_go_trials,
@@ -53,7 +53,7 @@ def generate_qc_report(core_data):
         et.validate_intial_and_final_in_non_aborted,
         et.validate_reward_follows_first_lick_in_window,
         et.validate_never_more_than_one_reward,
-#         et.validate_lick_before_scheduled_on_aborted_trials,
+        # et.validate_lick_before_scheduled_on_aborted_trials,
         et.validate_lick_after_scheduled_on_go_catch_trials,
         et.validate_initial_matches_final,
         et.validate_first_lick_after_change_on_nonaborted,
