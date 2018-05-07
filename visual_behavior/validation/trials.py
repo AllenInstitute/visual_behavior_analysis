@@ -1,7 +1,7 @@
 import pandas as pd
 
 from ..schemas.core import TrialSchema
-from ..validation import assert_is_valid_dataframe
+from .utils import assert_is_valid_dataframe
 
 
 def assert_is_int(x):
