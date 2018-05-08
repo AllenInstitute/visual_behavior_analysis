@@ -157,7 +157,7 @@ def identify_consecutive_aborted_blocks(trials, failure_repeats):
 def identify_licks_in_response_window(row):
     '''a method for counting licks in the response window'''
     if len(row['lick_times']) > 0 and ~np.isnan(row['change_time']):
-        licks_relative_to_change = np.array(row['lick_times'])-row['change_time']
+        licks_relative_to_change = np.array(row['lick_times']) - row['change_time']
         licks_in_window = licks_relative_to_change[
             np.logical_and(
                 licks_relative_to_change >= row['response_window'][0],
@@ -494,8 +494,8 @@ def validate_number_aborted_trial_repeats(trials, failure_repeats, tolerance=0.0
     # check each block to make sure all scheduled change times are equal, within a tolerance
     block_has_matching_scheduled_change_time = []
     for block_id in block_ids:
-        scheduled_times_this_block = aborted_trials[aborted_trials.consecutive_aborted_should_match==block_id]['scheduled_change_time'].values
-        this_block_matches=all_close(scheduled_times_this_block,tolerance=tolerance)
+        scheduled_times_this_block = aborted_trials[aborted_trials.consecutive_aborted_should_match == block_id]['scheduled_change_time'].values
+        this_block_matches = all_close(scheduled_times_this_block, tolerance=tolerance)
         block_has_matching_scheduled_change_time.append(this_block_matches)
 
     # return True if all blocks matched
@@ -519,14 +519,14 @@ def validate_params_change_after_aborted_trial_repeats(trials, failure_repeats):
     # compare scheduled change times across blocks. They should be different
     block_has_different_scheduled_change_time_than_last = []
     for ii, block_id in enumerate(block_ids):
-        scheduled_times_this_block = aborted_trials[aborted_trials.consecutive_aborted_should_match==block_id]['scheduled_change_time'].values
+        scheduled_times_this_block = aborted_trials[aborted_trials.consecutive_aborted_should_match == block_id]['scheduled_change_time'].values
         first_change_time_in_block = scheduled_times_this_block[0]
         if ii > 0:  # can't compare first block to anything
             # ensure change time is different than last change time on last block
             block_has_different_scheduled_change_time_than_last.append(
-                first_change_time_in_block != last_change_time_in_block
+                first_change_time_in_block != last_change_time_in_block  # noqa F821
             )
-        last_change_time_in_block = scheduled_times_this_block[-1]
+        last_change_time_in_block = scheduled_times_this_block[-1]  # noqa F841
 
     # return True if every block has different params than the last
     return all(block_has_different_scheduled_change_time_than_last)
@@ -631,7 +631,7 @@ def validate_licks_on_go_trials_earn_reward(trials):
     number_of_licks_in_window = trials.apply(identify_licks_in_response_window, axis=1)
     number_of_rewards_on_go_lick_trials = trials[
         (number_of_licks_in_window > 0) &
-        (trials['trial_type']=='go')
+        (trials['trial_type'] == 'go')
     ]['number_of_rewards']
     return all(number_of_rewards_on_go_lick_trials) == 1
 
@@ -665,7 +665,7 @@ def validate_even_sampling(trials, even_sampling_enabled):
             aggfunc=np.size
         )
         # Return true if the range of max to min is less than or equal to 1
-        return abs(transition_matrix.values.max()-transition_matrix.values.min()) <= 1
+        return abs(transition_matrix.values.max() - transition_matrix.values.min()) <= 1
     else:
         return True
 
@@ -678,7 +678,7 @@ def validate_flash_blank_durations(visual_stimuli, expected_flash_duration=0.25,
     Takes core_data['visual_stimuli'] as input
     '''
     # get all blank durations
-    blank_durations = visual_stimuli['time'].diff()-visual_stimuli['duration']
+    blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
     blank_durations = blank_durations[~np.isnan(blank_durations)].values
 
     # get all flash durations
