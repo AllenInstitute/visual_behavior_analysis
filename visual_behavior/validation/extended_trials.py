@@ -616,7 +616,12 @@ def validate_licks_on_catch_trials_do_not_earn_reward(trials):
         (number_of_licks_in_window > 0) &
         (trials['trial_type'] == 'catch')
     ]['number_of_rewards']
-    return all(number_of_rewards_on_catch_lick_trials) == 0
+    #can only evaluate if there have been some false alarm trials
+    if len(number_of_rewards_on_catch_lick_trials)>0:
+        return all(number_of_rewards_on_catch_lick_trials) == 0
+    #if no false alarm trials, return True
+    else:
+        return True
 
 
 def validate_even_sampling(trials, even_sampling_enabled):
