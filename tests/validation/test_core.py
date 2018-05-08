@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from visual_behavior.validation.core import validate_running_data, validate_licks
 
