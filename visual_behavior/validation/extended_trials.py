@@ -113,9 +113,7 @@ def identify_consecutive_aborted_blocks(trials, failure_repeats):
     '''
     adds columns to the dataframe that:
         1 - track the number of consecutive aborted trials
-        2 - assigns a unique integer to each 'failure_repeats' long block of
-        aborted trials
-        3 - adjusts scheduled change time to be relative to trial start
+        2 - assigns a unique integer to each 'failure_repeats' long block of aborted trials
     '''
     # instantiate some counters and empty lists
     # first counter will keep track of consecutive aborted trials
@@ -130,28 +128,58 @@ def identify_consecutive_aborted_blocks(trials, failure_repeats):
     for idx, row in trials.iterrows():
         # check whether or not to iterate consecutive aborted
         if row['trial_type'] == 'aborted':
+            # increment an integer that keeps track of which block of aborted
+            # trials should have matching change times
+            if consecutive_aborted % (failure_repeats + 1) == 0:  # a new block whenever modulus = 0
+                consecutive_aborted_should_match += 1
             consecutive_aborted += 1
         else:
             consecutive_aborted = 0
 
-        # increment an integer that keeps track of which block of aborted
-        # trials should have matching change times
-        if consecutive_aborted % failure_repeats == 0:  # a new block whenever modulus = 0
-            consecutive_aborted_should_match += 1
-
         consecutive_aborted_col.append(consecutive_aborted)
-        consecutive_aborted_should_match_col.append(
-            consecutive_aborted_should_match
-        )
+        consecutive_aborted_should_match_col.append(consecutive_aborted_should_match)
 
     # append columns to dataframe to allow slicing
     trials['consecutive_aborted'] = consecutive_aborted_col
     trials['consecutive_aborted_should_match'] = consecutive_aborted_should_match_col
 
-    # get scheduled change time relative to trial start
-    trials['scheduled_change_time_trial_time'] = trials['scheduled_change_time'] - trials['starttime']
-
     return trials
+
+
+def identify_licks_in_response_window(row):
+    '''a method for counting licks in the response window'''
+    if len(row['lick_times']) > 0 and ~np.isnan(row['change_time']):
+        licks_relative_to_change = np.array(row['lick_times']) - row['change_time']
+        licks_in_window = licks_relative_to_change[
+            np.logical_and(
+                licks_relative_to_change >= row['response_window'][0],
+                licks_relative_to_change <= row['response_window'][1]
+            )
+        ]
+        return len(licks_in_window)
+    else:
+        return 0
+
+
+def count_stimuli_per_trial(trials, visual_stimuli):
+    '''
+    iterates over trials
+    counts stimulus groups in range of trial frames for each trial
+    returns vector with all numbers of stimuli per trial
+    '''
+    # preallocate array
+    stimuli_per_trial = np.empty(len(trials))
+
+    # iterate over dataframe
+    for idx, trial in trials.reset_index().iterrows():
+        # get visual stimuli in range
+        stimuli = visual_stimuli[
+            (visual_stimuli['frame'] >= trial['startframe']) &
+            (visual_stimuli['frame'] <= trial['endframe'])
+        ]['image_category'].unique()
+        # add to array
+        stimuli_per_trial[idx] = len(stimuli)
+    return stimuli_per_trial
 
 
 # test functions
@@ -256,8 +284,14 @@ def validate_no_change_on_all_catch_trials(trials):
 def validate_intial_and_final_in_non_aborted(trials):
     '''all non-aborted trials should have either an intial and final image OR an initial and final orientation'''
     non_aborted_trials = trials[trials.trial_type != 'aborted']
-    all_initial = all(~pd.isnull(non_aborted_trials['initial_image_name'])) or all(~pd.isnull(non_aborted_trials['initial_ori']))
-    all_final = all(~pd.isnull(non_aborted_trials['change_image_name'])) or all(~pd.isnull(non_aborted_trials['change_ori']))
+    all_initial = (
+        all(~pd.isnull(non_aborted_trials['initial_image_name']))
+        or all(~pd.isnull(non_aborted_trials['initial_ori']))
+    )
+    all_final = (
+        all(~pd.isnull(non_aborted_trials['change_image_name']))
+        or all(~pd.isnull(non_aborted_trials['change_ori']))
+    )
     return all_initial and all_final
 
 
@@ -458,15 +492,42 @@ def validate_number_aborted_trial_repeats(trials, failure_repeats, tolerance=0.0
     # check each block to make sure all scheduled change times are equal, within a tolerance
     block_has_matching_scheduled_change_time = []
     for block_id in block_ids:
-        block_has_matching_scheduled_change_time.append(
-            all_close(
-                aborted_trials[aborted_trials.consecutive_aborted_should_match == block_id]['scheduled_change_time_trial_time'].values,
-                tolerance=tolerance,
-            )
-        )
+        scheduled_times_this_block = aborted_trials[aborted_trials.consecutive_aborted_should_match == block_id]['scheduled_change_time'].values
+        this_block_matches = all_close(scheduled_times_this_block, tolerance=tolerance)
+        block_has_matching_scheduled_change_time.append(this_block_matches)
 
     # return True if all blocks matched
     return all(block_has_matching_scheduled_change_time)
+
+
+def validate_params_change_after_aborted_trial_repeats(trials, failure_repeats):
+    '''
+    failure_repeats: for the `failure_repeats`+2 aborted trial, new parameters should be sampled
+    '''
+
+    # assign columns to the dataframe to make test possible
+    trials = identify_consecutive_aborted_blocks(trials, failure_repeats)
+
+    # get all aborted trials
+    aborted_trials = trials[trials['trial_type'] == 'aborted']
+
+    # identify all blocks which should have matching scheduled change times (blocks with lengths in multiples of 'failure_repeats')
+    block_ids = aborted_trials.consecutive_aborted_should_match.unique()
+
+    # compare scheduled change times across blocks. They should be different
+    block_has_different_scheduled_change_time_than_last = []
+    for ii, block_id in enumerate(block_ids):
+        scheduled_times_this_block = aborted_trials[aborted_trials.consecutive_aborted_should_match == block_id]['scheduled_change_time'].values
+        first_change_time_in_block = scheduled_times_this_block[0]
+        if ii > 0:  # can't compare first block to anything
+            # ensure change time is different than last change time on last block
+            block_has_different_scheduled_change_time_than_last.append(
+                first_change_time_in_block != last_change_time_in_block  # noqa F821
+            )
+        last_change_time_in_block = scheduled_times_this_block[-1]  # noqa F841
+
+    # return True if every block has different params than the last
+    return all(block_has_different_scheduled_change_time_than_last)
 
 
 def validate_ignore_false_alarms(trials, ignore_false_alarms):
@@ -559,3 +620,174 @@ def validate_no_abort_on_lick_before_response_window(trials):
 
     # ensure that all trials with first lick between the change time and the start of the response window are labeled as 'go' or 'catch' (not 'aborted')
     return all(trials[trials['response_before_response_window'] == True].trial_type.isin(['go', 'catch']))
+
+
+def validate_licks_on_go_trials_earn_reward(trials):
+    '''
+    all go trials with licks in response window should have 1 reward
+    '''
+    number_of_licks_in_window = trials.apply(identify_licks_in_response_window, axis=1)
+    number_of_rewards_on_go_lick_trials = trials[
+        (number_of_licks_in_window > 0) &
+        (trials['trial_type'] == 'go')
+    ]['number_of_rewards']
+    return all(number_of_rewards_on_go_lick_trials) == 1
+
+
+def validate_licks_on_catch_trials_do_not_earn_reward(trials):
+    '''
+    all catch trials with licks in window should have 0 rewards
+    '''
+    number_of_licks_in_window = trials.apply(identify_licks_in_response_window, axis=1)
+    number_of_rewards_on_catch_lick_trials = trials[
+        (number_of_licks_in_window > 0) &
+        (trials['trial_type'] == 'catch')
+    ]['number_of_rewards']
+    return all(number_of_rewards_on_catch_lick_trials) == 0
+
+
+def validate_even_sampling(trials, even_sampling_enabled):
+    '''
+    if even_sampling mode is enabled, no stimulus change combinations (including catch conditions) are sampled more than one more time than any other.
+    Note that even sampling only applies to images, so this does not need to be written to deal with grating stimuli
+    '''
+    if even_sampling_enabled == True:
+        nonaborted_trials = trials[trials['trial_type'] != 'aborted']
+
+        # build a table with the counts of all combinations
+        transition_matrix = pd.pivot_table(
+            nonaborted_trials,
+            values='response',
+            index=['initial_image_name'],
+            columns=['change_image_name'],
+            aggfunc=np.size
+        )
+        # Return true if the range of max to min is less than or equal to 1
+        return abs(transition_matrix.values.max() - transition_matrix.values.min()) <= 1
+    else:
+        return True
+
+
+def validate_flash_blank_durations(visual_stimuli, expected_flash_duration=0.25, expected_blank_duration=0.5, tolerance=0.02):
+    '''
+    The duty cycle of the stimulus onset/offset is maintained across trials
+    (e.g., if conditions for ending a trial are met, the stimulus presentation is not truncated)
+
+    Takes core_data['visual_stimuli'] as input
+    '''
+    # get all blank durations
+    blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
+    blank_durations = blank_durations[~np.isnan(blank_durations)].values
+
+    # get all flash durations
+    flash_durations = visual_stimuli.duration.values
+
+    # make sure all flashes and blanks are within tolerance
+    blank_durations_consistent = all(
+        np.logical_and(
+            blank_durations > 0.5 - tolerance,
+            blank_durations < 0.5 + tolerance
+        )
+    )
+    flash_durations_consistent = all(
+        np.logical_and(
+            flash_durations > 0.25 - tolerance,
+            flash_durations < 0.25 + tolerance
+        )
+    )
+
+    return blank_durations_consistent and flash_durations_consistent
+
+
+def validate_two_stimuli_per_go_trial(trials, visual_stimuli):
+    '''
+    all 'go' trials should have two stimulus groups
+    '''
+    stimuli_per_trial = count_stimuli_per_trial(trials[trials['trial_type'] == 'go'], visual_stimuli)
+    return all(stimuli_per_trial == 2)
+
+
+def validate_one_stimulus_per_catch_trial(trials, visual_stimuli):
+    '''
+    all 'catch' trials should have one stimulus group
+    '''
+    stimuli_per_trial = count_stimuli_per_trial(trials[trials['trial_type'] == 'catch'], visual_stimuli)
+    return all(stimuli_per_trial == 1)
+
+
+def validate_one_stimulus_per_aborted_trial(trials, visual_stimuli):
+    '''
+    all 'aborted' trials should have one stimulus group
+    '''
+    stimuli_per_trial = count_stimuli_per_trial(trials[trials['trial_type'] == 'aborted'], visual_stimuli)
+    return all(stimuli_per_trial == 1)
+
+
+def validate_change_frame_at_flash_onset(trials, visual_stimuli):
+    '''
+    if `periodic_flash` is not null, changes should always coincide with a stimulus onset
+    '''
+    # get all non-null change frames
+    change_frames = trials[~pd.isnull(trials['change_frame'])]['change_frame'].values
+
+    # confirm that all change frames coincide with flash onsets in the visual stimulus log
+    return all(np.in1d(change_frames, visual_stimuli['frame']))
+
+
+def validate_running_data(core_data):
+    '''
+    for each sampling frame, the value of the encoder should be known
+    takes core_data as input
+    '''
+    running_data = core_data['running']
+    # make sure length matches length of time vector
+    length_correct = len(running_data) == len(core_data['time'])
+    # check if all speed values are the same
+    all_same = all(running_data['speed'].values == running_data['speed'].values[0])
+
+    return length_correct and not all_same
+
+
+def validate_licks(core_data):
+    '''
+    validate that licks exist
+    '''
+    return len(core_data['licks']) > 0
+
+
+def validate_frame_intervals_exists(data):
+    '''
+    ensure that frame intervals exist in PKL file
+    takes full pickled data object as input
+    '''
+    return len(data['items']['behavior']['intervalsms']) > 0
+
+
+def validate_initial_blank(trials, visual_stimuli, initial_blank, tolerance=0.005):
+    '''
+    iterates over trials
+    Verifies that there is a blank screen of duration `initial_blank` at the start of every trial.
+    If initial blank is 0, first frame of flash should be coincident with trial start
+    '''
+    # preallocate array
+    initial_blank_in_tolerance = np.empty(len(trials))
+
+    # iterate over dataframe
+    for idx, trial in trials.reset_index().iterrows():
+        # get visual greater than initial frame
+        first_stim_index = visual_stimuli[visual_stimuli['frame'] >= trial['startframe']].index[0]
+        # get offset between trial start and first stimulus of frame
+        first_stim_time_offset = visual_stimuli.loc[first_stim_index]['time'] - trial['starttime']
+        # check to see if offset is within tolerance of expected blank
+        initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=tolerance)
+    # ensure all initial blanks were within tolerance
+    return all(initial_blank_in_tolerance)
+
+
+def validate_new_params_on_nonaborted_trials(trials):
+    '''
+    new parameters should be sampled after any non-aborted trial
+    '''
+    nonaborted_trials = trials[trials['trial_type'] != 'aborted']
+
+    return all(nonaborted_trials['scheduled_change_time'] != nonaborted_trials['scheduled_change_time'].shift())
