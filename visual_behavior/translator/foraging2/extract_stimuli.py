@@ -11,6 +11,7 @@ def get_image_changes(change_log):
         ))
     return changes
 
+
 def get_grating_changes(change_log):
     changes = []
     for _, stim_params, time, frame in change_log:
