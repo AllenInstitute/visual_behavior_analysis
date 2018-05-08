@@ -205,6 +205,9 @@ def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
 
 
 def validate_autorewards_after_N_consecutive_misses(trials, autoreward_after_consecutive_misses):
+    '''
+    validate that an autoreward is delivered after N consecutive misses
+    '''
     go_trials = trials[trials.trial_type == 'go']
     auto_reward_when_expected = []
     consecutive_misses = 0
