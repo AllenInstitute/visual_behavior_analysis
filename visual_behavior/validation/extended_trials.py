@@ -313,12 +313,17 @@ def validate_lick_before_scheduled_on_aborted_trials(trials):
     Therefore, every aborted trial should have a lick before the scheduled change time
     '''
     aborted_trials = trials[trials.trial_type == 'aborted']
-    first_lick = aborted_trials.apply(
-        get_first_lick_relative_to_scheduled_change,
-        axis=1,
-    )
-    # don't use nanmax. If there's a nan, we expect this to fail
-    return np.max(first_lick.values) < 0
+    #can only run this test if there are aborted trials
+    if len(aborted_trials) > 0:
+        first_lick = aborted_trials.apply(
+            get_first_lick_relative_to_scheduled_change,
+            axis=1,
+        )
+        # don't use nanmax. If there's a nan, we expect this to fail
+        return np.max(first_lick.values) < 0
+    #if no aborted trials, return True
+    else:
+        return True
 
 
 def validate_lick_after_scheduled_on_go_catch_trials(trials):
