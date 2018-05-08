@@ -71,18 +71,56 @@ def foraging_data_fixture():
 
 @pytest.fixture(scope="session")
 def foraging2_data_fixture():
-    return pd.read_pickle(os.path.join(TESTING_RES_DIR, "foraging2_chris.pkl"))
+    foraging2_data = pd.read_pickle(
+        os.path.join(TESTING_RES_DIR, "foraging2_chris.pkl")
+    )
+
+    # this is the hack way we are using to edit the stim_log item ordering due to derricw new changes
+    old_set_log = foraging2_data["items"]["behavior"]["stimuli"]["gratings"]["set_log"]
+    new_set_log = []
+
+    for set_attr, set_value, set_frame, set_time in old_set_log:
+        new_set_log.append((set_attr, set_value, set_time, set_frame, ))
+
+    foraging2_data["items"]["behavior"]["stimuli"]["gratings"]["set_log"] = \
+        new_set_log
+
+    return foraging2_data
 
 
 @pytest.fixture(scope="session")
 def foraging2_natural_images_data_fixture():
-    return pd.read_pickle(
+    foraging2_data = pd.read_pickle(
         os.path.join(TESTING_RES_DIR, "foraging2_natural_images.pkl")
     )
+
+    # this is the hack way we are using to edit the stim_log item ordering due to derricw new changes
+    old_set_log = foraging2_data["items"]["behavior"]["stimuli"]["natural_images"]["set_log"]
+    new_set_log = []
+
+    for set_attr, set_value, set_frame, set_time in old_set_log:
+        new_set_log.append((set_attr, set_value, set_time, set_frame, ))
+
+    foraging2_data["items"]["behavior"]["stimuli"]["natural_images"]["set_log"] = \
+        new_set_log
+
+    return foraging2_data
 
 
 @pytest.fixture(scope="session")
 def foraging2_data_fixture_issue_73():
-    return pd.read_pickle(
+    foraging2_data = pd.read_pickle(
         os.path.join(TESTING_RES_DIR, "issue_73.pkl")
     )
+
+    # this is the hack way we are using to edit the stim_log item ordering due to derricw new changes
+    old_set_log = foraging2_data["items"]["behavior"]["stimuli"]["natual_scenes"]["set_log"]
+    new_set_log = []
+
+    for set_value, set_frame, set_time in old_set_log:
+        new_set_log.append(("image", set_value, set_time, set_frame, ))
+
+    foraging2_data["items"]["behavior"]["stimuli"]["natual_scenes"]["set_log"] = \
+        new_set_log
+
+    return foraging2_data

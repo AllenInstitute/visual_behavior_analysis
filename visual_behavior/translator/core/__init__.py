@@ -1,4 +1,7 @@
 import pandas as pd
+import datetime
+import json
+import numpy as np
 
 from . import annotate
 
@@ -78,3 +81,15 @@ def create_extended_dataframe(trials, metadata, licks, time):
         print(e)
 
     return trials
+
+
+class JSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, datetime.date):
+            return obj.isoformat()
+
+
+def df_to_json(input_df):
+    return json.dumps(input_df.to_dict('records'), cls=JSONEncoder)
