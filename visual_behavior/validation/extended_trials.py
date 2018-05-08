@@ -1,34 +1,23 @@
 import numpy as np
 import pandas as pd
 
-from .trials import validate_trials
 from ..schemas.extended_trials import ExtendedTrialSchema
-from .utils import assert_is_valid_dataframe
+from .utils import assert_is_valid_dataframe, nanis_equal, all_close
 
 
 def validate_schema(extended_trials):
     assert_is_valid_dataframe(extended_trials, ExtendedTrialSchema())
 
 
-def validate_aborted_change_time(tr):
+def _check_aborted_change_time(tr):
     if tr['trial_type'] == 'aborted':
-        assert pd.isnull(tr['change_time'])
+        return pd.isnull(tr['change_time'])
+    else:
+        return True
 
 
-def validate_extended_trials(extended_trials):
-
-    row_validators = (
-        validate_aborted_change_time,
-    )
-
-    for validator in row_validators:
-        extended_trials.apply(validator, axis=0)
-
-
-def validate(extended_trials):
-    validate_schema(extended_trials)
-    validate_trials(extended_trials)
-    validate_extended_trials(extended_trials)
+def validate_aborted_change_time(trials):
+    return all(trials.apply(_check_aborted_change_time, axis=1))
 
 
 # helper functions for tests:
@@ -41,30 +30,6 @@ def get_warmup_trials(trials):
     '''finds all warmup trials'''
     first_non_warmup_trial = trials[trials['auto_rewarded'] == False].index[0]  # noqa: E712
     return trials.iloc[:first_non_warmup_trial]
-
-
-def is_equal(v1, v2):
-    '''
-    checks equality, but deals with nulls (e.g., will return True for
-    np.nan==None)
-    '''
-    if pd.isnull(v1):
-        v1 = None
-    if pd.isnull(v2):
-        v2 = None
-    return v1 == v2
-
-
-def all_close(v, tolerance=0.01):
-    '''
-    adapts the numpy allclose method to work on single array
-    creates two arrays that are shifted versions of the input, pads with
-    initial and final values, compares. equivalent to iterating through v and
-    comparing each element to the next
-    '''
-    a = np.concatenate(([v[0]], v))
-    b = np.concatenate((v, [v[-1]]))
-    return np.allclose(a, b, rtol=tolerance)
 
 
 def get_first_lick_in_response_window(row):
@@ -239,7 +204,7 @@ def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
         return False
 
 
-def validate_autorewards_after_N_consecutive_misses(trials, autoreward_after_consecutive_misses=10):
+def validate_autorewards_after_N_consecutive_misses(trials, autoreward_after_consecutive_misses):
     go_trials = trials[trials.trial_type == 'go']
     auto_reward_when_expected = []
     consecutive_misses = 0
@@ -263,8 +228,8 @@ def validate_change_on_all_go_trials(trials):
     '''
     go_trials = trials[trials.trial_type == 'go']
     for idx, row in go_trials.iterrows():
-        same_image = is_equal(row['initial_image_name'], row['change_image_name'])
-        same_ori = is_equal(row['initial_ori'], row['change_ori'])
+        same_image = nanis_equal(row['initial_image_name'], row['change_image_name'])
+        same_ori = nanis_equal(row['initial_ori'], row['change_ori'])
         if (same_image is True) and (same_ori is True):
             return False
     return True
@@ -274,8 +239,8 @@ def validate_no_change_on_all_catch_trials(trials):
     '''ensure that neither the orientation nor the image_name changes on every catch trial'''
     go_trials = trials[trials.trial_type == 'catch']
     for idx, row in go_trials.iterrows():
-        same_image = is_equal(row['initial_image_name'], row['change_image_name'])
-        same_ori = is_equal(row['initial_ori'], row['change_ori'])
+        same_image = nanis_equal(row['initial_image_name'], row['change_image_name'])
+        same_ori = nanis_equal(row['initial_ori'], row['change_ori'])
         if (same_image is False) and (same_ori is False):
             return False
     return True
@@ -374,8 +339,8 @@ def validate_initial_matches_final(trials):
     image_match = []
     ori_match = []
     for idx, row in trials_to_test.iterrows():
-        image_match.append(is_equal(row['initial_image_name'], last_trial_final_im))
-        ori_match.append(is_equal(row['initial_ori'], last_trial_final_ori))
+        image_match.append(nanis_equal(row['initial_image_name'], last_trial_final_im))
+        ori_match.append(nanis_equal(row['initial_ori'], last_trial_final_ori))
 
         last_trial_final_im = row['change_image_name']
         last_trial_final_ori = row['change_ori']
@@ -668,7 +633,7 @@ def validate_even_sampling(trials, even_sampling_enabled):
         return True
 
 
-def validate_flash_blank_durations(visual_stimuli, expected_flash_duration=0.25, expected_blank_duration=0.5, tolerance=0.02):
+def validate_flash_blank_durations(visual_stimuli, expected_flash_duration, expected_blank_duration, tolerance=0.02):
     '''
     The duty cycle of the stimulus onset/offset is maintained across trials
     (e.g., if conditions for ending a trial are met, the stimulus presentation is not truncated)
@@ -732,35 +697,6 @@ def validate_change_frame_at_flash_onset(trials, visual_stimuli):
 
     # confirm that all change frames coincide with flash onsets in the visual stimulus log
     return all(np.in1d(change_frames, visual_stimuli['frame']))
-
-
-def validate_running_data(core_data):
-    '''
-    for each sampling frame, the value of the encoder should be known
-    takes core_data as input
-    '''
-    running_data = core_data['running']
-    # make sure length matches length of time vector
-    length_correct = len(running_data) == len(core_data['time'])
-    # check if all speed values are the same
-    all_same = all(running_data['speed'].values == running_data['speed'].values[0])
-
-    return length_correct and not all_same
-
-
-def validate_licks(core_data):
-    '''
-    validate that licks exist
-    '''
-    return len(core_data['licks']) > 0
-
-
-def validate_frame_intervals_exists(data):
-    '''
-    ensure that frame intervals exist in PKL file
-    takes full pickled data object as input
-    '''
-    return len(data['items']['behavior']['intervalsms']) > 0
 
 
 def validate_initial_blank(trials, visual_stimuli, initial_blank, tolerance=0.005):
