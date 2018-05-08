@@ -442,8 +442,8 @@ def validate_task_id_present(trials):
     The parameter `task_id` should be recorded in the output file.
     '''
     try:
-        trials['task_id']
-        return all(~pd.isnull(trials['task_id']))
+        trials['task']
+        return all(~pd.isnull(trials['task']))
     except KeyError:
         return False
 
