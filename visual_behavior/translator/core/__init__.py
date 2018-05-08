@@ -45,7 +45,6 @@ def create_extended_dataframe(trials, metadata, licks, time):
 
     annotate.annotate_parameters(trials, metadata, keydict=keydict, inplace=True)
     annotate.annotate_startdatetime(trials, metadata, inplace=True)
-    annotate.explode_startdatetime(trials, inplace=True)
     annotate.annotate_n_rewards(trials, inplace=True)
     annotate.annotate_rig_id(trials, metadata, inplace=True)
     annotate.fix_autorearded(trials, inplace=True)

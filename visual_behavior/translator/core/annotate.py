@@ -62,29 +62,6 @@ def annotate_parameters(trials, metadata, keydict=None):
 
 
 @inplace
-def explode_startdatetime(df):
-    """ explodes the 'startdatetime' column into date/year/month/day/hour/dayofweek
-
-    Parameters
-    ----------
-    trials : pandas DataFrame
-        dataframe of trials (or flashes)
-    inplace : bool, optional
-        modify `trials` in place. if False, returns a copy. default: True
-
-    See Also
-    --------
-    io.load_trials
-    """
-    df['date'] = df['startdatetime'].dt.date.astype(str)
-    df['year'] = df['startdatetime'].dt.year
-    df['month'] = df['startdatetime'].dt.month
-    df['day'] = df['startdatetime'].dt.day
-    df['hour'] = df['startdatetime'].dt.hour
-    df['dayofweek'] = df['startdatetime'].dt.weekday
-
-
-@inplace
 def annotate_n_rewards(df):
     """ computes the number of rewards from the 'reward_times' column
 
@@ -129,7 +106,8 @@ def annotate_rig_id(trials, metadata):
 
 @inplace
 def annotate_startdatetime(trials, metadata):
-    """ adds a column with the session's `startdatetime`
+    """ adds a column with the session's `startdatetime`, explodes the
+    'startdatetime' column into date/year/month/day/hour/dayofweek
 
     Parameters
     ----------
@@ -143,7 +121,15 @@ def annotate_startdatetime(trials, metadata):
     --------
     io.load_trials
     """
-    trials['startdatetime'] = pd.to_datetime(metadata['startdatetime'])
+    startdatetime = pd.to_datetime(metadata['startdatetime'])
+
+    trials['startdatetime'] = startdatetime
+    trials['date'] = startdatetime.date().isoformat()
+    trials['year'] = startdatetime.year
+    trials['month'] = startdatetime.month
+    trials['day'] = startdatetime.day
+    trials['hour'] = startdatetime.hour
+    trials['dayofweek'] = startdatetime.weekday()
 
 
 @inplace
