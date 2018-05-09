@@ -352,11 +352,11 @@ def annotate_stimuli(trial, stimuli):
 
         initial_orientation = initial_changes.get("ori")
         initial_contrast = initial_changes.get("contrast")
-        change_orientation = change_changes.get("ori")
-        change_contrast = change_changes.get("constrast")
+        change_orientation = change_changes.get("ori", initial_orientation)
+        change_contrast = change_changes.get("constrast", initial_contrast)
 
-        if initial_orientation and change_orientation:
-            delta_orientation = initial_orientation - change_orientation
+        if initial_orientation is not None and change_orientation is not None:
+            delta_orientation = change_orientation - initial_orientation
         else:
             delta_orientation = np.nan
 
@@ -429,14 +429,15 @@ def _get_stimulus_attr_changes(stim_dict, change_frame, first_frame, last_frame)
     -----
     - assumes only two stimuli are ever shown
     - converts attr_names to lowercase
+    - gets the net attr changes from the start of a trial to the end of a trial
     """
     initial_attr = {}
     change_attr = {}
 
     for attr_name, set_value, set_time, set_frame in stim_dict["set_log"]:
-        if first_frame <= set_frame < change_frame:
+        if set_frame <= first_frame:
             initial_attr[attr_name.lower()] = set_value
-        elif change_frame <= set_frame < last_frame:
+        elif set_frame <= last_frame:
             change_attr[attr_name.lower()] = set_value
         else:
             pass
