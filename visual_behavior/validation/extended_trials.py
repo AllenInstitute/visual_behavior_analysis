@@ -205,6 +205,9 @@ def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
 
 
 def validate_autorewards_after_N_consecutive_misses(trials, autoreward_after_consecutive_misses):
+    '''
+    validate that an autoreward is delivered after N consecutive misses
+    '''
     go_trials = trials[trials.trial_type == 'go']
     auto_reward_when_expected = []
     consecutive_misses = 0
@@ -313,12 +316,17 @@ def validate_lick_before_scheduled_on_aborted_trials(trials):
     Therefore, every aborted trial should have a lick before the scheduled change time
     '''
     aborted_trials = trials[trials.trial_type == 'aborted']
-    first_lick = aborted_trials.apply(
-        get_first_lick_relative_to_scheduled_change,
-        axis=1,
-    )
-    # don't use nanmax. If there's a nan, we expect this to fail
-    return np.max(first_lick.values) < 0
+    # can only run this test if there are aborted trials
+    if len(aborted_trials) > 0:
+        first_lick = aborted_trials.apply(
+            get_first_lick_relative_to_scheduled_change,
+            axis=1,
+        )
+        # don't use nanmax. If there's a nan, we expect this to fail
+        return np.max(first_lick.values) < 0
+    # if no aborted trials, return True
+    else:
+        return True
 
 
 def validate_lick_after_scheduled_on_go_catch_trials(trials):
@@ -434,8 +442,8 @@ def validate_task_id_present(trials):
     The parameter `task_id` should be recorded in the output file.
     '''
     try:
-        trials['task_id']
-        return all(~pd.isnull(trials['task_id']))
+        trials['task']
+        return all(~pd.isnull(trials['task']))
     except KeyError:
         return False
 
@@ -608,7 +616,12 @@ def validate_licks_on_catch_trials_do_not_earn_reward(trials):
         (number_of_licks_in_window > 0) &
         (trials['trial_type'] == 'catch')
     ]['number_of_rewards']
-    return all(number_of_rewards_on_catch_lick_trials) == 0
+    # can only evaluate if there have been some false alarm trials
+    if len(number_of_rewards_on_catch_lick_trials) > 0:
+        return all(number_of_rewards_on_catch_lick_trials) == 0
+    # if no false alarm trials, return True
+    else:
+        return True
 
 
 def validate_even_sampling(trials, even_sampling_enabled):
