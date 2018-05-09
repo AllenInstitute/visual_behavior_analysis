@@ -274,24 +274,25 @@ class EndOfStateFinder(object):
     def __init__(self):
         self.end_frame = 0
 
-    def check(self,state):
+    def check(self, state):
         if state is True:
             self.end_frame += 1
         else:
             self.end_frame = 0
         return self.end_frame
 
+
 def find_ends(stimdf):
     # first, grab a copy of the reversed dataframe
-    stimdf = stimdf.sort_values('frame',ascending=False)
+    stimdf = stimdf.sort_values('frame', ascending=False)
 
     stimdf['frames_to_end'] = stimdf['state'].map(EndOfStateFinder().check)
 
-    stimdf = stimdf.sort_values('frame',ascending=True)
+    stimdf = stimdf.sort_values('frame', ascending=True)
     return stimdf
 
 
-def load_visual_stimuli(data,time=None):
+def load_visual_stimuli(data, time=None):
     """ Returns the stimulus flashes in an experiment.
 
     NOTE: Currently only works for images & gratings.
@@ -319,6 +320,7 @@ def load_visual_stimuli(data,time=None):
 
     stimdf = find_ends(stimdf)
     stimdf['end'] = stimdf['frames_to_end'] + stimdf['frame']
+
     def find_time(fr):
         try:
             return time[fr]
@@ -335,15 +337,13 @@ def load_visual_stimuli(data,time=None):
         .fillna(1.0)
     ) > 0
 
-    if pd.isnull(stimdf['image_name']).any() == False: #'image_category' in stimdf.columns:
-        stim_type = 'images'
+    if pd.isnull(stimdf['image_name']).any() == False:  # 'image_category' in stimdf.columns:
         cols = ['frame', 'time', 'duration', 'image_category', 'image_name']
         stimuli = stimdf[onset_mask][cols]
         stimuli['orientation'] = None
         stimuli['contrast'] = None
 
     elif 'ori' in stimdf.columns:
-        stim_type = 'gratings'
         cols = ['frame', 'time', 'duration', 'ori', 'contrast']
         stimuli = stimdf[onset_mask][cols]
         stimuli.rename(columns={'ori': 'orientation'}, inplace=True)

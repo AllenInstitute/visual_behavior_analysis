@@ -7,9 +7,9 @@ IMAGES_CHANGE_LOG = [
 ]
 
 EXPECTED_IMAGES_CHANGES = [
-    {'frame': 229, 'orientation': 'im053', 'time': 4.475209915492957},
-    {'frame': 965, 'orientation': 'im111', 'time': 16.250224375586853},
-    {'frame': 1379, 'orientation': 'im037', 'time': 22.876219192488264},
+    {'frame': 229, 'image_category': 'im053', 'image_name': 'im053', 'time': 4.475209915492957},
+    {'frame': 965, 'image_category': 'im111', 'image_name': 'im111', 'time': 16.250224375586853},
+    {'frame': 1379, 'image_category': 'im037', 'image_name': 'im037', 'time': 22.876219192488264},
 ]
 
 GRATING_CHANGE_LOG = [
@@ -29,7 +29,7 @@ def test_get_image_changes():
     changes = get_image_changes(IMAGES_CHANGE_LOG)
     assert changes == EXPECTED_IMAGES_CHANGES
 
-    
+
 def test_get_grating_changes():
     changes = get_grating_changes(GRATING_CHANGE_LOG)
     assert changes == EXPECTED_GRATING_CHANGES
