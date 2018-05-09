@@ -20,11 +20,11 @@ EXPECTED_TRIALS = pd.DataFrame(data={
     },
     "cumulative_reward_number": {0: 1, 1: 2, 2: 3, },
     "cumulative_volume": {0: 0.008, 1: 0.016, 2: 0.024, },
-    "delta_ori": {0: None, 1: None, 2: None, },
+    "delta_ori": {0: 90.0, 1: -90.0, 2: 90.0, },
     "initial_contrast": {0: None, 1: None, 2: None, },
     "initial_image_category": {0: None, 1: None, 2: None, },
     "initial_image_name": {0: None, 1: None, 2: None, },
-    "initial_ori": {0: None, 1: None, 2: None, },
+    "initial_ori": {0: 0, 1: 90.0, 2: 0.0, },
     # "lick_frames": {0: [196], 1: [886], 2: [1392], },
     "lick_times": {
         0: [6.7089195225430425],
@@ -75,7 +75,6 @@ EXPECTED_TRIALS = pd.DataFrame(data={
     #     2: 8.268650904572262
     # },
     # "trial_type": {0: "go", 1: "go", 2: "go", },
-    "stim_on_frames": None,
     "publish_time": None,
     "index": {0: 0, 1: 1, 2:2, },
 })
@@ -207,10 +206,6 @@ def test_data_to_licks(monkeypatch, foraging2_data_fixture):
 
 def test_data_to_trials(foraging2_data_fixture):
     trials = foraging2.data_to_trials(foraging2_data_fixture)
-
-    assert trials.stim_on_frames.notnull().all(), "stimulus_on_frame is not what we expect..."
-
-    trials.stim_on_frames = None
 
     pd.testing.assert_frame_equal(
         trials,

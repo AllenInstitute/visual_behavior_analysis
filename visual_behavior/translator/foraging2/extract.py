@@ -304,8 +304,6 @@ def annotate_stimuli(trial, stimuli):
             the contrast of the initial image
         delta_orientation: float
             difference in orientation between the initial image and the change image
-        stimulus_on_frames: list of int
-            frame indices of whether or not the stimulus was drawn
 
     Notes
     -----
@@ -354,11 +352,11 @@ def annotate_stimuli(trial, stimuli):
 
         initial_orientation = initial_changes.get("ori")
         initial_contrast = initial_changes.get("contrast")
-        change_orientation = change_changes.get("ori")
-        change_contrast = change_changes.get("constrast")
+        change_orientation = change_changes.get("ori", initial_orientation)
+        change_contrast = change_changes.get("constrast", initial_contrast)
 
-        if initial_orientation and change_orientation:
-            delta_orientation = initial_orientation - change_orientation
+        if initial_orientation is not None and change_orientation is not None:
+            delta_orientation = change_orientation - initial_orientation
         else:
             delta_orientation = np.nan
 
@@ -372,7 +370,6 @@ def annotate_stimuli(trial, stimuli):
             "initial_orientation": initial_orientation,
             "initial_contrast": initial_contrast,
             "delta_orientation": delta_orientation,
-            "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
         }
     elif implied_type in ("DoCImageStimulus", ):
         return {
@@ -385,7 +382,6 @@ def annotate_stimuli(trial, stimuli):
             "initial_orientation": None,
             "initial_contrast": None,
             "delta_orientation": None,
-            "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
         }
     else:
         raise ValueError("invalid implied type: {}".format(implied_type))
@@ -433,14 +429,15 @@ def _get_stimulus_attr_changes(stim_dict, change_frame, first_frame, last_frame)
     -----
     - assumes only two stimuli are ever shown
     - converts attr_names to lowercase
+    - gets the net attr changes from the start of a trial to the end of a trial
     """
     initial_attr = {}
     change_attr = {}
 
     for attr_name, set_value, set_time, set_frame in stim_dict["set_log"]:
-        if first_frame <= set_frame < change_frame:
+        if set_frame <= first_frame:
             initial_attr[attr_name.lower()] = set_value
-        elif change_frame <= set_frame < last_frame:
+        elif set_frame <= last_frame:
             change_attr[attr_name.lower()] = set_value
         else:
             pass
@@ -1137,15 +1134,6 @@ def get_trial_log(data):
         foraging2 shaped trial log
     """
     return behavior_items_or_top_level(data)["trial_log"]
-
-
-def get_stimulus_on_frames(exp_data):
-    """pd.Series frame, boolean whether shown
-    """
-    return pd.Series([
-        was_drawn == 1
-        for was_drawn in get_unified_draw_log(exp_data)
-    ])
 
 
 def get_task_id(data):

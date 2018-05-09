@@ -124,6 +124,7 @@ def foraging2_stimuli_fixture():
             ],
             'unpickleable': ['changeOccurred', 'flash_ended'],
             'set_log': [
+                ('Ori', 0, 0, 0, ),
                 ('Ori', 90, 6.509936595531521, 183, ),
                 ('Ori', 0, 17.550367668425903, 873, ),
                 ('Ori', 90, 25.645875388494208, 1379, )
@@ -372,15 +373,6 @@ def test_get_stimulus_duration(foraging2_data_fixture):
     assert extract.get_stimulus_duration(foraging2_data_fixture) == 6.0
 
 
-def test_get_stimulus_on_frames(foraging2_data_fixture, foraging2_stimuli_fixture):
-    assert extract.get_stimulus_on_frames(foraging2_data_fixture).iloc[:20].equals(
-        pd.Series([
-            True, True, True, True, True, True, True, True, True, True, True,
-            True, True, True, True, False, False, False, False, False,
-        ])
-    )  # first 20 items should be sufficient
-
-
 def test_get_stimuli(foraging2_data_fixture, foraging2_stimuli_fixture):
     assert extract.get_stimuli(foraging2_data_fixture) == \
         foraging2_stimuli_fixture
@@ -441,8 +433,6 @@ def test_annotate_stimuli(foraging2_trial_fixture, foraging2_stimuli_fixture):
         foraging2_stimuli_fixture
     )
 
-    annotated_stimuli["stimulus_on_frames"] = []  # testing stimulus_on_frames too annoying for now...
-
     assert annotated_stimuli == {
         'initial_image_category': None,
         'initial_image_name': None,
@@ -450,10 +440,9 @@ def test_annotate_stimuli(foraging2_trial_fixture, foraging2_stimuli_fixture):
         'change_image_category': None,
         'change_orientation': 90,
         'change_contrast': None,
-        'initial_orientation': None,
+        'initial_orientation': 0,
         'initial_contrast': None,
-        "delta_orientation": np.nan,
-        "stimulus_on_frames": [],
+        "delta_orientation": 90,
     }
 
 
@@ -469,7 +458,7 @@ def test__resolve_stimulus_dict(foraging2_stimuli_fixture):
 
 def test__get_stimulus_attr_changes(foraging2_stimuli_fixture):
     assert extract._get_stimulus_attr_changes(foraging2_stimuli_fixture["gratings"], 183, 0, 516) == \
-        ({}, {'ori': 90}, )
+        ({"ori": 0, }, {'ori': 90, }, )
 
 
 def test_annotate_trials(foraging2_trial_fixture):
@@ -567,13 +556,11 @@ def test__resolve_initial_image(foraging2_data_fixture_issue_73, start_frame, ex
 
 
 @pytest.mark.regression
-def test_regression_annotate_stimuli(foraging2_natural_images_data_fixture):
+def test_regression_annotate_stimuli_natural_scenes(foraging2_natural_scenes_data_fixture):
     annotated_stimuli = extract.annotate_stimuli(
-        extract.get_trial_log(foraging2_natural_images_data_fixture)[1],
-        extract.get_stimuli(foraging2_natural_images_data_fixture)
+        extract.get_trial_log(foraging2_natural_scenes_data_fixture)[1],
+        extract.get_stimuli(foraging2_natural_scenes_data_fixture)
     )
-
-    annotated_stimuli["stimulus_on_frames"] = []  # testing stimulus_on_frames too annoying for now...
 
     assert annotated_stimuli == {
         'initial_image_category': 'im008',
@@ -585,7 +572,6 @@ def test_regression_annotate_stimuli(foraging2_natural_images_data_fixture):
         'initial_orientation': None,
         'initial_contrast': None,
         "delta_orientation": None,
-        "stimulus_on_frames": [],
     }
 
 
@@ -598,7 +584,7 @@ def test_get_auto_reward_volume(foraging2_data_fixture):
 
 
 @pytest.mark.regression
-def test_regression_annotate_stimuli(foraging2_data_fixture_issue_73):
+def test_regression_annotate_stimuli_73(foraging2_data_fixture_issue_73):
     stimuli = extract.get_stimuli(foraging2_data_fixture_issue_73)
     trials = extract.get_trials(foraging2_data_fixture_issue_73).copy(deep=True)
 
@@ -612,3 +598,60 @@ def test_regression_annotate_stimuli(foraging2_data_fixture_issue_73):
             trial_stim["change_image_category"] is None
 
     assert non_image_trial_count == 0
+
+
+@pytest.mark.regression
+@pytest.mark.parametrize("args, expected", [
+    (
+        (np.nan, 0, 881, ),
+        ({"ori": 0, }, {}, ),
+    ),
+    (
+        (12327, 12140, 12655, ),
+        ({"ori": 90, }, {"ori": 0, }, ),
+    ),
+])
+def test_regression__get_stimulus_attr_changes(
+        foraging2_data_fixture_issue_116, args, expected
+):
+    stimuli = extract.get_stimuli(foraging2_data_fixture_issue_116)
+    trials = extract.get_trials(foraging2_data_fixture_issue_116).copy(deep=True)
+
+    assert extract._get_stimulus_attr_changes(stimuli["grating"], *args) == \
+        expected
+
+
+
+@pytest.mark.regression
+def test_regression_annotate_stimuli_116(foraging2_data_fixture_issue_116):
+    stimuli = extract.get_stimuli(foraging2_data_fixture_issue_116)
+    trials = extract.get_trials(foraging2_data_fixture_issue_116).copy(deep=True)
+
+    non_ori_trial_count = 0
+
+    for _, trial in trials.iterrows():
+        trial_stim = extract.annotate_stimuli(trial, stimuli)
+        initial_ori = trial_stim["initial_orientation"]
+        change_ori = trial_stim["change_orientation"]
+
+        non_ori_trial_count += initial_ori is None or np.isnan(initial_ori) or \
+            change_ori is None or np.isnan(change_ori)
+
+    assert non_ori_trial_count == 0
+
+
+@pytest.mark.parametrize("stim_dict, args, expected", [
+    (
+        {
+            "set_log": [
+                ('Ori', 0, 0.6300831158435708, 0),
+                ('Contrast', 0.5, 20.123506742232717, 1218),
+                ('Ori', 90, 197.87752266590869, 12327),
+            ],
+        },
+        (12327, 12140, 12655, ),
+        ({"ori": 0, "contrast": 0.5, }, {"ori": 90, }, ),
+    ),
+])
+def test__get_stimulus_attr_changes_many_changes(stim_dict, args, expected):
+    assert extract._get_stimulus_attr_changes(stim_dict, *args) == expected
