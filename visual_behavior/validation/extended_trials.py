@@ -29,7 +29,7 @@ def get_autoreward_trials(trials):
 def get_warmup_trials(trials):
     '''finds all warmup trials'''
     first_non_warmup_trial_df = trials[trials['auto_rewarded'] == False]
-    if len(first_non_warmup_trial_df)>0:
+    if len(first_non_warmup_trial_df) > 0:
         first_non_warmup_trial = first_non_warmup_trial_df.index[0]  # noqa: E712
         return trials.iloc[:first_non_warmup_trial]
     else:
@@ -176,14 +176,14 @@ def validate_number_of_warmup_trials(trials, expected_number_of_warmup_trials):
     warmup_trials = get_warmup_trials(trials)
 
     # check to ensure that the number of GO warmup trials matches the expected number
-    if len(warmup_trials)==0 and expected_number_of_warmup_trials!=0:
+    if len(warmup_trials) == 0 and expected_number_of_warmup_trials != 0:
         # if there are fewer go/catch trials than the expected number of warmup trials, return True
         # This will result if so many trials were aborted that the number of warmup trials were never met
-        if len(trials[trials.trial_type.isin(['go','catch'])]) < expected_number_of_warmup_trials:
+        if len(trials[trials.trial_type.isin(['go', 'catch'])]) < expected_number_of_warmup_trials:
             return True
         else:
             return False
-    if len(warmup_trials)==0 and expected_number_of_warmup_trials==0:
+    if len(warmup_trials) == 0 and expected_number_of_warmup_trials == 0:
         return True
     elif expected_number_of_warmup_trials != -1:
         return len(warmup_trials[warmup_trials.trial_type == 'go']) == expected_number_of_warmup_trials
@@ -201,7 +201,7 @@ def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
     warmup_trials = get_warmup_trials(trials)
 
     # can only perform this validation if there were warmup trials
-    if len(warmup_trials)>0:
+    if len(warmup_trials) > 0:
         # find only go warmup trials
         go_warmup_trials = warmup_trials[warmup_trials.trial_type == 'go']
 
@@ -218,7 +218,7 @@ def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
             # if the above fails, fail the test
             return False
     # if no warmup trials, return True
-    elif len(warmup_trials)==0:
+    elif len(warmup_trials) == 0:
         return True
 
 
@@ -286,7 +286,7 @@ def validate_min_change_time(trials, pre_change_time):
     return np.nanmin((trials['change_time'] - trials['starttime']).values) > pre_change_time
 
 
-def validate_max_change_time(trials, pre_change_time, stimulus_window,tolerance=0.05):
+def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance=0.05):
     '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
     return np.nanmax((trials['change_time'] - trials['starttime']).values) < (pre_change_time + stimulus_window + tolerance)
 
@@ -395,11 +395,11 @@ def validate_first_lick_after_change_on_nonaborted(trials):
     '''
     non_aborted_trials = trials[trials.trial_type != 'aborted']
     # we can only validate this if there is at least one nonaborted trial
-    if len(non_aborted_trials)>0:
+    if len(non_aborted_trials) > 0:
         first_lick_relative_to_change = non_aborted_trials.apply(get_first_lick_relative_to_change, axis=1)
         return np.nanmin(first_lick_relative_to_change.values) > 0
     # if no nonaborted trials, just return True
-    elif len(non_aborted_trials)==0:
+    elif len(non_aborted_trials) == 0:
         return True
 
 
@@ -596,7 +596,7 @@ def validate_monotonically_decreasing_number_of_change_times(trials, expected_di
     '''
     change_times = (trials['change_time'] - trials['starttime']).values
     if expected_distribution == 'exponential' and all(pd.isnull(change_times)) != True:
-        
+
         change_times = change_times[~np.isnan(change_times)]
 
         nvals, edges = np.histogram(change_times, bins=np.arange(0, 10, 0.5))
