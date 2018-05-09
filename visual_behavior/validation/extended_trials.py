@@ -176,7 +176,16 @@ def validate_number_of_warmup_trials(trials, expected_number_of_warmup_trials):
     warmup_trials = get_warmup_trials(trials)
 
     # check to ensure that the number of GO warmup trials matches the expected number
-    if expected_number_of_warmup_trials != -1:
+    if len(warmup_trials)==0 and expected_number_of_warmup_trials!=0:
+        # if there are fewer go/catch trials than the expected number of warmup trials, return True
+        # This will result if so many trials were aborted that the number of warmup trials were never met
+        if len(trials[trials.trial_type.isin(['go','catch'])]) < expected_number_of_warmup_trials:
+            return True
+        else:
+            return False
+    if len(warmup_trials)==0 and expected_number_of_warmup_trials==0:
+        return True
+    elif expected_number_of_warmup_trials != -1:
         return len(warmup_trials[warmup_trials.trial_type == 'go']) == expected_number_of_warmup_trials
     else:
         return len(warmup_trials[warmup_trials.trial_type == 'go']) == len(trials[trials.trial_type == 'go'])
