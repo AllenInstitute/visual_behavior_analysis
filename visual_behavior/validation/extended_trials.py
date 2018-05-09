@@ -350,19 +350,29 @@ def validate_lick_after_scheduled_on_go_catch_trials(trials):
 
 
 def validate_initial_matches_final(trials):
+    '''
+    On go and catch trials, the initial image (or ori) on a given trial should match the final image (or ori) on the previous trial
+    '''
     trials_to_test = trials[trials['trial_type'].isin(['go', 'catch'])]
-    last_trial_final_im = trials_to_test.iloc[0]['initial_image_name']
-    last_trial_final_ori = trials_to_test.iloc[0]['initial_ori']
-    image_match = []
-    ori_match = []
-    for idx, row in trials_to_test.iterrows():
-        image_match.append(nanis_equal(row['initial_image_name'], last_trial_final_im))
-        ori_match.append(nanis_equal(row['initial_ori'], last_trial_final_ori))
 
-        last_trial_final_im = row['change_image_name']
-        last_trial_final_ori = row['change_ori']
+    # Can only run this validation if there are at least two go or catch trials
+    if len(trials_to_test) > 2:
+        last_trial_final_im = trials_to_test.iloc[0]['initial_image_name']
+        last_trial_final_ori = trials_to_test.iloc[0]['initial_ori']
+        image_match = []
+        ori_match = []
+        for idx, row in trials_to_test.iterrows():
+            image_match.append(nanis_equal(row['initial_image_name'], last_trial_final_im))
+            ori_match.append(nanis_equal(row['initial_ori'], last_trial_final_ori))
 
-    return all(image_match) and all(ori_match)
+            last_trial_final_im = row['change_image_name']
+            last_trial_final_ori = row['change_ori']
+
+        return all(image_match) and all(ori_match)
+
+    # If too few trials to validate, return True
+    else:
+        return True
 
 
 def validate_first_lick_after_change_on_nonaborted(trials):
