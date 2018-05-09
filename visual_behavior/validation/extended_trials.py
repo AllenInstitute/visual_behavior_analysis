@@ -353,9 +353,14 @@ def validate_lick_after_scheduled_on_go_catch_trials(trials):
     Therefore, no non-aborted trials should have a lick before the scheduled change time
     '''
     nonaborted_trials = trials[trials.trial_type != 'aborted']
-    first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
-    # use nanmin, it is possible
-    return np.nanmin(first_lick.values) > 0
+    # We can only check this if there is at least 1 nonaborted trial.
+    if len(nonaborted_trials) > 0:
+        first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
+        # use nanmin
+        return np.nanmin(first_lick.values) > 0
+    # if there are no nonaborted trials, just return True
+    elif len(nonaborted_trials) == 0:
+        return True
 
 
 def validate_initial_matches_final(trials):
@@ -621,11 +626,18 @@ def validate_no_abort_on_lick_before_response_window(trials):
         else:
             return False
 
-    # identify all trials with licks between the change time and the start of the response window
-    trials['response_before_response_window'] = trials.apply(identify_first_lick_before_response_window, axis=1)
+    nonaborted_trials = trials[trials['trial_type'] != 'aborted']
 
-    # ensure that all trials with first lick between the change time and the start of the response window are labeled as 'go' or 'catch' (not 'aborted')
-    return all(trials[trials['response_before_response_window'] == True].trial_type.isin(['go', 'catch']))
+    # Can only check this if there is at least one non-aborted trial
+    if len(nonaborted_trials) > 0:
+        # identify all trials with licks between the change time and the start of the response window
+        trials['response_before_response_window'] = trials.apply(identify_first_lick_before_response_window, axis=1)
+
+        # ensure that all trials with first lick between the change time and the start of the response window are labeled as 'go' or 'catch' (not 'aborted')
+        return all(trials[trials['response_before_response_window'] == True].trial_type.isin(['go', 'catch']))
+    # if no non-aborted trials, just return True
+    else:
+        return True
 
 
 def validate_licks_on_go_trials_earn_reward(trials):
