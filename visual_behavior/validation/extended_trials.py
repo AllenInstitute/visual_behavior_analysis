@@ -589,8 +589,9 @@ def validate_monotonically_decreasing_number_of_change_times(trials, expected_di
     '''
     If stimulus_distribution is 'exponential', then the number of trials with changes on each flash should be monotonically decreasing from the first flash after the `min_change_time`
     '''
-    if expected_distribution == 'exponential':
-        change_times = (trials['change_time'] - trials['starttime']).values
+    change_times = (trials['change_time'] - trials['starttime']).values
+    if expected_distribution == 'exponential' and all(pd.isnull(change_times)) != True:
+        
         change_times = change_times[~np.isnan(change_times)]
 
         nvals, edges = np.histogram(change_times, bins=np.arange(0, 10, 0.5))
