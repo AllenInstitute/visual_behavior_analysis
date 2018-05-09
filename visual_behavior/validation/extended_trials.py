@@ -146,16 +146,6 @@ def count_stimuli_per_trial(trials, visual_stimuli):
         stimuli_per_trial[idx] = len(stimuli)
     return stimuli_per_trial
 
-def even_sampling_mode_enabled(data):
-    '''
-    check the foraging2 data structure to determine whether even sampling mode is enabled
-    '''
-    stim = data['items']['behavior']['stimuli'].values()[0]
-    if stim['obj_type'].lower()=='docimagestimulus' and stim['sampling'] in ['even','file']:
-        return True
-    else:
-        return False 
-
 
 # test functions
 def validate_autoreward_volume(trials, auto_reward_volume):

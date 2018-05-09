@@ -30,3 +30,14 @@ def all_close(v, tolerance=0.01):
     a = np.concatenate(([v[0]], v))
     b = np.concatenate((v, [v[-1]]))
     return np.allclose(a, b, rtol=tolerance)
+
+def even_sampling_mode_enabled(data):
+    '''
+    check the foraging2 data structure to determine whether even sampling mode is enabled
+    '''
+    stim = data['items']['behavior']['stimuli'].values()[0]
+    if stim['obj_type'].lower()=='docimagestimulus' and stim['sampling'] in ['even','file']:
+        return True
+    else:
+        return False 
+
