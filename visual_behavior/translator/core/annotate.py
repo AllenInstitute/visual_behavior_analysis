@@ -5,6 +5,8 @@ import numpy as np
 from six import iteritems
 from functools import wraps
 
+from visual_behavior.devices import get_rig_id
+
 
 def inplace(func):
     """ decorator which allows functions that modify a dataframe inplace
@@ -100,8 +102,7 @@ def annotate_rig_id(trials, metadata):
     try:
         trials['rig_id'] = metadata['rig_id']
     except KeyError:
-        from visual_behavior.devices import get_rig_id
-        trials['rig_id'] = get_rig_id(trials['computer_name'][0])
+        trials['rig_id'] = get_rig_id(metadata['computer_name'][0])
 
 
 @inplace
@@ -489,6 +490,28 @@ def get_lick_frames(trials, licks):
     return local_licks
 
 
+def get_lick_frames(trials, licks):
+    """
+    returns a list of arrays of lick frames, with one entry per trial
+    """
+    # Note: [DRO - 1/12/18] it used to be the case that the lick sensor was polled on every frame in the stimulus code, giving
+    #      a 1:1 correspondence between the frame number and the index in the 'lickData' array. However, that assumption was
+    #      violated when we began displaying a frame at the beginning of the session without a corresponding call the 'checkLickSensor'
+    #      method. Using the 'responselog' instead will provide a more accurate measure of actual like frames and times.
+    # lick_frames = data['lickData'][0]
+    lick_frames = licks['frame']
+
+    licks = []
+    for idx, row in trials.iterrows():  # this is bad but hopefully we'll change it
+        local_licks = []
+        for frame in lick_frames:
+            if frame >= row["startframe"] and frame <= row["endframe"]:
+                local_licks.append(frame)
+        licks.append(local_licks)
+
+    return licks
+
+
 @inplace
 def calculate_latency(trials):
     # For each trial, calculate the difference between each stimulus change and the next lick (response lick)
@@ -633,6 +656,45 @@ def assign_color(trials, palette='default'):
                     color[idx] = 'darkorange'
 
             elif trials.loc[idx]['response'] != 1:
+                if palette.lower() == 'marina':
+                    color[idx] = '#4c72b0'
+                else:
+                    color[idx] = 'yellow'
+
+    return color
+
+
+def assign_color(trials, palette='default'):
+    color = [None] * len(trials)
+    for idx, row in trials.iterrows():
+        if row["trial_type"] == "aborted":
+            if palette.lower() == 'marina':
+                color[idx] = 'lightgray'
+            else:
+                color[idx] = 'red'
+        elif row["auto_rewarded"] is True:
+            if palette.lower() == 'marina':
+                color[idx] = 'darkblue'
+            else:
+                color[idx] = 'blue'
+        elif row["trial_type"] == "go":
+            if row['response'] == 1:
+                if palette.lower() == 'marina':
+                    color[idx] = '#55a868'
+                else:
+                    color[idx] = 'darkgreen'
+            elif row['response'] != 1:
+                if palette.lower() == 'marina':
+                    color[idx] = '#ccb974'
+                else:
+                    color[idx] = 'lightgreen'
+        elif row['trial_type'] == 'catch':
+            if row['response'] == 1:
+                if palette.lower() == 'marina':
+                    color[idx] = '#c44e52'
+                else:
+                    color[idx] = 'darkorange'
+            elif row['response'] != 1:
                 if palette.lower() == 'marina':
                     color[idx] = '#4c72b0'
                 else:
