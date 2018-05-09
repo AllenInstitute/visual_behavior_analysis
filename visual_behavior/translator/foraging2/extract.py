@@ -304,8 +304,6 @@ def annotate_stimuli(trial, stimuli):
             the contrast of the initial image
         delta_orientation: float
             difference in orientation between the initial image and the change image
-        stimulus_on_frames: list of int
-            frame indices of whether or not the stimulus was drawn
 
     Notes
     -----
@@ -372,7 +370,6 @@ def annotate_stimuli(trial, stimuli):
             "initial_orientation": initial_orientation,
             "initial_contrast": initial_contrast,
             "delta_orientation": delta_orientation,
-            "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
         }
     elif implied_type in ("DoCImageStimulus", ):
         return {
@@ -385,7 +382,6 @@ def annotate_stimuli(trial, stimuli):
             "initial_orientation": None,
             "initial_contrast": None,
             "delta_orientation": None,
-            "stimulus_on_frames": np.array(stim_dict["draw_log"], dtype=np.bool),
         }
     else:
         raise ValueError("invalid implied type: {}".format(implied_type))
@@ -1137,15 +1133,6 @@ def get_trial_log(data):
         foraging2 shaped trial log
     """
     return behavior_items_or_top_level(data)["trial_log"]
-
-
-def get_stimulus_on_frames(exp_data):
-    """pd.Series frame, boolean whether shown
-    """
-    return pd.Series([
-        was_drawn == 1
-        for was_drawn in get_unified_draw_log(exp_data)
-    ])
 
 
 def get_task_id(data):

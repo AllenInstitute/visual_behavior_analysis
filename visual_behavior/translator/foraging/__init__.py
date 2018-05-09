@@ -121,7 +121,6 @@ def load_trials(data, time=None):
         'scheduled_change_time',
         'startframe',
         'starttime',
-        'stim_on_frames',
     )
 
     forced_types = {
