@@ -75,7 +75,6 @@ EXPECTED_TRIALS = pd.DataFrame(data={
     #     2: 8.268650904572262
     # },
     # "trial_type": {0: "go", 1: "go", 2: "go", },
-    "stim_on_frames": None,
     "publish_time": None,
     "index": {0: 0, 1: 1, 2:2, },
 })
@@ -207,10 +206,6 @@ def test_data_to_licks(monkeypatch, foraging2_data_fixture):
 
 def test_data_to_trials(foraging2_data_fixture):
     trials = foraging2.data_to_trials(foraging2_data_fixture)
-
-    assert trials.stim_on_frames.notnull().all(), "stimulus_on_frame is not what we expect..."
-
-    trials.stim_on_frames = None
 
     pd.testing.assert_frame_equal(
         trials,

@@ -276,7 +276,6 @@ def data_to_trials(data):
             "auto_rewarded_trial": "auto_rewarded",
             "change_orientation": "change_ori",
             "initial_orientation": "initial_ori",
-            "stimulus_on_frames": "stim_on_frames",
         }
     ).reset_index()
 

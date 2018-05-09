@@ -373,15 +373,6 @@ def test_get_stimulus_duration(foraging2_data_fixture):
     assert extract.get_stimulus_duration(foraging2_data_fixture) == 6.0
 
 
-def test_get_stimulus_on_frames(foraging2_data_fixture, foraging2_stimuli_fixture):
-    assert extract.get_stimulus_on_frames(foraging2_data_fixture).iloc[:20].equals(
-        pd.Series([
-            True, True, True, True, True, True, True, True, True, True, True,
-            True, True, True, True, False, False, False, False, False,
-        ])
-    )  # first 20 items should be sufficient
-
-
 def test_get_stimuli(foraging2_data_fixture, foraging2_stimuli_fixture):
     assert extract.get_stimuli(foraging2_data_fixture) == \
         foraging2_stimuli_fixture
@@ -442,8 +433,6 @@ def test_annotate_stimuli(foraging2_trial_fixture, foraging2_stimuli_fixture):
         foraging2_stimuli_fixture
     )
 
-    annotated_stimuli["stimulus_on_frames"] = []  # testing stimulus_on_frames too annoying for now...
-
     assert annotated_stimuli == {
         'initial_image_category': None,
         'initial_image_name': None,
@@ -454,7 +443,6 @@ def test_annotate_stimuli(foraging2_trial_fixture, foraging2_stimuli_fixture):
         'initial_orientation': 0,
         'initial_contrast': None,
         "delta_orientation": 90,
-        "stimulus_on_frames": [],
     }
 
 
@@ -574,8 +562,6 @@ def test_regression_annotate_stimuli_natural_scenes(foraging2_natural_scenes_dat
         extract.get_stimuli(foraging2_natural_scenes_data_fixture)
     )
 
-    annotated_stimuli["stimulus_on_frames"] = []  # testing stimulus_on_frames too annoying for now...
-
     assert annotated_stimuli == {
         'initial_image_category': 'im008',
         'initial_image_name': 'im008',
@@ -586,7 +572,6 @@ def test_regression_annotate_stimuli_natural_scenes(foraging2_natural_scenes_dat
         'initial_orientation': None,
         'initial_contrast': None,
         "delta_orientation": None,
-        "stimulus_on_frames": [],
     }
 
 
