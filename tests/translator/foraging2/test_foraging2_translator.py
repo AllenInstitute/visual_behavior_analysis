@@ -20,11 +20,11 @@ EXPECTED_TRIALS = pd.DataFrame(data={
     },
     "cumulative_reward_number": {0: 1, 1: 2, 2: 3, },
     "cumulative_volume": {0: 0.008, 1: 0.016, 2: 0.024, },
-    "delta_ori": {0: None, 1: None, 2: None, },
+    "delta_ori": {0: 90.0, 1: -90.0, 2: 90.0, },
     "initial_contrast": {0: None, 1: None, 2: None, },
     "initial_image_category": {0: None, 1: None, 2: None, },
     "initial_image_name": {0: None, 1: None, 2: None, },
-    "initial_ori": {0: None, 1: None, 2: None, },
+    "initial_ori": {0: 0, 1: 90.0, 2: 0.0, },
     # "lick_frames": {0: [196], 1: [886], 2: [1392], },
     "lick_times": {
         0: [6.7089195225430425],
