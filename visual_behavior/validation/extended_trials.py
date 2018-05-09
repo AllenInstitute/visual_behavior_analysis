@@ -394,8 +394,13 @@ def validate_first_lick_after_change_on_nonaborted(trials):
     on GO and CATCH trials, licks should never be observed between the trial start and the first frame of an image change
     '''
     non_aborted_trials = trials[trials.trial_type != 'aborted']
-    first_lick_relative_to_change = non_aborted_trials.apply(get_first_lick_relative_to_change, axis=1)
-    return np.nanmin(first_lick_relative_to_change.values) > 0
+    # we can only validate this if there is at least one nonaborted trial
+    if len(non_aborted_trials)>0:
+        first_lick_relative_to_change = non_aborted_trials.apply(get_first_lick_relative_to_change, axis=1)
+        return np.nanmin(first_lick_relative_to_change.values) > 0
+    # if no nonaborted trials, just return True
+    elif len(non_aborted_trials)==0:
+        return True
 
 
 def validate_trial_ends_without_licks(trials, minimum_no_lick_time):
