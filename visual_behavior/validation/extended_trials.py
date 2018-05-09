@@ -28,8 +28,12 @@ def get_autoreward_trials(trials):
 
 def get_warmup_trials(trials):
     '''finds all warmup trials'''
-    first_non_warmup_trial = trials[trials['auto_rewarded'] == False].index[0]  # noqa: E712
-    return trials.iloc[:first_non_warmup_trial]
+    first_non_warmup_trial_df = trials[trials['auto_rewarded'] == False]
+    if len(first_non_warmup_trial_df) > 0:
+        first_non_warmup_trial = first_non_warmup_trial_df.index[0]  # noqa: E712
+        return trials.iloc[:first_non_warmup_trial]
+    else:
+        return pd.DataFrame()
 
 
 def get_first_lick_in_response_window(row):
@@ -172,7 +176,16 @@ def validate_number_of_warmup_trials(trials, expected_number_of_warmup_trials):
     warmup_trials = get_warmup_trials(trials)
 
     # check to ensure that the number of GO warmup trials matches the expected number
-    if expected_number_of_warmup_trials != -1:
+    if len(warmup_trials) == 0 and expected_number_of_warmup_trials != 0:
+        # if there are fewer go/catch trials than the expected number of warmup trials, return True
+        # This will result if so many trials were aborted that the number of warmup trials were never met
+        if len(trials[trials.trial_type.isin(['go', 'catch'])]) < expected_number_of_warmup_trials:
+            return True
+        else:
+            return False
+    if len(warmup_trials) == 0 and expected_number_of_warmup_trials == 0:
+        return True
+    elif expected_number_of_warmup_trials != -1:
         return len(warmup_trials[warmup_trials.trial_type == 'go']) == expected_number_of_warmup_trials
     else:
         return len(warmup_trials[warmup_trials.trial_type == 'go']) == len(trials[trials.trial_type == 'go'])
@@ -187,21 +200,26 @@ def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
     # find all of the warmup trials
     warmup_trials = get_warmup_trials(trials)
 
-    # find only go warmup trials
-    go_warmup_trials = warmup_trials[warmup_trials.trial_type == 'go']
+    # can only perform this validation if there were warmup trials
+    if len(warmup_trials) > 0:
+        # find only go warmup trials
+        go_warmup_trials = warmup_trials[warmup_trials.trial_type == 'go']
 
-    # get time difference between each reward and change_time
-    try:
-        time_delta = [
-            abs(rt[0] - ct)
-            for rt, ct
-            in zip(go_warmup_trials.reward_times, go_warmup_trials.change_time)
-        ]
-        # check to see that all time differences fall within threshold
-        return all([td < tolerance for td in time_delta])
-    except Exception:
-        # if the above fails, fail the test
-        return False
+        # get time difference between each reward and change_time
+        try:
+            time_delta = [
+                abs(rt[0] - ct)
+                for rt, ct
+                in zip(go_warmup_trials.reward_times, go_warmup_trials.change_time)
+            ]
+            # check to see that all time differences fall within threshold
+            return all([td < tolerance for td in time_delta])
+        except Exception:
+            # if the above fails, fail the test
+            return False
+    # if no warmup trials, return True
+    elif len(warmup_trials) == 0:
+        return True
 
 
 def validate_autorewards_after_N_consecutive_misses(trials, autoreward_after_consecutive_misses):
@@ -268,9 +286,9 @@ def validate_min_change_time(trials, pre_change_time):
     return np.nanmin((trials['change_time'] - trials['starttime']).values) > pre_change_time
 
 
-def validate_max_change_time(trials, pre_change_time, stimulus_window):
+def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance=0.05):
     '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
-    return np.nanmax((trials['change_time'] - trials['starttime']).values) < (pre_change_time + stimulus_window)
+    return np.nanmax((trials['change_time'] - trials['starttime']).values) < (pre_change_time + stimulus_window + tolerance)
 
 
 def validate_reward_follows_first_lick_in_window(trials, tolerance=0.001):
@@ -335,25 +353,40 @@ def validate_lick_after_scheduled_on_go_catch_trials(trials):
     Therefore, no non-aborted trials should have a lick before the scheduled change time
     '''
     nonaborted_trials = trials[trials.trial_type != 'aborted']
-    first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
-    # use nanmin, it is possible
-    return np.nanmin(first_lick.values) > 0
+    # We can only check this if there is at least 1 nonaborted trial.
+    if len(nonaborted_trials) > 0:
+        first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
+        # use nanmin
+        return np.nanmin(first_lick.values) > 0
+    # if there are no nonaborted trials, just return True
+    elif len(nonaborted_trials) == 0:
+        return True
 
 
 def validate_initial_matches_final(trials):
+    '''
+    On go and catch trials, the initial image (or ori) on a given trial should match the final image (or ori) on the previous trial
+    '''
     trials_to_test = trials[trials['trial_type'].isin(['go', 'catch'])]
-    last_trial_final_im = trials_to_test.iloc[0]['initial_image_name']
-    last_trial_final_ori = trials_to_test.iloc[0]['initial_ori']
-    image_match = []
-    ori_match = []
-    for idx, row in trials_to_test.iterrows():
-        image_match.append(nanis_equal(row['initial_image_name'], last_trial_final_im))
-        ori_match.append(nanis_equal(row['initial_ori'], last_trial_final_ori))
 
-        last_trial_final_im = row['change_image_name']
-        last_trial_final_ori = row['change_ori']
+    # Can only run this validation if there are at least two go or catch trials
+    if len(trials_to_test) > 2:
+        last_trial_final_im = trials_to_test.iloc[0]['initial_image_name']
+        last_trial_final_ori = trials_to_test.iloc[0]['initial_ori']
+        image_match = []
+        ori_match = []
+        for idx, row in trials_to_test.iterrows():
+            image_match.append(nanis_equal(row['initial_image_name'], last_trial_final_im))
+            ori_match.append(nanis_equal(row['initial_ori'], last_trial_final_ori))
 
-    return all(image_match) and all(ori_match)
+            last_trial_final_im = row['change_image_name']
+            last_trial_final_ori = row['change_ori']
+
+        return all(image_match) and all(ori_match)
+
+    # If too few trials to validate, return True
+    else:
+        return True
 
 
 def validate_first_lick_after_change_on_nonaborted(trials):
@@ -361,8 +394,13 @@ def validate_first_lick_after_change_on_nonaborted(trials):
     on GO and CATCH trials, licks should never be observed between the trial start and the first frame of an image change
     '''
     non_aborted_trials = trials[trials.trial_type != 'aborted']
-    first_lick_relative_to_change = non_aborted_trials.apply(get_first_lick_relative_to_change, axis=1)
-    return np.nanmin(first_lick_relative_to_change.values) > 0
+    # we can only validate this if there is at least one nonaborted trial
+    if len(non_aborted_trials) > 0:
+        first_lick_relative_to_change = non_aborted_trials.apply(get_first_lick_relative_to_change, axis=1)
+        return np.nanmin(first_lick_relative_to_change.values) > 0
+    # if no nonaborted trials, just return True
+    elif len(non_aborted_trials) == 0:
+        return True
 
 
 def validate_trial_ends_without_licks(trials, minimum_no_lick_time):
@@ -544,15 +582,21 @@ def validate_change_time_mean(trials, expected_mean, tolerance=0.5):
     stimulus_distribution: the mean of the stimulus distribution should match the 'distribution_mean' parameter
     '''
     change_time_trial_referenced = trials['change_time'] - trials['starttime'] - trials['prechange_minimum']
-    return abs(change_time_trial_referenced[~np.isnan(change_time_trial_referenced)].mean() - expected_mean) <= tolerance
+    # if all of the change times are Nan, cannot check mean. Return True
+    if all(pd.isnull(change_time_trial_referenced)) == True:
+        return True
+    # otherwise, ensure that the non-null change times are within tolerance of the expected mean
+    else:
+        return abs(change_time_trial_referenced[~np.isnan(change_time_trial_referenced)].mean() - expected_mean) <= tolerance
 
 
 def validate_monotonically_decreasing_number_of_change_times(trials, expected_distribution):
     '''
     If stimulus_distribution is 'exponential', then the number of trials with changes on each flash should be monotonically decreasing from the first flash after the `min_change_time`
     '''
-    if expected_distribution == 'exponential':
-        change_times = (trials['change_time'] - trials['starttime']).values
+    change_times = (trials['change_time'] - trials['starttime']).values
+    if expected_distribution == 'exponential' and all(pd.isnull(change_times)) != True:
+
         change_times = change_times[~np.isnan(change_times)]
 
         nvals, edges = np.histogram(change_times, bins=np.arange(0, 10, 0.5))
@@ -588,11 +632,18 @@ def validate_no_abort_on_lick_before_response_window(trials):
         else:
             return False
 
-    # identify all trials with licks between the change time and the start of the response window
-    trials['response_before_response_window'] = trials.apply(identify_first_lick_before_response_window, axis=1)
+    nonaborted_trials = trials[trials['trial_type'] != 'aborted']
 
-    # ensure that all trials with first lick between the change time and the start of the response window are labeled as 'go' or 'catch' (not 'aborted')
-    return all(trials[trials['response_before_response_window'] == True].trial_type.isin(['go', 'catch']))
+    # Can only check this if there is at least one non-aborted trial
+    if len(nonaborted_trials) > 0:
+        # identify all trials with licks between the change time and the start of the response window
+        trials['response_before_response_window'] = trials.apply(identify_first_lick_before_response_window, axis=1)
+
+        # ensure that all trials with first lick between the change time and the start of the response window are labeled as 'go' or 'catch' (not 'aborted')
+        return all(trials[trials['response_before_response_window'] == True].trial_type.isin(['go', 'catch']))
+    # if no non-aborted trials, just return True
+    else:
+        return True
 
 
 def validate_licks_on_go_trials_earn_reward(trials):
