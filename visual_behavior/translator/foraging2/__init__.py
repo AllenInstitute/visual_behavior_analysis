@@ -11,6 +11,9 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stage, get_reward_volume, get_auto_reward_volume
 
 
+from .extract_stimuli import get_visual_stimuli
+
+
 def data_to_change_detection_core(data):
     """Core data structure to be used across all analysis code?
 
@@ -36,7 +39,7 @@ def data_to_change_detection_core(data):
         "trials": data_to_trials(data),
         "running": data_to_running(data),
         "rewards": data_to_rewards(data),
-        "visual_stimuli": None,  # not yet implemented
+        "visual_stimuli": data_to_visual_stimuli(data),
     }
 
 
@@ -280,7 +283,13 @@ def data_to_trials(data):
     ).reset_index()
 
 
-def data_to_visual_stimuli(data):
-    # stimuli = get_stimuli(data)
-    # times = get_times(data)
-    raise NotImplementedError("maybe never...")
+def data_to_visual_stimuli(data, time=None):
+
+    stimuli = data['items']['behavior']['stimuli']
+
+    if time is None:
+        time = get_time(data)
+
+    visual_stimuli = get_visual_stimuli(stimuli, time)
+
+    return visual_stimuli
