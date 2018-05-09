@@ -572,7 +572,12 @@ def validate_change_time_mean(trials, expected_mean, tolerance=0.5):
     stimulus_distribution: the mean of the stimulus distribution should match the 'distribution_mean' parameter
     '''
     change_time_trial_referenced = trials['change_time'] - trials['starttime'] - trials['prechange_minimum']
-    return abs(change_time_trial_referenced[~np.isnan(change_time_trial_referenced)].mean() - expected_mean) <= tolerance
+    # if all of the change times are Nan, cannot check mean. Return True
+    if all(pd.isnull(change_time_trial_referenced)) == True:
+        return True
+    # otherwise, ensure that the non-null change times are within tolerance of the expected mean
+    else:
+        return abs(change_time_trial_referenced[~np.isnan(change_time_trial_referenced)].mean() - expected_mean) <= tolerance
 
 
 def validate_monotonically_decreasing_number_of_change_times(trials, expected_distribution):
