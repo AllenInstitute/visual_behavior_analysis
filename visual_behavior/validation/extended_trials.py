@@ -28,8 +28,12 @@ def get_autoreward_trials(trials):
 
 def get_warmup_trials(trials):
     '''finds all warmup trials'''
-    first_non_warmup_trial = trials[trials['auto_rewarded'] == False].index[0]  # noqa: E712
-    return trials.iloc[:first_non_warmup_trial]
+    first_non_warmup_trial_df = trials[trials['auto_rewarded'] == False]
+    if len(first_non_warmup_trial_df)>0:
+        first_non_warmup_trial = first_non_warmup_trial_df.index[0]  # noqa: E712
+        return trials.iloc[:first_non_warmup_trial]
+    else:
+        return pd.DataFrame()
 
 
 def get_first_lick_in_response_window(row):
@@ -187,21 +191,26 @@ def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
     # find all of the warmup trials
     warmup_trials = get_warmup_trials(trials)
 
-    # find only go warmup trials
-    go_warmup_trials = warmup_trials[warmup_trials.trial_type == 'go']
+    # can only perform this validation if there were warmup trials
+    if len(warmup_trials)>0:
+        # find only go warmup trials
+        go_warmup_trials = warmup_trials[warmup_trials.trial_type == 'go']
 
-    # get time difference between each reward and change_time
-    try:
-        time_delta = [
-            abs(rt[0] - ct)
-            for rt, ct
-            in zip(go_warmup_trials.reward_times, go_warmup_trials.change_time)
-        ]
-        # check to see that all time differences fall within threshold
-        return all([td < tolerance for td in time_delta])
-    except Exception:
-        # if the above fails, fail the test
-        return False
+        # get time difference between each reward and change_time
+        try:
+            time_delta = [
+                abs(rt[0] - ct)
+                for rt, ct
+                in zip(go_warmup_trials.reward_times, go_warmup_trials.change_time)
+            ]
+            # check to see that all time differences fall within threshold
+            return all([td < tolerance for td in time_delta])
+        except Exception:
+            # if the above fails, fail the test
+            return False
+    # if no warmup trials, return True
+    elif len(warmup_trials)==0:
+        return True
 
 
 def validate_autorewards_after_N_consecutive_misses(trials, autoreward_after_consecutive_misses):
