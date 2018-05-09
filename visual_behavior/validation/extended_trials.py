@@ -286,9 +286,9 @@ def validate_min_change_time(trials, pre_change_time):
     return np.nanmin((trials['change_time'] - trials['starttime']).values) > pre_change_time
 
 
-def validate_max_change_time(trials, pre_change_time, stimulus_window):
+def validate_max_change_time(trials, pre_change_time, stimulus_window,tolerance=0.05):
     '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
-    return np.nanmax((trials['change_time'] - trials['starttime']).values) < (pre_change_time + stimulus_window)
+    return np.nanmax((trials['change_time'] - trials['starttime']).values) < (pre_change_time + stimulus_window + tolerance)
 
 
 def validate_reward_follows_first_lick_in_window(trials, tolerance=0.001):
