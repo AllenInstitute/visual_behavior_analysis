@@ -150,12 +150,17 @@ def test_data_to_rewards(foraging2_data_fixture):
     )
 
 
-@pytest.mark.xfail  # this appears to be a pandas related bug or something related to pandas-insanity...
-def test_data_to_running(foraging2_data_fixture):
+def test_data_to_running(monkeypatch, foraging2_data_fixture):
+    monkeypatch.setattr(
+        foraging2.extract,
+        "get_vsyncs",
+        lambda data: [16] * (data["items"]["behavior"]["update_count"] - 1)  # n vsyncs should be update_count - 1
+    )
+
     expected = pd.DataFrame(data={
         "speed": {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, },
-        "time": {0: 0.000000, 1: 16.539637, 2: 33.228720, 3: 49.925000, 4: 66.560116, },
-        "frame": {0: -1, 1: 0, 2: 1, 3: 2, 4: 3, },
+        "time": {0: 0.000000, 1: 0.016, 2: 0.032, 3: 0.048, 4: 0.064, },
+        "frame": {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, },
     })
 
     pd.testing.assert_frame_equal(
@@ -172,7 +177,7 @@ def test_data_to_time(monkeypatch, foraging2_data_fixture):
     monkeypatch.setattr(
         foraging2.extract,
         "get_vsyncs",
-        lambda data: [16] * data["items"]["behavior"]["update_count"]
+        lambda data: [16] * (data["items"]["behavior"]["update_count"] - 1)  # n vsyncs should be update_count - 1
     )
 
     np.testing.assert_almost_equal(
