@@ -269,7 +269,6 @@ def data_to_trials(data):
             index
         )
         expand_dict(trials, annotate_stimuli(trial, stimuli), index)
-        # expand_dict(trials, annotate_trials(trial), index)
         expand_dict(trials, experiment_params, index)
 
     trials = pd.DataFrame(data=trials)
@@ -278,6 +277,8 @@ def data_to_trials(data):
         columns={
             "start_time": "starttime",
             "start_frame": "startframe",
+            "end_time": "endtime",
+            "end_frame": "endframe",
             "delta_orientation": "delta_ori",
             "auto_rewarded_trial": "auto_rewarded",
             "change_orientation": "change_ori",
