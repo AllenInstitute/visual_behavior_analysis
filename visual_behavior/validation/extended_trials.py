@@ -552,19 +552,19 @@ def validate_params_change_after_aborted_trial_repeats(trials, failure_repeats):
     return all(block_has_different_scheduled_change_time_than_last)
 
 
-def validate_ignore_false_alarms(trials, ignore_false_alarms):
+def validate_ignore_false_alarms(trials, abort_on_early_response):
     '''
-    If `ignore_false_alarms` is True, no aborted trials or timeout periods should occur.
-    This is used on the 'day 0' session, where we don't want to penalize exploratory licking
+    If 'abort_on_early_response' is False, no aborted trials or timeout periods should occur.
+    This is False on the 'day 0' session, where we don't want to penalize exploratory licking
     '''
-    if ignore_false_alarms == True:
+    if abort_on_early_response == False:
         # if ignore_false_alarms is True, there should be 0 aborted trials
         # Of course, this depends on the aborted trials having been properly identified
         if len(trials[trials.trial_type == 'aborted']) == 0:
             return True
         else:
             return False
-    # test is only valid if the 'ignore_false_alarms' parameter is True. If not the case, just pass the test
+    # test is only valid if the 'abort_on_early_response' parameter is False. If not the case, just pass the test
     else:
         return True
 
