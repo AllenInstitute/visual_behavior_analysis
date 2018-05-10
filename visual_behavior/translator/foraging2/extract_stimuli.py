@@ -95,7 +95,12 @@ def get_visual_stimuli(stimuli, time):
             how='left',
             left_on='change_index',
             right_index=True,
-        ).reset_index()[['frame', 'time', 'image_name', 'image_category', 'orientation']]
+        ).reset_index()[['frame', 'end_frame', 'time', 'image_name', 'image_category', 'orientation']]
+
+        # NEED CHANGES TO FORAGING2 FOR THIS TO WORK
+        # viz['end_time'] = viz['end_frame'].map(lambda fr: time[int(fr)])
+        # viz['duration'] = viz['end_time'] - viz['time']
+        # del viz['end_time']
 
         visual_stimuli.append(viz)
     visual_stimuli = pd.concat(visual_stimuli)
