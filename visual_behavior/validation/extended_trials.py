@@ -283,12 +283,24 @@ def validate_intial_and_final_in_non_aborted(trials):
 
 def validate_min_change_time(trials, pre_change_time):
     '''change time in trial should never be less than pre_change_time'''
-    return np.nanmin((trials['change_time'] - trials['starttime']).values) > pre_change_time
+    change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
+    # can only run validation if there are some non-null values
+    if all(pd.isnull(change_times_trial_referenced))==False:
+        return np.nanmin(change_times_trial_referenced) > pre_change_time
+    # cannot run valiation function if all null, just return True
+    elif all(pd.isnull(change_times_trial_referenced))==True:
+        return True
 
 
 def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance=0.05):
     '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
-    return np.nanmax((trials['change_time'] - trials['starttime']).values) < (pre_change_time + stimulus_window + tolerance)
+    change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
+    # can only run validation if there are some non-null values
+    if all(pd.isnull(change_times_trial_referenced))==False:
+        return np.nanmax(change_times_trial_referenced) < (pre_change_time + stimulus_window + tolerance)
+    # cannot run valiation function if all null, just return True
+    elif all(pd.isnull(change_times_trial_referenced))==True:
+        return True
 
 
 def validate_reward_follows_first_lick_in_window(trials, tolerance=0.001):
