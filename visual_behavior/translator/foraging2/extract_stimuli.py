@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from six import iteritems
-from .extract import get_time
 
 
 def get_image_changes(change_log):
@@ -104,10 +103,7 @@ def get_visual_stimuli(stimuli, time):
     return visual_stimuli
 
 
-def get_draw_log(stim_dict, time=None):
-
-    if time is None:
-        time = get_time(data)
+def get_draw_log(stim_dict, time):
 
     draw_log = stim_dict['draw_log']
     draw_log = (
