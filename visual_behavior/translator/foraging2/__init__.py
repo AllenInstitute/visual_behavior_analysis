@@ -203,10 +203,13 @@ def data_to_running(data):
 
     n_frames = len(speed_df)
 
-    frames_df = pd.DataFrame(data={"frame": range(-1, n_frames - 1)})
+    frames_df = pd.DataFrame(data={"frame": range(n_frames)})
 
-    return speed_df.join(frames_df, how="outer") \
-        .rename(index=str, columns={"speed (cm/s)": "speed", })
+    return pd.DataFrame(data={
+        "speed": speed_df["speed (cm/s)"],
+        "frame": frames_df["frame"],
+        "time": speed_df["time"],
+    })
 
 
 def data_to_time(data):
