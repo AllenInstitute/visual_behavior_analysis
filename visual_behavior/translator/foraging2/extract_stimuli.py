@@ -6,10 +6,12 @@ from .extract import get_time
 
 def get_image_changes(change_log):
     changes = []
-    for _, stim_params, time, frame in change_log:
+    for source_params, dest_params, time, frame in change_log:
         changes.append(dict(
-            image_category=stim_params[0],
-            image_name=stim_params[1],
+            prior_image_category=source_params[0],
+            prior_image_name=source_params[1],
+            image_category=dest_params[0],
+            image_name=dest_params[1],
             time=time,
             frame=frame,
         ))
@@ -18,9 +20,10 @@ def get_image_changes(change_log):
 
 def get_grating_changes(change_log):
     changes = []
-    for _, stim_params, time, frame in change_log:
+    for source_params, dest_params, time, frame in change_log:
         changes.append(dict(
-            orientation=stim_params[1],
+            prior_orientation=source_params[1],
+            orientation=dest_params[1],
             time=time,
             frame=frame,
         ))
@@ -28,10 +31,33 @@ def get_grating_changes(change_log):
 
 
 def change_records_to_dataframe(change_records):
-    return pd.DataFrame(
-        change_records,
-        columns=['frame', 'time', 'image_category', 'image_name', 'orientation'],
+    first_record = dict(
+        frame=0,
+        time=None,
     )
+    try:
+        image_name = change_records[0]['prior_image_name']
+        image_category = change_records[0]['prior_image_category']
+        first_record.update(image_name=image_name)
+        first_record.update(image_category=image_category)
+    except KeyError:
+        orientation = change_records[0]['prior_orientation']
+        orientation.update(orientation=orientation)
+
+    change_records.insert(0, first_record)
+
+    changes = pd.DataFrame(
+        change_records,
+        columns=[
+            'frame',
+            'time',
+            'image_category',
+            'image_name',
+            'orientation',
+        ],
+    )
+
+    return changes
 
 
 def find_change_indices(changes, draw_log):
@@ -62,7 +88,11 @@ def get_visual_stimuli(stimuli, time):
         draw_log = reduce_to_onsets(draw_log)
         draw_log['change_index'] = find_change_indices(changes, draw_log)
         viz = draw_log.merge(
-            changes[['image_name', 'image_category', 'orientation']],
+            changes[[
+                'image_name',
+                'image_category',
+                'orientation',
+            ]],
             how='left',
             left_on='change_index',
             right_index=True,

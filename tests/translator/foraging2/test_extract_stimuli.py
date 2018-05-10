@@ -7,9 +7,30 @@ IMAGES_CHANGE_LOG = [
 ]
 
 EXPECTED_IMAGES_CHANGES = [
-    {'frame': 229, 'image_category': 'im053', 'image_name': 'im053', 'time': 4.475209915492957},
-    {'frame': 965, 'image_category': 'im111', 'image_name': 'im111', 'time': 16.250224375586853},
-    {'frame': 1379, 'image_category': 'im037', 'image_name': 'im037', 'time': 22.876219192488264},
+    {
+        'frame': 229,
+        'time': 4.475209915492957,
+        'image_category': 'im053',
+        'image_name': 'im053',
+        'prior_image_category': 'im111',
+        'prior_image_name': 'im111',
+    },
+    {
+        'frame': 965,
+        'time': 16.250224375586853,
+        'image_category': 'im111',
+        'image_name': 'im111',
+        'prior_image_category': 'im053',
+        'prior_image_name': 'im053',
+    },
+    {
+        'frame': 1379,
+        'time': 22.876219192488264,
+        'image_category': 'im037',
+        'image_name': 'im037',
+        'prior_image_category': 'im111',
+        'prior_image_name': 'im111',
+    },
 ]
 
 GRATING_CHANGE_LOG = [
@@ -19,9 +40,24 @@ GRATING_CHANGE_LOG = [
 ]
 
 EXPECTED_GRATING_CHANGES = [
-    {'frame': 367, 'orientation': 90, 'time': 6.558310159624413},
-    {'frame': 965, 'orientation': 0, 'time': 16.127468169014083},
-    {'frame': 1287, 'orientation': 90, 'time': 21.279577840375588},
+    {
+        'frame': 367,
+        'time': 6.558310159624413,
+        'orientation': 90,
+        'prior_orientation': 0,
+    },
+    {
+        'frame': 965,
+        'time': 16.127468169014083,
+        'orientation': 0,
+        'prior_orientation': 90,
+    },
+    {
+        'frame': 1287,
+        'time': 21.279577840375588,
+        'orientation': 90,
+        'prior_orientation': 0,
+    },
 ]
 
 
