@@ -8,7 +8,10 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stimulus_duration, get_task_id, get_response_window, get_licks, \
     get_running_speed, get_params, get_time, get_trials, \
     get_stimulus_distribution, get_delta_mean, get_initial_blank_duration, \
-    get_stage, get_reward_volume, get_auto_reward_volume
+    get_stage, get_reward_volume, get_auto_reward_volume, get_warm_up_trials, \
+    get_stimulus_window, get_volume_limit, get_failure_repeats, \
+    get_catch_frequency, get_free_reward_trials, get_min_no_lick_time, \
+    get_max_session_duration, get_abort_on_early_response
 
 
 def data_to_change_detection_core(data):
@@ -144,6 +147,15 @@ def data_to_metadata(data):
         "trial_duration": None,  # not obtainable
         "n_stimulus_frames": n_stimulus_frames,
         "stimulus": stimulus_category,  # needs to be a string so we will just grab the first stimulus category we find even though there can be many
+        "warm_up_trials": get_warm_up_trials(data),
+        "stimulus_window": get_stimulus_window(data),
+        "volume_limit": get_volume_limit(data),
+        "failure_repeats": get_failure_repeats(data),
+        "catch_frequency": get_catch_frequency(data),
+        "free_reward_trials": get_free_reward_trials(data),
+        "min_no_lick_time": get_min_no_lick_time(data),
+        "max_session_duration": get_max_session_duration(data),
+        "abort_on_early_response": get_abort_on_early_response(data),
     }
 
 

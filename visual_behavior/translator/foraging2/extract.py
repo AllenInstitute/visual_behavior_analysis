@@ -1280,3 +1280,146 @@ def get_auto_reward_volume(data):
         auto reward volume per reward or None if not found
     """
     return data["items"]["behavior"]["config"]["DoC"].get("auto_reward_volume")
+
+
+def get_warm_up_trials(data):
+    """Get number of warm up trials for a foraging2 behavior session
+
+    Parameters
+    ----------
+    data : Mapping
+
+    Returns
+    -------
+    int or None
+        number of warm up trials or None if not found
+    """
+    return data["items"]["behavior"]["config"]["DoC"].get("warm_up_trials")
+
+
+def get_stimulus_window(data):
+    """Get the stimulus window set for a foraging2 behavior session
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float or None
+        stimulus window
+    """
+    return data["items"]["behavior"]["config"]["DoC"].get("stimulus_window")
+
+
+def get_volume_limit(data):
+    """Get the volume limit set for a foraging2 behavior session
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float or None
+        volume limit or None if not found
+    """
+    return data["items"]["behavior"]["config"]["behavior"].get("volume_limit")
+
+
+def get_failure_repeats(data):
+    """Get the number of failure repeats set for a foraging2 behavior session
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    int or None
+        number of failure repeats or None if not found
+    """
+    return data["items"]["behavior"]["config"]["DoC"].get("failure_repeats")
+
+
+def get_catch_frequency(data):
+    """Get the catch frequency set for a foraging2 behavior session
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float or None
+        catch frequency or None if not found
+    """
+    return data["items"]["behavior"]["config"]["DoC"].get("catch_frequency")
+
+
+def get_free_reward_trials(data):
+    """Get free reward trials set for a foraging2 behavior session
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    int or none
+        number of free reward trials or None if not found
+    """
+    return data["items"]["behavior"]["config"]["DoC"].get("free_reward_trials")
+
+
+def get_min_no_lick_time(data):
+    """Get minimum no lick time set for a foraging2 behavior session
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float or none
+        minimum no lick time or None if not found
+    """
+    return data["items"]["behavior"]["config"]["DoC"].get("min_no_lick_time")
+
+
+def get_max_session_duration(data):
+    """Get max session duration (min) set for a foraging2 behavior session
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float or none
+        max session duration (min) or None if not found
+    """
+    return data["items"]["behavior"]["config"]["DoC"].get("max_task_duration_min")
+
+
+def get_abort_on_early_response(data):
+    """Get abort on early response boolean set for a foraging2 behavior session
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    boolean or none
+        abort on early response boolean or None if not found
+    """
+    return data["items"]["behavior"]["config"]["DoC"].get("abort_on_early_response")
