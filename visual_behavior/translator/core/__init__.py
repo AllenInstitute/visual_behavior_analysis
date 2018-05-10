@@ -63,7 +63,6 @@ def create_extended_dataframe(trials, metadata, licks, time):
     # add some columns that require calculation
 
     trials['trial_type'] = annotate.categorize_trials(trials)
-    trials['endframe'] = annotate.get_end_frame(trials, metadata)
     trials['lick_frames'] = annotate.get_lick_frames(trials, licks)
 
     annotate.update_times(trials, time, inplace=True)
@@ -73,8 +72,6 @@ def create_extended_dataframe(trials, metadata, licks, time):
     annotate.calculate_reward_rate(trials, inplace=True)
 
     trials['response'] = annotate.check_responses(trials)
-    trials['trial_length'] = annotate.calculate_trial_length(trials)
-    trials['endtime'] = annotate.get_end_time(trials, time)
 
     if 'end_time' in trials.columns:
 
