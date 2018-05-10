@@ -424,6 +424,7 @@ def test_annotate_schedule_time(foraging2_data_fixture, foraging2_trial_fixture)
             'start_time': 3.564911950538426,
             'end_frame': 516,
             'end_time': 11.824898500267068,
+            'trial_length': 8.25998654972864,
         }
 
 
@@ -459,13 +460,6 @@ def test__resolve_stimulus_dict(foraging2_stimuli_fixture):
 def test__get_stimulus_attr_changes(foraging2_stimuli_fixture):
     assert extract._get_stimulus_attr_changes(foraging2_stimuli_fixture["gratings"], 183, 0, 516) == \
         ({"ori": 0, }, {'ori': 90, }, )
-
-
-def test_annotate_trials(foraging2_trial_fixture):
-    assert extract.annotate_trials(foraging2_trial_fixture) == {
-        "trial_type": "go",
-        "trial_duration": 8.25998654972864,
-    }
 
 
 def test_get_pre_change_time(foraging2_data_fixture):
