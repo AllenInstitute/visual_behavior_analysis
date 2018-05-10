@@ -117,7 +117,7 @@ def identify_consecutive_aborted_blocks(trials, failure_repeats):
 
 def identify_licks_in_response_window(row):
     '''a method for counting licks in the response window'''
-    if len(row['lick_times']) > 0 and ~np.isnan(row['change_time']):
+    if len(row['lick_times']) > 0 and pd.isnull(row['change_time']) == False:
         licks_relative_to_change = np.array(row['lick_times']) - row['change_time']
         licks_in_window = licks_relative_to_change[
             np.logical_and(
