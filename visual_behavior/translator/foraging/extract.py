@@ -1,4 +1,4 @@
-
+import numpy as np
 
 def get_end_frame(trials, metadata):
 
