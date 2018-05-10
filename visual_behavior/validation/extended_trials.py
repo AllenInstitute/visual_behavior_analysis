@@ -53,7 +53,6 @@ def get_first_lick_in_response_window(row):
     else:
         return np.nan
 
-
 def get_first_lick_relative_to_change(row):
     '''
     returns first lick relative to scheduled change time, nan if no such lick
@@ -71,7 +70,7 @@ def get_first_lick_relative_to_scheduled_change(row):
     returns first lick relative to scheduled change time, nan if no such lick
     exists
     '''
-    licks = np.array(row['lick_times']) - row['scheduled_change_time']
+    licks = np.array(row['lick_times']) - row['scheduled_change_time'] - row['starttime']
     if len(licks) > 0:
         return licks[0]
     else:
@@ -340,7 +339,7 @@ def validate_never_more_than_one_reward(trials):
     return np.max(trials['number_of_rewards']) <= 1
 
 
-def validate_lick_before_scheduled_on_aborted_trials(trials):
+def validate_lick_before_scheduled_on_aborted_trials(trials,expected_flash_duration=0.25,expected_blank_duration=0.5):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, every aborted trial should have a lick before the scheduled change time
@@ -353,7 +352,7 @@ def validate_lick_before_scheduled_on_aborted_trials(trials):
             axis=1,
         )
         # don't use nanmax. If there's a nan, we expect this to fail
-        return np.max(first_lick.values) < 0
+        return np.max(first_lick.values) < (0+expected_flash_duration+expected_blank_duration)
     # if no aborted trials, return True
     else:
         return True
