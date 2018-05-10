@@ -41,7 +41,7 @@ def change_records_to_dataframe(change_records):
         first_record.update(image_category=image_category)
     except KeyError:
         orientation = change_records[0]['prior_orientation']
-        orientation.update(orientation=orientation)
+        first_record.update(orientation=orientation)
 
     change_records.insert(0, first_record)
 
