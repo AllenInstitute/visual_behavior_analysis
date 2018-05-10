@@ -202,9 +202,6 @@ def data_to_running(data):
 
     frames_df = pd.DataFrame(data={"frame": range(n_frames)})
 
-    running_df = speed_df.join(frames_df, how="outer") \
-        .rename(index=str, columns={"speed (cm/s)": "speed", })
-
     return pd.DataFrame(data={
         "speed": speed_df["speed (cm/s)"],
         "frame": frames_df["frame"],
