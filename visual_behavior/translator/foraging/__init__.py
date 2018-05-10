@@ -38,7 +38,7 @@ def data_to_change_detection_core(data, time=None):
         "trials": load_trials(data, time=time),
         "running": load_running_speed(data, time=time),
         "rewards": load_rewards(data, time=time),
-        "visual_stimuli": None,  # not yet implemented
+        "visual_stimuli": load_visual_stimuli(data, time=time),
     }
 
 
@@ -267,3 +267,87 @@ def load_running_speed(data, smooth=False, time=None):
         # 'jerk (cm/s^3)': jerk,
     })
     return running_speed
+
+
+class EndOfStateFinder(object):
+
+    def __init__(self):
+        self.end_frame = 0
+
+    def check(self, state):
+        if state is True:
+            self.end_frame += 1
+        else:
+            self.end_frame = 0
+        return self.end_frame
+
+
+def find_ends(stimdf):
+    # first, grab a copy of the reversed dataframe
+    stimdf = stimdf.sort_values('frame', ascending=False)
+
+    stimdf['frames_to_end'] = stimdf['state'].map(EndOfStateFinder().check)
+
+    stimdf = stimdf.sort_values('frame', ascending=True)
+    return stimdf
+
+
+def load_visual_stimuli(data, time=None):
+    """ Returns the stimulus flashes in an experiment.
+
+    NOTE: Currently only works for images & gratings.
+
+    Parameters
+    ----------
+    data : dict, unpickled experiment (or path to pickled object))
+    time : np.array, optional
+        array of times for each stimulus frame
+
+    Returns
+    -------
+    flashes : pandas DataFrame
+
+    See Also
+    --------
+    load_trials : loads trials
+
+    """
+    if time is None:
+        print('`time` not passed. using vsync from pkl file')
+        time = load_time(data)
+
+    stimdf = pd.DataFrame(data['stimuluslog'])
+
+    stimdf = find_ends(stimdf)
+    stimdf['end'] = stimdf['frames_to_end'] + stimdf['frame']
+
+    def find_time(fr):
+        try:
+            return time[fr]
+        except IndexError:
+            return np.nan
+
+    stimdf['end_time'] = stimdf['end'].map(find_time)
+    stimdf['duration'] = stimdf['end_time'] - stimdf['time']
+
+    onset_mask = (
+        stimdf['state']
+        .astype(int)
+        .diff()
+        .fillna(1.0)
+    ) > 0
+
+    if pd.isnull(stimdf['image_name']).any() == False:  # 'image_category' in stimdf.columns:
+        cols = ['frame', 'time', 'duration', 'image_category', 'image_name']
+        stimuli = stimdf[onset_mask][cols]
+        stimuli['orientation'] = None
+        stimuli['contrast'] = None
+
+    elif 'ori' in stimdf.columns:
+        cols = ['frame', 'time', 'duration', 'ori', 'contrast']
+        stimuli = stimdf[onset_mask][cols]
+        stimuli.rename(columns={'ori': 'orientation'}, inplace=True)
+        stimuli['image_category'] = None
+        stimuli['image_name'] = None
+
+    return stimuli
