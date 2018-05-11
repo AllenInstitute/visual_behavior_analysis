@@ -137,6 +137,7 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             "min_no_lick_time": 0.0,
             "max_session_duration": 60.0,
             "abort_on_early_response": None,
+            "initial_blank_duration": 0.0,
         }
 
 
