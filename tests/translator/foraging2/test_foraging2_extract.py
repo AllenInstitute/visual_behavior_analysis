@@ -486,7 +486,7 @@ def test_get_unified_draw_log(foraging2_data_fixture):
 
 
 def test_get_initial_blank_duration(foraging2_data_fixture):
-    assert extract.get_initial_blank_duration(foraging2_data_fixture) == None
+    assert extract.get_initial_blank_duration(foraging2_data_fixture) == 0.0
 
 
 @pytest.mark.parametrize("mock_data, expected, exception_type", [
