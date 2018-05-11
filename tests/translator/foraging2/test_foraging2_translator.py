@@ -230,3 +230,22 @@ def test_data_to_trials(foraging2_data_fixture):
         check_exact=False,
         check_less_precise=3,
     )
+
+
+def test_data_to_visual_stimuli(
+        foraging2_data_stage0_2018_05_10,
+        foraging2_expected_visual_stimuli_stage0_2018_05_10
+):
+    visual_stimuli = foraging2.data_to_visual_stimuli(foraging2_data_stage0_2018_05_10)
+
+    assert list(visual_stimuli.keys()) == ["grating", ]  # no easy way to compare dictionaries with pandas inside them and we're low on time...TODO better tests...or something...
+
+    pd.testing.assert_frame_equal(
+        visual_stimuli["grating"],
+        foraging2_expected_visual_stimuli_stage0_2018_05_10,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True,
+        check_names=False
+    )
