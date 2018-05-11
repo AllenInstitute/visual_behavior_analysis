@@ -53,6 +53,7 @@ def get_first_lick_in_response_window(row):
     else:
         return np.nan
 
+
 def get_first_lick_relative_to_change(row):
     '''
     returns first lick relative to scheduled change time, nan if no such lick
@@ -141,9 +142,9 @@ def count_stimuli_per_trial(trials, visual_stimuli):
     # iterate over dataframe
     for idx, trial in trials.reset_index().iterrows():
         # check to see if images or gratings are being used
-        if all(pd.isnull(visual_stimuli.image_category))==False:
+        if all(pd.isnull(visual_stimuli.image_category)) == False:
             col_to_check = 'image_category'
-        elif all(pd.isnull(visual_stimuli.orientation))==False:
+        elif all(pd.isnull(visual_stimuli.orientation)) == False:
             col_to_check = 'orientation'
         # get visual stimuli in range
         stimuli = visual_stimuli[
@@ -191,9 +192,9 @@ def validate_number_of_warmup_trials(trials, expected_number_of_warmup_trials):
         return True
     elif expected_number_of_warmup_trials != -1:
         return len(warmup_trials[warmup_trials.trial_type == 'go']) == expected_number_of_warmup_trials
-    # if -1, all will be warmup trials. 
+    # if -1, all will be warmup trials.
     elif expected_number_of_warmup_trials == -1:
-        return len(trials[trials.auto_rewarded==True])==len(trials)
+        return len(trials[trials.auto_rewarded == True]) == len(trials)
 
 
 def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
@@ -290,10 +291,10 @@ def validate_min_change_time(trials, pre_change_time):
     '''change time in trial should never be less than pre_change_time'''
     change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
     # can only run validation if there are some non-null values
-    if all(pd.isnull(change_times_trial_referenced))==False:
+    if all(pd.isnull(change_times_trial_referenced)) == False:
         return np.nanmin(change_times_trial_referenced) > pre_change_time
     # cannot run valiation function if all null, just return True
-    elif all(pd.isnull(change_times_trial_referenced))==True:
+    elif all(pd.isnull(change_times_trial_referenced)) == True:
         return True
 
 
@@ -301,10 +302,10 @@ def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance
     '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
     change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
     # can only run validation if there are some non-null values
-    if all(pd.isnull(change_times_trial_referenced))==False:
+    if all(pd.isnull(change_times_trial_referenced)) == False:
         return np.nanmax(change_times_trial_referenced) < (pre_change_time + stimulus_window + tolerance)
     # cannot run valiation function if all null, just return True
-    elif all(pd.isnull(change_times_trial_referenced))==True:
+    elif all(pd.isnull(change_times_trial_referenced)) == True:
         return True
 
 
@@ -345,7 +346,7 @@ def validate_never_more_than_one_reward(trials):
     return np.max(trials['number_of_rewards']) <= 1
 
 
-def validate_lick_before_scheduled_on_aborted_trials(trials,expected_flash_duration=0.25,expected_blank_duration=0.5):
+def validate_lick_before_scheduled_on_aborted_trials(trials, expected_flash_duration, expected_blank_duration):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, every aborted trial should have a lick before the scheduled change time
@@ -358,7 +359,7 @@ def validate_lick_before_scheduled_on_aborted_trials(trials,expected_flash_durat
             axis=1,
         )
         # don't use nanmax. If there's a nan, we expect this to fail
-        return np.max(first_lick.values) < (0+expected_flash_duration+expected_blank_duration)
+        return np.max(first_lick.values) < (0 + expected_flash_duration + expected_blank_duration)
     # if no aborted trials, return True
     else:
         return True
