@@ -376,7 +376,10 @@ def validate_lick_after_scheduled_on_go_catch_trials(trials):
     if len(nonaborted_trials) > 0:
         first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
         # use nanmin
-        return np.nanmin(first_lick.values) > 0
+        if np.nanmin(first_lick.values) < 0:
+            return False
+        else:
+            return True
     # if there are no nonaborted trials, just return True
     elif len(nonaborted_trials) == 0:
         return True
@@ -416,7 +419,10 @@ def validate_first_lick_after_change_on_nonaborted(trials):
     # we can only validate this if there is at least one nonaborted trial
     if len(non_aborted_trials) > 0:
         first_lick_relative_to_change = non_aborted_trials.apply(get_first_lick_relative_to_change, axis=1)
-        return np.nanmin(first_lick_relative_to_change.values) > 0
+        if np.nanmin(first_lick_relative_to_change.values) < 0:
+            return False
+        else:
+            return True
     # if no nonaborted trials, just return True
     elif len(non_aborted_trials) == 0:
         return True
