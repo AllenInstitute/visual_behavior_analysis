@@ -336,3 +336,10 @@ def foraging2_data_fixture_issue_116():
     )
 
     return foraging2_data
+
+
+@pytest.fixture(scope="session")
+def foraging2_data_stage4_2018_05_10():
+    return pd.read_pickle(
+        os.path.join(TESTING_RES_DIR, "doc_images_21f064f_PerfectDoCMouse.pkl")
+    )
