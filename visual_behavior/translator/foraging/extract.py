@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def get_end_frame(trials, metadata):
 
     last_frame = metadata['n_stimulus_frames']
