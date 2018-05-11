@@ -160,6 +160,7 @@ def data_to_metadata(data):
         "min_no_lick_time": get_min_no_lick_time(data),
         "max_session_duration": get_max_session_duration(data),
         "abort_on_early_response": get_abort_on_early_response(data),
+        "initial_blank_duration": get_initial_blank_duration(data),
     }
 
 
