@@ -1,5 +1,6 @@
 import pandas as pd
 from dateutil import tz
+from six import iteritems
 
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     annotate_licks, annotate_rewards, annotate_optogenetics, annotate_responses, \
@@ -14,7 +15,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_max_session_duration, get_abort_on_early_response
 
 
-from .extract_stimuli import get_visual_stimuli
+from .extract_stimuli import get_visual_stimuli, _get_static_visual_stimuli
 
 
 def data_to_change_detection_core(data):
@@ -300,12 +301,22 @@ def data_to_trials(data):
 
 
 def data_to_visual_stimuli(data, time=None):
-
     stimuli = data['items']['behavior']['stimuli']
+    is_static = data["items"]["behavior"]["config"]["DoC"] \
+        .get("periodic_flash") == "None"
 
-    if time is None:
-        time = get_time(data)
+    if is_static:
+        visual_stimuli = [
+            _get_static_visual_stimuli(stim_dict)
+            for name, stim_dict in iteritems(stimuli)
+        ]
 
-    visual_stimuli = get_visual_stimuli(stimuli, time)
+        visual_stimuli = pd.concat(visual_stimuli)
+
+    else:
+        if time is None:
+            time = get_time(data)
+
+        visual_stimuli = get_visual_stimuli(stimuli, time)
 
     return visual_stimuli
