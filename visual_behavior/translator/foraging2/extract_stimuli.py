@@ -53,6 +53,7 @@ def change_records_to_dataframe(change_records):
             'image_category',
             'image_name',
             'orientation',
+            'contrast',
         ],
     )
 
@@ -95,7 +96,7 @@ def get_visual_stimuli(stimuli, time):
             how='left',
             left_on='change_index',
             right_index=True,
-        ).reset_index()[['frame', 'end_frame', 'time', 'image_name', 'image_category', 'orientation']]
+        ).reset_index()[['frame', 'end_frame', 'time', 'image_name', 'image_category', 'orientation', 'contrast']]
 
         # NEED CHANGES TO FORAGING2 FOR THIS TO WORK
         # viz['end_time'] = viz['end_frame'].map(lambda fr: time[int(fr)])
@@ -144,7 +145,7 @@ def reduce_to_onsets(draw_log):
     return draw_log
 
 
-def _get_static_visual_stimuli(stim_dict, end_time=np.inf):
+def _get_static_visual_stimuli(stim_dict):
     """This is a quick hack function to create a visual stimuli dataframe for a
     static change detection task
 
@@ -176,9 +177,14 @@ def _get_static_visual_stimuli(stim_dict, end_time=np.inf):
         image_name = attr_value if attr_name.lower() == "image" else np.nan
 
         try:
-            duration = stim_dict["set_log"][idx + 1][2] - time  # subtract time from the time of the next time stimuli set
+            end_frame = stim_dict["set_log"][idx + 1][3]  # grab the frame of the next stimulus
         except IndexError:
-            duration = end_time - time
+            end_frame = None  # this will probably work
+
+        # try:
+        #     duration = stim_dict["set_log"][idx + 1][2] - time  # subtract time from the time of the next time stimuli set
+        # except IndexError:
+        #     duration = end_time - time
 
         data.append({
             "contrast": contrast,
@@ -187,7 +193,8 @@ def _get_static_visual_stimuli(stim_dict, end_time=np.inf):
             "image_category": image_name,
             "frame": frame,
             "time": time,
-            "duration": duration,
+            "end_frame": end_frame,
+            # "duration": duration,
         })
 
     return pd.DataFrame(data=data)

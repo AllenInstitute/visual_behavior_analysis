@@ -306,14 +306,17 @@ def data_to_visual_stimuli(data, time=None):
         .get("periodic_flash") == "None"
 
     if is_static:
-        return {
-            name: _get_static_visual_stimuli(stim_dict)
+        visual_stimuli = [
+            _get_static_visual_stimuli(stim_dict)
             for name, stim_dict in iteritems(stimuli)
-        }
+        ]
+
+        visual_stimuli = pd.concat(visual_stimuli)
+
     else:
         if time is None:
             time = get_time(data)
 
         visual_stimuli = get_visual_stimuli(stimuli, time)
 
-        return visual_stimuli
+    return visual_stimuli
