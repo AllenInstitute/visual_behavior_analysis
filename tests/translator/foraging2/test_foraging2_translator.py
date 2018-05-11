@@ -63,18 +63,17 @@ EXPECTED_TRIALS = pd.DataFrame(data={
         1: 12.401147424383737,
         2: 21.23261967558831,
     },
-    "end_time": {
+    "endtime": {
         0: 11.824898500267068,
         1: 20.66769388732215,
         2: 29.50127058016057,
     },
-    "end_frame": {0: 516, 1: 1068, 2: 1620, },
-    # "trial_duration": {
-    #     0: 8.25998654972864,
-    #     1: 8.266546462938415,
-    #     2: 8.268650904572262
-    # },
-    # "trial_type": {0: "go", 1: "go", 2: "go", },
+    "endframe": {0: 516, 1: 1068, 2: 1620, },
+    "trial_length": {
+        0: 8.25998654972864,
+        1: 8.266546462938415,
+        2: 8.268650904572262,
+    },
     "publish_time": None,
     "index": {0: 0, 1: 1, 2:2, },
 })
@@ -129,6 +128,15 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             'trial_duration': None,
             'n_stimulus_frames': 592,
             'stimulus': 'gratings',
+            "warm_up_trials": 1,
+            "stimulus_window": 6.0,
+            "volume_limit": 1.5,
+            "failure_repeats": 5,
+            "catch_frequency": None,
+            "free_reward_trials": 10,
+            "min_no_lick_time": 0.0,
+            "max_session_duration": 60.0,
+            "abort_on_early_response": None,
         }
 
 
@@ -150,12 +158,17 @@ def test_data_to_rewards(foraging2_data_fixture):
     )
 
 
-@pytest.mark.xfail  # this appears to be a pandas related bug or something related to pandas-insanity...
-def test_data_to_running(foraging2_data_fixture):
+def test_data_to_running(monkeypatch, foraging2_data_fixture):
+    monkeypatch.setattr(
+        foraging2.extract,
+        "get_vsyncs",
+        lambda data: [16] * (data["items"]["behavior"]["update_count"] - 1)  # n vsyncs should be update_count - 1
+    )
+
     expected = pd.DataFrame(data={
         "speed": {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, },
-        "time": {0: 0.000000, 1: 16.539637, 2: 33.228720, 3: 49.925000, 4: 66.560116, },
-        "frame": {0: -1, 1: 0, 2: 1, 3: 2, 4: 3, },
+        "time": {0: 0.000000, 1: 0.016, 2: 0.032, 3: 0.048, 4: 0.064, },
+        "frame": {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, },
     })
 
     pd.testing.assert_frame_equal(
@@ -172,7 +185,7 @@ def test_data_to_time(monkeypatch, foraging2_data_fixture):
     monkeypatch.setattr(
         foraging2.extract,
         "get_vsyncs",
-        lambda data: [16] * data["items"]["behavior"]["update_count"]
+        lambda data: [16] * (data["items"]["behavior"]["update_count"] - 1)  # n vsyncs should be update_count - 1
     )
 
     np.testing.assert_almost_equal(

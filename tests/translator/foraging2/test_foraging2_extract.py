@@ -424,6 +424,7 @@ def test_annotate_schedule_time(foraging2_data_fixture, foraging2_trial_fixture)
             'start_time': 3.564911950538426,
             'end_frame': 516,
             'end_time': 11.824898500267068,
+            'trial_length': 8.25998654972864,
         }
 
 
@@ -459,13 +460,6 @@ def test__resolve_stimulus_dict(foraging2_stimuli_fixture):
 def test__get_stimulus_attr_changes(foraging2_stimuli_fixture):
     assert extract._get_stimulus_attr_changes(foraging2_stimuli_fixture["gratings"], 183, 0, 516) == \
         ({"ori": 0, }, {'ori': 90, }, )
-
-
-def test_annotate_trials(foraging2_trial_fixture):
-    assert extract.annotate_trials(foraging2_trial_fixture) == {
-        "trial_type": "go",
-        "trial_duration": 8.25998654972864,
-    }
 
 
 def test_get_pre_change_time(foraging2_data_fixture):
@@ -655,3 +649,39 @@ def test_regression_annotate_stimuli_116(foraging2_data_fixture_issue_116):
 ])
 def test__get_stimulus_attr_changes_many_changes(stim_dict, args, expected):
     assert extract._get_stimulus_attr_changes(stim_dict, *args) == expected
+
+
+def test_get_warm_up_trials(foraging2_data_stage4_2018_05_10):
+    assert extract.get_warm_up_trials(foraging2_data_stage4_2018_05_10) == 5
+
+
+def test_get_stimulus_window(foraging2_data_stage4_2018_05_10):
+    assert extract.get_stimulus_window(foraging2_data_stage4_2018_05_10) == 6.0
+
+
+def test_get_volume_limit(foraging2_data_stage4_2018_05_10):
+    assert extract.get_volume_limit(foraging2_data_stage4_2018_05_10) == 1.5
+
+
+def test_get_failure_repeats(foraging2_data_stage4_2018_05_10):
+    assert extract.get_failure_repeats(foraging2_data_stage4_2018_05_10) == 5
+
+
+def test_get_catch_frequency(foraging2_data_stage4_2018_05_10):
+    assert extract.get_catch_frequency(foraging2_data_stage4_2018_05_10) == None
+
+
+def test_get_free_reward_trials(foraging2_data_stage4_2018_05_10):
+    assert extract.get_free_reward_trials(foraging2_data_stage4_2018_05_10) == 10
+
+
+def test_get_min_no_lick_time(foraging2_data_stage4_2018_05_10):
+    assert extract.get_min_no_lick_time(foraging2_data_stage4_2018_05_10) == 0.0
+
+
+def test_get_max_session_duration(foraging2_data_stage4_2018_05_10):
+    assert extract.get_max_session_duration(foraging2_data_stage4_2018_05_10) == 60.0
+
+
+def test_get_abort_on_early_response(foraging2_data_stage4_2018_05_10):
+    assert extract.get_abort_on_early_response(foraging2_data_stage4_2018_05_10) == True

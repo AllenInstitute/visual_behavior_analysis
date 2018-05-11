@@ -2,8 +2,12 @@ import pandas as pd
 import datetime
 import json
 import numpy as np
+import logging
+import warnings
 
 from . import annotate
+
+logger = logging.getLogger(__name__)
 
 
 def create_extended_dataframe(trials, metadata, licks, time):
@@ -59,7 +63,6 @@ def create_extended_dataframe(trials, metadata, licks, time):
     # add some columns that require calculation
 
     trials['trial_type'] = annotate.categorize_trials(trials)
-    trials['endframe'] = annotate.get_end_frame(trials, metadata)
     trials['lick_frames'] = annotate.get_lick_frames(trials, licks)
 
     annotate.update_times(trials, time, inplace=True)
@@ -69,8 +72,21 @@ def create_extended_dataframe(trials, metadata, licks, time):
     annotate.calculate_reward_rate(trials, inplace=True)
 
     trials['response'] = annotate.check_responses(trials)
-    trials['trial_length'] = annotate.calculate_trial_length(trials)
-    trials['endtime'] = annotate.get_end_time(trials, time)
+
+    if 'end_time' in trials.columns:
+
+        logger.critical('end_time column detected when creating extended dataframe')
+        warnings.warn('overwriting endtime column with end_time, and removing endtime')
+        trials['endtime'] = trials['end_time']
+        trials.drop('end_time', inplace=True, axis=1)
+
+    if 'end_frame' in trials.columns:
+
+        logger.critical('end_frame column detected when creating extended dataframe')
+        warnings.warn('overwriting endframe column with end_frame, and removing endframe')
+        trials['endframe'] = trials['end_frame']
+        trials.drop('end_frame', inplace=True, axis=1)
+
     trials['color'] = annotate.assign_color(trials)
     trials['response_type'] = annotate.get_response_type(trials)
 
