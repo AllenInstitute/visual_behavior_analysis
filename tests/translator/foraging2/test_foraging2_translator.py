@@ -129,6 +129,15 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             'trial_duration': None,
             'n_stimulus_frames': 592,
             'stimulus': 'gratings',
+            "warm_up_trials": 1,
+            "stimulus_window": 6.0,
+            "volume_limit": 1.5,
+            "failure_repeats": 5,
+            "catch_frequency": None,
+            "free_reward_trials": 10,
+            "min_no_lick_time": 0.0,
+            "max_session_duration": 60.0,
+            "abort_on_early_response": None,
         }
 
 
