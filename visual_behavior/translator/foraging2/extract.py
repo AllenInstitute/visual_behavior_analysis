@@ -253,16 +253,21 @@ def annotate_schedule_time(trial, pre_change_time, initial_blank_duration):
     try:
         start_time, start_frame = trial["events"][0][2:4]
         end_time, end_frame = trial["events"][-1][2:4]
+        trial_length = end_time - start_time
     except IndexError:
         return {
             "start_time": None,
             "start_frame": None,
+            "trial_length": None,
             "scheduled_change_time": None,
+            "end_time": None,
+            "end_frame": None,
         }
 
     return {
         "start_time": start_time,
         "start_frame": start_frame,
+        "trial_length": trial_length,
         "scheduled_change_time": (
             pre_change_time +
             initial_blank_duration +
@@ -473,37 +478,6 @@ def _resolve_stimulus_dict(stimuli, group_name):
             return classification_name, stim_dict
     else:
         raise ValueError("unable to resolve stimulus_dict from group_name...")
-
-
-def annotate_trials(trial):
-    """Annotate trial information
-
-    Parameters
-    ----------
-    trial: Mapping
-        foraging2 shape trial from trial_log
-
-    Returns
-    -------
-    dict
-        trial_type: str
-            "go" or "catch"
-        trial_duration: float or None
-            duration of trial in seconds or None if fails
-    """
-    try:
-        trial_duration = trial["events"][-1][2] - trial["events"][0][2]
-    except IndexError:
-        trial_duration = None
-
-    if any([ev[0] == 'abort' for ev in trial['events']]):
-        trial_type = 'aborted'
-    else:
-        trial_type = "catch" if trial["trial_params"]["catch"] else "go"
-    return {
-        "trial_type": trial_type,
-        "trial_duration": trial_duration,
-    }
 
 
 # def annotate_visual_stimuli(trial, stim_table, times):
@@ -1153,7 +1127,7 @@ def get_task_id(data):
         data["items"]["behavior"]["params"].get("task_id")
 
 
-def get_scheduled_trial_duration(data):
+def get_scheduled_trial_length(data):
     """Get scheduled trial duration
 
     Parameters
