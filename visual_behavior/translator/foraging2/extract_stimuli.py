@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
 from six import iteritems
+import logging
+import warnings
+
+logger = logging.getLogger(__name__)
 
 
 def get_image_changes(change_log):
@@ -42,6 +46,10 @@ def change_records_to_dataframe(change_records):
     except KeyError:
         orientation = change_records[0]['prior_orientation']
         first_record.update(orientation=orientation)
+    except IndexError:
+        notice = 'no changes found, so stimulus record will be empty. NEED TO USE STIM_LOG'
+        logger.critical(notice)
+        warnings.warn(notice)
 
     change_records.insert(0, first_record)
 
