@@ -28,7 +28,7 @@ def get_autoreward_trials(trials):
 
 def get_warmup_trials(trials):
     '''finds all warmup trials'''
-    first_non_warmup_trial_df = trials[trials['auto_rewarded'] == False]
+    first_non_warmup_trial_df = trials[trials['auto_rewarded'] != True]
     if len(first_non_warmup_trial_df) > 0:
         first_non_warmup_trial = first_non_warmup_trial_df.index[0]  # noqa: E712
         return trials.iloc[:first_non_warmup_trial]
@@ -71,7 +71,7 @@ def get_first_lick_relative_to_scheduled_change(row):
     returns first lick relative to scheduled change time, nan if no such lick
     exists
     '''
-    licks = np.array(row['lick_times']) - row['scheduled_change_time']
+    licks = np.array(row['lick_times']) - row['scheduled_change_time'] - row['starttime']
     if len(licks) > 0:
         return licks[0]
     else:
@@ -117,7 +117,7 @@ def identify_consecutive_aborted_blocks(trials, failure_repeats):
 
 def identify_licks_in_response_window(row):
     '''a method for counting licks in the response window'''
-    if len(row['lick_times']) > 0 and ~np.isnan(row['change_time']):
+    if len(row['lick_times']) > 0 and pd.isnull(row['change_time']) == False:
         licks_relative_to_change = np.array(row['lick_times']) - row['change_time']
         licks_in_window = licks_relative_to_change[
             np.logical_and(
@@ -141,11 +141,16 @@ def count_stimuli_per_trial(trials, visual_stimuli):
 
     # iterate over dataframe
     for idx, trial in trials.reset_index().iterrows():
+        # check to see if images or gratings are being used
+        if all(pd.isnull(visual_stimuli.image_category)) == False:
+            col_to_check = 'image_category'
+        elif all(pd.isnull(visual_stimuli.orientation)) == False:
+            col_to_check = 'orientation'
         # get visual stimuli in range
         stimuli = visual_stimuli[
             (visual_stimuli['frame'] >= trial['startframe']) &
             (visual_stimuli['frame'] <= trial['endframe'])
-        ]['image_category'].unique()
+        ][col_to_check].unique()
         # add to array
         stimuli_per_trial[idx] = len(stimuli)
     return stimuli_per_trial
@@ -176,7 +181,7 @@ def validate_number_of_warmup_trials(trials, expected_number_of_warmup_trials):
     warmup_trials = get_warmup_trials(trials)
 
     # check to ensure that the number of GO warmup trials matches the expected number
-    if len(warmup_trials) == 0 and expected_number_of_warmup_trials != 0:
+    if len(warmup_trials) == 0 and expected_number_of_warmup_trials > 0:
         # if there are fewer go/catch trials than the expected number of warmup trials, return True
         # This will result if so many trials were aborted that the number of warmup trials were never met
         if len(trials[trials.trial_type.isin(['go', 'catch'])]) < expected_number_of_warmup_trials:
@@ -187,8 +192,9 @@ def validate_number_of_warmup_trials(trials, expected_number_of_warmup_trials):
         return True
     elif expected_number_of_warmup_trials != -1:
         return len(warmup_trials[warmup_trials.trial_type == 'go']) == expected_number_of_warmup_trials
-    else:
-        return len(warmup_trials[warmup_trials.trial_type == 'go']) == len(trials[trials.trial_type == 'go'])
+    # if -1, all will be warmup trials.
+    elif expected_number_of_warmup_trials == -1:
+        return len(trials[trials.auto_rewarded == True]) == len(trials)
 
 
 def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
@@ -283,12 +289,24 @@ def validate_intial_and_final_in_non_aborted(trials):
 
 def validate_min_change_time(trials, pre_change_time):
     '''change time in trial should never be less than pre_change_time'''
-    return np.nanmin((trials['change_time'] - trials['starttime']).values) > pre_change_time
+    change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
+    # can only run validation if there are some non-null values
+    if all(pd.isnull(change_times_trial_referenced)) == False:
+        return np.nanmin(change_times_trial_referenced) > pre_change_time
+    # cannot run valiation function if all null, just return True
+    elif all(pd.isnull(change_times_trial_referenced)) == True:
+        return True
 
 
 def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance=0.05):
     '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
-    return np.nanmax((trials['change_time'] - trials['starttime']).values) < (pre_change_time + stimulus_window + tolerance)
+    change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
+    # can only run validation if there are some non-null values
+    if all(pd.isnull(change_times_trial_referenced)) == False:
+        return np.nanmax(change_times_trial_referenced) < (pre_change_time + stimulus_window + tolerance)
+    # cannot run valiation function if all null, just return True
+    elif all(pd.isnull(change_times_trial_referenced)) == True:
+        return True
 
 
 def validate_reward_follows_first_lick_in_window(trials, tolerance=0.001):
@@ -328,7 +346,7 @@ def validate_never_more_than_one_reward(trials):
     return np.max(trials['number_of_rewards']) <= 1
 
 
-def validate_lick_before_scheduled_on_aborted_trials(trials):
+def validate_lick_before_scheduled_on_aborted_trials(trials, expected_flash_duration, expected_blank_duration):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, every aborted trial should have a lick before the scheduled change time
@@ -341,7 +359,7 @@ def validate_lick_before_scheduled_on_aborted_trials(trials):
             axis=1,
         )
         # don't use nanmax. If there's a nan, we expect this to fail
-        return np.max(first_lick.values) < 0
+        return np.max(first_lick.values) < (0 + expected_flash_duration + expected_blank_duration)
     # if no aborted trials, return True
     else:
         return True
@@ -541,19 +559,19 @@ def validate_params_change_after_aborted_trial_repeats(trials, failure_repeats):
     return all(block_has_different_scheduled_change_time_than_last)
 
 
-def validate_ignore_false_alarms(trials, ignore_false_alarms):
+def validate_ignore_false_alarms(trials, abort_on_early_response):
     '''
-    If `ignore_false_alarms` is True, no aborted trials or timeout periods should occur.
-    This is used on the 'day 0' session, where we don't want to penalize exploratory licking
+    If 'abort_on_early_response' is False, no aborted trials or timeout periods should occur.
+    This is False on the 'day 0' session, where we don't want to penalize exploratory licking
     '''
-    if ignore_false_alarms == True:
+    if abort_on_early_response == False:
         # if ignore_false_alarms is True, there should be 0 aborted trials
         # Of course, this depends on the aborted trials having been properly identified
         if len(trials[trials.trial_type == 'aborted']) == 0:
             return True
         else:
             return False
-    # test is only valid if the 'ignore_false_alarms' parameter is True. If not the case, just pass the test
+    # test is only valid if the 'abort_on_early_response' parameter is False. If not the case, just pass the test
     else:
         return True
 
@@ -697,35 +715,41 @@ def validate_even_sampling(trials, even_sampling_enabled):
         return True
 
 
-def validate_flash_blank_durations(visual_stimuli, expected_flash_duration, expected_blank_duration, tolerance=0.02):
+def validate_flash_blank_durations(visual_stimuli, periodic_flash, tolerance=0.02):
     '''
     The duty cycle of the stimulus onset/offset is maintained across trials
     (e.g., if conditions for ending a trial are met, the stimulus presentation is not truncated)
 
     Takes core_data['visual_stimuli'] as input
     '''
-    # get all blank durations
-    blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
-    blank_durations = blank_durations[~np.isnan(blank_durations)].values
+    if periodic_flash is not None:
+        expected_flash_duration = periodic_flash[0]
+        expected_blank_duration = periodic_flash[1]
+        # get all blank durations
+        blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
+        blank_durations = blank_durations[~np.isnan(blank_durations)].values
 
-    # get all flash durations
-    flash_durations = visual_stimuli.duration.values
+        # get all flash durations
+        flash_durations = visual_stimuli.duration.values
 
-    # make sure all flashes and blanks are within tolerance
-    blank_durations_consistent = all(
-        np.logical_and(
-            blank_durations > 0.5 - tolerance,
-            blank_durations < 0.5 + tolerance
+        # make sure all flashes and blanks are within tolerance
+        blank_durations_consistent = all(
+            np.logical_and(
+                blank_durations > expected_blank_duration - tolerance,
+                blank_durations < expected_blank_duration + tolerance
+            )
         )
-    )
-    flash_durations_consistent = all(
-        np.logical_and(
-            flash_durations > 0.25 - tolerance,
-            flash_durations < 0.25 + tolerance
+        flash_durations_consistent = all(
+            np.logical_and(
+                flash_durations > expected_flash_duration - tolerance,
+                flash_durations < expected_flash_duration + tolerance
+            )
         )
-    )
 
-    return blank_durations_consistent and flash_durations_consistent
+        return blank_durations_consistent and flash_durations_consistent
+    # cannot evaluate if periodic_flash is None. just return True
+    else:
+        return True
 
 
 def validate_two_stimuli_per_go_trial(trials, visual_stimuli):
