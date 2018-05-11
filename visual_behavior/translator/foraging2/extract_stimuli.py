@@ -142,3 +142,52 @@ def reduce_to_onsets(draw_log):
     flash_onsets = draw_log['draw'].diff().fillna(1.0) > 0
     draw_log = draw_log[flash_onsets]
     return draw_log
+
+
+def _get_static_visual_stimuli(stim_dict, end_time=np.inf):
+    """This is a quick hack function to create a visual stimuli dataframe for a
+    static change detection task
+
+    Parameters
+    ----------
+    stim_dict: Mapping
+        foraging2 output stim_dict
+    end_time: float, default=np.inf
+        end time of the last trial in which a stimulus from 'stim_dict' is shown
+
+    Returns
+    -------
+    pandas.DataFrame
+        visual stimuli dataframe
+
+    Notes
+    -----
+    - as of 05/10/2018, the 'stim_dict' is assumed to be a dictionary in the
+    foraging2 output and is expected to be at:
+        foraging2 output -> 'items' -> 'behavior' -> 'stimuli' -> <stim name> -> stim_dict
+    - for an experiment with only one 'stim_dict', which is all experiments
+    currently (05/10/2018), then:
+        end_time == <end time of the last trial>
+    """
+    data = []
+    for idx, (attr_name, attr_value, time, frame, ) in enumerate(stim_dict["set_log"]):
+        contrast = attr_value if attr_name.lower() == "contrast" else np.nan
+        orientation = attr_value if attr_name.lower() == "ori" else np.nan
+        image_name = attr_value if attr_name.lower() == "image" else np.nan
+
+        try:
+            duration = stim_dict["set_log"][idx + 1][2] - time  # subtract time from the time of the next time stimuli set
+        except IndexError:
+            duration = end_time - time
+
+        data.append({
+            "contrast": contrast,
+            "orientation": orientation,
+            "image_name": image_name,
+            "image_category": image_name,
+            "frame": frame,
+            "time": time,
+            "duration": duration,
+        })
+
+    return pd.DataFrame(data=data)

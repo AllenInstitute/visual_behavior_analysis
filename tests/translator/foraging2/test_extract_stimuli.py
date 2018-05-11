@@ -1,4 +1,7 @@
-from visual_behavior.translator.foraging2.extract_stimuli import get_image_changes, get_grating_changes
+import pandas as pd
+
+from visual_behavior.translator.foraging2.extract_stimuli import get_image_changes, \
+    get_grating_changes, _get_static_visual_stimuli
 
 IMAGES_CHANGE_LOG = [
     (('im111', 'im111'), ('im053', 'im053'), 4.475209915492957, 229),
@@ -69,3 +72,19 @@ def test_get_image_changes():
 def test_get_grating_changes():
     changes = get_grating_changes(GRATING_CHANGE_LOG)
     assert changes == EXPECTED_GRATING_CHANGES
+
+
+def test__get_static_visual_stimuli(
+        foraging2_data_stage0_2018_05_10,
+        foraging2_expected_visual_stimuli_stage0_2018_05_10
+):
+    stim_dict = foraging2_data_stage0_2018_05_10["items"]["behavior"]["stimuli"]["grating"]
+
+    pd.testing.assert_frame_equal(
+        _get_static_visual_stimuli(stim_dict),
+        foraging2_expected_visual_stimuli_stage0_2018_05_10,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True
+    )
