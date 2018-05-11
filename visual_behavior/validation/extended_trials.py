@@ -140,11 +140,16 @@ def count_stimuli_per_trial(trials, visual_stimuli):
 
     # iterate over dataframe
     for idx, trial in trials.reset_index().iterrows():
+        # check to see if images or gratings are being used
+        if all(pd.isnull(visual_stimuli.image_category))==False:
+            col_to_check = 'image_category'
+        elif all(pd.isnull(visual_stimuli.orientation))==False:
+            col_to_check = 'orientation'
         # get visual stimuli in range
         stimuli = visual_stimuli[
             (visual_stimuli['frame'] >= trial['startframe']) &
             (visual_stimuli['frame'] <= trial['endframe'])
-        ]['image_category'].unique()
+        ][col_to_check].unique()
         # add to array
         stimuli_per_trial[idx] = len(stimuli)
     return stimuli_per_trial
