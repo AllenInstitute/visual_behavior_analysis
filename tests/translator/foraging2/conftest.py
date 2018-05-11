@@ -6,11 +6,11 @@ from numpy import nan, inf
 @pytest.fixture(scope="session")
 def foraging2_expected_visual_stimuli_stage0_2018_05_10():
     return pd.DataFrame(data={
-        'contrast': {
-            0: nan, 1: nan, 2: nan, 3: nan, 4: nan, 5: nan, 6: nan, 7: nan,
-            8: nan, 9: nan, 10: nan, 11: nan, 12: nan, 13: nan, 14: nan,
-            15: nan, 16: nan, 17: nan, 18: nan, 19: nan, 20: nan,
-        },
+        # 'contrast': {
+        #     0: nan, 1: nan, 2: nan, 3: nan, 4: nan, 5: nan, 6: nan, 7: nan,
+        #     8: nan, 9: nan, 10: nan, 11: nan, 12: nan, 13: nan, 14: nan,
+        #     15: nan, 16: nan, 17: nan, 18: nan, 19: nan, 20: nan,
+        # },
         # 'duration': {
         #     0: 3.827588859316023, 1: 9.939477051049149, 2: 6.969386074926252,
         #     3: 7.328499882516464, 4: 7.326008690776735, 5: 13.999345577661423,

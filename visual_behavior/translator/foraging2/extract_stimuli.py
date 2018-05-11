@@ -53,7 +53,7 @@ def change_records_to_dataframe(change_records):
             'image_category',
             'image_name',
             'orientation',
-            'contrast',
+            # 'contrast',
         ],
     )
 
@@ -96,7 +96,7 @@ def get_visual_stimuli(stimuli, time):
             how='left',
             left_on='change_index',
             right_index=True,
-        ).reset_index()[['frame', 'end_frame', 'time', 'image_name', 'image_category', 'orientation', 'contrast']]
+        ).reset_index()[['frame', 'end_frame', 'time', 'image_name', 'image_category', 'orientation', ]]
 
         # NEED CHANGES TO FORAGING2 FOR THIS TO WORK
         # viz['end_time'] = viz['end_frame'].map(lambda fr: time[int(fr)])
@@ -172,7 +172,7 @@ def _get_static_visual_stimuli(stim_dict):
     """
     data = []
     for idx, (attr_name, attr_value, time, frame, ) in enumerate(stim_dict["set_log"]):
-        contrast = attr_value if attr_name.lower() == "contrast" else np.nan
+        # contrast = attr_value if attr_name.lower() == "contrast" else np.nan
         orientation = attr_value if attr_name.lower() == "ori" else np.nan
         image_name = attr_value if attr_name.lower() == "image" else np.nan
 
@@ -187,7 +187,7 @@ def _get_static_visual_stimuli(stim_dict):
         #     duration = end_time - time
 
         data.append({
-            "contrast": contrast,
+            # "contrast": contrast,
             "orientation": orientation,
             "image_name": image_name,
             "image_category": image_name,
