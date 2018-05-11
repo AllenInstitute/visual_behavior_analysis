@@ -708,35 +708,41 @@ def validate_even_sampling(trials, even_sampling_enabled):
         return True
 
 
-def validate_flash_blank_durations(visual_stimuli, expected_flash_duration, expected_blank_duration, tolerance=0.02):
+def validate_flash_blank_durations(visual_stimuli, periodic_flash, tolerance=0.02):
     '''
     The duty cycle of the stimulus onset/offset is maintained across trials
     (e.g., if conditions for ending a trial are met, the stimulus presentation is not truncated)
 
     Takes core_data['visual_stimuli'] as input
     '''
-    # get all blank durations
-    blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
-    blank_durations = blank_durations[~np.isnan(blank_durations)].values
+    if periodic_flash is not None:
+        expected_flash_duration = periodic_flash[0]
+        expected_blank_duration = periodic_flash[1]
+        # get all blank durations
+        blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
+        blank_durations = blank_durations[~np.isnan(blank_durations)].values
 
-    # get all flash durations
-    flash_durations = visual_stimuli.duration.values
+        # get all flash durations
+        flash_durations = visual_stimuli.duration.values
 
-    # make sure all flashes and blanks are within tolerance
-    blank_durations_consistent = all(
-        np.logical_and(
-            blank_durations > 0.5 - tolerance,
-            blank_durations < 0.5 + tolerance
+        # make sure all flashes and blanks are within tolerance
+        blank_durations_consistent = all(
+            np.logical_and(
+                blank_durations > expected_blank_duration - tolerance,
+                blank_durations < expected_blank_duration + tolerance
+            )
         )
-    )
-    flash_durations_consistent = all(
-        np.logical_and(
-            flash_durations > 0.25 - tolerance,
-            flash_durations < 0.25 + tolerance
+        flash_durations_consistent = all(
+            np.logical_and(
+                flash_durations > expected_flash_duration - tolerance,
+                flash_durations < expected_flash_duration + tolerance
+            )
         )
-    )
 
-    return blank_durations_consistent and flash_durations_consistent
+        return blank_durations_consistent and flash_durations_consistent
+    # cannot evaluate if periodic_flash is None. just return True
+    else:
+        return True
 
 
 def validate_two_stimuli_per_go_trial(trials, visual_stimuli):
