@@ -138,6 +138,19 @@ def fix_visual_stimuli(core_data):
     core_data['visual_stimuli'].at[core_data['visual_stimuli'].index[-1],'end_frame']=trials.iloc[-1].endframe
     return core_data
 
+def scrub_first_lick(trials):
+    '''
+    Currently, when building the extended trial dataframe, a lick that occurs on the last frame of a trial
+    gets attributed both to that trial and the next. See: https://github.com/AllenInstitute/visual_behavior_analysis/issues/146
+    
+    Until that issue is resolved, this method will remove any licks that coincide with the first frame of a given trial
+    '''
+    for idx,trial in trials.iterrows():
+        if len(trial['lick_frames'])>0 and trial['lick_frames'][0]==trial['startframe']:
+            trials.at[idx,'lick_frames']=trial['lick_frames'][1:]
+            trials.at[idx,'lick_times']=trial['lick_times'][1:]
+    return trials
+
 def count_stimuli_per_trial(trials, visual_stimuli):
     '''
     iterates over trials
