@@ -129,6 +129,14 @@ def identify_licks_in_response_window(row):
     else:
         return 0
 
+def fix_visual_stimuli(core_data):
+    '''
+    #patch end_frame in core_data['visual_stimuli']
+    #lets us move ahead while awaiting a fix to https://github.com/AllenInstitute/visual_behavior_analysis/issues/156
+    '''
+    trials=core_data['trials']
+    core_data['visual_stimuli'].at[core_data['visual_stimuli'].index[-1],'end_frame']=trials.iloc[-1].endframe
+    return core_data
 
 def count_stimuli_per_trial(trials, visual_stimuli):
     '''
