@@ -154,11 +154,20 @@ def count_stimuli_per_trial(trials, visual_stimuli):
             col_to_check = 'image_category'
         elif all(pd.isnull(visual_stimuli.orientation)) == False:
             col_to_check = 'orientation'
-        # get visual stimuli in range
-        stimuli = visual_stimuli[
-            (visual_stimuli['frame'] >= trial['startframe']) &
-            (visual_stimuli['frame'] <= trial['endframe'])
-        ][col_to_check].unique()
+
+        #get the index of the first stimulus that started on or before the trial start 
+        start_stim=visual_stimuli[
+                (visual_stimuli.frame<=trial.startframe)&
+                (visual_stimuli.end_frame>=trial.startframe)
+            ].index[-1]
+
+        #get the index of the last stimulus that ended on or before the trial end
+        end_stim=visual_stimuli[
+                (visual_stimuli.frame<=trial.endframe)
+            ].index[-1]
+
+        #get all unique stimuli on this trial
+        stimuli = np.unique(visual_stimuli.loc[start_stim:end_stim][col_to_check])
         # add to array
         stimuli_per_trial[idx] = len(stimuli)
     return stimuli_per_trial
