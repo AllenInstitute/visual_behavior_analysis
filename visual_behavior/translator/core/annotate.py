@@ -464,27 +464,6 @@ def get_lick_frames(trials, licks):
     #      violated when we began displaying a frame at the beginning of the session without a corresponding call the 'checkLickSensor'
     #      method. Using the 'responselog' instead will provide a more accurate measure of actual like frames and times.
     # lick_frames = data['lickData'][0]
-
-    lick_frames = licks['frame']
-
-    local_licks = []
-    for idx, row in trials.iterrows():
-        local_licks.append(
-            lick_frames[np.logical_and(lick_frames >= int(row['startframe']), lick_frames <= int(row['endframe']))]
-        )
-
-    return local_licks
-
-
-def get_lick_frames(trials, licks):
-    """
-    returns a list of arrays of lick frames, with one entry per trial
-    """
-    # Note: [DRO - 1/12/18] it used to be the case that the lick sensor was polled on every frame in the stimulus code, giving
-    #      a 1:1 correspondence between the frame number and the index in the 'lickData' array. However, that assumption was
-    #      violated when we began displaying a frame at the beginning of the session without a corresponding call the 'checkLickSensor'
-    #      method. Using the 'responselog' instead will provide a more accurate measure of actual like frames and times.
-    # lick_frames = data['lickData'][0]
     lick_frames = licks['frame']
 
     licks = []
@@ -575,6 +554,7 @@ def check_responses(trials, reward_window=None):
         if reward_window is None:
             rw_low = trials.loc[idx]['response_window'][0]
             rw_high = trials.loc[idx]['response_window'][1]
+
         if pd.isnull(trials.loc[idx]['change_time']) == False and \
                 pd.isnull(trials.loc[idx]['response_latency']) == False and \
                 trials.loc[idx]['response_latency'] >= rw_low and \
@@ -582,51 +562,6 @@ def check_responses(trials, reward_window=None):
             did_respond[ii] = True
 
     return did_respond
-
-
-def assign_color(trials, palette='default'):
-    color = [None] * len(trials)
-    for idx in trials.index:
-
-        if trials.loc[idx]['trial_type'] == 'aborted':
-            if palette.lower() == 'marina':
-                color[idx] = 'lightgray'
-            else:
-                color[idx] = 'red'
-
-        elif trials.loc[idx]['auto_rewarded'] is True:
-            if palette.lower() == 'marina':
-                color[idx] = 'darkblue'
-            else:
-                color[idx] = 'blue'
-
-        elif trials.loc[idx]['trial_type'] == 'go':
-            if trials.loc[idx]['response'] == 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#55a868'
-                else:
-                    color[idx] = 'darkgreen'
-
-            elif trials.loc[idx]['response'] != 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#ccb974'
-                else:
-                    color[idx] = 'lightgreen'
-
-        elif trials.loc[idx]['trial_type'] == 'catch':
-            if trials.loc[idx]['response'] == 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#c44e52'
-                else:
-                    color[idx] = 'darkorange'
-
-            elif trials.loc[idx]['response'] != 1:
-                if palette.lower() == 'marina':
-                    color[idx] = '#4c72b0'
-                else:
-                    color[idx] = 'yellow'
-
-    return color
 
 
 def assign_color(trials, palette='default'):

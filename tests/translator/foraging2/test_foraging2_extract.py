@@ -443,7 +443,7 @@ def test_annotate_stimuli(foraging2_trial_fixture, foraging2_stimuli_fixture):
         'change_contrast': None,
         'initial_orientation': 0,
         'initial_contrast': None,
-        "delta_orientation": np.nan,
+        "delta_orientation": 90,
     }
 
 

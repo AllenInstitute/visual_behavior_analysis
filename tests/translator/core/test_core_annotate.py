@@ -136,17 +136,6 @@ def test_categorize_trials(
     )
 
 
-def test_get_end_frame(
-        exemplar_extended_trials_fixture,
-        exemplar_trials_fixture,
-        exemplar_metadata_fixture
-):
-    np.testing.assert_equal(
-        annotate.get_end_frame(exemplar_trials_fixture, exemplar_metadata_fixture),
-        exemplar_extended_trials_fixture["endframe"].values
-    )
-
-
 def test_get_lick_frames(
         exemplar_extended_trials_fixture,
         exemplar_trials_fixture,
@@ -230,42 +219,11 @@ def test_check_responses(
         exemplar_metadata_fixture,
         keydict={"response_window": "response_window", }
     )  # no non-inplace option
+    annotated_trials = annotate.calculate_latency(annotated_trials)
 
     np.testing.assert_equal(
         annotate.check_responses(annotated_trials),
         exemplar_extended_trials_fixture["response"].values
-    )
-
-
-def test_calculate_trial_length(
-        exemplar_extended_trials_fixture,
-        exemplar_trials_fixture
-):
-    np.testing.assert_allclose(
-        annotate.calculate_trial_length(exemplar_trials_fixture),
-        exemplar_extended_trials_fixture["trial_length"].values
-    )
-
-
-def test_get_end_frame(
-        exemplar_extended_trials_fixture,
-        exemplar_trials_fixture,
-        exemplar_metadata_fixture
-):
-    np.testing.assert_allclose(
-        annotate.get_end_frame(exemplar_trials_fixture, exemplar_metadata_fixture),
-        exemplar_extended_trials_fixture["endframe"].values
-    )
-
-
-def test_get_end_time(
-        exemplar_extended_trials_fixture,
-        exemplar_trials_fixture,
-        exemplar_time_fixture
-):
-    np.testing.assert_equal(
-        annotate.get_end_time(exemplar_trials_fixture, exemplar_time_fixture),
-        exemplar_extended_trials_fixture["endtime"].values
     )
 
 
@@ -292,7 +250,8 @@ def test_get_response_type(
         exemplar_metadata_fixture,
         keydict={"response_window": "response_window", }
     )  # no non-inplace option
-    annotated_trials["response"] = annotate.check_responses(annotated_trials)
+    annotated_trials = annotate.calculate_latency(annotated_trials)
+    annotated_trials['response'] = annotate.check_responses(annotated_trials)
 
     np.testing.assert_equal(
         annotate.get_response_type(annotated_trials),
