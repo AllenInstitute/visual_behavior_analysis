@@ -36,7 +36,7 @@ def get_warmup_trials(trials):
         return pd.DataFrame()
 
 
-def get_first_lick_in_response_window(row):
+def get_first_lick_in_response_window(row,tolerance=0.01):
     '''
     returns first lick that falls in response window, nan if no such lick
     exists
@@ -44,7 +44,7 @@ def get_first_lick_in_response_window(row):
     licks = np.array(row['lick_times']) - row['change_time']
     licks_in_window = licks[
         np.logical_and(
-            licks >= row['response_window'][0],
+            licks >= row['response_window'][0]-tolerance,
             licks <= row['response_window'][1],
         )
     ]
@@ -339,7 +339,7 @@ def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance
         return True
 
 
-def validate_reward_follows_first_lick_in_window(trials, tolerance=0.001):
+def validate_reward_follows_first_lick_in_window(trials, tolerance=0.01):
     '''reward should happen immediately (within tolerance) of first lick in window on non-autorewarded go trials'''
     # get all go_trials without auto_rewards
     contingent_go_trials = trials[
