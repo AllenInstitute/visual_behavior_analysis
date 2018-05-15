@@ -396,14 +396,15 @@ def validate_lick_before_scheduled_on_aborted_trials(trials):
         return True
 
 
-def validate_lick_after_scheduled_on_go_catch_trials(trials):
+def validate_lick_after_scheduled_on_go_catch_trials(trials,abort_on_early_response):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
-    Therefore, no non-aborted trials should have a lick before the scheduled change time
+    Therefore, no non-aborted trials should have a lick before the scheduled change time,
+    except when abort_on_early_response is False
     '''
     nonaborted_trials = trials[trials.trial_type != 'aborted']
     # We can only check this if there is at least 1 nonaborted trial.
-    if len(nonaborted_trials) > 0:
+    if abort_on_early_response==True and len(nonaborted_trials) > 0:
         first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
         # use nanmin
         if np.nanmin(first_lick.values) < 0:
@@ -411,7 +412,7 @@ def validate_lick_after_scheduled_on_go_catch_trials(trials):
         else:
             return True
     # if there are no nonaborted trials, just return True
-    elif len(nonaborted_trials) == 0:
+    elif abort_on_early_response==False or len(nonaborted_trials) == 0:
         return True
 
 
@@ -441,20 +442,21 @@ def validate_initial_matches_final(trials):
         return True
 
 
-def validate_first_lick_after_change_on_nonaborted(trials):
+def validate_first_lick_after_change_on_nonaborted(trials,abort_on_early_response):
     '''
-    on GO and CATCH trials, licks should never be observed between the trial start and the first frame of an image change
+    on GO and CATCH trials, licks should never be observed between the trial start and the first frame of an image change,
+    except when abort_on_early_response == False
     '''
     non_aborted_trials = trials[trials.trial_type != 'aborted']
     # we can only validate this if there is at least one nonaborted trial
-    if len(non_aborted_trials) > 0:
+    if abort_on_early_response==True and len(non_aborted_trials) > 0:
         first_lick_relative_to_change = non_aborted_trials.apply(get_first_lick_relative_to_change, axis=1)
         if np.nanmin(first_lick_relative_to_change.values) < 0:
             return False
         else:
             return True
     # if no nonaborted trials, just return True
-    elif len(non_aborted_trials) == 0:
+    elif abort_on_early_response==False or len(non_aborted_trials) == 0:
         return True
 
 
