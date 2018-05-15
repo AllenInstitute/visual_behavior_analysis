@@ -651,7 +651,7 @@ def validate_stimulus_distribution_key(trials, expected_distribution_name):
     return all(trials['stimulus_distribution'] == expected_distribution_name)
 
 
-def validate_change_time_mean(trials, expected_mean, tolerance=0.5):
+def validate_change_time_mean(trials, expected_mean, tolerance=1):
     '''
     stimulus_distribution: the mean of the stimulus distribution should match the 'distribution_mean' parameter
     '''
