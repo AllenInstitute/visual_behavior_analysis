@@ -843,25 +843,30 @@ def validate_change_frame_at_flash_onset(trials, visual_stimuli):
     return all(np.in1d(change_frames, visual_stimuli['frame']))
 
 
-def validate_initial_blank(trials, visual_stimuli, initial_blank, tolerance=0.005):
+def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash=True, tolerance=0.005):
     '''
     iterates over trials
     Verifies that there is a blank screen of duration `initial_blank` at the start of every trial.
     If initial blank is 0, first frame of flash should be coincident with trial start
     '''
-    # preallocate array
-    initial_blank_in_tolerance = np.empty(len(trials))
 
-    # iterate over dataframe
-    for idx, trial in trials.reset_index().iterrows():
-        # get visual greater than initial frame
-        first_stim_index = visual_stimuli[visual_stimuli['frame'] >= trial['startframe']].index[0]
-        # get offset between trial start and first stimulus of frame
-        first_stim_time_offset = visual_stimuli.loc[first_stim_index]['time'] - trial['starttime']
-        # check to see if offset is within tolerance of expected blank
-        initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=tolerance)
-    # ensure all initial blanks were within tolerance
-    return all(initial_blank_in_tolerance)
+    # this test doesn't make sense for static stimuli with no initial blank. just return True
+    if fix_periodic_flash(periodic_flash) is None and initial_blank==0:
+        return True
+    else:
+        # preallocate array
+        initial_blank_in_tolerance = np.empty(len(trials))
+
+        # iterate over dataframe
+        for idx, trial in trials.reset_index().iterrows():
+            # get visual greater than initial frame
+            first_stim_index = visual_stimuli[visual_stimuli['frame'] >= trial['startframe']].index[0]
+            # get offset between trial start and first stimulus of frame
+            first_stim_time_offset = visual_stimuli.loc[first_stim_index]['time'] - trial['starttime']
+            # check to see if offset is within tolerance of expected blank
+            initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=tolerance)
+        # ensure all initial blanks were within tolerance
+        return all(initial_blank_in_tolerance)
 
 
 def validate_new_params_on_nonaborted_trials(trials):
