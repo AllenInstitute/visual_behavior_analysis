@@ -43,7 +43,6 @@ def create_extended_dataframe(trials, metadata, licks, time):
         'stimulus_distribution': 'stimulus_distribution',
         'stimulus': 'stimulus',
         'distribution_mean': 'delta_mean',
-        'trial_duration': 'trial_duration',
         'computer_name': 'computer_name',
     }
 

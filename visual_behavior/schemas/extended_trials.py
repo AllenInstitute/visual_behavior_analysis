@@ -67,7 +67,6 @@ class ExtendedTrialSchema(TrialSchema):
     stimulus = fields.String()
     stimulus_distribution = fields.String()
     task = fields.String()
-    trial_duration = fields.Float()
     trial_length = fields.Float()
     trial_type = fields.String()
     user_id = fields.String()
