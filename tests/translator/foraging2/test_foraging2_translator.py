@@ -117,7 +117,7 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             'task': 'DoC',
             'stage': None,
             'stoptime': 27.232,
-            'userid': None,
+            'userid': '',
             'lick_detect_training_mode': False,
             'blankscreen_on_timeout': False,
             'stim_duration': 6000.0,

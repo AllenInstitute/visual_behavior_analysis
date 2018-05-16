@@ -930,8 +930,8 @@ def get_user_id(exp_data):
         the id of the user or None if not found
     """
     behavior_items = behavior_items_or_top_level(exp_data)
-    return behavior_items.get("config", {}).get("behavior", {}).get("user_id") or \
-        behavior_items.get("cl_params", {}).get("user_id")
+    return behavior_items.get("config", {}).get("behavior", {}).get("user_id", '') or \
+        behavior_items.get("cl_params", {}).get("user_id", '')
 
 
 def get_session_id(exp_data):

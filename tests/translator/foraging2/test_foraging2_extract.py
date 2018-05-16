@@ -344,7 +344,7 @@ def test_get_blank_duration_range(foraging2_data_fixture):
 
 
 def test_get_user_id(foraging2_data_fixture):
-    assert extract.get_user_id(foraging2_data_fixture) == None
+    assert extract.get_user_id(foraging2_data_fixture) == ''
 
 
 def test_get_session_id(foraging2_data_fixture):
