@@ -386,7 +386,7 @@ def test_annotate_licks(foraging2_trial_fixture):
 
 def test_annotate_optogenetics(foraging2_data_fixture):
     assert extract.annotate_optogenetics(extract.get_trial_log(foraging2_data_fixture)[0]) == \
-        {"optogenetics": None, }
+        {"optogenetics": False, }
 
 
 def test_annotate_responses(foraging2_data_fixture):

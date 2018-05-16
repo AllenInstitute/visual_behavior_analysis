@@ -72,7 +72,7 @@ def annotate_optogenetics(trial):
     - this idea of existance checking wasn't my choice...
     """
     return {
-        "optogenetics": trial["trial_params"].get("optogenetics"),
+        "optogenetics": trial["trial_params"].get("optogenetics", False),
     }
 
 

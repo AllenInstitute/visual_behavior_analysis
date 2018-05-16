@@ -110,7 +110,6 @@ def load_trials(data, time=None):
         'initial_ori',
         'lick_times',
         'optogenetics',
-        'publish_time',
         'response_latency',
         'response_time',
         'response_type',
@@ -129,6 +128,7 @@ def load_trials(data, time=None):
         'delta_ori': float,
         'initial_contrast': float,
         'change_contrast': float,
+        'optogenetics': bool,
     }
 
     trials = (

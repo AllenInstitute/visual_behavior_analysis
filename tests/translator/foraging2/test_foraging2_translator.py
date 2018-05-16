@@ -31,7 +31,7 @@ EXPECTED_TRIALS = pd.DataFrame(data={
         1: [17.754299520384357],
         2: [25.84577631036363],
     },
-    "optogenetics": {0: None, 1: None, 2: None, },
+    "optogenetics": {0: False, 1: False, 2: False, },
     # "response_frame": {0: np.nan, 1: 886, 2: 1392, },
     "response_latency": {
         0: np.inf,
@@ -74,7 +74,6 @@ EXPECTED_TRIALS = pd.DataFrame(data={
         1: 8.266546462938415,
         2: 8.268650904572262,
     },
-    "publish_time": None,
     "index": {0: 0, 1: 1, 2:2, },
 })
 

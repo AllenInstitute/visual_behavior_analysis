@@ -184,14 +184,8 @@ class TrialSchema(Schema):
     optogenetics = fields.Bool(
         description='whether optogenetic stimulation was applied on this trial',
         required=True,
-        allow_none=True,
     )
 
-    publish_time = fields.Str(
-        description='the time that this trial was published',
-        required=True,
-        allow_none=True,
-    )
 
 
 class StimulusSchema(TimeSeriesSchema):
