@@ -356,7 +356,7 @@ def test_get_filename(foraging2_data_fixture):
 
 
 def test_get_device_name(foraging2_data_fixture):
-    assert extract.get_device_name(foraging2_data_fixture) is None
+    assert extract.get_device_name(foraging2_data_fixture) == 'localhost'
 
 
 def test_get_session_duration(monkeypatch, foraging2_data_fixture):

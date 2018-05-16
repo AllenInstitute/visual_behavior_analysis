@@ -76,6 +76,7 @@ def data_to_licks(data):
     """
     return get_licks(data)
 
+from ...devices import get_rig_id
 
 def data_to_metadata(data):
     """Get metadata associated with an experiment
@@ -126,7 +127,7 @@ def data_to_metadata(data):
 
     return {
         "startdatetime": start_time_datetime.astimezone(tz.gettz("UTC")).isoformat(),
-        "rig_id": None,  # not obtainable because device_name is not obtainable
+        "rig_id": get_rig_id(device_name),
         "computer_name": device_name,
         "reward_vol": get_reward_volume(data),
         "rewardvol": get_reward_volume(data),  # for compatibility with legacy code

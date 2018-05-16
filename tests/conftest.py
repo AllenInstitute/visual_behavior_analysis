@@ -288,6 +288,8 @@ def foraging2_data_fixture():
     foraging2_data["items"]["behavior"]["stimuli"]["gratings"]["set_log"] = \
         new_set_log
 
+    foraging2_data['platform_info']['computer_name'] = 'localhost'
+
     return foraging2_data
 
 

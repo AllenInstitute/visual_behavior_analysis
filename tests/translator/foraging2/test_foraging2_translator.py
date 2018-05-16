@@ -91,8 +91,8 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
     assert foraging2.data_to_metadata(foraging2_data_fixture) == \
         {
             'startdatetime': '2018-04-04T22:20:53.665000+00:00',
-            'rig_id': None,
-            'computer_name': None,
+            'rig_id': 'localhost',
+            'computer_name': 'localhost',
             'reward_vol': 0.007,
             'rewardvol': 0.007,
             'auto_reward_vol': 0.007,

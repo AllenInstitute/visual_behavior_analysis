@@ -1003,12 +1003,8 @@ def get_device_name(exp_data):
     -----
     - the device is assumed to be the device running the agent process that runs the
     experiment
-    - 03/13/18: device_name is not yet accessible and will be None
     """
-    logger.warn("get_device_name is not working and will return None...")
-    return behavior_items_or_top_level(exp_data) \
-        .get("platform_info", {}) \
-        .get("device_name")
+    return exp_data['platform_info']['computer_name']
 
 
 def get_image_path(data):
