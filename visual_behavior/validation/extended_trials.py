@@ -53,6 +53,19 @@ def get_first_lick_in_response_window(row,tolerance=0.01):
     else:
         return np.nan
 
+def identify_licks_in_response_window(row,tolerance=0.01):
+    '''a method for counting licks in the response window'''
+    if len(row['lick_times']) > 0 and pd.isnull(row['change_time']) == False:
+        licks_relative_to_change = np.array(row['lick_times']) - row['change_time']
+        licks_in_window = licks_relative_to_change[
+            np.logical_and(
+                licks_relative_to_change >= row['response_window'][0]-tolerance,
+                licks_relative_to_change <= row['response_window'][1]
+            )
+        ]
+        return len(licks_in_window)
+    else:
+        return 0
 
 def get_first_lick_relative_to_change(row):
     '''
@@ -114,20 +127,6 @@ def identify_consecutive_aborted_blocks(trials, failure_repeats):
 
     return trials
 
-
-def identify_licks_in_response_window(row):
-    '''a method for counting licks in the response window'''
-    if len(row['lick_times']) > 0 and pd.isnull(row['change_time']) == False:
-        licks_relative_to_change = np.array(row['lick_times']) - row['change_time']
-        licks_in_window = licks_relative_to_change[
-            np.logical_and(
-                licks_relative_to_change >= row['response_window'][0],
-                licks_relative_to_change <= row['response_window'][1]
-            )
-        ]
-        return len(licks_in_window)
-    else:
-        return 0
 
 def fix_visual_stimuli(core_data):
     '''
