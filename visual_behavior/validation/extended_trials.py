@@ -45,7 +45,7 @@ def get_first_lick_in_response_window(row,tolerance=0.01):
     licks_in_window = licks[
         np.logical_and(
             licks >= row['response_window'][0]-tolerance,
-            licks <= row['response_window'][1]+tolerance,
+            licks <= row['response_window'][1],
         )
     ]
     if len(licks_in_window) > 0:
