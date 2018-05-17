@@ -344,7 +344,7 @@ def test_get_blank_duration_range(foraging2_data_fixture):
 
 
 def test_get_user_id(foraging2_data_fixture):
-    assert extract.get_user_id(foraging2_data_fixture) == None
+    assert extract.get_user_id(foraging2_data_fixture) == ''
 
 
 def test_get_session_id(foraging2_data_fixture):
@@ -356,7 +356,7 @@ def test_get_filename(foraging2_data_fixture):
 
 
 def test_get_device_name(foraging2_data_fixture):
-    assert extract.get_device_name(foraging2_data_fixture) is None
+    assert extract.get_device_name(foraging2_data_fixture) == 'localhost'
 
 
 def test_get_session_duration(monkeypatch, foraging2_data_fixture):
@@ -386,7 +386,7 @@ def test_annotate_licks(foraging2_trial_fixture):
 
 def test_annotate_optogenetics(foraging2_data_fixture):
     assert extract.annotate_optogenetics(extract.get_trial_log(foraging2_data_fixture)[0]) == \
-        {"optogenetics": None, }
+        {"optogenetics": False, }
 
 
 def test_annotate_responses(foraging2_data_fixture):

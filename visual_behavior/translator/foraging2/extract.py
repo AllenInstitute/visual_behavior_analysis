@@ -72,7 +72,7 @@ def annotate_optogenetics(trial):
     - this idea of existance checking wasn't my choice...
     """
     return {
-        "optogenetics": trial["trial_params"].get("optogenetics"),
+        "optogenetics": trial["trial_params"].get("optogenetics", False),
     }
 
 
@@ -930,8 +930,8 @@ def get_user_id(exp_data):
         the id of the user or None if not found
     """
     behavior_items = behavior_items_or_top_level(exp_data)
-    return behavior_items.get("config", {}).get("behavior", {}).get("user_id") or \
-        behavior_items.get("cl_params", {}).get("user_id")
+    return behavior_items.get("config", {}).get("behavior", {}).get("user_id", '') or \
+        behavior_items.get("cl_params", {}).get("user_id", '')
 
 
 def get_session_id(exp_data):
@@ -1003,12 +1003,8 @@ def get_device_name(exp_data):
     -----
     - the device is assumed to be the device running the agent process that runs the
     experiment
-    - 03/13/18: device_name is not yet accessible and will be None
     """
-    logger.warn("get_device_name is not working and will return None...")
-    return behavior_items_or_top_level(exp_data) \
-        .get("platform_info", {}) \
-        .get("device_name")
+    return exp_data['platform_info']['computer_name']
 
 
 def get_image_path(data):

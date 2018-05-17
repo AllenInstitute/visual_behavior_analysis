@@ -48,12 +48,6 @@ def exemplar_extended_trials_fixture():
             [25.769513533916324, 26.020016693975776, 26.219824876636267, ],
         ],
         "optogenetics": [False, False, False, False, ],
-        "publish_time": [
-            "2017-07-19T10:35:17.799000",
-            "2017-07-19T10:35:27.559000",
-            "2017-07-19T10:35:35.069000",
-            "2017-07-19T10:35:35.819000",
-        ],
         "response_latency": [0.600438, 0.250190, 0.200154, np.inf, ],
         "response_time": [[], [], [], [], ],
         "response_type": ["HIT", "HIT", "HIT", "MISS", ],
@@ -64,46 +58,6 @@ def exemplar_extended_trials_fixture():
         "scheduled_change_time": [3.96059, 15.242503, 21.582325, 28.156679, ],
         "startframe": [0, 165, 360, 510, ],
         "starttime": [0.0, 8.256248, 18.013633, 25.519331, ],
-        "stim_on_frames": [
-            [],
-            [],
-            [
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1.,
-            ],
-            [
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-                1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
-            ],
-        ],
         "stimulus_distribution": [
             "exponential",
             "exponential",
@@ -206,11 +160,11 @@ def exemplar_extended_trials_fixture():
         'change_time', 'cumulative_reward_number', 'cumulative_volume',
         'delta_ori', 'index', 'initial_contrast', 'initial_image_category',
         'initial_image_name', 'initial_ori', 'lick_times', 'optogenetics',
-        'publish_time', 'response_latency', 'response_time', 'response_type',
+        'response_latency', 'response_time', 'response_type',
         'reward_frames', 'reward_times', 'reward_volume', 'rewarded',
-        'scheduled_change_time', 'startframe', 'starttime', 'stim_on_frames',
+        'scheduled_change_time', 'startframe', 'starttime',
         'stimulus_distribution', 'task', 'user_id', 'stim_duration', 'LDT_mode',
-        'distribution_mean', 'trial_duration', 'stimulus', 'mouse_id',
+        'distribution_mean', 'stimulus', 'mouse_id',
         'prechange_minimum', 'computer_name', 'blank_duration_range',
         'response_window', 'blank_screen_timeout', 'session_duration', 'stage',
         'startdatetime', 'date', 'year', 'month', 'day', 'hour', 'dayofweek',
@@ -228,6 +182,7 @@ def trials_df_fixture():
         axis=1
     )  # change scheduled_change_time from time relative to experiment start to time relative to trial start
     del trials['stim_on_frames']
+    del trials['publish_time']
     return trials
 
 
@@ -287,6 +242,8 @@ def foraging2_data_fixture():
 
     foraging2_data["items"]["behavior"]["stimuli"]["gratings"]["set_log"] = \
         new_set_log
+
+    foraging2_data['platform_info']['computer_name'] = 'localhost'
 
     return foraging2_data
 

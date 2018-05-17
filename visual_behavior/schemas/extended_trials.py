@@ -26,8 +26,7 @@ class TrialSchema(PandasSchemaBase):
     initial_image_name = fields.Raw(allow_none=True)
     initial_ori = fields.Float(allow_none=True)
     lick_times = fields.List(fields.Float)
-    optogenetics = fields.Bool(allow_none=True)
-    publish_time = fields.String()
+    optogenetics = fields.Bool()
     response_latency = fields.Float(allow_none=True)
     response_time = fields.List(fields.Float(allow_none=True))
     response_type = fields.String(allow_none=True)
@@ -38,7 +37,6 @@ class TrialSchema(PandasSchemaBase):
     scheduled_change_time = fields.Float()
     startframe = fields.Integer(strict=True)
     starttime = fields.Float()
-    stim_on_frames = fields.List(fields.Integer(strict=True))
 
 
 class ExtendedTrialSchema(TrialSchema):
@@ -67,7 +65,6 @@ class ExtendedTrialSchema(TrialSchema):
     stimulus = fields.String()
     stimulus_distribution = fields.String()
     task = fields.String()
-    trial_duration = fields.Float()
     trial_length = fields.Float()
     trial_type = fields.String()
     user_id = fields.String()
