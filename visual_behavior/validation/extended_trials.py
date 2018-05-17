@@ -774,10 +774,12 @@ def validate_even_sampling(trials, even_sampling_enabled):
         return True
 
 
-def validate_flash_blank_durations(visual_stimuli, periodic_flash, tolerance=0.02):
+def validate_flash_blank_durations(visual_stimuli, periodic_flash, mean_tolerance=1/60.,std_tolerance=1/60.):
     '''
     The duty cycle of the stimulus onset/offset is maintained across trials
     (e.g., if conditions for ending a trial are met, the stimulus presentation is not truncated)
+
+    default tolerances on mean and std are 1 frame (1/60 seconds)
 
     Takes core_data['visual_stimuli'] as input
     '''
@@ -786,23 +788,21 @@ def validate_flash_blank_durations(visual_stimuli, periodic_flash, tolerance=0.0
         expected_blank_duration = periodic_flash[1]
         # get all blank durations
         blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
-        blank_durations = blank_durations[~np.isnan(blank_durations)].values
+        blank_durations = blank_durations[~np.isnan(blank_durations)]
 
         # get all flash durations
-        flash_durations = visual_stimuli.duration.values
+        flash_durations = visual_stimuli.duration
 
         # make sure all flashes and blanks are within tolerance
-        blank_durations_consistent = all(
-            np.logical_and(
-                blank_durations > expected_blank_duration - tolerance,
-                blank_durations < expected_blank_duration + tolerance
-            )
+        # mean should be within tolernace of expected value
+        # std should be within tolerance of 0
+        blank_durations_consistent = np.logical_and(
+            np.isclose(flash_durations.mean(),periodic_flash[0],atol=mean_tolerance),
+            np.isclose(flash_durations.std(),0,atol=std_tolerance)
         )
-        flash_durations_consistent = all(
-            np.logical_and(
-                flash_durations > expected_flash_duration - tolerance,
-                flash_durations < expected_flash_duration + tolerance
-            )
+        flash_durations_consistent = np.logical_and(
+            np.isclose(blank_durations.mean(),periodic_flash[1],atol=mean_tolerance),
+            np.isclose(blank_durations.std(),0,atol=std_tolerance)
         )
 
         return blank_durations_consistent and flash_durations_consistent
