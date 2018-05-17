@@ -11,12 +11,12 @@ def test_dump_load_schema(exemplar_extended_trials_fixture):
     deserialized_extended_trials = extended_trial_schema.loads(serialized_extended_trials, many=True).data
 
     # print(deserialized_extended_trials["change_frame"].iloc[3])
-
-    left = deserialized_extended_trials.iloc[0].index
-    right = exemplar_extended_trials_fixture.iloc[0].index
-
-    print set(left) - set(right)
-    print set(right) - set(left)
+    # 
+    # left = deserialized_extended_trials.iloc[0].index
+    # right = exemplar_extended_trials_fixture.iloc[0].index
+    #
+    # print set(left) - set(right)
+    # print set(right) - set(left)
 
     pd.testing.assert_frame_equal(
         deserialized_extended_trials,

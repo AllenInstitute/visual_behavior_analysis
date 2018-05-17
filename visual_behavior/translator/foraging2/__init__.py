@@ -2,6 +2,7 @@ import pandas as pd
 from dateutil import tz
 from six import iteritems
 
+from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     annotate_licks, annotate_rewards, annotate_optogenetics, annotate_responses, \
     annotate_schedule_time, annotate_stimuli, get_user_id, get_mouse_id, \
@@ -13,7 +14,6 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stimulus_window, get_volume_limit, get_failure_repeats, \
     get_catch_frequency, get_free_reward_trials, get_min_no_lick_time, \
     get_max_session_duration, get_abort_on_early_response
-
 
 from .extract_stimuli import get_visual_stimuli, _get_static_visual_stimuli
 
@@ -76,7 +76,6 @@ def data_to_licks(data):
     """
     return get_licks(data)
 
-from ...devices import get_rig_id
 
 def data_to_metadata(data):
     """Get metadata associated with an experiment
@@ -261,9 +260,6 @@ def data_to_trials(data):
     trial_log = get_trial_log(data)
     pre_change_time = get_pre_change_time(data)
     initial_blank_duration = get_initial_blank_duration(data) or 0  # woohoo!
-    experiment_params = {
-        "publish_time": None,  # not obtainable
-    }
 
     trials = {}
 
@@ -284,7 +280,6 @@ def data_to_trials(data):
             index
         )
         expand_dict(trials, annotate_stimuli(trial, stimuli), index)
-        expand_dict(trials, experiment_params, index)
 
     trials = pd.DataFrame(data=trials)
 

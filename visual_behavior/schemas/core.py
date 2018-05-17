@@ -187,7 +187,6 @@ class TrialSchema(Schema):
     )
 
 
-
 class StimulusSchema(TimeSeriesSchema):
     duration = fields.Float(
         description='duration of the stimulus',
