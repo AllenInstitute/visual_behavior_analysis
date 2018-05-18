@@ -183,6 +183,8 @@ def trials_df_fixture():
     )  # change scheduled_change_time from time relative to experiment start to time relative to trial start
     del trials['stim_on_frames']
     del trials['publish_time']
+    trials['endframe'] = trials['startframe'].shift(periods=-1)
+    trials.at[trials.index[-1],'endframe']=94157
     return trials
 
 

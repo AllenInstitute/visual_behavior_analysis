@@ -120,6 +120,7 @@ def load_trials(data, time=None):
         'scheduled_change_time',
         'startframe',
         'starttime',
+        'endframe'
     )
 
     forced_types = {
@@ -166,6 +167,10 @@ def load_trials(data, time=None):
 
     # make scheduled_change_time relative
     trials["scheduled_change_time"] = trials["scheduled_change_time"] - trials['starttime']
+
+    # add endframe column as startframe of last frame. Last endframe is last frame of session
+    trials['endframe'] = trials['startframe'].shift(periods=-1)
+    trials.at[trials.index[-1], 'endframe'] = len(load_time(data)) - 1
 
     return trials
 
