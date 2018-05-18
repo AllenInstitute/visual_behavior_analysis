@@ -306,6 +306,18 @@ def foraging2_data_stage4_2018_05_10():
 
 @pytest.fixture(scope="session")
 def foraging2_data_stage0_2018_05_10():
-    return pd.read_pickle(
+    data = pd.read_pickle(
         os.path.join(TESTING_RES_DIR, "doc_gratings_8910798_EarlyDoCMouse.pkl")
+    )
+
+    data['items']['behavior']['stimuli']['grating']['draw_log'][-3] = 0
+    data['items']['behavior']['stimuli']['grating']['draw_log'][-2] = 0
+    data['items']['behavior']['stimuli']['grating']['draw_log'][-1] = 0
+    return data
+
+
+@pytest.fixture(scope="session")
+def foraging2_data_stage_0_2018_05_16():
+    return pd.read_pickle(
+        os.path.join(TESTING_RES_DIR, "doc_images_db22310_LateDoCMouse.pkl")
     )
