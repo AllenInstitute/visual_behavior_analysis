@@ -1,8 +1,6 @@
 import numpy as np
-import pandas as pd
 from six import iteritems
 import logging
-import warnings
 
 
 logger = logging.getLogger(__name__)

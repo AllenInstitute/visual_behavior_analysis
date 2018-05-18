@@ -1,6 +1,5 @@
 import pandas as pd
 from dateutil import tz
-from six import iteritems
 
 from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
