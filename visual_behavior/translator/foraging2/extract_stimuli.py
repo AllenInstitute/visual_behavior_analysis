@@ -1,208 +1,112 @@
 import numpy as np
-import pandas as pd
 from six import iteritems
 import logging
-import warnings
+
 
 logger = logging.getLogger(__name__)
 
 
-def get_image_changes(change_log):
-    changes = []
-    for source_params, dest_params, time, frame in change_log:
-        changes.append(dict(
-            prior_image_category=source_params[0],
-            prior_image_name=source_params[1],
-            image_category=dest_params[0],
-            image_name=dest_params[1],
-            time=time,
-            frame=frame,
-        ))
-    return changes
-
-
-def get_grating_changes(change_log):
-    changes = []
-    for source_params, dest_params, time, frame in change_log:
-        changes.append(dict(
-            prior_orientation=source_params[1],
-            orientation=dest_params[1],
-            time=time,
-            frame=frame,
-        ))
-    return changes
-
-
-def change_records_to_dataframe(change_records):
-    first_record = dict(
-        frame=0,
-        time=None,
-    )
-    try:
-        image_name = change_records[0]['prior_image_name']
-        image_category = change_records[0]['prior_image_category']
-        first_record.update(image_name=image_name)
-        first_record.update(image_category=image_category)
-    except KeyError:
-        orientation = change_records[0]['prior_orientation']
-        first_record.update(orientation=orientation)
-    except IndexError:
-        notice = 'no changes found, so stimulus record will be empty. NEED TO USE STIM_LOG'
-        logger.critical(notice)
-        warnings.warn(notice)
-
-    change_records.insert(0, first_record)
-
-    changes = pd.DataFrame(
-        change_records,
-        columns=[
-            'frame',
-            'time',
-            'image_category',
-            'image_name',
-            'orientation',
-            # 'contrast',
-        ],
-    )
-
-    return changes
-
-
-def find_change_indices(changes, draw_log):
-
-    indices = np.searchsorted(
-        changes['frame'],
-        draw_log['frame'],
-        side='right',
-    )
-
-    return indices - 1
-
-
 def get_visual_stimuli(stimuli, time):
-    visual_stimuli = []
+    n_frames = len(time)
 
-    for stim_category_name, stim_dict in iteritems(stimuli):
-        if stim_category_name == 'images':
-            changes = get_image_changes(stim_dict['change_log'])
-        elif stim_category_name == 'grating':
-            changes = get_grating_changes(stim_dict['change_log'])
-        else:
-            raise NotImplementedError("we don't know how to parse {} stimuli".format(stim_category_name))
-
-        changes = change_records_to_dataframe(changes)
-        draw_log = get_draw_log(stim_dict, time)
-        draw_log = annotate_end_frames(draw_log)
-        draw_log = reduce_to_onsets(draw_log)
-        draw_log['change_index'] = find_change_indices(changes, draw_log)
-        viz = draw_log.merge(
-            changes[[
-                'image_name',
-                'image_category',
-                'orientation',
-            ]],
-            how='left',
-            left_on='change_index',
-            right_index=True,
-        ).reset_index()[['frame', 'end_frame', 'time', 'image_name', 'image_category', 'orientation', ]]
-
-        # NEED CHANGES TO FORAGING2 FOR THIS TO WORK
-        # viz['end_time'] = viz['end_frame'].map(lambda fr: time[int(fr)])
-        # viz['duration'] = viz['end_time'] - viz['time']
-        # del viz['end_time']
-
-        visual_stimuli.append(viz)
-    visual_stimuli = pd.concat(visual_stimuli)
-
-    return visual_stimuli
-
-
-def get_draw_log(stim_dict, time):
-
-    draw_log = stim_dict['draw_log']
-    draw_log = (
-        pd.DataFrame({'time': time, 'draw': draw_log})
-        .reset_index()
-        .rename(columns={'index': 'frame'})
-    )
-    return draw_log
-
-
-class EndOfRunFinder(object):
-    def __init__(self):
-        self.end_frame = None
-
-    def check(self, log):
-        if log['draw'] == 0:
-            self.end_frame = log['frame']
-        elif self.end_frame is None:
-            self.end_frame = log['frame'] + 1
-        return self.end_frame
-
-
-def annotate_end_frames(draw_log):
-    draw_log = draw_log.sort_values('frame', ascending=False)
-    draw_log['end_frame'] = draw_log.apply(EndOfRunFinder().check, axis=1)
-    draw_log = draw_log.sort_values('frame', ascending=True)
-    return draw_log
-
-
-def reduce_to_onsets(draw_log):
-    flash_onsets = draw_log['draw'].diff().fillna(1.0) > 0
-    draw_log = draw_log[flash_onsets]
-    return draw_log
-
-
-def _get_static_visual_stimuli(stim_dict):
-    """This is a quick hack function to create a visual stimuli dataframe for a
-    static change detection task
-
-    Parameters
-    ----------
-    stim_dict: Mapping
-        foraging2 output stim_dict
-    end_time: float, default=np.inf
-        end time of the last trial in which a stimulus from 'stim_dict' is shown
-
-    Returns
-    -------
-    pandas.DataFrame
-        visual stimuli dataframe
-
-    Notes
-    -----
-    - as of 05/10/2018, the 'stim_dict' is assumed to be a dictionary in the
-    foraging2 output and is expected to be at:
-        foraging2 output -> 'items' -> 'behavior' -> 'stimuli' -> <stim name> -> stim_dict
-    - for an experiment with only one 'stim_dict', which is all experiments
-    currently (05/10/2018), then:
-        end_time == <end time of the last trial>
-    """
     data = []
-    for idx, (attr_name, attr_value, time, frame, ) in enumerate(stim_dict["set_log"]):
-        # contrast = attr_value if attr_name.lower() == "contrast" else np.nan
-        orientation = attr_value if attr_name.lower() == "ori" else np.nan
-        image_name = attr_value if attr_name.lower() == "image" else np.nan
+    for stimuli_group_name, stim_dict in iteritems(stimuli):
 
-        try:
-            end_frame = stim_dict["set_log"][idx + 1][3]  # grab the frame of the next stimulus
-        except IndexError:
-            end_frame = None  # this will probably work
+        for idx, (attr_name, attr_value, _time, frame, ) in \
+                enumerate(stim_dict["set_log"]):
+            orientation = attr_value if attr_name.lower() == "ori" else np.nan
+            image_name = attr_value if attr_name.lower() == "image" else np.nan
 
-        # try:
-        #     duration = stim_dict["set_log"][idx + 1][2] - time  # subtract time from the time of the next time stimuli set
-        # except IndexError:
-        #     duration = end_time - time
+            if attr_name.lower() == "image":
+                image_category = _resolve_image_category(
+                    stim_dict["change_log"],
+                    frame
+                )
+            else:
+                image_category = np.nan
 
-        data.append({
-            # "contrast": contrast,
-            "orientation": orientation,
-            "image_name": image_name,
-            "image_category": image_name,
-            "frame": frame,
-            "time": time,
-            "end_frame": end_frame,
-            # "duration": duration,
-        })
+            stimulus_epoch = _get_stimulus_epoch(
+                stim_dict["set_log"],
+                idx,
+                frame,
+                n_frames,
+            )
+            draw_epochs = _get_draw_epochs(
+                stim_dict["draw_log"],
+                *stimulus_epoch
+            )
 
-    return pd.DataFrame(data=data)
+            for idx, (epoch_start, epoch_end, ) in enumerate(draw_epochs):
+
+                # visual stimulus doesn't actually change until start of
+                # following frame, so we need to bump the epoch_start & epoch_end
+                # to get the timing right
+                epoch_start += 1
+                epoch_end += 1
+
+                data.append({
+                    "orientation": orientation,
+                    "image_name": image_name,
+                    "image_category": image_category,
+                    "frame": epoch_start,
+                    "end_frame": epoch_end,
+                    "time": time[epoch_start],
+                    "duration": time[epoch_end] - time[epoch_start],  # this will always work because an epoch will never occur near the end of time
+                })
+
+    return data
+
+
+def unpack_change_log(change):
+
+    (from_category, from_name), (to_category, to_name, ), time, frame = change
+
+    return dict(
+        frame=frame,
+        time=time,
+        from_category=from_category,
+        to_category=to_category,
+        from_name=from_name,
+        to_name=to_name,
+    )
+
+
+def _resolve_image_category(change_log, frame):
+
+    for change in (unpack_change_log(c) for c in change_log):
+        image_category = change['from_category']
+        if frame < change['frame']:
+            return image_category
+
+    return image_category
+
+
+def _get_stimulus_epoch(set_log, current_set_index, start_frame, n_frames):
+    try:
+        next_set_event = set_log[current_set_index + 1]  # attr_name, attr_value, time, frame
+    except IndexError:  # assume this is the last set event
+        next_set_event = (None, None, None, n_frames, )
+
+    return (start_frame, next_set_event[3])  # end frame isnt inclusive
+
+
+def _get_draw_epochs(draw_log, start_frame, stop_frame):
+    """start_frame inclusive, stop_frame non-inclusive
+    """
+    draw_epochs = []
+    current_frame = start_frame
+
+    while current_frame <= stop_frame:
+        epoch_length = 0
+        while current_frame < stop_frame and draw_log[current_frame] == 1:
+            epoch_length += 1
+            current_frame += 1
+        else:
+            current_frame += 1
+
+        if epoch_length:
+            draw_epochs.append(
+                (current_frame - epoch_length - 1, current_frame - 1, )
+            )
+
+    return draw_epochs

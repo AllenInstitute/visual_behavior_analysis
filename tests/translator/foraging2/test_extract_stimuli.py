@@ -1,90 +1,112 @@
+import pytest
+import numpy as np
 import pandas as pd
 
-from visual_behavior.translator.foraging2.extract_stimuli import get_image_changes, \
-    get_grating_changes, _get_static_visual_stimuli
-
-IMAGES_CHANGE_LOG = [
-    (('im111', 'im111'), ('im053', 'im053'), 4.475209915492957, 229),
-    (('im053', 'im053'), ('im111', 'im111'), 16.250224375586853, 965),
-    (('im111', 'im111'), ('im037', 'im037'), 22.876219192488264, 1379),
-]
-
-EXPECTED_IMAGES_CHANGES = [
-    {
-        'frame': 229,
-        'time': 4.475209915492957,
-        'image_category': 'im053',
-        'image_name': 'im053',
-        'prior_image_category': 'im111',
-        'prior_image_name': 'im111',
-    },
-    {
-        'frame': 965,
-        'time': 16.250224375586853,
-        'image_category': 'im111',
-        'image_name': 'im111',
-        'prior_image_category': 'im053',
-        'prior_image_name': 'im053',
-    },
-    {
-        'frame': 1379,
-        'time': 22.876219192488264,
-        'image_category': 'im037',
-        'image_name': 'im037',
-        'prior_image_category': 'im111',
-        'prior_image_name': 'im111',
-    },
-]
-
-GRATING_CHANGE_LOG = [
-    (('group0', 0), ('group1', 90), 6.558310159624413, 367),
-    (('group1', 90), ('group0', 0), 16.127468169014083, 965),
-    (('group0', 0), ('group1', 90), 21.279577840375588, 1287),
-]
-
-EXPECTED_GRATING_CHANGES = [
-    {
-        'frame': 367,
-        'time': 6.558310159624413,
-        'orientation': 90,
-        'prior_orientation': 0,
-    },
-    {
-        'frame': 965,
-        'time': 16.127468169014083,
-        'orientation': 0,
-        'prior_orientation': 90,
-    },
-    {
-        'frame': 1287,
-        'time': 21.279577840375588,
-        'orientation': 90,
-        'prior_orientation': 0,
-    },
-]
+from visual_behavior.translator.foraging2 import extract
+from visual_behavior.translator.foraging2 import extract_stimuli
 
 
-def test_get_image_changes():
-    changes = get_image_changes(IMAGES_CHANGE_LOG)
-    assert changes == EXPECTED_IMAGES_CHANGES
+@pytest.mark.parametrize("set_frame, expected", [
+    (237, "im040", ),
+    (800, "im037", ),
+    (9753, "im046", ),
+])
+def test__resolve_image_category(foraging2_data_stage_0_2018_05_16, set_frame, expected):
+    change_log = foraging2_data_stage_0_2018_05_16["items"]["behavior"]["stimuli"]["images"]["change_log"]
+    assert extract_stimuli._resolve_image_category(change_log, set_frame) == expected
 
 
-def test_get_grating_changes():
-    changes = get_grating_changes(GRATING_CHANGE_LOG)
-    assert changes == EXPECTED_GRATING_CHANGES
+@pytest.mark.parametrize("idx, start_frame, last_trial_frame, expected", [
+    (0, 0, 20000, (0, 237, ), ),
+    (1, 238, 20000, (238, 800, ), ),
+    (21, 19128, 20000, (19128, 20000, ), ),
+])
+def test__get_stimulus_epoch(foraging2_data_stage_0_2018_05_16, idx, start_frame, last_trial_frame, expected):
+    set_log = foraging2_data_stage_0_2018_05_16["items"]["behavior"]["stimuli"]["images"]["set_log"]
+    assert extract_stimuli._get_stimulus_epoch(set_log, idx, start_frame, last_trial_frame) == expected
 
 
-def test__get_static_visual_stimuli(
-        foraging2_data_stage0_2018_05_10,
-        foraging2_expected_visual_stimuli_stage0_2018_05_10
-):
-    stim_dict = foraging2_data_stage0_2018_05_10["items"]["behavior"]["stimuli"]["grating"]
+@pytest.mark.parametrize("args, expected", [
+    (
+        (
+            ([1] * 3 + [0] * 5 + [1] * 4 + [0] * 11 + [1] * 2),
+            5,
+            22,
+        ),
+        [(8, 12, ), ],
+    ),
+    (
+        (
+            ([1] * 3 + [0] * 5 + [1] * 4 + [0] * 11 + [1] * 2 + [0] * 10),
+            0,
+            25,
+        ),
+        [(0, 3, ), (8, 12, ), (23, 25, ), ],
+    ),
+    (
+        (
+            [0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, ],
+            0,
+            12,
+        ),
+        [(1, 2, ), (3, 5, ), (6, 11, ), ],
+    ),
+])
+def test__get_draw_epochs(args, expected):
+    assert extract_stimuli._get_draw_epochs(*args) == expected
+
+
+def test_get_visual_stimuli(foraging2_data_stage_0_2018_05_16):
+    expected = pd.DataFrame(data=[
+        {
+            "duration": 0.24021686678929832,
+            "end_frame": 19,
+            "frame": 4,
+            "image_category": "im111",
+            "image_name": "im111",
+            "orientation": np.nan,
+            "time": 0.06456185853540397,
+        },
+        {
+            "duration": 0.25631751922853896,
+            "end_frame": 67,
+            "frame": 51,
+            "image_category": "im111",
+            "image_name": "im111",
+            "orientation": np.nan,
+            "time": 0.8165832663787371,
+        },
+        {
+            "duration": 0.2400167541733691,
+            "end_frame": 113,
+            "frame": 98,
+            "image_category": "im111",
+            "image_name": "im111",
+            "orientation": np.nan,
+            "time": 1.568588749344226,
+        },
+    ])
+
+    stimuli = foraging2_data_stage_0_2018_05_16["items"]["behavior"]["stimuli"]
+    time = extract.get_time(foraging2_data_stage_0_2018_05_16)
 
     pd.testing.assert_frame_equal(
-        _get_static_visual_stimuli(stim_dict),
-        foraging2_expected_visual_stimuli_stage0_2018_05_10,
+        pd.DataFrame(data=extract_stimuli.get_visual_stimuli(stimuli, time)[:3]),
+        expected,
         check_column_type=False,
         check_index_type=False,
         check_dtype=False,
         check_like=True
     )
+
+
+# def test_wut():
+#     from visual_behavior.translator.foraging2 import data_to_change_detection_core
+#
+#     datapath = r'\\allen\aibs\mpe\Software\data\behavior\validation\stage_4\doc_images_efd6ed0_StupidDoCMouse.pkl'
+#     data = pd.read_pickle(datapath)
+#     core_data = data_to_change_detection_core(data)
+#     periodic_flash = core_data['metadata']['params']['periodic_flash']
+#
+#     print validate_flash_blank_durations(core_data['visual_stimuli'], periodic_flash)
+#     assert False
