@@ -52,8 +52,8 @@ class _TestSchema1(base.PandasSchemaBase):
 def test_dumps_loads_PandasSchemaBase(input, many, schema):
     if isinstance(input, pd.Series):
         pd.testing.assert_series_equal(
-            schema.loads(schema.dumps(input, many=many).data, many=many).data,
-            input,
+            schema.loads(schema.dumps(input, many=many).data, many=many).data.sort_index(),
+            input.sort_index(),
             check_index_type=False,
             check_dtype=False
         )
