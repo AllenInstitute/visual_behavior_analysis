@@ -670,11 +670,11 @@ def get_even_sampling(data):
         True if even_sampling is enabled
     """
 
-    stim = data['items']['behavior']['stimuli'].values()[0]
-    if stim['obj_type'].lower() == 'docimagestimulus' and stim['sampling'] in ['even', 'file']:
-        return True
-    else:
-        return False
+    stimuli = data['items']['behavior']['stimuli']
+    for stimuli_group_name, stim in iteritems(stimuli):
+        if stim['obj_type'].lower() == 'docimagestimulus' and stim['sampling'] in ['even', 'file']:
+            return True
+    return False
 
 
 def get_running_speed(exp_data, smooth=False, time=None):
