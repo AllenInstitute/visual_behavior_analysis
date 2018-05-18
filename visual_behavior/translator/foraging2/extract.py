@@ -656,6 +656,27 @@ def get_response_window(data):
         .get("response_window")
 
 
+def get_even_sampling(data):
+    """Get status of even_sampling
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    bool:
+        True if even_sampling is enabled
+    """
+
+    stim = data['items']['behavior']['stimuli'].values()[0]
+    if stim['obj_type'].lower() == 'docimagestimulus' and stim['sampling'] in ['even', 'file']:
+        return True
+    else:
+        return False
+
+
 def get_running_speed(exp_data, smooth=False, time=None):
     """Get running speed
 
