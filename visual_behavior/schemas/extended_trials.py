@@ -76,3 +76,4 @@ class ExtendedTrialSchema(TrialSchema):
     day = fields.Integer(strict=True)
     hour = fields.Integer(strict=True)
     dayofweek = fields.Integer(strict=True)
+    behavior_session_uuid = fields.String()

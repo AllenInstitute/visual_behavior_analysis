@@ -12,7 +12,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stage, get_reward_volume, get_auto_reward_volume, get_warm_up_trials, \
     get_stimulus_window, get_volume_limit, get_failure_repeats, \
     get_catch_frequency, get_free_reward_trials, get_min_no_lick_time, \
-    get_max_session_duration, get_abort_on_early_response, \
+    get_max_session_duration, get_abort_on_early_response, get_session_id, \
     get_even_sampling
 
 
@@ -162,6 +162,7 @@ def data_to_metadata(data):
         "abort_on_early_response": get_abort_on_early_response(data),
         "initial_blank_duration": get_initial_blank_duration(data),
         "even_sampling_enabled": get_even_sampling(data),
+        "behavior_session_uuid": get_session_id(data),
     }
 
 
