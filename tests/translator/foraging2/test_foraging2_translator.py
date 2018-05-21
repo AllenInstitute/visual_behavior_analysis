@@ -138,6 +138,7 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             "abort_on_early_response": None,
             "initial_blank_duration": 0.0,
             'even_sampling_enabled': False,
+            "behavior_session_uuid": '',
         }
 
 

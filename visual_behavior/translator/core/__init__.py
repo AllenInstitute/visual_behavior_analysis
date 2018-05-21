@@ -43,6 +43,7 @@ def create_extended_dataframe(trials, metadata, licks, time):
         'stimulus': 'stimulus',
         'distribution_mean': 'delta_mean',
         'computer_name': 'computer_name',
+        'behavior_session_uuid': 'behavior_session_uuid',
     }
 
     annotate.annotate_parameters(trials, metadata, keydict=keydict, inplace=True)
