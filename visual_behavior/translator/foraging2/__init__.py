@@ -117,7 +117,6 @@ def data_to_metadata(data):
         n_stimulus_frames += sum(stim_table.get("draw_log", []))
 
     params["response_window"] = list(params["response_window"])  # tuple to list
-    params["periodic_flash"] = list(params["periodic_flash"])  # tuple to list
 
     # ugly python3 compat dict key iterating...
     try:

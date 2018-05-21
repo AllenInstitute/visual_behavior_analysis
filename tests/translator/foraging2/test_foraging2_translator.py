@@ -103,7 +103,7 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
                 'volume_limit': 1.5,
                 'catch_freq': 0.5,
                 'max_task_duration_min': 60.0,
-                'periodic_flash': [0.25, 0.5],
+                'periodic_flash': (0.25, 0.5),
                 'nidevice': 'Dev1',
                 'stimulus_window': 6.0,
                 'pre_change_time': 2.25,
