@@ -172,8 +172,8 @@ def count_stimuli_per_trial(trials, visual_stimuli):
 
         #get the index of the first stimulus that started on or before the trial start 
         start_stim=visual_stimuli[
-                (visual_stimuli.frame<=trial.startframe)&
-                (visual_stimuli.end_frame>=trial.startframe)
+                (visual_stimuli.frame<=trial.startframe+1)&
+                (visual_stimuli.end_frame>=trial.startframe+1)
             ].index[-1]
 
         #get the index of the last stimulus that ended on or before the trial end
@@ -844,7 +844,7 @@ def validate_change_frame_at_flash_onset(trials, visual_stimuli,periodic_flash):
         return True
     else:
         # get all non-null change frames
-        change_frames = trials[~pd.isnull(trials['change_frame'])]['change_frame'].values
+        change_frames = trials[~pd.isnull(trials['change_frame'])]['change_frame'].values+1
 
         # confirm that all change frames coincide with flash onsets in the visual stimulus log
         return all(np.in1d(change_frames, visual_stimuli['frame']))
