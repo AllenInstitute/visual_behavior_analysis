@@ -194,20 +194,9 @@ def count_stimuli_per_trial(trials, visual_stimuli):
 
 def fix_periodic_flash(pf):
         '''
-        temporary patch to deal with core_data['metadata']['params']['periodic_flash']=[u'N', u'o', u'n', u'e'] or 'None'
+        deal with core_data['metadata']['params']['periodic_flash']='None'
         '''
-        if type(pf) == list:
-            if pf[0] == 'N':
-                return None
-            else:
-                return pf
-        elif type(pf) == str or type(pf) == unicode:
-            if pf.lower() == 'none':
-                return None
-            else:
-                return pf
-        else:
-            return pf
+        return None if pf.lower() == 'none' else pf
 
 
 # test functions
