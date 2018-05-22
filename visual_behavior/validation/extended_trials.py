@@ -41,13 +41,18 @@ def get_first_lick_in_response_window(row, tolerance=0.01):
     returns first lick that falls in response window, nan if no such lick
     exists
     '''
-    licks = np.array(row['lick_times']) - row['change_time']
-    licks_in_window = licks[
-        np.logical_and(
-            licks >= row['response_window'][0] - tolerance,
-            licks <= row['response_window'][1],
-        )
-    ]
+    # only look for licks in window if there were licks and a change time
+    if len(row['lick_times']) > 0 and not pd.isnull(row['change_time']):
+        licks = np.array(row['lick_times']) - row['change_time']
+        licks_in_window = licks[
+            np.logical_and(
+                licks >= row['response_window'][0] - tolerance,
+                licks <= row['response_window'][1],
+            )
+        ]
+    else:
+        licks_in_window = []
+
     if len(licks_in_window) > 0:
         return licks_in_window[0]
     else:
