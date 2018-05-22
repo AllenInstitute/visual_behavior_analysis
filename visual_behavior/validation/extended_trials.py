@@ -196,7 +196,7 @@ def fix_periodic_flash(pf):
         '''
         deal with core_data['metadata']['params']['periodic_flash']='None'
         '''
-        return None if pf.lower() == 'none' else pf
+        return None if pf == 'None' else pf
 
 
 # test functions

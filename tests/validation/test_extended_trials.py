@@ -253,24 +253,26 @@ def test_validate_flash_blank_durations():
 def test_validate_two_stimuli_per_go_trial():
     # good data: two stimulus categoris per go trial
     GOOD_DATA_TRIALS = pd.DataFrame({
-        'startframe': [1, 3],
-        'endframe': [2, 4],
+        'startframe': [1, 11],
+        'endframe': [10, 20],
         'trial_type': ['go', 'go']
     })
     GOOD_DATA_VISUAL_STIMULI = pd.DataFrame({
-        'frame': [1, 2, 3, 4],
+        'frame': [1, 5, 10, 15],
+        'end_frame': [3, 8, 13, 18],
         'image_category': ['a', 'b', 'a', 'b']
     })
     assert validate_two_stimuli_per_go_trial(GOOD_DATA_TRIALS, GOOD_DATA_VISUAL_STIMULI) == True
 
     # bad data: only one stimulus group on second go trial
     BAD_DATA_TRIALS = pd.DataFrame({
-        'startframe': [1, 3],
-        'endframe': [2, 4],
+        'startframe': [1, 11],
+        'endframe': [10, 20],
         'trial_type': ['go', 'go']
     })
     BAD_DATA_VISUAL_STIMULI = pd.DataFrame({
-        'frame': [1, 2, 3, 4],
+        'frame': [1, 5, 10, 15],
+        'end_frame': [3, 8, 13, 18],
         'image_category': ['a', 'b', 'a', 'a']
     })
     assert validate_two_stimuli_per_go_trial(BAD_DATA_TRIALS, BAD_DATA_VISUAL_STIMULI) == False
@@ -279,24 +281,26 @@ def test_validate_two_stimuli_per_go_trial():
 def test_validate_one_stimulus_per_catch_trial():
     # good data: only one stimulus group per catch trial
     GOOD_DATA_TRIALS = pd.DataFrame({
-        'startframe': [1, 3],
-        'endframe': [2, 4],
+        'startframe': [1, 11],
+        'endframe': [10, 20],
         'trial_type': ['catch', 'catch']
     })
     GOOD_DATA_VISUAL_STIMULI = pd.DataFrame({
-        'frame': [1, 2, 3, 4],
+        'frame': [1, 5, 10, 15],
+        'end_frame': [3, 8, 13, 18],
         'image_category': ['a', 'a', 'a', 'a']
     })
     assert validate_one_stimulus_per_catch_trial(GOOD_DATA_TRIALS, GOOD_DATA_VISUAL_STIMULI) == True
 
     # bad data: two stimulus group on first catch trial
     BAD_DATA_TRIALS = pd.DataFrame({
-        'startframe': [1, 3],
-        'endframe': [2, 4],
+        'startframe': [1, 11],
+        'endframe': [10, 20],
         'trial_type': ['catch', 'catch']
     })
     BAD_DATA_VISUAL_STIMULI = pd.DataFrame({
-        'frame': [1, 2, 3, 4],
+        'frame': [1, 5, 10, 15],
+        'end_frame': [3, 8, 13, 18],
         'image_category': ['a', 'b', 'a', 'a']
     })
     assert validate_one_stimulus_per_catch_trial(BAD_DATA_TRIALS, BAD_DATA_VISUAL_STIMULI) == False
@@ -305,24 +309,26 @@ def test_validate_one_stimulus_per_catch_trial():
 def test_validate_one_stimulus_per_aborted_trial():
     # good data: only one stimulus group per aborted trial
     GOOD_DATA_TRIALS = pd.DataFrame({
-        'startframe': [1, 3],
-        'endframe': [2, 4],
+        'startframe': [1, 11],
+        'endframe': [10, 20],
         'trial_type': ['aborted', 'aborted']
     })
     GOOD_DATA_VISUAL_STIMULI = pd.DataFrame({
-        'frame': [1, 2, 3, 4],
+        'frame': [1, 5, 10, 15],
+        'end_frame': [3, 8, 13, 18],
         'image_category': ['a', 'a', 'a', 'a']
     })
     assert validate_one_stimulus_per_aborted_trial(GOOD_DATA_TRIALS, GOOD_DATA_VISUAL_STIMULI) == True
 
     # bad data: two stimulus group on first aborted trial
     BAD_DATA_TRIALS = pd.DataFrame({
-        'startframe': [1, 3],
-        'endframe': [2, 4],
+        'startframe': [1, 11],
+        'endframe': [10, 20],
         'trial_type': ['aborted', 'aborted']
     })
     BAD_DATA_VISUAL_STIMULI = pd.DataFrame({
-        'frame': [1, 2, 3, 4],
+        'frame': [1, 5, 10, 15],
+        'end_frame': [3, 8, 13, 18],
         'image_category': ['a', 'b', 'a', 'a']
     })
     assert validate_one_stimulus_per_aborted_trial(BAD_DATA_TRIALS, BAD_DATA_VISUAL_STIMULI) == False
@@ -330,22 +336,23 @@ def test_validate_one_stimulus_per_aborted_trial():
 
 def test_validate_change_frame_at_flash_onset():
     # good data: changes coincide with flashes
+    PERIODIC_FLASH=[0.25,0.5]
     GOOD_DATA_TRIALS = pd.DataFrame({
         'change_frame': [10, 20, 30],
     })
     GOOD_DATA_VISUAL_STIMULI = pd.DataFrame({
-        'frame': [10, 20, 30],
+        'frame': [11, 21, 31],
     })
-    assert validate_change_frame_at_flash_onset(GOOD_DATA_TRIALS, GOOD_DATA_VISUAL_STIMULI) == True
+    assert validate_change_frame_at_flash_onset(GOOD_DATA_TRIALS, GOOD_DATA_VISUAL_STIMULI,PERIODIC_FLASH) == True
 
     # bad data: 3rd change does not coincide with flash
     BAD_DATA_TRIALS = pd.DataFrame({
         'change_frame': [10, 20, 31],
     })
     BAD_DATA_VISUAL_STIMULI = pd.DataFrame({
-        'frame': [10, 20, 30],
+        'frame': [11, 21, 31],
     })
-    assert validate_change_frame_at_flash_onset(BAD_DATA_TRIALS, BAD_DATA_VISUAL_STIMULI) == False
+    assert validate_change_frame_at_flash_onset(BAD_DATA_TRIALS, BAD_DATA_VISUAL_STIMULI,PERIODIC_FLASH) == False
 
 
 def test_validate_initial_blank():
