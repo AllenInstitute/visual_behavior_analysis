@@ -36,7 +36,7 @@ def get_warmup_trials(trials):
         return pd.DataFrame()
 
 
-def get_first_lick_in_response_window(row,tolerance=0.01):
+def get_first_lick_in_response_window(row, tolerance=0.01):
     '''
     returns first lick that falls in response window, nan if no such lick
     exists
@@ -44,7 +44,7 @@ def get_first_lick_in_response_window(row,tolerance=0.01):
     licks = np.array(row['lick_times']) - row['change_time']
     licks_in_window = licks[
         np.logical_and(
-            licks >= row['response_window'][0]-tolerance,
+            licks >= row['response_window'][0] - tolerance,
             licks <= row['response_window'][1],
         )
     ]
@@ -53,19 +53,21 @@ def get_first_lick_in_response_window(row,tolerance=0.01):
     else:
         return np.nan
 
-def identify_licks_in_response_window(row,tolerance=0.01):
+
+def identify_licks_in_response_window(row, tolerance=0.01):
     '''a method for counting licks in the response window'''
     if len(row['lick_times']) > 0 and pd.isnull(row['change_time']) == False:
         licks_relative_to_change = np.array(row['lick_times']) - row['change_time']
         licks_in_window = licks_relative_to_change[
             np.logical_and(
-                licks_relative_to_change >= row['response_window'][0]-tolerance,
+                licks_relative_to_change >= row['response_window'][0] - tolerance,
                 licks_relative_to_change <= row['response_window'][1]
             )
         ]
         return len(licks_in_window)
     else:
         return 0
+
 
 def get_first_lick_relative_to_change(row):
     '''
@@ -133,25 +135,27 @@ def fix_visual_stimuli(core_data):
     #patch end_frame in core_data['visual_stimuli']
     #lets us move ahead while awaiting a fix to https://github.com/AllenInstitute/visual_behavior_analysis/issues/156
     '''
-    trials=core_data['trials']
-    core_data['visual_stimuli'].at[core_data['visual_stimuli'].index[-1],'end_frame']=trials.iloc[-1].endframe
+    trials = core_data['trials']
+    core_data['visual_stimuli'].at[core_data['visual_stimuli'].index[-1], 'end_frame'] = trials.iloc[-1].endframe
     return core_data
+
 
 def scrub_first_lick(trials):
     '''
     Currently, when building the extended trial dataframe, a lick that occurs on the last frame of a trial
     gets attributed both to that trial and the next. See: https://github.com/AllenInstitute/visual_behavior_analysis/issues/146
-    
+
     Until that issue is resolved, this method will remove any licks that coincide with the first frame of a given trial
     '''
-    for idx,trial in trials.iterrows():
-        if len(trial['lick_frames'])>0 and trial['lick_frames'][0]==trial['startframe']:
+    for idx, trial in trials.iterrows():
+        if len(trial['lick_frames']) > 0 and trial['lick_frames'][0] == trial['startframe']:
             # in rare cases, a lick can legitimately land on the first frame, in which case we don't want to remove it
             # in those cases, the trial would have been one frame long. Only remove licks when that is not the case
-            if trial['startframe']!=trial['endframe']:
-                trials.at[idx,'lick_frames']=trial['lick_frames'][1:]
-                trials.at[idx,'lick_times']=trial['lick_times'][1:]
+            if trial['startframe'] != trial['endframe']:
+                trials.at[idx, 'lick_frames'] = trial['lick_frames'][1:]
+                trials.at[idx, 'lick_times'] = trial['lick_times'][1:]
     return trials
+
 
 def count_stimuli_per_trial(trials, visual_stimuli):
     '''
@@ -170,34 +174,35 @@ def count_stimuli_per_trial(trials, visual_stimuli):
         elif all(pd.isnull(visual_stimuli.orientation)) == False:
             col_to_check = 'orientation'
 
-        #get the index of the first stimulus that started on or before the trial start 
-        start_stim=visual_stimuli[
-                (visual_stimuli.frame<=trial.startframe+1)&
-                (visual_stimuli.end_frame>=trial.startframe+1)
-            ].index[-1]
+        # get the index of the first stimulus that started on or before the trial start
+        start_stim = visual_stimuli[
+            (visual_stimuli.frame <= trial.startframe + 1) &
+            (visual_stimuli.end_frame >= trial.startframe + 1)
+        ].index[-1]
 
-        #get the index of the last stimulus that ended on or before the trial end
-        end_stim=visual_stimuli[
-                (visual_stimuli.frame<=trial.endframe)
-            ].index[-1]
+        # get the index of the last stimulus that ended on or before the trial end
+        end_stim = visual_stimuli[
+            (visual_stimuli.frame <= trial.endframe)
+        ].index[-1]
 
-        #get all unique stimuli on this trial
+        # get all unique stimuli on this trial
         stimuli = np.unique(visual_stimuli.loc[start_stim:end_stim][col_to_check])
         # add to array
         stimuli_per_trial[idx] = len(stimuli)
     return stimuli_per_trial
 
+
 def fix_periodic_flash(pf):
         '''
         temporary patch to deal with core_data['metadata']['params']['periodic_flash']=[u'N', u'o', u'n', u'e'] or 'None'
         '''
-        if type(pf)==list:
-            if pf[0]=='N':
+        if type(pf) == list:
+            if pf[0] == 'N':
                 return None
             else:
                 return pf
-        elif type(pf)==str or type(pf)==unicode:
-            if pf.lower()=='none':
+        elif type(pf) == str or type(pf) == unicode:
+            if pf.lower() == 'none':
                 return None
             else:
                 return pf
@@ -400,7 +405,7 @@ def validate_lick_before_scheduled_on_aborted_trials(trials):
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, every aborted trial should have a lick before the scheduled change time
     '''
-    flash_blank_buffer=0.75 #allow licks to come this long after scheduled change time without failing validation
+    flash_blank_buffer = 0.75  # allow licks to come this long after scheduled change time without failing validation
     aborted_trials = trials[trials.trial_type == 'aborted']
     # can only run this test if there are aborted trials
     if len(aborted_trials) > 0:
@@ -415,7 +420,7 @@ def validate_lick_before_scheduled_on_aborted_trials(trials):
         return True
 
 
-def validate_lick_after_scheduled_on_go_catch_trials(trials,abort_on_early_response):
+def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, no non-aborted trials should have a lick before the scheduled change time,
@@ -423,7 +428,7 @@ def validate_lick_after_scheduled_on_go_catch_trials(trials,abort_on_early_respo
     '''
     nonaborted_trials = trials[trials.trial_type != 'aborted']
     # We can only check this if there is at least 1 nonaborted trial.
-    if abort_on_early_response==True and len(nonaborted_trials) > 0:
+    if abort_on_early_response == True and len(nonaborted_trials) > 0:
         first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
         # use nanmin
         if np.nanmin(first_lick.values) < 0:
@@ -431,7 +436,7 @@ def validate_lick_after_scheduled_on_go_catch_trials(trials,abort_on_early_respo
         else:
             return True
     # if there are no nonaborted trials, just return True
-    elif abort_on_early_response==False or len(nonaborted_trials) == 0:
+    elif abort_on_early_response == False or len(nonaborted_trials) == 0:
         return True
 
 
@@ -461,21 +466,21 @@ def validate_initial_matches_final(trials):
         return True
 
 
-def validate_first_lick_after_change_on_nonaborted(trials,abort_on_early_response):
+def validate_first_lick_after_change_on_nonaborted(trials, abort_on_early_response):
     '''
     on GO and CATCH trials, licks should never be observed between the trial start and the first frame of an image change,
     except when abort_on_early_response == False
     '''
     non_aborted_trials = trials[trials.trial_type != 'aborted']
     # we can only validate this if there is at least one nonaborted trial
-    if abort_on_early_response==True and len(non_aborted_trials) > 0:
+    if abort_on_early_response == True and len(non_aborted_trials) > 0:
         first_lick_relative_to_change = non_aborted_trials.apply(get_first_lick_relative_to_change, axis=1)
         if np.nanmin(first_lick_relative_to_change.values) < 0:
             return False
         else:
             return True
     # if no nonaborted trials, just return True
-    elif abort_on_early_response==False or len(non_aborted_trials) == 0:
+    elif abort_on_early_response == False or len(non_aborted_trials) == 0:
         return True
 
 
@@ -757,8 +762,7 @@ def validate_even_sampling(trials, even_sampling_enabled):
     Note that even sampling only applies to images, so this does not need to be written to deal with grating stimuli
     '''
     nonaborted_trials = trials[trials['trial_type'] != 'aborted']
-    if even_sampling_enabled == True and len(nonaborted_trials)>0:
-        
+    if even_sampling_enabled == True and len(nonaborted_trials) > 0:
         # build a table with the counts of all combinations
         transition_matrix = pd.pivot_table(
             nonaborted_trials,
@@ -768,14 +772,14 @@ def validate_even_sampling(trials, even_sampling_enabled):
             aggfunc=np.size,
             fill_value=0,
         )
-        sample_range=abs(transition_matrix.values.max() - transition_matrix.values.min())
+        sample_range = abs(transition_matrix.values.max() - transition_matrix.values.min())
         # Return true if the range of max to min is less than or equal to 1 AND sum of values matches trial number
         return sample_range <= 1 and transition_matrix.sum().sum() == len(nonaborted_trials)
     else:
         return True
 
 
-def validate_flash_blank_durations(visual_stimuli, periodic_flash, mean_tolerance=1/60.,std_tolerance=1/60.):
+def validate_flash_blank_durations(visual_stimuli, periodic_flash, mean_tolerance=1 / 60., std_tolerance=1 / 60.):
     '''
     The duty cycle of the stimulus onset/offset is maintained across trials
     (e.g., if conditions for ending a trial are met, the stimulus presentation is not truncated)
@@ -785,8 +789,6 @@ def validate_flash_blank_durations(visual_stimuli, periodic_flash, mean_toleranc
     Takes core_data['visual_stimuli'] as input
     '''
     if periodic_flash is not None:
-        expected_flash_duration = periodic_flash[0]
-        expected_blank_duration = periodic_flash[1]
         # get all blank durations
         blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
         blank_durations = blank_durations[~np.isnan(blank_durations)]
@@ -798,12 +800,12 @@ def validate_flash_blank_durations(visual_stimuli, periodic_flash, mean_toleranc
         # mean should be within tolernace of expected value
         # std should be within tolerance of 0
         blank_durations_consistent = np.logical_and(
-            np.isclose(flash_durations.mean(),periodic_flash[0],atol=mean_tolerance),
-            np.isclose(flash_durations.std(),0,atol=std_tolerance)
+            np.isclose(flash_durations.mean(), periodic_flash[0], atol=mean_tolerance),
+            np.isclose(flash_durations.std(), 0, atol=std_tolerance)
         )
         flash_durations_consistent = np.logical_and(
-            np.isclose(blank_durations.mean(),periodic_flash[1],atol=mean_tolerance),
-            np.isclose(blank_durations.std(),0,atol=std_tolerance)
+            np.isclose(blank_durations.mean(), periodic_flash[1], atol=mean_tolerance),
+            np.isclose(blank_durations.std(), 0, atol=std_tolerance)
         )
 
         return blank_durations_consistent and flash_durations_consistent
@@ -836,7 +838,7 @@ def validate_one_stimulus_per_aborted_trial(trials, visual_stimuli):
     return all(stimuli_per_trial == 1)
 
 
-def validate_change_frame_at_flash_onset(trials, visual_stimuli,periodic_flash):
+def validate_change_frame_at_flash_onset(trials, visual_stimuli, periodic_flash):
     '''
     if `periodic_flash` is not null, changes should always coincide with a stimulus onset
     '''
@@ -844,7 +846,7 @@ def validate_change_frame_at_flash_onset(trials, visual_stimuli,periodic_flash):
         return True
     else:
         # get all non-null change frames
-        change_frames = trials[~pd.isnull(trials['change_frame'])]['change_frame'].values+1
+        change_frames = trials[~pd.isnull(trials['change_frame'])]['change_frame'].values + 1
 
         # confirm that all change frames coincide with flash onsets in the visual stimulus log
         return all(np.in1d(change_frames, visual_stimuli['frame']))
@@ -858,7 +860,7 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
     '''
 
     # this test doesn't make sense for static stimuli with no initial blank. just return True
-    if fix_periodic_flash(periodic_flash) is None and initial_blank==0:
+    if fix_periodic_flash(periodic_flash) is None and initial_blank == 0:
         return True
     else:
         # preallocate array
