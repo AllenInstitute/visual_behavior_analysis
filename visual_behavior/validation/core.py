@@ -27,5 +27,5 @@ def validate_minimal_dropped_frames(core_data, allowable_fraction_dropped=0.01):
     ensures that no more than `allowable_fraction_dropped` frames are greater than 2/60. seconds long
     '''
     intervals = np.diff(core_data['time'])
-    fraction_dropped = len(intervals[intervals >= (2 / 60.)]) / len(intervals)
+    fraction_dropped = 1.0*len(intervals[intervals >= (2 / 60.)]) / len(intervals)
     return fraction_dropped <= allowable_fraction_dropped

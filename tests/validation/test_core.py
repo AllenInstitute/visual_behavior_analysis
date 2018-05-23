@@ -54,4 +54,4 @@ def test_validate_minimal_dropped_frames():
     BAD_DATA = pd.DataFrame({
         'time': [0, 1. / 60, 3. / 60, 4. / 60]
     })
-    assert validate_minimal_dropped_frames(BAD_DATA) == True
+    assert validate_minimal_dropped_frames(BAD_DATA) == False
