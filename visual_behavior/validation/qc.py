@@ -94,7 +94,7 @@ def define_validation_functions(core_data):
         et.validate_flash_blank_durations: (core_data['visual_stimuli'], PERIODIC_FLASH,),  # this one doesn't take trials
         cd.validate_running_data: (core_data,),  # this one doesn't take trials
         cd.validate_licks: (core_data,),  # this one doesn't take trials
-        cd.validate_minimal_dropped_frames:(core_data,), # this one doesn't take trials
+        cd.validate_minimal_dropped_frames: (core_data,),  # this one doesn't take trials
         # f2.validate_frame_intervals_exists:(data), # this one doesn't take trials
     }
 
