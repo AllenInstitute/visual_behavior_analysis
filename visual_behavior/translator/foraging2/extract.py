@@ -366,10 +366,10 @@ def annotate_stimuli(trial, stimuli):
             delta_orientation = np.nan
 
         return {
-            "initial_image_category": None,
-            "initial_image_name": None,
-            "change_image_name": None,
-            "change_image_category": None,
+            "initial_image_category": '',
+            "initial_image_name": '',
+            "change_image_name": '',
+            "change_image_category": '',
             "change_orientation": change_orientation,
             "change_contrast": change_contrast,
             "initial_orientation": initial_orientation,
@@ -412,9 +412,9 @@ def _resolve_initial_image(stimuli, start_frame):
         name of the initial image
     """
     max_frame = float("-inf")
-    initial_image_group = None
-    initial_image_name = None
-    intial_image_category_name = None
+    initial_image_group = ''
+    initial_image_name = ''
+    initial_image_category_name = ''
 
     for stim_category_name, stim_dict in iteritems(stimuli):
         for set_event in stim_dict["set_log"]:
@@ -422,10 +422,10 @@ def _resolve_initial_image(stimuli, start_frame):
             if set_frame <= start_frame and set_frame >= max_frame:
                 initial_image_group = initial_image_name = set_event[1]  # hack assumes initial_image_group == initial_image_name, only initial_image_name is present for natual_scenes
                 # initial_image_group, initial_image_name = change_event[0]
-                intial_image_category_name = stim_category_name
+                initial_image_category_name = stim_category_name
                 max_frame = set_frame
 
-    return intial_image_category_name, initial_image_group, initial_image_name
+    return initial_image_category_name, initial_image_group, initial_image_name
 
 
 def _get_stimulus_attr_changes(stim_dict, change_frame, first_frame, last_frame):
