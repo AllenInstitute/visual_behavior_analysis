@@ -1222,7 +1222,7 @@ def get_initial_blank_duration(data):
     float or None
         blank duration in seconds or None if not found
     """
-    return data["items"]["behavior"]["config"]["DoC"]["initial_blank"
+    return data["items"]["behavior"]["config"]["DoC"]["initial_blank"]
 
 
 def get_stage(data):
