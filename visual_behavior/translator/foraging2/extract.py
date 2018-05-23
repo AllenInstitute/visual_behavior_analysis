@@ -1222,7 +1222,7 @@ def get_initial_blank_duration(data):
     float or None
         blank duration in seconds or None if not found
     """
-    return data["items"]["behavior"]["config"].get("DoC", {}).get("initial_blank")
+    return data["items"]["behavior"]["config"]["DoC"]["initial_blank"
 
 
 def get_stage(data):
@@ -1254,7 +1254,7 @@ def get_reward_volume(data):
     float or None
         reward volume per reward or None if not found
     """
-    return data["items"]["behavior"]["config"]["reward"].get("reward_volume")
+    return data["items"]["behavior"]["config"]["reward"]["reward_volume"]
 
 
 def get_auto_reward_volume(data):
@@ -1270,7 +1270,7 @@ def get_auto_reward_volume(data):
     float or None
         auto reward volume per reward or None if not found
     """
-    return data["items"]["behavior"]["config"]["DoC"].get("auto_reward_volume")
+    return data["items"]["behavior"]["config"]["DoC"]["auto_reward_volume"]
 
 
 def get_warm_up_trials(data):
@@ -1285,7 +1285,7 @@ def get_warm_up_trials(data):
     int or None
         number of warm up trials or None if not found
     """
-    return data["items"]["behavior"]["config"]["DoC"].get("warm_up_trials")
+    return data["items"]["behavior"]["config"]["DoC"]["warm_up_trials"]
 
 
 def get_stimulus_window(data):
@@ -1301,7 +1301,7 @@ def get_stimulus_window(data):
     float or None
         stimulus window
     """
-    return data["items"]["behavior"]["config"]["DoC"].get("stimulus_window")
+    return data["items"]["behavior"]["config"]["DoC"]["stimulus_window"]
 
 
 def get_volume_limit(data):
@@ -1317,7 +1317,7 @@ def get_volume_limit(data):
     float or None
         volume limit or None if not found
     """
-    return data["items"]["behavior"]["config"]["behavior"].get("volume_limit")
+    return data["items"]["behavior"]["config"]["behavior"]["volume_limit"]
 
 
 def get_failure_repeats(data):
@@ -1333,7 +1333,7 @@ def get_failure_repeats(data):
     int or None
         number of failure repeats or None if not found
     """
-    return data["items"]["behavior"]["config"]["DoC"].get("failure_repeats")
+    return data["items"]["behavior"]["config"]["DoC"]["failure_repeats"]
 
 
 def get_catch_frequency(data):
@@ -1349,7 +1349,7 @@ def get_catch_frequency(data):
     float or None
         catch frequency or None if not found
     """
-    return data["items"]["behavior"]["config"]["DoC"].get("catch_frequency")
+    return data["items"]["behavior"]["config"]["DoC"]["catch_freq"]
 
 
 def get_free_reward_trials(data):
@@ -1365,7 +1365,7 @@ def get_free_reward_trials(data):
     int or none
         number of free reward trials or None if not found
     """
-    return data["items"]["behavior"]["config"]["DoC"].get("free_reward_trials")
+    return data["items"]["behavior"]["config"]["DoC"]["free_reward_trials"]
 
 
 def get_min_no_lick_time(data):
@@ -1381,7 +1381,7 @@ def get_min_no_lick_time(data):
     float or none
         minimum no lick time or None if not found
     """
-    return data["items"]["behavior"]["config"]["DoC"].get("min_no_lick_time")
+    return data["items"]["behavior"]["config"]["DoC"]["min_no_lick_time"]
 
 
 def get_max_session_duration(data):
@@ -1397,7 +1397,7 @@ def get_max_session_duration(data):
     float or none
         max session duration (min) or None if not found
     """
-    return data["items"]["behavior"]["config"]["DoC"].get("max_task_duration_min")
+    return data["items"]["behavior"]["config"]["DoC"]["max_task_duration_min"]
 
 
 def get_abort_on_early_response(data):
@@ -1413,4 +1413,4 @@ def get_abort_on_early_response(data):
     boolean or none
         abort on early response boolean or None if not found
     """
-    return data["items"]["behavior"]["config"]["DoC"].get("abort_on_early_response")
+    return data["items"]["behavior"]["config"]["DoC"]["abort_on_early_response"]
