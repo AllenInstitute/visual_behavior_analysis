@@ -249,3 +249,13 @@ def test_data_to_visual_stimuli(
         check_like=True,
         check_names=False
     )
+
+
+def test_data_to_visual_stimuli_images(foraging2_data_stage4_2018_05_10):
+    visual_stimuli = foraging2.data_to_visual_stimuli(foraging2_data_stage4_2018_05_10)
+
+    pd.testing.assert_series_equal(
+        visual_stimuli['image_category'],
+        visual_stimuli['image_name'],
+        check_names=False,
+    )
