@@ -36,18 +36,21 @@ def get_warmup_trials(trials):
         return pd.DataFrame()
 
 
-def get_first_lick_in_response_window(row, tolerance=0.01):
+def get_first_lick_in_response_window(row, tolerance=0.01, tolerance_direction='inside'):
     '''
     returns first lick that falls in response window, nan if no such lick
     exists
     '''
     # only look for licks in window if there were licks and a change time
     if len(row['lick_times']) > 0 and not pd.isnull(row['change_time']):
+        left_edge = np.subtract(row['response_window'][0], tolerance) if tolerance_direction == 'outside' else np.add(row['response_window'][0], tolerance)
+        right_edge = np.add(row['response_window'][1], tolerance) if tolerance_direction == 'outside' else np.subtract(row['response_window'][1], tolerance)
+
         licks = np.array(row['lick_times']) - row['change_time']
         licks_in_window = licks[
             np.logical_and(
-                licks >= row['response_window'][0] - tolerance,
-                licks <= row['response_window'][1],
+                licks >= left_edge,
+                licks <= right_edge,
             )
         ]
     else:
@@ -59,14 +62,17 @@ def get_first_lick_in_response_window(row, tolerance=0.01):
         return np.nan
 
 
-def identify_licks_in_response_window(row, tolerance=0.01):
+def identify_licks_in_response_window(row, tolerance=0.01, tolerance_direction='inside'):
     '''a method for counting licks in the response window'''
     if len(row['lick_times']) > 0 and pd.isnull(row['change_time']) == False:
         licks_relative_to_change = np.array(row['lick_times']) - row['change_time']
+        left_edge = np.subtract(row['response_window'][0], tolerance) if tolerance_direction == 'outside' else np.add(row['response_window'][0], tolerance)
+        right_edge = np.add(row['response_window'][1], tolerance) if tolerance_direction == 'outside' else np.subtract(row['response_window'][1], tolerance)
+
         licks_in_window = licks_relative_to_change[
             np.logical_and(
-                licks_relative_to_change >= row['response_window'][0] - tolerance,
-                licks_relative_to_change <= row['response_window'][1]
+                licks_relative_to_change >= left_edge,
+                licks_relative_to_change <= right_edge
             )
         ]
         return len(licks_in_window)
@@ -198,10 +204,10 @@ def count_stimuli_per_trial(trials, visual_stimuli):
 
 
 def fix_periodic_flash(pf):
-        '''
-        deal with core_data['metadata']['params']['periodic_flash']='None'
-        '''
-        return None if pf == 'None' else pf
+    '''
+    deal with core_data['metadata']['params']['periodic_flash']='None'
+    '''
+    return None if pf == 'None' else pf
 
 
 # test functions
@@ -369,6 +375,8 @@ def validate_reward_follows_first_lick_in_window(trials, tolerance=0.01):
     first_lick_in_window = contingent_go_trials.apply(
         get_first_lick_in_response_window,
         axis=1,
+        tolerance=0.01,
+        tolerance_direction='inside'
     )
     first_lick_in_window.name = 'first_lick'
 
@@ -378,13 +386,10 @@ def validate_reward_follows_first_lick_in_window(trials, tolerance=0.01):
 
     # check that, whenever a first lick exists, a reward was given with tolerance
     for idx, row in pd.concat([first_lick_in_window, reward_time], axis=1).iterrows():
-        # if there was no lick, there should be no reward
-        if pd.isnull(row['first_lick']):
-            if len(row['reward_time'] > 0):
+        # if there was a lick, there should be a reward within tolerance
+        if ~pd.isnull(row['first_lick']) and len(row['reward_time'] == 0):
+            if abs(row['first_lick'] - row['reward_time'][0]) > tolerance:
                 return False
-        # if there was a lick, the reward should happen immediately
-        elif abs(row['first_lick'] - row['reward_time'][0]) > tolerance:
-            return False
 
     return True
 
@@ -537,7 +542,7 @@ def validate_catch_frequency(trials, expected_catch_frequency, rejection_probabi
         p=expected_catch_frequency,
     )
 
-    if probability_of_null_hypothesis < (1 - rejection_probability):
+    if probability_of_null_hypothesis > rejection_probability:
         return True
     else:
         return False
@@ -725,7 +730,8 @@ def validate_licks_on_go_trials_earn_reward(trials):
     '''
     all go trials with licks in response window should have 1 reward
     '''
-    number_of_licks_in_window = trials.apply(identify_licks_in_response_window, axis=1)
+    # note: make tolerance direction 'inside' to only look at licks that were unambiguously inside the window
+    number_of_licks_in_window = trials.apply(identify_licks_in_response_window, axis=1, tolerance=0.01, tolerance_direction='inside')
     number_of_rewards_on_go_lick_trials = trials[
         (number_of_licks_in_window > 0) &
         (trials['trial_type'] == 'go')
@@ -737,7 +743,8 @@ def validate_licks_on_catch_trials_do_not_earn_reward(trials):
     '''
     all catch trials with licks in window should have 0 rewards
     '''
-    number_of_licks_in_window = trials.apply(identify_licks_in_response_window, axis=1)
+    # note: make tolerance direction 'outside' to identify licks that may have been just outside the window, but counted at runtime
+    number_of_licks_in_window = trials.apply(identify_licks_in_response_window, axis=1, tolerance=0.01, tolerance_direction='outside')
     number_of_rewards_on_catch_lick_trials = trials[
         (number_of_licks_in_window > 0) &
         (trials['trial_type'] == 'catch')
@@ -850,7 +857,7 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
     '''
     iterates over trials
     Verifies that there is a blank screen of duration `initial_blank` at the start of every trial.
-    If initial blank is 0, first frame of flash should be coincident with trial start
+    If initial blank is 0, first frame of flash should be coincident with trial start (within 1 frame)
     '''
 
     # this test doesn't make sense for static stimuli with no initial blank. just return True
@@ -867,7 +874,7 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
             # get offset between trial start and first stimulus of frame
             first_stim_time_offset = visual_stimuli.loc[first_stim_index]['time'] - trial['starttime']
             # check to see if offset is within tolerance of expected blank
-            initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=tolerance)
+            initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=(tolerance + 1 / 60.))
         # ensure all initial blanks were within tolerance
         return all(initial_blank_in_tolerance)
 
