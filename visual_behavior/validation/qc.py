@@ -5,7 +5,16 @@ from . import core as cd
 from . import foraging2 as f2
 from ..translator.core import create_extended_dataframe
 
-warnings.warn('The following are turned off; remove this warning when done\n*valide_schema\n*validate_monotonically_decreasing_number_of_change_times')
+functions_yet_to_implement = [
+    
+]
+warnings.warn('The following are turned off; remove this warning when done {}'.format(
+    '\n'+
+    ' * validate_schema'+'\n'+
+    ' * validate_monotonically_decreasing_number_of_change_times'+'\n'+
+    ' * validate_frame_intervals_exists'
+))
+
 
 def define_validation_functions(core_data):
     '''
