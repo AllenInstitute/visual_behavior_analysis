@@ -2,7 +2,7 @@ import warnings
 import pandas as pd
 import numpy as np
 from scipy.signal import medfilt
-from ...utilities import calc_deriv, rad_to_dist
+from ...utilities import calc_deriv, rad_to_dist, local_time
 
 warnings.warn(
     "support for the loading stimulus_code outputs will be deprecated in a future version",
@@ -75,6 +75,11 @@ def load_metadata(data):
             metadata[field] = None
 
     metadata['n_stimulus_frames'] = len(data['vsyncintervals'])
+
+    metadata['startdatetime'] = local_time(
+        metadata["startdatetime"],
+        timezone='America/Los_Angeles',
+    )
 
     return metadata
 
@@ -160,10 +165,10 @@ def load_trials(data, time=None):
         trials[col] = trials[col].map(stringify)
 
     trials['change_frame'] = trials['change_frame'].map(lambda x: int(x) if np.isfinite(x) else None)
-    trials["change_image_category"] = trials["change_image_category"].apply(lambda x: x if x else np.nan)  # use np.nan instead of NoneType
-    trials["change_image_name"] = trials["change_image_name"].apply(lambda x: x if x else np.nan)  # use np.nan instead of NoneType
-    trials["initial_image_category"] = trials["initial_image_category"].apply(lambda x: x if x else np.nan)  # use np.nan instead of NoneType
-    trials["initial_image_name"] = trials["initial_image_name"].apply(lambda x: x if x else np.nan)  # use np.nan instead of NoneType
+    trials["change_image_category"] = trials["change_image_category"].apply(lambda x: x if x else '')  # use empty string instead of NoneType
+    trials["change_image_name"] = trials["change_image_name"].apply(lambda x: x if x else '')  # use empty string instead of NoneType
+    trials["initial_image_category"] = trials["initial_image_category"].apply(lambda x: x if x else '')  # use empty string instead of NoneType
+    trials["initial_image_name"] = trials["initial_image_name"].apply(lambda x: x if x else '')  # use empty string instead of NoneType
 
     # make scheduled_change_time relative
     trials["scheduled_change_time"] = trials["scheduled_change_time"] - trials['starttime']

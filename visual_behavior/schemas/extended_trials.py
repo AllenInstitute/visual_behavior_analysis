@@ -1,79 +1,145 @@
 from marshmallow import fields
+from datetime import datetime, date
+from .core import TrialSchema
 
-from .base import PandasSchemaBase
+
+class FriendlyDateTime(fields.DateTime):
+    def _deserialize(self, value, attr, data):
+        if isinstance(value, datetime):
+            return value
+        result = super(FriendlyDateTime, self)._deserialize(value, attr, data)
+        return result
 
 
-class TrialSchema(PandasSchemaBase):
-    """
-    This schema describes the core trial structure
-    """
-    index = fields.Int(required=True)  # maybe this should be required...
+class FriendlyDate(fields.Date):
+    def _deserialize(self, value, attr, data):
+        if isinstance(value, date):
+            return value
+        result = super(FriendlyDate, self)._deserialize(value, attr, data)
+        return result
 
-    auto_rewarded = fields.Bool()
-    change_contrast = fields.Float(allow_none=True)
-    change_frame = fields.Integer(strict=True)
-    change_image_category = fields.Raw(allow_none=True)
-    change_image_name = fields.Raw(allow_none=True)
-    change_ori = fields.Float(allow_none=True)
-    change_time = fields.Float()
-    cumulative_reward_number = fields.Integer(strict=True)
-    cumulative_volume = fields.Float()
-    delta_ori = fields.Float(allow_none=True)
-    endtime = fields.Float()
-    endframe = fields.Integer(strict=True)
-    initial_contrast = fields.Float(allow_none=True)
-    initial_image_category = fields.Raw(allow_none=True)
-    initial_image_name = fields.Raw(allow_none=True)
-    initial_ori = fields.Float(allow_none=True)
-    lick_times = fields.List(fields.Float)
-    optogenetics = fields.Bool()
-    response_latency = fields.Float(allow_none=True)
-    response_time = fields.List(fields.Float(allow_none=True))
-    response_type = fields.String(allow_none=True)
-    reward_frames = fields.List(fields.Integer(strict=True))
-    reward_times = fields.List(fields.Float)
-    reward_volume = fields.Float()
-    rewarded = fields.Bool()
-    scheduled_change_time = fields.Float()
-    startframe = fields.Integer(strict=True)
-    starttime = fields.Float()
+
+class StringifiedUUID(fields.UUID):
+
+    def _deserialize(self, value, attr, data):
+        return str(self._validated(value))
 
 
 class ExtendedTrialSchema(TrialSchema):
     """Extended trial schema
     """
-    blank_duration_range = fields.List(fields.Float)
-    blank_screen_timeout = fields.Bool()
-    color = fields.String()
-    computer_name = fields.String()
-    distribution_mean = fields.Float()
-    LDT_mode = fields.String()
-    lick_frames = fields.List(fields.Integer(strict=True))
-    mouse_id = fields.String()
-    number_of_rewards = fields.Integer(strict=True)
-    prechange_minimum = fields.Float()
-    response = fields.Float()
-    response_window = fields.List(fields.Float)
-    reward_licks = fields.Raw()
-    reward_lick_count = fields.Integer(strict=True, allow_none=True)
-    reward_lick_latency = fields.Float(allow_none=True)
-    reward_rate = fields.Float(allow_none=True)
-    rig_id = fields.String()
-    session_duration = fields.Float()
-    stage = fields.String()
-    stim_duration = fields.Float()
-    stimulus = fields.String()
-    stimulus_distribution = fields.String()
-    task = fields.String()
-    trial_length = fields.Float()
-    trial_type = fields.String()
-    user_id = fields.String()
-
-    startdatetime = fields.DateTime()
-    date = fields.Date()
-    year = fields.Integer(strict=True)
-    month = fields.Integer(strict=True)
-    day = fields.Integer(strict=True)
-    hour = fields.Integer(strict=True)
-    dayofweek = fields.Integer(strict=True)
-    behavior_session_uuid = fields.String()
+    blank_duration_range = fields.List(
+        fields.Float,
+        required=True,
+    )
+    blank_screen_timeout = fields.Bool(
+        required=True,
+    )
+    color = fields.String(
+        required=True,
+    )
+    computer_name = fields.String(
+        required=True,
+    )
+    distribution_mean = fields.Float(
+        required=True,
+    )
+    LDT_mode = fields.String(
+        required=True,
+    )
+    lick_frames = fields.List(
+        fields.Integer(strict=True),
+        required=True,
+    )
+    mouse_id = fields.String(
+        required=True,
+    )
+    number_of_rewards = fields.Integer(
+        required=True,
+        strict=True,
+    )
+    prechange_minimum = fields.Float(
+        required=True,
+    )
+    response = fields.Float(
+        required=True,
+    )
+    response_type = fields.String(
+        required=True,
+    )
+    response_window = fields.List(
+        fields.Float,
+        required=True,
+    )
+    reward_licks = fields.List(
+        fields.Float,
+        required=True,
+        allow_none=True,
+    )
+    reward_lick_count = fields.Integer(
+        required=True,
+        # strict=True,
+        allow_none=True,
+    )
+    reward_lick_latency = fields.Float(
+        allow_none=True,
+    )
+    reward_rate = fields.Float(
+        allow_none=True,
+    )
+    rig_id = fields.String(
+        required=True,
+    )
+    session_duration = fields.Float(
+        required=True,
+    )
+    stage = fields.String(
+        required=True,
+    )
+    stim_duration = fields.Float(
+        required=True,
+    )
+    stimulus = fields.String(
+        required=True,
+    )
+    stimulus_distribution = fields.String(
+        required=True,
+    )
+    task = fields.String(
+        required=True,
+    )
+    trial_type = fields.String(
+        required=True,
+    )
+    user_id = fields.String(
+        required=True,
+    )
+    startdatetime = FriendlyDateTime(
+        required=True,
+        strict=True,
+    )
+    date = FriendlyDate(
+        required=True,
+    )
+    year = fields.Integer(
+        strict=True
+    )
+    month = fields.Integer(
+        required=True,
+        strict=True,
+    )
+    day = fields.Integer(
+        required=True,
+        strict=True,
+    )
+    hour = fields.Integer(
+        required=True,
+        strict=True,
+    )
+    dayofweek = fields.Integer(
+        strict=True,
+        required=True,
+    )
+    behavior_session_uuid = StringifiedUUID(
+        required=True,
+    )

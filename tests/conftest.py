@@ -25,12 +25,12 @@ else:
 
 @pytest.fixture
 def exemplar_extended_trials_fixture():
-    return pd.DataFrame(data={
+    trials = pd.DataFrame(data={
         "auto_rewarded": [True, True, True, False, ],
         "change_contrast": [1.0, 1.0, 1.0, 1.0, ],
         "change_frame": [90.0, 315.0, 435.0, np.nan, ],
-        "change_image_category": [np.nan, np.nan, np.nan, np.nan, ],
-        "change_image_name": [np.nan, np.nan, np.nan, np.nan, ],
+        "change_image_category": ['', '', '', '', ],
+        "change_image_name": ['', '', '', '', ],
         "change_ori": [180.0, 270.0, 360.0, np.nan, ],
         "change_time": [4.503416, 15.761926, 21.766479, np.nan, ],
         "cumulative_reward_number": [1, 2, 3, 3, ],
@@ -38,8 +38,8 @@ def exemplar_extended_trials_fixture():
         "delta_ori": [90.0, 90.0, 90.0, 90.0, ],
         "index": [0, 1, 2, 3, ],
         "initial_contrast": [1.0, 1.0, 1.0, 1.0, ],
-        "initial_image_category": [np.nan, np.nan, np.nan, np.nan, ],
-        "initial_image_name": [np.nan, np.nan, np.nan, np.nan, ],
+        "initial_image_category": ['', '', '', '', ],
+        "initial_image_name": ['', '', '', '', ],
         "initial_ori": [90.0, 180.0, 270.0, 360.0, ],
         "lick_times": [
             [5.1038541570305824, ],
@@ -146,9 +146,9 @@ def exemplar_extended_trials_fixture():
             [0.60043793, ],
             [0.25019039, 0.85061032, 1.00075962, 1.10083506, 1.25094946, 1.40106247, 1.70129349, ],
             [0.20015447, 0.45034403, 0.70052833, 0.85064301, 0.9507201, 1.10083229, 1.25094447, ],
-            np.nan,
+            [],
         ],
-        "reward_lick_count": [1.0, 7.0, 7.0, np.nan, ],
+        "reward_lick_count": [1, 7, 7, 0, ],
         "reward_lick_latency": [0.600438, 0.250190, 0.200154, np.nan, ],
         "reward_rate": [np.inf, np.inf, np.inf, np.inf, ],
         "response": [1.0, 1.0, 1.0, 1.0, ],
@@ -172,6 +172,9 @@ def exemplar_extended_trials_fixture():
         'endtime', 'reward_licks', 'reward_lick_count', 'reward_lick_latency',
         'reward_rate', 'response', 'trial_length', 'color'
     ])
+    trials['startdatetime'] = trials['startdatetime'].dt.tz_localize('America/Los_Angeles')
+    trials['behavior_session_uuid'] = '66750c6b-0a0e-43bd-9cb3-fc511c34dc0e'
+    return trials
 
 
 @pytest.fixture(scope="module")
@@ -185,6 +188,15 @@ def trials_df_fixture():
     del trials['publish_time']
     trials['endframe'] = trials['startframe'].shift(periods=-1)
     trials.at[trials.index[-1],'endframe']=94157
+
+    def nan_to_empty_string(val):
+        if pd.isnull(val):
+            return ''
+        return val
+    trials["change_image_category"] = trials["change_image_category"].apply(nan_to_empty_string)  # use empty string instead of NoneType
+    trials["change_image_name"] = trials["change_image_name"].apply(nan_to_empty_string)  # use empty string instead of NoneType
+    trials["initial_image_category"] = trials["initial_image_category"].apply(nan_to_empty_string)  # use empty string instead of NoneType
+    trials["initial_image_name"] = trials["initial_image_name"].apply(nan_to_empty_string)  # use empty string instead of NoneType
     return trials
 
 
