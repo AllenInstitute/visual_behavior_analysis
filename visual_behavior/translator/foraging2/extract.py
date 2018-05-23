@@ -968,7 +968,7 @@ def get_session_id(exp_data):
     int or None
         id of experiment session or empty string if not found
     """
-    return behavior_items_or_top_level(exp_data).get("session_uuid", "")
+    return exp_data.get("session_uuid", "")
 
 
 def get_stimuli(data):
