@@ -311,9 +311,14 @@ def foraging2_data_fixture_issue_116():
 
 @pytest.fixture(scope="session")
 def foraging2_data_stage4_2018_05_10():
-    return pd.read_pickle(
+    data = pd.read_pickle(
         os.path.join(TESTING_RES_DIR, "doc_images_21f064f_PerfectDoCMouse.pkl")
     )
+
+    data['items']['behavior']['stimuli']['images']['draw_log'][-3] = 0
+    data['items']['behavior']['stimuli']['images']['draw_log'][-2] = 0
+    data['items']['behavior']['stimuli']['images']['draw_log'][-1] = 0
+    return data
 
 
 @pytest.fixture(scope="session")
