@@ -2,7 +2,6 @@ import warnings
 
 from . import extended_trials as et
 from . import core as cd
-from . import foraging2 as f2
 from ..translator.core import create_extended_dataframe
 
 functions_yet_to_implement = [
