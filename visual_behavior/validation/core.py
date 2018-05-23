@@ -1,4 +1,4 @@
-
+import numpy as np
 
 def validate_running_data(core_data):
     '''
