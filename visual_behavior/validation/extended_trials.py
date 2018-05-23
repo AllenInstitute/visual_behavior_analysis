@@ -857,7 +857,7 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
     '''
     iterates over trials
     Verifies that there is a blank screen of duration `initial_blank` at the start of every trial.
-    If initial blank is 0, first frame of flash should be coincident with trial start
+    If initial blank is 0, first frame of flash should be coincident with trial start (within 1 frame)
     '''
 
     # this test doesn't make sense for static stimuli with no initial blank. just return True
@@ -874,7 +874,7 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
             # get offset between trial start and first stimulus of frame
             first_stim_time_offset = visual_stimuli.loc[first_stim_index]['time'] - trial['starttime']
             # check to see if offset is within tolerance of expected blank
-            initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=tolerance)
+            initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=(tolerance+1/60.))
         # ensure all initial blanks were within tolerance
         return all(initial_blank_in_tolerance)
 
