@@ -493,7 +493,7 @@ def get_lick_frames(trials, licks):
     local_licks = []
     for idx, row in trials.iterrows():
         local_licks.append(
-            lick_frames[np.logical_and(lick_frames >= int(row['startframe']), lick_frames <= int(row['endframe']))]
+            lick_frames[np.logical_and(lick_frames > int(row['startframe']), lick_frames <= int(row['endframe']))]
         )
 
     return local_licks
