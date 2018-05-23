@@ -1,4 +1,5 @@
 from __future__ import print_function
+from dateutil import tz
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -151,3 +152,10 @@ def rad_to_dist(speed_rad_per_s):
         2.0 * wheel_diameter / 3.0)  # assume the animal runs at 2/3 the distance from the wheel center
     running_speed_cm_per_sec = np.pi * speed_rad_per_s * running_radius / 180.
     return running_speed_cm_per_sec
+
+
+def local_time(iso_timestamp, timezone=None):
+    datetime = pd.to_datetime(iso_timestamp)
+    if not datetime.tzinfo:
+        datetime = datetime.replace(tzinfo=tz.gettz('America/Los_Angeles'))
+    return datetime.isoformat()

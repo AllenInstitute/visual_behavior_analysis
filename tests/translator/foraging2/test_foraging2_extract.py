@@ -435,10 +435,10 @@ def test_annotate_stimuli(foraging2_trial_fixture, foraging2_stimuli_fixture):
     )
 
     assert annotated_stimuli == {
-        'initial_image_category': None,
-        'initial_image_name': None,
-        'change_image_name': None,
-        'change_image_category': None,
+        'initial_image_category': '',
+        'initial_image_name': '',
+        'change_image_name': '',
+        'change_image_category': '',
         'change_orientation': 90,
         'change_contrast': None,
         'initial_orientation': 0,

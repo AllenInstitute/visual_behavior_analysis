@@ -10,8 +10,8 @@ EXPECTED_TRIALS = pd.DataFrame(data={
     "auto_rewarded": {0: True, 1: False, 2: False, },
     "change_contrast": {0: None, 1: None, 2: None, },
     "change_frame": {0: 184, 1: 874, 2: 1380, },
-    "change_image_category": {0: None, 1: None, 2: None, },
-    "change_image_name": {0: None, 1: None, 2: None, },
+    "change_image_category": {0: '', 1: '', 2: '', },
+    "change_image_name": {0: '', 1: '', 2: '', },
     "change_ori": {0: 90, 1: 0, 2: 90, },
     "change_time": {
         0: 6.511695924235673,
@@ -22,8 +22,8 @@ EXPECTED_TRIALS = pd.DataFrame(data={
     "cumulative_volume": {0: 0.008, 1: 0.016, 2: 0.024, },
     "delta_ori": {0: 90.0, 1: -90.0, 2: 90.0, },
     "initial_contrast": {0: None, 1: None, 2: None, },
-    "initial_image_category": {0: None, 1: None, 2: None, },
-    "initial_image_name": {0: None, 1: None, 2: None, },
+    "initial_image_category": {0: '', 1: '', 2: '', },
+    "initial_image_name": {0: '', 1: '', 2: '', },
     "initial_ori": {0: 0, 1: 90.0, 2: 0.0, },
     # "lick_frames": {0: [196], 1: [886], 2: [1392], },
     "lick_times": {
@@ -89,7 +89,7 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
 
     assert foraging2.data_to_metadata(foraging2_data_fixture) == \
         {
-            'startdatetime': '2018-04-04T22:20:53.665000+00:00',
+            'startdatetime': '2018-04-04T15:20:53.665000-07:00',
             'rig_id': 'localhost',
             'computer_name': 'localhost',
             'reward_vol': 0.007,
@@ -117,7 +117,7 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             'stage': None,
             'stoptime': 27.232,
             'userid': '',
-            'lick_detect_training_mode': False,
+            'lick_detect_training_mode': 'single',
             'blankscreen_on_timeout': False,
             'stim_duration': 6000.0,
             'blank_duration_range': [0.5, 0.5, ],
