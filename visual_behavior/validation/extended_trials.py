@@ -43,8 +43,8 @@ def get_first_lick_in_response_window(row, tolerance=0.01, tolerance_direction='
     '''
     # only look for licks in window if there were licks and a change time
     if len(row['lick_times']) > 0 and not pd.isnull(row['change_time']):
-        left_edge = np.subtract(row['response_window'][0],tolerance) if tolerance_direction == 'outside' else np.add(row['response_window'][0],tolerance)
-        right_edge = np.add(row['response_window'][1],tolerance) if tolerance_direction == 'outside' else np.subtract(row['response_window'][1],tolerance)
+        left_edge = np.subtract(row['response_window'][0], tolerance) if tolerance_direction == 'outside' else np.add(row['response_window'][0], tolerance)
+        right_edge = np.add(row['response_window'][1], tolerance) if tolerance_direction == 'outside' else np.subtract(row['response_window'][1], tolerance)
 
         licks = np.array(row['lick_times']) - row['change_time']
         licks_in_window = licks[
@@ -66,8 +66,8 @@ def identify_licks_in_response_window(row, tolerance=0.01, tolerance_direction='
     '''a method for counting licks in the response window'''
     if len(row['lick_times']) > 0 and pd.isnull(row['change_time']) == False:
         licks_relative_to_change = np.array(row['lick_times']) - row['change_time']
-        left_edge = np.subtract(row['response_window'][0],tolerance) if tolerance_direction == 'outside' else np.add(row['response_window'][0],tolerance)
-        right_edge = np.add(row['response_window'][1],tolerance) if tolerance_direction == 'outside' else np.subtract(row['response_window'][1],tolerance)
+        left_edge = np.subtract(row['response_window'][0], tolerance) if tolerance_direction == 'outside' else np.add(row['response_window'][0], tolerance)
+        right_edge = np.add(row['response_window'][1], tolerance) if tolerance_direction == 'outside' else np.subtract(row['response_window'][1], tolerance)
 
         licks_in_window = licks_relative_to_change[
             np.logical_and(
@@ -204,10 +204,10 @@ def count_stimuli_per_trial(trials, visual_stimuli):
 
 
 def fix_periodic_flash(pf):
-        '''
-        deal with core_data['metadata']['params']['periodic_flash']='None'
-        '''
-        return None if pf == 'None' else pf
+    '''
+    deal with core_data['metadata']['params']['periodic_flash']='None'
+    '''
+    return None if pf == 'None' else pf
 
 
 # test functions
@@ -874,7 +874,7 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
             # get offset between trial start and first stimulus of frame
             first_stim_time_offset = visual_stimuli.loc[first_stim_index]['time'] - trial['starttime']
             # check to see if offset is within tolerance of expected blank
-            initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=(tolerance+1/60.))
+            initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=(tolerance + 1 / 60.))
         # ensure all initial blanks were within tolerance
         return all(initial_blank_in_tolerance)
 
