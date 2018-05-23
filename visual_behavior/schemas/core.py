@@ -1,5 +1,7 @@
 from marshmallow import Schema, fields
 
+# from .base import PandasSchemaBase
+
 
 class TimeSeriesSchema(Schema):
     """ base schema for all timeseries
@@ -22,10 +24,10 @@ class RewardSchema(TimeSeriesSchema):
         description='Volume of water dispensed on this reward presentation in mL',
         required=True,
     )
-    lickspout = fields.Int(
-        description='The water line on which this reward was dispensed',
-        required=True,
-    )
+    # lickspout = fields.Int(
+    #     description='The water line on which this reward was dispensed',
+    #     required=True,
+    # )
 
 
 class LickSchema(TimeSeriesSchema):
@@ -56,6 +58,17 @@ class TrialSchema(Schema):
     )
     starttime = fields.Float(
         description='time in seconds when this trial starts',
+        required=True,
+    )
+    endframe = fields.Int(
+        description='frame when this trial ends',
+        required=True,
+    )
+    endtime = fields.Float(
+        description='time in seconds when this trial ends',
+        required=True,
+    )
+    trial_length = fields.Float(
         required=True,
     )
 
@@ -122,13 +135,6 @@ class TrialSchema(Schema):
         allow_none=True,
     )
 
-    # general stimulus info
-    stim_on_frames = fields.List(
-        fields.Bool,
-        description='frames in this trial in which the stimulus was present',
-        required=True,
-    )
-
     # licks
     lick_times = fields.List(
         fields.Float,
@@ -180,7 +186,7 @@ class TrialSchema(Schema):
         required=True,
     )
 
-    # candidates to deprecate
+    # optogenetics
     optogenetics = fields.Bool(
         description='whether optogenetic stimulation was applied on this trial',
         required=True,
@@ -286,10 +292,6 @@ class MetadataSchema(Schema):
     )
     delta_mean = fields.Float(
         description='mean time until change',
-        required=True,
-    )
-    trial_duration = fields.Float(
-        description='duration of a single trial (unless aborted or extended by licks)',
         required=True,
     )
     n_stimulus_frames = fields.Int(

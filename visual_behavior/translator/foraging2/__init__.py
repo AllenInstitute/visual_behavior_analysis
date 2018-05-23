@@ -1,5 +1,5 @@
 import pandas as pd
-from dateutil import tz
+from ...utilities import local_time
 
 from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
@@ -102,10 +102,10 @@ def data_to_metadata(data):
         - delta_mean
         - trial_duration
     """
-    start_time_datetime = data["start_time"]
+    start_time_datetime_local = local_time(data["start_time"], timezone='America/Los_Angeles')
 
-    if not start_time_datetime.tzinfo:
-        start_time_datetime = start_time_datetime.replace(tzinfo=tz.gettz("US/Pacific"))
+    mouse_id = get_mouse_id(data)
+    behavior_session_uuid = get_session_id(data)
 
     device_name = get_device_name(data)
     params = get_params(data)  # this joins both params and commandline params
@@ -125,26 +125,26 @@ def data_to_metadata(data):
         stimulus_category = None
 
     return {
-        "startdatetime": start_time_datetime.astimezone(tz.gettz("UTC")).isoformat(),
+        "startdatetime": start_time_datetime_local,
         "rig_id": get_rig_id(device_name),
         "computer_name": device_name,
         "reward_vol": get_reward_volume(data),
         "rewardvol": get_reward_volume(data),  # for compatibility with legacy code
         "auto_reward_vol": get_auto_reward_volume(data),
         "params": params,
-        "mouseid": get_mouse_id(data),
+        "mouseid": mouse_id,
         "response_window": list(get_response_window(data)),  # tuple to list
         "task": get_task_id(data),
         "stage": get_stage(data),  # not implemented currently
         "stoptime": get_session_duration(data),
         "userid": get_user_id(data),
-        "lick_detect_training_mode": False,  # currently no choice
+        "lick_detect_training_mode": "single",  # currently no choice
         "blankscreen_on_timeout": False,  # always false for now 041318
         "stim_duration": get_stimulus_duration(data) * 1000,  # seconds to milliseconds
         "blank_duration_range": [
             get_blank_duration_range(data)[0],
             get_blank_duration_range(data)[1],
-        ],  # seconds to miliseconds
+        ],
         "delta_minimum": get_pre_change_time(data),
         "stimulus_distribution": get_stimulus_distribution(data),  # not obtainable
         "delta_mean": get_delta_mean(data),  # not obtainable
@@ -162,7 +162,7 @@ def data_to_metadata(data):
         "abort_on_early_response": get_abort_on_early_response(data),
         "initial_blank_duration": get_initial_blank_duration(data),
         "even_sampling_enabled": get_even_sampling(data),
-        "behavior_session_uuid": get_session_id(data),
+        "behavior_session_uuid": behavior_session_uuid,
     }
 
 
