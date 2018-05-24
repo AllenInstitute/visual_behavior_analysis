@@ -783,13 +783,13 @@ def validate_flash_blank_durations(visual_stimuli, periodic_flash, mean_toleranc
         # make sure all flashes and blanks are within tolerance
         # mean should be within tolernace of expected value
         # std should be within tolerance of 0
-        blank_durations_consistent = np.logical_and(
-            np.isclose(flash_durations.mean(), periodic_flash[0], atol=mean_tolerance),
-            np.isclose(flash_durations.std(), 0, atol=std_tolerance)
-        )
         flash_durations_consistent = np.logical_and(
-            np.isclose(blank_durations.mean(), periodic_flash[1], atol=mean_tolerance),
-            np.isclose(blank_durations.std(), 0, atol=std_tolerance)
+            np.isclose(flash_durations.mean(), periodic_flash[0], atol = mean_tolerance),
+            np.isclose(flash_durations.std(), 0, atol = std_tolerance)
+        )
+        blank_durations_consistent = np.logical_and(
+            np.isclose(blank_durations.mean(), periodic_flash[1], atol = mean_tolerance),
+            np.isclose(blank_durations.std(), 0, atol = 2 * std_tolerance)
         )
 
         return blank_durations_consistent and flash_durations_consistent
