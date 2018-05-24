@@ -836,7 +836,7 @@ def validate_change_frame_at_flash_onset(trials, visual_stimuli, periodic_flash)
         return all(np.in1d(change_frames, visual_stimuli['frame']))
 
 
-def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash=True, tolerance=0.005):
+def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash = True, frame_tolerance = 2):
     '''
     iterates over trials
     Verifies that there is a blank screen of duration `initial_blank` at the start of every trial.
@@ -855,9 +855,11 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
             # get visual greater than initial frame
             first_stim_index = visual_stimuli[visual_stimuli['frame'] >= trial['startframe']].index[0]
             # get offset between trial start and first stimulus of frame
-            first_stim_time_offset = visual_stimuli.loc[first_stim_index]['time'] - trial['starttime']
+            first_stim_frame_offset = visual_stimuli.loc[first_stim_index]['frame'] - trial['startframe']
+            #convert expected blank duration to frames
+            initial_blank_in_frames = int(initial_blank * 60.)
             # check to see if offset is within tolerance of expected blank
-            initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=(tolerance + 1 / 60.))
+            initial_blank_in_tolerance[idx] = np.isclose(first_stim_frame_offset, initial_blank_in_frames, atol = (frame_tolerance))
         # ensure all initial blanks were within tolerance
         return all(initial_blank_in_tolerance)
 
