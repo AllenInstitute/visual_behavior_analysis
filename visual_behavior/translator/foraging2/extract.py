@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from six import iteritems
+import uuid
 
 from scipy.signal import medfilt
 from ...analyze import calc_deriv, rad_to_dist
@@ -968,7 +969,10 @@ def get_session_id(exp_data):
     int or None
         id of experiment session or empty string if not found
     """
-    return exp_data.get("session_uuid", "")
+    if 'session_uuid' in exp_data:
+        return uuid.UUID(exp_data["session_uuid"])
+    else:
+        return ''
 
 
 def get_stimuli(data):
