@@ -259,6 +259,8 @@ def foraging2_data_fixture():
         new_set_log
 
     foraging2_data['platform_info']['computer_name'] = 'localhost'
+    foraging2_data['items']['behavior']['config']['DoC']['catch_freq'] = 0.5
+    foraging2_data["items"]["behavior"]["config"]["DoC"]["abort_on_early_response"] = True
 
     return foraging2_data
 
@@ -316,6 +318,7 @@ def foraging2_data_stage4_2018_05_10():
         os.path.join(TESTING_RES_DIR, "doc_images_21f064f_PerfectDoCMouse.pkl")
     )
 
+    data['items']['behavior']['config']['DoC']['catch_freq'] = 0.5
     data['items']['behavior']['stimuli']['images']['draw_log'][-3] = 0
     data['items']['behavior']['stimuli']['images']['draw_log'][-2] = 0
     data['items']['behavior']['stimuli']['images']['draw_log'][-1] = 0
@@ -339,3 +342,4 @@ def foraging2_data_stage_0_2018_05_16():
     return pd.read_pickle(
         os.path.join(TESTING_RES_DIR, "doc_images_db22310_LateDoCMouse.pkl")
     )
+foraging2_data_stage4_2018_05_10
