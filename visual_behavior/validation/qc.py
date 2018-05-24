@@ -131,7 +131,10 @@ def check_session_passes(qc_metrics):
 
     """
 
-    return all(qc_metrics.values())
+    metrics_to_validate = qc_metrics.copy()
+    metrics_to_validate.pop('validate_licks', None)
+
+    return all(metrics_to_validate.values())
 
 
 def generate_qc_report(core_data):
