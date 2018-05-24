@@ -18,4 +18,4 @@ def test_create_session_uuid():
 
     session_uuid = create_session_uuid(mouse_id, session_datetime_iso_utc)
 
-    assert session_uuid == EXPECTED_UUID
+    assert str(session_uuid) == EXPECTED_UUID
