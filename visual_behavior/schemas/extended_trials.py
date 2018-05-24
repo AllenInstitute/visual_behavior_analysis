@@ -19,12 +19,6 @@ class FriendlyDate(fields.Date):
         return result
 
 
-class StringifiedUUID(fields.UUID):
-
-    def _deserialize(self, value, attr, data):
-        return str(self._validated(value))
-
-
 class ExtendedTrialSchema(TrialSchema):
     """Extended trial schema
     """
@@ -140,6 +134,6 @@ class ExtendedTrialSchema(TrialSchema):
         strict=True,
         required=True,
     )
-    behavior_session_uuid = StringifiedUUID(
+    behavior_session_uuid = fields.UUID(
         required=True,
     )
