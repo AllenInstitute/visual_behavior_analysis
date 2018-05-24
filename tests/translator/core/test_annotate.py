@@ -21,7 +21,7 @@ def test_make_deterministic_session_uuid():
     EXPECTED_UUID = '1b48889e-465d-5732-a32e-cc2f67d2f581'
     behavior_session_uuid = make_deterministic_session_uuid(metadata)
 
-    assert behavior_session_uuid == EXPECTED_UUID
+    assert str(behavior_session_uuid) == EXPECTED_UUID
 
     metadata = {
         'mouseid': 'M999999',
@@ -30,4 +30,4 @@ def test_make_deterministic_session_uuid():
     EXPECTED_UUID = '1b48889e-465d-5732-a32e-cc2f67d2f581'
     behavior_session_uuid = make_deterministic_session_uuid(metadata)
 
-    assert behavior_session_uuid == EXPECTED_UUID
+    assert str(behavior_session_uuid) == EXPECTED_UUID
