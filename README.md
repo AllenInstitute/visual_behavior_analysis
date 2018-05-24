@@ -23,22 +23,35 @@ If you are plan to contribute to the development of the package, I recommend ins
 
 This ensures that Python uses the current, active files in the folder (even while switching between branches).
 
-## API
+## Use
 
-Here's a quick overview of each of the files:
+First, load up a Foraging2 output
 
-- *analyze*: general purpose analysis functions
-- *cohorts*: functions for getting information about training cohorts
-- *core*: core functions (currently empty. will move some "utilities" here)
-- *data*: manipulating and annotating data (especially trial dataframes)
-- *devices*: accessing training devices
-- *io*: reading & writing data
-- *latest*: for syncing the latest data to a local folder
-- *masks*: common/useful masks for filtering trials from the trial dataframe
-- *metrics.classification*: sklearn-style metrics for behavior
-- *metrics.session*: summary metrics for individual sessions
-- *plotting*: plotting functions
-- *utilities*: general purposes utilities
+``` Python
+import pandas as pd
+data = pd.read_pickle(PATH_TO_FORAGING2_OUTPUT_PKL)
+```
+
+Then, we create the "core" data structure: a dictionary with licks, rewards, trials, running, visual stimuli, and metadata.
+
+``` Python
+from visual_behavior.translator.foraging2 import data_to_change_detection_core
+
+core_data = foraging2.data_to_change_detection_core(data)
+```
+
+Finally, we create an "extended" dataframe for use in generating trial-level plots and analysis.
+
+``` Python
+from visual_behavior.translator.core import create_extended_dataframe
+
+extended_trials = create_extended_dataframe(
+    trials=core_data['trials'],
+    metadata=core_data['metadata'],
+    licks=core_data['licks'],
+    time=core_data['time'],
+)
+```
 
 ## Contributing
 
@@ -56,6 +69,7 @@ Pull requests are welcome.
 - Doug Ollerenshaw - dougo@alleninstitute.org
 - Justin Kiggins - justink@alleninstitute.org
 - Sahar Manavi - saharm@alleninstitute.org
+- Nicholas Cain - nicholasc@alleninstitute.org
 
 
 ## Additional Links
