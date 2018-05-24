@@ -86,7 +86,7 @@ def explode_startdatetime(df):
     --------
     io.load_trials
     """
-    df['date'] = df['startdatetime'].dt.date.astype(str)
+    df['date'] = df['startdatetime'].dt.date
     df['year'] = df['startdatetime'].dt.year
     df['month'] = df['startdatetime'].dt.month
     df['day'] = df['startdatetime'].dt.day
