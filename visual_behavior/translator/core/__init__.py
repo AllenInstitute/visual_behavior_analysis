@@ -81,7 +81,6 @@ def create_extended_dataframe(trials, metadata, licks, time):
         print('FAILED TO REMOVE REPEATED LICKS')
         print(e)
 
-
     return trials
 
 
