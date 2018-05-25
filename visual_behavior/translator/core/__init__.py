@@ -60,6 +60,7 @@ def create_extended_dataframe(trials, metadata, licks, time):
             trials[col] = None
 
     # add some columns that require calculation
+    annotate.make_trials_contiguous(trials, time, inplace=True)
 
     trials['trial_type'] = annotate.categorize_trials(trials)
     trials['lick_frames'] = annotate.get_lick_frames(trials, licks)
@@ -80,7 +81,6 @@ def create_extended_dataframe(trials, metadata, licks, time):
         print('FAILED TO REMOVE REPEATED LICKS')
         print(e)
 
-    annotate.make_trials_contiguous(trials, time, inplace=True)
 
     return trials
 
