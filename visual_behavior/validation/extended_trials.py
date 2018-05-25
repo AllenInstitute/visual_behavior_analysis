@@ -402,7 +402,7 @@ def validate_lick_before_scheduled_on_aborted_trials(trials):
         return True
 
 
-def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response):
+def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response,tolerance=0.01):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, no non-aborted trials should have a lick before the scheduled change time,
@@ -412,8 +412,8 @@ def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_resp
     # We can only check this if there is at least 1 nonaborted trial.
     if abort_on_early_response == True and len(nonaborted_trials) > 0:
         first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
-        # use nanmin
-        if np.nanmin(first_lick.values) < 0:
+        # use nanmin, apply tolerance to account for same frame licks
+        if np.nanmin(first_lick.values) < 0 - tolerance:
             return False
         else:
             return True
