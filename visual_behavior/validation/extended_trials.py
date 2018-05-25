@@ -324,18 +324,18 @@ def validate_intial_and_final_in_non_aborted(trials):
     return all_initial and all_final
 
 
-def validate_min_change_time(trials, pre_change_time):
+def validate_min_change_time(trials, pre_change_time, tolerance = 0.01):
     '''change time in trial should never be less than pre_change_time'''
     change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
     # can only run validation if there are some non-null values
     if all(pd.isnull(change_times_trial_referenced)) == False:
-        return np.nanmin(change_times_trial_referenced) > pre_change_time
+        return np.nanmin(change_times_trial_referenced) > pre_change_time - tolerance
     # cannot run valiation function if all null, just return True
     elif all(pd.isnull(change_times_trial_referenced)) == True:
         return True
 
 
-def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance=0.05):
+def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance = 0.05):
     '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
     change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
     # can only run validation if there are some non-null values
@@ -346,7 +346,7 @@ def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance
         return True
 
 
-def validate_reward_follows_first_lick_in_window(trials, tolerance=0.01):
+def validate_reward_follows_first_lick_in_window(trials, tolerance = 0.01):
     '''reward should happen immediately (within tolerance) of first lick in window on non-autorewarded go trials'''
     # get all go_trials without auto_rewards
     contingent_go_trials = trials[
@@ -402,7 +402,7 @@ def validate_lick_before_scheduled_on_aborted_trials(trials):
         return True
 
 
-def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response,tolerance=0.01):
+def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response, tolerance = 0.01):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, no non-aborted trials should have a lick before the scheduled change time,
@@ -411,7 +411,7 @@ def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_resp
     nonaborted_trials = trials[trials.trial_type != 'aborted']
     # We can only check this if there is at least 1 nonaborted trial.
     if abort_on_early_response == True and len(nonaborted_trials) > 0:
-        first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
+        first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis = 1)
         # use nanmin, apply tolerance to account for same frame licks
         if np.nanmin(first_lick.values) < 0 - tolerance:
             return False
@@ -456,7 +456,7 @@ def validate_first_lick_after_change_on_nonaborted(trials, abort_on_early_respon
     non_aborted_trials = trials[trials.trial_type != 'aborted']
     # we can only validate this if there is at least one nonaborted trial
     if abort_on_early_response == True and len(non_aborted_trials) > 0:
-        first_lick_relative_to_change = non_aborted_trials.apply(get_first_lick_relative_to_change, axis=1)
+        first_lick_relative_to_change = non_aborted_trials.apply(get_first_lick_relative_to_change, axis = 1)
         if np.nanmin(first_lick_relative_to_change.values) < 0:
             return False
         else:
@@ -479,14 +479,14 @@ def validate_trial_ends_without_licks(trials, minimum_no_lick_time):
     return True
 
 
-def validate_session_within_expected_duration(trials, expected_duration_seconds, tolerance=30):
+def validate_session_within_expected_duration(trials, expected_duration_seconds, tolerance = 30):
     '''
     ensure that last trial end time does not exceed expected duration by more than 30 seconds
     '''
     return trials['endtime'].values[-1] < expected_duration_seconds + tolerance
 
 
-def validate_session_ends_at_max_cumulative_volume(trials, volume_limit, tolerance=0.01):
+def validate_session_ends_at_max_cumulative_volume(trials, volume_limit, tolerance = 0.01):
     '''
     ensure that earned volume does not exceed volume limit
     build in a tolerance in case reward limit is not even multiple of reward volumes
@@ -494,7 +494,7 @@ def validate_session_ends_at_max_cumulative_volume(trials, volume_limit, toleran
     return trials['cumulative_volume'].max() <= volume_limit + tolerance
 
 
-def validate_duration_and_volume_limit(trials, expected_duration, volume_limit, time_tolerance=30):
+def validate_duration_and_volume_limit(trials, expected_duration, volume_limit, time_tolerance = 30):
     '''
     The length of a session should not be less than `duration` by more than 30 seconds UNLESS `volume_limit` has been met
     '''
@@ -510,7 +510,7 @@ def validate_duration_and_volume_limit(trials, expected_duration, volume_limit, 
             return True
 
 
-def validate_catch_frequency(trials, expected_catch_frequency, rejection_probability=0.001):
+def validate_catch_frequency(trials, expected_catch_frequency, rejection_probability = 0.001):
     '''
     non-aborted catch trials should comprise `catc_freq` of all non-aborted trials
     uses scipy's binomial test to ensure that the null hypothesis (catch trials come from a binomial distribution drawn with catch_freq) is true with 95% probability
