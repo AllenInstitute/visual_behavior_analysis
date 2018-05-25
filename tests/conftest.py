@@ -8,6 +8,7 @@ from shutil import copyfile
 from collections import Mapping
 from six import PY3
 from six.moves import cPickle as pickle
+import uuid
 
 from visual_behavior.pizza import we_can_unpizza_that  # this is terrible but hopefully will be an external dependency very soon
 
@@ -173,7 +174,7 @@ def exemplar_extended_trials_fixture():
         'reward_rate', 'response', 'trial_length', 'color'
     ])
     trials['startdatetime'] = trials['startdatetime'].dt.tz_localize('America/Los_Angeles')
-    trials['behavior_session_uuid'] = '66750c6b-0a0e-43bd-9cb3-fc511c34dc0e'
+    trials['behavior_session_uuid'] = uuid.UUID('66750c6b-0a0e-43bd-9cb3-fc511c34dc0e')
     return trials
 
 

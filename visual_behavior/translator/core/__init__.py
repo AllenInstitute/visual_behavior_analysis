@@ -80,6 +80,8 @@ def create_extended_dataframe(trials, metadata, licks, time):
         print('FAILED TO REMOVE REPEATED LICKS')
         print(e)
 
+    annotate.make_trials_contiguous(trials, time, inplace=True)
+
     return trials
 
 
@@ -89,7 +91,3 @@ class JSONEncoder(json.JSONEncoder):
             return obj.tolist()
         elif isinstance(obj, datetime.date):
             return obj.isoformat()
-
-
-def df_to_json(input_df):
-    return json.dumps(input_df.to_dict('records'), cls=JSONEncoder)
