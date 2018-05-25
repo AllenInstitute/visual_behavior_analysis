@@ -510,7 +510,7 @@ def validate_duration_and_volume_limit(trials, expected_duration, volume_limit, 
             return True
 
 
-def validate_catch_frequency(trials, expected_catch_frequency, rejection_probability=0.01):
+def validate_catch_frequency(trials, expected_catch_frequency, rejection_probability=0.001):
     '''
     non-aborted catch trials should comprise `catc_freq` of all non-aborted trials
     uses scipy's binomial test to ensure that the null hypothesis (catch trials come from a binomial distribution drawn with catch_freq) is true with 95% probability
