@@ -44,8 +44,8 @@ def define_validation_functions(core_data):
     WARM_UP_TRIALS = core_data['metadata']['params']['warm_up_trials']
     STIMULUS_WINDOW = core_data['metadata']['params']['stimulus_window']
     VOLUME_LIMIT = core_data['metadata']['params']['volume_limit']
-    if 'catch_frequency' in core_data['metadata']['params'].keys():
-        CATCH_FREQUENCY = core_data['metadata']['params']['catch_frequency']
+    if 'catch_frequency' in core_data['metadata'].keys():
+        CATCH_FREQUENCY = core_data['metadata']['catch_frequency']
     else:
         CATCH_FREQUENCY = 0
 

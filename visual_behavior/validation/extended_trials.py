@@ -324,12 +324,12 @@ def validate_intial_and_final_in_non_aborted(trials):
     return all_initial and all_final
 
 
-def validate_min_change_time(trials, pre_change_time):
+def validate_min_change_time(trials, pre_change_time, tolerance=0.015):
     '''change time in trial should never be less than pre_change_time'''
     change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
     # can only run validation if there are some non-null values
     if all(pd.isnull(change_times_trial_referenced)) == False:
-        return np.nanmin(change_times_trial_referenced) > pre_change_time
+        return np.nanmin(change_times_trial_referenced) > pre_change_time - tolerance
     # cannot run valiation function if all null, just return True
     elif all(pd.isnull(change_times_trial_referenced)) == True:
         return True
@@ -402,7 +402,7 @@ def validate_lick_before_scheduled_on_aborted_trials(trials):
         return True
 
 
-def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response):
+def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response, tolerance=0.01):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, no non-aborted trials should have a lick before the scheduled change time,
@@ -412,8 +412,8 @@ def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_resp
     # We can only check this if there is at least 1 nonaborted trial.
     if abort_on_early_response == True and len(nonaborted_trials) > 0:
         first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
-        # use nanmin
-        if np.nanmin(first_lick.values) < 0:
+        # use nanmin, apply tolerance to account for same frame licks
+        if np.nanmin(first_lick.values) < 0 - tolerance:
             return False
         else:
             return True
@@ -510,7 +510,7 @@ def validate_duration_and_volume_limit(trials, expected_duration, volume_limit, 
             return True
 
 
-def validate_catch_frequency(trials, expected_catch_frequency, rejection_probability=0.05):
+def validate_catch_frequency(trials, expected_catch_frequency, rejection_probability=0.001):
     '''
     non-aborted catch trials should comprise `catc_freq` of all non-aborted trials
     uses scipy's binomial test to ensure that the null hypothesis (catch trials come from a binomial distribution drawn with catch_freq) is true with 95% probability
@@ -783,13 +783,13 @@ def validate_flash_blank_durations(visual_stimuli, periodic_flash, mean_toleranc
         # make sure all flashes and blanks are within tolerance
         # mean should be within tolernace of expected value
         # std should be within tolerance of 0
-        blank_durations_consistent = np.logical_and(
+        flash_durations_consistent = np.logical_and(
             np.isclose(flash_durations.mean(), periodic_flash[0], atol=mean_tolerance),
             np.isclose(flash_durations.std(), 0, atol=std_tolerance)
         )
-        flash_durations_consistent = np.logical_and(
+        blank_durations_consistent = np.logical_and(
             np.isclose(blank_durations.mean(), periodic_flash[1], atol=mean_tolerance),
-            np.isclose(blank_durations.std(), 0, atol=std_tolerance)
+            np.isclose(blank_durations.std(), 0, atol=2 * std_tolerance)
         )
 
         return blank_durations_consistent and flash_durations_consistent
@@ -836,7 +836,7 @@ def validate_change_frame_at_flash_onset(trials, visual_stimuli, periodic_flash)
         return all(np.in1d(change_frames, visual_stimuli['frame']))
 
 
-def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash=True, tolerance=0.005):
+def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash=True, frame_tolerance=2):
     '''
     iterates over trials
     Verifies that there is a blank screen of duration `initial_blank` at the start of every trial.
@@ -855,9 +855,11 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
             # get visual greater than initial frame
             first_stim_index = visual_stimuli[visual_stimuli['frame'] >= trial['startframe']].index[0]
             # get offset between trial start and first stimulus of frame
-            first_stim_time_offset = visual_stimuli.loc[first_stim_index]['time'] - trial['starttime']
+            first_stim_frame_offset = visual_stimuli.loc[first_stim_index]['frame'] - trial['startframe']
+            # convert expected blank duration to frames
+            initial_blank_in_frames = int(initial_blank * 60.)
             # check to see if offset is within tolerance of expected blank
-            initial_blank_in_tolerance[idx] = np.isclose(first_stim_time_offset, initial_blank, atol=(tolerance + 1 / 60.))
+            initial_blank_in_tolerance[idx] = np.isclose(first_stim_frame_offset, initial_blank_in_frames, atol=(frame_tolerance))
         # ensure all initial blanks were within tolerance
         return all(initial_blank_in_tolerance)
 
