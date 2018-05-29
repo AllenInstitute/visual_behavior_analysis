@@ -15,6 +15,9 @@ def test__resolve_image_category(foraging2_data_stage_0_2018_05_16, set_frame, e
     change_log = foraging2_data_stage_0_2018_05_16["items"]["behavior"]["stimuli"]["images"]["change_log"]
     assert extract_stimuli._resolve_image_category(change_log, set_frame) == expected
 
+    change_log = []
+    assert extract_stimuli._resolve_image_category(change_log, set_frame) == None
+
 
 @pytest.mark.parametrize("idx, start_frame, last_trial_frame, expected", [
     (0, 0, 20000, (0, 237, ), ),
