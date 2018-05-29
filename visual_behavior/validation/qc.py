@@ -45,10 +45,6 @@ def define_validation_functions(core_data):
     VOLUME_LIMIT = core_data['metadata']['volume_limit']
 
     PERIODIC_FLASH = et.fix_periodic_flash(core_data['metadata']['periodic_flash'])
-    
-    
-    
-
 
     validation_functions = {
         # et.validate_schema
