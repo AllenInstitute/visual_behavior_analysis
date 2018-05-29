@@ -382,26 +382,6 @@ def validate_never_more_than_one_reward(trials):
     return np.max(trials['number_of_rewards']) <= 1
 
 
-def validate_lick_before_scheduled_on_aborted_trials(trials):
-    '''
-    if licks occur before a scheduled change time/flash, the trial ends
-    Therefore, every aborted trial should have a lick before the scheduled change time
-    '''
-    flash_blank_buffer = 0.75  # allow licks to come this long after scheduled change time without failing validation
-    aborted_trials = trials[trials.trial_type == 'aborted']
-    # can only run this test if there are aborted trials
-    if len(aborted_trials) > 0:
-        first_lick = aborted_trials.apply(
-            get_first_lick_relative_to_scheduled_change,
-            axis=1,
-        )
-        # don't use nanmax. If there's a nan, we expect this to fail
-        return np.max(first_lick.values) < flash_blank_buffer
-    # if no aborted trials, return True
-    else:
-        return True
-
-
 def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response, tolerance=0.01):
     '''
     if licks occur before a scheduled change time/flash, the trial ends

@@ -1,5 +1,6 @@
 import numpy as np
-
+import pandas as pd
+from .extended_trials import get_first_lick_relative_to_scheduled_change
 
 def validate_running_data(core_data):
     '''
