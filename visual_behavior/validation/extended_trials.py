@@ -324,7 +324,7 @@ def validate_intial_and_final_in_non_aborted(trials):
     return all_initial and all_final
 
 
-def validate_min_change_time(trials, pre_change_time, tolerance=0.01):
+def validate_min_change_time(trials, pre_change_time, tolerance=0.015):
     '''change time in trial should never be less than pre_change_time'''
     change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
     # can only run validation if there are some non-null values
