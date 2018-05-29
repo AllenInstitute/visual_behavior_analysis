@@ -30,3 +30,23 @@ def validate_minimal_dropped_frames(core_data, allowable_fraction_dropped=0.01):
     intervals = np.diff(core_data['time'])
     fraction_dropped = 1.0 * len(intervals[intervals >= (2 / 60.)]) / len(intervals)
     return fraction_dropped <= allowable_fraction_dropped
+
+
+def validate_lick_before_scheduled_on_aborted_trials(core_data):
+    '''
+    if licks occur before a scheduled change time/flash, the trial ends
+    Therefore, every aborted trial should have a lick before the scheduled change time
+    '''
+    flash_blank_buffer = 0.75  # allow licks to come this long after scheduled change time without failing validation
+    aborted_trials = core_data['trials'][pd.isnull(core_data['trials']['change_time'])]
+    # can only run this test if there are aborted trials
+    if len(aborted_trials) > 0:
+        first_lick = aborted_trials.apply(
+            get_first_lick_relative_to_scheduled_change,
+            axis=1,
+        )
+        # don't use nanmax. If there's a nan, we expect this to fail
+        return np.max(first_lick.values) < flash_blank_buffer
+    # if no aborted trials, return True
+    else:
+        return True
