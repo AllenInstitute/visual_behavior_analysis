@@ -55,4 +55,4 @@ def test_make_trials_contiguous():
 
     output_trials = make_trials_contiguous(input_trials,time)
 
-    assert_frame_equal(output_trials, EXPECTED_TRIALS)
+    assert_frame_equal(output_trials, EXPECTED_TRIALS, check_dtype=False)

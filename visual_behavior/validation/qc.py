@@ -59,7 +59,6 @@ def define_validation_functions(core_data):
         et.validate_max_change_time: (trials, PRE_CHANGE_TIME, STIMULUS_WINDOW,),
         et.validate_reward_follows_first_lick_in_window: (trials,),
         et.validate_never_more_than_one_reward: (trials,),
-        et.validate_lick_before_scheduled_on_aborted_trials: (trials,),
         et.validate_lick_after_scheduled_on_go_catch_trials: (trials, ABORT_ON_EARLY_RESPONSE,),
         et.validate_initial_matches_final: (trials,),
         et.validate_first_lick_after_change_on_nonaborted: (trials, ABORT_ON_EARLY_RESPONSE),
@@ -88,6 +87,7 @@ def define_validation_functions(core_data):
         et.validate_initial_blank: (trials, core_data['visual_stimuli'], INITIAL_BLANK, PERIODIC_FLASH),
         et.validate_new_params_on_nonaborted_trials: (trials,),
         et.validate_flash_blank_durations: (core_data['visual_stimuli'], PERIODIC_FLASH,),  # this one doesn't take trials
+        cd.validate_lick_before_scheduled_on_aborted_trials: (core_data,),
         cd.validate_running_data: (core_data,),  # this one doesn't take trials
         cd.validate_licks: (core_data,),  # this one doesn't take trials
         cd.validate_minimal_dropped_frames: (core_data,),  # this one doesn't take trials

@@ -382,26 +382,6 @@ def validate_never_more_than_one_reward(trials):
     return np.max(trials['number_of_rewards']) <= 1
 
 
-def validate_lick_before_scheduled_on_aborted_trials(trials):
-    '''
-    if licks occur before a scheduled change time/flash, the trial ends
-    Therefore, every aborted trial should have a lick before the scheduled change time
-    '''
-    flash_blank_buffer = 0.75  # allow licks to come this long after scheduled change time without failing validation
-    aborted_trials = trials[trials.trial_type == 'aborted']
-    # can only run this test if there are aborted trials
-    if len(aborted_trials) > 0:
-        first_lick = aborted_trials.apply(
-            get_first_lick_relative_to_scheduled_change,
-            axis=1,
-        )
-        # don't use nanmax. If there's a nan, we expect this to fail
-        return np.max(first_lick.values) < flash_blank_buffer
-    # if no aborted trials, return True
-    else:
-        return True
-
-
 def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response, tolerance=0.01):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
@@ -745,20 +725,25 @@ def validate_even_sampling(trials, even_sampling_enabled):
     if even_sampling mode is enabled, no stimulus change combinations (including catch conditions) are sampled more than one more time than any other.
     Note that even sampling only applies to images, so this does not need to be written to deal with grating stimuli
     '''
-    nonaborted_trials = trials[trials['trial_type'] != 'aborted']
-    if even_sampling_enabled == True and len(nonaborted_trials) > 0:
+    go_trials = trials[trials['trial_type'] == 'go']
+    if even_sampling_enabled == True and len(go_trials) > 0:
         # build a table with the counts of all combinations
         transition_matrix = pd.pivot_table(
-            nonaborted_trials,
+            go_trials,
             values='response',
             index=['initial_image_name'],
             columns=['change_image_name'],
             aggfunc=np.size,
             fill_value=0,
-        )
-        sample_range = abs(transition_matrix.values.max() - transition_matrix.values.min())
+        ).astype(float)
+
+        # if catch trials are drawn during autorewards, foraging2 skips those, violating the even_sampling rule
+        # fill the diagonal with NaN to prevent skipped catch trials during autorewards from failing this validation
+        np.fill_diagonal(transition_matrix.values, np.nan)
+
+        sample_range = abs(np.nanmax(transition_matrix.values) - np.nanmin(transition_matrix.values))
         # Return true if the range of max to min is less than or equal to 1 AND sum of values matches trial number
-        return sample_range <= 1 and transition_matrix.sum().sum() == len(nonaborted_trials)
+        return sample_range <= 1 and transition_matrix.sum().sum() == len(go_trials)
     else:
         return True
 
