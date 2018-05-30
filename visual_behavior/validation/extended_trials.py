@@ -736,11 +736,11 @@ def validate_even_sampling(trials, even_sampling_enabled):
             aggfunc=np.size,
             fill_value=0,
         ).astype(float)
-        
+
         # if catch trials are drawn during autorewards, foraging2 skips those, violating the even_sampling rule
         # fill the diagonal with NaN to prevent skipped catch trials during autorewards from failing this validation
-        np.fill_diagonal(transition_matrix.values,np.nan)
-        
+        np.fill_diagonal(transition_matrix.values, np.nan)
+
         sample_range = abs(np.nanmax(transition_matrix.values) - np.nanmin(transition_matrix.values))
         # Return true if the range of max to min is less than or equal to 1 AND sum of values matches trial number
         return sample_range <= 1 and transition_matrix.sum().sum() == len(go_trials)
