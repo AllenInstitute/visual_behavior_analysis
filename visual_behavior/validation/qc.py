@@ -54,7 +54,7 @@ def define_validation_functions(core_data):
         et.validate_autoreward_volume: (trials, AUTO_REWARD_VOLUME,),
         et.validate_number_of_warmup_trials: (trials, WARM_UP_TRIALS,),
         et.validate_reward_delivery_on_warmup_trials: (trials,),
-        et.validate_autorewards_after_N_consecutive_misses: (trials, FREE_REWARD_TRIALS,),
+        et.validate_autorewards_after_N_consecutive_misses: (trials, FREE_REWARD_TRIALS, WARM_UP_TRIALS),
         et.validate_change_on_all_go_trials: (trials,),
         et.validate_no_change_on_all_catch_trials: (trials,),
         et.validate_intial_and_final_in_non_aborted: (trials,),
