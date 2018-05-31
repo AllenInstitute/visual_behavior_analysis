@@ -394,3 +394,30 @@ def test_validate_new_params_on_nonaborted_trials():
         'scheduled_change_time': [2.4, 2.4, 3, 3, 3, 2.5],
     })
     assert validate_new_params_on_nonaborted_trials(BAD_DATA) == False
+
+
+def test_validate_autorewards_after_N_consecutive_misses():
+    auto_rewards_after_N_misses = 10
+    warmup_trials = 5
+    GOOD_TRIALS = pd.DataFrame({
+        'trial_type': ['go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go'],
+        'reward_times': [[1], [1], [1], [1], [1], [1], [], [], [], [], [], [], [], [], [], [], [2]],
+        'auto_rewarded': [True, True, True, True, True, False, False, False, False, False, False, False, False, False, False, False, True, ]
+    })
+    assert validate_autorewards_after_N_consecutive_misses(GOOD_TRIALS, auto_rewards_after_N_misses, warmup_trials) == True
+
+    # missing autoreward
+    BAD_TRIALS_MISSING = pd.DataFrame({
+        'trial_type': ['go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go'],
+        'reward_times': [[1], [1], [1], [1], [1], [1], [], [], [], [], [], [], [], [], [], [], []],
+        'auto_rewarded': [True, True, True, True, True, False, False, False, False, False, False, False, False, False, False, False, False, ]
+    })
+    assert validate_autorewards_after_N_consecutive_misses(BAD_TRIALS_MISSING, auto_rewards_after_N_misses, warmup_trials) == False
+
+    # autoreward at unexpected time
+    BAD_TRIALS_EARLY = pd.DataFrame({
+        'trial_type': ['go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go', 'go'],
+        'reward_times': [[1], [1], [1], [1], [1], [1], [], [], [], [], [], [], [], [], [1], [], [1]],
+        'auto_rewarded': [True, True, True, True, True, False, False, False, False, False, False, False, False, False, True, False, True, ]
+    })
+    assert validate_autorewards_after_N_consecutive_misses(BAD_TRIALS_EARLY, auto_rewards_after_N_misses, warmup_trials) == False

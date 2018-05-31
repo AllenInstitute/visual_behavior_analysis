@@ -265,24 +265,47 @@ def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
         return True
 
 
-def validate_autorewards_after_N_consecutive_misses(trials, autoreward_after_consecutive_misses):
+def validate_autorewards_after_N_consecutive_misses(extended_trials, autoreward_after_consecutive_misses, warmup_trials):
     '''
     validate that an autoreward is delivered after N consecutive misses
+
+    returns False if any expected autorewards are missing OR any autorewards come earlier than expected
+
+    Ignores warmup trials
     '''
-    go_trials = trials[trials.trial_type == 'go']
-    auto_reward_when_expected = []
-    consecutive_misses = 0
 
-    for idx, row in go_trials.iterrows():
-        miss = 1 if row['response'] == 0 else 0
-        auto_rewarded = 1 if row['auto_rewarded'] else 0
-        consecutive_misses = (consecutive_misses * miss + miss) * abs(1 - auto_rewarded)
-        if consecutive_misses > autoreward_after_consecutive_misses:
-            # these are trials when an autoreward is expected
-            auto_reward_when_expected.append(row['auto_rewarded'])
+    # if warmup_trials == -1, skip this validation altogether
+    if warmup_trials == -1:
+        return True
+    else:
+        # get all go trials, ignore the first `warmup_trials` trials
+        go_trials = extended_trials[extended_trials.trial_type == 'go'].iloc[warmup_trials:]
+        auto_reward_when_expected = []
+        consecutive_misses = 0
+        reward_expected_on_next = False
 
-    # all trials with expected autorewards should be True
-    return all(auto_reward_when_expected)
+        for idx, row in go_trials.iterrows():
+            # use the presence/absence of rewards to determine whether foraging2 labeled this as a hit or miss
+            miss = 1 if len(row['reward_times']) == 0 else 0
+            auto_rewarded = 1 if row['auto_rewarded'] else 0
+            consecutive_misses = (consecutive_misses * miss + miss) * abs(1 - auto_rewarded)
+
+            if reward_expected_on_next == True:
+                # these are trials when an autoreward is expected
+                auto_reward_when_expected.append(row['auto_rewarded'])
+
+            # check for autorewards that come at unexpected times
+            if reward_expected_on_next == False and auto_rewarded == 1:
+                return False
+
+            # keep track of whether an autoreward is expected on the next go trial
+            if consecutive_misses == autoreward_after_consecutive_misses:
+                reward_expected_on_next = True
+            else:
+                reward_expected_on_next = False
+
+        # all trials with expected autorewards should be True
+        return all(auto_reward_when_expected)
 
 
 def validate_change_on_all_go_trials(trials):
