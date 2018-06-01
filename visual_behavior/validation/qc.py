@@ -39,15 +39,12 @@ def define_validation_functions(core_data):
     FAILURE_REPEATS = core_data['metadata']['failure_repeats']
 
     INITIAL_BLANK = core_data['metadata']['initial_blank_duration']
+    CATCH_FREQUENCY = core_data['metadata']['catch_frequency']
+    WARM_UP_TRIALS = core_data['metadata']['warm_up_trials']
+    STIMULUS_WINDOW = core_data['metadata']['stimulus_window']
+    VOLUME_LIMIT = core_data['metadata']['volume_limit']
 
-    PERIODIC_FLASH = et.fix_periodic_flash(core_data['metadata']['params']['periodic_flash'])
-    WARM_UP_TRIALS = core_data['metadata']['params']['warm_up_trials']
-    STIMULUS_WINDOW = core_data['metadata']['params']['stimulus_window']
-    VOLUME_LIMIT = core_data['metadata']['params']['volume_limit']
-    if 'catch_frequency' in core_data['metadata'].keys():
-        CATCH_FREQUENCY = core_data['metadata']['catch_frequency']
-    else:
-        CATCH_FREQUENCY = 0
+    PERIODIC_FLASH = et.fix_periodic_flash(core_data['metadata']['periodic_flash'])
 
     validation_functions = {
         # et.validate_schema
