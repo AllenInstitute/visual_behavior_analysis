@@ -179,7 +179,8 @@ def load_flashes(data, time=None):
     # first we find the flashes
     try:
         assert pd.isnull(stimdf['image_category']).any() == False
-        if len(data['omitted_flash_frame_log']) > 0:
+        # if len(data['omitted_flash_frame_log']) > 0:
+        if 'omitted_flash_frame_log' in data:
             omitted_flash = pd.DataFrame(data['omitted_flash_frame_log'], columns=['frame'])
             omitted_flash['omitted'] = True
             stimdf = pd.merge(stimdf, omitted_flash, how='left', on='frame')
