@@ -5,6 +5,29 @@ import pandas as pd
 from scipy.stats import norm
 
 
+def load_extended_trials(datapath, tasktype='foraging2'):
+    '''
+    a simple helper function to allow the extended trial dataframe to be built in a single line
+    '''
+    from visual_behavior.translator.core import create_extended_dataframe
+    if tasktype == 'foraging2':
+        from visual_behavior.translator.foraging2 import data_to_change_detection_core
+    else:
+        from visual_behavior.translator.foraging import data_to_change_detection_core
+
+    data = pd.read_pickle(datapath)
+    core_data = data_to_change_detection_core(data)
+
+    extended_trial_dataframe = create_extended_dataframe(
+        trials=core_data['trials'],
+        metadata=core_data['metadata'],
+        licks=core_data['licks'],
+        time=core_data['time'],
+    )
+
+    return extended_trial_dataframe
+
+
 def flatten_list(in_list):
     out_list = []
     for i in range(len(in_list)):
@@ -93,6 +116,7 @@ class RisingEdge():
     ```
 
     """
+
     def __init__(self):
         self.firstall = False
 
