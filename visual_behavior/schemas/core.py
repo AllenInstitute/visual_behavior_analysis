@@ -298,6 +298,34 @@ class MetadataSchema(Schema):
         description='total number of stimulus frames',
         required=True,
     )
+    auto_reward_volume = fields.Float(
+        description='volume provided during autoreward trials',
+        required=True,
+    )
+    max_session_duration = fields.Float(
+        description='maximum duration in minutes of a session',
+        required=True,
+    )
+    min_no_lick_time = fields.Float(
+        description='minimum time where there should be no licks before the start of a trial',
+        required=True,
+    )
+    free_reward_trials  = fields.Int(
+        description='number of free reward trials to start the session',
+        required=True,
+    )
+    abort_on_early_response = fields.Bool(
+        description='if True, abort trials on early responses',
+        required=True,
+    )
+    even_sampling_enabled = fields.Bool(
+        description='if True, images should be sample evenly from the change matrix',
+        required=True,
+    )
+    failure_repeats = fields.Int(
+        description='maximum number of times to repeat parameters after a false alarm',
+        required=True,
+    )
 
 
 # class ChangeDetectionSessionCoreSchema(Schema):
