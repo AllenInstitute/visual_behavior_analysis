@@ -3,9 +3,8 @@ import setuptools
 # https://packaging.python.org/discussions/install-requires-vs-requirements/ this is the way i think it should be -Chris
 
 setuptools.setup(
-    name="visual_behavior",
+    name="visual-behavior",
     version="0.3.0",
-    url="http://stash.corp.alleninstitute.org/users/justink/repos/visual_behavior/browse",
     author="Justin Kiggins",
     author_email="justink@alleninstitute.org",
     description="analysis package for visual behavior",
