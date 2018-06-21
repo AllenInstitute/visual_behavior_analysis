@@ -742,7 +742,7 @@ def validate_licks_on_go_trials_earn_reward(trials):
     all go trials with licks in response window should have 1 reward
     '''
     # note: make tolerance direction 'inside' to only look at licks that were unambiguously inside the window
-    number_of_licks_in_window = trials.apply(identify_licks_in_response_window, axis=1, tolerance=1/60., tolerance_direction='inside')
+    number_of_licks_in_window = trials.apply(identify_licks_in_response_window, axis=1, tolerance=1 / 60., tolerance_direction='inside')
     number_of_rewards_on_go_lick_trials = trials[
         (number_of_licks_in_window > 0) &
         (trials['trial_type'] == 'go')
