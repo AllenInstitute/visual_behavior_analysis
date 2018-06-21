@@ -421,3 +421,91 @@ def test_validate_autorewards_after_N_consecutive_misses():
         'auto_rewarded': [True, True, True, True, True, False, False, False, False, False, False, False, False, False, True, False, True, ]
     })
     assert validate_autorewards_after_N_consecutive_misses(BAD_TRIALS_EARLY, auto_rewards_after_N_misses, warmup_trials) == False
+
+
+def test_validate_reward_when_lick_in_window():
+    GOOD_DATA = pd.DataFrame({
+        'trial_type': ['go', 'go', 'catch', 'aborted'],
+        'auto_rewarded': [False, False, False, False],
+        'change_time': [867.943295, 2132.735950, 2359.626023, 2500],
+        'lick_times': [
+            [868.07670185, 868.243553692, 868.343638907],
+            [2132.8193812, 2133.00285741, 2134.73767532],
+            [2359.72610696, 2359.95964697], [2499]
+        ],
+        'reward_times': [
+            [867.943295],
+            [2132.8193812],
+            [],
+            [],
+        ],
+        'response_window': [[0.15, 0.75], [0.15, 0.75], [0.15, 0.75], [0.15, 0.75]]
+    })
+
+    assert validate_reward_when_lick_in_window(GOOD_DATA) == True
+
+    # missing reward on second go trial
+    BAD_DATA = pd.DataFrame({
+        'trial_type': ['go', 'go', 'catch', 'aborted'],
+        'auto_rewarded': [False, False, False, False],
+        'change_time': [867.943295, 2132.735950, 2359.626023, 2500],
+        'lick_times': [
+            [868.07670185, 868.243553692, 868.343638907],
+            [2132.8193812, 2133.00285741, 2134.73767532],
+            [2359.72610696, 2359.95964697], [2499]
+        ],
+        'reward_times': [
+            [867.943295],
+            [],
+            [],
+            [],
+        ],
+        'response_window': [[0.15, 0.75], [0.15, 0.75], [0.15, 0.75], [0.15, 0.75]]
+    })
+
+    assert validate_reward_when_lick_in_window(BAD_DATA) == False
+
+
+def test_validate_licks_near_every_reward():
+    GOOD_DATA = pd.DataFrame({
+        'trial_type': ['go', 'go', 'catch', 'aborted'],
+        'auto_rewarded': [False, False, False, False],
+        'change_time': [867.943295, 2132.735950, 2359.626023, 2500],
+        'lick_times': [
+            [868.07670185, 868.243553692, 868.343638907],
+            [2132.8193812, 2133.00285741, 2134.73767532],
+            [2359.72610696, 2359.95964697], [2499]
+        ],
+        'reward_times': [
+            [868.243553692],
+            [2132.8193812],
+            [],
+            [],
+        ],
+        'number_of_rewards': [1, 1, 0, 0],
+        'response_window': [[0.15, 0.75], [0.15, 0.75], [0.15, 0.75], [0.15, 0.75]]
+    })
+
+    assert validate_licks_near_every_reward(GOOD_DATA) == True
+
+    # second reward has no associated lick
+    BAD_DATA = pd.DataFrame({
+        'trial_type': ['go', 'go', 'catch', 'aborted'],
+        'auto_rewarded': [False, False, False, False],
+        'change_time': [867.943295, 2132.735950, 2359.626023, 2500],
+        'lick_times': [
+            [868.07670185, 868.243553692, 868.343638907],
+            [2132.8193812, 2133.00285741, 2134.73767532],
+            [2359.72610696, 2359.95964697], [2499]
+        ],
+        'reward_times': [
+            [868.243553692],
+            [2132.00285741],
+            [],
+            [],
+        ],
+        'number_of_rewards': [1, 1, 0, 0],
+        'response_window': [[0.15, 0.75], [0.15, 0.75], [0.15, 0.75], [0.15, 0.75]]
+    })
+
+    assert validate_licks_near_every_reward(BAD_DATA) == False
