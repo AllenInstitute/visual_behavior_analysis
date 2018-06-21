@@ -369,12 +369,12 @@ def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance
         return True
 
 
-def validate_reward_follows_first_lick_in_window(trials, tolerance=0.01):
-    '''reward should happen immediately (within tolerance) of first lick in window on non-autorewarded go trials'''
+def validate_reward_when_lick_in_window(trials, tolerance=0.01):
+    '''for every trial with a lick in the response window, there should be a reward'''
     # get all go_trials without auto_rewards
     contingent_go_trials = trials[
-        (trials.trial_type == 'go')
-        & (trials.auto_rewarded == False)  # noqa: E712
+        (trials.trial_type == 'go') &
+        (trials.auto_rewarded == False)
     ]
 
     # get first lick in response window, relative to change time
@@ -387,16 +387,41 @@ def validate_reward_follows_first_lick_in_window(trials, tolerance=0.01):
     first_lick_in_window.name = 'first_lick'
 
     # get reward time, relative to change time
-    reward_time = contingent_go_trials['reward_times'] - contingent_go_trials['change_time']
+    def get_reward_relative_to_change(row):
+        if len(row['reward_times']) > 0:
+            return row['reward_times'][0] - row['change_time']
+        else:
+            return np.nan
+    reward_time = contingent_go_trials.apply(get_reward_relative_to_change, axis=1)
     reward_time.name = 'reward_time'
 
     # check that, whenever a first lick exists, a reward was given with tolerance
     for idx, row in pd.concat([first_lick_in_window, reward_time], axis=1).iterrows():
-        # if there was a lick, there should be a reward within tolerance
-        if ~pd.isnull(row['first_lick']) and len(row['reward_time'] == 0):
-            if abs(row['first_lick'] - row['reward_time'][0]) > tolerance:
-                return False
+        # if there was a lick in the window and there was no reward, fail
+        if not pd.isnull(row['first_lick']) and pd.isnull(row['reward_time']):
+            return False
 
+    return True
+
+
+def validate_licks_near_every_reward(trials, tolerance=0.005):
+    '''
+    validates that there is a lick near every reward, excluding auto_rewards
+    '''
+    earned_reward_trials = trials[
+        (trials.number_of_rewards > 0) &
+        (trials.auto_rewarded == False)
+    ]
+
+    for idx, row in earned_reward_trials.iterrows():
+        # if there aren't any licks, something is wrong. Return False
+        if len(row['lick_times']) == 0:
+            return False
+        # assuming there are licks, there should be one within tolerance of the reward
+        elif not np.isclose(min(abs(row['reward_times'][0] - np.array(row['lick_times']))), 0, atol=tolerance):
+            return False
+
+    # if no failed trials found, return True
     return True
 
 
