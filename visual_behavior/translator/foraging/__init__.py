@@ -81,6 +81,16 @@ def load_metadata(data):
         timezone='America/Los_Angeles',
     )
 
+
+    metadata['auto_reward_vol'] = 0.05 # hard coded
+    metadata['max_session_duration'] = None
+    metadata['min_no_lick_time'] = data.get('minimum_no_lick_time', None)
+    metadata['free_reward_trials'] = data.get('warm_up_trials', None)
+    metadata['abort_on_early_response'] = data.get('ignore_false_alarms', False) == False
+    metadata['even_sampling_enabled'] = data.get('image_category_sampling_mode','') == 'even_sampling'
+    metadata['failure_repeats'] = data.get('max_number_trial_repeats', None)
+
+
     return metadata
 
 
