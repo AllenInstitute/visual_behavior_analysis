@@ -25,7 +25,7 @@ This ensures that Python uses the current, active files in the folder (even whil
 
 ## Use
 
-First, load up a Foraging2 output
+First, load up a Foraging2 output 
 
 ``` Python
 import pandas as pd
