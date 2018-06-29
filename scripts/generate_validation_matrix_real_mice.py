@@ -11,6 +11,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 def get_files():
+    '''
+    get list of sessions from mouse seeks
+    get cached outcomes
+    '''
     path=r'//allen/programs/braintv/workgroups/ophysdev/oPhysQC/mouse_seeks/reports'
     mouse_seeks_output = pd.read_csv(os.path.join(path,'BEHAVIOR_report.csv'))
     mouse_seeks_output['timestamp']=mouse_seeks_output['lims_behavior_session_created_at'].map(lambda x:pd.to_datetime(x))
@@ -23,6 +27,9 @@ def get_files():
     return outcomes,f2_files
 
 def run_qc(f2_files,outcomes=None):
+    '''
+    run QC functions. Pass when data can't be loaded
+    '''
     all_results = []
     for idx,row in f2_files.iterrows():
         if outcomes is not None and row['lims_behavior_session_foraging_id'] not in outcomes.session_id.unique():
@@ -59,6 +66,9 @@ def run_qc(f2_files,outcomes=None):
     return all_results
 
 def add_new_results_to_outcomes(new_results,outcomes):
+    '''
+    find data files that didn't already exist in outcomes. Append them
+    '''
     all_results = run_qc(f2_files,outcomes)
     outcomes = pd.concat((outcomes,pd.DataFrame(all_results)))
     outcomes.to_csv('//allen/programs/braintv/workgroups/ophysdev/oPhysQC/mouse_seeks/reports/visual_behavior_mouse_validation_matrix.csv',index=False)
@@ -66,6 +76,9 @@ def add_new_results_to_outcomes(new_results,outcomes):
     return outcomes 
 
 def make_plot(outcomes):
+    '''
+    make a plot. Save it to the network.
+    '''
     outcomes_sorted = (
         outcomes
         .drop(labels=['session_id'],axis=1)
