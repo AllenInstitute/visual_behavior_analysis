@@ -1,6 +1,5 @@
 
 PKG=visual_behavior
-REV=`git rev-parse HEAD | cut -c -7`
 UID=`id -u`
 
 clean:
