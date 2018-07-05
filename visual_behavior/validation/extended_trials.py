@@ -234,7 +234,7 @@ def validate_number_of_warmup_trials(trials, expected_number_of_warmup_trials):
         return len(trials[trials.auto_rewarded == True]) == len(trials)
 
 
-def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
+def validate_reward_delivery_on_warmup_trials(trials, autoreward_delay=0, tolerance=0.001):
     '''
     all warmup trials should have rewards presented simultaneously with the
     change image
@@ -256,7 +256,7 @@ def validate_reward_delivery_on_warmup_trials(trials, tolerance=0.001):
                 in zip(go_warmup_trials.reward_times, go_warmup_trials.change_time)
             ]
             # check to see that all time differences fall within threshold
-            return all([td < tolerance for td in time_delta])
+            return all([abs(td - autoreward_delay) < tolerance for td in time_delta])
         except Exception:
             # if the above fails, fail the test
             return False

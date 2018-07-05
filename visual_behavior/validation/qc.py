@@ -37,6 +37,7 @@ def define_validation_functions(core_data):
     EXPECTED_CHANGE_DISTRIBUTION_MEAN = core_data['metadata']['delta_mean']
     EVEN_SAMPLING = core_data['metadata']['even_sampling_enabled']
     FAILURE_REPEATS = core_data['metadata']['failure_repeats']
+    AUTOREWARD_DELAY = core_data['metadata']['auto_reward_delay']
 
     INITIAL_BLANK = core_data['metadata']['initial_blank_duration']
     CATCH_FREQUENCY = core_data['metadata']['catch_frequency']
@@ -50,7 +51,7 @@ def define_validation_functions(core_data):
         # et.validate_schema
         et.validate_autoreward_volume: (trials, AUTO_REWARD_VOLUME,),
         et.validate_number_of_warmup_trials: (trials, WARM_UP_TRIALS,),
-        et.validate_reward_delivery_on_warmup_trials: (trials,),
+        et.validate_reward_delivery_on_warmup_trials: (trials, AUTOREWARD_DELAY),
         et.validate_autorewards_after_N_consecutive_misses: (trials, FREE_REWARD_TRIALS, WARM_UP_TRIALS),
         et.validate_change_on_all_go_trials: (trials,),
         et.validate_no_change_on_all_catch_trials: (trials,),
