@@ -725,8 +725,8 @@ def get_running_speed(exp_data, smooth=False, time=None):
     running_speed = pd.DataFrame({
         'time': time,
         'speed (cm/s)': speed,
-        'acceleration (cm/s^2)': accel,
-        'jerk (cm/s^3)': jerk,
+        # 'acceleration (cm/s^2)': accel,
+        # 'jerk (cm/s^3)': jerk,
     })
     return running_speed
 

@@ -208,13 +208,13 @@ class StimulusSchema(TimeSeriesSchema):
         required=True,
         allow_none=True,
     )
-    contrast = fields.Float(
-        description='The contrast of a grating stimulus',
+    orientation = fields.Float(
+        description='The orientation of a grating stimulus',
         required=True,
         allow_none=True,
     )
-    orientation = fields.Float(
-        description='The orientation of a grating stimulus',
+    end_frame = fields.Int(
+        description='The last frame of this stimulus, non-inclusive',
         required=True,
     )
 
@@ -298,7 +298,7 @@ class MetadataSchema(Schema):
         description='total number of stimulus frames',
         required=True,
     )
-    auto_reward_volume = fields.Float(
+    auto_reward_vol = fields.Float(
         description='volume provided during autoreward trials',
         required=True,
     )
@@ -324,6 +324,26 @@ class MetadataSchema(Schema):
     )
     failure_repeats = fields.Int(
         description='maximum number of times to repeat parameters after a false alarm',
+        required=True,
+    )
+    initial_blank_duration = fields.Float(
+        description='duration of grey screen at start of each trial, in seconds',
+        required=True,
+    )
+    catch_frequency = fields.Float(
+        description='fraction of trials that should be catch trials',
+        required=True,
+    )
+    warm_up_trials = fields.Int(
+        description='number of warm up trials at start of session',
+        required=True,
+    )
+    stimulus_window = fields.Float(
+        description='start and stop times of stimulus window',
+        required=True,
+    )
+    volume_limit = fields.Float(
+        description='maximum volume of water to deliver in a session, in mL',
         required=True,
     )
 

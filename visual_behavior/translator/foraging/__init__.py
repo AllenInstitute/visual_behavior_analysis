@@ -282,6 +282,7 @@ def load_running_speed(data, smooth=False, time=None):
 
     running_speed = pd.DataFrame({
         'time': time,
+        'frame': range(len(time)),
         'speed': speed,
         # 'acceleration (cm/s^2)': accel,
         # 'jerk (cm/s^3)': jerk,
@@ -339,7 +340,7 @@ def load_visual_stimuli(data, time=None):
     stimdf = pd.DataFrame(data['stimuluslog'])
 
     stimdf = find_ends(stimdf)
-    stimdf['end'] = stimdf['frames_to_end'] + stimdf['frame']
+    stimdf['end_frame'] = stimdf['frames_to_end'] + stimdf['frame']
 
     def find_time(fr):
         try:
@@ -347,7 +348,7 @@ def load_visual_stimuli(data, time=None):
         except IndexError:
             return np.nan
 
-    stimdf['end_time'] = stimdf['end'].map(find_time)
+    stimdf['end_time'] = stimdf['end_frame'].map(find_time)
     stimdf['duration'] = stimdf['end_time'] - stimdf['time']
 
     onset_mask = (
@@ -358,13 +359,13 @@ def load_visual_stimuli(data, time=None):
     ) > 0
 
     if pd.isnull(stimdf['image_name']).any() == False:  # 'image_category' in stimdf.columns:
-        cols = ['frame', 'time', 'duration', 'image_category', 'image_name']
+        cols = ['frame', 'end_frame', 'time', 'duration', 'image_category', 'image_name']
         stimuli = stimdf[onset_mask][cols]
         stimuli['orientation'] = None
         stimuli['contrast'] = None
 
     elif 'ori' in stimdf.columns:
-        cols = ['frame', 'time', 'duration', 'ori', 'contrast']
+        cols = ['frame', 'end_frame', 'time', 'duration', 'ori', 'contrast']
         stimuli = stimdf[onset_mask][cols]
         stimuli.rename(columns={'ori': 'orientation'}, inplace=True)
         stimuli['image_category'] = None
