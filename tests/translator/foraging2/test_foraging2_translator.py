@@ -140,6 +140,7 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             'even_sampling_enabled': False,
             "behavior_session_uuid": '',
             "abort_on_early_response": True,
+            "auto_reward_delay": 0.0,
         }
 
 

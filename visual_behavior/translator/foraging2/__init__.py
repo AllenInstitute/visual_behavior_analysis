@@ -13,7 +13,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stimulus_window, get_volume_limit, get_failure_repeats, \
     get_catch_frequency, get_free_reward_trials, get_min_no_lick_time, \
     get_max_session_duration, get_abort_on_early_response, get_session_id, \
-    get_even_sampling
+    get_even_sampling, get_auto_reward_delay
 
 
 from .extract_stimuli import get_visual_stimuli
@@ -156,6 +156,7 @@ def data_to_metadata(data):
         "volume_limit": get_volume_limit(data),
         "failure_repeats": get_failure_repeats(data),
         "catch_frequency": get_catch_frequency(data),
+        "auto_reward_delay": get_auto_reward_delay(data),
         "free_reward_trials": get_free_reward_trials(data),
         "min_no_lick_time": get_min_no_lick_time(data),
         "max_session_duration": get_max_session_duration(data),
