@@ -39,7 +39,7 @@ RIG_NAME = {
     'W7DTMJ036PSL': 'Marina2P_Sutter',
     'W7DT2PNC1STIM': '2P6',
     'W7DTMJ234MG': 'peterl_2p',
-    'W7DT2P3STIM': '2P3',
+    'W7DT2P3STiM': '2P3',
     'localhost': 'localhost'
 }
 
