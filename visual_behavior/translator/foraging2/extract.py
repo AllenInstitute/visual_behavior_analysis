@@ -1355,6 +1355,7 @@ def get_catch_frequency(data):
     """
     return data["items"]["behavior"]["config"]["DoC"]["catch_freq"]
 
+
 def get_auto_reward_delay(data):
     """Get the auto reward delay set for a foraging2 behavior session
 
@@ -1367,7 +1368,7 @@ def get_auto_reward_delay(data):
     -------
     float
     """
-    return data["items"]["behavior"]["config"]["DoC"].get("auto_reward_delay",0.0)
+    return data["items"]["behavior"]["config"]["DoC"].get("auto_reward_delay", 0.0)
 
 
 def get_free_reward_trials(data):
