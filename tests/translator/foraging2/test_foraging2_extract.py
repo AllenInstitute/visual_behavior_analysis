@@ -671,6 +671,10 @@ def test_get_catch_frequency(foraging2_data_stage4_2018_05_10):
     assert extract.get_catch_frequency(foraging2_data_stage4_2018_05_10) == 0.5
 
 
+def test_get_auto_reward_delay(foraging2_data_stage4_2018_05_10):
+    assert extract.get_auto_reward_delay(foraging2_data_stage4_2018_05_10) == 0.0
+
+
 def test_get_free_reward_trials(foraging2_data_stage4_2018_05_10):
     assert extract.get_free_reward_trials(foraging2_data_stage4_2018_05_10) == 10
 
