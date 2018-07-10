@@ -2,12 +2,6 @@ import numpy as np
 import pandas as pd
 from visual_behavior.validation.core import *
 
-def test_assert_auto_reward_delay_exists():
-    '''
-    This will ensure that tests fail
-    Remove this after https://github.com/AllenInstitute/visual_behavior_analysis/issues/257 is solved
-    '''
-    raise
 
 def test_validate_running_data():
     # good data: length matches time and not all values the same
