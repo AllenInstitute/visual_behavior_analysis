@@ -50,6 +50,8 @@ RIG_NAME = {
     'localhost': 'localhost'
 }
 
+RIG_NAME = {k.lower(): v for k, v in iteritems(RIG_NAME))
+
 COMPUTER_NAME = dict((v, k) for k, v in iteritems(RIG_NAME))
 
 
@@ -71,7 +73,7 @@ def get_rig_id(in_val, input_type='computer_name'):
         specifies whether `in_val` is a computer name or rig_id
     '''
     if input_type == 'computer_name' and in_val in RIG_NAME.keys():
-        return RIG_NAME[in_val]
+        return RIG_NAME[in_val.lower()]
     elif input_type == 'rig_id' and in_val in COMPUTER_NAME.keys():
         return COMPUTER_NAME[in_val]
     else:
