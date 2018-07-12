@@ -56,25 +56,32 @@ COMPUTER_NAME = dict((v, k) for k, v in iteritems(RIG_NAME))
 
 
 # -> devices.py
-def get_rig_id(in_val, input_type='computer_name'):
+def get_rig_id(computer_name):
     '''
     This provides a map between the computer name and the rig ID.
 
     >>> get_rig_id('W7DTMJ19R2F')
     A1
-    >>> get_rig_id('A1',input_type='rig_id')
-    W7DTMJ19R2F
-
+    
     Parameters
     ----------
     in_val : str
         computer name
-    input_type : 'computer_name' or 'rig_id'
-        specifies whether `in_val` is a computer name or rig_id
     '''
-    if input_type == 'computer_name' and in_val in RIG_NAME.keys():
-        return RIG_NAME[in_val.lower()]
-    elif input_type == 'rig_id' and in_val in COMPUTER_NAME.keys():
-        return COMPUTER_NAME[in_val]
-    else:
-        return 'unknown'
+    
+    return RIG_NAME.get(computer_name.lower(),'unknown')
+
+def get_computer_name(rig_id):
+    '''
+    This provides a map between the computer name and the rig ID.
+
+    >>> get_computer_name('A1')
+    W7DTMJ19R2F
+
+    Parameters
+    ----------
+    rig_id : str
+        rig name
+    '''
+    
+    return COMPUTER_NAME.get(rig_id,'unknown')
