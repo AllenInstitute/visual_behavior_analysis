@@ -145,3 +145,16 @@ def generate_qc_report(core_data):
     results['passes'] = check_session_passes(results)
 
     return results
+
+from ..change_detection.trials.summarize import summarize_session
+
+def generate_performance_report(core_data):
+
+    trials = create_extended_dataframe(
+        trials=core_data['trials'],
+        metadata=core_data['metadata'],
+        licks=core_data['licks'],
+        time=core_data['time'],
+    )
+
+    return summarize_session(trials)
