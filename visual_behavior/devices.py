@@ -50,7 +50,7 @@ RIG_NAME = {
     'localhost': 'localhost'
 }
 
-RIG_NAME = {k.lower(): v for k, v in iteritems(RIG_NAME))
+RIG_NAME = {k.lower(): v for k, v in iteritems(RIG_NAME)}
 
 COMPUTER_NAME = dict((v, k) for k, v in iteritems(RIG_NAME))
 
