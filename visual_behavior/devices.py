@@ -62,14 +62,15 @@ def get_rig_id(computer_name):
 
     >>> get_rig_id('W7DTMJ19R2F')
     A1
-    
+
     Parameters
     ----------
     in_val : str
         computer name
     '''
-    
-    return RIG_NAME.get(computer_name.lower(),'unknown')
+
+    return RIG_NAME.get(computer_name.lower(), 'unknown')
+
 
 def get_computer_name(rig_id):
     '''
@@ -83,5 +84,5 @@ def get_computer_name(rig_id):
     rig_id : str
         rig name
     '''
-    
-    return COMPUTER_NAME.get(rig_id,'unknown')
+
+    return COMPUTER_NAME.get(rig_id, 'unknown')
