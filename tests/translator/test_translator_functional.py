@@ -4,6 +4,7 @@ from visual_behavior.schemas.core import MetadataSchema, StimulusSchema, \
 from visual_behavior.schemas.extended_trials import ExtendedTrialSchema
 from visual_behavior.translator import foraging2, foraging
 from visual_behavior.translator.core import create_extended_dataframe
+from visual_behavior.uuid_utils import create_session_uuid
 
 
 """test the schemas vs the outputs here
@@ -50,10 +51,20 @@ def test_foraging2_translator_schema(foraging2_data_stage4_2018_05_10):
     core_data = foraging2.data_to_change_detection_core(
         foraging2_data_stage4_2018_05_10
     )
+    core_data['metadata']['behavior_session_uuid'] = create_session_uuid(
+        core_data['metadata']['mouseid'],
+        core_data['metadata']['startdatetime'],
+    )
     _test_core_data_schemas(core_data)
 
 def test_foraging_translator_schema(behavioral_session_output_fixture):
     core_data = foraging.data_to_change_detection_core(
         behavioral_session_output_fixture
     )
+
+    core_data['metadata']['behavior_session_uuid'] = create_session_uuid(
+        str(core_data['metadata']['mouseid']),
+        core_data['metadata']['startdatetime'],
+    )
+
     _test_core_data_schemas(core_data)

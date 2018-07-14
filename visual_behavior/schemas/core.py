@@ -20,10 +20,10 @@ class RewardSchema(TimeSeriesSchema):
     """ schema for water reward presentations
 
     """
-    volume = fields.Float(
-        description='Volume of water dispensed on this reward presentation in mL',
-        required=True,
-    )
+    # volume = fields.Float(
+    #     description='Volume of water dispensed on this reward presentation in mL',
+    #     required=True,
+    # )
     # lickspout = fields.Int(
     #     description='The water line on which this reward was dispensed',
     #     required=True,
