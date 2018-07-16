@@ -216,17 +216,8 @@ def data_to_running(data):
     -----
     - the index of each time is the frame number
     """
-    speed_df = get_running_speed(data)[["speed (cm/s)", "time"]]  # yeah...it's dumb i kno...
-
-    n_frames = len(speed_df)
-
-    frames_df = pd.DataFrame(data={"frame": range(n_frames)})
-
-    return pd.DataFrame(data={
-        "speed": speed_df["speed (cm/s)"],
-        "frame": frames_df["frame"],
-        "time": speed_df["time"],
-    })
+    speed_df = get_running_speed(data)
+    return speed_df
 
 
 def data_to_time(data):

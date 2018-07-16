@@ -283,10 +283,11 @@ def test_get_licks(monkeypatch, foraging2_data_fixture):
     (
         {},
         pd.DataFrame(data={
-            "time": np.array([0.0, 0.016, 0.032, 0.048, 0.064, ]),
-            "speed (cm/s)": np.array([0, 0, 0, 0, 0, ]),
-            "acceleration (cm/s^2)": np.array([0, 0, 0, 0, 0, ]),
-            "jerk (cm/s^3)": np.array([0, 0, 0, 0, 0, ]),
+            "time": [0.0, 0.016, 0.032, 0.048, 0.064, ],
+            "speed": [0, 0, 0, 0, 0, ],
+            "frame": [0, 1, 2, 3, 4, ]
+            # "acceleration (cm/s^2)": np.array([0, 0, 0, 0, 0, ]),
+            # "jerk (cm/s^3)": np.array([0, 0, 0, 0, 0, ]),
         }),
     ),
 ])

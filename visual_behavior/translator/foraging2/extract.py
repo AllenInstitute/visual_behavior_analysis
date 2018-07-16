@@ -719,14 +719,15 @@ def get_running_speed(exp_data, smooth=False, time=None):
         # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
         raise NotImplementedError
 
-    accel = calc_deriv(speed, time)
-    jerk = calc_deriv(accel, time)
+    # accel = calc_deriv(speed, time)
+    # jerk = calc_deriv(accel, time)
 
     running_speed = pd.DataFrame({
         'time': time,
-        'speed (cm/s)': speed,
-        'acceleration (cm/s^2)': accel,
-        'jerk (cm/s^3)': jerk,
+        'frame': range(len(time)),
+        'speed': speed,
+        # 'acceleration (cm/s^2)': accel,
+        # 'jerk (cm/s^3)': jerk,
     })
     return running_speed
 
