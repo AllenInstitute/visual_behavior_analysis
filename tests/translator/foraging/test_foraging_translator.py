@@ -26,6 +26,7 @@ def test_load_time(behavioral_session_output_fixture):
 
 def test_load_trials(behavioral_session_output_fixture, trials_df_fixture):
     trials = foraging.load_trials(behavioral_session_output_fixture)
+
     pd.testing.assert_frame_equal(
         trials,
         trials_df_fixture,
@@ -96,6 +97,13 @@ def test_load_running_speed(behavioral_session_output_fixture):
             #     3: -100.3045892838318,
             #     4: -218.06477955362016
             # },
+            'frame': {
+                0: 0,
+                1: 1,
+                2: 2,
+                3: 3,
+                4: 4
+            },
             'speed': {
                 0: 0.0,
                 1: 0.14556417360329282,
@@ -111,10 +119,6 @@ def test_load_running_speed(behavioral_session_output_fixture):
                 4: 0.2000794094055891
             }
         },
-        columns=[
-            u'speed',
-            u'time',
-        ]
     )
 
     pd.testing.assert_frame_equal(
