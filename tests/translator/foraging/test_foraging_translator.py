@@ -27,6 +27,8 @@ def test_load_time(behavioral_session_output_fixture):
 def test_load_trials(behavioral_session_output_fixture, trials_df_fixture):
     trials = foraging.load_trials(behavioral_session_output_fixture)
 
+    trials_df_fixture['change_frame'] += 1
+
     pd.testing.assert_frame_equal(
         trials,
         trials_df_fixture,
