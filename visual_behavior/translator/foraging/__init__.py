@@ -358,6 +358,9 @@ def load_visual_stimuli(data, time=None):
     stimdf = find_ends(stimdf)
     stimdf['end_frame'] = stimdf['frames_to_end'] + stimdf['frame']
 
+    stimdf['frame'] += 1
+    stimdf['end_frame'] += 1
+
     def find_time(fr):
         try:
             return time[fr]
