@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Sunday July 15 2018
 
@@ -6,15 +5,9 @@ Created on Sunday July 15 2018
 """
 import os
 import h5py
-import json
-import shutil
 import platform
 import numpy as np
 import pandas as pd
-import cPickle as pickle
-import visual_behavior.utilities as du
-import visual_behavior.io as vbio
-from visual_behavior_ophys.utilities.lims_database import LimsDatabase
 
 
 class VisualBehaviorOphysDataset(object):
@@ -59,7 +52,7 @@ class VisualBehaviorOphysDataset(object):
                 cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
             else:
                 cache_dir = r'\\allen\aibs\informatics\swdb2018\visual_behavior'
-            print 'using default cache_dir:', cache_dir
+            print 'using default cache_dir:', cache_dir # flake8: noqa: E999
         else:
             cache_dir = self.cache_dir
         self.cache_dir = cache_dir
@@ -67,23 +60,17 @@ class VisualBehaviorOphysDataset(object):
 
     def get_analysis_dir(self):
         analysis_folder = [file for file in os.listdir(self.cache_dir) if str(self.experiment_id) in file]
-        if len(analysis_folder)>0:
+        if len(analysis_folder) > 0:
             self.analysis_folder = analysis_folder[0]
             self.analysis_dir = os.path.join(self.cache_dir, self.analysis_folder)
         else:
             self.analysis_dir = None
-            print 'no analysis folder  found for ',self.experiment_id
+            print 'no analysis folder  found for ', self.experiment_id
         return self.analysis_dir
 
     def get_metadata(self):
         self.metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
         return self.metadata
-
-    def get_timestamps(lims_data):
-        from visual_behavior.ophys.sync.process_sync import get_sync_data
-        sync_data = get_sync_data(lims_data)
-        timestamps = pd.DataFrame(sync_data)
-        return timestamps
 
     def get_timestamps(self):
         self.timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df', format='fixed')
@@ -125,17 +112,6 @@ class VisualBehaviorOphysDataset(object):
         return self.max_projection
 
     def get_motion_correction(self):
-        self.motion_correction = pd.read_hdf(os.path.join(self.analysis_dir, 'motion_correction.h5'), key='df', format='fixed')
+        self.motion_correction = pd.read_hdf(os.path.join(self.analysis_dir, 'motion_correction.h5'), key='df',
+                                             format='fixed')
         return self.motion_correction
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Created on Tue Oct 20 13:49:10 2015
 
@@ -17,23 +16,24 @@ def convert_lims_path(data_folder):
     data_folder = data_folder.replace('/projects', '/allen/programs/braintv/production')
     data_folder = data_folder.replace('/vol1', '')
 
-    if os.name=='nt':
+    if os.name == 'nt':
         data_folder = data_folder.replace('/', '\\')
         if data_folder[0:2] == '\\a':
             data_folder = '\\' + data_folder
     return data_folder
 
+
 class LimsDatabase:
     def __init__(self, lims_id):
 
-        self.lims_id=lims_id
+        self.lims_id = lims_id
 
         # We first gather all information from LIMS
         try:
-            conn=psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2",password="limsro", port=5432)
-            cur=conn.cursor()
+            conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+            cur = conn.cursor()
 
-            query=' '.join((
+            query = ' '.join((
                 "SELECT oe.id, oe.name, oe.storage_directory, os.specimen_id",
                 ", sp.external_specimen_name, os.date_of_acquisition, u.login as operator",
                 ", e.name as rig, id.depth, st.acronym, os.parent_session_id, oe.workflow_state",
@@ -61,15 +61,16 @@ class LimsDatabase:
                 self.data_present = True
 
             conn.close()
-        except:
-            print("Unable to query LIMS database")
+        except Exception as e:
+            print e # flake8: noqa: E999
+            print "Unable to query LIMS database"
             self.data_present = False
 
     def is_valid(self):
         return self.data_present
 
     def get_qc_param(self):
-        if not(hasattr(self,'qc_data')):
+        if not (hasattr(self, 'qc_data')):
             qc_data = pd.DataFrame()
 
             qc_data['lims_id'] = [self.get_lims_id()]
@@ -92,7 +93,7 @@ class LimsDatabase:
             # qc_data['workflow_state'] = [self.get_workflow_state()]
 
             # We save the qc internally
-            self.qc_data=qc_data
+            self.qc_data = qc_data
 
         return self.qc_data
 
@@ -109,7 +110,7 @@ class LimsDatabase:
         return self.data_pointer[10]
 
     def get_project_id(self):
-        return  self.data_pointer[14]
+        return self.data_pointer[14]
 
     def get_external_specimen_id(self):
         return self.data_pointer[4]
@@ -146,10 +147,10 @@ class LimsDatabase:
     def get_specimen_driver_line(self):
 
         try:
-            conn=psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2",password="limsro", port=5432)
-            cur=conn.cursor()
+            conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+            cur = conn.cursor()
 
-            query=' '.join((
+            query = ' '.join((
                 "SELECT g.name as driver_line",
                 "FROM ophys_experiments oe",
                 "JOIN ophys_sessions os ON oe.ophys_session_id = os.id",
@@ -161,19 +162,20 @@ class LimsDatabase:
                 "WHERE oe.id=%s",
             ))
 
-            cur.execute(query,[self.lims_id])
+            cur.execute(query, [self.lims_id])
             genotype_data = cur.fetchall()
 
             final_genotype = ''
             link_string = ''
             for local_text in genotype_data:
-                local_gene=local_text[0]
-                final_genotype=local_gene+link_string+final_genotype
+                local_gene = local_text[0]
+                final_genotype = local_gene + link_string + final_genotype
                 link_string = ';'
 
             conn.close()
 
-        except:
+        except Exception as e:
+            print e
             final_genotype = ''
 
         return final_genotype
@@ -181,10 +183,10 @@ class LimsDatabase:
     def get_specimen_reporter_line(self):
 
         try:
-            conn=psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2",password="limsro", port=5432)
-            cur=conn.cursor()
+            conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+            cur = conn.cursor()
 
-            query=' '.join((
+            query = ' '.join((
                 "SELECT g.name as reporter_line",
                 "FROM ophys_experiments oe",
                 "JOIN ophys_sessions os ON oe.ophys_session_id = os.id",
@@ -196,19 +198,20 @@ class LimsDatabase:
                 "WHERE oe.id=%s",
             ))
 
-            cur.execute(query,[self.lims_id])
+            cur.execute(query, [self.lims_id])
             genotype_data = cur.fetchall()
 
             final_genotype = ''
             link_string = ''
             for local_text in genotype_data:
-                local_gene=local_text[0]
-                final_genotype=final_genotype+link_string+local_gene
+                local_gene = local_text[0]
+                final_genotype = final_genotype + link_string + local_gene
                 link_string = ';'
 
             conn.close()
 
-        except:
+        except Exception as e:
+            print e
             final_genotype = ''
 
         return final_genotype

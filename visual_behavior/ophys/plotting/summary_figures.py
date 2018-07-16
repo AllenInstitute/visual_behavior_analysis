@@ -1,15 +1,12 @@
-
 """
 Created on Sunday July 15 2018
 
 @author: marinag
 """
 
-
 import os
 import h5py
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -30,6 +27,7 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     for f in formats:
         fig.savefig(filename + f, transparent=True, orientation='landscape')
 
+
 def plot_cell_zoom(roi_masks, max_projection, cell_id, spacex=10, spacey=10, show_mask=False, ax=None):
     m = roi_masks[cell_id]
     (y, x) = np.where(m == 1)
@@ -41,19 +39,20 @@ def plot_cell_zoom(roi_masks, max_projection, cell_id, spacex=10, spacey=10, sho
     mask[:] = np.nan
     mask[y, x] = 1
     if ax is None:
-        fig,ax = plt.subplots()
+        fig, ax = plt.subplots()
     ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection))
     if show_mask:
         ax.imshow(mask, cmap='jet', alpha=0.3, vmin=0, vmax=1)
     ax.set_xlim(xmin - spacex, xmax + spacex)
     ax.set_ylim(ymin - spacey, ymax + spacey)
-    ax.set_title('cell '+str(cell_id))
+    ax.set_title('cell ' + str(cell_id))
     ax.grid(False)
     ax.axis('off')
     return ax
 
+
 def plot_roi_validation(lims_data):
-    import visual_behavior.ophys.io.convert_level_0_to_level_1 as io
+    import visual_behavior.ophys.io.convert_level_1_to_level_2 as io
     file_path = os.path.join(io.get_processed_dir(lims_data), 'roi_traces.h5')
     g = h5py.File(file_path)
     roi_traces = np.asarray(g['data'])
@@ -95,7 +94,7 @@ def plot_roi_validation(lims_data):
 
         if id in cell_specimen_ids:
             cell_index = io.get_cell_index_for_cell_specimen_id(cell_specimen_ids, id)
-            ax[2] = plot_cell_zoom(roi_masks, max_projection, id, spacex=10, spacey=10, show_mask=True, ax = ax[2])
+            ax[2] = plot_cell_zoom(roi_masks, max_projection, id, spacex=10, spacey=10, show_mask=True, ax=ax[2])
             ax[2].grid(False)
 
             ax[4].imshow(max_projection, cmap='gray')
@@ -120,5 +119,5 @@ def plot_roi_validation(lims_data):
 
         fig.tight_layout()
         save_figure(fig, (20, 10), analysis_dir, 'roi_validation',
-                       str(index) + '_' + str(id) + '_' + str(cell_index))
+                    str(index) + '_' + str(id) + '_' + str(cell_index))
         plt.close()

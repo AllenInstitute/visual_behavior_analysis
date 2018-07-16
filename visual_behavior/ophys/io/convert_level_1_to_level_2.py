@@ -13,13 +13,15 @@ import numpy as np
 import pandas as pd
 
 
-def save_data_as_h5(data,name,analysis_dir):
-    f = h5py.File(os.path.join(analysis_dir, name+'.h5'), 'w')
+def save_data_as_h5(data, name, analysis_dir):
+    f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
     f.create_dataset('data', data=data)
     f.close()
 
-def save_dataframe_as_h5(df,name,analysis_dir):
-    df.to_hdf(os.path.join(analysis_dir, name+'.h5'), key='df', format='fixed')
+
+def save_dataframe_as_h5(df, name, analysis_dir):
+    df.to_hdf(os.path.join(analysis_dir, name + '.h5'), key='df', format='fixed')
+
 
 def get_cache_dir():
     if platform.system() == 'Linux':
@@ -27,6 +29,7 @@ def get_cache_dir():
     else:
         cache_dir = r'\\allen\aibs\informatics\swdb2018\visual_behavior'
     return cache_dir
+
 
 def get_lims_data(lims_id):
     from visual_behavior.ophys.io.lims_database import LimsDatabase
@@ -37,38 +40,43 @@ def get_lims_data(lims_id):
     lims_data.insert(loc=2, column='ophys_session_dir', value=lims_data.datafolder.values[0][:-28])
     return lims_data
 
+
 def get_lims_id(lims_data):
     lims_id = lims_data.lims_id.values[0]
     return lims_id
 
+
 def get_analysis_folder_name(lims_data):
-    l = lims_data
-    date = str(l.experiment_date.values[0])[:10].split('-')
-    analysis_folder_name = str(l.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                           str(l.lims_id.values[0]) + '_' + \
-                           l.structure.values[0] + '_' + str(l.depth.values[0]) + '_' + \
-                           l.specimen_driver_line.values[0].split('-')[0] + '_' + l.rig.values[0][3:5] + \
-                           l.rig.values[0][6] \
-                           + '_' + l.session_name.values[0]
+    date = str(lims_data.experiment_date.values[0])[:10].split('-')
+    analysis_folder_name = str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+        str(lims_data.lims_id.values[0]) + '_' + \
+        lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
+        lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
+        lims_data.rig.values[0][6] + '_' + lims_data.session_name.values[0]
     return analysis_folder_name
+
 
 def get_mouse_id(lims_data):
     mouse_id = int(lims_data.external_specimen_id.values[0])
     return mouse_id
 
+
 def get_experiment_date(lims_data):
     experiment_date = str(lims_data.experiment_date.values[0])[:10].split('-')
     return experiment_date
 
+
 def get_analysis_dir(lims_data):
-    analysis_dir = os.path.join(get_cache_dir(),get_analysis_folder_name(lims_data))
+    analysis_dir = os.path.join(get_cache_dir(), get_analysis_folder_name(lims_data))
     if not os.path.exists(analysis_dir):
         os.mkdir(analysis_dir)
     return analysis_dir
 
+
 def get_ophys_session_dir(lims_data):
     ophys_session_dir = lims_data.ophys_session_dir.values[0]
     return ophys_session_dir
+
 
 def get_ophys_experiment_dir(lims_data):
     lims_id = get_lims_id(lims_data)
@@ -76,15 +84,18 @@ def get_ophys_experiment_dir(lims_data):
     ophys_experiment_dir = os.path.join(ophys_session_dir, 'ophys_experiment_' + str(lims_id))
     return ophys_experiment_dir
 
+
 def get_demix_dir(lims_data):
     ophys_experiment_dir = get_ophys_experiment_dir(lims_data)
     demix_dir = os.path.join(ophys_experiment_dir, 'demix')
     return demix_dir
 
+
 def get_processed_dir(lims_data):
     ophys_experiment_dir = get_ophys_experiment_dir(lims_data)
     processed_dir = os.path.join(ophys_experiment_dir, 'processed')
     return processed_dir
+
 
 def get_segmentation_dir(lims_data):
     processed_dir = get_processed_dir(lims_data)
@@ -92,15 +103,17 @@ def get_segmentation_dir(lims_data):
     segmentation_dir = os.path.join(processed_dir, segmentation_folder[0])
     return segmentation_dir
 
+
 def get_sync_path(lims_data):
     ophys_session_dir = get_ophys_session_dir(lims_data)
     sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file][0]
     sync_path = os.path.join(ophys_session_dir, sync_file)
     analysis_dir = get_analysis_dir(lims_data)
     if sync_file not in os.listdir(analysis_dir):
-        print 'moving ',sync_file,' to analysis dir'
+        print 'moving ', sync_file, ' to analysis dir' # flake8: noqa: E999
         shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
     return sync_path
+
 
 def get_timestamps(lims_data):
     from visual_behavior.ophys.sync.process_sync import get_sync_data
@@ -108,22 +121,26 @@ def get_timestamps(lims_data):
     timestamps = pd.DataFrame(sync_data)
     return timestamps
 
+
 def save_timestamps(timestamps, lims_data):
-    save_dataframe_as_h5(timestamps,'timestamps',get_analysis_dir(lims_data))
+    save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
+
 
 def get_timestamps_stimulus(timestamps):
     timestamps_stimulus = timestamps['stimulus_frames']['timestamps']
     return timestamps_stimulus
 
+
 def get_timestamps_ophys(timestamps):
     timestamps_ophys = timestamps['ophys_frames']['timestamps']
     return timestamps_ophys
 
-def get_metadata(lims_data,timestamps):
+
+def get_metadata(lims_data, timestamps):
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     timestamps_ophys = get_timestamps_ophys(timestamps)
     from collections import OrderedDict
-    metadata=OrderedDict()
+    metadata = OrderedDict()
     metadata['experiment_id'] = lims_data['experiment_id'].values[0]
     metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
     metadata['mouse_id'] = int(lims_data.external_specimen_id.values[0])
@@ -138,14 +155,16 @@ def get_metadata(lims_data,timestamps):
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
     metadata['project_id'] = lims_data.project_id.values[0]
     metadata['rig'] = lims_data.rig.values[0]
-    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)),1)
-    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)),1)
+    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 1)
+    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 1)
     # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
-    metadata = pd.DataFrame(metadata,index=[metadata['experiment_id']])
+    metadata = pd.DataFrame(metadata, index=[metadata['experiment_id']])
     return metadata
 
+
 def save_metadata(metadata, lims_data):
-    save_dataframe_as_h5(metadata,'metadata',get_analysis_dir(lims_data))
+    save_dataframe_as_h5(metadata, 'metadata', get_analysis_dir(lims_data))
+
 
 def get_stimulus_pkl_path(lims_data):
     ophys_session_dir = get_ophys_session_dir(lims_data)
@@ -165,12 +184,13 @@ def get_stimulus_pkl_path(lims_data):
         stimulus_pkl_path = os.path.join(pkl_dir, pkl_file)
     return stimulus_pkl_path
 
+
 def get_pkl(lims_data):
     stimulus_pkl_path = get_stimulus_pkl_path(lims_data)
     pkl_file = stimulus_pkl_path.split('\\')[-1]
     analysis_dir = get_analysis_dir(lims_data)
     if pkl_file not in os.listdir(analysis_dir):
-        print 'moving ',pkl_file,' to analysis dir'
+        print 'moving ', pkl_file, ' to analysis dir'
         shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
     print('getting stimulus data from pkl')
     pkl = pd.read_pickle(stimulus_pkl_path)
@@ -178,6 +198,7 @@ def get_pkl(lims_data):
     # core_data = data_to_change_detection_core(pkl)
     # print('visual frames in pkl file:', len(core_data['time']))
     return pkl
+
 
 # def get_extended_trials_dataframe(pkl):
 #     from visual_behavior.translator.foraging2 import data_to_change_detection_core
@@ -195,7 +216,7 @@ def get_pkl(lims_data):
 #     pkl_df.to_hdf(os.path.join(analysis_dir, 'pkl_df.h5'), key='df', format='fixed')
 #
 
-def get_running_speed(pkl,timestamps):
+def get_running_speed(pkl, timestamps):
     # from visual_behavior.translator.foraging2 import get_running_speed
     # speed = get_running_speed(pkl, smooth=False, time=None)
     # running_speed = speed['speed (cm/s)'].values
@@ -203,11 +224,13 @@ def get_running_speed(pkl,timestamps):
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     speed = vbio.load_running_speed(pkl, time=timestamps_stimulus)
     running_speed = speed['speed (cm/s)'].values
-    print 'length of running speed trace: ',str(len(running_speed))
+    print 'length of running speed trace: ', str(len(running_speed))
     return running_speed
 
-def save_running_speed(running_speed,lims_data):
+
+def save_running_speed(running_speed, lims_data):
     save_data_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
+
 
 def parse_mask_string(mask_string):
     # convert ruby json array ouput to python 2D array
@@ -228,6 +251,7 @@ def parse_mask_string(mask_string):
             row.append(True)
     return np.asarray(mask)
 
+
 def get_input_extract_traces_json(lims_data):
     processed_dir = get_processed_dir(lims_data)
     json_file = [file for file in os.listdir(processed_dir) if 'input_extract_traces.json' in file]
@@ -235,6 +259,7 @@ def get_input_extract_traces_json(lims_data):
     with open(json_path, 'r') as w:
         jin = json.load(w)
     return jin
+
 
 def get_roi_locations(lims_data):
     jin = get_input_extract_traces_json(lims_data)
@@ -251,6 +276,7 @@ def get_roi_locations(lims_data):
     roi_locations = pd.DataFrame(data=roi_locations_list, columns=['id', 'x', 'y', 'width', 'height', 'valid', 'mask'])
     return roi_locations
 
+
 def add_cell_specimen_ids_to_roi_metrics(roi_metrics, roi_locations):
     # add roi ids to objectlist
     ids = []
@@ -261,6 +287,7 @@ def add_cell_specimen_ids_to_roi_metrics(roi_metrics, roi_locations):
         ids.append(id)
     roi_metrics['cell_specimen_id'] = ids
     return roi_metrics
+
 
 def get_roi_metrics(lims_data):
     # objectlist.txt contains metrics associated with segmentation masks
@@ -276,31 +303,37 @@ def get_roi_metrics(lims_data):
     roi_metrics['id'] = roi_metrics.cell_specimen_id.values
     roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
     # remove invalid roi_metrics
-    roi_metrics = roi_metrics[roi_metrics.valid==True]
+    roi_metrics = roi_metrics[roi_metrics.valid == True]
     # add filtered cell index
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
                   roi_metrics.cell_specimen_id.values]
     roi_metrics['cell_index'] = cell_index
     return roi_metrics
 
-def save_roi_metrics(roi_metrics,lims_data):
+
+def save_roi_metrics(roi_metrics, lims_data):
     save_dataframe_as_h5(roi_metrics, 'roi_metrics', get_analysis_dir(lims_data))
+
 
 def get_cell_specimen_ids(roi_metrics):
     cell_specimen_ids = np.sort(roi_metrics.cell_specimen_id.values)
     return cell_specimen_ids
 
+
 def get_cell_indices(roi_metrics):
     cell_indices = np.sort(roi_metrics.cell_index.values)
     return cell_indices
+
 
 def get_cell_specimen_id_for_cell_index(cell_index, cell_specimen_ids):
     cell_specimen_id = cell_specimen_ids[cell_index]
     return cell_specimen_id
 
+
 def get_cell_index_for_cell_specimen_id(cell_specimen_id, cell_specimen_ids):
     cell_index = np.where(cell_specimen_ids == cell_specimen_id)[0][0]
     return cell_index
+
 
 def get_roi_masks(roi_metrics, lims_data):
     # make roi_dict with ids as keys and roi_mask_array
@@ -317,13 +350,15 @@ def get_roi_masks(roi_metrics, lims_data):
         roi_masks[id] = binary_mask
     return roi_masks
 
-def save_roi_masks(roi_masks,lims_data):
+
+def save_roi_masks(roi_masks, lims_data):
     f = h5py.File(os.path.join(get_analysis_dir(lims_data), 'roi_masks.h5'), 'w')
     for id in np.sort(roi_masks.keys()):
         f.create_dataset(str(id), data=roi_masks[id])
     f.close()
 
-def get_dff_traces(roi_metrics,lims_data):
+
+def get_dff_traces(roi_metrics, lims_data):
     dff_path = os.path.join(get_ophys_experiment_dir(lims_data), str(get_lims_id(lims_data)) + '_dff.h5')
     g = h5py.File(dff_path)
     dff_traces = np.asarray(g['data'])
@@ -339,11 +374,13 @@ def get_dff_traces(roi_metrics,lims_data):
     print 'number of segmented cells:', dff_traces.shape[0]
     return dff_traces
 
+
 def save_dff_traces(dff_traces, roi_metrics, lims_data):
     f = h5py.File(os.path.join(get_analysis_dir(lims_data), 'dff_traces.h5'), 'w')
-    for i,id in enumerate(get_cell_specimen_ids(roi_metrics)):
+    for i, id in enumerate(get_cell_specimen_ids(roi_metrics)):
         f.create_dataset(str(id), data=dff_traces[i])
     f.close()
+
 
 def get_motion_correction(lims_data):
     csv_file = [file for file in os.listdir(get_processed_dir(lims_data)) if file.endswith('.csv')]
@@ -354,9 +391,11 @@ def get_motion_correction(lims_data):
     motion_correction['y_corr'] = csv[2].values
     return motion_correction
 
+
 def save_motion_correction(motion_correction, lims_data):
     analysis_dir = get_analysis_dir(lims_data)
-    save_dataframe_as_h5(motion_correction,'motion_correction',analysis_dir)
+    save_dataframe_as_h5(motion_correction, 'motion_correction', analysis_dir)
+
 
 def get_max_projection(lims_data):
     import matplotlib.image as mpimg
@@ -364,34 +403,36 @@ def get_max_projection(lims_data):
     max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
     return max_projection
 
+
 def save_max_projection(max_projection, lims_data):
     analysis_dir = get_analysis_dir(lims_data)
-    save_data_as_h5(max_projection,'max_projection',analysis_dir)
+    save_data_as_h5(max_projection, 'max_projection', analysis_dir)
     import matplotlib.image as mpimg
-    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,cmap='gray')
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
+                 cmap='gray')
 
 
-def convert_level_0_to_level_1(lims_id):
+def convert_level_1_to_level_2(lims_id):
     lims_data = get_lims_data(lims_id)
 
     timestamps = get_timestamps(lims_data)
-    save_timestamps(timestamps,lims_data)
+    save_timestamps(timestamps, lims_data)
 
-    metadata = get_metadata(lims_data,timestamps)
-    save_metadata(metadata,lims_data)
+    metadata = get_metadata(lims_data, timestamps)
+    save_metadata(metadata, lims_data)
 
     # running_speed = io.get_running_speed(pkl,timestamps)
     # io.save_running_speed(running_speed,analysis_dir)
 
-    pkl = get_pkl(lims_data)
+    # pkl = get_pkl(lims_data)
 
     roi_metrics = get_roi_metrics(lims_data)
-    save_roi_metrics(roi_metrics,lims_data)
+    save_roi_metrics(roi_metrics, lims_data)
 
     roi_masks = get_roi_masks(roi_metrics, lims_data)
-    save_roi_masks(roi_masks,lims_data)
+    save_roi_masks(roi_masks, lims_data)
 
-    dff_traces = get_dff_traces(roi_metrics,lims_data)
+    dff_traces = get_dff_traces(roi_metrics, lims_data)
     save_dff_traces(dff_traces, roi_metrics, lims_data)
 
     motion_correction = get_motion_correction(lims_data)
@@ -406,5 +447,4 @@ def convert_level_0_to_level_1(lims_id):
 
 if __name__ == '__main__':
     lims_id = 702134928
-    convert_level_0_to_level_1(lims_id)
-
+    convert_level_1_to_level_2(lims_id)

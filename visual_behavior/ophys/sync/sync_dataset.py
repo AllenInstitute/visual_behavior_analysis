@@ -57,7 +57,7 @@ def get_bit(uint_array, bit):
         The bit to extract.
 
     """
-    return np.bitwise_and(uint_array, 2**bit).astype(bool).astype(np.uint8)
+    return np.bitwise_and(uint_array, 2 ** bit).astype(bool).astype(np.uint8)
 
 
 class Dataset(object):
@@ -112,7 +112,7 @@ class Dataset(object):
             Path to hdf5 file.
 
         """
-        self.dfile = h5.File(path, 'r') #MG edit 3/15 removed 'r' because some sync files were unable to load
+        self.dfile = h5.File(path, 'r')  # MG edit 3/15 removed 'r' because some sync files were unable to load
         self.meta_data = eval(self.dfile['meta'].value)
         self.line_labels = self.meta_data['line_labels']
         self.times = self._process_times()
@@ -124,7 +124,6 @@ class Dataset(object):
             return float(self.meta_data['ni_daq']['sample_freq'])
         except KeyError:
             return float(self.meta_data['ni_daq']['counter_output_freq'])
-    
 
     def get_bit(self, bit):
         """
@@ -204,7 +203,7 @@ class Dataset(object):
             return times
         elif units in ['seconds', 'sec', 'secs']:
             freq = self.sample_freq
-            return times/freq
+            return times / freq
         else:
             raise ValueError("Only 'samples' or 'seconds' are valid units.")
 
@@ -326,23 +325,22 @@ class Dataset(object):
 
         """
         source_edges = getattr(self,
-            "get_{}_edges".format(source_edge.lower()))(source.lower(), units="samples")
+                               "get_{}_edges".format(source_edge.lower()))(source.lower(), units="samples")
         target_edges = getattr(self,
-            "get_{}_edges".format(target_edge.lower()))(target.lower(), units="samples")
+                               "get_{}_edges".format(target_edge.lower()))(target.lower(), units="samples")
         indices = np.searchsorted(target_edges, source_edges, side="right")
         if direction.lower() == "previous":
-            indices[np.where(indices!=0)] -= 1
+            indices[np.where(indices != 0)] -= 1
         elif direction.lower() == "next":
-            indices[np.where(indices==len(target_edges))] = -1
+            indices[np.where(indices == len(target_edges))] = -1
         if units in ["indices", 'index']:
             return indices
         elif units == "samples":
             return target_edges[indices]
         elif units in ['sec', 'seconds', 'second']:
-            return target_edges[indices]/self.sample_freq
+            return target_edges[indices] / self.sample_freq
         else:
             raise KeyError("Invalid units.  Try 'seconds', 'samples' or 'indices'")
-
 
     def get_analog_channel(self,
                            channel,
@@ -374,9 +372,9 @@ class Dataset(object):
             dset = self.dfile['analog_data']
             analog_meta = self.get_analog_meta()
             sample_rate = analog_meta['analog_sample_rate']
-            start = int(start_time*sample_rate)
+            start = int(start_time * sample_rate)
             if stop_time:
-                stop = int(stop_time*sample_rate)
+                stop = int(stop_time * sample_rate)
                 return dset[start:stop:downsample, channel]
             else:
                 return dset[start::downsample, channel]
@@ -403,38 +401,38 @@ class Dataset(object):
         ##TODO: Split this up into smaller functions.
 
         """
-        #convert to bit
+        # convert to bit
         bit = self._line_to_bit(line)
 
-        #get the bit's data
+        # get the bit's data
         bit_data = self.get_bit(bit)
         total_data_points = len(bit_data)
 
-        #get the events
+        # get the events
         events = self.get_events_by_bit(bit)
         total_events = len(events)
 
-        #get the rising edges
+        # get the rising edges
         rising = self.get_rising_edges(bit)
         total_rising = len(rising)
 
-        #get falling edges
+        # get falling edges
         falling = self.get_falling_edges(bit)
         total_falling = len(falling)
 
         if total_events <= 0:
             if print_results:
-                print("*"*70)
+                print("*" * 70)
                 print("No events on line: %s" % line)
-                print("*"*70)
+                print("*" * 70)
             return None
         elif total_events <= 10:
             if print_results:
-                print("*"*70)
+                print("*" * 70)
                 print("Sparse events on line: %s" % line)
                 print("Rising: %s" % total_rising)
                 print("Falling: %s" % total_falling)
-                print("*"*70)
+                print("*" * 70)
             return {
                 'line': line,
                 'bit': bit,
@@ -445,7 +443,7 @@ class Dataset(object):
             }
         else:
 
-            #period
+            # period
             period = self.period(line)
 
             avg_period = period['avg']
@@ -453,14 +451,14 @@ class Dataset(object):
             min_period = period['min']
             period_sd = period['sd']
 
-            #freq
+            # freq
             avg_freq = self.frequency(line)
 
-            #duty cycle
+            # duty cycle
             duty_cycle = self.duty_cycle(line)
 
             if print_results:
-                print("*"*70)
+                print("*" * 70)
 
                 print("Quick stats for line: %s" % line)
                 print("Bit: %i" % bit)
@@ -475,7 +473,7 @@ class Dataset(object):
                 print("Average freq: %s" % avg_freq)
                 print("Duty cycle: %s" % duty_cycle)
 
-                print("*"*70)
+                print("*" * 70)
 
             return {
                 'line': line,
@@ -506,9 +504,9 @@ class Dataset(object):
         if len(edges) > 2:
 
             timebase_freq = self.meta_data['ni_daq']['counter_output_freq']
-            avg_period = np.mean(np.ediff1d(edges[1:]))/timebase_freq
-            max_period = np.max(np.ediff1d(edges[1:]))/timebase_freq
-            min_period = np.min(np.ediff1d(edges[1:]))/timebase_freq
+            avg_period = np.mean(np.ediff1d(edges[1:])) / timebase_freq
+            max_period = np.max(np.ediff1d(edges[1:])) / timebase_freq
+            min_period = np.min(np.ediff1d(edges[1:])) / timebase_freq
             period_sd = np.std(avg_period)
 
         else:
@@ -527,7 +525,7 @@ class Dataset(object):
         """
 
         period = self.period(line, edge)
-        return 1.0/period['avg']
+        return 1.0 / period['avg']
 
     def duty_cycle(self, line):
         """
@@ -553,17 +551,17 @@ class Dataset(object):
             pass
 
         if rising[0] < falling[0]:
-            #line starts low
+            # line starts low
             high = falling - rising
         else:
-            #line starts high
+            # line starts high
             high = np.concatenate(falling, self.get_all_events()[-1, 0]) - \
                 np.concatenate(0, rising)
 
         total_high_time = np.sum(high)
         all_events = self.get_events_by_bit(bit)
-        total_time = all_events[-1]-all_events[0]
-        return 1.0*total_high_time/total_time
+        total_time = all_events[-1] - all_events[0]
+        return 1.0 * total_high_time / total_time
 
     def stats(self):
         """
@@ -576,14 +574,14 @@ class Dataset(object):
         active_bits = [x for x in bits if x is not None]
         print("Active bits: ", len(active_bits))
         for bit in active_bits:
-            print("*"*70)
+            print("*" * 70)
             print("Bit: %i" % bit['bit'])
             print("Label: %s" % self.line_labels[bit['bit']])
             print("Rising edges: %i" % bit['total_rising'])
             print("Falling edges: %i" % bit["total_falling"])
             print("Average freq: %s" % bit['avg_freq'])
             print("Duty cycle: %s" % bit['duty_cycle'])
-        print("*"*70)
+        print("*" * 70)
         return active_bits
 
     def plot_all(self,
@@ -603,7 +601,7 @@ class Dataset(object):
                 self.plot_bit(bit,
                               start_time,
                               stop_time,
-                              auto_show=False,)
+                              auto_show=False, )
         if auto_show:
             plt.show()
 
@@ -629,7 +627,7 @@ class Dataset(object):
                           end_time,
                           auto_show=False,
                           axes=ax)
-        #f.set_size_inches(18, 10, forward=True)
+        # f.set_size_inches(18, 10, forward=True)
         f.subplots_adjust(hspace=0)
 
         if auto_show:
@@ -652,7 +650,7 @@ class Dataset(object):
 
         times = self.get_all_times(units='sec')
         if not end_time:
-            end_time = 2**32
+            end_time = 2 ** 32
 
         window = (times < end_time) & (times > start_time)
 
@@ -673,8 +671,8 @@ class Dataset(object):
         else:
             axes_obj = plt.gca()
             axes_obj.set_ylim(-0.1, 1.1)
-        #ax.set_ylabel('Logic State')
-        #ax.yaxis.set_ticks_position('none')
+        # ax.set_ylabel('Logic State')
+        # ax.yaxis.set_ticks_position('none')
         plt.setp(ax.get_yticklabels(), visible=False)
         ax.set_xlabel('time (seconds)')
         ax.legend([name])
@@ -697,10 +695,9 @@ class Dataset(object):
         bit = self._line_to_bit(line)
         self.plot_bit(bit, start_time, end_time, auto_show=False)
 
-        #plt.legend([line])
+        # plt.legend([line])
         if auto_show:
             plt.show()
-
 
     def plot_lines(self,
                    lines,
@@ -716,9 +713,9 @@ class Dataset(object):
         for line in lines:
             bits.append(self._line_to_bit(line))
         f, axes = self.plot_bits(bits,
-                       start_time,
-                       end_time,
-                       auto_show=False,)
+                                 start_time,
+                                 end_time,
+                                 auto_show=False, )
 
         plt.subplots_adjust(left=0.025, right=0.975, bottom=0.05, top=0.95)
         if auto_show:

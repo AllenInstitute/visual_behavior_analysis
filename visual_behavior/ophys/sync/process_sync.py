@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def filter_digital(rising, falling, threshold=0.0001):
     """
     Removes short transients from digital signal.
@@ -32,13 +33,13 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
     ROUND_PRECISION = 4
     ONE = 1
 
-    print('calculating monitor delay')
+    print 'calculating monitor delay' # flake8: noqa: E999
 
     try:
         # photodiode transitions
         photodiode_rise = sync_data.get_rising_edges('stim_photodiode') / sample_frequency
 
-        ####Find start and stop of stimulus####
+        # Find start and stop of stimulus
         # test and correct for photodiode transition errors
         photodiode_rise_diff = np.ediff1d(photodiode_rise)
         min_short_photodiode_rise = 0.1
@@ -71,7 +72,7 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
                 ptd_end = medium_rise_index
 
         # if the photodiode signal exists
-        if ptd_start != None and ptd_end != None:
+        if ptd_start is not None and ptd_end is not None:
             # check to make sure there are no there are no photodiode errors
             # sometimes two consecutive photodiode events take place close to each other
             # correct this case if it happens
@@ -81,13 +82,13 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
             # iterate until all of the errors have been corrected
             while any(photodiode_rise_diff[ptd_start:ptd_end] < photodiode_rise_error_threshold):
                 error_frames = np.where(photodiode_rise_diff[ptd_start:ptd_end] < photodiode_rise_error_threshold)[
-                                   FIRST_ELEMENT_INDEX] + ptd_start
+                    FIRST_ELEMENT_INDEX] + ptd_start
                 # remove the bad photodiode event
                 photodiode_rise = np.delete(photodiode_rise, error_frames[last_frame_index])
                 ptd_end -= 1
                 photodiode_rise_diff = np.ediff1d(photodiode_rise)
 
-            ####Find the delay####
+            # Find the delay
             # calculate monitor delay
             first_pulse = ptd_start
             number_of_photodiode_rises = ptd_end - ptd_start
@@ -97,32 +98,32 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
             delay_rise = np.empty(number_of_photodiode_rises)
             for photodiode_rise_index in range(number_of_photodiode_rises):
                 delay_rise[photodiode_rise_index] = photodiode_rise[photodiode_rise_index + first_pulse] - \
-                                                    stim_vsync_fall[(
-                                                                    photodiode_rise_index * vsync_fall_events_per_photodiode_rise) + half_vsync_fall_events_per_photodiode_rise]
+                    stim_vsync_fall[(photodiode_rise_index * vsync_fall_events_per_photodiode_rise) + half_vsync_fall_events_per_photodiode_rise]
 
             # get a single delay value by finding the mean of all of the delays - skip the last element in the array (the end of the experimenet)
             delay = np.mean(delay_rise[:last_frame_index])
 
             if (delay > DELAY_THRESHOLD or np.isnan(delay)):
-                print("Sync photodiode error needs to be fixed")
+                print "Sync photodiode error needs to be fixed"
                 delay = ASSUMED_DELAY
-                print("Using assumed monitor delay:", round(delay, ROUND_PRECISION))
+                print "Using assumed monitor delay:", round(delay, ROUND_PRECISION)
 
         # assume delay
         else:
             delay = ASSUMED_DELAY
     except Exception as e:
-        print (e)
-        print ("Process without photodiode signal")
+        print e
+        print "Process without photodiode signal"
         delay = ASSUMED_DELAY
-        print ("Assumed delay:", round(delay, ROUND_PRECISION))
+        print "Assumed delay:", round(delay, ROUND_PRECISION)
 
     return delay
 
+
 def get_sync_data(lims_id):
-    print('getting sync data')
+    print 'getting sync data'
     from visual_behavior.ophys.sync.sync_dataset import Dataset
-    import visual_behavior.ophys.io.convert_level_0_to_level_1 as io
+    import visual_behavior.ophys.io.convert_level_1_to_level_2 as io
     sync_path = io.get_sync_path(lims_id)
     sync_dataset = Dataset(sync_path)
     meta_data = sync_dataset.meta_data
@@ -156,8 +157,8 @@ def get_sync_data(lims_id):
     stim_photodiode = sync_dataset.get_rising_edges('stim_photodiode') / sample_freq
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger
     frames_2p = frames_2p[frames_2p > trigger[0]]
-    print 'stimulus frames detected in sync: ',len(vsyncs)
-    print 'ophys frames detected in sync: ',len(frames_2p)
+    print 'stimulus frames detected in sync: ', len(vsyncs)
+    print 'ophys frames detected in sync: ', len(frames_2p)
     # put sync data in dphys format to be compatible with downstream analysis
     times_2p = {'timestamps': frames_2p}
     times_vsync = {'timestamps': vsyncs}
@@ -167,11 +168,11 @@ def get_sync_data(lims_id):
     times_cam2_exposure = {'timestamps': cam2_exposure}
     times_stim_photodiode = {'timestamps': stim_photodiode}
     sync_data = {'ophys_frames': times_2p,
-            'stimulus_frames': times_vsync,
-            'lick_times': times_lick_1,
-            'cam1_exposure': times_cam1_exposure,
-            'cam2_exposure': times_cam2_exposure,
-            'stim_photodiode': times_stim_photodiode,
-            'ophys_trigger': times_trigger,
-            }
+                 'stimulus_frames': times_vsync,
+                 'lick_times': times_lick_1,
+                 'cam1_exposure': times_cam1_exposure,
+                 'cam2_exposure': times_cam2_exposure,
+                 'stim_photodiode': times_stim_photodiode,
+                 'ophys_trigger': times_trigger,
+                 }
     return sync_data
