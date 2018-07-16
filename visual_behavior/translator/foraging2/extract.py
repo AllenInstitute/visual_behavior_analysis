@@ -719,14 +719,15 @@ def get_running_speed(exp_data, smooth=False, time=None):
         # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
         raise NotImplementedError
 
-    accel = calc_deriv(speed, time)
-    jerk = calc_deriv(accel, time)
+    # accel = calc_deriv(speed, time)
+    # jerk = calc_deriv(accel, time)
 
     running_speed = pd.DataFrame({
         'time': time,
-        'speed (cm/s)': speed,
-        'acceleration (cm/s^2)': accel,
-        'jerk (cm/s^3)': jerk,
+        'frame': range(len(time)),
+        'speed': speed,
+        # 'acceleration (cm/s^2)': accel,
+        # 'jerk (cm/s^3)': jerk,
     })
     return running_speed
 
@@ -1354,6 +1355,21 @@ def get_catch_frequency(data):
         catch frequency or None if not found
     """
     return data["items"]["behavior"]["config"]["DoC"]["catch_freq"]
+
+
+def get_auto_reward_delay(data):
+    """Get the auto reward delay set for a foraging2 behavior session
+
+    Parameters
+    ----------
+    data: Mapping
+        foraging2 output data
+
+    Returns
+    -------
+    float
+    """
+    return data["items"]["behavior"]["config"]["DoC"].get("auto_reward_delay", 0.0)
 
 
 def get_free_reward_trials(data):

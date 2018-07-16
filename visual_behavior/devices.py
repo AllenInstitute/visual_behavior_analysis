@@ -33,39 +33,57 @@ RIG_NAME = {
     'W7VS-SYSLOGIC34': 'E4',
     'W7VS-SYSLOGIC35': 'E5',
     'W7VS-SYSLOGIC36': 'E6',
+    'W7DT102905': 'F1',
+    'W7DT102904': 'F2',
+    'W7DT102903': 'F3',
+    'W7DT102914': 'F4',
+    'W7DT102913': 'F5',
+    'W7DT12497': 'F6',
     'W7VS-SYSLOGIC26': 'Widefield-329',
     'OSXLTTF6T6.local': 'DougLaptop',
     'W7DTMJ026LUL': 'DougPC',
     'W7DTMJ036PSL': 'Marina2P_Sutter',
     'W7DT2PNC1STIM': '2P6',
     'W7DTMJ234MG': 'peterl_2p',
-    'W7DT2P3STIM': '2P3',
+    'W7DT2P3STiM': '2P3',
+    'W10DTSM118296': 'NP3',
+    'meso1stim': 'MS1',
     'localhost': 'localhost'
 }
+
+RIG_NAME = {k.lower(): v for k, v in iteritems(RIG_NAME)}
 
 COMPUTER_NAME = dict((v, k) for k, v in iteritems(RIG_NAME))
 
 
 # -> devices.py
-def get_rig_id(in_val, input_type='computer_name'):
+def get_rig_id(computer_name):
     '''
     This provides a map between the computer name and the rig ID.
 
     >>> get_rig_id('W7DTMJ19R2F')
     A1
-    >>> get_rig_id('A1',input_type='rig_id')
-    W7DTMJ19R2F
 
     Parameters
     ----------
     in_val : str
         computer name
-    input_type : 'computer_name' or 'rig_id'
-        specifies whether `in_val` is a computer name or rig_id
     '''
-    if input_type == 'computer_name' and in_val in RIG_NAME.keys():
-        return RIG_NAME[in_val]
-    elif input_type == 'rig_id' and in_val in COMPUTER_NAME.keys():
-        return COMPUTER_NAME[in_val]
-    else:
-        return 'unknown'
+
+    return RIG_NAME.get(computer_name.lower(), 'unknown')
+
+
+def get_computer_name(rig_id):
+    '''
+    This provides a map between the computer name and the rig ID.
+
+    >>> get_computer_name('A1')
+    W7DTMJ19R2F
+
+    Parameters
+    ----------
+    rig_id : str
+        rig name
+    '''
+
+    return COMPUTER_NAME.get(rig_id, 'unknown')

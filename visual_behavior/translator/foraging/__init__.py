@@ -2,6 +2,7 @@ import warnings
 import pandas as pd
 import numpy as np
 from scipy.signal import medfilt
+from .extract import get_end_time
 from ...utilities import calc_deriv, rad_to_dist, local_time
 
 warnings.warn(
@@ -81,6 +82,25 @@ def load_metadata(data):
         timezone='America/Los_Angeles',
     )
 
+    metadata['auto_reward_vol'] = 0.05  # hard coded
+    metadata['max_session_duration'] = 60.0  # hard coded
+    metadata['min_no_lick_time'] = data['minimum_no_lick_time']
+    metadata['abort_on_early_response'] = data['ignore_false_alarms'] == False
+    metadata['even_sampling_enabled'] = data['image_category_sampling_mode'] == 'even_sampling'
+    metadata['failure_repeats'] = data['max_number_trial_repeats']
+    metadata['catch_frequency'] = data['catch_frequency']
+    metadata['volume_limit'] = data['volumelimit']
+    metadata['initial_blank_duration'] = data['initial_blank']
+    metadata['warm_up_trials'] = data['warmup_trials']
+    metadata['stimulus_window'] = data['trial_duration'] - data['delta_minimum']
+
+    block_length = data['lick_detect_training_block_length']
+
+    try:
+        metadata['free_reward_trials'] = block_length[0]
+    except TypeError:
+        metadata['free_reward_trials'] = block_length
+
     return metadata
 
 
@@ -96,6 +116,9 @@ def load_trials(data, time=None):
     trials : pandas DataFrame
 
     """
+
+    if time is None:
+        time = load_time(data)
 
     columns = (
         'auto_rewarded',
@@ -164,7 +187,8 @@ def load_trials(data, time=None):
     for col in forced_string:
         trials[col] = trials[col].map(stringify)
 
-    trials['change_frame'] = trials['change_frame'].map(lambda x: int(x) if np.isfinite(x) else None)
+    trials['change_frame'] = trials['change_frame'].map(lambda x: int(x) if np.isfinite(x) else None) + 1
+
     trials["change_image_category"] = trials["change_image_category"].apply(lambda x: x if x else '')  # use empty string instead of NoneType
     trials["change_image_name"] = trials["change_image_name"].apply(lambda x: x if x else '')  # use empty string instead of NoneType
     trials["initial_image_category"] = trials["initial_image_category"].apply(lambda x: x if x else '')  # use empty string instead of NoneType
@@ -175,7 +199,10 @@ def load_trials(data, time=None):
 
     # add endframe column as startframe of last frame. Last endframe is last frame of session
     trials['endframe'] = trials['startframe'].shift(periods=-1)
-    trials.at[trials.index[-1], 'endframe'] = len(load_time(data)) - 1
+    trials.at[trials.index[-1], 'endframe'] = len(time) - 1
+
+    trials['endtime'] = get_end_time(trials, time)
+    trials['trial_length'] = trials['endtime'] - trials['starttime']
 
     return trials
 
@@ -272,6 +299,7 @@ def load_running_speed(data, smooth=False, time=None):
 
     running_speed = pd.DataFrame({
         'time': time,
+        'frame': range(len(time)),
         'speed': speed,
         # 'acceleration (cm/s^2)': accel,
         # 'jerk (cm/s^3)': jerk,
@@ -329,7 +357,10 @@ def load_visual_stimuli(data, time=None):
     stimdf = pd.DataFrame(data['stimuluslog'])
 
     stimdf = find_ends(stimdf)
-    stimdf['end'] = stimdf['frames_to_end'] + stimdf['frame']
+    stimdf['end_frame'] = stimdf['frames_to_end'] + stimdf['frame']
+
+    stimdf['frame'] += 1
+    stimdf['end_frame'] += 1
 
     def find_time(fr):
         try:
@@ -337,7 +368,7 @@ def load_visual_stimuli(data, time=None):
         except IndexError:
             return np.nan
 
-    stimdf['end_time'] = stimdf['end'].map(find_time)
+    stimdf['end_time'] = stimdf['end_frame'].map(find_time)
     stimdf['duration'] = stimdf['end_time'] - stimdf['time']
 
     onset_mask = (
@@ -348,13 +379,13 @@ def load_visual_stimuli(data, time=None):
     ) > 0
 
     if pd.isnull(stimdf['image_name']).any() == False:  # 'image_category' in stimdf.columns:
-        cols = ['frame', 'time', 'duration', 'image_category', 'image_name']
+        cols = ['frame', 'end_frame', 'time', 'duration', 'image_category', 'image_name']
         stimuli = stimdf[onset_mask][cols]
         stimuli['orientation'] = None
         stimuli['contrast'] = None
 
     elif 'ori' in stimdf.columns:
-        cols = ['frame', 'time', 'duration', 'ori', 'contrast']
+        cols = ['frame', 'end_frame', 'time', 'duration', 'ori', 'contrast']
         stimuli = stimdf[onset_mask][cols]
         stimuli.rename(columns={'ori': 'orientation'}, inplace=True)
         stimuli['image_category'] = None

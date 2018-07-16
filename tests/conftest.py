@@ -181,23 +181,6 @@ def exemplar_extended_trials_fixture():
 @pytest.fixture(scope="module")
 def trials_df_fixture():
     trials = pd.read_pickle(os.path.join(TESTING_RES_DIR, "trials.pkl"))
-    trials["scheduled_change_time"] = trials.apply(
-        lambda row: row["scheduled_change_time"] - row["starttime"],
-        axis=1
-    )  # change scheduled_change_time from time relative to experiment start to time relative to trial start
-    del trials['stim_on_frames']
-    del trials['publish_time']
-    trials['endframe'] = trials['startframe'].shift(periods=-1)
-    trials.at[trials.index[-1],'endframe']=94157
-
-    def nan_to_empty_string(val):
-        if pd.isnull(val):
-            return ''
-        return val
-    trials["change_image_category"] = trials["change_image_category"].apply(nan_to_empty_string)  # use empty string instead of NoneType
-    trials["change_image_name"] = trials["change_image_name"].apply(nan_to_empty_string)  # use empty string instead of NoneType
-    trials["initial_image_category"] = trials["initial_image_category"].apply(nan_to_empty_string)  # use empty string instead of NoneType
-    trials["initial_image_name"] = trials["initial_image_name"].apply(nan_to_empty_string)  # use empty string instead of NoneType
     return trials
 
 
