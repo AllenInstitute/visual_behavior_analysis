@@ -310,7 +310,7 @@ class MetadataSchema(Schema):
         description='minimum time where there should be no licks before the start of a trial',
         required=True,
     )
-    free_reward_trials  = fields.Int(
+    free_reward_trials = fields.Int(
         description='number of free reward trials to start the session',
         required=True,
     )

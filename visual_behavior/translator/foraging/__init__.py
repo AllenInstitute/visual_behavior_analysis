@@ -82,9 +82,8 @@ def load_metadata(data):
         timezone='America/Los_Angeles',
     )
 
-
-    metadata['auto_reward_vol'] = 0.05 # hard coded
-    metadata['max_session_duration'] = 60.0 # hard coded
+    metadata['auto_reward_vol'] = 0.05  # hard coded
+    metadata['max_session_duration'] = 60.0  # hard coded
     metadata['min_no_lick_time'] = data['minimum_no_lick_time']
     metadata['abort_on_early_response'] = data['ignore_false_alarms'] == False
     metadata['even_sampling_enabled'] = data['image_category_sampling_mode'] == 'even_sampling'
