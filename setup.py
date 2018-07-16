@@ -13,7 +13,7 @@ setuptools.setup(
         "matplotlib",
         "pandas",
         "six",
-        "sklearn",  # should be pinned but versioning looks broken right now...
+        "scikit-learn>=0.19.2",
         "scipy>=1.0.0",
         "deepdish>=0.3.6",
         "numpy>=1.9.0",  # for science some packages need to be pinned
