@@ -141,3 +141,7 @@ def test_load_running_speed(behavioral_session_output_fixture):
         check_dtype=False,
         check_like=True
     )
+
+def test_load_images(behavioral_session_output_fixture):
+    images = foraging.load_images(behavioral_session_output_fixture)
+    # assert images.keys()
