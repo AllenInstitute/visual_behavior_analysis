@@ -186,13 +186,6 @@ def count_stimuli_per_trial(trials, visual_stimuli):
     return stimuli_per_trial
 
 
-def fix_periodic_flash(pf):
-    '''
-    deal with core_data['metadata']['params']['periodic_flash']='None'
-    '''
-    return None if pf == 'None' else pf
-
-
 # test functions
 def validate_autoreward_volume(trials, auto_reward_volume):
     '''Each dispense of water for autorewards should be `auto_reward_vol`.'''
@@ -859,7 +852,7 @@ def validate_change_frame_at_flash_onset(trials, visual_stimuli, periodic_flash)
     '''
     if `periodic_flash` is not null, changes should always coincide with a stimulus onset
     '''
-    if fix_periodic_flash(periodic_flash) is None:
+    if periodic_flash is None:
         return True
     else:
         # get all non-null change frames
@@ -877,7 +870,7 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
     '''
 
     # this test doesn't make sense for static stimuli with no initial blank. just return True
-    if fix_periodic_flash(periodic_flash) is None and initial_blank == 0:
+    if periodic_flash is None and initial_blank == 0:
         return True
     else:
         # preallocate array
