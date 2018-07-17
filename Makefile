@@ -10,6 +10,12 @@ build: clean
 test: build
 	docker run -t -e HOST_ID=$(UID) -v `pwd`/data/:/data visual_behavior:latest /$(PKG)/test.sh
 
+dev:
+	docker create -t --rm --name dev $(PKG):latest /$(PKG)/test.sh
+	docker cp test.sh dev:/$(PKG)/test.sh
+	docker cp tests dev:/$(PKG)
+	docker start -i dev
+
 bdist_wheel:
 	docker run -e HOST_ID=$(UID) -v `pwd`/data/:/data visual_behavior:latest /$(PKG)/build_bdist_wheel.sh
 
