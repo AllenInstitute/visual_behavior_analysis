@@ -166,8 +166,8 @@ def get_metadata(lims_data, timestamps):
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
     metadata['project_id'] = lims_data.project_id.values[0]
     metadata['rig'] = lims_data.rig.values[0]
-    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 1)
-    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 1)
+    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 0)
+    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 0)
     # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
     metadata = pd.DataFrame(metadata, index=[metadata['experiment_id']])
     return metadata

@@ -34,12 +34,16 @@ class VisualBehaviorOphysDataset(object):
         self.get_timestamps_stimulus()
         self.get_visual_stimuli()
         self.get_running()
-        self.get_licks()
+        self._licks = None
+        #self.get_licks()
         self.get_rewards()
+        self.get_task_parameters()
         self.get_trials()
         self.get_dff_traces()
         self.get_roi_masks()
         self.get_roi_metrics()
+        self.get_cell_specimen_ids()
+        self.get_cell_indices()
         self.get_max_projection()
         self.get_motion_correction()
         # self.get_pupil_diameter()
@@ -92,6 +96,13 @@ class VisualBehaviorOphysDataset(object):
         self.running = pd.read_hdf(os.path.join(self.analysis_dir, 'running.h5'), key='df', format='fixed')
         return self.running
 
+    # this is cool, consider implementing later
+    # @property
+    # def licks(self):
+    #     if self._licks is None:
+    #         self.get_licks()
+    #     return self._licks
+
     def get_licks(self):
         self.licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df', format='fixed')
         return self.licks
@@ -100,11 +111,15 @@ class VisualBehaviorOphysDataset(object):
         self.rewards = pd.read_hdf(os.path.join(self.analysis_dir, 'rewards.h5'), key='df', format='fixed')
         return self.rewards
 
+    def get_task_parameters(self):
+        self.task_parameters = pd.read_hdf(os.path.join(self.analysis_dir, 'task_parameters.h5'), key='df', format='fixed')
+        return self.task_parameters
+
     def get_trials(self):
         self.all_trials = pd.read_hdf(os.path.join(self.analysis_dir, 'trials.h5'), key='df', format='fixed')
         all_trials = self.all_trials.copy()
         trials = all_trials[(all_trials.auto_rewarded != True) & (all_trials.trial_type != 'aborted')].reset_index()
-        trials = trials.rename(columns={'level_0': 'index'})
+        trials = trials.rename(columns={'level_0': 'original_trial_index'})
         trials.insert(loc=0, column='trial', value=trials.index.values)
         self.trials = trials
         return self.trials
@@ -141,3 +156,20 @@ class VisualBehaviorOphysDataset(object):
         self.motion_correction = pd.read_hdf(os.path.join(self.analysis_dir, 'motion_correction.h5'), key='df',
                                              format='fixed')
         return self.motion_correction
+
+    def get_cell_specimen_ids(self):
+        self.cell_specimen_ids = np.sort(self.roi_metrics.cell_specimen_id.values)
+        return self.cell_specimen_ids
+
+    def get_cell_indices(self):
+        self.cell_indices = np.sort(self.roi_metrics.cell_index.values)
+        return self.cell_indices
+
+    def get_cell_specimen_id_for_cell_index(self, cell_index):
+        cell_specimen_id = self.cell_specimen_ids[cell_index]
+        return cell_specimen_id
+
+    def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
+        cell_index = np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
+        return cell_index
+
