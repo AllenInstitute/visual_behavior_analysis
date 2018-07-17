@@ -45,7 +45,7 @@ def define_validation_functions(core_data):
     STIMULUS_WINDOW = core_data['metadata']['stimulus_window']
     VOLUME_LIMIT = core_data['metadata']['volume_limit']
 
-    PERIODIC_FLASH = et.fix_periodic_flash(core_data['metadata']['params']['periodic_flash'])
+    PERIODIC_FLASH = core_data['metadata']['periodic_flash']
 
     validation_functions = {
         # et.validate_schema
