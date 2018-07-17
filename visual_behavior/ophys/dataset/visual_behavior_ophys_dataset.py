@@ -28,21 +28,17 @@ class VisualBehaviorOphysDataset(object):
         self.get_timestamps()
         self.get_timestamps_ophys()
         self.get_timestamps_stimulus()
+        self.get_visual_stimuli()
+        self.get_running()
+        self.get_licks()
+        self.get_rewards()
+        self.get_trials()
         self.get_dff_traces()
         self.get_roi_masks()
         self.get_roi_metrics()
         self.get_max_projection()
         self.get_motion_correction()
-
-        # self.get_pkl()
-        # self.get_pkl_df()
-        # self.get_running_speed()
-        # self.get_stim_codes()
-        # self.get_stim_table()
-        # self.get_stimulus_type()
-        #
         # self.get_pupil_diameter()
-        # self.get_flashes()
         # self.get_corrected_fluorescence_traces()
         # self.get_events()
 
@@ -82,6 +78,31 @@ class VisualBehaviorOphysDataset(object):
     def get_timestamps_ophys(self):
         self.timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
         return self.timestamps_ophys
+
+    def get_visual_stimuli(self):
+        self.visual_stimuli = pd.read_hdf(os.path.join(self.analysis_dir, 'visual_stimuli.h5'), key='df', format='fixed')
+        return self.visual_stimuli
+
+    def get_running(self):
+        self.running = pd.read_hdf(os.path.join(self.analysis_dir, 'running.h5'), key='df', format='fixed')
+        return self.running
+
+    def get_licks(self):
+        self.licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df', format='fixed')
+        return self.licks
+
+    def get_rewards(self):
+        self.rewards = pd.read_hdf(os.path.join(self.analysis_dir, 'rewards.h5'), key='df', format='fixed')
+        return self.rewards
+
+    def get_trials(self):
+        self.all_trials = pd.read_hdf(os.path.join(self.analysis_dir, 'trials.h5'), key='df', format='fixed')
+        all_trials = self.all_trials.copy()
+        trials = all_trials[(all_trials.auto_rewarded != True) & (all_trials.trial_type != 'aborted')].reset_index()
+        trials = trials.rename(columns={'level_0': 'index'})
+        trials.insert(loc=0, column='trial', value=trials.index.values)
+        self.trials = trials
+        return self.trials
 
     def get_dff_traces(self):
         f = h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r')

@@ -49,10 +49,10 @@ def get_lims_id(lims_data):
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
     analysis_folder_name = str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-        str(lims_data.lims_id.values[0]) + '_' + \
-        lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
-        lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
-        lims_data.rig.values[0][6] + '_' + lims_data.session_name.values[0]
+                           str(lims_data.lims_id.values[0]) + '_' + \
+                           lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
+                           lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
+                           lims_data.rig.values[0][6] + '_' + lims_data.session_name.values[0]
     return analysis_folder_name
 
 
@@ -110,7 +110,7 @@ def get_sync_path(lims_data):
     sync_path = os.path.join(ophys_session_dir, sync_file)
     analysis_dir = get_analysis_dir(lims_data)
     if sync_file not in os.listdir(analysis_dir):
-        print 'moving ', sync_file, ' to analysis dir' # flake8: noqa: E999
+        print 'moving ', sync_file, ' to analysis dir'  # flake8: noqa: E999
         shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
     return sync_path
 
@@ -200,21 +200,58 @@ def get_pkl(lims_data):
     return pkl
 
 
-# def get_extended_trials_dataframe(pkl):
-#     from visual_behavior.translator.foraging2 import data_to_change_detection_core
-#     from visual_behavior.translator.core import create_extended_dataframe
-#     core_data = data_to_change_detection_core(pkl)
-#     trials = create_extended_dataframe(
-#         trials=core_data['trials'],
-#         metadata=core_data['metadata'],
-#         licks=core_data['licks'],
-#         time=core_data['time'])
-#     return trials
-#
-# def save_pkl_df(pkl_df,lims_id):
-#     analysis_dir = get_analysis_dir(lims_id)
-#     pkl_df.to_hdf(os.path.join(analysis_dir, 'pkl_df.h5'), key='df', format='fixed')
-#
+def get_core_data(pkl, timestamps_stimulus):
+    from visual_behavior.translator.foraging import data_to_change_detection_core
+    core_data = data_to_change_detection_core(pkl, time=timestamps_stimulus)
+    return core_data
+
+
+def get_task_parameters(core_data):
+    task_parameters = {}
+    task_parameters['blank_duration'] = core_data['metadata']['blank_duration_range'][0]
+    task_parameters['stimulus_duration'] = core_data['metadata']['stim_duration']
+    task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['omitted_flash_fraction']
+    task_parameters['response_window'] = [core_data['metadata']['response_window']]
+    task_parameters['reward_volume'] = core_data['metadata']['rewardvol']
+    task_parameters['stage'] = core_data['metadata']['stage']
+    task_parameters['stimulus'] = core_data['metadata']['stimulus']
+    task_parameters['stimulus_distribution'] = core_data['metadata']['stimulus_distribution']
+    task_parameters['task'] = core_data['metadata']['task']
+    task_parameters['n_stimulus_frames'] = core_data['metadata']['n_stimulus_frames']
+    task_parameters = pd.DataFrame(task_parameters, columns=task_parameters.keys(), index=['params'])
+    return task_parameters
+
+
+def save_core_data_components(core_data, lims_data):
+    rewards = core_data['rewards']
+    save_dataframe_as_h5(rewards, 'rewards', get_analysis_dir(lims_data))
+
+    running = core_data['running']
+    save_dataframe_as_h5(running, 'running', get_analysis_dir(lims_data))
+
+    licks = core_data['licks']
+    save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
+
+    visual_stimuli = core_data['visual_stimuli']
+    save_dataframe_as_h5(visual_stimuli, 'visual_stimuli', get_analysis_dir(lims_data))
+
+    task_parameters = get_task_parameters(core_data)
+    save_dataframe_as_h5(task_parameters, 'task_parameters', get_analysis_dir(lims_data))
+
+
+def get_trials(core_data):
+    from visual_behavior.translator.core import create_extended_dataframe
+    trials = create_extended_dataframe(
+        trials=core_data['trials'],
+        metadata=core_data['metadata'],
+        licks=core_data['licks'],
+        time=core_data['time'])
+    return trials
+
+
+def save_trials(trials, lims_data):
+    save_dataframe_as_h5(trials, 'trials', get_analysis_dir(lims_data))
+
 
 def get_running_speed(pkl, timestamps):
     # from visual_behavior.translator.foraging2 import get_running_speed
@@ -421,10 +458,13 @@ def convert_level_1_to_level_2(lims_id):
     metadata = get_metadata(lims_data, timestamps)
     save_metadata(metadata, lims_data)
 
-    # running_speed = io.get_running_speed(pkl,timestamps)
-    # io.save_running_speed(running_speed,analysis_dir)
+    pkl = get_pkl(lims_data)
+    timestamps_stimulus = get_timestamps_stimulus(timestamps)
+    core_data = get_core_data(pkl, timestamps_stimulus)
+    save_core_data_components(core_data, lims_data)
 
-    # pkl = get_pkl(lims_data)
+    trials = get_trials(core_data)
+    save_trials(trials, lims_data)
 
     roi_metrics = get_roi_metrics(lims_data)
     save_roi_metrics(roi_metrics, lims_data)
