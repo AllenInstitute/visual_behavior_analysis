@@ -1,3 +1,4 @@
+from __future__ import print_function
 """
 Created on Saturday July 14 2018
 
@@ -11,7 +12,6 @@ import shutil
 import platform
 import numpy as np
 import pandas as pd
-
 
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
@@ -121,7 +121,7 @@ def get_sync_path(lims_data):
     sync_path = os.path.join(ophys_session_dir, sync_file)
     analysis_dir = get_analysis_dir(lims_data)
     if sync_file not in os.listdir(analysis_dir):
-        print 'moving ', sync_file, ' to analysis dir'  # flake8: noqa: E999
+        print('moving ', sync_file, ' to analysis dir')  # flake8: noqa: E999
         shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
     return sync_path
 
@@ -201,7 +201,7 @@ def get_pkl(lims_data):
     pkl_file = os.path.basename(stimulus_pkl_path)
     analysis_dir = get_analysis_dir(lims_data)
     if pkl_file not in os.listdir(analysis_dir):
-        print 'moving ', pkl_file, ' to analysis dir'
+        print('moving ', pkl_file, ' to analysis dir')
         shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
     print('getting stimulus data from pkl')
     pkl = pd.read_pickle(stimulus_pkl_path)
@@ -272,7 +272,7 @@ def get_running_speed(pkl, timestamps):
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     speed = vbio.load_running_speed(pkl, time=timestamps_stimulus)
     running_speed = speed['speed (cm/s)'].values
-    print 'length of running speed trace: ', str(len(running_speed))
+    print('length of running speed trace: ', str(len(running_speed)))
     return running_speed
 
 
@@ -418,8 +418,8 @@ def get_dff_traces(roi_metrics, lims_data):
     # only include valid roi traces
     valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
     dff_traces = dff_traces[valid_roi_indices]
-    print 'length of traces:', dff_traces.shape[1]
-    print 'number of segmented cells:', dff_traces.shape[0]
+    print('length of traces:', dff_traces.shape[1])
+    print('number of segmented cells:', dff_traces.shape[0])
     return dff_traces
 
 
@@ -464,6 +464,14 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     lims_data = get_lims_data(lims_id)
     
     get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
+
+
+    
+    # lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
+    # print analysis_dir = lims_data['analysis_dir'].values[0]
+    # import sys
+    # sys.exit()
+
     timestamps = get_timestamps(lims_data)
     save_timestamps(timestamps, lims_data)
 
