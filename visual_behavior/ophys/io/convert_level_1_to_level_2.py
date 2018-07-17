@@ -23,12 +23,15 @@ def save_dataframe_as_h5(df, name, analysis_dir):
     df.to_hdf(os.path.join(analysis_dir, name + '.h5'), key='df', format='fixed')
 
 
-def get_cache_dir():
-    if platform.system() == 'Linux':
-        cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+def get_cache_dir(cache_dir=None):
+    if not cache_dir:
+        if platform.system() == 'Linux':
+            cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+        else:
+            cache_dir = r'\\allen\aibs\informatics\swdb2018\visual_behavior'
+        return cache_dir
     else:
-        cache_dir = r'\\allen\aibs\informatics\swdb2018\visual_behavior'
-    return cache_dir
+        return cache_dir
 
 
 def get_lims_data(lims_id):
@@ -66,10 +69,18 @@ def get_experiment_date(lims_data):
     return experiment_date
 
 
-def get_analysis_dir(lims_data):
-    analysis_dir = os.path.join(get_cache_dir(), get_analysis_folder_name(lims_data))
+def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
+    
+    cache_dir = get_cache_dir(cache_dir=cache_dir)
+    
+    if 'analysis_dir' in lims_data.columns:
+        return lims_data['analysis_dir'].values[0]
+
+    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
     if not os.path.exists(analysis_dir):
         os.mkdir(analysis_dir)
+    if cache_on_lims_data:
+        lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
     return analysis_dir
 
 
@@ -187,7 +198,7 @@ def get_stimulus_pkl_path(lims_data):
 
 def get_pkl(lims_data):
     stimulus_pkl_path = get_stimulus_pkl_path(lims_data)
-    pkl_file = stimulus_pkl_path.split('\\')[-1]
+    pkl_file = os.path.basename(stimulus_pkl_path)
     analysis_dir = get_analysis_dir(lims_data)
     if pkl_file not in os.listdir(analysis_dir):
         print 'moving ', pkl_file, ' to analysis dir'
@@ -449,9 +460,10 @@ def save_max_projection(max_projection, lims_data):
                  cmap='gray')
 
 
-def convert_level_1_to_level_2(lims_id):
+def convert_level_1_to_level_2(lims_id, cache_dir=None):
     lims_data = get_lims_data(lims_id)
-
+    
+    get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
     timestamps = get_timestamps(lims_data)
     save_timestamps(timestamps, lims_data)
 
@@ -487,4 +499,4 @@ def convert_level_1_to_level_2(lims_id):
 
 if __name__ == '__main__':
     lims_id = 702134928
-    convert_level_1_to_level_2(lims_id)
+    convert_level_1_to_level_2(lims_id, cache_dir='/allen/aibs/technology/nicholasc/tmp2')
