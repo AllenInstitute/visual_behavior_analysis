@@ -1,7 +1,7 @@
 FROM continuumio/anaconda:latest
 
 # Install environment dependencies:
-RUN apt-get update -yqq && apt-get install -yqq --no-install-recommends emacs curl apt-utils wget && apt-get -q clean
+RUN apt-get update -yqq && apt-get install -yqq --no-install-recommends xvfb emacs curl apt-utils wget libgl1-mesa-glx && apt-get -q clean
 
 # Install python dependencies:
 RUN conda update -n base conda
