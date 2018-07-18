@@ -168,29 +168,25 @@ def count_stimuli_per_trial(trials, visual_stimuli):
         elif all(pd.isnull(visual_stimuli.orientation)) == False:
             col_to_check = 'orientation'
 
-        # get the index of the first stimulus that started on or before the trial start
-        start_stim = visual_stimuli[
-            (visual_stimuli.frame <= trial.startframe + 1) &
-            (visual_stimuli.end_frame >= trial.startframe + 1)
-        ].index[-1]
+        try:
+            # get the index of the first stimulus that started on or before the trial start
+            start_stim = visual_stimuli[
+                (visual_stimuli.frame <= trial.startframe + 1) &
+                (visual_stimuli.end_frame >= trial.startframe + 1)
+            ].index[-1]
 
-        # get the index of the last stimulus that ended on or before the trial end
-        end_stim = visual_stimuli[
-            (visual_stimuli.frame <= trial.endframe)
-        ].index[-1]
+            # get the index of the last stimulus that ended on or before the trial end
+            end_stim = visual_stimuli[
+                (visual_stimuli.frame <= trial.endframe)
+            ].index[-1]
 
-        # get all unique stimuli on this trial
-        stimuli = np.unique(visual_stimuli.loc[start_stim:end_stim][col_to_check])
-        # add to array
-        stimuli_per_trial[idx] = len(stimuli)
+            # get all unique stimuli on this trial
+            stimuli = np.unique(visual_stimuli.loc[start_stim:end_stim][col_to_check])
+            # add to array
+            stimuli_per_trial[idx] = len(stimuli)
+        except IndexError:
+            stimuli_per_trial[idx] = 0
     return stimuli_per_trial
-
-
-def fix_periodic_flash(pf):
-    '''
-    deal with core_data['metadata']['params']['periodic_flash']='None'
-    '''
-    return None if pf == 'None' else pf
 
 
 # test functions
@@ -859,7 +855,7 @@ def validate_change_frame_at_flash_onset(trials, visual_stimuli, periodic_flash)
     '''
     if `periodic_flash` is not null, changes should always coincide with a stimulus onset
     '''
-    if fix_periodic_flash(periodic_flash) is None:
+    if periodic_flash is None:
         return True
     else:
         # get all non-null change frames
@@ -877,7 +873,7 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
     '''
 
     # this test doesn't make sense for static stimuli with no initial blank. just return True
-    if fix_periodic_flash(periodic_flash) is None and initial_blank == 0:
+    if periodic_flash is None and initial_blank == 0:
         return True
     else:
         # preallocate array
