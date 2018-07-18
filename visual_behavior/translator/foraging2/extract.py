@@ -1434,3 +1434,7 @@ def get_abort_on_early_response(data):
         abort on early response boolean or None if not found
     """
     return data["items"]["behavior"]["config"]["DoC"]["abort_on_early_response"]
+
+
+def get_periodic_flash(data):
+    return tuple(data['items']['behavior']['config']['DoC']['periodic_flash'])

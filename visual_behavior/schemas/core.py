@@ -346,6 +346,16 @@ class MetadataSchema(Schema):
         description='maximum volume of water to deliver in a session, in mL',
         required=True,
     )
+    auto_reward_delay = fields.Float(
+        description='delay between change time and reward on autoreward trials',
+        required=True,
+    )
+    periodic_flash = fields.List(
+        fields.Float,
+        description='duration of flash and grey screen',
+        required=True,
+        allow_none=True,
+    )
 
 
 # class ChangeDetectionSessionCoreSchema(Schema):

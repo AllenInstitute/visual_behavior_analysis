@@ -93,6 +93,10 @@ def load_metadata(data):
     metadata['initial_blank_duration'] = data['initial_blank']
     metadata['warm_up_trials'] = data['warmup_trials']
     metadata['stimulus_window'] = data['trial_duration'] - data['delta_minimum']
+    metadata['auto_reward_delay'] = 0.0  # hard coded
+
+    blank_dur = np.mean(data['blank_duration_range'])
+    metadata['periodic_flash'] = (data['stim_duration'], blank_dur) if blank_dur > 0 else None
 
     block_length = data['lick_detect_training_block_length']
 

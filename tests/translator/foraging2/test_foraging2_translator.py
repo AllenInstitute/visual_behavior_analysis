@@ -141,6 +141,7 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             "behavior_session_uuid": '',
             "abort_on_early_response": True,
             "auto_reward_delay": 0.0,
+            "periodic_flash": (0.25, 0.5),
         }
 
 
