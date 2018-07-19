@@ -13,6 +13,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class VisualBehaviorOphysDataset(object):
     def __init__(self, experiment_id, cache_dir=None):
         """initialize visual behavior ophys experiment dataset.

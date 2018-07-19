@@ -4,6 +4,7 @@ import numpy as np
 import logging
 logger = logging.getLogger(__name__)
 
+
 def filter_digital(rising, falling, threshold=0.0001):
     """
     Removes short transients from digital signal.

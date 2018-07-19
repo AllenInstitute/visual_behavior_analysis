@@ -13,6 +13,7 @@ import pandas as pd
 import logging
 logger = logging.getLogger(__name__)
 
+
 def convert_lims_path(data_folder):
     # We need to convert internal storage path to real path on titan
     data_folder = data_folder.replace('/projects', '/allen/programs/braintv/production')
