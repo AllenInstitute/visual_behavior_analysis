@@ -204,6 +204,30 @@ def make_rolling_dprime_plot(d_prime, ax, format='vertical'):
         ax.set_ylabel("d'", fontsize=14)
     ax.set_title("Rolling d'", fontsize=16)
 
+def make_legend(ax):
+    ax.plot(np.nan,np.nan,marker='.',linestyle='none',color='black')
+    ax.plot(np.nan,np.nan,marker='o',linestyle='none',color='blue')
+    ax.plot(np.nan,np.nan,'d',color='indigo')
+    ax.axvspan(np.nan,np.nan,color='red')
+    ax.axvspan(np.nan,np.nan,color='blue')
+    ax.axvspan(np.nan,np.nan,color='darkgreen')
+    ax.axvspan(np.nan,np.nan,color='lightgreen')
+    ax.axvspan(np.nan,np.nan,color='darkorange')
+    ax.axvspan(np.nan,np.nan,color='yellow')
+    ax.legend([
+        'licks',
+        'rewards',
+        'stimulus\nchanges',
+        'aborted\ntrials',
+        'free reward\ntrials',
+        'hit\ntrials',
+        'miss\ntrials',
+        'false alarm\ntrials',
+        'correct rejection\ntrials'
+        ],loc='upper center',ncol=3,fontsize=9,frameon=False)
+    ax.set_xticks([])
+    ax.set_yticks([])
+
 
 def make_daily_figure(
         extended_trials,
@@ -240,6 +264,9 @@ def make_daily_figure(
     ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(0, 1), yspan=(0.425, 1), sharey=True)
     ax_timeline = placeAxesOnGrid(fig, xspan=(0.5, 1), yspan=(0.225, 0.3))
     ax_table = placeAxesOnGrid(fig, xspan=(0.1, 0.6), yspan=(0, 0.25), frameon=False)
+    ax_legend = placeAxesOnGrid(fig, xspan=(0.5,1), yspan=(0, 0.225), frameon=False)
+
+    make_legend(ax_legend)
 
     if mouse_image_before is not None:
         try:
