@@ -134,14 +134,14 @@ def make_session_timeline_plot(extended_trials, ax):
     ax.set_title('Full Session Timeline', fontsize=14)
 
 
-def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5), show_reward_window=True):
+def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5), show_reward_window=True, y_axis_limit=None):
     if reward_window is None:
         try:
             reward_window = get_reward_window(extended_trials)
         except Exception:
             reward_window = [0.15, 1]
 
-    if show_reward_window == True: # NOQA E712
+    if show_reward_window == True:  # NOQA E712
         ax.axvspan(reward_window[0], reward_window[1], facecolor='k', alpha=0.5)
     lick_x = []
     lick_y = []
@@ -165,7 +165,10 @@ def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5)
     ax.plot(flatten_list(reward_x), flatten_list(reward_y), 'o', color='blue', alpha=0.5)
 
     ax.set_xlim(xlims[0], xlims[1])
-    ax.set_ylim(-0.5, ii + 0.5)
+    if y_axis_limit is None or y_axis_limit is False:
+        ax.set_ylim(-0.5, ii + 0.5)
+    else:
+        ax.set_ylim(-0.5, y_axis_limit + 0.5)
     ax.invert_yaxis()
 
     ax.set_title('Lick Raster', fontsize=16)
@@ -202,17 +205,47 @@ def make_rolling_dprime_plot(d_prime, ax, format='vertical'):
     ax.set_title("Rolling d'", fontsize=16)
 
 
+def make_legend(ax):
+    ax.plot(np.nan, np.nan, marker='.', linestyle='none', color='black')
+    ax.plot(np.nan, np.nan, marker='o', linestyle='none', color='blue')
+    ax.plot(np.nan, np.nan, 'd', color='indigo')
+    ax.axvspan(np.nan, np.nan, color='red')
+    ax.axvspan(np.nan, np.nan, color='blue')
+    ax.axvspan(np.nan, np.nan, color='darkgreen')
+    ax.axvspan(np.nan, np.nan, color='lightgreen')
+    ax.axvspan(np.nan, np.nan, color='darkorange')
+    ax.axvspan(np.nan, np.nan, color='yellow')
+    ax.legend([
+        'licks',
+        'rewards',
+        'stimulus\nchanges',
+        'aborted\ntrials',
+        'free reward\ntrials',
+        'hit\ntrials',
+        'miss\ntrials',
+        'false alarm\ntrials',
+        'correct rejection\ntrials'
+    ], loc='upper center', ncol=3, fontsize=9, frameon=False)
+    ax.set_xticks([])
+    ax.set_yticks([])
+
+
 def make_daily_figure(
         extended_trials,
         mouse_id=None,
         reward_window=None,
         sliding_window=100,
         mouse_image_before=None,
-        mouse_image_after=None
+        mouse_image_after=None,
+        y_axis_limit=False
 ):
     '''
     Generates a daily summary plot for the detection of change task
     '''
+
+    if y_axis_limit is True:
+        y_axis_limit = 475  # approximate maximum number of trials in a one hour session
+
     date = extended_trials.startdatetime.iloc[0].strftime('%Y-%m-%d')
     if mouse_id is None:
         mouse_id = extended_trials.mouse_id.unique()[0]
@@ -232,6 +265,9 @@ def make_daily_figure(
     ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(0, 1), yspan=(0.425, 1), sharey=True)
     ax_timeline = placeAxesOnGrid(fig, xspan=(0.5, 1), yspan=(0.225, 0.3))
     ax_table = placeAxesOnGrid(fig, xspan=(0.1, 0.6), yspan=(0, 0.25), frameon=False)
+    ax_legend = placeAxesOnGrid(fig, xspan=(0.5, 1), yspan=(0, 0.225), frameon=False)
+
+    make_legend(ax_legend)
 
     if mouse_image_before is not None:
         try:
@@ -254,7 +290,7 @@ def make_daily_figure(
     make_session_timeline_plot(extended_trials, ax_timeline)
 
     # make trial-based plots
-    make_lick_raster_plot(df_nonaborted, ax[0], reward_window=reward_window)
+    make_lick_raster_plot(df_nonaborted, ax[0], reward_window=reward_window, y_axis_limit=y_axis_limit)
     make_cumulative_volume_plot(df_nonaborted, ax[1])
     # note (DRO - 10/31/17): after removing the autorewarded trials from the calculation, will these vectors be of different length than the lick raster?
     hit_rate, fa_rate, d_prime = get_response_rates(
