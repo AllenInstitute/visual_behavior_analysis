@@ -141,7 +141,7 @@ def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5)
         except Exception:
             reward_window = [0.15, 1]
 
-    if show_reward_window == True: # NOQA E712
+    if show_reward_window == True:  # NOQA E712
         ax.axvspan(reward_window[0], reward_window[1], facecolor='k', alpha=0.5)
     lick_x = []
     lick_y = []
@@ -204,16 +204,17 @@ def make_rolling_dprime_plot(d_prime, ax, format='vertical'):
         ax.set_ylabel("d'", fontsize=14)
     ax.set_title("Rolling d'", fontsize=16)
 
+
 def make_legend(ax):
-    ax.plot(np.nan,np.nan,marker='.',linestyle='none',color='black')
-    ax.plot(np.nan,np.nan,marker='o',linestyle='none',color='blue')
-    ax.plot(np.nan,np.nan,'d',color='indigo')
-    ax.axvspan(np.nan,np.nan,color='red')
-    ax.axvspan(np.nan,np.nan,color='blue')
-    ax.axvspan(np.nan,np.nan,color='darkgreen')
-    ax.axvspan(np.nan,np.nan,color='lightgreen')
-    ax.axvspan(np.nan,np.nan,color='darkorange')
-    ax.axvspan(np.nan,np.nan,color='yellow')
+    ax.plot(np.nan, np.nan, marker='.', linestyle='none', color='black')
+    ax.plot(np.nan, np.nan, marker='o', linestyle='none', color='blue')
+    ax.plot(np.nan, np.nan, 'd', color='indigo')
+    ax.axvspan(np.nan, np.nan, color='red')
+    ax.axvspan(np.nan, np.nan, color='blue')
+    ax.axvspan(np.nan, np.nan, color='darkgreen')
+    ax.axvspan(np.nan, np.nan, color='lightgreen')
+    ax.axvspan(np.nan, np.nan, color='darkorange')
+    ax.axvspan(np.nan, np.nan, color='yellow')
     ax.legend([
         'licks',
         'rewards',
@@ -224,7 +225,7 @@ def make_legend(ax):
         'miss\ntrials',
         'false alarm\ntrials',
         'correct rejection\ntrials'
-        ],loc='upper center',ncol=3,fontsize=9,frameon=False)
+    ], loc='upper center', ncol=3, fontsize=9, frameon=False)
     ax.set_xticks([])
     ax.set_yticks([])
 
@@ -243,7 +244,7 @@ def make_daily_figure(
     '''
 
     if y_axis_limit is True:
-        y_axis_limit = 475 #approximate maximum number of trials in a one hour session
+        y_axis_limit = 475  # approximate maximum number of trials in a one hour session
 
     date = extended_trials.startdatetime.iloc[0].strftime('%Y-%m-%d')
     if mouse_id is None:
@@ -264,7 +265,7 @@ def make_daily_figure(
     ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(0, 1), yspan=(0.425, 1), sharey=True)
     ax_timeline = placeAxesOnGrid(fig, xspan=(0.5, 1), yspan=(0.225, 0.3))
     ax_table = placeAxesOnGrid(fig, xspan=(0.1, 0.6), yspan=(0, 0.25), frameon=False)
-    ax_legend = placeAxesOnGrid(fig, xspan=(0.5,1), yspan=(0, 0.225), frameon=False)
+    ax_legend = placeAxesOnGrid(fig, xspan=(0.5, 1), yspan=(0, 0.225), frameon=False)
 
     make_legend(ax_legend)
 
