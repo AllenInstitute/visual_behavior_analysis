@@ -230,7 +230,7 @@ def validate_number_of_warmup_trials(trials, expected_number_of_warmup_trials):
         return len(trials[trials.auto_rewarded == True]) == len(trials)
 
 
-def validate_reward_delivery_on_warmup_trials(trials, autoreward_delay, tolerance=1/60.):
+def validate_reward_delivery_on_warmup_trials(trials, autoreward_delay, tolerance=0.017):
     '''
     all warmup trials should have rewards presented simultaneously with the
     change image
