@@ -70,6 +70,8 @@ Pull requests are welcome.
 - Justin Kiggins - justink@alleninstitute.org
 - Sahar Manavi - saharm@alleninstitute.org
 - Nicholas Cain - nicholasc@alleninstitute.org
+- Ryan Valenza - ryanv@alleninstitute.org
+- Marina Garrett - marinag@alleninstitute.org
 
 
 ## Additional Links
