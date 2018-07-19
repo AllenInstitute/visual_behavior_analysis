@@ -1,6 +1,9 @@
 import numpy as np
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 def filter_digital(rising, falling, threshold=0.0001):
     """
     Removes short transients from digital signal.
@@ -33,7 +36,7 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
     ROUND_PRECISION = 4
     ONE = 1
 
-    print 'calculating monitor delay' # flake8: noqa: E999
+    logger.info('calculating monitor delay')
 
     try:
         # photodiode transitions
@@ -104,24 +107,21 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
             delay = np.mean(delay_rise[:last_frame_index])
 
             if (delay > DELAY_THRESHOLD or np.isnan(delay)):
-                print "Sync photodiode error needs to be fixed"
                 delay = ASSUMED_DELAY
-                print "Using assumed monitor delay:", round(delay, ROUND_PRECISION)
+                logger.error("Sync photodiode error needs to be fixed. Using assumed monitor delay: {}".format(round(delay, ROUND_PRECISION)))
 
         # assume delay
         else:
             delay = ASSUMED_DELAY
     except Exception as e:
-        print e
-        print "Process without photodiode signal"
         delay = ASSUMED_DELAY
-        print "Assumed delay:", round(delay, ROUND_PRECISION)
+        logger.error("Process without photodiode signal. Assumed delay: {}".format(round(delay, ROUND_PRECISION)))
 
     return delay
 
 
 def get_sync_data(lims_id):
-    print 'getting sync data'
+    logger.info('getting sync data')
     from visual_behavior.ophys.sync.sync_dataset import Dataset
     import visual_behavior.ophys.io.convert_level_1_to_level_2 as io
     sync_path = io.get_sync_path(lims_id)
@@ -157,8 +157,8 @@ def get_sync_data(lims_id):
     stim_photodiode = sync_dataset.get_rising_edges('stim_photodiode') / sample_freq
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger
     frames_2p = frames_2p[frames_2p > trigger[0]]
-    print 'stimulus frames detected in sync: ', len(vsyncs)
-    print 'ophys frames detected in sync: ', len(frames_2p)
+    logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
+    logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
     # put sync data in dphys format to be compatible with downstream analysis
     times_2p = {'timestamps': frames_2p}
     times_vsync = {'timestamps': vsyncs}

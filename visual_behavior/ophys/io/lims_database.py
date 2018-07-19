@@ -10,6 +10,8 @@ import json
 import psycopg2
 import pandas as pd
 
+import logging
+logger = logging.getLogger(__name__)
 
 def convert_lims_path(data_folder):
     # We need to convert internal storage path to real path on titan
@@ -62,8 +64,7 @@ class LimsDatabase:
 
             conn.close()
         except Exception as e:
-            print e # flake8: noqa: E999
-            print "Unable to query LIMS database"
+            logger.error("Unable to query LIMS database: {}".format(e))
             self.data_present = False
 
     def is_valid(self):
@@ -175,7 +176,7 @@ class LimsDatabase:
             conn.close()
 
         except Exception as e:
-            print e
+            logger.error("cannot query specimen driver line: {}".format(e))
             final_genotype = ''
 
         return final_genotype
@@ -211,7 +212,7 @@ class LimsDatabase:
             conn.close()
 
         except Exception as e:
-            print e
+            logger.error("cannot query specimen reporter line: {}".format(e))
             final_genotype = ''
 
         return final_genotype

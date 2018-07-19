@@ -9,6 +9,9 @@ import platform
 import numpy as np
 import pandas as pd
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class VisualBehaviorOphysDataset(object):
     def __init__(self, experiment_id, cache_dir=None):
@@ -48,7 +51,8 @@ class VisualBehaviorOphysDataset(object):
                 cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
             else:
                 cache_dir = r'\\allen\aibs\informatics\swdb2018\visual_behavior'
-            print 'using default cache_dir:', cache_dir # flake8: noqa: E999
+
+            logger.info('using default cache_dir: {}'.format(cache_dir))
         else:
             cache_dir = self.cache_dir
         self.cache_dir = cache_dir
@@ -61,7 +65,7 @@ class VisualBehaviorOphysDataset(object):
             self.analysis_dir = os.path.join(self.cache_dir, self.analysis_folder)
         else:
             self.analysis_dir = None
-            print 'no analysis folder  found for ', self.experiment_id
+            logger.info('no analysis folder found for {}'.format(self.experiment_id))
         return self.analysis_dir
 
     def get_metadata(self):

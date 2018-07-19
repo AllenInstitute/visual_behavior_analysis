@@ -70,9 +70,9 @@ def get_experiment_date(lims_data):
 
 
 def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
-    
+
     cache_dir = get_cache_dir(cache_dir=cache_dir)
-    
+
     if 'analysis_dir' in lims_data.columns:
         return lims_data['analysis_dir'].values[0]
 
@@ -462,15 +462,8 @@ def save_max_projection(max_projection, lims_data):
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None):
     lims_data = get_lims_data(lims_id)
-    
+
     get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
-
-
-    
-    # lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
-    # print analysis_dir = lims_data['analysis_dir'].values[0]
-    # import sys
-    # sys.exit()
 
     timestamps = get_timestamps(lims_data)
     save_timestamps(timestamps, lims_data)
