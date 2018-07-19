@@ -690,3 +690,6 @@ def test_get_max_session_duration(foraging2_data_stage4_2018_05_10):
 
 def test_get_abort_on_early_response(foraging2_data_stage4_2018_05_10):
     assert extract.get_abort_on_early_response(foraging2_data_stage4_2018_05_10) == True
+
+def test_get_periodic_flash(foraging2_data_stage4_2018_05_10):
+    assert extract.get_periodic_flash(foraging2_data_stage4_2018_05_10) == (0.25, 0.5)
