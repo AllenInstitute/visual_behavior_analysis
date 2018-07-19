@@ -134,7 +134,7 @@ def make_session_timeline_plot(extended_trials, ax):
     ax.set_title('Full Session Timeline', fontsize=14)
 
 
-def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5), show_reward_window=True):
+def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5), show_reward_window=True, y_axis_limit=None):
     if reward_window is None:
         try:
             reward_window = get_reward_window(extended_trials)
@@ -165,7 +165,10 @@ def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5)
     ax.plot(flatten_list(reward_x), flatten_list(reward_y), 'o', color='blue', alpha=0.5)
 
     ax.set_xlim(xlims[0], xlims[1])
-    ax.set_ylim(-0.5, ii + 0.5)
+    if y_axis_limit is None or y_axis_limit is False:
+        ax.set_ylim(-0.5, ii + 0.5)
+    else:
+        ax.set_ylim(-0.5, y_axis_limit + 0.5)
     ax.invert_yaxis()
 
     ax.set_title('Lick Raster', fontsize=16)
@@ -208,11 +211,16 @@ def make_daily_figure(
         reward_window=None,
         sliding_window=100,
         mouse_image_before=None,
-        mouse_image_after=None
+        mouse_image_after=None,
+        y_axis_limit=False
 ):
     '''
     Generates a daily summary plot for the detection of change task
     '''
+
+    if y_axis_limit is True:
+        y_axis_limit = 475 #approximate maximum number of trials in a one hour session
+
     date = extended_trials.startdatetime.iloc[0].strftime('%Y-%m-%d')
     if mouse_id is None:
         mouse_id = extended_trials.mouse_id.unique()[0]
@@ -254,7 +262,7 @@ def make_daily_figure(
     make_session_timeline_plot(extended_trials, ax_timeline)
 
     # make trial-based plots
-    make_lick_raster_plot(df_nonaborted, ax[0], reward_window=reward_window)
+    make_lick_raster_plot(df_nonaborted, ax[0], reward_window=reward_window, y_axis_limit=y_axis_limit)
     make_cumulative_volume_plot(df_nonaborted, ax[1])
     # note (DRO - 10/31/17): after removing the autorewarded trials from the calculation, will these vectors be of different length than the lick raster?
     hit_rate, fa_rate, d_prime = get_response_rates(
