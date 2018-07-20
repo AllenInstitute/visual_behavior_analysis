@@ -3,6 +3,29 @@ import pandas as pd
 from .extended_trials import get_first_lick_relative_to_scheduled_change
 
 
+def parse_log(log_record):
+    levelname, name, message = log_record.split('::')
+    return dict(
+        levelname=levelname,
+        name=name,
+        message=message,
+    )
+
+
+def count_read_errors(core_data):
+    log = [parse_log(log_record) for log_record in core_data['log']]
+    log = pd.DataFrame(log, columns=['levelname', 'name', 'message'])
+    return log.groupby('levelname').size().to_dict()
+
+
+def validate_no_read_errors(core_data):
+    error_counts = count_read_errors(core_data)
+
+    n_errors = error_counts.get('ERROR', 0) + error_counts.get('CRITICAL', 0)
+
+    return (n_errors == 0)
+
+
 def validate_running_data(core_data):
     '''
     for each sampling frame, the value of the encoder should be known

@@ -709,8 +709,9 @@ def get_running_speed(exp_data, smooth=False, time=None):
     dx = medfilt(dx, kernel_size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
 
-    if len(time) != len(dx):
-        raise ValueError("dx and time must be the same length")
+    if len(time) < len(dx):
+        logger.error('intervalsms record appears to be missing entries')
+        dx = dx[:len(time)]
 
     speed = calc_deriv(dx, time)
     speed = rad_to_dist(speed)
