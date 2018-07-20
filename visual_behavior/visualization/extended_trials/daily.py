@@ -180,7 +180,7 @@ def make_cumulative_volume_plot(df_in, ax):
     ax.barh(np.arange(len(df_in)), df_in.cumulative_volume, height=1.0, linewidth=0)
     ax.set_xlabel('Cumulative \nVolume (mL)', fontsize=14)
     ax.set_title('Cumulative Volume', fontsize=16)
-    ax.set_xlim(0,2)
+    ax.set_xlim(0, 2)
 
 
 def make_rolling_response_probability_plot(hit_rate, fa_rate, ax):
@@ -190,7 +190,7 @@ def make_rolling_response_probability_plot(hit_rate, fa_rate, ax):
     ax.set_title('Resp. Prob.', fontsize=16)
     ax.set_xticks([0, 0.25, 0.5, 0.75, 1])
     ax.set_xlabel('Response Prob.', fontsize=14)
-    ax.set_xlim(-0.1,1.1)
+    ax.set_xlim(-0.1, 1.1)
 
 
 def make_rolling_dprime_plot(d_prime, ax, format='vertical'):
@@ -201,7 +201,7 @@ def make_rolling_dprime_plot(d_prime, ax, format='vertical'):
         ax.plot(np.arange(len(d_prime)), d_prime, color='black', linewidth=2)
         ax.set_ylabel("d'", fontsize=14)
     ax.set_title("Rolling d'", fontsize=16)
-    ax.set_xlim(0,5)
+    ax.set_xlim(0, 5)
 
 
 def make_legend(ax):
