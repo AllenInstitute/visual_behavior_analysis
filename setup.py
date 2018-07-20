@@ -4,7 +4,7 @@ import setuptools
 
 setuptools.setup(
     name="visual-behavior",
-    version="0.5.0.dev2",
+    version="0.5.0.dev3",
     author="Justin Kiggins",
     author_email="justink@alleninstitute.org",
     description="analysis package for visual behavior",
