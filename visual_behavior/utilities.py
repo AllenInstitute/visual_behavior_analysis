@@ -167,7 +167,7 @@ class ListHandler(logging.Handler):
     def __init__(self, log_list):
         super(ListHandler, self).__init__()
         self.log_list = log_list
-        
+
     def emit(self, record):
         entry = self.format(record)
         self.log_list.append(entry)
