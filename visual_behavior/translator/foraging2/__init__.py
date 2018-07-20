@@ -1,5 +1,5 @@
 import pandas as pd
-from ...utilities import local_time
+from ...utilities import local_time, ListHandler, DoubleColonFormatter
 
 from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
@@ -17,6 +17,10 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
 
 
 from .extract_stimuli import get_visual_stimuli
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def data_to_change_detection_core(data):
@@ -37,7 +41,18 @@ def data_to_change_detection_core(data):
     - currently doesn't require or check that the `task` field in the
     experiment data is "DoC" (Detection of Change)
     """
-    return {
+
+    log_messages = []
+    handler = ListHandler(log_messages)
+    handler.setFormatter(
+        DoubleColonFormatter
+    )
+
+    logger.addHandler(
+        handler
+    )
+
+    core_data = {
         "metadata": data_to_metadata(data),
         "time": data_to_time(data),
         "licks": data_to_licks(data),
@@ -46,6 +61,10 @@ def data_to_change_detection_core(data):
         "rewards": data_to_rewards(data),
         "visual_stimuli": data_to_visual_stimuli(data),
     }
+
+    core_data['log'] = log_messages
+
+    return core_data
 
 
 def expand_dict(out_dict, from_dict, index):

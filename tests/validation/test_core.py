@@ -2,6 +2,48 @@ import numpy as np
 import pandas as pd
 from visual_behavior.validation.core import *
 
+def test_parse_log():
+
+    EXPECTED = dict(
+        levelname="ERROR",
+        name="package.module",
+        message="This is the error"
+    )
+
+    parsed = parse_log("{levelname}::{name}::{message}".format(**EXPECTED))
+    assert parsed == EXPECTED
+
+def test_count_read_errors():
+
+    EMPTY = dict(
+        log=[]
+    )
+    results = count_read_errors(EMPTY)
+    print(results)
+    assert 'ERROR' not in results
+
+    INFO = dict(
+        log=["INFO::package.module::informative message"]
+    )
+
+    results = count_read_errors(INFO)
+    print(results)
+    assert 'ERROR' not in results
+    assert results['INFO']==1
+
+def test_validate_no_read_errors():
+
+    WITH_ERRORS = dict(
+        log=["ERROR::package.module::error message"]
+    )
+
+    WITHOUT_ERRORS = dict(
+        log=["INFO::package.module::informative message"]
+    )
+
+    assert validate_no_read_errors(WITH_ERRORS)==False
+    assert validate_no_read_errors(WITHOUT_ERRORS)==True
+
 
 def test_validate_running_data():
     # good data: length matches time and not all values the same

@@ -1,5 +1,6 @@
 from __future__ import print_function
 from dateutil import tz
+import logging
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
@@ -159,3 +160,19 @@ def local_time(iso_timestamp, timezone=None):
     if not datetime.tzinfo:
         datetime = datetime.replace(tzinfo=tz.gettz('America/Los_Angeles'))
     return datetime.isoformat()
+
+
+class ListHandler(logging.Handler):
+    """docstring for ListHandler."""
+    def __init__(self, log_list):
+        super(ListHandler, self).__init__()
+        self.log_list = log_list
+        
+    def emit(self, record):
+        entry = self.format(record)
+        self.log_list.append(entry)
+
+
+DoubleColonFormatter = logging.Formatter(
+    "%(levelname)s::%(name)s::%(message)s",
+)
