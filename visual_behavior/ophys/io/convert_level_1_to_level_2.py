@@ -155,7 +155,7 @@ def get_metadata(lims_data, timestamps):
     metadata['experiment_id'] = lims_data['experiment_id'].values[0]
     metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
     metadata['mouse_id'] = int(lims_data.external_specimen_id.values[0])
-    metadata['area'] = lims_data.structure.values[0]
+    metadata['structure'] = lims_data.structure.values[0]
     metadata['depth'] = int(lims_data.depth.values[0])
     metadata['driver_line'] = lims_data['specimen_driver_line'].values[0]
     metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0]
