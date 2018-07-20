@@ -3,7 +3,11 @@ import pandas as pd
 import numpy as np
 from scipy.signal import medfilt
 from .extract import get_end_time
-from ...utilities import calc_deriv, rad_to_dist, local_time
+from ...utilities import calc_deriv, rad_to_dist, local_time, ListHandler, DoubleColonFormatter
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 warnings.warn(
     "support for the loading stimulus_code outputs will be deprecated in a future version",
@@ -29,10 +33,20 @@ def data_to_change_detection_core(data, time=None):
     - currently doesn't require or check that the `task` field in the
     experiment data is "DoC" (Detection of Change)
     """
+
+    log_messages = []
+    handler = ListHandler(log_messages)
+    handler.setFormatter(
+        DoubleColonFormatter
+    )
+    logger.addHandler(
+        handler
+    )
+
     if time is None:
         time = load_time(data)
 
-    return {
+    core_data = {
         "time": time,
         "metadata": load_metadata(data),
         "licks": load_licks(data, time=time),
@@ -41,6 +55,9 @@ def data_to_change_detection_core(data, time=None):
         "rewards": load_rewards(data, time=time),
         "visual_stimuli": load_visual_stimuli(data, time=time),
     }
+
+    core_data['log'] = log_messages
+    return core_data
 
 
 def load_metadata(data):
