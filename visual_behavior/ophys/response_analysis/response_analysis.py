@@ -28,20 +28,12 @@ class ResponseAnalysis(object):
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
 
         self.get_trial_response_df()
+        self.get_flash_response_df()
 
 
     def get_trial_response_df_path(self):
         path = os.path.join(self.dataset.analysis_dir, 'trial_response_df.h5')
         return path
-
-    def get_trial_response_df(self):
-        if os.path.exists(self.get_trial_response_df_path()):
-            print 'loading trial response dataframe'
-            self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
-        else:
-            self.trial_response_df = self.generate_trial_response_df()
-            self.save_response_df(self.trial_response_df)
-        return self.trial_response_df
 
     def generate_trial_response_df(self):
         print 'generating trial response dataframe'
@@ -81,6 +73,51 @@ class ResponseAnalysis(object):
         #     trial_response_df = df.merge(self.dataset.trials, on='trial')
         return trial_response_df
 
-    def save_response_df(self, trial_response_df):
+    def save_trial_response_df(self, trial_response_df):
         print 'saving trial response dataframe'
         trial_response_df.to_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
+
+    def get_trial_response_df(self):
+        if os.path.exists(self.get_trial_response_df_path()):
+            print 'loading trial response dataframe'
+            self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
+        else:
+            self.trial_response_df = self.generate_trial_response_df()
+            self.save_trial_response_df(self.trial_response_df)
+        return self.trial_response_df
+
+
+    def get_flash_response_df_path(self):
+        path = os.path.join(self.dataset.analysis_dir, 'flash_response_df.h5')
+        return path
+
+    def generate_flash_response_df(self):
+        row = []
+        for cell in range(self.dataset.dff_traces.shape[0]):
+            for flash in self.dataset.visual_stimuli.flash_num:
+                flash_data = self.dataset.visual_stimuli[self.dataset.visual_stimuli.flash_num == flash]
+                flash_time = flash_data.time.values[0]
+                image_name = flash_data.image_name.values[0]
+                window = [0, self.response_window_duration]
+                trace = ut.get_trace_around_timepoint(flash_time, self.dataset.dff_traces[cell], self.dataset.timestamps_ophys,
+                                                      window, self.ophys_frame_rate)
+                mean_response = ut.get_mean_in_window(trace, window, self.ophys_frame_rate)
+
+                row.append([cell, flash, flash_time, image_name, mean_response])
+        flash_response_df = pd.DataFrame(data=row,
+                                         columns=['cell', 'flash', 'flash_time', 'image_name', 'mean_response'])
+        return flash_response_df
+
+    def save_flash_response_df(self, flash_response_df):
+        print 'saving flash response dataframe'
+        flash_response_df.to_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
+
+    def get_flash_response_df(self):
+        if os.path.exists(self.get_flash_response_df_path()):
+            print 'loading flash response dataframe'
+            self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
+        else:
+            self.flash_response_df = self.generate_flash_response_df()
+            self.save_flash_response_df(self.flash_response_df)
+        return self.flash_response_df
+

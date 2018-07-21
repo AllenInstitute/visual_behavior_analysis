@@ -240,6 +240,7 @@ def save_core_data_components(core_data, lims_data):
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
     visual_stimuli = core_data['visual_stimuli']
+    visual_stimuli.insert(loc=0, column='flash_num', value=np.arange(0, len(visual_stimuli)))
     save_dataframe_as_h5(visual_stimuli, 'visual_stimuli', get_analysis_dir(lims_data))
 
     task_parameters = get_task_parameters(core_data)
@@ -499,5 +500,21 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
 
 if __name__ == '__main__':
-    lims_id = 702134928
-    convert_level_1_to_level_2(lims_id, cache_dir='/allen/aibs/technology/nicholasc/tmp2')
+    # lims_id = 702134928
+    # convert_level_1_to_level_2(lims_id)
+
+    lims_ids = [639253368, 639438856, 639769395, 639932228, 644942849, 645035903,
+       645086795, 645362806, 646917185, 646922970, 647108734, 647544751,
+       647551128, 647885642, 647887770, 648647430, 649318212, 652844352,
+       653053906, 653123781, 661423848, 663771245, 663773621, 664886336,
+       665285900, 665286182, 670396087, 671152642, 672185644, 672584839,
+       673139359, 673460976, 685744008, 686726085, 692342909, 692841424,
+       693272975, 693862238, 695471168, 696136550, 698724265, 701325132,
+       702723649, 703731969]
+
+    for lims_id in lims_ids:
+        try:
+            print 'processing', lims_id,
+            convert_level_1_to_level_2(lims_id)
+        except:
+            print '******** problem for',lims_id,'********'
