@@ -34,8 +34,7 @@ class VisualBehaviorOphysDataset(object):
         self.get_timestamps_stimulus()
         self.get_visual_stimuli()
         self.get_running()
-        self._licks = None
-        #self.get_licks()
+        self.get_licks()
         self.get_rewards()
         self.get_task_parameters()
         self.get_trials()
@@ -86,6 +85,7 @@ class VisualBehaviorOphysDataset(object):
 
     def get_timestamps_ophys(self):
         self.timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
+
         return self.timestamps_ophys
 
     def get_visual_stimuli(self):
@@ -95,13 +95,6 @@ class VisualBehaviorOphysDataset(object):
     def get_running(self):
         self.running = pd.read_hdf(os.path.join(self.analysis_dir, 'running.h5'), key='df', format='fixed')
         return self.running
-
-    # this is cool, consider implementing later
-    # @property
-    # def licks(self):
-    #     if self._licks is None:
-    #         self.get_licks()
-    #     return self._licks
 
     def get_licks(self):
         self.licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df', format='fixed')

@@ -133,10 +133,6 @@ def get_timestamps(lims_data):
     return timestamps
 
 
-def save_timestamps(timestamps, lims_data):
-    save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
-
-
 def get_timestamps_stimulus(timestamps):
     timestamps_stimulus = timestamps['stimulus_frames']['timestamps']
     return timestamps_stimulus
@@ -395,7 +391,7 @@ def get_roi_masks(roi_metrics, lims_data):
         mask = np.asarray(m['mask'].values[0])
         binary_mask = np.zeros((h, w), dtype=np.uint8)
         binary_mask[int(m.y):int(m.y) + int(m.height), int(m.x):int(m.x) + int(m.width)] = mask
-        roi_masks[id] = binary_mask
+        roi_masks[int(id)] = binary_mask
     return roi_masks
 
 
@@ -410,12 +406,6 @@ def get_dff_traces(roi_metrics, lims_data):
     dff_path = os.path.join(get_ophys_experiment_dir(lims_data), str(get_lims_id(lims_data)) + '_dff.h5')
     g = h5py.File(dff_path)
     dff_traces = np.asarray(g['data'])
-    # # filter out NaN traces - how did they get in here anyway? very rare
-    # for i in range(dff_traces.shape[0]):
-    #     if np.isnan(dff_traces[i][0]):
-    #         index = self.roi_df[self.roi_df.unfiltered_cell_index == i].index[0]
-    #         self.roi_df.at[index, 'valid'] = False
-    # only include valid roi traces
     valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
     dff_traces = dff_traces[valid_roi_indices]
     print('length of traces:', dff_traces.shape[1])
@@ -428,6 +418,15 @@ def save_dff_traces(dff_traces, roi_metrics, lims_data):
     for i, id in enumerate(get_cell_specimen_ids(roi_metrics)):
         f.create_dataset(str(id), data=dff_traces[i])
     f.close()
+
+
+def save_timestamps(timestamps, dff_traces, lims_data):
+    # remove spurious frames at end of ophys session - known issue with Scientifica data
+    if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
+        difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
+        print 'length of ophys timestamps >  length of traces by',str(difference),'frames , truncating ophys timestamps'
+        timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
+    save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
 
 
 def get_motion_correction(lims_data):
@@ -466,7 +465,6 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
 
     timestamps = get_timestamps(lims_data)
-    save_timestamps(timestamps, lims_data)
 
     metadata = get_metadata(lims_data, timestamps)
     save_metadata(metadata, lims_data)
@@ -487,6 +485,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
     dff_traces = get_dff_traces(roi_metrics, lims_data)
     save_dff_traces(dff_traces, roi_metrics, lims_data)
+
+    save_timestamps(timestamps, dff_traces, lims_data)
 
     motion_correction = get_motion_correction(lims_data)
     save_motion_correction(motion_correction, lims_data)
