@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 class VisualBehaviorOphysDataset(object):
     def __init__(self, experiment_id, cache_dir=None):
-        """initialize visual behavior ophys experiment dataset.
-            loads processed experiment data from cache_dir
+        """Initialize visual behavior ophys experiment dataset.
+            Loads experiment data from cache_dir, including dF/F traces, roi masks, stimulus metadata, running speed, licks, rewards, and metadata.
 
         Parameters
         ----------
-        experiment_id : ophys experiment ID (not session ID)
+        experiment_id : ophys experiment ID
         cache_dir : directory to save or load analysis files to/from
         """
         self.experiment_id = experiment_id

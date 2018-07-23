@@ -5,9 +5,14 @@ import pandas as pd
 from visual_behavior.ophys.response_analysis import utilities as ut
 
 class ResponseAnalysis(object):
-    """ Contains methods for organizing responses by trial or by visual stimulus flash in a DataFrame,
-    with a portion of the cell trace and running around the change time for every change trial, for every cell.
-    Response DataFrame also contains behavioral metadata such as lick times, running, reward rate, and stimulus.
+    """ Contains methods for organizing responses by trial or by individual visual stimulus flashes in a DataFrame.
+
+    For trial responses, a segment of the dF/F trace for each cell is extracted for each trial in a +/-4 seconds window (the 'trial_window') around the change time.
+    The mean response for each cell is taken in a 500ms window after the change time (the 'response_window').
+    The trial_response_df also contains behavioral metadata such as lick times, running, reward rate, and initial and change stimulus names.
+
+    For stimulus flashes, the mean response is taken in a 500ms window after each stimulus presentation (the 'response_window').
+    The flash_response_df also contains metadata such as the time from last lick, time since last stimulus change, and mean running speed during each flash.
 
     Parameters
     ----------
