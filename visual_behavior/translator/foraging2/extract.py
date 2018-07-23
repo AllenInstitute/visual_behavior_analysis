@@ -705,8 +705,8 @@ def get_running_speed(exp_data, smooth=False, time=None):
         time = get_time(exp_data)
         logger.info("`time` not passed. using intervalms as `time`")
 
-    dx = get_dx(exp_data)
-    dx = medfilt(dx, kernel_size=5)  # remove big, single frame spikes in encoder values
+    dx_raw = get_dx(exp_data)
+    dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
 
     if len(time) < len(dx):
@@ -727,6 +727,7 @@ def get_running_speed(exp_data, smooth=False, time=None):
         'time': time,
         'frame': range(len(time)),
         'speed': speed,
+        'dx': dx_raw,
         # 'acceleration (cm/s^2)': accel,
         # 'jerk (cm/s^3)': jerk,
     })
