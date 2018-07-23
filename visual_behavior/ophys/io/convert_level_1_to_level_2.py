@@ -401,8 +401,8 @@ def get_roi_masks(roi_metrics, lims_data):
 
 def save_roi_masks(roi_masks, lims_data):
     f = h5py.File(os.path.join(get_analysis_dir(lims_data), 'roi_masks.h5'), 'w')
-    for id in np.sort(roi_masks.keys()):
-        f.create_dataset(str(id), data=roi_masks[id])
+    for id, roi_mask in roi_masks.items():
+        f.create_dataset(str(id), data=roi_mask)
     f.close()
 
 
