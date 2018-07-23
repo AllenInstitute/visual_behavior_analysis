@@ -11,7 +11,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-import ..io.convert_level_1_to_level_2 as io
+from ..io import convert_level_1_to_level_2 as io
 
 # formatting
 sns.set_style('whitegrid')
