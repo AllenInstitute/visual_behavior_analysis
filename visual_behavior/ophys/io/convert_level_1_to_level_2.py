@@ -494,10 +494,23 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     max_projection = get_max_projection(lims_data)
     save_max_projection(max_projection, lims_data)
 
-    import visual_behavior.ophys.plotting.summary_figures as sf
-    sf.plot_roi_validation(lims_data)
+    ophys_data = core_data.update(
+        dict(
+            lims_data=lims_data,
+            timestamps=timestamps,
+            metadata=metadata,
+            roi_metrics=roi_metrics,
+            roi_masks=roi_masks,
+            dff_traces=dff_traces,
+            motion_correction=motion_correction,
+            max_projection=max_projection,
+        )
+    )
+    return ophys_data
 
 
 if __name__ == '__main__':
+    import visual_behavior.ophys.plotting.summary_figures as sf
     lims_id = 702134928
-    convert_level_1_to_level_2(lims_id, cache_dir='/allen/aibs/technology/nicholasc/tmp2')
+    ophys_data = convert_level_1_to_level_2(lims_id, cache_dir='/allen/aibs/technology/nicholasc/tmp2')
+    sf.plot_roi_validation(ophys_data['lims_data'])
