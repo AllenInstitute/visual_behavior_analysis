@@ -13,6 +13,8 @@ test: build
 dev:
 	docker create -t --rm --name dev  -v /allen/programs/braintv/production/neuralcoding/:/allen/programs/braintv/production/neuralcoding:ro $(PKG):latest /$(PKG)/test.sh
 	docker cp test.sh dev:/$(PKG)/test.sh
+	find ./tests -name \*.pyc -delete
+	rm -rf tests/__pycache__
 	docker cp tests dev:/$(PKG)
 	docker start -i dev
 
