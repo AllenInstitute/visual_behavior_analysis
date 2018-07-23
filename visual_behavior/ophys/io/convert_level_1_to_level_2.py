@@ -158,7 +158,10 @@ def get_metadata(lims_data, timestamps):
     metadata['image_set'] = lims_data.session_name.values[0][-1]
     metadata['session_name'] = lims_data.session_name.values[0]
     metadata['session_id'] = int(lims_data.session_id.values[0])
-    metadata['parent_session_id'] = int(lims_data.parent_session_id.values[0])
+    if lims_data.parent_session_id.values[0]:
+        metadata['parent_session_id'] = int(lims_data.parent_session_id.values[0])
+    else:
+        metadata['parent_session_id'] = None
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
     metadata['project_id'] = lims_data.project_id.values[0]
     metadata['rig'] = lims_data.rig.values[0]
@@ -217,7 +220,10 @@ def get_task_parameters(core_data):
     task_parameters = {}
     task_parameters['blank_duration'] = core_data['metadata']['blank_duration_range'][0]
     task_parameters['stimulus_duration'] = core_data['metadata']['stim_duration']
-    task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['omitted_flash_fraction']
+    if 'omitted_flash_fraction' in core_data['metadata']['params'].keys():
+        task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['omitted_flash_fraction']
+    else:
+        task_parameters['omitted_flash_fraction'] = None
     task_parameters['response_window'] = [core_data['metadata']['response_window']]
     task_parameters['reward_volume'] = core_data['metadata']['rewardvol']
     task_parameters['stage'] = core_data['metadata']['stage']
@@ -506,15 +512,19 @@ if __name__ == '__main__':
     lims_ids = [639253368, 639438856, 639769395, 639932228, 644942849, 645035903,
        645086795, 645362806, 646917185, 646922970, 647108734, 647544751,
        647551128, 647885642, 647887770, 648647430, 649318212, 652844352,
-       653053906, 653123781, 661423848, 663771245, 663773621, 664886336,
+       653053906, 653123781, 661423848, 663773621, 664886336,
        665285900, 665286182, 670396087, 671152642, 672185644, 672584839,
        673139359, 673460976, 685744008, 686726085, 692342909, 692841424,
        693272975, 693862238, 695471168, 696136550, 698724265, 701325132,
        702723649, 703731969]
 
-    for lims_id in lims_ids:
-        try:
-            print 'processing', lims_id,
-            convert_level_1_to_level_2(lims_id)
-        except:
-            print '******** problem for',lims_id,'********'
+    # 663771245 - wrong pkl in lims
+    # 664886336 - problem plotting roi_metrics figures
+    # 692342909 - problem with roi metrics
+
+    for lims_id in lims_ids[-1:]:
+        # try:
+        print 'processing', lims_id,
+        convert_level_1_to_level_2(lims_id)
+        # except:
+        #     print '******** problem for',lims_id,'********'
