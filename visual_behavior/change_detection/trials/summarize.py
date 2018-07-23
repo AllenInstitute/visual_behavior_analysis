@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from . import session_metrics
 from .. import metrics
+from ..translator.core.annotate import annotate_epochs
 
 
 def create_summarizer(**kwargs):
@@ -90,7 +91,6 @@ def session_level_summary(trials, **kwargs):
 
 
 def epoch_level_summary(trials, epoch_length=5.0, **kwargs):
-    from visual_behavior.data import annotate_epochs
     trials = annotate_epochs(trials, epoch_length)
 
     summarizer = create_summarizer(
