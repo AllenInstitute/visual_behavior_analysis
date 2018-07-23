@@ -7,8 +7,11 @@ Created on Sunday July 15 2018
 import os
 import h5py
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+import ..io.convert_level_1_to_level_2 as io
 
 # formatting
 sns.set_style('whitegrid')
@@ -20,7 +23,6 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
-    import matplotlib as mpl
     mpl.rcParams['pdf.fonttype'] = 42
     fig.set_size_inches(figsize)
     filename = os.path.join(fig_dir, fig_title)
@@ -52,7 +54,6 @@ def plot_cell_zoom(roi_masks, max_projection, cell_id, spacex=10, spacey=10, sho
 
 
 def plot_roi_validation(lims_data):
-    import visual_behavior.ophys.io.convert_level_1_to_level_2 as io
     file_path = os.path.join(io.get_processed_dir(lims_data), 'roi_traces.h5')
     g = h5py.File(file_path)
     roi_traces = np.asarray(g['data'])
