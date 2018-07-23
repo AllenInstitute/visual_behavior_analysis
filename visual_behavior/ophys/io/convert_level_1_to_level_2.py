@@ -394,8 +394,8 @@ def get_roi_masks(roi_metrics, lims_data):
     cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
     roi_masks = {}
     for i, id in enumerate(cell_specimen_ids):
-        m = roi_metrics[roi_metrics.id == id]
-        mask = np.asarray(m['mask'].values[0])
+        m = roi_metrics[roi_metrics.id == id].iloc[0]
+        mask = np.asarray(m['mask'])
         binary_mask = np.zeros((h, w), dtype=np.uint8)
         binary_mask[int(m.y):int(m.y) + int(m.height), int(m.x):int(m.x) + int(m.width)] = mask
         roi_masks[int(id)] = binary_mask
@@ -421,10 +421,12 @@ def get_dff_traces(roi_metrics, lims_data):
 
 
 def save_dff_traces(dff_traces, roi_metrics, lims_data):
-    f = h5py.File(os.path.join(get_analysis_dir(lims_data), 'dff_traces.h5'), 'w')
-    for i, id in enumerate(get_cell_specimen_ids(roi_metrics)):
-        f.create_dataset(str(id), data=dff_traces[i])
-    f.close()
+    traces_path = os.path.join(get_analysis_dir(lims_data), 'dff_traces.h5')
+    if not os.path.exists(traces_path):
+        f = h5py.File(traces_path, 'w')
+        for i, id in enumerate(get_cell_specimen_ids(roi_metrics)):
+            f.create_dataset(str(id), data=dff_traces[i])
+        f.close()
 
 
 def save_timestamps(timestamps, dff_traces, lims_data):
@@ -519,12 +521,10 @@ if __name__ == '__main__':
        702723649, 703731969]
 
     # 663771245 - wrong pkl in lims
-    # 664886336 - problem plotting roi_metrics figures
-    # 692342909 - problem with roi metrics
 
     for lims_id in lims_ids:
-        try:
-            print('processing', lims_id)
-            convert_level_1_to_level_2(lims_id)
-        except:
-            print('******** problem for', lims_id, '********')
+        # try:
+        print('processing', lims_id)
+        convert_level_1_to_level_2(lims_id)
+        # except:
+        #     print('******** problem for', lims_id, '********')
