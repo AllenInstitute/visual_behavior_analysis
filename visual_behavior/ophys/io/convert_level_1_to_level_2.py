@@ -431,7 +431,7 @@ def save_timestamps(timestamps, dff_traces, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-        print 'length of ophys timestamps >  length of traces by',str(difference),'frames , truncating ophys timestamps'
+        print('length of ophys timestamps >  length of traces by', str(difference), 'frames , truncating ophys timestamps')
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
     save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
 
@@ -522,9 +522,9 @@ if __name__ == '__main__':
     # 664886336 - problem plotting roi_metrics figures
     # 692342909 - problem with roi metrics
 
-    for lims_id in lims_ids[-1:]:
-        # try:
-        print 'processing', lims_id,
-        convert_level_1_to_level_2(lims_id)
-        # except:
-        #     print '******** problem for',lims_id,'********'
+    for lims_id in lims_ids:
+        try:
+            print('processing', lims_id)
+            convert_level_1_to_level_2(lims_id)
+        except:
+            print('******** problem for', lims_id, '********')
