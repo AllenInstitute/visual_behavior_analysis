@@ -469,6 +469,7 @@ def save_max_projection(max_projection, lims_data):
 
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None):
+    print('converting',lims_id)
     lims_data = get_lims_data(lims_id)
 
     get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
@@ -503,6 +504,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     max_projection = get_max_projection(lims_data)
     save_max_projection(max_projection, lims_data)
 
+    print('done converting')
     import visual_behavior.ophys.plotting.summary_figures as sf
     sf.plot_roi_validation(lims_data)
 
