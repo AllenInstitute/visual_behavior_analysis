@@ -71,7 +71,8 @@ def plot_roi_validation(lims_data):
     dff_traces = io.get_dff_traces(roi_metrics, lims_data)
     cell_specimen_ids = io.get_cell_specimen_ids(roi_metrics)
     max_projection = io.get_max_projection(lims_data)
-    analysis_dir = io.get_analysis_dir(lims_data)
+
+    roi_validation = []
 
     for index, id in enumerate(roi_names):
         fig, ax = plt.subplots(3, 2, figsize=(20, 10))
@@ -119,6 +120,11 @@ def plot_roi_validation(lims_data):
             cell_index = ''
 
         fig.tight_layout()
-        save_figure(fig, (20, 10), analysis_dir, 'roi_validation',
-                    str(index) + '_' + str(id) + '_' + str(cell_index))
-        plt.close()
+        roi_validation.append(dict(
+            fig=fig,
+            index=index,
+            id=id,
+            cell_index=cell_index,
+        ))
+
+    return roi_validation
