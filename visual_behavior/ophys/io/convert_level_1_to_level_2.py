@@ -12,6 +12,14 @@ import shutil
 import platform
 import numpy as np
 import pandas as pd
+from collections import OrderedDict
+import matplotlib.image as mpimg
+
+
+from ..sync.process_sync import get_sync_data
+from .lims_database import LimsDatabase
+from ...translator import foraging2, foraging
+from ...translator.core import create_extended_dataframe
 
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
@@ -35,7 +43,6 @@ def get_cache_dir(cache_dir=None):
 
 
 def get_lims_data(lims_id):
-    from visual_behavior.ophys.io.lims_database import LimsDatabase
     ld = LimsDatabase(lims_id)
     lims_data = ld.get_qc_param()
     lims_data.insert(loc=2, column='experiment_id', value=lims_data.lims_id.values[0])
@@ -127,7 +134,6 @@ def get_sync_path(lims_data):
 
 
 def get_timestamps(lims_data):
-    from visual_behavior.ophys.sync.process_sync import get_sync_data
     sync_data = get_sync_data(lims_data)
     timestamps = pd.DataFrame(sync_data)
     return timestamps
@@ -150,7 +156,6 @@ def get_timestamps_ophys(timestamps):
 def get_metadata(lims_data, timestamps):
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     timestamps_ophys = get_timestamps_ophys(timestamps)
-    from collections import OrderedDict
     metadata = OrderedDict()
     metadata['experiment_id'] = lims_data['experiment_id'].values[0]
     metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
@@ -212,8 +217,10 @@ def get_pkl(lims_data):
 
 
 def get_core_data(pkl, timestamps_stimulus):
-    from visual_behavior.translator.foraging import data_to_change_detection_core
-    core_data = data_to_change_detection_core(pkl, time=timestamps_stimulus)
+    try:
+        core_data = foraging.data_to_change_detection_core(pkl, time=timestamps_stimulus)
+    except KeyError:
+        core_data = foraging2.data_to_change_detection_core(pkl, time=timestamps_stimulus)
     return core_data
 
 
@@ -251,7 +258,6 @@ def save_core_data_components(core_data, lims_data):
 
 
 def get_trials(core_data):
-    from visual_behavior.translator.core import create_extended_dataframe
     trials = create_extended_dataframe(
         trials=core_data['trials'],
         metadata=core_data['metadata'],
@@ -446,7 +452,6 @@ def save_motion_correction(motion_correction, lims_data):
 
 
 def get_max_projection(lims_data):
-    import matplotlib.image as mpimg
     # max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
     max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
     return max_projection
@@ -455,7 +460,6 @@ def get_max_projection(lims_data):
 def save_max_projection(max_projection, lims_data):
     analysis_dir = get_analysis_dir(lims_data)
     save_data_as_h5(max_projection, 'max_projection', analysis_dir)
-    import matplotlib.image as mpimg
     mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
                  cmap='gray')
 
@@ -494,6 +498,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     max_projection = get_max_projection(lims_data)
     save_max_projection(max_projection, lims_data)
 
+    sf.plot_roi_validation(lims_data)
+
     ophys_data = core_data.update(
         dict(
             lims_data=lims_data,
@@ -513,4 +519,3 @@ if __name__ == '__main__':
     import visual_behavior.ophys.plotting.summary_figures as sf
     lims_id = 702134928
     ophys_data = convert_level_1_to_level_2(lims_id, cache_dir='/allen/aibs/technology/nicholasc/tmp2')
-    sf.plot_roi_validation(ophys_data['lims_data'])
