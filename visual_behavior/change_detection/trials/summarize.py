@@ -2,7 +2,7 @@ import six
 import pandas as pd
 import numpy as np
 from . import session_metrics
-from .. import metrics
+from ... import metrics
 from ..translator.core.annotate import annotate_epochs
 
 
