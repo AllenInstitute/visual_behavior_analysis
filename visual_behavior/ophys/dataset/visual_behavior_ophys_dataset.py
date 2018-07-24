@@ -93,8 +93,8 @@ class VisualBehaviorOphysDataset(object):
         return self.visual_stimuli
 
     def get_running(self):
-        self.running = pd.read_hdf(os.path.join(self.analysis_dir, 'running.h5'), key='df', format='fixed')
-        return self.running
+        self.running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running.h5'), key='df', format='fixed')
+        return self.running_speed
 
     def get_licks(self):
         self.licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df', format='fixed')
