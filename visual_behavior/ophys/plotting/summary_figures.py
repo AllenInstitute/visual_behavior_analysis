@@ -3,15 +3,12 @@ Created on Sunday July 15 2018
 
 @author: marinag
 """
-
 import os
 import h5py
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-from ..io import convert_level_1_to_level_2 as io
 
 # formatting
 sns.set_style('whitegrid')
@@ -54,23 +51,25 @@ def plot_cell_zoom(roi_masks, max_projection, cell_id, spacex=10, spacey=10, sho
 
 
 def plot_roi_validation(lims_data):
-    file_path = os.path.join(io.get_processed_dir(lims_data), 'roi_traces.h5')
+    from ..io import convert_level_1_to_level_2 as convert
+
+    file_path = os.path.join(convert.get_processed_dir(lims_data), 'roi_traces.h5')
     g = h5py.File(file_path)
     roi_traces = np.asarray(g['data'])
     roi_names = np.asarray(g['roi_names'])
     g.close()
 
-    dff_path = os.path.join(io.get_ophys_experiment_dir(lims_data), str(io.get_lims_id(lims_data)) + '_dff.h5')
+    dff_path = os.path.join(convert.get_ophys_experiment_dir(lims_data), str(convert.get_lims_id(lims_data)) + '_dff.h5')
     f = h5py.File(dff_path)
     dff_traces_original = np.asarray(f['data'])
     f.close()
 
-    roi_df = io.get_roi_locations(lims_data)
-    roi_metrics = io.get_roi_metrics(lims_data)
-    roi_masks = io.get_roi_masks(roi_metrics, lims_data)
-    dff_traces = io.get_dff_traces(roi_metrics, lims_data)
-    cell_specimen_ids = io.get_cell_specimen_ids(roi_metrics)
-    max_projection = io.get_max_projection(lims_data)
+    roi_df = convert.get_roi_locations(lims_data)
+    roi_metrics = convert.get_roi_metrics(lims_data)
+    roi_masks = convert.get_roi_masks(roi_metrics, lims_data)
+    dff_traces = convert.get_dff_traces(roi_metrics, lims_data)
+    cell_specimen_ids = convert.get_cell_specimen_ids(roi_metrics)
+    max_projection = convert.get_max_projection(lims_data)
 
     roi_validation = []
 
@@ -95,7 +94,7 @@ def plot_roi_validation(lims_data):
         ax[3].set_ylabel('dF/F')
 
         if id in cell_specimen_ids:
-            cell_index = io.get_cell_index_for_cell_specimen_id(cell_specimen_ids, id)
+            cell_index = convert.get_cell_index_for_cell_specimen_id(cell_specimen_ids, id)
             ax[2] = plot_cell_zoom(roi_masks, max_projection, id, spacex=10, spacey=10, show_mask=True, ax=ax[2])
             ax[2].grid(False)
 
