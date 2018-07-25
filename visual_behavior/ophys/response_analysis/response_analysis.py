@@ -4,6 +4,7 @@ import pandas as pd
 
 from visual_behavior.ophys.response_analysis import utilities as ut
 
+
 class ResponseAnalysis(object):
     """ Contains methods for organizing responses by trial or by individual visual stimulus flashes in a DataFrame.
 
@@ -35,7 +36,6 @@ class ResponseAnalysis(object):
         self.get_trial_response_df()
         self.get_flash_response_df()
 
-
     def get_trial_response_df_path(self):
         path = os.path.join(self.dataset.analysis_dir, 'trial_response_df.h5')
         return path
@@ -52,28 +52,32 @@ class ResponseAnalysis(object):
                 cell_trace = self.dataset.dff_traces[cell_index, :]
                 change_time = self.dataset.trials[self.dataset.trials.trial == trial].change_time.values[0]
 
-                trace, timestamps = ut.get_trace_around_timepoint(change_time, cell_trace, self.dataset.timestamps_ophys,
-                                                               self.trial_window, self.ophys_frame_rate)
+                trace, timestamps = ut.get_trace_around_timepoint(change_time, cell_trace,
+                                                                  self.dataset.timestamps_ophys,
+                                                                  self.trial_window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, self.response_window, self.ophys_frame_rate)
                 baseline_response = ut.get_mean_in_window(trace, self.baseline_window, self.ophys_frame_rate)
                 p_value = ut.get_p_val(trace, self.response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(trace, self.response_window, self.baseline_window,
-                                                        self.ophys_frame_rate)
+                                                           self.ophys_frame_rate)
 
                 # this is redundant because its the same for every cell. do we want to keep this?
                 running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(change_time,
-                                                                                           running_speed,
-                                                                                           self.dataset.timestamps_stimulus,
-                                                                                           self.trial_window,
-                                                                                           self.stimulus_frame_rate)
-                mean_running_speed = ut.get_mean_in_window(running_speed_trace, self.response_window, self.stimulus_frame_rate)
+                                                                                              running_speed,
+                                                                                              self.dataset.timestamps_stimulus,
+                                                                                              self.trial_window,
+                                                                                              self.stimulus_frame_rate)
+                mean_running_speed = ut.get_mean_in_window(running_speed_trace, self.response_window,
+                                                           self.stimulus_frame_rate)
 
-                df_list.append([trial, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response,
-                                p_value, sd_over_baseline, running_speed_trace, running_speed_timestamps,
-                                mean_running_speed])
+                df_list.append(
+                    [trial, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response,
+                     p_value, sd_over_baseline, running_speed_trace, running_speed_timestamps,
+                     mean_running_speed])
 
         columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
-                   'p_value', 'sd_over_baseline', 'running_speed_trace', 'running_speed_timestamps', 'mean_running_speed']
+                   'p_value', 'sd_over_baseline', 'running_speed_trace', 'running_speed_timestamps',
+                   'mean_running_speed']
         trial_response_df = pd.DataFrame(df_list, columns=columns)
         #     trial_response_df = df.merge(self.dataset.trials, on='trial')
         return trial_response_df
@@ -91,7 +95,6 @@ class ResponseAnalysis(object):
             self.save_trial_response_df(self.trial_response_df)
         return self.trial_response_df
 
-
     def get_flash_response_df_path(self):
         path = os.path.join(self.dataset.analysis_dir, 'flash_response_df.h5')
         return path
@@ -104,7 +107,8 @@ class ResponseAnalysis(object):
                 flash_time = flash_data.time.values[0]
                 image_name = flash_data.image_name.values[0]
                 window = [0, self.response_window_duration]
-                trace = ut.get_trace_around_timepoint(flash_time, self.dataset.dff_traces[cell], self.dataset.timestamps_ophys,
+                trace = ut.get_trace_around_timepoint(flash_time, self.dataset.dff_traces[cell],
+                                                      self.dataset.timestamps_ophys,
                                                       window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, window, self.ophys_frame_rate)
 
@@ -125,4 +129,3 @@ class ResponseAnalysis(object):
             self.flash_response_df = self.generate_flash_response_df()
             self.save_flash_response_df(self.flash_response_df)
         return self.flash_response_df
-

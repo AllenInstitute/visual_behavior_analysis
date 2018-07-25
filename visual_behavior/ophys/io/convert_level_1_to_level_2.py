@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 """
 Created on Saturday July 14 2018
 
@@ -16,7 +17,7 @@ from collections import OrderedDict
 import matplotlib
 
 matplotlib.use('Agg')
-    
+
 import matplotlib.image as mpimg
 
 from ...translator import foraging2, foraging
@@ -82,7 +83,6 @@ def get_experiment_date(lims_data):
 
 
 def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
-
     cache_dir = get_cache_dir(cache_dir=cache_dir)
 
     if 'analysis_dir' in lims_data.columns:
@@ -444,7 +444,8 @@ def save_timestamps(timestamps, dff_traces, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-        print('length of ophys timestamps >  length of traces by', str(difference), 'frames , truncating ophys timestamps')
+        print('length of ophys timestamps >  length of traces by', str(difference),
+              'frames , truncating ophys timestamps')
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
     save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
 
@@ -483,7 +484,6 @@ def get_roi_validation(lims_data):
 
 
 def save_roi_validation(roi_validation, lims_data):
-
     analysis_dir = get_analysis_dir(lims_data)
 
     for roi in roi_validation:
@@ -497,7 +497,7 @@ def save_roi_validation(roi_validation, lims_data):
 
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None):
-    print('converting',lims_id)
+    print('converting', lims_id)
     lims_data = get_lims_data(lims_id)
 
     get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)

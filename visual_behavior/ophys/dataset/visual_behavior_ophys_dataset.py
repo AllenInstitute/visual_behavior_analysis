@@ -89,7 +89,8 @@ class VisualBehaviorOphysDataset(object):
         return self.timestamps_ophys
 
     def get_visual_stimuli(self):
-        self.visual_stimuli = pd.read_hdf(os.path.join(self.analysis_dir, 'visual_stimuli.h5'), key='df', format='fixed')
+        self.visual_stimuli = pd.read_hdf(os.path.join(self.analysis_dir, 'visual_stimuli.h5'), key='df',
+                                          format='fixed')
         return self.visual_stimuli
 
     def get_running(self):
@@ -105,7 +106,8 @@ class VisualBehaviorOphysDataset(object):
         return self.rewards
 
     def get_task_parameters(self):
-        self.task_parameters = pd.read_hdf(os.path.join(self.analysis_dir, 'task_parameters.h5'), key='df', format='fixed')
+        self.task_parameters = pd.read_hdf(os.path.join(self.analysis_dir, 'task_parameters.h5'), key='df',
+                                           format='fixed')
         return self.task_parameters
 
     def get_trials(self):
@@ -165,4 +167,3 @@ class VisualBehaviorOphysDataset(object):
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
         cell_index = np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
         return cell_index
-
