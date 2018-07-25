@@ -137,7 +137,8 @@ def get_sync_data(lims_id):
     vs2p_rsec = vs2p_r / sample_freq
     vs2p_fsec = vs2p_f / sample_freq
     vs2p_r_filtered, vs2p_f_filtered = filter_digital(vs2p_rsec, vs2p_fsec, threshold=0.01)
-    frames_2p = vs2p_f_filtered  # used to be using rising edges, CAM scripts use falling
+    # use rising edge for Scientifica, falling edge for Nikon http://confluence.corp.alleninstitute.org/display/IT/Ophys+Time+Sync
+    frames_2p = vs2p_r_filtered
     # Convert to seconds - skip if using units in get_falling_edges, otherwise convert before doing filter digital
     # vs2p_rsec = vs2p_r / sample_freq
     # frames_2p = vs2p_rsec
