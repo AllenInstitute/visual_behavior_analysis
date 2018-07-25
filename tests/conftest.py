@@ -1,5 +1,7 @@
 import pytest
+import py
 import os
+import tempfile
 import datetime
 import numpy as np
 import pandas as pd
@@ -22,6 +24,18 @@ if PY3:
     load_pickle = lambda pstream: pickle.load(pstream, encoding="latin1")
 else:
     load_pickle = lambda pstream: pickle.load(pstream)
+
+
+@pytest.fixture(scope='function')
+def tmpdir(request):
+    """
+    Get a temp dir to build in
+    """
+
+    dir = py.path.local(tempfile.mkdtemp())
+    request.addfinalizer(lambda: dir.remove(rec=True))
+
+    return dir
 
 
 @pytest.fixture

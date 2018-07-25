@@ -3,10 +3,10 @@ Created on Sunday July 15 2018
 
 @author: marinag
 """
-
 import os
 import h5py
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -20,7 +20,6 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
-    import matplotlib as mpl
     mpl.rcParams['pdf.fonttype'] = 42
     fig.set_size_inches(figsize)
     filename = os.path.join(fig_dir, fig_title)
@@ -52,25 +51,27 @@ def plot_cell_zoom(roi_masks, max_projection, cell_id, spacex=10, spacey=10, sho
 
 
 def plot_roi_validation(lims_data):
-    import visual_behavior.ophys.io.convert_level_1_to_level_2 as io
-    file_path = os.path.join(io.get_processed_dir(lims_data), 'roi_traces.h5')
+    from ..io import convert_level_1_to_level_2 as convert
+
+    file_path = os.path.join(convert.get_processed_dir(lims_data), 'roi_traces.h5')
     g = h5py.File(file_path)
     roi_traces = np.asarray(g['data'])
     roi_names = np.asarray(g['roi_names'])
     g.close()
 
-    dff_path = os.path.join(io.get_ophys_experiment_dir(lims_data), str(io.get_lims_id(lims_data)) + '_dff.h5')
+    dff_path = os.path.join(convert.get_ophys_experiment_dir(lims_data), str(convert.get_lims_id(lims_data)) + '_dff.h5')
     f = h5py.File(dff_path)
     dff_traces_original = np.asarray(f['data'])
     f.close()
 
-    roi_df = io.get_roi_locations(lims_data)
-    roi_metrics = io.get_roi_metrics(lims_data)
-    roi_masks = io.get_roi_masks(roi_metrics, lims_data)
-    dff_traces = io.get_dff_traces(roi_metrics, lims_data)
-    cell_specimen_ids = io.get_cell_specimen_ids(roi_metrics)
-    max_projection = io.get_max_projection(lims_data)
-    analysis_dir = io.get_analysis_dir(lims_data)
+    roi_df = convert.get_roi_locations(lims_data)
+    roi_metrics = convert.get_roi_metrics(lims_data)
+    roi_masks = convert.get_roi_masks(roi_metrics, lims_data)
+    dff_traces = convert.get_dff_traces(roi_metrics, lims_data)
+    cell_specimen_ids = convert.get_cell_specimen_ids(roi_metrics)
+    max_projection = convert.get_max_projection(lims_data)
+
+    roi_validation = []
 
     for index, id in enumerate(roi_names):
         fig, ax = plt.subplots(3, 2, figsize=(20, 10))
@@ -93,7 +94,7 @@ def plot_roi_validation(lims_data):
         ax[3].set_ylabel('dF/F')
 
         if id in cell_specimen_ids:
-            cell_index = io.get_cell_index_for_cell_specimen_id(cell_specimen_ids, id)
+            cell_index = convert.get_cell_index_for_cell_specimen_id(cell_specimen_ids, id)
             ax[2] = plot_cell_zoom(roi_masks, max_projection, id, spacex=10, spacey=10, show_mask=True, ax=ax[2])
             ax[2].grid(False)
 
@@ -118,9 +119,14 @@ def plot_roi_validation(lims_data):
             cell_index = ''
 
         fig.tight_layout()
-        save_figure(fig, (20, 10), analysis_dir, 'roi_validation',
-                    str(index) + '_' + str(id) + '_' + str(cell_index))
-        plt.close()
+        roi_validation.append(dict(
+            fig=fig,
+            index=index,
+            id=id,
+            cell_index=cell_index,
+        ))
+
+    return roi_validation
 
 def get_xticks_xticklabels(trace, interval_sec=1):
     interval_frames = interval_sec * 30
