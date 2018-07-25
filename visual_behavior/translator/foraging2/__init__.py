@@ -23,7 +23,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def data_to_change_detection_core(data):
+def data_to_change_detection_core(data, time=None):
     """Core data structure to be used across all analysis code?
 
     Parameters
@@ -42,6 +42,11 @@ def data_to_change_detection_core(data):
     experiment data is "DoC" (Detection of Change)
     """
 
+    if time is None:
+        time = data_to_time(data)
+    else:
+        raise NotImplementedError('the Foraging2 translator does not support rebasing time')
+
     log_messages = []
     handler = ListHandler(log_messages)
     handler.setFormatter(
@@ -54,7 +59,7 @@ def data_to_change_detection_core(data):
 
     core_data = {
         "metadata": data_to_metadata(data),
-        "time": data_to_time(data),
+        "time": time,
         "licks": data_to_licks(data),
         "trials": data_to_trials(data),
         "running": data_to_running(data),
