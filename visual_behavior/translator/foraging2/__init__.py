@@ -280,6 +280,10 @@ def data_to_trials(data):
     for trial in trial_log:
         index = trial["index"]  # trial index
 
+        if 'trial_params' not in trial:
+            logger.error("No 'trial_params' in trial {}. Skipping. See https://github.com/AllenInstitute/visual_behavior_analysis/issues/289".format(index))
+            continue
+
         expand_dict(trials, annotate_licks(trial), index)
         expand_dict(trials, annotate_rewards(trial), index)
         expand_dict(trials, annotate_optogenetics(trial), index)
