@@ -151,8 +151,8 @@ def plot_mean_trace(traces, label=None, color='k', interval_sec=1, xlims=(2, 6),
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
 
         xticks, xticklabels = get_xticks_xticklabels(trace, interval_sec)
-        ax.set_xticks([int(x) for x in xticks]);
-        ax.set_xticklabels([int(x) for x in xticklabels]);
+        ax.set_xticks([int(x) for x in xticks])
+        ax.set_xticklabels([int(x) for x in xticklabels])
         ax.set_xlim(xlims[0] * 30, xlims[1] * 30)
         ax.set_xlabel('time after change (s)')
         ax.set_ylabel('dF/F')

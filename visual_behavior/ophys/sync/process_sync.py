@@ -115,6 +115,7 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
         else:
             delay = ASSUMED_DELAY
     except Exception as e:
+        print(e)
         delay = ASSUMED_DELAY
         logger.error("Process without photodiode signal. Assumed delay: {}".format(round(delay, ROUND_PRECISION)))
 

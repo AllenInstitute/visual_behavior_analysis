@@ -1,9 +1,9 @@
 import sys
 import platform
-
+from pbstools import PythonJob
 if platform.system() == 'Linux':
     sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/Doug/pbstools')
-from pbstools import PythonJob
+
 
 lims_ids = [644942849, 645035903, 645086795, 645362806, 646922970, 647108734,
             647551128, 647887770, 648647430, 649318212, 652844352, 652989428,

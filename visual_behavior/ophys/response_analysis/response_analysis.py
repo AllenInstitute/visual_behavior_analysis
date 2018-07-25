@@ -25,7 +25,7 @@ class ResponseAnalysis(object):
         self.trial_window = [-4, 4]  # time, in seconds, around change time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
         self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
-                                                                         0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
+            0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         self.baseline_window = np.asarray(
             self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
         self.stimulus_duration = self.dataset.task_parameters['stimulus_duration'].values[0]
