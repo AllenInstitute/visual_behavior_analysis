@@ -2,7 +2,8 @@ import six
 import pandas as pd
 import numpy as np
 from . import session_metrics
-from .. import metrics
+from ... import metrics
+from ...translator.core.annotate import annotate_epochs
 
 
 def create_summarizer(**kwargs):
@@ -48,7 +49,7 @@ def number_of_stim_mask_ISIs(session_trials):
     return len(session_trials.ISI.unique())
 
 
-def session_level_summary(trials, **kwargs):
+def session_level_summary(trials, groupby=('mouse_id', 'startdatetime'), **kwargs):
     """ computes session-level summary table
     """
 
@@ -81,7 +82,7 @@ def session_level_summary(trials, **kwargs):
 
     session_summary = (
         trials
-        .groupby(['mouse_id', 'startdatetime'])
+        .groupby(list(groupby))
         .apply(summarizer)
         .reset_index()
     )
@@ -90,7 +91,6 @@ def session_level_summary(trials, **kwargs):
 
 
 def epoch_level_summary(trials, epoch_length=5.0, **kwargs):
-    from visual_behavior.data import annotate_epochs
     trials = annotate_epochs(trials, epoch_length)
 
     summarizer = create_summarizer(
