@@ -41,7 +41,7 @@ class ResponseAnalysis(object):
         return path
 
     def generate_trial_response_df(self):
-        print 'generating trial response dataframe'
+        print('generating trial response dataframe')
         # frames_in_trial_window = np.int(self.trial_window[1] - self.trial_window[0]) * self.ophys_frame_rate
         # frames_in_run_window = np.int(self.trial_window[1] - self.trial_window[0]) * self.stimulus_frame_rate
         running_speed = self.dataset.running.speed.values

@@ -28,7 +28,7 @@ job_settings = {'queue': 'braintv',
                 }
 
 for lims_id in lims_ids:
-    print lims_id
+    print (lims_id) 
     PythonJob(
         python_file,
         python_executable='/home/marinag/anaconda2/envs/visual_behavior_ophys/bin/python',
