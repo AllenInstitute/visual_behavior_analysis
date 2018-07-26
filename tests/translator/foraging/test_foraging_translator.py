@@ -119,7 +119,28 @@ def test_load_running_speed(behavioral_session_output_fixture):
                 2: 0.099998492747545242,
                 3: 0.1500439215451479,
                 4: 0.2000794094055891
-            }
+            },
+            'dx': {
+                0: 100.36169405405147,
+                1: -0.4142989250785689,
+                2: 0.15160053879232294,
+                3: 0.0,
+                4: 0.21203225391985825
+            },
+            'v_sig': { # [1.405, 1.4, 1.4, 1.4, 1.405]
+                0: 1.405,
+                1: 1.4,
+                2: 1.4,
+                3: 1.4,
+                4: 1.405
+            },
+            'v_in': {
+                0: 5.043,
+                1: 5.043,
+                2: 5.035,
+                3: 5.035,
+                4: 5.043
+            },
         },
     )
 
@@ -129,7 +150,8 @@ def test_load_running_speed(behavioral_session_output_fixture):
         check_column_type=False,
         check_index_type=False,
         check_dtype=False,
-        check_like=True
+        check_like=True,
+        check_less_precise=3,
     )
 
     pd.testing.assert_frame_equal(
@@ -139,5 +161,6 @@ def test_load_running_speed(behavioral_session_output_fixture):
         check_column_type=False,
         check_index_type=False,
         check_dtype=False,
-        check_like=True
+        check_like=True,
+        check_less_precise=3,
     )
