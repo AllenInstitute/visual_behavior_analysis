@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 """
 Created on Saturday July 14 2018
 
@@ -16,7 +17,7 @@ from collections import OrderedDict
 import matplotlib
 
 matplotlib.use('Agg')
-    
+
 import matplotlib.image as mpimg
 
 from ...translator import foraging2, foraging
@@ -51,7 +52,7 @@ def get_lims_data(lims_id):
     ld = LimsDatabase(lims_id)
     lims_data = ld.get_qc_param()
     lims_data.insert(loc=2, column='experiment_id', value=lims_data.lims_id.values[0])
-    lims_data.insert(loc=2, column='session_name', value=lims_data.experiment_name.values[0].split('_')[-1])
+    lims_data.insert(loc=2, column='session_type', value='behavior_'+lims_data.experiment_name.values[0].split('_')[-1])
     lims_data.insert(loc=2, column='ophys_session_dir', value=lims_data.datafolder.values[0][:-28])
     return lims_data
 
@@ -67,7 +68,7 @@ def get_analysis_folder_name(lims_data):
                            str(lims_data.lims_id.values[0]) + '_' + \
                            lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
                            lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
-                           lims_data.rig.values[0][6] + '_' + lims_data.session_name.values[0]
+                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]
     return analysis_folder_name
 
 
@@ -82,7 +83,6 @@ def get_experiment_date(lims_data):
 
 
 def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
-
     cache_dir = get_cache_dir(cache_dir=cache_dir)
 
     if 'analysis_dir' in lims_data.columns:
@@ -144,10 +144,6 @@ def get_timestamps(lims_data):
     return timestamps
 
 
-def save_timestamps(timestamps, lims_data):
-    save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
-
-
 def get_timestamps_stimulus(timestamps):
     timestamps_stimulus = timestamps['stimulus_frames']['timestamps']
     return timestamps_stimulus
@@ -162,24 +158,28 @@ def get_metadata(lims_data, timestamps):
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     timestamps_ophys = get_timestamps_ophys(timestamps)
     metadata = OrderedDict()
-    metadata['experiment_id'] = lims_data['experiment_id'].values[0]
-    metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
-    metadata['mouse_id'] = int(lims_data.external_specimen_id.values[0])
-    metadata['area'] = lims_data.structure.values[0]
-    metadata['depth'] = int(lims_data.depth.values[0])
-    metadata['driver_line'] = lims_data['specimen_driver_line'].values[0]
+    metadata['ophys_experiment_id'] = lims_data['experiment_id'].values[0]
+    if lims_data.parent_session_id.values[0]:
+        metadata['experiment_container_id'] = int(lims_data.parent_session_id.values[0])
+    else:
+        metadata['experiment_container_id'] = None
+    metadata['targeted_structure'] = lims_data.structure.values[0]
+    metadata['imaging_depth'] = int(lims_data.depth.values[0])
+    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0]
     metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0]
-    metadata['image_set'] = lims_data.session_name.values[0][-1]
-    metadata['session_name'] = lims_data.session_name.values[0]
-    metadata['session_id'] = int(lims_data.session_id.values[0])
-    metadata['parent_session_id'] = int(lims_data.parent_session_id.values[0])
+    metadata['session_type'] = lims_data.session_type.values[0][-1]
+    metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
+    metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
+    metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
-    metadata['project_id'] = lims_data.project_id.values[0]
-    metadata['rig'] = lims_data.rig.values[0]
-    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 1)
-    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 1)
+    # metadata['session_name'] = lims_data.session_name.values[0]
+    # metadata['session_id'] = int(lims_data.session_id.values[0])
+    # metadata['project_id'] = lims_data.project_id.values[0]
+    # metadata['rig'] = lims_data.rig.values[0]
+    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 0)
+    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 0)
     # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
-    metadata = pd.DataFrame(metadata, index=[metadata['experiment_id']])
+    metadata = pd.DataFrame(metadata, index=[metadata['ophys_experiment_id']])
     return metadata
 
 
@@ -233,7 +233,10 @@ def get_task_parameters(core_data):
     task_parameters = {}
     task_parameters['blank_duration'] = core_data['metadata']['blank_duration_range'][0]
     task_parameters['stimulus_duration'] = core_data['metadata']['stim_duration']
-    task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['omitted_flash_fraction']
+    if 'omitted_flash_fraction' in core_data['metadata']['params'].keys():
+        task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['omitted_flash_fraction']
+    else:
+        task_parameters['omitted_flash_fraction'] = None
     task_parameters['response_window'] = [core_data['metadata']['response_window']]
     task_parameters['reward_volume'] = core_data['metadata']['rewardvol']
     task_parameters['stage'] = core_data['metadata']['stage']
@@ -256,6 +259,7 @@ def save_core_data_components(core_data, lims_data):
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
     visual_stimuli = core_data['visual_stimuli']
+    visual_stimuli.insert(loc=0, column='flash_num', value=np.arange(0, len(visual_stimuli)))
     save_dataframe_as_h5(visual_stimuli, 'visual_stimuli', get_analysis_dir(lims_data))
 
     task_parameters = get_task_parameters(core_data)
@@ -402,11 +406,11 @@ def get_roi_masks(roi_metrics, lims_data):
     cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
     roi_masks = {}
     for i, id in enumerate(cell_specimen_ids):
-        m = roi_metrics[roi_metrics.id == id]
-        mask = np.asarray(m['mask'].values[0])
+        m = roi_metrics[roi_metrics.id == id].iloc[0]
+        mask = np.asarray(m['mask'])
         binary_mask = np.zeros((h, w), dtype=np.uint8)
         binary_mask[int(m.y):int(m.y) + int(m.height), int(m.x):int(m.x) + int(m.width)] = mask
-        roi_masks[id] = binary_mask
+        roi_masks[int(id)] = binary_mask
     return roi_masks
 
 
@@ -421,12 +425,6 @@ def get_dff_traces(roi_metrics, lims_data):
     dff_path = os.path.join(get_ophys_experiment_dir(lims_data), str(get_lims_id(lims_data)) + '_dff.h5')
     g = h5py.File(dff_path)
     dff_traces = np.asarray(g['data'])
-    # # filter out NaN traces - how did they get in here anyway? very rare
-    # for i in range(dff_traces.shape[0]):
-    #     if np.isnan(dff_traces[i][0]):
-    #         index = self.roi_df[self.roi_df.unfiltered_cell_index == i].index[0]
-    #         self.roi_df.at[index, 'valid'] = False
-    # only include valid roi traces
     valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
     dff_traces = dff_traces[valid_roi_indices]
     print('length of traces:', dff_traces.shape[1])
@@ -435,10 +433,22 @@ def get_dff_traces(roi_metrics, lims_data):
 
 
 def save_dff_traces(dff_traces, roi_metrics, lims_data):
-    f = h5py.File(os.path.join(get_analysis_dir(lims_data), 'dff_traces.h5'), 'w')
-    for i, id in enumerate(get_cell_specimen_ids(roi_metrics)):
-        f.create_dataset(str(id), data=dff_traces[i])
-    f.close()
+    traces_path = os.path.join(get_analysis_dir(lims_data), 'dff_traces.h5')
+    if not os.path.exists(traces_path):
+        f = h5py.File(traces_path, 'w')
+        for i, id in enumerate(get_cell_specimen_ids(roi_metrics)):
+            f.create_dataset(str(id), data=dff_traces[i])
+        f.close()
+
+
+def save_timestamps(timestamps, dff_traces, lims_data):
+    # remove spurious frames at end of ophys session - known issue with Scientifica data
+    if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
+        difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
+        print('length of ophys timestamps >  length of traces by', str(difference),
+              'frames , truncating ophys timestamps')
+        timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
+    save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
 
 
 def get_motion_correction(lims_data):
@@ -475,7 +485,6 @@ def get_roi_validation(lims_data):
 
 
 def save_roi_validation(roi_validation, lims_data):
-
     analysis_dir = get_analysis_dir(lims_data)
 
     for roi in roi_validation:
@@ -489,12 +498,12 @@ def save_roi_validation(roi_validation, lims_data):
 
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None):
+    print('converting', lims_id)
     lims_data = get_lims_data(lims_id)
 
     get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
 
     timestamps = get_timestamps(lims_data)
-    save_timestamps(timestamps, lims_data)
 
     metadata = get_metadata(lims_data, timestamps)
     save_metadata(metadata, lims_data)
@@ -516,6 +525,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     dff_traces = get_dff_traces(roi_metrics, lims_data)
     save_dff_traces(dff_traces, roi_metrics, lims_data)
 
+    save_timestamps(timestamps, dff_traces, lims_data)
+
     motion_correction = get_motion_correction(lims_data)
     save_motion_correction(motion_correction, lims_data)
 
@@ -524,6 +535,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
     roi_validation = get_roi_validation(lims_data)
     save_roi_validation(roi_validation, lims_data)
+    print('done converting')
 
     ophys_data = core_data.update(
         dict(
@@ -542,4 +554,4 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
 if __name__ == '__main__':
     lims_id = 702134928
-    ophys_data = convert_level_1_to_level_2(lims_id, cache_dir='/allen/aibs/technology/nicholasc/tmp2')
+    ophys_data = convert_level_1_to_level_2(lims_id, cache_dir=r'\\allen\aibs\informatics\swdb2018\visual_behavior')

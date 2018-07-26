@@ -16,12 +16,12 @@ logger = logging.getLogger(__name__)
 
 class VisualBehaviorOphysDataset(object):
     def __init__(self, experiment_id, cache_dir=None):
-        """initialize visual behavior ophys experiment dataset.
-            loads processed experiment data from cache_dir
+        """Initialize visual behavior ophys experiment dataset.
+            Loads experiment data from cache_dir, including dF/F traces, roi masks, stimulus metadata, running speed, licks, rewards, and metadata.
 
         Parameters
         ----------
-        experiment_id : ophys experiment ID (not session ID)
+        experiment_id : ophys experiment ID
         cache_dir : directory to save or load analysis files to/from
         """
         self.experiment_id = experiment_id
@@ -36,10 +36,13 @@ class VisualBehaviorOphysDataset(object):
         self.get_running()
         self.get_licks()
         self.get_rewards()
+        self.get_task_parameters()
         self.get_trials()
         self.get_dff_traces()
         self.get_roi_masks()
         self.get_roi_metrics()
+        self.get_cell_specimen_ids()
+        self.get_cell_indices()
         self.get_max_projection()
         self.get_motion_correction()
         # self.get_pupil_diameter()
@@ -82,15 +85,17 @@ class VisualBehaviorOphysDataset(object):
 
     def get_timestamps_ophys(self):
         self.timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
+
         return self.timestamps_ophys
 
     def get_visual_stimuli(self):
-        self.visual_stimuli = pd.read_hdf(os.path.join(self.analysis_dir, 'visual_stimuli.h5'), key='df', format='fixed')
+        self.visual_stimuli = pd.read_hdf(os.path.join(self.analysis_dir, 'visual_stimuli.h5'), key='df',
+                                          format='fixed')
         return self.visual_stimuli
 
     def get_running(self):
-        self.running = pd.read_hdf(os.path.join(self.analysis_dir, 'running.h5'), key='df', format='fixed')
-        return self.running
+        self.running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running.h5'), key='df', format='fixed')
+        return self.running_speed
 
     def get_licks(self):
         self.licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df', format='fixed')
@@ -100,11 +105,16 @@ class VisualBehaviorOphysDataset(object):
         self.rewards = pd.read_hdf(os.path.join(self.analysis_dir, 'rewards.h5'), key='df', format='fixed')
         return self.rewards
 
+    def get_task_parameters(self):
+        self.task_parameters = pd.read_hdf(os.path.join(self.analysis_dir, 'task_parameters.h5'), key='df',
+                                           format='fixed')
+        return self.task_parameters
+
     def get_trials(self):
         self.all_trials = pd.read_hdf(os.path.join(self.analysis_dir, 'trials.h5'), key='df', format='fixed')
         all_trials = self.all_trials.copy()
         trials = all_trials[(all_trials.auto_rewarded != True) & (all_trials.trial_type != 'aborted')].reset_index()
-        trials = trials.rename(columns={'level_0': 'index'})
+        trials = trials.rename(columns={'level_0': 'original_trial_index'})
         trials.insert(loc=0, column='trial', value=trials.index.values)
         self.trials = trials
         return self.trials
@@ -141,3 +151,19 @@ class VisualBehaviorOphysDataset(object):
         self.motion_correction = pd.read_hdf(os.path.join(self.analysis_dir, 'motion_correction.h5'), key='df',
                                              format='fixed')
         return self.motion_correction
+
+    def get_cell_specimen_ids(self):
+        self.cell_specimen_ids = np.sort(self.roi_metrics.cell_specimen_id.values)
+        return self.cell_specimen_ids
+
+    def get_cell_indices(self):
+        self.cell_indices = np.sort(self.roi_metrics.cell_index.values)
+        return self.cell_indices
+
+    def get_cell_specimen_id_for_cell_index(self, cell_index):
+        cell_specimen_id = self.cell_specimen_ids[cell_index]
+        return cell_specimen_id
+
+    def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
+        cell_index = np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
+        return cell_index

@@ -59,7 +59,8 @@ def plot_roi_validation(lims_data):
     roi_names = np.asarray(g['roi_names'])
     g.close()
 
-    dff_path = os.path.join(convert.get_ophys_experiment_dir(lims_data), str(convert.get_lims_id(lims_data)) + '_dff.h5')
+    dff_path = os.path.join(convert.get_ophys_experiment_dir(lims_data),
+                            str(convert.get_lims_id(lims_data)) + '_dff.h5')
     f = h5py.File(dff_path)
     dff_traces_original = np.asarray(f['data'])
     f.close()
@@ -127,3 +128,33 @@ def plot_roi_validation(lims_data):
         ))
 
     return roi_validation
+
+
+def get_xticks_xticklabels(trace, interval_sec=1):
+    interval_frames = interval_sec * 30
+    n_frames = len(trace)
+    n_sec = n_frames / 30
+    xticks = np.arange(0, n_frames + 1, interval_frames)
+    xticklabels = np.arange(0, n_sec + 0.1, interval_sec)
+    xticklabels = xticklabels - n_sec / 2
+    return xticks, xticklabels
+
+
+def plot_mean_trace(traces, label=None, color='k', interval_sec=1, xlims=(2, 6), ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    if len(traces) > 0:
+        trace = np.mean(traces)
+        times = np.arange(0, len(trace), 1)
+        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        ax.plot(trace, label=label, linewidth=3, color=color)
+        ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
+
+        xticks, xticklabels = get_xticks_xticklabels(trace, interval_sec)
+        ax.set_xticks([int(x) for x in xticks])
+        ax.set_xticklabels([int(x) for x in xticklabels])
+        ax.set_xlim(xlims[0] * 30, xlims[1] * 30)
+        ax.set_xlabel('time after change (s)')
+        ax.set_ylabel('dF/F')
+    sns.despine(ax=ax)
+    return ax
