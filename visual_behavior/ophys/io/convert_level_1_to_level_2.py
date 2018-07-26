@@ -52,7 +52,7 @@ def get_lims_data(lims_id):
     ld = LimsDatabase(lims_id)
     lims_data = ld.get_qc_param()
     lims_data.insert(loc=2, column='experiment_id', value=lims_data.lims_id.values[0])
-    lims_data.insert(loc=2, column='session_name', value=lims_data.experiment_name.values[0].split('_')[-1])
+    lims_data.insert(loc=2, column='session_type', value='behavior_'+lims_data.experiment_name.values[0].split('_')[-1])
     lims_data.insert(loc=2, column='ophys_session_dir', value=lims_data.datafolder.values[0][:-28])
     return lims_data
 
@@ -68,7 +68,7 @@ def get_analysis_folder_name(lims_data):
                            str(lims_data.lims_id.values[0]) + '_' + \
                            lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
                            lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
-                           lims_data.rig.values[0][6] + '_' + lims_data.session_name.values[0]
+                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]
     return analysis_folder_name
 
 
@@ -158,27 +158,28 @@ def get_metadata(lims_data, timestamps):
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     timestamps_ophys = get_timestamps_ophys(timestamps)
     metadata = OrderedDict()
-    metadata['experiment_id'] = lims_data['experiment_id'].values[0]
-    metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
-    metadata['mouse_id'] = int(lims_data.external_specimen_id.values[0])
-    metadata['structure'] = lims_data.structure.values[0]
-    metadata['depth'] = int(lims_data.depth.values[0])
-    metadata['driver_line'] = lims_data['specimen_driver_line'].values[0]
-    metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0]
-    metadata['image_set'] = lims_data.session_name.values[0][-1]
-    metadata['session_name'] = lims_data.session_name.values[0]
-    metadata['session_id'] = int(lims_data.session_id.values[0])
+    metadata['ophys_experiment_id'] = lims_data['experiment_id'].values[0]
     if lims_data.parent_session_id.values[0]:
-        metadata['parent_session_id'] = int(lims_data.parent_session_id.values[0])
+        metadata['experiment_container_id'] = int(lims_data.parent_session_id.values[0])
     else:
-        metadata['parent_session_id'] = None
+        metadata['experiment_container_id'] = None
+    metadata['targeted_structure'] = lims_data.structure.values[0]
+    metadata['imaging_depth'] = int(lims_data.depth.values[0])
+    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0]
+    metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0]
+    metadata['session_type'] = lims_data.session_type.values[0][-1]
+    metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
+    metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
+    metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
-    metadata['project_id'] = lims_data.project_id.values[0]
-    metadata['rig'] = lims_data.rig.values[0]
+    # metadata['session_name'] = lims_data.session_name.values[0]
+    # metadata['session_id'] = int(lims_data.session_id.values[0])
+    # metadata['project_id'] = lims_data.project_id.values[0]
+    # metadata['rig'] = lims_data.rig.values[0]
     metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 0)
     metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 0)
     # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
-    metadata = pd.DataFrame(metadata, index=[metadata['experiment_id']])
+    metadata = pd.DataFrame(metadata, index=[metadata['ophys_experiment_id']])
     return metadata
 
 
@@ -553,4 +554,4 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
 if __name__ == '__main__':
     lims_id = 702134928
-    ophys_data = convert_level_1_to_level_2(lims_id, cache_dir='/allen/aibs/technology/nicholasc/tmp2')
+    ophys_data = convert_level_1_to_level_2(lims_id, cache_dir=r'\\allen\aibs\informatics\swdb2018\visual_behavior')
