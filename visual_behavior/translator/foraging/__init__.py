@@ -323,6 +323,8 @@ def load_running_speed(data, smooth=False, time=None):
         'frame': range(len(time)),
         'speed': speed,
         'dx': dx_raw,
+        'v_sig': data['vsig'],
+        'v_in': data['vin'],
         # 'acceleration (cm/s^2)': accel,
         # 'jerk (cm/s^3)': jerk,
     })

@@ -557,6 +557,50 @@ def get_dx(exp_data):
     return behavior_items_or_top_level(exp_data)["encoders"][0]["dx"]
 
 
+def get_vsig(exp_data):
+    """Get wheel rotation for each frame
+
+    Parameters
+    ----------
+    exp_data : Mapping
+        experiment data
+
+    Returns
+    -------
+    numpy.ndarray
+        log of whether or not a stimulus was presented, 1 dimensional with index
+        representing frame number and value position of the frame
+
+    Notes
+    -----
+    - asssumes data is in the Foraging2 format
+    - no idea what the units are
+    """
+    return behavior_items_or_top_level(exp_data)["encoders"][0]["vsig"]
+
+
+def get_vin(exp_data):
+    """Get wheel rotation for each frame
+
+    Parameters
+    ----------
+    exp_data : Mapping
+        experiment data
+
+    Returns
+    -------
+    numpy.ndarray
+        log of whether or not a stimulus was presented, 1 dimensional with index
+        representing frame number and value position of the frame
+
+    Notes
+    -----
+    - asssumes data is in the Foraging2 format
+    - no idea what the units are
+    """
+    return behavior_items_or_top_level(exp_data)["encoders"][0]["vin"]
+
+
 def get_licks(exp_data, time=None):
     """Returns each lick in an experiment.
 
@@ -728,6 +772,8 @@ def get_running_speed(exp_data, smooth=False, time=None):
         'frame': range(len(time)),
         'speed': speed,
         'dx': dx_raw,
+        'v_sig': get_vsig(data),
+        'v_in': get_vin(data),
         # 'acceleration (cm/s^2)': accel,
         # 'jerk (cm/s^3)': jerk,
     })
