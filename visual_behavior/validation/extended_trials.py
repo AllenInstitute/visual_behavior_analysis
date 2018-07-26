@@ -184,7 +184,7 @@ def count_stimuli_per_trial(trials, visual_stimuli):
             stimuli = np.unique(visual_stimuli.loc[start_stim:end_stim][col_to_check])
             # add to array
             stimuli_per_trial[idx] = len(stimuli)
-        except IndexError:
+        except (IndexError, UnboundLocalError):
             stimuli_per_trial[idx] = 0
     return stimuli_per_trial
 
