@@ -1438,4 +1438,7 @@ def get_abort_on_early_response(data):
 
 
 def get_periodic_flash(data):
-    return tuple(data['items']['behavior']['config']['DoC']['periodic_flash'])
+    periodic_flash = data['items']['behavior']['config']['DoC']['periodic_flash']
+    if periodic_flash is None or periodic_flash == 'None':
+        return None
+    return tuple(periodic_flash)
