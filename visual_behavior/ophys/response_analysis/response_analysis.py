@@ -83,12 +83,12 @@ class ResponseAnalysis(object):
         return trial_response_df
 
     def save_trial_response_df(self, trial_response_df):
-        print 'saving trial response dataframe'
+        print('saving trial response dataframe')
         trial_response_df.to_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
 
     def get_trial_response_df(self):
         if os.path.exists(self.get_trial_response_df_path()):
-            print 'loading trial response dataframe'
+            print('loading trial response dataframe')
             self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
         else:
             self.trial_response_df = self.generate_trial_response_df()
@@ -118,12 +118,12 @@ class ResponseAnalysis(object):
         return flash_response_df
 
     def save_flash_response_df(self, flash_response_df):
-        print 'saving flash response dataframe'
+        print('saving flash response dataframe')
         flash_response_df.to_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
 
     def get_flash_response_df(self):
         if os.path.exists(self.get_flash_response_df_path()):
-            print 'loading flash response dataframe'
+            print('loading flash response dataframe')
             self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
         else:
             self.flash_response_df = self.generate_flash_response_df()
