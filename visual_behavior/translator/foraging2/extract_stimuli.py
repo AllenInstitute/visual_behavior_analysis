@@ -71,13 +71,20 @@ def unpack_change_log(change):
     )
 
 
-def _resolve_image_category(change_log, frame):
+def _resolve_image_category(stim_dict, frame):
 
-    for change in (unpack_change_log(c) for c in change_log):
-        if frame < change['frame']:
-            return change['from_category']
+    change_log = stim_dict['change_log']
 
-    return change['to_category']
+    if len(change_log) > 0:
+
+        for change in (unpack_change_log(c) for c in change_log):
+            if frame < change['frame']:
+                return change['from_category']
+
+        return change['to_category']
+
+    else:
+        return stim_dict['initial_group']
 
 
 def _get_stimulus_epoch(set_log, current_set_index, start_frame, n_frames):
