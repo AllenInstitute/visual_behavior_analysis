@@ -236,6 +236,25 @@ def test_data_to_trials(foraging2_data_fixture):
         check_less_precise=3,
     )
 
+    # regression test for https://github.com/AllenInstitute/visual_behavior_analysis/issues/289
+    data = foraging2_data_fixture.copy()
+    data['items']['behavior']['trial_log'][-1].pop('trial_params')
+    expected = EXPECTED_TRIALS.iloc[:-1]
+    # expected.set_index([0, 1])
+
+    trials = foraging2.data_to_trials(data)
+
+    pd.testing.assert_frame_equal(
+        trials,
+        expected,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True,
+        check_exact=False,
+        check_less_precise=3,
+    )
+
 
 def test_data_to_visual_stimuli(
         foraging2_data_stage0_2018_05_10,
