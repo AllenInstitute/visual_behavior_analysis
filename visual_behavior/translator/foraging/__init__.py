@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy.signal import medfilt
 from .extract import get_end_time
+from .extract_images import get_image_data, get_image_metadata
 from ...utilities import calc_deriv, rad_to_dist, local_time, ListHandler, DoubleColonFormatter
 
 import logging
@@ -46,7 +47,9 @@ def data_to_change_detection_core(data, time=None):
     if time is None:
         time = load_time(data)
 
-    core_data = {
+    images = load_images(data)
+
+    return {
         "time": time,
         "metadata": load_metadata(data),
         "licks": load_licks(data, time=time),
@@ -54,6 +57,7 @@ def data_to_change_detection_core(data, time=None):
         "running": load_running_speed(data, time=time),
         "rewards": load_rewards(data, time=time),
         "visual_stimuli": load_visual_stimuli(data, time=time),
+        "image_set": images,
     }
 
     core_data['log'] = log_messages
@@ -413,3 +417,24 @@ def load_visual_stimuli(data, time=None):
         stimuli['image_name'] = None
 
     return stimuli
+
+def load_images(data):
+
+    if 'image_dict' in data.keys():
+        image_dict = data['image_dict']
+
+        images, images_meta = get_image_data(image_dict)
+
+        images = dict(
+            metadata=get_image_metadata(data),
+            images=images,
+            image_attributes=images_meta,
+        )
+    else:
+        images = dict(
+            metadata={},
+            images=[],
+            image_attributes=[],
+        )
+
+    return images

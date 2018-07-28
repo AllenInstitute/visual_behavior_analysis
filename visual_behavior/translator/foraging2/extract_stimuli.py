@@ -17,7 +17,7 @@ def get_visual_stimuli(stimuli, time):
             orientation = attr_value if attr_name.lower() == "ori" else np.nan
             image_name = attr_value if attr_name.lower() == "image" else np.nan
 
-            if attr_name.lower() == "image":
+            if attr_name.lower() == "image" and stim_dict["change_log"]:
                 image_category = _resolve_image_category(
                     stim_dict["change_log"],
                     frame
