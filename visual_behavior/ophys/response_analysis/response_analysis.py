@@ -1,3 +1,9 @@
+"""
+Created on Sunday July 15 2018
+
+@author: marinag
+"""
+
 import os
 import numpy as np
 import pandas as pd
@@ -10,7 +16,7 @@ class ResponseAnalysis(object):
 
     For trial responses, a segment of the dF/F trace for each cell is extracted for each trial in a +/-4 seconds window (the 'trial_window') around the change time.
     The mean response for each cell is taken in a 500ms window after the change time (the 'response_window').
-    The trial_response_df also contains behavioral metadata such as lick times, running, reward rate, and initial and change stimulus names.
+    The trial_response_df also contains behavioral metadata such as lick times, running speed, reward rate, and initial and change stimulus names.
 
     For stimulus flashes, the mean response is taken in a 500ms window after each stimulus presentation (the 'response_window').
     The flash_response_df also contains metadata such as the time from last lick, time since last stimulus change, and mean running speed during each flash.
@@ -42,9 +48,7 @@ class ResponseAnalysis(object):
 
     def generate_trial_response_df(self):
         print('generating trial response dataframe')
-        # frames_in_trial_window = np.int(self.trial_window[1] - self.trial_window[0]) * self.ophys_frame_rate
-        # frames_in_run_window = np.int(self.trial_window[1] - self.trial_window[0]) * self.stimulus_frame_rate
-        running_speed = self.dataset.running.speed.values
+        running_speed = self.dataset.running_speed.running_speed.values
         df_list = []
         for cell_index in self.dataset.cell_indices:
             for trial in self.dataset.trials.trial.values:
@@ -102,9 +106,9 @@ class ResponseAnalysis(object):
     def generate_flash_response_df(self):
         row = []
         for cell in range(self.dataset.dff_traces.shape[0]):
-            for flash in self.dataset.visual_stimuli.flash_num:
-                flash_data = self.dataset.visual_stimuli[self.dataset.visual_stimuli.flash_num == flash]
-                flash_time = flash_data.time.values[0]
+            for flash in self.dataset.stimulus_table.flash_number:
+                flash_data = self.dataset.stimulus_table[self.dataset.stimulus_table.flash_number == flash]
+                flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
                 window = [0, self.response_window_duration]
                 trace = ut.get_trace_around_timepoint(flash_time, self.dataset.dff_traces[cell],
@@ -114,7 +118,7 @@ class ResponseAnalysis(object):
 
                 row.append([cell, flash, flash_time, image_name, mean_response])
         flash_response_df = pd.DataFrame(data=row,
-                                         columns=['cell', 'flash', 'flash_time', 'image_name', 'mean_response'])
+                                         columns=['cell', 'flash_number', 'start_time', 'image_name', 'mean_response'])
         return flash_response_df
 
     def save_flash_response_df(self, flash_response_df):

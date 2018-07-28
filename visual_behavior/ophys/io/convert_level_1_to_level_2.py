@@ -248,19 +248,26 @@ def get_task_parameters(core_data):
     return task_parameters
 
 
-def save_core_data_components(core_data, lims_data):
+def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     rewards = core_data['rewards']
     save_dataframe_as_h5(rewards, 'rewards', get_analysis_dir(lims_data))
 
     running = core_data['running']
-    save_dataframe_as_h5(running, 'running', get_analysis_dir(lims_data))
+    running_speed = running.rename(columns = {'speed':'running_speed'})
+    save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
     licks = core_data['licks']
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
-    visual_stimuli = core_data['visual_stimuli']
-    visual_stimuli.insert(loc=0, column='flash_num', value=np.arange(0, len(visual_stimuli)))
-    save_dataframe_as_h5(visual_stimuli, 'visual_stimuli', get_analysis_dir(lims_data))
+    stimulus_table = core_data['visual_stimuli']
+    # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
+    stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
+    stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
+    start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
+    stimulus_table.start_time = start_time
+    end_time = [timestamps_stimulus[end_frame] for end_frame in stimulus_table.end_frame.values]
+    stimulus_table.insert(loc=4, column='end_time', value=end_time)
+    save_dataframe_as_h5(stimulus_table, 'stimulus_table', get_analysis_dir(lims_data))
 
     task_parameters = get_task_parameters(core_data)
     save_dataframe_as_h5(task_parameters, 'task_parameters', get_analysis_dir(lims_data))
@@ -293,6 +300,18 @@ def get_running_speed(pkl, timestamps):
 
 def save_running_speed(running_speed, lims_data):
     save_data_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
+
+
+def get_visual_stimuli(pkl):
+    from visual_behavior.translator.foraging.extract_images import get_image_data
+    images, image_metadata = get_image_data(pkl['image_dict'])
+    visual_stimuli = pd.DataFrame(image_metadata)
+    visual_stimuli['image'] = images
+    return visual_stimuli
+
+
+def save_visual_stimuli(visual_stimuli, lims_data):
+    save_dataframe_as_h5(visual_stimuli, 'visual_stimuli', get_analysis_dir(lims_data))
 
 
 def parse_mask_string(mask_string):
@@ -511,10 +530,13 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     pkl = get_pkl(lims_data)
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     core_data = get_core_data(pkl, timestamps_stimulus)
-    save_core_data_components(core_data, lims_data)
+    save_core_data_components(core_data, lims_data, timestamps_stimulus)
 
     trials = get_trials(core_data)
     save_trials(trials, lims_data)
+
+    visual_stimuli = get_visual_stimuli(pkl)
+    save_visual_stimuli(visual_stimuli, lims_data)
 
     roi_metrics = get_roi_metrics(lims_data)
     save_roi_metrics(roi_metrics, lims_data)

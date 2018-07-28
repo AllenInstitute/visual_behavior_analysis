@@ -32,8 +32,10 @@ class VisualBehaviorOphysDataset(object):
         self.get_timestamps()
         self.get_timestamps_ophys()
         self.get_timestamps_stimulus()
+        self.get_stimulus_table()
         self.get_visual_stimuli()
-        self.get_running()
+        self.get_stimulus_template()
+        self.get_running_speed()
         self.get_licks()
         self.get_rewards()
         self.get_task_parameters()
@@ -88,13 +90,22 @@ class VisualBehaviorOphysDataset(object):
 
         return self.timestamps_ophys
 
+    def get_stimulus_table(self):
+        self.stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df',
+                                          format='fixed')
+        return self.stimulus_table
+
     def get_visual_stimuli(self):
         self.visual_stimuli = pd.read_hdf(os.path.join(self.analysis_dir, 'visual_stimuli.h5'), key='df',
                                           format='fixed')
         return self.visual_stimuli
 
-    def get_running(self):
-        self.running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running.h5'), key='df', format='fixed')
+    def get_stimulus_template(self):
+        self.stimulus_template = self.visual_stimuli['image'].values
+        return self.stimulus_template
+
+    def get_running_speed(self):
+        self.running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df', format='fixed')
         return self.running_speed
 
     def get_licks(self):
