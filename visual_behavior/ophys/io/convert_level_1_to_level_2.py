@@ -259,7 +259,7 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     licks = core_data['licks']
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
-    stimulus_table = core_data['visual_stimuli']
+    stimulus_table = core_data['visual_stimuli'][:-10] #ignore last 10 flashes
     # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})

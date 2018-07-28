@@ -31,7 +31,7 @@ class ResponseAnalysis(object):
         self.trial_window = [-4, 4]  # time, in seconds, around change time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
         self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
-            0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
+                                                                         0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         self.baseline_window = np.asarray(
             self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
         self.stimulus_duration = self.dataset.task_parameters['stimulus_duration'].values[0]
@@ -83,7 +83,18 @@ class ResponseAnalysis(object):
                    'p_value', 'sd_over_baseline', 'running_speed_trace', 'running_speed_timestamps',
                    'mean_running_speed']
         trial_response_df = pd.DataFrame(df_list, columns=columns)
-        #     trial_response_df = df.merge(self.dataset.trials, on='trial')
+        trial_metadata = self.dataset.trials[
+            ['trial', 'trial_type', 'initial_image_name', 'change_image_name', 'change_time', 'lick_times',
+             'reward_times', 'response', 'response_type', 'response_time', 'response_latency', 'rewarded',
+             'reward_rate', 'reward_volume', 'cumulative_volume', 'cumulative_reward_number', 'reward_lick_count',
+             'color', 'initial_image_category', 'change_image_category', 'change_frame',
+             'lick_frames', 'reward_frames', 'startframe', 'starttime', 'endframe', 'endtime', 'trial_length',
+             'stim_duration', 'stimulus', 'task', 'mouse_id', 'behavior_session_uuid', 'startdatetime']]
+        trial_metadata = trial_metadata.rename(columns={'response': 'behavioral_response'})
+        trial_metadata = trial_metadata.rename(columns={'response_type': 'behavioral_response_type'})
+        trial_metadata = trial_metadata.rename(columns={'response_time': 'behavioral_response_time'})
+        trial_metadata = trial_metadata.rename(columns={'response_latency': 'behavioral_response_latency'})
+        trial_response_df = trial_response_df.merge(trial_metadata, on='trial')
         return trial_response_df
 
     def save_trial_response_df(self, trial_response_df):
