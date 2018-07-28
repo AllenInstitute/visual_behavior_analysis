@@ -122,7 +122,7 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
     return delay
 
 
-def get_sync_data(lims_id):
+def get_sync_data(lims_id, foraging2=False):
     logger.info('getting sync data')
     from visual_behavior.ophys.sync.sync_dataset import Dataset
     import visual_behavior.ophys.io.convert_level_1_to_level_2 as io
@@ -152,17 +152,28 @@ def get_sync_data(lims_id):
     # add display lag
     monitor_delay = calculate_delay(sync_dataset, vs_f_sec, sample_freq)
     vsyncs = vs_f_sec + monitor_delay  # this should be added, right!?
-    # add lick data
-    lick_1 = sync_dataset.get_rising_edges('lick_1') / sample_freq
-    trigger = sync_dataset.get_rising_edges('2p_trigger') / sample_freq
+    # line labels are different on 2P6 and production rigs - need options for both
+    if 'lick_1' in  meta_data['line_labels']:
+        lick_1 = sync_dataset.get_rising_edges('lick_1') / sample_freq
+    elif 'lick_sensor' in meta_data['line_labels']:
+        lick_1 = sync_dataset.get_rising_edges('lick_sensor') / sample_freq
+    else:
+        lick_1 = None
+    if '2p_trigger' in meta_data['line_labels']:
+        trigger = sync_dataset.get_rising_edges('2p_trigger') / sample_freq
+    elif 'acq_trigger' in meta_data['line_labels']:
+        trigger = sync_dataset.get_rising_edges('acq_trigger') / sample_freq
+    if 'stim_photodiode' in meta_data['line_labels']:
+        stim_photodiode = sync_dataset.get_rising_edges('stim_photodiode') / sample_freq
+    elif 'photodiode' in meta_data['line_labels']:
+        stim_photodiode = sync_dataset.get_rising_edges('photodiode') / sample_freq
     cam1_exposure = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
     cam2_exposure = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
-    stim_photodiode = sync_dataset.get_rising_edges('stim_photodiode') / sample_freq
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger
     frames_2p = frames_2p[frames_2p > trigger[0]]
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
-    # put sync data in dphys format to be compatible with downstream analysis
+    # put sync data in format to be compatible with downstream analysis
     times_2p = {'timestamps': frames_2p}
     times_vsync = {'timestamps': vsyncs}
     times_lick_1 = {'timestamps': lick_1}
