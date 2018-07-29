@@ -8,10 +8,14 @@ import h5py
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import seaborn as sns
+import matplotlib
+
+matplotlib.use('Agg')
 
 # formatting
-sns.set_style('whitegrid')
+import seaborn as sns
+
+sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_palette('deep')
 
@@ -204,24 +208,46 @@ def plot_single_trial_trace(trace, frame_rate, label=None, color='k', interval_s
     return ax
 
 
-def plot_image_response_for_trial_types(ra,cell,save=True):
+def plot_image_response_for_trial_types(ra, cell, save=True):
     df = ra.trial_response_df.copy()
     trials = ra.dataset.trials
     images = trials.change_image_name.unique()
-    colors = sns.color_palette('hls',len(images))
-    figsize=(20,5)
-    fig,ax = plt.subplots(1,2,figsize=figsize,sharey=True)
-    for i,trial_type in enumerate(['go','catch']):
-        for c,change_image_name in enumerate(images):
-            selected_trials = trials[(trials.change_image_name==change_image_name)&(trials.trial_type==trial_type)].trial.values
-            traces = df[(df.cell==cell)&(df.trial.isin(selected_trials))].trace.values
-            ax[i] = plot_mean_trace(traces,ra.ophys_frame_rate,label=None,color=colors[c],interval_sec=1,xlims=[-4,4],ax=ax[i])
-        ax[i] = plot_flashes_on_trace(ax[i],ra,trial_type=trial_type,omitted=False,alpha=0.3)
+    colors = sns.color_palette('hls', len(images))
+    figsize = (20, 5)
+    fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
+    for i, trial_type in enumerate(['go', 'catch']):
+        for c, change_image_name in enumerate(images):
+            selected_trials = trials[
+                (trials.change_image_name == change_image_name) & (trials.trial_type == trial_type)].trial.values
+            traces = df[(df.cell == cell) & (df.trial.isin(selected_trials))].trace.values
+            ax[i] = plot_mean_trace(traces, ra.ophys_frame_rate, label=None, color=colors[c], interval_sec=1,
+                                    xlims=[-4, 4], ax=ax[i])
+        ax[i] = plot_flashes_on_trace(ax[i], ra, trial_type=trial_type, omitted=False, alpha=0.3)
         ax[i].set_title(trial_type)
-    ax[i].legend(images,loc=9,bbox_to_anchor=(1.1,1))
-    title = str(cell)+'_'+str(df[df.cell==cell].cell_specimen_id.values[0])+'_'+ra.dataset.analysis_folder
-    plt.suptitle(title,x=0.515, y=1., horizontalalignment='center')
+    ax[i].set_ylabel('')
+    ax[i].legend(images, loc=9, bbox_to_anchor=(1.1, 1))
+    title = str(cell) + '_' + str(df[df.cell == cell].cell_specimen_id.values[0]) + '_' + ra.dataset.analysis_folder
+    plt.suptitle(title, x=0.515, y=1., horizontalalignment='center')
     fig.tight_layout()
     if save:
         plt.gcf().subplots_adjust(top=0.85)
+        plt.gcf().subplots_adjust(right=0.9)
         save_figure(fig, figsize, ra.dataset.analysis_dir, 'image_responses', title, formats=['.png'])
+        plt.close()
+
+
+if __name__ == '__main__':
+    experiment_id = 719996589
+
+    from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+
+    dataset = VisualBehaviorOphysDataset(experiment_id)
+
+    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+
+    analysis = ResponseAnalysis(dataset)
+
+    print('plotting cell responses')
+    for cell in dataset.get_cell_indices():
+        plot_image_response_for_trial_types(analysis, cell)
+    print('done')

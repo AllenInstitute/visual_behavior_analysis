@@ -16,7 +16,7 @@ lims_ids = [644942849, 645035903, 645086795, 645362806, 646922970, 647108734,
             715887471, 716337289, 716602547, 720001924, 720793118, 723064523,
             723750115, 719321260, 719996589, 723748162, 723037901]
 
-python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/ophys/plotting/summary_figures.py"
+python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/ophys/io/create_analysis_files.py"
 
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords2'
 
