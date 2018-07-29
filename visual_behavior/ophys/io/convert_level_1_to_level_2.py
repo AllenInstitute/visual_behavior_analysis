@@ -32,7 +32,6 @@ from visual_behavior.translator.core import create_extended_dataframe
 from visual_behavior.ophys.sync.process_sync import get_sync_data
 from visual_behavior.ophys.plotting.summary_figures import save_figure, plot_roi_validation
 from visual_behavior.ophys.io.lims_database import LimsDatabase
-from visual_behavior.translator.foraging import extract_images
 
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
@@ -310,7 +309,7 @@ def save_running_speed(running_speed, lims_data):
 
 
 def get_visual_stimuli(pkl):
-    images, image_metadata = extract_images.get_image_data(pkl['image_dict'])
+    images, image_metadata = foraging.extract_images.get_image_data(pkl['image_dict'])
     visual_stimuli = pd.DataFrame(image_metadata)
     visual_stimuli['image'] = images
     return visual_stimuli
