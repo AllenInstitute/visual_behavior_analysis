@@ -16,9 +16,8 @@ def create_analysis_files(experiment_id):
 
 
 if __name__ == '__main__':
-    # import sys
-    # experiment_id = sys.argv[1]
-    experiment_id = 719996589
+    import sys
+    experiment_id = sys.argv[1]
 
     create_analysis_files(experiment_id)
 

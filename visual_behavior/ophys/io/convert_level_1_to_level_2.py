@@ -32,6 +32,7 @@ from visual_behavior.translator.core import create_extended_dataframe
 from visual_behavior.ophys.sync.process_sync import get_sync_data
 from visual_behavior.ophys.plotting.summary_figures import save_figure, plot_roi_validation
 from visual_behavior.ophys.io.lims_database import LimsDatabase
+from visual_behavior.translator.foraging import extract_images
 
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
@@ -309,8 +310,7 @@ def save_running_speed(running_speed, lims_data):
 
 
 def get_visual_stimuli(pkl):
-    from visual_behavior.translator.foraging.extract_images import get_image_data
-    images, image_metadata = get_image_data(pkl['image_dict'])
+    images, image_metadata = extract_images.get_image_data(pkl['image_dict'])
     visual_stimuli = pd.DataFrame(image_metadata)
     visual_stimuli['image'] = images
     return visual_stimuli
@@ -582,6 +582,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
 if __name__ == '__main__':
 
-    lims_id = 702134928
-    # ophys_data = convert_level_1_to_level_2(lims_id, cache_dir=r'\\allen\aibs\informatics\swdb2018\visual_behavior')
-    ophys_data = convert_level_1_to_level_2(lims_id, cache_dir=r'/allen/aibs/informatics/swdb2018/visual_behavior')
+    # experiment_id = 702134928
+    import sys
+    experiment_id = sys.argv[1]
+    # ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir=r'\\allen\aibs\informatics\swdb2018\visual_behavior')
+    ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir=r'/allen/aibs/informatics/swdb2018/visual_behavior')
