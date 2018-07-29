@@ -582,6 +582,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
 if __name__ == '__main__':
 
-    lims_id = 702134928
-    # ophys_data = convert_level_1_to_level_2(lims_id, cache_dir=r'\\allen\aibs\informatics\swdb2018\visual_behavior')
-    ophys_data = convert_level_1_to_level_2(lims_id, cache_dir=r'/allen/aibs/informatics/swdb2018/visual_behavior')
+    # experiment_id = 702134928
+    import sys
+    experiment_id = sys.argv[1]
+    # ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir=r'\\allen\aibs\informatics\swdb2018\visual_behavior')
+    ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir=r'/allen/aibs/informatics/swdb2018/visual_behavior')
