@@ -20,12 +20,18 @@ matplotlib.use('Agg')
 
 import matplotlib.image as mpimg
 
-from ...translator import foraging2, foraging
-from ...translator.core import create_extended_dataframe
-from ..sync.process_sync import get_sync_data
-from ..plotting.summary_figures import save_figure, plot_roi_validation
-from .lims_database import LimsDatabase
+# from ...translator import foraging2, foraging
+# from ...translator.core import create_extended_dataframe
+# from ..sync.process_sync import get_sync_data
+# from ..plotting.summary_figures import save_figure, plot_roi_validation
+# from .lims_database import LimsDatabase
 
+#relative import doesnt work on cluster
+from visual_behavior.translator import foraging2, foraging
+from visual_behavior.translator.core import create_extended_dataframe
+from visual_behavior.ophys.sync.process_sync import get_sync_data
+from visual_behavior.ophys.plotting.summary_figures import save_figure, plot_roi_validation
+from visual_behavior.ophys.io.lims_database import LimsDatabase
 
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
@@ -575,5 +581,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
 
 if __name__ == '__main__':
+
     lims_id = 702134928
-    ophys_data = convert_level_1_to_level_2(lims_id, cache_dir=r'\\allen\aibs\informatics\swdb2018\visual_behavior')
+    # ophys_data = convert_level_1_to_level_2(lims_id, cache_dir=r'\\allen\aibs\informatics\swdb2018\visual_behavior')
+    ophys_data = convert_level_1_to_level_2(lims_id, cache_dir=r'/allen/aibs/informatics/swdb2018/visual_behavior')
