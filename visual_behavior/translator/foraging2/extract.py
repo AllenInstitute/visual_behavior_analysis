@@ -1440,7 +1440,7 @@ def get_abort_on_early_response(data):
 def get_periodic_flash(data):
     periodic_flash = data['items']['behavior']['config']['DoC']['periodic_flash']
     if periodic_flash is None:
-        return None
+        pass
     else:
         try:
             periodic_flash = tuple([float(val) for val in periodic_flash])
@@ -1448,4 +1448,4 @@ def get_periodic_flash(data):
             logger.error('Value of `periodic_flash` is not supported.')
             periodic_flash = None
 
-    return tuple(periodic_flash)
+    return periodic_flash
