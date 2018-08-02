@@ -24,14 +24,17 @@ class ResponseAnalysis(object):
     Parameters
     ----------
     dataset: VisualBehaviorOphysDataset instance
+    overwrite_analysis_files: Boolean, if True will create and overwrite response analysis dataframe files.
+    If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
     """
 
-    def __init__(self, dataset):
+    def __init__(self, dataset, overwrite_analysis_files=False):
         self.dataset = dataset
+        self.overwrite_analysis_files = overwrite_analysis_files
         self.trial_window = [-4, 4]  # time, in seconds, around change time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
         self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
-                                                                         0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
+            0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         self.baseline_window = np.asarray(
             self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
         self.stimulus_duration = self.dataset.task_parameters['stimulus_duration'].values[0]
@@ -51,7 +54,7 @@ class ResponseAnalysis(object):
         running_speed = self.dataset.running_speed.running_speed.values
         df_list = []
         for cell_index in self.dataset.cell_indices:
-            for trial in self.dataset.trials.trial.values:
+            for trial in self.dataset.trials.trial.values[:-1]:  # ignore last trial to avoid truncated traces
                 cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
                 cell_trace = self.dataset.dff_traces[cell_index, :]
                 change_time = self.dataset.trials[self.dataset.trials.trial == trial].change_time.values[0]
@@ -102,12 +105,16 @@ class ResponseAnalysis(object):
         trial_response_df.to_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
 
     def get_trial_response_df(self):
-        if os.path.exists(self.get_trial_response_df_path()):
-            print('loading trial response dataframe')
-            self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
-        else:
+        if self.overwrite_analysis_files:
             self.trial_response_df = self.generate_trial_response_df()
             self.save_trial_response_df(self.trial_response_df)
+        else:
+            if os.path.exists(self.get_trial_response_df_path()):
+                print('loading trial response dataframe')
+                self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
+            else:
+                self.trial_response_df = self.generate_trial_response_df()
+                self.save_trial_response_df(self.trial_response_df)
         return self.trial_response_df
 
     def get_flash_response_df_path(self):
@@ -137,10 +144,14 @@ class ResponseAnalysis(object):
         flash_response_df.to_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
 
     def get_flash_response_df(self):
-        if os.path.exists(self.get_flash_response_df_path()):
-            print('loading flash response dataframe')
-            self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
-        else:
+        if self.overwrite_analysis_files:
             self.flash_response_df = self.generate_flash_response_df()
             self.save_flash_response_df(self.flash_response_df)
+        else:
+            if os.path.exists(self.get_flash_response_df_path()):
+                print('loading flash response dataframe')
+                self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
+            else:
+                self.flash_response_df = self.generate_flash_response_df()
+                self.save_flash_response_df(self.flash_response_df)
         return self.flash_response_df

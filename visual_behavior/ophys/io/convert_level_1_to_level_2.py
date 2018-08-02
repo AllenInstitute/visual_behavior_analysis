@@ -19,19 +19,21 @@ import matplotlib
 matplotlib.use('Agg')
 
 import matplotlib.image as mpimg
-
+#
 # from ...translator import foraging2, foraging
 # from ...translator.core import create_extended_dataframe
 # from ..sync.process_sync import get_sync_data
 # from ..plotting.summary_figures import save_figure, plot_roi_validation
 # from .lims_database import LimsDatabase
 
-#relative import doesnt work on cluster
+
+# relative import doesnt work on cluster
 from visual_behavior.translator import foraging2, foraging
 from visual_behavior.translator.core import create_extended_dataframe
 from visual_behavior.ophys.sync.process_sync import get_sync_data
 from visual_behavior.ophys.plotting.summary_figures import save_figure, plot_roi_validation
 from visual_behavior.ophys.io.lims_database import LimsDatabase
+
 
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
@@ -58,7 +60,8 @@ def get_lims_data(lims_id):
     ld = LimsDatabase(lims_id)
     lims_data = ld.get_qc_param()
     lims_data.insert(loc=2, column='experiment_id', value=lims_data.lims_id.values[0])
-    lims_data.insert(loc=2, column='session_type', value='behavior_'+lims_data.experiment_name.values[0].split('_')[-1])
+    lims_data.insert(loc=2, column='session_type',
+                     value='behavior_' + lims_data.experiment_name.values[0].split('_')[-1])
     lims_data.insert(loc=2, column='ophys_session_dir', value=lims_data.datafolder.values[0][:-28])
     return lims_data
 
@@ -135,9 +138,15 @@ def get_segmentation_dir(lims_data):
 
 def get_sync_path(lims_data):
     ophys_session_dir = get_ophys_session_dir(lims_data)
-    sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file][0]
-    sync_path = os.path.join(ophys_session_dir, sync_file)
     analysis_dir = get_analysis_dir(lims_data)
+    # hack for expt 713525580 - sync in lims is broken, fixed version available in analysis_dir
+    if get_lims_id(lims_data) == 713525580:
+        print('using sync file from analysis directory instead of lims')
+        sync_file = [file for file in os.listdir(analysis_dir) if 'sync' in file][0]
+        sync_path = os.path.join(analysis_dir, sync_file)
+    else:
+        sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file][0]
+        sync_path = os.path.join(ophys_session_dir, sync_file)
     if sync_file not in os.listdir(analysis_dir):
         print('moving ', sync_file, ' to analysis dir')  # flake8: noqa: E999
         shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
@@ -259,13 +268,13 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     save_dataframe_as_h5(rewards, 'rewards', get_analysis_dir(lims_data))
 
     running = core_data['running']
-    running_speed = running.rename(columns = {'speed':'running_speed'})
+    running_speed = running.rename(columns={'speed': 'running_speed'})
     save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
     licks = core_data['licks']
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
-    stimulus_table = core_data['visual_stimuli'][:-10] #ignore last 10 flashes
+    stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
     # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
@@ -391,6 +400,10 @@ def get_roi_metrics(lims_data):
     roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
     # remove invalid roi_metrics
     roi_metrics = roi_metrics[roi_metrics.valid == True]
+    ## hack for expt 692342909 with 2 rois at same location - need a long term solution for this!
+    if get_lims_id(lims_data) == 692342909:
+        print('removing bad cell')
+        roi_metrics = roi_metrics[roi_metrics.cell_specimen_id.isin([692357032]) == False]
     # add filtered cell index
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
                   roi_metrics.cell_specimen_id.values]
@@ -580,9 +593,16 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
 
 if __name__ == '__main__':
-
-    # experiment_id = 702134928
     import sys
+
     experiment_id = sys.argv[1]
-    # ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir=r'\\allen\aibs\informatics\swdb2018\visual_behavior')
-    ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir=r'/allen/aibs/informatics/swdb2018/visual_behavior')
+    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
+
+    # import pandas as pd
+    #
+    # manifest = r'\\allen\aibs\informatics\swdb2018\visual_behavior\visual_behavior_data_manifest.csv'
+    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    # df = pd.read_csv(manifest)
+    # for i, experiment_id in enumerate(df.experiment_id.values):
+    #     ophys_data = convert_level_1_to_level_2(int(experiment_id), cache_dir=cache_dir)

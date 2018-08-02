@@ -5,16 +5,15 @@ Created on Sunday July 15 2018
 """
 import os
 import h5py
+import matplotlib
 import numpy as np
+import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import matplotlib
 
 matplotlib.use('Agg')
 
 # formatting
-import seaborn as sns
-
 sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_palette('deep')
@@ -156,8 +155,8 @@ def plot_mean_trace(traces, frame_rate, label=None, color='k', interval_sec=1, x
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
 
         xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
-        ax.set_xticks([int(x) for x in xticks]);
-        ax.set_xticklabels([int(x) for x in xticklabels]);
+        ax.set_xticks([int(x) for x in xticks])
+        ax.set_xticklabels([int(x) for x in xticklabels])
         ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
         ax.set_xlabel('time (sec)')
         ax.set_ylabel('dF/F')
@@ -199,8 +198,8 @@ def plot_single_trial_trace(trace, frame_rate, label=None, color='k', interval_s
     ax.plot(trace, label=label, linewidth=3, color=color)
 
     xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
-    ax.set_xticks([int(x) for x in xticks]);
-    ax.set_xticklabels([int(x) for x in xticklabels]);
+    ax.set_xticks([int(x) for x in xticks])
+    ax.set_xticklabels([int(x) for x in xticklabels])
     ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
     ax.set_xlabel('time (sec)')
     ax.set_ylabel('dF/F')
@@ -227,11 +226,11 @@ def plot_image_response_for_trial_types(ra, cell, save=True):
     ax[i].set_ylabel('')
     ax[i].legend(images, loc=9, bbox_to_anchor=(1.1, 1))
     title = str(cell) + '_' + str(df[df.cell == cell].cell_specimen_id.values[0]) + '_' + ra.dataset.analysis_folder
-    plt.suptitle(title, x=0.515, y=1., horizontalalignment='center')
+    plt.suptitle(title, x=0.47, y=1., horizontalalignment='center')
     fig.tight_layout()
     if save:
         plt.gcf().subplots_adjust(top=0.85)
-        plt.gcf().subplots_adjust(right=0.9)
+        plt.gcf().subplots_adjust(right=0.85)
         save_figure(fig, figsize, ra.dataset.analysis_dir, 'image_responses', title, formats=['.png'])
         plt.close()
 

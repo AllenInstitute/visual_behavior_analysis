@@ -122,7 +122,7 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
     return delay
 
 
-def get_sync_data(lims_id, foraging2=False):
+def get_sync_data(lims_id):
     logger.info('getting sync data')
     from visual_behavior.ophys.sync.sync_dataset import Dataset
     import visual_behavior.ophys.io.convert_level_1_to_level_2 as io
@@ -153,7 +153,7 @@ def get_sync_data(lims_id, foraging2=False):
     monitor_delay = calculate_delay(sync_dataset, vs_f_sec, sample_freq)
     vsyncs = vs_f_sec + monitor_delay  # this should be added, right!?
     # line labels are different on 2P6 and production rigs - need options for both
-    if 'lick_1' in  meta_data['line_labels']:
+    if 'lick_1' in meta_data['line_labels']:
         lick_1 = sync_dataset.get_rising_edges('lick_1') / sample_freq
     elif 'lick_sensor' in meta_data['line_labels']:
         lick_1 = sync_dataset.get_rising_edges('lick_sensor') / sample_freq
