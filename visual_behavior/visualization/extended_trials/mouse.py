@@ -179,7 +179,7 @@ def make_total_volume_plot(df_in, session_dates, ax):
         dates.append(df_in[(df_in.startdatetime == date)].startdatetime.iloc[0].strftime('%Y-%m-%d'))
         df1 = df_in[(df_in.startdatetime == date) & (df_in.trial_type != 'aborted')]
 
-        total_volume.append(df1.number_of_rewards.sum() * df1.reward_volume.max())
+        total_volume.append(df1.cumulative_volume.max())
         number_correct.append(df1.number_of_rewards.sum())
 
     ax.plot(
