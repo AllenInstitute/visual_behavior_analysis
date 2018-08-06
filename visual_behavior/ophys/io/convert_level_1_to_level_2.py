@@ -323,14 +323,14 @@ def save_running_speed(running_speed, lims_data):
 
 
 def get_visual_stimulus_data(pkl):
-    images, image_metadata = foraging.extract_images.get_image_data(pkl['image_dict'])
-    visual_stimulus_data = pd.DataFrame(image_metadata)
-    visual_stimulus_data['image_data'] = images
-    return visual_stimulus_data
+    stimulus_template, stimulus_metadata = foraging.extract_images.get_image_data(pkl['image_dict'])
+    stimulus_metadata = pd.DataFrame(stimulus_metadata)
+    return stimulus_template, stimulus_metadata
 
 
-def save_visual_stimulus_data(visual_stimulus_data, lims_data):
-    save_dataframe_as_h5(visual_stimulus_data, 'visual_stimulus_data', get_analysis_dir(lims_data))
+def save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data):
+    save_dataframe_as_h5(stimulus_metadata, 'stimulus_metadata', get_analysis_dir(lims_data))
+    save_data_as_h5(stimulus_template, 'stimulus_template', get_analysis_dir(lims_data))
 
 
 def parse_mask_string(mask_string):
@@ -558,8 +558,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     trials = get_trials(core_data)
     save_trials(trials, lims_data)
 
-    visual_stimulus_data = get_visual_stimulus_data(pkl)
-    save_visual_stimulus_data(visual_stimulus_data, lims_data)
+    stimulus_template, stimulus_metadata = get_visual_stimulus_data(pkl)
+    save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data)
 
     roi_metrics = get_roi_metrics(lims_data)
     save_roi_metrics(roi_metrics, lims_data)

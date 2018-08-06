@@ -33,8 +33,8 @@ class VisualBehaviorOphysDataset(object):
         self.get_timestamps_ophys()
         self.get_timestamps_stimulus()
         self.get_stimulus_table()
-        self.get_visual_stimulus_data()
         self.get_stimulus_template()
+        self.get_stimulus_metadata()
         self.get_running_speed()
         self.get_licks()
         self.get_rewards()
@@ -95,14 +95,16 @@ class VisualBehaviorOphysDataset(object):
                                           format='fixed')
         return self.stimulus_table
 
-    def get_visual_stimulus_data(self):
-        self.visual_stimulus_data = pd.read_hdf(os.path.join(self.analysis_dir, 'visual_stimulus_data.h5'), key='df',
-                                          format='fixed')
-        return self.visual_stimulus_data
-
     def get_stimulus_template(self):
-        self.stimulus_template = self.visual_stimulus_data['image_data'].values
+        f = h5py.File(os.path.join(self.analysis_dir, 'stimulus_template.h5'), 'r')
+        self.stimulus_template = np.asarray(f['data'])
+        f.close()
         return self.stimulus_template
+
+    def get_stimulus_metadata(self):
+        self.stimulus_metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df',
+                                          format='fixed')
+        return self.stimulus_metadata
 
     def get_running_speed(self):
         self.running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df', format='fixed')
