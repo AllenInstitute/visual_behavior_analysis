@@ -603,7 +603,7 @@ def assign_color(trials, palette='default'):
             else:
                 color[idx] = 'red'
 
-        elif trials.loc[idx]['auto_rewarded'] is True:
+        elif trials.loc[idx]['auto_rewarded'] == True:
             if palette.lower() == 'marina':
                 color[idx] = 'darkblue'
             else:
