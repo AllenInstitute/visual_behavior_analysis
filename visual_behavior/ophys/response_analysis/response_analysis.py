@@ -12,19 +12,19 @@ from visual_behavior.ophys.response_analysis import utilities as ut
 
 
 class ResponseAnalysis(object):
-    """ Contains methods for organizing responses by trial or by individual visual stimulus flashes in a DataFrame.
+    """ Contains methods for organizing responses by trial or by  visual stimulus flashes in a DataFrame.
 
-    For trial responses, a segment of the dF/F trace for each cell is extracted for each trial in a +/-4 seconds window (the 'trial_window') around the change time.
-    The mean response for each cell is taken in a 500ms window after the change time (the 'response_window').
+    For trial responses, a segment of the dF/F trace for each cell is extracted for each trial in the trials records in a +/-4 seconds window (the 'trial_window') around the change time.
+    The mean_response for each cell is taken in a 500ms window after the change time (the 'response_window').
     The trial_response_df also contains behavioral metadata such as lick times, running speed, reward rate, and initial and change stimulus names.
 
-    For stimulus flashes, the mean response is taken in a 500ms window after each stimulus presentation (the 'response_window').
+    For stimulus flashes, the mean response is taken in a 500ms window after each stimulus presentation (the 'response_window') in the stimulus_table.
     The flash_response_df also contains metadata such as the time from last lick, time since last stimulus change, and mean running speed during each flash.
 
     Parameters
     ----------
     dataset: VisualBehaviorOphysDataset instance
-    overwrite_analysis_files: Boolean, if True will create and overwrite response analysis dataframe files.
+    overwrite_analysis_files: Boolean, if True will create and overwrite response analysis  files.
     If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
     """
 
@@ -129,7 +129,7 @@ class ResponseAnalysis(object):
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
                 window = [0, self.response_window_duration]
-                trace = ut.get_trace_around_timepoint(flash_time, self.dataset.dff_traces[cell],
+                trace, timestamps = ut.get_trace_around_timepoint(flash_time, self.dataset.dff_traces[cell],
                                                       self.dataset.timestamps_ophys,
                                                       window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, window, self.ophys_frame_rate)

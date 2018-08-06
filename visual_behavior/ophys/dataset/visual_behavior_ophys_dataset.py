@@ -22,7 +22,7 @@ class VisualBehaviorOphysDataset(object):
         Parameters
         ----------
         experiment_id : ophys experiment ID
-        cache_dir : directory to save or load analysis files to/from
+        cache_dir : directory where data files are located for loading
         """
         self.experiment_id = experiment_id
         self.cache_dir = cache_dir
@@ -33,7 +33,7 @@ class VisualBehaviorOphysDataset(object):
         self.get_timestamps_ophys()
         self.get_timestamps_stimulus()
         self.get_stimulus_table()
-        self.get_visual_stimuli()
+        self.get_visual_stimulus_data()
         self.get_stimulus_template()
         self.get_running_speed()
         self.get_licks()
@@ -95,13 +95,13 @@ class VisualBehaviorOphysDataset(object):
                                           format='fixed')
         return self.stimulus_table
 
-    def get_visual_stimuli(self):
-        self.visual_stimuli = pd.read_hdf(os.path.join(self.analysis_dir, 'visual_stimuli.h5'), key='df',
+    def get_visual_stimulus_data(self):
+        self.visual_stimulus_data = pd.read_hdf(os.path.join(self.analysis_dir, 'visual_stimulus_data.h5'), key='df',
                                           format='fixed')
-        return self.visual_stimuli
+        return self.visual_stimulus_data
 
     def get_stimulus_template(self):
-        self.stimulus_template = self.visual_stimuli['image'].values
+        self.stimulus_template = self.visual_stimulus_data['image_data'].values
         return self.stimulus_template
 
     def get_running_speed(self):

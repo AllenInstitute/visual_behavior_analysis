@@ -73,11 +73,11 @@ def get_lims_id(lims_data):
 
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
-    analysis_folder_name = str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                           str(lims_data.lims_id.values[0]) + '_' + \
-                           lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
-                           lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
-                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]
+    analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
+        str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+        lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
+        lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
+        lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]
     return analysis_folder_name
 
 
@@ -180,9 +180,14 @@ def get_metadata(lims_data, timestamps):
         metadata['experiment_container_id'] = None
     metadata['targeted_structure'] = lims_data.structure.values[0]
     metadata['imaging_depth'] = int(lims_data.depth.values[0])
-    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0]
-    metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0]
-    metadata['session_type'] = lims_data.session_type.values[0][-1]
+    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
+    if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
+        metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[1] + ';' + \
+            lims_data['specimen_reporter_line'].values[0].split('(')[0]
+    else:
+        metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0].split('(')[0]
+    metadata['full_genotype'] = metadata['cre_line']+';'+metadata['reporter_line']
+    metadata['session_type'] = 'behavior_session_'+lims_data.session_type.values[0][-1]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
@@ -317,15 +322,15 @@ def save_running_speed(running_speed, lims_data):
     save_data_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
 
-def get_visual_stimuli(pkl):
+def get_visual_stimulus_data(pkl):
     images, image_metadata = foraging.extract_images.get_image_data(pkl['image_dict'])
-    visual_stimuli = pd.DataFrame(image_metadata)
-    visual_stimuli['image'] = images
-    return visual_stimuli
+    visual_stimulus_data = pd.DataFrame(image_metadata)
+    visual_stimulus_data['image_data'] = images
+    return visual_stimulus_data
 
 
-def save_visual_stimuli(visual_stimuli, lims_data):
-    save_dataframe_as_h5(visual_stimuli, 'visual_stimuli', get_analysis_dir(lims_data))
+def save_visual_stimulus_data(visual_stimulus_data, lims_data):
+    save_dataframe_as_h5(visual_stimulus_data, 'visual_stimulus_data', get_analysis_dir(lims_data))
 
 
 def parse_mask_string(mask_string):
@@ -553,8 +558,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     trials = get_trials(core_data)
     save_trials(trials, lims_data)
 
-    visual_stimuli = get_visual_stimuli(pkl)
-    save_visual_stimuli(visual_stimuli, lims_data)
+    visual_stimulus_data = get_visual_stimulus_data(pkl)
+    save_visual_stimulus_data(visual_stimulus_data, lims_data)
 
     roi_metrics = get_roi_metrics(lims_data)
     save_roi_metrics(roi_metrics, lims_data)

@@ -6,12 +6,12 @@ Created on Sunday July 15 2018
 import os
 import h5py
 import matplotlib
+matplotlib.use('Agg')
 import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-matplotlib.use('Agg')
 
 # formatting
 sns.set_style('white')
@@ -164,12 +164,12 @@ def plot_mean_trace(traces, frame_rate, label=None, color='k', interval_sec=1, x
     return ax
 
 
-def plot_flashes_on_trace(ax, ra, trial_type=None, omitted=False, alpha=0.15):
-    frame_rate = ra.ophys_frame_rate
-    stim_duration = ra.stimulus_duration
-    blank_duration = ra.blank_duration
-    change_frame = ra.trial_window[1] * frame_rate
-    end_frame = (ra.trial_window[1] + np.abs(ra.trial_window[0])) * frame_rate
+def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.15):
+    frame_rate = analysis.ophys_frame_rate
+    stim_duration = analysis.stimulus_duration
+    blank_duration = analysis.blank_duration
+    change_frame = analysis.trial_window[1] * frame_rate
+    end_frame = (analysis.trial_window[1] + np.abs(analysis.trial_window[0])) * frame_rate
     interval = blank_duration + stim_duration
     if omitted:
         array = np.arange((change_frame + interval) * frame_rate, end_frame, interval * frame_rate)
@@ -207,9 +207,9 @@ def plot_single_trial_trace(trace, frame_rate, label=None, color='k', interval_s
     return ax
 
 
-def plot_image_response_for_trial_types(ra, cell, save=True):
-    df = ra.trial_response_df.copy()
-    trials = ra.dataset.trials
+def plot_image_response_for_trial_types(analysis, cell, save=True):
+    df = analysis.trial_response_df.copy()
+    trials = analysis.dataset.trials
     images = trials.change_image_name.unique()
     colors = sns.color_palette('hls', len(images))
     figsize = (20, 5)
@@ -219,19 +219,19 @@ def plot_image_response_for_trial_types(ra, cell, save=True):
             selected_trials = trials[
                 (trials.change_image_name == change_image_name) & (trials.trial_type == trial_type)].trial.values
             traces = df[(df.cell == cell) & (df.trial.isin(selected_trials))].trace.values
-            ax[i] = plot_mean_trace(traces, ra.ophys_frame_rate, label=None, color=colors[c], interval_sec=1,
+            ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, label=None, color=colors[c], interval_sec=1,
                                     xlims=[-4, 4], ax=ax[i])
-        ax[i] = plot_flashes_on_trace(ax[i], ra, trial_type=trial_type, omitted=False, alpha=0.3)
+        ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=0.3)
         ax[i].set_title(trial_type)
     ax[i].set_ylabel('')
     ax[i].legend(images, loc=9, bbox_to_anchor=(1.1, 1))
-    title = str(cell) + '_' + str(df[df.cell == cell].cell_specimen_id.values[0]) + '_' + ra.dataset.analysis_folder
+    title = str(cell) + '_' + str(df[df.cell == cell].cell_specimen_id.values[0]) + '_' + analysis.dataset.analysis_folder
     plt.suptitle(title, x=0.47, y=1., horizontalalignment='center')
     fig.tight_layout()
     if save:
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(right=0.85)
-        save_figure(fig, figsize, ra.dataset.analysis_dir, 'image_responses', title, formats=['.png'])
+        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_responses', title, formats=['.png'])
         plt.close()
 
 
