@@ -41,7 +41,8 @@ class VisualBehaviorOphysDataset(object):
         self.get_task_parameters()
         self.get_trials()
         self.get_dff_traces()
-        self.get_roi_masks()
+        self.get_roi_mask_dict()
+        self.get_roi_mask_array()
         self.get_roi_metrics()
         self.get_cell_specimen_ids()
         self.get_cell_indices()
@@ -87,7 +88,6 @@ class VisualBehaviorOphysDataset(object):
 
     def get_timestamps_ophys(self):
         self.timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
-
         return self.timestamps_ophys
 
     def get_stimulus_table(self):
@@ -139,16 +139,22 @@ class VisualBehaviorOphysDataset(object):
             dff_traces.append(np.asarray(f[key]))
         f.close()
         self.dff_traces = np.asarray(dff_traces)
-        return self.dff_traces
+        return self.timestamps_ophys, self.dff_traces
 
-    def get_roi_masks(self):
+    def get_roi_mask_dict(self):
         f = h5py.File(os.path.join(self.analysis_dir, 'roi_masks.h5'), 'r')
-        roi_masks = {}
+        roi_mask_dict = {}
         for key in f.keys():
-            roi_masks[key] = np.asarray(f[key])
+            roi_mask_dict[key] = np.asarray(f[key])
         f.close()
-        self.roi_masks = roi_masks
-        return self.roi_masks
+        self.roi_mask_dict = roi_mask_dict
+        return self.roi_mask_dict
+
+    def get_roi_mask_array(self):
+        w, h = self.roi_mask_dict[self.roi_mask_dict.keys()[0]].shape
+        roi_mask_array = np.empty((len(self.roi_mask_dict.keys()), w, h))
+        self.roi_mask_array = roi_mask_array
+        return self.roi_mask_array
 
     def get_roi_metrics(self):
         self.roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')

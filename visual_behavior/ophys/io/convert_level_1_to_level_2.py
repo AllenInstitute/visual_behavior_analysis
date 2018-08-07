@@ -274,6 +274,10 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
 
     running = core_data['running']
     running_speed = running.rename(columns={'speed': 'running_speed'})
+    # filter to get rid of encoder spikes
+    # happens in 645086795, 645362806
+    from scipy.signal import medfilt
+    running_speed['running_speed'] = medfilt(running_speed.running_speed.values,kernel_size=5)
     save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
     licks = core_data['licks']
@@ -304,22 +308,6 @@ def get_trials(core_data):
 
 def save_trials(trials, lims_data):
     save_dataframe_as_h5(trials, 'trials', get_analysis_dir(lims_data))
-
-
-def get_running_speed(pkl, timestamps):
-    # from visual_behavior.translator.foraging2 import get_running_speed
-    # speed = get_running_speed(pkl, smooth=False, time=None)
-    # running_speed = speed['speed (cm/s)'].values
-    import visual_behavior.io as vbio
-    timestamps_stimulus = get_timestamps_stimulus(timestamps)
-    speed = vbio.load_running_speed(pkl, time=timestamps_stimulus)
-    running_speed = speed['speed (cm/s)'].values
-    print('length of running speed trace: ', str(len(running_speed)))
-    return running_speed
-
-
-def save_running_speed(running_speed, lims_data):
-    save_data_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
 
 def get_visual_stimulus_data(pkl):
@@ -490,6 +478,14 @@ def save_timestamps(timestamps, dff_traces, core_data, lims_data):
         print('length of ophys timestamps >  length of traces by', str(difference),
               'frames , truncating ophys timestamps')
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
+    # account for dropped ophys frames - a rare but unfortunate issue
+    if dff_traces.shape[1] > timestamps['ophys_frames']['timestamps'].shape[0]:
+        difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
+        print('length of ophys timestamps <  length of traces by', str(difference),
+              'frames , truncating traces')
+        dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
+        roi_metrics = get_roi_metrics(lims_data)
+        save_dff_traces(dff_traces, roi_metrics, lims_data)
     # make sure length of timestamps equals length of running traces
     running_speed = core_data['running'].speed.values
     if len(running_speed) < timestamps['stimulus_frames']['timestamps'].shape[0]:
