@@ -128,15 +128,18 @@ class ResponseAnalysis(object):
                 flash_data = self.dataset.stimulus_table[self.dataset.stimulus_table.flash_number == flash]
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
-                window = [0, self.response_window_duration]
+                trace_window = [-self.response_window_duration, self.response_window_duration]
                 trace, timestamps = ut.get_trace_around_timepoint(flash_time, self.dataset.dff_traces[cell],
-                                                      self.dataset.timestamps_ophys,
-                                                      window, self.ophys_frame_rate)
-                mean_response = ut.get_mean_in_window(trace, window, self.ophys_frame_rate)
+                                                                  self.dataset.timestamps_ophys,
+                                                                  trace_window, self.ophys_frame_rate)
+                response_window = [self.response_window_duration, self.response_window_duration * 2]
+                p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
+                mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate)
 
-                row.append([cell, flash, flash_time, image_name, mean_response])
+                row.append([cell, flash, flash_time, image_name, mean_response, p_value])
         flash_response_df = pd.DataFrame(data=row,
-                                         columns=['cell', 'flash_number', 'start_time', 'image_name', 'mean_response'])
+                                         columns=['cell', 'flash_number', 'start_time', 'image_name', 'mean_response',
+                                                  'p_value'])
         return flash_response_df
 
     def save_flash_response_df(self, flash_response_df):

@@ -483,13 +483,17 @@ def save_dff_traces(dff_traces, roi_metrics, lims_data):
         f.close()
 
 
-def save_timestamps(timestamps, dff_traces, lims_data):
+def save_timestamps(timestamps, dff_traces, core_data, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
         print('length of ophys timestamps >  length of traces by', str(difference),
               'frames , truncating ophys timestamps')
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
+    # make sure length of timestamps equals length of running traces
+    running_speed = core_data['running'].speed.values
+    if len(running_speed) < timestamps['stimulus_frames']['timestamps'].shape[0]:
+        timestamps['stimulus_frames']['timestamps'] = timestamps['stimulus_frames']['timestamps'][:len(running_speed)]
     save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
 
 
@@ -570,7 +574,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     dff_traces = get_dff_traces(roi_metrics, lims_data)
     save_dff_traces(dff_traces, roi_metrics, lims_data)
 
-    save_timestamps(timestamps, dff_traces, lims_data)
+    save_timestamps(timestamps, dff_traces, core_data, lims_data)
 
     motion_correction = get_motion_correction(lims_data)
     save_motion_correction(motion_correction, lims_data)
@@ -578,8 +582,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     max_projection = get_max_projection(lims_data)
     save_max_projection(max_projection, lims_data)
 
-    roi_validation = get_roi_validation(lims_data)
-    save_roi_validation(roi_validation, lims_data)
+    # roi_validation = get_roi_validation(lims_data)
+    # save_roi_validation(roi_validation, lims_data)
     print('done converting')
 
     ophys_data = core_data.update(
