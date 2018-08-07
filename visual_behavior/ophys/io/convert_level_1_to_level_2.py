@@ -74,10 +74,10 @@ def get_lims_id(lims_data):
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
     analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-        str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-        lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
-        lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
-        lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]
+                           str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+                           lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
+                           lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
+                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]
     return analysis_folder_name
 
 
@@ -183,11 +183,11 @@ def get_metadata(lims_data, timestamps):
     metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
     if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
         metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[1] + ';' + \
-            lims_data['specimen_reporter_line'].values[0].split('(')[0]
+                                    lims_data['specimen_reporter_line'].values[0].split('(')[0]
     else:
         metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0].split('(')[0]
-    metadata['full_genotype'] = metadata['cre_line']+';'+metadata['reporter_line']
-    metadata['session_type'] = 'behavior_session_'+lims_data.session_type.values[0][-1]
+    metadata['full_genotype'] = metadata['cre_line'] + ';' + metadata['reporter_line']
+    metadata['session_type'] = 'behavior_session_' + lims_data.session_type.values[0][-1]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
@@ -277,7 +277,7 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     # filter to get rid of encoder spikes
     # happens in 645086795, 645362806
     from scipy.signal import medfilt
-    running_speed['running_speed'] = medfilt(running_speed.running_speed.values,kernel_size=5)
+    running_speed['running_speed'] = medfilt(running_speed.running_speed.values, kernel_size=5)
     save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
     licks = core_data['licks']
@@ -464,11 +464,10 @@ def get_dff_traces(roi_metrics, lims_data):
 
 def save_dff_traces(dff_traces, roi_metrics, lims_data):
     traces_path = os.path.join(get_analysis_dir(lims_data), 'dff_traces.h5')
-    if not os.path.exists(traces_path):
-        f = h5py.File(traces_path, 'w')
-        for i, id in enumerate(get_cell_specimen_ids(roi_metrics)):
-            f.create_dataset(str(id), data=dff_traces[i])
-        f.close()
+    f = h5py.File(traces_path, 'w')
+    for i, index in enumerate(get_cell_specimen_ids(roi_metrics)):
+        f.create_dataset(str(index), data=dff_traces[i])
+    f.close()
 
 
 def save_timestamps(timestamps, dff_traces, core_data, lims_data):
@@ -577,6 +576,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
     max_projection = get_max_projection(lims_data)
     save_max_projection(max_projection, lims_data)
+
+    # import matplotlib
+    # matplotlib.use('Agg')
 
     # roi_validation = get_roi_validation(lims_data)
     # save_roi_validation(roi_validation, lims_data)

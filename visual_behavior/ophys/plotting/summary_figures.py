@@ -5,13 +5,10 @@ Created on Sunday July 15 2018
 """
 import os
 import h5py
-import matplotlib
-matplotlib.use('Agg')
 import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
 
 # formatting
 sns.set_style('white')
@@ -225,7 +222,8 @@ def plot_image_response_for_trial_types(analysis, cell, save=True):
         ax[i].set_title(trial_type)
     ax[i].set_ylabel('')
     ax[i].legend(images, loc=9, bbox_to_anchor=(1.1, 1))
-    title = str(cell) + '_' + str(df[df.cell == cell].cell_specimen_id.values[0]) + '_' + analysis.dataset.analysis_folder
+    title = str(cell) + '_' + str(
+        df[df.cell == cell].cell_specimen_id.values[0]) + '_' + analysis.dataset.analysis_folder
     plt.suptitle(title, x=0.47, y=1., horizontalalignment='center')
     fig.tight_layout()
     if save:

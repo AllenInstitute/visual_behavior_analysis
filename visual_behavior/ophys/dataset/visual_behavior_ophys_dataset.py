@@ -103,7 +103,7 @@ class VisualBehaviorOphysDataset(object):
 
     def get_stimulus_metadata(self):
         self.stimulus_metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df',
-                                          format='fixed')
+                                             format='fixed')
         return self.stimulus_metadata
 
     def get_running_speed(self):
