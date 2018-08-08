@@ -1,9 +1,33 @@
+import warnings
 import numpy as np
 import pandas as pd
 from .extended_trials import get_first_lick_relative_to_scheduled_change
 
 
 def parse_log(log_record):
+    """ Parses a log record.
+
+    This function looks for entries in core_data['log']. This function counts
+    the number of errors for each level (e.g. 'INFO', 'ERROR' or 'CRITICAL',
+    etc), and returns a dictionary like `{'ERROR': 2, 'CRITICAL': 1, 'DEBUG':
+    42}` with the number of log messages at each log level.
+
+    Parameters
+    ----------
+    log_record: str
+        single log record with the syntax `"<levelname>::<name>::<message>"`
+
+    Returns
+    -------
+    dict
+        {'levelname': <levelname>, 'name': <name>, 'message': <message>}
+
+    See Also
+    --------
+    count_read_errors : counts the number of log messages at each log level
+    validate_no_read_errors : returns False if there are any read errors
+
+    """
     levelname, name, message = log_record.split('::')
     return dict(
         levelname=levelname,
@@ -13,12 +37,61 @@ def parse_log(log_record):
 
 
 def count_read_errors(core_data):
+    """ Counts the number of errors raised at different levels when reading the data file.
+
+    This function looks for entries in core_data['log']. This function counts
+    the number of errors for each level (e.g. 'INFO', 'ERROR' or 'CRITICAL',
+    etc), and returns a dictionary like `{'ERROR': 2, 'CRITICAL': 1, 'DEBUG':
+    42}` with the number of log messages at each log level.
+
+    Parameters
+    ----------
+    core_data: dictionary
+        core visual_behavior data structure
+
+    Returns
+    -------
+    dict
+        keys are log levels and values are number of messages at that log level
+
+    See Also
+    --------
+    validate_no_read_errors : returns False if there are any read errors
+
+    """
     log = [parse_log(log_record) for log_record in core_data['log']]
+    for rec in log:
+        if rec['levelname'] in ['WARNING', 'ERROR', 'CRITICAL']:
+            warnings.warn(
+                '{} error while reading file: "{}"'.format(rec['levelname'], rec['message'])
+            )
     log = pd.DataFrame(log, columns=['levelname', 'name', 'message'])
     return log.groupby('levelname').size().to_dict()
 
 
 def validate_no_read_errors(core_data):
+    """ Validates that there were no errors raised when reading the data file.
+
+    This function looks for entries in core_data['log']. If any errors are found
+    at the 'ERROR' or 'CRITICAL' level, this check fails and this function
+    returns `False`
+
+    Parameters
+    ----------
+    core_data: dictionary
+        core visual_behavior data structure
+
+    Returns
+    -------
+    bool
+        `True` if there were no read errors, else `False`
+
+
+    See Also
+    --------
+    count_read_errors : counts the number of log messages at each log level
+
+    """
     error_counts = count_read_errors(core_data)
 
     n_errors = error_counts.get('ERROR', 0) + error_counts.get('CRITICAL', 0)
@@ -41,9 +114,19 @@ def validate_running_data(core_data):
 
 
 def validate_licks(core_data):
-    '''
-    validate that licks exist
-    '''
+    """ Validates that licks exist
+
+    Parameters
+    ----------
+    core_data: dictionary
+        legacy style output data structure
+
+    Returns
+    -------
+    bool
+        `True` if licks exist, else `False`
+
+    """
     return len(core_data['licks']) > 0
 
 
