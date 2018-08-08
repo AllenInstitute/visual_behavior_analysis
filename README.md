@@ -23,6 +23,10 @@ If you are plan to contribute to the development of the package, I recommend ins
 
 This ensures that Python uses the current, active files in the folder (even while switching between branches).
 
+To install from with in the AIBS local network from a whl using pip:
+   
+   pip install -i http://aibs-artifactory/artifactory/api/pypi/pypi-local/simple --trusted-host aibs-artifactory --extra-index-url https://pypi.org/simple visual_behavior==0.5.0.dev5
+
 ## Use
 
 First, load up a Foraging2 output
