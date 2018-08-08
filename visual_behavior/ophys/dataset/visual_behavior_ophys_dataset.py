@@ -41,9 +41,9 @@ class VisualBehaviorOphysDataset(object):
         self.get_task_parameters()
         self.get_trials()
         self.get_dff_traces()
+        self.get_roi_metrics()
         self.get_roi_mask_dict()
         self.get_roi_mask_array()
-        self.get_roi_metrics()
         self.get_cell_specimen_ids()
         self.get_cell_indices()
         self.get_max_projection()
@@ -141,6 +141,10 @@ class VisualBehaviorOphysDataset(object):
         self.dff_traces = np.asarray(dff_traces)
         return self.timestamps_ophys, self.dff_traces
 
+    def get_roi_metrics(self):
+        self.roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
+        return self.roi_metrics
+
     def get_roi_mask_dict(self):
         f = h5py.File(os.path.join(self.analysis_dir, 'roi_masks.h5'), 'r')
         roi_mask_dict = {}
@@ -153,12 +157,11 @@ class VisualBehaviorOphysDataset(object):
     def get_roi_mask_array(self):
         w, h = self.roi_mask_dict[self.roi_mask_dict.keys()[0]].shape
         roi_mask_array = np.empty((len(self.roi_mask_dict.keys()), w, h))
+        for cell_specimen_id in self.roi_mask_dict.keys():
+            cell_index = self.get_cell_index_for_cell_specimen_id(int(cell_specimen_id))
+            roi_mask_array[cell_index] = self.roi_mask_dict[cell_specimen_id]
         self.roi_mask_array = roi_mask_array
         return self.roi_mask_array
-
-    def get_roi_metrics(self):
-        self.roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
-        return self.roi_metrics
 
     def get_max_projection(self):
         f = h5py.File(os.path.join(self.analysis_dir, 'max_projection.h5'), 'r')
@@ -180,9 +183,11 @@ class VisualBehaviorOphysDataset(object):
         return self.cell_indices
 
     def get_cell_specimen_id_for_cell_index(self, cell_index):
-        cell_specimen_id = self.cell_specimen_ids[cell_index]
+        cell_specimen_ids = self.get_cell_specimen_ids()
+        cell_specimen_id = cell_specimen_ids[cell_index]
         return cell_specimen_id
 
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
-        cell_index = np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
+        cell_specimen_ids = self.get_cell_specimen_ids()
+        cell_index = np.where(cell_specimen_ids == cell_specimen_id)[0][0]
         return cell_index
