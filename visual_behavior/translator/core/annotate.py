@@ -603,7 +603,7 @@ def assign_color(trials, palette='default'):
             else:
                 color[idx] = 'red'
 
-        elif trials.loc[idx]['auto_rewarded'] is True:
+        elif trials.loc[idx]['auto_rewarded'] == True:
             if palette.lower() == 'marina':
                 color[idx] = 'darkblue'
             else:
@@ -642,7 +642,9 @@ def get_response_type(trials):
 
     response_type = []
     for idx in trials.index:
-        if (trials.loc[idx].rewarded == True) & (trials.loc[idx].response == 1):
+        if trials.loc[idx].trial_type.lower() == 'aborted':
+            response_type.append('EARLY_RESPONSE')
+        elif (trials.loc[idx].rewarded == True) & (trials.loc[idx].response == 1):
             response_type.append('HIT')
         elif (trials.loc[idx].rewarded == True) & (trials.loc[idx].response != 1):
             response_type.append('MISS')
