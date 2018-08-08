@@ -9,7 +9,7 @@ from . import annotate
 logger = logging.getLogger(__name__)
 
 
-def create_extended_dataframe(trials, metadata, licks, time):
+def create_extended_dataframe(trials, metadata, licks, time, *args, **kwargs):
     """ creates a trials dataframe from a detection-of-change session
 
     Parameters
