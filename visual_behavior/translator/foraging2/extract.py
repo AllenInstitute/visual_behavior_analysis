@@ -1445,7 +1445,7 @@ def get_periodic_flash(data):
         try:
             periodic_flash = tuple([float(val) for val in periodic_flash])
         except ValueError:
-            logger.error('Value of `periodic_flash` is not supported.')
+            logger.error('`periodic_flash` is `{} ({})`, which is not supported. Setting this to `None`'.format(periodic_flash, type(periodic_flash)))
             periodic_flash = None
 
     return periodic_flash
