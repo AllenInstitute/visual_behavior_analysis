@@ -578,7 +578,7 @@ def get_vsig(exp_data):
     """
 
     vsig = behavior_items_or_top_level(exp_data)["encoders"][0]["vsig"]
-    if len(vsig)==0:
+    if len(vsig) == 0:
         dx = get_dx(exp_data)
         vsig = np.empty_like(dx)
         vsig[:] = np.nan
@@ -605,7 +605,7 @@ def get_vin(exp_data):
     - no idea what the units are
     """
     vin = behavior_items_or_top_level(exp_data)["encoders"][0]["vin"]
-    if len(vin)==0:
+    if len(vin) == 0:
         dx = get_dx(exp_data)
         vin = np.empty_like(dx)
         vin[:] = np.nan
