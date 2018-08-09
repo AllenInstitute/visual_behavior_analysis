@@ -418,6 +418,7 @@ def load_visual_stimuli(data, time=None):
 
     return stimuli
 
+
 def load_images(data):
 
     if 'image_dict' in data.keys():
