@@ -285,7 +285,10 @@ def test_get_licks(monkeypatch, foraging2_data_fixture):
         pd.DataFrame(data={
             "time": [0.0, 0.016, 0.032, 0.048, 0.064, ],
             "speed": [0, 0, 0, 0, 0, ],
-            "frame": [0, 1, 2, 3, 4, ]
+            "frame": [0, 1, 2, 3, 4, ],
+            "dx": [0, 0, 0, 0, 0, ],
+            "v_in": [np.nan, np.nan, np.nan, np.nan, np.nan, ],
+            "v_sig": [np.nan, np.nan, np.nan, np.nan, np.nan, ],
             # "acceleration (cm/s^2)": np.array([0, 0, 0, 0, 0, ]),
             # "jerk (cm/s^3)": np.array([0, 0, 0, 0, 0, ]),
         }),
@@ -693,11 +696,11 @@ def test_get_abort_on_early_response(foraging2_data_stage4_2018_05_10):
 
 def test_get_periodic_flash(foraging2_data_stage4_2018_05_10):
     data = foraging2_data_stage4_2018_05_10.copy()
-    
+
     assert extract.get_periodic_flash(data) == (0.25, 0.5)
-    
+
     data['items']['behavior']['config']['DoC']['periodic_flash'] = None
     assert extract.get_periodic_flash(data) is None
-    
+
     data['items']['behavior']['config']['DoC']['periodic_flash'] = 'None'
     assert extract.get_periodic_flash(data) is None

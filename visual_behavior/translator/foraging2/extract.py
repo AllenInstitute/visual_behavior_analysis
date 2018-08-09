@@ -576,7 +576,13 @@ def get_vsig(exp_data):
     - asssumes data is in the Foraging2 format
     - no idea what the units are
     """
-    return behavior_items_or_top_level(exp_data)["encoders"][0]["vsig"]
+
+    vsig = behavior_items_or_top_level(exp_data)["encoders"][0]["vsig"]
+    if len(vsig)==0:
+        dx = get_dx(exp_data)
+        vsig = np.empty_like(dx)
+        vsig[:] = np.nan
+    return vsig
 
 
 def get_vin(exp_data):
@@ -598,7 +604,12 @@ def get_vin(exp_data):
     - asssumes data is in the Foraging2 format
     - no idea what the units are
     """
-    return behavior_items_or_top_level(exp_data)["encoders"][0]["vin"]
+    vin = behavior_items_or_top_level(exp_data)["encoders"][0]["vin"]
+    if len(vin)==0:
+        dx = get_dx(exp_data)
+        vin = np.empty_like(dx)
+        vin[:] = np.nan
+    return vin
 
 
 def get_licks(exp_data, time=None):
@@ -772,8 +783,8 @@ def get_running_speed(exp_data, smooth=False, time=None):
         'frame': range(len(time)),
         'speed': speed,
         'dx': dx_raw,
-        'v_sig': get_vsig(data),
-        'v_in': get_vin(data),
+        'v_sig': get_vsig(exp_data),
+        'v_in': get_vin(exp_data),
         # 'acceleration (cm/s^2)': accel,
         # 'jerk (cm/s^3)': jerk,
     })
