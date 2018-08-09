@@ -49,7 +49,7 @@ def data_to_change_detection_core(data, time=None):
 
     images = load_images(data)
 
-    return {
+    core_data = {
         "time": time,
         "metadata": load_metadata(data),
         "licks": load_licks(data, time=time),
@@ -417,6 +417,7 @@ def load_visual_stimuli(data, time=None):
         stimuli['image_name'] = None
 
     return stimuli
+
 
 def load_images(data):
 
