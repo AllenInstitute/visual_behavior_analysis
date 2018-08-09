@@ -5,6 +5,7 @@ from scipy.signal import medfilt
 from .extract import get_end_time
 from .extract_images import get_image_data, get_image_metadata
 from ...utilities import calc_deriv, rad_to_dist, local_time, ListHandler, DoubleColonFormatter
+from ...uuid_utils import make_deterministic_session_uuid
 
 import logging
 
@@ -101,6 +102,12 @@ def load_metadata(data):
     metadata['startdatetime'] = local_time(
         metadata["startdatetime"],
         timezone='America/Los_Angeles',
+    )
+
+    logger.warning('`session_uuid` not found. generating a deterministic UUID')
+    metadata['behavior_session_uuid'] = make_deterministic_session_uuid(
+        metadata['mouseid'],
+        metadata['startdatetime'],
     )
 
     metadata['auto_reward_vol'] = 0.05  # hard coded

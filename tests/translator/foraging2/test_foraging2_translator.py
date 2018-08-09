@@ -2,6 +2,7 @@ import pytest
 import datetime
 import pandas as pd
 import numpy as np
+from uuid import UUID
 
 from visual_behavior.translator import foraging2
 
@@ -138,7 +139,7 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             "abort_on_early_response": None,
             "initial_blank_duration": 0.0,
             'even_sampling_enabled': False,
-            "behavior_session_uuid": '',
+            "behavior_session_uuid": UUID('{a5fa6058-c1f5-52f1-b767-5442075de1ae}'),
             "abort_on_early_response": True,
             "auto_reward_delay": 0.0,
             "periodic_flash": (0.25, 0.5),

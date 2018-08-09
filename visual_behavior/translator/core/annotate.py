@@ -3,17 +3,8 @@ import warnings
 import pandas as pd
 import numpy as np
 from six import iteritems
-from dateutil import tz, parser
+from dateutil import parser
 from functools import wraps
-from ...uuid_utils import create_session_uuid
-
-
-def make_deterministic_session_uuid(metadata):
-    mouse_id = metadata['mouseid']
-    start_time_datetime = parser.parse(metadata["startdatetime"])
-    start_time_datetime_utc = start_time_datetime.astimezone(tz.gettz("UTC")).isoformat()
-    behavior_session_uuid = create_session_uuid(mouse_id, start_time_datetime_utc)
-    return behavior_session_uuid
 
 
 def inplace(func):
