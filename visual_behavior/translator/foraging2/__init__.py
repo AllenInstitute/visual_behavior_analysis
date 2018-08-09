@@ -54,6 +54,7 @@ def data_to_change_detection_core(data, time=None):
     handler.setFormatter(
         DoubleColonFormatter
     )
+    handler.setLevel(logging.INFO)
 
     logger.addHandler(
         handler

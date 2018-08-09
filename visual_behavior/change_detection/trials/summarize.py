@@ -75,6 +75,7 @@ DEFAULT_SUMMARY_METRICS = dict(
     stimulus=session_metrics.stimulus,
 )
 
+
 def session_level_summary(trials, groupby=('mouse_id', 'startdatetime'), **kwargs):
     """ computes session-level summary table
     """
