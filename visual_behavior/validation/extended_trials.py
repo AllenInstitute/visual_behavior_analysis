@@ -354,16 +354,18 @@ def validate_min_change_time(trials, pre_change_time, tolerance=0.015):
         return True
 
 
-def validate_max_change_time(trials, pre_change_time, stimulus_window, tolerance=0.05):
-    '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
-    change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
-    # can only run validation if there are some non-null values
-    if all(pd.isnull(change_times_trial_referenced)) == False:
-        return np.nanmax(change_times_trial_referenced) < (pre_change_time + stimulus_window + tolerance)
-    # cannot run valiation function if all null, just return True
-    elif all(pd.isnull(change_times_trial_referenced)) == True:
+def validate_max_change_time(trials, pre_change_time, stimulus_window, distribution_type, tolerance=0.05):
+    if distribution_type.lower() == 'geometric':
         return True
-
+    else:
+        '''Changes should never occur at a time greater than `pre_change_time` + `stimulus_window`'''
+        change_times_trial_referenced = (trials['change_time'] - trials['starttime']).values
+        # can only run validation if there are some non-null values
+        if all(pd.isnull(change_times_trial_referenced)) == False:
+            return np.nanmax(change_times_trial_referenced) < (pre_change_time + stimulus_window + tolerance)
+        # cannot run valiation function if all null, just return True
+        elif all(pd.isnull(change_times_trial_referenced)) == True:
+            return True
 
 def validate_reward_when_lick_in_window(trials, tolerance=0.01):
     '''for every trial with a lick in the response window, there should be a reward'''
@@ -426,15 +428,18 @@ def validate_never_more_than_one_reward(trials):
     return np.max(trials['number_of_rewards']) <= 1
 
 
-def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response, tolerance=0.01):
+def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response, distribution_type, tolerance=0.01):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, no non-aborted trials should have a lick before the scheduled change time,
     except when abort_on_early_response is False
     '''
+
     nonaborted_trials = trials[trials.trial_type != 'aborted']
     # We can only check this if there is at least 1 nonaborted trial.
-    if abort_on_early_response == True and len(nonaborted_trials) > 0:
+    if distribution_type.lower() == 'geometric':
+        return True
+    elif abort_on_early_response == True and len(nonaborted_trials) > 0:
         first_lick = nonaborted_trials.apply(get_first_lick_relative_to_scheduled_change, axis=1)
         # use nanmin, apply tolerance to account for same frame licks
         if np.nanmin(first_lick.values) < 0 - tolerance:
@@ -598,34 +603,37 @@ def validate_number_aborted_trial_repeats(trials, failure_repeats, tolerance=0.0
     return all(block_has_matching_scheduled_change_time)
 
 
-def validate_params_change_after_aborted_trial_repeats(trials, failure_repeats):
+def validate_params_change_after_aborted_trial_repeats(trials, failure_repeats, distribution_type):
     '''
     failure_repeats: for the `failure_repeats`+2 aborted trial, new parameters should be sampled
     '''
 
-    # assign columns to the dataframe to make test possible
-    trials = identify_consecutive_aborted_blocks(trials, failure_repeats)
+    if distribution_type.lower() == 'geometric':
+        return True
+    else:
+        # assign columns to the dataframe to make test possible
+        trials = identify_consecutive_aborted_blocks(trials, failure_repeats)
 
-    # get all aborted trials
-    aborted_trials = trials[trials['trial_type'] == 'aborted']
+        # get all aborted trials
+        aborted_trials = trials[trials['trial_type'] == 'aborted']
 
-    # identify all blocks which should have matching scheduled change times (blocks with lengths in multiples of 'failure_repeats')
-    block_ids = aborted_trials.consecutive_aborted_should_match.unique()
+        # identify all blocks which should have matching scheduled change times (blocks with lengths in multiples of 'failure_repeats')
+        block_ids = aborted_trials.consecutive_aborted_should_match.unique()
 
-    # compare scheduled change times across blocks. They should be different
-    block_has_different_scheduled_change_time_than_last = []
-    for ii, block_id in enumerate(block_ids):
-        scheduled_times_this_block = aborted_trials[aborted_trials.consecutive_aborted_should_match == block_id]['scheduled_change_time'].values
-        first_change_time_in_block = scheduled_times_this_block[0]
-        if ii > 0:  # can't compare first block to anything
-            # ensure change time is different than last change time on last block
-            block_has_different_scheduled_change_time_than_last.append(
-                first_change_time_in_block != last_change_time_in_block  # noqa F821
-            )
-        last_change_time_in_block = scheduled_times_this_block[-1]  # noqa F841
+        # compare scheduled change times across blocks. They should be different
+        block_has_different_scheduled_change_time_than_last = []
+        for ii, block_id in enumerate(block_ids):
+            scheduled_times_this_block = aborted_trials[aborted_trials.consecutive_aborted_should_match == block_id]['scheduled_change_time'].values
+            first_change_time_in_block = scheduled_times_this_block[0]
+            if ii > 0:  # can't compare first block to anything
+                # ensure change time is different than last change time on last block
+                block_has_different_scheduled_change_time_than_last.append(
+                    first_change_time_in_block != last_change_time_in_block  # noqa F821
+                )
+            last_change_time_in_block = scheduled_times_this_block[-1]  # noqa F841
 
-    # return True if every block has different params than the last
-    return all(block_has_different_scheduled_change_time_than_last)
+        # return True if every block has different params than the last
+        return all(block_has_different_scheduled_change_time_than_last)
 
 
 def validate_ignore_false_alarms(trials, abort_on_early_response):
@@ -664,13 +672,16 @@ def validate_stimulus_distribution_key(trials, expected_distribution_name):
     return all(trials['stimulus_distribution'] == expected_distribution_name)
 
 
-def validate_change_time_mean(trials, expected_mean, tolerance=1):
+def validate_change_time_mean(trials, expected_mean, distribution_type, tolerance=1):
     '''
     stimulus_distribution: the mean of the stimulus distribution should match the 'distribution_mean' parameter
     '''
     change_time_trial_referenced = trials['change_time'] - trials['starttime'] - trials['prechange_minimum']
     # if all of the change times are Nan, cannot check mean. Return True
     if all(pd.isnull(change_time_trial_referenced)) == True:
+        return True
+    # or if the distribution is geometric, this doesn't make sense, so return True
+    elif distribution_type.lower() == 'geometric':
         return True
     # otherwise, ensure that the non-null change times are within tolerance of the expected mean
     else:
@@ -893,10 +904,13 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
         return all(initial_blank_in_tolerance)
 
 
-def validate_new_params_on_nonaborted_trials(trials):
+def validate_new_params_on_nonaborted_trials(trials, distribution_type):
     '''
     new parameters should be sampled after any non-aborted trial
     '''
     nonaborted_trials = trials[trials['trial_type'] != 'aborted']
 
-    return all(nonaborted_trials['scheduled_change_time'] != nonaborted_trials['scheduled_change_time'].shift())
+    if distribution_type.lower() == 'geometric':
+        return True
+    else:
+        return all(nonaborted_trials['scheduled_change_time'] != nonaborted_trials['scheduled_change_time'].shift())
