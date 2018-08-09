@@ -65,6 +65,7 @@ def data_to_change_detection_core(data, time=None):
         "running": data_to_running(data),
         "rewards": data_to_rewards(data),
         "visual_stimuli": data_to_visual_stimuli(data),
+        "image_set": data_to_images(data),
     }
 
     core_data['log'] = log_messages
@@ -330,3 +331,12 @@ def data_to_visual_stimuli(data, time=None):
         stimuli,
         time,
     ))
+
+
+def data_to_images(data):
+    logger.error('loading images from foraging2 outputs is not implemented')
+    return {
+        'metadata': {},
+        'images': [],
+        'image_attributes': [],
+    }
