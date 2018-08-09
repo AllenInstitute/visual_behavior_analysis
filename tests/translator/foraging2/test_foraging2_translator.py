@@ -174,6 +174,9 @@ def test_data_to_running(monkeypatch, foraging2_data_fixture):
         "speed": {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, },
         "time": {0: 0.000000, 1: 0.016, 2: 0.032, 3: 0.048, 4: 0.064, },
         "frame": {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, },
+        "dx": {0: 0.0, 1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, },
+        "v_in": {0: np.nan, 1: np.nan, 2: np.nan, 3: np.nan, 4: np.nan, },
+        "v_sig": {0: np.nan, 1: np.nan, 2: np.nan, 3: np.nan, 4: np.nan, },
     })
 
     pd.testing.assert_frame_equal(

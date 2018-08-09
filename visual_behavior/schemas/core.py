@@ -41,6 +41,20 @@ class RunningSchema(TimeSeriesSchema):
         description='The speed of the mouse on the running wheel (in cm/s)',
         required=True,
     )
+    dx = fields.Float(
+        description='The raw encoder values that the speed is computed from.',
+        required=True,
+    )
+    v_in = fields.Float(
+        description='The reference voltage for the encoder.',
+        required=True,
+        allow_none=True,
+    )
+    v_in = fields.Float(
+        description='The input voltage for the encoder.',
+        required=True,
+        allow_none=True,
+    )
 
 
 class TrialSchema(Schema):
