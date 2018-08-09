@@ -372,6 +372,47 @@ class MetadataSchema(Schema):
     )
 
 
+class ImageSetMetadataSchema(Schema):
+    image_set = fields.Str(
+        description='name for image set. should be unique (not enforced)',
+        # required=True,
+    )
+
+
+class ImageAttributesSchema(Schema):
+
+    image_category = fields.String(
+        description='The category of an image stimulus',
+        required=True,
+    )
+    image_name = fields.String(
+        description='The name of an image stimulus',
+        required=True,
+    )
+    image_index = fields.Int(
+        description='Index of image',
+        required=True,
+    )
+
+
+class ImageSetSchema(Schema):
+    metadata = fields.Nested(
+        ImageSetMetadataSchema,
+        description='record of parameters passed into script',
+        required=True,
+    )
+    images = fields.List(
+        fields.Raw,
+        description='Image data',
+        required=True,
+    )
+    image_attributes = fields.List(
+        fields.Nested(ImageAttributesSchema),
+        description='Attributes for each of the images in the set',
+        required=True,
+    )
+
+
 # class ChangeDetectionSessionCoreSchema(Schema):
 #     """ This is the set of core data assets in a change detection session.
 #

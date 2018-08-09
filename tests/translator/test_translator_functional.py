@@ -1,6 +1,6 @@
 
 from visual_behavior.schemas.core import MetadataSchema, StimulusSchema, \
-    RunningSchema, LickSchema, RewardSchema, TrialSchema
+    RunningSchema, LickSchema, RewardSchema, TrialSchema, ImageSetSchema
 from visual_behavior.schemas.extended_trials import ExtendedTrialSchema
 from visual_behavior.translator import foraging2, foraging
 from visual_behavior.translator.core import create_extended_dataframe
@@ -44,8 +44,14 @@ def _test_core_data_schemas(core_data):
     for row, row_errors in errors.items():
         assert len(row_errors)==0, row_errors
 
-    errors = MetadataSchema().validate(core_data['metadata'])
-    assert len(errors)==0, errors.keys()
+    simple_schemas = (
+        (MetadataSchema, core_data['metadata']),
+        (ImageSetSchema, core_data['image_set']),
+    )
+
+    for Schema, data in simple_schemas:
+        errors = Schema().validate(data)
+        assert len(errors)==0, errors.keys()
 
 
 def test_foraging2_translator_schema(foraging2_data_stage4_2018_05_10):
@@ -60,7 +66,23 @@ def test_foraging2_translator_schema(foraging2_data_stage4_2018_05_10):
     generate_qc_report(core_data)
 
 
+
 def test_foraging_translator_schema(behavioral_session_output_fixture):
+
+    core_data = foraging.data_to_change_detection_core(
+        behavioral_session_output_fixture
+    )
+
+    core_data['metadata']['behavior_session_uuid'] = create_session_uuid(
+        str(core_data['metadata']['mouseid']),
+        core_data['metadata']['startdatetime'],
+    )
+
+    _test_core_data_schemas(core_data)
+
+
+    behavioral_session_output_fixture.pop('image_dict')
+
     core_data = foraging.data_to_change_detection_core(
         behavioral_session_output_fixture
     )
