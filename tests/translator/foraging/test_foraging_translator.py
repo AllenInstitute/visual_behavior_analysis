@@ -183,7 +183,7 @@ def test_load_visual_stimuli(behavioral_session_output_fixture):
             0.2668826589360833,
         ],
         'end_frame': [6, 27, 47, 67, 87],
-        'frame': [1L, 21L, 41L, 61L, 81L],
+        'frame': [1, 21, 41, 61, 81],
         'image_category': ['im062', 'im062', 'im062', 'im062', 'im062'],
         'image_name': ['im062', 'im062', 'im062', 'im062', 'im062'],
         'orientation': [None, None, None, None, None],
