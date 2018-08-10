@@ -704,3 +704,19 @@ def test_get_periodic_flash(foraging2_data_stage4_2018_05_10):
 
     data['items']['behavior']['config']['DoC']['periodic_flash'] = 'None'
     assert extract.get_periodic_flash(data) is None
+
+def test_get_platform_info(foraging2_data_stage4_2018_05_10):
+
+    EXPECTED = {
+        'camstim': '0.2.9',
+        'camstim_git_hash': '21f064f',
+        'computer_name': 'W10DTPC0FB21A',
+        'hardware': ('Intel64 Family 6 Model 94 Stepping 3, GenuineIntel', 'AMD64'),
+        'opengl': '4.4.0 - Build 21.20.16.4590',
+        'os': ('Windows', '10', '10.0.14393'),
+        'psychopy': '1.82.01',
+        'pyglet': '1.2.4',
+        'python': '2.7.14',
+        'rig_id': 'unknown',
+    }
+    assert extract.get_platform_info(foraging2_data_stage4_2018_05_10) == EXPECTED

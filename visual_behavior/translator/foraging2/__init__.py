@@ -14,7 +14,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stimulus_window, get_volume_limit, get_failure_repeats, \
     get_catch_frequency, get_free_reward_trials, get_min_no_lick_time, \
     get_max_session_duration, get_abort_on_early_response, get_session_id, \
-    get_even_sampling, get_auto_reward_delay, get_periodic_flash
+    get_even_sampling, get_auto_reward_delay, get_periodic_flash, get_platform_info
 
 
 from .extract_stimuli import get_visual_stimuli
@@ -200,6 +200,7 @@ def data_to_metadata(data):
         "even_sampling_enabled": get_even_sampling(data),
         "behavior_session_uuid": behavior_session_uuid,
         "periodic_flash": get_periodic_flash(data),
+        "platform_info": get_platform_info(data),
     }
 
     return metadata
