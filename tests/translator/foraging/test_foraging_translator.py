@@ -165,6 +165,63 @@ def test_load_running_speed(behavioral_session_output_fixture):
         check_less_precise=3,
     )
 
+
 def test_load_images(behavioral_session_output_fixture):
     images = foraging.load_images(behavioral_session_output_fixture)
     assert set(images.keys())==set(['images','metadata','image_attributes'])
+
+
+def test_load_visual_stimuli(behavioral_session_output_fixture):
+
+    EXPECTED = pd.DataFrame({
+        'contrast': [None, None, None, None, None],
+        'duration': [
+            0.21682183537632227,
+            0.2668964499607682,
+            0.26688618771731853,
+            0.26688362192362547,
+            0.2668826589360833,
+        ],
+        'end_frame': [6, 27, 47, 67, 87],
+        'frame': [1L, 21L, 41L, 61L, 81L],
+        'image_category': ['im062', 'im062', 'im062', 'im062', 'im062'],
+        'image_name': ['im062', 'im062', 'im062', 'im062', 'im062'],
+        'orientation': [None, None, None, None, None],
+        'time': [
+            0.04998128581792116,
+            0.8005754956975579,
+            1.5678746066987514,
+            2.335178849287331,
+            3.1024792436510324,
+        ],
+        },
+        index=[0, 20, 40, 60, 80]
+    )
+
+    pd.testing.assert_frame_equal(
+        foraging.load_visual_stimuli(
+            behavioral_session_output_fixture,
+        ).iloc[:5],
+        EXPECTED,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True,
+        check_less_precise=3,
+    )
+
+    new_time = foraging.load_time(behavioral_session_output_fixture) + 20.0
+    EXPECTED['time'] += 20.0
+
+    pd.testing.assert_frame_equal(
+        foraging.load_visual_stimuli(
+            behavioral_session_output_fixture,
+            new_time,
+        ).iloc[:5],
+        EXPECTED,
+        check_column_type=False,
+        check_index_type=False,
+        check_dtype=False,
+        check_like=True,
+        check_less_precise=3,
+    )
