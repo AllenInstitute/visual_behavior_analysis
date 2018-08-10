@@ -143,6 +143,17 @@ def test_data_to_metadata(monkeypatch, foraging2_data_fixture):
             "abort_on_early_response": True,
             "auto_reward_delay": 0.0,
             "periodic_flash": (0.25, 0.5),
+            "platform_info": {
+                'camstim': '0.2.5',
+                'camstim_git_hash': '4bca34e',
+                'computer_name': 'localhost',
+                'hardware': ('Intel64 Family 6 Model 62 Stepping 4, GenuineIntel', 'AMD64'),
+                'opengl': '4.4.0',
+                'os': ('Windows', '7', '6.1.7601'),
+                'psychopy': '1.82.01',
+                'pyglet': '1.2.4',
+                'python': '2.7.13',
+            }
         }
 
 

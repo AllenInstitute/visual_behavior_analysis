@@ -370,6 +370,10 @@ class MetadataSchema(Schema):
         required=True,
         allow_none=True,
     )
+    platform_info = fields.Dict(
+        description='record of platform information when script ran',
+        required=True,
+    )
     behavior_session_uuid = fields.UUID(
         required=True,
     )
