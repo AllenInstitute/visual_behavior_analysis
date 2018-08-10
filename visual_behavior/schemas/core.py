@@ -370,6 +370,9 @@ class MetadataSchema(Schema):
         required=True,
         allow_none=True,
     )
+    behavior_session_uuid = fields.UUID(
+        required=True,
+    )
 
 
 class ImageSetMetadataSchema(Schema):

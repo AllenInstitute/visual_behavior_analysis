@@ -1,5 +1,6 @@
 import pandas as pd
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
+from ...uuid_utils import make_deterministic_session_uuid
 
 from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
@@ -45,6 +46,7 @@ def data_to_change_detection_core(data, time=None):
     if time is None:
         time = data_to_time(data)
     else:
+        logger.critical('`time` rebasing has not been implemented')
         raise NotImplementedError('the Foraging2 translator does not support rebasing time')
 
     log_messages = []
@@ -52,6 +54,7 @@ def data_to_change_detection_core(data, time=None):
     handler.setFormatter(
         DoubleColonFormatter
     )
+    handler.setLevel(logging.INFO)
 
     logger.addHandler(
         handler
@@ -130,7 +133,14 @@ def data_to_metadata(data):
     start_time_datetime_local = local_time(data["start_time"], timezone='America/Los_Angeles')
 
     mouse_id = get_mouse_id(data)
+
     behavior_session_uuid = get_session_id(data)
+    if len(behavior_session_uuid) == 0:
+        logger.warning('`session_uuid` not found. generating a deterministic UUID')
+        behavior_session_uuid = make_deterministic_session_uuid(
+            mouse_id,
+            start_time_datetime_local,
+        )
 
     device_name = get_device_name(data)
     params = get_params(data)  # this joins both params and commandline params
@@ -149,7 +159,7 @@ def data_to_metadata(data):
     except StopIteration:
         stimulus_category = None
 
-    return {
+    metadata = {
         "startdatetime": start_time_datetime_local,
         "rig_id": get_rig_id(device_name),
         "computer_name": device_name,
@@ -191,6 +201,8 @@ def data_to_metadata(data):
         "behavior_session_uuid": behavior_session_uuid,
         "periodic_flash": get_periodic_flash(data),
     }
+
+    return metadata
 
 
 def data_to_rewards(data):
