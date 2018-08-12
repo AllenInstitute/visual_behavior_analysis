@@ -19,10 +19,13 @@ class VisualBehaviorOphysDataset(object):
         """Initialize visual behavior ophys experiment dataset.
             Loads experiment data from cache_dir, including dF/F traces, roi masks, stimulus metadata, running speed, licks, rewards, and metadata.
 
+            All available experiment data is read upon initialization of the object.
+            Data can be accessed directly as attributes of the class (ex: dff_traces = dataset.dff_traces) or by using functions (ex: dff_traces = dataset.get_dff_traces()
+
         Parameters
         ----------
         experiment_id : ophys experiment ID
-        cache_dir : directory where data files are located for loading
+        cache_dir : directory where data files are located
         """
         self.experiment_id = experiment_id
         self.cache_dir = cache_dir
@@ -48,9 +51,6 @@ class VisualBehaviorOphysDataset(object):
         self.get_cell_indices()
         self.get_max_projection()
         self.get_motion_correction()
-        # self.get_pupil_diameter()
-        # self.get_corrected_fluorescence_traces()
-        # self.get_events()
 
     def get_cache_dir(self):
         if self.cache_dir is None:
