@@ -16,15 +16,16 @@ class ResponseAnalysis(object):
 
     For trial responses, a segment of the dF/F trace for each cell is extracted for each trial in the trials records in a +/-4 seconds window (the 'trial_window') around the change time.
     The mean_response for each cell is taken in a 500ms window after the change time (the 'response_window').
-    The trial_response_df also contains behavioral metadata such as lick times, running speed, reward rate, and initial and change stimulus names.
+    The trial_response_df also contains behavioral metadata from the trial records such as lick times, running speed, reward rate, and initial and change stimulus names.
 
     For stimulus flashes, the mean response is taken in a 500ms window after each stimulus presentation (the 'response_window') in the stimulus_table.
-    The flash_response_df also contains metadata such as the time from last lick, time since last stimulus change, and mean running speed during each flash.
+    The flash_response_df contains the mean response for every cell, for every stimulus flash.
 
     Parameters
     ----------
     dataset: VisualBehaviorOphysDataset instance
-    overwrite_analysis_files: Boolean, if True will create and overwrite response analysis  files.
+    overwrite_analysis_files: Boolean, if True will create and overwrite response analysis files.
+    This can be used if new functionality is added to the ResponseAnalysis class to modify existing structures or make new ones.
     If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
     """
 
