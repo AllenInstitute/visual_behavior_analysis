@@ -93,6 +93,9 @@ class VisualBehaviorOphysDataset(object):
     def get_stimulus_table(self):
         self.stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df',
                                           format='fixed')
+        self.stimulus_table = self.stimulus_table.reset_index()
+        self.stimulus_table = self.stimulus_table.drop(
+            columns=['orientation', 'contrast', 'image_category', 'start_frame', 'end_frame', 'duration','index'])
         return self.stimulus_table
 
     def get_stimulus_template(self):
@@ -104,6 +107,7 @@ class VisualBehaviorOphysDataset(object):
     def get_stimulus_metadata(self):
         self.stimulus_metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df',
                                              format='fixed')
+        self.stimulus_metadata = self.stimulus_metadata.drop(columns='image_category')
         return self.stimulus_metadata
 
     def get_running_speed(self):
@@ -129,6 +133,13 @@ class VisualBehaviorOphysDataset(object):
         trials = all_trials[(all_trials.auto_rewarded != True) & (all_trials.trial_type != 'aborted')].reset_index()
         trials = trials.rename(columns={'level_0': 'original_trial_index'})
         trials.insert(loc=0, column='trial', value=trials.index.values)
+        trials = trials.rename(
+            columns={'starttime': 'start_time', 'endtime': 'end_time', 'startdatetime': 'start_date_time',
+                     'level_0': 'original_trial_index', 'color': 'trial_type_color'})
+        trials = trials[['trial', 'change_time', 'initial_image_name', 'change_image_name', 'trial_type', 'trial_type_color',
+                         'response', 'response_type', 'response_window','lick_times', 'response_latency', 'rewarded', 'reward_times',
+                         'reward_volume', 'reward_rate', 'start_time', 'end_time', 'trial_length', 'mouse_id',
+                         'start_date_time']]
         self.trials = trials
         return self.trials
 

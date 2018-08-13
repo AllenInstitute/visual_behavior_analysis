@@ -149,7 +149,7 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
     return xticks, xticklabels
 
 
-def plot_mean_trace(traces, frame_rate, y_label='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4], ax=None):
+def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4], ax=None):
     """
     Function that accepts an array of single trial traces and plots the mean and SEM of the trace, with xticklabels in seconds
 
@@ -179,7 +179,7 @@ def plot_mean_trace(traces, frame_rate, y_label='dF/F', legend_label=None, color
         ax.set_xticklabels([int(x) for x in xticklabels])
         ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
         ax.set_xlabel('time (sec)')
-        ax.set_ylabel(y_label)
+        ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
 
@@ -222,7 +222,7 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.
     return ax
 
 
-def plot_single_trial_trace(trace, frame_rate, label=None, color='k', interval_sec=1, xlims=[-4, 4], ax=None):
+def plot_single_trial_trace(trace, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4], ax=None):
     """
     Function to plot a single timeseries trace with xticklabels in secconds
 
@@ -241,14 +241,14 @@ def plot_single_trial_trace(trace, frame_rate, label=None, color='k', interval_s
     xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
     if ax is None:
         fig, ax = plt.subplots()
-    ax.plot(trace, label=label, linewidth=3, color=color)
+    ax.plot(trace, label=legend_label, linewidth=3, color=color)
 
     xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
     ax.set_xticks([int(x) for x in xticks])
     ax.set_xticklabels([int(x) for x in xticklabels])
     ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
     ax.set_xlabel('time (sec)')
-    ax.set_ylabel('dF/F')
+    ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
 
@@ -274,7 +274,7 @@ def plot_image_response_for_trial_types(analysis, cell, save=True):
             selected_trials = trials[
                 (trials.change_image_name == change_image_name) & (trials.trial_type == trial_type)].trial.values
             traces = df[(df.cell == cell) & (df.trial.isin(selected_trials))].trace.values
-            ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, label=None, color=colors[c], interval_sec=1,
+            ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=colors[c], interval_sec=1,
                                     xlims=[-4, 4], ax=ax[i])
         ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=0.3)
         ax[i].set_title(trial_type)
