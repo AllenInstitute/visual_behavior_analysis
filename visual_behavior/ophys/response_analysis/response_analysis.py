@@ -99,6 +99,8 @@ class ResponseAnalysis(object):
         # trial_metadata = trial_metadata.rename(columns={'response_time': 'behavioral_response_time'})
         # trial_metadata = trial_metadata.rename(columns={'response_latency': 'behavioral_response_latency'})
         trial_response_df = trial_response_df.merge(self.dataset.trials, on='trial')
+        if 'start_date_time' in self.dataset.trials.keys():
+            print('start_date_time is correct')
         return trial_response_df
 
     def save_trial_response_df(self, trial_response_df):
