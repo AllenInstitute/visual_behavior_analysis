@@ -1,7 +1,7 @@
-
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 import matplotlib
+
 matplotlib.use('Agg')
 
 
