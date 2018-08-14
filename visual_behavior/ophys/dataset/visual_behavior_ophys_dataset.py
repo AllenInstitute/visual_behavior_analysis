@@ -143,7 +143,6 @@ class VisualBehaviorOphysDataset(object):
              'reward_volume', 'reward_rate', 'start_time', 'end_time', 'trial_length', 'mouse_id',
              'start_date_time']]
         self.trials = trials
-        print('renamed trials')
         return self.trials
 
     def get_dff_traces(self):
