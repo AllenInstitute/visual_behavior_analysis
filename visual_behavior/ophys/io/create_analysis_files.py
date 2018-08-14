@@ -6,6 +6,7 @@ matplotlib.use('Agg')
 
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False):
+    print(experiment_id)
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
 
