@@ -16,7 +16,7 @@ def plot_notebook_figures(experiment_id, save_dir):
     ax = ax.ravel()
     x = 0
 
-    cache_dir = r'\\allen\aibs\informatics\swdb2018\visual_behavior'
+    cache_dir = save_dir
 
     from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
@@ -310,10 +310,10 @@ def plot_notebook_figures(experiment_id, save_dir):
 
 
 if __name__ == '__main__':
-    # import sys
+    import sys
 
     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
 
-    # experiment_id = sys.argv[1]
-    experiment_id = 696136550
+    experiment_id = sys.argv[1]
+    # experiment_id = 696136550
     plot_notebook_figures(experiment_id, save_dir)
