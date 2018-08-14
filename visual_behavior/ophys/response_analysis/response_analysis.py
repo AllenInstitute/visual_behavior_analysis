@@ -100,7 +100,9 @@ class ResponseAnalysis(object):
         # trial_metadata = trial_metadata.rename(columns={'response_latency': 'behavioral_response_latency'})
         trial_response_df = trial_response_df.merge(self.dataset.trials, on='trial')
         if 'start_date_time' in self.dataset.trials.keys():
-            print('start_date_time is correct')
+            print('start_date_time is correct in trials')
+        if 'start_date_time' in trial_response_df.keys():
+            print('start_date_time is correct in trial_response_df')
         return trial_response_df
 
     def save_trial_response_df(self, trial_response_df):
@@ -109,6 +111,7 @@ class ResponseAnalysis(object):
 
     def get_trial_response_df(self):
         if self.overwrite_analysis_files:
+            print('overwriting analysis files')
             self.trial_response_df = self.generate_trial_response_df()
             self.save_trial_response_df(self.trial_response_df)
         else:
