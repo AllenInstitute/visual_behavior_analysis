@@ -133,18 +133,16 @@ def plot_notebook_figures(experiment_id, save_dir):
     ax[x].legend(['go','catch'])
     x += 1
 
-    def make_lick_raster(trials, ax=None):
-        if ax is None:
-            figsize = (5, 10)
-            fig,ax = plt.subplots(figsize=figsize)
+    def make_lick_raster(trials):
+        fig, ax = plt.subplots(figsize=(5, 10))
         for trial in trials.trial.values:
             trial_data = trials.iloc[trial]
             # get times relative to change time
-            trial_start = trial_data.starttime - trial_data.change_time
+            trial_start = trial_data.start_time - trial_data.change_time
             lick_times = [(t - trial_data.change_time) for t in trial_data.lick_times]
             reward_time = [(t - trial_data.change_time) for t in trial_data.reward_times]
             # plot trials as colored rows
-            ax.axhspan(trial, trial + 1, -200, 200, color=trial_data.color, alpha=.5)
+            ax.axhspan(trial, trial + 1, -200, 200, color=trial_data.trial_type_color, alpha=.5)
             # plot reward times
             if len(reward_time) > 0:
                 ax.plot(reward_time[0], trial + 0.5, '.', color='b', label='reward', markersize=6)
