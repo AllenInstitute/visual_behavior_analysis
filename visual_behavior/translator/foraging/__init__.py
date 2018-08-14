@@ -5,6 +5,7 @@ from scipy.signal import medfilt
 from .extract import get_end_time
 from .extract_images import get_image_data, get_image_metadata
 from ...utilities import calc_deriv, rad_to_dist, local_time, ListHandler, DoubleColonFormatter
+from ...uuid_utils import make_deterministic_session_uuid
 
 import logging
 
@@ -40,6 +41,7 @@ def data_to_change_detection_core(data, time=None):
     handler.setFormatter(
         DoubleColonFormatter
     )
+    handler.setLevel(logging.INFO)
     logger.addHandler(
         handler
     )
@@ -103,6 +105,12 @@ def load_metadata(data):
         timezone='America/Los_Angeles',
     )
 
+    logger.warning('`session_uuid` not found. generating a deterministic UUID')
+    metadata['behavior_session_uuid'] = make_deterministic_session_uuid(
+        metadata['mouseid'],
+        metadata['startdatetime'],
+    )
+
     metadata['auto_reward_vol'] = 0.05  # hard coded
     metadata['max_session_duration'] = 60.0  # hard coded
     metadata['min_no_lick_time'] = data['minimum_no_lick_time']
@@ -115,6 +123,7 @@ def load_metadata(data):
     metadata['warm_up_trials'] = data['warmup_trials']
     metadata['stimulus_window'] = data['trial_duration'] - data['delta_minimum']
     metadata['auto_reward_delay'] = 0.0  # hard coded
+    metadata['platform_info'] = {}
 
     blank_dur = np.mean(data['blank_duration_range'])
     metadata['periodic_flash'] = (data['stim_duration'], blank_dur) if blank_dur > 0 else None

@@ -5,7 +5,8 @@ from visual_behavior.schemas.extended_trials import ExtendedTrialSchema
 from visual_behavior.translator import foraging2, foraging
 from visual_behavior.translator.core import create_extended_dataframe
 from visual_behavior.uuid_utils import create_session_uuid
-from visual_behavior.validation.qc import generate_qc_report
+from visual_behavior.reporting.software import generate_qc_report
+from visual_behavior.reporting.behavior import change_detection_metrics
 
 
 """test the schemas vs the outputs here
@@ -64,6 +65,7 @@ def test_foraging2_translator_schema(foraging2_data_stage4_2018_05_10):
     )
     _test_core_data_schemas(core_data)
     generate_qc_report(core_data)
+    change_detection_metrics(core_data)
 
 
 
@@ -94,3 +96,4 @@ def test_foraging_translator_schema(behavioral_session_output_fixture):
 
     _test_core_data_schemas(core_data)
     generate_qc_report(core_data)
+    change_detection_metrics(core_data)

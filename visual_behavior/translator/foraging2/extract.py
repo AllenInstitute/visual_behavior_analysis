@@ -952,6 +952,22 @@ def get_mouse_id(exp_data):
         behavior_items.get("cl_params", {}).get("mouse_id")
 
 
+def get_platform_info(exp_data):
+    """Gets platform info for the experiment
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    dict
+
+    """
+    return exp_data['platform_info']
+
+
 def get_pre_change_time(data):
     """Gets the prechange time associated with an experiment
 
