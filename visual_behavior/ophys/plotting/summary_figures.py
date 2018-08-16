@@ -294,6 +294,21 @@ def plot_image_response_for_trial_types(analysis, cell, save=True):
         plt.close()
 
 
+def plot_traces_heatmap(dff_traces, ax=None):
+    if ax is None:
+        figsize = (20, 8)
+        fig, ax = plt.subplots(figsize=figsize)
+    cax = ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=np.percentile(dff_traces[np.isnan(dff_traces)==False], 99))
+    ax.set_ylim(0, dff_traces.shape[0])
+    ax.set_xlim(0,dff_traces.shape[1])
+    ax.set_ylabel('cells')
+    ax.set_xlabel('2P frames')
+    cb = plt.colorbar(cax, pad = 0.015);
+    cb.set_label('dF/F', labelpad=3)
+    return ax
+
+
+
 if __name__ == '__main__':
     experiment_id = 719996589
 
