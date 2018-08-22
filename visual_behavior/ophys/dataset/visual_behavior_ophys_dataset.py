@@ -17,6 +17,17 @@ logger = logging.getLogger(__name__)
 class LazyLoadable(object):
 
     def __init__(self, name, calculate):
+        ''' Wrapper for attributes intended to be computed or loaded once, then held in memory by a containing object.
+
+        Parameters
+        ----------
+        name : str
+            The name of the hidden attribute in which this attribute's data will be stored.
+        calculate : fn
+            a function (presumably expensive) used to calculate or load this attribute's data
+
+        '''
+
         self.name = name
         self.calculate = calculate
 
@@ -235,7 +246,18 @@ class VisualBehaviorOphysDataset(object):
         return np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
 
     @classmethod
-    def factory(cls, experiment_id, cache_dir=None, **kwargs):
+    def construct_and_load(cls, experiment_id, cache_dir=None, **kwargs):
+        ''' Instantiate a VisualBehaviorOphysDataset and load its data
+
+        Parameters
+        ----------
+        experiment_id : int
+            identifier for this experiment
+        cache_dir : str
+            filesystem path to directory containing this experiment's
+
+        '''
+
         obj = cls(experiment_id, cache_dir=cache_dir, **kwargs)
 
         obj.get_analysis_dir()
