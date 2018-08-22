@@ -584,44 +584,44 @@ def check_responses(trials, reward_window=None):
     return did_respond
 
 
-def assign_color(trials, palette='default'):
+def assign_color(trials, palette='trial_types'):
     color = [None] * len(trials)
     for idx in trials.index:
 
         if trials.loc[idx]['trial_type'] == 'aborted':
-            if palette.lower() == 'marina':
+            if palette.lower() == 'trial_types':
                 color[idx] = 'lightgray'
             else:
                 color[idx] = 'red'
 
         elif trials.loc[idx]['auto_rewarded'] == True:
-            if palette.lower() == 'marina':
+            if palette.lower() == 'trial_types':
                 color[idx] = 'darkblue'
             else:
                 color[idx] = 'blue'
 
         elif trials.loc[idx]['trial_type'] == 'go':
             if trials.loc[idx]['response'] == 1:
-                if palette.lower() == 'marina':
+                if palette.lower() == 'trial_types':
                     color[idx] = '#55a868'
                 else:
                     color[idx] = 'darkgreen'
 
             elif trials.loc[idx]['response'] != 1:
-                if palette.lower() == 'marina':
+                if palette.lower() == 'trial_types':
                     color[idx] = '#ccb974'
                 else:
                     color[idx] = 'lightgreen'
 
         elif trials.loc[idx]['trial_type'] == 'catch':
             if trials.loc[idx]['response'] == 1:
-                if palette.lower() == 'marina':
+                if palette.lower() == 'trial_types':
                     color[idx] = '#c44e52'
                 else:
                     color[idx] = 'darkorange'
 
             elif trials.loc[idx]['response'] != 1:
-                if palette.lower() == 'marina':
+                if palette.lower() == 'trial_types':
                     color[idx] = '#4c72b0'
                 else:
                     color[idx] = 'yellow'
