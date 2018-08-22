@@ -14,8 +14,24 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
+class MemcachedCalculation(object):
+    
+    def __init__(self, name, calculate):
+        self.name = name
+        self.calculate = calculate
+
+    def __get__(self, obj, objtype=None):
+        if obj is None:
+            return self
+        if not hasattr(obj, self.name):
+            setattr(obj, self.name, self.calculate(obj))
+        return getattr(obj, self.name)
+    
+
 class VisualBehaviorOphysDataset(object):
-    def __init__(self, experiment_id, cache_dir=None):
+    
+    def __init__(self, experiment_id, cache_dir=None, **kwargs):
         """Initialize visual behavior ophys experiment dataset.
             Loads experiment data from cache_dir, including dF/F traces, roi masks, stimulus metadata, running speed, licks, rewards, and metadata.
 
@@ -30,28 +46,8 @@ class VisualBehaviorOphysDataset(object):
         self.experiment_id = experiment_id
         self.cache_dir = cache_dir
         self.cache_dir = self.get_cache_dir()
-        self.get_analysis_dir()
-        self.get_metadata()
-        self.get_timestamps()
-        self.get_timestamps_ophys()
-        self.get_timestamps_stimulus()
-        self.get_stimulus_table()
-        self.get_stimulus_template()
-        self.get_stimulus_metadata()
-        self.get_running_speed()
-        self.get_licks()
-        self.get_rewards()
-        self.get_task_parameters()
-        self.get_trials()
-        self.get_dff_traces()
-        self.get_roi_metrics()
-        self.get_roi_mask_dict()
-        self.get_roi_mask_array()
-        self.get_cell_specimen_ids()
-        self.get_cell_indices()
-        self.get_max_projection()
-        self.get_motion_correction()
 
+        
     def get_cache_dir(self):
         if self.cache_dir is None:
             if platform.system() == 'Linux':
@@ -65,70 +61,115 @@ class VisualBehaviorOphysDataset(object):
         self.cache_dir = cache_dir
         return self.cache_dir
 
+    
+    def get_analysis_folder(self):
+        candidates = [file for file in os.listdir(self.cache_dir) if str(self.experiment_id) in file]
+        if len(candidates) == 1:
+            self._analysis_folder = candidates[0]
+        elif len(candidates) < 1:
+            raise OSError('unable to locate analysis folder for experiment {} in {}'.format(self.experiment_id, self.cache_dir))
+        elif len(candidates) > 1:
+            raise OSError('{} contains multiple possible analysis folders: {}'.format(self.cache_dir, candidates))
+        
+        return self._analysis_folder
+    analysis_folder = MemcachedCalculation('_analysis_folder', get_analysis_folder)
+    
+    
     def get_analysis_dir(self):
-        analysis_folder = [file for file in os.listdir(self.cache_dir) if str(self.experiment_id) in file]
-        if len(analysis_folder) > 0:
-            self.analysis_folder = analysis_folder[0]
-            self.analysis_dir = os.path.join(self.cache_dir, self.analysis_folder)
-        else:
-            self.analysis_dir = None
-            logger.info('no analysis folder found for {}'.format(self.experiment_id))
-        return self.analysis_dir
+        self._analysis_dir = os.path.join(self.cache_dir, self.analysis_folder)
+        return self._analysis_dir
+    analysis_dir = MemcachedCalculation('_analysis_dir', get_analysis_dir)
+    
 
     def get_metadata(self):
-        self.metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
+        self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
         return self.metadata
-
+    metadata = MemcachedCalculation('_metadata', get_metadata)
+        
+    
     def get_timestamps(self):
-        self.timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df', format='fixed')
+        self._timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df', format='fixed')
+        return self._timestamps
+    timestamps = MemcachedCalculation('_timestamps', get_timestamps)
 
+    
     def get_timestamps_stimulus(self):
-        self.timestamps_stimulus = self.timestamps['stimulus_frames']['timestamps']
-        return self.timestamps_stimulus
+        self._timestamps_stimulus = self.timestamps['stimulus_frames']['timestamps']
+        return self._timestamps_stimulus
+    timestamps_stimulus = MemcachedCalculation('_timestamps_stimulus', get_timestamps_stimulus)
 
+    
     def get_timestamps_ophys(self):
-        self.timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
-        return self.timestamps_ophys
+        self._timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
+        return self._timestamps_ophys
+    timestamps_ophys = MemcachedCalculation('_timestamps_ophys', get_timestamps_ophys)
 
+    
     def get_stimulus_table(self):
-        self.stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df',
-                                          format='fixed')
-        self.stimulus_table = self.stimulus_table.reset_index()
-        self.stimulus_table = self.stimulus_table.drop(
-            columns=['orientation', 'contrast', 'image_category', 'start_frame', 'end_frame', 'duration', 'index'])
-        return self.stimulus_table
+        self._stimulus_table = pd.read_hdf(
+            os.path.join(self.analysis_dir, 'stimulus_table.h5'), 
+            key='df', format='fixed'
+        )
+        self._stimulus_table = self._stimulus_table.reset_index()
+        self._stimulus_table = self._stimulus_table.drop(
+            columns=['orientation', 'contrast', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
+        )
+        return self._stimulus_table
+    stimulus_table = MemcachedCalculation('_stimulus_table', get_stimulus_table)
 
+    
     def get_stimulus_template(self):
-        f = h5py.File(os.path.join(self.analysis_dir, 'stimulus_template.h5'), 'r')
-        self.stimulus_template = np.asarray(f['data'])
-        f.close()
-        return self.stimulus_template
+        stimulus_template_file = h5py.File(os.path.join(self.analysis_dir, 'stimulus_template.h5'), 'r')
+        self._stimulus_template = np.asarray(stim_template_file['data'])
+        stimulus_template_file.close()
+        return self._stimulus_template
+    stimulus_template = MemcachedCalculation('_stimulus_template', get_stimulus_template)
 
+    
     def get_stimulus_metadata(self):
-        self.stimulus_metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df',
-                                             format='fixed')
-        self.stimulus_metadata = self.stimulus_metadata.drop(columns='image_category')
-        return self.stimulus_metadata
+        self._stimulus_metadata = pd.read_hdf(
+            os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), 
+            key='df', format='fixed'
+        )
+        self._stimulus_metadata = self._stimulus_metadata.drop(columns='image_category')
+        return self._stimulus_metadata
+    stimulus_metadata = MemcachedCalculation('_stimulus_metadata', get_stimulus_metadata)
 
+    
     def get_running_speed(self):
-        self.running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df', format='fixed')
-        return self.running_speed
+        self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df', format='fixed')
+        return self._running_speed
+    running_speed = MemcachedCalculation('_running_speed', get_running_speed)
 
+    
     def get_licks(self):
-        self.licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df', format='fixed')
-        return self.licks
+        self._licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df', format='fixed')
+        return self._licks
+    licks = MemcachedCalculation('_licks', get_licks)
 
+    
     def get_rewards(self):
-        self.rewards = pd.read_hdf(os.path.join(self.analysis_dir, 'rewards.h5'), key='df', format='fixed')
-        return self.rewards
-
+        self._rewards = pd.read_hdf(os.path.join(self.analysis_dir, 'rewards.h5'), key='df', format='fixed')
+        return self._rewards
+    rewards = MemcachedCalculation('_rewards', get_rewards)
+    
+    
     def get_task_parameters(self):
-        self.task_parameters = pd.read_hdf(os.path.join(self.analysis_dir, 'task_parameters.h5'), key='df',
-                                           format='fixed')
-        return self.task_parameters
+        self._task_parameters = pd.read_hdf(
+            os.path.join(self.analysis_dir, 'task_parameters.h5'), 
+            key='df', format='fixed'
+        )
+        return self._task_parameters
+    task_parameters = MemcachedCalculation('_task_parameters', get_task_parameters)
 
+    
+    def get_all_trials(self):
+        self._all_trials = pd.read_hdf(os.path.join(self.analysis_dir, 'trials.h5'), key='df', format='fixed')
+        return self._all_trials
+    all_trials = MemcachedCalculation('_all_trials', get_all_trials)
+    
+    
     def get_trials(self):
-        self.all_trials = pd.read_hdf(os.path.join(self.analysis_dir, 'trials.h5'), key='df', format='fixed')
         all_trials = self.all_trials.copy()
         trials = all_trials[(all_trials.auto_rewarded != True) & (all_trials.trial_type != 'aborted')].reset_index()
         trials = trials.rename(columns={'level_0': 'original_trial_index'})
@@ -142,65 +183,112 @@ class VisualBehaviorOphysDataset(object):
              'reward_times',
              'reward_volume', 'reward_rate', 'start_time', 'end_time', 'trial_length', 'mouse_id',
              'start_date_time']]
-        self.trials = trials
-        return self.trials
+        self._trials = trials
+        return self._trials
+    trials = MemcachedCalculation('_trials', get_trials)
 
+    
     def get_dff_traces(self):
         f = h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r')
         dff_traces = []
         for key in f.keys():
             dff_traces.append(np.asarray(f[key]))
         f.close()
-        self.dff_traces = np.asarray(dff_traces)
-        return self.timestamps_ophys, self.dff_traces
+        self._dff_traces = np.asarray(dff_traces)
+        return self.timestamps_ophys, self._dff_traces
+    dff_traces = MemcachedCalculation('_dff_traces', get_dff_traces)
 
+    
     def get_roi_metrics(self):
-        self.roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
-        return self.roi_metrics
+        self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
+        return self._roi_metrics
+    roi_metrics = MemcachedCalculation('_roi_metrics', get_roi_metrics)
 
+    
     def get_roi_mask_dict(self):
         f = h5py.File(os.path.join(self.analysis_dir, 'roi_masks.h5'), 'r')
         roi_mask_dict = {}
         for key in f.keys():
             roi_mask_dict[key] = np.asarray(f[key])
         f.close()
-        self.roi_mask_dict = roi_mask_dict
-        return self.roi_mask_dict
+        self._roi_mask_dict = roi_mask_dict
+        return self._roi_mask_dict
+    roi_mask_dict = MemcachedCalculation('_roi_mask_dict', get_roi_mask_dict)
 
+    
     def get_roi_mask_array(self):
         w, h = self.roi_mask_dict[self.roi_mask_dict.keys()[0]].shape
         roi_mask_array = np.empty((len(self.roi_mask_dict.keys()), w, h))
         for cell_specimen_id in self.roi_mask_dict.keys():
             cell_index = self.get_cell_index_for_cell_specimen_id(int(cell_specimen_id))
             roi_mask_array[cell_index] = self.roi_mask_dict[cell_specimen_id]
-        self.roi_mask_array = roi_mask_array
-        return self.roi_mask_array
+        self._roi_mask_array = roi_mask_array
+        return self._roi_mask_array
+    roi_mask_array = MemcachedCalculation('_roi_mask_array', get_roi_mask_array)
 
+    
     def get_max_projection(self):
         f = h5py.File(os.path.join(self.analysis_dir, 'max_projection.h5'), 'r')
-        self.max_projection = np.asarray(f['data'])
+        self._max_projection = np.asarray(f['data'])
         f.close()
-        return self.max_projection
+        return self._max_projection
+    max_projection = MemcachedCalculation('_max_projection', get_max_projection)
 
+    
     def get_motion_correction(self):
-        self.motion_correction = pd.read_hdf(os.path.join(self.analysis_dir, 'motion_correction.h5'), key='df',
-                                             format='fixed')
-        return self.motion_correction
+        self._motion_correction = pd.read_hdf(
+            os.path.join(self.analysis_dir, 'motion_correction.h5'), 
+            key='df', format='fixed'
+        )
+        return self._motion_correction
+    motion_correction = MemcachedCalculation('_motion_correction', get_motion_correction)
 
+    
     def get_cell_specimen_ids(self):
-        self.cell_specimen_ids = np.sort(self.roi_metrics.cell_specimen_id.values)
-        return self.cell_specimen_ids
-
+        self._cell_specimen_ids = np.sort(self.roi_metrics.cell_specimen_id.values)
+        return self._cell_specimen_ids
+    cell_specimen_ids = MemcachedCalculation('_cell_specimen_ids', get_cell_specimen_ids)
+    
+    
     def get_cell_indices(self):
-        self.cell_indices = np.sort(self.roi_metrics.cell_index.values)
-        return self.cell_indices
+        self._cell_indices = np.sort(self.roi_metrics.cell_index.values)
+        return self._cell_indices
+    cell_indices = MemcachedCalculation('_cell_indices', get_cell_indices)
 
+    
     def get_cell_specimen_id_for_cell_index(self, cell_index):
-        cell_specimen_ids = self.get_cell_specimen_ids()
-        cell_specimen_id = cell_specimen_ids[cell_index]
-        return cell_specimen_id
+        return self.cell_specimen_ids[cell_index]
 
+    
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
-        cell_specimen_ids = self.get_cell_specimen_ids()
-        cell_index = np.where(cell_specimen_ids == cell_specimen_id)[0][0]
-        return cell_index
+        return np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
+                    
+    
+    @classmethod
+    def factory(cls, experiment_id, cache_dir=None, **kwargs):
+        obj = cls(experiment_id, cache_dir=cache_dir, **kwargs)
+
+        obj.get_analysis_dir()
+        obj.get_metadata()
+        obj.get_timestamps()
+        obj.get_timestamps_ophys()
+        obj.get_timestamps_stimulus()
+        obj.get_stimulus_table()
+        obj.get_stimulus_template()
+        obj.get_stimulus_metadata()
+        obj.get_running_speed()
+        obj.get_licks()
+        obj.get_rewards()
+        obj.get_task_parameters()
+        obj.get_trials()
+        obj.get_dff_traces()
+        obj.get_roi_metrics()
+        obj.get_roi_mask_dict()
+        obj.get_roi_mask_array()
+        obj.get_cell_specimen_ids()
+        obj.get_cell_indices()
+        obj.get_max_projection()
+        obj.get_motion_correction()
+        
+        return obj
+        
