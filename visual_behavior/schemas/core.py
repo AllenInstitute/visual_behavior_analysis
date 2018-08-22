@@ -41,6 +41,20 @@ class RunningSchema(TimeSeriesSchema):
         description='The speed of the mouse on the running wheel (in cm/s)',
         required=True,
     )
+    dx = fields.Float(
+        description='The raw encoder values that the speed is computed from.',
+        required=True,
+    )
+    v_in = fields.Float(
+        description='The reference voltage for the encoder.',
+        required=True,
+        allow_none=True,
+    )
+    v_in = fields.Float(
+        description='The input voltage for the encoder.',
+        required=True,
+        allow_none=True,
+    )
 
 
 class TrialSchema(Schema):
@@ -355,6 +369,54 @@ class MetadataSchema(Schema):
         description='duration of flash and grey screen',
         required=True,
         allow_none=True,
+    )
+    platform_info = fields.Dict(
+        description='record of platform information when script ran',
+        required=True,
+    )
+    behavior_session_uuid = fields.UUID(
+        required=True,
+    )
+
+
+class ImageSetMetadataSchema(Schema):
+    image_set = fields.Str(
+        description='name for image set. should be unique (not enforced)',
+        # required=True,
+    )
+
+
+class ImageAttributesSchema(Schema):
+
+    image_category = fields.String(
+        description='The category of an image stimulus',
+        required=True,
+    )
+    image_name = fields.String(
+        description='The name of an image stimulus',
+        required=True,
+    )
+    image_index = fields.Int(
+        description='Index of image',
+        required=True,
+    )
+
+
+class ImageSetSchema(Schema):
+    metadata = fields.Nested(
+        ImageSetMetadataSchema,
+        description='record of parameters passed into script',
+        required=True,
+    )
+    images = fields.List(
+        fields.Raw,
+        description='Image data',
+        required=True,
+    )
+    image_attributes = fields.List(
+        fields.Nested(ImageAttributesSchema),
+        description='Attributes for each of the images in the set',
+        required=True,
     )
 
 

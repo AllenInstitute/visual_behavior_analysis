@@ -30,14 +30,12 @@ def get_sd_in_window(trace, window, frame_rate):
 
 
 def get_sd_over_baseline(trace, response_window, baseline_window, frame_rate):
-    # baseline_mean = self.get_mean_in_window(trace, self.baseline_window, self.metadata['ophys_frame_rate'])
     baseline_std = get_sd_in_window(trace, baseline_window, frame_rate)
     response_mean = get_mean_in_window(trace, response_window, frame_rate)
     return response_mean / (baseline_std)
 
 
 def get_p_val(trace, response_window, frame_rate):
-    # method borrowed from Brain Observatory analysis in allensdk
     response_window_duration = response_window[1] - response_window[0]
     baseline_end = int(response_window[0] * frame_rate)
     baseline_start = int((response_window[0] - response_window_duration) * frame_rate)

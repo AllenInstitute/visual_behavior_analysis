@@ -1,5 +1,6 @@
 import pandas as pd
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
+from ...uuid_utils import make_deterministic_session_uuid
 
 from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
@@ -13,7 +14,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stimulus_window, get_volume_limit, get_failure_repeats, \
     get_catch_frequency, get_free_reward_trials, get_min_no_lick_time, \
     get_max_session_duration, get_abort_on_early_response, get_session_id, \
-    get_even_sampling, get_auto_reward_delay, get_periodic_flash
+    get_even_sampling, get_auto_reward_delay, get_periodic_flash, get_platform_info
 
 
 from .extract_stimuli import get_visual_stimuli
@@ -45,6 +46,7 @@ def data_to_change_detection_core(data, time=None):
     if time is None:
         time = data_to_time(data)
     else:
+        logger.critical('`time` rebasing has not been implemented')
         raise NotImplementedError('the Foraging2 translator does not support rebasing time')
 
     log_messages = []
@@ -52,6 +54,7 @@ def data_to_change_detection_core(data, time=None):
     handler.setFormatter(
         DoubleColonFormatter
     )
+    handler.setLevel(logging.INFO)
 
     logger.addHandler(
         handler
@@ -65,6 +68,7 @@ def data_to_change_detection_core(data, time=None):
         "running": data_to_running(data),
         "rewards": data_to_rewards(data),
         "visual_stimuli": data_to_visual_stimuli(data),
+        "image_set": data_to_images(data),
     }
 
     core_data['log'] = log_messages
@@ -129,7 +133,14 @@ def data_to_metadata(data):
     start_time_datetime_local = local_time(data["start_time"], timezone='America/Los_Angeles')
 
     mouse_id = get_mouse_id(data)
+
     behavior_session_uuid = get_session_id(data)
+    if len(behavior_session_uuid) == 0:
+        logger.warning('`session_uuid` not found. generating a deterministic UUID')
+        behavior_session_uuid = make_deterministic_session_uuid(
+            mouse_id,
+            start_time_datetime_local,
+        )
 
     device_name = get_device_name(data)
     params = get_params(data)  # this joins both params and commandline params
@@ -148,7 +159,7 @@ def data_to_metadata(data):
     except StopIteration:
         stimulus_category = None
 
-    return {
+    metadata = {
         "startdatetime": start_time_datetime_local,
         "rig_id": get_rig_id(device_name),
         "computer_name": device_name,
@@ -189,7 +200,10 @@ def data_to_metadata(data):
         "even_sampling_enabled": get_even_sampling(data),
         "behavior_session_uuid": behavior_session_uuid,
         "periodic_flash": get_periodic_flash(data),
+        "platform_info": get_platform_info(data),
     }
+
+    return metadata
 
 
 def data_to_rewards(data):
@@ -330,3 +344,12 @@ def data_to_visual_stimuli(data, time=None):
         stimuli,
         time,
     ))
+
+
+def data_to_images(data):
+    logger.error('loading images from foraging2 outputs is not implemented')
+    return {
+        'metadata': {},
+        'images': [],
+        'image_attributes': [],
+    }

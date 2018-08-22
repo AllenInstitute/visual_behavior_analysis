@@ -285,7 +285,10 @@ def test_get_licks(monkeypatch, foraging2_data_fixture):
         pd.DataFrame(data={
             "time": [0.0, 0.016, 0.032, 0.048, 0.064, ],
             "speed": [0, 0, 0, 0, 0, ],
-            "frame": [0, 1, 2, 3, 4, ]
+            "frame": [0, 1, 2, 3, 4, ],
+            "dx": [0, 0, 0, 0, 0, ],
+            "v_in": [np.nan, np.nan, np.nan, np.nan, np.nan, ],
+            "v_sig": [np.nan, np.nan, np.nan, np.nan, np.nan, ],
             # "acceleration (cm/s^2)": np.array([0, 0, 0, 0, 0, ]),
             # "jerk (cm/s^3)": np.array([0, 0, 0, 0, 0, ]),
         }),
@@ -693,11 +696,27 @@ def test_get_abort_on_early_response(foraging2_data_stage4_2018_05_10):
 
 def test_get_periodic_flash(foraging2_data_stage4_2018_05_10):
     data = foraging2_data_stage4_2018_05_10.copy()
-    
+
     assert extract.get_periodic_flash(data) == (0.25, 0.5)
-    
+
     data['items']['behavior']['config']['DoC']['periodic_flash'] = None
     assert extract.get_periodic_flash(data) is None
-    
+
     data['items']['behavior']['config']['DoC']['periodic_flash'] = 'None'
     assert extract.get_periodic_flash(data) is None
+
+def test_get_platform_info(foraging2_data_stage4_2018_05_10):
+
+    EXPECTED = {
+        'camstim': '0.2.9',
+        'camstim_git_hash': '21f064f',
+        'computer_name': 'W10DTPC0FB21A',
+        'hardware': ('Intel64 Family 6 Model 94 Stepping 3, GenuineIntel', 'AMD64'),
+        'opengl': '4.4.0 - Build 21.20.16.4590',
+        'os': ('Windows', '10', '10.0.14393'),
+        'psychopy': '1.82.01',
+        'pyglet': '1.2.4',
+        'python': '2.7.14',
+        'rig_id': 'unknown',
+    }
+    assert extract.get_platform_info(foraging2_data_stage4_2018_05_10) == EXPECTED

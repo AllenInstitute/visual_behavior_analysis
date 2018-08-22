@@ -19,12 +19,20 @@ import matplotlib
 matplotlib.use('Agg')
 
 import matplotlib.image as mpimg
+#
+# from ...translator import foraging2, foraging
+# from ...translator.core import create_extended_dataframe
+# from ..sync.process_sync import get_sync_data
+# from ..plotting.summary_figures import save_figure, plot_roi_validation
+# from .lims_database import LimsDatabase
 
-from ...translator import foraging2, foraging
-from ...translator.core import create_extended_dataframe
-from ..sync.process_sync import get_sync_data
-from ..plotting.summary_figures import save_figure, plot_roi_validation
-from .lims_database import LimsDatabase
+
+# relative import doesnt work on cluster
+from visual_behavior.translator import foraging2, foraging
+from visual_behavior.translator.core import create_extended_dataframe
+from visual_behavior.ophys.sync.process_sync import get_sync_data
+from visual_behavior.ophys.plotting.summary_figures import save_figure, plot_roi_validation
+from visual_behavior.ophys.io.lims_database import LimsDatabase
 
 
 def save_data_as_h5(data, name, analysis_dir):
@@ -52,7 +60,8 @@ def get_lims_data(lims_id):
     ld = LimsDatabase(lims_id)
     lims_data = ld.get_qc_param()
     lims_data.insert(loc=2, column='experiment_id', value=lims_data.lims_id.values[0])
-    lims_data.insert(loc=2, column='session_type', value='behavior_'+lims_data.experiment_name.values[0].split('_')[-1])
+    lims_data.insert(loc=2, column='session_type',
+                     value='behavior_' + lims_data.experiment_name.values[0].split('_')[-1])
     lims_data.insert(loc=2, column='ophys_session_dir', value=lims_data.datafolder.values[0][:-28])
     return lims_data
 
@@ -64,8 +73,8 @@ def get_lims_id(lims_data):
 
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
-    analysis_folder_name = str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                           str(lims_data.lims_id.values[0]) + '_' + \
+    analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
+                           str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
                            lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
                            lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
                            lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]
@@ -129,9 +138,15 @@ def get_segmentation_dir(lims_data):
 
 def get_sync_path(lims_data):
     ophys_session_dir = get_ophys_session_dir(lims_data)
-    sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file][0]
-    sync_path = os.path.join(ophys_session_dir, sync_file)
     analysis_dir = get_analysis_dir(lims_data)
+    # hack for expt 713525580 - sync in lims is broken, fixed version available in analysis_dir
+    if get_lims_id(lims_data) == 713525580:
+        print('using sync file from analysis directory instead of lims')
+        sync_file = [file for file in os.listdir(analysis_dir) if 'sync' in file][0]
+        sync_path = os.path.join(analysis_dir, sync_file)
+    else:
+        sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file][0]
+        sync_path = os.path.join(ophys_session_dir, sync_file)
     if sync_file not in os.listdir(analysis_dir):
         print('moving ', sync_file, ' to analysis dir')  # flake8: noqa: E999
         shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
@@ -165,9 +180,14 @@ def get_metadata(lims_data, timestamps):
         metadata['experiment_container_id'] = None
     metadata['targeted_structure'] = lims_data.structure.values[0]
     metadata['imaging_depth'] = int(lims_data.depth.values[0])
-    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0]
-    metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0]
-    metadata['session_type'] = lims_data.session_type.values[0][-1]
+    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
+    if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
+        metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[1] + ';' + \
+                                    lims_data['specimen_reporter_line'].values[0].split('(')[0]
+    else:
+        metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0].split('(')[0]
+    metadata['full_genotype'] = metadata['cre_line'] + ';' + metadata['reporter_line']
+    metadata['session_type'] = 'behavior_session_' + lims_data.session_type.values[0][-1]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
@@ -248,19 +268,30 @@ def get_task_parameters(core_data):
     return task_parameters
 
 
-def save_core_data_components(core_data, lims_data):
+def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     rewards = core_data['rewards']
     save_dataframe_as_h5(rewards, 'rewards', get_analysis_dir(lims_data))
 
     running = core_data['running']
-    save_dataframe_as_h5(running, 'running', get_analysis_dir(lims_data))
+    running_speed = running.rename(columns={'speed': 'running_speed'})
+    # filter to get rid of encoder spikes
+    # happens in 645086795, 645362806
+    from scipy.signal import medfilt
+    running_speed['running_speed'] = medfilt(running_speed.running_speed.values, kernel_size=5)
+    save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
     licks = core_data['licks']
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
-    visual_stimuli = core_data['visual_stimuli']
-    visual_stimuli.insert(loc=0, column='flash_num', value=np.arange(0, len(visual_stimuli)))
-    save_dataframe_as_h5(visual_stimuli, 'visual_stimuli', get_analysis_dir(lims_data))
+    stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
+    # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
+    stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
+    stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
+    start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
+    stimulus_table.start_time = start_time
+    end_time = [timestamps_stimulus[end_frame] for end_frame in stimulus_table.end_frame.values]
+    stimulus_table.insert(loc=4, column='end_time', value=end_time)
+    save_dataframe_as_h5(stimulus_table, 'stimulus_table', get_analysis_dir(lims_data))
 
     task_parameters = get_task_parameters(core_data)
     save_dataframe_as_h5(task_parameters, 'task_parameters', get_analysis_dir(lims_data))
@@ -279,20 +310,15 @@ def save_trials(trials, lims_data):
     save_dataframe_as_h5(trials, 'trials', get_analysis_dir(lims_data))
 
 
-def get_running_speed(pkl, timestamps):
-    # from visual_behavior.translator.foraging2 import get_running_speed
-    # speed = get_running_speed(pkl, smooth=False, time=None)
-    # running_speed = speed['speed (cm/s)'].values
-    import visual_behavior.io as vbio
-    timestamps_stimulus = get_timestamps_stimulus(timestamps)
-    speed = vbio.load_running_speed(pkl, time=timestamps_stimulus)
-    running_speed = speed['speed (cm/s)'].values
-    print('length of running speed trace: ', str(len(running_speed)))
-    return running_speed
+def get_visual_stimulus_data(pkl):
+    stimulus_template, stimulus_metadata = foraging.extract_images.get_image_data(pkl['image_dict'])
+    stimulus_metadata = pd.DataFrame(stimulus_metadata)
+    return stimulus_template, stimulus_metadata
 
 
-def save_running_speed(running_speed, lims_data):
-    save_data_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
+def save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data):
+    save_dataframe_as_h5(stimulus_metadata, 'stimulus_metadata', get_analysis_dir(lims_data))
+    save_data_as_h5(stimulus_template, 'stimulus_template', get_analysis_dir(lims_data))
 
 
 def parse_mask_string(mask_string):
@@ -367,6 +393,10 @@ def get_roi_metrics(lims_data):
     roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
     # remove invalid roi_metrics
     roi_metrics = roi_metrics[roi_metrics.valid == True]
+    ## hack for expt 692342909 with 2 rois at same location - need a long term solution for this!
+    if get_lims_id(lims_data) == 692342909:
+        print('removing bad cell')
+        roi_metrics = roi_metrics[roi_metrics.cell_specimen_id.isin([692357032]) == False]
     # add filtered cell index
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
                   roi_metrics.cell_specimen_id.values]
@@ -434,20 +464,31 @@ def get_dff_traces(roi_metrics, lims_data):
 
 def save_dff_traces(dff_traces, roi_metrics, lims_data):
     traces_path = os.path.join(get_analysis_dir(lims_data), 'dff_traces.h5')
-    if not os.path.exists(traces_path):
-        f = h5py.File(traces_path, 'w')
-        for i, id in enumerate(get_cell_specimen_ids(roi_metrics)):
-            f.create_dataset(str(id), data=dff_traces[i])
-        f.close()
+    f = h5py.File(traces_path, 'w')
+    for i, index in enumerate(get_cell_specimen_ids(roi_metrics)):
+        f.create_dataset(str(index), data=dff_traces[i])
+    f.close()
 
 
-def save_timestamps(timestamps, dff_traces, lims_data):
+def save_timestamps(timestamps, dff_traces, core_data, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
         print('length of ophys timestamps >  length of traces by', str(difference),
               'frames , truncating ophys timestamps')
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
+    # account for dropped ophys frames - a rare but unfortunate issue
+    if dff_traces.shape[1] > timestamps['ophys_frames']['timestamps'].shape[0]:
+        difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
+        print('length of ophys timestamps <  length of traces by', str(difference),
+              'frames , truncating traces')
+        dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
+        roi_metrics = get_roi_metrics(lims_data)
+        save_dff_traces(dff_traces, roi_metrics, lims_data)
+    # make sure length of timestamps equals length of running traces
+    running_speed = core_data['running'].speed.values
+    if len(running_speed) < timestamps['stimulus_frames']['timestamps'].shape[0]:
+        timestamps['stimulus_frames']['timestamps'] = timestamps['stimulus_frames']['timestamps'][:len(running_speed)]
     save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
 
 
@@ -511,10 +552,13 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     pkl = get_pkl(lims_data)
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     core_data = get_core_data(pkl, timestamps_stimulus)
-    save_core_data_components(core_data, lims_data)
+    save_core_data_components(core_data, lims_data, timestamps_stimulus)
 
     trials = get_trials(core_data)
     save_trials(trials, lims_data)
+
+    stimulus_template, stimulus_metadata = get_visual_stimulus_data(pkl)
+    save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data)
 
     roi_metrics = get_roi_metrics(lims_data)
     save_roi_metrics(roi_metrics, lims_data)
@@ -525,7 +569,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     dff_traces = get_dff_traces(roi_metrics, lims_data)
     save_dff_traces(dff_traces, roi_metrics, lims_data)
 
-    save_timestamps(timestamps, dff_traces, lims_data)
+    save_timestamps(timestamps, dff_traces, core_data, lims_data)
 
     motion_correction = get_motion_correction(lims_data)
     save_motion_correction(motion_correction, lims_data)
@@ -533,8 +577,11 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     max_projection = get_max_projection(lims_data)
     save_max_projection(max_projection, lims_data)
 
-    roi_validation = get_roi_validation(lims_data)
-    save_roi_validation(roi_validation, lims_data)
+    # import matplotlib
+    # matplotlib.use('Agg')
+
+    # roi_validation = get_roi_validation(lims_data)
+    # save_roi_validation(roi_validation, lims_data)
     print('done converting')
 
     ophys_data = core_data.update(
@@ -553,5 +600,17 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
 
 if __name__ == '__main__':
-    lims_id = 702134928
-    ophys_data = convert_level_1_to_level_2(lims_id, cache_dir=r'\\allen\aibs\informatics\swdb2018\visual_behavior')
+    import sys
+
+    experiment_id = sys.argv[1]
+    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
+    cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+    ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
+
+    # import pandas as pd
+    #
+    # manifest = r'\\allen\aibs\informatics\swdb2018\visual_behavior\visual_behavior_data_manifest.csv'
+    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    # df = pd.read_csv(manifest)
+    # for i, experiment_id in enumerate(df.experiment_id.values):
+    #     ophys_data = convert_level_1_to_level_2(int(experiment_id), cache_dir=cache_dir)

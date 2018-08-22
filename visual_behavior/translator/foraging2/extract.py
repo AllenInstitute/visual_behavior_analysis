@@ -557,6 +557,61 @@ def get_dx(exp_data):
     return behavior_items_or_top_level(exp_data)["encoders"][0]["dx"]
 
 
+def get_vsig(exp_data):
+    """Get wheel rotation for each frame
+
+    Parameters
+    ----------
+    exp_data : Mapping
+        experiment data
+
+    Returns
+    -------
+    numpy.ndarray
+        log of whether or not a stimulus was presented, 1 dimensional with index
+        representing frame number and value position of the frame
+
+    Notes
+    -----
+    - asssumes data is in the Foraging2 format
+    - no idea what the units are
+    """
+
+    vsig = behavior_items_or_top_level(exp_data)["encoders"][0]["vsig"]
+    if len(vsig) == 0:
+        dx = get_dx(exp_data)
+        vsig = np.empty_like(dx)
+        vsig[:] = np.nan
+    return vsig
+
+
+def get_vin(exp_data):
+    """Get wheel rotation for each frame
+
+    Parameters
+    ----------
+    exp_data : Mapping
+        experiment data
+
+    Returns
+    -------
+    numpy.ndarray
+        log of whether or not a stimulus was presented, 1 dimensional with index
+        representing frame number and value position of the frame
+
+    Notes
+    -----
+    - asssumes data is in the Foraging2 format
+    - no idea what the units are
+    """
+    vin = behavior_items_or_top_level(exp_data)["encoders"][0]["vin"]
+    if len(vin) == 0:
+        dx = get_dx(exp_data)
+        vin = np.empty_like(dx)
+        vin[:] = np.nan
+    return vin
+
+
 def get_licks(exp_data, time=None):
     """Returns each lick in an experiment.
 
@@ -705,8 +760,8 @@ def get_running_speed(exp_data, smooth=False, time=None):
         time = get_time(exp_data)
         logger.info("`time` not passed. using intervalms as `time`")
 
-    dx = get_dx(exp_data)
-    dx = medfilt(dx, kernel_size=5)  # remove big, single frame spikes in encoder values
+    dx_raw = get_dx(exp_data)
+    dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
 
     if len(time) < len(dx):
@@ -727,6 +782,9 @@ def get_running_speed(exp_data, smooth=False, time=None):
         'time': time,
         'frame': range(len(time)),
         'speed': speed,
+        'dx': dx_raw,
+        'v_sig': get_vsig(exp_data),
+        'v_in': get_vin(exp_data),
         # 'acceleration (cm/s^2)': accel,
         # 'jerk (cm/s^3)': jerk,
     })
@@ -892,6 +950,22 @@ def get_mouse_id(exp_data):
     behavior_items = behavior_items_or_top_level(exp_data)
     return behavior_items.get("config", {}).get("behavior", {}).get("mouse_id") or \
         behavior_items.get("cl_params", {}).get("mouse_id")
+
+
+def get_platform_info(exp_data):
+    """Gets platform info for the experiment
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    dict
+
+    """
+    return exp_data['platform_info']
 
 
 def get_pre_change_time(data):

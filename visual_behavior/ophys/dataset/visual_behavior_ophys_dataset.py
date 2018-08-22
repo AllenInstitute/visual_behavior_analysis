@@ -19,10 +19,13 @@ class VisualBehaviorOphysDataset(object):
         """Initialize visual behavior ophys experiment dataset.
             Loads experiment data from cache_dir, including dF/F traces, roi masks, stimulus metadata, running speed, licks, rewards, and metadata.
 
+            All available experiment data is read upon initialization of the object.
+            Data can be accessed directly as attributes of the class (ex: dff_traces = dataset.dff_traces) or by using functions (ex: dff_traces = dataset.get_dff_traces()
+
         Parameters
         ----------
         experiment_id : ophys experiment ID
-        cache_dir : directory to save or load analysis files to/from
+        cache_dir : directory where data files are located
         """
         self.experiment_id = experiment_id
         self.cache_dir = cache_dir
@@ -32,22 +35,22 @@ class VisualBehaviorOphysDataset(object):
         self.get_timestamps()
         self.get_timestamps_ophys()
         self.get_timestamps_stimulus()
-        self.get_visual_stimuli()
-        self.get_running()
+        self.get_stimulus_table()
+        self.get_stimulus_template()
+        self.get_stimulus_metadata()
+        self.get_running_speed()
         self.get_licks()
         self.get_rewards()
         self.get_task_parameters()
         self.get_trials()
         self.get_dff_traces()
-        self.get_roi_masks()
         self.get_roi_metrics()
+        self.get_roi_mask_dict()
+        self.get_roi_mask_array()
         self.get_cell_specimen_ids()
         self.get_cell_indices()
         self.get_max_projection()
         self.get_motion_correction()
-        # self.get_pupil_diameter()
-        # self.get_corrected_fluorescence_traces()
-        # self.get_events()
 
     def get_cache_dir(self):
         if self.cache_dir is None:
@@ -85,16 +88,30 @@ class VisualBehaviorOphysDataset(object):
 
     def get_timestamps_ophys(self):
         self.timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
-
         return self.timestamps_ophys
 
-    def get_visual_stimuli(self):
-        self.visual_stimuli = pd.read_hdf(os.path.join(self.analysis_dir, 'visual_stimuli.h5'), key='df',
+    def get_stimulus_table(self):
+        self.stimulus_table = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df',
                                           format='fixed')
-        return self.visual_stimuli
+        self.stimulus_table = self.stimulus_table.reset_index()
+        self.stimulus_table = self.stimulus_table.drop(
+            columns=['orientation', 'contrast', 'image_category', 'start_frame', 'end_frame', 'duration', 'index'])
+        return self.stimulus_table
 
-    def get_running(self):
-        self.running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running.h5'), key='df', format='fixed')
+    def get_stimulus_template(self):
+        f = h5py.File(os.path.join(self.analysis_dir, 'stimulus_template.h5'), 'r')
+        self.stimulus_template = np.asarray(f['data'])
+        f.close()
+        return self.stimulus_template
+
+    def get_stimulus_metadata(self):
+        self.stimulus_metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df',
+                                             format='fixed')
+        self.stimulus_metadata = self.stimulus_metadata.drop(columns='image_category')
+        return self.stimulus_metadata
+
+    def get_running_speed(self):
+        self.running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df', format='fixed')
         return self.running_speed
 
     def get_licks(self):
@@ -116,6 +133,15 @@ class VisualBehaviorOphysDataset(object):
         trials = all_trials[(all_trials.auto_rewarded != True) & (all_trials.trial_type != 'aborted')].reset_index()
         trials = trials.rename(columns={'level_0': 'original_trial_index'})
         trials.insert(loc=0, column='trial', value=trials.index.values)
+        trials = trials.rename(
+            columns={'starttime': 'start_time', 'endtime': 'end_time', 'startdatetime': 'start_date_time',
+                     'level_0': 'original_trial_index', 'color': 'trial_type_color'})
+        trials = trials[
+            ['trial', 'change_time', 'initial_image_name', 'change_image_name', 'trial_type', 'trial_type_color',
+             'response', 'response_type', 'response_window', 'lick_times', 'response_latency', 'rewarded',
+             'reward_times',
+             'reward_volume', 'reward_rate', 'start_time', 'end_time', 'trial_length', 'mouse_id',
+             'start_date_time']]
         self.trials = trials
         return self.trials
 
@@ -126,20 +152,29 @@ class VisualBehaviorOphysDataset(object):
             dff_traces.append(np.asarray(f[key]))
         f.close()
         self.dff_traces = np.asarray(dff_traces)
-        return self.dff_traces
-
-    def get_roi_masks(self):
-        f = h5py.File(os.path.join(self.analysis_dir, 'roi_masks.h5'), 'r')
-        roi_masks = {}
-        for key in f.keys():
-            roi_masks[key] = np.asarray(f[key])
-        f.close()
-        self.roi_masks = roi_masks
-        return self.roi_masks
+        return self.timestamps_ophys, self.dff_traces
 
     def get_roi_metrics(self):
         self.roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
         return self.roi_metrics
+
+    def get_roi_mask_dict(self):
+        f = h5py.File(os.path.join(self.analysis_dir, 'roi_masks.h5'), 'r')
+        roi_mask_dict = {}
+        for key in f.keys():
+            roi_mask_dict[key] = np.asarray(f[key])
+        f.close()
+        self.roi_mask_dict = roi_mask_dict
+        return self.roi_mask_dict
+
+    def get_roi_mask_array(self):
+        w, h = self.roi_mask_dict[self.roi_mask_dict.keys()[0]].shape
+        roi_mask_array = np.empty((len(self.roi_mask_dict.keys()), w, h))
+        for cell_specimen_id in self.roi_mask_dict.keys():
+            cell_index = self.get_cell_index_for_cell_specimen_id(int(cell_specimen_id))
+            roi_mask_array[cell_index] = self.roi_mask_dict[cell_specimen_id]
+        self.roi_mask_array = roi_mask_array
+        return self.roi_mask_array
 
     def get_max_projection(self):
         f = h5py.File(os.path.join(self.analysis_dir, 'max_projection.h5'), 'r')
@@ -161,9 +196,11 @@ class VisualBehaviorOphysDataset(object):
         return self.cell_indices
 
     def get_cell_specimen_id_for_cell_index(self, cell_index):
-        cell_specimen_id = self.cell_specimen_ids[cell_index]
+        cell_specimen_ids = self.get_cell_specimen_ids()
+        cell_specimen_id = cell_specimen_ids[cell_index]
         return cell_specimen_id
 
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
-        cell_index = np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
+        cell_specimen_ids = self.get_cell_specimen_ids()
+        cell_index = np.where(cell_specimen_ids == cell_specimen_id)[0][0]
         return cell_index

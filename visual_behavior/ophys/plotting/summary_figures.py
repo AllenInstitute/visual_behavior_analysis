@@ -6,12 +6,12 @@ Created on Sunday July 15 2018
 import os
 import h5py
 import numpy as np
+import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import seaborn as sns
 
 # formatting
-sns.set_style('whitegrid')
+sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_palette('deep')
 
@@ -130,31 +130,182 @@ def plot_roi_validation(lims_data):
     return roi_validation
 
 
-def get_xticks_xticklabels(trace, interval_sec=1):
-    interval_frames = interval_sec * 30
+def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
+    """
+    Function that accepts a timeseries, evaluates the number of points in the trace, and converts from acquisition frames to timestamps
+
+    :param trace: a single trace where length = the number of timepoints
+    :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
+    :param interval_sec: interval in seconds in between labels
+
+    :return: xticks, xticklabels = xticks in frames corresponding to timepoints in the trace, xticklabels in seconds
+    """
+    interval_frames = interval_sec * frame_rate
     n_frames = len(trace)
-    n_sec = n_frames / 30
+    n_sec = n_frames / frame_rate
     xticks = np.arange(0, n_frames + 1, interval_frames)
     xticklabels = np.arange(0, n_sec + 0.1, interval_sec)
     xticklabels = xticklabels - n_sec / 2
     return xticks, xticklabels
 
 
-def plot_mean_trace(traces, label=None, color='k', interval_sec=1, xlims=(2, 6), ax=None):
+def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4],
+                    ax=None):
+    """
+    Function that accepts an array of single trial traces and plots the mean and SEM of the trace, with xticklabels in seconds
+
+    :param traces: array of individual trial traces to average and plot. traces must be of equal length
+    :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
+    :param y_label: 'dF/F' for calcium trace, 'running speed (cm/s)' for running speed trace
+    :param legend_label: string describing trace for legend (ex: 'go', 'catch', image name or other condition identifier)
+    :param color: color to plot the trace
+    :param interval_sec: interval in seconds for x_axis labels
+    :param xlims: range in seconds to plot. Must be <= the length of the traces
+    :param ax: if None, create figure and axes to plot. If axis handle is provided, plot is created on that axis
+
+    :return: axis handle
+    """
+    xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
         trace = np.mean(traces)
         times = np.arange(0, len(trace), 1)
         sem = (traces.std()) / np.sqrt(float(len(traces)))
-        ax.plot(trace, label=label, linewidth=3, color=color)
+        ax.plot(trace, label=legend_label, linewidth=3, color=color)
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
 
-        xticks, xticklabels = get_xticks_xticklabels(trace, interval_sec)
+        xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
         ax.set_xticks([int(x) for x in xticks])
         ax.set_xticklabels([int(x) for x in xticklabels])
-        ax.set_xlim(xlims[0] * 30, xlims[1] * 30)
-        ax.set_xlabel('time after change (s)')
-        ax.set_ylabel('dF/F')
+        ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
+        ax.set_xlabel('time (sec)')
+        ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
+
+
+def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.15):
+    """
+    Function to create transparent gray bars spanning the duration of visual stimulus presentations to overlay on existing figure
+
+    :param ax: axis on which to plot stimulus presentation times
+    :param analysis: ResponseAnalysis class instance
+    :param trial_type: 'go' or 'catch'. If 'go', different alpha levels are used for stimulus presentations before and after change time
+    :param omitted: boolean, use True if plotting response to omitted flashes
+    :param alpha: value between 0-1 to set transparency level of gray bars demarcating stimulus times
+
+    :return: axis handle
+    """
+    frame_rate = analysis.ophys_frame_rate
+    stim_duration = analysis.stimulus_duration
+    blank_duration = analysis.blank_duration
+    change_frame = analysis.trial_window[1] * frame_rate
+    end_frame = (analysis.trial_window[1] + np.abs(analysis.trial_window[0])) * frame_rate
+    interval = blank_duration + stim_duration
+    if omitted:
+        array = np.arange((change_frame + interval) * frame_rate, end_frame, interval * frame_rate)
+    else:
+        array = np.arange(change_frame, end_frame, interval * frame_rate)
+    for i, vals in enumerate(array):
+        amin = array[i]
+        amax = array[i] + (stim_duration * frame_rate)
+        ax.axvspan(amin, amax, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    if trial_type == 'go':
+        alpha = alpha * 3
+    else:
+        alpha
+    array = np.arange(change_frame - ((blank_duration) * frame_rate), 0, -interval * frame_rate)
+    for i, vals in enumerate(array):
+        amin = array[i]
+        amax = array[i] - (stim_duration * frame_rate)
+        ax.axvspan(amin, amax, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    return ax
+
+
+def plot_single_trial_trace(trace, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=1,
+                            xlims=[-4, 4], ax=None):
+    """
+    Function to plot a single timeseries trace with xticklabels in secconds
+
+    :return: axis handle
+    :param trace: single trial timeseries trace to plot
+    :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
+    :param y_label: 'dF/F' for calcium trace, 'running speed (cm/s)' for running speed trace
+    :param legend_label: string describing trace for legend (ex: 'go', 'catch', image name or other condition identifier)
+    :param color: color to plot the trace
+    :param interval_sec: interval in seconds for x_axis labels
+    :param xlims: range in seconds to plot. Must be <= the length of the traces
+    :param ax: if None, create figure and axes to plot. If axis handle is provided, plot is created on that axis
+
+    :return: axis handle
+    """
+    xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.plot(trace, label=legend_label, linewidth=3, color=color)
+
+    xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
+    ax.set_xticks([int(x) for x in xticks])
+    ax.set_xticklabels([int(x) for x in xticklabels])
+    ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
+    ax.set_xlabel('time (sec)')
+    ax.set_ylabel(ylabel)
+    sns.despine(ax=ax)
+    return ax
+
+
+def plot_image_response_for_trial_types(analysis, cell, save=True):
+    """
+    Function to plot trial avereraged response of a cell for all images separately for 'go' and 'catch' trials. Creates figure and axes to plot.
+
+    :param analysis: ResponseAnalysis class instance
+    :param cell: cell index for cell to plot
+    :param save: boolean, if True, saves figure to a folder called 'image_responses' in the analysis_dir attribute of the analysis object
+
+    :return: None
+    """
+    df = analysis.trial_response_df.copy()
+    trials = analysis.dataset.trials
+    images = trials.change_image_name.unique()
+    colors = sns.color_palette('hls', len(images))
+    figsize = (20, 5)
+    fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
+    for i, trial_type in enumerate(['go', 'catch']):
+        for c, change_image_name in enumerate(images):
+            selected_trials = trials[
+                (trials.change_image_name == change_image_name) & (trials.trial_type == trial_type)].trial.values
+            traces = df[(df.cell == cell) & (df.trial.isin(selected_trials))].trace.values
+            ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=colors[c],
+                                    interval_sec=1,
+                                    xlims=[-4, 4], ax=ax[i])
+        ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=0.3)
+        ax[i].set_title(trial_type)
+    ax[i].set_ylabel('')
+    ax[i].legend(images, loc=9, bbox_to_anchor=(1.1, 1))
+    title = str(cell) + '_' + str(
+        df[df.cell == cell].cell_specimen_id.values[0]) + '_' + analysis.dataset.analysis_folder
+    plt.suptitle(title, x=0.47, y=1., horizontalalignment='center')
+    fig.tight_layout()
+    if save:
+        plt.gcf().subplots_adjust(top=0.85)
+        plt.gcf().subplots_adjust(right=0.85)
+        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_responses', title, formats=['.png'])
+        plt.close()
+
+
+if __name__ == '__main__':
+    experiment_id = 719996589
+
+    from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+
+    dataset = VisualBehaviorOphysDataset(experiment_id)
+
+    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+
+    analysis = ResponseAnalysis(dataset)
+
+    print('plotting cell responses')
+    for cell in dataset.get_cell_indices():
+        plot_image_response_for_trial_types(analysis, cell)
+    print('done')

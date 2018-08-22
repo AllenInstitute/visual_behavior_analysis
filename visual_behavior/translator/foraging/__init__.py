@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 from scipy.signal import medfilt
 from .extract import get_end_time
+from .extract_images import get_image_data, get_image_metadata
 from ...utilities import calc_deriv, rad_to_dist, local_time, ListHandler, DoubleColonFormatter
+from ...uuid_utils import make_deterministic_session_uuid
 
 import logging
 
@@ -39,12 +41,15 @@ def data_to_change_detection_core(data, time=None):
     handler.setFormatter(
         DoubleColonFormatter
     )
+    handler.setLevel(logging.INFO)
     logger.addHandler(
         handler
     )
 
     if time is None:
         time = load_time(data)
+
+    images = load_images(data)
 
     core_data = {
         "time": time,
@@ -54,6 +59,7 @@ def data_to_change_detection_core(data, time=None):
         "running": load_running_speed(data, time=time),
         "rewards": load_rewards(data, time=time),
         "visual_stimuli": load_visual_stimuli(data, time=time),
+        "image_set": images,
     }
 
     core_data['log'] = log_messages
@@ -99,6 +105,12 @@ def load_metadata(data):
         timezone='America/Los_Angeles',
     )
 
+    logger.warning('`session_uuid` not found. generating a deterministic UUID')
+    metadata['behavior_session_uuid'] = make_deterministic_session_uuid(
+        metadata['mouseid'],
+        metadata['startdatetime'],
+    )
+
     metadata['auto_reward_vol'] = 0.05  # hard coded
     metadata['max_session_duration'] = 60.0  # hard coded
     metadata['min_no_lick_time'] = data['minimum_no_lick_time']
@@ -111,6 +123,7 @@ def load_metadata(data):
     metadata['warm_up_trials'] = data['warmup_trials']
     metadata['stimulus_window'] = data['trial_duration'] - data['delta_minimum']
     metadata['auto_reward_delay'] = 0.0  # hard coded
+    metadata['platform_info'] = {}
 
     blank_dur = np.mean(data['blank_duration_range'])
     metadata['periodic_flash'] = (data['stim_duration'], blank_dur) if blank_dur > 0 else None
@@ -302,8 +315,8 @@ def load_running_speed(data, smooth=False, time=None):
         print('`time` not passed. using vsync from pkl file')
         time = load_time(data)
 
-    dx = np.array(data['dx'])
-    dx = medfilt(dx, kernel_size=5)  # remove big, single frame spikes in encoder values
+    dx_raw = np.array(data['dx'])
+    dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
 
     time = time[:len(dx)]
@@ -322,6 +335,9 @@ def load_running_speed(data, smooth=False, time=None):
         'time': time,
         'frame': range(len(time)),
         'speed': speed,
+        'dx': dx_raw,
+        'v_sig': data['vsig'],
+        'v_in': data['vin'],
         # 'acceleration (cm/s^2)': accel,
         # 'jerk (cm/s^3)': jerk,
     })
@@ -413,3 +429,25 @@ def load_visual_stimuli(data, time=None):
         stimuli['image_name'] = None
 
     return stimuli
+
+
+def load_images(data):
+
+    if 'image_dict' in data.keys():
+        image_dict = data['image_dict']
+
+        images, images_meta = get_image_data(image_dict)
+
+        images = dict(
+            metadata=get_image_metadata(data),
+            images=images,
+            image_attributes=images_meta,
+        )
+    else:
+        images = dict(
+            metadata={},
+            images=[],
+            image_attributes=[],
+        )
+
+    return images
