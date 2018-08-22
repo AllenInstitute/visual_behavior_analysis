@@ -120,9 +120,8 @@ class VisualBehaviorOphysDataset(object):
 
     
     def get_stimulus_template(self):
-        stimulus_template_file = h5py.File(os.path.join(self.analysis_dir, 'stimulus_template.h5'), 'r')
-        self._stimulus_template = np.asarray(stim_template_file['data'])
-        stimulus_template_file.close()
+        with h5py.File(os.path.join(self.analysis_dir, 'stimulus_template.h5'), 'r') as stimulus_template_file:
+            self._stimulus_template = np.asarray(stimulus_template_file['data'])
         return self._stimulus_template
     stimulus_template = LazyLoadable('_stimulus_template', get_stimulus_template)
 

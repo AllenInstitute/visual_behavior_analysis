@@ -4,6 +4,7 @@ import warnings
 import pytest
 import pandas as pd
 import numpy as np
+import h5py
 
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 
@@ -30,14 +31,47 @@ def ophys_metadata():
 @pytest.fixture
 def ophys_timestamps():
     return pd.DataFrame({
-        'stimulus_frames': [np.arange(10)]
+        'stimulus_frames': [np.arange(10)],
+        'ophys_frames': [np.arange(10)*-1]
     }, index=['timestamps'])
-    
+
+
+
+@pytest.fixture
+def ophys_stimulus_table():
+    return pd.DataFrame({
+        'flash_number': [0, 1, 2], 
+        'start_time': [0.0, 0.5, 1.0],
+        'end_time': [0.5, 1.0, 1.5], 
+        'image_name': ['im01', 'im02', 'im03'],
+        'orientation': [np.pi/2.0, np.pi, -np.pi/2.0], 
+        'contrast': [10, 20, 30], 
+        'image_category': ['a', 'a', 'b'], 
+        'start_frame': [0, 1, 2], 
+        'end_frame': [1, 2, 3], 
+        'duration': [0.5, 0.5, 0.5]
+    })
     
     
 @pytest.fixture
-def ophys_data_dir(tmpdir_factory, ophys_metadata, ophys_timestamps):
-    warnings.simplefilter("ignore")
+def stimulus_template():
+    return np.arange(250).reshape([10, 5, 5])
+    
+    
+@pytest.fixture
+def stimulus_metadata():
+    return pd.DataFrame({
+        'image_index': [12, 24, 36],
+        'image_name': ['im01', 'im02', 'im03'],
+        'image_category': ['a', 'a', 'b']
+    })
+    
+    
+@pytest.fixture
+def ophys_data_dir(tmpdir_factory, 
+    ophys_metadata, ophys_timestamps, ophys_stimulus_table, stimulus_template, stimulus_metadata
+):
+    warnings.simplefilter("ignore") # pandas yells about hdf object columns - it IS a problem for cross-version compatibility
     
     eid = 12345678
     tmp_dir = str(tmpdir_factory.mktemp('ophys_dataset_01'))
@@ -55,8 +89,20 @@ def ophys_data_dir(tmpdir_factory, ophys_metadata, ophys_timestamps):
     ts_path = os.path.join(analysis_folder_path,  'timestamps.h5')
     ophys_timestamps.to_hdf(ts_path, key='df', format='fixed')
     
+    # stim table
+    stimulus_table_path = os.path.join(analysis_folder_path, 'stimulus_table.h5')
+    ophys_stimulus_table.to_hdf(stimulus_table_path, key='df', format='fixed')
+    
+    # stim template
+    stimulus_template_path = os.path.join(analysis_folder_path, 'stimulus_template.h5')
+    with h5py.File(stimulus_template_path) as stimulus_template_file:
+        stimulus_template_file.create_dataset('data', data=stimulus_template)
+        
+    # stim metadata
+    stimulus_metadata_path = os.path.join(analysis_folder_path, 'stimulus_metadata.h5')
+    stimulus_metadata.to_hdf(stimulus_metadata_path, key='df', format='fixed')
+    
     return tmp_dir
-
 
 
 @pytest.fixture
@@ -112,3 +158,45 @@ def test_get_timestamps_stimulus(fn, ophys_dataset, ophys_timestamps):
     
     obtained = fn(ophys_dataset)
     assert np.allclose(obtained, ophys_timestamps['stimulus_frames']['timestamps'])
+    
+    
+@pytest.mark.parametrize('fn', [
+    lambda ds: ds.timestamps_ophys,
+    lambda ds: ds.get_timestamps_ophys()
+])
+def test_get_timestamps_ophys(fn, ophys_dataset, ophys_timestamps):
+    
+    obtained = fn(ophys_dataset)
+    assert np.allclose(obtained, ophys_timestamps['ophys_frames']['timestamps'])
+    
+
+@pytest.mark.parametrize('fn', [
+    lambda ds: ds.stimulus_table,
+    lambda ds: ds.get_stimulus_table()
+])
+def test_get_stimulus_table(fn, ophys_dataset, ophys_stimulus_table):
+    
+    obtained = fn(ophys_dataset)
+    ophys_stimulus_table = ophys_stimulus_table.loc[:, ('flash_number', 'start_time', 'end_time', 'image_name')]
+    pd.testing.assert_frame_equal(obtained, ophys_stimulus_table, check_like=True)
+        
+    
+@pytest.mark.parametrize('fn', [
+    lambda ds: ds.stimulus_template,
+    lambda ds: ds.get_stimulus_template()
+])
+def test_get_timestamps_ophys(fn, ophys_dataset, stimulus_template):
+    
+    obtained = fn(ophys_dataset)
+    assert np.allclose(obtained, stimulus_template)
+    
+    
+@pytest.mark.parametrize('fn', [
+    lambda ds: ds.stimulus_metadata,
+    lambda ds: ds.get_stimulus_metadata()
+])
+def test_get_stimulus_metadata(fn, ophys_dataset, stimulus_metadata):
+    
+    obtained = fn(ophys_dataset)
+    stimulus_metadata = stimulus_metadata.loc[:, ('image_index', 'image_name')]
+    pd.testing.assert_frame_equal(obtained, stimulus_metadata, check_like=True) 
