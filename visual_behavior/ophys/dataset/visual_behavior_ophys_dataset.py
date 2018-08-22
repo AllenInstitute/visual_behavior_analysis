@@ -189,11 +189,10 @@ class VisualBehaviorOphysDataset(object):
 
     
     def get_dff_traces(self):
-        f = h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r')
-        dff_traces = []
-        for key in f.keys():
-            dff_traces.append(np.asarray(f[key]))
-        f.close()
+        with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
+            dff_traces = []
+            for key in f.keys():
+                dff_traces.append(np.asarray(f[key]))
         self._dff_traces = np.asarray(dff_traces)
         return self.timestamps_ophys, self._dff_traces
     dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
@@ -228,9 +227,8 @@ class VisualBehaviorOphysDataset(object):
 
     
     def get_max_projection(self):
-        f = h5py.File(os.path.join(self.analysis_dir, 'max_projection.h5'), 'r')
-        self._max_projection = np.asarray(f['data'])
-        f.close()
+        with h5py.File(os.path.join(self.analysis_dir, 'max_projection.h5'), 'r') as max_projection_file:
+            self._max_projection = np.asarray(max_projection_file['data'])
         return self._max_projection
     max_projection = LazyLoadable('_max_projection', get_max_projection)
 
