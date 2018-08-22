@@ -1046,7 +1046,7 @@ def get_session_id(exp_data):
         id of experiment session or empty string if not found
     """
     if 'session_uuid' in exp_data:
-        return uuid.UUID(exp_data["session_uuid"])
+        return exp_data["session_uuid"]
     else:
         return ''
 
