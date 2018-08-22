@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from six import iteritems
-import uuid
 
 from scipy.signal import medfilt
 from ...analyze import calc_deriv, rad_to_dist
