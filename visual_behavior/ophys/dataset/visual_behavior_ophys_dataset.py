@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 
-class MemcachedCalculation(object):
+class LazyLoadable(object):
     
     def __init__(self, name, calculate):
         self.name = name
@@ -30,6 +30,7 @@ class MemcachedCalculation(object):
     
 
 class VisualBehaviorOphysDataset(object):
+    # TODO getter methods no longer need to set attributes directly
     
     def __init__(self, experiment_id, cache_dir=None, **kwargs):
         """Initialize visual behavior ophys experiment dataset.
@@ -72,37 +73,37 @@ class VisualBehaviorOphysDataset(object):
             raise OSError('{} contains multiple possible analysis folders: {}'.format(self.cache_dir, candidates))
         
         return self._analysis_folder
-    analysis_folder = MemcachedCalculation('_analysis_folder', get_analysis_folder)
+    analysis_folder = LazyLoadable('_analysis_folder', get_analysis_folder)
     
     
     def get_analysis_dir(self):
         self._analysis_dir = os.path.join(self.cache_dir, self.analysis_folder)
         return self._analysis_dir
-    analysis_dir = MemcachedCalculation('_analysis_dir', get_analysis_dir)
+    analysis_dir = LazyLoadable('_analysis_dir', get_analysis_dir)
     
 
     def get_metadata(self):
         self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
-        return self.metadata
-    metadata = MemcachedCalculation('_metadata', get_metadata)
+        return self._metadata
+    metadata = LazyLoadable('_metadata', get_metadata)
         
     
     def get_timestamps(self):
         self._timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df', format='fixed')
         return self._timestamps
-    timestamps = MemcachedCalculation('_timestamps', get_timestamps)
+    timestamps = LazyLoadable('_timestamps', get_timestamps)
 
     
     def get_timestamps_stimulus(self):
         self._timestamps_stimulus = self.timestamps['stimulus_frames']['timestamps']
         return self._timestamps_stimulus
-    timestamps_stimulus = MemcachedCalculation('_timestamps_stimulus', get_timestamps_stimulus)
+    timestamps_stimulus = LazyLoadable('_timestamps_stimulus', get_timestamps_stimulus)
 
     
     def get_timestamps_ophys(self):
         self._timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
         return self._timestamps_ophys
-    timestamps_ophys = MemcachedCalculation('_timestamps_ophys', get_timestamps_ophys)
+    timestamps_ophys = LazyLoadable('_timestamps_ophys', get_timestamps_ophys)
 
     
     def get_stimulus_table(self):
@@ -115,7 +116,7 @@ class VisualBehaviorOphysDataset(object):
             columns=['orientation', 'contrast', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
         )
         return self._stimulus_table
-    stimulus_table = MemcachedCalculation('_stimulus_table', get_stimulus_table)
+    stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)
 
     
     def get_stimulus_template(self):
@@ -123,7 +124,7 @@ class VisualBehaviorOphysDataset(object):
         self._stimulus_template = np.asarray(stim_template_file['data'])
         stimulus_template_file.close()
         return self._stimulus_template
-    stimulus_template = MemcachedCalculation('_stimulus_template', get_stimulus_template)
+    stimulus_template = LazyLoadable('_stimulus_template', get_stimulus_template)
 
     
     def get_stimulus_metadata(self):
@@ -133,25 +134,25 @@ class VisualBehaviorOphysDataset(object):
         )
         self._stimulus_metadata = self._stimulus_metadata.drop(columns='image_category')
         return self._stimulus_metadata
-    stimulus_metadata = MemcachedCalculation('_stimulus_metadata', get_stimulus_metadata)
+    stimulus_metadata = LazyLoadable('_stimulus_metadata', get_stimulus_metadata)
 
     
     def get_running_speed(self):
         self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df', format='fixed')
         return self._running_speed
-    running_speed = MemcachedCalculation('_running_speed', get_running_speed)
+    running_speed = LazyLoadable('_running_speed', get_running_speed)
 
     
     def get_licks(self):
         self._licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df', format='fixed')
         return self._licks
-    licks = MemcachedCalculation('_licks', get_licks)
+    licks = LazyLoadable('_licks', get_licks)
 
     
     def get_rewards(self):
         self._rewards = pd.read_hdf(os.path.join(self.analysis_dir, 'rewards.h5'), key='df', format='fixed')
         return self._rewards
-    rewards = MemcachedCalculation('_rewards', get_rewards)
+    rewards = LazyLoadable('_rewards', get_rewards)
     
     
     def get_task_parameters(self):
@@ -160,13 +161,13 @@ class VisualBehaviorOphysDataset(object):
             key='df', format='fixed'
         )
         return self._task_parameters
-    task_parameters = MemcachedCalculation('_task_parameters', get_task_parameters)
+    task_parameters = LazyLoadable('_task_parameters', get_task_parameters)
 
     
     def get_all_trials(self):
         self._all_trials = pd.read_hdf(os.path.join(self.analysis_dir, 'trials.h5'), key='df', format='fixed')
         return self._all_trials
-    all_trials = MemcachedCalculation('_all_trials', get_all_trials)
+    all_trials = LazyLoadable('_all_trials', get_all_trials)
     
     
     def get_trials(self):
@@ -185,7 +186,7 @@ class VisualBehaviorOphysDataset(object):
              'start_date_time']]
         self._trials = trials
         return self._trials
-    trials = MemcachedCalculation('_trials', get_trials)
+    trials = LazyLoadable('_trials', get_trials)
 
     
     def get_dff_traces(self):
@@ -196,13 +197,13 @@ class VisualBehaviorOphysDataset(object):
         f.close()
         self._dff_traces = np.asarray(dff_traces)
         return self.timestamps_ophys, self._dff_traces
-    dff_traces = MemcachedCalculation('_dff_traces', get_dff_traces)
+    dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
 
     
     def get_roi_metrics(self):
         self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
         return self._roi_metrics
-    roi_metrics = MemcachedCalculation('_roi_metrics', get_roi_metrics)
+    roi_metrics = LazyLoadable('_roi_metrics', get_roi_metrics)
 
     
     def get_roi_mask_dict(self):
@@ -213,7 +214,7 @@ class VisualBehaviorOphysDataset(object):
         f.close()
         self._roi_mask_dict = roi_mask_dict
         return self._roi_mask_dict
-    roi_mask_dict = MemcachedCalculation('_roi_mask_dict', get_roi_mask_dict)
+    roi_mask_dict = LazyLoadable('_roi_mask_dict', get_roi_mask_dict)
 
     
     def get_roi_mask_array(self):
@@ -224,7 +225,7 @@ class VisualBehaviorOphysDataset(object):
             roi_mask_array[cell_index] = self.roi_mask_dict[cell_specimen_id]
         self._roi_mask_array = roi_mask_array
         return self._roi_mask_array
-    roi_mask_array = MemcachedCalculation('_roi_mask_array', get_roi_mask_array)
+    roi_mask_array = LazyLoadable('_roi_mask_array', get_roi_mask_array)
 
     
     def get_max_projection(self):
@@ -232,7 +233,7 @@ class VisualBehaviorOphysDataset(object):
         self._max_projection = np.asarray(f['data'])
         f.close()
         return self._max_projection
-    max_projection = MemcachedCalculation('_max_projection', get_max_projection)
+    max_projection = LazyLoadable('_max_projection', get_max_projection)
 
     
     def get_motion_correction(self):
@@ -241,19 +242,19 @@ class VisualBehaviorOphysDataset(object):
             key='df', format='fixed'
         )
         return self._motion_correction
-    motion_correction = MemcachedCalculation('_motion_correction', get_motion_correction)
+    motion_correction = LazyLoadable('_motion_correction', get_motion_correction)
 
     
     def get_cell_specimen_ids(self):
         self._cell_specimen_ids = np.sort(self.roi_metrics.cell_specimen_id.values)
         return self._cell_specimen_ids
-    cell_specimen_ids = MemcachedCalculation('_cell_specimen_ids', get_cell_specimen_ids)
+    cell_specimen_ids = LazyLoadable('_cell_specimen_ids', get_cell_specimen_ids)
     
     
     def get_cell_indices(self):
         self._cell_indices = np.sort(self.roi_metrics.cell_index.values)
         return self._cell_indices
-    cell_indices = MemcachedCalculation('_cell_indices', get_cell_indices)
+    cell_indices = LazyLoadable('_cell_indices', get_cell_indices)
 
     
     def get_cell_specimen_id_for_cell_index(self, cell_index):
