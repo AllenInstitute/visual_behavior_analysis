@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from . import session_metrics
 from ... import metrics
-from ...translator.core.annotate import annotate_epochs
+from ...translator.core.annotate import annotate_epochs, annotate_change_detect
 
 
 def create_summarizer(**kwargs):
@@ -83,6 +83,8 @@ def session_level_summary(trials, groupby=('mouse_id', 'startdatetime'), **kwarg
     summary_metrics = DEFAULT_SUMMARY_METRICS.copy()
     summary_metrics.update(kwargs)
     summarizer = create_summarizer(**summary_metrics)
+
+    trials = annotate_change_detect(trials)
 
     session_summary = (
         trials

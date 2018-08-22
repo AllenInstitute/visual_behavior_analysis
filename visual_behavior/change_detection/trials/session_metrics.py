@@ -139,11 +139,19 @@ def isnull(a):
 
 def blank_duration(session_trials):
     '''blank screen duration between each stimulus flash'''
-    if not isnull(session_trials.iloc[0].blank_duration_range):
-        if len(session_trials.iloc[0].blank_duration_range) == 1:
-            return session_trials.iloc[0].blank_duration_range
-        elif len(session_trials.iloc[0].blank_duration_range) == 2:
-            return session_trials.iloc[0].blank_duration_range[0]
+
+    blank_duration_range = session_trials.iloc[0].blank_duration_range
+    if type(blank_duration_range) == str:
+        # in some cases, the blank duration range is being turned into a string. It should be a list. Convert it.
+        import ast
+        blank_duration_range = ast.literal_eval(blank_duration_range)
+
+    if not isnull(blank_duration_range):
+        if len(blank_duration_range) == 1:
+            return blank_duration_range
+        elif len(blank_duration_range) == 2:
+
+            return blank_duration_range[0]
     else:
         return np.nan
 
