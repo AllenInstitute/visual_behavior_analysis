@@ -191,8 +191,8 @@ class VisualBehaviorOphysDataset(object):
     def get_dff_traces(self):
         with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
             dff_traces = []
-            for key in f.keys():
-                dff_traces.append(np.asarray(f[key]))
+            for key in dff_traces_file.keys():
+                dff_traces.append(np.asarray(dff_traces_file[key]))
         self._dff_traces = np.asarray(dff_traces)
         return self.timestamps_ophys, self._dff_traces
     dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
