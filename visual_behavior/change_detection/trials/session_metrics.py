@@ -155,7 +155,10 @@ def blank_duration(session_trials):
     else:
         return np.nan
 
+def training_stage(session_trials):
+    return session_trials['stage'].iloc[0]
 
+    
 def session_duration(session_trials):
     return session_trials['trial_length'].sum()
 

@@ -73,6 +73,7 @@ DEFAULT_SUMMARY_METRICS = dict(
     user_id=session_metrics.user_id,
     # filename=session_metrics.filename,
     stimulus=session_metrics.stimulus,
+    stage=session_metrics.training_stage,
 )
 
 
