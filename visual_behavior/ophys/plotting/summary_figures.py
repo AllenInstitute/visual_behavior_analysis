@@ -131,6 +131,15 @@ def plot_roi_validation(lims_data):
 
 
 def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
+    """
+    Function that accepts a timeseries, evaluates the number of points in the trace, and converts from acquisition frames to timestamps
+
+    :param trace: a single trace where length = the number of timepoints
+    :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
+    :param interval_sec: interval in seconds in between labels
+
+    :return: xticks, xticklabels = xticks in frames corresponding to timepoints in the trace, xticklabels in seconds
+    """
     interval_frames = interval_sec * frame_rate
     n_frames = len(trace)
     n_sec = n_frames / frame_rate
@@ -140,7 +149,22 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
     return xticks, xticklabels
 
 
-def plot_mean_trace(traces, frame_rate, label=None, color='k', interval_sec=1, xlims=[-4, 4], ax=None):
+def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4],
+                    ax=None):
+    """
+    Function that accepts an array of single trial traces and plots the mean and SEM of the trace, with xticklabels in seconds
+
+    :param traces: array of individual trial traces to average and plot. traces must be of equal length
+    :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
+    :param y_label: 'dF/F' for calcium trace, 'running speed (cm/s)' for running speed trace
+    :param legend_label: string describing trace for legend (ex: 'go', 'catch', image name or other condition identifier)
+    :param color: color to plot the trace
+    :param interval_sec: interval in seconds for x_axis labels
+    :param xlims: range in seconds to plot. Must be <= the length of the traces
+    :param ax: if None, create figure and axes to plot. If axis handle is provided, plot is created on that axis
+
+    :return: axis handle
+    """
     xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
     if ax is None:
         fig, ax = plt.subplots()
@@ -148,7 +172,7 @@ def plot_mean_trace(traces, frame_rate, label=None, color='k', interval_sec=1, x
         trace = np.mean(traces)
         times = np.arange(0, len(trace), 1)
         sem = (traces.std()) / np.sqrt(float(len(traces)))
-        ax.plot(trace, label=label, linewidth=3, color=color)
+        ax.plot(trace, label=legend_label, linewidth=3, color=color)
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
 
         xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
@@ -156,12 +180,23 @@ def plot_mean_trace(traces, frame_rate, label=None, color='k', interval_sec=1, x
         ax.set_xticklabels([int(x) for x in xticklabels])
         ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
         ax.set_xlabel('time (sec)')
-        ax.set_ylabel('dF/F')
+        ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
 
 
 def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.15):
+    """
+    Function to create transparent gray bars spanning the duration of visual stimulus presentations to overlay on existing figure
+
+    :param ax: axis on which to plot stimulus presentation times
+    :param analysis: ResponseAnalysis class instance
+    :param trial_type: 'go' or 'catch'. If 'go', different alpha levels are used for stimulus presentations before and after change time
+    :param omitted: boolean, use True if plotting response to omitted flashes
+    :param alpha: value between 0-1 to set transparency level of gray bars demarcating stimulus times
+
+    :return: axis handle
+    """
     frame_rate = analysis.ophys_frame_rate
     stim_duration = analysis.stimulus_duration
     blank_duration = analysis.blank_duration
@@ -188,23 +223,48 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.
     return ax
 
 
-def plot_single_trial_trace(trace, frame_rate, label=None, color='k', interval_sec=1, xlims=[-4, 4], ax=None):
+def plot_single_trial_trace(trace, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=1,
+                            xlims=[-4, 4], ax=None):
+    """
+    Function to plot a single timeseries trace with xticklabels in secconds
+
+    :return: axis handle
+    :param trace: single trial timeseries trace to plot
+    :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
+    :param y_label: 'dF/F' for calcium trace, 'running speed (cm/s)' for running speed trace
+    :param legend_label: string describing trace for legend (ex: 'go', 'catch', image name or other condition identifier)
+    :param color: color to plot the trace
+    :param interval_sec: interval in seconds for x_axis labels
+    :param xlims: range in seconds to plot. Must be <= the length of the traces
+    :param ax: if None, create figure and axes to plot. If axis handle is provided, plot is created on that axis
+
+    :return: axis handle
+    """
     xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
     if ax is None:
         fig, ax = plt.subplots()
-    ax.plot(trace, label=label, linewidth=3, color=color)
+    ax.plot(trace, label=legend_label, linewidth=3, color=color)
 
     xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
     ax.set_xticks([int(x) for x in xticks])
     ax.set_xticklabels([int(x) for x in xticklabels])
     ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
     ax.set_xlabel('time (sec)')
-    ax.set_ylabel('dF/F')
+    ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
 
 
 def plot_image_response_for_trial_types(analysis, cell, save=True):
+    """
+    Function to plot trial avereraged response of a cell for all images separately for 'go' and 'catch' trials. Creates figure and axes to plot.
+
+    :param analysis: ResponseAnalysis class instance
+    :param cell: cell index for cell to plot
+    :param save: boolean, if True, saves figure to a folder called 'image_responses' in the analysis_dir attribute of the analysis object
+
+    :return: None
+    """
     df = analysis.trial_response_df.copy()
     trials = analysis.dataset.trials
     images = trials.change_image_name.unique()
@@ -216,7 +276,8 @@ def plot_image_response_for_trial_types(analysis, cell, save=True):
             selected_trials = trials[
                 (trials.change_image_name == change_image_name) & (trials.trial_type == trial_type)].trial.values
             traces = df[(df.cell == cell) & (df.trial.isin(selected_trials))].trace.values
-            ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, label=None, color=colors[c], interval_sec=1,
+            ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=colors[c],
+                                    interval_sec=1,
                                     xlims=[-4, 4], ax=ax[i])
         ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=0.3)
         ax[i].set_title(trial_type)

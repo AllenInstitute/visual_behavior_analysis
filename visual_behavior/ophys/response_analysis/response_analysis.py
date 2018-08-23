@@ -16,15 +16,16 @@ class ResponseAnalysis(object):
 
     For trial responses, a segment of the dF/F trace for each cell is extracted for each trial in the trials records in a +/-4 seconds window (the 'trial_window') around the change time.
     The mean_response for each cell is taken in a 500ms window after the change time (the 'response_window').
-    The trial_response_df also contains behavioral metadata such as lick times, running speed, reward rate, and initial and change stimulus names.
+    The trial_response_df also contains behavioral metadata from the trial records such as lick times, running speed, reward rate, and initial and change stimulus names.
 
     For stimulus flashes, the mean response is taken in a 500ms window after each stimulus presentation (the 'response_window') in the stimulus_table.
-    The flash_response_df also contains metadata such as the time from last lick, time since last stimulus change, and mean running speed during each flash.
+    The flash_response_df contains the mean response for every cell, for every stimulus flash.
 
     Parameters
     ----------
     dataset: VisualBehaviorOphysDataset instance
-    overwrite_analysis_files: Boolean, if True will create and overwrite response analysis  files.
+    overwrite_analysis_files: Boolean, if True will create and overwrite response analysis files.
+    This can be used if new functionality is added to the ResponseAnalysis class to modify existing structures or make new ones.
     If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
     """
 
@@ -86,13 +87,7 @@ class ResponseAnalysis(object):
                    'p_value', 'sd_over_baseline', 'running_speed_trace', 'running_speed_timestamps',
                    'mean_running_speed']
         trial_response_df = pd.DataFrame(df_list, columns=columns)
-        trial_metadata = self.dataset.trials[
-            ['trial', 'trial_type', 'initial_image_name', 'change_image_name', 'change_time', 'lick_times',
-             'reward_times', 'response', 'response_type', 'response_time', 'response_latency', 'rewarded',
-             'reward_rate', 'reward_volume', 'cumulative_volume', 'cumulative_reward_number', 'reward_lick_count',
-             'color', 'initial_image_category', 'change_image_category', 'change_frame',
-             'lick_frames', 'reward_frames', 'startframe', 'starttime', 'endframe', 'endtime', 'trial_length',
-             'stim_duration', 'stimulus', 'task', 'mouse_id', 'behavior_session_uuid', 'startdatetime']]
+        trial_metadata = self.dataset.trials
         trial_metadata = trial_metadata.rename(columns={'response': 'behavioral_response'})
         trial_metadata = trial_metadata.rename(columns={'response_type': 'behavioral_response_type'})
         trial_metadata = trial_metadata.rename(columns={'response_time': 'behavioral_response_time'})
@@ -106,6 +101,7 @@ class ResponseAnalysis(object):
 
     def get_trial_response_df(self):
         if self.overwrite_analysis_files:
+            print('overwriting analysis files')
             self.trial_response_df = self.generate_trial_response_df()
             self.save_trial_response_df(self.trial_response_df)
         else:

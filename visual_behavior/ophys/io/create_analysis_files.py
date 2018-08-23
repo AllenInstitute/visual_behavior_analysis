@@ -1,11 +1,13 @@
-
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 import matplotlib
+
 matplotlib.use('Agg')
 
 
-def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False):
+def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
+    print(experiment_id)
+    print('saving ', str(experiment_id), 'to', cache_dir)
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
 

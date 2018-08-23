@@ -1,3 +1,4 @@
+import uuid
 import pandas as pd
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
 from ...uuid_utils import make_deterministic_session_uuid
@@ -141,6 +142,8 @@ def data_to_metadata(data):
             mouse_id,
             start_time_datetime_local,
         )
+    else:
+        behavior_session_uuid = uuid.UUID(behavior_session_uuid)
 
     device_name = get_device_name(data)
     params = get_params(data)  # this joins both params and commandline params
