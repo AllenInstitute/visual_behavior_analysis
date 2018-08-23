@@ -141,10 +141,6 @@ def blank_duration(session_trials):
     '''blank screen duration between each stimulus flash'''
 
     blank_duration_range = session_trials.iloc[0].blank_duration_range
-    if type(blank_duration_range) == str:
-        # in some cases, the blank duration range is being turned into a string. It should be a list. Convert it.
-        import ast
-        blank_duration_range = ast.literal_eval(blank_duration_range)
 
     if not isnull(blank_duration_range):
         if len(blank_duration_range) == 1:
