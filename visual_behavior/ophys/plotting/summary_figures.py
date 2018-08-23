@@ -293,18 +293,65 @@ def plot_image_response_for_trial_types(analysis, cell, save=True):
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_responses', title, formats=['.png'])
         plt.close()
 
+def get_colors_for_response_types(response_types):
+    c = sns.color_palette()
+    colors_dict = {'HIT': c[1], 'MISS': c[4], 'CR': c[0], 'FA': c[2]}
+    colors = []
+    for val in response_types:
+        colors.append(colors_dict[val])
+    return colors
 
-def plot_traces_heatmap(dff_traces, ax=None):
+def plot_trial_trace_heatmap(trial_response_df, cell, cmap='viridis', vmax=0.5, colorbar=False, ax=None, save_dir=None):
+    response_types = ['HIT', 'MISS', 'FA', 'CR']
+    df = trial_response_df.copy()
+    rows = 1
+    cols = len(df.change_image_name.unique())
+    colors = get_colors_for_response_types(response_types)
     if ax is None:
-        figsize = (20, 8)
-        fig, ax = plt.subplots(figsize=figsize)
-    cax = ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=np.percentile(dff_traces[np.isnan(dff_traces)==False], 99))
-    ax.set_ylim(0, dff_traces.shape[0])
-    ax.set_xlim(0,dff_traces.shape[1])
-    ax.set_ylabel('cells')
-    ax.set_xlabel('2P frames')
-    cb = plt.colorbar(cax, pad = 0.015);
-    cb.set_label('dF/F', labelpad=3)
+        figsize = (15, 5)
+        fig, ax = plt.subplots(rows, cols, figsize=figsize, sharex=True);
+        ax = ax.ravel();
+    resp_types = []
+    for i, change_image_name in enumerate(np.sort(df.change_image_name.unique())):
+        im_df = df[(df.cell == cell) & (df.change_image_name == change_image_name)]
+        n_frames = im_df.trace.values[0].shape[0]
+        n_trials = im_df.trace.shape[0]
+        response_matrix = np.empty((n_trials, n_frames))
+        response_type_list = []
+        segments = []
+        idx = 0
+        segments.append(idx)
+        for y, response_type in enumerate(response_types):
+            sub_df = im_df[(im_df.behavioral_response_type == response_type)]
+            traces = sub_df.trace.values
+            for pos, trial in enumerate(range(traces.shape[0])[::-1]):
+                response_matrix[idx, :] = traces[int(trial)]
+                response_type_list.append(response_type)
+                idx += 1
+            segments.append(idx)
+            if vmax:
+                cax = ax[i].pcolormesh(response_matrix, cmap=cmap, vmax=vmax, vmin=0);
+            else:
+                cax = ax[i].pcolormesh(response_matrix, cmap=cmap);
+            ax[i].set_ylim(0, response_matrix.shape[0]);
+            ax[i].set_xlim(0, response_matrix.shape[1]);
+            ax[i].set_yticks(segments);
+            ax[i].set_yticklabels('')
+            ax[i].set_xlabel('time (s)');
+            xticks, xticklabels = get_xticks_xticklabels(np.arange(0,response_matrix.shape[1],1), 31., interval_sec=2)
+            ax[i].set_xticks(xticks);
+            ax[i].set_xticklabels([int(x) for x in xticklabels]);
+    #             ax[i].vlines(x=np.mean(xticks), ymin=0, ymax=response_matrix.shape[0], color='w', linewidth=1)
+            ax[i].set_title(change_image_name);
+        for s in range(len(segments) - 1):
+            ax[i].vlines(x=-10, ymin=segments[s], ymax=segments[s + 1], color=colors[s], linewidth=30)
+        ax[0].set_ylabel('trials')
+        resp_types.append(response_type_list)
+    plt.tight_layout()
+    if colorbar:
+        plt.colorbar(cax, ax=ax[i]);
+    if save_dir:
+        save_figure(fig, figsize, save_dir, 'trial_trace_heatmap', 'roi_' + str(cell))
     return ax
 
 

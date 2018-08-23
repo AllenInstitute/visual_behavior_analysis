@@ -6,6 +6,7 @@ Created on Saturday July 14 2018
 
 import numpy as np
 from scipy import stats
+import pandas as pd
 
 
 def get_nearest_frame(timepoint, timestamps):
@@ -48,3 +49,63 @@ def get_p_val(trace, response_window, frame_rate):
 def ptest(x, num_conditions):
     ptest = len(np.where(x < (0.05 / num_conditions))[0])
     return ptest
+
+
+def get_mean_sem(group):
+    mean_response = np.mean(group['mean_response'])
+    sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
+    mean_trace = np.mean(group['trace'])
+    sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
+    return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
+                      'mean_trace': mean_trace, 'sem_trace': sem_trace})
+
+def annotate_trial_response_df_with_pref_stim(rdf):
+    rdf['pref_stim'] = False
+    mean_response = rdf.groupby(['cell', 'change_image_name']).apply(get_mean_sem)
+    m = mean_response.unstack()
+    for cell in m.index:
+        image_index = np.where(m.loc[cell]['mean_response'].values==np.max(m.loc[cell]['mean_response'].values))[0][0]
+        pref_image = m.loc[cell]['mean_response'].index[image_index]
+        trials = rdf[(rdf.cell==cell)&(rdf.change_image_name==pref_image)].index
+        for trial in trials:
+            rdf.loc[trial,'pref_stim'] = True
+    return rdf
+
+def annotate_mean_df_with_pref_stim(mean_df):
+    mdf = mean_df.reset_index()
+    mdf['pref_stim'] = False
+
+    for cell in mdf.cell.unique():
+        mc =  mdf[(mdf.cell==cell)]
+        pref_image = mc[(mc.mean_response==np.max(mc.mean_response.values))].change_image_name.values[0]
+        row = mdf[(mdf.cell==cell)&(mdf.change_image_name==pref_image)].index
+        mdf.loc[row,'pref_stim'] = True
+    return mdf
+
+def get_fraction_significant_trials(group):
+    fraction_significant_trials = len(group[group.p_value<0.005])/float(len(group))
+    return pd.Series({'fraction_significant_trials': fraction_significant_trials})
+
+def get_fraction_responsive_trials(group):
+    fraction_responsive_trials = len(group[group.mean_response>0.1])/float(len(group))
+    return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
+
+
+def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
+    rdf = trial_response_df.copy()
+
+    mdf = rdf.groupby(conditions).apply(get_mean_sem)
+    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
+    mdf = mdf.reset_index()
+    mdf = annotate_mean_df_with_pref_stim(mdf)
+
+    fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
+    fraction_significant_trials = fraction_significant_trials.reset_index()
+    mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
+
+    fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
+    fraction_responsive_trials = fraction_responsive_trials.reset_index()
+    mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
+
+    return mdf
+
