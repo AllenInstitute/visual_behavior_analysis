@@ -127,7 +127,16 @@ def total_number_of_licks(session_trials):
 
 
 def session_id(session_trials):
-    return session_trials.iloc[0].session_id
+    '''
+    gets session id.
+    deals with variable syntax
+    '''
+    if 'session_id' in session_trials.columns:
+        return session_trials.iloc[0].session_id
+    elif 'behavior_session_uuid' in session_trials.columns:
+        return session_trials.iloc[0].behavior_session_uuid
+    else:
+        return None
 
 
 def isnull(a):

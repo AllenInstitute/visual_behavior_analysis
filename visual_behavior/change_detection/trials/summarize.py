@@ -50,7 +50,7 @@ def number_of_stim_mask_ISIs(session_trials):
 
 
 DEFAULT_SUMMARY_METRICS = dict(
-    # session_id=session_metrics.session_id,
+    session_id=session_metrics.session_id,
     session_duration=session_metrics.session_duration,
     d_prime_peak=session_metrics.peak_dprime,
     d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime),
