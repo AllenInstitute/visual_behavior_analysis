@@ -203,9 +203,9 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
             save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_trace_heatmap_'+condition)
 
 def get_upper_limit_and_intervals(dff_traces, timestamps_ophys):
-    upper = np.round(dff_traces[0].shape[0], -3) + 1000
+    upper = np.round(dff_traces.shape[1], -3) + 1000
     interval = 5 * 60
-    frame_interval = np.arange(0, len(dff_traces[0]), interval * 31)
+    frame_interval = np.arange(0, len(dff_traces), interval * 31)
     time_interval = np.uint64(np.round(np.arange(timestamps_ophys[0], timestamps_ophys[-1], interval), 1))
     return upper, time_interval, frame_interval
 
@@ -274,11 +274,11 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.set_title(analysis.dataset.experiment_id)
     ax.axis('off')
 
-    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(analysis.dataset.dff_traces[1],
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(analysis.dataset.dff_traces,
                                                                                    analysis.dataset.timestamps_ophys)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.9), yspan=(0, .3))
-    ax = plot_traces_heatmap(analysis.dataset.dff_traces[1], ax=ax)
+    ax = plot_traces_heatmap(analysis.dataset.dff_traces, ax=ax)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
