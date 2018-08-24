@@ -5,9 +5,10 @@ from visual_behavior.ophys.plotting import summary_figures as sf
 from visual_coding_2p_analysis.l0_analysis import L0_analysis
 
 def event_detection(lims_id):
-    dataset= VisualBehaviorOphysDataset(lims_id, save_processed_data=False, from_processed_data=True)
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
+    dataset= VisualBehaviorOphysDataset(lims_id, cache_dir=cache_dir)
 
-    events_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis\events'
+    events_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/events'
     l0 = L0_analysis(dataset, cache_directory=events_dir)
 
     events = l0.get_events()
