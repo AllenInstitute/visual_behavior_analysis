@@ -11,6 +11,10 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
 
+    print('plotting experiment summary figure')
+    from visual_behavior.ophys.plotting import experiment_summary_figures as esf
+    esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
+
     print('plotting cell responses')
     from visual_behavior.ophys.plotting import summary_figures as sf
     for cell in dataset.get_cell_indices():
