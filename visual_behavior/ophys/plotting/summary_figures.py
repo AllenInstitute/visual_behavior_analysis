@@ -293,6 +293,18 @@ def plot_image_response_for_trial_types(analysis, cell, save=True):
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_responses', title, formats=['.png'])
         plt.close()
 
+def plot_event_detection(dff_traces_l0, events, analysis_dir):
+    for cell in range(len(dff_traces_l0)):
+        fig, ax = plt.subplots(figsize=(20, 5))
+        ax.plot(dff_traces_l0[cell], label='dF/F from L0')
+        ax.plot(events[cell], color='r', label='events')
+        ax.set_title('roi ' + str(cell))
+        ax.set_xlabel('2P frames')
+        ax.set_ylabel('dF/F')
+        plt.legend()
+        save_figure(fig, (20, 5), analysis_dir, 'event_detection', str(cell))
+        plt.close()
+
 
 if __name__ == '__main__':
     experiment_id = 719996589
