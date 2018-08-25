@@ -255,7 +255,7 @@ def plot_single_trial_trace(trace, frame_rate, ylabel='dF/F', legend_label=None,
     return ax
 
 
-def plot_image_response_for_trial_types(analysis, cell, save=True):
+def plot_image_response_for_trial_types(analysis, cell, save_dir=None):
     """
     Function to plot trial avereraged response of a cell for all images separately for 'go' and 'catch' trials. Creates figure and axes to plot.
 
@@ -287,10 +287,10 @@ def plot_image_response_for_trial_types(analysis, cell, save=True):
         df[df.cell == cell].cell_specimen_id.values[0]) + '_' + analysis.dataset.analysis_folder
     plt.suptitle(title, x=0.47, y=1., horizontalalignment='center')
     fig.tight_layout()
-    if save:
+    if save_dir:
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(right=0.85)
-        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_responses', title, formats=['.png'])
+        save_figure(fig, figsize, save_dir, 'image_responses', title, formats=['.png'])
         plt.close()
 
 

@@ -21,7 +21,8 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     logger.info('plotting cell responses')
     from visual_behavior.ophys.plotting import summary_figures as sf
     for cell in dataset.get_cell_indices():
-        sf.plot_image_response_for_trial_types(analysis, cell, save=True)
+        sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir)
+        sf.plot_image_response_for_trial_types(analysis, cell, save_dir=cache_dir)
     logger.info('done')
 
 
