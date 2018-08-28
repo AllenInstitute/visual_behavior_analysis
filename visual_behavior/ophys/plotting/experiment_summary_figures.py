@@ -10,8 +10,6 @@ import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib
-matplotlib.use('Agg')
-
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.ophys.plotting.summary_figures as sf
 
@@ -19,6 +17,8 @@ import visual_behavior.ophys.plotting.summary_figures as sf
 sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_palette('deep')
+matplotlib.use('Agg')
+
 
 logger = logging.getLogger(__name__)
 
@@ -188,7 +188,8 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
 
     for i, condition_value in enumerate(condition_values):
         im_df = data[(data[condition] == condition_value)]
-        if len(im_df) > 1: #needs to be at least 2 trials of a condition
+        # needs to be at least 2 trials of a condition
+        if len(im_df) > 1:
             if i == 0:
                 order = np.argsort(im_df.mean_response.values)
             mean_traces = im_df.mean_trace.values[order][::-1]
@@ -196,15 +197,15 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
             for x, trace in enumerate(mean_traces):
                 response_array[x, :] = trace
 
-        sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=False)
-        xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1)
-        ax[i].set_xticks(xticks)
-        ax[i].set_xticklabels([int(x) for x in xticklabels])
-        ax[i].set_yticks(np.arange(0, response_array.shape[0], 10))
-        ax[i].set_yticklabels(np.arange(0, response_array.shape[0], 10))
-        ax[i].set_xlabel('time after change (s)', fontsize=16)
-        ax[i].set_title(condition_value)
-        ax[0].set_ylabel('cells')
+            sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=False)
+            xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1)
+            ax[i].set_xticks(xticks)
+            ax[i].set_xticklabels([int(x) for x in xticklabels])
+            ax[i].set_yticks(np.arange(0, response_array.shape[0], 10))
+            ax[i].set_yticklabels(np.arange(0, response_array.shape[0], 10))
+            ax[i].set_xlabel('time after change (s)', fontsize=16)
+            ax[i].set_title(condition_value)
+            ax[0].set_ylabel('cells')
 
         if save_dir:
             fig.tight_layout()
@@ -277,7 +278,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     figsize = [2 * 11, 2 * 8.5]
     fig = plt.figure(figsize=figsize, facecolor='white')
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.82, 1), yspan=(0, .3))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.82, 0.95), yspan=(0, .3))
     table_data = format_table_data(analysis.dataset)
     xtable = ax.table(cellText=table_data.values, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
     xtable.scale(1, 3)
@@ -320,7 +321,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
                                  condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None)
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.8, 1), yspan=(.3, .8))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.8, 0.98), yspan=(.3, .8))
     mdf = ut.get_mean_df(analysis.trial_response_df, conditions=['cell', 'change_image_name'])
     ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None)
 
@@ -355,7 +356,8 @@ if __name__ == '__main__':
 
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
 
-    for lims_id in lims_ids:
+    for lims_id in lims_ids[10:]:
+        print(lims_id)
         logger.info(lims_id)
         dataset = VisualBehaviorOphysDataset(lims_id, cache_dir=cache_dir)
         analysis = ResponseAnalysis(dataset)

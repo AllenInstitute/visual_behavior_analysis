@@ -72,6 +72,7 @@ def annotate_trial_response_df_with_pref_stim(rdf):
             rdf.loc[trial, 'pref_stim'] = True
     return rdf
 
+
 def get_mean_sem(group):
     mean_response = np.mean(group['mean_response'])
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
