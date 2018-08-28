@@ -9,6 +9,8 @@ import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.ophys.plotting.summary_figures as sf
@@ -325,6 +327,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     fig.tight_layout()
 
     if save_dir:
+        fig.tight_layout()
         save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder)
 
 
