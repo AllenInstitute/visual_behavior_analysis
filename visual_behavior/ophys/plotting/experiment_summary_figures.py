@@ -280,7 +280,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.82, 1), yspan=(0, .3))
     table_data = format_table_data(analysis.dataset)
     xtable = ax.table(cellText=table_data.values, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
-    xtable.scale(1.5, 3)
+    xtable.scale(1.5, 2.5)
     ax.axis('off')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .22), yspan=(0, .27))
@@ -314,7 +314,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .2), yspan=(.25, .8))
     ax = plot_lick_raster(analysis.dataset.trials, ax=ax, save_dir=None)
 
-    ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35, )
+    ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35)
     mdf = ut.get_mean_df(analysis.trial_response_df,
                          conditions=['cell', 'change_image_name', 'behavioral_response_type'])
     ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',

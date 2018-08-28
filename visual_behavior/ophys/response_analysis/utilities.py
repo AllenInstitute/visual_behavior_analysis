@@ -51,7 +51,7 @@ def ptest(x, num_conditions):
     return ptest
 
 
-def get_mean_sem(group):
+def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
     mean_trace = np.mean(group['trace'])
@@ -62,7 +62,7 @@ def get_mean_sem(group):
 
 def annotate_trial_response_df_with_pref_stim(rdf):
     rdf['pref_stim'] = False
-    mean_response = rdf.groupby(['cell', 'change_image_name']).apply(get_mean_sem)
+    mean_response = rdf.groupby(['cell', 'change_image_name']).apply(get_mean_sem_trace)
     m = mean_response.unstack()
     for cell in m.index:
         image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
@@ -71,6 +71,24 @@ def annotate_trial_response_df_with_pref_stim(rdf):
         for trial in trials:
             rdf.loc[trial, 'pref_stim'] = True
     return rdf
+
+def get_mean_sem(group):
+    mean_response = np.mean(group['mean_response'])
+    sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
+    return pd.Series({'mean_response': mean_response, 'sem_response': sem_response})
+
+
+def annotate_flash_response_df_with_pref_stim(fdf):
+    fdf['pref_stim'] = False
+    mean_response = fdf.groupby(['cell', 'image_name']).apply(get_mean_sem)
+    m = mean_response.unstack()
+    for cell in m.index:
+        image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
+        pref_image = m.loc[cell]['mean_response'].index[image_index]
+        trials = fdf[(fdf.cell == cell) & (fdf.image_name == pref_image)].index
+        for trial in trials:
+            fdf.loc[trial, 'pref_stim'] = True
+    return fdf
 
 
 def annotate_mean_df_with_pref_stim(mean_df):
@@ -98,7 +116,7 @@ def get_fraction_responsive_trials(group):
 def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
     rdf = trial_response_df.copy()
 
-    mdf = rdf.groupby(conditions).apply(get_mean_sem)
+    mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
     mdf = mdf.reset_index()
     mdf = annotate_mean_df_with_pref_stim(mdf)
