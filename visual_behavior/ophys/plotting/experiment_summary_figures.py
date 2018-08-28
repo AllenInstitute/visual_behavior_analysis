@@ -280,7 +280,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.82, 1), yspan=(0, .3))
     table_data = format_table_data(analysis.dataset)
     xtable = ax.table(cellText=table_data.values, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
-    xtable.scale(1.5, 2.5)
+    xtable.scale(1, 3)
     ax.axis('off')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .22), yspan=(0, .27))
