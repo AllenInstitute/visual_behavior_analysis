@@ -172,14 +172,6 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
 
 def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['go', 'catch'], ax=None, save_dir=None):
     data = mean_df[mean_df.pref_stim == True].copy()
-
-    cell_list = []
-    for cell in data.cell.unique():
-        # only include cells that have a mean response for both conditions
-        if len(data[(data.cell == cell) & (data[condition].isin(condition_values))]) == len(condition_values):
-            cell_list.append(cell)
-    data = data[(data.cell.isin(cell_list))]
-
     vmax = 0.5
     if ax is None:
         figsize = (3 * len(condition_values), 6)
@@ -188,28 +180,33 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
 
     for i, condition_value in enumerate(condition_values):
         im_df = data[(data[condition] == condition_value)]
-        # needs to be at least 2 trials of a condition
-        if len(im_df) > 1:
-            if i == 0:
-                order = np.argsort(im_df.mean_response.values)
-            mean_traces = im_df.mean_trace.values[order][::-1]
-            response_array = np.empty((len(im_df), mean_traces[0].shape[0]))
-            for x, trace in enumerate(mean_traces):
-                response_array[x, :] = trace
+        if i == 0:
+            order = np.argsort(im_df.mean_response.values)[::-1]
+            cells = im_df.cell.unique()[order]
+        len_trace = len(im_df.mean_trace.values[0])
+        response_array = np.empty((len(cells), len_trace))
+        for x, cell in enumerate(cells):
+            tmp = im_df[im_df.cell==cell]
+            if len(tmp)>=1:
+                trace = tmp.mean_trace.values[0]
+            else:
+                trace = np.empty((len_trace))
+                trace[:] = np.nan
+            response_array[x, :] = trace
 
-            sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=False)
-            xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1)
-            ax[i].set_xticks(xticks)
-            ax[i].set_xticklabels([int(x) for x in xticklabels])
-            ax[i].set_yticks(np.arange(0, response_array.shape[0], 10))
-            ax[i].set_yticklabels(np.arange(0, response_array.shape[0], 10))
-            ax[i].set_xlabel('time after change (s)', fontsize=16)
-            ax[i].set_title(condition_value)
-            ax[0].set_ylabel('cells')
+        sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=False)
+        xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1)
+        ax[i].set_xticks(xticks)
+        ax[i].set_xticklabels([int(x) for x in xticklabels])
+        ax[i].set_yticks(np.arange(0, response_array.shape[0], 10))
+        ax[i].set_yticklabels(np.arange(0, response_array.shape[0], 10))
+        ax[i].set_xlabel('time after change (s)', fontsize=16)
+        ax[i].set_title(condition_value)
+        ax[0].set_ylabel('cells')
 
-        if save_dir:
-            fig.tight_layout()
-            save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_trace_heatmap_' + condition)
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_trace_heatmap_' + condition)
 
 
 def get_upper_limit_and_intervals(dff_traces, timestamps_ophys):
@@ -278,10 +275,10 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     figsize = [2 * 11, 2 * 8.5]
     fig = plt.figure(figsize=figsize, facecolor='white')
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.82, 0.95), yspan=(0, .3))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.8, 0.95), yspan=(0, .3))
     table_data = format_table_data(analysis.dataset)
     xtable = ax.table(cellText=table_data.values, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
-    xtable.scale(1, 3)
+    xtable.scale(1.5, 3)
     ax.axis('off')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .22), yspan=(0, .27))
@@ -321,7 +318,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
                                  condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None)
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.8, 0.98), yspan=(.3, .8))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.98), yspan=(.3, .8))
     mdf = ut.get_mean_df(analysis.trial_response_df, conditions=['cell', 'change_image_name'])
     ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None)
 
