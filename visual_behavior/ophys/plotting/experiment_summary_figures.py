@@ -6,13 +6,13 @@ Created on Wednesday August 22 2018
 import os
 import logging
 import numpy as np
-import seaborn as sns
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.ophys.plotting.summary_figures as sf
+import seaborn as sns
 
 # formatting
 sns.set_style('white')
