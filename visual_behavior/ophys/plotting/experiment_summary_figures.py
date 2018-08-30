@@ -4,20 +4,20 @@ Created on Wednesday August 22 2018
 @author: marinag
 """
 import os
-import logging
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.ophys.plotting.summary_figures as sf
 import seaborn as sns
+import matplotlib
+matplotlib.use('Agg')
 
 # formatting
 sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_palette('deep')
+
 
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
     '''
@@ -182,8 +182,8 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
         len_trace = len(im_df.mean_trace.values[0])
         response_array = np.empty((len(cells), len_trace))
         for x, cell in enumerate(cells):
-            tmp = im_df[im_df.cell==cell]
-            if len(tmp)>=1:
+            tmp = im_df[im_df.cell == cell]
+            if len(tmp) >= 1:
                 trace = tmp.mean_trace.values[0]
             else:
                 trace = np.empty((len_trace))
@@ -351,8 +351,7 @@ if __name__ == '__main__':
 
     for lims_id in lims_ids[10:]:
         print(lims_id)
-        logger.info(lims_id)
         dataset = VisualBehaviorOphysDataset(lims_id, cache_dir=cache_dir)
         analysis = ResponseAnalysis(dataset)
         plot_experiment_summary_figure(analysis, save_dir=cache_dir)
-        logger.info('done plotting figures')
+        print('done plotting figures')
