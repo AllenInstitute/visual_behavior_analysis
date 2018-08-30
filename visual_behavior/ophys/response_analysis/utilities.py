@@ -165,7 +165,7 @@ def add_repeat_to_stimulus_table(stimulus_table):
 
 def add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table):
     stimulus_table = add_repeat_to_stimulus_table(stimulus_table)
-    flash_response_df = flash_response_df.merge(flashes[['flash_number','repeat']],on='flash_number')
+    flash_response_df = flash_response_df.merge(stimulus_table[['flash_number','repeat']],on='flash_number')
     return flash_response_df
 
 
@@ -182,5 +182,5 @@ def add_image_block_to_stimulus_table(stimulus_table):
 
 def add_image_block_to_flash_response_df(flash_response_df, stimulus_table):
     stimulus_table = add_image_block_to_stimulus_table(stimulus_table)
-    flash_response_df = flash_response_df.merge(flashes[['flash_number','image_block']],on='flash_number')
+    flash_response_df = flash_response_df.merge(stimulus_table[['flash_number','image_block']],on='flash_number')
     return flash_response_df
