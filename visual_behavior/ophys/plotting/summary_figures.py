@@ -357,6 +357,74 @@ def plot_trial_trace_heatmap(trial_response_df, cell, cmap='viridis', vmax=0.5, 
     return ax
 
 
+def plot_mean_response_by_repeat(flash_response_df, cell, save_dir=None):
+    n_repeats = 15
+    palette = sns.color_palette("RdBu", n_colors=n_repeats)
+    norm = plt.Normalize(0, n_repeats)
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
+    sm.set_array([])
+
+    df = flash_response_df[flash_response_df.cell == cell]
+    df = df[df['repeat'] < n_repeats]
+    figsize = (10, 5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.stripplot(data=df, x='image_name', y='mean_response', jitter=.2, size=3, ax=ax, hue='repeat',
+                       palette=palette)
+    ax.set_xticklabels(df.image_name.unique(), rotation=90);
+    ax.legend_.remove()
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax)
+    cbar.set_label('repeat')
+    ax.set_title('cell ' + str(cell))
+    if save_dir:
+        sf.save_figure(fig, figsize, save_dir, 'mean_response_by_repeat', 'cell_' + str(cell))
+        plt.close()
+
+
+def plot_mean_response_by_image_block(flash_response_df, cell, save_dir=None):
+    n_blocks = len(flash_response_df.image_block.unique())
+    palette = sns.color_palette("RdBu", n_colors=n_blocks)
+    norm = plt.Normalize(0, n_blocks)
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
+    sm.set_array([])
+
+    df = flash_response_df[flash_response_df.cell == cell]
+    figsize = (10, 5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.stripplot(data=df, x='image_name', y='mean_response', jitter=.2, size=3, ax=ax, hue='image_block',
+                       palette=palette)
+    ax.set_xticklabels(df.image_name.unique(), rotation=90);
+    ax.legend_.remove()
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax)
+    cbar.set_label('image_block')
+    ax.set_title('cell ' + str(cell))
+    if save_dir:
+        sf.save_figure(fig, figsize, save_dir, 'mean_response_by_image_block', 'cell_' + str(cell))
+        plt.close()
+
+
+def plot_mean_response_by_image_block(flash_response_df, cell, save_dir=None):
+    n_blocks = len(flash_response_df.image_block.unique())
+    palette = sns.color_palette("RdBu", n_colors=n_blocks)
+    norm = plt.Normalize(0, n_blocks)
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
+    sm.set_array([])
+
+    df = flash_response_df[flash_response_df.cell == cell]
+    figsize = (10, 5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.stripplot(data=df, x='image_name', y='mean_response', jitter=.2, size=3, ax=ax, hue='image_block',
+                       palette=palette)
+    ax.set_xticklabels(df.image_name.unique(), rotation=90);
+    ax.legend_.remove()
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax)
+    cbar.set_label('image_block')
+    ax.set_title('cell ' + str(cell))
+    if save_dir:
+        sf.save_figure(fig, figsize, save_dir, 'mean_response_by_image_block', 'cell_' + str(cell))
+        plt.close()
+
+
+
 if __name__ == '__main__':
     experiment_id = 719996589
 

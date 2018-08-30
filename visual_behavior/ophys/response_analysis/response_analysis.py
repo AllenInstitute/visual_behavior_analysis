@@ -135,6 +135,10 @@ class ResponseAnalysis(object):
         flash_response_df = pd.DataFrame(data=row,
                                          columns=['cell', 'flash_number', 'start_time', 'image_name', 'mean_response',
                                                   'p_value'])
+
+        stimulus_table = self.dataset.stimulus_table.copy()
+        flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
+        flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
         return flash_response_df
 
     def save_flash_response_df(self, flash_response_df):

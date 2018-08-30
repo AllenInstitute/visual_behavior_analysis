@@ -131,3 +131,56 @@ def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
     mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
 
     return mdf
+
+def get_gray_response_df(dataset, window=0.5):
+    window = 0.5
+    row = []
+    flashes = dataset.stimulus_table.copy()
+    stim_duration = dataset.task_parameters.stimulus_duration.values[0]
+    for cell in range(dataset.dff_traces.shape[0]):
+        for x,gray_start_time in enumerate(flashes.end_time[:-5]): #exclude the last 5 frames to prevent truncation of traces
+            ophys_start_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - gray_start_time)))
+            ophys_end_time = gray_start_time + int(dataset.metadata.ophys_frame_rate.values[0] * 0.5)
+            gray_end_time = gray_start_time + window
+            ophys_end_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - ophys_end_time)))
+            mean_response = np.mean(dataset.dff_traces[cell][ophys_start_frame:ophys_end_frame])
+            row.append([cell, x, gray_start_time, gray_end_time, mean_response])
+    gray_response_df = pd.DataFrame(data=row, columns=['cell', 'gray_number', 'gray_start_time', 'gray_end_time', 'mean_response'])
+    return gray_response_df
+
+
+def add_repeat_to_stimulus_table(stimulus_table):
+    repeat = []
+    n = 0
+    for i, image in enumerate(stimulus_table.image_name.values):
+        if image != stimulus_table.image_name.values[i - 1]:
+            n = 1
+            repeat.append(n)
+        else:
+            n += 1
+            repeat.append(n)
+    stimulus_table['repeat'] = repeat
+    return stimulus_table
+
+
+def add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table):
+    stimulus_table = add_repeat_to_stimulus_table(stimulus_table)
+    flash_response_df = flash_response_df.merge(flashes[['flash_number','repeat']],on='flash_number')
+    return flash_response_df
+
+
+def add_image_block_to_stimulus_table(stimulus_table):
+    stimulus_table['image_block'] = np.nan
+    for image_name in stimulus_table.image_name.unique():
+        block = 0
+        for index in stimulus_table[stimulus_table.image_name==image_name].index.values:
+            if stimulus_table.iloc[index]['repeat'] == 1:
+                block +=1
+            stimulus_table.loc[index,'image_block'] = int(block)
+    return stimulus_table
+
+
+def add_image_block_to_flash_response_df(flash_response_df, stimulus_table):
+    stimulus_table = add_image_block_to_stimulus_table(stimulus_table)
+    flash_response_df = flash_response_df.merge(flashes[['flash_number','image_block']],on='flash_number')
+    return flash_response_df
