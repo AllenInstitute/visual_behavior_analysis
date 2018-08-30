@@ -603,8 +603,10 @@ if __name__ == '__main__':
     import sys
 
     experiment_id = sys.argv[1]
-    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
-    cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
+    # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
+    # cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+    # experiment_id = 742828820
     ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
 
     # import pandas as pd
