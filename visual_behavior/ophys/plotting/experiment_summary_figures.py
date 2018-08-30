@@ -305,7 +305,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.legend(loc='upper right', ncol=2, borderaxespad=0.)
     ax.set_xlabel('time (seconds)')
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .2), yspan=(.25, .8))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .22), yspan=(.25, .8))
     ax = plot_lick_raster(analysis.dataset.trials, ax=ax, save_dir=None)
 
     ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35)
@@ -314,7 +314,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
                                  condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None)
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.98), yspan=(.3, .8))
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
     mdf = ut.get_mean_df(analysis.trial_response_df, conditions=['cell', 'change_image_name'])
     ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None)
 
