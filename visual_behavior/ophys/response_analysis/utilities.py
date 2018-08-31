@@ -60,7 +60,8 @@ def get_mean_sem_trace(group):
                       'mean_trace': mean_trace, 'sem_trace': sem_trace})
 
 
-def annotate_trial_response_df_with_pref_stim(rdf):
+def annotate_trial_response_df_with_pref_stim(trial_response_df):
+    rdf = trial_response_df.copy()
     rdf['pref_stim'] = False
     mean_response = rdf.groupby(['cell', 'change_image_name']).apply(get_mean_sem_trace)
     m = mean_response.unstack()
