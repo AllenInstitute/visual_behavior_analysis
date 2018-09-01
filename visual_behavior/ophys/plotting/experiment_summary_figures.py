@@ -354,7 +354,7 @@ def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=No
     return ax
 
 
-def plot_mean_response_across_image_block_sets(data, save_dir=None, ax=None):
+def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=None, ax=None):
     order = np.argsort(data[data.image_block==1].early_late_block_ratio.values)
     cell_order = data[data.image_block==1].cell.values[order]
     if ax is None:
@@ -374,7 +374,7 @@ def plot_mean_response_across_image_block_sets(data, save_dir=None, ax=None):
     ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
     if save_dir:
         fig.tight_layout()
-        save_figure(fig,figsize,save_dir,'first_flash_by_image_block',analysis.dataset.analysis_folder)
+        save_figure(fig,figsize,save_dir,'first_flash_by_image_block',analysis_folder)
     return ax
 
 
