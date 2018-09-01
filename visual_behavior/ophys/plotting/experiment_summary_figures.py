@@ -374,7 +374,7 @@ def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=N
     ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
     if save_dir:
         fig.tight_layout()
-        save_figure(fig,figsize,save_dir,'first_flash_by_image_block',analysis_folder)
+        save_figure(fig,figsize,save_dir,'first_flash_by_image_block_set',analysis_folder)
     return ax
 
 
