@@ -137,6 +137,7 @@ class ResponseAnalysis(object):
                                                   'p_value'])
 
         stimulus_table = self.dataset.stimulus_table.copy()
+        flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
         flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
         return flash_response_df

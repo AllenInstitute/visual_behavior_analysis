@@ -17,6 +17,12 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     logger.info('plotting experiment summary figure')
     from visual_behavior.ophys.plotting import experiment_summary_figures as esf
     esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
+    esf.plot_mean_first_flash_response_by_image_block(analysis, save_dir=cache_dir, ax=None)
+
+    analysis.flash_response_df = ut.annotate_flash_response_df_with_block_set(analysis.flash_response_df)
+    fdf = analysis.flash_response_df.copy()
+    data = ut.add_early_late_block_ratio_for_fdf(fdf)
+    esf.plot_mean_response_across_image_block_sets(data, save_dir=cache_dir, ax=None)
 
     logger.info('plotting cell responses')
     from visual_behavior.ophys.plotting import summary_figures as sf
@@ -24,8 +30,8 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir)
         sf.plot_image_response_for_trial_types(analysis, cell, save_dir=cache_dir)
 
-        sf.plot_mean_response_by_repeat(analysis, cell, save_dir=analysis.dataset.analysis_dir)
-        sf.plot_mean_response_by_image_block(analysis, cell, save_dir=analysis.dataset.analysis_dir)
+        # sf.plot_mean_response_by_repeat(analysis, cell, save_dir=analysis.dataset.analysis_dir)
+        # sf.plot_mean_response_by_image_block(analysis, cell, save_dir=analysis.dataset.analysis_dir)
         sf.plot_mean_response_by_repeat(analysis, cell, save_dir=cache_dir)
         sf.plot_mean_response_by_image_block(analysis, cell, save_dir=cache_dir)
     logger.info('done')

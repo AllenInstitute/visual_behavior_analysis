@@ -161,6 +161,7 @@ def add_repeat_to_stimulus_table(stimulus_table):
             n += 1
             repeat.append(n)
     stimulus_table['repeat'] = repeat
+    stimulus_table['repeat'] = [int(repeat) for repeat in stimulus_table.repeat.values]
     return stimulus_table
 
 
@@ -178,6 +179,7 @@ def add_image_block_to_stimulus_table(stimulus_table):
             if stimulus_table.iloc[index]['repeat'] == 1:
                 block +=1
             stimulus_table.loc[index,'image_block'] = int(block)
+    stimulus_table['image_block'] = [int(image_block) for image_block in stimulus_table.image_block.values]
     return stimulus_table
 
 
@@ -185,3 +187,31 @@ def add_image_block_to_flash_response_df(flash_response_df, stimulus_table):
     stimulus_table = add_image_block_to_stimulus_table(stimulus_table)
     flash_response_df = flash_response_df.merge(stimulus_table[['flash_number','image_block']],on='flash_number')
     return flash_response_df
+
+
+def annotate_flash_response_df_with_block_set(flash_response_df):
+    fdf = flash_response_df.copy()
+    fdf['block_set'] = np.nan
+    block_sets = np.arange(0,np.amax(fdf.image_block.unique()),10)
+    for i,block_set in enumerate(block_sets):
+        if block_set != np.amax(block_sets):
+            indices = fdf[(fdf.image_block>=block_sets[i])&(fdf.image_block<block_sets[i+1])].index.values
+        else:
+            indices = fdf[(fdf.image_block>=block_sets[i])].index.values
+        for index in indices:
+            fdf.loc[index,'block_set'] = i
+    return fdf
+
+def add_early_late_block_ratio_for_fdf(fdf, repeat=1, pref_stim=True):
+    data = fdf[(fdf.repeat==repeat)&(fdf.pref_stim==pref_stim)]
+
+    data['early_late_block_ratio'] = np.nan
+    for cell in data.cell.unique():
+        first_blocks = data[(data.cell==cell)&(data.block_set.isin([0,1]))].mean_response.mean()
+        last_blocks = data[(data.cell==cell)&(data.block_set.isin([2,3]))].mean_response.mean()
+        index = (last_blocks-first_blocks)/(last_blocks+first_blocks)
+        ratio = first_blocks/last_blocks
+        indices = data[data.cell==cell].index
+        data.loc[indices,'early_late_block_index'] = index
+        data.loc[indices,'early_late_block_ratio'] = ratio
+    return data

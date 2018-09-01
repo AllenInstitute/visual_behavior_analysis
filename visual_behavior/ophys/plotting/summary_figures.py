@@ -290,7 +290,7 @@ def plot_image_response_for_trial_types(analysis, cell, save_dir=None):
     if save_dir:
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(right=0.85)
-        save_figure(fig, figsize, save_dir, 'image_responses', title, formats=['.png'])
+        save_figure(fig, figsize, save_dir, 'image_responses', analysis.dataset.analysis_folder+'_'+str(cell), formats=['.png'])
         plt.close()
 
 
@@ -353,11 +353,12 @@ def plot_trial_trace_heatmap(trial_response_df, cell, cmap='viridis', vmax=0.5, 
     if colorbar:
         plt.colorbar(cax, ax=ax[i])
     if save_dir:
+        fig.tight_layout()
         save_figure(fig, figsize, save_dir, 'trial_trace_heatmap', 'roi_' + str(cell))
     return ax
 
 
-def plot_mean_response_by_repeat(analysis, cell, save_dir=None):
+def plot_mean_response_by_repeat(analysis, cell, save_dir=None, ax=None):
     flash_response_df = analysis.flash_response_df.copy()
     n_repeats = 15
     palette = sns.color_palette("RdBu", n_colors=n_repeats)
@@ -377,12 +378,13 @@ def plot_mean_response_by_repeat(analysis, cell, save_dir=None):
     cbar.set_label('repeat')
     ax.set_title(str(cell)+'_'+analysis.dataset.analysis_folder, fontsize=14)
     if save_dir:
+        fig.tight_layout()
         save_figure(fig, figsize, save_dir, 'mean_response_by_repeat', analysis.dataset.analysis_folder + '_' + str(cell))
         plt.close()
     return ax
 
 
-def plot_mean_response_by_image_block(analysis, cell, save_dir=None):
+def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
     flash_response_df = analysis.flash_response_df.copy()
     n_blocks = len(flash_response_df.image_block.unique())
     palette = sns.color_palette("RdBu", n_colors=n_blocks)
@@ -401,6 +403,7 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None):
     cbar.set_label('image_block')
     ax.set_title(str(cell)+'_'+analysis.dataset.analysis_folder, fontsize=14)
     if save_dir:
+        fig.tight_layout()
         save_figure(fig, figsize, save_dir, 'mean_response_by_image_block', analysis.dataset.analysis_folder + '_' + str(cell))
         plt.close()
     return ax
