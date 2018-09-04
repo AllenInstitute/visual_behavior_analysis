@@ -69,7 +69,7 @@ def test_validate_change_time_mean():
         'prechange_minimum': np.zeros_like(simulated_change_times_bad),
     })
 
-    assert validate_change_time_mean(BAD_TRIALS, EXPECTED_MEAN, tolerance=0.5) == False
+    assert validate_change_time_mean(BAD_TRIALS, EXPECTED_MEAN, distribution_type='exponential', tolerance=0.5) == False
 
 
 def test_validate_monotonically_decreasing_number_of_change_times():
