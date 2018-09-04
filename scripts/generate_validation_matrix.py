@@ -20,6 +20,7 @@ def get_simulated_mouse_PKLs(path='//allen/aibs/mpe/Software/data/behavior/valid
         'stage_2',
         'stage_3',
         'stage_4',
+        'stage_5'
     )
 
     mice = (
@@ -53,7 +54,7 @@ def run_qc(pkls):
     for mouse, mouse_pkls in pkls.iteritems():
         for stage, stage_pkl in mouse_pkls.iteritems():
 
-            print mouse, stage
+            print('mouse = {}, stage = {}'.format(mouse, stage))
             try:
                 data = pd.read_pickle(stage_pkl)
 
@@ -62,7 +63,7 @@ def run_qc(pkls):
                 results.update({'mouse': mouse, 'stage': stage})
 
             except Exception as e:
-                print 'error before validation', e
+                print('error before validation: {}'.format(e))
                 results = {'mouse': mouse, 'stage': stage}
 
             all_results.append(results)
@@ -104,7 +105,7 @@ def build_matrix(all_results, savepath='//allen/aibs/mpe/Software/data/behavior/
     ax.set_xticklabels(xticklabels, rotation=40, ha='right', fontsize=8)
     yticklabels = ax.get_yticklabels()
     ax.set_yticklabels(yticklabels, rotation=0, ha='right', fontsize=8)
-    ax.grid(True)
+    ax.grid(False)
     ax.set_title('Fraction of passing validations = {:.2f}'.format(np.nanmean(np.array(outcomes.fillna(0).values.astype(float)), axis=(0, 1))))
     fig.tight_layout()
 
@@ -113,12 +114,12 @@ def build_matrix(all_results, savepath='//allen/aibs/mpe/Software/data/behavior/
     return fig
 
 
-def main():
+def generate_validation_matrix():
     pkls = get_simulated_mouse_PKLs()
     all_results = run_qc(pkls)
-    all_results = remove_lick_validation_from_obstinate_mouse(all_licks)
-    build_matrix(all_results)
-
+    all_results = remove_lick_validation_from_obstinate_mouse(all_results)
+    fig = build_matrix(all_results)
+    return fig
 
 if __name__ == '__main__':
-    main()
+    generate_validation_matrix()
