@@ -367,6 +367,7 @@ def validate_max_change_time(trials, pre_change_time, stimulus_window, distribut
         elif all(pd.isnull(change_times_trial_referenced)) == True:
             return True
 
+
 def validate_reward_when_lick_in_window(trials, tolerance=0.01):
     '''for every trial with a lick in the response window, there should be a reward'''
     # get all go_trials without auto_rewards
