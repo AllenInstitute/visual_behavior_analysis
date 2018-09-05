@@ -187,7 +187,7 @@ class VisualBehaviorOphysDataset(object):
             for key in dff_traces_file.keys():
                 dff_traces.append(np.asarray(dff_traces_file[key]))
         self._dff_traces = np.asarray(dff_traces)
-        return self.timestamps_ophys, self._dff_traces
+        return self._dff_traces
     dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
 
     def get_roi_metrics(self):
