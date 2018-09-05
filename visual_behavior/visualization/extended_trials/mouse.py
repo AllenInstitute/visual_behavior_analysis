@@ -120,7 +120,7 @@ def make_dprime_plot(
         ax,
         reward_window=None,
         return_vals=False,
-        sliding_window=None
+        sliding_window=100,
 ):
     if sliding_window is None:
         calculate_sliding_window = True
@@ -215,7 +215,8 @@ def make_summary_figure(df, mouse_id):
 
     make_performance_plot(dfm, session_dates, ax[2])
 
-    make_dprime_plot(dfm, session_dates, ax[3])
+    df_nonaborted = dfm[(dfm.trial_type != 'aborted') & (dfm.trial_type != 'other')]
+    make_dprime_plot(df_nonaborted, session_dates, ax[3])
 
     make_total_volume_plot(dfm, session_dates, ax[4])
 
