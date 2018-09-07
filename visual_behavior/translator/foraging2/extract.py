@@ -658,6 +658,10 @@ def get_params(exp_data):
     """
     params = deepcopy(exp_data["items"]["behavior"].get("params", {}))
     params.update(exp_data["items"]["behavior"].get("cl_params", {}))
+
+    if "response_window" in params:
+        params["response_window"] = list(params["response_window"])  # tuple to list
+
     return params
 
 
