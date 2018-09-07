@@ -458,8 +458,6 @@ def categorize_one_trial(tr):
         elif (tr['rewarded'] == 0):
             return 'catch'
 
-        
-
         else:
             return 'other'
 
@@ -586,8 +584,8 @@ def check_responses(trials, reward_window=None):
     return did_respond
 
 
-def trial_translator(trial_type,response_type):
-    if trial_type=='aborted':
+def trial_translator(trial_type, response_type):
+    if trial_type == 'aborted':
         return 'aborted'
     elif trial_type == 'autorewarded':
         return 'auto_rewarded'
@@ -606,29 +604,30 @@ def trial_translator(trial_type,response_type):
 def colormap(trial_type, palette='trial_types'):
     if palette.lower() == 'trial_types':
         colors = {
-            'aborted':'lightgray',
-            'auto_rewarded':'darkblue',
-            'hit':'#55a868',
-            'miss':'#ccb974',
-            'false_alarm':'#c44e52',
-            'correct_reject':'#4c72b0',
+            'aborted': 'lightgray',
+            'auto_rewarded': 'darkblue',
+            'hit': '#55a868',
+            'miss': '#ccb974',
+            'false_alarm': '#c44e52',
+            'correct_reject': '#4c72b0',
         }
     else:
         colors = {
-            'aborted':'red',
-            'auto_rewarded':'blue',
-            'hit':'darkgreen',
-            'miss':'lightgreen',
-            'false_alarm':'darkorange',
-            'correct_reject':'yellow',
+            'aborted': 'red',
+            'auto_rewarded': 'blue',
+            'hit': 'darkgreen',
+            'miss': 'lightgreen',
+            'false_alarm': 'darkorange',
+            'correct_reject': 'yellow',
         }
     return colors[trial_type]
 
 
 def assign_color(trial, palette='trial_types'):
 
-        trial_type = trial_translator(trial['trial_type'],trial['response'])
-        return colormap(trial_type, palette)
+    trial_type = trial_translator(trial['trial_type'], trial['response'])
+    return colormap(trial_type, palette)
+
 
 def get_response_type(trials):
 
@@ -667,7 +666,7 @@ def remove_repeated_licks(trials):
         if len(lick_frames_on_this_trial) > 0:
             # use the number of frames between each lick to determine which to keep
             if len(lick_frames_on_this_trial) > 1:
-                    lick_intervals = np.hstack((np.inf, np.diff(lick_frames_on_this_trial)))
+                lick_intervals = np.hstack((np.inf, np.diff(lick_frames_on_this_trial)))
             else:
                 lick_intervals = np.array([np.inf])
 

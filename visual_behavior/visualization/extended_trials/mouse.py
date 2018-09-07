@@ -61,7 +61,7 @@ def make_trial_type_plot(dfm, session_dates, ax):
                 fraction = 0
             vals.append(fraction)
         all_vals.append(vals)
-    print('all_vals:',all_vals)
+    print('all_vals:', all_vals)
     all_vals = np.array(all_vals)
     cumsum = np.hstack((np.zeros((np.shape(all_vals)[0], 1)), np.cumsum(all_vals, axis=1)))
     width = 0.8  # NOQA: F841
