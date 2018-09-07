@@ -154,7 +154,8 @@ def data_to_metadata(data):
     for stim_type, stim_table in stim_tables.items():
         n_stimulus_frames += sum(stim_table.get("draw_log", []))
 
-    params["response_window"] = list(params["response_window"])  # tuple to list
+    if "response_window" in params:
+        params["response_window"] = list(params["response_window"])  # tuple to list
 
     # ugly python3 compat dict key iterating...
     try:
