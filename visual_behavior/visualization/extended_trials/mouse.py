@@ -46,11 +46,12 @@ def make_ILI_plot(dfm, session_dates, ax):
 def make_trial_type_plot(dfm, session_dates, ax):
     sums = dfm.groupby(['startdatetime', 'color', ]).sum()
     colors = ['blue', 'red', 'darkgreen', 'lightgreen', 'darkorange', 'yellow']
-    dates = []
     all_vals = []
+
+    dates = [pd.to_datetime(date).strftime('%Y-%m-%d') for date in dfm.startdatetime.unique()]
+
     for ii, date in enumerate(session_dates[:]):
 
-        dates.append(dfm[(dfm.startdatetime == date)].startdatetime.iloc[0].strftime('%Y-%m-%d'))
         total_dur = sums.loc[date]['trial_length'].sum()
         vals = []
         for color in colors:
@@ -60,7 +61,7 @@ def make_trial_type_plot(dfm, session_dates, ax):
                 fraction = 0
             vals.append(fraction)
         all_vals.append(vals)
-
+    print('all_vals:',all_vals)
     all_vals = np.array(all_vals)
     cumsum = np.hstack((np.zeros((np.shape(all_vals)[0], 1)), np.cumsum(all_vals, axis=1)))
     width = 0.8  # NOQA: F841
@@ -99,6 +100,7 @@ def make_dprime_plot(
 ):
 
     dates = [pd.to_datetime(date).strftime('%Y-%m-%d') for date in df_summary.startdatetime.unique()]
+
     max_dprime = df_summary['d_prime_peak'].values
 
     height = 0.7

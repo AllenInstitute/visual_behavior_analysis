@@ -110,10 +110,10 @@ def peak_false_alarm_rate(session_trials):
         return np.nan
 
 
-def fraction_time_aborted(session_trials):
+def fraction_time_by_trial_type(session_trials, trial_type='aborted'):
     trial_fractions = session_trials.groupby('trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
     try:
-        return trial_fractions['aborted']
+        return trial_fractions[trial_type]
     except KeyError:
         return 0.0
 

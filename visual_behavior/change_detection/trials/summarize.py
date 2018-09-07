@@ -60,7 +60,7 @@ DEFAULT_SUMMARY_METRICS = dict(
     total_water=session_metrics.total_water,
     num_contingent_trials=session_metrics.num_contingent_trials,
     lick_latency_median=session_metrics.lick_latency,
-    fraction_time_aborted=session_metrics.fraction_time_aborted,
+    fraction_time_aborted=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'aborted'),
     hit_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.hit_rate),
     false_alarm_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.false_alarm_rate),
     hit_rate_peak=session_metrics.peak_hit_rate,
