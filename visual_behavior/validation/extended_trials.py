@@ -781,7 +781,7 @@ def validate_even_sampling(trials, even_sampling_enabled):
     if even_sampling mode is enabled, no stimulus change combinations (including catch conditions) are sampled more than one more time than any other.
     Note that even sampling only applies to images, so this does not need to be written to deal with grating stimuli
     '''
-    go_trials = trials[trials['trial_type'] == 'go']
+    go_trials = trials[trials['trial_type'].isin(['go','autorewarded'])]
     if even_sampling_enabled == True and len(go_trials) > 0:
         # build a table with the counts of all combinations
         transition_matrix = pd.pivot_table(
