@@ -715,7 +715,7 @@ def validate_monotonically_decreasing_number_of_change_times(trials, expected_di
 def validate_no_abort_on_lick_before_response_window(trials):
     '''
     If licks occur between the change time and `response_window[0]`, the trial should continue.
-    Method ensures that all cases matching this condition are labeled as 'go' or 'catch', not 'aborted'
+    Method ensures that all cases matching this condition are labeled as 'go', 'catch', or 'autorewarded', not 'aborted'
     '''
     def identify_first_lick_before_response_window(row):
         '''
@@ -739,7 +739,7 @@ def validate_no_abort_on_lick_before_response_window(trials):
         trials['response_before_response_window'] = trials.apply(identify_first_lick_before_response_window, axis=1)
 
         # ensure that all trials with first lick between the change time and the start of the response window are labeled as 'go' or 'catch' (not 'aborted')
-        return all(trials[trials['response_before_response_window'] == True].trial_type.isin(['go', 'catch']))
+        return all(trials[trials['response_before_response_window'] == True].trial_type.isin(['go', 'catch', 'autorewarded']))
     # if no non-aborted trials, just return True
     else:
         return True
