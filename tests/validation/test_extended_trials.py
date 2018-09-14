@@ -59,7 +59,7 @@ def test_validate_change_time_mean():
         'prechange_minimum': np.zeros_like(simulated_change_times_good)
     })
 
-    assert validate_change_time_mean(GOOD_TRIALS, EXPECTED_MEAN, tolerance=0.5) == True
+    assert validate_change_time_mean(GOOD_TRIALS, EXPECTED_MEAN, distribution_type='exponential', tolerance=0.5) == True
 
     np.random.seed(seed=100)
     simulated_change_times_bad = np.random.exponential(scale=3, size=100)
@@ -69,7 +69,7 @@ def test_validate_change_time_mean():
         'prechange_minimum': np.zeros_like(simulated_change_times_bad),
     })
 
-    assert validate_change_time_mean(BAD_TRIALS, EXPECTED_MEAN, tolerance=0.5) == False
+    assert validate_change_time_mean(BAD_TRIALS, EXPECTED_MEAN, distribution_type='exponential', tolerance=0.5) == False
 
 
 def test_validate_monotonically_decreasing_number_of_change_times():
@@ -219,7 +219,7 @@ def test_validate_params_change_after_aborted_trial_repeats():
         'trial_type': (["go", ] * 2) + (["aborted", ] * 7),
         'scheduled_change_time': [3, 4, 2.5, 2.5, 2.5, 4, 4, 4, 5],
     })
-    assert validate_params_change_after_aborted_trial_repeats(GOOD_DATA, failure_repeats) == True
+    assert validate_params_change_after_aborted_trial_repeats(GOOD_DATA, failure_repeats, distribution_type='exponential') == True
 
     failure_repeats = 2  # should repeat params twice after failure,  for a total of 3 consecutive
     # bad data with a block of 4 aborted trials with matching scheduled change times,  followed by another block of 2
@@ -227,7 +227,7 @@ def test_validate_params_change_after_aborted_trial_repeats():
         'trial_type': (["go", ] * 2) + (["aborted", ] * 7),
         'scheduled_change_time': [3, 4, 2.5, 2.5, 2.5, 2.5, 4, 4, 5],
     })
-    assert validate_params_change_after_aborted_trial_repeats(BAD_DATA, failure_repeats) == False
+    assert validate_params_change_after_aborted_trial_repeats(BAD_DATA, failure_repeats, distribution_type='exponential') == False
 
 
 def test_validate_flash_blank_durations():
@@ -386,14 +386,14 @@ def test_validate_new_params_on_nonaborted_trials():
         'trial_type': ['go', 'catch', 'aborted', 'aborted', 'go', 'go'],
         'scheduled_change_time': [2.4, 2.5, 3, 3, 3, 2.5],
     })
-    assert validate_new_params_on_nonaborted_trials(GOOD_DATA) == True
+    assert validate_new_params_on_nonaborted_trials(GOOD_DATA, distribution_type='exponential') == True
 
     # bad data: repeated scheduled change time on first two nonaborted trials
     BAD_DATA = pd.DataFrame({
         'trial_type': ['go', 'catch', 'aborted', 'aborted', 'go', 'go'],
         'scheduled_change_time': [2.4, 2.4, 3, 3, 3, 2.5],
     })
-    assert validate_new_params_on_nonaborted_trials(BAD_DATA) == False
+    assert validate_new_params_on_nonaborted_trials(BAD_DATA, distribution_type='exponential') == False
 
 
 def test_validate_autorewards_after_N_consecutive_misses():
