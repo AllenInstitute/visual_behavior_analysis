@@ -93,14 +93,36 @@ def annotate_flash_response_df_with_pref_stim(fdf):
     return fdf
 
 
-def annotate_mean_df_with_pref_stim(mean_df):
+def annotate_flashes_with_reward_rate(dataset):
+    last_time = 0
+    reward_rate_by_frame = []
+    trials = dataset.trials[dataset.trials.trial_type != 'aborted']
+    flashes = dataset.stimulus_table.copy()
+    for change_time in trials.change_time.values:
+        reward_rate = trials[trials.change_time == change_time].reward_rate.values[0]
+        for start_time in flashes.start_time:
+            if (start_time < change_time) and (start_time > last_time):
+                reward_rate_by_frame.append(reward_rate)
+                last_time = start_time
+    # fill the last flashes with last value
+    for i in range(len(flashes) - len(reward_rate_by_frame)):
+        reward_rate_by_frame.append(reward_rate_by_frame[-1])
+    flashes['reward_rate'] = reward_rate_by_frame
+    return flashes
+
+
+def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
+    if flashes:
+        image_name = 'image_name'
+    else:
+        image_name = 'change_image_name'
     mdf = mean_df.reset_index()
     mdf['pref_stim'] = False
 
     for cell in mdf.cell.unique():
         mc = mdf[(mdf.cell == cell)]
-        pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))].change_image_name.values[0]
-        row = mdf[(mdf.cell == cell) & (mdf.change_image_name == pref_image)].index
+        pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))][image_name].values[0]
+        row = mdf[(mdf.cell == cell) & (mdf[image_name] == pref_image)].index
         mdf.loc[row, 'pref_stim'] = True
     return mdf
 
