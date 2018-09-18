@@ -50,7 +50,7 @@ def number_of_stim_mask_ISIs(session_trials):
 
 
 DEFAULT_SUMMARY_METRICS = dict(
-    session_id=session_metrics.session_id,
+    # behavior_session_uuid=session_metrics.session_id,
     session_duration=session_metrics.session_duration,
     d_prime_peak=session_metrics.peak_dprime,
     d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime),
@@ -77,7 +77,7 @@ DEFAULT_SUMMARY_METRICS = dict(
 )
 
 
-def session_level_summary(trials, groupby=('mouse_id', 'startdatetime'), **kwargs):
+def session_level_summary(trials, groupby=('mouse_id', 'behavior_session_uuid'), **kwargs):
     """ computes session-level summary table
     """
 
@@ -106,7 +106,7 @@ def epoch_level_summary(trials, epoch_length=5.0, **kwargs):
         response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
         earned_water=session_metrics.earned_water,
         lick_latency_median=session_metrics.lick_latency,
-        fraction_time_aborted=session_metrics.fraction_time_aborted,
+        fraction_time_aborted=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'aborted'),
         hit_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.hit_rate),
         false_alarm_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.false_alarm_rate),
         reward_lick_count=session_metrics.reward_lick_count,
@@ -116,7 +116,7 @@ def epoch_level_summary(trials, epoch_length=5.0, **kwargs):
 
     epoch_summary = (
         trials
-        .groupby(['mouse_id', 'session_id', 'epoch'])
+        .groupby(['mouse_id', 'behavior_session_uuid', 'epoch'])
         .apply(summarizer)
         .reset_index()
     )
