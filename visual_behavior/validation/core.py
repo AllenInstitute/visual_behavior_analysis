@@ -114,7 +114,7 @@ def validate_running_data(core_data):
 
 
 def validate_licks(core_data, lick_spout_present=True):
-    """ 
+    """
     Validates that licks exist
     Ignores any session with 'lick_spout_present' = False (returns True)
 
