@@ -113,10 +113,10 @@ def validate_running_data(core_data):
     return length_correct and not all_same
 
 
-def validate_licks(core_data, stage):
+def validate_licks(core_data, lick_spout_present=True):
     """ 
     Validates that licks exist
-    Ignores any session with 'passive' in stage name, in which lick spout is pulled away from animal (returns True)
+    Ignores any session with 'lick_spout_present' = False (returns True)
 
     Parameters
     ----------
@@ -129,7 +129,7 @@ def validate_licks(core_data, stage):
         `True` if licks exist, else `False`
 
     """
-    if 'passive' in stage.lower():
+    if lick_spout_present == False:
         return True
     else:
         return len(core_data['licks']) > 0
