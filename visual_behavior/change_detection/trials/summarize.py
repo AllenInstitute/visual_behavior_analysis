@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from . import session_metrics
 from ... import metrics
-from ...translator.core.annotate import annotate_epochs
+from ...translator.core.annotate import annotate_epochs, annotate_change_detect
 
 
 def create_summarizer(**kwargs):
@@ -50,7 +50,7 @@ def number_of_stim_mask_ISIs(session_trials):
 
 
 DEFAULT_SUMMARY_METRICS = dict(
-    # session_id=session_metrics.session_id,
+    session_id=session_metrics.session_id,
     session_duration=session_metrics.session_duration,
     d_prime_peak=session_metrics.peak_dprime,
     d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime),
@@ -73,6 +73,7 @@ DEFAULT_SUMMARY_METRICS = dict(
     user_id=session_metrics.user_id,
     # filename=session_metrics.filename,
     stimulus=session_metrics.stimulus,
+    stage=session_metrics.training_stage,
 )
 
 
@@ -83,6 +84,8 @@ def session_level_summary(trials, groupby=('mouse_id', 'startdatetime'), **kwarg
     summary_metrics = DEFAULT_SUMMARY_METRICS.copy()
     summary_metrics.update(kwargs)
     summarizer = create_summarizer(**summary_metrics)
+
+    trials = annotate_change_detect(trials)
 
     session_summary = (
         trials

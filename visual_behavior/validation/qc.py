@@ -38,6 +38,7 @@ def define_validation_functions(core_data):
     EVEN_SAMPLING = core_data['metadata']['even_sampling_enabled']
     FAILURE_REPEATS = core_data['metadata']['failure_repeats']
     AUTOREWARD_DELAY = core_data['metadata']['auto_reward_delay']
+    LICK_SPOUT_PRESENT = core_data['metadata']['params'].get('lick_spout', True)
 
     INITIAL_BLANK = core_data['metadata']['initial_blank_duration']
     CATCH_FREQUENCY = core_data['metadata']['catch_frequency']
@@ -57,11 +58,11 @@ def define_validation_functions(core_data):
         et.validate_no_change_on_all_catch_trials: (trials,),
         et.validate_intial_and_final_in_non_aborted: (trials,),
         et.validate_min_change_time: (trials, PRE_CHANGE_TIME,),
-        et.validate_max_change_time: (trials, PRE_CHANGE_TIME, STIMULUS_WINDOW,),
+        et.validate_max_change_time: (trials, PRE_CHANGE_TIME, STIMULUS_WINDOW, DISTRIBUTION),
         et.validate_reward_when_lick_in_window: (trials,),
         et.validate_licks_near_every_reward: (trials, ),
         et.validate_never_more_than_one_reward: (trials,),
-        et.validate_lick_after_scheduled_on_go_catch_trials: (trials, ABORT_ON_EARLY_RESPONSE,),
+        et.validate_lick_after_scheduled_on_go_catch_trials: (trials, ABORT_ON_EARLY_RESPONSE, DISTRIBUTION),
         et.validate_initial_matches_final: (trials,),
         et.validate_first_lick_after_change_on_nonaborted: (trials, ABORT_ON_EARLY_RESPONSE),
         et.validate_trial_ends_without_licks: (trials, MIN_NO_LICK_TIME,),
@@ -72,11 +73,11 @@ def define_validation_functions(core_data):
         et.validate_stage_present: (trials,),
         et.validate_task_id_present: (trials,),
         et.validate_number_aborted_trial_repeats: (trials, FAILURE_REPEATS,),
-        et.validate_params_change_after_aborted_trial_repeats: (trials, FAILURE_REPEATS,),
+        et.validate_params_change_after_aborted_trial_repeats: (trials, FAILURE_REPEATS, DISTRIBUTION),
         et.validate_ignore_false_alarms: (trials, ABORT_ON_EARLY_RESPONSE,),
         et.validate_trial_times_never_overlap: (trials,),
         et.validate_stimulus_distribution_key: (trials, DISTRIBUTION,),
-        et.validate_change_time_mean: (trials, EXPECTED_CHANGE_DISTRIBUTION_MEAN,),
+        et.validate_change_time_mean: (trials, EXPECTED_CHANGE_DISTRIBUTION_MEAN, DISTRIBUTION),
         # et.validate_monotonically_decreasing_number_of_change_times:(trials,DISTRIBUTION,),
         et.validate_no_abort_on_lick_before_response_window: (trials,),
         et.validate_licks_on_go_trials_earn_reward: (trials,),
@@ -87,11 +88,11 @@ def define_validation_functions(core_data):
         et.validate_one_stimulus_per_aborted_trial: (trials, core_data['visual_stimuli'],),
         et.validate_change_frame_at_flash_onset: (trials, core_data['visual_stimuli'], PERIODIC_FLASH,),
         et.validate_initial_blank: (trials, core_data['visual_stimuli'], INITIAL_BLANK, PERIODIC_FLASH),
-        et.validate_new_params_on_nonaborted_trials: (trials,),
+        et.validate_new_params_on_nonaborted_trials: (trials, DISTRIBUTION),
         et.validate_flash_blank_durations: (core_data['visual_stimuli'], PERIODIC_FLASH,),  # this one doesn't take trials
         cd.validate_lick_before_scheduled_on_aborted_trials: (core_data,),
         cd.validate_running_data: (core_data,),  # this one doesn't take trials
-        cd.validate_licks: (core_data,),  # this one doesn't take trials
+        cd.validate_licks: (core_data, LICK_SPOUT_PRESENT),  # this one doesn't take trials
         cd.validate_minimal_dropped_frames: (core_data,),  # this one doesn't take trials
         # f2.validate_frame_intervals_exists:(data), # this one doesn't take trials
         cd.validate_no_read_errors: (core_data,),
