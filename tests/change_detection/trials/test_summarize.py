@@ -20,6 +20,7 @@ TRIALS = pd.DataFrame({
 TRIALS['trial_type'] = TRIALS['change'].map(lambda x: ['catch', 'go'][x])
 TRIALS['response'] = TRIALS['detect']
 TRIALS['change_time'] = np.sort(np.random.rand(n_tr)) * 3600
+TRIALS['reward_lick_latency'] = 0.1
 
 metadata = {}
 metadata['mouse_id'] = 'M999999'
@@ -28,14 +29,14 @@ metadata['startdatetime'] = (
     .datetime(2017, 7, 19, 10, 35, 8, 369000, tzinfo=pytz.utc)
     .isoformat()
 )
-
 metadata['behavior_session_uuid'] = make_deterministic_session_uuid(
     metadata['mouse_id'],
     metadata['startdatetime'],
 )
+metadata['stage'] = 'test'
 
-for k in ('mouse_id', 'behavior_session_uuid'):
-    TRIALS[k] = metadata[k]
+for k, v in metadata.items():
+    TRIALS[k] = v
 
 
 def test_session_level_summary():
