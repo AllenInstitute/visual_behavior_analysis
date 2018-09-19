@@ -19,6 +19,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     logger.info('plotting experiment summary figure')
     from visual_behavior.ophys.plotting import experiment_summary_figures as esf
     esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
+    esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
     esf.plot_mean_first_flash_response_by_image_block(analysis, save_dir=cache_dir, ax=None)
 
     analysis.flash_response_df = ut.annotate_flash_response_df_with_block_set(analysis.flash_response_df)
