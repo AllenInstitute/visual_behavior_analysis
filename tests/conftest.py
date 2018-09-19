@@ -5,14 +5,13 @@ import tempfile
 import datetime
 import numpy as np
 import pandas as pd
-from copy import deepcopy
-from shutil import copyfile
-from collections import Mapping
+import pytz
 from six import PY3
 from six.moves import cPickle as pickle
 import uuid
 
 from visual_behavior.pizza import we_can_unpizza_that  # this is terrible but hopefully will be an external dependency very soon
+from visual_behavior.uuid_utils import make_deterministic_session_uuid
 
 
 TESTING_DIR = os.path.realpath(os.path.dirname(__file__))
@@ -191,6 +190,73 @@ def exemplar_extended_trials_fixture():
     trials['behavior_session_uuid'] = uuid.UUID('66750c6b-0a0e-43bd-9cb3-fc511c34dc0e')
     return trials
 
+
+@pytest.fixture
+def mock_trials_fixture():
+
+    n_tr = 500
+    np.random.seed(42)
+    change = np.random.random(n_tr) > 0.8
+    incorrect = np.random.random(n_tr) > 0.8
+    detect = change.copy()
+    detect[incorrect] = ~detect[incorrect]
+
+    trials = pd.DataFrame({
+        'change': change,
+        'detect': detect,
+    },)
+    trials['trial_type'] = trials['change'].map(lambda x: ['catch', 'go'][x])
+    trials['response'] = trials['detect']
+    trials['change_time'] = np.sort(np.random.rand(n_tr)) * 3600
+    trials['reward_lick_latency'] = 0.1
+    trials['reward_lick_count'] = 10
+    trials['auto_rewarded'] = False
+    trials['lick_frames'] = [[] for row in trials.iterrows()]
+    trials['trial_length'] = 8.5
+    trials['reward_times'] = trials.apply(lambda r: [r['change_time']+0.2] if r['change']*r['detect'] else [],axis=1)
+    trials['reward_volume'] = 0.005 * trials['reward_times'].map(len)
+    trials['response_latency'] = trials.apply(lambda r: 0.2 if r['detect'] else np.inf,axis=1)
+    trials['blank_duration_range'] = [[0.5, 0.5] for row in trials.iterrows()]
+
+    metadata = {}
+    metadata['mouse_id'] = 'M999999'
+    metadata['user_id'] = 'johnd'
+
+    metadata['startdatetime'] = datetime.datetime(2017, 7, 19, 10, 35, 8, 369000, tzinfo=pytz.utc)
+    metadata['dayofweek'] = metadata['startdatetime'].weekday()
+    metadata['startdatetime'] = metadata['startdatetime']
+
+    metadata['behavior_session_uuid'] = make_deterministic_session_uuid(
+        metadata['mouse_id'],
+        metadata['startdatetime'].isoformat(),
+    )
+    metadata['stage'] = 'test'
+    metadata['stimulus'] = 'natural_scenes'
+    metadata['stimulus_distribution'] = 'exponential'
+
+    for k, v in metadata.items():
+        trials[k] = v
+    return trials
+
+
+@pytest.fixture
+def session_summary():
+    summary = pd.read_csv(
+        os.path.join(TESTING_RES_DIR, 'session_level_summary.csv'),
+        index_col=0,
+    )
+    summary['behavior_session_uuid'] = summary['behavior_session_uuid'].map(uuid.UUID)
+    return summary
+
+
+@pytest.fixture
+def epoch_summary():
+    summary = pd.read_csv(
+        os.path.join(TESTING_RES_DIR, 'epoch_level_summary.csv'),
+        index_col=0,
+    )
+    summary['behavior_session_uuid'] = summary['behavior_session_uuid'].map(uuid.UUID)
+    return summary
 
 @pytest.fixture(scope="module")
 def trials_df_fixture():
