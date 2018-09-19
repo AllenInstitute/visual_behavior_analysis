@@ -77,14 +77,21 @@ def test_validate_licks():
         'time': [10, 20],
         'frame': [1, 2]
     })
-    assert validate_licks(GOOD_DATA) == True
+    assert validate_licks(GOOD_DATA, lick_spout_present=True) == True
 
     BAD_DATA = {}
     BAD_DATA['licks'] = pd.DataFrame({
         'time': [],
         'frame': []
     })
-    assert validate_licks(BAD_DATA) == False
+    assert validate_licks(BAD_DATA, lick_spout_present=True) == False
+
+    NO_LICKSPOUT_DATA = {}
+    NO_LICKSPOUT_DATA['licks'] = pd.DataFrame({
+        'time': [],
+        'frame': []
+    })
+    assert validate_licks(NO_LICKSPOUT_DATA, lick_spout_present=False) == True
 
 
 def test_validate_minimal_dropped_frames():

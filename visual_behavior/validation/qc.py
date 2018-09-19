@@ -38,6 +38,7 @@ def define_validation_functions(core_data):
     EVEN_SAMPLING = core_data['metadata']['even_sampling_enabled']
     FAILURE_REPEATS = core_data['metadata']['failure_repeats']
     AUTOREWARD_DELAY = core_data['metadata']['auto_reward_delay']
+    LICK_SPOUT_PRESENT = core_data['metadata']['params'].get('lick_spout', True)
 
     INITIAL_BLANK = core_data['metadata']['initial_blank_duration']
     CATCH_FREQUENCY = core_data['metadata']['catch_frequency']
@@ -91,7 +92,7 @@ def define_validation_functions(core_data):
         et.validate_flash_blank_durations: (core_data['visual_stimuli'], PERIODIC_FLASH,),  # this one doesn't take trials
         cd.validate_lick_before_scheduled_on_aborted_trials: (core_data,),
         cd.validate_running_data: (core_data,),  # this one doesn't take trials
-        cd.validate_licks: (core_data,),  # this one doesn't take trials
+        cd.validate_licks: (core_data, LICK_SPOUT_PRESENT),  # this one doesn't take trials
         cd.validate_minimal_dropped_frames: (core_data,),  # this one doesn't take trials
         # f2.validate_frame_intervals_exists:(data), # this one doesn't take trials
         cd.validate_no_read_errors: (core_data,),
