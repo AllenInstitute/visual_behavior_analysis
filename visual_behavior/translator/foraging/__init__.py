@@ -405,6 +405,7 @@ def load_visual_stimuli(data, time=None):
         except IndexError:
             return np.nan
 
+    stimdf['time'] = stimdf['frame'].map(find_time)
     stimdf['end_time'] = stimdf['end_frame'].map(find_time)
     stimdf['duration'] = stimdf['end_time'] - stimdf['time']
 
