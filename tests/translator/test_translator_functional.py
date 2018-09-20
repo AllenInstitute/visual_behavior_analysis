@@ -70,7 +70,7 @@ def test_foraging2_translator_schema(foraging2_data_stage4_2018_05_10):
     change_detection_metrics(core_data)
     trials = create_extended_dataframe(**core_data)
     make_daily_figure(trials)
-    make_summary_figure(trials,'')
+    make_summary_figure(trials,core_data['metadata']['mouseid'])
 
 
 def test_foraging_translator_schema(behavioral_session_output_fixture):
@@ -103,4 +103,4 @@ def test_foraging_translator_schema(behavioral_session_output_fixture):
     change_detection_metrics(core_data)
     trials = create_extended_dataframe(**core_data)
     make_daily_figure(trials)
-    make_summary_figure(trials,'')
+    make_summary_figure(trials,core_data['metadata']['mouseid'])
