@@ -350,7 +350,7 @@ def data_to_visual_stimuli(data, time=None):
 
 
 def data_to_images(data):
-    logger.error('loading images from foraging2 outputs is not implemented')
+    logger.warning('loading images from foraging2 outputs is not implemented')
     return {
         'metadata': {},
         'images': [],
