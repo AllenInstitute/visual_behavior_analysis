@@ -275,7 +275,7 @@ def validate_autorewards_after_N_consecutive_misses(extended_trials, autoreward_
         return True
     else:
         # get all go trials, ignore the first `warmup_trials` trials
-        go_trials = extended_trials[extended_trials.trial_type.isin(['go','autorewarded'])].iloc[warmup_trials:]
+        go_trials = extended_trials[extended_trials.trial_type.isin(['go', 'autorewarded'])].iloc[warmup_trials:]
         auto_reward_when_expected = []
         consecutive_misses = 0
         reward_expected_on_next = False
