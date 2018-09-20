@@ -449,14 +449,14 @@ def categorize_one_trial(tr):
         else:
             trial_type = 'other'
     else:
-        if (tr['rewarded'] is True):
+        if (tr['auto_rewarded'] is True):
+            return 'autorewarded'
+
+        elif (tr['rewarded'] is True):
             return 'go'
 
         elif (tr['rewarded'] == 0):
             return 'catch'
-
-        elif (tr['auto_rewarded'] is True):
-            return 'autorewarded'
 
         else:
             return 'other'
@@ -584,49 +584,49 @@ def check_responses(trials, reward_window=None):
     return did_respond
 
 
-def assign_color(trials, palette='trial_types'):
-    color = [None] * len(trials)
-    for idx in trials.index:
+def trial_translator(trial_type, response_type):
+    if trial_type == 'aborted':
+        return 'aborted'
+    elif trial_type == 'autorewarded':
+        return 'auto_rewarded'
+    elif trial_type == 'go':
+        if response_type in ['HIT', True, 1]:
+            return 'hit'
+        else:
+            return 'miss'
+    elif trial_type == 'catch':
+        if response_type in ['FA', True, 1]:
+            return 'false_alarm'
+        else:
+            return 'correct_reject'
 
-        if trials.loc[idx]['trial_type'] == 'aborted':
-            if palette.lower() == 'trial_types':
-                color[idx] = 'lightgray'
-            else:
-                color[idx] = 'red'
 
-        elif trials.loc[idx]['auto_rewarded'] == True:
-            if palette.lower() == 'trial_types':
-                color[idx] = 'darkblue'
-            else:
-                color[idx] = 'blue'
+def colormap(trial_type, palette='trial_types'):
+    if palette.lower() == 'trial_types':
+        colors = {
+            'aborted': 'lightgray',
+            'auto_rewarded': 'darkblue',
+            'hit': '#55a868',
+            'miss': '#ccb974',
+            'false_alarm': '#c44e52',
+            'correct_reject': '#4c72b0',
+        }
+    else:
+        colors = {
+            'aborted': 'red',
+            'auto_rewarded': 'blue',
+            'hit': 'darkgreen',
+            'miss': 'lightgreen',
+            'false_alarm': 'darkorange',
+            'correct_reject': 'yellow',
+        }
+    return colors[trial_type]
 
-        elif trials.loc[idx]['trial_type'] == 'go':
-            if trials.loc[idx]['response'] == 1:
-                if palette.lower() == 'trial_types':
-                    color[idx] = '#55a868'
-                else:
-                    color[idx] = 'darkgreen'
 
-            elif trials.loc[idx]['response'] != 1:
-                if palette.lower() == 'trial_types':
-                    color[idx] = '#ccb974'
-                else:
-                    color[idx] = 'lightgreen'
+def assign_color(trial, palette='trial_types'):
 
-        elif trials.loc[idx]['trial_type'] == 'catch':
-            if trials.loc[idx]['response'] == 1:
-                if palette.lower() == 'trial_types':
-                    color[idx] = '#c44e52'
-                else:
-                    color[idx] = 'darkorange'
-
-            elif trials.loc[idx]['response'] != 1:
-                if palette.lower() == 'trial_types':
-                    color[idx] = '#4c72b0'
-                else:
-                    color[idx] = 'yellow'
-
-    return color
+    trial_type = trial_translator(trial['trial_type'], trial['response'])
+    return colormap(trial_type, palette)
 
 
 def get_response_type(trials):
@@ -666,7 +666,7 @@ def remove_repeated_licks(trials):
         if len(lick_frames_on_this_trial) > 0:
             # use the number of frames between each lick to determine which to keep
             if len(lick_frames_on_this_trial) > 1:
-                    lick_intervals = np.hstack((np.inf, np.diff(lick_frames_on_this_trial)))
+                lick_intervals = np.hstack((np.inf, np.diff(lick_frames_on_this_trial)))
             else:
                 lick_intervals = np.array([np.inf])
 

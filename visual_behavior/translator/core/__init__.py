@@ -4,7 +4,7 @@ import json
 import numpy as np
 import logging
 
-from . import annotate
+from visual_behavior.translator.core import annotate
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ def create_extended_dataframe(trials, metadata, licks, time, *args, **kwargs):
     annotate.calculate_reward_rate(trials, inplace=True)
 
     trials['response'] = annotate.check_responses(trials)
-    trials['color'] = annotate.assign_color(trials)
+    trials['color'] = trials.apply(annotate.assign_color, axis=1)
     trials['response_type'] = annotate.get_response_type(trials)
 
     try:
