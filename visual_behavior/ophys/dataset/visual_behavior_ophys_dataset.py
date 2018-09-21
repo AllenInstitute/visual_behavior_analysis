@@ -190,6 +190,15 @@ class VisualBehaviorOphysDataset(object):
         return self._dff_traces
     dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
 
+    def get_corrected_fluorescence_traces(self):
+        with h5py.File(os.path.join(self.analysis_dir, 'corrected_fluorescence_traces.h5'), 'r') as corrected_fluorescence_traces_file:
+            corrected_fluorescence_traces = []
+            for key in corrected_fluorescence_traces_file.keys():
+                corrected_fluorescence_traces.append(np.asarray(corrected_fluorescence_traces_file[key]))
+        self._corrected_fluorescence_traces = np.asarray(corrected_fluorescence_traces)
+        return self._corrected_fluorescence_traces
+    corrected_fluorescence_traces = LazyLoadable('_corrected_fluorescence_traces', get_corrected_fluorescence_traces)
+
     def get_roi_metrics(self):
         self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
         return self._roi_metrics
@@ -274,6 +283,7 @@ class VisualBehaviorOphysDataset(object):
         obj.get_task_parameters()
         obj.get_trials()
         obj.get_dff_traces()
+        obj.get_corrected_fluorescence_traces()
         obj.get_roi_metrics()
         obj.get_roi_mask_dict()
         obj.get_roi_mask_array()
