@@ -255,7 +255,7 @@ def plot_single_trial_trace(trace, frame_rate, ylabel='dF/F', legend_label=None,
     return ax
 
 
-def plot_image_response_for_trial_types(analysis, cell, save=True):
+def plot_image_response_for_trial_types(analysis, cell, save_dir=None):
     """
     Function to plot trial avereraged response of a cell for all images separately for 'go' and 'catch' trials. Creates figure and axes to plot.
 
@@ -287,10 +287,10 @@ def plot_image_response_for_trial_types(analysis, cell, save=True):
         df[df.cell == cell].cell_specimen_id.values[0]) + '_' + analysis.dataset.analysis_folder
     plt.suptitle(title, x=0.47, y=1., horizontalalignment='center')
     fig.tight_layout()
-    if save:
+    if save_dir:
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(right=0.85)
-        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_responses', title, formats=['.png'])
+        save_figure(fig, figsize, save_dir, 'image_responses', analysis.dataset.analysis_folder+'_'+str(cell), formats=['.png'])
         plt.close()
 
 def plot_event_detection(dff_traces_l0, events, analysis_dir):
@@ -304,6 +304,122 @@ def plot_event_detection(dff_traces_l0, events, analysis_dir):
         plt.legend()
         save_figure(fig, (20, 5), analysis_dir, 'event_detection', str(cell))
         plt.close()
+
+
+def get_colors_for_response_types(response_types):
+    c = sns.color_palette()
+    colors_dict = {'HIT': c[1], 'MISS': c[4], 'CR': c[0], 'FA': c[2]}
+    colors = []
+    for val in response_types:
+        colors.append(colors_dict[val])
+    return colors
+
+
+def plot_trial_trace_heatmap(trial_response_df, cell, cmap='viridis', vmax=0.5, colorbar=False, ax=None, save_dir=None):
+    response_types = ['HIT', 'MISS', 'FA', 'CR']
+    df = trial_response_df.copy()
+    rows = 1
+    cols = len(df.change_image_name.unique())
+    colors = get_colors_for_response_types(response_types)
+    if ax is None:
+        figsize = (15, 5)
+        fig, ax = plt.subplots(rows, cols, figsize=figsize, sharex=True)
+        ax = ax.ravel()
+    resp_types = []
+    for i, change_image_name in enumerate(np.sort(df.change_image_name.unique())):
+        im_df = df[(df.cell == cell) & (df.change_image_name == change_image_name)]
+        n_frames = im_df.trace.values[0].shape[0]
+        n_trials = im_df.trace.shape[0]
+        response_matrix = np.empty((n_trials, n_frames))
+        response_type_list = []
+        segments = []
+        idx = 0
+        segments.append(idx)
+        for y, response_type in enumerate(response_types):
+            sub_df = im_df[(im_df.behavioral_response_type == response_type)]
+            traces = sub_df.trace.values
+            for pos, trial in enumerate(range(traces.shape[0])[::-1]):
+                response_matrix[idx, :] = traces[int(trial)]
+                response_type_list.append(response_type)
+                idx += 1
+            segments.append(idx)
+            if vmax:
+                cax = ax[i].pcolormesh(response_matrix, cmap=cmap, vmax=vmax, vmin=0)
+            else:
+                cax = ax[i].pcolormesh(response_matrix, cmap=cmap)
+            ax[i].set_ylim(0, response_matrix.shape[0])
+            ax[i].set_xlim(0, response_matrix.shape[1])
+            ax[i].set_yticks(segments)
+            ax[i].set_yticklabels('')
+            ax[i].set_xlabel('time (s)')
+            xticks, xticklabels = get_xticks_xticklabels(np.arange(0, response_matrix.shape[1], 1), 31., interval_sec=2)
+            ax[i].set_xticks(xticks)
+            ax[i].set_xticklabels([int(x) for x in xticklabels])
+            #             ax[i].vlines(x=np.mean(xticks), ymin=0, ymax=response_matrix.shape[0], color='w', linewidth=1)
+            ax[i].set_title(change_image_name)
+        for s in range(len(segments) - 1):
+            ax[i].vlines(x=-10, ymin=segments[s], ymax=segments[s + 1], color=colors[s], linewidth=30)
+        ax[0].set_ylabel('trials')
+        resp_types.append(response_type_list)
+    plt.tight_layout()
+    if colorbar:
+        plt.colorbar(cax, ax=ax[i])
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, 'trial_trace_heatmap', 'roi_' + str(cell))
+    return ax
+
+
+def plot_mean_response_by_repeat(analysis, cell, save_dir=None, ax=None):
+    flash_response_df = analysis.flash_response_df.copy()
+    n_repeats = 15
+    palette = sns.color_palette("RdBu", n_colors=n_repeats)
+    norm = plt.Normalize(0, n_repeats)
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
+    sm.set_array([])
+
+    df = flash_response_df[flash_response_df.cell == cell]
+    df = df[df['repeat'] < n_repeats]
+    figsize = (10, 5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.stripplot(data=df, x='image_name', y='mean_response', jitter=.2, size=3, ax=ax, hue='repeat',
+                       palette=palette)
+    ax.set_xticklabels(df.image_name.unique(), rotation=90);
+    ax.legend_.remove()
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax)
+    cbar.set_label('repeat')
+    ax.set_title(str(cell)+'_'+analysis.dataset.analysis_folder, fontsize=14)
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, 'mean_response_by_repeat', analysis.dataset.analysis_folder + '_' + str(cell))
+        plt.close()
+    return ax
+
+
+def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
+    flash_response_df = analysis.flash_response_df.copy()
+    n_blocks = len(flash_response_df.image_block.unique())
+    palette = sns.color_palette("RdBu", n_colors=n_blocks)
+    norm = plt.Normalize(0, n_blocks)
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
+    sm.set_array([])
+
+    df = flash_response_df[flash_response_df.cell == cell]
+    figsize = (10, 5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.stripplot(data=df, x='image_name', y='mean_response', jitter=.2, size=3, ax=ax, hue='image_block',
+                       palette=palette)
+    ax.set_xticklabels(df.image_name.unique(), rotation=90);
+    ax.legend_.remove()
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax)
+    cbar.set_label('image_block')
+    ax.set_title(str(cell)+'_'+analysis.dataset.analysis_folder, fontsize=14)
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, 'mean_response_by_image_block', analysis.dataset.analysis_folder + '_' + str(cell))
+        plt.close()
+    return ax
+
 
 
 if __name__ == '__main__':

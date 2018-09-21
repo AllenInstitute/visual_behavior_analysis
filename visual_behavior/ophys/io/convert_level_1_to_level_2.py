@@ -396,7 +396,7 @@ def get_roi_metrics(lims_data):
     ## hack for expt 692342909 with 2 rois at same location - need a long term solution for this!
     if get_lims_id(lims_data) == 692342909:
         print('removing bad cell')
-        roi_metrics = roi_metrics[roi_metrics.cell_specimen_id.isin([692357032]) == False]
+        roi_metrics = roi_metrics[roi_metrics.cell_specimen_id.isin([692357032, 692356966]) == False]
     # add filtered cell index
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
                   roi_metrics.cell_specimen_id.values]
@@ -603,14 +603,18 @@ if __name__ == '__main__':
     import sys
 
     experiment_id = sys.argv[1]
-    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
-    cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
+    # # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
+    # # cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+    # # experiment_id = 742828820
     ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
 
     # import pandas as pd
     #
+    # experiment_id = 692342909
     # manifest = r'\\allen\aibs\informatics\swdb2018\visual_behavior\visual_behavior_data_manifest.csv'
     # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    # ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir=cache_dir)
     # df = pd.read_csv(manifest)
     # for i, experiment_id in enumerate(df.experiment_id.values):
     #     ophys_data = convert_level_1_to_level_2(int(experiment_id), cache_dir=cache_dir)

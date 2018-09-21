@@ -34,8 +34,7 @@ class ResponseAnalysis(object):
         self.overwrite_analysis_files = overwrite_analysis_files
         self.trial_window = [-4, 4]  # time, in seconds, around change time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
-        self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
-            0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
+        self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         self.baseline_window = np.asarray(
             self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
         self.stimulus_duration = self.dataset.task_parameters['stimulus_duration'].values[0]
@@ -118,10 +117,12 @@ class ResponseAnalysis(object):
         return path
 
     def generate_flash_response_df(self):
+        stimulus_table = ut.annotate_flashes_with_reward_rate(self.dataset)
         row = []
         for cell in range(self.dataset.dff_traces.shape[0]):
-            for flash in self.dataset.stimulus_table.flash_number:
-                flash_data = self.dataset.stimulus_table[self.dataset.stimulus_table.flash_number == flash]
+            cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell)
+            for flash in stimulus_table.flash_number:
+                flash_data = stimulus_table[stimulus_table.flash_number == flash]
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
                 trace_window = [-self.response_window_duration, self.response_window_duration]
@@ -131,11 +132,15 @@ class ResponseAnalysis(object):
                 response_window = [self.response_window_duration, self.response_window_duration * 2]
                 p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate)
+                reward_rate = flash_data.reward_rate.values[0]
 
-                row.append([cell, flash, flash_time, image_name, mean_response, p_value])
+                row.append([cell, cell_specimen_id, flash, flash_time, image_name, mean_response, p_value, reward_rate])
         flash_response_df = pd.DataFrame(data=row,
-                                         columns=['cell', 'flash_number', 'start_time', 'image_name', 'mean_response',
-                                                  'p_value'])
+                                         columns=['cell', 'cell_specimen_id','flash_number', 'start_time', 'image_name', 'mean_response',
+                                                  'p_value', 'reward_rate'])
+        flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
+        flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
+        flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
         return flash_response_df
 
     def save_flash_response_df(self, flash_response_df):
