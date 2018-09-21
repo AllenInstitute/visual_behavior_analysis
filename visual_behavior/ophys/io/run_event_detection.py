@@ -20,7 +20,7 @@ lims_ids = [644942849, 645035903, 645086795, 645362806, 646922970, 647108734,
 
 python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/ophys/io/event_detection.py"
 
-jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
+jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords2'
 
 job_settings = {'queue': 'braintv',
                 'mem': '80g',

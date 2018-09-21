@@ -9,6 +9,8 @@ import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg') #change backend thing so that it can run without monitor
 
 # formatting
 sns.set_style('white')
