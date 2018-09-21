@@ -224,7 +224,7 @@ def validate_number_of_warmup_trials(trials, expected_number_of_warmup_trials):
     if len(warmup_trials) == 0 and expected_number_of_warmup_trials == 0:
         return True
     elif expected_number_of_warmup_trials != -1:
-        return len(warmup_trials[warmup_trials.trial_type == 'go']) == expected_number_of_warmup_trials
+        return len(warmup_trials[warmup_trials.trial_type.isin(['go', 'autorewarded'])]) == expected_number_of_warmup_trials
     # if -1, all will be warmup trials.
     elif expected_number_of_warmup_trials == -1:
         return len(trials[trials.auto_rewarded == True]) == len(trials)
@@ -275,7 +275,7 @@ def validate_autorewards_after_N_consecutive_misses(extended_trials, autoreward_
         return True
     else:
         # get all go trials, ignore the first `warmup_trials` trials
-        go_trials = extended_trials[extended_trials.trial_type == 'go'].iloc[warmup_trials:]
+        go_trials = extended_trials[extended_trials.trial_type.isin(['go', 'autorewarded'])].iloc[warmup_trials:]
         auto_reward_when_expected = []
         consecutive_misses = 0
         reward_expected_on_next = False
@@ -456,7 +456,7 @@ def validate_initial_matches_final(trials):
     '''
     On go and catch trials, the initial image (or ori) on a given trial should match the final image (or ori) on the previous trial
     '''
-    trials_to_test = trials[trials['trial_type'].isin(['go', 'catch'])]
+    trials_to_test = trials[trials['trial_type'].isin(['go', 'catch', 'autorewarded'])]
 
     # Can only run this validation if there are at least two go or catch trials
     if len(trials_to_test) > 2:

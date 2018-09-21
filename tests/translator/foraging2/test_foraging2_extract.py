@@ -159,7 +159,7 @@ def test_get_params(foraging2_data_fixture):
         'nidevice': 'Dev1',
         'periodic_flash': (0.25, 0.5),
         'pre_change_time': 2.25,
-        'response_window': (0.15, 2.0),
+        'response_window': [0.15, 2.0],
         'reward_volume': 0.007,
         'stimulus_window': 6.0,
         'task_id': 'DoC',

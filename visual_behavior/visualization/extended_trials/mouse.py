@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from visual_behavior.plotting import placeAxesOnGrid
-from visual_behavior.utilities import flatten_list, get_response_rates
+from visual_behavior.utilities import flatten_list
+from visual_behavior.change_detection.trials import summarize
 
 
 def make_ILI_plot(dfm, session_dates, ax):
@@ -44,11 +46,12 @@ def make_ILI_plot(dfm, session_dates, ax):
 def make_trial_type_plot(dfm, session_dates, ax):
     sums = dfm.groupby(['startdatetime', 'color', ]).sum()
     colors = ['blue', 'red', 'darkgreen', 'lightgreen', 'darkorange', 'yellow']
-    dates = []
     all_vals = []
+
+    dates = [pd.to_datetime(date).strftime('%Y-%m-%d') for date in dfm.startdatetime.unique()]
+
     for ii, date in enumerate(session_dates[:]):
 
-        dates.append(dfm[(dfm.startdatetime == date)].startdatetime.iloc[0].strftime('%Y-%m-%d'))
         total_dur = sums.loc[date]['trial_length'].sum()
         vals = []
         for color in colors:
@@ -58,7 +61,7 @@ def make_trial_type_plot(dfm, session_dates, ax):
                 fraction = 0
             vals.append(fraction)
         all_vals.append(vals)
-
+    print('all_vals:', all_vals)
     all_vals = np.array(all_vals)
     cumsum = np.hstack((np.zeros((np.shape(all_vals)[0], 1)), np.cumsum(all_vals, axis=1)))
     width = 0.8  # NOQA: F841
@@ -71,41 +74,15 @@ def make_trial_type_plot(dfm, session_dates, ax):
     ax.invert_yaxis()
 
 
-def make_performance_plot(df_in, session_dates, ax, reward_window=None, sliding_window=None):
-    if sliding_window == None:  # NOQA: E711
-        calculate_sliding_window = True  # NOQA: F841
-    else:
-        caclulate_sliding_window = False  # NOQA: F841
+def make_performance_plot(df_summary, ax, reward_window=None, sliding_window=None):
 
-    dates = []
-    max_hit_rates = []
-    mean_hit_rates = []
-    max_false_alarm_rates = []
-    mean_false_alarm_rates = []
-    max_dprime = []
-    mean_dprime = []
-    for ii, date in enumerate(session_dates[:]):
-
-        dates.append(df_in[(df_in.startdatetime == date)].startdatetime.iloc[0].strftime('%Y-%m-%d'))
-
-        df1 = df_in[(df_in.startdatetime == date) & (df_in.trial_type != 'aborted')]
-
-        if calculate_sliding_window == True:
-            sliding_window = len(df1)
-
-        hit_rate, fa_rate, d_prime = get_response_rates(df1, sliding_window=sliding_window, reward_window=reward_window)
-
-        max_hit_rates.append(np.nanmax(hit_rate[int(len(hit_rate) / 3):]))
-        max_false_alarm_rates.append(np.nanmax(fa_rate[int(len(hit_rate) / 3):]))
-        max_dprime.append(np.nanmax(d_prime[int(len(hit_rate) / 3):]))
-
-        mean_hit_rates.append(np.nanmean(hit_rate[int(len(hit_rate) / 3):]))
-        mean_false_alarm_rates.append(np.nanmean(fa_rate[int(len(hit_rate) / 3):]))
-        mean_dprime.append(np.nanmean(d_prime[int(len(hit_rate) / 3):]))
+    dates = [pd.to_datetime(date).strftime('%Y-%m-%d') for date in df_summary.startdatetime.unique()]
+    max_hit_rates = df_summary['hit_rate_peak'].values
+    max_false_alarm_rates = df_summary['false_alarm_rate_peak'].values
 
     height = 0.35
     ax.barh(np.arange(len(max_hit_rates)) - height, max_hit_rates, height=height, color='darkgreen', alpha=1)
-    ax.barh(np.arange(len(max_hit_rates)), max_false_alarm_rates, height=height, color='orange', alpha=1)
+    ax.barh(np.arange(len(max_false_alarm_rates)), max_false_alarm_rates, height=height, color='orange', alpha=1)
 
     ax.set_title('PEAK Hit \nand FA Rates')
     ax.set_xlabel('Max Response Probability')
@@ -115,51 +92,19 @@ def make_performance_plot(df_in, session_dates, ax, reward_window=None, sliding_
 
 
 def make_dprime_plot(
-        df_in,
-        session_dates,
+        df_summary,
         ax,
         reward_window=None,
         return_vals=False,
-        sliding_window=None
+        sliding_window=100,
 ):
-    if sliding_window is None:
-        calculate_sliding_window = True
-    else:
-        calculate_sliding_window = False
 
-    dates = []
-    max_hit_rates = []
-    mean_hit_rates = []
-    max_false_alarm_rates = []
-    mean_false_alarm_rates = []
-    max_dprime = []
-    mean_dprime = []
-    for ii, date in enumerate(session_dates[:]):
+    dates = [pd.to_datetime(date).strftime('%Y-%m-%d') for date in df_summary.startdatetime.unique()]
 
-        dates.append(df_in[(df_in.startdatetime == date)].startdatetime.iloc[0].strftime('%Y-%m-%d'))
-
-        df1 = df_in[(df_in.startdatetime == date) & (df_in.trial_type != 'aborted')]
-
-        if calculate_sliding_window == True:
-            sliding_window = len(df1)
-
-        hit_rate, fa_rate, d_prime = get_response_rates(
-            df1,
-            sliding_window=sliding_window,
-            reward_window=reward_window
-        )
-
-        max_hit_rates.append(np.nanmax(hit_rate[int(len(hit_rate) / 3):]))
-        max_false_alarm_rates.append(np.nanmax(fa_rate[int(len(hit_rate) / 3):]))
-        max_dprime.append(np.nanmax(d_prime[int(len(hit_rate) / 3):]))
-
-        mean_hit_rates.append(np.nanmean(hit_rate[int(len(hit_rate) / 3):]))
-        mean_false_alarm_rates.append(np.nanmean(fa_rate[int(len(hit_rate) / 3):]))
-        mean_dprime.append(np.nanmean(d_prime[int(len(hit_rate) / 3):]))
+    max_dprime = df_summary['d_prime_peak'].values
 
     height = 0.7
-    ax.barh(np.arange(len(max_hit_rates)) - height / 2, max_dprime, height=height, color='black', alpha=1)
-    # ax.barh(np.arange(len(max_hit_rates)),mean_dprime,height=height,color='gray',alpha=1)
+    ax.barh(np.arange(len(max_dprime)) - height / 2, max_dprime, height=height, color='black', alpha=1)
 
     ax.set_title('PEAK \ndprime')
     ax.set_xlabel('Max dprime')
@@ -170,17 +115,10 @@ def make_dprime_plot(
         return max_dprime
 
 
-def make_total_volume_plot(df_in, session_dates, ax):
-    dates = []
-    total_volume = []
-    number_correct = []
-    for ii, date in enumerate(session_dates[:]):
+def make_total_volume_plot(df_summary, ax):
 
-        dates.append(df_in[(df_in.startdatetime == date)].startdatetime.iloc[0].strftime('%Y-%m-%d'))
-        df1 = df_in[(df_in.startdatetime == date) & (df_in.trial_type != 'aborted')]
-
-        total_volume.append(df1.cumulative_volume.max())
-        number_correct.append(df1.number_of_rewards.sum())
+    dates = [pd.to_datetime(date).strftime('%Y-%m-%d') for date in df_summary.startdatetime.unique()]
+    total_volume = df_summary['total_water'].values
 
     ax.plot(
         total_volume,
@@ -199,7 +137,11 @@ def make_total_volume_plot(df_in, session_dates, ax):
 
 def make_summary_figure(df, mouse_id):
     dfm = df[(df.mouse_id == mouse_id)]
-    session_dates = np.sort(dfm.startdatetime.unique())
+
+    df_summary = summarize.session_level_summary(dfm).reset_index()
+
+    session_dates = np.sort(df_summary.startdatetime.unique())
+
     # fig,ax=plt.subplots(1,5,sharey=True,figsize=(11.5,8))
     fig = plt.figure(figsize=(11.5, 8))
     ax = []
@@ -213,11 +155,11 @@ def make_summary_figure(df, mouse_id):
 
     make_trial_type_plot(dfm, session_dates, ax[1])
 
-    make_performance_plot(dfm, session_dates, ax[2])
+    make_performance_plot(df_summary, ax[2])
 
-    make_dprime_plot(dfm, session_dates, ax[3])
+    make_dprime_plot(df_summary, ax[3])
 
-    make_total_volume_plot(dfm, session_dates, ax[4])
+    make_total_volume_plot(df_summary, ax[4])
 
     for i in range(1, len(ax)):
         ax[i].set_yticklabels([])
