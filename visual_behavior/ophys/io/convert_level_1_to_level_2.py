@@ -450,6 +450,22 @@ def save_roi_masks(roi_masks, lims_data):
         f.create_dataset(str(id), data=roi_mask)
     f.close()
 
+def get_corrected_fluorescence_traces(roi_metrics, lims_data):
+    file_path = os.path.join(get_ophys_experiment_dir(lims_data), 'demix', str(get_lims_id(lims_data)) + '_demixed_traces.h5')
+    g = h5py.File(file_path)
+    corrected_fluorescence_traces = np.asarray(g['data'])
+    valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
+    corrected_fluorescence_traces = corrected_fluorescence_traces[valid_roi_indices]
+    return corrected_fluorescence_traces
+
+
+def save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data):
+    traces_path = os.path.join(get_analysis_dir(lims_data), 'corrected_fluorescence_traces.h5')
+    f = h5py.File(traces_path, 'w')
+    for i, index in enumerate(get_cell_specimen_ids(roi_metrics)):
+        f.create_dataset(str(index), data=corrected_fluorescence_traces[i])
+    f.close()
+
 
 def get_dff_traces(roi_metrics, lims_data):
     dff_path = os.path.join(get_ophys_experiment_dir(lims_data), str(get_lims_id(lims_data)) + '_dff.h5')
@@ -566,6 +582,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     roi_masks = get_roi_masks(roi_metrics, lims_data)
     save_roi_masks(roi_masks, lims_data)
 
+    corrected_fluorescence_traces = get_corrected_fluorescence_traces(roi_metrics, lims_data)
+    save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data)
+
     dff_traces = get_dff_traces(roi_metrics, lims_data)
     save_dff_traces(dff_traces, roi_metrics, lims_data)
 
@@ -604,9 +623,9 @@ if __name__ == '__main__':
 
     experiment_id = sys.argv[1]
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
-    # # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
-    # # cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
-    # # experiment_id = 742828820
+    # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
+    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    # experiment_id = 644942849
     ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
 
     # import pandas as pd
