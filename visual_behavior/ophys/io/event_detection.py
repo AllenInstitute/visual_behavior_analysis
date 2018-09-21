@@ -7,9 +7,10 @@ from visual_coding_2p_analysis.l0_analysis import L0_analysis
 def event_detection(lims_id):
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
     dataset= VisualBehaviorOphysDataset(lims_id, cache_dir=cache_dir)
+    dataset.metadata['genotype'] = 'Ai93'
 
     events_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/events'
-    l0 = L0_analysis(dataset, cache_directory=events_dir)
+    l0 = L0_analysis(dataset, cache_directory=events_dir, genotype='Ai93', halflife_ms=315)
 
     events = l0.get_events()
 
