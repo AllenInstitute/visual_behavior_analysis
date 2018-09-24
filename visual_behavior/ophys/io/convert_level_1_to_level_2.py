@@ -623,17 +623,9 @@ if __name__ == '__main__':
 
     experiment_id = sys.argv[1]
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
-    # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
-    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
-    # experiment_id = 644942849
     ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
 
-    # import pandas as pd
-    #
-    # experiment_id = 692342909
-    # manifest = r'\\allen\aibs\informatics\swdb2018\visual_behavior\visual_behavior_data_manifest.csv'
     # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
-    # ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir=cache_dir)
-    # df = pd.read_csv(manifest)
-    # for i, experiment_id in enumerate(df.experiment_id.values):
-    #     ophys_data = convert_level_1_to_level_2(int(experiment_id), cache_dir=cache_dir)
+    # # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
+    # experiment_id = 673139359
+    # ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)

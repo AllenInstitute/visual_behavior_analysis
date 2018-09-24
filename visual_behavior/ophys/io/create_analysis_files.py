@@ -47,13 +47,6 @@ if __name__ == '__main__':
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
     create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
 
-    # import pandas as pd
-    # experiment_id = 692342909
-    # manifest = r'\\allen\aibs\informatics\swdb2018\visual_behavior\visual_behavior_data_manifest.csv'
+    # experiment_id = 673139359 #673139359
     # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
     # create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
-
-    # df = pd.read_csv(manifest)
-    # for i, experiment_id in enumerate(df.experiment_id.values):
-    #     print(i, experiment_id)
-    #     create_analysis_files(int(experiment_id), overwrite_analysis_files=True)
