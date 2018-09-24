@@ -38,8 +38,8 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
     outer_grid = gridspec.GridSpec(100, 100)
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
-                    subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
-                    int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace, hspace=hspace)
+                    subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]), # flake8: noqa: E999
+                    int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace, hspace=hspace) # flake8: noqa: E999
 
     # NOTE: A cleaner way to do this is with list comprehension:
     # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
@@ -347,7 +347,7 @@ def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=No
     #     norm = plt.Normalize(0,5)
     sm = plt.cm.ScalarMappable(cmap="Blues", norm=norm)
     sm.set_array([])
-    cbar = ax.figure.colorbar(mappable=sm, ax=ax, label='mean response across blocks')
+    ax.figure.colorbar(mappable=sm, ax=ax, label='mean response across blocks')
     ax.set_title('mean response to first flash of pref stim across image blocks')
     if save_dir:
         fig.tight_layout()
@@ -371,7 +371,7 @@ def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=N
     #     norm = plt.Normalize(0,5)
     sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
     sm.set_array([])
-    cbar = ax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
+    cax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
     ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
     if save_dir:
         fig.tight_layout()

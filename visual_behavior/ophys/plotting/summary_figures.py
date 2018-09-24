@@ -7,10 +7,10 @@ import os
 import h5py
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')  # change backend thing so that it can run without monitor
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+matplotlib.use('Agg')  # change backend thing so that it can run without monitor
 
 # formatting
 sns.set_style('white')

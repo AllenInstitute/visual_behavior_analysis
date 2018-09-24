@@ -173,7 +173,7 @@ def get_gray_response_df(dataset, window=0.5):
     window = 0.5
     row = []
     flashes = dataset.stimulus_table.copy()
-    stim_duration = dataset.task_parameters.stimulus_duration.values[0]
+    # stim_duration = dataset.task_parameters.stimulus_duration.values[0]
     for cell in range(dataset.dff_traces.shape[0]):
         for x, gray_start_time in enumerate(
                 flashes.end_time[:-5]):  # exclude the last 5 frames to prevent truncation of traces
@@ -199,7 +199,7 @@ def add_repeat_to_stimulus_table(stimulus_table):
             n += 1
             repeat.append(n)
     stimulus_table['repeat'] = repeat
-    stimulus_table['repeat'] = [int(repeat) for repeat in stimulus_table.repeat.values]
+    stimulus_table['repeat'] = [int(r) for r in stimulus_table.repeat.values]
     return stimulus_table
 
 
