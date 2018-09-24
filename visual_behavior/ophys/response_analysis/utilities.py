@@ -76,7 +76,7 @@ def get_fraction_responsive_trials(group):
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
 
-def get_mean_df(trial_response_df, conditions=['cell_specimen_id', 'change_image_name']):
+def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
     rdf = trial_response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
@@ -112,10 +112,14 @@ def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
     mdf = mean_df.reset_index()
     mdf['pref_stim'] = False
 
-    for cell in mdf.cell_specimen_id.unique():
-        mc = mdf[(mdf.cell_specimen_id == cell)]
+    if 'cell_specimen_id' in mdf.keys():
+        cell_key = 'cell_specimen_id'
+    else:
+        cell_key = 'cell'
+    for cell in mdf[cell_key].unique():
+        mc = mdf[(mdf[cell_key] == cell)]
         pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))][image_name].values[0]
-        row = mdf[(mdf.cell_specimen_id == cell) & (mdf[image_name] == pref_image)].index
+        row = mdf[(mdf[cell_key] == cell) & (mdf[image_name] == pref_image)].index
         mdf.loc[row, 'pref_stim'] = True
     return mdf
 
