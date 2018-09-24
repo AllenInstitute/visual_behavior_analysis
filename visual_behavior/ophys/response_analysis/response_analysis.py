@@ -80,11 +80,11 @@ class ResponseAnalysis(object):
                 df_list.append(
                     [trial, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response,
                      p_value, sd_over_baseline, running_speed_trace, running_speed_timestamps,
-                     mean_running_speed])
+                     mean_running_speed, self.dataset.experiment_id])
 
         columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
                    'p_value', 'sd_over_baseline', 'running_speed_trace', 'running_speed_timestamps',
-                   'mean_running_speed']
+                   'mean_running_speed', 'experiment_id']
         trial_response_df = pd.DataFrame(df_list, columns=columns)
         trial_metadata = self.dataset.trials
         trial_metadata = trial_metadata.rename(columns={'response': 'behavioral_response'})
@@ -134,10 +134,11 @@ class ResponseAnalysis(object):
                 mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate)
                 reward_rate = flash_data.reward_rate.values[0]
 
-                row.append([cell, cell_specimen_id, flash, flash_time, image_name, mean_response, p_value, reward_rate])
+                row.append([cell, cell_specimen_id, flash, flash_time, image_name, mean_response, p_value, reward_rate,
+                            self.dataset.experiment_id])
         flash_response_df = pd.DataFrame(data=row,
                                          columns=['cell', 'cell_specimen_id','flash_number', 'start_time', 'image_name', 'mean_response',
-                                                  'p_value', 'reward_rate'])
+                                                  'p_value', 'reward_rate', 'experiment_id'])
         flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
         flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
