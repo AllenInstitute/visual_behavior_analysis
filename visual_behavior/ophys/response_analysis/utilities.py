@@ -60,6 +60,31 @@ def get_mean_sem_trace(group):
                       'mean_trace': mean_trace, 'sem_trace': sem_trace})
 
 
+def get_mean_sem(group):
+    mean_response = np.mean(group['mean_response'])
+    sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
+    return pd.Series({'mean_response': mean_response, 'sem_response': sem_response})
+
+
+def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
+    rdf = trial_response_df.copy()
+
+    mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
+    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
+    mdf = mdf.reset_index()
+    mdf = annotate_mean_df_with_pref_stim(mdf)
+
+    fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
+    fraction_significant_trials = fraction_significant_trials.reset_index()
+    mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
+
+    fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
+    fraction_responsive_trials = fraction_responsive_trials.reset_index()
+    mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
+
+    return mdf
+
+
 def annotate_trial_response_df_with_pref_stim(trial_response_df):
     rdf = trial_response_df.copy()
     rdf['pref_stim'] = False
@@ -72,12 +97,6 @@ def annotate_trial_response_df_with_pref_stim(trial_response_df):
         for trial in trials:
             rdf.loc[trial, 'pref_stim'] = True
     return rdf
-
-
-def get_mean_sem(group):
-    mean_response = np.mean(group['mean_response'])
-    sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
-    return pd.Series({'mean_response': mean_response, 'sem_response': sem_response})
 
 
 def annotate_flash_response_df_with_pref_stim(fdf):
@@ -136,24 +155,6 @@ def get_fraction_responsive_trials(group):
     fraction_responsive_trials = len(group[group.mean_response > 0.1]) / float(len(group))
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
-
-def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
-    rdf = trial_response_df.copy()
-
-    mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
-    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
-    mdf = mdf.reset_index()
-    mdf = annotate_mean_df_with_pref_stim(mdf)
-
-    fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
-    fraction_significant_trials = fraction_significant_trials.reset_index()
-    mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
-
-    fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
-    fraction_responsive_trials = fraction_responsive_trials.reset_index()
-    mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
-
-    return mdf
 
 def get_gray_response_df(dataset, window=0.5):
     window = 0.5

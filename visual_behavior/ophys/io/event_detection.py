@@ -12,7 +12,9 @@ def event_detection(lims_id):
     events_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/events'
     l0 = L0_analysis(dataset, cache_directory=events_dir, genotype='Ai93', halflife_ms=315)
 
+    print('getting events')
     events = l0.get_events()
+    print('done getting events')
 
     dff_traces_file = l0.dff_file
     f = np.load(dff_traces_file)
