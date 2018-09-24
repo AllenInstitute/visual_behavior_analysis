@@ -7,7 +7,7 @@ import os
 import h5py
 import numpy as np
 import matplotlib
-matplotlib.use('Agg') #change backend thing so that it can run without monitor
+matplotlib.use('Agg')  # change backend thing so that it can run without monitor
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -292,17 +292,18 @@ def plot_image_response_for_trial_types(analysis, cell, save_dir=None):
     if save_dir:
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(right=0.85)
-        save_figure(fig, figsize, save_dir, 'image_responses', analysis.dataset.analysis_folder+'_'+str(cell), formats=['.png'])
+        save_figure(fig, figsize, save_dir, 'image_responses', analysis.dataset.analysis_folder + '_' + str(cell),
+                    formats=['.png'])
         plt.close()
 
 
 def plot_event_detection(dff_traces, events, analysis_dir):
-    figsize=(20, 15)
-    xlims_list = [[0,dff_traces[0].shape[0]],[2000,10000],[60000,62000]]
+    figsize = (20, 15)
+    xlims_list = [[0, dff_traces[0].shape[0]], [2000, 10000], [60000, 62000]]
     for cell in range(len(dff_traces)):
-        fig, ax = plt.subplots(3,1,figsize=figsize)
+        fig, ax = plt.subplots(3, 1, figsize=figsize)
         ax = ax.ravel()
-        for i,xlims in enumerate(xlims_list):
+        for i, xlims in enumerate(xlims_list):
             ax[i].plot(dff_traces[cell], label='dF/F from L0')
             ax[i].plot(events[cell], color='r', label='events')
             ax[i].set_title('roi ' + str(cell))
@@ -393,14 +394,15 @@ def plot_mean_response_by_repeat(analysis, cell, save_dir=None, ax=None):
     fig, ax = plt.subplots(figsize=figsize)
     ax = sns.stripplot(data=df, x='image_name', y='mean_response', jitter=.2, size=3, ax=ax, hue='repeat',
                        palette=palette)
-    ax.set_xticklabels(df.image_name.unique(), rotation=90);
+    ax.set_xticklabels(df.image_name.unique(), rotation=90)
     ax.legend_.remove()
     cbar = ax.figure.colorbar(mappable=sm, ax=ax)
     cbar.set_label('repeat')
-    ax.set_title(str(cell)+'_'+analysis.dataset.analysis_folder, fontsize=14)
+    ax.set_title(str(cell) + '_' + analysis.dataset.analysis_folder, fontsize=14)
     if save_dir:
         fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'mean_response_by_repeat', analysis.dataset.analysis_folder + '_' + str(cell))
+        save_figure(fig, figsize, save_dir, 'mean_response_by_repeat',
+                    analysis.dataset.analysis_folder + '_' + str(cell))
         plt.close()
     return ax
 
@@ -418,17 +420,17 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
     fig, ax = plt.subplots(figsize=figsize)
     ax = sns.stripplot(data=df, x='image_name', y='mean_response', jitter=.2, size=3, ax=ax, hue='image_block',
                        palette=palette)
-    ax.set_xticklabels(df.image_name.unique(), rotation=90);
+    ax.set_xticklabels(df.image_name.unique(), rotation=90)
     ax.legend_.remove()
     cbar = ax.figure.colorbar(mappable=sm, ax=ax)
     cbar.set_label('image_block')
-    ax.set_title(str(cell)+'_'+analysis.dataset.analysis_folder, fontsize=14)
+    ax.set_title(str(cell) + '_' + analysis.dataset.analysis_folder, fontsize=14)
     if save_dir:
         fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'mean_response_by_image_block', analysis.dataset.analysis_folder + '_' + str(cell))
+        save_figure(fig, figsize, save_dir, 'mean_response_by_image_block',
+                    analysis.dataset.analysis_folder + '_' + str(cell))
         plt.close()
     return ax
-
 
 
 if __name__ == '__main__':

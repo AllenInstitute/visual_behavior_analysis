@@ -4,6 +4,7 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 
 import matplotlib
 import logging
+import os
 
 matplotlib.use('Agg')
 
@@ -25,20 +26,22 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     analysis.flash_response_df = ut.annotate_flash_response_df_with_block_set(analysis.flash_response_df)
     fdf = analysis.flash_response_df.copy()
     data = ut.add_early_late_block_ratio_for_fdf(fdf)
-    esf.plot_mean_response_across_image_block_sets(data, analysis.dataset.analysis_folder, save_dir=cache_dir, ax=None)
+    save_dir = os.path.join(cache_dir, 'multi_session_summary_figures')
+    esf.plot_mean_response_across_image_block_sets(data, analysis.dataset.analysis_folder, save_dir=save_dir, ax=None)
 
     logger.info('plotting cell responses')
+    save_dir = os.path.join(cache_dir, 'summary_figures')
     from visual_behavior.ophys.plotting import summary_figures as sf
     for cell in dataset.get_cell_indices():
         sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir)
-        sf.plot_image_response_for_trial_types(analysis, cell, save_dir=cache_dir)
+        sf.plot_image_response_for_trial_types(analysis, cell, save_dir=save_dir)
 
         # sf.plot_mean_response_by_repeat(analysis, cell, save_dir=analysis.dataset.analysis_dir)
         # sf.plot_mean_response_by_image_block(analysis, cell, save_dir=analysis.dataset.analysis_dir)
-        sf.plot_mean_response_by_repeat(analysis, cell, save_dir=cache_dir)
-        sf.plot_mean_response_by_image_block(analysis, cell, save_dir=cache_dir)
+        sf.plot_mean_response_by_repeat(analysis, cell, save_dir=save_dir)
+        sf.plot_mean_response_by_image_block(analysis, cell, save_dir=save_dir)
 
-    if dataset.events != None:
+    if dataset.events is not None:
         sf.plot_event_detection(dataset.dff_traces, dataset.events, dataset.analysis_dir)
     logger.info('done')
 

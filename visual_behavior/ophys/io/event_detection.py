@@ -4,9 +4,10 @@ from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBe
 from visual_behavior.ophys.plotting import summary_figures as sf
 from visual_coding_2p_analysis.l0_analysis import L0_analysis
 
+
 def event_detection(lims_id):
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
-    dataset= VisualBehaviorOphysDataset(lims_id, cache_dir=cache_dir)
+    dataset = VisualBehaviorOphysDataset(lims_id, cache_dir=cache_dir)
     dataset.metadata['genotype'] = 'Ai93'
 
     events_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/events'
@@ -24,10 +25,7 @@ def event_detection(lims_id):
 
 
 if __name__ == '__main__':
-        import sys
-        lims_id = sys.argv[1]
-        event_detection(lims_id)
+    import sys
 
-
-
-
+    lims_id = sys.argv[1]
+    event_detection(lims_id)

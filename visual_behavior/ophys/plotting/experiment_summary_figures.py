@@ -11,6 +11,7 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.ophys.plotting.summary_figures as sf
 import seaborn as sns
 import matplotlib
+
 matplotlib.use('Agg')
 
 # formatting
@@ -37,8 +38,8 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
     outer_grid = gridspec.GridSpec(100, 100)
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
-                                                  subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
-                                                  int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace, hspace=hspace)
+                    subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
+                    int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace, hspace=hspace)
 
     # NOTE: A cleaner way to do this is with list comprehension:
     # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
@@ -328,53 +329,53 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
 def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=None):
     fdf = analysis.flash_response_df.copy()
     fdf.image_block = [int(image_block) for image_block in fdf.image_block.values]
-    data = fdf[(fdf.repeat==1)&(fdf.pref_stim==True)]
+    data = fdf[(fdf.repeat == 1) & (fdf.pref_stim == True)]
     mean_response = data.groupby(['cell']).apply(ut.get_mean_sem)
     mean_response = mean_response.unstack()
 
     cell_order = np.argsort(mean_response.mean_response.values)
     if ax is None:
-        figsize = (15,5)
+        figsize = (15, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data = data, x="image_block", y="mean_response", kind="point", hue='cell', hue_order=cell_order,
-                       palette='Blues',ax = ax)
+    ax = sns.pointplot(data=data, x="image_block", y="mean_response", kind="point", hue='cell', hue_order=cell_order,
+                       palette='Blues', ax=ax)
     # ax.legend(bbox_to_anchor=(1,1))
     ax.legend_.remove()
     min = mean_response.mean_response.min()
     max = mean_response.mean_response.max()
-    norm = plt.Normalize(min,max)
-#     norm = plt.Normalize(0,5)
+    norm = plt.Normalize(min, max)
+    #     norm = plt.Normalize(0,5)
     sm = plt.cm.ScalarMappable(cmap="Blues", norm=norm)
     sm.set_array([])
     cbar = ax.figure.colorbar(mappable=sm, ax=ax, label='mean response across blocks')
     ax.set_title('mean response to first flash of pref stim across image blocks')
     if save_dir:
         fig.tight_layout()
-        save_figure(fig,figsize,save_dir,'first_flash_by_image_block',analysis.dataset.analysis_folder)
+        save_figure(fig, figsize, save_dir, 'first_flash_by_image_block', analysis.dataset.analysis_folder)
     return ax
 
 
 def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=None, ax=None):
-    order = np.argsort(data[data.image_block==1].early_late_block_ratio.values)
-    cell_order = data[data.image_block==1].cell.values[order]
+    order = np.argsort(data[data.image_block == 1].early_late_block_ratio.values)
+    cell_order = data[data.image_block == 1].cell.values[order]
     if ax is None:
-        figsize = (6,5)
+        figsize = (6, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data = data, x="block_set", y="mean_response", kind="point", palette='RdBu',ax = ax,
-                      hue='cell', hue_order=cell_order)
+    ax = sns.pointplot(data=data, x="block_set", y="mean_response", kind="point", palette='RdBu', ax=ax,
+                       hue='cell', hue_order=cell_order)
     # ax.legend(bbox_to_anchor=(1,1))
     ax.legend_.remove()
     min = np.amin(data.early_late_block_ratio.unique())
     max = np.amax(data.early_late_block_ratio.unique())
-    norm = plt.Normalize(min,max)
-#     norm = plt.Normalize(0,5)
+    norm = plt.Normalize(min, max)
+    #     norm = plt.Normalize(0,5)
     sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
     sm.set_array([])
     cbar = ax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
     ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
     if save_dir:
         fig.tight_layout()
-        save_figure(fig,figsize,save_dir,'first_flash_by_image_block_set',analysis_folder)
+        save_figure(fig, figsize, save_dir, 'first_flash_by_image_block_set', analysis_folder)
     return ax
 
 

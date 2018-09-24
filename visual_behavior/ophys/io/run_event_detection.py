@@ -18,8 +18,6 @@ lims_ids = [644942849, 645035903, 645086795, 645362806, 646922970, 647108734,
             745637183, 747248249, 750469573, 751935154, 752966796, 753931104,
             754552635]
 
-lims_ids = [751935154, 752966796, 753931104, 754552635,
-            673139359, 673460976]
 
 python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/ophys/io/event_detection.py"
 
@@ -41,5 +39,4 @@ for lims_id in lims_ids:
         conda_env=None,
         jobname='process_{}'.format(lims_id),
         **job_settings
-        ).run(dryrun=False)
-
+    ).run(dryrun=False)
