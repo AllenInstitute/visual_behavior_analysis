@@ -295,16 +295,23 @@ def plot_image_response_for_trial_types(analysis, cell, save_dir=None):
         save_figure(fig, figsize, save_dir, 'image_responses', analysis.dataset.analysis_folder+'_'+str(cell), formats=['.png'])
         plt.close()
 
-def plot_event_detection(dff_traces_l0, events, analysis_dir):
-    for cell in range(len(dff_traces_l0)):
-        fig, ax = plt.subplots(figsize=(20, 5))
-        ax.plot(dff_traces_l0[cell], label='dF/F from L0')
-        ax.plot(events[cell], color='r', label='events')
-        ax.set_title('roi ' + str(cell))
-        ax.set_xlabel('2P frames')
-        ax.set_ylabel('dF/F')
+
+def plot_event_detection(dff_traces, events, analysis_dir):
+    figsize=(20, 15)
+    xlims_list = [[0,dff_traces[0].shape[0]],[2000,10000],[60000,62000]]
+    for cell in range(len(dff_traces)):
+        fig, ax = plt.subplots(3,1,figsize=figsize)
+        ax = ax.ravel()
+        for i,xlims in enumerate(xlims_list):
+            ax[i].plot(dff_traces[cell], label='dF/F from L0')
+            ax[i].plot(events[cell], color='r', label='events')
+            ax[i].set_title('roi ' + str(cell))
+            ax[i].set_xlabel('2P frames')
+            ax[i].set_ylabel('dF/F')
+            ax[i].set_xlim(xlims)
         plt.legend()
-        save_figure(fig, (20, 5), analysis_dir, 'event_detection', str(cell))
+        fig.tight_layout()
+        save_figure(fig, figsize, analysis_dir, 'event_detection', str(cell))
         plt.close()
 
 

@@ -199,6 +199,22 @@ class VisualBehaviorOphysDataset(object):
         return self._corrected_fluorescence_traces
     corrected_fluorescence_traces = LazyLoadable('_corrected_fluorescence_traces', get_corrected_fluorescence_traces)
 
+    def get_events(self):
+        events_folder = os.path.join(self.cache_dir, 'events')
+        events_file = [file for file in os.listdir(events_folder) if
+                       str(self.experiment_id) + '_events.npz' in file]
+        if len(events_file) > 0:
+            print('getting L0 events')
+            f = np.load(os.path.join(events_folder, events_file[0]))
+            events = np.asarray(f['ev'])
+            f.close()
+        else:
+            print('no events for this experiment')
+            events = None
+        self._events = events
+        return self._events
+    events = LazyLoadable('_events', get_events)
+
     def get_roi_metrics(self):
         self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
         return self._roi_metrics
@@ -284,6 +300,7 @@ class VisualBehaviorOphysDataset(object):
         obj.get_trials()
         obj.get_dff_traces()
         obj.get_corrected_fluorescence_traces()
+        obj.get_events()
         obj.get_roi_metrics()
         obj.get_roi_mask_dict()
         obj.get_roi_mask_array()

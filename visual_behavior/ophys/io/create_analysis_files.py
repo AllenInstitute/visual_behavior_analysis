@@ -37,6 +37,9 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         # sf.plot_mean_response_by_image_block(analysis, cell, save_dir=analysis.dataset.analysis_dir)
         sf.plot_mean_response_by_repeat(analysis, cell, save_dir=cache_dir)
         sf.plot_mean_response_by_image_block(analysis, cell, save_dir=cache_dir)
+
+    if dataset.events != None:
+        sf.plot_event_detection(dataset.dff_traces, dataset.events, dataset.analysis_dir)
     logger.info('done')
 
 
