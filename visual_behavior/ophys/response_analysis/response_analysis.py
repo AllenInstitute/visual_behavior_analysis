@@ -57,9 +57,9 @@ class ResponseAnalysis(object):
         for cell_index in self.dataset.cell_indices:
             for trial in self.dataset.trials.trial.values[:-1]:  # ignore last trial to avoid truncated traces
                 cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
-                cell_trace = self.dataset.dff_traces[cell_index, :]
                 change_time = self.dataset.trials[self.dataset.trials.trial == trial].change_time.values[0]
-
+                # get dF/F trace & metrics
+                cell_trace = self.dataset.dff_traces[cell_index, :]
                 trace, timestamps = ut.get_trace_around_timepoint(change_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
                                                                   self.trial_window, self.ophys_frame_rate)
@@ -68,6 +68,23 @@ class ResponseAnalysis(object):
                 p_value = ut.get_p_val(trace, self.response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(trace, self.response_window, self.baseline_window,
                                                            self.ophys_frame_rate)
+                # get events and metrics
+                if self.dataset.events is not None:
+                    event_trace = self.dataset.events[cell_index, :]
+                    events, timestamps = ut.get_trace_around_timepoint(change_time, event_trace,
+                                                                      self.dataset.timestamps_ophys,
+                                                                      self.trial_window, self.ophys_frame_rate)
+                    mean_response_events = ut.get_mean_in_window(events, self.response_window, self.ophys_frame_rate)
+                    baseline_response_events = ut.get_mean_in_window(events, self.baseline_window, self.ophys_frame_rate)
+                    p_value_events = ut.get_p_val(events, self.response_window, self.ophys_frame_rate)
+                    sd_over_baseline_events = ut.get_sd_over_baseline(events, self.response_window, self.baseline_window,
+                                                               self.ophys_frame_rate)
+                else:
+                    events = None
+                    mean_response_events = None
+                    baseline_response_events = None
+                    p_value_events = None
+                    sd_over_baseline_events = None
 
                 # this is redundant because its the same for every cell. do we want to keep this?
                 running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(change_time,
@@ -80,11 +97,15 @@ class ResponseAnalysis(object):
 
                 df_list.append(
                     [trial, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response,
-                     p_value, sd_over_baseline, running_speed_trace, running_speed_timestamps,
+                     p_value, sd_over_baseline,
+                     events, mean_response_events, baseline_response_events, p_value_events, sd_over_baseline_events,
+                     running_speed_trace, running_speed_timestamps,
                      mean_running_speed, self.dataset.experiment_id])
 
         columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
-                   'p_value', 'sd_over_baseline', 'running_speed_trace', 'running_speed_timestamps',
+                   'p_value', 'sd_over_baseline',
+                   'events', 'mean_response_events', 'baseline_response_events', 'p_value_events', 'sd_over_baseline_events',
+                   'running_speed_trace', 'running_speed_timestamps',
                    'mean_running_speed', 'experiment_id']
         trial_response_df = pd.DataFrame(df_list, columns=columns)
         trial_metadata = self.dataset.trials
