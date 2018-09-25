@@ -93,6 +93,7 @@ class ResponseAnalysis(object):
         trial_metadata = trial_metadata.rename(columns={'response_time': 'behavioral_response_time'})
         trial_metadata = trial_metadata.rename(columns={'response_latency': 'behavioral_response_latency'})
         trial_response_df = trial_response_df.merge(trial_metadata, on='trial')
+        trial_response_df = ut.annotate_trial_response_df_with_pref_stim(trial_response_df)
         return trial_response_df
 
     def save_trial_response_df(self, trial_response_df):
