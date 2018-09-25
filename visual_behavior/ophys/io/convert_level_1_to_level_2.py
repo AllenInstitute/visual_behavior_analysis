@@ -450,6 +450,7 @@ def save_roi_masks(roi_masks, lims_data):
         f.create_dataset(str(id), data=roi_mask)
     f.close()
 
+
 def get_corrected_fluorescence_traces(roi_metrics, lims_data):
     file_path = os.path.join(get_ophys_experiment_dir(lims_data), 'demix', str(get_lims_id(lims_data)) + '_demixed_traces.h5')
     g = h5py.File(file_path)
@@ -473,9 +474,27 @@ def get_dff_traces(roi_metrics, lims_data):
     dff_traces = np.asarray(g['data'])
     valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
     dff_traces = dff_traces[valid_roi_indices]
+    # find cells with NaN traces
+    bad_cell_indices = []
+    final_dff_traces = []
+    for i, dff in enumerate(dff_traces):
+        if np.isnan(dff).any():
+            print('NaN trace detected, removing cell_index:',i)
+            bad_cell_indices.append(i)
+        elif np.amax(dff)>20:
+            print('outlier trace detected, removing cell_index',i)
+            bad_cell_indices.append(i)
+        else:
+            final_dff_traces.append(dff)
+    dff_traces = np.asarray(final_dff_traces)
+    roi_metrics = roi_metrics[roi_metrics.cell_index.isin(bad_cell_indices) == False]
+    # reset cell index after removing bad cells
+    cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
+                  roi_metrics.cell_specimen_id.values]
+    roi_metrics['cell_index'] = cell_index
     print('length of traces:', dff_traces.shape[1])
     print('number of segmented cells:', dff_traces.shape[0])
-    return dff_traces
+    return dff_traces, roi_metrics
 
 
 def save_dff_traces(dff_traces, roi_metrics, lims_data):
@@ -486,7 +505,7 @@ def save_dff_traces(dff_traces, roi_metrics, lims_data):
     f.close()
 
 
-def save_timestamps(timestamps, dff_traces, core_data, lims_data):
+def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
@@ -499,7 +518,6 @@ def save_timestamps(timestamps, dff_traces, core_data, lims_data):
         print('length of ophys timestamps <  length of traces by', str(difference),
               'frames , truncating traces')
         dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
-        roi_metrics = get_roi_metrics(lims_data)
         save_dff_traces(dff_traces, roi_metrics, lims_data)
     # make sure length of timestamps equals length of running traces
     running_speed = core_data['running'].speed.values
@@ -577,18 +595,19 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data)
 
     roi_metrics = get_roi_metrics(lims_data)
-    save_roi_metrics(roi_metrics, lims_data)
 
     roi_masks = get_roi_masks(roi_metrics, lims_data)
     save_roi_masks(roi_masks, lims_data)
 
+    dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
+    save_dff_traces(dff_traces, roi_metrics, lims_data)
+
+    save_roi_metrics(roi_metrics, lims_data)
+
     corrected_fluorescence_traces = get_corrected_fluorescence_traces(roi_metrics, lims_data)
     save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data)
 
-    dff_traces = get_dff_traces(roi_metrics, lims_data)
-    save_dff_traces(dff_traces, roi_metrics, lims_data)
-
-    save_timestamps(timestamps, dff_traces, core_data, lims_data)
+    save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data)
 
     motion_correction = get_motion_correction(lims_data)
     save_motion_correction(motion_correction, lims_data)
@@ -613,19 +632,18 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
             dff_traces=dff_traces,
             motion_correction=motion_correction,
             max_projection=max_projection,
-        )
-    )
+        ))
     return ophys_data
 
 
 if __name__ == '__main__':
-    import sys
+    # import sys
 
-    experiment_id = sys.argv[1]
-    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
-    ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
-
-    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
-    # # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
-    # experiment_id = 673139359
+    # experiment_id = sys.argv[1]
+    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
     # ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
+
+    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
+    experiment_id = 736490031
+    ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)

@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
+    print(experiment_id)
     logger.info(experiment_id)
     logger.info('saving ', str(experiment_id), 'to', cache_dir)
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
@@ -36,8 +37,8 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir)
         sf.plot_image_response_for_trial_types(analysis, cell, save_dir=save_dir)
 
-        # sf.plot_mean_response_by_repeat(analysis, cell, save_dir=analysis.dataset.analysis_dir)
-        # sf.plot_mean_response_by_image_block(analysis, cell, save_dir=analysis.dataset.analysis_dir)
+        sf.plot_mean_response_by_repeat(analysis, cell, save_dir=analysis.dataset.analysis_dir)
+        sf.plot_mean_response_by_image_block(analysis, cell, save_dir=analysis.dataset.analysis_dir)
         sf.plot_mean_response_by_repeat(analysis, cell, save_dir=save_dir)
         sf.plot_mean_response_by_image_block(analysis, cell, save_dir=save_dir)
 
@@ -47,12 +48,12 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
 
 if __name__ == '__main__':
-    import sys
-
-    experiment_id = sys.argv[1]
-    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
-    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
-
-    # experiment_id = 673139359 #673139359
-    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    # import sys
+    #
+    # experiment_id = sys.argv[1]
+    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
     # create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
+
+    experiment_id = 737471012
+    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)

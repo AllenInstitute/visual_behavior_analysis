@@ -371,7 +371,7 @@ def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=N
     #     norm = plt.Normalize(0,5)
     sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
     sm.set_array([])
-    cax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
+    ax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
     ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
     if save_dir:
         fig.tight_layout()
