@@ -111,7 +111,6 @@ def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
         image_name = 'change_image_name'
     mdf = mean_df.reset_index()
     mdf['pref_stim'] = False
-
     if 'cell_specimen_id' in mdf.keys():
         cell_key = 'cell_specimen_id'
     else:
@@ -127,25 +126,33 @@ def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
 def annotate_trial_response_df_with_pref_stim(trial_response_df):
     rdf = trial_response_df.copy()
     rdf['pref_stim'] = False
-    mean_response = rdf.groupby(['cell_specimen_id', 'change_image_name']).apply(get_mean_sem_trace)
+    if 'cell_specimen_id' in rdf.keys():
+        cell_key = 'cell_specimen_id'
+    else:
+        cell_key = 'cell'
+    mean_response = rdf.groupby([cell_key, 'change_image_name']).apply(get_mean_sem_trace)
     m = mean_response.unstack()
     for cell in m.index:
         image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
         pref_image = m.loc[cell]['mean_response'].index[image_index]
-        trials = rdf[(rdf.cell == cell) & (rdf.change_image_name == pref_image)].index
+        trials = rdf[(rdf[cell_key] == cell) & (rdf.change_image_name == pref_image)].index
         for trial in trials:
             rdf.loc[trial, 'pref_stim'] = True
     return rdf
 
 
 def annotate_flash_response_df_with_pref_stim(fdf):
+    if 'cell_specimen_id' in fdf.keys():
+        cell_key = 'cell_specimen_id'
+    else:
+        cell_key = 'cell'
     fdf['pref_stim'] = False
-    mean_response = fdf.groupby(['cell_specimen_id', 'image_name']).apply(get_mean_sem)
+    mean_response = fdf.groupby([cell_key, 'image_name']).apply(get_mean_sem)
     m = mean_response.unstack()
     for cell in m.index:
         image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
         pref_image = m.loc[cell]['mean_response'].index[image_index]
-        trials = fdf[(fdf.cell == cell) & (fdf.image_name == pref_image)].index
+        trials = fdf[(fdf[cell_key] == cell) & (fdf.image_name == pref_image)].index
         for trial in trials:
             fdf.loc[trial, 'pref_stim'] = True
     return fdf
