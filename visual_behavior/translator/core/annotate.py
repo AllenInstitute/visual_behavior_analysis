@@ -289,7 +289,7 @@ def annotate_epochs(trials, epoch_length=5.0):
     trials['epoch'] = (
         trials['change_time']
         .map(lambda x: x / (60 * epoch_length))
-        .round()
+        .map(np.floor)
         .map(lambda x: x * epoch_length)
         # .map(lambda x: "{:0.1f} min".format(x))
     )
