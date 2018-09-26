@@ -261,3 +261,52 @@ def add_early_late_block_ratio_for_fdf(fdf, repeat=1, pref_stim=True):
         data.loc[indices, 'early_late_block_index'] = index
         data.loc[indices, 'early_late_block_ratio'] = ratio
     return data
+
+
+def add_ophys_times_to_behavior_df(behavior_df, timestamps_ophys):
+    """
+    behavior_df can be dataset.running, dataset.licks or dataset.rewards
+    """
+    ophys_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in behavior_df.time.values]
+    ophys_times = [timestamps_ophys[frame] for frame in ophys_frames]
+    behavior_df['ophys_frame'] = ophys_frames
+    behavior_df['ophys_time'] = ophys_times
+    return behavior_df
+
+
+def add_ophys_times_to_stimulus_table(stimulus_table, timestamps_ophys):
+    ophys_start_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in
+                          stimulus_table.start_time.values]
+    ophys_start_times = [timestamps_ophys[frame] for frame in ophys_start_frames]
+    stimulus_table['ophys_start_frame'] = ophys_start_frames
+    stimulus_table['ophys_start_time'] = ophys_start_times
+
+    ophys_end_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in stimulus_table.end_time.values]
+    ophys_end_times = [timestamps_ophys[frame] for frame in ophys_end_frames]
+    stimulus_table['ophys_end_frame'] = ophys_end_frames
+    stimulus_table['ophys_end_time'] = ophys_end_times
+    return stimulus_table
+
+def get_running_speed_ophys_time(running_speed, timestamps_ophys):
+    """
+    running_speed dataframe must have column 'ophys_times'
+    """
+    if 'ophys_time' not in running_speed.keys():
+        print 'ophys_times not in running_speed dataframe'
+    running_speed_ophys_time = np.empty(timestamps_ophys.shape)
+    for i,ophys_time in enumerate(timestamps_ophys):
+        run_df = running_speed[running_speed.ophys_time==ophys_time]
+        if len(run_df) > 0:
+            run_speed = run_df.running_speed.mean()
+        else:
+            run_speed = np.nan
+        running_speed_ophys_time[i] = run_speed
+    return running_speed_ophys_time
+
+def get_binary_mask_for_behavior_events(behavior_df, timestamps_ophys):
+    """
+    behavior_df must have column 'ophys_times' from add_ophys_times_to_behavior_df
+    """
+    binary_mask = [1 if time in behavior_df.ophys_time.values else 0 for time in timestamps_ophys]
+    binary_mask = np.asarray(binary_mask)
+    return binary_mask
