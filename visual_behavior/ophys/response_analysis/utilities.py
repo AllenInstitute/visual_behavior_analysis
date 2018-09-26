@@ -310,3 +310,22 @@ def get_binary_mask_for_behavior_events(behavior_df, timestamps_ophys):
     binary_mask = [1 if time in behavior_df.ophys_time.values else 0 for time in timestamps_ophys]
     binary_mask = np.asarray(binary_mask)
     return binary_mask
+
+def get_image_for_ophys_time(ophys_timestamp, stimulus_table):
+    flash_number = np.searchsorted(stimulus_table['ophys_start_time'], ophys_timestamp) - 1
+    flash_number = flash_number[0]
+    end_flash = np.searchsorted(stimulus_table['ophys_end_time'], ophys_timestamp)
+    end_flash = end_flash[0]
+    if flash_number==end_flash:
+        return stimulus_table.loc[flash_number]['image_name']
+    else:
+        return None
+
+def get_stimulus_df_for_ophys_times(stimulus_table, timestamps_ophys):
+    timestamps_df = pd.DataFrame(timestamps_ophys, columns=['ophys_timestamp'])
+    timestamps_df['image'] = timestamps_df['ophys_timestamp'].map(lambda x: get_image_for_ophys_time(x, stimulus_table))
+    stimulus_df = pd.get_dummies(timestamps_df, columns=['image'])
+    stimulus_df.insert(loc=1, column='image', value=timestamps_df['image'])
+    stimulus_df.insert(loc=0, column='ophys_frame', value=np.arange(0,len(timestamps_ophys),1))
+    return stimulus_df
+
