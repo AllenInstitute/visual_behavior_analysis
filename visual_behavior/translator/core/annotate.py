@@ -286,13 +286,19 @@ def annotate_epochs(trials, epoch_length=5.0):
     io.load_trials
     """
 
-    trials['epoch'] = (
+    epoch = (
         trials['change_time']
-        .map(lambda x: x / (60 * epoch_length))
+        .map(lambda x: x / (60.0 * epoch_length))
         .map(np.floor)
         .map(lambda x: x * epoch_length)
         # .map(lambda x: "{:0.1f} min".format(x))
     )
+    epoch = (
+        epoch
+        .fillna(method='ffill')
+        .fillna(method='bfill')
+    )
+    trials['epoch'] = epoch
 
 
 @inplace
