@@ -767,9 +767,15 @@ def get_running_speed(exp_data, smooth=False, time=None):
     dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
 
+    v_sig = get_vsig(exp_data)
+    v_in = get_vin(exp_data)
+
     if len(time) < len(dx):
         logger.error('intervalsms record appears to be missing entries')
         dx = dx[:len(time)]
+        dx_raw = dx_raw[:len(time)]
+        v_sig = v_sig[:len(time)]
+        v_in = v_in[:len(time)]
 
     speed = calc_deriv(dx, time)
     speed = rad_to_dist(speed)
@@ -786,8 +792,8 @@ def get_running_speed(exp_data, smooth=False, time=None):
         'frame': range(len(time)),
         'speed': speed,
         'dx': dx_raw,
-        'v_sig': get_vsig(exp_data),
-        'v_in': get_vin(exp_data),
+        'v_sig': v_sig,
+        'v_in': v_in,
         # 'acceleration (cm/s^2)': accel,
         # 'jerk (cm/s^3)': jerk,
     })
