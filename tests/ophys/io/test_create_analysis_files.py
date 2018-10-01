@@ -3,7 +3,7 @@ import pytest
 from visual_behavior.ophys.io.create_analysis_files import create_analysis_files
 
 
-@pytest.mark.skipif(not os.path.exists('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'), reason='Source files not available')
+@pytest.mark.skipif(os.environ.get('PYTHONPATH','').startswith('/home/circleci'), reason='Cannot test against real files on CircleCI')
 def test_create_analysis(tmpdir):
 
     experiment_id = 712860764
