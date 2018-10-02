@@ -20,6 +20,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
 
 from .extract_stimuli import get_visual_stimuli
 from .extract_images import get_image_metadata
+from ..foraging.extract_images import get_image_data
 
 import logging
 
@@ -350,17 +351,13 @@ def data_to_visual_stimuli(data, time=None):
 
 def data_to_images(data):
 
-
-
     if 'images' in data[b"items"][b"behavior"][b"stimuli"]:
     
-
-        # images, images_meta = get_image_data(image_dict)
-        images = None
-        images_meta = None
+        metadata = get_image_metadata(data)
+        images, images_meta = get_image_data(pd.read_pickle(open(metadata['image_set'], 'r')))
 
         return dict(
-            metadata=get_image_metadata(data),
+            metadata=metadata,
             images=images,
             image_attributes=images_meta,
         )
@@ -370,24 +367,3 @@ def data_to_images(data):
             images=[],
             image_attributes=[],
         )
-
-
-# image_dict = data['image_dict']
-#     logger.warning('loading images from foraging2 outputs is not implemented')
-#     return {
-#         'metadata': {},
-#         'images': [],
-#         'image_attributes': [],
-#     }
-
-# def load_images(data):
-    
-
-    # else:
-    #     images = dict(
-    #         metadata={},
-    #         images=[],
-    #         image_attributes=[],
-    #     )
-
-    # return images
