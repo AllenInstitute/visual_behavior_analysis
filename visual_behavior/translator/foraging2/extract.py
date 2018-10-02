@@ -4,8 +4,7 @@ import pandas as pd
 from copy import deepcopy
 from six import iteritems
 
-from scipy.signal import medfilt
-from ...analyze import calc_deriv, compute_running_speed
+from ...analyze import compute_running_speed  # , calc_deriv
 
 
 logger = logging.getLogger(__name__)
@@ -763,6 +762,7 @@ def get_running_speed(exp_data, smooth=False, time=None):
         time = get_time(exp_data)
         logger.info("`time` not passed. using intervalms as `time`")
 
+    dx_raw = get_dx(exp_data)
     v_sig = get_vsig(exp_data)
     v_in = get_vin(exp_data)
 
