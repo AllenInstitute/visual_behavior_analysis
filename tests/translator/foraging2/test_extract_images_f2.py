@@ -7,7 +7,7 @@ EXPECTED_METADATA = {
 }
 
 
-def test_get_image_metadata(foraging2_data_stage4_2018_05_10):
+def test_get_image_metadata_f2(foraging2_data_stage4_2018_05_10):
 
     image_metadata = extract_images.get_image_metadata(foraging2_data_stage4_2018_05_10)
     assert image_metadata == EXPECTED_METADATA

@@ -1,5 +1,6 @@
 import uuid
 import pandas as pd
+import zipfile
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
 from ...uuid_utils import make_deterministic_session_uuid
 
@@ -353,8 +354,16 @@ def data_to_images(data):
 
     if 'images' in data[b"items"][b"behavior"][b"stimuli"]:
     
+        # Sometimes the source is a zipped pickle:
         metadata = get_image_metadata(data)
-        images, images_meta = get_image_data(pd.read_pickle(open(metadata['image_set'], 'r')))
+        try:
+            image_set = pd.read_pickle(open(metadata['image_set'], 'r'))
+        except AttributeError:
+            zfile = zipfile.ZipFile(metadata['image_set'])
+            finfo = zfile.infolist()[0]
+            ifile = zfile.open(finfo)
+            image_set = pd.read_pickle(ifile)
+        images, images_meta = get_image_data(image_set)
 
         return dict(
             metadata=metadata,
