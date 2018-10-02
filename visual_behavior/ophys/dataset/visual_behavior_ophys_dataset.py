@@ -76,9 +76,7 @@ class VisualBehaviorOphysDataset(object):
         if len(candidates) == 1:
             self._analysis_folder = candidates[0]
         elif len(candidates) < 1:
-            self._analysis_folder = str(self.experiment_id)
-            logger.warning('unable to locate analysis folder for experiment {} in {}, creating analysis folder'.format(self.experiment_id, self.cache_dir))
-            os.mkdir(os.path.join(self.cache_dir, self._analysis_folder))
+            raise OSError('unable to locate analysis folder for experiment {} in {}'.format(self.experiment_id, self.cache_dir))
         elif len(candidates) > 1:
             raise OSError('{} contains multiple possible analysis folders: {}'.format(self.cache_dir, candidates))
 
