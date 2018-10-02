@@ -25,6 +25,11 @@ else:
     load_pickle = lambda pstream: pickle.load(pstream)
 
 
+@pytest.fixture(scope='session')
+def cache_dir(tmpdir_factory):
+    return str(tmpdir_factory.mktemp("cache_dir"))
+
+
 @pytest.fixture(scope='function')
 def tmpdir(request):
     """
