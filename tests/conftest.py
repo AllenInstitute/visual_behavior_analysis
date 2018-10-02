@@ -30,18 +30,6 @@ def cache_dir(tmpdir_factory):
     return str(tmpdir_factory.mktemp("cache_dir"))
 
 
-@pytest.fixture(scope='function')
-def tmpdir(request):
-    """
-    Get a temp dir to build in
-    """
-
-    dir = py.path.local(tempfile.mkdtemp())
-    request.addfinalizer(lambda: dir.remove(rec=True))
-
-    return dir
-
-
 @pytest.fixture
 def exemplar_extended_trials_fixture():
     trials = pd.DataFrame(data={
