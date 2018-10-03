@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')
+
 
 from visual_behavior.schemas.core import MetadataSchema, StimulusSchema, \
     RunningSchema, LickSchema, RewardSchema, TrialSchema, ImageSetSchema

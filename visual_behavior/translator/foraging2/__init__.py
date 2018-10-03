@@ -1,5 +1,8 @@
 import uuid
 import pandas as pd
+from six import PY3
+import pickle
+
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
 from ...uuid_utils import make_deterministic_session_uuid
 
@@ -19,10 +22,28 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
 
 
 from .extract_stimuli import get_visual_stimuli
+from .extract_images import get_image_metadata
+from ..foraging.extract_images import get_image_data
 
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+if PY3:
+    import zipfile36 as zipfile
+
+    def load_pickle(pstream):
+
+        return pickle.load(pstream, encoding="bytes")
+else:
+    import zipfile2 as zipfile
+
+    FileNotFoundError = IOError
+
+    def load_pickle(pstream):
+
+        return pickle.load(pstream)
 
 
 def data_to_change_detection_core(data, time=None):
@@ -348,9 +369,36 @@ def data_to_visual_stimuli(data, time=None):
 
 
 def data_to_images(data):
-    logger.warning('loading images from foraging2 outputs is not implemented')
-    return {
-        'metadata': {},
-        'images': [],
-        'image_attributes': [],
-    }
+
+    if 'images' in data["items"]["behavior"]["stimuli"]:
+
+        # Sometimes the source is a zipped pickle:
+        metadata = get_image_metadata(data)
+        try:
+            image_set = load_pickle(open(metadata['image_set'], 'r'))
+        except (AttributeError, UnicodeDecodeError):
+            zfile = zipfile.ZipFile(metadata['image_set'])
+            finfo = zfile.infolist()[0]
+            ifile = zfile.open(finfo)
+            image_set = load_pickle(ifile)
+        except FileNotFoundError:
+            logger.critical('Image file not found: {0}'.format(metadata['image_set']))
+            return dict(
+                metadata={},
+                images=[],
+                image_attributes=[],
+            )
+
+        images, images_meta = get_image_data(image_set)
+
+        return dict(
+            metadata=metadata,
+            images=images,
+            image_attributes=images_meta,
+        )
+    else:
+        return dict(
+            metadata={},
+            images=[],
+            image_attributes=[],
+        )
