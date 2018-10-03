@@ -1,6 +1,6 @@
 import uuid
 import pandas as pd
-import zipfile36 as zipfile
+
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
 from ...uuid_utils import make_deterministic_session_uuid
 
@@ -30,8 +30,10 @@ logger = logging.getLogger(__name__)
 from six import PY3
 import pickle
 if PY3:
+    import zipfile36 as zipfile
     load_pickle = lambda pstream: pickle.load(pstream, encoding="latin1")
 else:
+    import zipfile
     load_pickle = lambda pstream: pickle.load(pstream)
 
 
