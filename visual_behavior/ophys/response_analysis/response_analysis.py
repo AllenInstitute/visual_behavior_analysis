@@ -34,8 +34,7 @@ class ResponseAnalysis(object):
         self.overwrite_analysis_files = overwrite_analysis_files
         self.trial_window = [-4, 4]  # time, in seconds, around change time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
-        self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
-            0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
+        self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         self.baseline_window = np.asarray(
             self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
         self.stimulus_duration = self.dataset.task_parameters['stimulus_duration'].values[0]
@@ -72,13 +71,14 @@ class ResponseAnalysis(object):
                 if self.dataset.events is not None:
                     event_trace = self.dataset.events[cell_index, :]
                     events, timestamps = ut.get_trace_around_timepoint(change_time, event_trace,
-                                                                      self.dataset.timestamps_ophys,
-                                                                      self.trial_window, self.ophys_frame_rate)
+                                                                       self.dataset.timestamps_ophys, self.trial_window,
+                                                                       self.ophys_frame_rate)
                     mean_response_events = ut.get_mean_in_window(events, self.response_window, self.ophys_frame_rate)
-                    baseline_response_events = ut.get_mean_in_window(events, self.baseline_window, self.ophys_frame_rate)
+                    baseline_response_events = ut.get_mean_in_window(events, self.baseline_window,
+                                                                     self.ophys_frame_rate)
                     p_value_events = ut.get_p_val(events, self.response_window, self.ophys_frame_rate)
-                    sd_over_baseline_events = ut.get_sd_over_baseline(events, self.response_window, self.baseline_window,
-                                                               self.ophys_frame_rate)
+                    sd_over_baseline_events = ut.get_sd_over_baseline(events, self.response_window,
+                                                                      self.baseline_window, self.ophys_frame_rate)
                 else:
                     events = None
                     mean_response_events = None
@@ -104,7 +104,8 @@ class ResponseAnalysis(object):
 
         columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
                    'p_value', 'sd_over_baseline',
-                   'events', 'mean_response_events', 'baseline_response_events', 'p_value_events', 'sd_over_baseline_events',
+                   'events', 'mean_response_events', 'baseline_response_events', 'p_value_events',
+                   'sd_over_baseline_events',
                    'running_speed_trace', 'running_speed_timestamps',
                    'mean_running_speed', 'experiment_id']
         trial_response_df = pd.DataFrame(df_list, columns=columns)

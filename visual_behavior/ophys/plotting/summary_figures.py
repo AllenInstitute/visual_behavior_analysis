@@ -10,6 +10,7 @@ import matplotlib
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+
 matplotlib.use('Agg')  # change backend thing so that it can run without monitor
 
 # formatting
@@ -432,48 +433,56 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
         plt.close()
     return ax
 
+
 def plot_single_trial_with_events(cell_specimen_id, trial_num, analysis, ax=None, save=False):
     tdf = analysis.trial_response_df.copy()
-    trial_data = tdf[(tdf.trial==trial_num)&(tdf.cell_specimen_id==cell_specimen_id)]
+    trial_data = tdf[(tdf.trial == trial_num) & (tdf.cell_specimen_id == cell_specimen_id)]
     trial_type = trial_data.trial_type.values[0]
     if ax is None:
-        figsize=(6,4)
+        figsize = (6, 4)
         fig, ax = plt.subplots(figsize=figsize)
     trace = trial_data.trace.values[0]
-    ax = plot_single_trial_trace(trace, analysis.ophys_frame_rate, ylabel='dF/F', legend_label='dF/F', color='k', interval_sec=1,
-                                xlims=[-4, 4], ax=ax)
+    ax = plot_single_trial_trace(trace, analysis.ophys_frame_rate, ylabel='dF/F', legend_label='dF/F', color='k',
+                                 interval_sec=1,
+                                 xlims=[-4, 4], ax=ax)
     events = trial_data.events.values[0]
-    ax = plot_single_trial_trace(events, analysis.ophys_frame_rate, ylabel='response magnitude', legend_label='events', color='r', interval_sec=1,
-                                xlims=[-4, 4], ax=ax)
+    ax = plot_single_trial_trace(events, analysis.ophys_frame_rate, ylabel='response magnitude', legend_label='events',
+                                 color='r', interval_sec=1,
+                                 xlims=[-4, 4], ax=ax)
     ax = plot_flashes_on_trace(ax, analysis, trial_type=trial_type, omitted=False, alpha=0.3)
     ax.legend()
-    ax.set_title('cell: '+str(cell_specimen_id)+', trial:'+str(trial_num))
+    ax.set_title('cell: ' + str(cell_specimen_id) + ', trial:' + str(trial_num))
 
     if save:
         fig.tight_layout()
-        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'single_trial_responses', str(cell_specimen_id)+'_'+str(trial_num))
+        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'single_trial_responses',
+                    str(cell_specimen_id) + '_' + str(trial_num))
         plt.close()
     return ax
+
 
 def plot_mean_trace_and_events(cell_specimen_id, analysis, ax=None, save=False):
     tdf = analysis.trial_response_df.copy()
     if ax is None:
-        figsize=(12,4)
-        fig, ax = plt.subplots(1,2,figsize=figsize,sharey=True)
+        figsize = (12, 4)
+        fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
         ax = ax.ravel()
 
-    for i,trial_type in enumerate(['go','catch']):
-        trial_data = tdf[(tdf.cell_specimen_id==cell_specimen_id)&(tdf.pref_stim==True)&(tdf.trial_type==trial_type)]
+    for i, trial_type in enumerate(['go', 'catch']):
+        trial_data = tdf[
+            (tdf.cell_specimen_id == cell_specimen_id) & (tdf.pref_stim == True) & (tdf.trial_type == trial_type)]
 
         traces = trial_data.trace.values
-        ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, ylabel='event rate', legend_label='dF/F', color='k', interval_sec=1, xlims=[-4, 4], ax=ax[i])
+        ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, ylabel='event rate', legend_label='dF/F', color='k',
+                                interval_sec=1, xlims=[-4, 4], ax=ax[i])
 
         events = trial_data.events.values
-        ax[i] = plot_mean_trace(events, analysis.ophys_frame_rate, ylabel='response magnitude', legend_label='events', color='r', interval_sec=1, xlims=[-4, 4], ax=ax[i])
+        ax[i] = plot_mean_trace(events, analysis.ophys_frame_rate, ylabel='response magnitude', legend_label='events',
+                                color='r', interval_sec=1, xlims=[-4, 4], ax=ax[i])
 
         ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=0.3)
     ax[i].legend()
-    plt.suptitle(str(cell_specimen_id)+'_'+analysis.dataset.analysis_folder, fontsize=16)
+    plt.suptitle(str(cell_specimen_id) + '_' + analysis.dataset.analysis_folder, fontsize=16)
     if save:
         fig.tight_layout()
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'pref_stim_mean_events', str(cell_specimen_id))

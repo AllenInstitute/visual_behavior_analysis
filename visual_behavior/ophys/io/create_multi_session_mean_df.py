@@ -11,7 +11,6 @@ matplotlib.use('Agg')
 logger = logging.getLogger(__name__)
 
 
-
 def get_multi_session_mean_df(experiment_ids, cache_dir,
                               conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type']):
     mega_mdf = pd.DataFrame()
@@ -25,11 +24,11 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
         mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
 
         mega_mdf = pd.concat([mega_mdf, mdf])
-    mega_mdf.to_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs', 'mean_'+conditions[3]+'_df.h5'), key='df',
+    mega_mdf.to_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs', 'mean_' + conditions[3] + '_df.h5'), key='df',
                     format='fixed')
 
+
 if __name__ == '__main__':
-    import sys
 
     # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'

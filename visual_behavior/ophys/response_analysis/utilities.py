@@ -287,6 +287,7 @@ def add_ophys_times_to_stimulus_table(stimulus_table, timestamps_ophys):
     stimulus_table['ophys_end_time'] = ophys_end_times
     return stimulus_table
 
+
 def get_running_speed_ophys_time(running_speed, timestamps_ophys):
     """
     running_speed dataframe must have column 'ophys_times'
@@ -294,14 +295,15 @@ def get_running_speed_ophys_time(running_speed, timestamps_ophys):
     if 'ophys_time' not in running_speed.keys():
         print 'ophys_times not in running_speed dataframe'
     running_speed_ophys_time = np.empty(timestamps_ophys.shape)
-    for i,ophys_time in enumerate(timestamps_ophys):
-        run_df = running_speed[running_speed.ophys_time==ophys_time]
+    for i, ophys_time in enumerate(timestamps_ophys):
+        run_df = running_speed[running_speed.ophys_time == ophys_time]
         if len(run_df) > 0:
             run_speed = run_df.running_speed.mean()
         else:
             run_speed = np.nan
         running_speed_ophys_time[i] = run_speed
     return running_speed_ophys_time
+
 
 def get_binary_mask_for_behavior_events(behavior_df, timestamps_ophys):
     """
@@ -311,21 +313,22 @@ def get_binary_mask_for_behavior_events(behavior_df, timestamps_ophys):
     binary_mask = np.asarray(binary_mask)
     return binary_mask
 
+
 def get_image_for_ophys_time(ophys_timestamp, stimulus_table):
     flash_number = np.searchsorted(stimulus_table['ophys_start_time'], ophys_timestamp) - 1
     flash_number = flash_number[0]
     end_flash = np.searchsorted(stimulus_table['ophys_end_time'], ophys_timestamp)
     end_flash = end_flash[0]
-    if flash_number==end_flash:
+    if flash_number == end_flash:
         return stimulus_table.loc[flash_number]['image_name']
     else:
         return None
+
 
 def get_stimulus_df_for_ophys_times(stimulus_table, timestamps_ophys):
     timestamps_df = pd.DataFrame(timestamps_ophys, columns=['ophys_timestamp'])
     timestamps_df['image'] = timestamps_df['ophys_timestamp'].map(lambda x: get_image_for_ophys_time(x, stimulus_table))
     stimulus_df = pd.get_dummies(timestamps_df, columns=['image'])
     stimulus_df.insert(loc=1, column='image', value=timestamps_df['image'])
-    stimulus_df.insert(loc=0, column='ophys_frame', value=np.arange(0,len(timestamps_ophys),1))
+    stimulus_df.insert(loc=0, column='ophys_frame', value=np.arange(0, len(timestamps_ophys), 1))
     return stimulus_df
-
