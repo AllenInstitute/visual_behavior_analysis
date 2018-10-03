@@ -4,6 +4,7 @@ import pandas as pd
 from visual_behavior.plotting import placeAxesOnGrid
 from visual_behavior.utilities import flatten_list
 from visual_behavior.change_detection.trials import summarize
+from visual_behavior.translator.core.annotate import colormap
 
 
 def make_ILI_plot(dfm, session_dates, ax):
@@ -43,9 +44,9 @@ def make_ILI_plot(dfm, session_dates, ax):
         patch.set_color('black'), patch.set_alpha(0.5)
 
 
-def make_trial_type_plot(dfm, session_dates, ax):
+def make_trial_type_plot(dfm, session_dates, ax, palette='trial_types'):
     sums = dfm.groupby(['startdatetime', 'color', ]).sum()
-    colors = ['blue', 'red', 'darkgreen', 'lightgreen', 'darkorange', 'yellow']
+    colors = [colormap(trial_type, palette) for trial_type in ['aborted', 'auto_rewarded', 'hit', 'miss', 'false_alarm', 'correct_reject']]
     all_vals = []
 
     dates = [pd.to_datetime(date).strftime('%Y-%m-%d') for date in dfm.startdatetime.unique()]
@@ -74,15 +75,15 @@ def make_trial_type_plot(dfm, session_dates, ax):
     ax.invert_yaxis()
 
 
-def make_performance_plot(df_summary, ax, reward_window=None, sliding_window=None):
+def make_performance_plot(df_summary, ax, reward_window=None, sliding_window=None, palette='trial_types'):
 
     dates = [pd.to_datetime(date).strftime('%Y-%m-%d') for date in df_summary.startdatetime.unique()]
     max_hit_rates = df_summary['hit_rate_peak'].values
     max_false_alarm_rates = df_summary['false_alarm_rate_peak'].values
 
     height = 0.35
-    ax.barh(np.arange(len(max_hit_rates)) - height, max_hit_rates, height=height, color='darkgreen', alpha=1)
-    ax.barh(np.arange(len(max_false_alarm_rates)), max_false_alarm_rates, height=height, color='orange', alpha=1)
+    ax.barh(np.arange(len(max_hit_rates)) - height, max_hit_rates, height=height, color=colormap('hit', palette), alpha=1)
+    ax.barh(np.arange(len(max_false_alarm_rates)), max_false_alarm_rates, height=height, color=colormap('false_alarm', palette), alpha=1)
 
     ax.set_title('PEAK Hit \nand FA Rates')
     ax.set_xlabel('Max Response Probability')
@@ -135,7 +136,7 @@ def make_total_volume_plot(df_summary, ax):
     ax.invert_yaxis()
 
 
-def make_summary_figure(df, mouse_id):
+def make_summary_figure(df, mouse_id, palette='trial_types'):
     dfm = df[(df.mouse_id == mouse_id)]
 
     df_summary = summarize.session_level_summary(dfm).reset_index()
@@ -153,7 +154,7 @@ def make_summary_figure(df, mouse_id):
 
     make_ILI_plot(dfm, session_dates, ax[0])
 
-    make_trial_type_plot(dfm, session_dates, ax[1])
+    make_trial_type_plot(dfm, session_dates, ax[1], palette)
 
     make_performance_plot(df_summary, ax[2])
 
