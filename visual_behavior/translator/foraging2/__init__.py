@@ -32,11 +32,17 @@ logger = logging.getLogger(__name__)
 
 if PY3:
     import zipfile36 as zipfile
+
     def load_pickle(pstream):
-        return pickle.load(pstream, encoding="latin1")
+
+        return pickle.load(pstream, encoding="bytes")
 else:
-    import zipfile
+    import zipfile2 as zipfile
+
+    FileNotFoundError = IOError
+
     def load_pickle(pstream):
+
         return pickle.load(pstream)
 
 
@@ -370,11 +376,19 @@ def data_to_images(data):
         metadata = get_image_metadata(data)
         try:
             image_set = load_pickle(open(metadata['image_set'], 'r'))
-        except AttributeError:
+        except (AttributeError, UnicodeDecodeError):
             zfile = zipfile.ZipFile(metadata['image_set'])
             finfo = zfile.infolist()[0]
             ifile = zfile.open(finfo)
             image_set = load_pickle(ifile)
+        except FileNotFoundError:
+            logger.critical('Image file not found: {0}'.format(metadata['image_set']))
+            return dict(
+                metadata={},
+                images=[],
+                image_attributes=[],
+            )
+
         images, images_meta = get_image_data(image_set)
 
         return dict(
