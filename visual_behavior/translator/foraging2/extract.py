@@ -4,8 +4,7 @@ import pandas as pd
 from copy import deepcopy
 from six import iteritems
 
-from scipy.signal import medfilt
-from ...analyze import calc_deriv, rad_to_dist
+from ...analyze import compute_running_speed  # , calc_deriv
 
 
 logger = logging.getLogger(__name__)
@@ -764,19 +763,16 @@ def get_running_speed(exp_data, smooth=False, time=None):
         logger.info("`time` not passed. using intervalms as `time`")
 
     dx_raw = get_dx(exp_data)
-    dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
-    dx = np.cumsum(dx)  # wheel rotations
+    v_sig = get_vsig(exp_data)
+    v_in = get_vin(exp_data)
 
-    if len(time) < len(dx):
+    if len(time) < len(dx_raw):
         logger.error('intervalsms record appears to be missing entries')
-        dx = dx[:len(time)]
+        dx_raw = dx_raw[:len(time)]
+        v_sig = v_sig[:len(time)]
+        v_in = v_in[:len(time)]
 
-    speed = calc_deriv(dx, time)
-    speed = rad_to_dist(speed)
-
-    if smooth:
-        # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
-        raise NotImplementedError
+    speed = compute_running_speed(dx_raw, time, v_sig, v_in)
 
     # accel = calc_deriv(speed, time)
     # jerk = calc_deriv(accel, time)
@@ -786,8 +782,8 @@ def get_running_speed(exp_data, smooth=False, time=None):
         'frame': range(len(time)),
         'speed': speed,
         'dx': dx_raw,
-        'v_sig': get_vsig(exp_data),
-        'v_in': get_vin(exp_data),
+        'v_sig': v_sig,
+        'v_in': v_in,
         # 'acceleration (cm/s^2)': accel,
         # 'jerk (cm/s^3)': jerk,
     })

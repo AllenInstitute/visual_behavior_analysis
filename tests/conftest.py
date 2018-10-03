@@ -25,16 +25,9 @@ else:
     load_pickle = lambda pstream: pickle.load(pstream)
 
 
-@pytest.fixture(scope='function')
-def tmpdir(request):
-    """
-    Get a temp dir to build in
-    """
-
-    dir = py.path.local(tempfile.mkdtemp())
-    request.addfinalizer(lambda: dir.remove(rec=True))
-
-    return dir
+@pytest.fixture(scope='session')
+def cache_dir(tmpdir_factory):
+    return str(tmpdir_factory.mktemp("cache_dir"))
 
 
 @pytest.fixture
@@ -245,6 +238,8 @@ def session_summary():
         os.path.join(TESTING_RES_DIR, 'session_level_summary.csv'),
         index_col=0,
     )
+    summary['startdatetime'] = datetime.datetime(2017, 7, 19, 10, 35, 8, 369000, tzinfo=pytz.utc)
+    summary['startdatetime'] = pd.to_datetime(summary['startdatetime'])
     summary['behavior_session_uuid'] = summary['behavior_session_uuid'].map(uuid.UUID)
     return summary
 
@@ -255,6 +250,8 @@ def epoch_summary():
         os.path.join(TESTING_RES_DIR, 'epoch_level_summary.csv'),
         index_col=0,
     )
+    summary['startdatetime'] = datetime.datetime(2017, 7, 19, 10, 35, 8, 369000, tzinfo=pytz.utc)
+    summary['startdatetime'] = pd.to_datetime(summary['startdatetime'])
     summary['behavior_session_uuid'] = summary['behavior_session_uuid'].map(uuid.UUID)
     return summary
 
