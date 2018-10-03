@@ -1,5 +1,7 @@
 import uuid
 import pandas as pd
+from six import PY3
+import pickle
 
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
 from ...uuid_utils import make_deterministic_session_uuid
@@ -27,14 +29,15 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from six import PY3
-import pickle
+
 if PY3:
     import zipfile36 as zipfile
-    load_pickle = lambda pstream: pickle.load(pstream, encoding="latin1")
+    def load_pickle(pstream):
+        return pickle.load(pstream, encoding="latin1")
 else:
     import zipfile
-    load_pickle = lambda pstream: pickle.load(pstream)
+    def load_pickle(pstream):
+        return pickle.load(pstream)
 
 
 def data_to_change_detection_core(data, time=None):
@@ -362,12 +365,12 @@ def data_to_visual_stimuli(data, time=None):
 def data_to_images(data):
 
     if 'images' in data["items"]["behavior"]["stimuli"]:
-    
+
         # Sometimes the source is a zipped pickle:
         metadata = get_image_metadata(data)
         try:
             image_set = load_pickle(open(metadata['image_set'], 'r'))
-        except:
+        except AttributeError:
             zfile = zipfile.ZipFile(metadata['image_set'])
             finfo = zfile.infolist()[0]
             ifile = zfile.open(finfo)
