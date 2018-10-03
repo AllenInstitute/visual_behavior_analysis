@@ -1,6 +1,6 @@
 import uuid
 import pandas as pd
-import zipfile
+import zipfile36 as zipfile
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
 from ...uuid_utils import make_deterministic_session_uuid
 
@@ -26,6 +26,13 @@ from ..foraging.extract_images import get_image_data
 import logging
 
 logger = logging.getLogger(__name__)
+
+from six import PY3
+import pickle
+if PY3:
+    load_pickle = lambda pstream: pickle.load(pstream, encoding="latin1")
+else:
+    load_pickle = lambda pstream: pickle.load(pstream)
 
 
 def data_to_change_detection_core(data, time=None):
@@ -352,17 +359,17 @@ def data_to_visual_stimuli(data, time=None):
 
 def data_to_images(data):
 
-    if 'images' in data[b"items"][b"behavior"][b"stimuli"]:
+    if 'images' in data["items"]["behavior"]["stimuli"]:
     
         # Sometimes the source is a zipped pickle:
         metadata = get_image_metadata(data)
         try:
-            image_set = pd.read_pickle(open(metadata['image_set'], 'r'))
-        except AttributeError:
+            image_set = load_pickle(open(metadata['image_set'], 'r'))
+        except:
             zfile = zipfile.ZipFile(metadata['image_set'])
             finfo = zfile.infolist()[0]
             ifile = zfile.open(finfo)
-            image_set = pd.read_pickle(ifile)
+            image_set = load_pickle(ifile)
         images, images_meta = get_image_data(image_set)
 
         return dict(

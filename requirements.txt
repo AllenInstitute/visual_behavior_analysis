@@ -11,4 +11,4 @@ marshmallow==3.0.0b11
 h5py>=2.7.1
 psycopg2
 seaborn
-zipfile
+zipfile36
