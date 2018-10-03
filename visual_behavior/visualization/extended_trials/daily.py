@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from visual_behavior.plotting import placeAxesOnGrid
 from visual_behavior.utilities import flatten_list, get_response_rates
 from visual_behavior.translator.core.annotate import check_responses
+from visual_behavior.translator.core.annotate import colormap
 
 
 def get_reward_window(extended_trials):
@@ -183,9 +184,9 @@ def make_cumulative_volume_plot(df_in, ax):
     ax.set_xlim(0, 2)
 
 
-def make_rolling_response_probability_plot(hit_rate, fa_rate, ax):
-    ax.plot(hit_rate, np.arange(len(hit_rate)), color='darkgreen', linewidth=2)
-    ax.plot(fa_rate, np.arange(len(fa_rate)), color='orange', linewidth=2)
+def make_rolling_response_probability_plot(hit_rate, fa_rate, ax, palette='trial_types'):
+    ax.plot(hit_rate, np.arange(len(hit_rate)), color=colormap('hit', palette), linewidth=2)
+    ax.plot(fa_rate, np.arange(len(fa_rate)), color=colormap('false_alarm', palette), linewidth=2)
 
     ax.set_title('Resp. Prob.', fontsize=16)
     ax.set_xticks([0, 0.25, 0.5, 0.75, 1])
@@ -204,16 +205,16 @@ def make_rolling_dprime_plot(d_prime, ax, format='vertical'):
     ax.set_xlim(0, 5)
 
 
-def make_legend(ax):
+def make_legend(ax, palette='trial_types'):
     ax.plot(np.nan, np.nan, marker='.', linestyle='none', color='black')
     ax.plot(np.nan, np.nan, marker='o', linestyle='none', color='blue')
     ax.plot(np.nan, np.nan, 'd', color='indigo')
-    ax.axvspan(np.nan, np.nan, color='red')
-    ax.axvspan(np.nan, np.nan, color='blue')
-    ax.axvspan(np.nan, np.nan, color='darkgreen')
-    ax.axvspan(np.nan, np.nan, color='lightgreen')
-    ax.axvspan(np.nan, np.nan, color='darkorange')
-    ax.axvspan(np.nan, np.nan, color='yellow')
+    ax.axvspan(np.nan, np.nan, color=colormap('aborted', palette))
+    ax.axvspan(np.nan, np.nan, color=colormap('auto_rewarded', palette))
+    ax.axvspan(np.nan, np.nan, color=colormap('hit', palette))
+    ax.axvspan(np.nan, np.nan, color=colormap('miss', palette))
+    ax.axvspan(np.nan, np.nan, color=colormap('false_alarm', palette))
+    ax.axvspan(np.nan, np.nan, color=colormap('correct_reject', palette))
     ax.legend([
         'licks',
         'rewards',
@@ -236,7 +237,8 @@ def make_daily_figure(
         sliding_window=100,
         mouse_image_before=None,
         mouse_image_after=None,
-        y_axis_limit=False
+        y_axis_limit=False,
+        palette='trial_types'
 ):
     '''
     Generates a daily summary plot for the detection of change task
@@ -266,7 +268,7 @@ def make_daily_figure(
     ax_table = placeAxesOnGrid(fig, xspan=(0.1, 0.6), yspan=(0, 0.25), frameon=False)
     ax_legend = placeAxesOnGrid(fig, xspan=(0.5, 1), yspan=(0, 0.225), frameon=False)
 
-    make_legend(ax_legend)
+    make_legend(ax_legend, palette)
 
     if mouse_image_before is not None:
         try:
@@ -297,7 +299,7 @@ def make_daily_figure(
         sliding_window=sliding_window,
         reward_window=reward_window
     )
-    make_rolling_response_probability_plot(hit_rate, fa_rate, ax[2])
+    make_rolling_response_probability_plot(hit_rate, fa_rate, ax[2], palette)
     mean_rate = np.mean(check_responses(df_nonaborted, reward_window=reward_window) == 1.0)
     ax[2].axvline(mean_rate, color='0.5', linestyle=':')
     make_rolling_dprime_plot(d_prime, ax[3])
