@@ -16,7 +16,6 @@ def test_session_level_summary(mock_trials_fixture, session_summary):
 
 def test_epoch_level_summary(mock_trials_fixture,epoch_summary):
     summary = summarize.epoch_level_summary(mock_trials_fixture)
-    summary.to_csv('~/epoch_level_summary.csv')
     print(summary)
     print(epoch_summary)
     assert_frame_equal(
