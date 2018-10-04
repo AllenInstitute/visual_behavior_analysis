@@ -293,7 +293,7 @@ def get_running_speed_ophys_time(running_speed, timestamps_ophys):
     running_speed dataframe must have column 'ophys_times'
     """
     if 'ophys_time' not in running_speed.keys():
-        print 'ophys_times not in running_speed dataframe'
+        print('ophys_times not in running_speed dataframe')
     running_speed_ophys_time = np.empty(timestamps_ophys.shape)
     for i, ophys_time in enumerate(timestamps_ophys):
         run_df = running_speed[running_speed.ophys_time == ophys_time]
