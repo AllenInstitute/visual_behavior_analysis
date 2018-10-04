@@ -3,7 +3,7 @@ import pandas as pd
 from six import PY3
 import pickle
 
-from ...utilities import local_time, ListHandler, DoubleColonFormatter
+from ...utilities import local_time, ListHandler, DoubleColonFormatter, inplace
 from ...uuid_utils import make_deterministic_session_uuid
 
 from ...devices import get_rig_id
@@ -66,10 +66,9 @@ def data_to_change_detection_core(data, time=None):
     """
 
     if time is None:
-        time = data_to_time(data)
+        timestamps = data_to_time(data)
     else:
-        logger.critical('`time` rebasing has not been implemented')
-        raise NotImplementedError('the Foraging2 translator does not support rebasing time')
+        timestamps = time
 
     log_messages = []
     handler = ListHandler(log_messages)
@@ -84,12 +83,12 @@ def data_to_change_detection_core(data, time=None):
 
     core_data = {
         "metadata": data_to_metadata(data),
-        "time": time,
-        "licks": data_to_licks(data),
-        "trials": data_to_trials(data),
-        "running": data_to_running(data),
-        "rewards": data_to_rewards(data),
-        "visual_stimuli": data_to_visual_stimuli(data),
+        "time": timestamps,
+        "licks": data_to_licks(data, time=time),
+        "trials": data_to_trials(data, time=time),
+        "running": data_to_running(data, time=time),
+        "rewards": data_to_rewards(data, time=time),
+        "visual_stimuli": data_to_visual_stimuli(data, time=time),
         "image_set": data_to_images(data),
     }
 
@@ -112,7 +111,7 @@ def expand_dict(out_dict, from_dict, index):
         out_dict.get(k)[index] = v
 
 
-def data_to_licks(data):
+def data_to_licks(data, time=None):
     """Get a dataframe of licks
 
     Parameters
@@ -125,7 +124,12 @@ def data_to_licks(data):
     pandas.DataFrame
         licks dataframe
     """
-    return get_licks(data)
+    licks = get_licks(data)
+
+    if time is not None:
+        licks['time'] = time[licks['frame']]
+
+    return licks
 
 
 def data_to_metadata(data):
@@ -228,7 +232,7 @@ def data_to_metadata(data):
     return metadata
 
 
-def data_to_rewards(data):
+def data_to_rewards(data, time=None):
     """Generate a rewards dataframe
 
     Parameters
@@ -241,6 +245,7 @@ def data_to_rewards(data):
     pandas.DataFrame
         rewards data structure
     """
+
     rewards_dict = {
         "frame": {},
         "time": {},
@@ -257,10 +262,15 @@ def data_to_rewards(data):
             rewards_dict["frame"][idx] = rewards[0][2]
             rewards_dict["lickspout"][idx] = None  # not yet implemented in the foraging2 output
 
-    return pd.DataFrame(data=rewards_dict)
+    rewards = pd.DataFrame(data=rewards_dict)
+
+    if time is not None:
+        rewards['time'] = time[rewards['frame']]
+
+    return rewards
 
 
-def data_to_running(data):
+def data_to_running(data, time=None):
     """Get experiments running data
 
     Parameters
@@ -278,6 +288,10 @@ def data_to_running(data):
     - the index of each time is the frame number
     """
     speed_df = get_running_speed(data)
+
+    if time is not None:
+        speed_df['time'] = time[speed_df['frame']]
+
     return speed_df
 
 
@@ -297,7 +311,34 @@ def data_to_time(data):
     return get_time(data)
 
 
-def data_to_trials(data):
+@inplace
+def rebase_trials(trials, time):
+
+    trials['starttime'] = time[trials['startframe']]
+    trials['endtime'] = time[trials['endframe']]
+    trials['change_time'] = trials['change_frame'].map(lambda x: x if pd.isnull(x) else time[int(x)])
+
+    if 'lick_frames' in trials.columns:
+        trials['lick_times'] = trials['lick_frames'].map(lambda x: time[x])
+    else:
+        logger.warning('cannot rebase `lick_times` column in trials without a `lick_frames` column')
+        trials['lick_times'] = trials['lick_times'].map(lambda x: ['REBASING NOT SUPPORTED', ])
+
+    if 'response_frame' in trials.columns:
+        trials['response_time'] = trials['response_frame'].map(lambda x: time[x])
+    else:
+        logger.warning('cannot rebase `response_time` column in trials without a `response_frame` column')
+        trials['response_time'] = trials['response_time'].map(lambda x: ['REBASING NOT SUPPORTED', ])
+
+    def get_times(frames):
+        return [time[fr] for fr in frames]
+
+    trials['reward_times'] = trials['reward_frames'].map(get_times)
+
+    return trials
+
+
+def data_to_trials(data, time=None):
     """Generate a trial structure that very closely mirrors the original trials
     structure output by foraging legacy code
 
@@ -342,7 +383,7 @@ def data_to_trials(data):
 
     trials = pd.DataFrame(data=trials)
 
-    return trials.rename(
+    trials = trials.rename(
         columns={
             "start_time": "starttime",
             "start_frame": "startframe",
@@ -354,6 +395,12 @@ def data_to_trials(data):
             "initial_orientation": "initial_ori",
         }
     ).reset_index()
+
+    if time is not None:
+        logger.warning('rebasing time of trials dataframe')
+        trials = rebase_trials(trials, time)
+
+    return trials
 
 
 def data_to_visual_stimuli(data, time=None):
