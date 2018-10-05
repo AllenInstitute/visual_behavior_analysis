@@ -10,6 +10,10 @@ from six import PY3
 from six.moves import cPickle as pickle
 import uuid
 
+
+import matplotlib
+matplotlib.use('Agg')
+
 from visual_behavior.pizza import we_can_unpizza_that  # this is terrible but hopefully will be an external dependency very soon
 from visual_behavior.uuid_utils import make_deterministic_session_uuid
 

@@ -219,16 +219,21 @@ class VisualBehaviorOphysDataset(object):
 
     def get_events(self):
         events_folder = os.path.join(self.cache_dir, 'events')
-        events_file = [file for file in os.listdir(events_folder) if
-                       str(self.experiment_id) + '_events.npz' in file]
-        if len(events_file) > 0:
-            print('getting L0 events')
-            f = np.load(os.path.join(events_folder, events_file[0]))
-            events = np.asarray(f['ev'])
-            f.close()
+        if os.path.exists(events_folder):
+            events_file = [file for file in os.listdir(events_folder) if
+                           str(self.experiment_id) + '_events.npz' in file]
+            if len(events_file) > 0:
+                logger.info('getting L0 events')
+                f = np.load(os.path.join(events_folder, events_file[0]))
+                events = np.asarray(f['ev'])
+                f.close()
+            else:
+                logger.info('no events for this experiment')
+                events = None
         else:
-            print('no events for this experiment')
+            logger.info('no events for this experiment')
             events = None
+
         self._events = events
         return self._events
 

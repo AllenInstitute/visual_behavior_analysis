@@ -6,6 +6,8 @@ Created on Saturday July 14 2018
 @author: marinag
 """
 
+
+
 import os
 import h5py
 import json
@@ -13,12 +15,16 @@ import shutil
 import platform
 import numpy as np
 import pandas as pd
+from scipy.signal import medfilt
 from collections import OrderedDict
-import matplotlib
-
-matplotlib.use('Agg')
 
 import matplotlib.image as mpimg
+
+import logging
+logger = logging.getLogger(__name__)
+
+
+
 #
 # from ...translator import foraging2, foraging
 # from ...translator.core import create_extended_dataframe
@@ -30,8 +36,8 @@ import matplotlib.image as mpimg
 # relative import doesnt work on cluster
 from visual_behavior.translator import foraging2, foraging
 from visual_behavior.translator.core import create_extended_dataframe
-from visual_behavior.ophys.sync.process_sync import get_sync_data
-from visual_behavior.ophys.plotting.summary_figures import save_figure, plot_roi_validation
+from visual_behavior.visualization.ophys.summary_figures import save_figure, plot_roi_validation
+from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 
 
@@ -141,16 +147,85 @@ def get_sync_path(lims_data):
     analysis_dir = get_analysis_dir(lims_data)
     # hack for expt 713525580 - sync in lims is broken, fixed version available in analysis_dir
     if get_lims_id(lims_data) == 713525580:
-        print('using sync file from analysis directory instead of lims')
+        logger.info('using sync file from analysis directory instead of lims')
         sync_file = [file for file in os.listdir(analysis_dir) if 'sync' in file][0]
         sync_path = os.path.join(analysis_dir, sync_file)
     else:
         sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file][0]
         sync_path = os.path.join(ophys_session_dir, sync_file)
     if sync_file not in os.listdir(analysis_dir):
-        print('moving ', sync_file, ' to analysis dir')  # flake8: noqa: E999
+        logger.info('moving ', sync_file, ' to analysis dir')  # flake8: noqa: E999
         shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
     return sync_path
+
+
+def get_sync_data(lims_id):
+    logger.info('getting sync data')
+    sync_path = get_sync_path(lims_id)
+    sync_dataset = SyncDataset(sync_path)
+    meta_data = sync_dataset.meta_data
+    sample_freq = meta_data['ni_daq']['counter_output_freq']
+    # 2P vsyncs
+    vs2p_r = sync_dataset.get_rising_edges('2p_vsync')
+    vs2p_f = sync_dataset.get_falling_edges(
+        '2p_vsync', )  # new sync may be able to do units = 'sec', so conversion can be skipped
+    vs2p_rsec = vs2p_r / sample_freq
+    vs2p_fsec = vs2p_f / sample_freq
+    vs2p_r_filtered, vs2p_f_filtered = filter_digital(vs2p_rsec, vs2p_fsec, threshold=0.01)
+    # use rising edge for Scientifica, falling edge for Nikon http://confluence.corp.alleninstitute.org/display/IT/Ophys+Time+Sync
+    frames_2p = vs2p_r_filtered
+    # Convert to seconds - skip if using units in get_falling_edges, otherwise convert before doing filter digital
+    # vs2p_rsec = vs2p_r / sample_freq
+    # frames_2p = vs2p_rsec
+    # stimulus vsyncs
+    # vs_r = d.get_rising_edges('stim_vsync')
+    vs_f = sync_dataset.get_falling_edges('stim_vsync')
+    # convert to seconds
+    # vs_r_sec = vs_r / sample_freq
+    vs_f_sec = vs_f / sample_freq
+    # vsyncs = vs_f_sec
+    # add display lag
+    monitor_delay = calculate_delay(sync_dataset, vs_f_sec, sample_freq)
+    vsyncs = vs_f_sec + monitor_delay  # this should be added, right!?
+    # line labels are different on 2P6 and production rigs - need options for both
+    if 'lick_1' in meta_data['line_labels']:
+        lick_1 = sync_dataset.get_rising_edges('lick_1') / sample_freq
+    elif 'lick_sensor' in meta_data['line_labels']:
+        lick_1 = sync_dataset.get_rising_edges('lick_sensor') / sample_freq
+    else:
+        lick_1 = None
+    if '2p_trigger' in meta_data['line_labels']:
+        trigger = sync_dataset.get_rising_edges('2p_trigger') / sample_freq
+    elif 'acq_trigger' in meta_data['line_labels']:
+        trigger = sync_dataset.get_rising_edges('acq_trigger') / sample_freq
+    if 'stim_photodiode' in meta_data['line_labels']:
+        stim_photodiode = sync_dataset.get_rising_edges('stim_photodiode') / sample_freq
+    elif 'photodiode' in meta_data['line_labels']:
+        stim_photodiode = sync_dataset.get_rising_edges('photodiode') / sample_freq
+    cam1_exposure = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
+    cam2_exposure = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
+    # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger
+    frames_2p = frames_2p[frames_2p > trigger[0]]
+    logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
+    logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
+    # put sync data in format to be compatible with downstream analysis
+    times_2p = {'timestamps': frames_2p}
+    times_vsync = {'timestamps': vsyncs}
+    times_lick_1 = {'timestamps': lick_1}
+    times_trigger = {'timestamps': trigger}
+    times_cam1_exposure = {'timestamps': cam1_exposure}
+    times_cam2_exposure = {'timestamps': cam2_exposure}
+    times_stim_photodiode = {'timestamps': stim_photodiode}
+    sync_data = {'ophys_frames': times_2p,
+                 'stimulus_frames': times_vsync,
+                 'lick_times': times_lick_1,
+                 'cam1_exposure': times_cam1_exposure,
+                 'cam2_exposure': times_cam2_exposure,
+                 'stim_photodiode': times_stim_photodiode,
+                 'ophys_trigger': times_trigger,
+                 }
+    return sync_data
+
 
 
 def get_timestamps(lims_data):
@@ -231,13 +306,13 @@ def get_pkl(lims_data):
     pkl_file = os.path.basename(stimulus_pkl_path)
     analysis_dir = get_analysis_dir(lims_data)
     if pkl_file not in os.listdir(analysis_dir):
-        print('moving ', pkl_file, ' to analysis dir')
+        logger.info('moving ', pkl_file, ' to analysis dir')
         shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
-    print('getting stimulus data from pkl')
+    logger.info('getting stimulus data from pkl')
     pkl = pd.read_pickle(stimulus_pkl_path)
     # from visual_behavior.translator.foraging2 import data_to_change_detection_core
     # core_data = data_to_change_detection_core(pkl)
-    # print('visual frames in pkl file:', len(core_data['time']))
+    # logger.info('visual frames in pkl file:', len(core_data['time']))
     return pkl
 
 
@@ -276,7 +351,6 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     running_speed = running.rename(columns={'speed': 'running_speed'})
     # filter to get rid of encoder spikes
     # happens in 645086795, 645362806
-    from scipy.signal import medfilt
     running_speed['running_speed'] = medfilt(running_speed.running_speed.values, kernel_size=5)
     save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
@@ -395,7 +469,7 @@ def get_roi_metrics(lims_data):
     roi_metrics = roi_metrics[roi_metrics.valid == True]
     ## hack for expt 692342909 with 2 rois at same location - need a long term solution for this!
     if get_lims_id(lims_data) == 692342909:
-        print('removing bad cell')
+        logger.info('removing bad cell')
         roi_metrics = roi_metrics[roi_metrics.cell_specimen_id.isin([692357032, 692356966]) == False]
     # add filtered cell index
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
@@ -479,10 +553,10 @@ def get_dff_traces(roi_metrics, lims_data):
     final_dff_traces = []
     for i, dff in enumerate(dff_traces):
         if np.isnan(dff).any():
-            print('NaN trace detected, removing cell_index:',i)
+            logger.info('NaN trace detected, removing cell_index:',i)
             bad_cell_indices.append(i)
         elif np.amax(dff)>20:
-            print('outlier trace detected, removing cell_index',i)
+            logger.info('outlier trace detected, removing cell_index',i)
             bad_cell_indices.append(i)
         else:
             final_dff_traces.append(dff)
@@ -492,8 +566,8 @@ def get_dff_traces(roi_metrics, lims_data):
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
                   roi_metrics.cell_specimen_id.values]
     roi_metrics['cell_index'] = cell_index
-    print('length of traces:', dff_traces.shape[1])
-    print('number of segmented cells:', dff_traces.shape[0])
+    logger.info('length of traces:', dff_traces.shape[1])
+    logger.info('number of segmented cells:', dff_traces.shape[0])
     return dff_traces, roi_metrics
 
 
@@ -509,13 +583,13 @@ def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-        print('length of ophys timestamps >  length of traces by', str(difference),
+        logger.info('length of ophys timestamps >  length of traces by', str(difference),
               'frames , truncating ophys timestamps')
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
     # account for dropped ophys frames - a rare but unfortunate issue
     if dff_traces.shape[1] > timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-        print('length of ophys timestamps <  length of traces by', str(difference),
+        logger.info('length of ophys timestamps <  length of traces by', str(difference),
               'frames , truncating traces')
         dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
         save_dff_traces(dff_traces, roi_metrics, lims_data)
@@ -573,7 +647,7 @@ def save_roi_validation(roi_validation, lims_data):
 
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None):
-    print('converting', lims_id)
+    logger.info('converting', lims_id)
     lims_data = get_lims_data(lims_id)
 
     get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
@@ -615,12 +689,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     max_projection = get_max_projection(lims_data)
     save_max_projection(max_projection, lims_data)
 
-    import matplotlib
-    matplotlib.use('Agg')
-
     roi_validation = get_roi_validation(lims_data)
     save_roi_validation(roi_validation, lims_data)
-    print('done converting')
+    logger.info('done converting')
 
     ophys_data = core_data.update(
         dict(
@@ -634,16 +705,3 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
             max_projection=max_projection,
         ))
     return ophys_data
-
-
-if __name__ == '__main__':
-    # import sys
-
-    # experiment_id = sys.argv[1]
-    # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
-    # ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
-
-    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
-    # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
-    experiment_id = 736490031
-    ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
