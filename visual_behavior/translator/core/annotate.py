@@ -4,33 +4,8 @@ import pandas as pd
 import numpy as np
 from six import iteritems
 from dateutil import parser
-from functools import wraps
 
-
-def inplace(func):
-    """ decorator which allows functions that modify a dataframe inplace
-    to use a copy instead
-    """
-
-    @wraps(func)
-    def df_wrapper(df, *args, **kwargs):
-
-        try:
-            inplace = kwargs.pop('inplace')
-        except KeyError:
-            inplace = False
-
-        if inplace is False:
-            df = df.copy()
-
-        func(df, *args, **kwargs)
-
-        if inplace is False:
-            return df
-        else:
-            return None
-
-    return df_wrapper
+from ...utilities import inplace
 
 
 @inplace
@@ -416,7 +391,7 @@ def update_times(trials, time):
 
     def update(fr):
         try:
-            if pd.isnull(fr) == True:  # this should catch np.nans
+            if (fr is None) or (np.isnan(fr) == True):  # this should catch np.nans
                 return None
             else:  # this should be for floats
                 return time[int(fr)]
