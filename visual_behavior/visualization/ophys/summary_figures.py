@@ -6,12 +6,10 @@ Created on Sunday July 15 2018
 import os
 import h5py
 import numpy as np
-import matplotlib
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-matplotlib.use('Agg')  # change backend thing so that it can run without monitor
 
 # formatting
 sns.set_style('white')
@@ -488,20 +486,3 @@ def plot_mean_trace_and_events(cell_specimen_id, analysis, ax=None, save=False):
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'pref_stim_mean_events', str(cell_specimen_id))
         plt.close()
     return ax
-
-
-if __name__ == '__main__':
-    experiment_id = 719996589
-
-    from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
-
-    dataset = VisualBehaviorOphysDataset(experiment_id)
-
-    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
-
-    analysis = ResponseAnalysis(dataset)
-
-    print('plotting cell responses')
-    for cell in dataset.get_cell_indices():
-        plot_image_response_for_trial_types(analysis, cell)
-    print('done')
