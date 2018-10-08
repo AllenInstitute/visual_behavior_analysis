@@ -52,6 +52,8 @@ def plot_cell_zoom(roi_masks, max_projection, cell_id, spacex=10, spacey=10, sho
 
 
 def plot_roi_validation(lims_data):
+    import matplotlib
+    matplotlib.use('Agg')
     from visual_behavior.ophys.io import convert_level_1_to_level_2 as convert
 
     file_path = os.path.join(convert.get_processed_dir(lims_data), 'roi_traces.h5')
