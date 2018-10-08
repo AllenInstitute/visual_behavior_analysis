@@ -636,6 +636,18 @@ def save_max_projection(max_projection, lims_data):
                  cmap='gray')
 
 
+def get_average_image(lims_data):
+    average_image = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'avgInt_a1X.png'))
+    return average_image
+
+
+def save_average_image(average_image, lims_data):
+    analysis_dir = get_analysis_dir(lims_data)
+    save_data_as_h5(average_image, 'average_image', analysis_dir)
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'average_image.png'), arr=average_image,
+                 cmap='gray')
+
+
 def get_roi_validation(lims_data):
     roi_validation = plot_roi_validation(lims_data)
     return roi_validation
@@ -697,6 +709,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     max_projection = get_max_projection(lims_data)
     save_max_projection(max_projection, lims_data)
 
+    average_image = get_average_image(lims_data)
+    save_average_image(average_image, lims_data)
+
     # roi_validation = get_roi_validation(lims_data)
     # save_roi_validation(roi_validation, lims_data)
     logger.info('done converting')
@@ -711,5 +726,6 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
             dff_traces=dff_traces,
             motion_correction=motion_correction,
             max_projection=max_projection,
+            average_image=average_image,
         ))
     return ophys_data
