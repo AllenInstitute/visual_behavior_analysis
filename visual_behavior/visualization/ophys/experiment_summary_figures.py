@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.visualization.ophys.summary_figures as sf
 import seaborn as sns
-import platform 
-if platform.system() == 'Linux':
-    import matplotlib
-    matplotlib.use('Agg')
+# import platform
+# if platform.system() == 'Linux':
+import matplotlib
+matplotlib.use('Agg')
 
 
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
