@@ -274,6 +274,13 @@ class VisualBehaviorOphysDataset(object):
 
     max_projection = LazyLoadable('_max_projection', get_max_projection)
 
+    def get_average_image(self):
+        with h5py.File(os.path.join(self.analysis_dir, 'average_image.h5'), 'r') as average_image_file:
+            self._average_image = np.asarray(average_image_file['data'])
+        return self._average_image
+
+    average_image = LazyLoadable('_average_image', get_average_image)
+
     def get_motion_correction(self):
         self._motion_correction = pd.read_hdf(
             os.path.join(self.analysis_dir, 'motion_correction.h5'),
@@ -338,6 +345,7 @@ class VisualBehaviorOphysDataset(object):
         obj.get_cell_specimen_ids()
         obj.get_cell_indices()
         obj.get_max_projection()
+        obj.get_average_image()
         obj.get_motion_correction()
 
         return obj
