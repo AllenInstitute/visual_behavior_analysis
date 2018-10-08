@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.visualization.ophys.summary_figures as sf
 import seaborn as sns
+import platform 
 if platform.system() == 'Linux':
     import matplotlib
     matplotlib.use('Agg')
