@@ -9,15 +9,13 @@ import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 
 # formatting
 sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_palette('deep')
-
-import platform
-import matplotlib
-matplotlib.use('Agg')
 
 def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
