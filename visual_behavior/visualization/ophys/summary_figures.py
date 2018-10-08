@@ -52,7 +52,7 @@ def plot_cell_zoom(roi_masks, max_projection, cell_id, spacex=10, spacey=10, sho
 
 
 def plot_roi_validation(lims_data):
-    from ..io import convert_level_1_to_level_2 as convert
+    from visual_behavior.ophys.io import convert_level_1_to_level_2 as convert
 
     file_path = os.path.join(convert.get_processed_dir(lims_data), 'roi_traces.h5')
     g = h5py.File(file_path)
@@ -69,7 +69,7 @@ def plot_roi_validation(lims_data):
     roi_df = convert.get_roi_locations(lims_data)
     roi_metrics = convert.get_roi_metrics(lims_data)
     roi_masks = convert.get_roi_masks(roi_metrics, lims_data)
-    dff_traces = convert.get_dff_traces(roi_metrics, lims_data)
+    dff_traces, roi_metrics = convert.get_dff_traces(roi_metrics, lims_data)
     cell_specimen_ids = convert.get_cell_specimen_ids(roi_metrics)
     max_projection = convert.get_max_projection(lims_data)
 
@@ -96,7 +96,7 @@ def plot_roi_validation(lims_data):
         ax[3].set_ylabel('dF/F')
 
         if id in cell_specimen_ids:
-            cell_index = convert.get_cell_index_for_cell_specimen_id(cell_specimen_ids, id)
+            cell_index = convert.get_cell_index_for_cell_specimen_id(id, cell_specimen_ids)
             ax[2] = plot_cell_zoom(roi_masks, max_projection, id, spacex=10, spacey=10, show_mask=True, ax=ax[2])
             ax[2].grid(False)
 

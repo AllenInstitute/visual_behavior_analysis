@@ -121,7 +121,7 @@ class VisualBehaviorOphysDataset(object):
         )
         self._stimulus_table = self._stimulus_table.reset_index()
         self._stimulus_table = self._stimulus_table.drop(
-            columns=['orientation', 'contrast', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
+            columns=['orientation', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
         )
         return self._stimulus_table
 

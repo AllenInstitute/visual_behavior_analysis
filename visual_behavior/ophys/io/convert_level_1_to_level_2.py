@@ -160,6 +160,7 @@ def get_sync_path(lims_data):
 
 
 def get_sync_data(lims_id):
+    from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
     logger.info('getting sync data')
     sync_path = get_sync_path(lims_id)
     sync_dataset = SyncDataset(sync_path)
