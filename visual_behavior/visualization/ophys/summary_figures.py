@@ -9,6 +9,9 @@ import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+if platform.system() == 'Linux':
+    import matplotlib
+    matplotlib.use('Agg')
 
 
 # formatting
