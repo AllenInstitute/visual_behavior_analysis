@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.signal import medfilt
 
 
 def calc_deriv(x, time):
@@ -20,3 +21,35 @@ def rad_to_dist(speed_rad_per_s):
         2.0 * wheel_diameter / 3.0)  # assume the animal runs at 2/3 the distance from the wheel center
     running_speed_cm_per_sec = np.pi * speed_rad_per_s * running_radius / 180.
     return running_speed_cm_per_sec
+
+
+def compute_running_speed(dx_raw, time, v_sig, v_in, smooth=False):
+    """Calculate running speed
+
+    Parameters
+    ----------
+    dx_raw: numpy.ndarray
+        dx values for each stimulus frame
+    time: numpy.ndarray
+        timestamps for each stimulus frame
+    v_sig: numpy.ndarray
+        v_sig for each stimulus frame: currently unused
+    v_in: numpy.ndarray
+        v_in for each stimulus frame: currently unused
+    smooth: boolean, default=False
+        flag to smooth output: not implemented
+
+    Returns
+    -------
+    numpy.ndarray
+        Running speed (cm/s)
+    """
+    dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
+    dx = np.cumsum(dx)  # wheel rotations
+    speed = calc_deriv(dx, time)
+    speed = rad_to_dist(speed)
+
+    if smooth:
+        raise NotImplementedError
+
+    return speed

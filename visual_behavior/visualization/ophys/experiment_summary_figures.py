@@ -8,15 +8,10 @@ import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import visual_behavior.ophys.response_analysis.utilities as ut
-import visual_behavior.ophys.plotting.summary_figures as sf
+import visual_behavior.visualization.ophys.summary_figures as sf
 import seaborn as sns
 import matplotlib
 matplotlib.use('Agg')
-
-# formatting
-sns.set_style('white')
-sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-sns.set_palette('deep')
 
 
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
@@ -37,8 +32,8 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
     outer_grid = gridspec.GridSpec(100, 100)
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
-                                                  subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
-                                                  int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace, hspace=hspace)
+                    subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]), # flake8: noqa: E999
+                    int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace, hspace=hspace) # flake8: noqa: E999
 
     # NOTE: A cleaner way to do this is with list comprehension:
     # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
@@ -325,33 +320,54 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
         save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder)
 
 
-if __name__ == '__main__':
-    from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
-    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=None):
+    fdf = analysis.flash_response_df.copy()
+    fdf.image_block = [int(image_block) for image_block in fdf.image_block.values]
+    data = fdf[(fdf.repeat == 1) & (fdf.pref_stim == True)]
+    mean_response = data.groupby(['cell']).apply(ut.get_mean_sem)
+    mean_response = mean_response.unstack()
 
-    # experiment_id = 723037901
-    # experiment_id = 712860764
-    # cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
-    # dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
-    # analysis = ResponseAnalysis(dataset)
-    # plot_experiment_summary_figure(analysis, save_dir=cache_dir)
-    #
-    lims_ids = [644942849, 645035903, 645086795, 645362806, 646922970, 647108734,
-                647551128, 647887770, 648647430, 649118720, 649318212, 652844352,
-                653053906, 653123781, 639253368, 639438856, 639769395, 639932228,
-                661423848, 663771245, 663773621, 665286182, 670396087, 671152642,
-                672185644, 672584839, 685744008, 686726085, 695471168, 696136550,
-                698244621, 698724265, 700914412, 701325132, 702134928, 702723649,
-                692342909, 692841424, 693272975, 693862238, 712178916, 712860764,
-                713525580, 714126693, 715161256, 715887497, 716327871, 716600289,
-                715228642, 715887471, 716337289, 716602547, 720001924, 720793118,
-                723064523, 723750115, 719321260, 719996589, 723748162, 723037901]
+    cell_order = np.argsort(mean_response.mean_response.values)
+    if ax is None:
+        figsize = (15, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.pointplot(data=data, x="image_block", y="mean_response", kind="point", hue='cell', hue_order=cell_order,
+                       palette='Blues', ax=ax)
+    # ax.legend(bbox_to_anchor=(1,1))
+    ax.legend_.remove()
+    min = mean_response.mean_response.min()
+    max = mean_response.mean_response.max()
+    norm = plt.Normalize(min, max)
+    #     norm = plt.Normalize(0,5)
+    sm = plt.cm.ScalarMappable(cmap="Blues", norm=norm)
+    sm.set_array([])
+    ax.figure.colorbar(mappable=sm, ax=ax, label='mean response across blocks')
+    ax.set_title('mean response to first flash of pref stim across image blocks')
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, 'first_flash_by_image_block', analysis.dataset.analysis_folder)
+    return ax
 
-    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
 
-    for lims_id in lims_ids[10:]:
-        print(lims_id)
-        dataset = VisualBehaviorOphysDataset(lims_id, cache_dir=cache_dir)
-        analysis = ResponseAnalysis(dataset)
-        plot_experiment_summary_figure(analysis, save_dir=cache_dir)
-        print('done plotting figures')
+def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=None, ax=None):
+    order = np.argsort(data[data.image_block == 1].early_late_block_ratio.values)
+    cell_order = data[data.image_block == 1].cell.values[order]
+    if ax is None:
+        figsize = (6, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.pointplot(data=data, x="block_set", y="mean_response", kind="point", palette='RdBu', ax=ax,
+                       hue='cell', hue_order=cell_order)
+    # ax.legend(bbox_to_anchor=(1,1))
+    ax.legend_.remove()
+    min = np.amin(data.early_late_block_ratio.unique())
+    max = np.amax(data.early_late_block_ratio.unique())
+    norm = plt.Normalize(min, max)
+    #     norm = plt.Normalize(0,5)
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
+    sm.set_array([])
+    ax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
+    ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, 'first_flash_by_image_block_set', analysis_folder)
+    return ax

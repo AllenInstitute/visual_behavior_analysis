@@ -25,6 +25,7 @@ def test_load_time(behavioral_session_output_fixture):
 
 
 def test_load_trials(behavioral_session_output_fixture, trials_df_fixture):
+
     trials = foraging.load_trials(behavioral_session_output_fixture)
 
     trials_df_fixture['change_frame'] += 1
@@ -37,6 +38,7 @@ def test_load_trials(behavioral_session_output_fixture, trials_df_fixture):
         check_dtype=False,
         check_like=True
     )
+
 
 
 def test_load_rewards(behavioral_session_output_fixture):

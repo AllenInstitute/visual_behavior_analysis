@@ -4,10 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-sns.set_style('white')
-sns.set_palette('deep')
-
 
 def plot_notebook_figures(experiment_id, save_dir):
     print(experiment_id)
@@ -168,7 +164,7 @@ def plot_notebook_figures(experiment_id, save_dir):
     image_name = largest_response.change_image_name.values[0]
     trial_type = largest_response.trial_type.values[0]
 
-    import visual_behavior.ophys.plotting.summary_figures as sf
+    import visual_behavior.visualization.ophys.summary_figures as sf
 
     trace = largest_response.trace.values[0]
     frame_rate = analysis.ophys_frame_rate
@@ -310,6 +306,11 @@ def plot_notebook_figures(experiment_id, save_dir):
 
 
 if __name__ == '__main__':
+
+    sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
+    sns.set_style('white')
+    sns.set_palette('deep')
+
     import sys
 
     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'

@@ -9,12 +9,13 @@ import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 
 # formatting
 sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_palette('deep')
-
 
 def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
@@ -51,7 +52,9 @@ def plot_cell_zoom(roi_masks, max_projection, cell_id, spacex=10, spacey=10, sho
 
 
 def plot_roi_validation(lims_data):
-    from ..io import convert_level_1_to_level_2 as convert
+    import matplotlib
+    matplotlib.use('Agg')
+    from visual_behavior.ophys.io import convert_level_1_to_level_2 as convert
 
     file_path = os.path.join(convert.get_processed_dir(lims_data), 'roi_traces.h5')
     g = h5py.File(file_path)
@@ -68,7 +71,7 @@ def plot_roi_validation(lims_data):
     roi_df = convert.get_roi_locations(lims_data)
     roi_metrics = convert.get_roi_metrics(lims_data)
     roi_masks = convert.get_roi_masks(roi_metrics, lims_data)
-    dff_traces = convert.get_dff_traces(roi_metrics, lims_data)
+    dff_traces, roi_metrics = convert.get_dff_traces(roi_metrics, lims_data)
     cell_specimen_ids = convert.get_cell_specimen_ids(roi_metrics)
     max_projection = convert.get_max_projection(lims_data)
 
@@ -95,7 +98,7 @@ def plot_roi_validation(lims_data):
         ax[3].set_ylabel('dF/F')
 
         if id in cell_specimen_ids:
-            cell_index = convert.get_cell_index_for_cell_specimen_id(cell_specimen_ids, id)
+            cell_index = convert.get_cell_index_for_cell_specimen_id(id, cell_specimen_ids)
             ax[2] = plot_cell_zoom(roi_masks, max_projection, id, spacex=10, spacey=10, show_mask=True, ax=ax[2])
             ax[2].grid(False)
 
@@ -290,7 +293,27 @@ def plot_image_response_for_trial_types(analysis, cell, save_dir=None):
     if save_dir:
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(right=0.85)
-        save_figure(fig, figsize, save_dir, 'image_responses', title, formats=['.png'])
+        save_figure(fig, figsize, save_dir, 'image_responses', analysis.dataset.analysis_folder + '_' + str(cell),
+                    formats=['.png'])
+        plt.close()
+
+
+def plot_event_detection(dff_traces, events, analysis_dir):
+    figsize = (20, 15)
+    xlims_list = [[0, dff_traces[0].shape[0]], [2000, 10000], [60000, 62000]]
+    for cell in range(len(dff_traces)):
+        fig, ax = plt.subplots(3, 1, figsize=figsize)
+        ax = ax.ravel()
+        for i, xlims in enumerate(xlims_list):
+            ax[i].plot(dff_traces[cell], label='dF/F from L0')
+            ax[i].plot(events[cell], color='r', label='events')
+            ax[i].set_title('roi ' + str(cell))
+            ax[i].set_xlabel('2P frames')
+            ax[i].set_ylabel('dF/F')
+            ax[i].set_xlim(xlims)
+        plt.legend()
+        fig.tight_layout()
+        save_figure(fig, figsize, analysis_dir, 'event_detection', str(cell))
         plt.close()
 
 
@@ -353,22 +376,115 @@ def plot_trial_trace_heatmap(trial_response_df, cell, cmap='viridis', vmax=0.5, 
     if colorbar:
         plt.colorbar(cax, ax=ax[i])
     if save_dir:
+        fig.tight_layout()
         save_figure(fig, figsize, save_dir, 'trial_trace_heatmap', 'roi_' + str(cell))
     return ax
 
 
-if __name__ == '__main__':
-    experiment_id = 719996589
+def plot_mean_response_by_repeat(analysis, cell, save_dir=None, ax=None):
+    flash_response_df = analysis.flash_response_df.copy()
+    n_repeats = 15
+    palette = sns.color_palette("RdBu", n_colors=n_repeats)
+    norm = plt.Normalize(0, n_repeats)
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
+    sm.set_array([])
 
-    from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+    df = flash_response_df[flash_response_df.cell == cell]
+    df = df[df['repeat'] < n_repeats]
+    figsize = (10, 5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.stripplot(data=df, x='image_name', y='mean_response', jitter=.2, size=3, ax=ax, hue='repeat',
+                       palette=palette)
+    ax.set_xticklabels(df.image_name.unique(), rotation=90)
+    ax.legend_.remove()
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax)
+    cbar.set_label('repeat')
+    ax.set_title(str(cell) + '_' + analysis.dataset.analysis_folder, fontsize=14)
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, 'mean_response_by_repeat',
+                    analysis.dataset.analysis_folder + '_' + str(cell))
+        plt.close()
+    return ax
 
-    dataset = VisualBehaviorOphysDataset(experiment_id)
 
-    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
+    flash_response_df = analysis.flash_response_df.copy()
+    n_blocks = len(flash_response_df.image_block.unique())
+    palette = sns.color_palette("RdBu", n_colors=n_blocks)
+    norm = plt.Normalize(0, n_blocks)
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
+    sm.set_array([])
 
-    analysis = ResponseAnalysis(dataset)
+    df = flash_response_df[flash_response_df.cell == cell]
+    figsize = (10, 5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.stripplot(data=df, x='image_name', y='mean_response', jitter=.2, size=3, ax=ax, hue='image_block',
+                       palette=palette)
+    ax.set_xticklabels(df.image_name.unique(), rotation=90)
+    ax.legend_.remove()
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax)
+    cbar.set_label('image_block')
+    ax.set_title(str(cell) + '_' + analysis.dataset.analysis_folder, fontsize=14)
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, 'mean_response_by_image_block',
+                    analysis.dataset.analysis_folder + '_' + str(cell))
+        plt.close()
+    return ax
 
-    print('plotting cell responses')
-    for cell in dataset.get_cell_indices():
-        plot_image_response_for_trial_types(analysis, cell)
-    print('done')
+
+def plot_single_trial_with_events(cell_specimen_id, trial_num, analysis, ax=None, save=False):
+    tdf = analysis.trial_response_df.copy()
+    trial_data = tdf[(tdf.trial == trial_num) & (tdf.cell_specimen_id == cell_specimen_id)]
+    trial_type = trial_data.trial_type.values[0]
+    if ax is None:
+        figsize = (6, 4)
+        fig, ax = plt.subplots(figsize=figsize)
+    trace = trial_data.trace.values[0]
+    ax = plot_single_trial_trace(trace, analysis.ophys_frame_rate, ylabel='dF/F', legend_label='dF/F', color='k',
+                                 interval_sec=1,
+                                 xlims=[-4, 4], ax=ax)
+    events = trial_data.events.values[0]
+    ax = plot_single_trial_trace(events, analysis.ophys_frame_rate, ylabel='response magnitude', legend_label='events',
+                                 color='r', interval_sec=1,
+                                 xlims=[-4, 4], ax=ax)
+    ax = plot_flashes_on_trace(ax, analysis, trial_type=trial_type, omitted=False, alpha=0.3)
+    ax.legend()
+    ax.set_title('cell: ' + str(cell_specimen_id) + ', trial:' + str(trial_num))
+
+    if save:
+        fig.tight_layout()
+        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'single_trial_responses',
+                    str(cell_specimen_id) + '_' + str(trial_num))
+        plt.close()
+    return ax
+
+
+def plot_mean_trace_and_events(cell_specimen_id, analysis, ax=None, save=False):
+    tdf = analysis.trial_response_df.copy()
+    if ax is None:
+        figsize = (12, 4)
+        fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
+        ax = ax.ravel()
+
+    for i, trial_type in enumerate(['go', 'catch']):
+        trial_data = tdf[
+            (tdf.cell_specimen_id == cell_specimen_id) & (tdf.pref_stim == True) & (tdf.trial_type == trial_type)]
+
+        traces = trial_data.trace.values
+        ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, ylabel='event rate', legend_label='dF/F', color='k',
+                                interval_sec=1, xlims=[-4, 4], ax=ax[i])
+
+        events = trial_data.events.values
+        ax[i] = plot_mean_trace(events, analysis.ophys_frame_rate, ylabel='response magnitude', legend_label='events',
+                                color='r', interval_sec=1, xlims=[-4, 4], ax=ax[i])
+
+        ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=0.3)
+    ax[i].legend()
+    plt.suptitle(str(cell_specimen_id) + '_' + analysis.dataset.analysis_folder, fontsize=16)
+    if save:
+        fig.tight_layout()
+        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'pref_stim_mean_events', str(cell_specimen_id))
+        plt.close()
+    return ax

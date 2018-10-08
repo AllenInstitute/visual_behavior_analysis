@@ -1,5 +1,6 @@
 from __future__ import print_function
 from dateutil import tz
+from functools import wraps
 import logging
 import numpy as np
 import pandas as pd
@@ -176,3 +177,29 @@ class ListHandler(logging.Handler):
 DoubleColonFormatter = logging.Formatter(
     "%(levelname)s::%(name)s::%(message)s",
 )
+
+
+def inplace(func):
+    """ decorator which allows functions that modify a dataframe inplace
+    to use a copy instead
+    """
+
+    @wraps(func)
+    def df_wrapper(df, *args, **kwargs):
+
+        try:
+            inplace = kwargs.pop('inplace')
+        except KeyError:
+            inplace = False
+
+        if inplace is False:
+            df = df.copy()
+
+        func(df, *args, **kwargs)
+
+        if inplace is False:
+            return df
+        else:
+            return None
+
+    return df_wrapper

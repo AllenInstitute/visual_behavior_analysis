@@ -4,11 +4,14 @@ Created on Sunday July 15 2018
 @author: marinag
 """
 
+from visual_behavior.ophys.response_analysis import utilities as ut
+
 import os
 import numpy as np
 import pandas as pd
 
-from visual_behavior.ophys.response_analysis import utilities as ut
+import logging
+logger = logging.getLogger(__name__)
 
 
 class ResponseAnalysis(object):
@@ -50,15 +53,15 @@ class ResponseAnalysis(object):
         return path
 
     def generate_trial_response_df(self):
-        print('generating trial response dataframe')
+        logger.info('generating trial response dataframe')
         running_speed = self.dataset.running_speed.running_speed.values
         df_list = []
         for cell_index in self.dataset.cell_indices:
             for trial in self.dataset.trials.trial.values[:-1]:  # ignore last trial to avoid truncated traces
                 cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
-                cell_trace = self.dataset.dff_traces[cell_index, :]
                 change_time = self.dataset.trials[self.dataset.trials.trial == trial].change_time.values[0]
-
+                # get dF/F trace & metrics
+                cell_trace = self.dataset.dff_traces[cell_index, :]
                 trace, timestamps = ut.get_trace_around_timepoint(change_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
                                                                   self.trial_window, self.ophys_frame_rate)
@@ -67,6 +70,24 @@ class ResponseAnalysis(object):
                 p_value = ut.get_p_val(trace, self.response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(trace, self.response_window, self.baseline_window,
                                                            self.ophys_frame_rate)
+                # get events and metrics
+                if self.dataset.events is not None:
+                    event_trace = self.dataset.events[cell_index, :]
+                    events, timestamps = ut.get_trace_around_timepoint(change_time, event_trace,
+                                                                       self.dataset.timestamps_ophys, self.trial_window,
+                                                                       self.ophys_frame_rate)
+                    mean_response_events = ut.get_mean_in_window(events, self.response_window, self.ophys_frame_rate)
+                    baseline_response_events = ut.get_mean_in_window(events, self.baseline_window,
+                                                                     self.ophys_frame_rate)
+                    p_value_events = ut.get_p_val(events, self.response_window, self.ophys_frame_rate)
+                    sd_over_baseline_events = ut.get_sd_over_baseline(events, self.response_window,
+                                                                      self.baseline_window, self.ophys_frame_rate)
+                else:
+                    events = None
+                    mean_response_events = None
+                    baseline_response_events = None
+                    p_value_events = None
+                    sd_over_baseline_events = None
 
                 # this is redundant because its the same for every cell. do we want to keep this?
                 running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(change_time,
@@ -79,12 +100,17 @@ class ResponseAnalysis(object):
 
                 df_list.append(
                     [trial, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response,
-                     p_value, sd_over_baseline, running_speed_trace, running_speed_timestamps,
-                     mean_running_speed])
+                     p_value, sd_over_baseline,
+                     events, mean_response_events, baseline_response_events, p_value_events, sd_over_baseline_events,
+                     running_speed_trace, running_speed_timestamps,
+                     mean_running_speed, self.dataset.experiment_id])
 
         columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
-                   'p_value', 'sd_over_baseline', 'running_speed_trace', 'running_speed_timestamps',
-                   'mean_running_speed']
+                   'p_value', 'sd_over_baseline',
+                   'events', 'mean_response_events', 'baseline_response_events', 'p_value_events',
+                   'sd_over_baseline_events',
+                   'running_speed_trace', 'running_speed_timestamps',
+                   'mean_running_speed', 'experiment_id']
         trial_response_df = pd.DataFrame(df_list, columns=columns)
         trial_metadata = self.dataset.trials
         trial_metadata = trial_metadata.rename(columns={'response': 'behavioral_response'})
@@ -92,20 +118,21 @@ class ResponseAnalysis(object):
         trial_metadata = trial_metadata.rename(columns={'response_time': 'behavioral_response_time'})
         trial_metadata = trial_metadata.rename(columns={'response_latency': 'behavioral_response_latency'})
         trial_response_df = trial_response_df.merge(trial_metadata, on='trial')
+        trial_response_df = ut.annotate_trial_response_df_with_pref_stim(trial_response_df)
         return trial_response_df
 
     def save_trial_response_df(self, trial_response_df):
-        print('saving trial response dataframe')
+        logger.info('saving trial response dataframe')
         trial_response_df.to_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
 
     def get_trial_response_df(self):
         if self.overwrite_analysis_files:
-            print('overwriting analysis files')
+            logger.info('overwriting analysis files')
             self.trial_response_df = self.generate_trial_response_df()
             self.save_trial_response_df(self.trial_response_df)
         else:
             if os.path.exists(self.get_trial_response_df_path()):
-                print('loading trial response dataframe')
+                logger.info('loading trial response dataframe')
                 self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
             else:
                 self.trial_response_df = self.generate_trial_response_df()
@@ -117,10 +144,12 @@ class ResponseAnalysis(object):
         return path
 
     def generate_flash_response_df(self):
+        stimulus_table = ut.annotate_flashes_with_reward_rate(self.dataset)
         row = []
         for cell in range(self.dataset.dff_traces.shape[0]):
-            for flash in self.dataset.stimulus_table.flash_number:
-                flash_data = self.dataset.stimulus_table[self.dataset.stimulus_table.flash_number == flash]
+            cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell)
+            for flash in stimulus_table.flash_number:
+                flash_data = stimulus_table[stimulus_table.flash_number == flash]
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
                 trace_window = [-self.response_window_duration, self.response_window_duration]
@@ -130,15 +159,21 @@ class ResponseAnalysis(object):
                 response_window = [self.response_window_duration, self.response_window_duration * 2]
                 p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate)
+                reward_rate = flash_data.reward_rate.values[0]
 
-                row.append([cell, flash, flash_time, image_name, mean_response, p_value])
+                row.append([cell, cell_specimen_id, flash, flash_time, image_name, mean_response, p_value, reward_rate,
+                            self.dataset.experiment_id])
         flash_response_df = pd.DataFrame(data=row,
-                                         columns=['cell', 'flash_number', 'start_time', 'image_name', 'mean_response',
-                                                  'p_value'])
+                                         columns=['cell', 'cell_specimen_id', 'flash_number', 'start_time',
+                                                  'image_name', 'mean_response',
+                                                  'p_value', 'reward_rate', 'experiment_id'])
+        flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
+        flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
+        flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
         return flash_response_df
 
     def save_flash_response_df(self, flash_response_df):
-        print('saving flash response dataframe')
+        logger.info('saving flash response dataframe')
         flash_response_df.to_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
 
     def get_flash_response_df(self):
@@ -147,7 +182,7 @@ class ResponseAnalysis(object):
             self.save_flash_response_df(self.flash_response_df)
         else:
             if os.path.exists(self.get_flash_response_df_path()):
-                print('loading flash response dataframe')
+                logger.info('loading flash response dataframe')
                 self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
             else:
                 self.flash_response_df = self.generate_flash_response_df()

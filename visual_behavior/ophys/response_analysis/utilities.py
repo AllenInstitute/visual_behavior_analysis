@@ -9,6 +9,10 @@ from scipy import stats
 import pandas as pd
 
 
+import logging
+logger = logging.getLogger(__name__)
+
+
 def get_nearest_frame(timepoint, timestamps):
     return int(np.nanargmin(abs(timestamps - timepoint)))
 
@@ -60,48 +64,10 @@ def get_mean_sem_trace(group):
                       'mean_trace': mean_trace, 'sem_trace': sem_trace})
 
 
-def annotate_trial_response_df_with_pref_stim(rdf):
-    rdf['pref_stim'] = False
-    mean_response = rdf.groupby(['cell', 'change_image_name']).apply(get_mean_sem_trace)
-    m = mean_response.unstack()
-    for cell in m.index:
-        image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
-        pref_image = m.loc[cell]['mean_response'].index[image_index]
-        trials = rdf[(rdf.cell == cell) & (rdf.change_image_name == pref_image)].index
-        for trial in trials:
-            rdf.loc[trial, 'pref_stim'] = True
-    return rdf
-
-
 def get_mean_sem(group):
     mean_response = np.mean(group['mean_response'])
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response})
-
-
-def annotate_flash_response_df_with_pref_stim(fdf):
-    fdf['pref_stim'] = False
-    mean_response = fdf.groupby(['cell', 'image_name']).apply(get_mean_sem)
-    m = mean_response.unstack()
-    for cell in m.index:
-        image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
-        pref_image = m.loc[cell]['mean_response'].index[image_index]
-        trials = fdf[(fdf.cell == cell) & (fdf.image_name == pref_image)].index
-        for trial in trials:
-            fdf.loc[trial, 'pref_stim'] = True
-    return fdf
-
-
-def annotate_mean_df_with_pref_stim(mean_df):
-    mdf = mean_df.reset_index()
-    mdf['pref_stim'] = False
-
-    for cell in mdf.cell.unique():
-        mc = mdf[(mdf.cell == cell)]
-        pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))].change_image_name.values[0]
-        row = mdf[(mdf.cell == cell) & (mdf.change_image_name == pref_image)].index
-        mdf.loc[row, 'pref_stim'] = True
-    return mdf
 
 
 def get_fraction_significant_trials(group):
@@ -131,3 +97,242 @@ def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
     mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
 
     return mdf
+
+
+def add_metadata_to_mean_df(mdf, metadata):
+    metadata = metadata.reset_index()
+    metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
+    metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
+    metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
+    mdf = mdf.merge(metadata, how='outer', on='experiment_id')
+    return mdf
+
+
+def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
+    if flashes:
+        image_name = 'image_name'
+    else:
+        image_name = 'change_image_name'
+    mdf = mean_df.reset_index()
+    mdf['pref_stim'] = False
+    if 'cell_specimen_id' in mdf.keys():
+        cell_key = 'cell_specimen_id'
+    else:
+        cell_key = 'cell'
+    for cell in mdf[cell_key].unique():
+        mc = mdf[(mdf[cell_key] == cell)]
+        pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))][image_name].values[0]
+        row = mdf[(mdf[cell_key] == cell) & (mdf[image_name] == pref_image)].index
+        mdf.loc[row, 'pref_stim'] = True
+    return mdf
+
+
+def annotate_trial_response_df_with_pref_stim(trial_response_df):
+    rdf = trial_response_df.copy()
+    rdf['pref_stim'] = False
+    if 'cell_specimen_id' in rdf.keys():
+        cell_key = 'cell_specimen_id'
+    else:
+        cell_key = 'cell'
+    mean_response = rdf.groupby([cell_key, 'change_image_name']).apply(get_mean_sem_trace)
+    m = mean_response.unstack()
+    for cell in m.index:
+        image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
+        pref_image = m.loc[cell]['mean_response'].index[image_index]
+        trials = rdf[(rdf[cell_key] == cell) & (rdf.change_image_name == pref_image)].index
+        for trial in trials:
+            rdf.loc[trial, 'pref_stim'] = True
+    return rdf
+
+
+def annotate_flash_response_df_with_pref_stim(fdf):
+    if 'cell_specimen_id' in fdf.keys():
+        cell_key = 'cell_specimen_id'
+    else:
+        cell_key = 'cell'
+    fdf['pref_stim'] = False
+    mean_response = fdf.groupby([cell_key, 'image_name']).apply(get_mean_sem)
+    m = mean_response.unstack()
+    for cell in m.index:
+        image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
+        pref_image = m.loc[cell]['mean_response'].index[image_index]
+        trials = fdf[(fdf[cell_key] == cell) & (fdf.image_name == pref_image)].index
+        for trial in trials:
+            fdf.loc[trial, 'pref_stim'] = True
+    return fdf
+
+
+def annotate_flashes_with_reward_rate(dataset):
+    last_time = 0
+    reward_rate_by_frame = []
+    trials = dataset.trials[dataset.trials.trial_type != 'aborted']
+    flashes = dataset.stimulus_table.copy()
+    for change_time in trials.change_time.values:
+        reward_rate = trials[trials.change_time == change_time].reward_rate.values[0]
+        for start_time in flashes.start_time:
+            if (start_time < change_time) and (start_time > last_time):
+                reward_rate_by_frame.append(reward_rate)
+                last_time = start_time
+    # fill the last flashes with last value
+    for i in range(len(flashes) - len(reward_rate_by_frame)):
+        reward_rate_by_frame.append(reward_rate_by_frame[-1])
+    flashes['reward_rate'] = reward_rate_by_frame
+    return flashes
+
+
+def get_gray_response_df(dataset, window=0.5):
+    window = 0.5
+    row = []
+    flashes = dataset.stimulus_table.copy()
+    # stim_duration = dataset.task_parameters.stimulus_duration.values[0]
+    for cell in range(dataset.dff_traces.shape[0]):
+        for x, gray_start_time in enumerate(
+                flashes.end_time[:-5]):  # exclude the last 5 frames to prevent truncation of traces
+            ophys_start_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - gray_start_time)))
+            ophys_end_time = gray_start_time + int(dataset.metadata.ophys_frame_rate.values[0] * 0.5)
+            gray_end_time = gray_start_time + window
+            ophys_end_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - ophys_end_time)))
+            mean_response = np.mean(dataset.dff_traces[cell][ophys_start_frame:ophys_end_frame])
+            row.append([cell, x, gray_start_time, gray_end_time, mean_response])
+    gray_response_df = pd.DataFrame(data=row, columns=['cell', 'gray_number', 'gray_start_time', 'gray_end_time',
+                                                       'mean_response'])
+    return gray_response_df
+
+
+def add_repeat_to_stimulus_table(stimulus_table):
+    repeat = []
+    n = 0
+    for i, image in enumerate(stimulus_table.image_name.values):
+        if image != stimulus_table.image_name.values[i - 1]:
+            n = 1
+            repeat.append(n)
+        else:
+            n += 1
+            repeat.append(n)
+    stimulus_table['repeat'] = repeat
+    stimulus_table['repeat'] = [int(r) for r in stimulus_table.repeat.values]
+    return stimulus_table
+
+
+def add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table):
+    stimulus_table = add_repeat_to_stimulus_table(stimulus_table)
+    flash_response_df = flash_response_df.merge(stimulus_table[['flash_number', 'repeat']], on='flash_number')
+    return flash_response_df
+
+
+def add_image_block_to_stimulus_table(stimulus_table):
+    stimulus_table['image_block'] = np.nan
+    for image_name in stimulus_table.image_name.unique():
+        block = 0
+        for index in stimulus_table[stimulus_table.image_name == image_name].index.values:
+            if stimulus_table.iloc[index]['repeat'] == 1:
+                block += 1
+            stimulus_table.loc[index, 'image_block'] = int(block)
+    stimulus_table['image_block'] = [int(image_block) for image_block in stimulus_table.image_block.values]
+    return stimulus_table
+
+
+def add_image_block_to_flash_response_df(flash_response_df, stimulus_table):
+    stimulus_table = add_image_block_to_stimulus_table(stimulus_table)
+    flash_response_df = flash_response_df.merge(stimulus_table[['flash_number', 'image_block']], on='flash_number')
+    return flash_response_df
+
+
+def annotate_flash_response_df_with_block_set(flash_response_df):
+    fdf = flash_response_df.copy()
+    fdf['block_set'] = np.nan
+    block_sets = np.arange(0, np.amax(fdf.image_block.unique()), 10)
+    for i, block_set in enumerate(block_sets):
+        if block_set != np.amax(block_sets):
+            indices = fdf[(fdf.image_block >= block_sets[i]) & (fdf.image_block < block_sets[i + 1])].index.values
+        else:
+            indices = fdf[(fdf.image_block >= block_sets[i])].index.values
+        for index in indices:
+            fdf.loc[index, 'block_set'] = i
+    return fdf
+
+
+def add_early_late_block_ratio_for_fdf(fdf, repeat=1, pref_stim=True):
+    data = fdf[(fdf.repeat == repeat) & (fdf.pref_stim == pref_stim)]
+
+    data['early_late_block_ratio'] = np.nan
+    for cell in data.cell.unique():
+        first_blocks = data[(data.cell == cell) & (data.block_set.isin([0, 1]))].mean_response.mean()
+        last_blocks = data[(data.cell == cell) & (data.block_set.isin([2, 3]))].mean_response.mean()
+        index = (last_blocks - first_blocks) / (last_blocks + first_blocks)
+        ratio = first_blocks / last_blocks
+        indices = data[data.cell == cell].index
+        data.loc[indices, 'early_late_block_index'] = index
+        data.loc[indices, 'early_late_block_ratio'] = ratio
+    return data
+
+
+def add_ophys_times_to_behavior_df(behavior_df, timestamps_ophys):
+    """
+    behavior_df can be dataset.running, dataset.licks or dataset.rewards
+    """
+    ophys_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in behavior_df.time.values]
+    ophys_times = [timestamps_ophys[frame] for frame in ophys_frames]
+    behavior_df['ophys_frame'] = ophys_frames
+    behavior_df['ophys_time'] = ophys_times
+    return behavior_df
+
+
+def add_ophys_times_to_stimulus_table(stimulus_table, timestamps_ophys):
+    ophys_start_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in
+                          stimulus_table.start_time.values]
+    ophys_start_times = [timestamps_ophys[frame] for frame in ophys_start_frames]
+    stimulus_table['ophys_start_frame'] = ophys_start_frames
+    stimulus_table['ophys_start_time'] = ophys_start_times
+
+    ophys_end_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in stimulus_table.end_time.values]
+    ophys_end_times = [timestamps_ophys[frame] for frame in ophys_end_frames]
+    stimulus_table['ophys_end_frame'] = ophys_end_frames
+    stimulus_table['ophys_end_time'] = ophys_end_times
+    return stimulus_table
+
+
+def get_running_speed_ophys_time(running_speed, timestamps_ophys):
+    """
+    running_speed dataframe must have column 'ophys_times'
+    """
+    if 'ophys_time' not in running_speed.keys():
+        logger.info('ophys_times not in running_speed dataframe')
+    running_speed_ophys_time = np.empty(timestamps_ophys.shape)
+    for i, ophys_time in enumerate(timestamps_ophys):
+        run_df = running_speed[running_speed.ophys_time == ophys_time]
+        if len(run_df) > 0:
+            run_speed = run_df.running_speed.mean()
+        else:
+            run_speed = np.nan
+        running_speed_ophys_time[i] = run_speed
+    return running_speed_ophys_time
+
+
+def get_binary_mask_for_behavior_events(behavior_df, timestamps_ophys):
+    """
+    behavior_df must have column 'ophys_times' from add_ophys_times_to_behavior_df
+    """
+    binary_mask = [1 if time in behavior_df.ophys_time.values else 0 for time in timestamps_ophys]
+    binary_mask = np.asarray(binary_mask)
+    return binary_mask
+
+
+def get_image_for_ophys_time(ophys_timestamp, stimulus_table):
+    flash_number = np.searchsorted(stimulus_table['ophys_start_time'], ophys_timestamp) - 1
+    flash_number = flash_number[0]
+    end_flash = np.searchsorted(stimulus_table['ophys_end_time'], ophys_timestamp)
+    end_flash = end_flash[0]
+    if flash_number == end_flash:
+        return stimulus_table.loc[flash_number]['image_name']
+    else:
+        return None
+
+
+def get_stimulus_df_for_ophys_times(stimulus_table, timestamps_ophys):
+    timestamps_df = pd.DataFrame(timestamps_ophys, columns=['ophys_timestamp'])
+    timestamps_df['image'] = timestamps_df['ophys_timestamp'].map(lambda x: get_image_for_ophys_time(x, stimulus_table))
+    stimulus_df = pd.get_dummies(timestamps_df, columns=['image'])
+    stimulus_df.insert(loc=1, column='image', value=timestamps_df['image'])
+    stimulus_df.insert(loc=0, column='ophys_frame', value=np.arange(0, len(timestamps_ophys), 1))
+    return stimulus_df
