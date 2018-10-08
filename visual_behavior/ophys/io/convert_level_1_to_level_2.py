@@ -697,8 +697,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     max_projection = get_max_projection(lims_data)
     save_max_projection(max_projection, lims_data)
 
-    roi_validation = get_roi_validation(lims_data)
-    save_roi_validation(roi_validation, lims_data)
+    # roi_validation = get_roi_validation(lims_data)
+    # save_roi_validation(roi_validation, lims_data)
     logger.info('done converting')
 
     ophys_data = core_data.update(
