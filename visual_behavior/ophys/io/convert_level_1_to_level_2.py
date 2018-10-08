@@ -36,9 +36,11 @@ logger = logging.getLogger(__name__)
 # relative import doesnt work on cluster
 from visual_behavior.translator import foraging2, foraging
 from visual_behavior.translator.core import create_extended_dataframe
-from visual_behavior.visualization.ophys.summary_figures import save_figure, plot_roi_validation
+from visual_behavior.visualization.utils import save_figure
+from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
 from visual_behavior.ophys.io.lims_database import LimsDatabase
+from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
 
 
 def save_data_as_h5(data, name, analysis_dir):
@@ -160,7 +162,6 @@ def get_sync_path(lims_data):
 
 
 def get_sync_data(lims_id):
-    from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
     logger.info('getting sync data')
     sync_path = get_sync_path(lims_id)
     sync_dataset = SyncDataset(sync_path)
@@ -648,8 +649,52 @@ def save_average_image(average_image, lims_data):
                  cmap='gray')
 
 
-def get_roi_validation(lims_data):
-    roi_validation = plot_roi_validation(lims_data)
+def run_roi_validation(lims_data):
+
+    processed_dir = convert.get_processed_dir(lims_data)
+    file_path = os.path.join(processed_dir, 'roi_traces.h5')
+
+    with h5py.File(file_path) as g:
+        roi_traces = np.asarray(g['data'])
+        roi_names = np.asarray(g['roi_names'])
+
+    experiment_dir = convert.get_ophys_experiment_dir(lims_data)
+    lims_id = convert.get_lims_id(lims_data)
+
+    dff_path = os.path.join(experiment_dir, str(lims_id) + '_dff.h5')
+
+    with h5py.File(dff_path) as f:
+        dff_traces_original = np.asarray(f['data'])
+
+    roi_df = convert.get_roi_locations(lims_data)
+    roi_metrics = convert.get_roi_metrics(lims_data)
+    roi_masks = convert.get_roi_masks(roi_metrics, lims_data)
+    dff_traces, roi_metrics = convert.get_dff_traces(roi_metrics, lims_data)
+    cell_specimen_ids = convert.get_cell_specimen_ids(roi_metrics)
+    max_projection = convert.get_max_projection(lims_data)
+
+    cell_indices = {id: convert.get_cell_index_for_cell_specimen_id(id, cell_specimen_ids) for id in cell_specimen_ids}
+
+    return roi_names, roi_df, roi_traces, dff_traces_original, cell_indices, roi_masks, max_projection, dff_traces
+
+
+def get_roi_validation(lims_data,save_plots=False):
+
+    analysis_dir = get_analysis_dir(lims_data)
+
+    roi_names, roi_df, roi_traces, dff_traces_original, cell_indices, roi_masks, max_projection, dff_traces = run_roi_validation(lims_data)
+
+    roi_validation = plot_roi_validation(
+        roi_names,
+        roi_df,
+        roi_traces,
+        dff_traces_original,
+        cell_indices,
+        roi_masks,
+        max_projection,
+        dff_traces,
+    )
+
     return roi_validation
 
 
@@ -666,11 +711,12 @@ def save_roi_validation(roi_validation, lims_data):
                     str(index) + '_' + str(id) + '_' + str(cell_index))
 
 
+
 def convert_level_1_to_level_2(lims_id, cache_dir=None):
     logger.info('converting', lims_id)
     lims_data = get_lims_data(lims_id)
 
-    get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
+    analysis_dir = get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
 
     timestamps = get_timestamps(lims_data)
 
@@ -712,8 +758,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     average_image = get_average_image(lims_data)
     save_average_image(average_image, lims_data)
 
-    # roi_validation = get_roi_validation(lims_data)
-    # save_roi_validation(roi_validation, lims_data)
+    roi_validation = get_roi_validation(lims_data)
+    save_roi_validation(roi_validation, lims_data)
+
     logger.info('done converting')
 
     ophys_data = core_data.update(

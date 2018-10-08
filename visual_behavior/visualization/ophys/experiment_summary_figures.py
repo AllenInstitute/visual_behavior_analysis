@@ -9,9 +9,10 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.visualization.ophys.summary_figures as sf
+from visual_behavior.visualization.utils import save_figure
+from visual_behavior import utilities as vbut
 import seaborn as sns
-import matplotlib
-matplotlib.use('Agg')
+
 
 
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
@@ -228,7 +229,6 @@ def plot_d_prime(trials, d_prime, ax=None):
 
 
 def plot_hit_false_alarm_rates(trials, ax=None):
-    from visual_behavior import utilities as vbut
     trials['auto_rewarded'] = False
     hr, cr, d_prime = vbut.get_response_rates(trials, sliding_window=100, reward_window=None)
 

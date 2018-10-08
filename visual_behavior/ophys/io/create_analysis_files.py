@@ -2,6 +2,10 @@ from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBe
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 import visual_behavior.ophys.response_analysis.utilities as ut
 
+
+from visual_behavior.visualization.ophys import experiment_summary_figures as esf
+from visual_behavior.visualization.ophys import summary_figures as sf
+
 import logging
 import os
 
@@ -16,7 +20,6 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
 
     logger.info('plotting experiment summary figure')
-    from visual_behavior.visualization.ophys import experiment_summary_figures as esf
     esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
     esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
     esf.plot_mean_first_flash_response_by_image_block(analysis, save_dir=cache_dir, ax=None)
@@ -29,7 +32,6 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
     logger.info('plotting cell responses')
     save_dir = os.path.join(cache_dir, 'summary_figures')
-    from visual_behavior.visualization.ophys import summary_figures as sf
 
     for cell_specimen_id in dataset.cell_specimen_ids:
         sf.plot_mean_trace_and_events(cell_specimen_id, analysis, ax=None, save=True)
