@@ -651,44 +651,45 @@ def save_average_image(average_image, lims_data):
 
 def run_roi_validation(lims_data):
 
-    processed_dir = convert.get_processed_dir(lims_data)
+    processed_dir = get_processed_dir(lims_data)
     file_path = os.path.join(processed_dir, 'roi_traces.h5')
 
     with h5py.File(file_path) as g:
         roi_traces = np.asarray(g['data'])
         roi_names = np.asarray(g['roi_names'])
 
-    experiment_dir = convert.get_ophys_experiment_dir(lims_data)
-    lims_id = convert.get_lims_id(lims_data)
+    experiment_dir = get_ophys_experiment_dir(lims_data)
+    lims_id = get_lims_id(lims_data)
 
     dff_path = os.path.join(experiment_dir, str(lims_id) + '_dff.h5')
 
     with h5py.File(dff_path) as f:
         dff_traces_original = np.asarray(f['data'])
 
-    roi_df = convert.get_roi_locations(lims_data)
-    roi_metrics = convert.get_roi_metrics(lims_data)
-    roi_masks = convert.get_roi_masks(roi_metrics, lims_data)
-    dff_traces, roi_metrics = convert.get_dff_traces(roi_metrics, lims_data)
-    cell_specimen_ids = convert.get_cell_specimen_ids(roi_metrics)
-    max_projection = convert.get_max_projection(lims_data)
+    roi_df = get_roi_locations(lims_data)
+    roi_metrics = get_roi_metrics(lims_data)
+    roi_masks = get_roi_masks(roi_metrics, lims_data)
+    dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
+    cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
+    max_projection = get_max_projection(lims_data)
 
-    cell_indices = {id: convert.get_cell_index_for_cell_specimen_id(id, cell_specimen_ids) for id in cell_specimen_ids}
+    cell_indices = {id: get_cell_index_for_cell_specimen_id(id, cell_specimen_ids) for id in cell_specimen_ids}
 
-    return roi_names, roi_df, roi_traces, dff_traces_original, cell_indices, roi_masks, max_projection, dff_traces
+    return roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces
 
 
 def get_roi_validation(lims_data,save_plots=False):
 
     analysis_dir = get_analysis_dir(lims_data)
 
-    roi_names, roi_df, roi_traces, dff_traces_original, cell_indices, roi_masks, max_projection, dff_traces = run_roi_validation(lims_data)
+    roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces = run_roi_validation(lims_data)
 
     roi_validation = plot_roi_validation(
         roi_names,
         roi_df,
         roi_traces,
         dff_traces_original,
+        cell_specimen_ids,
         cell_indices,
         roi_masks,
         max_projection,
