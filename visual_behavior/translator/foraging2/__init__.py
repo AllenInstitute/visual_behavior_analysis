@@ -1,10 +1,8 @@
-import uuid
 import pandas as pd
 from six import PY3
 import pickle
 
 from ...utilities import local_time, ListHandler, DoubleColonFormatter, inplace
-from ...uuid_utils import make_deterministic_session_uuid
 
 from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
@@ -160,15 +158,7 @@ def data_to_metadata(data):
 
     mouse_id = get_mouse_id(data)
 
-    behavior_session_uuid = get_session_id(data)
-    if len(behavior_session_uuid) == 0:
-        logger.warning('`session_uuid` not found. generating a deterministic UUID')
-        behavior_session_uuid = make_deterministic_session_uuid(
-            mouse_id,
-            start_time_datetime_local,
-        )
-    else:
-        behavior_session_uuid = uuid.UUID(behavior_session_uuid)
+    behavior_session_uuid = get_session_id(data, create_if_missing=True)
 
     device_name = get_device_name(data)
     params = get_params(data)  # this joins both params and commandline params
