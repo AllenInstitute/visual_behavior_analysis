@@ -97,7 +97,7 @@ def session_level_summary(trials, groupby=('mouse_id', 'behavior_session_uuid', 
     return session_summary
 
 
-def epoch_level_summary(trials, epoch_length=5.0, **kwargs):
+def epoch_level_summary(trials, epoch_length=10.0, **kwargs):
     trials = annotate_epochs(trials, epoch_length)
 
     summarizer = create_summarizer(
