@@ -40,7 +40,7 @@ class ResponseAnalysis(object):
         self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         self.baseline_window = np.asarray(
             self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
-        self.stimulus_duration = self.dataset.task_parameters['stimulus_duration'].values[0]
+        self.stimulus_duration = 0.25 #self.dataset.task_parameters['stimulus_duration'].values[0]
         self.blank_duration = self.dataset.task_parameters['blank_duration'].values[0]
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate'].values[0]
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
