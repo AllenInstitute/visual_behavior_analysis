@@ -90,8 +90,8 @@ def plot_roi_validation(roi_names,
             ymin = np.min(y)
             ymax = np.max(y)
             ax[4].imshow(mask, cmap='RdBu', alpha=0.5)
-            ax[4].set_xlim(xmin - 20, xmax + 20)
-            ax[4].set_ylim(ymin - 20, ymax + 20)
+            ax[4].set_xlim(xmin - 10, xmax + 10)
+            ax[4].set_ylim(ymin - 10, ymax + 10)
             ax[4].grid(False)
 
             ax[5].plot(dff_traces[cell_index])
