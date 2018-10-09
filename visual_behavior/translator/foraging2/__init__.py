@@ -1,4 +1,3 @@
-import uuid
 import pandas as pd
 from six import PY3
 import pickle

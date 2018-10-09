@@ -1,4 +1,5 @@
 import logging
+import uuid
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -1044,11 +1045,11 @@ def get_session_id(exp_data, create_if_missing=False):
     Returns
     -------
     int or None
-        id of experiment session or empty string if not found
+        id of experiment session or None if not found
     """
 
     if 'session_uuid' in exp_data:
-        return exp_data["session_uuid"]
+        return uuid.UUID(exp_data["session_uuid"])
     elif create_if_missing:
 
         start_time_datetime_local = local_time(exp_data["start_time"], timezone='America/Los_Angeles')
@@ -1059,10 +1060,10 @@ def get_session_id(exp_data, create_if_missing=False):
             mouse_id,
             start_time_datetime_local,
         )
-        return str(behavior_session_uuid)
+        return behavior_session_uuid
     else:
-        logger.warning('`session_uuid` not found. returning empty string')
-        return ''
+        logger.warning('`session_uuid` not found. returning None')
+        return None
 
 
 def get_stimuli(data):
