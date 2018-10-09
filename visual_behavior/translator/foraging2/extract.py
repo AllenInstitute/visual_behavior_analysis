@@ -1,10 +1,13 @@
 import logging
+import uuid
 import numpy as np
 import pandas as pd
 from copy import deepcopy
 from six import iteritems
 
 from ...analyze import compute_running_speed  # , calc_deriv
+from ...uuid_utils import make_deterministic_session_uuid
+from ...utilities import local_time
 
 
 logger = logging.getLogger(__name__)
@@ -1031,7 +1034,7 @@ def get_user_id(exp_data):
         behavior_items.get("cl_params", {}).get("user_id", '')
 
 
-def get_session_id(exp_data):
+def get_session_id(exp_data, create_if_missing=False):
     """Gets the id associated with the experiment session
 
     Parameters
@@ -1042,12 +1045,25 @@ def get_session_id(exp_data):
     Returns
     -------
     int or None
-        id of experiment session or empty string if not found
+        id of experiment session or None if not found
     """
+
     if 'session_uuid' in exp_data:
-        return exp_data["session_uuid"]
+        return uuid.UUID(exp_data["session_uuid"])
+    elif create_if_missing:
+
+        start_time_datetime_local = local_time(exp_data["start_time"], timezone='America/Los_Angeles')
+        mouse_id = get_mouse_id(exp_data)
+
+        logger.warning('`session_uuid` not found. generating a deterministic UUID')
+        behavior_session_uuid = make_deterministic_session_uuid(
+            mouse_id,
+            start_time_datetime_local,
+        )
+        return behavior_session_uuid
     else:
-        return ''
+        logger.warning('`session_uuid` not found. returning None')
+        return None
 
 
 def get_stimuli(data):
