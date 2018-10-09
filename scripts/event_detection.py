@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+
+import matplotlib
+matplotlib.use('Agg')
+
 import numpy as np
 
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset

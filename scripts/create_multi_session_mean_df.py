@@ -1,10 +1,11 @@
+#!/usr/bin/env python
+import matplotlib
+matplotlib.use('Agg')
+
 import pandas as pd
 from visual_behavior.ophys.io.create_multi_session_mean_df import get_multi_session_mean_df
 
 if __name__ == '__main__':
-    import matplotlib
-
-    matplotlib.use('Agg')
 
     # cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'

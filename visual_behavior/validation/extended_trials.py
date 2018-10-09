@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 from ..schemas.extended_trials import ExtendedTrialSchema
 from .utils import assert_is_valid_dataframe, nanis_equal, all_close
@@ -545,7 +546,6 @@ def validate_catch_frequency(trials, expected_catch_frequency, rejection_probabi
     non-aborted catch trials should comprise `catc_freq` of all non-aborted trials
     uses scipy's binomial test to ensure that the null hypothesis (catch trials come from a binomial distribution drawn with catch_freq) is true with 95% probability
     '''
-    from scipy import stats
     go_trials = trials[trials['trial_type'] == 'go']
     catch_trials = trials[trials['trial_type'] == 'catch']
 
