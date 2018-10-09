@@ -423,7 +423,7 @@ def data_to_images(data):
         metadata = get_image_metadata(data)
         try:
             image_set = load_pickle(open(metadata['image_set'], 'rb'))
-        except (AttributeError, UnicodeDecodeError):
+        except (AttributeError, UnicodeDecodeError, pickle.UnpicklingError):
             zfile = zipfile.ZipFile(metadata['image_set'])
             finfo = zfile.infolist()[0]
             ifile = zfile.open(finfo)
