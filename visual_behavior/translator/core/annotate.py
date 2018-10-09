@@ -595,7 +595,7 @@ def colormap(trial_type, palette='trial_types'):
             'false_alarm': 'darkorange',
             'correct_reject': 'yellow',
         }
-    return colors[trial_type]
+    return colors.get(trial_type, 'white')
 
 
 def assign_color(trial, palette='trial_types'):
