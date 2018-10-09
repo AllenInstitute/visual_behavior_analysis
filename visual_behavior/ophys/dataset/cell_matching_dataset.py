@@ -36,7 +36,7 @@ class CellMatchingDataset(object):
         self.get_roi_metrics()
         self.make_roi_dict()
         self.get_max_projection()
-        self.get_avg_image()
+        self.get_average_image()
 
     def get_cache_dir(self):
         if self.cache_dir is None:
@@ -66,7 +66,7 @@ class CellMatchingDataset(object):
         elif (os.name == 'nt') and (self.ophys_session_dir.startswith('/')):
             self.ophys_session_dir = self.ophys_session_dir.replace('/', '\\')
             self.ophys_session_dir = '\\' + self.ophys_session_dir
-        self.session_name = lims_data.experiment_name.values[0].split('_')[-1]
+        self.session_type = 'behavior_'+lims_data.experiment_name.values[0].split('_')[-1]
         self.experiment_id = lims_data.lims_id.values[0]
         self.structure = lims_data.structure.values[0]
         self.specimen_driver_line = lims_data.specimen_driver_line.values[0]
@@ -74,19 +74,32 @@ class CellMatchingDataset(object):
         self.experiment_date = str(lims_data.experiment_date.values[0])[:10]
         self.experiment_name = lims_data.experiment_name.values[0]
         self.lims_data = lims_data
-        return self
+        return self.lims_data
 
     def get_analysis_folder_name(self):
-        l = self.lims_data
-        date = str(l.experiment_date.values[0])[:10].split('-')
-        analysis_folder_name = str(l.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                               str(l.lims_id.values[0]) + '_' + \
-                               l.structure.values[0] + '_' + str(l.depth.values[0]) + '_' + \
-                               l.specimen_driver_line.values[0].split('-')[0] + '_' + l.rig.values[0][3:5] + \
-                               l.rig.values[0][6] \
-                               + '_' + self.session_name
+        lims_data = self.get_lims_data()
+        date = str(lims_data.experiment_date.values[0])[:10].split('-')
+        analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
+                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
+                                   2] + '_' + \
+                               lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
+                               lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][
+                                                                                              3:5] + \
+                               lims_data.rig.values[0][6] + '_' + self.session_type
         self.analysis_folder_name = analysis_folder_name
         return self.analysis_folder_name
+
+    # def get_analysis_folder_name(self):
+    #     l = self.lims_data
+    #     date = str(l.experiment_date)[:10].split('-')
+    #     analysis_folder_name = str(l.mouse_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+    #                            str(l.lims_id.values[0]) + '_' + \
+    #                            l.structure.values[0] + '_' + str(l.depth.values[0]) + '_' + \
+    #                            l.specimen_driver_line.values[0].split('-')[0] + '_' + l.rig.values[0][3:5] + \
+    #                            l.rig.values[0][6] \
+    #                            + '_' + self.session_name
+    #     self.analysis_folder_name = analysis_folder_name
+    #     return self.analysis_folder_name
 
     def get_directories(self):
         print(self.lims_id)
@@ -102,8 +115,8 @@ class CellMatchingDataset(object):
             self.lims_data = self.get_lims_data()
             self.analysis_folder_name = self.get_analysis_folder_name()
             analysis_dir = os.path.join(cache_dir, self.analysis_folder_name)
-            if not os.path.exists(analysis_dir):
-                os.mkdir(analysis_dir)
+            # if not os.path.exists(analysis_dir):
+            #     os.mkdir(analysis_dir)
             self.analysis_dir = analysis_dir
         self.ophys_experiment_dir = os.path.join(self.ophys_session_dir, 'ophys_experiment_' + str(self.experiment_id))
         self.demix_dir = os.path.join(self.ophys_experiment_dir, 'demix')
@@ -249,10 +262,10 @@ class CellMatchingDataset(object):
             self.max_projection = mpimg.imread(os.path.join(self.segmentation_dir, 'maxInt_a13a.png'))
         return self.max_projection
 
-    def get_avg_image(self):
+    def get_average_image(self):
         import matplotlib.image as mpimg
-        self.avg_image = mpimg.imread(os.path.join(self.segmentation_dir, 'avgInt_a1X.png'))
-        return self.avg_image
+        self.average_image = mpimg.imread(os.path.join(self.segmentation_dir, 'avgInt_a1X.png'))
+        return self.average_image
 
 
 
