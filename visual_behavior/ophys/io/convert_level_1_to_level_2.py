@@ -485,15 +485,18 @@ def get_roi_metrics(lims_data):
                   roi_metrics.cell_specimen_id.values]
     roi_metrics['cell_index'] = cell_index
     # hack to get rid of cases with 2 rois at the same location
+    filter = False
     for cell_index in roi_metrics.cell_index.values:
         roi_data = roi_metrics[roi_metrics.cell_index == cell_index]
         if len(roi_data) > 1:
             ind = roi_data.index
-    roi_metrics = roi_metrics.drop(index=ind.values)
-    # reset cell index after removing bad cells
-    cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
-                  roi_metrics.cell_specimen_id.values]
-    roi_metrics['cell_index'] = cell_index
+            filter = True
+    if filter:
+        roi_metrics = roi_metrics.drop(index=ind.values)
+        # reset cell index after removing bad cells
+        cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
+                      roi_metrics.cell_specimen_id.values]
+        roi_metrics['cell_index'] = cell_index
     return roi_metrics
 
 
