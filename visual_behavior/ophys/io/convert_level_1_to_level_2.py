@@ -484,6 +484,16 @@ def get_roi_metrics(lims_data):
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
                   roi_metrics.cell_specimen_id.values]
     roi_metrics['cell_index'] = cell_index
+    # hack to get rid of cases with 2 rois at the same location
+    for cell_index in roi_metrics.cell_index.values:
+        roi_data = roi_metrics[roi_metrics.cell_index == cell_index]
+        if len(roi_data) > 1:
+            ind = roi_data.index
+    roi_metrics = roi_metrics.drop(index=ind.values)
+    # reset cell index after removing bad cells
+    cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
+                  roi_metrics.cell_specimen_id.values]
+    roi_metrics['cell_index'] = cell_index
     return roi_metrics
 
 
@@ -715,6 +725,7 @@ def save_roi_validation(roi_validation, lims_data):
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None):
     logger.info('converting', lims_id)
+    print('converting', lims_id)
     lims_data = get_lims_data(lims_id)
 
     analysis_dir = get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
@@ -763,6 +774,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     save_roi_validation(roi_validation, lims_data)
 
     logger.info('done converting')
+    print('done converting')
 
     ophys_data = core_data.update(
         dict(

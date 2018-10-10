@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
     logger.info(experiment_id)
-    logger.info(experiment_id)
+    print(experiment_id)
     logger.info('saving ', str(experiment_id), 'to', cache_dir)
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files)
