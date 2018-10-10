@@ -64,9 +64,7 @@ def data_to_change_detection_core(data, time=None):
     """
 
     if time is None:
-        timestamps = data_to_time(data)
-    else:
-        timestamps = time
+        time = data_to_time(data)
 
     log_messages = []
     handler = ListHandler(log_messages)
@@ -81,7 +79,7 @@ def data_to_change_detection_core(data, time=None):
 
     core_data = {
         "metadata": data_to_metadata(data),
-        "time": timestamps,
+        "time": time,
         "licks": data_to_licks(data, time=time),
         "trials": data_to_trials(data, time=time),
         "running": data_to_running(data, time=time),
@@ -325,8 +323,6 @@ def rebase_trials(trials, time):
         return [time[fr] for fr in frames]
 
     trials['reward_times'] = trials['reward_frames'].map(get_times)
-
-    return trials
 
 
 def data_to_trials(data, time=None):
