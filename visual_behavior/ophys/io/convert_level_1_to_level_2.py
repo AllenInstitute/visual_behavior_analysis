@@ -492,12 +492,12 @@ def save_roi_metrics(roi_metrics, lims_data):
 
 
 def get_cell_specimen_ids(roi_metrics):
-    cell_specimen_ids = np.sort(roi_metrics.cell_specimen_id.values)
+    cell_specimen_ids = np.unique(np.sort(roi_metrics.cell_specimen_id.values))
     return cell_specimen_ids
 
 
 def get_cell_indices(roi_metrics):
-    cell_indices = np.sort(roi_metrics.cell_index.values)
+    cell_indices = np.unique(np.sort(roi_metrics.cell_index.values))
     return cell_indices
 
 
