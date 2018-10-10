@@ -12,7 +12,7 @@ import os
 logger = logging.getLogger(__name__)
 
 
-def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
+def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False):
     logger.info(experiment_id)
     logger.info(experiment_id)
     logger.info('saving ', str(experiment_id), 'to', cache_dir)
