@@ -161,7 +161,7 @@ def get_sync_path(lims_data):
     return sync_path
 
 
-def get_sync_data(lims_id):
+def get_sync_data(lims_id, use_acq_trigger):
     logger.info('getting sync data')
     sync_path = get_sync_path(lims_id)
     sync_dataset = SyncDataset(sync_path)
@@ -206,8 +206,9 @@ def get_sync_data(lims_id):
         stim_photodiode = sync_dataset.get_rising_edges('photodiode') / sample_freq
     cam1_exposure = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
     cam2_exposure = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
-    # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger
-    frames_2p = frames_2p[frames_2p > trigger[0]]
+    # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only
+    if use_acq_trigger:
+        frames_2p = frames_2p[frames_2p > trigger[0]]
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
     # put sync data in format to be compatible with downstream analysis
@@ -230,8 +231,12 @@ def get_sync_data(lims_id):
 
 
 
-def get_timestamps(lims_data):
-    sync_data = get_sync_data(lims_data)
+def get_timestamps(lims_data, analysis_dir):
+    if '2P6' in analysis_dir:
+        use_acq_trigger = True
+    else:
+        use_acq_trigger = False
+    sync_data = get_sync_data(lims_data, use_acq_trigger)
     timestamps = pd.DataFrame(sync_data)
     return timestamps
 
@@ -733,7 +738,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
     analysis_dir = get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
 
-    timestamps = get_timestamps(lims_data)
+    timestamps = get_timestamps(lims_data, analysis_dir)
 
     metadata = get_metadata(lims_data, timestamps)
     save_metadata(metadata, lims_data)
@@ -773,8 +778,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     average_image = get_average_image(lims_data)
     save_average_image(average_image, lims_data)
 
-    roi_validation = get_roi_validation(lims_data)
-    save_roi_validation(roi_validation, lims_data)
+    # roi_validation = get_roi_validation(lims_data)
+    # save_roi_validation(roi_validation, lims_data)
 
     logger.info('done converting')
     print('done converting')
@@ -791,4 +796,4 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
             max_projection=max_projection,
             average_image=average_image,
         ))
-    return ophys_data
+    return core_data
