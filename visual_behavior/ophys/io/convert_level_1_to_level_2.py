@@ -482,26 +482,21 @@ def get_roi_metrics(lims_data):
     # remove invalid roi_metrics
     roi_metrics = roi_metrics[roi_metrics.valid == True]
     ## hack for expt 692342909 with 2 rois at same location - need a long term solution for this!
+    print('metrics: ',len(roi_metrics))
     if get_lims_id(lims_data) == 692342909:
         logger.info('removing bad cell')
         roi_metrics = roi_metrics[roi_metrics.cell_specimen_id.isin([692357032, 692356966]) == False]
+    # hack to get rid of cases with 2 rois at the same location
+    for cell_specimen_id in roi_metrics.cell_specimen_id.values:
+        roi_data = roi_metrics[roi_metrics.cell_specimen_id == cell_specimen_id]
+        if len(roi_data) > 1:
+            ind = roi_data.index
+            roi_metrics = roi_metrics.drop(index=ind.values)
     # add filtered cell index
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
                   roi_metrics.cell_specimen_id.values]
     roi_metrics['cell_index'] = cell_index
-    # hack to get rid of cases with 2 rois at the same location
-    filter = False
-    for cell_index in roi_metrics.cell_index.values:
-        roi_data = roi_metrics[roi_metrics.cell_index == cell_index]
-        if len(roi_data) > 1:
-            ind = roi_data.index
-            filter = True
-    if filter:
-        roi_metrics = roi_metrics.drop(index=ind.values)
-        # reset cell index after removing bad cells
-        cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
-                      roi_metrics.cell_specimen_id.values]
-        roi_metrics['cell_index'] = cell_index
+    print('metrics: ',len(roi_metrics))
     return roi_metrics
 
 
@@ -578,6 +573,8 @@ def get_dff_traces(roi_metrics, lims_data):
     # find cells with NaN traces
     bad_cell_indices = []
     final_dff_traces = []
+    print(len(dff_traces))
+    print('metrics:',len(roi_metrics))
     for i, dff in enumerate(dff_traces):
         if np.isnan(dff).any():
             logger.info('NaN trace detected, removing cell_index:',i)
@@ -587,12 +584,14 @@ def get_dff_traces(roi_metrics, lims_data):
             bad_cell_indices.append(i)
         else:
             final_dff_traces.append(dff)
+    print(len(dff_traces))
     dff_traces = np.asarray(final_dff_traces)
     roi_metrics = roi_metrics[roi_metrics.cell_index.isin(bad_cell_indices) == False]
     # reset cell index after removing bad cells
     cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
                   roi_metrics.cell_specimen_id.values]
     roi_metrics['cell_index'] = cell_index
+    print('metrics:',len(roi_metrics))
     logger.info('length of traces:', dff_traces.shape[1])
     logger.info('number of segmented cells:', dff_traces.shape[0])
     return dff_traces, roi_metrics
