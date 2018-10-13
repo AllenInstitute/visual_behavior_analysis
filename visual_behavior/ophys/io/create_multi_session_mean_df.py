@@ -14,6 +14,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
     mega_mdf = pd.DataFrame()
     for experiment_id in experiment_ids:
         logger.info(experiment_id)
+        print(experiment_id)
         dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
         analysis = ResponseAnalysis(dataset)
         mdf = ut.get_mean_df(analysis.trial_response_df,
