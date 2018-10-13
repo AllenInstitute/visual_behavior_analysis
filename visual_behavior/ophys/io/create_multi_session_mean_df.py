@@ -16,13 +16,16 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
         logger.info(experiment_id)
         print(experiment_id)
         dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
-        analysis = ResponseAnalysis(dataset)
-        mdf = ut.get_mean_df(analysis.trial_response_df,
-                             conditions=conditions)
-        mdf['experiment_id'] = dataset.experiment_id
-        mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
+        if 'trial_response_df.h5' in os.listdir(dataset.analysis_dir):
+            analysis = ResponseAnalysis(dataset)
+            mdf = ut.get_mean_df(analysis.trial_response_df,
+                                 conditions=conditions)
+            mdf['experiment_id'] = dataset.experiment_id
+            mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
 
-        mega_mdf = pd.concat([mega_mdf, mdf])
+            mega_mdf = pd.concat([mega_mdf, mdf])
+        else:
+            print('problem for',experiment_id)
 
     mega_mdf.to_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs', 'mean_' + conditions[2] + '_df.h5'), key='df',
                     format='fixed')
