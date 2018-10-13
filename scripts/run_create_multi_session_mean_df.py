@@ -15,13 +15,11 @@ job_settings = {'queue': 'braintv',
                 'jobdir': jobdir,
                 }
 
-for lims_id in lims_ids:
-    print(lims_id)
-    PythonJob(
-        python_file,
-        python_executable='/home/marinag/anaconda2/envs/visual_behavior_ophys/bin/python',
-        python_args=None,
-        conda_env=None,
-        jobname='process_multi_session_df',
-        **job_settings
-    ).run(dryrun=False)
+PythonJob(
+    python_file,
+    python_executable='/home/marinag/anaconda2/envs/visual_behavior_ophys/bin/python',
+    python_args=None,
+    conda_env=None,
+    jobname='process_multi_session_df',
+    **job_settings
+).run(dryrun=False)
