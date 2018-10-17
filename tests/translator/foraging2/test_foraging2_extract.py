@@ -352,11 +352,18 @@ def test_get_user_id(foraging2_data_fixture):
 
 
 def test_get_session_id(foraging2_data_fixture):
-    assert extract.get_session_id(foraging2_data_fixture) == ''
-    EXPECTED = '30ff3fba-f349-40c3-a43f-d8c898b7670d'
 
+    # test if no uuid exists
+    assert extract.get_session_id(foraging2_data_fixture) == None
+
+    # test create_if_missing when no uuid exists
+    EXPECTED = 'a5fa6058-c1f5-52f1-b767-5442075de1ae'
+    assert str(extract.get_session_id(foraging2_data_fixture, create_if_missing=True)) == EXPECTED
+
+    # test when uuid exists
+    EXPECTED = '30ff3fba-f349-40c3-a43f-d8c898b7670d'
     foraging2_data_fixture['session_uuid'] = EXPECTED
-    assert extract.get_session_id(foraging2_data_fixture) == EXPECTED
+    assert str(extract.get_session_id(foraging2_data_fixture)) == EXPECTED
 
 
 def test_get_filename(foraging2_data_fixture):
