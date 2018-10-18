@@ -210,11 +210,25 @@ def plot_ssim_values(reg_df, container_id):
     sf.save_figure(fig,figsize,save_dir,'figures','ssim_values')
     plt.close()
 
+
+def get_lims_ids_for_matching_results(container_id):
+    container_info = get_container_info()
+    container_path = container_info[container_info.container_id == container_id].container_path.values[0]
+
+    input_json = [file for file in os.listdir(container_path) if '_input.json' in file]
+    json = pd.read_json(os.path.join(container_path,input_json[0]))
+
+    result_lims_ids = []
+    for i in range(len(json.experiment_containers.ophys_experiments)):
+        result_lims_ids.append(json.experiment_containers.ophys_experiments[i]['id'])
+    return result_lims_ids
+
+
 def get_cell_matching_results_cell_indices(container_id):
     container_info = get_container_info()
     container_path = container_info[container_info.container_id == container_id].container_path.values[0]
     matching_result = os.path.join(container_path, "matching_result.txt")
-    lims_ids = get_lims_ids_for_container(container_id)
+    lims_ids = get_lims_ids_for_matching_results(container_id)
     df = pd.read_csv(matching_result, delim_whitespace=True, header=None, index_col=len(lims_ids), names=lims_ids)
     df.to_csv(os.path.join(get_container_analysis_dir(container_id),
                            str(int(container_id)) + '_matching_results_cell_indices.csv'))
@@ -226,7 +240,7 @@ def get_cell_matching_results_cell_specimen_ids(container_id):
     container_path = container_info[container_info.container_id == container_id].container_path.values[0]
     output_json = [file for file in os.listdir(container_path) if '_output.json' in file]
     json = pd.read_json(os.path.join(container_path,output_json[0]))
-    lims_ids = get_lims_ids_for_container(container_id)
+    lims_ids = get_lims_ids_for_matching_results(container_id)
     df = get_cell_matching_results_cell_indices(container_id)
     new_df_list = []
     for matching_cell_id in df.index:
@@ -259,6 +273,7 @@ def get_valid_cell_matching_results_cell_specimen_ids(container_id, cell_matchin
                     else:
                         new_cell_list.append(-1) #else dont include
                 else:
+                    print('**cell doesnt exist**')
                     new_cell_list.append(-1)
             else:
                 new_cell_list.append(-1)
@@ -292,7 +307,7 @@ def get_cumulative_matching_cell_counts(counts):
         cdf[count] = cumulative_count
     return cdf
 
-def plot_cumulative_matching_cell_counts(cdf, container_id):
+def plot_cumulative_matching_cell_counts(cdf, container_id, ymax=None):
     figsize=(6,4)
     fig,ax = plt.subplots(figsize=figsize)
     for count in np.sort(cdf.keys()):
@@ -302,10 +317,12 @@ def plot_cumulative_matching_cell_counts(cdf, container_id):
         ax.set_xlabel('# sessions')
         ax.set_xticks(np.arange(1,len(cdf.keys())+1,1))
         ax.set_ylim(ymin=0)
+        if ymax is not None:
+            ax.set_ylim(ymax=ymax)
     plt.suptitle(str(int(container_id)), x=0.55, y=1.03, horizontalalignment='center')
     fig.tight_layout()
     save_dir = get_container_analysis_dir(container_id)
-    sf.save_figure(fig,figsize,save_dir,'figures','cumulative_matched_cells')
+    sf.save_figure(fig,figsize,save_dir,'figures','cumulative_matched_cells_'+str(ymax))
 
 
 def get_cell_matching_matrix(container_id, cell_matching_dataset_dict):
@@ -334,7 +351,7 @@ def plot_matched_cells_matrix(container_id, cell_matching_dataset_dict, label='s
         fig_title = 'n_matched_cells_matrix'
     figsize=(10,10)
     fig,ax = plt.subplots(figsize=figsize)
-    ax = sns.heatmap(matrix,square=True,cmap='magma',ax=ax,cbar_kws={'shrink':0.7},annot=True,fmt='.3g')
+    ax = sns.heatmap(matrix,square=True,cmap='magma',ax=ax,cbar_kws={'shrink':0.7},annot=False,fmt='.3g')
     ax.set_xticklabels(labels,rotation=90);
     ax.set_yticklabels(labels,rotation=0);
     ax.set_title('# matched cells')
@@ -361,7 +378,7 @@ def plot_fraction_matched_cells_matrix(container_id, cell_matching_dataset_dict,
     figsize = (10, 10)
     fig, ax = plt.subplots(figsize=figsize)
     ax = sns.heatmap(new_matrix, square=True, cmap='magma', vmin=0., vmax=1, ax=ax, cbar_kws={'shrink': 0.7},
-                     annot=True, fmt='.1g')
+                     annot=False, fmt='.1g')
     ax.set_xticklabels(labels, rotation=90);
     ax.set_yticklabels(labels, rotation=0);
     ax.set_title('fraction matched cells')

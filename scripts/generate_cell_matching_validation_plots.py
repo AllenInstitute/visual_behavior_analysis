@@ -15,7 +15,7 @@ if __name__ == '__main__':
     cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
 
     container_info = pd.read_csv(os.path.join(cache_dir,'cell_matching_results','container_info.csv'))
-    container_id = container_info.container_id.values[10]
+    container_id = container_info.container_id.values[3]
     lims_ids = ut.get_lims_ids_for_container(container_id)
     cell_matching_dataset_dict = ut.get_cell_matching_dataset_dict(lims_ids, cache_dir)
 
@@ -31,6 +31,7 @@ if __name__ == '__main__':
     counts = ut.get_matching_cell_counts(valid_matching_df)
     cdf = ut.get_cumulative_matching_cell_counts(counts)
     ut.plot_cumulative_matching_cell_counts(cdf, container_id)
+    ut.plot_cumulative_matching_cell_counts(cdf, container_id, ymax=250)
 
     ut.plot_matched_cells_matrix(container_id, cell_matching_dataset_dict, label='stim_names')
     ut.plot_fraction_matched_cells_matrix(container_id, cell_matching_dataset_dict, label='stim_names')
