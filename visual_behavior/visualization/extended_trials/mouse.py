@@ -148,8 +148,8 @@ def add_y_labels(df_summary, ax):
     days_of_week = df_summary['startdatetime'].dt.weekday_name
     stages = [s for s in df_summary.stage]
     font_colors = ['black']
-    for i in range(1,len(stages)):
-        if stages[i] != stages[i-1]:
+    for i in range(1, len(stages)):
+        if stages[i] != stages[i - 1]:
             font_colors.append('red')
         else:
             font_colors.append('black')
@@ -160,18 +160,19 @@ def add_y_labels(df_summary, ax):
         fontsize = 8
     else:
         fontsize = 6
-    
+
     # alternate dates if more than 15 to avoid crowding
-    if len(dates)<25:
+    if len(dates) < 25:
         labels = ['{} ({})\n{}'.format(date, day_of_week, stage) for date, day_of_week, stage in zip(dates, days_of_week, stages)]
     else:
-        ax.set_yticks(range(0,len(dates),2))
+        ax.set_yticks(range(0, len(dates), 2))
         labels = ['{} ({})\n{}'.format(date, day_of_week, stage) for date, day_of_week, stage in zip(dates[::2], days_of_week[::2], stages[::2])]
         font_colors = font_colors[::2]
 
     ax.set_yticklabels(labels, fontsize=fontsize)
-    for color,tick in zip(font_colors,ax.yaxis.get_major_ticks()):
+    for color, tick in zip(font_colors, ax.yaxis.get_major_ticks()):
         tick.label1.set_color(color)
+
 
 def make_summary_figure(df, mouse_id=None, palette='trial_types'):
     if mouse_id is None:
