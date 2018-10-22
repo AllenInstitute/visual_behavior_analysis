@@ -19,6 +19,9 @@ setuptools.setup(
         "numpy>=1.9.0",  # for science some packages need to be pinned
         "python-dateutil",
         "marshmallow==3.0.0b11",
+        'zipfile2; python_version < "3.6"',
+        'zipfile36; python_version >= "3.6"',
+
     ],
     tests_require=[
         "flake8",
