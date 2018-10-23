@@ -1,10 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import warnings
 from visual_behavior.plotting import placeAxesOnGrid
 from visual_behavior.utilities import flatten_list
 from visual_behavior.change_detection.trials import summarize
-from visual_behavior.translator.core.annotate import colormap
+from visual_behavior.translator.core.annotate import colormap, assign_color, categorize_one_trial
 
 
 def make_ILI_plot(dfm, session_dates, ax):
@@ -36,7 +37,7 @@ def make_ILI_plot(dfm, session_dates, ax):
     ax.set_xlabel('time between licks (s)')
     ax.set_yticks(np.arange(0, len(ILIs)))
     ax.set_ylim(-1, len(session_dates[:]))
-    ax.set_yticklabels(dates)
+    # ax.set_yticklabels(dates)
     ax.set_title('Inter-lick \nintervals')
     ax.invert_yaxis()
     vplot = ax.violinplot(ILIs, positions, widths=0.8, showmeans=False, showextrema=False, vert=False)
@@ -45,8 +46,13 @@ def make_ILI_plot(dfm, session_dates, ax):
 
 
 def make_trial_type_plot(dfm, session_dates, ax, palette='trial_types'):
+
+    trial_types = ['aborted', 'auto_rewarded', 'hit', 'miss', 'false_alarm', 'correct_reject']
+    # reassign trial types and colors based on the passed palette
+    dfm['trial_type'] = dfm.apply(categorize_one_trial, axis=1)
+    dfm['color'] = dfm.apply(assign_color, axis=1, palette=palette)
+    colors = [colormap(trial_type, palette) for trial_type in trial_types]
     sums = dfm.groupby(['startdatetime', 'color', ]).sum()
-    colors = [colormap(trial_type, palette) for trial_type in ['aborted', 'auto_rewarded', 'hit', 'miss', 'false_alarm', 'correct_reject']]
     all_vals = []
 
     dates = [pd.to_datetime(date).strftime('%Y-%m-%d') for date in dfm.startdatetime.unique()]
@@ -62,7 +68,7 @@ def make_trial_type_plot(dfm, session_dates, ax, palette='trial_types'):
                 fraction = 0
             vals.append(fraction)
         all_vals.append(vals)
-    print('all_vals:', all_vals)
+
     all_vals = np.array(all_vals)
     cumsum = np.hstack((np.zeros((np.shape(all_vals)[0], 1)), np.cumsum(all_vals, axis=1)))
     width = 0.8  # NOQA: F841
@@ -82,6 +88,7 @@ def make_performance_plot(df_summary, ax, reward_window=None, sliding_window=Non
     max_false_alarm_rates = df_summary['false_alarm_rate_peak'].values
 
     height = 0.35
+
     ax.barh(np.arange(len(max_hit_rates)) - height, max_hit_rates, height=height, color=colormap('hit', palette), alpha=1)
     ax.barh(np.arange(len(max_false_alarm_rates)), max_false_alarm_rates, height=height, color=colormap('false_alarm', palette), alpha=1)
 
@@ -136,10 +143,45 @@ def make_total_volume_plot(df_summary, ax):
     ax.invert_yaxis()
 
 
-def make_summary_figure(df, mouse_id, palette='trial_types'):
-    dfm = df[(df.mouse_id == mouse_id)]
+def add_y_labels(df_summary, ax):
+    dates = [d.strftime('%Y-%m-%d') for d in df_summary.startdatetime]
+    days_of_week = df_summary['startdatetime'].dt.weekday_name
+    stages = [s for s in df_summary.stage]
+    font_colors = ['black']
+    for i in range(1, len(stages)):
+        if stages[i] != stages[i - 1]:
+            font_colors.append('red')
+        else:
+            font_colors.append('black')
 
-    df_summary = summarize.session_level_summary(dfm).reset_index()
+    if len(dates) < 25:
+        fontsize = 10
+    elif len(dates) in range(25, 35):
+        fontsize = 8
+    else:
+        fontsize = 6
+
+    # alternate dates if more than 15 to avoid crowding
+    if len(dates) < 25:
+        labels = ['{} ({})\n{}'.format(date, day_of_week, stage) for date, day_of_week, stage in zip(dates, days_of_week, stages)]
+    else:
+        ax.set_yticks(range(0, len(dates), 2))
+        labels = ['{} ({})\n{}'.format(date, day_of_week, stage) for date, day_of_week, stage in zip(dates[::2], days_of_week[::2], stages[::2])]
+        font_colors = font_colors[::2]
+
+    ax.set_yticklabels(labels, fontsize=fontsize)
+    for color, tick in zip(font_colors, ax.yaxis.get_major_ticks()):
+        tick.label1.set_color(color)
+
+
+def make_summary_figure(df, mouse_id=None, palette='trial_types'):
+    if mouse_id is None:
+        mouse_id = df.mouse_id.unique()[0]
+        if len(df.mouse_id.unique()) > 1:
+            warnings.warn('More than one mouse ID present in this data, using only {}'.format(mouse_id))
+
+    dfm = df[(df.mouse_id == mouse_id)]
+    df_summary = summarize.session_level_summary(dfm).sort_values(by='startdatetime').reset_index(drop=True)
 
     session_dates = np.sort(df_summary.startdatetime.unique())
 
@@ -155,18 +197,18 @@ def make_summary_figure(df, mouse_id, palette='trial_types'):
     make_ILI_plot(dfm, session_dates, ax[0])
 
     make_trial_type_plot(dfm, session_dates, ax[1], palette)
-
-    make_performance_plot(df_summary, ax[2])
-
+    make_performance_plot(df_summary, ax[2], palette=palette)
     make_dprime_plot(df_summary, ax[3])
 
     make_total_volume_plot(df_summary, ax[4])
 
+    add_y_labels(df_summary, ax[0])
+
     for i in range(1, len(ax)):
         ax[i].set_yticklabels([])
 
-    # fig.tight_layout()
-    plt.subplots_adjust(top=0.9)
+    fig.tight_layout()
+    plt.subplots_adjust(top=0.9, wspace=0.125)
     fig.suptitle('MOUSE = ' + mouse_id, fontsize=18)
 
     return fig
