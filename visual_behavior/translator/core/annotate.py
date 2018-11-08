@@ -127,7 +127,9 @@ def annotate_startdatetime(trials, metadata):
     --------
     io.load_trials
     """
-    trials['startdatetime'] = parser.parse(metadata['startdatetime'])
+    startdatetime = parser.parse(metadata['startdatetime'])
+    startdatetime = pd.to_datetime(startdatetime)
+    trials['startdatetime'] = startdatetime
 
 
 @inplace
