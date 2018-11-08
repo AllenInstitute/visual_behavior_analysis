@@ -18,7 +18,7 @@ import matplotlib
 
 matplotlib.use('Agg')
 
-import matplotlib.image as mpimg
+import matplotlib.image as mpimg # NOQA: E402
 #
 # from ...translator import foraging2, foraging
 # from ...translator.core import create_extended_dataframe
@@ -28,11 +28,11 @@ import matplotlib.image as mpimg
 
 
 # relative import doesnt work on cluster
-from visual_behavior.translator import foraging2, foraging
-from visual_behavior.translator.core import create_extended_dataframe
-from visual_behavior.ophys.sync.process_sync import get_sync_data
-from visual_behavior.ophys.plotting.summary_figures import save_figure, plot_roi_validation
-from visual_behavior.ophys.io.lims_database import LimsDatabase
+from visual_behavior.translator import foraging2, foraging # NOQA: E402
+from visual_behavior.translator.core import create_extended_dataframe # NOQA: E402
+from visual_behavior.ophys.sync.process_sync import get_sync_data # NOQA: E402
+from visual_behavior.ophys.plotting.summary_figures import save_figure, plot_roi_validation # NOQA: E402
+from visual_behavior.ophys.io.lims_database import LimsDatabase # NOQA: E402
 
 
 def save_data_as_h5(data, name, analysis_dir):
@@ -74,10 +74,10 @@ def get_lims_id(lims_data):
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
     analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                           str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                           lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
-                           lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
-                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]
+                           str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \ # NOQA: E127
+                           lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \ # NOQA: E127
+                           lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \ # NOQA: E127
+                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0] # NOQA: E127
     return analysis_folder_name
 
 
@@ -183,7 +183,7 @@ def get_metadata(lims_data, timestamps):
     metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
     if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
         metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[1] + ';' + \
-                                    lims_data['specimen_reporter_line'].values[0].split('(')[0]
+                                    lims_data['specimen_reporter_line'].values[0].split('(')[0] # NOQA: E126
     else:
         metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0].split('(')[0]
     metadata['full_genotype'] = metadata['cre_line'] + ';' + metadata['reporter_line']
@@ -393,7 +393,7 @@ def get_roi_metrics(lims_data):
     roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
     # remove invalid roi_metrics
     roi_metrics = roi_metrics[roi_metrics.valid == True]
-    ## hack for expt 692342909 with 2 rois at same location - need a long term solution for this!
+    # hack for expt 692342909 with 2 rois at same location - need a long term solution for this!
     if get_lims_id(lims_data) == 692342909:
         print('removing bad cell')
         roi_metrics = roi_metrics[roi_metrics.cell_specimen_id.isin([692357032]) == False]
