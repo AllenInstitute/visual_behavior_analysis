@@ -145,7 +145,7 @@ def make_total_volume_plot(df_summary, ax):
 
 def add_y_labels(df_summary, ax):
     dates = [d.strftime('%Y-%m-%d') for d in df_summary.startdatetime]
-    days_of_week = df_summary['startdatetime'].dt.weekday_name
+    days_of_week = df_summary['startdatetime'].map(lambda x: pd.to_datetime(x).weekday_name)
     stages = [s for s in df_summary.stage]
     font_colors = ['black']
     for i in range(1, len(stages)):
