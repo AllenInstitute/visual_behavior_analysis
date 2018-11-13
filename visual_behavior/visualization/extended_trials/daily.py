@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from visual_behavior.plotting import placeAxesOnGrid
 from visual_behavior.utilities import flatten_list, get_response_rates
 from visual_behavior.translator.core.annotate import check_responses
-from visual_behavior.translator.core.annotate import colormap
+from visual_behavior.translator.core.annotate import colormap, trial_translator
 
 
 def get_reward_window(extended_trials):
@@ -82,7 +82,7 @@ def make_info_table(extended_trials, ax):
             cell_dict[cell].set_width(0.5)
 
 
-def make_session_timeline_plot(extended_trials, ax):
+def make_session_timeline_plot(extended_trials, ax, palette='trial_types'):
     licks = list(extended_trials['lick_times'])
     rewards = list(extended_trials['reward_times'])
     stimuli = list(extended_trials['change_time'])
@@ -92,19 +92,21 @@ def make_session_timeline_plot(extended_trials, ax):
     spanstart = 0
     trial = 0
     for trial in range(1, len(extended_trials)):
-        if extended_trials.iloc[trial]['color'] != extended_trials.iloc[trial - 1]['color']:
+        if extended_trials.iloc[trial]['trial_type'] != extended_trials.iloc[trial - 1]['trial_type']:
+            trial_type = trial_translator(extended_trials.iloc[trial - 1]['trial_type'], extended_trials.iloc[trial - 1]['response'])
             ax.axvspan(
                 spanstart,
                 extended_trials.iloc[trial]['starttime'],
-                color=extended_trials.iloc[trial - 1]['color'],
+                color=colormap(trial_type, palette),
                 alpha=0.75
             )
             spanstart = extended_trials.iloc[trial]['starttime']
     # plot a span for the final trial(s)
+    trial_type = trial_translator(extended_trials.iloc[trial - 1]['trial_type'], extended_trials.iloc[trial - 1]['response'])
     ax.axvspan(
         spanstart,
         extended_trials.iloc[trial]['starttime'] + extended_trials.iloc[trial]['trial_length'],
-        color=extended_trials.iloc[trial - 1]['color'],
+        color=colormap(trial_type, palette),
         alpha=0.75
     )
 
@@ -135,7 +137,7 @@ def make_session_timeline_plot(extended_trials, ax):
     ax.set_title('Full Session Timeline', fontsize=14)
 
 
-def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5), show_reward_window=True, y_axis_limit=None):
+def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5), show_reward_window=True, y_axis_limit=None, palette='trial_types'):
     if reward_window is None:
         try:
             reward_window = get_reward_window(extended_trials)
@@ -160,7 +162,8 @@ def make_lick_raster_plot(extended_trials, ax, reward_window=None, xlims=(-1, 5)
             reward_x.append(rt)
             reward_y.append(np.ones_like(rt) * ii)
 
-        ax.axhspan(ii - 0.5, ii + 0.5, facecolor=extended_trials.loc[idx]['color'], alpha=0.5)
+        trial_type = trial_translator(extended_trials.loc[idx]['trial_type'], extended_trials.loc[idx]['response'])
+        ax.axhspan(ii - 0.5, ii + 0.5, facecolor=colormap(trial_type, palette), alpha=0.5)
 
     ax.plot(flatten_list(lick_x), flatten_list(lick_y), '.k')
     ax.plot(flatten_list(reward_x), flatten_list(reward_y), 'o', color='blue', alpha=0.5)
@@ -288,10 +291,10 @@ def make_daily_figure(
     make_info_table(extended_trials, ax_table)
 
     # make timeline plot
-    make_session_timeline_plot(extended_trials, ax_timeline)
+    make_session_timeline_plot(extended_trials, ax_timeline, palette)
 
     # make trial-based plots
-    make_lick_raster_plot(df_nonaborted, ax[0], reward_window=reward_window, y_axis_limit=y_axis_limit)
+    make_lick_raster_plot(df_nonaborted, ax[0], reward_window=reward_window, y_axis_limit=y_axis_limit, palette=palette)
     make_cumulative_volume_plot(df_nonaborted, ax[1])
     # note (DRO - 10/31/17): after removing the autorewarded trials from the calculation, will these vectors be of different length than the lick raster?
     hit_rate, fa_rate, d_prime = get_response_rates(
@@ -299,7 +302,7 @@ def make_daily_figure(
         sliding_window=sliding_window,
         reward_window=reward_window
     )
-    make_rolling_response_probability_plot(hit_rate, fa_rate, ax[2], palette)
+    make_rolling_response_probability_plot(hit_rate, fa_rate, ax[2], palette=palette)
     mean_rate = np.mean(check_responses(df_nonaborted, reward_window=reward_window) == 1.0)
     ax[2].axvline(mean_rate, color='0.5', linestyle=':')
     make_rolling_dprime_plot(d_prime, ax[3])
