@@ -74,9 +74,9 @@ def get_lims_id(lims_data):
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
     analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                           str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \ # NOQA: E127
-                           lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \ # NOQA: E127
-                           lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \ # NOQA: E127
+                           str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+                           lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
+                           lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
                            lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0] # NOQA: E127
     return analysis_folder_name
 
