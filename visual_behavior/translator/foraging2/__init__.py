@@ -19,7 +19,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_even_sampling, get_auto_reward_delay, get_periodic_flash, get_platform_info
 
 
-from .extract_stimuli import get_visual_stimuli
+from .extract_stimuli import get_visual_stimuli, check_for_omitted_flashes
 from .extract_images import get_image_metadata
 from ..foraging.extract_images import get_image_data
 
@@ -87,6 +87,7 @@ def data_to_change_detection_core(data, time=None):
         "running": data_to_running(data, time=time),
         "rewards": data_to_rewards(data, time=time),
         "visual_stimuli": data_to_visual_stimuli(data, time=time),
+        "omitted_stimuli": data_to_omitted_stimuli(data, time=time),
         "image_set": data_to_images(data),
     }
 
@@ -403,6 +404,18 @@ def data_to_visual_stimuli(data, time=None):
         stimuli,
         time,
     ))
+
+
+def data_to_omitted_stimuli(data,time=None):
+    if time is None:
+        time = get_time(data)
+        
+    if 'omitted_flash_frame_log' in data['items']['behavior'].keys():
+        omitted_flash_frame_log = data['items']['behavior']['omitted_flash_frame_log']
+    else:
+        omitted_flash_frame_log = None
+
+    return check_for_omitted_flashes(data_to_visual_stimuli(data, time=time), time, omitted_flash_frame_log, get_periodic_flash(data))
 
 
 def data_to_images(data):
