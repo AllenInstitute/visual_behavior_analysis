@@ -406,10 +406,10 @@ def data_to_visual_stimuli(data, time=None):
     ))
 
 
-def data_to_omitted_stimuli(data,time=None):
+def data_to_omitted_stimuli(data, time=None):
     if time is None:
         time = get_time(data)
-        
+
     if 'omitted_flash_frame_log' in data['items']['behavior'].keys():
         omitted_flash_frame_log = data['items']['behavior']['omitted_flash_frame_log']
     else:

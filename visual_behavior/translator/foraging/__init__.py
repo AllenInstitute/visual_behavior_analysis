@@ -443,12 +443,12 @@ def load_omitted_stimuli(data, time=None):
         for omitted_flash_frame in data['omitted_flash_frame_log']:
 
             omitted_flash_list.append({
-                'frame':omitted_flash_frame,
-                'time':time[omitted_flash_frame],
+                'frame': omitted_flash_frame,
+                'time': time[omitted_flash_frame],
             })
         return pd.DataFrame(omitted_flash_list)
     else:
-        return pd.DataFrame(columns=['frame','time'])
+        return pd.DataFrame(columns=['frame', 'time'])
 
 
 def load_images(data):

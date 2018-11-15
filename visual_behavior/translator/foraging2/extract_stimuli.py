@@ -76,18 +76,18 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
     '''
     if periodic_flash is None:
         # there cannot be omitted flashes if the stimulus isn't flashing
-        return pd.DataFrame(columns=['frame','time'])
+        return pd.DataFrame(columns=['frame', 'time'])
     else:
-        flash_duration,blank_duration = periodic_flash
+        flash_duration, blank_duration = periodic_flash
 
         omitted_flash_list = []
         if omitted_flash_frame_log is None:
-            #if there was no omitted flash frame log, infer omitted flashes
-            #iterate over all rows with a preceding blank duration greater than threshold
+            # if there was no omitted flash frame log, infer omitted flashes
+            # iterate over all rows with a preceding blank duration greater than threshold
 
             stimulus_df['preceding_blank_duration'] = stimulus_df['time'].diff() - stimulus_df['duration']
 
-            for idx,row in stimulus_df[stimulus_df['preceding_blank_duration'] > threshold * blank_duration].iterrows():
+            for idx, row in stimulus_df[stimulus_df['preceding_blank_duration'] > threshold * blank_duration].iterrows():
 
                 consecutive_previous_omitted_flashes = int((row['preceding_blank_duration'] - blank_duration) / (flash_duration + blank_duration))
 
@@ -97,18 +97,18 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
                     inferred_omitted_flash_frame = np.argmin(abs(inferred_omitted_flash_time - time))
 
                     omitted_flash_list.append({
-                        'frame':inferred_omitted_flash_frame,
-                        'time':inferred_omitted_flash_time,
+                        'frame': inferred_omitted_flash_frame,
+                        'time': inferred_omitted_flash_time,
                     })
-                    
+
         elif omitted_flash_frame_log is not None:
             for stimuli_group_name, omitted_flash_frames in iteritems(omitted_flash_frame_log):
                 omitted_flash_times = [time[frame] for frame in omitted_flash_frames]
-                for omitted_flash_frame,omitted_flash_time in zip(omitted_flash_frames,omitted_flash_times):
+                for omitted_flash_frame, omitted_flash_time in zip(omitted_flash_frames, omitted_flash_times):
 
                     omitted_flash_list.append({
-                        'frame':omitted_flash_frame,
-                        'time':omitted_flash_time,
+                        'frame': omitted_flash_frame,
+                        'time': omitted_flash_time,
                     })
 
     return pd.DataFrame(omitted_flash_list)
