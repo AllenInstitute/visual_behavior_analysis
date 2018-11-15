@@ -5,9 +5,7 @@ RUN apt-get update -yqq && apt-get install -yqq --no-install-recommends xvfb ema
 
 # Install python dependencies:
 RUN conda update -n base conda
-RUN pip install --upgrade pip
 RUN conda install -y scipy numpy pandas scikit-learn subprocess32 cython
-RUN pip install virtualenv
 
 # Set up build:
 RUN mkdir -p /data
@@ -15,6 +13,8 @@ ARG PKG
 RUN mkdir -p /${PKG}
 WORKDIR /${PKG}
 
+RUN pip install --upgrade pip
+RUN pip install virtualenv
 COPY requirements_dev.txt requirements_dev.txt
 COPY requirements.txt requirements.txt
 COPY tox.ini tox.ini

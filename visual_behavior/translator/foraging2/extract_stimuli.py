@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from six import iteritems
 import logging
 
@@ -55,6 +56,62 @@ def get_visual_stimuli(stimuli, time):
                 })
 
     return data
+
+
+def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, periodic_flash=None, threshold=2):
+    '''
+    Parameters
+    ----------
+    stimulus_df: result of get_visual_stimuli
+    time: time array
+    omitted_flash_frame_log: a dictionary with key=stimulus name, value=list of omitted flashes
+        if None, infers omitted flashes based on gray periods - exceptionally long gray periods are assumed to be omitted flashes
+    periodic_flash: a tuple of format (flash_time, blank_time), None if no flashing
+    threshold: the multiple of the blank_time necessary to interpret as an omitted flash
+
+    Returns
+    -------
+    pandas.DataFrame
+        dataframe with `frame` and `time` associated with each omitted flash
+    '''
+    if periodic_flash is None:
+        # there cannot be omitted flashes if the stimulus isn't flashing
+        return pd.DataFrame(columns=['frame', 'time'])
+    else:
+        flash_duration, blank_duration = periodic_flash
+
+        omitted_flash_list = []
+        if omitted_flash_frame_log is None:
+            # if there was no omitted flash frame log, infer omitted flashes
+            # iterate over all rows with a preceding blank duration greater than threshold
+
+            stimulus_df['preceding_blank_duration'] = stimulus_df['time'].diff() - stimulus_df['duration']
+
+            for idx, row in stimulus_df[stimulus_df['preceding_blank_duration'] > threshold * blank_duration].iterrows():
+
+                consecutive_previous_omitted_flashes = int((row['preceding_blank_duration'] - blank_duration) / (flash_duration + blank_duration))
+
+                for inferred_omitted_flash_number in range(consecutive_previous_omitted_flashes):
+                    inferred_blank_time = (1 + inferred_omitted_flash_number) * (flash_duration + blank_duration)
+                    inferred_omitted_flash_time = row['time'] - inferred_blank_time
+                    inferred_omitted_flash_frame = np.argmin(abs(inferred_omitted_flash_time - time))
+
+                    omitted_flash_list.append({
+                        'frame': inferred_omitted_flash_frame,
+                        'time': inferred_omitted_flash_time,
+                    })
+
+        elif omitted_flash_frame_log is not None:
+            for stimuli_group_name, omitted_flash_frames in iteritems(omitted_flash_frame_log):
+                omitted_flash_times = [time[frame] for frame in omitted_flash_frames]
+                for omitted_flash_frame, omitted_flash_time in zip(omitted_flash_frames, omitted_flash_times):
+
+                    omitted_flash_list.append({
+                        'frame': omitted_flash_frame,
+                        'time': omitted_flash_time,
+                    })
+
+    return pd.DataFrame(omitted_flash_list)
 
 
 def unpack_change_log(change):
