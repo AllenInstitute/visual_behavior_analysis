@@ -59,6 +59,7 @@ def data_to_change_detection_core(data, time=None):
         "running": load_running_speed(data, time=time),
         "rewards": load_rewards(data, time=time),
         "visual_stimuli": load_visual_stimuli(data, time=time),
+        "omitted_stimuli": load_omitted_stimuli(data, time=time),
         "image_set": images,
     }
 
@@ -429,6 +430,25 @@ def load_visual_stimuli(data, time=None):
         stimuli['image_name'] = None
 
     return stimuli
+
+
+def load_omitted_stimuli(data, time=None):
+
+    if time is None:
+        print('`time` not passed. using vsync from pkl file')
+        time = load_time(data)
+
+    if 'omitted_flash_frame_log' in data.keys():
+        omitted_flash_list = []
+        for omitted_flash_frame in data['omitted_flash_frame_log']:
+
+            omitted_flash_list.append({
+                'frame':omitted_flash_frame,
+                'time':time[omitted_flash_frame],
+            })
+        return pd.DataFrame(omitted_flash_list)
+    else:
+        return pd.DataFrame(columns=['frame','time'])
 
 
 def load_images(data):
