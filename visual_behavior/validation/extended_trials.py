@@ -503,7 +503,7 @@ def validate_session_within_expected_duration(trials, expected_duration_seconds,
     '''
     ensure that last trial end time does not exceed expected duration by more than 30 seconds
     '''
-    return trials['endtime'].values[-1] < expected_duration_seconds + tolerance
+    return (trials['starttime'].values[-1] - trials['starttime'].values[0]) < (expected_duration_seconds + tolerance)
 
 
 def validate_session_ends_at_max_cumulative_volume(trials, volume_limit, tolerance=0.01):
