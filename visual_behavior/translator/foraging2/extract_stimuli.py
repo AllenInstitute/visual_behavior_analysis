@@ -60,8 +60,19 @@ def get_visual_stimuli(stimuli, time):
 
 def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, periodic_flash=None, threshold=2):
     '''
-    fills in stimulus_df with rows for omitted flashes
-    if omitted_flash_frame_log is None, looks for blank_durations exceeding threshold*(expected blank duration)
+    Parameters
+    ----------
+    stimulus_df: result of get_visual_stimuli
+    time: time array
+    omitted_flash_frame_log: a dictionary with key=stimulus name, value=list of omitted flashes
+        if None, infers omitted flashes based on gray periods - exceptionally long gray periods are assumed to be omitted flashes
+    periodic_flash: a tuple of format (flash_time, blank_time), None if no flashing
+    threshold: the multiple of the blank_time necessary to interpret as an omitted flash
+
+    Returns
+    -------
+    pandas.DataFrame
+        dataframe with `frame` and `time` associated with each omitted flash
     '''
     if periodic_flash is None:
         # there cannot be omitted flashes if the stimulus isn't flashing
