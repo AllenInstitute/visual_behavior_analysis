@@ -18,13 +18,10 @@ import pandas as pd
 from scipy.signal import medfilt
 from collections import OrderedDict
 
-import matplotlib.image as mpimg
-
 import matplotlib.image as mpimg  # NOQA: E402
+
 import logging
 logger = logging.getLogger(__name__)
-
-
 
 #
 # from ...translator import foraging2, foraging
@@ -33,19 +30,14 @@ logger = logging.getLogger(__name__)
 # from ..plotting.summary_figures import save_figure, plot_roi_validation
 # from .lims_database import LimsDatabase
 
-
 # relative import doesnt work on cluster
-from visual_behavior.translator import foraging2, foraging  # NOQA: E402
-from visual_behavior.ophys.sync.process_sync import get_sync_data  # NOQA: E402
-from visual_behavior.ophys.plotting.summary_figures import save_figure, plot_roi_validation  # NOQA: E402
 from visual_behavior.ophys.io.lims_database import LimsDatabase  # NOQA: E402
-from visual_behavior.translator import foraging2, foraging
-from visual_behavior.translator.core import create_extended_dataframe
-from visual_behavior.visualization.utils import save_figure
-from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation
-from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
-from visual_behavior.ophys.io.lims_database import LimsDatabase
-from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
+from visual_behavior.translator import foraging2, foraging  # NOQA: E402
+from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E402
+from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NOQA: E402
+from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
+from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
+from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 
 
 def save_data_as_h5(data, name, analysis_dir):
@@ -195,12 +187,12 @@ def get_sync_data(lims_id, use_acq_trigger):
     monitor_delay = calculate_delay(sync_dataset, vs_f_sec, sample_freq)
     vsyncs = vs_f_sec + monitor_delay  # this should be added, right!?
     # line labels are different on 2P6 and production rigs - need options for both
-    if 'lick_1' in meta_data['line_labels']:
-        lick_1 = sync_dataset.get_rising_edges('lick_1') / sample_freq
+    if 'lick_times' in meta_data['line_labels']:
+        lick_times = sync_dataset.get_rising_edges('lick_1') / sample_freq
     elif 'lick_sensor' in meta_data['line_labels']:
-        lick_1 = sync_dataset.get_rising_edges('lick_sensor') / sample_freq
+        lick_times = sync_dataset.get_rising_edges('lick_sensor') / sample_freq
     else:
-        lick_1 = None
+        lick_times = None
     if '2p_trigger' in meta_data['line_labels']:
         trigger = sync_dataset.get_rising_edges('2p_trigger') / sample_freq
     elif 'acq_trigger' in meta_data['line_labels']:
@@ -209,8 +201,14 @@ def get_sync_data(lims_id, use_acq_trigger):
         stim_photodiode = sync_dataset.get_rising_edges('stim_photodiode') / sample_freq
     elif 'photodiode' in meta_data['line_labels']:
         stim_photodiode = sync_dataset.get_rising_edges('photodiode') / sample_freq
-    cam1_exposure = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
-    cam2_exposure = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
+    if 'cam1_exposure' in meta_data['line_labels']:
+        eye_tracking = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
+    elif 'eye_tracking' in meta_data['line_labels']:
+        eye_tracking = sync_dataset.get_rising_edges('eye_tracking') / sample_freq
+    if 'cam2_exposure' in meta_data['line_labels']:
+        behavior_monitoring = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
+    elif 'behavior_monitoring' in meta_data['line_labels']:
+        behavior_monitoring = sync_dataset.get_rising_edges('behavior_monitoring') / sample_freq
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only
     if use_acq_trigger:
         frames_2p = frames_2p[frames_2p > trigger[0]]
@@ -219,16 +217,16 @@ def get_sync_data(lims_id, use_acq_trigger):
     # put sync data in format to be compatible with downstream analysis
     times_2p = {'timestamps': frames_2p}
     times_vsync = {'timestamps': vsyncs}
-    times_lick_1 = {'timestamps': lick_1}
+    times_lick = {'timestamps': lick_times}
     times_trigger = {'timestamps': trigger}
-    times_cam1_exposure = {'timestamps': cam1_exposure}
-    times_cam2_exposure = {'timestamps': cam2_exposure}
+    times_eye_tracking = {'timestamps': eye_tracking}
+    times_behavior_monitoring = {'timestamps': behavior_monitoring}
     times_stim_photodiode = {'timestamps': stim_photodiode}
     sync_data = {'ophys_frames': times_2p,
                  'stimulus_frames': times_vsync,
-                 'lick_times': times_lick_1,
-                 'cam1_exposure': times_cam1_exposure,
-                 'cam2_exposure': times_cam2_exposure,
+                 'lick_times': times_lick,
+                 'eye_tracking': times_eye_tracking,
+                 'behavior_monitoring': times_behavior_monitoring,
                  'stim_photodiode': times_stim_photodiode,
                  'ophys_trigger': times_trigger,
                  }
