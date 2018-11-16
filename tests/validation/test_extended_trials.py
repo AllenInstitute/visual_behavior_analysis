@@ -258,9 +258,9 @@ def test_validate_two_stimuli_per_go_trial():
         'trial_type': ['go', 'go']
     })
     GOOD_DATA_VISUAL_STIMULI = pd.DataFrame({
-        'frame': [1, 5, 10, 15],
-        'end_frame': [3, 8, 13, 18],
-        'image_category': ['a', 'b', 'a', 'b']
+        'frame': [1, 5, 10, 13, 15],
+        'end_frame': [3, 8, 12, 14, 18],
+        'image_category': ['a', 'b', 'b', 'b', 'a']
     })
     assert validate_two_stimuli_per_go_trial(GOOD_DATA_TRIALS, GOOD_DATA_VISUAL_STIMULI) == True
 
