@@ -170,7 +170,7 @@ def count_stimuli_per_trial(trials, visual_stimuli):
 
         try:
             stimuli = np.unique(visual_stimuli[
-                visual_stimuli['frame'].isin(range(trial.startframe,trial.endframe))
+                visual_stimuli['frame'].isin(range(trial.startframe, trial.endframe))
             ][col_to_check])
             # add to array
             stimuli_per_trial[idx] = len(stimuli)
@@ -803,11 +803,11 @@ def validate_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_fla
 
     Takes core_data['visual_stimuli'] and core_data['omitted_stimuli'] as input
     '''
-    
+
     if periodic_flash is not None:
         # if there are omitted flashes, exclude them from this validation
         if omitted_stimuli is not None:
-            visual_stimuli = pd.concat((visual_stimuli,omitted_stimuli)).sort_values(by='frame').reset_index()
+            visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
 
         # get all blank durations
         blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
@@ -885,7 +885,7 @@ def validate_initial_blank(trials, visual_stimuli, omitted_stimuli, initial_blan
     else:
 
         if omitted_stimuli is not None:
-            visual_stimuli = pd.concat((visual_stimuli,omitted_stimuli)).sort_values(by='frame').reset_index()
+            visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
 
         # preallocate array
         initial_blank_in_tolerance = np.empty(len(trials))
