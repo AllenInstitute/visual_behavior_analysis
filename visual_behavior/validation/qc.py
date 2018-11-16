@@ -87,9 +87,9 @@ def define_validation_functions(core_data):
         et.validate_one_stimulus_per_catch_trial: (trials, core_data['visual_stimuli'],),
         et.validate_one_stimulus_per_aborted_trial: (trials, core_data['visual_stimuli'],),
         et.validate_change_frame_at_flash_onset: (trials, core_data['visual_stimuli'], PERIODIC_FLASH,),
-        et.validate_initial_blank: (trials, core_data['visual_stimuli'], INITIAL_BLANK, PERIODIC_FLASH),
+        et.validate_initial_blank: (trials, core_data['visual_stimuli'], core_data['omitted_stimuli'], INITIAL_BLANK, PERIODIC_FLASH),
         et.validate_new_params_on_nonaborted_trials: (trials, DISTRIBUTION),
-        et.validate_flash_blank_durations: (core_data['visual_stimuli'], PERIODIC_FLASH,),  # this one doesn't take trials
+        et.validate_flash_blank_durations: (core_data['visual_stimuli'], core_data['omitted_stimuli'], PERIODIC_FLASH,),  # this one doesn't take trials
         cd.validate_lick_before_scheduled_on_aborted_trials: (core_data,),
         cd.validate_running_data: (core_data,),  # this one doesn't take trials
         cd.validate_licks: (core_data, LICK_SPOUT_PRESENT),  # this one doesn't take trials
