@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from six import iteritems
 import logging
+import warnings
 
 
 logger = logging.getLogger(__name__)
@@ -100,6 +101,9 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
                         'frame': inferred_omitted_flash_frame,
                         'time': inferred_omitted_flash_time,
                     })
+
+                if len(omitted_flash_list) > 0:
+                    warnings.warn('\nthere was no omitted_flash_frame_log, but long delays were present that were assumed to be omitted flashes')
 
         elif omitted_flash_frame_log is not None:
             for stimuli_group_name, omitted_flash_frames in iteritems(omitted_flash_frame_log):
