@@ -794,16 +794,21 @@ def validate_even_sampling(trials, even_sampling_enabled):
         return True
 
 
-def validate_flash_blank_durations(visual_stimuli, periodic_flash, mean_tolerance=1 / 60., std_tolerance=1 / 60.):
+def validate_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash, mean_tolerance=1 / 60., std_tolerance=1 / 60.):
     '''
-    The duty cycle of the stimulus onset/offset is maintained across trials
+    The periodicity of the stimulus onset/offset is maintained across trials
     (e.g., if conditions for ending a trial are met, the stimulus presentation is not truncated)
 
     default tolerances on mean and std are 1 frame (1/60 seconds)
 
-    Takes core_data['visual_stimuli'] as input
+    Takes core_data['visual_stimuli'] and core_data['omitted_stimuli'] as input
     '''
+    
     if periodic_flash is not None:
+        # if there are omitted flashes, exclude them from this validation
+        if omitted_stimuli is not None:
+            visual_stimuli = pd.concat((visual_stimuli,omitted_stimuli)).sort_values(by='frame').reset_index()
+
         # get all blank durations
         blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
         blank_durations = blank_durations[~np.isnan(blank_durations)]
@@ -867,7 +872,7 @@ def validate_change_frame_at_flash_onset(trials, visual_stimuli, periodic_flash)
         return all(np.in1d(change_frames, visual_stimuli['frame']))
 
 
-def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash=True, frame_tolerance=2):
+def validate_initial_blank(trials, visual_stimuli, omitted_stimuli, initial_blank, periodic_flash=True, frame_tolerance=2):
     '''
     iterates over trials
     Verifies that there is a blank screen of duration `initial_blank` at the start of every trial.
@@ -878,6 +883,10 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
     if periodic_flash is None and initial_blank == 0:
         return True
     else:
+
+        if omitted_stimuli is not None:
+            visual_stimuli = pd.concat((visual_stimuli,omitted_stimuli)).sort_values(by='frame').reset_index()
+
         # preallocate array
         initial_blank_in_tolerance = np.empty(len(trials))
 
