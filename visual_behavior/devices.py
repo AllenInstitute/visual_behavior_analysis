@@ -46,6 +46,8 @@ RIG_NAME = {
     'W7DT2PNC1STIM': '2P6',
     'W7DTMJ234MG': 'peterl_2p',
     'W7DT2P3STiM': '2P3',
+    'W7DT2P4STIM': '2P4',
+    'W7DT2P5STIM': '2P5',
     'W10DTSM118296': 'NP3',
     'meso1stim': 'MS1',
     'localhost': 'localhost'
