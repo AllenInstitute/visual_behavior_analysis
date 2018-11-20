@@ -90,7 +90,7 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
 
             for idx, row in stimulus_df[stimulus_df['preceding_blank_duration'] > threshold * blank_duration].iterrows():
 
-                consecutive_previous_omitted_flashes = int((row['preceding_blank_duration'] - blank_duration) / (flash_duration + blank_duration))
+                consecutive_previous_omitted_flashes = int(round((row['preceding_blank_duration'] - blank_duration) / (flash_duration + blank_duration)))
 
                 for inferred_omitted_flash_number in range(consecutive_previous_omitted_flashes):
                     inferred_blank_time = (1 + inferred_omitted_flash_number) * (flash_duration + blank_duration)
