@@ -1,6 +1,7 @@
 import pandas as pd
 import time
 import pytest
+import os
 
 from visual_behavior.translator.foraging2 import data_to_change_detection_core
 from visual_behavior.translator.core import create_extended_dataframe
@@ -37,6 +38,7 @@ class DataCheck(object):
 
 
 @pytest.mark.parametrize("session_key, filename", sessions.items())
+@pytest.mark.skipif(not os.path.exists('//allen/programs/braintv'), reason="no access to network path, skipping test on network PKL files")
 def test_sessions(session_key, filename):
     data_result = DataCheck(filename)
     assert(data_result.qc['passes'] == True)
