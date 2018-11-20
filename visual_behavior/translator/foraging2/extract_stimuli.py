@@ -102,8 +102,8 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
                         'time': inferred_omitted_flash_time,
                     })
 
-                if len(omitted_flash_list) > 0:
-                    warnings.warn('\nthere was no omitted_flash_frame_log, but long delays were present that were assumed to be omitted flashes')
+            if len(omitted_flash_list) > 0:
+                warnings.warn('\nthere was no omitted_flash_frame_log, but long delays were present that were assumed to be omitted flashes')
 
         elif omitted_flash_frame_log is not None:
             for stimuli_group_name, omitted_flash_frames in iteritems(omitted_flash_frame_log):
