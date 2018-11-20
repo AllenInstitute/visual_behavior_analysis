@@ -1,6 +1,5 @@
 import pandas as pd
 import time
-import platform
 import pytest
 
 from visual_behavior.translator.foraging2 import data_to_change_detection_core
@@ -24,10 +23,7 @@ sessions = {
 class DataCheck(object):
     # a simple class for loading data, running qc
     def __init__(self, pkl_path):
-        if platform.system == 'Linux':
-            self.pkl_path = pkl_path.replace('//allen', '/allen')
-        else:
-            self.pkl_path = pkl_path
+        self.pkl_path = pkl_path
         self.load_data()
         self.run_qc()
 
