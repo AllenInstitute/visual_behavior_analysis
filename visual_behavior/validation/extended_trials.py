@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import six
 
 from ..schemas.extended_trials import ExtendedTrialSchema
 from .utils import assert_is_valid_dataframe, nanis_equal, all_close
@@ -160,18 +161,22 @@ def count_stimuli_per_trial(trials, visual_stimuli):
     # preallocate array
     stimuli_per_trial = np.empty(len(trials))
 
+    # check to see if images or gratings are being used
+    if all(pd.isnull(visual_stimuli.image_category)) == False:
+        col_to_check = 'image_category'
+    elif all(pd.isnull(visual_stimuli.orientation)) == False:
+        col_to_check = 'orientation'
+
     # iterate over dataframe
     for idx, trial in trials.reset_index().iterrows():
-        # check to see if images or gratings are being used
-        if all(pd.isnull(visual_stimuli.image_category)) == False:
-            col_to_check = 'image_category'
-        elif all(pd.isnull(visual_stimuli.orientation)) == False:
-            col_to_check = 'orientation'
 
         try:
             stimuli = np.unique(visual_stimuli[
-                visual_stimuli['frame'].isin(range(trial.startframe, trial.endframe))
+                (visual_stimuli['frame'].isin(range(trial.startframe, trial.endframe)))
+                |(visual_stimuli['end_frame'].isin(range(trial.startframe, trial.endframe)))
             ][col_to_check])
+            # print('checking frame {} to {}'.format(trial.startframe, trial.endframe))
+            # print('unique stimuli = {}'.format(stimuli))
             # add to array
             stimuli_per_trial[idx] = len(stimuli)
         except (IndexError, UnboundLocalError):
@@ -667,7 +672,7 @@ def validate_change_time_mean(trials, expected_mean, distribution_type, toleranc
     '''
     stimulus_distribution: the mean of the stimulus distribution should match the 'distribution_mean' parameter
     '''
-    change_time_trial_referenced = trials['change_time'] - trials['starttime'] - trials['prechange_minimum']
+    change_time_trial_referenced = trials['scheduled_change_time'] - trials['prechange_minimum']
     # if all of the change times are Nan, cannot check mean. Return True
     if all(pd.isnull(change_time_trial_referenced)) == True:
         return True
@@ -794,6 +799,25 @@ def validate_even_sampling(trials, even_sampling_enabled):
         return True
 
 
+def get_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash):
+    if omitted_stimuli is not None:
+        if six.PY2:
+            visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
+        elif six.PY3:
+            visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli),sort=True).sort_values(by='frame').reset_index()
+        else:
+            raise(RuntimeError)
+
+
+    # get all blank durations
+    blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
+
+    # get all flash durations
+    flash_durations = visual_stimuli.duration
+
+    return flash_durations[~np.isnan(flash_durations)], blank_durations[~np.isnan(blank_durations)]
+
+
 def validate_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash, mean_tolerance=1 / 60., std_tolerance=1 / 60.):
     '''
     The periodicity of the stimulus onset/offset is maintained across trials
@@ -806,15 +830,7 @@ def validate_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_fla
 
     if periodic_flash is not None:
         # if there are omitted flashes, exclude them from this validation
-        if omitted_stimuli is not None:
-            visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
-
-        # get all blank durations
-        blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
-        blank_durations = blank_durations[~np.isnan(blank_durations)]
-
-        # get all flash durations
-        flash_durations = visual_stimuli.duration
+        flash_durations, blank_durations = get_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash)
 
         # make sure all flashes and blanks are within tolerance
         # mean should be within tolernace of expected value
@@ -844,18 +860,18 @@ def validate_two_stimuli_per_go_trial(trials, visual_stimuli):
 
 def validate_one_stimulus_per_catch_trial(trials, visual_stimuli):
     '''
-    all 'catch' trials should have one stimulus group
+    all 'catch' trials should have no more than one stimulus group
     '''
     stimuli_per_trial = count_stimuli_per_trial(trials[trials['trial_type'] == 'catch'], visual_stimuli)
-    return all(stimuli_per_trial == 1)
+    return all(stimuli_per_trial <= 1)
 
 
 def validate_one_stimulus_per_aborted_trial(trials, visual_stimuli):
     '''
-    all 'aborted' trials should have one stimulus group
+    all 'aborted' trials should have no more than one stimulus group
     '''
     stimuli_per_trial = count_stimuli_per_trial(trials[trials['trial_type'] == 'aborted'], visual_stimuli)
-    return all(stimuli_per_trial == 1)
+    return all(stimuli_per_trial <= 1)
 
 
 def validate_change_frame_at_flash_onset(trials, visual_stimuli, periodic_flash):
@@ -885,7 +901,13 @@ def validate_initial_blank(trials, visual_stimuli, omitted_stimuli, initial_blan
     else:
 
         if omitted_stimuli is not None:
-            visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
+            if six.PY2:
+                visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
+            elif six.PY3:
+                visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli),sort=True).sort_values(by='frame').reset_index()
+            else:
+                raise(RuntimeError)
+           
 
         # preallocate array
         initial_blank_in_tolerance = np.empty(len(trials))
