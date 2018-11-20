@@ -173,7 +173,7 @@ def count_stimuli_per_trial(trials, visual_stimuli):
         try:
             stimuli = np.unique(visual_stimuli[
                 (visual_stimuli['frame'].isin(range(trial.startframe, trial.endframe)))
-                |(visual_stimuli['end_frame'].isin(range(trial.startframe, trial.endframe)))
+                | (visual_stimuli['end_frame'].isin(range(trial.startframe, trial.endframe)))
             ][col_to_check])
             # print('checking frame {} to {}'.format(trial.startframe, trial.endframe))
             # print('unique stimuli = {}'.format(stimuli))
@@ -804,10 +804,9 @@ def get_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash):
         if six.PY2:
             visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
         elif six.PY3:
-            visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli),sort=True).sort_values(by='frame').reset_index()
+            visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli), sort=True).sort_values(by='frame').reset_index()
         else:
             raise(RuntimeError)
-
 
     # get all blank durations
     blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
@@ -904,10 +903,9 @@ def validate_initial_blank(trials, visual_stimuli, omitted_stimuli, initial_blan
             if six.PY2:
                 visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
             elif six.PY3:
-                visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli),sort=True).sort_values(by='frame').reset_index()
+                visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli), sort=True).sort_values(by='frame').reset_index()
             else:
                 raise(RuntimeError)
-           
 
         # preallocate array
         initial_blank_in_tolerance = np.empty(len(trials))
