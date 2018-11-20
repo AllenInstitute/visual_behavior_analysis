@@ -397,7 +397,7 @@ def update_times(trials, time):
 
     def update(fr):
         try:
-            if (fr is None) or (np.isnan(fr) == True):  # this should catch np.nans
+            if (fr is None) or (type(fr)==float and np.isnan(fr) == True):  # this should catch np.nans
                 return None
             else:  # this should be for floats
                 return time[int(fr)]
