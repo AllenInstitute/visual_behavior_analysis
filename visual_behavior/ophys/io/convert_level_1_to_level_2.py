@@ -32,8 +32,7 @@ from visual_behavior.translator import foraging2, foraging # NOQA: E402
 from visual_behavior.translator.core import create_extended_dataframe # NOQA: E402
 from visual_behavior.ophys.sync.process_sync import get_sync_data # NOQA: E402
 from visual_behavior.ophys.plotting.summary_figures import save_figure, plot_roi_validation # NOQA: E402
-from visual_behavior.ophys.io.lims_database import LimsDatabase # NOQA: E402
-
+from visual_behavior.ophys.io.lims_database import LimsDatabase # NOQA: 
 
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
