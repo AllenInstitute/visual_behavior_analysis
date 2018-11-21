@@ -34,7 +34,6 @@ def make_info_table(extended_trials, ax):
     # I'm using a list of lists instead of a dictionary so that it maintains order
     # the second entries are in quotes so they can be evaluated below in a try/except
     data = [['Date', 'extended_trials.iloc[0].startdatetime.strftime("%m-%d-%Y")'],
-            ['Training Day', 'training_day'],
             ['Time', 'extended_trials.iloc[0].startdatetime.strftime("%H:%M")'],
             ['Duration (minutes)', 'round(extended_trials.iloc[0]["session_duration"]/60.,2)'],
             ['Total water received (ml)', 'extended_trials["cumulative_volume"].max()'],
