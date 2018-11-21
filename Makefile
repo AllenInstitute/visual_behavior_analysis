@@ -8,7 +8,7 @@ build: clean
 	docker build --build-arg PKG=$(PKG) -t $(PKG):latest -f Dockerfile . 
 
 test: build
-	docker run -t -e HOST_ID=$(UID) -v `pwd`/data/:/data -v /allen/programs/braintv/production/neuralcoding/:/allen/programs/braintv/production/neuralcoding:ro visual_behavior:latest /$(PKG)/test.sh
+	docker run -t -e HOST_ID=$(UID) -v `pwd`/data/:/data -v /allen/programs/braintv/production/:/allen/programs/braintv/production:ro visual_behavior:latest /$(PKG)/test.sh
 
 dev:
 	docker create -t --rm --name dev  -v /allen/programs/braintv/production/neuralcoding/:/allen/programs/braintv/production/neuralcoding:ro $(PKG):latest /$(PKG)/test.sh
