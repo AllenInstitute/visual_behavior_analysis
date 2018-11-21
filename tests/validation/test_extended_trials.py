@@ -55,6 +55,7 @@ def test_validate_change_time_mean():
     simulated_change_times_good = np.random.exponential(scale=2, size=100, )
     GOOD_TRIALS = pd.DataFrame({
         'change_time': simulated_change_times_good,
+        'scheduled_change_time': simulated_change_times_good,
         'starttime': np.zeros_like(simulated_change_times_good),
         'prechange_minimum': np.zeros_like(simulated_change_times_good)
     })
@@ -65,6 +66,7 @@ def test_validate_change_time_mean():
     simulated_change_times_bad = np.random.exponential(scale=3, size=100)
     BAD_TRIALS = pd.DataFrame({
         'change_time': simulated_change_times_bad,
+        'scheduled_change_time': simulated_change_times_bad,
         'starttime': np.zeros_like(simulated_change_times_bad),
         'prechange_minimum': np.zeros_like(simulated_change_times_bad),
     })
