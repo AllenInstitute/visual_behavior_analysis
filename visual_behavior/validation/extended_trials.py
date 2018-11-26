@@ -799,8 +799,14 @@ def validate_even_sampling(trials, even_sampling_enabled):
         return True
 
 
-def get_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash):
+def merge_in_omitted_flashes(visual_stimuli, omitted_stimuli):
+    visual_stimuli['omitted'] = False
+
+    # get all blank durations
+    visual_stimuli['previous_blank_duration'] = visual_stimuli['time'].diff() - visual_stimuli['duration']
+
     if omitted_stimuli is not None:
+        omitted_stimuli['omitted'] = True
         if six.PY2:
             visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
         elif six.PY3:
@@ -808,8 +814,10 @@ def get_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash):
         else:
             raise(RuntimeError)
 
-    # get all blank durations
-    blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
+    # was previous flash omitted?
+    visual_stimuli['previous_omitted'] = visual_stimuli['omitted'].shift()
+
+    return visual_stimuli
 
     # get all flash durations
     flash_durations = visual_stimuli.duration
