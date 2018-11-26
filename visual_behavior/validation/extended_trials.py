@@ -827,13 +827,13 @@ def get_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash):
     # get all blank durations, but ignore omitted flashes and flashes immediately following omitted flashes
     blank_durations = visual_stimuli[
         (visual_stimuli['omitted'] == False)
-        &(visual_stimuli['previous_omitted'] == False)
+        & (visual_stimuli['previous_omitted'] == False)
     ]['previous_blank_duration']
 
     # get all flash durations, but ignore omitted flashes and flashes immediately following omitted flashes
     flash_durations = visual_stimuli[
         (visual_stimuli['omitted'] == False)
-        &(visual_stimuli['previous_omitted'] == False)
+        & (visual_stimuli['previous_omitted'] == False)
     ]['duration']
 
     return flash_durations[~np.isnan(flash_durations)], blank_durations[~np.isnan(blank_durations)]
