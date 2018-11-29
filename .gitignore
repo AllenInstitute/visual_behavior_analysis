@@ -68,5 +68,6 @@ figures/
 
 # vs code
 .idea/
+.vscode/
 
 \.DS_Store
