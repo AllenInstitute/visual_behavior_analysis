@@ -31,6 +31,14 @@ RUN pip install .
 RUN rm -rf tests/__pycache__
 RUN find . -name \*.pyc -delete
 
+# Copy over regression test fixture files:
+COPY fixtures/181119102010_421137_c108dc71-ef5e-46ad-8d85-8da0fdaf7d3d.pkl /allen/programs/braintv/production/visualbehavior/prod0/specimen_760928877/behavior_session_781938249/181119102010_421137_c108dc71-ef5e-46ad-8d85-8da0fdaf7d3d.pkl
+COPY fixtures/181119092559_412629_a3775e3e-e1ca-474a-b413-91cccd6d886f.pkl /allen/programs/braintv/production/visualbehavior/prod0/specimen_756572266/behavior_session_781827134/181119092559_412629_a3775e3e-e1ca-474a-b413-91cccd6d886f.pkl
+COPY fixtures/181119150503_416656_2b0893fe-843d-495e-bceb-83b13f2b02dc.pkl /allen/programs/braintv/production/visualbehavior/prod0/specimen_760937126/behavior_session_782345413/181119150503_416656_2b0893fe-843d-495e-bceb-83b13f2b02dc.pkl
+COPY fixtures/181119135416_424460_b6daf247-2caf-4f38-9eb1-ab97825923cd.pkl /allen/programs/braintv/production/visualbehavior/prod0/specimen_759499601/behavior_session_782276944/181119135416_424460_b6daf247-2caf-4f38-9eb1-ab97825923cd.pkl
+COPY fixtures/181119134201_402329_b75a87d0-8178-4171-a3b2-7cea3ae8e118.pkl /allen/programs/braintv/production/visualbehavior/prod0/specimen_722884870/behavior_session_782264775/181119134201_402329_b75a87d0-8178-4171-a3b2-7cea3ae8e118.pkl
+COPY fixtures/778113069_stim.pkl /allen/programs/braintv/production/visualbehavior/prod0/specimen_744935649/ophys_session_778113069/778113069_stim.pkl
+
 CMD ["/bin/bash"]
 
 
