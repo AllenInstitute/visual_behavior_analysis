@@ -1,7 +1,12 @@
 import os
+import sys
 import glob
 import pandas as pd
 import numpy as np
+import six
+
+from dateutil import tz
+from datetime import datetime
 
 from visual_behavior.translator.foraging2 import data_to_change_detection_core
 from visual_behavior.translator.core import create_extended_dataframe
@@ -11,6 +16,9 @@ import visual_behavior_research.plotting as vbp
 
 import seaborn as sns
 import matplotlib.pyplot as plt
+
+import warnings
+warnings.filterwarnings("ignore")
 
 
 def get_PKL_path(row):
@@ -37,12 +45,15 @@ def get_mouse_seeks_output():
         new_data = pd.read_csv(os.path.join(path,report_name))
         new_data['timestamp']=new_data[date_column].map(lambda x:pd.to_datetime(x))
         new_data['PKL_path']=new_data.apply(get_PKL_path,axis=1)
-        mouse_seeks_output = pd.concat((mouse_seeks_output,new_data)).reset_index()
+        if six.PY2:
+            mouse_seeks_output = pd.concat((mouse_seeks_output,new_data)).reset_index()
+        elif six.PY3:
+            mouse_seeks_output = pd.concat((mouse_seeks_output,new_data),sort=True).reset_index()
 
         f2_files = mouse_seeks_output[
                 (mouse_seeks_output['timestamp']>pd.to_datetime('2018-10-01'))
                 &(mouse_seeks_output['change_detection_task'].str.contains('DoC'))
-            ].sort_values(by='timestamp',ascending=True)
+            ].sort_values(by='timestamp',ascending=True) 
 
     return f2_files
 
@@ -51,10 +62,17 @@ def load_data(f2_files,dropped_frame_log):
     load any files that aren't already in the dropped frame log into a dictionary called 'all_data'
     '''
     #figure out which foraging2 files aren't already in the dropped frame log
-    all_timestamps = list(dropped_frame_log['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S'))
-    already_loaded = f2_files.timestamp.dt.strftime('%Y-%m-%d %H:%M:%S').isin(all_timestamps)
-    recent_f2_files = f2_files[~already_loaded].copy().reset_index(drop=True)
+    print('len(dropped_frame_log):{}'.format(len(dropped_frame_log)))
+    if len(dropped_frame_log)>0:
 
+        # dropped_frame_log['timestamp_gmt'] = pd.to_datetime(dropped_frame_log['timestamp_gmt'])
+        all_timestamps = list(dropped_frame_log['timestamp_gmt'].dt.strftime('%Y-%m-%d %H:%M:%S'))
+        already_loaded = f2_files.timestamp.dt.strftime('%Y-%m-%d %H:%M:%S').isin(all_timestamps)
+    else:
+        already_loaded =  pd.Series([False]*len(f2_files),index=f2_files.index)
+
+    recent_f2_files = f2_files[~already_loaded].copy().reset_index(drop=True)
+    print('len(recent_f2_files):{}'.format(len(recent_f2_files)))
     all_data = {}
     for idx,row in recent_f2_files.iterrows():
         try:
@@ -65,11 +83,28 @@ def load_data(f2_files,dropped_frame_log):
             all_data[row['timestamp']]['core_data'] = data_to_change_detection_core(all_data[row['timestamp']]['data'])
         
             print('loaded file {} of {}'.format(idx+1,len(recent_f2_files),),end='\r')
-        except:
-            pass
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno)
     print('\n')
 
     return all_data
+
+def count_long_dropped_frames(frame_intervals,threshold=0.055):
+    return len(frame_intervals[frame_intervals>threshold])
+
+def build_list_of_long_dropped_frames(frame_intervals,threshold=0.055):
+    '''
+    returns a string of comma seperated values
+    '''
+    long_frames_indices = np.array(range(1,len(frame_intervals)+1))[frame_intervals>threshold]
+    return str(long_frames_indices.tolist())
+
+def convert_timestamp_to_local(ts):
+    from_zone = tz.tzutc()
+    to_zone = tz.tzlocal()
+    return ts.replace(tzinfo=from_zone).astimezone(to_zone)
 
 def build_dropped_frame_log(all_data,dropped_frame_log):
     '''
@@ -84,9 +119,9 @@ def build_dropped_frame_log(all_data,dropped_frame_log):
                 'mouse_id':cd['metadata']['mouseid'],
                 'rig_id':cd['metadata']['rig_id'],
                 'stage':cd['metadata']['stage'],
-                'timestamp':key,
+                'timestamp_gmt':key,
+                'timestamp_local':convert_timestamp_to_local(key),
                 'frame_intervals':[frame_intervals],
-                'N_dropped_frames':len(frame_intervals[frame_intervals>0.025]),
                 'mean_dropped_frame_length':np.mean(frame_intervals[frame_intervals>0.025]),
                 'median_dropped_frame_length':np.median(frame_intervals[frame_intervals>0.025]),
                 'max_dropped_frame_length':np.max(frame_intervals[frame_intervals>0.025]) if len(frame_intervals[frame_intervals>0.025])>0 else np.nan,
@@ -95,10 +130,18 @@ def build_dropped_frame_log(all_data,dropped_frame_log):
 
     if len(dropped_frame_log_list) > 0:
         dropped_frame_log_new = pd.concat(dropped_frame_log_list,sort=True).reset_index()
+
+        dropped_frame_log_new['week']=dropped_frame_log_new['timestamp_local'].dt.week
+        dropped_frame_log_new['dayofweek']=dropped_frame_log_new['timestamp_local'].dt.dayofweek
+        dropped_frame_log_new['weekday_name']=dropped_frame_log_new['timestamp_local'].dt.weekday_name
+        dropped_frame_log_new['n_dropped_frames'] = dropped_frame_log_new['frame_intervals'].map(lambda x: len(x[x>0.025]))
+        dropped_frame_log_new['long_dropped_frame_count'] = dropped_frame_log_new['frame_intervals'].map(lambda x: count_long_dropped_frames(x))
+        dropped_frame_log_new['long_dropped_frames'] = dropped_frame_log_new['frame_intervals'].map(lambda x: build_list_of_long_dropped_frames(x))
+
         dropped_frame_log = pd.concat((dropped_frame_log,dropped_frame_log_new),sort=True).drop(columns=['index'])
-    dropped_frame_log['week']=dropped_frame_log['timestamp'].dt.week
-    dropped_frame_log['dayofweek']=dropped_frame_log['timestamp'].dt.dayofweek
-    dropped_frame_log['weekday_name']=dropped_frame_log['timestamp'].dt.weekday_name
+
+    if 'level_0' in dropped_frame_log.columns:
+        dropped_frame_log.drop(columns='level_0',inplace=True)
 
     return dropped_frame_log
 
@@ -126,10 +169,10 @@ def make_boxplot(row,ax,x=0,swarmplot_max=250):
     ax.set_ylim(0,250)
     ax.set_title('{}\n{} dropped frames\nlongest_frame = {:.1f} ms\nmouse {}\n{}'.format(
         row['rig_id'],
-        row['N_dropped_frames'],
+        row['n_dropped_frames'],
         longest_frame,
         row['mouse_id'],
-        row['timestamp'].strftime('%Y-%m-%d_%H:%M:%S')
+        row['timestamp_local'].strftime('%Y-%m-%d_%I:%M:%S %p')
     ),fontsize=9)
 
 def make_summary_plot(summary,title=None):
@@ -158,10 +201,24 @@ def make_summary_plot(summary,title=None):
 
     return fig,ax
 
+def generate_text_summary(log_to_summarize):
+    message = ''
+    for idx,row in log_to_summarize.sort_values(by=['long_dropped_frame_count','rig_id'],ascending=[False,True]).iterrows():
+        if row['long_dropped_frame_count'] > 0:
+            message += '{} had {} {} > 50 ms on {}. The longest frame was {:0.0f} ms long \n'.format(
+                row['rig_id'],
+                row['long_dropped_frame_count'],
+                'frame' if row['long_dropped_frame_count'] <= 1 else 'frames',
+                row['timestamp_local'].strftime('%Y-%m-%d at %I:%M %p'),
+                1000*row['max_dropped_frame_length']
+            )
+    return message
+
 
 def generate_dropped_frame_log():
 
-    save_dir = r"\\ALLEN\programs\braintv\workgroups\nc-ophys\visual_behavior\dropped_frame_logs"
+    # save_dir = r"\\ALLEN\programs\braintv\workgroups\nc-ophys\visual_behavior\dropped_frame_logs"
+    save_dir = r"F:\dropped_frame_logs"
 
     print('\nloading existing dropped frame log...')
     existing_dropped_frame_log = pd.read_pickle(os.path.join(save_dir,"dropped_frame_df.pkl"))
@@ -197,9 +254,9 @@ def generate_dropped_frame_log():
             df = dropped_frame_log[
                 (dropped_frame_log['rig_id'].isin(clusters[cluster]))
                 &(dropped_frame_log['week']==week)
-            ].sort_values(by=['rig_id','timestamp'])
+            ].sort_values(by=['rig_id','timestamp_local'])
 
-            first_day = df['timestamp'].min().strftime('%Y-%m-%d')
+            first_day = df['timestamp_local'].min().strftime('%Y-%m-%d')
             title='Week starting {}, {} Cluster Dropped Frame log'.format(first_day,cluster)
 
             plot_exists = title+'.png' in os.listdir(os.path.join(save_dir,'plots'))
