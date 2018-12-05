@@ -72,7 +72,7 @@ def get_rig_id(computer_name):
         computer name
     '''
 
-    return RIG_NAME.get(computer_name.lower(), 'unknown')
+    return RIG_NAME.get(computer_name.lower(), '{} - unknown alias'.format(computer_name))
 
 
 def get_computer_name(rig_id):
