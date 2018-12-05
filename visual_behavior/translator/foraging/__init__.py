@@ -116,8 +116,14 @@ def load_metadata(data):
     metadata['max_session_duration'] = 60.0  # hard coded
     metadata['min_no_lick_time'] = data['minimum_no_lick_time']
     metadata['abort_on_early_response'] = data['ignore_false_alarms'] == False
-    metadata['even_sampling_enabled'] = data['image_category_sampling_mode'] == 'even_sampling'
-    metadata['failure_repeats'] = data['max_number_trial_repeats']
+    try:
+        metadata['even_sampling_enabled'] = data['image_category_sampling_mode'] == 'even_sampling'
+    except KeyError:
+        metadata['even_sampling_enabled'] = False
+    try:
+        metadata['failure_repeats'] = data['max_number_trial_repeats']
+    except KeyError:
+        metadata['failure_repeats'] = 0
     metadata['catch_frequency'] = data['catch_frequency']
     metadata['volume_limit'] = data['volumelimit']
     metadata['initial_blank_duration'] = data['initial_blank']
