@@ -6,7 +6,7 @@ import os
 from visual_behavior.translator.foraging2 import data_to_change_detection_core
 from visual_behavior.translator.core import create_extended_dataframe
 from visual_behavior.validation.qc import generate_qc_report
-
+from visual_behavior.validation.qc import define_validation_functions
 # some sessions that have been manually validated. These should all pass the QC functions.
 sessions = {
     'TRAINING_1_gratings_412629':'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/181119092559_412629_a3775e3e-e1ca-474a-b413-91cccd6d886f.pkl',
@@ -32,8 +32,15 @@ class DataCheck(object):
         self.data = pd.read_pickle(self.pkl_path)
         self.core_data = data_to_change_detection_core(self.data)
 
-    def run_qc(self):
+    def run_qc_old(self):
         self.qc = generate_qc_report(self.core_data)
+
+    def run_qc(self):
+        validation_functions = define_validation_functions(self.core_data)
+        for func in validation_functions:
+            assert func(*validation_functions[func]) == True
+
+
 
 
 @pytest.mark.parametrize("session_key, filename", sessions.items())
