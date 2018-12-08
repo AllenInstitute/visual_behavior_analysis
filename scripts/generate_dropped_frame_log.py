@@ -66,7 +66,7 @@ def load_data(f2_files,dropped_frame_log):
     if len(dropped_frame_log)>0:
 
         # dropped_frame_log['timestamp_gmt'] = pd.to_datetime(dropped_frame_log['timestamp_gmt'])
-        all_timestamps = list(dropped_frame_log['timestamp_gmt'].dt.strftime('%Y-%m-%d %H:%M:%S'))
+        all_timestamps = list(dropped_frame_log['timestamp_local'].dt.strftime('%Y-%m-%d %H:%M:%S'))
         already_loaded = f2_files.timestamp.dt.strftime('%Y-%m-%d %H:%M:%S').isin(all_timestamps)
     else:
         already_loaded =  pd.Series([False]*len(f2_files),index=f2_files.index)
@@ -78,21 +78,38 @@ def load_data(f2_files,dropped_frame_log):
         try:
             pkl_path = glob.glob(os.path.join(row['PKL_path'],'*.pkl'))[0]
 
-            all_data[row['timestamp']] = {}
-            all_data[row['timestamp']]['data'] = pd.read_pickle(pkl_path)
-            all_data[row['timestamp']]['core_data'] = data_to_change_detection_core(all_data[row['timestamp']]['data'])
+            data = pd.read_pickle(pkl_path)
+            # timestamp = data['start_time'].strftime('%Y-%m-%d %H:%M:%S')
+            timestamp = data['start_time']
+            all_data[timestamp] = {}
+            all_data[timestamp]['data'] = data
+            all_data[timestamp]['core_data'] = data_to_change_detection_core(all_data[timestamp]['data'])
         
             print('loaded file {} of {}'.format(idx+1,len(recent_f2_files),),end='\r')
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             print(exc_type, fname, exc_tb.tb_lineno)
+
     print('\n')
 
     return all_data
 
 def count_long_dropped_frames(frame_intervals,threshold=0.050):
     return len(frame_intervals[frame_intervals>threshold])
+
+def get_dropped_frame_times(row):
+    long_dropped_frames = eval(row['long_dropped_frames'])
+    times = np.cumsum(row['frame_intervals'])
+    return str(times[long_dropped_frames])
+
+def get_dropped_frame_durations(row):
+    long_dropped_frames = np.array(eval(row['long_dropped_frames']))
+    intervals = row['frame_intervals']
+    if len(long_dropped_frames) > 0:
+        return str(intervals[long_dropped_frames-1].tolist())
+    else:
+        return '[]'
 
 def build_list_of_long_dropped_frames(frame_intervals,threshold=0.050):
     '''
@@ -119,8 +136,8 @@ def build_dropped_frame_log(all_data,dropped_frame_log):
                 'mouse_id':cd['metadata']['mouseid'],
                 'rig_id':cd['metadata']['rig_id'],
                 'stage':cd['metadata']['stage'],
-                'timestamp_gmt':key,
-                'timestamp_local':convert_timestamp_to_local(key),
+                'timestamp_local':key,
+                'timestamp_gmt':None,
                 'frame_intervals':[frame_intervals],
                 'mean_dropped_frame_length':np.mean(frame_intervals[frame_intervals>0.025]),
                 'median_dropped_frame_length':np.median(frame_intervals[frame_intervals>0.025]),
@@ -137,6 +154,8 @@ def build_dropped_frame_log(all_data,dropped_frame_log):
         dropped_frame_log_new['n_dropped_frames'] = dropped_frame_log_new['frame_intervals'].map(lambda x: len(x[x>0.025]))
         dropped_frame_log_new['long_dropped_frame_count'] = dropped_frame_log_new['frame_intervals'].map(lambda x: count_long_dropped_frames(x))
         dropped_frame_log_new['long_dropped_frames'] = dropped_frame_log_new['frame_intervals'].map(lambda x: build_list_of_long_dropped_frames(x))
+        dropped_frame_log_new['long_dropped_frame_times'] = dropped_frame_log_new.apply(get_dropped_frame_times,axis=1)
+        dropped_frame_log_new['long_frame_durations'] = dropped_frame_log_new.apply(get_dropped_frame_durations,axis=1)
 
         dropped_frame_log = pd.concat((dropped_frame_log,dropped_frame_log_new),sort=True).drop(columns=['index'])
 
