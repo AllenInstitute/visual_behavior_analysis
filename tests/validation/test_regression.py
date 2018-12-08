@@ -38,7 +38,7 @@ class DataCheck(object):
     def run_qc(self):
         validation_functions = define_validation_functions(self.core_data)
         for func in validation_functions:
-            assert func(*validation_functions[func]) == True
+            assert func(*validation_functions[func]) == True, 'failed on {}'.format(func.__name__)
 
 
 
