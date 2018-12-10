@@ -4,7 +4,7 @@ import numpy as np
 from scipy.signal import medfilt
 from .extract import get_end_time
 from .extract_images import get_image_data, get_image_metadata
-from ...utilities import calc_deriv, rad_to_dist, local_time, ListHandler, DoubleColonFormatter
+from ...utilities import calc_deriv, deg_to_dist, local_time, ListHandler, DoubleColonFormatter
 from ...uuid_utils import make_deterministic_session_uuid
 
 import logging
@@ -322,8 +322,8 @@ def load_running_speed(data, smooth=False, time=None):
 
     time = time[:len(dx)]
 
-    speed = calc_deriv(dx, time)
-    speed = rad_to_dist(speed)
+    speed = calc_deriv(dx, time) # speed is in deg/s
+    speed = deg_to_dist(speed) # converts speed to cm/s
 
     if smooth:
         # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
