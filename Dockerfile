@@ -39,6 +39,9 @@ COPY fixtures/181119135416_424460_b6daf247-2caf-4f38-9eb1-ab97825923cd.pkl /alle
 COPY fixtures/778113069_stim.pkl /allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/778113069_stim.pkl
 COPY fixtures/181119134201_402329_b75a87d0-8178-4171-a3b2-7cea3ae8e118.pkl /allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/181119134201_402329_b75a87d0-8178-4171-a3b2-7cea3ae8e118.pkl
 
+COPY fixtures/nimages_0_20170714.zip /allen/aibs/mpe/Software/stimulus_files/nimages_0_20170714.zip
+COPY fixtures/Natural_Images_Lum_Matched_set_training_2017.07.14.pkl /allen/programs/braintv/workgroups/nc-ophys/Doug/Stimulus_Code/image_dictionaries/Natural_Images_Lum_Matched_set_training_2017.07.14.pkl
+
 CMD ["/bin/bash"]
 
 
