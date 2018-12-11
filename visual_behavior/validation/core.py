@@ -1,3 +1,4 @@
+from __future__ import print_function
 import warnings
 import numpy as np
 import pandas as pd
@@ -65,6 +66,7 @@ def count_read_errors(core_data):
             warnings.warn(
                 '{} error while reading file: "{}"'.format(rec['levelname'], rec['message'])
             )
+            print(rec)
     log = pd.DataFrame(log, columns=['levelname', 'name', 'message'])
     return log.groupby('levelname').size().to_dict()
 

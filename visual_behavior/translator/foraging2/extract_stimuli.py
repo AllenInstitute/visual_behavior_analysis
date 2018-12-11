@@ -90,7 +90,7 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
 
             for idx, row in stimulus_df[stimulus_df['preceding_blank_duration'] > threshold * blank_duration].iterrows():
 
-                consecutive_previous_omitted_flashes = int((row['preceding_blank_duration'] - blank_duration) / (flash_duration + blank_duration))
+                consecutive_previous_omitted_flashes = int(round((row['preceding_blank_duration'] - blank_duration) / (flash_duration + blank_duration)))
 
                 for inferred_omitted_flash_number in range(consecutive_previous_omitted_flashes):
                     inferred_blank_time = (1 + inferred_omitted_flash_number) * (flash_duration + blank_duration)
@@ -102,8 +102,8 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
                         'time': inferred_omitted_flash_time,
                     })
 
-                if len(omitted_flash_list) > 0:
-                    warnings.warn('\nthere was no omitted_flash_frame_log, but long delays were present that were assumed to be omitted flashes')
+            if len(omitted_flash_list) > 0:
+                warnings.warn('\nthere was no omitted_flash_frame_log, but long delays were present that were assumed to be omitted flashes')
 
         elif omitted_flash_frame_log is not None:
             for stimuli_group_name, omitted_flash_frames in iteritems(omitted_flash_frame_log):
