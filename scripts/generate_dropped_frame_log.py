@@ -164,26 +164,38 @@ def build_dropped_frame_log(all_data,dropped_frame_log):
 
     return dropped_frame_log
 
-def make_boxplot(row,ax,x=0,swarmplot_max=250):
+def make_boxplot(frame_intervals,ax,swarmplot_max=250,orient='vertical'):
     '''
     makes a single boxplot and swarmplot
     '''
-    frame_intervals = row['frame_intervals']*1000
+
     longest_frame=np.max(frame_intervals)
     dropped_frames = frame_intervals[frame_intervals>25]
+    
+    if orient == 'vertical':
+        ax.set_ylim(0,1.1*max(dropped_frames))
+        x=np.zeros_like(frame_intervals)
+        y=frame_intervals
+    elif orient == 'horizontal':
+        ax.set_xlim(0,1.1*max(dropped_frames))
+        y=np.zeros_like(frame_intervals)
+        x=frame_intervals
 
-    sns.boxplot(x=x+np.zeros_like(frame_intervals),y=frame_intervals,ax=ax,orient='vertical',fliersize=0,whis=np.inf)
+    sns.boxplot(x,y,ax=ax,orient=orient,fliersize=0,whis=np.inf)
 
     if len(dropped_frames)>0:
         if len(dropped_frames)>swarmplot_max:
             
             dropped_frames = np.hstack((
-                np.random.choice(dropped_frames,size=swarmplot_max,replace=False),
-                np.max(dropped_frames),
-                np.min(dropped_frames)
+                np.random.choice(dropped_frames[dropped_frames<100],size=swarmplot_max,replace=False),
+                np.min(dropped_frames),
+                dropped_frames[dropped_frames>=100]
             ))
-            
-        sns.swarmplot(x=x+np.zeros_like(dropped_frames),y=dropped_frames,ax=ax,color='darkred')
+        
+        if orient == 'vertical':
+            sns.swarmplot(x=np.zeros_like(dropped_frames),y=dropped_frames,ax=ax,color='darkred',orient=orient)
+        elif orient == 'horizontal':
+            sns.swarmplot(x=dropped_frames,y=np.zeros_like(dropped_frames),ax=ax,color='darkred',orient=orient)
 
     ax.set_ylim(0,250)
     ax.set_title('{}\n{} dropped frames\nlongest_frame = {:.1f} ms\nmouse {}\n{}'.format(
@@ -333,7 +345,7 @@ def generate_dropped_frame_log():
                     except PermissionError:
                         print('Permission Error when writing save {}, does someone have it open?'.format(os.path.join(save_dir,'logs',title+'.csv')))
 
-        if week == 48:
+        if week == 49:
             this_weeks_log = dropped_frame_log[dropped_frame_log['week']==week]
             text_summary = generate_text_summary(this_weeks_log)
             recipient_list = pd.read_csv(r"\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\dropped_frame_logs\recipient_list.csv")
