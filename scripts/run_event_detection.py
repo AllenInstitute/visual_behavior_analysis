@@ -1,7 +1,7 @@
 import sys
 import platform
-if platform.system() == 'Linux':
-    sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/Doug/pbstools')
+# if platform.system() == 'Linux':
+sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/Doug/pbstools')
 from pbstools import PythonJob # flake8: noqa: E999
 
 #VisualBehaviorDevelopment - complete dataset as of 11/15/18
