@@ -285,7 +285,7 @@ def send_email(to_list,subject="Empty",message = "Empty"):
             print(e)
 
 
-def generate_dropped_frame_log():
+def generate_dropped_frame_log(send_email=False):
 
     save_dir = r"\\ALLEN\programs\braintv\workgroups\nc-ophys\visual_behavior\dropped_frame_logs"
     # save_dir = r"F:\dropped_frame_logs"
@@ -345,11 +345,14 @@ def generate_dropped_frame_log():
                     except PermissionError:
                         print('Permission Error when writing save {}, does someone have it open?'.format(os.path.join(save_dir,'logs',title+'.csv')))
 
-        if week == 49:
+        if week == weeks[-1] and send_email == True:
             this_weeks_log = dropped_frame_log[dropped_frame_log['week']==week]
             text_summary = generate_text_summary(this_weeks_log)
             recipient_list = pd.read_csv(r"\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\dropped_frame_logs\recipient_list.csv")
             
+            # note: windows firewall blocks outgoing emails from python
+            # it's possible to temporarily enable this, but settings revert within minutes
+            # see: https://stackoverflow.com/questions/2778840/socket-error-errno-10013-an-attempt-was-made-to-access-a-socket-in-a-way-forb
             send_email(
                 to_list = recipient_list.address.values.tolist(),
                 subject = 'Visual Behavior Dropped Frame Summary for {} - {}'.format(
