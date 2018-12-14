@@ -34,12 +34,23 @@ def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate)
     return trace, timepoints
 
 
-def get_mean_in_window(trace, window, frame_rate):
-    return np.nanmean(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]) #modified 181212
+def get_mean_in_window(trace, window, frame_rate, use_events=False):
+    # if use_events:
+    #     trace[trace==0] = np.nan
+    mean = np.nanmean(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))])
+    # if np.isnan(mean):
+    #     mean = 0
+    return mean
 
 
 def get_sd_in_window(trace, window, frame_rate):
     return np.std(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]) #modified 181212
+
+
+def get_n_nonzero_in_window(trace, window, frame_rate):
+    datapoints = trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]
+    n_nonzero = len(np.where(datapoints > 0)[0])
+    return n_nonzero
 
 
 def get_sd_over_baseline(trace, response_window, baseline_window, frame_rate):
@@ -64,10 +75,10 @@ def ptest(x, num_conditions):
 
 
 def get_mean_sem_trace(group):
-    mean_response = np.mean(group['mean_response'])
+    mean_response = np.nanmean(group['mean_response'])
     mean_responses = group['mean_response'].values
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
-    mean_trace = np.mean(group['trace'])
+    mean_trace = np.nanmean(group['trace'])
     sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
                       'mean_trace': mean_trace, 'sem_trace': sem_trace,
@@ -75,19 +86,24 @@ def get_mean_sem_trace(group):
 
 
 def get_mean_sem(group):
-    mean_response = np.mean(group['mean_response'])
+    mean_response = np.nanmean(group['mean_response'])
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response})
 
 
 def get_fraction_significant_trials(group):
-    fraction_significant_trials = len(group[group.p_value < 0.005]) / float(len(group))
+    fraction_significant_trials = len(group[group.p_value < 0.05]) / float(len(group))
     return pd.Series({'fraction_significant_trials': fraction_significant_trials})
 
 
 def get_fraction_responsive_trials(group):
     fraction_responsive_trials = len(group[group.mean_response > 0.05]) / float(len(group))
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
+
+
+def get_fraction_nonzero_trials(group):
+    fraction_nonzero_trials = len(group[group.n_events > 0]) / float(len(group))
+    return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
 
 
 def get_mean_df(response_df, conditions=['cell', 'change_image_name'], flashes=False):
@@ -105,6 +121,10 @@ def get_mean_df(response_df, conditions=['cell', 'change_image_name'], flashes=F
     fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
     fraction_responsive_trials = fraction_responsive_trials.reset_index()
     mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
+
+    fraction_nonzero_trials = rdf.groupby(conditions).apply(get_fraction_nonzero_trials)
+    fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
+    mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
 
     return mdf
 

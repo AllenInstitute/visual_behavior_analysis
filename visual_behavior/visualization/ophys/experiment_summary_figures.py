@@ -110,7 +110,8 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
 
 def plot_traces_heatmap(traces, ax=None, save_dir=None, use_events=False):
     if use_events:
-        vmax = 0.03
+        # vmax = 0.03
+        vmax = np.percentile(traces, 99)
         label = 'event magnitude'
         suffix = '_events'
     else:
