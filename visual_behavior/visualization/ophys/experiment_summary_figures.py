@@ -194,29 +194,30 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
 
     for i, condition_value in enumerate(condition_values):
         im_df = data[(data[condition] == condition_value)]
-        if i == 0:
-            order = np.argsort(im_df.mean_response.values)[::-1]
-            cells = im_df.cell.unique()[order]
-        len_trace = len(im_df.mean_trace.values[0])
-        response_array = np.empty((len(cells), len_trace))
-        for x, cell in enumerate(cells):
-            tmp = im_df[im_df.cell == cell]
-            if len(tmp) >= 1:
-                trace = tmp.mean_trace.values[0]
-            else:
-                trace = np.empty((len_trace))
-                trace[:] = np.nan
-            response_array[x, :] = trace
+        if len(im_df) != 0:
+            if i == 0:
+                order = np.argsort(im_df.mean_response.values)[::-1]
+                cells = im_df.cell.unique()[order]
+            len_trace = len(im_df.mean_trace.values[0])
+            response_array = np.empty((len(cells), len_trace))
+            for x, cell in enumerate(cells):
+                tmp = im_df[im_df.cell == cell]
+                if len(tmp) >= 1:
+                    trace = tmp.mean_trace.values[0]
+                else:
+                    trace = np.empty((len_trace))
+                    trace[:] = np.nan
+                response_array[x, :] = trace
 
-        sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=False)
-        xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1)
-        ax[i].set_xticks(xticks)
-        ax[i].set_xticklabels([int(x) for x in xticklabels])
-        ax[i].set_yticks(np.arange(0, response_array.shape[0], 10))
-        ax[i].set_yticklabels(np.arange(0, response_array.shape[0], 10))
-        ax[i].set_xlabel('time after change (s)', fontsize=16)
-        ax[i].set_title(condition_value)
-        ax[0].set_ylabel('cells')
+            sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=False)
+            xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1)
+            ax[i].set_xticks(xticks)
+            ax[i].set_xticklabels([int(x) for x in xticklabels])
+            ax[i].set_yticks(np.arange(0, response_array.shape[0], 10))
+            ax[i].set_yticklabels(np.arange(0, response_array.shape[0], 10))
+            ax[i].set_xlabel('time after change (s)', fontsize=16)
+            ax[i].set_title(condition_value)
+            ax[0].set_ylabel('cells')
 
     if save_dir:
         fig.tight_layout()
