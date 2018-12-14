@@ -35,11 +35,11 @@ def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate)
 
 
 def get_mean_in_window(trace, window, frame_rate):
-    return np.nanmean(trace[np.round(window[0] * frame_rate): int(window[1] * frame_rate)]) #modified 181212
+    return np.nanmean(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]) #modified 181212
 
 
 def get_sd_in_window(trace, window, frame_rate):
-    return np.std(trace[np.round(window[0] * frame_rate): int(window[1] * frame_rate)]) #modified 181212
+    return np.std(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]) #modified 181212
 
 
 def get_sd_over_baseline(trace, response_window, baseline_window, frame_rate):

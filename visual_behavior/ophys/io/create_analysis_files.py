@@ -22,8 +22,8 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
 
     logger.info('plotting experiment summary figure')
-    esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
-    esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
+    esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir, use_events=use_events)
+    esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir, use_events=use_events)
 
     logger.info('plotting cell responses')
     save_dir = os.path.join(cache_dir, 'summary_figures')
@@ -36,8 +36,8 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
 
         logger.info('plotting experiment summary figure')
-        esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
-        esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
+        esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir, use_events=use_events)
+        esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir, use_events=use_events)
 
         logger.info('plotting cell responses')
         save_dir = os.path.join(cache_dir, 'summary_figures')

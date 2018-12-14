@@ -240,6 +240,7 @@ class ResponseAnalysis(object):
         # flash_response_df = pd.merge(flash_response_df, tmp[['change_time',
         #                             'lick_times', 'reward_times']], on='change_time', how='outer')
         flash_response_df = flash_response_df[(flash_response_df.flash_number>10)&(flash_response_df.trial_type!='autorewarded')]
+        flash_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in flash_response_df.reward_rate.values]
 
         return flash_response_df
 

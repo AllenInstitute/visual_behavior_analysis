@@ -154,11 +154,11 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
         figsize = (5, 8)
         fig, ax = plt.subplots(figsize=figsize)
     if use_events:
-        vmax = 0.03
+        vmax = 0.05
         label = 'mean event magnitude'
         suffix = '_events'
     else:
-        vmax = 0.3
+        vmax = 0.5
         label = 'mean dF/F'
         suffix = ''
     ax = sns.heatmap(response_matrix, cmap='magma', linewidths=0, linecolor='white', square=False,
@@ -181,10 +181,10 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
 def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['go', 'catch'], ax=None, save_dir=None, use_events=False):
     data = mean_df[mean_df.pref_stim == True].copy()
     if use_events:
-        vmax = 0.03
+        vmax = 0.05
         suffix = '_events'
     else:
-        vmax = 0.3
+        vmax = 0.5
         suffix = ''
     if ax is None:
         figsize = (3 * len(condition_values), 6)
@@ -282,10 +282,10 @@ def format_table_data(dataset):
 
 def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
     if use_events:
-        traces = analysis.dataset.events
+        traces = analysis.dataset.events.copy()
         suffix = '_events'
     else:
-        traces = analysis.dataset.dff_traces
+        traces = analysis.dataset.dff_traces.copy()
         suffix = '_events'
 
     interval_seconds = 600
