@@ -35,11 +35,11 @@ def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate)
 
 
 def get_mean_in_window(trace, window, frame_rate):
-    return np.nanmean(trace[np.round(window[0] * frame_rate): np.abs(window[1] * frame_rate)]) #modified 181212
+    return np.nanmean(trace[np.round(window[0] * frame_rate): int(window[1] * frame_rate)]) #modified 181212
 
 
 def get_sd_in_window(trace, window, frame_rate):
-    return np.std(trace[np.round(window[0] * frame_rate): np.abs(window[1] * frame_rate)]) #modified 181212
+    return np.std(trace[np.round(window[0] * frame_rate): int(window[1] * frame_rate)]) #modified 181212
 
 
 def get_sd_over_baseline(trace, response_window, baseline_window, frame_rate):
@@ -90,8 +90,8 @@ def get_fraction_responsive_trials(group):
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
 
-def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name'], flashes=False):
-    rdf = trial_response_df.copy()
+def get_mean_df(response_df, conditions=['cell', 'change_image_name'], flashes=False):
+    rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
