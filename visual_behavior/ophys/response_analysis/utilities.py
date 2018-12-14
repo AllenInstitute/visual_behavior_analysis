@@ -13,8 +13,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_nearest_frame(timepoint, timestamps):
-    return int(np.nanargmin(abs(timestamps - timepoint)))
+# def get_nearest_frame(timepoint, timestamps):
+#     return int(np.nanargmin(abs(timestamps - timepoint)))
+
+#modified 181212
+def get_nearest_frame(timepoint, timestamps, timepoint_must_be_before=True):
+    nearest_frame = int(np.nanargmin(abs(timestamps - timepoint)))
+    nearest_timepoint = timestamps[nearest_frame]
+    if nearest_timepoint>timepoint == False: #nearest frame time must be greater than provided timepoint
+        nearest_frame = nearest_frame-1 #use previous frame to ensure nearest follows input timepoint
+    return nearest_frame
 
 
 def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate):
@@ -27,11 +35,11 @@ def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate)
 
 
 def get_mean_in_window(trace, window, frame_rate):
-    return np.nanmean(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])
+    return np.nanmean(trace[np.round(window[0] * frame_rate): np.abs(window[1] * frame_rate)]) #modified 181212
 
 
 def get_sd_in_window(trace, window, frame_rate):
-    return np.std(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])
+    return np.std(trace[np.round(window[0] * frame_rate): np.abs(window[1] * frame_rate)]) #modified 181212
 
 
 def get_sd_over_baseline(trace, response_window, baseline_window, frame_rate):
@@ -57,11 +65,13 @@ def ptest(x, num_conditions):
 
 def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
+    mean_responses = group['mean_response'].values
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
     mean_trace = np.mean(group['trace'])
     sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
-                      'mean_trace': mean_trace, 'sem_trace': sem_trace})
+                      'mean_trace': mean_trace, 'sem_trace': sem_trace,
+                      'mean_responses': mean_responses})
 
 
 def get_mean_sem(group):
@@ -76,17 +86,17 @@ def get_fraction_significant_trials(group):
 
 
 def get_fraction_responsive_trials(group):
-    fraction_responsive_trials = len(group[group.mean_response > 0.1]) / float(len(group))
+    fraction_responsive_trials = len(group[group.mean_response > 0.05]) / float(len(group))
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
 
-def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
+def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name'], flashes=False):
     rdf = trial_response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
-    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
+    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
     mdf = mdf.reset_index()
-    mdf = annotate_mean_df_with_pref_stim(mdf)
+    mdf = annotate_mean_df_with_pref_stim(mdf, flashes=flashes)
 
     fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
     fraction_significant_trials = fraction_significant_trials.reset_index()
