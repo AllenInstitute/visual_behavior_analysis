@@ -108,23 +108,31 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
         save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
 
 
-def plot_traces_heatmap(dff_traces, ax=None, save_dir=None):
+def plot_traces_heatmap(traces, ax=None, save_dir=None, use_events=False):
+    if use_events:
+        vmax = 0.03
+        label = 'event magnitude'
+        suffix = '_events'
+    else:
+        vmax = np.percentile(traces, 99)
+        label = 'dF/F'
+        suffix = ''
     if ax is None:
         figsize = (20, 8)
         fig, ax = plt.subplots(figsize=figsize)
-    cax = ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=np.percentile(dff_traces, 99))
-    ax.set_ylim(0, dff_traces.shape[0])
-    ax.set_xlim(0, dff_traces.shape[1])
+    cax = ax.pcolormesh(traces, cmap='magma', vmin=0, vmax=vmax)
+    ax.set_ylim(0, traces.shape[0])
+    ax.set_xlim(0, traces.shape[1])
     ax.set_ylabel('cells')
     ax.set_xlabel('2P frames')
     cb = plt.colorbar(cax, pad=0.015)
-    cb.set_label('dF/F', labelpad=3)
+    cb.set_label(label, labelpad=3)
     if save_dir:
-        save_figure(fig, figsize, save_dir, 'experiment_summary', 'traces_heatmap')
+        save_figure(fig, figsize, save_dir, 'experiment_summary', 'traces_heatmap'+suffix)
     return ax
 
 
-def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None):
+def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None, use_events=False):
     df = mean_df.copy()
     images = np.sort(df.change_image_name.unique())
     cell_list = []
@@ -145,9 +153,17 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
     if ax is None:
         figsize = (5, 8)
         fig, ax = plt.subplots(figsize=figsize)
+    if use_events:
+        vmax = 0.03
+        label = 'mean event magnitude'
+        suffix = '_events'
+    else:
+        vmax = 0.3
+        label = 'mean dF/F'
+        suffix = ''
     ax = sns.heatmap(response_matrix, cmap='magma', linewidths=0, linecolor='white', square=False,
-                     vmin=0, vmax=0.3, robust=True,
-                     cbar_kws={"drawedges": False, "shrink": 1, "label": "mean dF/F"}, ax=ax)
+                     vmin=0, vmax=vmax, robust=True,
+                     cbar_kws={"drawedges": False, "shrink": 1, "label": label}, ax=ax)
 
     if title is None:
         title = 'mean response by image'
@@ -159,12 +175,17 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
     ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval))
     if save_dir:
         fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_image_response_heatmap')
+        save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_image_response_heatmap'+suffix)
 
 
-def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['go', 'catch'], ax=None, save_dir=None):
+def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['go', 'catch'], ax=None, save_dir=None, use_events=False):
     data = mean_df[mean_df.pref_stim == True].copy()
-    vmax = 0.5
+    if use_events:
+        vmax = 0.03
+        suffix = '_events'
+    else:
+        vmax = 0.3
+        suffix = ''
     if ax is None:
         figsize = (3 * len(condition_values), 6)
         fig, ax = plt.subplots(1, len(condition_values), figsize=figsize, sharey=True)
@@ -198,7 +219,7 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
 
     if save_dir:
         fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_trace_heatmap_' + condition)
+        save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_trace_heatmap_' + condition + suffix)
 
 
 def get_upper_limit_and_intervals(dff_traces, timestamps_ophys):
@@ -259,7 +280,14 @@ def format_table_data(dataset):
     return table_data
 
 
-def plot_experiment_summary_figure(analysis, save_dir=None):
+def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
+    if use_events:
+        traces = analysis.dataset.events
+        suffix = '_events'
+    else:
+        traces = analysis.dataset.dff_traces
+        suffix = '_events'
+
     interval_seconds = 600
     ophys_frame_rate = 31
 
@@ -277,11 +305,11 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.set_title(analysis.dataset.experiment_id)
     ax.axis('off')
 
-    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(analysis.dataset.dff_traces,
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces,
                                                                                analysis.dataset.timestamps_ophys)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.9), yspan=(0, .3))
-    ax = plot_traces_heatmap(analysis.dataset.dff_traces, ax=ax)
+    ax = plot_traces_heatmap(traces, ax=ax, use_events=use_events)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
@@ -307,17 +335,17 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     mdf = ut.get_mean_df(analysis.trial_response_df,
                          conditions=['cell', 'change_image_name', 'behavioral_response_type'])
     ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
-                                 condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None)
+                                 condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None, use_events=use_events)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
     mdf = ut.get_mean_df(analysis.trial_response_df, conditions=['cell', 'change_image_name'])
-    ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None)
+    ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None, use_events=use_events)
 
     fig.tight_layout()
 
     if save_dir:
         fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder)
+        save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder+suffix)
 
 
 def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=None):

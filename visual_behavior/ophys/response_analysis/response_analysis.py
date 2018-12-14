@@ -32,8 +32,9 @@ class ResponseAnalysis(object):
     If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
     """
 
-    def __init__(self, dataset, overwrite_analysis_files=False):
+    def __init__(self, dataset, overwrite_analysis_files=False, use_events=False):
         self.dataset = dataset
+        self.use_events = use_events
         self.overwrite_analysis_files = overwrite_analysis_files
         self.trial_window = [-4, 4]  # time, in seconds, around change time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
@@ -49,7 +50,10 @@ class ResponseAnalysis(object):
         self.get_flash_response_df()
 
     def get_trial_response_df_path(self):
-        path = os.path.join(self.dataset.analysis_dir, 'trial_response_df.h5')
+        if self.use_events:
+            path = os.path.join(self.dataset.analysis_dir, 'trial_response_df_events.h5')
+        else:
+            path = os.path.join(self.dataset.analysis_dir, 'trial_response_df.h5')
         return path
 
     def generate_trial_response_df(self):
@@ -61,7 +65,10 @@ class ResponseAnalysis(object):
                 cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
                 change_time = self.dataset.trials[self.dataset.trials.trial == trial].change_time.values[0]
                 # get dF/F trace & metrics
-                cell_trace = self.dataset.dff_traces[cell_index, :]
+                if self.use_events:
+                    cell_trace = self.dataset.events[cell_index, :]
+                else:
+                    cell_trace = self.dataset.dff_traces[cell_index, :]
                 trace, timestamps = ut.get_trace_around_timepoint(change_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
                                                                   self.trial_window, self.ophys_frame_rate)
@@ -70,24 +77,24 @@ class ResponseAnalysis(object):
                 p_value = ut.get_p_val(trace, self.response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(trace, self.response_window, self.baseline_window,
                                                            self.ophys_frame_rate)
-                # get events and metrics
-                if self.dataset.events is not None:
-                    event_trace = self.dataset.events[cell_index, :]
-                    events, timestamps = ut.get_trace_around_timepoint(change_time, event_trace,
-                                                                       self.dataset.timestamps_ophys, self.trial_window,
-                                                                       self.ophys_frame_rate)
-                    mean_response_events = ut.get_mean_in_window(events, self.response_window, self.ophys_frame_rate)
-                    baseline_response_events = ut.get_mean_in_window(events, self.baseline_window,
-                                                                     self.ophys_frame_rate)
-                    p_value_events = ut.get_p_val(events, self.response_window, self.ophys_frame_rate)
-                    sd_over_baseline_events = ut.get_sd_over_baseline(events, self.response_window,
-                                                                      self.baseline_window, self.ophys_frame_rate)
-                else:
-                    events = None
-                    mean_response_events = None
-                    baseline_response_events = None
-                    p_value_events = None
-                    sd_over_baseline_events = None
+                # # get events and metrics
+                # if self.dataset.events is not None:
+                #     event_trace = self.dataset.events[cell_index, :]
+                #     events, timestamps = ut.get_trace_around_timepoint(change_time, event_trace,
+                #                                                        self.dataset.timestamps_ophys, self.trial_window,
+                #                                                        self.ophys_frame_rate)
+                #     mean_response_events = ut.get_mean_in_window(events, self.response_window, self.ophys_frame_rate)
+                #     baseline_response_events = ut.get_mean_in_window(events, self.baseline_window,
+                #                                                      self.ophys_frame_rate)
+                #     p_value_events = ut.get_p_val(events, self.response_window, self.ophys_frame_rate)
+                #     sd_over_baseline_events = ut.get_sd_over_baseline(events, self.response_window,
+                #                                                       self.baseline_window, self.ophys_frame_rate)
+                # else:
+                #     events = None
+                #     mean_response_events = None
+                #     baseline_response_events = None
+                #     p_value_events = None
+                #     sd_over_baseline_events = None
 
                 # this is redundant because its the same for every cell. do we want to keep this?
                 running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(change_time,
@@ -98,18 +105,27 @@ class ResponseAnalysis(object):
                 mean_running_speed = ut.get_mean_in_window(running_speed_trace, self.response_window,
                                                            self.stimulus_frame_rate)
 
+        #         df_list.append(
+        #             [trial, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response,
+        #              p_value, sd_over_baseline,
+        #              events, mean_response_events, baseline_response_events, p_value_events, sd_over_baseline_events,
+        #              running_speed_trace, running_speed_timestamps,
+        #              mean_running_speed, self.dataset.experiment_id])
+        #
+        # columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
+        #            'p_value', 'sd_over_baseline',
+        #            'events', 'mean_response_events', 'baseline_response_events', 'p_value_events',
+        #            'sd_over_baseline_events',
+        #            'running_speed_trace', 'running_speed_timestamps',
+        #            'mean_running_speed', 'experiment_id']
+
                 df_list.append(
                     [trial, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response,
-                     p_value, sd_over_baseline,
-                     events, mean_response_events, baseline_response_events, p_value_events, sd_over_baseline_events,
-                     running_speed_trace, running_speed_timestamps,
+                     p_value, sd_over_baseline, running_speed_trace, running_speed_timestamps,
                      mean_running_speed, self.dataset.experiment_id])
 
         columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
-                   'p_value', 'sd_over_baseline',
-                   'events', 'mean_response_events', 'baseline_response_events', 'p_value_events',
-                   'sd_over_baseline_events',
-                   'running_speed_trace', 'running_speed_timestamps',
+                   'p_value', 'sd_over_baseline', 'running_speed_trace', 'running_speed_timestamps',
                    'mean_running_speed', 'experiment_id']
         trial_response_df = pd.DataFrame(df_list, columns=columns)
         trial_metadata = self.dataset.trials
@@ -140,36 +156,91 @@ class ResponseAnalysis(object):
         return self.trial_response_df
 
     def get_flash_response_df_path(self):
-        path = os.path.join(self.dataset.analysis_dir, 'flash_response_df.h5')
+        if self.use_events:
+            path = os.path.join(self.dataset.analysis_dir, 'flash_response_df_events.h5')
+        else:
+            path = os.path.join(self.dataset.analysis_dir, 'flash_response_df.h5')
         return path
 
     def generate_flash_response_df(self):
         stimulus_table = ut.annotate_flashes_with_reward_rate(self.dataset)
         row = []
-        for cell in range(self.dataset.dff_traces.shape[0]):
+        for cell in self.dataset.cell_indices:
             cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell)
+            if self.use_events:
+                cell_trace = self.dataset.events[cell,:]
+            else:
+                cell_trace = self.dataset.dff_traces[cell,:]
             for flash in stimulus_table.flash_number:
                 flash_data = stimulus_table[stimulus_table.flash_number == flash]
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
-                trace_window = [-self.response_window_duration, self.response_window_duration]
-                trace, timestamps = ut.get_trace_around_timepoint(flash_time, self.dataset.dff_traces[cell],
+                flash_window = [-self.response_window_duration, self.response_window_duration]
+                trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
-                                                                  trace_window, self.ophys_frame_rate)
-                response_window = [self.response_window_duration, self.response_window_duration * 2]
+                                                                  flash_window, self.ophys_frame_rate)
+                # response_window = [self.response_window_duration, self.response_window_duration * 2]
+                response_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
+                baseline_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) - self.response_window_duration]
                 p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
+                sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
+                                                                  baseline_window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate)
+                baseline_response = ut.get_mean_in_window(trace, baseline_window,
+                                                                 self.ophys_frame_rate)
                 reward_rate = flash_data.reward_rate.values[0]
 
-                row.append([cell, cell_specimen_id, flash, flash_time, image_name, mean_response, p_value, reward_rate,
-                            self.dataset.experiment_id])
+                row.append([cell, cell_specimen_id, flash, flash_time, image_name, trace, timestamps, mean_response,
+                            baseline_response, p_value, sd_over_baseline, reward_rate, self.dataset.experiment_id])
+
+                # # get events and metrics
+                # if self.dataset.events is not None:
+                #     event_trace = self.dataset.events[cell, :]
+                #     events, timestamps = ut.get_trace_around_timepoint(flash_time, event_trace,
+                #                                                        self.dataset.timestamps_ophys, flash_window,
+                #                                                        self.ophys_frame_rate)
+                #     mean_response_events = ut.get_mean_in_window(events, flash_window, self.ophys_frame_rate)
+                #     baseline_response_events = ut.get_mean_in_window(events, baseline_window,
+                #                                                      self.ophys_frame_rate)
+                #     p_value_events = ut.get_p_val(events, response_window, self.ophys_frame_rate)
+                #     sd_over_baseline_events = ut.get_sd_over_baseline(events, flash_window,
+                #                                                       baseline_window, self.ophys_frame_rate)
+                # else:
+                #     event_trace = None
+                #     mean_response_events = None
+                #     baseline_response_events = None
+                #     p_value_events = None
+                #     sd_over_baseline_events = None
+
+        #         row.append([cell, cell_specimen_id, flash, flash_time, image_name, trace, timestamps, mean_response, baseline_response,
+        #                                           p_value, sd_over_baseline, event_trace, mean_response_events, baseline_response_events,
+        #                                           p_value_events, sd_over_baseline_events, reward_rate, self.dataset.experiment_id])
+        # flash_response_df = pd.DataFrame(data=row,
+        #                                  columns=['cell', 'cell_specimen_id', 'flash_number', 'start_time',
+        #                                           'image_name', 'trace', 'timestamps','mean_response', 'baseline_response',
+        #                                           'p_value', 'sd_over_baseline', 'event_trace',
+        #                                           'mean_response_events', 'baseline_response_events',
+        #                                           'p_value_events', 'sd_over_baseline_events',
+        #                                           'reward_rate', 'experiment_id'])
+
         flash_response_df = pd.DataFrame(data=row,
                                          columns=['cell', 'cell_specimen_id', 'flash_number', 'start_time',
-                                                  'image_name', 'mean_response',
-                                                  'p_value', 'reward_rate', 'experiment_id'])
+                                                  'image_name', 'trace', 'timestamps', 'mean_response',
+                                                  'baseline_response', 'p_value', 'sd_over_baseline',
+                                                  'reward_rate', 'experiment_id'])
         flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
         flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
+
+        flash_response_df['change_time'] = flash_response_df.start_time.values
+        flash_response_df = pd.merge(flash_response_df, self.dataset.all_trials[['change_time', 'trial_type']],
+                                     on='change_time', how='outer')
+
+        # tmp = self.trial_response_df[self.trial_response_df.cell == 0]
+        # flash_response_df = pd.merge(flash_response_df, tmp[['change_time',
+        #                             'lick_times', 'reward_times']], on='change_time', how='outer')
+        flash_response_df = flash_response_df[(flash_response_df.flash_number>10)&(flash_response_df.trial_type!='autorewarded')]
+
         return flash_response_df
 
     def save_flash_response_df(self, flash_response_df):
