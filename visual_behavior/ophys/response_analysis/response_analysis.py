@@ -61,14 +61,14 @@ class ResponseAnalysis(object):
         running_speed = self.dataset.running_speed.running_speed.values
         df_list = []
         for cell_index in self.dataset.cell_indices:
+            if self.use_events:
+                cell_trace = self.dataset.events[cell_index, :]
+            else:
+                cell_trace = self.dataset.dff_traces[cell_index, :]
             for trial in self.dataset.trials.trial.values[:-1]:  # ignore last trial to avoid truncated traces
                 cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
                 change_time = self.dataset.trials[self.dataset.trials.trial == trial].change_time.values[0]
                 # get dF/F trace & metrics
-                if self.use_events:
-                    cell_trace = self.dataset.events[cell_index, :]
-                else:
-                    cell_trace = self.dataset.dff_traces[cell_index, :]
                 trace, timestamps = ut.get_trace_around_timepoint(change_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
                                                                   self.trial_window, self.ophys_frame_rate)

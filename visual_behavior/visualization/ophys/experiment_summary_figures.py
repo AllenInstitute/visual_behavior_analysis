@@ -154,7 +154,7 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
         figsize = (5, 8)
         fig, ax = plt.subplots(figsize=figsize)
     if use_events:
-        vmax = 0.05
+        vmax = 0.03
         label = 'mean event magnitude'
         suffix = '_events'
     else:
@@ -181,7 +181,7 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
 def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['go', 'catch'], ax=None, save_dir=None, use_events=False):
     data = mean_df[mean_df.pref_stim == True].copy()
     if use_events:
-        vmax = 0.05
+        vmax = 0.03
         suffix = '_events'
     else:
         vmax = 0.5
@@ -286,7 +286,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
         suffix = '_events'
     else:
         traces = analysis.dataset.dff_traces.copy()
-        suffix = '_events'
+        suffix = ''
 
     interval_seconds = 600
     ophys_frame_rate = 31
