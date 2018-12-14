@@ -158,7 +158,7 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
         label = 'mean event magnitude'
         suffix = '_events'
     else:
-        vmax = 0.5
+        vmax = 0.3
         label = 'mean dF/F'
         suffix = ''
     ax = sns.heatmap(response_matrix, cmap='magma', linewidths=0, linecolor='white', square=False,
