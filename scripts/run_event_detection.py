@@ -34,6 +34,7 @@ from pbstools import PythonJob # flake8: noqa: E999
 #        775458588, 776042634, 778056266, 778427011]
 
 lims_ids = [737471012, 745637183, 775011398, 775429615, 776042634]
+lims_ids = [737471012]
 
 
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/event_detection.py"
