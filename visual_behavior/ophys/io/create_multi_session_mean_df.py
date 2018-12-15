@@ -64,10 +64,10 @@ if __name__ == '__main__':
     # experiment_ids = manifest.experiment_id.values
     experiment_ids = [639253368, 639438856, 639769395, 639932228, 644942849, 645035903]
 
-    get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
-    get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'])
+    # get_multi_session_mean_df(experiment_ids, cache_dir,
+    #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
+    # get_multi_session_mean_df(experiment_ids, cache_dir,
+    #                           conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'])
     get_multi_session_mean_df(experiment_ids, cache_dir,
                               conditions=['cell_specimen_id', 'change_image_name', 'trial_type'], use_events=True)
     get_multi_session_mean_df(experiment_ids, cache_dir,
