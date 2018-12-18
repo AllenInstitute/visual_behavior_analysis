@@ -9,23 +9,23 @@ from visual_behavior.visualization.ophys import summary_figures as sf
 import logging
 import os
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
-    logger.info(experiment_id)
+    # logger.info(experiment_id)
     print(experiment_id)
-    logger.info('saving ', str(experiment_id), 'to', cache_dir)
+    print('saving ', str(experiment_id), 'to', cache_dir)
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
 
     use_events = False
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
 
-    logger.info('plotting experiment summary figure')
+    print('plotting experiment summary figure')
     esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir, use_events=use_events)
     esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir, use_events=use_events)
 
-    logger.info('plotting cell responses')
+    print('plotting cell responses')
     save_dir = os.path.join(cache_dir, 'summary_figures')
     for cell in dataset.get_cell_indices():
         sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir, use_events=use_events)
@@ -35,11 +35,11 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         use_events = True
         analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
 
-        logger.info('plotting experiment summary figure')
+        print('plotting experiment summary figure')
         esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir, use_events=use_events)
         esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir, use_events=use_events)
 
-        logger.info('plotting cell responses')
+        print('plotting cell responses')
         save_dir = os.path.join(cache_dir, 'summary_figures')
         for cell in dataset.get_cell_indices():
             sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir,
