@@ -76,7 +76,7 @@ def reward_lick_latency(session_trials):
 def total_water(session_trials, trial_types=()):
     mask = masks.trial_types(session_trials, trial_types)
 
-    return session_trials[mask][(session_trials['reward_times'].map(len) > 0)]['reward_volume'].sum()
+    return session_trials[mask]['reward_volume'].sum()
 
 
 def earned_water(session_trials):
