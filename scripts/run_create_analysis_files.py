@@ -55,6 +55,7 @@ lims_ids = [639253368, 639438856, 639769395, 639932228, 644942849, 645035903,
 #        779335436, 775614735, 775614751, 774991640]
 #
 
+lims_ids = [730863840, 737471012, 775011398, 775429615, 776042634]
 
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_analysis_files.py"
 
