@@ -6,7 +6,7 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.visualization.ophys import experiment_summary_figures as esf
 from visual_behavior.visualization.ophys import summary_figures as sf
 
-import logging
+# import logging
 import os
 
 # logger = logging.getLogger(__name__)
