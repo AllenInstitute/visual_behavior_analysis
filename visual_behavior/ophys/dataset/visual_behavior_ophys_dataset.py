@@ -258,9 +258,9 @@ class VisualBehaviorOphysDataset(object):
     def get_roi_mask_array(self):
         w, h = self.roi_mask_dict[self.roi_mask_dict.keys()[0]].shape
         roi_mask_array = np.empty((len(self.roi_mask_dict.keys()), w, h))
-        for cell_specimen_id in self.roi_mask_dict.keys():
+        for cell_specimen_id in self.cell_specimen_ids:
             cell_index = self.get_cell_index_for_cell_specimen_id(int(cell_specimen_id))
-            roi_mask_array[cell_index] = self.roi_mask_dict[cell_specimen_id]
+            roi_mask_array[cell_index] = self.roi_mask_dict[str(cell_specimen_id)]
         self._roi_mask_array = roi_mask_array
         return self._roi_mask_array
 
