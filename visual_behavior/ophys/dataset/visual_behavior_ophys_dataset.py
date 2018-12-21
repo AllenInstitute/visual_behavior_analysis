@@ -242,7 +242,6 @@ class VisualBehaviorOphysDataset(object):
     def get_roi_metrics(self):
         self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
         return self._roi_metrics
-
     roi_metrics = LazyLoadable('_roi_metrics', get_roi_metrics)
 
     def get_roi_mask_dict(self):

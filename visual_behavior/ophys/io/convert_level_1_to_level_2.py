@@ -81,7 +81,7 @@ def get_analysis_folder_name(lims_data):
     analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
                            lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
-                           lims_data.specimen_driver_line.values[0].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
+                           lims_data.specimen_driver_line.values[0].split(';')[1].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
                            lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E127
     return analysis_folder_name
 
@@ -267,7 +267,7 @@ def get_metadata(lims_data, timestamps):
     metadata['imaging_depth'] = int(lims_data.depth.values[0])
     metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
     if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
-        metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[1] + ';' + \
+        metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0] + ';' + \
                                     lims_data['specimen_reporter_line'].values[0].split('(')[0]  # NOQA: E126
     else:
         metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0].split('(')[0]
