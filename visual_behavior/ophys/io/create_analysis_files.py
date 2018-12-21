@@ -79,4 +79,4 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         # sf.plot_mean_response_by_repeat(analysis, cell, save_dir=save_dir)
         # sf.plot_mean_response_by_image_block(analysis, cell, save_dir=save_dir)
 
-    logger.info('done')
+    # logger.info('done')
