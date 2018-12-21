@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 
 from visual_behavior.ophys.io.create_analysis_files import create_analysis_files
 
