@@ -282,6 +282,34 @@ def format_table_data(dataset):
     return table_data
 
 
+def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, cmap='RdBu', ax=None, save=False, colorbar=False):
+    # roi_dict = dataset.roi_dict.copy()
+    roi_mask_array = dataset.roi_mask_array.copy()
+    if cmap == 'hls':
+        from matplotlib.colors import ListedColormap
+        cmap = ListedColormap(sns.color_palette('hls',8))
+    if ax is None:
+        figsize = (10, 10)
+        fig, ax = plt.subplots(figsize=figsize)
+    if max_image is True:
+        ax.imshow(dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(dataset.max_projection))
+    for roi in cell_list:
+        tmp = roi_mask_array[roi,:,:].copy()
+        mask = np.empty(tmp.shape, dtype=np.float)
+        mask[:] = np.nan
+        mask[tmp == 1] = metrics[roi]
+        cax = ax.imshow(mask, cmap=cmap, alpha=0.5, vmin=np.amin(metrics), vmax=np.amax(metrics))
+        ax.set_title(metric_name)
+        ax.grid(False)
+        ax.axis('off')
+    if colorbar:
+        plt.colorbar(cax, ax=ax, )
+    if save:
+        plt.tight_layout()
+        sf.save_figure(fig, figsize, dataset.analysis_dir, fig_title=metric_name, folder='experiment_summary')
+    return ax
+
+
 def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
     if use_events:
         traces = analysis.dataset.events.copy()
@@ -303,7 +331,13 @@ def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
     ax.axis('off')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .22), yspan=(0, .27))
-    ax.imshow(analysis.dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(analysis.dataset.max_projection) / 2.)
+    # metrics = dataset.cell_indices
+    metrics = np.empty(len(analysis.dataset.cell_indices))
+    metrics[:] = -1
+    cell_list = analysis.dataset.cell_indices
+    plot_metrics_mask(analysis.dataset, metrics, cell_list, 'cell masks', max_image=True, cmap='hls', ax=ax, save=False,
+                      colorbar=False)
+    # ax.imshow(analysis.dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(analysis.dataset.max_projection))
     ax.set_title(analysis.dataset.experiment_id)
     ax.axis('off')
 
@@ -401,3 +435,22 @@ def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=N
         fig.tight_layout()
         save_figure(fig, figsize, save_dir, 'first_flash_by_image_block_set', analysis_folder)
     return ax
+
+def plot_roi_masks(dataset, save_dir):
+    figsize = (20,10)
+    fig, ax = plt.subplots(1,2, figsize=figsize)
+    ax = ax.ravel()
+
+    ax[0].imshow(dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(dataset.max_projection))
+    ax[0].axis('off')
+    ax[0].set_title('max intensity projection')
+
+    metrics = np.empty(len(dataset.cell_indices))
+    metrics[:] = -1
+    cell_list = dataset.cell_indices
+    plot_metrics_mask(dataset, metrics, cell_list, 'roi masks', max_image=True, cmap='hls', ax=ax[1], save=False,
+                      colorbar=False)
+
+    plt.suptitle(dataset.analysis_folder, fontsize=16,  x=0.5, y=1., horizontalalignment='center')
+    save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', dataset.analysis_folder+'_roi_masks')
+    save_figure(fig, figsize, save_dir, 'roi_masks', dataset.analysis_folder+'_roi_masks')
