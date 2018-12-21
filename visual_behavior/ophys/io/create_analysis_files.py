@@ -24,12 +24,13 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     print('plotting experiment summary figure')
     esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir, use_events=use_events)
     esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir, use_events=use_events)
+    esf.plot_roi_masks(dataset, save_dir=cache_dir)
 
     print('plotting cell responses')
     save_dir = os.path.join(cache_dir, 'summary_figures')
-    for cell in dataset.get_cell_indices():
-        sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir, use_events=use_events)
-        sf.plot_image_response_for_trial_types(analysis, cell, save_dir=save_dir, use_events=use_events)
+    # for cell in dataset.get_cell_indices():
+    #     sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir, use_events=use_events)
+    #     sf.plot_image_response_for_trial_types(analysis, cell, save_dir=save_dir, use_events=use_events)
 
     if dataset.events is not None:
         use_events = True
@@ -39,12 +40,12 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir, use_events=use_events)
         esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir, use_events=use_events)
 
-        print('plotting cell responses')
-        save_dir = os.path.join(cache_dir, 'summary_figures')
-        for cell in dataset.get_cell_indices():
-            sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir,
-                                                   use_events=use_events)
-            sf.plot_image_response_for_trial_types(analysis, cell, save_dir=save_dir, use_events=use_events)
+        # print('plotting cell responses')
+        # save_dir = os.path.join(cache_dir, 'summary_figures')
+        # for cell in dataset.get_cell_indices():
+        #     sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir,
+        #                                            use_events=use_events)
+        #     sf.plot_image_response_for_trial_types(analysis, cell, save_dir=save_dir, use_events=use_events)
     else:
         print('no events for',experiment_id)
 
