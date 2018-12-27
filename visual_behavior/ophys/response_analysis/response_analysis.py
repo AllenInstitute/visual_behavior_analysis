@@ -37,6 +37,7 @@ class ResponseAnalysis(object):
         self.use_events = use_events
         self.overwrite_analysis_files = overwrite_analysis_files
         self.trial_window = [-4, 4]  # time, in seconds, around change time to extract portion of cell trace
+        self.flash_window = [-0.5, 0.5] # time, in seconds, around stimulus flash onset time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
         self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         self.baseline_window = np.asarray(
@@ -143,12 +144,14 @@ class ResponseAnalysis(object):
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
                 flash_window = [-self.response_window_duration, self.response_window_duration]
+                flash_window = self.flash_window
                 trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
                                                                   flash_window, self.ophys_frame_rate)
                 # response_window = [self.response_window_duration, self.response_window_duration * 2]
                 response_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
-                baseline_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) - self.response_window_duration]
+                baseline_window = [np.abs(flash_window[0]) - self.response_window_duration, (np.abs(flash_window[0]))]
+                # baseline_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) - self.response_window_duration]
                 p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
                                                                   baseline_window, self.ophys_frame_rate)

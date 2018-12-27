@@ -60,6 +60,7 @@ def get_sd_over_baseline(trace, response_window, baseline_window, frame_rate):
 
 
 def get_p_val(trace, response_window, frame_rate):
+    from scipy import stats
     response_window_duration = response_window[1] - response_window[0]
     baseline_end = int(response_window[0] * frame_rate)
     baseline_start = int((response_window[0] - response_window_duration) * frame_rate)
@@ -106,13 +107,17 @@ def get_fraction_nonzero_trials(group):
     return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
 
 
-def get_mean_df(response_df, conditions=['cell', 'change_image_name'], flashes=False):
+def get_mean_df(analysis, response_df, conditions=['cell', 'change_image_name'], flashes=False):
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
     mdf = mdf.reset_index()
     mdf = annotate_mean_df_with_pref_stim(mdf, flashes=flashes)
+    mdf = annotate_mean_df_with_p_value(analysis, mdf, flashes=flashes)
+    mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, flashes=flashes)
+    mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, flashes=flashes)
+    mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
 
     fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
     fraction_significant_trials = fraction_significant_trials.reset_index()
@@ -136,6 +141,82 @@ def add_metadata_to_mean_df(mdf, metadata):
     metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
     mdf = mdf.merge(metadata, how='outer', on='experiment_id')
     return mdf
+
+
+def get_time_to_peak(analysis, trace, flashes=False):
+    if flashes:
+        response_window_duration = analysis.response_window_duration
+        flash_window = [-response_window_duration, response_window_duration]
+        response_window = [flash_window[0] + response_window_duration, flash_window[1]]
+    else:
+        response_window = analysis.response_window
+    frame_rate = analysis.ophys_frame_rate
+    response_window_trace = trace[int(response_window[0]*frame_rate):(int(response_window[1]*frame_rate))]
+    peak_response = np.amax(response_window_trace)
+    peak_frames_from_response_window_start = np.where(response_window_trace == np.amax(response_window_trace))[0][0]
+    time_to_peak = peak_frames_from_response_window_start / float(frame_rate)
+    return peak_response, time_to_peak
+
+
+def annotate_mean_df_with_time_to_peak(analysis, mean_df, flashes=False):
+    ttp_list = []
+    peak_list = []
+    for idx in mean_df.index:
+        mean_trace = mean_df.iloc[idx].mean_trace
+        peak_response, time_to_peak = get_time_to_peak(analysis, mean_trace, flashes=flashes)
+        ttp_list.append(time_to_peak)
+        peak_list.append(peak_response)
+    mean_df['peak_response'] = peak_list
+    mean_df['time_to_peak'] = ttp_list
+    return mean_df
+
+
+def annotate_mean_df_with_fano_factor(analysis, mean_df):
+    ff_list = []
+    for idx in mean_df.index:
+        mean_responses = mean_df.iloc[idx].mean_responses
+        sd = np.std(mean_responses)
+        mean_response = np.mean(mean_responses)
+        fano_factor = (sd*2)/mean_response
+        ff_list.append(fano_factor)
+    mean_df['fano_factor'] = ff_list
+    return mean_df
+
+
+def annotate_mean_df_with_p_value(analysis, mean_df, flashes=False):
+    if flashes:
+        response_window_duration = analysis.response_window_duration
+        flash_window = [-response_window_duration, response_window_duration]
+        response_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) + response_window_duration]
+    else:
+        response_window = analysis.response_window
+    frame_rate = analysis.ophys_frame_rate
+    p_val_list = []
+    for idx in mean_df.index:
+        mean_trace = mean_df.iloc[idx].mean_trace
+        p_value = get_p_val(mean_trace, response_window, frame_rate)
+        p_val_list.append(p_value)
+    mean_df['p_value'] = p_val_list
+    return mean_df
+
+
+def annotate_mean_df_with_sd_over_baseline(analysis, mean_df, flashes=False):
+    if flashes:
+        response_window_duration = analysis.response_window_duration
+        flash_window = [-response_window_duration, response_window_duration]
+        response_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) + response_window_duration]
+        baseline_window = [np.abs(flash_window[0]) - response_window_duration, (np.abs(flash_window[0]))]
+    else:
+        response_window = analysis.response_window
+        baseline_window = analysis.baseline_window
+    frame_rate = analysis.ophys_frame_rate
+    sd_list = []
+    for idx in mean_df.index:
+        mean_trace = mean_df.iloc[idx].mean_trace
+        sd = get_sd_over_baseline(mean_trace, response_window, baseline_window, frame_rate)
+        sd_list.append(sd)
+    mean_df['sd_over_baseline'] = sd_list
+    return mean_df
 
 
 def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
@@ -366,3 +447,359 @@ def get_stimulus_df_for_ophys_times(stimulus_table, timestamps_ophys):
     stimulus_df.insert(loc=1, column='image', value=timestamps_df['image'])
     stimulus_df.insert(loc=0, column='ophys_frame', value=np.arange(0, len(timestamps_ophys), 1))
     return stimulus_df
+
+def compute_lifetime_sparseness(image_responses):
+    # image responses should be a list or array of the trial averaged responses to each image, for some condition (ex: go trials only, engaged/disengaged etc)
+    # sparseness = 1-(sum of trial averaged responses to images / N)squared / (sum of (squared mean responses / n)) / (1-(1/N))
+    # N = number of images
+    N = float(len(image_responses))
+    # modeled after Vinje & Gallant, 2000
+    # ls = (1 - (((np.sum(image_responses) / N) ** 2) / (np.sum(image_responses ** 2 / N)))) / (1 - (1 / N))
+    # emulated from https://github.com/AllenInstitute/visual_coding_2p_analysis/blob/master/visual_coding_2p_analysis/natural_scenes_events.py
+    # formulated similar to Froudarakis et al., 2014
+    ls = ((1-(1/N) * ((np.power(image_responses.sum(axis=0),2)) / (np.power(image_responses,2).sum(axis=0)))) / (1-(1/N)))
+
+    return ls
+
+
+def plot_ranked_image_tuning_curve_trial_types(analysis, cell, ax=None, save=False, use_events=False):
+    from scipy.stats import sem as compute_sem
+    from visual_behavior.ophys.response_analysis import utilities as ut
+    c = sns.color_palette()
+    colors = [c[3],c[0],c[2]]
+    ylabel, suffix = get_ylabel_and_suffix(use_events)
+    cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
+    tdf = ut.get_mean_df(analysis, analysis.trial_response_df,
+                         conditions = ['cell_specimen_id','change_image_name','trial_type'])
+    if ax is None:
+        figsize = (6,4)
+        fig,ax = plt.subplots(figsize=figsize)
+    ls_list = []
+    for t,trial_type in enumerate(['go','catch']):
+        tmp = tdf[(tdf.cell_specimen_id==cell_specimen_id)&(tdf.trial_type==trial_type)]
+        responses = tmp.mean_response.values
+        ls = ut.compute_lifetime_sparseness(responses)
+        ls_list.append(ls)
+        order = np.argsort(responses)[::-1]
+        images = tmp.change_image_name.unique()[order]
+        for i,image in enumerate(images):
+            means = tmp[tmp.change_image_name==image].mean_response.values[0]
+            sem = compute_sem(means)
+            ax.errorbar(i,np.mean(means),yerr=sem,color=colors[t])
+            ax.plot(i,np.mean(means),'o',color=colors[t])
+        ax.plot(i,np.mean(means),'o',color=colors[t],label=trial_type)
+#     ax.set_ylim(ymin=0)
+    ax.set_ylabel('mean '+ylabel)
+    ax.set_xticks(np.arange(0,len(responses),1))
+    ax.set_xticklabels(images,rotation=90);
+    ax.legend()
+    ax.set_title('lifetime sparseness go: '+str(np.round(ls_list[0],3))+'\nlifetime sparseness catch: '+str(np.round(ls_list[1],3)));
+    if save:
+        save_figure(fig,figsize,analysis.dataset.analysis_dir,'lifetime_sparseness'+suffix,'trial_types_tc_'+str(cell_specimen_id))
+    return ax
+
+def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=None, use_events=False):
+    from scipy.stats import sem as compute_sem
+    from visual_behavior.ophys.response_analysis import utilities as ut
+    c = sns.color_palette()
+    colors = [c[3],c[0],c[2]]
+    ylabel, suffix = get_ylabel_and_suffix(use_events)
+    cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
+    fdf = analysis.flash_response_df.copy()
+    fmdf = ut.get_mean_df(analysis, fdf, conditions = ['cell_specimen_id','image_name'], flashes=True)
+    if ax is None:
+        figsize = (6,4)
+        fig,ax = plt.subplots(figsize=figsize)
+    tmp = fdf[(fdf.cell_specimen_id==cell_specimen_id)]
+    responses = fmdf[(fmdf.cell_specimen_id==cell_specimen_id)].mean_response.values
+    ls = ut.compute_lifetime_sparseness(responses)
+    order = np.argsort(responses)[::-1]
+    images = fmdf[(fmdf.cell_specimen_id==cell_specimen_id)].image_name.values
+    images = images[order]
+    for i,image in enumerate(images):
+        means = tmp[tmp.image_name==image].mean_response.values
+        sem = compute_sem(means)
+        ax.errorbar(i,np.mean(means),yerr=sem,color=colors[1])
+        ax.plot(i,np.mean(means),'o',color=colors[1])
+        ax.plot(i,np.mean(means),'o',color=colors[1])
+#     ax.set_ylim(ymin=0)
+    ax.set_ylabel('mean dF/F')
+    ax.set_xticks(np.arange(0,len(responses),1))
+    ax.set_xticklabels(images,rotation=90);
+    ax.set_title('lifetime sparseness all flashes: '+str(np.round(ls,3)));
+    ax.legend()
+    if save:
+        save_figure(fig,figsize,save_dir,'lifetime_sparseness_flashes','roi_'+str(cell))
+    return ax
+
+def plot_ranked_image_tuning_curve_flashes(analysis, cell, ax=None, save=None, use_events=False):
+    from scipy.stats import sem as compute_sem
+    from visual_behavior.ophys.response_analysis import utilities as ut
+    c = sns.color_palette()
+    colors = [c[3],c[0],c[2]]
+    ylabel, suffix = get_ylabel_and_suffix(use_events)
+    cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
+    fdf = analysis.flash_response_df.copy()
+    repeats = [1,5,10]
+    fdf = fdf[fdf.repeat.isin(repeats)]
+    fmdf = ut.get_mean_df(analysis, fdf, conditions = ['cell_specimen_id','image_name','repeat'], flashes=True)
+    if ax is None:
+        figsize = (6,4)
+        fig,ax = plt.subplots(figsize=figsize)
+    ls_list = []
+    for r, repeat in enumerate(fmdf.repeat.unique()):
+        tmp = fdf[(fdf.cell_specimen_id==cell_specimen_id)&(fdf.repeat==repeat)]
+        responses = fmdf[(fmdf.cell_specimen_id==cell_specimen_id)&(fmdf.repeat==repeat)].mean_response.values
+        ls = ut.compute_lifetime_sparseness(responses)
+        ls_list.append(ls)
+        if r == 0:
+            order = np.argsort(responses)[::-1]
+            images = fmdf[(fmdf.cell_specimen_id==cell_specimen_id)&(fmdf.repeat==repeat)].image_name.values
+            images = images[order]
+        for i,image in enumerate(images):
+            means = tmp[tmp.image_name==image].mean_response.values
+            sem = compute_sem(means)
+            ax.errorbar(i,np.mean(means),yerr=sem,color=colors[r])
+            ax.plot(i,np.mean(means),'o',color=colors[r])
+            ax.plot(i,np.mean(means),'o',color=colors[r])
+    #     ax.set_ylim(ymin=0)
+    ax.set_ylabel('mean '+ylabel)
+    ax.set_xticks(np.arange(0,len(responses),1))
+    ax.set_xticklabels(images,rotation=90);
+    ax.set_title('lifetime sparseness repeat '+str(repeats[0])+': '+str(np.round(ls_list[0],3))+
+                 '\nlifetime sparseness repeat '+str(repeats[1])+': '+str(np.round(ls_list[1],3))+
+                 '\nlifetime sparseness repeat '+str(repeats[2])+': '+str(np.round(ls_list[2],3)))
+    ax.legend()
+    if save:
+        fig.tight_layout()
+        save_figure(fig,figsize,analysis.dataset.analysis_dir,'lifetime_sparseness_flashes'+suffix,str(cell_specimen_id))
+    return ax
+
+
+def plot_mean_trace_from_mean_df(mean_df, ophys_frame_rate, label=None, color='k', interval_sec=1, xlims=(2,6), ax=None, use_events=False):
+    ylabel, suffix = get_ylabel_and_suffix(use_events)
+    if ax is None:
+        fig,ax = plt.subplots()
+    mean_trace = mean_df.mean_trace.values[0]
+    sem = mean_df.sem_trace.values[0]
+    times = np.arange(0, len(mean_trace), 1)
+    ax.plot(mean_trace, label=label, linewidth=3, color=color)
+    ax.fill_between(times, mean_trace + sem, mean_trace - sem, alpha=0.5, color=color)
+    xticks, xticklabels = get_xticks_xticklabels(mean_trace, analysis.ophys_frame_rate, interval_sec=1)
+    ax.set_xticks(xticks);
+    ax.set_xticklabels(xticklabels);
+    ax.set_xlim([xlims[0]*ophys_frame_rate, xlims[1]*ophys_frame_rate])
+    ax.set_xlabel('time after change (s)')
+    ax.set_ylabel(ylabel)
+    sns.despine(ax=ax)
+    return ax
+
+def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=None, color='k', interval_sec=1, xlims=[-4, 4],
+                    ax=None):
+#     xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
+    if ax is None:
+        fig, ax = plt.subplots()
+    if len(traces) > 0:
+        mean_trace = np.mean(traces)
+        times = np.arange(0, len(mean_trace), 1)
+        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        for trace in traces:
+            ax.plot(trace, linewidth=1, color='gray')
+        ax.plot(mean_trace, label=label, linewidth=3, color=color, zorder=100)
+        xticks, xticklabels = get_xticks_xticklabels(mean_trace, frame_rate, interval_sec)
+        ax.set_xticks([int(x) for x in xticks])
+        ax.set_xticklabels([int(x) for x in xticklabels])
+        ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
+        ax.set_xlabel('time (sec)')
+        ax.set_ylabel(ylabel)
+    sns.despine(ax=ax)
+    return ax
+
+
+
+def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use_events=False):
+    import visual_behavior.ophys.response_analysis.utilities as ut
+    cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
+    tdf = analysis.trial_response_df.copy()
+    tdf = tdf[tdf.cell_specimen_id==cell_specimen_id]
+    mdf = ut.get_mean_df(analysis, analysis.trial_response_df, conditions = ['cell_specimen_id','change_image_name','trial_type'])
+    mdf = mdf[mdf.cell_specimen_id==cell_specimen_id]
+    if ax is None:
+        figsize=(12,6)
+        fig,ax = plt.subplots(1,2,figsize=figsize,sharey=True)
+        ax = ax.ravel()
+    pref_image = tdf[tdf.pref_stim==True].change_image_name.values[0]
+    images = np.sort(tdf.change_image_name.unique())
+    stim_code = np.where(images==pref_image)[0][0]
+    color = get_color_for_image_name(analysis.dataset, pref_image)
+    for i,trial_type in enumerate(['go', 'catch']):
+        tmp = tdf[(tdf.trial_type==trial_type)&(tdf.change_image_name==pref_image)]
+        mean_df = mdf[(mdf.trial_type==trial_type)&(mdf.change_image_name==pref_image)]
+        ax[i] = plot_mean_trace_with_variability(tmp.trace.values, analysis.ophys_frame_rate, label=None, color=color, interval_sec=1,xlims=(2,6),ax=ax[i])
+        ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=.05*8)
+        mean = np.round(mean_df.mean_response.values[0],3)
+        p_val = np.round(mean_df.p_value.values[0],4)
+        sd = np.round(mean_df.sd_over_baseline.values[0],2)
+        time_to_peak = np.round(mean_df.time_to_peak.values[0],3)
+        fano_factor = np.round(mean_df.fano_factor.values[0],3)
+        ax[i].set_title(trial_type+' - mean: '+str(mean)+'\np_val: '+str(p_val)+', sd: '+str(sd)+
+                        '\ntime_to_peak: '+str(time_to_peak)+
+                       '\nfano_factor: '+str(fano_factor));
+    ax[1].set_ylabel('')
+    if save:
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(top=0.7)
+        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'mean_response_pref_stim_metrics', str(cell_specimen_id))
+        plt.close()
+    return ax
+
+
+def format_table_data(dataset):
+    table_data = dataset.metadata.copy()
+    table_data = table_data[['specimen_id','donor_id','targeted_structure','imaging_depth',
+                             'experiment_date','cre_line','reporter_line','session_type']]
+    table_data['experiment_date'] = str(table_data['experiment_date'].values[0])[:10]
+    table_data = table_data.transpose()
+    return table_data
+
+def get_color_for_image_name(dataset, image_name):
+    images = np.sort(dataset.stimulus_table.image_name.unique())
+    colors = sns.color_palette("hls", len(images))
+    image_index = np.where(images==image_name)[0][0]
+    color = colors[image_index]
+    return color
+
+def plot_images(dataset, orientation='row', color_box=True, save=False, ax=None):
+    orientation = 'row'
+    if orientation == 'row':
+        figsize = (20, 5)
+        cols = len(dataset.stimulus_metadata)
+        rows = 1
+        if rows == 2:
+            cols = cols/2
+            figsize = (10,4)
+    elif orientation == 'column':
+        figsize = (5, 20)
+        cols = 1
+        rows = len(dataset.stim_codes.stim_code.unique())
+    if ax is None:
+        fig, ax = plt.subplots(rows, cols, figsize=figsize)
+        ax = ax.ravel();
+
+    stimuli = dataset.stimulus_metadata
+    image_names = np.sort(dataset.stimulus_table.image_name.unique())
+    colors = sns.color_palette("hls", len(image_names))
+    for i, image_name in enumerate(image_names):
+        image_index = stimuli[stimuli.image_name==image_name].image_index.values[0]
+        image = dataset.stimulus_template[image_index]
+        ax[i].imshow(image, cmap='gray', vmin=0, vmax=np.amax(image));
+        ax[i].grid('off')
+        ax[i].axis('off')
+        ax[i].set_title(image_name, color='k');
+        if color_box:
+            linewidth = 6
+            ax[i].axhline(y=-20, xmin=0.04, xmax=0.95, linewidth=linewidth, color=colors[i]);
+            ax[i].axhline(y=image.shape[0] - 20, xmin=0.04, xmax=0.95, linewidth=linewidth, color=colors[i]);
+            ax[i].axvline(x=-30, ymin=0.05, ymax=0.95, linewidth=linewidth, color=colors[i]);
+            ax[i].axvline(x=image.shape[1], ymin=0, ymax=0.95, linewidth=linewidth, color=colors[i]);
+            # ax[i].set_title(str(stim_code), color=colors[i])
+    if save:
+        title ='images_'+str(rows)
+        if color_box:
+            title = title+'_c'
+        save_figure(fig, figsize, dataset.analysis_dir, 'images', title, formats=['.png'])
+    return ax
+
+
+def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None, use_events=False):
+    cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell_index)
+    rdf = analysis.trial_response_df.copy()
+    fdf = analysis.flash_response_df.copy()
+    ylabel, suffix = get_ylabel_and_suffix(use_events)
+
+    figsize = [2 * 11, 2 * 8.5]
+    fig = plt.figure(figsize=figsize, facecolor='white')
+
+    ax = esf.placeAxesOnGrid(fig, dim=(1, 1), xspan=(.2, .7), yspan=(0, .2))
+    ax = plot_behavior_events_trace(dataset, [cell_index], xmin=600, length=2, ax=ax, save=False, use_events=use_events)
+    ax.set_title(dataset.analysis_folder)
+
+    ax = esf.placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .20), yspan=(0, .22))
+    ax = sf.plot_cell_zoom(dataset.roi_mask_dict, dataset.max_projection, cell_specimen_id, spacex=25, spacey=25,
+                           show_mask=True, ax=ax)
+    ax.set_title('cell ' + str(cell_index) + ' - ' + str(cell_specimen_id))
+
+    ax = esf.placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .7), yspan=(.16, .35))
+    ax = plot_trace(dataset.timestamps_ophys, dataset.dff_traces[cell_index, :], ax,
+                    title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
+    ax = plot_behavior_events(dataset, ax)
+    ax.set_title('')
+
+    ax = esf.placeAxesOnGrid(fig, dim=(1, len(rdf.change_image_name.unique())), xspan=(.0, .7), yspan=(.33, .55),
+                             wspace=0.35)
+    vmax = np.percentile(dataset.dff_traces[cell_index, :], 99.9)
+    ax = plot_transition_type_heatmap(analysis, [cell_index], vmax=vmax, ax=ax, cmap='magma', colorbar=False)
+
+    ax = esf.placeAxesOnGrid(fig, dim=(1, 2), xspan=(.0, .5), yspan=(.53, .75), wspace=0.25, sharex=True, sharey=True)
+    ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save_dir=None, use_events=use_events,
+                                             ax=ax)
+
+    if 'omitted' in analysis.flash_response_df.keys():
+        try:
+            ax = esf.placeAxesOnGrid(fig, dim=(1, 1), xspan=(.46, .66), yspan=(.57, .77))
+            ax = plot_omitted_flash_response_all_stim(analysis.omitted_flash_response_df, cell, ax=ax)
+            ax.legend(bbox_to_anchor=(1.4, 2))
+        except:
+            'cant plot omitted flashes'
+
+    fig.tight_layout()
+
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.0, .2))
+    # ax = plot_mean_trace_behavioral_response_types_pref_image(rdf, sdf, cell, behavioral_response_types=['HIT', 'MISS'],
+    #                                                              ax=ax)
+    #
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.2, .4))
+    # ax = plot_mean_trace_behavioral_response_types_pref_image(rdf, sdf, cell, behavioral_response_types=['FA', 'CR'],
+    #                                                              ax=ax)
+    #
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.39, .59))
+    # ax = plot_running_not_running(rdf, sdf, cell, trial_type='go', ax=ax)
+    #
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.58, 0.78))
+    # ax = plot_engaged_disengaged(rdf, sdf, cell, code='change_image', trial_type='go', ax=ax)
+
+    ax = esf.placeAxesOnGrid(fig, dim=(8, 1), xspan=(.68, .86), yspan=(.2, .99), wspace=0.25, hspace=0.25)
+    try:
+        ax = plot_images(dataset, orientation='column', color_box=True, save=False, ax=ax);
+    except:
+        pass
+
+    # ax = esf.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.0, 0.2), yspan=(.79, 1))
+    # ax = plot_mean_cell_response_heatmap(analysis, cell, values='mean_response', index='initial_image_name',
+    #                                     columns='change_image_name', save=False, ax=ax, use_events=use_events)
+
+    ax = esf.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.5, 0.7), yspan=(0.55, 0.75))
+    ax = plot_ranked_image_tuning_curve_trial_types(analysis, cell, ax=ax, save=False, use_events=use_events)
+
+    ax = esf.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.5, 0.7), yspan=(0.78, 0.99))
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.2, 0.44), yspan=(.79, 1))
+    ax = plot_ranked_image_tuning_curve_flashes(analysis, cell, ax=ax, save=False, use_events=use_events)
+
+    ax = esf.placeAxesOnGrid(fig, dim=(1, 2), xspan=(0.0, 0.5), yspan=(.78, .99), wspace=0.25, sharex=True, sharey=True)
+    ax = plot_mean_response_pref_stim_metrics(analysis, cell, ax=ax, save=False, use_events=use_events)
+
+    # # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.83, 1), yspan=(.78, 1))
+    # ax = esf.placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, .99), yspan=(0.05, .16))
+    # table_data = format_table_data(dataset)
+    # xtable = ax.table(cellText=table_data.values, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
+    # xtable.scale(1, 3)
+    # ax.axis('off');
+    fig.tight_layout()
+    plt.gcf().subplots_adjust(bottom=0.05)
+    if save:
+        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'cell_summary_plots', str(cell_specimen_id))
+        if cache_dir:
+            save_figure(fig, figsize, cache_dir, 'cell_summary',
+                        str(dataset.experiment_id) + '_' + str(cell_specimen_id))
+        if not show:
+            plt.close()

@@ -14,7 +14,6 @@ from visual_behavior import utilities as vbut
 import seaborn as sns
 
 
-
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
     '''
     Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
@@ -33,8 +32,10 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
     outer_grid = gridspec.GridSpec(100, 100)
     inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
-                    subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]), # flake8: noqa: E999
-                    int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace, hspace=hspace) # flake8: noqa: E999
+                                                  subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
+                                                               # flake8: noqa: E999
+                                                               int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace,
+                                                  hspace=hspace)  # flake8: noqa: E999
 
     # NOTE: A cleaner way to do this is with list comprehension:
     # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
@@ -129,7 +130,7 @@ def plot_traces_heatmap(traces, ax=None, save_dir=None, use_events=False):
     cb = plt.colorbar(cax, pad=0.015)
     cb.set_label(label, labelpad=3)
     if save_dir:
-        save_figure(fig, figsize, save_dir, 'experiment_summary', 'traces_heatmap'+suffix)
+        save_figure(fig, figsize, save_dir, 'experiment_summary', 'traces_heatmap' + suffix)
     return ax
 
 
@@ -176,10 +177,11 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
     ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval))
     if save_dir:
         fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_image_response_heatmap'+suffix)
+        save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_image_response_heatmap' + suffix)
 
 
-def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['go', 'catch'], ax=None, save_dir=None, use_events=False):
+def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['go', 'catch'], ax=None, save_dir=None,
+                            use_events=False):
     data = mean_df[mean_df.pref_stim == True].copy()
     if use_events:
         vmax = 0.03
@@ -282,19 +284,20 @@ def format_table_data(dataset):
     return table_data
 
 
-def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, cmap='RdBu', ax=None, save=False, colorbar=False):
+def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, cmap='RdBu', ax=None, save=False,
+                      colorbar=False):
     # roi_dict = dataset.roi_dict.copy()
     roi_mask_array = dataset.roi_mask_array.copy()
     if cmap == 'hls':
         from matplotlib.colors import ListedColormap
-        cmap = ListedColormap(sns.color_palette('hls',8))
+        cmap = ListedColormap(sns.color_palette('hls', 8))
     if ax is None:
         figsize = (10, 10)
         fig, ax = plt.subplots(figsize=figsize)
     if max_image is True:
         ax.imshow(dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(dataset.max_projection))
     for roi in cell_list:
-        tmp = roi_mask_array[roi,:,:].copy()
+        tmp = roi_mask_array[roi, :, :].copy()
         mask = np.empty(tmp.shape, dtype=np.float)
         mask[:] = np.nan
         mask[tmp == 1] = metrics[roi]
@@ -308,6 +311,79 @@ def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, 
         plt.tight_layout()
         sf.save_figure(fig, figsize, dataset.analysis_dir, fig_title=metric_name, folder='experiment_summary')
     return ax
+
+
+def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=None):
+    fdf = analysis.flash_response_df.copy()
+    fdf.image_block = [int(image_block) for image_block in fdf.image_block.values]
+    data = fdf[(fdf.repeat == 1) & (fdf.pref_stim == True)]
+    mean_response = data.groupby(['cell']).apply(ut.get_mean_sem)
+    mean_response = mean_response.unstack()
+
+    cell_order = np.argsort(mean_response.mean_response.values)
+    if ax is None:
+        figsize = (15, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.pointplot(data=data, x="image_block", y="mean_response", kind="point", hue='cell', hue_order=cell_order,
+                       palette='Blues', ax=ax)
+    # ax.legend(bbox_to_anchor=(1,1))
+    ax.legend_.remove()
+    min = mean_response.mean_response.min()
+    max = mean_response.mean_response.max()
+    norm = plt.Normalize(min, max)
+    #     norm = plt.Normalize(0,5)
+    sm = plt.cm.ScalarMappable(cmap="Blues", norm=norm)
+    sm.set_array([])
+    ax.figure.colorbar(mappable=sm, ax=ax, label='mean response across blocks')
+    ax.set_title('mean response to first flash of pref stim across image blocks')
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, 'first_flash_by_image_block', analysis.dataset.analysis_folder)
+    return ax
+
+
+def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=None, ax=None):
+    order = np.argsort(data[data.image_block == 1].early_late_block_ratio.values)
+    cell_order = data[data.image_block == 1].cell.values[order]
+    if ax is None:
+        figsize = (6, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.pointplot(data=data, x="block_set", y="mean_response", kind="point", palette='RdBu', ax=ax,
+                       hue='cell', hue_order=cell_order)
+    # ax.legend(bbox_to_anchor=(1,1))
+    ax.legend_.remove()
+    min = np.amin(data.early_late_block_ratio.unique())
+    max = np.amax(data.early_late_block_ratio.unique())
+    norm = plt.Normalize(min, max)
+    #     norm = plt.Normalize(0,5)
+    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
+    sm.set_array([])
+    ax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
+    ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, 'first_flash_by_image_block_set', analysis_folder)
+    return ax
+
+
+def plot_roi_masks(dataset, save_dir):
+    figsize = (20, 10)
+    fig, ax = plt.subplots(1, 2, figsize=figsize)
+    ax = ax.ravel()
+
+    ax[0].imshow(dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(dataset.max_projection))
+    ax[0].axis('off')
+    ax[0].set_title('max intensity projection')
+
+    metrics = np.empty(len(dataset.cell_indices))
+    metrics[:] = -1
+    cell_list = dataset.cell_indices
+    plot_metrics_mask(dataset, metrics, cell_list, 'roi masks', max_image=True, cmap='hls', ax=ax[1], save=False,
+                      colorbar=False)
+
+    plt.suptitle(dataset.analysis_folder, fontsize=16, x=0.5, y=1., horizontalalignment='center')
+    save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', dataset.analysis_folder + '_roi_masks')
+    save_figure(fig, figsize, save_dir, 'roi_masks', dataset.analysis_folder + '_roi_masks')
 
 
 def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
@@ -368,89 +444,18 @@ def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
     ax = plot_lick_raster(analysis.dataset.trials, ax=ax, save_dir=None)
 
     ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35)
-    mdf = ut.get_mean_df(analysis.trial_response_df,
+    mdf = ut.get_mean_df(analysis, analysis.trial_response_df,
                          conditions=['cell', 'change_image_name', 'behavioral_response_type'])
     ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
-                                 condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None, use_events=use_events)
+                                 condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None,
+                                 use_events=use_events)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
-    mdf = ut.get_mean_df(analysis.trial_response_df, conditions=['cell', 'change_image_name'])
+    mdf = ut.get_mean_df(analysis, analysis.trial_response_df, conditions=['cell', 'change_image_name'])
     ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None, use_events=use_events)
 
     fig.tight_layout()
 
     if save_dir:
         fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder+suffix)
-
-
-def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=None):
-    fdf = analysis.flash_response_df.copy()
-    fdf.image_block = [int(image_block) for image_block in fdf.image_block.values]
-    data = fdf[(fdf.repeat == 1) & (fdf.pref_stim == True)]
-    mean_response = data.groupby(['cell']).apply(ut.get_mean_sem)
-    mean_response = mean_response.unstack()
-
-    cell_order = np.argsort(mean_response.mean_response.values)
-    if ax is None:
-        figsize = (15, 5)
-        fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data=data, x="image_block", y="mean_response", kind="point", hue='cell', hue_order=cell_order,
-                       palette='Blues', ax=ax)
-    # ax.legend(bbox_to_anchor=(1,1))
-    ax.legend_.remove()
-    min = mean_response.mean_response.min()
-    max = mean_response.mean_response.max()
-    norm = plt.Normalize(min, max)
-    #     norm = plt.Normalize(0,5)
-    sm = plt.cm.ScalarMappable(cmap="Blues", norm=norm)
-    sm.set_array([])
-    ax.figure.colorbar(mappable=sm, ax=ax, label='mean response across blocks')
-    ax.set_title('mean response to first flash of pref stim across image blocks')
-    if save_dir:
-        fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'first_flash_by_image_block', analysis.dataset.analysis_folder)
-    return ax
-
-
-def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=None, ax=None):
-    order = np.argsort(data[data.image_block == 1].early_late_block_ratio.values)
-    cell_order = data[data.image_block == 1].cell.values[order]
-    if ax is None:
-        figsize = (6, 5)
-        fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data=data, x="block_set", y="mean_response", kind="point", palette='RdBu', ax=ax,
-                       hue='cell', hue_order=cell_order)
-    # ax.legend(bbox_to_anchor=(1,1))
-    ax.legend_.remove()
-    min = np.amin(data.early_late_block_ratio.unique())
-    max = np.amax(data.early_late_block_ratio.unique())
-    norm = plt.Normalize(min, max)
-    #     norm = plt.Normalize(0,5)
-    sm = plt.cm.ScalarMappable(cmap="RdBu", norm=norm)
-    sm.set_array([])
-    ax.figure.colorbar(mappable=sm, ax=ax, label='first/last ratio')
-    ax.set_title('mean response across image blocks\ncolored by ratio of first to last block')
-    if save_dir:
-        fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'first_flash_by_image_block_set', analysis_folder)
-    return ax
-
-def plot_roi_masks(dataset, save_dir):
-    figsize = (20,10)
-    fig, ax = plt.subplots(1,2, figsize=figsize)
-    ax = ax.ravel()
-
-    ax[0].imshow(dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(dataset.max_projection))
-    ax[0].axis('off')
-    ax[0].set_title('max intensity projection')
-
-    metrics = np.empty(len(dataset.cell_indices))
-    metrics[:] = -1
-    cell_list = dataset.cell_indices
-    plot_metrics_mask(dataset, metrics, cell_list, 'roi masks', max_image=True, cmap='hls', ax=ax[1], save=False,
-                      colorbar=False)
-
-    plt.suptitle(dataset.analysis_folder, fontsize=16,  x=0.5, y=1., horizontalalignment='center')
-    save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', dataset.analysis_folder+'_roi_masks')
-    save_figure(fig, figsize, save_dir, 'roi_masks', dataset.analysis_folder+'_roi_masks')
+        save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder + suffix)
