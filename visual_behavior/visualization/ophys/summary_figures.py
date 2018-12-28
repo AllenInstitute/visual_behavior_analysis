@@ -299,8 +299,7 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save_
         suffix = ''
     df = analysis.trial_response_df.copy()
     trials = analysis.dataset.trials
-    images = trials.change_image_name.unique()
-    colors = sns.color_palette('hls', len(images))
+    images = np.sort(trials.change_image_name.unique())
     if ax is None:
         figsize = (20, 5)
         fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
@@ -308,11 +307,12 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save_
             df[df.cell == cell_index].cell_specimen_id.values[0]) + '_' + analysis.dataset.analysis_folder
         plt.suptitle(title, x=0.47, y=1., horizontalalignment='center')
     for i, trial_type in enumerate(['go', 'catch']):
-        for c, change_image_name in enumerate(images):
+        for c, change_image_name in enumerate(change_image_name):
+            color = get_color_for_image_name(analysis.dataset, change_image_name)
             selected_trials = trials[
                 (trials.change_image_name == change_image_name) & (trials.trial_type == trial_type)].trial.values
             traces = df[(df.cell == cell_index) & (df.trial.isin(selected_trials))].trace.values
-            ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=colors[c],
+            ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=color,
                                     interval_sec=1,
                                     xlims=[-4, 4], ax=ax[i])
         ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=0.3)
