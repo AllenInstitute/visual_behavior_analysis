@@ -307,7 +307,7 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save_
             df[df.cell == cell_index].cell_specimen_id.values[0]) + '_' + analysis.dataset.analysis_folder
         plt.suptitle(title, x=0.47, y=1., horizontalalignment='center')
     for i, trial_type in enumerate(['go', 'catch']):
-        for c, change_image_name in enumerate(change_image_name):
+        for c, change_image_name in enumerate(images):
             color = get_color_for_image_name(analysis.dataset, change_image_name)
             selected_trials = trials[
                 (trials.change_image_name == change_image_name) & (trials.trial_type == trial_type)].trial.values
