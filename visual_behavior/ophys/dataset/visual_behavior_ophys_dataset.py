@@ -227,6 +227,11 @@ class VisualBehaviorOphysDataset(object):
                 f = np.load(os.path.join(events_folder, events_file[0]))
                 events = np.asarray(f['ev'])
                 f.close()
+                if events.shape[1] > self.timestamps_ophys.shape[0]:
+                    difference = self.timestamps_ophys.shape[0] - events.shape[1]
+                    logger.info('length of ophys timestamps <  length of events by', str(difference),
+                                'frames , truncating events')
+                    events = events[:, :self.timestamps_ophys.shape[0]]
             else:
                 logger.info('no events for this experiment')
                 events = None
