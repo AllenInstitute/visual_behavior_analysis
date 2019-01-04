@@ -133,12 +133,29 @@ def get_mean_df(analysis, response_df, conditions=['cell', 'change_image_name'],
 
     return mdf
 
+def get_cre_lines(mean_df):
+    cre_lines = np.sort(mean_df.cre_line.unique())
+    return cre_lines
+
+
+def get_colors_for_cre_lines():
+    colors = [sns.color_palette()[2],sns.color_palette()[4]]
+    return colors
+
+
+def get_image_names(mean_df):
+    image_names = np.sort(mean_df.change_image_name.unique())
+    return image_names
+
 
 def add_metadata_to_mean_df(mdf, metadata):
     metadata = metadata.reset_index()
     metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
     metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
     metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
+    metadata['image_set'] = metadata.session_type.values[0][-1]
+    metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in metadata.image_set.values]
+    # metadata['session_type'] = ['image_set_' + image_set for image_set in metadata.image_set.values]
     mdf = mdf.merge(metadata, how='outer', on='experiment_id')
     return mdf
 
