@@ -560,35 +560,47 @@ def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x', zorder=1):
         ax.axhspan(amin, amax, facecolor=color, edgecolor='none', alpha=alpha, linewidth=0, zorder=zorder)
 
 
-def add_stim_color_span(dataset, ax):
-    for idx in dataset.stimulus_table.index:
-        start_time = dataset.stimulus_table.loc[idx]['start_time']
-        end_time = dataset.stimulus_table.loc[idx]['end_time']
-        image_name = dataset.stimulus_table.loc[idx]['image_name']
+def add_stim_color_span(dataset, ax, xlim=None):
+    #xlim should be in seconds
+    stim_table = dataset.stimulus_table.copy()
+    if xlim is None:
+        stim_table = dataset.stimulus_table.copy()
+    else:
+        stim_table = dataset.stimulus_table.copy()
+        stim_table = stim_table[(stim_table.start_time>=xlim[0])&(stim_table.end_time<=xlim[1])]
+    for idx in stim_table.index:
+        start_time = stim_table.loc[idx]['start_time']
+        end_time = stim_table.loc[idx]['end_time']
+        image_name = stim_table.loc[idx]['image_name']
         color = get_color_for_image_name(dataset, image_name)
         addSpan(ax, start_time, end_time, color=color)
     return ax
 
 
-def plot_behavior_events(dataset, ax):
+def plot_behavior_events(dataset, ax, behavior_only=False):
     lick_times = dataset.licks.time.values
     reward_times = dataset.rewards.time.values
-    ymin, ymax = ax.get_ylim()
-    lick_y = ymin + (ymax * 0.05)
-    reward_y = ymin + (ymax * 0.1)
+    if behavior_only:
+        lick_y = 0
+        reward_y = 0.25
+        ax.set_ylim([-0.5, 1])
+    else:
+        ymin, ymax = ax.get_ylim()
+        lick_y = ymin + (ymax * 0.05)
+        reward_y = ymin + (ymax * 0.1)
     lick_y_array = np.empty(len(lick_times))
     lick_y_array[:] = lick_y
     reward_y_array = np.empty(len(reward_times))
     reward_y_array[:] = reward_y
-    ax.plot(lick_times, lick_y_array, '|', color='g', markeredgewidth=1)
-    ax.plot(reward_times, reward_y_array, 'o', markerfacecolor='purple', markeredgecolor='purple', markeredgewidth=0.1)
+    ax.plot(lick_times, lick_y_array, '|', color='g', markeredgewidth=1, label='licks')
+    ax.plot(reward_times, reward_y_array, 'o', markerfacecolor='purple', markeredgecolor='purple', markeredgewidth=0.1, label='rewards')
     return ax
 
 
 def restrict_axes(xmin, xmax, interval, ax):
     xticks = np.arange(xmin, xmax, interval)
-    ax.set_xlim([xmin, xmax])
     ax.set_xticks(xticks)
+    ax.set_xlim([xmin, xmax])
     return ax
 
 
@@ -599,7 +611,7 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
     for cell_index in cell_list:
         cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell_index)
         if ax is None:
-            figsize = (10, 4)
+            figsize = (15, 4)
             fig, ax = plt.subplots(figsize=figsize)
         if use_events:
             ax = plot_trace(dataset.timestamps_ophys, dataset.events[cell_index, :], ax,
@@ -607,7 +619,7 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
         else:
             ax = plot_trace(dataset.timestamps_ophys, dataset.dff_traces[cell_index, :], ax,
                             title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
-        ax = add_stim_color_span(dataset, ax)
+        ax = add_stim_color_span(dataset, ax, xlim=[xmin, xmax])
         ax = plot_behavior_events(dataset, ax)
         ax = restrict_axes(xmin, xmax, interval, ax)
         if save:
@@ -616,6 +628,77 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
             plt.close()
             ax = None
     return ax
+
+
+def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length_mins, save=False,
+                                     include_running=False, cell_label=False, use_events=False):
+    if use_events:
+        traces = dataset.events
+        cell_label = True
+        suffix = '_events'
+    else:
+        traces = dataset.dff_traces
+        suffix = ''
+    if include_running:
+        n = 2
+    else:
+        n = 1
+    interval_seconds = 20
+    xmax_seconds = xmin_seconds + (length_mins * 60) + 1
+    xlim = [xmin_seconds, xmax_seconds]
+
+    figsize = (15, 10)
+    fig, ax = plt.subplots(len(cell_indices) + n, 1, figsize=figsize, sharex=True)
+    ax = ax.ravel()
+
+    ymins = []
+    ymaxs = []
+    for i, cell_index in enumerate(cell_indices):
+        ax[i] = plot_trace(dataset.timestamps_ophys, traces[cell_index, :], ax=ax[i],
+                              title='', ylabel=str(cell_index))
+        ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
+        ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
+        ax[i].set_xlabel('')
+        ymin, ymax = ax[i].get_ylim()
+        ymins.append(ymin)
+        ymaxs.append(ymax)
+        if cell_label:
+            ax[i].set_ylabel(str(cell_index))
+        else:
+            ax[i].set_ylabel('dF/F')
+        sns.despine(ax=ax[i])
+
+    for i, cell_index in enumerate(cell_indices):
+        ax[i].set_ylim([np.amin(ymins), np.amax(ymaxs)])
+
+    i += 1
+    ax[i].set_ylim([np.amin(ymins), 1])
+    ax[i] = plot_behavior_events(dataset, ax=ax[i], behavior_only=True)
+    ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
+    ax[i].set_xlim(xlim)
+    ax[i].set_ylabel('')
+    ax[i].axes.get_yaxis().set_visible(False)
+    ax[i].legend(loc='upper left', fontsize=14)
+    sns.despine(ax=ax[i])
+
+    if include_running:
+        i += 1
+        ax[i].plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values)
+        ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
+        ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
+        ax[i].set_ylabel('run speed\n(cm/s)')
+        #         ax[i].axes.get_yaxis().set_visible(False)
+        sns.despine(ax=ax[i])
+
+    ax[i].set_xlabel('time (seconds)')
+    ax[0].set_title(dataset.analysis_folder)
+    fig.tight_layout()
+    plt.subplots_adjust(wspace=0, hspace=0)
+    if save:
+        sf.save_figure(fig, figsize, dataset.analysis_dir, 'example_traces', 'example_traces_' + str(xlim[0]) + suffix)
+        sf.save_figure(fig, figsize, dataset.cache_dir, 'example_traces',
+                       str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
+        plt.close()
 
 
 def get_colors_for_response_types(values):

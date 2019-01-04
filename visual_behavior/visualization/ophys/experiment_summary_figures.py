@@ -109,13 +109,15 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
         save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
 
 
-def plot_traces_heatmap(traces, ax=None, save_dir=None, use_events=False):
+def plot_traces_heatmap(dataset, ax=None, save_dir=None, use_events=False):
     if use_events:
+        traces = dataset.events
         vmax = 0.03
         # vmax = np.percentile(traces, 99)
         label = 'event magnitude'
         suffix = '_events'
     else:
+        traces = dataset.dff_traces
         vmax = np.percentile(traces, 99)
         label = 'dF/F'
         suffix = ''
@@ -123,10 +125,15 @@ def plot_traces_heatmap(traces, ax=None, save_dir=None, use_events=False):
         figsize = (20, 8)
         fig, ax = plt.subplots(figsize=figsize)
     cax = ax.pcolormesh(traces, cmap='magma', vmin=0, vmax=vmax)
-    ax.set_ylim(0, traces.shape[0])
-    ax.set_xlim(0, traces.shape[1])
     ax.set_ylabel('cells')
-    ax.set_xlabel('2P frames')
+
+    interval_seconds = 5*60
+    ophys_frame_rate = int(dataset.metadata.ophys_frame_rate.values[0])
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.timestamps_ophys, ophys_frame_rate)
+    ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
+    ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
+    ax.set_xlabel('time (seconds)')
+
     cb = plt.colorbar(cax, pad=0.015)
     cb.set_label(label, labelpad=3)
     if save_dir:
@@ -226,10 +233,10 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
         save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_trace_heatmap_' + condition + suffix)
 
 
-def get_upper_limit_and_intervals(dff_traces, timestamps_ophys):
-    upper = np.round(dff_traces.shape[1], -3) + 1000
-    interval = 5 * 60
-    frame_interval = np.arange(0, len(dff_traces), interval * 31)
+def get_upper_limit_and_intervals(traces, timestamps_ophys, ophys_frame_rate):
+    upper = np.round(traces.shape[1], -3) + 1000
+    interval = 5 * 60 #use 5 min interval
+    frame_interval = np.arange(0, traces.shape[1], interval * ophys_frame_rate)
     time_interval = np.uint64(np.round(np.arange(timestamps_ophys[0], timestamps_ophys[-1], interval), 1))
     return upper, time_interval, frame_interval
 
@@ -366,7 +373,7 @@ def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=N
     return ax
 
 
-def plot_roi_masks(dataset, save_dir):
+def plot_roi_masks(dataset, save_dir=None):
     figsize = (20, 10)
     fig, ax = plt.subplots(1, 2, figsize=figsize)
     ax = ax.ravel()
@@ -382,8 +389,9 @@ def plot_roi_masks(dataset, save_dir):
                       colorbar=False)
 
     plt.suptitle(dataset.analysis_folder, fontsize=16, x=0.5, y=1., horizontalalignment='center')
-    save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', dataset.analysis_folder + '_roi_masks')
-    save_figure(fig, figsize, save_dir, 'roi_masks', dataset.analysis_folder + '_roi_masks')
+    if save_dir:
+        save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', dataset.analysis_folder + '_roi_masks')
+        save_figure(fig, figsize, save_dir, 'roi_masks', dataset.analysis_folder + '_roi_masks')
 
 
 def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
@@ -418,10 +426,11 @@ def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
     ax.axis('off')
 
     upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces,
-                                                                               analysis.dataset.timestamps_ophys)
+                                                                               analysis.dataset.timestamps_ophys,
+                                                                               analysis.ophys_frame_rate)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.9), yspan=(0, .3))
-    ax = plot_traces_heatmap(traces, ax=ax, use_events=use_events)
+    ax = plot_traces_heatmap(dataset, ax=ax, use_events=use_events)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
