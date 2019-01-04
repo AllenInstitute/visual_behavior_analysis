@@ -1,5 +1,5 @@
 """
-Created on Wednesday August 22 2018
+Created on Thursday January 3 2019
 
 @author: marinag
 """
@@ -10,5 +10,16 @@ import matplotlib.pyplot as plt
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.visualization.ophys.summary_figures as sf
 from visual_behavior.visualization.utils import save_figure
-from visual_behavior import utilities as vbut
 import seaborn as sns
+
+
+def plot_histogram(values, label, color='k', range=(0,1), ax=None):
+    results, edges = np.histogram(values, normed=True, range=(0,1), bins=50)
+    binWidth = edges[1] - edges[0]
+    ax.bar(edges[:-1], results*binWidth, binWidth, color=color, label=label, alpha=0.5)
+    return ax
+
+def get_colors_for_cre_lines():
+    colors = [sns.color_palette()[2],sns.color_palette()[4]]
+    return colors
+

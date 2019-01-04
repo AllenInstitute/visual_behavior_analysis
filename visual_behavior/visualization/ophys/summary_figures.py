@@ -207,7 +207,7 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
         ax.set_xticks([int(x) for x in xticks])
         ax.set_xticklabels([int(x) for x in xticklabels])
         ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
-        ax.set_xlabel('time (sec)')
+        ax.set_xlabel('time after change (sec)')
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
@@ -298,8 +298,8 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save=
     else:
         suffix = ''
     df = analysis.trial_response_df.copy()
-    trials = analysis.dataset.trials
-    images = np.sort(trials.change_image_name.unique())
+    images = np.sort(df.change_image_name.unique())
+    trials = analysis.dataset.trials.copy()
     if ax is None:
         figsize = (20, 5)
         fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
@@ -330,6 +330,55 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save=
                     analysis.dataset.analysis_folder + '_' + str(cell_index))
         plt.close()
     return ax
+
+
+def plot_image_change_response(analysis, cell_index, legend=True, save=False, ax=None):
+    """
+    Function to plot trial avereraged response of a cell for all images 'go' trials. Creates figure and axes to plot.
+
+    :param analysis: ResponseAnalysis class instance
+    :param cell: cell index for cell to plot
+    :param save: boolean, if True, saves figure to a folder called 'image_responses' in the analysis_dir attribute of the analysis object
+
+    :return: None
+    """
+    if analysis.use_events:
+        suffix = '_events'
+        ylabel = 'event_magnitude'
+    else:
+        suffix = ''
+        ylabel = 'mean dF/F'
+    df = analysis.trial_response_df.copy()
+    df = df[df.trial_type=='go']
+    images = np.sort(df.change_image_name.unique())
+    trials = analysis.dataset.trials.copy()
+    cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index)
+    if ax is None:
+        figsize = (7, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for c, change_image_name in enumerate(images):
+        color = get_color_for_image_name(analysis.dataset, change_image_name)
+        selected_trials = trials[(trials.change_image_name == change_image_name)].trial.values
+        traces = df[(df.cell == cell_index) & (df.trial.isin(selected_trials))].trace.values
+        ax = plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=color,
+                                interval_sec=1, xlims=[-4, 4], ax=ax)
+    ax = plot_flashes_on_trace(ax, analysis, trial_type='go', alpha=0.3)
+    ax.set_title('cell_specimen_id: '+str(cell_specimen_id))
+    ax.set_ylabel(ylabel)
+    fig.tight_layout()
+    if legend:
+        ax.legend(images, loc=9, bbox_to_anchor=(1.2, 1))
+    if save:
+        plt.gcf().subplots_adjust(top=0.85)
+        plt.gcf().subplots_adjust(right=0.85)
+        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'change_responses' + suffix,
+                    analysis.dataset.analysis_folder + '_' + str(cell_index))
+        save_figure(fig, figsize, os.path.join(analysis.dataset.cache_dir,'summary_figures'), 'change_responses' + suffix,
+                    analysis.dataset.analysis_folder + '_' + str(cell_index))
+        plt.close()
+    return ax
+
+
 
 
 def plot_event_detection(dff_traces, events, analysis_dir):
@@ -467,61 +516,61 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
         plt.close()
     return ax
 
+# # deprecated
+# def plot_single_trial_with_events(cell_specimen_id, trial_num, analysis, ax=None, save=False):
+#     tdf = analysis.trial_response_df.copy()
+#     trial_data = tdf[(tdf.trial == trial_num) & (tdf.cell_specimen_id == cell_specimen_id)]
+#     trial_type = trial_data.trial_type.values[0]
+#     if ax is None:
+#         figsize = (6, 4)
+#         fig, ax = plt.subplots(figsize=figsize)
+#     trace = trial_data.trace.values[0]
+#     ax = plot_single_trial_trace(trace, analysis.ophys_frame_rate, ylabel='dF/F', legend_label='dF/F', color='k',
+#                                  interval_sec=1,
+#                                  xlims=[-4, 4], ax=ax)
+#     events = trial_data.events.values[0]
+#     ax = plot_single_trial_trace(events, analysis.ophys_frame_rate, ylabel='response magnitude', legend_label='events',
+#                                  color='r', interval_sec=1,
+#                                  xlims=[-4, 4], ax=ax)
+#     ax = plot_flashes_on_trace(ax, analysis, trial_type=trial_type, omitted=False, alpha=0.3)
+#     ax.legend()
+#     ax.set_title('cell: ' + str(cell_specimen_id) + ', trial:' + str(trial_num))
+#
+#     if save:
+#         fig.tight_layout()
+#         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'single_trial_responses',
+#                     str(cell_specimen_id) + '_' + str(trial_num))
+#         plt.close()
+#     return ax
 
-def plot_single_trial_with_events(cell_specimen_id, trial_num, analysis, ax=None, save=False):
-    tdf = analysis.trial_response_df.copy()
-    trial_data = tdf[(tdf.trial == trial_num) & (tdf.cell_specimen_id == cell_specimen_id)]
-    trial_type = trial_data.trial_type.values[0]
-    if ax is None:
-        figsize = (6, 4)
-        fig, ax = plt.subplots(figsize=figsize)
-    trace = trial_data.trace.values[0]
-    ax = plot_single_trial_trace(trace, analysis.ophys_frame_rate, ylabel='dF/F', legend_label='dF/F', color='k',
-                                 interval_sec=1,
-                                 xlims=[-4, 4], ax=ax)
-    events = trial_data.events.values[0]
-    ax = plot_single_trial_trace(events, analysis.ophys_frame_rate, ylabel='response magnitude', legend_label='events',
-                                 color='r', interval_sec=1,
-                                 xlims=[-4, 4], ax=ax)
-    ax = plot_flashes_on_trace(ax, analysis, trial_type=trial_type, omitted=False, alpha=0.3)
-    ax.legend()
-    ax.set_title('cell: ' + str(cell_specimen_id) + ', trial:' + str(trial_num))
 
-    if save:
-        fig.tight_layout()
-        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'single_trial_responses',
-                    str(cell_specimen_id) + '_' + str(trial_num))
-        plt.close()
-    return ax
-
-
-def plot_mean_trace_and_events(cell_specimen_id, analysis, ax=None, save=False):
-    tdf = analysis.trial_response_df.copy()
-    if ax is None:
-        figsize = (12, 4)
-        fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
-        ax = ax.ravel()
-
-    for i, trial_type in enumerate(['go', 'catch']):
-        trial_data = tdf[
-            (tdf.cell_specimen_id == cell_specimen_id) & (tdf.pref_stim == True) & (tdf.trial_type == trial_type)]
-
-        traces = trial_data.trace.values
-        ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, ylabel='event rate', legend_label='dF/F', color='k',
-                                interval_sec=1, xlims=[-4, 4], ax=ax[i])
-
-        events = trial_data.events.values
-        ax[i] = plot_mean_trace(events, analysis.ophys_frame_rate, ylabel='response magnitude', legend_label='events',
-                                color='r', interval_sec=1, xlims=[-4, 4], ax=ax[i])
-
-        ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=0.3)
-    ax[i].legend()
-    plt.suptitle(str(cell_specimen_id) + '_' + analysis.dataset.analysis_folder, fontsize=16)
-    if save:
-        fig.tight_layout()
-        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'pref_stim_mean_events', str(cell_specimen_id))
-        plt.close()
-    return ax
+# def plot_mean_trace_and_events(cell_specimen_id, analysis, ax=None, save=False):
+#     tdf = analysis.trial_response_df.copy()
+#     if ax is None:
+#         figsize = (12, 4)
+#         fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
+#         ax = ax.ravel()
+#
+#     for i, trial_type in enumerate(['go', 'catch']):
+#         trial_data = tdf[
+#             (tdf.cell_specimen_id == cell_specimen_id) & (tdf.pref_stim == True) & (tdf.trial_type == trial_type)]
+#
+#         traces = trial_data.trace.values
+#         ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, ylabel='event rate', legend_label='dF/F', color='k',
+#                                 interval_sec=1, xlims=[-4, 4], ax=ax[i])
+#
+#         events = trial_data.events.values
+#         ax[i] = plot_mean_trace(events, analysis.ophys_frame_rate, ylabel='response magnitude', legend_label='events',
+#                                 color='r', interval_sec=1, xlims=[-4, 4], ax=ax[i])
+#
+#         ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=0.3)
+#     ax[i].legend()
+#     plt.suptitle(str(cell_specimen_id) + '_' + analysis.dataset.analysis_folder, fontsize=16)
+#     if save:
+#         fig.tight_layout()
+#         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'pref_stim_mean_events', str(cell_specimen_id))
+#         plt.close()
+#     return ax
 
 
 def plot_trace(timestamps, trace, ax=None, xlabel='time (seconds)', ylabel='fluorescence', title='roi'):
@@ -878,7 +927,7 @@ def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=Non
     return ax
 
 
-def plot_ranked_image_tuning_curve_flashes(analysis, cell, ax=None, save=None, use_events=False):
+def plot_ranked_image_tuning_curve_flashes(analysis, cell, repeats = [1, 5, 10], ax=None, save=None, use_events=False):
     from scipy.stats import sem as compute_sem
     from visual_behavior.ophys.response_analysis import utilities as ut
     c = sns.color_palette()
@@ -886,7 +935,6 @@ def plot_ranked_image_tuning_curve_flashes(analysis, cell, ax=None, save=None, u
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     fdf = analysis.flash_response_df.copy()
-    repeats = [1, 5, 10]
     fdf = fdf[fdf.repeat.isin(repeats)]
     fmdf = ut.get_mean_df(analysis, fdf, conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
     if ax is None:
@@ -992,13 +1040,15 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         p_val = np.round(mean_df.p_value.values[0], 4)
         sd = np.round(mean_df.sd_over_baseline.values[0], 2)
         time_to_peak = np.round(mean_df.time_to_peak.values[0], 3)
-        fano_factor = np.round(mean_df.fano_factor.values[0], 3)
+        # fano_factor = np.round(mean_df.fano_factor.values[0], 3)
+        fraction_responsive_trials = np.round(mean_df.fraction_nonzero_trials.values[0],3)
         ax[i].set_title(trial_type + ' - mean: ' + str(mean) + '\np_val: ' + str(p_val) + ', sd: ' + str(sd) +
                         '\ntime_to_peak: ' + str(time_to_peak) +
-                        '\nfano_factor: ' + str(fano_factor));
+                         '\nfraction_responsive_trials: ' + str(fraction_responsive_trials));
+                        # '\nfano_factor: ' + str(fano_factor));
     ax[1].set_ylabel('')
+    fig.tight_layout()
     if save:
-        fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.7)
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'mean_response_pref_stim_metrics',
                        str(cell_specimen_id))

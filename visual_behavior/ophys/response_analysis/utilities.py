@@ -138,11 +138,6 @@ def get_cre_lines(mean_df):
     return cre_lines
 
 
-def get_colors_for_cre_lines():
-    colors = [sns.color_palette()[2],sns.color_palette()[4]]
-    return colors
-
-
 def get_image_names(mean_df):
     image_names = np.sort(mean_df.change_image_name.unique())
     return image_names
