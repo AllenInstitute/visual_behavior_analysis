@@ -8,6 +8,7 @@ from visual_behavior.visualization.ophys import summary_figures as sf
 
 # import logging
 import os
+import numpy as np
 
 # logger = logging.getLogger(__name__)
 
@@ -42,8 +43,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     # print('plotting cell responses')
     # save_dir = os.path.join(cache_dir, 'summary_figures')
     # for cell in dataset.get_cell_indices():
-    #     # sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir, use_events=use_events)
-    #     # sf.plot_image_response_for_trial_types(analysis, cell, save_dir=save_dir, use_events=use_events)
+    #     # sf.plot_image_response_for_trial_types(analysis, cell, save=True, use_events=use_events)
     #     sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir, use_events=use_events)
 
     if dataset.events is not None:
@@ -62,9 +62,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         # print('plotting cell responses')
         # save_dir = os.path.join(cache_dir, 'summary_figures')
         # for cell in dataset.get_cell_indices():
-        #     # sf.plot_image_response_for_trial_types(analysis, cell, save_dir=analysis.dataset.analysis_dir,
-        #     #                                        use_events=use_events)
-        #     # sf.plot_image_response_for_trial_types(analysis, cell, save_dir=save_dir, use_events=use_events)
+        #     # sf.plot_image_response_for_trial_types(analysis, cell, save=True, use_events=use_events)
         #     sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir, use_events=use_events)
     else:
         print('no events for',experiment_id)

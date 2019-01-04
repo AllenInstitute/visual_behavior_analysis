@@ -283,7 +283,7 @@ def plot_single_trial_trace(trace, frame_rate, ylabel='dF/F', legend_label=None,
     return ax
 
 
-def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save_dir=None, use_events=False, ax=None):
+def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save=False, use_events=False, ax=None):
     """
     Function to plot trial avereraged response of a cell for all images separately for 'go' and 'catch' trials. Creates figure and axes to plot.
 
@@ -320,13 +320,14 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save_
     ax[i].set_ylabel('')
     if legend:
         ax[i].legend(images, loc=9, bbox_to_anchor=(1.2, 1))
-    if save_dir:
+    if save:
         fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(right=0.85)
-        save_figure(fig, figsize, save_dir, 'image_responses' + suffix,
-                    analysis.dataset.analysis_folder + '_' + str(cell_index),
-                    formats=['.png'])
+        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_responses' + suffix,
+                    analysis.dataset.analysis_folder + '_' + str(cell_index))
+        save_figure(fig, figsize, os.path.join(analysis.dataset.cache_dir,'summary_figures'), 'image_responses' + suffix,
+                    analysis.dataset.analysis_folder + '_' + str(cell_index))
         plt.close()
     return ax
 
@@ -1102,7 +1103,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     ax = plot_transition_type_heatmap(analysis, [cell_index], vmax=vmax, ax=ax, cmap='magma', colorbar=False)
 
     ax = placeAxesOnGrid(fig, dim=(1, 2), xspan=(.0, .5), yspan=(.53, .75), wspace=0.25, sharex=True, sharey=True)
-    ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save_dir=None, use_events=use_events,
+    ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save=False, use_events=use_events,
                                              ax=ax)
 
     if 'omitted' in analysis.flash_response_df.keys():

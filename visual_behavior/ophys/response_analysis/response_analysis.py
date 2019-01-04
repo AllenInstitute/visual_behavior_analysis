@@ -134,12 +134,14 @@ class ResponseAnalysis(object):
         stimulus_table = ut.annotate_flashes_with_reward_rate(self.dataset)
         row = []
         for cell in self.dataset.cell_indices:
-            cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell)
+            cell = int(cell)
+            cell_specimen_id = int(self.dataset.get_cell_specimen_id_for_cell_index(cell))
             if self.use_events:
                 cell_trace = self.dataset.events[cell,:].copy()
             else:
                 cell_trace = self.dataset.dff_traces[cell,:].copy()
             for flash in stimulus_table.flash_number:
+                flash = int(flash)
                 flash_data = stimulus_table[stimulus_table.flash_number == flash]
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
