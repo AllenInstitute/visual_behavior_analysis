@@ -696,8 +696,8 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     fig.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
     if save:
-        sf.save_figure(fig, figsize, dataset.analysis_dir, 'example_traces', 'example_traces_' + str(xlim[0]) + suffix)
-        sf.save_figure(fig, figsize, dataset.cache_dir, 'example_traces',
+        save_figure(fig, figsize, dataset.analysis_dir, 'example_traces', 'example_traces_' + str(xlim[0]) + suffix)
+        save_figure(fig, figsize, dataset.cache_dir, 'example_traces',
                        str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
         plt.close()
 
@@ -1136,7 +1136,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     except:
         pass
 
-    # ax = esf.placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.0, 0.2), yspan=(.79, 1))
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.0, 0.2), yspan=(.79, 1))
     # ax = plot_mean_cell_response_heatmap(analysis, cell, values='mean_response', index='initial_image_name',
     #                                     columns='change_image_name', save=False, ax=ax, use_events=use_events)
 
@@ -1151,7 +1151,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     ax = plot_mean_response_pref_stim_metrics(analysis, cell_index, ax=ax, save=False, use_events=use_events)
 
     # # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.83, 1), yspan=(.78, 1))
-    # ax = esf.placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, .99), yspan=(0.05, .16))
+    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, .99), yspan=(0.05, .16))
     # table_data = format_table_data(dataset)
     # xtable = ax.table(cellText=table_data.values, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
     # xtable.scale(1, 3)

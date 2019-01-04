@@ -32,7 +32,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     for i, trace in enumerate(dataset.dff_traces):
         mean = np.mean(trace, axis=0)
         std = np.std(trace, axis=0)
-        snr = std / mean
+        snr = mean / std
         snr_values.append(snr)
     active_cell_indices = np.argsort(snr_values)[-10:]
     length_mins = 1
