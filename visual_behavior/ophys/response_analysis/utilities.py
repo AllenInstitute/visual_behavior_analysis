@@ -107,17 +107,18 @@ def get_fraction_nonzero_trials(group):
     return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
 
 
-def get_mean_df(analysis, response_df, conditions=['cell', 'change_image_name'], flashes=False):
+def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False):
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
     mdf = mdf.reset_index()
     mdf = annotate_mean_df_with_pref_stim(mdf, flashes=flashes)
-    mdf = annotate_mean_df_with_p_value(analysis, mdf, flashes=flashes)
-    mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, flashes=flashes)
-    mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, flashes=flashes)
-    mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
+    if analysis is not None:
+        mdf = annotate_mean_df_with_p_value(analysis, mdf, flashes=flashes)
+        mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, flashes=flashes)
+        mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, flashes=flashes)
+        mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
 
     fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
     fraction_significant_trials = fraction_significant_trials.reset_index()
@@ -481,7 +482,7 @@ def plot_ranked_image_tuning_curve_trial_types(analysis, cell, ax=None, save=Fal
     colors = [c[3],c[0],c[2]]
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
-    tdf = ut.get_mean_df(analysis, analysis.trial_response_df,
+    tdf = ut.get_mean_df(analysis.trial_response_df, analysis,
                          conditions = ['cell_specimen_id','change_image_name','trial_type'])
     if ax is None:
         figsize = (6,4)
@@ -518,7 +519,7 @@ def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=Non
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     fdf = analysis.flash_response_df.copy()
-    fmdf = ut.get_mean_df(analysis, fdf, conditions = ['cell_specimen_id','image_name'], flashes=True)
+    fmdf = ut.get_mean_df(fdf, analysis, conditions = ['cell_specimen_id','image_name'], flashes=True)
     if ax is None:
         figsize = (6,4)
         fig,ax = plt.subplots(figsize=figsize)
@@ -554,7 +555,7 @@ def plot_ranked_image_tuning_curve_flashes(analysis, cell, ax=None, save=None, u
     fdf = analysis.flash_response_df.copy()
     repeats = [1,5,10]
     fdf = fdf[fdf.repeat.isin(repeats)]
-    fmdf = ut.get_mean_df(analysis, fdf, conditions = ['cell_specimen_id','image_name','repeat'], flashes=True)
+    fmdf = ut.get_mean_df(fdf, analysis, conditions = ['cell_specimen_id','image_name','repeat'], flashes=True)
     if ax is None:
         figsize = (6,4)
         fig,ax = plt.subplots(figsize=figsize)
@@ -634,7 +635,7 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     tdf = analysis.trial_response_df.copy()
     tdf = tdf[tdf.cell_specimen_id==cell_specimen_id]
-    mdf = ut.get_mean_df(analysis, analysis.trial_response_df, conditions = ['cell_specimen_id','change_image_name','trial_type'])
+    mdf = ut.get_mean_df(analysis.trial_response_df, analysis, conditions = ['cell_specimen_id','change_image_name','trial_type'])
     mdf = mdf[mdf.cell_specimen_id==cell_specimen_id]
     if ax is None:
         figsize=(12,6)

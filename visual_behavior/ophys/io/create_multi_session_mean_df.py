@@ -27,7 +27,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                     flash_response_df = analysis.flash_response_df.copy()
                 flash_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
                                                 flash_response_df.reward_rate.values]
-                mdf = ut.get_mean_df(analysis, flash_response_df,
+                mdf = ut.get_mean_df(flash_response_df, analysis,
                                      conditions=conditions, flashes=True)
                 mdf['experiment_id'] = dataset.experiment_id
                 mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
@@ -36,7 +36,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                 #     print('problem with',analysis.get_flash_response_df_path().split('\\')[-1],'for',experiment_id)
             else:
                 # if analysis.get_trial_response_df_path().split('\\')[-1] in os.listdir(dataset.analysis_dir):
-                mdf = ut.get_mean_df(analysis, analysis.trial_response_df,
+                mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
                                      conditions=conditions)
                 mdf['experiment_id'] = dataset.experiment_id
                 mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)

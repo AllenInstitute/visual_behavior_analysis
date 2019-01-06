@@ -9,6 +9,8 @@ from visual_behavior.ophys.response_analysis import utilities as ut
 import os
 import numpy as np
 import pandas as pd
+import itertools
+import scipy as sp
 
 import logging
 logger = logging.getLogger(__name__)
@@ -102,7 +104,7 @@ class ResponseAnalysis(object):
         trial_metadata = trial_metadata.rename(columns={'response_time': 'behavioral_response_time'})
         trial_metadata = trial_metadata.rename(columns={'response_latency': 'behavioral_response_latency'})
         trial_response_df = trial_response_df.merge(trial_metadata, on='trial')
-        trial_response_df = ut.annotate_trial_response_df_with_pref_stim(trial_response_df)
+        # trial_response_df = ut.annotate_trial_response_df_with_pref_stim(trial_response_df)
         return trial_response_df
 
     def save_trial_response_df(self, trial_response_df):
@@ -203,3 +205,90 @@ class ResponseAnalysis(object):
                 self.flash_response_df = self.generate_flash_response_df()
                 self.save_flash_response_df(self.flash_response_df)
         return self.flash_response_df
+
+    def compute_pairwise_correlations(self):
+        fdf = self.flash_response_df.copy()
+        # compute correlations independently for each repeat of a given image after a change
+        # repeat = 1 is the first flash after change, repeat = 5 is the 5th flash after a change
+        s_corr_data = []
+        n_corr_data = []
+        for repeat in [1, 5, 10]:
+            tmp_fdf = fdf[fdf.repeat == repeat]
+            # create a df with the trial averaged response for each image across flash repeat number
+            mfdf = ut.get_mean_df(tmp_fdf, conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
+
+            # signal correlations
+            # create table with the trial averaged response of each cell to each image
+            signal_responses = mfdf.pivot_table(
+                index=['cell_specimen_id', 'repeat'],
+                columns='image_name',
+                values='mean_response')
+            # loop through pairs to compute signal correlations
+            for cell1_data, cell2_data in itertools.combinations(signal_responses.iterrows(), 2):
+                (cell_specimen_id_1, repeat_number_1), image_responses_1 = cell1_data
+                (cell_specimen_id_2, repeat_number_2), image_responses_2 = cell2_data
+                try:
+                    # correlation between 2 cells tuning curves
+                    scorr = sp.stats.pearsonr(image_responses_1[~np.isnan(image_responses_1)],
+                                              image_responses_2[~np.isnan(image_responses_2)])[0]
+                except ValueError:
+                    scorr = np.nan
+                s_corr_data.append(
+                    dict(repeat=repeat_number_1, cell1=cell_specimen_id_1,
+                         cell2=cell_specimen_id_2, signal_correlation=scorr))
+
+            # noise correlations
+            # get trial average response for each cell to subtract from each trial's response
+            mfdf['trial_average'] = mfdf.mean_response.values
+            mfdf2 = mfdf[['cell_specimen_id', 'image_name', 'repeat', 'trial_average']]
+            # add trial average column to flash response df
+            ndf = mfdf2.merge(tmp_fdf, on=['cell_specimen_id', 'image_name', 'repeat'])
+            # subtract the trial average from the mean response on each individual flash
+            ndf['noise_response'] = ndf.mean_response - ndf.trial_average
+            # create table with trial average subtracted response for each flash
+            noise_responses = ndf.pivot_table(
+                index=['cell_specimen_id', 'repeat'],
+                columns='flash_number',
+                values='noise_response')
+            # compute noise correlations
+            for cell1_data, cell2_data in itertools.combinations(noise_responses.iterrows(), 2):
+                (cell_specimen_id_1, repeat_number_1), trial_responses_1 = cell1_data
+                (cell_specimen_id_2, repeat_number_2), trial_responses_2 = cell2_data
+                try:
+                    ncorr = sp.stats.pearsonr(trial_responses_1[~np.isnan(trial_responses_1)],
+                                              trial_responses_2[~np.isnan(trial_responses_2)])[0]
+                except ValueError:
+                    ncorr = np.nan
+                n_corr_data.append(
+                    dict(repeat=repeat_number_1, cell1=cell_specimen_id_1,
+                         cell2=cell_specimen_id_2, noise_correlation=ncorr))
+
+        # create dataframes from signal and noise correlation dictionaries and merge
+        cdf1 = pd.DataFrame(s_corr_data)
+        cdf2 = pd.DataFrame(n_corr_data)
+        pairwise_correlations_df = cdf1.merge(cdf2, on=['cell1', 'cell2', 'repeat'])
+        pairwise_correlations_df['experiment_id'] = self.dataset.experiment_id
+
+        return pairwise_correlations_df
+
+    def get_pairwise_correlations_path(self):
+        if self.use_events:
+            path = os.path.join(self.dataset.analysis_dir, 'pairwise_correlations_events.h5')
+        else:
+            path = os.path.join(self.dataset.analysis_dir, 'pairwise_correlations.h5')
+        return path
+
+    def save_pairwise_correlations_df(self, pairwise_correlations_df):
+        print('saving pairwise correlations dataframe')
+        pairwise_correlations_df.to_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
+
+    def get_pairwise_correlations_df(self):
+        if os.path.exists(self.get_pairwise_correlations_path()):
+            print('loading pairwise correlations dataframe')
+            self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
+        else:
+            print('generating pairwise correlations dataframe')
+            self.pairwise_correlations_df = self.compute_pairwise_correlations()
+            self.save_pairwise_correlations_df(self.pairwise_correlations_df)
+        return self.pairwise_correlations_df
+
