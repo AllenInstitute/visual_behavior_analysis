@@ -164,3 +164,28 @@ def validate_lick_before_scheduled_on_aborted_trials(core_data):
     # if no aborted trials, return True
     else:
         return True
+
+
+def validate_omitted_flashes(core_data):
+    # core_data['omitted_stimuli'] will be an empty dataframe if no omitted flashes?
+    try:
+        omitted_stimuli = core_data['omitted_stimuli']
+    except KeyError:  # is there a better way?
+        warnings.warn(
+            'no ommited_stimuli key on core_data object, '
+            'this is likely really really bad'
+        )
+
+    if omitted_stimuli.empty:
+        warnings.warn(
+            'empty omitted_stimuli dataframe, '
+            'skipping \'validate_omitted_flashes\''
+        )
+        return True
+
+    for frame in omitted_stimuli['frame']:
+        for offset in range(-3, 4, 1):
+            if frame + offset in core_data['visual_stimuli']['frame'].tolist():
+                return False
+    else:
+        return True
