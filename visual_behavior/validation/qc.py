@@ -96,6 +96,7 @@ def define_validation_functions(core_data):
         cd.validate_minimal_dropped_frames: (core_data,),  # this one doesn't take trials
         # f2.validate_frame_intervals_exists:(data), # this one doesn't take trials
         cd.validate_no_read_errors: (core_data,),
+        cd.validate_omitted_flashes_are_omitted: (core_data, ),
     }
 
     return validation_functions
