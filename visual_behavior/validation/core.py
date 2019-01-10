@@ -166,7 +166,14 @@ def validate_lick_before_scheduled_on_aborted_trials(core_data):
         return True
 
 
-def validate_omitted_flashes(core_data):
+def validate_omitted_flashes_are_omitted(core_data):
+    '''
+    If a stimulus shows up in the omitted_stimuli log, there should never be another stimulus
+    in the visual_stimuli log within three frames in either direction
+
+    This catches an explicit bug that showed up in the first implementation of the omitted flash
+    logic in the foraging2 stimulus code
+    '''
     # core_data['omitted_stimuli'] will be an empty dataframe if no omitted flashes?
     try:
         omitted_stimuli = core_data['omitted_stimuli']

@@ -109,7 +109,7 @@ def test_validate_minimal_dropped_frames():
     assert validate_minimal_dropped_frames(BAD_DATA) == False
 
 
-def test_validate_omitted_flashes():
+def test_validate_omitted_flashes_are_omitted():
     GOOD_DATA = {
         'omitted_stimuli': pd.DataFrame({
             'frame': [
@@ -183,7 +183,7 @@ def test_validate_omitted_flashes():
         'omitted_stimuli': pd.DataFrame({
             'frame': [
                 915,
-                1050,
+                1050,  # this stimulus is in the omitted list, but also shows up one frame later in the visual stimuli table
             ],
             'time': [
                 15.258188,
@@ -203,7 +203,7 @@ def test_validate_omitted_flashes():
             ],
             'frame': [
                 1006,
-                1051,
+                1051,  # this is the stimulus that shouldn't be here
                 1096,
             ],
             'image_category': [
@@ -229,5 +229,5 @@ def test_validate_omitted_flashes():
         }),
     }
 
-    assert validate_omitted_flashes(GOOD_DATA) is True and \
-        validate_omitted_flashes(BAD_DATA) is False
+    assert validate_omitted_flashes_are_omitted(GOOD_DATA) is True and \
+        validate_omitted_flashes_are_omitted(BAD_DATA) is False
