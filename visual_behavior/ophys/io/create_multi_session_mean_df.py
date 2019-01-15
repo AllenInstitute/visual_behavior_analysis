@@ -53,6 +53,11 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
         suffix = '_events'
     else:
         suffix = ''
+    if 'level_0' in mega_mdf.keys():
+        mega_mdf = mega_mdf.drop(columns='level_0')
+    if 'index' in mega_mdf.keys():
+        mega_mdf = mega_mdf.drop(columns='index')
+
     mega_mdf.to_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs', 'mean'+type+conditions[2]+suffix+'_df.h5'), key='df',
                     format='fixed')
 

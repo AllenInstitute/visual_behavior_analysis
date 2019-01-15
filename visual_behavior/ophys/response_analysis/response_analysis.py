@@ -267,7 +267,7 @@ class ResponseAnalysis(object):
         cdf1 = pd.DataFrame(s_corr_data)
         cdf2 = pd.DataFrame(n_corr_data)
         pairwise_correlations_df = cdf1.merge(cdf2, on=['cell1', 'cell2', 'repeat'])
-        pairwise_correlations_df['experiment_id'] = self.dataset.experiment_id
+        pairwise_correlations_df['experiment_id'] = int(self.dataset.experiment_id)
 
         return pairwise_correlations_df
 

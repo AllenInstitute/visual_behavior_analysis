@@ -140,7 +140,10 @@ def get_cre_lines(mean_df):
 
 
 def get_image_names(mean_df):
-    image_names = np.sort(mean_df.change_image_name.unique())
+    if 'change_image_name' in mean_df.keys():
+        image_names = np.sort(mean_df.change_image_name.unique())
+    else:
+        image_names = np.sort(mean_df.image_name.unique())
     return image_names
 
 
