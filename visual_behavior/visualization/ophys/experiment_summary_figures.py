@@ -109,7 +109,7 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
         save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
 
 
-def plot_traces_heatmap(dataset, ax=None, save_dir=None, use_events=False):
+def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
     if use_events:
         traces = dataset.events
         vmax = 0.03
@@ -136,8 +136,8 @@ def plot_traces_heatmap(dataset, ax=None, save_dir=None, use_events=False):
 
     cb = plt.colorbar(cax, pad=0.015)
     cb.set_label(label, labelpad=3)
-    if save_dir:
-        save_figure(fig, figsize, save_dir, 'experiment_summary', 'traces_heatmap' + suffix)
+    if save:
+        save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', str(dataset.experiment_id)+'traces_heatmap' + suffix)
     return ax
 
 
@@ -148,14 +148,14 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
     for image in images:
         tmp = df[(df.change_image_name == image) & (df.pref_stim == True)]
         order = np.argsort(tmp.mean_response.values)[::-1]
-        cell_ids = list(tmp.cell.values[order])
+        cell_ids = list(tmp.cell_specimen_id.values[order])
         cell_list = cell_list + cell_ids
 
     response_matrix = np.empty((len(cell_list), len(images)))
     for i, cell in enumerate(cell_list):
         responses = []
         for image in images:
-            response = df[(df.cell == cell) & (df.change_image_name == image)].mean_response.values[0]
+            response = df[(df.cell_specimen_id == cell) & (df.change_image_name == image)].mean_response.values[0]
             responses.append(response)
         response_matrix[i, :] = np.asarray(responses)
 
@@ -182,8 +182,8 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
     interval = 10
     ax.set_yticks(np.arange(0, response_matrix.shape[0], interval))
     ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval))
+    fig.tight_layout()
     if save_dir:
-        fig.tight_layout()
         save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_image_response_heatmap' + suffix)
 
 
@@ -373,7 +373,7 @@ def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=N
     return ax
 
 
-def plot_roi_masks(dataset, save_dir=None):
+def plot_roi_masks(dataset, save=False):
     figsize = (20, 10)
     fig, ax = plt.subplots(1, 2, figsize=figsize)
     ax = ax.ravel()
@@ -389,9 +389,9 @@ def plot_roi_masks(dataset, save_dir=None):
                       colorbar=False)
 
     plt.suptitle(dataset.analysis_folder, fontsize=16, x=0.5, y=1., horizontalalignment='center')
-    if save_dir:
+    if save:
         save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', dataset.analysis_folder + '_roi_masks')
-        save_figure(fig, figsize, save_dir, 'roi_masks', dataset.analysis_folder + '_roi_masks')
+        save_figure(fig, figsize, dataset.cache_dir, 'roi_masks', dataset.analysis_folder + '_roi_masks')
 
 
 def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):

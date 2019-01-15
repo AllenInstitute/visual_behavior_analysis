@@ -66,8 +66,12 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     return inner_ax
 
 
+
 def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
-    m = roi_mask_dict[str(cell_specimen_id)]
+    if type(roi_mask_dict.keys()[0]) == int:
+        m = roi_mask_dict[int(cell_specimen_id)]
+    else:
+        m = roi_mask_dict[str(cell_specimen_id)]
     (y, x) = np.where(m == 1)
     xmin = np.min(x)
     xmax = np.max(x)
@@ -251,13 +255,15 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.
     return ax
 
 
-def plot_single_trial_trace(trace, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=1,
-                            xlims=[-4, 4], ax=None):
+def plot_single_trial_trace(trace, timestamps=None, dataset=None, frame_rate=31, ylabel='dF/F', legend_label=None,
+                            color='k', interval_sec=1, xlims=[-4, 4], ax=None):
     """
     Function to plot a single timeseries trace with xticklabels in secconds
 
     :return: axis handle
     :param trace: single trial timeseries trace to plot
+    :param timestamps: optional, if provided will plot xaxis as time in session, if not provided will plot as time relative to change
+    :param dataset: optional, if provided will plot accurate stimulus durations and plot in color, if not provided will infer flash times and plot in gray
     :param frame_rate: ophys frame rate if plotting a calcium trace, stimulus frame rate if plotting running speed
     :param y_label: 'dF/F' for calcium trace, 'running speed (cm/s)' for running speed trace
     :param legend_label: string describing trace for legend (ex: 'go', 'catch', image name or other condition identifier)
@@ -270,14 +276,21 @@ def plot_single_trial_trace(trace, frame_rate, ylabel='dF/F', legend_label=None,
     """
     xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
     if ax is None:
-        fig, ax = plt.subplots()
-    ax.plot(trace, label=legend_label, linewidth=3, color=color)
-
-    xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
-    ax.set_xticks([int(x) for x in xticks])
-    ax.set_xticklabels([int(x) for x in xticklabels])
-    ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
-    ax.set_xlabel('time (sec)')
+        figsize = (6,5)
+        fig, ax = plt.subplots(figsize=figsize)
+    if (timestamps is not None) and (dataset is not None):
+        ax.plot(timestamps, trace, label=legend_label, linewidth=3, color=color)
+        xlim = [timestamps[0], timestamps[-1]]
+        ax = add_stim_color_span(dataset, ax, xlim=xlim)
+        ax.set_xlim(xlim)
+        ax.set_xlabel('time in session (sec)')
+    else:
+        ax.plot(trace, label=legend_label, linewidth=3, color=color)
+        xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
+        ax.set_xticks([int(x) for x in xticks])
+        ax.set_xticklabels([int(x) for x in xticklabels])
+        ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
+        ax.set_xlabel('time after change (sec)')
     ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
@@ -372,7 +385,7 @@ def plot_image_change_response(analysis, cell_index, legend=True, save=False, ax
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(right=0.85)
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'change_responses' + suffix,
-                    analysis.dataset.analysis_folder + '_' + str(cell_index))
+                    'change_response_' + str(cell_index))
         save_figure(fig, figsize, os.path.join(analysis.dataset.cache_dir,'summary_figures'), 'change_responses' + suffix,
                     analysis.dataset.analysis_folder + '_' + str(cell_index))
         plt.close()
@@ -674,7 +687,7 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
         ax = restrict_axes(xmin, xmax, interval, ax)
         if save:
             fig.tight_layout()
-            save_figure(fig, figsize, dataset.analysis_dir, 'behavior_events_traces', str(cell_specimen_id))
+            save_figure(fig, figsize, dataset.analysis_dir, 'behavior_events_traces', 'behavior_events_trace_'+str(cell_specimen_id)+suffix)
             plt.close()
             ax = None
     return ax
@@ -860,7 +873,7 @@ def plot_ranked_image_tuning_curve_trial_types(analysis, cell, ax=None, save=Fal
     colors = [c[3], c[0], c[2]]
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
-    tdf = ut.get_mean_df(analysis, analysis.trial_response_df,
+    tdf = ut.get_mean_df(analysis.trial_response_df, analysis,
                          conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     if ax is None:
         figsize = (6, 4)
@@ -900,7 +913,7 @@ def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=Non
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     fdf = analysis.flash_response_df.copy()
-    fmdf = ut.get_mean_df(analysis, fdf, conditions=['cell_specimen_id', 'image_name'], flashes=True)
+    fmdf = ut.get_mean_df(fdf, analysis, conditions=['cell_specimen_id', 'image_name'], flashes=True)
     if ax is None:
         figsize = (6, 4)
         fig, ax = plt.subplots(figsize=figsize)
@@ -936,7 +949,7 @@ def plot_ranked_image_tuning_curve_flashes(analysis, cell, repeats = [1, 5, 10],
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     fdf = analysis.flash_response_df.copy()
     fdf = fdf[fdf.repeat.isin(repeats)]
-    fmdf = ut.get_mean_df(analysis, fdf, conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
+    fmdf = ut.get_mean_df(fdf, analysis, conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
     if ax is None:
         figsize = (6, 4)
         fig, ax = plt.subplots(figsize=figsize)
@@ -1019,7 +1032,7 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     tdf = analysis.trial_response_df.copy()
     tdf = tdf[tdf.cell_specimen_id == cell_specimen_id]
-    mdf = ut.get_mean_df(analysis, analysis.trial_response_df,
+    mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
                          conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     mdf = mdf[mdf.cell_specimen_id == cell_specimen_id]
     if ax is None:
@@ -1051,7 +1064,7 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
     if save:
         plt.gcf().subplots_adjust(top=0.7)
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'mean_response_pref_stim_metrics',
-                       str(cell_specimen_id))
+                       'metrics_'+str(cell_specimen_id))
         plt.close()
     return ax
 
