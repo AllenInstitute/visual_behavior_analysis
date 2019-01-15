@@ -148,7 +148,7 @@ def get_segmentation_dir(lims_data):
 def get_sync_path(lims_data):
     ophys_session_dir = get_ophys_session_dir(lims_data)
     analysis_dir = get_analysis_dir(lims_data)
-    # hack for expt 713525580 - sync in lims is broken, fixed version available in analysis_dir
+    # try getting sync file from analysis folder first - needed for early mesoscope data where lims sync file is missing line labels
     try:
         logger.info('using sync file from analysis directory instead of lims')
         sync_file = [file for file in os.listdir(analysis_dir) if 'sync' in file][0]
@@ -706,7 +706,7 @@ def run_roi_validation(lims_data):
 
 
 def get_roi_validation(lims_data, save_plots=False):
-    analysis_dir = get_analysis_dir(lims_data)
+    analysis_dir = get_analysis_dir(lims_data)  # flake8: noqa: F841
 
     roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces = run_roi_validation(
         lims_data)
@@ -793,7 +793,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     logger.info('done converting')
     print('done converting')
 
-    ophys_data = core_data.update(
+    ophys_data = core_data.update(  # flake8: noqa: F841
         dict(
             lims_data=lims_data,
             timestamps=timestamps,
