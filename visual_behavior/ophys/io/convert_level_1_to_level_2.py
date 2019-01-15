@@ -78,10 +78,15 @@ def get_lims_id(lims_data):
 
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
+    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_line) > 1:
+        specimen_driver_line = specimen_driver_line[1].split('-')[0]
+    else:
+        specimen_driver_line = specimen_driver_line[0]
     analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
                            lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
-                           lims_data.specimen_driver_line.values[0].split(';')[1].split('-')[0] + '_' + lims_data.rig.values[0][3:5] + \
+                           specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
                            lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E127
     return analysis_folder_name
 
@@ -145,11 +150,11 @@ def get_sync_path(lims_data):
     ophys_session_dir = get_ophys_session_dir(lims_data)
     analysis_dir = get_analysis_dir(lims_data)
     # hack for expt 713525580 - sync in lims is broken, fixed version available in analysis_dir
-    if get_lims_id(lims_data) == 713525580:
+    try:
         logger.info('using sync file from analysis directory instead of lims')
         sync_file = [file for file in os.listdir(analysis_dir) if 'sync' in file][0]
         sync_path = os.path.join(analysis_dir, sync_file)
-    else:
+    except:
         sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file][0]
         sync_path = os.path.join(ophys_session_dir, sync_file)
     if sync_file not in os.listdir(analysis_dir):
@@ -158,9 +163,9 @@ def get_sync_path(lims_data):
     return sync_path
 
 
-def get_sync_data(lims_id, use_acq_trigger):
+def get_sync_data(lims_data, use_acq_trigger):
     logger.info('getting sync data')
-    sync_path = get_sync_path(lims_id)
+    sync_path = get_sync_path(lims_data)
     sync_dataset = SyncDataset(sync_path)
     meta_data = sync_dataset.meta_data
     sample_freq = meta_data['ni_daq']['counter_output_freq']
@@ -170,9 +175,12 @@ def get_sync_data(lims_id, use_acq_trigger):
         '2p_vsync', )  # new sync may be able to do units = 'sec', so conversion can be skipped
     vs2p_rsec = vs2p_r / sample_freq
     vs2p_fsec = vs2p_f / sample_freq
-    vs2p_r_filtered, vs2p_f_filtered = filter_digital(vs2p_rsec, vs2p_fsec, threshold=0.01)
+    if use_acq_trigger:  # if 2P6, filter out solenoid artifacts
+        vs2p_r_filtered, vs2p_f_filtered = filter_digital(vs2p_rsec, vs2p_fsec, threshold=0.01)
+        frames_2p = vs2p_r_filtered
+    else:  # dont need to filter out artifacts in pipeline data
+        frames_2p = vs2p_rsec
     # use rising edge for Scientifica, falling edge for Nikon http://confluence.corp.alleninstitute.org/display/IT/Ophys+Time+Sync
-    frames_2p = vs2p_r_filtered
     # Convert to seconds - skip if using units in get_falling_edges, otherwise convert before doing filter digital
     # vs2p_rsec = vs2p_r / sample_freq
     # frames_2p = vs2p_rsec
@@ -264,7 +272,10 @@ def get_metadata(lims_data, timestamps):
     else:
         metadata['experiment_container_id'] = None
     metadata['targeted_structure'] = lims_data.structure.values[0]
-    metadata['imaging_depth'] = int(lims_data.depth.values[0])
+    if lims_data.depth.values[0] is None:
+        metadata['imaging_depth'] = None
+    else:
+        metadata['imaging_depth'] = int(lims_data.depth.values[0])
     metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
     if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
         metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0] + ';' + \
