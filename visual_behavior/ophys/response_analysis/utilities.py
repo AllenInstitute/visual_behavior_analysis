@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 
@@ -483,5 +482,5 @@ def get_active_cell_indices(dff_traces):
         std = np.std(trace, axis=0)
         snr = mean / std
         snr_values.append(snr)
-    active_cell_indices = np.argsort(snr_values)[-10:])
+    active_cell_indices = np.argsort(snr_values)[-10:]
     return active_cell_indices

@@ -25,7 +25,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
     use_events = False
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
-    pairwise_correlations_df = analysis.get_pairwise_correlations_df()
+    pairwise_correlations_df = analysis.get_pairwise_correlations_df() # flake8: noqa: E999
 
     print('plotting experiment summary figure')
     esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir, use_events=use_events)

@@ -44,7 +44,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                 mega_mdf = pd.concat([mega_mdf, mdf])
                 # else:
                 #     print('problem with',analysis.get_trial_response_df_path().split('\\')[-1],'for',experiment_id)
-        except:
+        except: # flake8: noqa: E999
             print('problem for', experiment_id)
     if flashes:
         type = '_flashes_'
