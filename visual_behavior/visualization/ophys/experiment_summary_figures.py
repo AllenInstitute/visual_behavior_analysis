@@ -13,6 +13,11 @@ from visual_behavior.visualization.utils import save_figure
 from visual_behavior import utilities as vbut
 import seaborn as sns
 
+# formatting
+sns.set_style('white')
+sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
+sns.set_palette('deep')
+
 
 def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
     '''
@@ -127,9 +132,10 @@ def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
     cax = ax.pcolormesh(traces, cmap='magma', vmin=0, vmax=vmax)
     ax.set_ylabel('cells')
 
-    interval_seconds = 5*60
+    interval_seconds = 5 * 60
     ophys_frame_rate = int(dataset.metadata.ophys_frame_rate.values[0])
-    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.timestamps_ophys, ophys_frame_rate)
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.timestamps_ophys,
+                                                                               ophys_frame_rate)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
@@ -137,7 +143,8 @@ def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
     cb = plt.colorbar(cax, pad=0.015)
     cb.set_label(label, labelpad=3)
     if save:
-        save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', str(dataset.experiment_id)+'traces_heatmap' + suffix)
+        save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary',
+                    str(dataset.experiment_id) + 'traces_heatmap' + suffix)
     return ax
 
 
@@ -235,7 +242,7 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
 
 def get_upper_limit_and_intervals(traces, timestamps_ophys, ophys_frame_rate):
     upper = np.round(traces.shape[1], -3) + 1000
-    interval = 5 * 60 #use 5 min interval
+    interval = 5 * 60  # use 5 min interval
     frame_interval = np.arange(0, traces.shape[1], interval * ophys_frame_rate)
     time_interval = np.uint64(np.round(np.arange(timestamps_ophys[0], timestamps_ophys[-1], interval), 1))
     return upper, time_interval, frame_interval

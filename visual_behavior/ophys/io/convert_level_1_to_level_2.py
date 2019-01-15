@@ -6,8 +6,6 @@ Created on Saturday July 14 2018
 @author: marinag
 """
 
-
-
 import os
 import h5py
 import json
@@ -21,6 +19,7 @@ from collections import OrderedDict
 import matplotlib.image as mpimg  # NOQA: E402
 
 import logging
+
 logger = logging.getLogger(__name__)
 
 #
@@ -241,7 +240,6 @@ def get_sync_data(lims_data, use_acq_trigger):
     return sync_data
 
 
-
 def get_timestamps(lims_data, analysis_dir):
     if '2P6' in analysis_dir:
         use_acq_trigger = True
@@ -406,7 +404,6 @@ def save_trials(trials, lims_data):
 
 
 def get_visual_stimulus_data(pkl):
-
     try:
         images = foraging2.data_to_images(pkl)
     except KeyError:
@@ -565,7 +562,8 @@ def save_roi_masks(roi_masks, lims_data):
 
 
 def get_corrected_fluorescence_traces(roi_metrics, lims_data):
-    file_path = os.path.join(get_ophys_experiment_dir(lims_data), 'demix', str(get_lims_id(lims_data)) + '_demixed_traces.h5')
+    file_path = os.path.join(get_ophys_experiment_dir(lims_data), 'demix',
+                             str(get_lims_id(lims_data)) + '_demixed_traces.h5')
     g = h5py.File(file_path)
     corrected_fluorescence_traces = np.asarray(g['data'])
     valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
@@ -592,10 +590,10 @@ def get_dff_traces(roi_metrics, lims_data):
     final_dff_traces = []
     for i, dff in enumerate(dff_traces):
         if np.isnan(dff).any():
-            logger.info('NaN trace detected, removing cell_index:',i)
+            logger.info('NaN trace detected, removing cell_index:', i)
             bad_cell_indices.append(i)
-        elif np.amax(dff)>20:
-            logger.info('outlier trace detected, removing cell_index',i)
+        elif np.amax(dff) > 20:
+            logger.info('outlier trace detected, removing cell_index', i)
             bad_cell_indices.append(i)
         else:
             final_dff_traces.append(dff)
@@ -623,13 +621,13 @@ def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
         logger.info('length of ophys timestamps >  length of traces by', str(difference),
-              'frames , truncating ophys timestamps')
+                    'frames , truncating ophys timestamps')
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
     # account for dropped ophys frames - a rare but unfortunate issue
     if dff_traces.shape[1] > timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
         logger.info('length of ophys timestamps <  length of traces by', str(difference),
-              'frames , truncating traces')
+                    'frames , truncating traces')
         dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
         save_dff_traces(dff_traces, roi_metrics, lims_data)
     # make sure length of timestamps equals length of running traces
@@ -680,7 +678,6 @@ def save_average_image(average_image, lims_data):
 
 
 def run_roi_validation(lims_data):
-
     processed_dir = get_processed_dir(lims_data)
     file_path = os.path.join(processed_dir, 'roi_traces.h5')
 
@@ -708,11 +705,11 @@ def run_roi_validation(lims_data):
     return roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces
 
 
-def get_roi_validation(lims_data,save_plots=False):
-
+def get_roi_validation(lims_data, save_plots=False):
     analysis_dir = get_analysis_dir(lims_data)
 
-    roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces = run_roi_validation(lims_data)
+    roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces = run_roi_validation(
+        lims_data)
 
     roi_validation = plot_roi_validation(
         roi_names,
@@ -740,7 +737,6 @@ def save_roi_validation(roi_validation, lims_data):
 
         save_figure(fig, (20, 10), analysis_dir, 'roi_validation',
                     str(index) + '_' + str(id) + '_' + str(cell_index))
-
 
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None):

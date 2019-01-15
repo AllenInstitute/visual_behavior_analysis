@@ -88,7 +88,7 @@ class CellMatchingDataset(object):
 
     def get_analysis_folder_name(self):
         folder = [file for file in os.listdir(self.cache_dir) if str(self.experiment_id) in file]
-        if len(folder)>0:
+        if len(folder) > 0:
             self.analysis_folder_name = folder[0]
         else:
             print('no analysis folder')
@@ -204,9 +204,9 @@ class CellMatchingDataset(object):
             ids.append(id)
         df['id'] = ids
         # add indices to objectlist corresponding to id order
-        df['unfiltered_trace_index'] = [roi_df[roi_df.id == id]['unfiltered_trace_index'].values[0] for id in
+        df['unfiltered_trace_index'] = [roi_df[roi_df.id == t_id]['unfiltered_trace_index'].values[0] for t_id in
                                         df['id'].values]
-        df['valid'] = [roi_df[roi_df.id == id]['valid'].values[0] for id in df['id'].values]
+        df['valid'] = [roi_df[roi_df.id == c_id]['valid'].values[0] for c_id in df['id'].values]
         self.objectlist = df
 
     def get_cell_specimen_ids(self):
@@ -254,7 +254,6 @@ class CellMatchingDataset(object):
         self.roi_dict = roi_dict
         self.roi_mask_array = roi_mask_array
 
-
     def get_max_projection(self):
         if self.from_processed_data:
             f = h5py.File(os.path.join(self.analysis_dir, 'max_projection.h5'), 'r')
@@ -268,9 +267,3 @@ class CellMatchingDataset(object):
         import matplotlib.image as mpimg
         self.average_image = mpimg.imread(os.path.join(self.segmentation_dir, 'avgInt_a1X.png'))
         return self.average_image
-
-
-
-
-
-

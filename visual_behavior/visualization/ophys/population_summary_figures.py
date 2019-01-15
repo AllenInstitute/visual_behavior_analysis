@@ -3,25 +3,29 @@ Created on Thursday January 3 2019
 
 @author: marinag
 """
-import os
 import numpy as np
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.visualization.ophys.summary_figures as sf
 from visual_behavior.visualization.utils import save_figure
 import seaborn as sns
 
+# formatting
+sns.set_style('white')
+sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
+sns.set_palette('deep')
 
-def plot_histogram(values, label, color='k', range=(0,1), ax=None):
+
+def plot_histogram(values, label, color='k', range=(0, 1), ax=None):
     results, edges = np.histogram(values, normed=True, range=range, bins=50)
     binWidth = edges[1] - edges[0]
-    ax.bar(edges[:-1], results*binWidth, binWidth, color=color, label=label, alpha=0.5)
+    ax.bar(edges[:-1], results * binWidth, binWidth, color=color, label=label, alpha=0.5)
     return ax
 
+
 def get_colors_for_cre_lines():
-    colors = [sns.color_palette()[2],sns.color_palette()[4]]
+    colors = [sns.color_palette()[2], sns.color_palette()[4]]
     return colors
+
 
 def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, use_events=False):
     if use_events:
@@ -46,7 +50,7 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
         cells = cells + cell_ids
 
     if ax is None:
-        figsize = (20,10)
+        figsize = (20, 10)
         fig, ax = plt.subplots(1, len(image_names), figsize=figsize, sharey=True, sharex=True)
         ax = ax.ravel()
 
@@ -62,11 +66,12 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
                 trace = np.empty((len_trace))
                 trace[:] = np.nan
             response_array[x, :] = trace
-        sm = sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='viridis', cbar=colorbar, cbar_kws={'label': label})
+        sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='viridis', cbar=colorbar,
+                    cbar_kws={'label': label})
         xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=2)
         ax[i].set_xticks(xticks)
         ax[i].set_xticklabels([int(x) for x in xticklabels])
-        if response_array.shape[0]>300:
+        if response_array.shape[0] > 300:
             interval = 100
         else:
             interval = 20
@@ -79,13 +84,14 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
     plt.gcf().subplots_adjust(top=0.9)
     fig.tight_layout()
     if save_dir:
-        save_figure(fig, figsize, save_dir, 'figure3','change_response_matrix_'+cre_line+'_'+image_set+'_'+trial_type+suffix)
+        save_figure(fig, figsize, save_dir, 'figure3',
+                    'change_response_matrix_' + cre_line + '_' + image_set + '_' + trial_type + suffix)
 
 
 def plot_tuning_curve_heatmap(df, title=None, ax=None, save_dir=None, use_events=False):
-    image_set = df.image_set.unique()[0]
+    # image_set = df.image_set.unique()[0]
     cre_line = df.cre_line.unique()[0]
-    trial_type = df.trial_type.unique()[0]
+    # trial_type = df.trial_type.unique()[0]
     #     detectability = get_detectability()
     #     d = detectability[detectability.image_set==image_set]
     #     order = np.argsort(d.detectability.values)
@@ -126,19 +132,15 @@ def plot_tuning_curve_heatmap(df, title=None, ax=None, save_dir=None, use_events
         fig.tight_layout()
     ax = sns.heatmap(response_matrix, cmap='magma', linewidths=0, linecolor='white', square=False,
                      vmin=0, vmax=vmax, robust=True, cbar=True,
-                     cbar_kws={"drawedges": False, "shrink": 1, "label": "mean dF/F"}, ax=ax)
+                     cbar_kws={"drawedges": False, "shrink": 1, "label": label}, ax=ax)
 
     if title is None:
         title = 'mean response by image'
     ax.set_title(title, va='bottom', ha='center')
     ax.set_xticklabels(images, rotation=90)
     ax.set_ylabel('cells')
-    ax.set_yticks(np.arange(0, response_matrix.shape[0], interval));
-    ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval));
+    ax.set_yticks(np.arange(0, response_matrix.shape[0], interval))
+    ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval))
     if save_dir:
         fig.tight_layout()
         save_figure(fig, figsize, save_dir, 'tuning_curve_heatmaps', title + suffix)
-
-
-
-

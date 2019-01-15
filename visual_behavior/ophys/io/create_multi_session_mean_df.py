@@ -1,11 +1,12 @@
+import os
+import pandas as pd
+
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 import visual_behavior.ophys.response_analysis.utilities as ut
-import pandas as pd
-import logging
-import os
 
 
+# import logging
 # logger = logging.getLogger(__name__)
 
 
@@ -44,7 +45,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                 # else:
                 #     print('problem with',analysis.get_trial_response_df_path().split('\\')[-1],'for',experiment_id)
         except:
-            print('problem for',experiment_id)
+            print('problem for', experiment_id)
     if flashes:
         type = '_flashes_'
     else:
@@ -58,9 +59,10 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
     if 'index' in mega_mdf.keys():
         mega_mdf = mega_mdf.drop(columns='index')
 
-    mega_mdf.to_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs', 'mean'+type+conditions[2]+suffix+'_df.h5'), key='df',
-                    format='fixed')
-
+    mega_mdf.to_hdf(
+        os.path.join(cache_dir, 'multi_session_summary_dfs', 'mean' + type + conditions[2] + suffix + '_df.h5'),
+        key='df',
+        format='fixed')
 
 
 if __name__ == '__main__':
