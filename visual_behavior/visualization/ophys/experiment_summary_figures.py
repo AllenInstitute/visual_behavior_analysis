@@ -151,18 +151,22 @@ def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
 def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None, use_events=False):
     df = mean_df.copy()
     images = np.sort(df.change_image_name.unique())
+    if 'cell_specimen_id' in df.keys():
+        cell_name = 'cell_specimen_id'
+    else:
+        cell_name = 'cell'
     cell_list = []
     for image in images:
         tmp = df[(df.change_image_name == image) & (df.pref_stim == True)]
         order = np.argsort(tmp.mean_response.values)[::-1]
-        cell_ids = list(tmp.cell_specimen_id.values[order])
+        cell_ids = list(tmp[cell_name].values[order])
         cell_list = cell_list + cell_ids
 
     response_matrix = np.empty((len(cell_list), len(images)))
     for i, cell in enumerate(cell_list):
         responses = []
         for image in images:
-            response = df[(df.cell_specimen_id == cell) & (df.change_image_name == image)].mean_response.values[0]
+            response = df[(df[cell_name] == cell) & (df.change_image_name == image)].mean_response.values[0]
             responses.append(response)
         response_matrix[i, :] = np.asarray(responses)
 
@@ -189,8 +193,8 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
     interval = 10
     ax.set_yticks(np.arange(0, response_matrix.shape[0], interval))
     ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval))
-    fig.tight_layout()
     if save_dir:
+        fig.tight_layout()
         save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_image_response_heatmap' + suffix)
 
 
@@ -437,7 +441,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
                                                                                analysis.ophys_frame_rate)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.9), yspan=(0, .3))
-    ax = plot_traces_heatmap(dataset, ax=ax, use_events=use_events)
+    ax = plot_traces_heatmap(analysis.dataset, ax=ax, use_events=use_events)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
@@ -460,14 +464,14 @@ def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
     ax = plot_lick_raster(analysis.dataset.trials, ax=ax, save_dir=None)
 
     ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35)
-    mdf = ut.get_mean_df(analysis, analysis.trial_response_df,
+    mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
                          conditions=['cell', 'change_image_name', 'behavioral_response_type'])
     ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
                                  condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None,
                                  use_events=use_events)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
-    mdf = ut.get_mean_df(analysis, analysis.trial_response_df, conditions=['cell', 'change_image_name'])
+    mdf = ut.get_mean_df(analysis.trial_response_df, analysis, conditions=['cell', 'change_image_name'])
     ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None, use_events=use_events)
 
     fig.tight_layout()

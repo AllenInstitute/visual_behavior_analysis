@@ -1062,8 +1062,8 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
                         '\nfraction_responsive_trials: ' + str(fraction_responsive_trials));
         # '\nfano_factor: ' + str(fano_factor));
     ax[1].set_ylabel('')
-    fig.tight_layout()
     if save:
+        fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.7)
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'mean_response_pref_stim_metrics',
                     'metrics_' + str(cell_specimen_id))
@@ -1130,7 +1130,8 @@ def plot_images(dataset, orientation='row', color_box=True, save=False, ax=None)
     return ax
 
 
-def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None, use_events=False):
+def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):
+    use_events = analysis.use_events
     dataset = analysis.dataset
     rdf = analysis.trial_response_df.copy()
     fdf = analysis.flash_response_df.copy()
@@ -1168,8 +1169,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     ax = plot_transition_type_heatmap(analysis, [cell_index], vmax=vmax, ax=ax, cmap='magma', colorbar=False)
 
     ax = placeAxesOnGrid(fig, dim=(1, 2), xspan=(.0, .5), yspan=(.53, .75), wspace=0.25, sharex=True, sharey=True)
-    ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save=False, use_events=use_events,
-                                             ax=ax)
+    ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save=False, ax=ax)
 
     if 'omitted' in analysis.flash_response_df.keys():
         try:
