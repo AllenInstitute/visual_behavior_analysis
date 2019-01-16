@@ -113,6 +113,62 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
     if save_dir:
         save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
 
+def reorder_traces(original_traces, analysis):
+    tdf = analysis.trial_response_df.copy()
+    df = ut.get_mean_df(tdf, analysis, conditions=['cell','change_image_name'])
+
+    images = np.sort(df.change_image_name.unique())
+
+    cell_list = []
+    for image in images:
+        tmp = df[(df.change_image_name == image) & (df.pref_stim == True)]
+        order = np.argsort(tmp.mean_response.values)[::-1]
+        cell_ids = list(tmp.cell.values[order])
+        cell_list = cell_list + cell_ids
+
+    reordered_traces = []
+    for cell_index in cell_list:
+        reordered_traces.append(original_traces[cell_index,:])
+    return np.asarray(reordered_traces)
+
+
+def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_events=False):
+    if use_events:
+        traces = dataset.events
+        traces = reorder_traces(traces, analysis)
+        vmax = 0.03
+        # vmax = np.percentile(traces, 99)
+        label = 'event magnitude'
+        suffix = '_events'
+    else:
+        traces = dataset.dff_traces
+        traces = reorder_traces(traces, analysis)
+        vmax = np.percentile(traces, 99)
+        label = 'dF/F'
+        suffix = ''
+    if ax is None:
+        figsize = (20, 8)
+        fig, ax = plt.subplots(figsize=figsize)
+
+
+    cax = ax.pcolormesh(traces, cmap='magma', vmin=0, vmax=vmax)
+    ax.set_ylabel('cells')
+
+    interval_seconds = 5 * 60
+    ophys_frame_rate = int(dataset.metadata.ophys_frame_rate.values[0])
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.timestamps_ophys,
+                                                                               ophys_frame_rate)
+    ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
+    ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
+    ax.set_xlabel('time (seconds)')
+
+    cb = plt.colorbar(cax, pad=0.015)
+    cb.set_label(label, labelpad=3)
+    if save:
+        save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary',
+                    str(dataset.experiment_id) + 'sorted_traces_heatmap' + suffix)
+    return ax
+
 
 def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
     if use_events:
@@ -441,7 +497,8 @@ def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
                                                                                analysis.ophys_frame_rate)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.9), yspan=(0, .3))
-    ax = plot_traces_heatmap(analysis.dataset, ax=ax, use_events=use_events)
+    # ax = plot_traces_heatmap(analysis.dataset, ax=ax, use_events=use_events)
+    ax = plot_sorted_traces_heatmap(analysis.dataset, analysis, ax=ax, use_events=use_events)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
@@ -464,11 +521,14 @@ def plot_experiment_summary_figure(analysis, save_dir=None, use_events=False):
     ax = plot_lick_raster(analysis.dataset.trials, ax=ax, save_dir=None)
 
     ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35)
-    mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
-                         conditions=['cell', 'change_image_name', 'behavioral_response_type'])
-    ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
-                                 condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None,
-                                 use_events=use_events)
+    try:
+        mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
+                             conditions=['cell', 'change_image_name', 'behavioral_response_type'])
+        ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
+                                     condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None,
+                                    use_events=use_events)
+    except:
+        pass
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
     mdf = ut.get_mean_df(analysis.trial_response_df, analysis, conditions=['cell', 'change_image_name'])
