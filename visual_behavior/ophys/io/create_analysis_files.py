@@ -88,7 +88,7 @@ if __name__ == '__main__':
                 773816712, 773843260, 774370025, 774379465, 775011398, 775429615,
                 776042634, 756565411]
 
-    cache_dir = r'\\allen/programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    cache_dir = r'\\allen/programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_mesoscope_analysis'
     # cache_dir = r'/allen/programs/braintv/workgroups/ophysdev/OPhysCore/Analysis/2018-08 - Behavior Integration test'
     for lims_id in lims_ids[::-1]:
         create_analysis_files(lims_id, cache_dir, overwrite_analysis_files=False)
