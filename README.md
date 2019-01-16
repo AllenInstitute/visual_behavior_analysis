@@ -1,4 +1,4 @@
-Visual Behavior
+Visual Behavior 
 ==============================
 
 Package for analyzing behavioral data from the BrainTV Visual Behavior Project.
