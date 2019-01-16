@@ -153,7 +153,7 @@ def get_sync_path(lims_data):
         logger.info('using sync file from analysis directory instead of lims')
         sync_file = [file for file in os.listdir(analysis_dir) if 'sync' in file][0]
         sync_path = os.path.join(analysis_dir, sync_file)
-    except:
+    except:  # flake8: noqa: E722
         sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file][0]
         sync_path = os.path.join(ophys_session_dir, sync_file)
     if sync_file not in os.listdir(analysis_dir):
@@ -706,8 +706,6 @@ def run_roi_validation(lims_data):
 
 
 def get_roi_validation(lims_data, save_plots=False):
-    analysis_dir = get_analysis_dir(lims_data)  # flake8: noqa: F841
-
     roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces = run_roi_validation(
         lims_data)
 
@@ -793,7 +791,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     logger.info('done converting')
     print('done converting')
 
-    ophys_data = core_data.update(  # flake8: noqa: F841
+    ophys_data = core_data.update(
         dict(
             lims_data=lims_data,
             timestamps=timestamps,
@@ -804,5 +802,5 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
             motion_correction=motion_correction,
             max_projection=max_projection,
             average_image=average_image,
-        ))
+        ))  # flake8: noqa: F841
     return core_data
