@@ -23,6 +23,8 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     print('saving ', str(experiment_id), 'to', cache_dir)
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
 
+    use_events = False
+
     print('plotting example traces')
     active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
     length_mins = 1
@@ -30,7 +32,6 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
                                             cell_label=False, include_running=True, use_events=use_events)
 
-    use_events = False
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
     pairwise_correlations_df = analysis.get_pairwise_correlations_df()  # flake8: noqa: F841
 
