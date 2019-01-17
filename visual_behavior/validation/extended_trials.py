@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import six
 from scipy import stats
 
 from ..schemas.extended_trials import ExtendedTrialSchema
@@ -161,28 +162,22 @@ def count_stimuli_per_trial(trials, visual_stimuli):
     # preallocate array
     stimuli_per_trial = np.empty(len(trials))
 
+    # check to see if images or gratings are being used
+    if all(pd.isnull(visual_stimuli.image_category)) == False:
+        col_to_check = 'image_category'
+    elif all(pd.isnull(visual_stimuli.orientation)) == False:
+        col_to_check = 'orientation'
+
     # iterate over dataframe
     for idx, trial in trials.reset_index().iterrows():
-        # check to see if images or gratings are being used
-        if all(pd.isnull(visual_stimuli.image_category)) == False:
-            col_to_check = 'image_category'
-        elif all(pd.isnull(visual_stimuli.orientation)) == False:
-            col_to_check = 'orientation'
 
         try:
-            # get the index of the first stimulus that started on or before the trial start
-            start_stim = visual_stimuli[
-                (visual_stimuli.frame <= trial.startframe + 1) &
-                (visual_stimuli.end_frame >= trial.startframe + 1)
-            ].index[-1]
-
-            # get the index of the last stimulus that ended on or before the trial end
-            end_stim = visual_stimuli[
-                (visual_stimuli.frame <= trial.endframe)
-            ].index[-1]
-
-            # get all unique stimuli on this trial
-            stimuli = np.unique(visual_stimuli.loc[start_stim:end_stim][col_to_check])
+            stimuli = np.unique(visual_stimuli[
+                (visual_stimuli['frame'].isin(range(trial.startframe, trial.endframe)))
+                | (visual_stimuli['end_frame'].isin(range(trial.startframe, trial.endframe)))
+            ][col_to_check])
+            # print('checking frame {} to {}'.format(trial.startframe, trial.endframe))
+            # print('unique stimuli = {}'.format(stimuli))
             # add to array
             stimuli_per_trial[idx] = len(stimuli)
         except (IndexError, UnboundLocalError):
@@ -514,7 +509,7 @@ def validate_session_within_expected_duration(trials, expected_duration_seconds,
     '''
     ensure that last trial end time does not exceed expected duration by more than 30 seconds
     '''
-    return trials['endtime'].values[-1] < expected_duration_seconds + tolerance
+    return (trials['starttime'].values[-1] - trials['starttime'].values[0]) < (expected_duration_seconds + tolerance)
 
 
 def validate_session_ends_at_max_cumulative_volume(trials, volume_limit, tolerance=0.01):
@@ -677,7 +672,7 @@ def validate_change_time_mean(trials, expected_mean, distribution_type, toleranc
     '''
     stimulus_distribution: the mean of the stimulus distribution should match the 'distribution_mean' parameter
     '''
-    change_time_trial_referenced = trials['change_time'] - trials['starttime'] - trials['prechange_minimum']
+    change_time_trial_referenced = trials['scheduled_change_time'] - trials['prechange_minimum']
     # if all of the change times are Nan, cannot check mean. Return True
     if all(pd.isnull(change_time_trial_referenced)) == True:
         return True
@@ -804,33 +799,71 @@ def validate_even_sampling(trials, even_sampling_enabled):
         return True
 
 
-def validate_flash_blank_durations(visual_stimuli, periodic_flash, mean_tolerance=1 / 60., std_tolerance=1 / 60.):
+def merge_in_omitted_flashes(visual_stimuli, omitted_stimuli):
+    visual_stimuli['omitted'] = False
+
+    # get all blank durations
+    visual_stimuli['previous_blank_duration'] = visual_stimuli['time'].diff() - visual_stimuli['duration']
+
+    if omitted_stimuli is not None:
+        omitted_stimuli['omitted'] = True
+        if six.PY2:
+            visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
+        elif six.PY3:
+            visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli), sort=True).sort_values(by='frame').reset_index()
+        else:
+            raise(RuntimeError)
+
+    # was previous flash omitted?
+    visual_stimuli['previous_omitted'] = visual_stimuli['omitted'].shift()
+
+    return visual_stimuli
+
+
+def get_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash):
+
+    visual_stimuli = merge_in_omitted_flashes(visual_stimuli, omitted_stimuli)
+
+    # get all blank durations, but ignore omitted flashes and flashes immediately following omitted flashes
+    blank_durations = visual_stimuli[
+        (visual_stimuli['omitted'] == False)
+        & (visual_stimuli['previous_omitted'] == False)
+    ]['previous_blank_duration']
+
+    # get all flash durations, but ignore omitted flashes and flashes immediately following omitted flashes
+    flash_durations = visual_stimuli[
+        (visual_stimuli['omitted'] == False)
+        & (visual_stimuli['previous_omitted'] == False)
+    ]['duration']
+
+    return flash_durations[~np.isnan(flash_durations)], blank_durations[~np.isnan(blank_durations)]
+
+
+def validate_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash, mean_tolerance=1 / 60., std_tolerance=1 / 60.):
     '''
-    The duty cycle of the stimulus onset/offset is maintained across trials
+    The periodicity of the stimulus onset/offset is maintained across trials
     (e.g., if conditions for ending a trial are met, the stimulus presentation is not truncated)
 
     default tolerances on mean and std are 1 frame (1/60 seconds)
 
-    Takes core_data['visual_stimuli'] as input
+    Takes core_data['visual_stimuli'] and core_data['omitted_stimuli'] as input
     '''
-    if periodic_flash is not None:
-        # get all blank durations
-        blank_durations = visual_stimuli['time'].diff() - visual_stimuli['duration']
-        blank_durations = blank_durations[~np.isnan(blank_durations)]
 
-        # get all flash durations
-        flash_durations = visual_stimuli.duration
+    if periodic_flash is not None:
+        # if there are omitted flashes, exclude them from this validation
+        flash_durations, blank_durations = get_flash_blank_durations(visual_stimuli, omitted_stimuli, periodic_flash)
 
         # make sure all flashes and blanks are within tolerance
         # mean should be within tolernace of expected value
         # std should be within tolerance of 0
+        # leave the very last flash and blank out of the validation to avoid failures when the session was terminated early
         flash_durations_consistent = np.logical_and(
-            np.isclose(flash_durations.mean(), periodic_flash[0], atol=mean_tolerance),
-            np.isclose(flash_durations.std(), 0, atol=std_tolerance)
+            np.isclose(flash_durations[:-1].mean(), periodic_flash[0], atol=mean_tolerance),
+            np.isclose(flash_durations[:-1].std(), 0, atol=std_tolerance)
         )
         blank_durations_consistent = np.logical_and(
-            np.isclose(blank_durations.mean(), periodic_flash[1], atol=mean_tolerance),
-            np.isclose(blank_durations.std(), 0, atol=2 * std_tolerance)
+            np.isclose(blank_durations[:-1].mean(), periodic_flash[1], atol=mean_tolerance),
+            np.isclose(blank_durations[:-1].std(), 0, atol=2 * std_tolerance)
         )
 
         return blank_durations_consistent and flash_durations_consistent
@@ -849,18 +882,18 @@ def validate_two_stimuli_per_go_trial(trials, visual_stimuli):
 
 def validate_one_stimulus_per_catch_trial(trials, visual_stimuli):
     '''
-    all 'catch' trials should have one stimulus group
+    all 'catch' trials should have no more than one stimulus group
     '''
     stimuli_per_trial = count_stimuli_per_trial(trials[trials['trial_type'] == 'catch'], visual_stimuli)
-    return all(stimuli_per_trial == 1)
+    return all(stimuli_per_trial <= 1)
 
 
 def validate_one_stimulus_per_aborted_trial(trials, visual_stimuli):
     '''
-    all 'aborted' trials should have one stimulus group
+    all 'aborted' trials should have no more than one stimulus group
     '''
     stimuli_per_trial = count_stimuli_per_trial(trials[trials['trial_type'] == 'aborted'], visual_stimuli)
-    return all(stimuli_per_trial == 1)
+    return all(stimuli_per_trial <= 1)
 
 
 def validate_change_frame_at_flash_onset(trials, visual_stimuli, periodic_flash):
@@ -877,7 +910,7 @@ def validate_change_frame_at_flash_onset(trials, visual_stimuli, periodic_flash)
         return all(np.in1d(change_frames, visual_stimuli['frame']))
 
 
-def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash=True, frame_tolerance=2):
+def validate_initial_blank(trials, visual_stimuli, omitted_stimuli, initial_blank, periodic_flash=True, frame_tolerance=2):
     '''
     iterates over trials
     Verifies that there is a blank screen of duration `initial_blank` at the start of every trial.
@@ -888,6 +921,15 @@ def validate_initial_blank(trials, visual_stimuli, initial_blank, periodic_flash
     if periodic_flash is None and initial_blank == 0:
         return True
     else:
+
+        if omitted_stimuli is not None:
+            if six.PY2:
+                visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli)).sort_values(by='frame').reset_index()
+            elif six.PY3:
+                visual_stimuli = pd.concat((visual_stimuli, omitted_stimuli), sort=True).sort_values(by='frame').reset_index()
+            else:
+                raise(RuntimeError)
+
         # preallocate array
         initial_blank_in_tolerance = np.empty(len(trials))
 

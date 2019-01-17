@@ -55,6 +55,7 @@ def test_validate_change_time_mean():
     simulated_change_times_good = np.random.exponential(scale=2, size=100, )
     GOOD_TRIALS = pd.DataFrame({
         'change_time': simulated_change_times_good,
+        'scheduled_change_time': simulated_change_times_good,
         'starttime': np.zeros_like(simulated_change_times_good),
         'prechange_minimum': np.zeros_like(simulated_change_times_good)
     })
@@ -65,6 +66,7 @@ def test_validate_change_time_mean():
     simulated_change_times_bad = np.random.exponential(scale=3, size=100)
     BAD_TRIALS = pd.DataFrame({
         'change_time': simulated_change_times_bad,
+        'scheduled_change_time': simulated_change_times_bad,
         'starttime': np.zeros_like(simulated_change_times_bad),
         'prechange_minimum': np.zeros_like(simulated_change_times_bad),
     })
@@ -237,17 +239,17 @@ def test_validate_flash_blank_durations():
         'duration': [ 0.25189872, 0.25191379, 0.25223227, 0.25221559, 0.25236601]
     })
 
-    assert validate_flash_blank_durations(GOOD_DATA, periodic_flash=[0.25, 0.5]) == True
+    assert validate_flash_blank_durations(GOOD_DATA, omitted_stimuli=None, periodic_flash=[0.25, 0.5]) == True
 
     # bad data: flashes at ~250ms with one over 300ms,  blanks at ~500ms
     BAD_DATA = pd.DataFrame({
         'time': [  1.66710466e-03, 7.68953469e-01, 1.53593739e+00, 2.30325807e+00, 3.07040749e+00],
         'duration': [ 0.25189872, 0.25191379, 0.25223227, 0.30221559, 0.25236601]
     })
-    assert validate_flash_blank_durations(BAD_DATA, periodic_flash=[0.25, 0.5]) == False
+    assert validate_flash_blank_durations(BAD_DATA, omitted_stimuli=None, periodic_flash=[0.25, 0.5]) == False
 
     # function should return True if periodic_flash is None,  regardless of input data
-    assert validate_flash_blank_durations(BAD_DATA, periodic_flash=None) == True
+    assert validate_flash_blank_durations(BAD_DATA, omitted_stimuli=None, periodic_flash=None) == True
 
 
 def test_validate_two_stimuli_per_go_trial():
@@ -258,9 +260,9 @@ def test_validate_two_stimuli_per_go_trial():
         'trial_type': ['go', 'go']
     })
     GOOD_DATA_VISUAL_STIMULI = pd.DataFrame({
-        'frame': [1, 5, 10, 15],
-        'end_frame': [3, 8, 13, 18],
-        'image_category': ['a', 'b', 'a', 'b']
+        'frame': [1, 5, 10, 13, 15],
+        'end_frame': [3, 8, 12, 14, 18],
+        'image_category': ['a', 'b', 'b', 'b', 'a']
     })
     assert validate_two_stimuli_per_go_trial(GOOD_DATA_TRIALS, GOOD_DATA_VISUAL_STIMULI) == True
 
@@ -366,7 +368,7 @@ def test_validate_initial_blank():
         'frame': [0, 5, 10, 15],
         'time': [0.1, 5.1, 10.101, 15.1]
     })
-    assert validate_initial_blank(GOOD_DATA_TRIALS, GOOD_DATA_VISUAL_STIMULI, initial_blank) == True
+    assert validate_initial_blank(GOOD_DATA_TRIALS, GOOD_DATA_VISUAL_STIMULI, omitted_stimuli=None, initial_blank=initial_blank) == True
 
     # bad data: 2nd stimulus 200 ms early,  3rd stimulus 200 ms and 3 frames late
     BAD_DATA_TRIALS = pd.DataFrame({
@@ -377,7 +379,7 @@ def test_validate_initial_blank():
         'frame': [0, 5, 13, 15],
         'time': [0.1, 4.9, 10.201, 15.1]
     })
-    assert validate_initial_blank(BAD_DATA_TRIALS, BAD_DATA_VISUAL_STIMULI, initial_blank) == False
+    assert validate_initial_blank(BAD_DATA_TRIALS, BAD_DATA_VISUAL_STIMULI, omitted_stimuli=None, initial_blank=initial_blank) == False
 
 
 def test_validate_new_params_on_nonaborted_trials():

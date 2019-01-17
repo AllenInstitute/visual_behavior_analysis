@@ -15,11 +15,16 @@ def calc_deriv(x, time):
     return dxdt
 
 
-def rad_to_dist(speed_rad_per_s):
+def deg_to_dist(speed_deg_per_s):
+    '''
+    takes speed in degrees per second
+    converts to radians
+    multiplies by radius (in cm) to get linear speed in cm/s
+    '''
     wheel_diameter = 6.5 * 2.54  # 6.5" wheel diameter
     running_radius = 0.5 * (
         2.0 * wheel_diameter / 3.0)  # assume the animal runs at 2/3 the distance from the wheel center
-    running_speed_cm_per_sec = np.pi * speed_rad_per_s * running_radius / 180.
+    running_speed_cm_per_sec = np.pi * speed_deg_per_s * running_radius / 180.
     return running_speed_cm_per_sec
 
 
@@ -46,8 +51,8 @@ def compute_running_speed(dx_raw, time, v_sig, v_in, smooth=False):
     """
     dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
     dx = np.cumsum(dx)  # wheel rotations
-    speed = calc_deriv(dx, time)
-    speed = rad_to_dist(speed)
+    speed = calc_deriv(dx, time)  # speed in degrees/s
+    speed = deg_to_dist(speed)
 
     if smooth:
         raise NotImplementedError
