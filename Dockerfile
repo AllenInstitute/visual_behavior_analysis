@@ -9,6 +9,10 @@ RUN conda install -y scipy numpy pandas scikit-learn subprocess32 cython
 
 # Set up build:
 RUN mkdir -p /data
+RUN mkdir -p /allen/aibs/informatics/swdb2018/visual_behavior/702134928_363887_180524_VISal_175_Vip_2P6_behavior_sessionC
+RUN mkdir -p /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508
+RUN mkdir -p /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935
+
 ARG PKG
 RUN mkdir -p /${PKG}
 WORKDIR /${PKG}
@@ -41,6 +45,18 @@ COPY fixtures/181119134201_402329_b75a87d0-8178-4171-a3b2-7cea3ae8e118.pkl /alle
 
 COPY fixtures/nimages_0_20170714.zip /allen/aibs/mpe/Software/stimulus_files/nimages_0_20170714.zip
 COPY fixtures/Natural_Images_Lum_Matched_set_training_2017.07.14.pkl /allen/programs/braintv/workgroups/nc-ophys/Doug/Stimulus_Code/image_dictionaries/Natural_Images_Lum_Matched_set_training_2017.07.14.pkl
+
+COPY fixtures/702134928_363887_180524_VISal_175_Vip_2P6_behavior_sessionC /allen/aibs/informatics/swdb2018/visual_behavior/702134928_363887_180524_VISal_175_Vip_2P6_behavior_sessionC
+RUN chmod -R a-w /allen/aibs/informatics/swdb2018/visual_behavior/702134928_363887_180524_VISal_175_Vip_2P6_behavior_sessionC
+
+# Ophys test assets:
+COPY fixtures/702013508_363887_20180524142941_sync.h5 /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508
+COPY fixtures/702013508_363887_20180524142941_stim.pkl  /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508
+COPY fixtures/objectlist.txt /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935 
+COPY fixtures/702134928_input_extract_traces.json /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed
+COPY fixtures/702134928_dff.h5 /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928
+COPY fixtures/702134928_rigid_motion_transform.csv /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed 
+COPY fixtures/maxInt_a13a.png /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935 
 
 CMD ["/bin/bash"]
 
