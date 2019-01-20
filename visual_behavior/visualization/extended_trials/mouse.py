@@ -20,7 +20,7 @@ def make_ILI_plot(dfm, session_dates, ax):
         ILI = ILI[ILI > 0.500]
         # if no licks are recorded, this will keep the violin plot from failing below
         if len(ILI) == 0:
-            ILI = [0]
+            ILI = np.array([0])
         ILIs.append(ILI)
         ax.scatter(
             ILI,
