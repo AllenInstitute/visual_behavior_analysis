@@ -101,6 +101,21 @@ def get_fraction_nonzero_trials(group):
     return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
 
 
+def get_reliability(group):
+    import scipy as sp
+    trials = group['trial'].values
+    corr_values = []
+    traces = group['trace'].values
+    for i, trial in enumerate(trials[:-1]):
+        trial1 = traces[i]
+        trial2 = traces[i+1]
+        corr = sp.stats.pearsonr(trial1,trial2)[0]
+        corr_values.append(corr)
+    corr_values = np.asarray(corr_values)
+    reliability = np.mean(corr_values)
+    return pd.Series({'reliability': reliability})
+
+
 def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False):
     rdf = response_df.copy()
 
@@ -125,6 +140,10 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     fraction_nonzero_trials = rdf.groupby(conditions).apply(get_fraction_nonzero_trials)
     fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
     mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
+
+    reliability = rdf.groupby(conditions).apply(get_reliability)
+    reliability = reliability.reset_index()
+    mdf['reliability'] = reliability.reliability
 
     return mdf
 

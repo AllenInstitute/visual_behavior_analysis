@@ -41,7 +41,7 @@ class ResponseAnalysis(object):
         self.overwrite_analysis_files = overwrite_analysis_files
         self.trial_window = [-4, 4]  # time, in seconds, around change time to extract portion of cell trace
         self.flash_window = [-0.5,
-                             0.5]  # time, in seconds, around stimulus flash onset time to extract portion of cell trace
+                             0.75]  # time, in seconds, around stimulus flash onset time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
         self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
                                 0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
@@ -152,7 +152,7 @@ class ResponseAnalysis(object):
                 flash_data = stimulus_table[stimulus_table.flash_number == flash]
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
-                flash_window = [-self.response_window_duration, self.response_window_duration]
+                # flash_window = [-self.response_window_duration, self.response_window_duration]
                 flash_window = self.flash_window
                 trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
