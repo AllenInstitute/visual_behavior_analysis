@@ -23,7 +23,8 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                 # if analysis.get_flash_response_df_path().split('/')[-1] in os.listdir(dataset.analysis_dir):
                 if 'repeat' in conditions:
                     flash_response_df = analysis.flash_response_df.copy()
-                    flash_response_df = flash_response_df[flash_response_df.repeat.isin([1, 5, 10, 15])]
+                    repeats = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15]
+                    flash_response_df = flash_response_df[flash_response_df.repeat.isin(repeats)]
                 else:
                     flash_response_df = analysis.flash_response_df.copy()
                 flash_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
