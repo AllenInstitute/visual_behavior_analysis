@@ -103,7 +103,10 @@ def get_fraction_nonzero_trials(group):
 
 def get_reliability(group):
     import scipy as sp
-    trials = group['trial'].values
+    if 'trial' in group.keys():
+        trials = group['trial'].values
+    elif 'flash_number' in group.keys():
+        trials = group['flash_number'].values
     corr_values = []
     traces = group['trace'].values
     for i, trial in enumerate(trials[:-1]):
