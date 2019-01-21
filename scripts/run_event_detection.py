@@ -36,7 +36,6 @@ from pbstools import PythonJob # flake8: noqa: E999
 # lims_ids = [737471012, 745637183, 775011398, 775429615, 776042634]
 lims_ids = [730863840]
 
-
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/event_detection.py"
 
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords2'
