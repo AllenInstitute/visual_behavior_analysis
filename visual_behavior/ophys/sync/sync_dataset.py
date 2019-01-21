@@ -19,6 +19,9 @@ import collections
 import h5py as h5
 import numpy as np
 
+import logging
+logger = logging.getLogger(__name__)
+
 dset_version = 1.04
 
 
@@ -73,12 +76,12 @@ class Dataset(object):
     Examples
     --------
     >>> dset = Dataset('my_h5_file.h5')
-    >>> print(dset.meta_data)
+    >>> logger.info(dset.meta_data)
     >>> dset.stats()
     >>> dset.close()
 
     >>> with Dataset('my_h5_file.h5') as d:
-    ...     print(dset.meta_data)
+    ...     logger.info(dset.meta_data)
     ...     dset.stats()
 
     """
@@ -422,17 +425,17 @@ class Dataset(object):
 
         if total_events <= 0:
             if print_results:
-                print("*" * 70)
-                print("No events on line: %s" % line)
-                print("*" * 70)
+                logger.info("*" * 70)
+                logger.info("No events on line: %s" % line)
+                logger.info("*" * 70)
             return None
         elif total_events <= 10:
             if print_results:
-                print("*" * 70)
-                print("Sparse events on line: %s" % line)
-                print("Rising: %s" % total_rising)
-                print("Falling: %s" % total_falling)
-                print("*" * 70)
+                logger.info("*" * 70)
+                logger.info("Sparse events on line: %s" % line)
+                logger.info("Rising: %s" % total_rising)
+                logger.info("Falling: %s" % total_falling)
+                logger.info("*" * 70)
             return {
                 'line': line,
                 'bit': bit,
@@ -458,22 +461,22 @@ class Dataset(object):
             duty_cycle = self.duty_cycle(line)
 
             if print_results:
-                print("*" * 70)
+                logger.info("*" * 70)
 
-                print("Quick stats for line: %s" % line)
-                print("Bit: %i" % bit)
-                print("Data points: %i" % total_data_points)
-                print("Total transitions: %i" % total_events)
-                print("Rising edges: %i" % total_rising)
-                print("Falling edges: %i" % total_falling)
-                print("Average period: %s" % avg_period)
-                print("Minimum period: %s" % min_period)
-                print("Max period: %s" % max_period)
-                print("Period SD: %s" % period_sd)
-                print("Average freq: %s" % avg_freq)
-                print("Duty cycle: %s" % duty_cycle)
+                logger.info("Quick stats for line: %s" % line)
+                logger.info("Bit: %i" % bit)
+                logger.info("Data points: %i" % total_data_points)
+                logger.info("Total transitions: %i" % total_events)
+                logger.info("Rising edges: %i" % total_rising)
+                logger.info("Falling edges: %i" % total_falling)
+                logger.info("Average period: %s" % avg_period)
+                logger.info("Minimum period: %s" % min_period)
+                logger.info("Max period: %s" % max_period)
+                logger.info("Period SD: %s" % period_sd)
+                logger.info("Average freq: %s" % avg_freq)
+                logger.info("Duty cycle: %s" % duty_cycle)
 
-                print("*" * 70)
+                logger.info("*" * 70)
 
             return {
                 'line': line,
@@ -572,16 +575,16 @@ class Dataset(object):
         for i in range(32):
             bits.append(self.line_stats(i, print_results=False))
         active_bits = [x for x in bits if x is not None]
-        print("Active bits: ", len(active_bits))
+        logger.info("Active bits: ", len(active_bits))
         for bit in active_bits:
-            print("*" * 70)
-            print("Bit: %i" % bit['bit'])
-            print("Label: %s" % self.line_labels[bit['bit']])
-            print("Rising edges: %i" % bit['total_rising'])
-            print("Falling edges: %i" % bit["total_falling"])
-            print("Average freq: %s" % bit['avg_freq'])
-            print("Duty cycle: %s" % bit['duty_cycle'])
-        print("*" * 70)
+            logger.info("*" * 70)
+            logger.info("Bit: %i" % bit['bit'])
+            logger.info("Label: %s" % self.line_labels[bit['bit']])
+            logger.info("Rising edges: %i" % bit['total_rising'])
+            logger.info("Falling edges: %i" % bit["total_falling"])
+            logger.info("Average freq: %s" % bit['avg_freq'])
+            logger.info("Duty cycle: %s" % bit['duty_cycle'])
+        logger.info("*" * 70)
         return active_bits
 
     def plot_all(self,

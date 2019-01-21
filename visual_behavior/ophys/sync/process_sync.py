@@ -1,3 +1,5 @@
+
+
 import numpy as np
 
 
@@ -115,78 +117,8 @@ def calculate_delay(sync_data, stim_vsync_fall, sample_frequency):
         else:
             delay = ASSUMED_DELAY
     except Exception as e:
-        print(e)
+        logger.info(e)
         delay = ASSUMED_DELAY
         logger.error("Process without photodiode signal. Assumed delay: {}".format(round(delay, ROUND_PRECISION)))
 
     return delay
-
-
-def get_sync_data(lims_id):
-    logger.info('getting sync data')
-    from visual_behavior.ophys.sync.sync_dataset import Dataset
-    import visual_behavior.ophys.io.convert_level_1_to_level_2 as io
-    sync_path = io.get_sync_path(lims_id)
-    sync_dataset = Dataset(sync_path)
-    meta_data = sync_dataset.meta_data
-    sample_freq = meta_data['ni_daq']['counter_output_freq']
-    # 2P vsyncs
-    vs2p_r = sync_dataset.get_rising_edges('2p_vsync')
-    vs2p_f = sync_dataset.get_falling_edges(
-        '2p_vsync', )  # new sync may be able to do units = 'sec', so conversion can be skipped
-    vs2p_rsec = vs2p_r / sample_freq
-    vs2p_fsec = vs2p_f / sample_freq
-    vs2p_r_filtered, vs2p_f_filtered = filter_digital(vs2p_rsec, vs2p_fsec, threshold=0.01)
-    # use rising edge for Scientifica, falling edge for Nikon http://confluence.corp.alleninstitute.org/display/IT/Ophys+Time+Sync
-    frames_2p = vs2p_r_filtered
-    # Convert to seconds - skip if using units in get_falling_edges, otherwise convert before doing filter digital
-    # vs2p_rsec = vs2p_r / sample_freq
-    # frames_2p = vs2p_rsec
-    # stimulus vsyncs
-    # vs_r = d.get_rising_edges('stim_vsync')
-    vs_f = sync_dataset.get_falling_edges('stim_vsync')
-    # convert to seconds
-    # vs_r_sec = vs_r / sample_freq
-    vs_f_sec = vs_f / sample_freq
-    # vsyncs = vs_f_sec
-    # add display lag
-    monitor_delay = calculate_delay(sync_dataset, vs_f_sec, sample_freq)
-    vsyncs = vs_f_sec + monitor_delay  # this should be added, right!?
-    # line labels are different on 2P6 and production rigs - need options for both
-    if 'lick_1' in meta_data['line_labels']:
-        lick_1 = sync_dataset.get_rising_edges('lick_1') / sample_freq
-    elif 'lick_sensor' in meta_data['line_labels']:
-        lick_1 = sync_dataset.get_rising_edges('lick_sensor') / sample_freq
-    else:
-        lick_1 = None
-    if '2p_trigger' in meta_data['line_labels']:
-        trigger = sync_dataset.get_rising_edges('2p_trigger') / sample_freq
-    elif 'acq_trigger' in meta_data['line_labels']:
-        trigger = sync_dataset.get_rising_edges('acq_trigger') / sample_freq
-    if 'stim_photodiode' in meta_data['line_labels']:
-        stim_photodiode = sync_dataset.get_rising_edges('stim_photodiode') / sample_freq
-    elif 'photodiode' in meta_data['line_labels']:
-        stim_photodiode = sync_dataset.get_rising_edges('photodiode') / sample_freq
-    cam1_exposure = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
-    cam2_exposure = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
-    # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger
-    frames_2p = frames_2p[frames_2p > trigger[0]]
-    logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
-    logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
-    # put sync data in format to be compatible with downstream analysis
-    times_2p = {'timestamps': frames_2p}
-    times_vsync = {'timestamps': vsyncs}
-    times_lick_1 = {'timestamps': lick_1}
-    times_trigger = {'timestamps': trigger}
-    times_cam1_exposure = {'timestamps': cam1_exposure}
-    times_cam2_exposure = {'timestamps': cam2_exposure}
-    times_stim_photodiode = {'timestamps': stim_photodiode}
-    sync_data = {'ophys_frames': times_2p,
-                 'stimulus_frames': times_vsync,
-                 'lick_times': times_lick_1,
-                 'cam1_exposure': times_cam1_exposure,
-                 'cam2_exposure': times_cam2_exposure,
-                 'stim_photodiode': times_stim_photodiode,
-                 'ophys_trigger': times_trigger,
-                 }
-    return sync_data

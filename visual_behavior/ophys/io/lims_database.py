@@ -9,6 +9,7 @@ import os
 import json
 import psycopg2
 import pandas as pd
+from pytz import timezone
 
 import logging
 
@@ -122,7 +123,6 @@ class LimsDatabase:
         return self.data_pointer[1]
 
     def get_experiment_date(self):
-        from pytz import timezone
 
         utc_time = self.data_pointer[5]
         zoned_time = utc_time.replace(tzinfo=timezone('UTC'))

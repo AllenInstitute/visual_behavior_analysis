@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+import matplotlib
+matplotlib.use('Agg')
+
 import warnings
 import pandas as pd
 from argschema import ArgSchema, ArgSchemaParser, fields

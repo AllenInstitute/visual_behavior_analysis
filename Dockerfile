@@ -12,6 +12,7 @@ RUN mkdir -p /data
 RUN mkdir -p /allen/aibs/informatics/swdb2018/visual_behavior/702134928_363887_180524_VISal_175_Vip_2P6_behavior_sessionC
 RUN mkdir -p /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508
 RUN mkdir -p /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935
+RUN mkdir -p /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix
 
 ARG PKG
 RUN mkdir -p /${PKG}
@@ -57,6 +58,9 @@ COPY fixtures/702134928_input_extract_traces.json /allen/programs/braintv/produc
 COPY fixtures/702134928_dff.h5 /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928
 COPY fixtures/702134928_rigid_motion_transform.csv /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed 
 COPY fixtures/maxInt_a13a.png /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935 
+COPY fixtures/702134928_demixed_traces.h5 /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix 
+COPY fixtures/avgInt_a1X.png /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935 
+COPY fixtures/roi_traces.h5 /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed 
 
 CMD ["/bin/bash"]
 

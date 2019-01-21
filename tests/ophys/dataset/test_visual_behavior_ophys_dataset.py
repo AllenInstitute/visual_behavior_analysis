@@ -257,7 +257,7 @@ def test_get_timestamps_ophys(fn, ophys_dataset, ophys_timestamps):
 def test_get_stimulus_table(fn, ophys_dataset, ophys_stimulus_table):
     
     obtained = fn(ophys_dataset)
-    ophys_stimulus_table = ophys_stimulus_table.loc[:, ('flash_number', 'start_time', 'end_time', 'image_name')]
+    ophys_stimulus_table = ophys_stimulus_table.loc[:, ('contrast', 'flash_number', 'start_time', 'end_time', 'image_name')]
     pd.testing.assert_frame_equal(obtained, ophys_stimulus_table, check_like=True)
         
     
