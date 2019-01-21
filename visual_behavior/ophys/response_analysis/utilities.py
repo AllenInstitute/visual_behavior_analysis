@@ -111,8 +111,8 @@ def get_reliability(group):
     traces = group['trace'].values
     for i, trial in enumerate(trials[:-1]):
         trial1 = traces[i]
-        trial2 = traces[i+1]
-        corr = sp.stats.pearsonr(trial1,trial2)[0]
+        trial2 = traces[i + 1]
+        corr = sp.stats.pearsonr(trial1, trial2)[0]
         corr_values.append(corr)
     corr_values = np.asarray(corr_values)
     reliability = np.mean(corr_values)

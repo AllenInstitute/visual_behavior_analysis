@@ -89,7 +89,7 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
 
 
 def plot_tuning_curve_heatmap(df, title=None, ax=None, save_dir=None, use_events=False):
-    image_set = df.image_set.unique()[0]
+    # image_set = df.image_set.unique()[0]
     cre_line = df.cre_line.unique()[0]
     # trial_type = df.trial_type.unique()[0]
     #     detectability = get_detectability()

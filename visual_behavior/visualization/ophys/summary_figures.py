@@ -338,7 +338,11 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save=
         plt.gcf().subplots_adjust(right=0.85)
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_responses' + suffix,
                     analysis.dataset.analysis_folder + '_' + str(cell_index))
-        save_figure(fig, figsize, os.path.join(analysis.dataset.cache_dir, 'summary_figures'),
+
+        summary_figure_dir = os.path.join(analysis.dataset.cache_dir, 'summary_figures')
+        if not os.path.exists(summary_figure_dir):
+            os.makedirs(summary_figure_dir)
+        save_figure(fig, figsize, summary_figure_dir,
                     'image_responses' + suffix,
                     analysis.dataset.analysis_folder + '_' + str(cell_index))
         plt.close()

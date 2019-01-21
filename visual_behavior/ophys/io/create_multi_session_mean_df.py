@@ -60,8 +60,12 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
     if 'index' in mega_mdf.keys():
         mega_mdf = mega_mdf.drop(columns='index')
 
+    mega_mdf_write_dir = os.path.join(cache_dir, 'multi_session_summary_dfs')
+    if not os.path.exists(mega_mdf_write_dir):
+        os.makedirs(mega_mdf_write_dir)
+
     mega_mdf.to_hdf(
-        os.path.join(cache_dir, 'multi_session_summary_dfs', 'mean' + type + conditions[2] + suffix + '_df.h5'),
+        os.path.join(mega_mdf_write_dir, 'mean' + type + conditions[2] + suffix + '_df.h5'),
         key='df',
         format='fixed')
 
@@ -90,7 +94,6 @@ if __name__ == '__main__':
                       770094844, 771381093, 771427955, 772131949, 772696884, 772735942,
                       773816712, 773843260, 774370025, 774379465, 775011398, 775429615,
                       776042634, 756565411]
-
 
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
