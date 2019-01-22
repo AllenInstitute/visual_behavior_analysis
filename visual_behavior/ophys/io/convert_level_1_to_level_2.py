@@ -82,11 +82,32 @@ def get_analysis_folder_name(lims_data):
         specimen_driver_line = specimen_driver_line[0].split('-')[0]
     else:
         specimen_driver_line = specimen_driver_line[0]
-    analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                           str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                           lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
-                           specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
-                           lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E127
+    if lims_data.depth.values[0] is None:
+        depth = 0
+    else:
+        depth = lims_data.depth.values[0]
+    date = str(lims_data.experiment_date.values[0])[:10].split('-')
+    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_line) > 1:
+        specimen_driver_line = specimen_driver_line[0].split('-')[0]
+    else:
+        specimen_driver_line = specimen_driver_line[0]
+
+    if lims_data.rig.values[0][0] == 'M':
+        analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
+                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
+                                   2] + '_' + \
+                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+                               specimen_driver_line + '_' + lims_data.rig.values[0] + \
+                               '_' + lims_data.session_type.values[0]  # NOQA: E127
+    else:
+        analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
+                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
+                                   2] + '_' + \
+                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+                               specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
+                               lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E127
+
     return analysis_folder_name
 
 
@@ -143,6 +164,25 @@ def get_segmentation_dir(lims_data):
     segmentation_folder = [file for file in os.listdir(processed_dir) if 'segmentation' in file]
     segmentation_dir = os.path.join(processed_dir, segmentation_folder[0])
     return segmentation_dir
+
+
+def get_roi_group(lims_data):
+    experiment_id = lims_data.experiment_id.values[0]
+    ophys_session_dir = get_ophys_session_dir(lims_data)
+    import json
+    json_file = [file for file in os.listdir(ophys_session_dir) if ('SPLITTING' in file) and ('input.json' in file)]
+    json_path = os.path.join(ophys_session_dir, json_file[0])
+    with open(json_path, 'r') as w:
+        jin = json.load(w)
+    # figure out which roi_group the current experiment belongs to
+    plane_data = pd.DataFrame()
+    for i, roi_group in enumerate(range(len(jin['plane_groups']))):
+        group = jin['plane_groups'][roi_group]['ophys_experiments']
+        for j, plane in enumerate(range(len(group))):
+            expt_id = group[plane]['experiment_id']
+            if expt_id == experiment_id:
+                expt_roi_group = i
+    return expt_roi_group
 
 
 def get_sync_path(lims_data):
@@ -211,15 +251,25 @@ def get_sync_data(lims_data, use_acq_trigger):
         stim_photodiode = sync_dataset.get_rising_edges('photodiode') / sample_freq
     if 'cam1_exposure' in meta_data['line_labels']:
         eye_tracking = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
+    elif 'cam1' in meta_data['line_labels']:
+        eye_tracking = sync_dataset.get_rising_edges('cam1') / sample_freq
     elif 'eye_tracking' in meta_data['line_labels']:
         eye_tracking = sync_dataset.get_rising_edges('eye_tracking') / sample_freq
     if 'cam2_exposure' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
+    elif 'cam2' in meta_data['line_labels']:
+        behavior_monitoring = sync_dataset.get_rising_edges('cam2') / sample_freq
     elif 'behavior_monitoring' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('behavior_monitoring') / sample_freq
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only
     if use_acq_trigger:
         frames_2p = frames_2p[frames_2p > trigger[0]]
+    print(len(frames_2p))
+    if lims_data.rig.values[0][0] == 'M': #if Mesoscope
+        print('resampling mesoscope 2P frame times')
+        roi_group = get_roi_group(lims_data) #get roi_group order
+        frames_2p = frames_2p[roi_group::4] #resample sync times
+    print(len(frames_2p))
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
     # put sync data in format to be compatible with downstream analysis
@@ -786,8 +836,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     average_image = get_average_image(lims_data)
     save_average_image(average_image, lims_data)
 
-    roi_validation = get_roi_validation(lims_data)
-    save_roi_validation(roi_validation, lims_data)
+    # roi_validation = get_roi_validation(lims_data)
+    # save_roi_validation(roi_validation, lims_data)
 
     logger.info('done converting')
     print('done converting')
