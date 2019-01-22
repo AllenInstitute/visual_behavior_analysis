@@ -2,7 +2,7 @@ import pandas as pd
 from six import PY3
 import pickle
 
-from ...utilities import local_time, ListHandler, DoubleColonFormatter, inplace
+from ...utilities import local_time, ListHandler, DoubleColonFormatter
 
 from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
