@@ -248,21 +248,21 @@ def test_rebase_time(monkeypatch,foraging2_data_fixture):
     timestamps = foraging2.data_to_time(foraging2_data_fixture) + offset
     trials = foraging2.data_to_trials(foraging2_data_fixture)
 
-    trials_rebased = foraging2.rebase_trials(trials,timestamps)
+    foraging2.rebase_trials_inplace(trials,timestamps)
 
     # cols_to_check = ['starttime','endtime','change_time']
 
     np.testing.assert_almost_equal(
-        trials_rebased['starttime'].values[:3],
+        trials['starttime'].values[:3],
         np.array([1000.0, 1008.832, 1017.664]),
     )
 
     np.testing.assert_almost_equal(
-        trials_rebased['endtime'].values[:3],
+        trials['endtime'].values[:3],
         np.array([1008.256, 1017.088, 1025.92]),
     )
     np.testing.assert_almost_equal(
-        trials_rebased['change_time'].values[:3],
+        trials['change_time'].values[:3],
         np.array([1002.944, 1013.984, 1022.08 ]),
     )
     EXPECTED = np.empty((3,),dtype='object')
@@ -270,7 +270,7 @@ def test_rebase_time(monkeypatch,foraging2_data_fixture):
     EXPECTED[1] = list([1014.176])
     EXPECTED[2] = list([1022.272])
     np.testing.assert_equal(
-        trials_rebased['reward_times'].values[:3],
+        trials['reward_times'].values[:3],
         EXPECTED,
     )
 

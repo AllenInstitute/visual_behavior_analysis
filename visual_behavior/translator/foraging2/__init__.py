@@ -2,7 +2,7 @@ import pandas as pd
 from six import PY3
 import pickle
 
-from ...utilities import local_time, ListHandler, DoubleColonFormatter, inplace
+from ...utilities import local_time, ListHandler, DoubleColonFormatter
 
 from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
@@ -64,9 +64,7 @@ def data_to_change_detection_core(data, time=None):
     """
 
     if time is None:
-        timestamps = data_to_time(data)
-    else:
-        timestamps = time
+        time = data_to_time(data)
 
     log_messages = []
     handler = ListHandler(log_messages)
@@ -81,7 +79,7 @@ def data_to_change_detection_core(data, time=None):
 
     core_data = {
         "metadata": data_to_metadata(data),
-        "time": timestamps,
+        "time": time,
         "licks": data_to_licks(data, time=time),
         "trials": data_to_trials(data, time=time),
         "running": data_to_running(data, time=time),
@@ -302,8 +300,7 @@ def data_to_time(data):
     return get_time(data)
 
 
-@inplace
-def rebase_trials(trials, time):
+def rebase_trials_inplace(trials, time):
 
     trials['starttime'] = time[trials['startframe']]
     trials['endtime'] = time[trials['endframe']]
@@ -325,8 +322,6 @@ def rebase_trials(trials, time):
         return [time[fr] for fr in frames]
 
     trials['reward_times'] = trials['reward_frames'].map(get_times)
-
-    return trials
 
 
 def data_to_trials(data, time=None):
@@ -389,7 +384,7 @@ def data_to_trials(data, time=None):
 
     if time is not None:
         logger.warning('rebasing time of trials dataframe')
-        trials = rebase_trials(trials, time)
+        rebase_trials_inplace(trials, time)
 
     return trials
 
