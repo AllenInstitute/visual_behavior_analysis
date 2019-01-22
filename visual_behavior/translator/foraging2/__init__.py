@@ -300,8 +300,7 @@ def data_to_time(data):
     return get_time(data)
 
 
-@inplace
-def rebase_trials(trials, time):
+def rebase_trials_inplace(trials, time):
 
     trials['starttime'] = time[trials['startframe']]
     trials['endtime'] = time[trials['endframe']]
@@ -385,7 +384,7 @@ def data_to_trials(data, time=None):
 
     if time is not None:
         logger.warning('rebasing time of trials dataframe')
-        trials = rebase_trials(trials, time)
+        rebase_trials_inplace(trials, time)
 
     return trials
 
