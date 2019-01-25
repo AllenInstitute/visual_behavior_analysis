@@ -47,8 +47,7 @@ def make_info_table(extended_trials, ax):
             ['Black screen on timeout', 'extended_trials.iloc[0].blank_screen_timeout'],
             ['Minimum pre-change time', 'extended_trials.iloc[0]["prechange_minimum"]'],
             ['Trial duration', 'extended_trials.iloc[0].trial_duration'],
-            ['Number of contingent trials', 'session_metrics.num_contingent_trials(extended_trials)']
-    ]
+            ['Number of contingent trials', 'session_metrics.num_contingent_trials(extended_trials)']]
 
     cell_text = []
     for x in data:
@@ -216,6 +215,7 @@ def make_rolling_dprime_plot(d_prime, ax, format='vertical', peak_dprime=None):
         ax.set_xticks([0, peak_dprime, 5.0, ])  # this is more readable?
     else:  # ticks from original implementatin
         ax.set_xlim(0, 5)
+
 
 def make_legend(ax, palette='trial_types'):
     ax.plot(np.nan, np.nan, marker='.', linestyle='none', color='black')
