@@ -253,8 +253,8 @@ def annotate_mean_df_with_sd_over_baseline(analysis, mean_df, flashes=False):
     return mean_df
 
 
-def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
-    if flashes:
+def annotate_mean_df_with_pref_stim(mean_df):
+    if 'image_name' in mean_df.keys():
         image_name = 'image_name'
     else:
         image_name = 'change_image_name'

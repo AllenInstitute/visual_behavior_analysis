@@ -96,7 +96,13 @@ def plot_tuning_curve_heatmap(df, title=None, ax=None, save_dir=None, use_events
     #     d = detectability[detectability.image_set==image_set]
     #     order = np.argsort(d.detectability.values)
     #     images = d.image_name.values[order]
-    images = np.sort(df.change_image_name.unique())
+    if 'image_name' in df.keys():
+        image_name = 'image_name'
+        suffix = '_flashes'
+    else:
+        image_name = 'change_image_name'
+        suffix = '_trials'
+    images = np.sort(df[image_name].unique())
 
     if cre_line == 'Vip-IRES-Cre':
         interval = 50
@@ -105,15 +111,15 @@ def plot_tuning_curve_heatmap(df, title=None, ax=None, save_dir=None, use_events
     if use_events:
         vmax = 0.03
         label = 'mean event magnitude'
-        suffix = '_events'
+        suffix = suffix+'_events'
     else:
         vmax = 0.3
         label = 'mean dF/F'
-        suffix = ''
+        suffix = suffix
 
     cell_list = []
     for image in images:
-        tmp = df[(df.change_image_name == image) & (df.pref_stim == True)]
+        tmp = df[(df[image_name] == image) & (df.pref_stim == True)]
         order = np.argsort(tmp.mean_response.values)[::-1]
         cell_ids = list(tmp.cell_specimen_id.values[order])
         cell_list = cell_list + cell_ids
@@ -122,7 +128,7 @@ def plot_tuning_curve_heatmap(df, title=None, ax=None, save_dir=None, use_events
     for i, cell in enumerate(cell_list):
         responses = []
         for image in images:
-            response = df[(df.cell_specimen_id == cell) & (df.change_image_name == image)].mean_response.values[0]
+            response = df[(df.cell_specimen_id == cell) & (df[image_name] == image)].mean_response.values[0]
             responses.append(response)
         response_matrix[i, :] = np.asarray(responses)
 
