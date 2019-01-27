@@ -22,14 +22,14 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
             if flashes:
                 if 'repeat' in conditions:
                     flash_response_df = analysis.flash_response_df.copy()
-                    repeats = [1, 5, 10, 15]
+                    repeats = [1,2,3,4,5,6,7,8,9,10,15]
                     flash_response_df = flash_response_df[flash_response_df.repeat.isin(repeats)]
                 else:
                     flash_response_df = analysis.flash_response_df.copy()
                 flash_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
                                                 flash_response_df.reward_rate.values]
                 mdf = ut.get_mean_df(flash_response_df, analysis,
-                                     conditions=conditions, flashes=True)
+                                     conditions=conditions)
                 mdf['experiment_id'] = dataset.experiment_id
                 mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
                 mega_mdf = pd.concat([mega_mdf, mdf])
