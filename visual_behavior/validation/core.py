@@ -1,3 +1,4 @@
+from __future__ import print_function
 import warnings
 import numpy as np
 import pandas as pd
@@ -65,6 +66,7 @@ def count_read_errors(core_data):
             warnings.warn(
                 '{} error while reading file: "{}"'.format(rec['levelname'], rec['message'])
             )
+            print(rec)
     log = pd.DataFrame(log, columns=['levelname', 'name', 'message'])
     return log.groupby('levelname').size().to_dict()
 
@@ -160,5 +162,37 @@ def validate_lick_before_scheduled_on_aborted_trials(core_data):
         # don't use nanmax. If there's a nan, we expect this to fail
         return np.max(first_lick.values) < flash_blank_buffer
     # if no aborted trials, return True
+    else:
+        return True
+
+
+def validate_omitted_flashes_are_omitted(core_data):
+    '''
+    If a stimulus shows up in the omitted_stimuli log, there should never be another stimulus
+    in the visual_stimuli log within three frames in either direction
+
+    This catches an explicit bug that showed up in the first implementation of the omitted flash
+    logic in the foraging2 stimulus code
+    '''
+    # core_data['omitted_stimuli'] will be an empty dataframe if no omitted flashes?
+    try:
+        omitted_stimuli = core_data['omitted_stimuli']
+    except KeyError:  # is there a better way?
+        warnings.warn(
+            'no ommited_stimuli key on core_data object, '
+            'this is likely really really bad'
+        )
+
+    if omitted_stimuli.empty:
+        warnings.warn(
+            'empty omitted_stimuli dataframe, '
+            'skipping \'validate_omitted_flashes\''
+        )
+        return True
+
+    for frame in omitted_stimuli['frame']:
+        for offset in range(-3, 4, 1):
+            if frame + offset in core_data['visual_stimuli']['frame'].tolist():
+                return False
     else:
         return True

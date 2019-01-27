@@ -1,10 +1,8 @@
-import uuid
 import pandas as pd
 from six import PY3
 import pickle
 
-from ...utilities import local_time, ListHandler, DoubleColonFormatter, inplace
-from ...uuid_utils import make_deterministic_session_uuid
+from ...utilities import local_time, ListHandler, DoubleColonFormatter
 
 from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
@@ -21,7 +19,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_even_sampling, get_auto_reward_delay, get_periodic_flash, get_platform_info
 
 
-from .extract_stimuli import get_visual_stimuli
+from .extract_stimuli import get_visual_stimuli, check_for_omitted_flashes
 from .extract_images import get_image_metadata
 from ..foraging.extract_images import get_image_data
 
@@ -66,9 +64,7 @@ def data_to_change_detection_core(data, time=None):
     """
 
     if time is None:
-        timestamps = data_to_time(data)
-    else:
-        timestamps = time
+        time = data_to_time(data)
 
     log_messages = []
     handler = ListHandler(log_messages)
@@ -83,12 +79,13 @@ def data_to_change_detection_core(data, time=None):
 
     core_data = {
         "metadata": data_to_metadata(data),
-        "time": timestamps,
+        "time": time,
         "licks": data_to_licks(data, time=time),
         "trials": data_to_trials(data, time=time),
         "running": data_to_running(data, time=time),
         "rewards": data_to_rewards(data, time=time),
         "visual_stimuli": data_to_visual_stimuli(data, time=time),
+        "omitted_stimuli": data_to_omitted_stimuli(data, time=time),
         "image_set": data_to_images(data),
     }
 
@@ -160,15 +157,7 @@ def data_to_metadata(data):
 
     mouse_id = get_mouse_id(data)
 
-    behavior_session_uuid = get_session_id(data)
-    if len(behavior_session_uuid) == 0:
-        logger.warning('`session_uuid` not found. generating a deterministic UUID')
-        behavior_session_uuid = make_deterministic_session_uuid(
-            mouse_id,
-            start_time_datetime_local,
-        )
-    else:
-        behavior_session_uuid = uuid.UUID(behavior_session_uuid)
+    behavior_session_uuid = get_session_id(data, create_if_missing=True)
 
     device_name = get_device_name(data)
     params = get_params(data)  # this joins both params and commandline params
@@ -311,8 +300,7 @@ def data_to_time(data):
     return get_time(data)
 
 
-@inplace
-def rebase_trials(trials, time):
+def rebase_trials_inplace(trials, time):
 
     trials['starttime'] = time[trials['startframe']]
     trials['endtime'] = time[trials['endframe']]
@@ -334,8 +322,6 @@ def rebase_trials(trials, time):
         return [time[fr] for fr in frames]
 
     trials['reward_times'] = trials['reward_frames'].map(get_times)
-
-    return trials
 
 
 def data_to_trials(data, time=None):
@@ -398,7 +384,7 @@ def data_to_trials(data, time=None):
 
     if time is not None:
         logger.warning('rebasing time of trials dataframe')
-        trials = rebase_trials(trials, time)
+        rebase_trials_inplace(trials, time)
 
     return trials
 
@@ -415,6 +401,18 @@ def data_to_visual_stimuli(data, time=None):
     ))
 
 
+def data_to_omitted_stimuli(data, time=None):
+    if time is None:
+        time = get_time(data)
+
+    if 'omitted_flash_frame_log' in data['items']['behavior'].keys():
+        omitted_flash_frame_log = data['items']['behavior']['omitted_flash_frame_log']
+    else:
+        omitted_flash_frame_log = None
+
+    return check_for_omitted_flashes(data_to_visual_stimuli(data, time=time), time, omitted_flash_frame_log, get_periodic_flash(data))
+
+
 def data_to_images(data):
 
     if 'images' in data["items"]["behavior"]["stimuli"]:
@@ -422,8 +420,8 @@ def data_to_images(data):
         # Sometimes the source is a zipped pickle:
         metadata = get_image_metadata(data)
         try:
-            image_set = load_pickle(open(metadata['image_set'], 'r'))
-        except (AttributeError, UnicodeDecodeError):
+            image_set = load_pickle(open(metadata['image_set'], 'rb'))
+        except (AttributeError, UnicodeDecodeError, pickle.UnpicklingError):
             zfile = zipfile.ZipFile(metadata['image_set'])
             finfo = zfile.infolist()[0]
             ifile = zfile.open(finfo)

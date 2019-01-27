@@ -4,7 +4,7 @@ import numpy as np
 from scipy.signal import medfilt
 from .extract import get_end_time
 from .extract_images import get_image_data, get_image_metadata
-from ...utilities import calc_deriv, rad_to_dist, local_time, ListHandler, DoubleColonFormatter
+from ...utilities import calc_deriv, deg_to_dist, local_time, ListHandler, DoubleColonFormatter
 from ...uuid_utils import make_deterministic_session_uuid
 
 import logging
@@ -59,6 +59,7 @@ def data_to_change_detection_core(data, time=None):
         "running": load_running_speed(data, time=time),
         "rewards": load_rewards(data, time=time),
         "visual_stimuli": load_visual_stimuli(data, time=time),
+        "omitted_stimuli": load_omitted_stimuli(data, time=time),
         "image_set": images,
     }
 
@@ -321,8 +322,8 @@ def load_running_speed(data, smooth=False, time=None):
 
     time = time[:len(dx)]
 
-    speed = calc_deriv(dx, time)
-    speed = rad_to_dist(speed)
+    speed = calc_deriv(dx, time)  # speed is in deg/s
+    speed = deg_to_dist(speed)  # converts speed to cm/s
 
     if smooth:
         # running_speed_cm_per_sec = pd.rolling_mean(running_speed_cm_per_sec, window=6)
@@ -429,6 +430,25 @@ def load_visual_stimuli(data, time=None):
         stimuli['image_name'] = None
 
     return stimuli
+
+
+def load_omitted_stimuli(data, time=None):
+
+    if time is None:
+        print('`time` not passed. using vsync from pkl file')
+        time = load_time(data)
+
+    if 'omitted_flash_frame_log' in data.keys():
+        omitted_flash_list = []
+        for omitted_flash_frame in data['omitted_flash_frame_log']:
+
+            omitted_flash_list.append({
+                'frame': omitted_flash_frame,
+                'time': time[omitted_flash_frame],
+            })
+        return pd.DataFrame(omitted_flash_list)
+    else:
+        return pd.DataFrame(columns=['frame', 'time'])
 
 
 def load_images(data):

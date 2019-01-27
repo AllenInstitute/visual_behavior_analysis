@@ -1,20 +1,21 @@
-"""
-Created on Saturday July 14 2018
-
-@author: marinag
-"""
-
 import numpy as np
-from scipy import stats
 import pandas as pd
 
-
 import logging
+
 logger = logging.getLogger(__name__)
 
 
-def get_nearest_frame(timepoint, timestamps):
-    return int(np.nanargmin(abs(timestamps - timepoint)))
+# def get_nearest_frame(timepoint, timestamps):
+#     return int(np.nanargmin(abs(timestamps - timepoint)))
+
+# modified 181212
+def get_nearest_frame(timepoint, timestamps, timepoint_must_be_before=True):
+    nearest_frame = int(np.nanargmin(abs(timestamps - timepoint)))
+    nearest_timepoint = timestamps[nearest_frame]
+    if nearest_timepoint > timepoint == False:  # nearest frame time must be greater than provided timepoint
+        nearest_frame = nearest_frame - 1  # use previous frame to ensure nearest follows input timepoint
+    return nearest_frame
 
 
 def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate):
@@ -26,12 +27,24 @@ def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate)
     return trace, timepoints
 
 
-def get_mean_in_window(trace, window, frame_rate):
-    return np.nanmean(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])
+def get_mean_in_window(trace, window, frame_rate, use_events=False):
+    # if use_events:
+    #     trace[trace==0] = np.nan
+    mean = np.nanmean(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))])
+    # if np.isnan(mean):
+    #     mean = 0
+    return mean
 
 
 def get_sd_in_window(trace, window, frame_rate):
-    return np.std(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])
+    return np.std(
+        trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))])  # modified 181212
+
+
+def get_n_nonzero_in_window(trace, window, frame_rate):
+    datapoints = trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]
+    n_nonzero = len(np.where(datapoints > 0)[0])
+    return n_nonzero
 
 
 def get_sd_over_baseline(trace, response_window, baseline_window, frame_rate):
@@ -41,6 +54,7 @@ def get_sd_over_baseline(trace, response_window, baseline_window, frame_rate):
 
 
 def get_p_val(trace, response_window, frame_rate):
+    from scipy import stats
     response_window_duration = response_window[1] - response_window[0]
     baseline_end = int(response_window[0] * frame_rate)
     baseline_start = int((response_window[0] - response_window_duration) * frame_rate)
@@ -57,11 +71,13 @@ def ptest(x, num_conditions):
 
 def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
+    mean_responses = group['mean_response'].values
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
     mean_trace = np.mean(group['trace'])
     sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
-                      'mean_trace': mean_trace, 'sem_trace': sem_trace})
+                      'mean_trace': mean_trace, 'sem_trace': sem_trace,
+                      'mean_responses': mean_responses})
 
 
 def get_mean_sem(group):
@@ -71,22 +87,50 @@ def get_mean_sem(group):
 
 
 def get_fraction_significant_trials(group):
-    fraction_significant_trials = len(group[group.p_value < 0.005]) / float(len(group))
+    fraction_significant_trials = len(group[group.p_value < 0.05]) / float(len(group))
     return pd.Series({'fraction_significant_trials': fraction_significant_trials})
 
 
 def get_fraction_responsive_trials(group):
-    fraction_responsive_trials = len(group[group.mean_response > 0.1]) / float(len(group))
+    fraction_responsive_trials = len(group[group.mean_response > 0.05]) / float(len(group))
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
 
-def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
-    rdf = trial_response_df.copy()
+def get_fraction_nonzero_trials(group):
+    fraction_nonzero_trials = len(group[group.n_events > 0]) / float(len(group))
+    return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
+
+
+def get_reliability(group):
+    import scipy as sp
+    if 'trial' in group.keys():
+        trials = group['trial'].values
+    elif 'flash_number' in group.keys():
+        trials = group['flash_number'].values
+    corr_values = []
+    traces = group['trace'].values
+    for i, trial in enumerate(trials[:-1]):
+        trial1 = traces[i]
+        trial2 = traces[i + 1]
+        corr = sp.stats.pearsonr(trial1, trial2)[0]
+        corr_values.append(corr)
+    corr_values = np.asarray(corr_values)
+    reliability = np.mean(corr_values)
+    return pd.Series({'reliability': reliability})
+
+
+def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False):
+    rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
-    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace']]
+    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
     mdf = mdf.reset_index()
-    mdf = annotate_mean_df_with_pref_stim(mdf)
+    mdf = annotate_mean_df_with_pref_stim(mdf, flashes=flashes)
+    if analysis is not None:
+        mdf = annotate_mean_df_with_p_value(analysis, mdf, flashes=flashes)
+        mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, flashes=flashes)
+        mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, flashes=flashes)
+        mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
 
     fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
     fraction_significant_trials = fraction_significant_trials.reset_index()
@@ -96,7 +140,28 @@ def get_mean_df(trial_response_df, conditions=['cell', 'change_image_name']):
     fraction_responsive_trials = fraction_responsive_trials.reset_index()
     mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
 
+    fraction_nonzero_trials = rdf.groupby(conditions).apply(get_fraction_nonzero_trials)
+    fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
+    mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
+
+    reliability = rdf.groupby(conditions).apply(get_reliability)
+    reliability = reliability.reset_index()
+    mdf['reliability'] = reliability.reliability
+
     return mdf
+
+
+def get_cre_lines(mean_df):
+    cre_lines = np.sort(mean_df.cre_line.unique())
+    return cre_lines
+
+
+def get_image_names(mean_df):
+    if 'change_image_name' in mean_df.keys():
+        image_names = np.sort(mean_df.change_image_name.unique())
+    else:
+        image_names = np.sort(mean_df.image_name.unique())
+    return image_names
 
 
 def add_metadata_to_mean_df(mdf, metadata):
@@ -104,8 +169,88 @@ def add_metadata_to_mean_df(mdf, metadata):
     metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
     metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
     metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
+    metadata['image_set'] = metadata.session_type.values[0][-1]
+    metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in
+                                  metadata.image_set.values]
+    # metadata['session_type'] = ['image_set_' + image_set for image_set in metadata.image_set.values]
     mdf = mdf.merge(metadata, how='outer', on='experiment_id')
     return mdf
+
+
+def get_time_to_peak(analysis, trace, flashes=False):
+    if flashes:
+        response_window_duration = analysis.response_window_duration
+        flash_window = [-response_window_duration, response_window_duration]
+        response_window = [flash_window[0] + response_window_duration, flash_window[1]]
+    else:
+        response_window = analysis.response_window
+    frame_rate = analysis.ophys_frame_rate
+    response_window_trace = trace[int(response_window[0] * frame_rate):(int(response_window[1] * frame_rate))]
+    peak_response = np.amax(response_window_trace)
+    peak_frames_from_response_window_start = np.where(response_window_trace == np.amax(response_window_trace))[0][0]
+    time_to_peak = peak_frames_from_response_window_start / float(frame_rate)
+    return peak_response, time_to_peak
+
+
+def annotate_mean_df_with_time_to_peak(analysis, mean_df, flashes=False):
+    ttp_list = []
+    peak_list = []
+    for idx in mean_df.index:
+        mean_trace = mean_df.iloc[idx].mean_trace
+        peak_response, time_to_peak = get_time_to_peak(analysis, mean_trace, flashes=flashes)
+        ttp_list.append(time_to_peak)
+        peak_list.append(peak_response)
+    mean_df['peak_response'] = peak_list
+    mean_df['time_to_peak'] = ttp_list
+    return mean_df
+
+
+def annotate_mean_df_with_fano_factor(analysis, mean_df):
+    ff_list = []
+    for idx in mean_df.index:
+        mean_responses = mean_df.iloc[idx].mean_responses
+        sd = np.std(mean_responses)
+        mean_response = np.mean(mean_responses)
+        fano_factor = (sd * 2) / mean_response
+        ff_list.append(fano_factor)
+    mean_df['fano_factor'] = ff_list
+    return mean_df
+
+
+def annotate_mean_df_with_p_value(analysis, mean_df, flashes=False):
+    if flashes:
+        response_window_duration = analysis.response_window_duration
+        flash_window = [-response_window_duration, response_window_duration]
+        response_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) + response_window_duration]
+    else:
+        response_window = analysis.response_window
+    frame_rate = analysis.ophys_frame_rate
+    p_val_list = []
+    for idx in mean_df.index:
+        mean_trace = mean_df.iloc[idx].mean_trace
+        p_value = get_p_val(mean_trace, response_window, frame_rate)
+        p_val_list.append(p_value)
+    mean_df['p_value'] = p_val_list
+    return mean_df
+
+
+def annotate_mean_df_with_sd_over_baseline(analysis, mean_df, flashes=False):
+    if flashes:
+        response_window_duration = analysis.response_window_duration
+        flash_window = [-response_window_duration, response_window_duration]
+        response_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) + response_window_duration]
+        baseline_window = [np.abs(flash_window[0]) - response_window_duration, (np.abs(flash_window[0]))]
+    else:
+        response_window = analysis.response_window
+        baseline_window = analysis.baseline_window
+    frame_rate = analysis.ophys_frame_rate
+    sd_list = []
+    for idx in mean_df.index:
+        mean_trace = mean_df.iloc[idx].mean_trace
+        sd = get_sd_over_baseline(mean_trace, response_window, baseline_window, frame_rate)
+        sd_list.append(sd)
+    mean_df['sd_over_baseline'] = sd_list
+    return mean_df
 
 
 def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
@@ -336,3 +481,28 @@ def get_stimulus_df_for_ophys_times(stimulus_table, timestamps_ophys):
     stimulus_df.insert(loc=1, column='image', value=timestamps_df['image'])
     stimulus_df.insert(loc=0, column='ophys_frame', value=np.arange(0, len(timestamps_ophys), 1))
     return stimulus_df
+
+
+def compute_lifetime_sparseness(image_responses):
+    # image responses should be a list or array of the trial averaged responses to each image, for some condition (ex: go trials only, engaged/disengaged etc)
+    # sparseness = 1-(sum of trial averaged responses to images / N)squared / (sum of (squared mean responses / n)) / (1-(1/N))
+    # N = number of images
+    N = float(len(image_responses))
+    # modeled after Vinje & Gallant, 2000
+    # ls = (1 - (((np.sum(image_responses) / N) ** 2) / (np.sum(image_responses ** 2 / N)))) / (1 - (1 / N))
+    # emulated from https://github.com/AllenInstitute/visual_coding_2p_analysis/blob/master/visual_coding_2p_analysis/natural_scenes_events.py
+    # formulated similar to Froudarakis et al., 2014
+    ls = ((1 - (1 / N) * ((np.power(image_responses.sum(axis=0), 2)) / (np.power(image_responses, 2).sum(axis=0)))) / (
+        1 - (1 / N)))
+    return ls
+
+
+def get_active_cell_indices(dff_traces):
+    snr_values = []
+    for i, trace in enumerate(dff_traces):
+        mean = np.mean(trace, axis=0)
+        std = np.std(trace, axis=0)
+        snr = mean / std
+        snr_values.append(snr)
+    active_cell_indices = np.argsort(snr_values)[-10:]
+    return active_cell_indices

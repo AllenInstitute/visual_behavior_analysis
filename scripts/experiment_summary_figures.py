@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+
+import matplotlib
+matplotlib.use('Agg')
 
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
@@ -7,8 +11,6 @@ from visual_behavior.visualization.ophys.experiment_summary_figures import plot_
 
 if __name__ == '__main__':
 
-    import matplotlib
-    matplotlib.use('Agg')
 
     # formatting
     import seaborn as sns

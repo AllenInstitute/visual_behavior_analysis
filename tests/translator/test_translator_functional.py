@@ -68,6 +68,10 @@ def test_foraging2_translator_schema(foraging2_data_stage4_2018_05_10):
         core_data['metadata']['mouseid'],
         core_data['metadata']['startdatetime'],
     )
+
+    core_data['trials']['response_time'] = [[]]*len(core_data['trials'])
+    core_data['trials']['lick_times'] = [[]]*len(core_data['trials'])
+
     _test_core_data_schemas(core_data)
     generate_qc_report(core_data)
     change_detection_metrics(core_data)

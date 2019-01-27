@@ -5,16 +5,21 @@ RUN apt-get update -yqq && apt-get install -yqq --no-install-recommends xvfb ema
 
 # Install python dependencies:
 RUN conda update -n base conda
-RUN pip install --upgrade pip
 RUN conda install -y scipy numpy pandas scikit-learn subprocess32 cython
-RUN pip install virtualenv
 
 # Set up build:
 RUN mkdir -p /data
+RUN mkdir -p /allen/aibs/informatics/swdb2018/visual_behavior/702134928_363887_180524_VISal_175_Vip_2P6_behavior_sessionC
+RUN mkdir -p /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508
+RUN mkdir -p /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935
+RUN mkdir -p /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix
+
 ARG PKG
 RUN mkdir -p /${PKG}
 WORKDIR /${PKG}
 
+RUN pip install --upgrade pip
+RUN pip install virtualenv
 COPY requirements_dev.txt requirements_dev.txt
 COPY requirements.txt requirements.txt
 COPY tox.ini tox.ini
@@ -30,6 +35,32 @@ RUN pip install .
 
 RUN rm -rf tests/__pycache__
 RUN find . -name \*.pyc -delete
+
+# Copy over regression test fixture files:
+COPY fixtures/181119092559_412629_a3775e3e-e1ca-474a-b413-91cccd6d886f.pkl /allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/181119092559_412629_a3775e3e-e1ca-474a-b413-91cccd6d886f.pkl
+COPY fixtures/181119102010_421137_c108dc71-ef5e-46ad-8d85-8da0fdaf7d3d.pkl /allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/181119102010_421137_c108dc71-ef5e-46ad-8d85-8da0fdaf7d3d.pkl
+COPY fixtures/181119150503_416656_2b0893fe-843d-495e-bceb-83b13f2b02dc.pkl /allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/181119150503_416656_2b0893fe-843d-495e-bceb-83b13f2b02dc.pkl
+COPY fixtures/181119135416_424460_b6daf247-2caf-4f38-9eb1-ab97825923cd.pkl /allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/181119135416_424460_b6daf247-2caf-4f38-9eb1-ab97825923cd.pkl
+COPY fixtures/778113069_stim.pkl /allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/778113069_stim.pkl
+COPY fixtures/181119134201_402329_b75a87d0-8178-4171-a3b2-7cea3ae8e118.pkl /allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/181119134201_402329_b75a87d0-8178-4171-a3b2-7cea3ae8e118.pkl
+
+COPY fixtures/nimages_0_20170714.zip /allen/aibs/mpe/Software/stimulus_files/nimages_0_20170714.zip
+COPY fixtures/Natural_Images_Lum_Matched_set_training_2017.07.14.pkl /allen/programs/braintv/workgroups/nc-ophys/Doug/Stimulus_Code/image_dictionaries/Natural_Images_Lum_Matched_set_training_2017.07.14.pkl
+
+COPY fixtures/702134928_363887_180524_VISal_175_Vip_2P6_behavior_sessionC /allen/aibs/informatics/swdb2018/visual_behavior/702134928_363887_180524_VISal_175_Vip_2P6_behavior_sessionC
+RUN chmod -R a-w /allen/aibs/informatics/swdb2018/visual_behavior/702134928_363887_180524_VISal_175_Vip_2P6_behavior_sessionC
+
+# Ophys test assets: 
+COPY fixtures/702013508_363887_20180524142941_sync.h5 /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508
+COPY fixtures/702013508_363887_20180524142941_stim.pkl  /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508
+COPY fixtures/objectlist.txt /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935 
+COPY fixtures/702134928_input_extract_traces.json /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed
+COPY fixtures/702134928_dff.h5 /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928
+COPY fixtures/702134928_rigid_motion_transform.csv /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed 
+COPY fixtures/maxInt_a13a.png /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935 
+COPY fixtures/702134928_demixed_traces.h5 /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix 
+COPY fixtures/avgInt_a1X.png /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935 
+COPY fixtures/roi_traces.h5 /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed 
 
 CMD ["/bin/bash"]
 

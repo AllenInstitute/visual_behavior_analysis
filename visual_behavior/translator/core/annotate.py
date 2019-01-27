@@ -286,13 +286,19 @@ def annotate_epochs(trials, epoch_length=5.0):
     io.load_trials
     """
 
-    trials['epoch'] = (
+    epoch = (
         trials['change_time']
-        .map(lambda x: x / (60 * epoch_length))
-        .round()
+        .map(lambda x: x / (60.0 * epoch_length))
+        .map(np.floor)
         .map(lambda x: x * epoch_length)
         # .map(lambda x: "{:0.1f} min".format(x))
     )
+    epoch = (
+        epoch
+        .fillna(method='ffill')
+        .fillna(method='bfill')
+    )
+    trials['epoch'] = epoch
 
 
 @inplace
@@ -391,7 +397,7 @@ def update_times(trials, time):
 
     def update(fr):
         try:
-            if (fr is None) or (np.isnan(fr) == True):  # this should catch np.nans
+            if (fr is None) or (type(fr) == float and np.isnan(fr) == True):  # this should catch np.nans
                 return None
             else:  # this should be for floats
                 return time[int(fr)]
@@ -595,7 +601,7 @@ def colormap(trial_type, palette='trial_types'):
             'false_alarm': 'darkorange',
             'correct_reject': 'yellow',
         }
-    return colors[trial_type]
+    return colors.get(trial_type, 'white')
 
 
 def assign_color(trial, palette='trial_types'):
