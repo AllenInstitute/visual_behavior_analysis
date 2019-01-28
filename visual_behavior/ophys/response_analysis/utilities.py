@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import seaborn as sns
 
 import logging
 
@@ -114,11 +115,12 @@ def get_reliability(group):
         trials = group['flash_number'].values
     corr_values = []
     traces = group['trace'].values
-    for i, trial in enumerate(trials[:-1]):
-        trial1 = traces[i]
-        trial2 = traces[i + 1]
-        corr = sp.stats.pearsonr(trial1, trial2)[0]
-        corr_values.append(corr)
+    for i, t1 in enumerate(trials[:-1]):
+        for j, t2 in enumerate(trials[:-1])
+            trial1 = traces[i]
+            trial2 = traces[j]
+            corr = sp.stats.pearsonr(trial1, trial2)[0]
+            corr_values.append(corr)
     corr_values = np.asarray(corr_values)
     reliability = np.mean(corr_values)
     return pd.Series({'reliability': reliability})
@@ -161,12 +163,39 @@ def get_cre_lines(mean_df):
     return cre_lines
 
 
+def get_image_sets(mean_df):
+    image_sets = np.sort(mean_df.image_set.unique())
+    return image_sets
+
+
 def get_image_names(mean_df):
     if 'change_image_name' in mean_df.keys():
         image_names = np.sort(mean_df.change_image_name.unique())
     else:
         image_names = np.sort(mean_df.image_name.unique())
     return image_names
+
+
+def get_color_for_image_name(image_names, image_name):
+    colors = sns.color_palette("hls", len(image_names))
+    image_index = np.where(image_names == image_name)[0][0]
+    color = colors[image_index]
+    return color
+
+
+def get_color_for_area(area):
+    colors = sns.color_palette()
+    if area=='VISp':
+        color = colors[7]
+    elif area=='VISal':
+        color = colors[9]
+    return color
+
+
+def get_colors_for_image_sets():
+    colors = sns.color_palette()
+    colors = [colors[3],colors[0],colors[2],colors[4]]
+    return colors
 
 
 def add_metadata_to_mean_df(mdf, metadata):
