@@ -29,7 +29,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                 flash_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
                                                 flash_response_df.reward_rate.values]
                 mdf = ut.get_mean_df(flash_response_df, analysis,
-                                     conditions=conditions)
+                                     conditions=conditions, flashes=True)
                 mdf['experiment_id'] = dataset.experiment_id
                 mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
                 mega_mdf = pd.concat([mega_mdf, mdf])
