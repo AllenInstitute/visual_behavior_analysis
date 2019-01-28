@@ -9,12 +9,13 @@ logger = logging.getLogger(__name__)
 # def get_nearest_frame(timepoint, timestamps):
 #     return int(np.nanargmin(abs(timestamps - timepoint)))
 
-# modified 181212
-def get_nearest_frame(timepoint, timestamps, timepoint_must_be_before=True):
+# modified 181212, again 190127
+def get_nearest_frame(timepoint, timestamps):
     nearest_frame = int(np.nanargmin(abs(timestamps - timepoint)))
     nearest_timepoint = timestamps[nearest_frame]
-    if nearest_timepoint > timepoint == False:  # nearest frame time must be greater than provided timepoint
-        nearest_frame = nearest_frame - 1  # use previous frame to ensure nearest follows input timepoint
+    if nearest_timepoint < timepoint:  # nearest frame time (2P) must be greater than provided timepoint (stim)
+        # nearest_frame = nearest_frame - 1  # 181212
+        nearest_frame = nearest_frame + 1  # use next frame to ensure nearest (2P) follows input timepoint (stim), 190127
     return nearest_frame
 
 
@@ -30,15 +31,19 @@ def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate)
 def get_mean_in_window(trace, window, frame_rate, use_events=False):
     # if use_events:
     #     trace[trace==0] = np.nan
-    mean = np.nanmean(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))])
+    # mean = np.nanmean(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]) # 181212
+    mean = np.nanmean(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)]) # modified 190127
     # if np.isnan(mean):
     #     mean = 0
     return mean
 
 
 def get_sd_in_window(trace, window, frame_rate):
-    return np.std(
-        trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))])  # modified 181212
+    # std = np.std(
+    #     trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))])  # modified 181212
+    std = np.std(
+        trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])  # modified 190127
+    return std
 
 
 def get_n_nonzero_in_window(trace, window, frame_rate):
