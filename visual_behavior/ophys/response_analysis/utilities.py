@@ -116,7 +116,7 @@ def get_reliability(group):
     corr_values = []
     traces = group['trace'].values
     for i, t1 in enumerate(trials[:-1]):
-        for j, t2 in enumerate(trials[:-1])
+        for j, t2 in enumerate(trials[:-1]):
             trial1 = traces[i]
             trial2 = traces[j]
             corr = sp.stats.pearsonr(trial1, trial2)[0]
