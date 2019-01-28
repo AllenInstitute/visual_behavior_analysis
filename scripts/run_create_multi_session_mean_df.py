@@ -9,8 +9,8 @@ python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_multi_sess
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords2'
 
 job_settings = {'queue': 'braintv',
-                'mem': '60g',
-                'walltime': '20:00:00',
+                'mem': '50',
+                'walltime': '10:00:00',
                 'ppn': 1,
                 'jobdir': jobdir,
                 }
