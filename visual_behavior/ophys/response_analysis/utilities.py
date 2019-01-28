@@ -132,7 +132,7 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
     mdf = mdf.reset_index()
-    mdf = annotate_mean_df_with_pref_stim(mdf, flashes=flashes)
+    mdf = annotate_mean_df_with_pref_stim(mdf)
     if analysis is not None:
         mdf = annotate_mean_df_with_p_value(analysis, mdf, flashes=flashes)
         mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, flashes=flashes)
@@ -161,6 +161,11 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
 def get_cre_lines(mean_df):
     cre_lines = np.sort(mean_df.cre_line.unique())
     return cre_lines
+
+
+def get_colors_for_cre_lines():
+    colors = [sns.color_palette()[2], sns.color_palette()[4]]
+    return colors
 
 
 def get_image_sets(mean_df):
@@ -192,6 +197,17 @@ def get_color_for_area(area):
     return color
 
 
+def get_colors_for_areas(df):
+    if 'area' in df:
+        area = 'area'
+    else:
+        area = 'targeted_structure'
+    colors = []
+    for area in np.sort(df[area].unique()):
+        colors.append(ut.get_color_for_area(area))
+    return colors
+
+
 def get_colors_for_image_sets():
     colors = sns.color_palette()
     colors = [colors[3],colors[0],colors[2],colors[4]]
@@ -214,8 +230,8 @@ def add_metadata_to_mean_df(mdf, metadata):
 def get_time_to_peak(analysis, trace, flashes=False):
     if flashes:
         response_window_duration = analysis.response_window_duration
-        flash_window = [-response_window_duration, response_window_duration]
-        response_window = [flash_window[0] + response_window_duration, flash_window[1]]
+        flash_window = analysis.flash_window
+        response_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) + response_window_duration]
     else:
         response_window = analysis.response_window
     frame_rate = analysis.ophys_frame_rate
