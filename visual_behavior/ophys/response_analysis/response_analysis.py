@@ -220,7 +220,7 @@ class ResponseAnalysis(object):
         # repeat = 1 is the first flash after change, repeat = 5 is the 5th flash after a change
         s_corr_data = []
         n_corr_data = []
-        for repeat in [1, 5, 10]:
+        for repeat in [1, 5, 10, 15]:
             tmp_fdf = fdf[fdf.repeat == repeat]
             # create a df with the trial averaged response for each image across flash repeat number
             mfdf = ut.get_mean_df(tmp_fdf, conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
@@ -291,11 +291,11 @@ class ResponseAnalysis(object):
         pairwise_correlations_df.to_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
 
     def get_pairwise_correlations_df(self):
-        if os.path.exists(self.get_pairwise_correlations_path()):
-            print('loading pairwise correlations dataframe')
-            self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
-        else:
-            print('generating pairwise correlations dataframe')
-            self.pairwise_correlations_df = self.compute_pairwise_correlations()
-            self.save_pairwise_correlations_df(self.pairwise_correlations_df)
+        # if os.path.exists(self.get_pairwise_correlations_path()):
+        #     print('loading pairwise correlations dataframe')
+        #     self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
+        # else:
+        print('generating pairwise correlations dataframe')
+        self.pairwise_correlations_df = self.compute_pairwise_correlations()
+        self.save_pairwise_correlations_df(self.pairwise_correlations_df)
         return self.pairwise_correlations_df
