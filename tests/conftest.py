@@ -16,6 +16,7 @@ matplotlib.use('Agg')
 
 from visual_behavior.pizza import we_can_unpizza_that  # this is terrible but hopefully will be an external dependency very soon
 from visual_behavior.uuid_utils import make_deterministic_session_uuid
+from visual_behavior.ophys.io.convert_level_1_to_level_2 import get_lims_data
 
 
 TESTING_DIR = os.path.realpath(os.path.dirname(__file__))
@@ -407,3 +408,26 @@ def foraging2_data_stage_0_2018_05_16():
         os.path.join(TESTING_RES_DIR, "doc_images_db22310_LateDoCMouse.pkl")
     )
 foraging2_data_stage4_2018_05_10
+
+
+
+class LimsDatabaseFixture:
+
+    def __init__(self, **kwargs):
+        self.lims_id = pd.Series(data=kwargs.pop('lims_id'))
+        self.ophys_session_dir = pd.Series(data=kwargs.pop('ophys_session_dir'))
+        # self.ophys_experiment_dir = 
+
+    
+@pytest.fixture(scope="function")
+def lims_data_fixture_702134928():
+    
+    return LimsDatabaseFixture(lims_id=702134928, 
+                               ophys_session_dir='/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508')
+
+
+
+@pytest.fixture(scope="function")
+def lims_data_702134928():
+    
+    return get_lims_data(702134928)
