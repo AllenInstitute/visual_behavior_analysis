@@ -739,69 +739,69 @@ def save_roi_validation(roi_validation, lims_data):
 
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None):
-    logger.info('converting', lims_id)
-    print('converting', lims_id)
-    lims_data = get_lims_data(lims_id)
 
-    analysis_dir = get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
+    lims_data = LimsDatabase(lims_id)
 
-    timestamps = get_timestamps(lims_data, analysis_dir)
+    if cache_dir is None:
+        cache_dir = '.'
 
-    metadata = get_metadata(lims_data, timestamps)
-    save_metadata(metadata, lims_data)
+    # timestamps = get_timestamps(lims_data, analysis_dir)
 
-    pkl = get_pkl(lims_data)
-    timestamps_stimulus = get_timestamps_stimulus(timestamps)
-    core_data = get_core_data(pkl, timestamps_stimulus)
-    save_core_data_components(core_data, lims_data, timestamps_stimulus)
+    # metadata = get_metadata(lims_data, timestamps)
+    # save_metadata(metadata, lims_data)
 
-    trials = get_trials(core_data)
-    save_trials(trials, lims_data)
+    # pkl = get_pkl(lims_data)
+    # timestamps_stimulus = get_timestamps_stimulus(timestamps)
+    # core_data = get_core_data(pkl, timestamps_stimulus)
+    # save_core_data_components(core_data, lims_data, timestamps_stimulus)
 
-    stimulus_template, stimulus_metadata = get_visual_stimulus_data(pkl)
-    save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data)
+    # trials = get_trials(core_data)
+    # save_trials(trials, lims_data)
 
-    roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
+    # stimulus_template, stimulus_metadata = get_visual_stimulus_data(pkl)
+    # save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data)
 
-    dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
-    save_dff_traces(dff_traces, roi_metrics, lims_data)
+    # roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
 
-    roi_masks = get_roi_masks(roi_metrics, lims_data)
-    save_roi_masks(roi_masks, lims_data)
+    # dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
+    # save_dff_traces(dff_traces, roi_metrics, lims_data)
 
-    save_roi_metrics(roi_metrics, lims_data)
-    save_unfiltered_roi_metrics(unfiltered_roi_metrics, lims_data)
+    # roi_masks = get_roi_masks(roi_metrics, lims_data)
+    # save_roi_masks(roi_masks, lims_data)
 
-    corrected_fluorescence_traces = get_corrected_fluorescence_traces(roi_metrics, lims_data)
-    save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data)
+    # save_roi_metrics(roi_metrics, lims_data)
+    # save_unfiltered_roi_metrics(unfiltered_roi_metrics, lims_data)
 
-    save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data)
+    # corrected_fluorescence_traces = get_corrected_fluorescence_traces(roi_metrics, lims_data)
+    # save_corrected_fluorescence_traces(corrected_fluorescence_traces, roi_metrics, lims_data)
 
-    motion_correction = get_motion_correction(lims_data)
-    save_motion_correction(motion_correction, lims_data)
+    # save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data)
 
-    max_projection = get_max_projection(lims_data)
-    save_max_projection(max_projection, lims_data)
+    # motion_correction = get_motion_correction(lims_data)
+    # save_motion_correction(motion_correction, lims_data)
 
-    average_image = get_average_image(lims_data)
-    save_average_image(average_image, lims_data)
+    # max_projection = get_max_projection(lims_data)
+    # save_max_projection(max_projection, lims_data)
 
-    roi_validation = get_roi_validation(lims_data)
-    save_roi_validation(roi_validation, lims_data)
+    # average_image = get_average_image(lims_data)
+    # save_average_image(average_image, lims_data)
 
-    logger.info('done converting')
-    print('done converting')
+    # roi_validation = get_roi_validation(lims_data)
+    # save_roi_validation(roi_validation, lims_data)
 
-    core_data.update(
-        dict(
-            lims_data=lims_data,
-            timestamps=timestamps,
-            metadata=metadata,
-            roi_metrics=roi_metrics,
-            roi_masks=roi_masks,
-            dff_traces=dff_traces,
-            motion_correction=motion_correction,
-            max_projection=max_projection,
-            average_image=average_image,
-        ))  # flake8: noqa: F841
-    return core_data
+    # logger.info('done converting')
+    # print('done converting')
+
+    # core_data.update(
+    #     dict(
+    #         lims_data=lims_data,
+    #         timestamps=timestamps,
+    #         metadata=metadata,
+    #         roi_metrics=roi_metrics,
+    #         roi_masks=roi_masks,
+    #         dff_traces=dff_traces,
+    #         motion_correction=motion_correction,
+    #         max_projection=max_projection,
+    #         average_image=average_image,
+    #     ))  # flake8: noqa: F841
+    # return core_data
