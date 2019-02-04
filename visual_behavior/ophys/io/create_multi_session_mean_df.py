@@ -59,8 +59,13 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
     if not os.path.exists(mega_mdf_write_dir):
         os.makedirs(mega_mdf_write_dir)
 
+    if len(conditions) == 2:
+        filename = 'mean' + type + conditions[2] + suffix + '_df.h5'
+    elif len(conditions) == 1:
+        filename = 'mean' + type + conditions[1] + suffix + '_df.h5'
+
     mega_mdf.to_hdf(
-        os.path.join(mega_mdf_write_dir, 'mean' + type + conditions[2] + suffix + '_df.h5'),
+        os.path.join(mega_mdf_write_dir, filename),
         key='df',
         format='fixed')
 
@@ -89,12 +94,14 @@ if __name__ == '__main__':
                       773816712, 773843260, 774370025, 774379465, 775011398, 775429615,
                       776042634, 756565411]
 
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id', 'image_name'], flashes=True)
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
-    get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
-    get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'image_name', 'engaged', 'repeat'], flashes=True)
+    # get_multi_session_mean_df(experiment_ids, cache_dir,
+    #                           conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
+    # get_multi_session_mean_df(experiment_ids, cache_dir,
+    #                           conditions=['cell_specimen_id', 'image_name', 'engaged', 'repeat'], flashes=True)
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'])
     #

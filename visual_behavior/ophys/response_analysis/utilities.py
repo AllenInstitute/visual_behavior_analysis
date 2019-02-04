@@ -7,6 +7,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def filter_by_responsiveness(data, use_events=False):
+    df = data[data.pref_stim==True].copy()
+    if use_events:
+        filtered_df = df[(df.mean_response>0.005) & (df.fraction_nonzero_trials>0.25)]
+    else:
+        filtered_df = df[(df.mean_response>0.05) & (df.fraction_significant_trials>0.25)]
+    return filtered_df
+
+
 # def get_nearest_frame(timepoint, timestamps):
 #     return int(np.nanargmin(abs(timestamps - timepoint)))
 
@@ -151,9 +160,9 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
     mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
 
-    reliability = rdf.groupby(conditions).apply(get_reliability)
-    reliability = reliability.reset_index()
-    mdf['reliability'] = reliability.reliability
+    # reliability = rdf.groupby(conditions).apply(get_reliability)
+    # reliability = reliability.reset_index()
+    # mdf['reliability'] = reliability.reliability
 
     return mdf
 
@@ -204,7 +213,7 @@ def get_colors_for_areas(df):
         area = 'targeted_structure'
     colors = []
     for area in np.sort(df[area].unique()):
-        colors.append(ut.get_color_for_area(area))
+        colors.append(get_color_for_area(area))
     return colors
 
 
