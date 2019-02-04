@@ -59,9 +59,9 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
     if not os.path.exists(mega_mdf_write_dir):
         os.makedirs(mega_mdf_write_dir)
 
-    if len(conditions) == 2:
+    if len(conditions) == 3:
         filename = 'mean' + type + conditions[2] + suffix + '_df.h5'
-    elif len(conditions) == 1:
+    elif len(conditions) == 2:
         filename = 'mean' + type + conditions[1] + suffix + '_df.h5'
 
     mega_mdf.to_hdf(
