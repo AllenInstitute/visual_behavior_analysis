@@ -10,7 +10,7 @@ jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobReco
 
 job_settings = {'queue': 'braintv',
                 'mem': '60g',
-                'walltime': '20:00:00',
+                'walltime': '8:00:00',
                 'ppn': 1,
                 'jobdir': jobdir,
                 }
