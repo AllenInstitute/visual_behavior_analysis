@@ -3,6 +3,8 @@ from visual_behavior.ophys.io.lims_database import LimsDatabase
 def test_lims_database(ophys_experiment_id):
     
     lims_data = LimsDatabase(ophys_experiment_id)
+    
+    assert lims_data.ophys_experiment_id == ophys_experiment_id
     assert lims_data.specimen_id == 652073919
     assert lims_data.session_id == 702013508
     assert lims_data.experiment_container_id == 700821114

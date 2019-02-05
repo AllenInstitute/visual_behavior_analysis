@@ -730,19 +730,26 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
 
     lims_data = LimsDatabase(lims_id)
 
+
+    # Get data:
     roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
-    roi_masks = get_roi_masks(roi_metrics, lims_data)
+    roi_masks = get_roi_masks(roi_metrics, lims_data)     # Slow but works, so commented out for now
     dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
     corrected_fluorescence_traces = get_corrected_fluorescence_traces(roi_metrics, lims_data)
+    
     motion_correction = get_motion_correction(lims_data)
+
     max_projection = get_max_projection(lims_data)
+
     pkl = get_pkl(lims_data)
     stimulus_template, stimulus_metadata = get_visual_stimulus_data(pkl)
+    
     timestamps = get_timestamps(lims_data) # refactor timestamps into get_timestamps_stimulus?
     metadata = get_metadata(lims_data, timestamps)
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     core_data = get_core_data(pkl, timestamps_stimulus)
     trials = get_trials(core_data)
+
     roi_validation = get_roi_validation(lims_data)
     
     # # Build cache:
