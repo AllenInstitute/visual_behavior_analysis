@@ -161,7 +161,7 @@ def plot_roi_validation(roi_names,
     return roi_validation
 
 
-def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
+def get_xticks_xticklabels(trace, frame_rate, interval_sec=1, window=None):
     """
     Function that accepts a timeseries, evaluates the number of points in the trace, and converts from acquisition frames to timestamps
 
@@ -176,7 +176,10 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1):
     n_sec = n_frames / frame_rate
     xticks = np.arange(0, n_frames + 1, interval_frames)
     xticklabels = np.arange(0, n_sec + 0.1, interval_sec)
-    xticklabels = xticklabels - n_sec / 2
+    if not window:
+        xticklabels = xticklabels - n_sec / 2
+    else:
+        xticklabels = xticklabels + window[0]
     return xticks, xticklabels
 
 
@@ -196,7 +199,8 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
 
     :return: axis handle
     """
-    xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
+    # xlims = [xlims[0] + np.abs(xlims[1]), xlims[1] + xlims[1]]
+    xlim = [0, xlims[1] + np.abs(xlims[0])]
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
@@ -206,10 +210,10 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
         ax.plot(trace, label=legend_label, linewidth=3, color=color)
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
 
-        xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec)
+        xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec, window=xlims)
         ax.set_xticks([int(x) for x in xticks])
         ax.set_xticklabels([int(x) for x in xticklabels])
-        ax.set_xlim(xlims[0] * int(frame_rate), xlims[1] * int(frame_rate))
+        ax.set_xlim(xlim[0] * int(frame_rate), xlim[1] * int(frame_rate))
         ax.set_xlabel('time after change (sec)')
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
