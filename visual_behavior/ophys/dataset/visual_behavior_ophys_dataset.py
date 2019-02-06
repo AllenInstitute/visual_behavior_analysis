@@ -4,17 +4,27 @@ import platform
 import numpy as np
 import pandas as pd
 import tempfile
-from allensdk.experimental.lazy_property import LazyProperty
+from allensdk.experimental.lazy_property import LazyProperty as LazyPropertyBase
 from visual_behavior.ophys.io.lims_api import VisualBehaviorLimsAPI
 from visual_behavior.ophys.io.filesystem_api import VisualBehaviorFileSystemAPI
 from pandas.util.testing import assert_frame_equal
 
 
+class LazyProperty(LazyPropertyBase):
+
+    def calculate(self, obj):
+        return getattr(obj.api, self.getter_name)(ophys_experiment_id=obj.ophys_experiment_id)
+
+class LazyPropertyAcqTrigger(LazyPropertyBase):
+    
+    def calculate(self, obj):
+        return getattr(obj.api, self.getter_name)(ophys_experiment_id=obj.ophys_experiment_id, use_acq_trigger=obj.use_acq_trigger)
+
 class VisualBehaviorOphysSession(object):
 
     max_projection = LazyProperty(api_method='get_max_projection')
     stimulus_timestamps = LazyProperty(api_method='get_stimulus_timestamps')
-    dff_traces = LazyProperty(api_method='get_dff_traces')
+    dff_traces = LazyPropertyAcqTrigger(api_method='get_dff_traces')
     roi_metrics = LazyProperty(api_method='get_roi_metrics')
     roi_masks = LazyProperty(api_method='get_roi_masks')
     cell_specimen_ids = LazyProperty(api_method='get_cell_specimen_ids')
@@ -31,7 +41,11 @@ class VisualBehaviorOphysSession(object):
         if api is None:
             api = self.api
         api.save(self)
-        
+
+
+
+
+
 
 def test_visbeh_ophys_data_set(ophys_experiment_id, api):
 
@@ -39,12 +53,12 @@ def test_visbeh_ophys_data_set(ophys_experiment_id, api):
 
     data_set.roi_metrics
     data_set.dff_traces
-    data_set.roi_masks
-    data_set.running_speed
+    # data_set.roi_masks
+    # data_set.running_speed
 
-    data_set.max_projection
-    data_set.cell_specimen_ids
-    data_set.stimulus_timestamps
+    # data_set.max_projection
+    # data_set.cell_specimen_ids
+    # data_set.stimulus_timestamps
 
 
     
@@ -59,7 +73,7 @@ def test_visbeh_ophys_data_set(ophys_experiment_id, api):
 
     
 
-    assert data_set.max_projection.shape == (512, 449)
+    # assert data_set.max_projection.shape == (512, 449)
 
 def test_cache_to_fs(ophys_experiment_id, tmpdir):
      
@@ -79,10 +93,10 @@ def test_cache_to_fs(ophys_experiment_id, tmpdir):
         v2 = getattr(data_set2, lazy_property)
         np.testing.assert_array_almost_equal(v1, v2)
 
+if __name__ == '__main__':
 
-
-test_visbeh_ophys_data_set(702134928, VisualBehaviorLimsAPI())
-test_cache_to_fs(702134928, './tmp') # tempfile.mkdtemp()
+    test_visbeh_ophys_data_set(702134928, VisualBehaviorLimsAPI())
+    # test_cache_to_fs(702134928, './tmp') # tempfile.mkdtemp()
 
 
 

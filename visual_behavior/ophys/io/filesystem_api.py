@@ -97,7 +97,7 @@ class VisualBehaviorFileSystemAPI:
 
     @property
     def stimulus_timestamps_file_info(self):
-        return os.path.join(self.cache_dir, 'stimuls_timestamps.h5'), 'data'
+        return os.path.join(self.cache_dir, 'stimulus_timestamps.h5'), 'data'
 
     def save_stimulus_timestamps(self, obj):
         save_df_h5(obj.running_speed, *self.stimulus_timestamps_file_info)

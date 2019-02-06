@@ -49,25 +49,32 @@ def correct_time_zone(utc_time):
     return correct_time.replace(tzinfo=None)
 
 
-
 class VisualBehaviorLimsAPI:
 
+    def __init__(self, dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432):
+
+        self.dbname = dbname
+        self.user = user
+        self.host = host
+        self.password = password
+        self.port = port
 
     def query(self, q):
-        conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+        conn = psycopg2.connect(dbname=self.dbname, user=self.user, host=self.host, password=self.password, port=self.port)
         cur = conn.cursor()
         cur.execute(q)
         return one(one(cur.fetchall()))
 
-    def get_ophys_experiment_dir(self, obj):
+    def get_ophys_experiment_dir(self, *args, **kwargs):
         query = '''
                 SELECT oe.storage_directory
                 FROM ophys_experiments oe
                 WHERE oe.id= {};
                 '''
-        return self.query(query.format(obj.ophys_experiment_id))
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
 
-    def get_maxint_file(self, obj):
+    def get_maxint_file(self, *args, **kwargs):
         query = '''
                 SELECT obj.storage_directory || 'maxInt_a13a.png' AS maxint_file
                 FROM ophys_experiments oe
@@ -75,9 +82,10 @@ class VisualBehaviorLimsAPI:
                 LEFT JOIN well_known_files obj ON obj.attachable_id=ocsr.id AND obj.attachable_type = 'OphysCellSegmentationRun' AND obj.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysSegmentationObjects')
                 WHERE oe.id= {};
                 '''
-        return self.query(query.format(obj.ophys_experiment_id))
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
 
-    def get_sync_file(self, obj):
+    def get_sync_file(self, *args, **kwargs):
         query = '''
                 SELECT sync.storage_directory || sync.filename AS sync_file
                 FROM ophys_experiments oe
@@ -85,17 +93,19 @@ class VisualBehaviorLimsAPI:
                 LEFT JOIN well_known_files sync ON sync.attachable_id=os.id AND sync.attachable_type = 'OphysSession' AND sync.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysRigSync')
                 WHERE oe.id= {};
                 '''
-        return self.query(query.format(obj.ophys_experiment_id))
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
 
-    def get_input_extract_traces_file(self, obj):
+    def get_input_extract_traces_file(self, *args, **kwargs):
         query = '''
                 SELECT oe.storage_directory || 'processed/' || oe.id || '_input_extract_traces.json'
                 FROM ophys_experiments oe
                 WHERE oe.id= {};
                 '''
-        return self.query(query.format(obj.ophys_experiment_id))
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
 
-    def get_objectlist_file(self, obj):
+    def get_objectlist_file(self, *args, **kwargs):
         query = '''
                 SELECT obj.storage_directory || obj.filename AS obj_file
                 FROM ophys_experiments oe
@@ -103,18 +113,20 @@ class VisualBehaviorLimsAPI:
                 LEFT JOIN well_known_files obj ON obj.attachable_id=ocsr.id AND obj.attachable_type = 'OphysCellSegmentationRun' AND obj.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysSegmentationObjects')
                 WHERE oe.id= {};
                 '''
-        return self.query(query.format(obj.ophys_experiment_id))
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
 
-    def get_dff_file(self, obj):
+    def get_dff_file(self, *args, **kwargs):
         query = '''
                 SELECT dff.storage_directory || dff.filename AS dff_file
                 FROM ophys_experiments oe
                 LEFT JOIN well_known_files dff ON dff.attachable_id=oe.id AND dff.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysDffTraceFile')
                 WHERE oe.id= {};
                 '''
-        return self.query(query.format(obj.ophys_experiment_id))
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
 
-    def get_stim_file(self, obj):
+    def get_stim_file(self, *args, **kwargs):
         query = '''
                 SELECT stim.storage_directory || stim.filename AS stim_file
                 FROM ophys_experiments oe
@@ -122,49 +134,56 @@ class VisualBehaviorLimsAPI:
                 LEFT JOIN well_known_files stim ON stim.attachable_id=os.id AND stim.attachable_type = 'OphysSession' AND stim.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'StimulusPickle')
                 WHERE oe.id= {};
                 '''
-        return self.query(query.format(obj.ophys_experiment_id))
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
 
 
-    def get_max_projection(self, obj):
-        maxInt_a13_file = self.get_maxint_file(obj)
+    def get_max_projection(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        maxInt_a13_file = self.get_maxint_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         max_projection = mpimg.imread(maxInt_a13_file)
         return max_projection
 
 
-    def get_roi_metrics(self, obj):
-        input_extract_traces_file = self.get_input_extract_traces_file(obj)
-        objectlist_file = self.get_objectlist_file(obj)
-        ophys_experiment_id = obj.ophys_experiment_id
+    def get_roi_metrics(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        input_extract_traces_file = self.get_input_extract_traces_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        objectlist_file = self.get_objectlist_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         return get_roi_metrics(input_extract_traces_file, ophys_experiment_id, objectlist_file)['filtered']
 
 
-    def get_roi_masks(self, obj):
-        roi_metrics = roi_metrics = self.get_roi_metrics(obj)
-        input_extract_traces_file = self.get_input_extract_traces_file(obj)
+    def get_roi_masks(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        roi_metrics = roi_metrics = self.get_roi_metrics(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        input_extract_traces_file = self.get_input_extract_traces_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
 
         return get_roi_masks(roi_metrics, input_extract_traces_file)
 
 
-    def get_cell_specimen_ids(self, obj):
-
-        input_extract_traces_file = self.get_input_extract_traces_file(obj)
+    def get_cell_specimen_ids(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        input_extract_traces_file = self.get_input_extract_traces_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         with open(input_extract_traces_file, 'r') as w:
             jin = json.load(w)
         return [roi['id'] for roi in jin['rois']]
 
 
-    def get_sync_data(self, obj):
-        sync_path = self.get_sync_file(obj)
-        return get_sync_data(sync_path, obj.use_acq_trigger)
+    def get_sync_data(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        use_acq_trigger = kwargs.pop('use_acq_trigger', False)
+        sync_path = self.get_sync_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        return get_sync_data(sync_path)
 
 
-    def get_stimulus_timestamps(self, obj):
-        return self.get_sync_data(obj)['stimulus_frames']
+    def get_stimulus_timestamps(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        return self.get_sync_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)['stimulus_frames']
 
 
-    def get_core_data(self, obj):
-        pkl = pd.read_pickle(self.get_stim_file(obj))
-        stimulus_timestamps = self.get_stimulus_timestamps(obj)
+    def get_core_data(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        pkl = pd.read_pickle(self.get_stim_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs))
+        stimulus_timestamps = self.get_stimulus_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         try:
             core_data = foraging.data_to_change_detection_core(pkl, time=stimulus_timestamps)
         except KeyError:
@@ -172,79 +191,108 @@ class VisualBehaviorLimsAPI:
         return core_data
 
 
-    def get_running_speed(self, obj):
-        return self.get_core_data(obj)['running']
+    def get_running_speed(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        return self.get_core_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)['running']
 
 
 
 
-    def get_dff_traces(self, obj):
-        dff_path = self.get_dff_file(obj)
+    def get_dff_traces(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        dff_path = self.get_dff_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         g = h5py.File(dff_path)
         dff_traces_orig = np.asarray(g['data'])
         g.close()
 
-        ophys_timestamps_orig = self.get_sync_data(obj)['ophys_frames']
+        ophys_timestamps_orig = self.get_sync_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)['ophys_frames']
 
         dff_traces, timestamps = match_dff_and_ophys_timestamp_len(dff_traces_orig, ophys_timestamps_orig)
 
-        cell_specimen_id_list = self.get_cell_specimen_ids(obj)
+        cell_specimen_id_list = self.get_cell_specimen_ids(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         df = pd.DataFrame({'cell_specimen_id':cell_specimen_id_list, 'dff':list(dff_traces)})
         df['timestamps'] = [timestamps]*len(df)
 
         return df
 
 
-from allensdk.experimental.lazy_property import LazyProperty
 
-class TestDataSet(object):
+def test_lims_api():
 
-    ophys_experiment_dir = LazyProperty(api_method='get_ophys_experiment_dir')
-    maxInt_file = LazyProperty(api_method='get_maxint_file')
-    sync_file = LazyProperty(api_method='get_sync_file')
-    input_extract_traces_file = LazyProperty(api_method='get_input_extract_traces_file')
-    objectlist_file = LazyProperty(api_method='get_objectlist_file')
-    dff_file = LazyProperty(api_method='get_dff_file')
-    stim_file = LazyProperty(api_method='get_stim_file')
+    oeid = 702134928
+
+    api = VisualBehaviorLimsAPI()
+
+    TD = {'ophys_dir':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/',
+         }
+
+    assert api.get_ophys_experiment_dir(oeid) == TD['ophys_dir']
+    assert api.get_ophys_experiment_dir(ophys_experiment_id=oeid) == TD['ophys_dir']
+
+    print api.get_dff_traces(oeid, use_acq_trigger=False)
+    print api.get_dff_traces(oeid, use_acq_trigger=True)
+
+#     assert lims_data.stim_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_stim.pkl'
+#     assert 'objectlist.txt' in lims_data.objectlist_file
+#     assert '_input_extract_traces.json' in lims_data.input_extract_traces_file
+#     assert lims_data.dff_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/702134928_dff.h5'
+#     assert lims_data.maxInt_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/maxInt_a13a.png'
+#     assert lims_data.sync_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_sync.h5'
+
+if __name__ == '__main__':
+    test_lims_api()
+
+# from allensdk.experimental.lazy_property import LazyProperty
+
+# class TestDataSet(object):
+
+#     ophys_experiment_dir = LazyProperty(api_method='get_ophys_experiment_dir')
+#     maxInt_file = LazyProperty(api_method='get_maxint_file')
+#     sync_file = LazyProperty(api_method='get_sync_file')
+#     input_extract_traces_file = LazyProperty(api_method='get_input_extract_traces_file')
+#     objectlist_file = LazyProperty(api_method='get_objectlist_file')
+#     dff_file = LazyProperty(api_method='get_dff_file')
+#     stim_file = LazyProperty(api_method='get_stim_file')
 
 
-    def __init__(self, ophys_experiment_id, api=None):
+#     def __init__(self, ophys_experiment_id, api=None):
 
-        self.ophys_experiment_id = ophys_experiment_id
-        self.api = VisualBehaviorLimsAPI() if api is None else api
+#         self.ophys_experiment_id = ophys_experiment_id
+#         self.api = VisualBehaviorLimsAPI() if api is None else api
 
-def test_lims_api(ophys_experiment_id):
 
-    lims_data = TestDataSet(ophys_experiment_id)
+# def test_lims_api(ophys_experiment_id):
 
-    # assert lims_data.ophys_experiment_id == ophys_experiment_id
-    # assert lims_data.specimen_id == 652073919
-    # assert lims_data.session_id == 702013508
-    # assert lims_data.experiment_container_id == 700821114
-    # assert lims_data.project_id == 'VisualBehaviorDevelopment'
-    # assert lims_data.external_specimen_id == 363887
-    # assert lims_data.experiment_name == '20180524_363887_sessionC'
-    # assert str(lims_data.experiment_date) == '2018-05-24 14:27:25'
-    # assert lims_data.targeted_structure == 'VISal'
-    # assert lims_data.imaging_depth == 175
-    # assert lims_data.stimulus_type is None
-    # assert lims_data.operator == 'saharm'
-    # assert lims_data.rig == 'CAM2P.6'
-    # assert lims_data.workflow_state == 'qc'
-    assert lims_data.ophys_experiment_dir == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/'
-    assert lims_data.sync_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_sync.h5'
-    # assert lims_data.specimen_id == 652073919
-    assert lims_data.stim_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_stim.pkl'
-    assert 'objectlist.txt' in lims_data.objectlist_file
-    assert '_input_extract_traces.json' in lims_data.input_extract_traces_file
-    assert lims_data.dff_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/702134928_dff.h5'
-    # assert lims_data.demix_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5'
-    # assert lims_data.rigid_motion_transform_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/702134928_rigid_motion_transform.csv'
-    assert lims_data.maxInt_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/maxInt_a13a.png'
-    # assert lims_data.roi_traces_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/roi_traces.h5'
-    # assert lims_data.avgint_a1X_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/avgInt_a1X.png'
+#     lims_data = TestDataSet(ophys_experiment_id)
 
-test_lims_api(702134928)
+#     # assert lims_data.ophys_experiment_id == ophys_experiment_id
+#     # assert lims_data.specimen_id == 652073919
+#     # assert lims_data.session_id == 702013508
+#     # assert lims_data.experiment_container_id == 700821114
+#     # assert lims_data.project_id == 'VisualBehaviorDevelopment'
+#     # assert lims_data.external_specimen_id == 363887
+#     # assert lims_data.experiment_name == '20180524_363887_sessionC'
+#     # assert str(lims_data.experiment_date) == '2018-05-24 14:27:25'
+#     # assert lims_data.targeted_structure == 'VISal'
+#     # assert lims_data.imaging_depth == 175
+#     # assert lims_data.stimulus_type is None
+#     # assert lims_data.operator == 'saharm'
+#     # assert lims_data.rig == 'CAM2P.6'
+#     # assert lims_data.workflow_state == 'qc'
+#     assert lims_data.ophys_experiment_dir == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/'
+#     assert lims_data.sync_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_sync.h5'
+#     # assert lims_data.specimen_id == 652073919
+#     assert lims_data.stim_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_stim.pkl'
+#     assert 'objectlist.txt' in lims_data.objectlist_file
+#     assert '_input_extract_traces.json' in lims_data.input_extract_traces_file
+#     assert lims_data.dff_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/702134928_dff.h5'
+#     # assert lims_data.demix_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5'
+#     # assert lims_data.rigid_motion_transform_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/702134928_rigid_motion_transform.csv'
+#     assert lims_data.maxInt_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/maxInt_a13a.png'
+#     # assert lims_data.roi_traces_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/roi_traces.h5'
+#     # assert lims_data.avgint_a1X_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/avgInt_a1X.png'
+
+# test_lims_api(702134928)
 
 
 
