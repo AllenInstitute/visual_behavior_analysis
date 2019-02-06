@@ -19,7 +19,7 @@ import matplotlib.image as mpimg  # NOQA: E402
 
 logger = logging.getLogger(__name__)
 
-from visual_behavior.ophys.timestamps import get_sync_data, match_dff_and_ophys_timestamp_len
+from visual_behavior.ophys.timestamps import get_sync_data
 from visual_behavior.ophys.roi_processing import get_roi_metrics, get_roi_masks
 from visual_behavior.translator import foraging2, foraging  # NOQA: E402
 
@@ -175,11 +175,6 @@ class VisualBehaviorLimsAPI:
         return get_sync_data(sync_path)
 
 
-    def get_stimulus_timestamps(self, *args, **kwargs):
-        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
-        return self.get_sync_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)['stimulus_frames']
-
-
     def get_core_data(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         pkl = pd.read_pickle(self.get_stim_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs))
@@ -196,25 +191,41 @@ class VisualBehaviorLimsAPI:
         return self.get_core_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)['running']
 
 
-
-
     def get_dff_traces(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         dff_path = self.get_dff_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         g = h5py.File(dff_path)
-        dff_traces_orig = np.asarray(g['data'])
+        dff_traces = np.asarray(g['data'])
         g.close()
 
-        ophys_timestamps_orig = self.get_sync_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)['ophys_frames']
+        ophys_timestamps = self.get_sync_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)['ophys_frames']
+        running_speed = self.get_running_speed(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
 
-        dff_traces, timestamps = match_dff_and_ophys_timestamp_len(dff_traces_orig, ophys_timestamps_orig)
+        # Make sure length of timestamps equals length of running traces
+        if len(running_speed) < ophys_timestamps.shape[0]:
+            ophys_timestamps = ophys_timestamps[:len(running_speed)]
+
+        if dff_traces.shape[1] < ophys_timestamps.shape[0]:
+        
+            # Remove spurious frames at end of ophys session - known issue with Scientifica data
+            difference = ophys_timestamps.shape[0] - dff_traces.shape[1]
+            ophys_timestamps = ophys_timestamps[:dff_traces.shape[1]]
+
+        elif dff_traces.shape[1] > ophys_timestamps.shape[0]:
+        
+            # Account for dropped ophys frames - a rare but unfortunate issue
+            difference = ophys_timestamps.shape[0] - dff_traces.shape[1]
+            dff_traces = dff_traces[:, :ophys_timestamps.shape[0]]
 
         cell_specimen_id_list = self.get_cell_specimen_ids(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         df = pd.DataFrame({'cell_specimen_id':cell_specimen_id_list, 'dff':list(dff_traces)})
-        df['timestamps'] = [timestamps]*len(df)
+        df['timestamps'] = [ophys_timestamps]*len(df)
 
         return df
 
+    def get_stimulus_timestamps(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        return self.get_sync_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)['stimulus_frames']
 
 
 def test_lims_api():

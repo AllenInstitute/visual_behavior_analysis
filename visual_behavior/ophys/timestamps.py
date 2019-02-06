@@ -74,19 +74,3 @@ def get_sync_data(sync_path, use_acq_trigger=False):
 
     return sync_data
 
-def match_dff_and_ophys_timestamp_len(dff_traces, ophys_timestamps):
-
-    if dff_traces.shape[1] < ophys_timestamps.shape[0]:
-
-        # Remove spurious frames at end of ophys session - known issue with Scientifica data
-        difference = ophys_timestamps.shape[0] - dff_traces.shape[1]
-        ophys_timestamps = ophys_timestamps[:dff_traces.shape[1]]
-
-    elif dff_traces.shape[1] > ophys_timestamps.shape[0]:
-
-        # Account for dropped ophys frames - a rare but unfortunate issue
-        difference = ophys_timestamps.shape[0] - dff_traces.shape[1]
-        dff_traces = dff_traces[:, :ophys_timestamps.shape[0]]
-
-    return dff_traces, ophys_timestamps
-

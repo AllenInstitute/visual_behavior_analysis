@@ -33,6 +33,7 @@ class VisualBehaviorFileSystemAPI:
         self.save_roi_metrics(obj)
         self.save_dff_traces(obj)
         self.save_roi_masks(obj)
+        self.save_running_speed(obj)
         self.save_stimulus_timestamps(obj)
 
 
@@ -40,7 +41,7 @@ class VisualBehaviorFileSystemAPI:
     def max_proj_cache_file_info(self):
         return os.path.join(self.cache_dir, 'max_projection.h5'), '/data'
 
-    def get_max_projection(self, obj):
+    def get_max_projection(self, *args, **kwargs):
         return read_data_h5(*self.max_proj_cache_file_info)
 
     def save_max_projection(self, obj):
@@ -51,59 +52,59 @@ class VisualBehaviorFileSystemAPI:
     def roi_metrics_cache_file_info(self):
         return os.path.join(self.cache_dir, 'roi_metrics.h5'), 'df'
 
+    def get_roi_metrics(self, *args, **kwargs):
+        return read_df_h5(*self.roi_metrics_cache_file_info)
+
     def save_roi_metrics(self, obj):
         save_df_h5(obj.roi_metrics, *self.roi_metrics_cache_file_info)
-
-    def get_roi_metrics(self, obj):
-        return read_df_h5(*self.roi_metrics_cache_file_info)
 
 
     @property
     def dff_cache_file_info(self):
         return os.path.join(self.cache_dir, 'dff.h5'), 'data'
 
-    def save_dff_traces(self, obj):
-        save_df_h5(obj.dff_traces, *self.dff_cache_file_info)
-
-    def get_dff_traces(self, obj):
+    def get_dff_traces(self, *args, **kwargs):
         return read_df_h5(*self.dff_cache_file_info)
 
-    def get_cell_specimen_ids(self, obj):
+    def get_cell_specimen_ids(self, *args, **kwargs):
         df = read_df_h5(*self.dff_cache_file_info)
         return df['cell_specimen_id'].values
+
+    def save_dff_traces(self, obj):
+        save_df_h5(obj.dff_traces, *self.dff_cache_file_info)
 
 
     @property
     def roi_mask_file_info(self):
         return os.path.join(self.cache_dir, 'roi_masks.h5'), 'data'
 
+    def get_roi_masks(self, *args, **kwargs):
+        return read_df_h5(*self.roi_mask_file_info)
+
     def save_roi_masks(self, obj):
         save_df_h5(obj.roi_masks, *self.roi_mask_file_info)
-
-    def get_roi_masks(self, obj):
-        return read_df_h5(*self.roi_mask_file_info)
 
 
     @property
     def running_speed_file_info(self):
         return os.path.join(self.cache_dir, 'running_speed.h5'), 'data'
 
+    def get_running_speed(self, *args, **kwargs):
+        return read_df_h5(*self.running_speed_file_info)
+
     def save_running_speed(self, obj):
         save_df_h5(obj.running_speed, *self.running_speed_file_info)
-
-    def get_running_speed(self, obj):
-        return read_df_h5(*self.running_speed_file_info)
 
 
     @property
     def stimulus_timestamps_file_info(self):
         return os.path.join(self.cache_dir, 'stimulus_timestamps.h5'), 'data'
 
-    def save_stimulus_timestamps(self, obj):
-        save_df_h5(obj.running_speed, *self.stimulus_timestamps_file_info)
+    def get_stimulus_timestamps(self, *args, **kwargs):
+        return read_data_h5(*self.stimulus_timestamps_file_info)
 
-    def get_stimulus_timestamps(self, obj):
-        return read_df_h5(*self.stimulus_timestamps_file_info)
+    def save_stimulus_timestamps(self, obj):
+        save_data_h5(obj.stimulus_timestamps, *self.stimulus_timestamps_file_info)
 
 
     # def save_timestamp_data(self, obj):

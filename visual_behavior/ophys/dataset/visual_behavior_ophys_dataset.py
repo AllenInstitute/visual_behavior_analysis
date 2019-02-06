@@ -37,13 +37,6 @@ class VisualBehaviorOphysSession(object):
         self.api = VisualBehaviorLimsAPI() if api is None else api
         self.use_acq_trigger = use_acq_trigger
 
-    def save(self, api=None):
-        if api is None:
-            api = self.api
-        api.save(self)
-
-
-
 
 
 
@@ -53,25 +46,13 @@ def test_visbeh_ophys_data_set(ophys_experiment_id, api):
 
     data_set.roi_metrics
     data_set.dff_traces
-    # data_set.roi_masks
-    # data_set.running_speed
+    data_set.roi_masks
+    data_set.running_speed
 
-    # data_set.max_projection
-    # data_set.cell_specimen_ids
-    # data_set.stimulus_timestamps
+    data_set.max_projection
+    data_set.cell_specimen_ids
+    data_set.stimulus_timestamps
 
-
-    
-    # # make sure length of timestamps equals length of running traces
-    # running_speed = core_data['running'].speed.values
-    # if len(running_speed) < timestamps['stimulus_frames']['timestamps'].shape[0]:
-    #     timestamps['stimulus_frames']['timestamps'] = timestamps['stimulus_frames']['timestamps'][:len(running_speed)]
-    # save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
-
-
-    # print timestamps['ophys_frames']['timestamps']
-
-    
 
     # assert data_set.max_projection.shape == (512, 449)
 
@@ -79,9 +60,10 @@ def test_cache_to_fs(ophys_experiment_id, tmpdir):
      
     
     # Round-trip data:
-    data_set = VisualBehaviorOphysSession(ophys_experiment_id, api=VisualBehaviorLimsAPI())
-    data_set.save(api=VisualBehaviorFileSystemAPI(tmpdir))
-    data_set2 = VisualBehaviorOphysSession(ophys_experiment_id, api=VisualBehaviorFileSystemAPI(tmpdir))
+    data_set = VisualBehaviorOphysSession(ophys_experiment_id)
+    api = VisualBehaviorFileSystemAPI(tmpdir)
+    api.save(data_set)
+    data_set2 = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
 
     for lazy_property in ['roi_metrics', 'dff_traces', 'roi_masks', 'running_speed']:
         v1 = getattr(data_set, lazy_property)
@@ -96,7 +78,7 @@ def test_cache_to_fs(ophys_experiment_id, tmpdir):
 if __name__ == '__main__':
 
     test_visbeh_ophys_data_set(702134928, VisualBehaviorLimsAPI())
-    # test_cache_to_fs(702134928, './tmp') # tempfile.mkdtemp()
+    test_cache_to_fs(702134928, './tmp') # tempfile.mkdtemp()
 
 
 
