@@ -173,14 +173,18 @@ def get_roi_group(lims_data):
     json_file = [file for file in os.listdir(ophys_session_dir) if ('SPLITTING' in file) and ('input.json' in file)]
     json_path = os.path.join(ophys_session_dir, json_file[0])
     with open(json_path, 'r') as w:
+        print('opening json')
         jin = json.load(w)
     # figure out which roi_group the current experiment belongs to
     plane_data = pd.DataFrame()
     for i, roi_group in enumerate(range(len(jin['plane_groups']))):
+        print('looping through groups')
         group = jin['plane_groups'][roi_group]['ophys_experiments']
         for j, plane in enumerate(range(len(group))):
+            print('looping through planes')
             expt_id = group[plane]['experiment_id']
             if expt_id == experiment_id:
+                print('experiment id found')
                 expt_roi_group = i
     return expt_roi_group
 
