@@ -9,13 +9,39 @@ from visual_behavior.ophys.io.lims_api import VisualBehaviorLimsAPI
 from visual_behavior.ophys.io.filesystem_api import VisualBehaviorFileSystemAPI
 from pandas.util.testing import assert_frame_equal
 
+class VisualBehaviorLimsAPI_hackEvents(VisualBehaviorLimsAPI):
+
+    def __init__(self, *args, **kwargs):
+        event_cache_dir = kwargs.pop('event_cache_dir')
+        self.event_cache_dir = event_cache_dir
+
+        super(VisualBehaviorLimsAPI_hackEvents, self).__init__(*args, **kwargs)
+
+    def get_events(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        ophys_timestamps = self.get_ophys_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        print ophys_experiment_id
+
+        events_folder = self.event_cache_dir
+        if os.path.exists(events_folder):
+            events_file = [file for file in os.listdir(events_folder) if
+                           str(ophys_experiment_id) + '_events.npz' in file]
+            if len(events_file) > 0:
+                f = np.load(os.path.join(events_folder, events_file[0]))
+                events = np.asarray(f['ev'])
+                f.close()
+                if events.shape[1] > ophys_timestamps.shape[0]:
+                    difference = ophys_timestamps.shape[0] - events.shape[1]
+                    events = events[:, :ophys_timestamps.shape[0]]
+            else:
+                events = None
+        else:
+            events = None
+
+        return events
+
 
 class LazyProperty(LazyPropertyBase):
-
-    def calculate(self, obj):
-        return getattr(obj.api, self.getter_name)(ophys_experiment_id=obj.ophys_experiment_id)
-
-class LazyPropertyAcqTrigger(LazyPropertyBase):
     
     def calculate(self, obj):
         return getattr(obj.api, self.getter_name)(ophys_experiment_id=obj.ophys_experiment_id, use_acq_trigger=obj.use_acq_trigger)
@@ -24,11 +50,21 @@ class VisualBehaviorOphysSession(object):
 
     max_projection = LazyProperty(api_method='get_max_projection')
     stimulus_timestamps = LazyProperty(api_method='get_stimulus_timestamps')
-    dff_traces = LazyPropertyAcqTrigger(api_method='get_dff_traces')
+    ophys_timestamps = LazyProperty(api_method='get_ophys_timestamps')
+    dff_traces = LazyProperty(api_method='get_dff_traces')
     roi_metrics = LazyProperty(api_method='get_roi_metrics')
     roi_masks = LazyProperty(api_method='get_roi_masks')
-    cell_specimen_ids = LazyProperty(api_method='get_cell_specimen_ids')
+    cell_roi_ids = LazyProperty(api_method='get_cell_roi_ids')
     running_speed = LazyProperty(api_method='get_running_speed')
+    stimulus_table = LazyProperty(api_method='get_stimulus_table')
+    stimulus_template = LazyProperty(api_method='get_stimulus_template')
+    stimulus_metadata = LazyProperty(api_method='get_stimulus_metadata')
+    licks = LazyProperty(api_method='get_licks')
+    rewards = LazyProperty(api_method='get_rewards')
+    task_parameters = LazyProperty(api_method='get_task_parameters')
+    trials = LazyProperty(api_method='get_trials')
+    corrected_fluorescence_traces = LazyProperty(api_method='get_corrected_fluorescence_traces')
+    events = LazyProperty(api_method='get_events')
 
 
     def __init__(self, ophys_experiment_id, api=None, use_acq_trigger=False):
@@ -38,22 +74,41 @@ class VisualBehaviorOphysSession(object):
         self.use_acq_trigger = use_acq_trigger
 
 
+def test_visbeh_ophys_data_set_events():
+    
+    ophys_experiment_id = 702134928
+    api = VisualBehaviorLimsAPI_hackEvents(event_cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/events')
+    data_set = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
+
+    print data_set.events
 
 
 def test_visbeh_ophys_data_set(ophys_experiment_id, api):
 
     data_set = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
 
-    data_set.roi_metrics
-    data_set.dff_traces
-    data_set.roi_masks
-    data_set.running_speed
+    # # Round tripped DataFrames:
+    # data_set.roi_metrics
+    # data_set.dff_traces
+    # data_set.roi_masks
+    # data_set.running_speed
+    # data_set.stimulus_metadata
+    # data_set.stimulus_table
+    # data_set.licks
+    # data_set.rewards
+    # data_set.task_parameters
+    # data_set.trials
+    # data_set.corrected_fluorescence_traces
 
-    data_set.max_projection
-    data_set.cell_specimen_ids
-    data_set.stimulus_timestamps
+    # # Round tripped ndarrays:
+    # data_set.max_projection
+    # data_set.cell_roi_ids
+    # data_set.stimulus_timestamps
+    # data_set.ophys_timestamps
+    # data_set.stimulus_template
 
-
+    # Not roud trip tested:
+    print data_set.events
     # assert data_set.max_projection.shape == (512, 449)
 
 def test_cache_to_fs(ophys_experiment_id, tmpdir):
@@ -65,25 +120,33 @@ def test_cache_to_fs(ophys_experiment_id, tmpdir):
     api.save(data_set)
     data_set2 = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
 
-    for lazy_property in ['roi_metrics', 'dff_traces', 'roi_masks', 'running_speed']:
+    for lazy_property in ['roi_metrics', 'dff_traces', 'roi_masks', 'running_speed', 'stimulus_table', 'stimulus_metadata', 'licks', 'rewards', 'task_parameters', 'trials', 'corrected_fluorescence_traces']:
         v1 = getattr(data_set, lazy_property)
         v2 = getattr(data_set2, lazy_property)
         assert_frame_equal(v1, v2)
 
-    for lazy_property in ['max_projection', 'cell_specimen_ids', 'stimulus_timestamps']:
+    for lazy_property in ['max_projection', 'cell_roi_ids', 'stimulus_timestamps', 'ophys_timestamps', 'stimulus_template']:
         v1 = getattr(data_set, lazy_property)
         v2 = getattr(data_set2, lazy_property)
         np.testing.assert_array_almost_equal(v1, v2)
 
+
+def test_plot_traces_heatmap():
+
+    from visual_behavior.visualization.ophys.experiment_summary_figures import plot_traces_heatmap
+    
+    oeid = 702134928
+    data_set = VisualBehaviorOphysSession(oeid)
+
+    plot_traces_heatmap(data_set)
+
+
 if __name__ == '__main__':
 
-    test_visbeh_ophys_data_set(702134928, VisualBehaviorLimsAPI())
-    test_cache_to_fs(702134928, './tmp') # tempfile.mkdtemp()
-
-
-
-
-
+    # test_visbeh_ophys_data_set(702134928, VisualBehaviorLimsAPI())
+    # test_cache_to_fs(702134928, './tmp') # tempfile.mkdtemp()
+    test_visbeh_ophys_data_set_events()
+    # test_plot_traces_heatmap()
 
     # def get_timestamps(self):
     #     self._timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df', format='fixed')
@@ -93,81 +156,7 @@ if __name__ == '__main__':
     #     self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
     #     return self._metadata
 
-    # def get_timestamps_stimulus(self):
-    #     self._timestamps_stimulus = self.timestamps['stimulus_frames']['timestamps']
-    #     return self._timestamps_stimulus
-
-    # timestamps_stimulus = LazyLoadable('_timestamps_stimulus', get_timestamps_stimulus)
-
-    # def get_timestamps_ophys(self):
-    #     self._timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
-    #     return self._timestamps_ophys
-
-    # timestamps_ophys = LazyLoadable('_timestamps_ophys', get_timestamps_ophys)
-
-    # def get_stimulus_table(self):
-    #     self._stimulus_table = pd.read_hdf(
-    #         os.path.join(self.analysis_dir, 'stimulus_table.h5'),
-    #         key='df', format='fixed'
-    #     )
-    #     self._stimulus_table = self._stimulus_table.reset_index()
-    #     self._stimulus_table = self._stimulus_table.drop(
-    #         columns=['orientation', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
-    #     )
-    #     return self._stimulus_table
-
-    # stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)
-
-    # def get_stimulus_template(self):
-    #     with h5py.File(os.path.join(self.analysis_dir, 'stimulus_template.h5'), 'r') as stimulus_template_file:
-    #         self._stimulus_template = np.asarray(stimulus_template_file['data'])
-    #     return self._stimulus_template
-
-    # stimulus_template = LazyLoadable('_stimulus_template', get_stimulus_template)
-
-    # def get_stimulus_metadata(self):
-    #     self._stimulus_metadata = pd.read_hdf(
-    #         os.path.join(self.analysis_dir, 'stimulus_metadata.h5'),
-    #         key='df', format='fixed'
-    #     )
-    #     self._stimulus_metadata = self._stimulus_metadata.drop(columns='image_category')
-    #     return self._stimulus_metadata
-
-    # stimulus_metadata = LazyLoadable('_stimulus_metadata', get_stimulus_metadata)
-
-    # def get_running_speed(self):
-    #     self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df', format='fixed')
-    #     return self._running_speed
-
-    # running_speed = LazyLoadable('_running_speed', get_running_speed)
-
-    # def get_licks(self):
-    #     self._licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df', format='fixed')
-    #     return self._licks
-
-    # licks = LazyLoadable('_licks', get_licks)
-
-    # def get_rewards(self):
-    #     self._rewards = pd.read_hdf(os.path.join(self.analysis_dir, 'rewards.h5'), key='df', format='fixed')
-    #     return self._rewards
-
-    # rewards = LazyLoadable('_rewards', get_rewards)
-
-    # def get_task_parameters(self):
-    #     self._task_parameters = pd.read_hdf(
-    #         os.path.join(self.analysis_dir, 'task_parameters.h5'),
-    #         key='df', format='fixed'
-    #     )
-    #     return self._task_parameters
-
-    # task_parameters = LazyLoadable('_task_parameters', get_task_parameters)
-
-    # def get_all_trials(self):
-    #     self._all_trials = pd.read_hdf(os.path.join(self.analysis_dir, 'trials.h5'), key='df', format='fixed')
-    #     return self._all_trials
-
-    # all_trials = LazyLoadable('_all_trials', get_all_trials)
-
+    # Trials is no built from "all_trials"
     # def get_trials(self):
     #     all_trials = self.all_trials.copy()
     #     trials = all_trials[(all_trials.auto_rewarded != True) & (all_trials.trial_type != 'aborted')].reset_index()
@@ -187,88 +176,16 @@ if __name__ == '__main__':
 
     # trials = LazyLoadable('_trials', get_trials)
 
-    # def get_dff_traces(self):
-    #     with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
-    #         dff_traces = []
-    #         for key in dff_traces_file.keys():
-    #             dff_traces.append(np.asarray(dff_traces_file[key]))
-    #     self._dff_traces = np.asarray(dff_traces)
-    #     return self._dff_traces
 
-    # dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
 
-    # def get_corrected_fluorescence_traces(self):
-    #     with h5py.File(os.path.join(self.analysis_dir, 'corrected_fluorescence_traces.h5'),
-    #                    'r') as corrected_fluorescence_traces_file:
-    #         corrected_fluorescence_traces = []
-    #         for key in corrected_fluorescence_traces_file.keys():
-    #             corrected_fluorescence_traces.append(np.asarray(corrected_fluorescence_traces_file[key]))
-    #     self._corrected_fluorescence_traces = np.asarray(corrected_fluorescence_traces)
-    #     return self._corrected_fluorescence_traces
 
-    # corrected_fluorescence_traces = LazyLoadable('_corrected_fluorescence_traces', get_corrected_fluorescence_traces)
 
-    # def get_events(self):
-    #     events_folder = os.path.join(self.cache_dir, 'events')
-    #     if os.path.exists(events_folder):
-    #         events_file = [file for file in os.listdir(events_folder) if
-    #                        str(self.experiment_id) + '_events.npz' in file]
-    #         if len(events_file) > 0:
-    #             logger.info('getting L0 events')
-    #             f = np.load(os.path.join(events_folder, events_file[0]))
-    #             events = np.asarray(f['ev'])
-    #             f.close()
-    #             if events.shape[1] > self.timestamps_ophys.shape[0]:
-    #                 difference = self.timestamps_ophys.shape[0] - events.shape[1]
-    #                 logger.info('length of ophys timestamps <  length of events by', str(difference),
-    #                             'frames , truncating events')
-    #                 events = events[:, :self.timestamps_ophys.shape[0]]
-    #         else:
-    #             logger.info('no events for this experiment')
-    #             events = None
-    #     else:
-    #         logger.info('no events for this experiment')
-    #         events = None
 
-    #     self._events = events
-    #     return self._events
 
-    # events = LazyLoadable('_events', get_events)
 
-    # def get_roi_metrics(self):
-    #     self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
-    #     return self._roi_metrics
 
-    # roi_metrics = LazyLoadable('_roi_metrics', get_roi_metrics)
 
-    # def get_roi_mask_dict(self):
-    #     f = h5py.File(os.path.join(self.analysis_dir, 'roi_masks.h5'), 'r')
-    #     roi_mask_dict = {}
-    #     for key in f.keys():
-    #         roi_mask_dict[key] = np.asarray(f[key])
-    #     f.close()
-    #     self._roi_mask_dict = roi_mask_dict
-    #     return self._roi_mask_dict
 
-    # roi_mask_dict = LazyLoadable('_roi_mask_dict', get_roi_mask_dict)
-
-    # def get_roi_mask_array(self):
-    #     w, h = self.roi_mask_dict[self.roi_mask_dict.keys()[0]].shape
-    #     roi_mask_array = np.empty((len(self.roi_mask_dict.keys()), w, h))
-    #     for cell_specimen_id in self.cell_specimen_ids:
-    #         cell_index = self.get_cell_index_for_cell_specimen_id(int(cell_specimen_id))
-    #         roi_mask_array[cell_index] = self.roi_mask_dict[str(cell_specimen_id)]
-    #     self._roi_mask_array = roi_mask_array
-    #     return self._roi_mask_array
-
-    # roi_mask_array = LazyLoadable('_roi_mask_array', get_roi_mask_array)
-
-    # def get_max_projection(self):
-    #     with h5py.File(os.path.join(self.analysis_dir, 'max_projection.h5'), 'r') as max_projection_file:
-    #         self._max_projection = np.asarray(max_projection_file['data'])
-    #     return self._max_projection
-
-    # max_projection = LazyLoadable('_max_projection', get_max_projection)
 
     # def get_average_image(self):
     #     with h5py.File(os.path.join(self.analysis_dir, 'average_image.h5'), 'r') as average_image_file:

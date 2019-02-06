@@ -35,6 +35,13 @@ class VisualBehaviorFileSystemAPI:
         self.save_roi_masks(obj)
         self.save_running_speed(obj)
         self.save_stimulus_timestamps(obj)
+        self.save_stimulus_table(obj)
+        self.save_stimulus_template(obj)
+        self.save_licks(obj)
+        self.save_rewards(obj)
+        self.save_task_parameters(obj)
+        self.save_trials(obj)
+        self.save_corrected_fluorescence_traces(obj)
 
 
     @property
@@ -66,9 +73,13 @@ class VisualBehaviorFileSystemAPI:
     def get_dff_traces(self, *args, **kwargs):
         return read_df_h5(*self.dff_cache_file_info)
 
-    def get_cell_specimen_ids(self, *args, **kwargs):
+    def get_cell_roi_ids(self, *args, **kwargs):
         df = read_df_h5(*self.dff_cache_file_info)
-        return df['cell_specimen_id'].values
+        return df['cell_roi_id'].values
+
+    def get_ophys_timestamps(self, *args, **kwargs):
+        df = read_df_h5(*self.dff_cache_file_info)
+        return df['timestamps'].values[0]
 
     def save_dff_traces(self, obj):
         save_df_h5(obj.dff_traces, *self.dff_cache_file_info)
@@ -107,23 +118,90 @@ class VisualBehaviorFileSystemAPI:
         save_data_h5(obj.stimulus_timestamps, *self.stimulus_timestamps_file_info)
 
 
-    # def save_timestamp_data(self, obj):
-    #     timestamps = obj.timestamp_data
-    # # def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
-    #     # remove spurious frames at end of ophys session - known issue with Scientifica data
-    #     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
-    #         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-    #         # logger.info('length of ophys timestamps >  length of traces by', str(difference), 'frames , truncating ophys timestamps')
-    #         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
-    #     # account for dropped ophys frames - a rare but unfortunate issue
-    #     if dff_traces.shape[1] > timestamps['ophys_frames']['timestamps'].shape[0]:
-    #         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-    #         # logger.info('length of ophys timestamps <  length of traces by', str(difference), 'frames , truncating traces')
-    #         dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
-    #         save_dff_traces(dff_traces, roi_metrics, lims_data)
-    #     # make sure length of timestamps equals length of running traces
-    #     running_speed = core_data['running'].speed.values
-    #     if len(running_speed) < timestamps['stimulus_frames']['timestamps'].shape[0]:
-    #         timestamps['stimulus_frames']['timestamps'] = timestamps['stimulus_frames']['timestamps'][:len(running_speed)]
-    #     save_dataframe_as_h5(timestamps, 'timestamps', get_analysis_dir(lims_data))
-    
+    @property
+    def stimulus_template_file_info(self):
+        return os.path.join(self.cache_dir, 'stimulus_template.h5'), 'data'
+
+    def get_stimulus_template(self, *args, **kwargs):
+        return read_data_h5(*self.stimulus_template_file_info)
+
+    def save_stimulus_template(self, obj):
+        save_data_h5(obj.stimulus_template, *self.stimulus_template_file_info)
+
+
+    @property
+    def stimulus_table_file_info(self):
+        return os.path.join(self.cache_dir, 'stimulus_table.h5'), 'data'
+
+    def get_stimulus_table(self, *args, **kwargs):
+        return read_df_h5(*self.stimulus_table_file_info)
+
+    def save_stimulus_table(self, obj):
+        save_df_h5(obj.stimulus_table, *self.stimulus_table_file_info)
+
+
+    @property
+    def stimulus_metadata_file_info(self):
+        return os.path.join(self.cache_dir, 'stimulus_metadata.h5'), 'data'
+
+    def get_stimulus_metadata(self, *args, **kwargs):
+        return read_df_h5(*self.stimulus_metadata_file_info)
+
+    def save_stimulus_metadata(self, obj):
+        save_df_h5(obj.stimulus_metadata, *self.stimulus_metadata_file_info)
+
+
+    @property
+    def licks_file_info(self):
+        return os.path.join(self.cache_dir, 'licks.h5'), 'data'
+
+    def get_licks(self, *args, **kwargs):
+        return read_df_h5(*self.licks_file_info)
+
+    def save_licks(self, obj):
+        save_df_h5(obj.licks, *self.licks_file_info)
+
+
+    @property
+    def rewards_file_info(self):
+        return os.path.join(self.cache_dir, 'rewards.h5'), 'data'
+
+    def get_rewards(self, *args, **kwargs):
+        return read_df_h5(*self.rewards_file_info)
+
+    def save_rewards(self, obj):
+        save_df_h5(obj.rewards, *self.rewards_file_info)
+
+    @property
+    def task_parameters_file_info(self):
+        return os.path.join(self.cache_dir, 'task_parameters.h5'), 'data'
+
+    def get_task_parameters(self, *args, **kwargs):
+        return read_df_h5(*self.task_parameters_file_info)
+
+    def save_task_parameters(self, obj):
+        save_df_h5(obj.task_parameters, *self.task_parameters_file_info)
+
+    @property
+    def trials_file_info(self):
+        return os.path.join(self.cache_dir, 'trials.h5'), 'data'
+
+    def get_trials(self, *args, **kwargs):
+        return read_df_h5(*self.trials_file_info)
+
+    def save_trials(self, obj):
+        save_df_h5(obj.trials, *self.trials_file_info)
+
+
+    @property
+    def corrected_fluorescence_traces_file_info(self):
+        return os.path.join(self.cache_dir, 'corrected_fluorescence_traces.h5'), 'data'
+
+    def get_corrected_fluorescence_traces(self, *args, **kwargs):
+        return read_df_h5(*self.corrected_fluorescence_traces_file_info)
+
+    def save_corrected_fluorescence_traces(self, obj):
+        save_df_h5(obj.corrected_fluorescence_traces, *self.corrected_fluorescence_traces_file_info)
+
+
+        

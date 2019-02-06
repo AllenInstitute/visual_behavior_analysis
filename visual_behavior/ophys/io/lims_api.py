@@ -19,9 +19,14 @@ import matplotlib.image as mpimg  # NOQA: E402
 
 logger = logging.getLogger(__name__)
 
-from visual_behavior.ophys.timestamps import get_sync_data
+from visual_behavior.ophys.stimulus_processing import get_stimtable, get_stimulus_template, get_stimulus_metadata
+from visual_behavior.ophys.fluorescence_processing import get_corrected_fluorescence_traces
+from visual_behavior.ophys.sync_processing import get_sync_data
 from visual_behavior.ophys.roi_processing import get_roi_metrics, get_roi_masks
+from visual_behavior.ophys.metadata_processing import get_task_parameters
 from visual_behavior.translator import foraging2, foraging  # NOQA: E402
+from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E402
+from allensdk.api.cache import memoize
 
 def one(x):
     assert len(x) == 1
@@ -49,7 +54,7 @@ def correct_time_zone(utc_time):
     return correct_time.replace(tzinfo=None)
 
 
-class VisualBehaviorLimsAPI:
+class VisualBehaviorLimsAPI(object):
 
     def __init__(self, dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432):
 
@@ -65,6 +70,7 @@ class VisualBehaviorLimsAPI:
         cur.execute(q)
         return one(one(cur.fetchall()))
 
+    @memoize
     def get_ophys_experiment_dir(self, *args, **kwargs):
         query = '''
                 SELECT oe.storage_directory
@@ -74,6 +80,7 @@ class VisualBehaviorLimsAPI:
         ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         return self.query(query.format(ophys_experiment_id))
 
+    @memoize
     def get_maxint_file(self, *args, **kwargs):
         query = '''
                 SELECT obj.storage_directory || 'maxInt_a13a.png' AS maxint_file
@@ -85,6 +92,7 @@ class VisualBehaviorLimsAPI:
         ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         return self.query(query.format(ophys_experiment_id))
 
+    @memoize
     def get_sync_file(self, *args, **kwargs):
         query = '''
                 SELECT sync.storage_directory || sync.filename AS sync_file
@@ -96,6 +104,7 @@ class VisualBehaviorLimsAPI:
         ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         return self.query(query.format(ophys_experiment_id))
 
+    @memoize
     def get_input_extract_traces_file(self, *args, **kwargs):
         query = '''
                 SELECT oe.storage_directory || 'processed/' || oe.id || '_input_extract_traces.json'
@@ -105,6 +114,7 @@ class VisualBehaviorLimsAPI:
         ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         return self.query(query.format(ophys_experiment_id))
 
+    @memoize
     def get_objectlist_file(self, *args, **kwargs):
         query = '''
                 SELECT obj.storage_directory || obj.filename AS obj_file
@@ -116,6 +126,7 @@ class VisualBehaviorLimsAPI:
         ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         return self.query(query.format(ophys_experiment_id))
 
+    @memoize
     def get_dff_file(self, *args, **kwargs):
         query = '''
                 SELECT dff.storage_directory || dff.filename AS dff_file
@@ -126,6 +137,7 @@ class VisualBehaviorLimsAPI:
         ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         return self.query(query.format(ophys_experiment_id))
 
+    @memoize
     def get_stim_file(self, *args, **kwargs):
         query = '''
                 SELECT stim.storage_directory || stim.filename AS stim_file
@@ -137,21 +149,31 @@ class VisualBehaviorLimsAPI:
         ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         return self.query(query.format(ophys_experiment_id))
 
+    @memoize
+    def get_demix_file(self, *args, **kwargs):
+        query = '''
+                SELECT oe.storage_directory || 'demix/' || oe.id || '_demixed_traces.h5' AS demix_file
+                FROM ophys_experiments oe
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
 
+    @memoize
     def get_max_projection(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         maxInt_a13_file = self.get_maxint_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         max_projection = mpimg.imread(maxInt_a13_file)
         return max_projection
 
-
+    @memoize
     def get_roi_metrics(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         input_extract_traces_file = self.get_input_extract_traces_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         objectlist_file = self.get_objectlist_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         return get_roi_metrics(input_extract_traces_file, ophys_experiment_id, objectlist_file)['filtered']
 
-
+    @memoize
     def get_roi_masks(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         roi_metrics = roi_metrics = self.get_roi_metrics(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
@@ -159,22 +181,22 @@ class VisualBehaviorLimsAPI:
 
         return get_roi_masks(roi_metrics, input_extract_traces_file)
 
-
-    def get_cell_specimen_ids(self, *args, **kwargs):
+    @memoize
+    def get_cell_roi_ids(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         input_extract_traces_file = self.get_input_extract_traces_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         with open(input_extract_traces_file, 'r') as w:
             jin = json.load(w)
         return [roi['id'] for roi in jin['rois']]
 
-
+    @memoize
     def get_sync_data(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
-        use_acq_trigger = kwargs.pop('use_acq_trigger', False)
+        use_acq_trigger = kwargs.pop('use_acq_trigger')
         sync_path = self.get_sync_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         return get_sync_data(sync_path)
 
-
+    @memoize
     def get_core_data(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         pkl = pd.read_pickle(self.get_stim_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs))
@@ -185,12 +207,12 @@ class VisualBehaviorLimsAPI:
             core_data = foraging2.data_to_change_detection_core(pkl, time=stimulus_timestamps)
         return core_data
 
-
+    @memoize
     def get_running_speed(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         return self.get_core_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)['running']
 
-
+    @memoize
     def get_dff_traces(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         dff_path = self.get_dff_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
@@ -217,15 +239,92 @@ class VisualBehaviorLimsAPI:
             difference = ophys_timestamps.shape[0] - dff_traces.shape[1]
             dff_traces = dff_traces[:, :ophys_timestamps.shape[0]]
 
-        cell_specimen_id_list = self.get_cell_specimen_ids(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
-        df = pd.DataFrame({'cell_specimen_id':cell_specimen_id_list, 'dff':list(dff_traces)})
+        cell_roi_id_list = self.get_cell_roi_ids(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        df = pd.DataFrame({'cell_roi_id':cell_roi_id_list, 'dff':list(dff_traces)})
         df['timestamps'] = [ophys_timestamps]*len(df)
 
         return df
 
+    @memoize
     def get_stimulus_timestamps(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         return self.get_sync_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)['stimulus_frames']
+
+    @memoize
+    def get_ophys_timestamps(self, *args, **kwargs):
+        return self.get_dff_traces(*args, **kwargs)['timestamps'].values[0]
+
+    @memoize    
+    def get_stimulus_table(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        core_data = self.get_core_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        timestamps_stimulus = self.get_stimulus_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        return get_stimtable(core_data, timestamps_stimulus)
+
+    @memoize
+    def get_stimulus_template(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        pkl = pd.read_pickle(self.get_stim_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs))
+        return get_stimulus_template(pkl)
+
+
+    @memoize
+    def get_stimulus_metadata(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        pkl = pd.read_pickle(self.get_stim_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs))
+        return get_stimulus_metadata(pkl)
+
+
+    @memoize
+    def get_licks(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        core_data = self.get_core_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        return core_data['licks']
+
+
+    @memoize
+    def get_rewards(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        core_data = self.get_core_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        return core_data['rewards']
+
+
+    @memoize
+    def get_task_parameters(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        core_data = self.get_core_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        return get_task_parameters(core_data)
+
+
+    @memoize
+    def get_trials(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        core_data = self.get_core_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        return create_extended_dataframe(trials=core_data['trials'], 
+                                         metadata=core_data['metadata'],
+                                         licks=core_data['licks'],
+                                         time=core_data['time'])
+
+
+    @memoize
+    def get_corrected_fluorescence_traces(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        demix_file = self.get_demix_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        roi_metrics = roi_metrics = self.get_roi_metrics(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        corrected_fluorescence_trace_array = get_corrected_fluorescence_traces(roi_metrics, demix_file)
+        cell_roi_id_list = self.get_cell_roi_ids(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        ophys_timestamps = self.get_ophys_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        assert corrected_fluorescence_trace_array.shape[1], ophys_timestamps.shape[0]
+        df = pd.DataFrame({'roi_id':cell_roi_id_list, 'corrected_fluorescence':list(corrected_fluorescence_trace_array)})
+        df['timestamps'] = [ophys_timestamps]*len(df)
+        return df
+
+    def get_traces_heatmap(self, ophys_experiment_id=None, use_acq_trigger=False):
+
+        from visual_behavior.visualization.ophys import plot_traces_heatmap
+
+        dff_df = self.get_dff_traces(ophys_experiment_id=ophys_experiment_id, use_acq_trigger=use_acq_trigger)
+        print plot_traces_heatmap(dff_df)
 
 
 def test_lims_api():
@@ -235,13 +334,14 @@ def test_lims_api():
     api = VisualBehaviorLimsAPI()
 
     TD = {'ophys_dir':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/',
-         }
+         'demix_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5'}
 
     assert api.get_ophys_experiment_dir(oeid) == TD['ophys_dir']
     assert api.get_ophys_experiment_dir(ophys_experiment_id=oeid) == TD['ophys_dir']
 
-    print api.get_dff_traces(oeid, use_acq_trigger=False)
-    print api.get_dff_traces(oeid, use_acq_trigger=True)
+    assert api.get_demix_file(oeid) == TD['demix_file']
+    assert api.get_demix_file(ophys_experiment_id=oeid) == TD['demix_file']
+
 
 #     assert lims_data.stim_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_stim.pkl'
 #     assert 'objectlist.txt' in lims_data.objectlist_file
@@ -250,8 +350,18 @@ def test_lims_api():
 #     assert lims_data.maxInt_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/maxInt_a13a.png'
 #     assert lims_data.sync_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_sync.h5'
 
+
+def test_get_traces_heatmap():
+
+    oeid = 702134928
+
+    api = VisualBehaviorLimsAPI()
+    api.get_traces_heatmap(ophys_experiment_id=oeid, use_acq_trigger=False)
+    
+
 if __name__ == '__main__':
-    test_lims_api()
+    # test_lims_api()
+    test_get_traces_heatmap()
 
 # from allensdk.experimental.lazy_property import LazyProperty
 
@@ -297,7 +407,7 @@ if __name__ == '__main__':
 #     assert 'objectlist.txt' in lims_data.objectlist_file
 #     assert '_input_extract_traces.json' in lims_data.input_extract_traces_file
 #     assert lims_data.dff_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/702134928_dff.h5'
-#     # assert lims_data.demix_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5'
+#     assert lims_data.demix_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5'
 #     # assert lims_data.rigid_motion_transform_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/702134928_rigid_motion_transform.csv'
 #     assert lims_data.maxInt_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/maxInt_a13a.png'
 #     # assert lims_data.roi_traces_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/roi_traces.h5'
