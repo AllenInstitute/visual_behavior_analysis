@@ -167,7 +167,7 @@ def get_segmentation_dir(lims_data):
 
 
 def get_roi_group(lims_data):
-    experiment_id = lims_data.experiment_id.values[0]
+    experiment_id = int(lims_data.experiment_id.values[0])
     ophys_session_dir = get_ophys_session_dir(lims_data)
     import json
     json_file = [file for file in os.listdir(ophys_session_dir) if ('SPLITTING' in file) and ('input.json' in file)]
@@ -182,7 +182,7 @@ def get_roi_group(lims_data):
         group = jin['plane_groups'][roi_group]['ophys_experiments']
         for j, plane in enumerate(range(len(group))):
             print('looping through planes')
-            expt_id = group[plane]['experiment_id']
+            expt_id = int(group[plane]['experiment_id'])
             if expt_id == experiment_id:
                 print('experiment id found')
                 expt_roi_group = i
