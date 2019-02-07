@@ -45,6 +45,7 @@ class VisualBehaviorFileSystemAPI:
         self.save_corrected_fluorescence_traces(obj)
         self.save_average_image(obj)
         self.save_motion_correction(obj)
+        self.save_events(obj)
 
 
     @property
@@ -227,3 +228,14 @@ class VisualBehaviorFileSystemAPI:
 
     def save_motion_correction(self, obj):
         save_df_h5(obj.motion_correction, *self.motion_correction_file_info)
+
+
+    @property
+    def events_file_info(self):
+        return os.path.join(self.cache_dir, 'events.h5'), 'data'
+
+    def get_events(self, *args, **kwargs):
+        return read_data_h5(*self.events_file_info)
+
+    def save_events(self, obj):
+        save_data_h5(obj.events, *self.events_file_info)
