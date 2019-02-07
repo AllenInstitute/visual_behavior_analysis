@@ -10,37 +10,6 @@ from visual_behavior.ophys.io.filesystem_api import VisualBehaviorFileSystemAPI
 from pandas.util.testing import assert_frame_equal
 import inspect
 
-class VisualBehaviorLimsAPI_hackEvents(VisualBehaviorLimsAPI):
-
-    def __init__(self, *args, **kwargs):
-        event_cache_dir = kwargs.pop('event_cache_dir')
-        self.event_cache_dir = event_cache_dir
-
-        super(VisualBehaviorLimsAPI_hackEvents, self).__init__(*args, **kwargs)
-
-    def get_events(self, *args, **kwargs):
-        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
-        ophys_timestamps = self.get_ophys_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
-        print ophys_experiment_id
-
-        events_folder = self.event_cache_dir
-        if os.path.exists(events_folder):
-            events_file = [file for file in os.listdir(events_folder) if
-                           str(ophys_experiment_id) + '_events.npz' in file]
-            if len(events_file) > 0:
-                f = np.load(os.path.join(events_folder, events_file[0]))
-                events = np.asarray(f['ev'])
-                f.close()
-                if events.shape[1] > ophys_timestamps.shape[0]:
-                    difference = ophys_timestamps.shape[0] - events.shape[1]
-                    events = events[:, :ophys_timestamps.shape[0]]
-            else:
-                events = None
-        else:
-            events = None
-
-        return events
-
 
 class LazyProperty(LazyPropertyBase):
     
