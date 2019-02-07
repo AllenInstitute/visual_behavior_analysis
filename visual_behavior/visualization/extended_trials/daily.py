@@ -4,6 +4,7 @@ from visual_behavior.plotting import placeAxesOnGrid
 from visual_behavior.utilities import flatten_list, get_response_rates
 from visual_behavior.translator.core.annotate import check_responses
 from visual_behavior.translator.core.annotate import colormap, trial_translator
+from visual_behavior.change_detection.trials import session_metrics
 
 
 def get_reward_window(extended_trials):
@@ -45,7 +46,8 @@ def make_info_table(extended_trials, ax):
             ['Time between flashes', 'extended_trials.iloc[0].blank_duration_range[0]'],
             ['Black screen on timeout', 'extended_trials.iloc[0].blank_screen_timeout'],
             ['Minimum pre-change time', 'extended_trials.iloc[0]["prechange_minimum"]'],
-            ['Trial duration', 'extended_trials.iloc[0].trial_duration']]
+            ['Trial duration', 'extended_trials.iloc[0].trial_duration'],
+            ['Number of contingent trials', 'session_metrics.num_contingent_trials(extended_trials)']]
 
     cell_text = []
     for x in data:
@@ -196,15 +198,23 @@ def make_rolling_response_probability_plot(hit_rate, fa_rate, ax, palette='trial
     ax.set_xlim(-0.1, 1.1)
 
 
-def make_rolling_dprime_plot(d_prime, ax, format='vertical'):
+def make_rolling_dprime_plot(d_prime, ax, format='vertical', peak_dprime=None):
     if format == 'vertical':
         ax.plot(d_prime, np.arange(len(d_prime)), color='black', linewidth=2)
         ax.set_xlabel("d'", fontsize=14)
+        if peak_dprime is not None:
+            ax.axvline(peak_dprime, linestyle='--', color='grey')  # peak dprime line
     elif format == 'horizontal':
         ax.plot(np.arange(len(d_prime)), d_prime, color='black', linewidth=2)
         ax.set_ylabel("d'", fontsize=14)
+        if peak_dprime is not None:
+            ax.axhline(peak_dprime, linestyle='--', color='grey')  # peak dprime line
     ax.set_title("Rolling d'", fontsize=16)
-    ax.set_xlim(0, 5)
+
+    if peak_dprime is not None:
+        ax.set_xticks([0, peak_dprime, 5.0, ])  # this is more readable?
+    else:  # ticks from original implementatin
+        ax.set_xlim(0, 5)
 
 
 def make_legend(ax, palette='trial_types'):
@@ -304,7 +314,12 @@ def make_daily_figure(
     make_rolling_response_probability_plot(hit_rate, fa_rate, ax[2], palette=palette)
     mean_rate = np.mean(check_responses(df_nonaborted, reward_window=reward_window) == 1.0)
     ax[2].axvline(mean_rate, color='0.5', linestyle=':')
-    make_rolling_dprime_plot(d_prime, ax[3])
+
+    peak_dprime = session_metrics.peak_dprime(extended_trials)
+    if not np.isnan(peak_dprime):
+        make_rolling_dprime_plot(d_prime, ax[3], peak_dprime=peak_dprime)
+    else:
+        make_rolling_dprime_plot(d_prime, ax[3])
 
     plt.subplots_adjust(top=0.9)
     fig.suptitle('mouse = ' + mouse_id + ', ' + date, fontsize=20)
