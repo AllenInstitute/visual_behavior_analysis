@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysSession
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 import visual_behavior.ophys.response_analysis.utilities as ut
 
@@ -16,7 +16,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
     mega_mdf = pd.DataFrame()
     for experiment_id in experiment_ids:
         print(experiment_id)
-        dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
+        dataset = VisualBehaviorOphysSession(experiment_id, cache_dir=cache_dir)
         analysis = ResponseAnalysis(dataset, use_events=use_events)
         try:
             if flashes:

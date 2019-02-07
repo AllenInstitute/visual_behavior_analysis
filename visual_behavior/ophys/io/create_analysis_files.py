@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysSession
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 import visual_behavior.ophys.response_analysis.utilities as ut
 
@@ -21,7 +21,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     # logger.info(experiment_id)
     print(experiment_id)
     print('saving ', str(experiment_id), 'to', cache_dir)
-    dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
+    dataset = VisualBehaviorOphysSession(experiment_id, cache_dir)
 
     use_events = False
 

@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 import h5py
 
-from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysSession
 
 
 
@@ -187,7 +187,7 @@ def ophys_data_dir(tmpdir_factory,
 
 @pytest.fixture
 def ophys_dataset(ophys_data_dir):
-    return VisualBehaviorOphysDataset(12345678, ophys_data_dir)
+    return VisualBehaviorOphysSession(12345678, ophys_data_dir)
     
     
 @pytest.mark.parametrize('fn', [
