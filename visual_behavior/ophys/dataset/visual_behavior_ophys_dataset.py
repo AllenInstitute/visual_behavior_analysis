@@ -75,17 +75,27 @@ class VisualBehaviorOphysSession(object):
         for member_name, member_object in inspect.getmembers(self.__class__):
             if inspect.isdatadescriptor(member_object) and member_name != '__weakref__':
                 fields.append(member_name)
-        return fields
+        return sorted(fields)
 
     def __eq__(self, other):
 
         try:
             for field in set(self.lazy_properties).union(other.lazy_properties): 
                 x1, x2 = getattr(self, field), getattr(other, field)
-                if isinstance(field, pd.DataFrame):
+                if isinstance(x1, pd.DataFrame):
                     assert_frame_equal(x1, x2)
-                elif isinstance(field, np.ndarray):
+                elif isinstance(x1, np.ndarray):
                     np.testing.assert_array_almost_equal(x1, x2)
+                elif isinstance(x1, (dict, list)):
+                    assert x1 == x2
+                else:
+                    raise Exception('Comparator not implmeneted')
+
+        except NotImplementedError as e:
+            self_implements_get_field = hasattr(self.api, getattr(type(self), field).getter_name)
+            other_implements_get_field = hasattr(other.api, getattr(type(other), field).getter_name)
+            assert self_implements_get_field == other_implements_get_field == False
+
         except (AssertionError, AttributeError) as e:
             return False
 
