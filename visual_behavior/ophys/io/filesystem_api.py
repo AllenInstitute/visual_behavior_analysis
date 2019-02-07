@@ -39,20 +39,23 @@ class VisualBehaviorFileSystemAPI:
         self.save_stimulus_template(obj)
         self.save_licks(obj)
         self.save_rewards(obj)
+        self.save_stimulus_metadata(obj)
         self.save_task_parameters(obj)
         self.save_extended_dataframe(obj)
         self.save_corrected_fluorescence_traces(obj)
+        self.save_average_image(obj)
+        self.save_motion_correction(obj)
 
 
     @property
-    def max_proj_cache_file_info(self):
+    def max_projection_cache_file_info(self):
         return os.path.join(self.cache_dir, 'max_projection.h5'), '/data'
 
     def get_max_projection(self, *args, **kwargs):
-        return read_data_h5(*self.max_proj_cache_file_info)
+        return read_data_h5(*self.max_projection_cache_file_info)
 
     def save_max_projection(self, obj):
-        save_data_h5(obj.max_projection, *self.max_proj_cache_file_info)
+        save_data_h5(obj.max_projection, *self.max_projection_cache_file_info)
 
 
     @property
@@ -204,4 +207,23 @@ class VisualBehaviorFileSystemAPI:
         save_df_h5(obj.corrected_fluorescence_traces, *self.corrected_fluorescence_traces_file_info)
 
 
-        
+    @property
+    def average_image_cache_file_info(self):
+        return os.path.join(self.cache_dir, 'average_image.h5'), '/data'
+
+    def get_average_image(self, *args, **kwargs):
+        return read_data_h5(*self.average_image_cache_file_info)
+
+    def save_average_image(self, obj):
+        save_data_h5(obj.average_image, *self.average_image_cache_file_info)
+
+
+    @property
+    def motion_correction_file_info(self):
+        return os.path.join(self.cache_dir, 'motion_correction.h5'), 'data'
+
+    def get_motion_correction(self, *args, **kwargs):
+        return read_df_h5(*self.motion_correction_file_info)
+
+    def save_motion_correction(self, obj):
+        save_df_h5(obj.motion_correction, *self.motion_correction_file_info)

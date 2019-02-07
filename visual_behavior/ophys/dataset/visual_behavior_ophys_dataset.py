@@ -65,6 +65,8 @@ class VisualBehaviorOphysSession(object):
     extended_dataframe = LazyProperty(api_method='get_extended_dataframe')
     corrected_fluorescence_traces = LazyProperty(api_method='get_corrected_fluorescence_traces')
     events = LazyProperty(api_method='get_events')
+    average_image = LazyProperty(api_method='get_average_image')
+    motion_correction = LazyProperty(api_method='get_motion_correction')
 
 
     def __init__(self, ophys_experiment_id, api=None, use_acq_trigger=False):
@@ -126,6 +128,7 @@ def test_visbeh_ophys_data_set(ophys_experiment_id, api):
     # data_set.task_parameters
     # data_set.extended_dataframe
     # data_set.corrected_fluorescence_traces
+    # data_set.motion_correction
 
     # # Round tripped ndarrays:
     # data_set.max_projection
@@ -133,6 +136,7 @@ def test_visbeh_ophys_data_set(ophys_experiment_id, api):
     # data_set.stimulus_timestamps
     # data_set.ophys_timestamps
     # data_set.stimulus_template
+    # data_set.average_image
 
     # Not roud trip tested:
 
@@ -154,12 +158,12 @@ def test_cache_to_fs(ophys_experiment_id, tmpdir):
     api.save(data_set)
     data_set2 = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
 
-    for lazy_property in ['roi_metrics', 'dff_traces', 'roi_masks', 'running_speed', 'stimulus_table', 'stimulus_metadata', 'licks', 'rewards', 'task_parameters', 'extended_dataframe', 'corrected_fluorescence_traces']:
+    for lazy_property in ['roi_metrics', 'dff_traces', 'roi_masks', 'running_speed', 'stimulus_table', 'stimulus_metadata', 'licks', 'rewards', 'task_parameters', 'extended_dataframe', 'corrected_fluorescence_traces', 'motion_correction']:
         v1 = getattr(data_set, lazy_property)
         v2 = getattr(data_set2, lazy_property)
         assert_frame_equal(v1, v2)
 
-    for lazy_property in ['max_projection', 'cell_roi_ids', 'stimulus_timestamps', 'ophys_timestamps', 'stimulus_template']:
+    for lazy_property in ['max_projection', 'cell_roi_ids', 'stimulus_timestamps', 'ophys_timestamps', 'stimulus_template', 'average_image']:
         v1 = getattr(data_set, lazy_property)
         v2 = getattr(data_set2, lazy_property)
         np.testing.assert_array_almost_equal(v1, v2)
@@ -178,10 +182,15 @@ def test_plot_traces_heatmap():
 if __name__ == '__main__':
 
     # test_visbeh_ophys_data_set(702134928, VisualBehaviorLimsAPI())
-    # test_cache_to_fs(702134928, './tmp') # tempfile.mkdtemp()
+    test_cache_to_fs(702134928, './tmp') # tempfile.mkdtemp()
     # test_visbeh_ophys_data_set_events()
-    test_get_trials()
+    # test_get_trials()
     # test_plot_traces_heatmap()
+
+
+
+
+
 
     # def get_timestamps(self):
     #     self._timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df', format='fixed')
@@ -190,93 +199,3 @@ if __name__ == '__main__':
     # def get_metadata(self):
     #     self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
     #     return self._metadata
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    # def get_average_image(self):
-    #     with h5py.File(os.path.join(self.analysis_dir, 'average_image.h5'), 'r') as average_image_file:
-    #         self._average_image = np.asarray(average_image_file['data'])
-    #     return self._average_image
-
-    # average_image = LazyLoadable('_average_image', get_average_image)
-
-    # def get_motion_correction(self):
-    #     self._motion_correction = pd.read_hdf(
-    #         os.path.join(self.analysis_dir, 'motion_correction.h5'),
-    #         key='df', format='fixed'
-    #     )
-    #     return self._motion_correction
-
-    # motion_correction = LazyLoadable('_motion_correction', get_motion_correction)
-
-    # def get_cell_specimen_ids(self):
-    #     self._cell_specimen_ids = np.sort(self.roi_metrics.cell_specimen_id.values)
-    #     return self._cell_specimen_ids
-
-    # cell_specimen_ids = LazyLoadable('_cell_specimen_ids', get_cell_specimen_ids)
-
-    # def get_cell_indices(self):
-    #     self._cell_indices = np.sort(self.roi_metrics.cell_index.values)
-    #     return self._cell_indices
-
-    # cell_indices = LazyLoadable('_cell_indices', get_cell_indices)
-
-    # def get_cell_specimen_id_for_cell_index(self, cell_index):
-    #     return self.cell_specimen_ids[cell_index]
-
-    # def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
-    #     return np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
-
-    # @classmethod
-    # def construct_and_load(cls, experiment_id, cache_dir=None, **kwargs):
-    #     ''' Instantiate a VisualBehaviorOphysDataset and load its data
-
-    #     Parameters
-    #     ----------
-    #     experiment_id : int
-    #         identifier for this experiment
-    #     cache_dir : str
-    #         filesystem path to directory containing this experiment's
-
-    #     '''
-
-    #     obj = cls(experiment_id, cache_dir=cache_dir, **kwargs)
-
-    #     obj.get_analysis_dir()
-    #     obj.get_metadata()
-    #     obj.get_timestamps()
-    #     obj.get_timestamps_ophys()
-    #     obj.get_timestamps_stimulus()
-    #     obj.get_stimulus_table()
-    #     obj.get_stimulus_template()
-    #     obj.get_stimulus_metadata()
-    #     obj.get_running_speed()
-    #     obj.get_licks()
-    #     obj.get_rewards()
-    #     obj.get_task_parameters()
-    #     obj.get_trials()
-    #     obj.get_dff_traces()
-    #     obj.get_corrected_fluorescence_traces()
-    #     obj.get_events()
-    #     obj.get_roi_metrics()
-    #     obj.get_roi_mask_dict()
-    #     obj.get_roi_mask_array()
-    #     obj.get_cell_specimen_ids()
-    #     obj.get_cell_indices()
-    #     obj.get_max_projection()
-    #     obj.get_average_image()
-    #     obj.get_motion_correction()
-
-    #     return obj
-

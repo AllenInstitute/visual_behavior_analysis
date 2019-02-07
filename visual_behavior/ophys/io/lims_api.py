@@ -160,6 +160,29 @@ class VisualBehaviorLimsAPI(object):
         return self.query(query.format(ophys_experiment_id))
 
     @memoize
+    def get_avgint_a1X_file(self, *args, **kwargs):
+        query = '''
+                SELECT obj.storage_directory || 'avgInt_a1X.png' AS avgint_file
+                FROM ophys_experiments oe
+                LEFT JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id = oe.id AND ocsr.current = 't'
+                LEFT JOIN well_known_files obj ON obj.attachable_id=ocsr.id AND obj.attachable_type = 'OphysCellSegmentationRun' AND obj.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysSegmentationObjects')
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+    @memoize
+    def get_rigid_motion_transform_file(self, *args, **kwargs):
+        query = '''
+                SELECT tra.storage_directory || tra.filename AS transform_file
+                FROM ophys_experiments oe
+                LEFT JOIN well_known_files tra ON tra.attachable_id=oe.id AND tra.attachable_type = 'OphysExperiment' AND tra.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysMotionXyOffsetData')
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+    @memoize
     def get_max_projection(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         maxInt_a13_file = self.get_maxint_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
@@ -319,8 +342,26 @@ class VisualBehaviorLimsAPI(object):
         df['timestamps'] = [ophys_timestamps]*len(df)
         return df
 
-    def get_traces_heatmap(self, ophys_experiment_id=None, use_acq_trigger=False):
 
+    def get_average_image(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        avgint_a1X_file = self.get_avgint_a1X_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        average_image = mpimg.imread(avgint_a1X_file)
+
+        return average_image
+
+
+    def get_motion_correction(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        csv_file = self.get_rigid_motion_transform_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        csv = pd.read_csv(csv_file, header=None)
+        motion_correction = pd.DataFrame()
+        motion_correction['x_corr'] = csv[1].values
+        motion_correction['y_corr'] = csv[2].values
+        return motion_correction
+
+    def get_traces_heatmap(self, ophys_experiment_id=None, use_acq_trigger=False):
+        
         from visual_behavior.visualization.ophys import plot_traces_heatmap
 
         dff_df = self.get_dff_traces(ophys_experiment_id=ophys_experiment_id, use_acq_trigger=use_acq_trigger)
@@ -334,7 +375,9 @@ def test_lims_api():
     api = VisualBehaviorLimsAPI()
 
     TD = {'ophys_dir':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/',
-         'demix_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5'}
+         'demix_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5',
+         'avgint_a1X_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/avgInt_a1X.png',
+         'rigid_motion_transform_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/702134928_rigid_motion_transform.csv'}
 
     assert api.get_ophys_experiment_dir(oeid) == TD['ophys_dir']
     assert api.get_ophys_experiment_dir(ophys_experiment_id=oeid) == TD['ophys_dir']
@@ -342,6 +385,11 @@ def test_lims_api():
     assert api.get_demix_file(oeid) == TD['demix_file']
     assert api.get_demix_file(ophys_experiment_id=oeid) == TD['demix_file']
 
+    assert api.get_avgint_a1X_file(oeid) == TD['avgint_a1X_file']
+    assert api.get_avgint_a1X_file(ophys_experiment_id=oeid) == TD['avgint_a1X_file']
+
+    assert api.get_rigid_motion_transform_file(oeid) == TD['rigid_motion_transform_file']
+    assert api.get_rigid_motion_transform_file(ophys_experiment_id=oeid) == TD['rigid_motion_transform_file']
 
 #     assert lims_data.stim_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_stim.pkl'
 #     assert 'objectlist.txt' in lims_data.objectlist_file
@@ -360,8 +408,8 @@ def test_get_traces_heatmap():
     
 
 if __name__ == '__main__':
-    # test_lims_api()
-    test_get_traces_heatmap()
+    test_lims_api()
+    # test_get_traces_heatmap()
 
 # from allensdk.experimental.lazy_property import LazyProperty
 
@@ -408,10 +456,10 @@ if __name__ == '__main__':
 #     assert '_input_extract_traces.json' in lims_data.input_extract_traces_file
 #     assert lims_data.dff_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/702134928_dff.h5'
 #     assert lims_data.demix_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5'
-#     # assert lims_data.rigid_motion_transform_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/702134928_rigid_motion_transform.csv'
+#     assert lims_data.rigid_motion_transform_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/702134928_rigid_motion_transform.csv'
 #     assert lims_data.maxInt_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/maxInt_a13a.png'
 #     # assert lims_data.roi_traces_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/roi_traces.h5'
-#     # assert lims_data.avgint_a1X_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/avgInt_a1X.png'
+#     assert lims_data.avgint_a1X_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/avgInt_a1X.png'
 
 # test_lims_api(702134928)
 
