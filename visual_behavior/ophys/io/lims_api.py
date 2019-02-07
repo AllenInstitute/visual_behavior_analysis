@@ -161,11 +161,11 @@ class VisualBehaviorLimsAPI(object):
     @memoize
     def get_avgint_a1X_file(self, *args, **kwargs):
         query = '''
-                SELECT obj.storage_directory || 'avgInt_a1X.png' AS avgint_file
+                SELECT avg.storage_directory || avg.filename AS avgint_file
                 FROM ophys_experiments oe
                 LEFT JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id = oe.id AND ocsr.current = 't'
-                LEFT JOIN well_known_files obj ON obj.attachable_id=ocsr.id AND obj.attachable_type = 'OphysCellSegmentationRun' AND obj.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysSegmentationObjects')
-                WHERE oe.id= {};
+                LEFT JOIN well_known_files avg ON avg.attachable_id=ocsr.id AND avg.attachable_type = 'OphysCellSegmentationRun' AND avg.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysAverageIntensityProjectionImage')
+                WHERE oe.id = {};
                 '''
         ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         return self.query(query.format(ophys_experiment_id))
