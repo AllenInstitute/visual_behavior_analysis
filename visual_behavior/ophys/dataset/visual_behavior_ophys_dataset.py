@@ -62,7 +62,7 @@ class VisualBehaviorOphysSession(object):
     licks = LazyProperty(api_method='get_licks')
     rewards = LazyProperty(api_method='get_rewards')
     task_parameters = LazyProperty(api_method='get_task_parameters')
-    trials = LazyProperty(api_method='get_trials')
+    extended_dataframe = LazyProperty(api_method='get_extended_dataframe')
     corrected_fluorescence_traces = LazyProperty(api_method='get_corrected_fluorescence_traces')
     events = LazyProperty(api_method='get_events')
 
@@ -73,6 +73,32 @@ class VisualBehaviorOphysSession(object):
         self.api = VisualBehaviorLimsAPI() if api is None else api
         self.use_acq_trigger = use_acq_trigger
 
+    def get_trials(self, columns=None, auto_rewarded=False, aborted=False):
+
+        trials = self.extended_dataframe
+        trials.insert(loc=0, column='trial', value=trials.index.values)
+
+        if auto_rewarded == False:
+            trials = trials[(trials.auto_rewarded != True)].reset_index()
+            trials = trials.rename(columns={'level_0': 'original_trial_index'})
+        if aborted == False:
+            trials = trials[(trials.trial_type != 'aborted')].reset_index()
+            trials = trials.rename(columns={'level_0': 'original_trial_index'})
+        trials.rename(
+            columns={'starttime': 'start_time', 'endtime': 'end_time', 'startdatetime': 'start_date_time',
+                     'level_0': 'original_trial_index', 'color': 'trial_type_color'}, inplace=True)
+
+        if columns is None:
+            columns = ['trial', 'change_time', 'initial_image_name', 'change_image_name', 'trial_type', 'trial_type_color',
+             'response', 'response_type', 'response_window', 'lick_times', 'response_latency', 'rewarded',
+             'reward_times', 'reward_volume', 'reward_rate', 'start_time', 'end_time', 'trial_length', 'mouse_id', 'start_date_time']
+
+        trials = trials[columns]
+
+        return trials
+
+
+
 
 def test_visbeh_ophys_data_set_events():
     
@@ -80,7 +106,8 @@ def test_visbeh_ophys_data_set_events():
     api = VisualBehaviorLimsAPI_hackEvents(event_cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/events')
     data_set = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
 
-    print data_set.events
+    # Not round-tripped
+    data_set.events
 
 
 def test_visbeh_ophys_data_set(ophys_experiment_id, api):
@@ -97,7 +124,7 @@ def test_visbeh_ophys_data_set(ophys_experiment_id, api):
     # data_set.licks
     # data_set.rewards
     # data_set.task_parameters
-    # data_set.trials
+    # data_set.extended_dataframe
     # data_set.corrected_fluorescence_traces
 
     # # Round tripped ndarrays:
@@ -108,8 +135,15 @@ def test_visbeh_ophys_data_set(ophys_experiment_id, api):
     # data_set.stimulus_template
 
     # Not roud trip tested:
-    print data_set.events
+
     # assert data_set.max_projection.shape == (512, 449)
+
+def test_get_trials():
+
+    ophys_experiment_id = 702134928 
+    data_set = VisualBehaviorOphysSession(ophys_experiment_id)
+    print data_set.get_trials()
+
 
 def test_cache_to_fs(ophys_experiment_id, tmpdir):
      
@@ -120,7 +154,7 @@ def test_cache_to_fs(ophys_experiment_id, tmpdir):
     api.save(data_set)
     data_set2 = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
 
-    for lazy_property in ['roi_metrics', 'dff_traces', 'roi_masks', 'running_speed', 'stimulus_table', 'stimulus_metadata', 'licks', 'rewards', 'task_parameters', 'trials', 'corrected_fluorescence_traces']:
+    for lazy_property in ['roi_metrics', 'dff_traces', 'roi_masks', 'running_speed', 'stimulus_table', 'stimulus_metadata', 'licks', 'rewards', 'task_parameters', 'extended_dataframe', 'corrected_fluorescence_traces']:
         v1 = getattr(data_set, lazy_property)
         v2 = getattr(data_set2, lazy_property)
         assert_frame_equal(v1, v2)
@@ -145,7 +179,8 @@ if __name__ == '__main__':
 
     # test_visbeh_ophys_data_set(702134928, VisualBehaviorLimsAPI())
     # test_cache_to_fs(702134928, './tmp') # tempfile.mkdtemp()
-    test_visbeh_ophys_data_set_events()
+    # test_visbeh_ophys_data_set_events()
+    test_get_trials()
     # test_plot_traces_heatmap()
 
     # def get_timestamps(self):
@@ -156,25 +191,7 @@ if __name__ == '__main__':
     #     self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
     #     return self._metadata
 
-    # Trials is no built from "all_trials"
-    # def get_trials(self):
-    #     all_trials = self.all_trials.copy()
-    #     trials = all_trials[(all_trials.auto_rewarded != True) & (all_trials.trial_type != 'aborted')].reset_index()
-    #     trials = trials.rename(columns={'level_0': 'original_trial_index'})
-    #     trials.insert(loc=0, column='trial', value=trials.index.values)
-    #     trials = trials.rename(
-    #         columns={'starttime': 'start_time', 'endtime': 'end_time', 'startdatetime': 'start_date_time',
-    #                  'level_0': 'original_trial_index', 'color': 'trial_type_color'})
-    #     trials = trials[
-    #         ['trial', 'change_time', 'initial_image_name', 'change_image_name', 'trial_type', 'trial_type_color',
-    #          'response', 'response_type', 'response_window', 'lick_times', 'response_latency', 'rewarded',
-    #          'reward_times',
-    #          'reward_volume', 'reward_rate', 'start_time', 'end_time', 'trial_length', 'mouse_id',
-    #          'start_date_time']]
-    #     self._trials = trials
-    #     return self._trials
 
-    # trials = LazyLoadable('_trials', get_trials)
 
 
 

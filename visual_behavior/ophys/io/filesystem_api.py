@@ -40,7 +40,7 @@ class VisualBehaviorFileSystemAPI:
         self.save_licks(obj)
         self.save_rewards(obj)
         self.save_task_parameters(obj)
-        self.save_trials(obj)
+        self.save_extended_dataframe(obj)
         self.save_corrected_fluorescence_traces(obj)
 
 
@@ -183,14 +183,14 @@ class VisualBehaviorFileSystemAPI:
         save_df_h5(obj.task_parameters, *self.task_parameters_file_info)
 
     @property
-    def trials_file_info(self):
-        return os.path.join(self.cache_dir, 'trials.h5'), 'data'
+    def extended_dataframe_file_info(self):
+        return os.path.join(self.cache_dir, 'extended_dataframe.h5'), 'data'
 
-    def get_trials(self, *args, **kwargs):
-        return read_df_h5(*self.trials_file_info)
+    def get_extended_dataframe(self, *args, **kwargs):
+        return read_df_h5(*self.extended_dataframe_file_info)
 
-    def save_trials(self, obj):
-        save_df_h5(obj.trials, *self.trials_file_info)
+    def save_extended_dataframe(self, obj):
+        save_df_h5(obj.extended_dataframe, *self.extended_dataframe_file_info)
 
 
     @property

@@ -297,7 +297,7 @@ class VisualBehaviorLimsAPI(object):
 
 
     @memoize
-    def get_trials(self, *args, **kwargs):
+    def get_extended_dataframe(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         core_data = self.get_core_data(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         return create_extended_dataframe(trials=core_data['trials'], 
