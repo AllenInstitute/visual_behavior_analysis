@@ -8,6 +8,7 @@ from allensdk.experimental.lazy_property import LazyProperty as LazyPropertyBase
 from visual_behavior.ophys.io.lims_api import VisualBehaviorLimsAPI
 from visual_behavior.ophys.io.filesystem_api import VisualBehaviorFileSystemAPI
 from pandas.util.testing import assert_frame_equal
+import inspect
 
 class VisualBehaviorLimsAPI_hackEvents(VisualBehaviorLimsAPI):
 
@@ -99,6 +100,36 @@ class VisualBehaviorOphysSession(object):
 
         return trials
 
+    @property
+    def lazy_properties(self):
+        fields = []
+        for member_name, member_object in inspect.getmembers(self.__class__):
+            if inspect.isdatadescriptor(member_object) and member_name != '__weakref__':
+                fields.append(member_name)
+        return fields
+
+    def __eq__(self, other):
+
+        try:
+            for field in set(self.lazy_properties).union(other.lazy_properties): 
+                x1, x2 = getattr(self, field), getattr(other, field)
+                if isinstance(field, pd.DataFrame):
+                    assert_frame_equal(x1, x2)
+                elif isinstance(field, np.ndarray):
+                    np.testing.assert_array_almost_equal(x1, x2)
+        except (AssertionError, AttributeError) as e:
+            return False
+
+        return True
+
+def test_equal():
+
+    oeid = 702134928
+    d1 = VisualBehaviorOphysSession(oeid)
+    d2 = VisualBehaviorOphysSession(oeid)
+
+    assert d1 == d2
+
 
 
 
@@ -149,26 +180,6 @@ def test_get_trials():
     print data_set.get_trials()
 
 
-def test_cache_to_fs(ophys_experiment_id, tmpdir):
-     
-    
-    # Round-trip data:
-    data_set = VisualBehaviorOphysSession(ophys_experiment_id)
-    api = VisualBehaviorFileSystemAPI(tmpdir)
-    api.save(data_set)
-    data_set2 = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
-
-    for lazy_property in ['roi_metrics', 'dff_traces', 'roi_masks', 'running_speed', 'stimulus_table', 'stimulus_metadata', 'licks', 'rewards', 'task_parameters', 'extended_dataframe', 'corrected_fluorescence_traces', 'motion_correction']:
-        v1 = getattr(data_set, lazy_property)
-        v2 = getattr(data_set2, lazy_property)
-        assert_frame_equal(v1, v2)
-
-    for lazy_property in ['max_projection', 'cell_roi_ids', 'stimulus_timestamps', 'ophys_timestamps', 'stimulus_template', 'average_image']:
-        v1 = getattr(data_set, lazy_property)
-        v2 = getattr(data_set2, lazy_property)
-        np.testing.assert_array_almost_equal(v1, v2)
-
-
 def test_plot_traces_heatmap():
 
     from visual_behavior.visualization.ophys.experiment_summary_figures import plot_traces_heatmap
@@ -182,10 +193,10 @@ def test_plot_traces_heatmap():
 if __name__ == '__main__':
 
     # test_visbeh_ophys_data_set(702134928, VisualBehaviorLimsAPI())
-    test_cache_to_fs(702134928, './tmp') # tempfile.mkdtemp()
     # test_visbeh_ophys_data_set_events()
     # test_get_trials()
     # test_plot_traces_heatmap()
+    test_equal()
 
 
 
