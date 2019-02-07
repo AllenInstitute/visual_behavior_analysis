@@ -20,7 +20,6 @@ import matplotlib.image as mpimg  # NOQA: E402
 logger = logging.getLogger(__name__)
 
 from visual_behavior.ophys.stimulus_processing import get_stimtable, get_stimulus_template, get_stimulus_metadata
-from visual_behavior.ophys.fluorescence_processing import get_corrected_fluorescence_traces
 from visual_behavior.ophys.sync_processing import get_sync_data
 from visual_behavior.ophys.roi_processing import get_roi_metrics, get_roi_masks
 from visual_behavior.ophys.metadata_processing import get_task_parameters
@@ -333,8 +332,11 @@ class VisualBehaviorLimsAPI(object):
     def get_corrected_fluorescence_traces(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         demix_file = self.get_demix_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
-        roi_metrics = roi_metrics = self.get_roi_metrics(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
-        corrected_fluorescence_trace_array = get_corrected_fluorescence_traces(roi_metrics, demix_file)
+        
+        g = h5py.File(demix_file)
+        corrected_fluorescence_trace_array = np.asarray(g['data'])
+        g.close()
+
         cell_roi_id_list = self.get_cell_roi_ids(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         ophys_timestamps = self.get_ophys_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         assert corrected_fluorescence_trace_array.shape[1], ophys_timestamps.shape[0]
