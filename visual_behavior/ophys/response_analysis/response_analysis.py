@@ -63,7 +63,7 @@ class ResponseAnalysis(object):
         return path
 
     def generate_trial_response_df(self):
-        logger.info('generating trial response dataframe')
+        print('generating trial response dataframe')
         running_speed = self.dataset.running_speed.running_speed.values
         df_list = []
         for cell_index in self.dataset.cell_indices:
