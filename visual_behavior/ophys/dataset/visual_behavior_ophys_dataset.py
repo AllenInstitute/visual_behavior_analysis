@@ -49,7 +49,8 @@ class VisualBehaviorOphysSession(object):
     def get_trials(self, columns=None, auto_rewarded=False, aborted=False):
 
         trials = self.extended_dataframe
-        trials.insert(loc=0, column='trial', value=trials.index.values)
+        if 'trial' not in trials.columns:
+            trials.insert(loc=0, column='trial', value=trials.index.values)
 
         if auto_rewarded == False:
             trials = trials[(trials.auto_rewarded != True)].reset_index()

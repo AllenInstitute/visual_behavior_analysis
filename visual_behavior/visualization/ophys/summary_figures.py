@@ -699,14 +699,14 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
     return ax
 
 
-def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length_mins, save=False,
+def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length_mins, save_dir=None,
                                      include_running=False, cell_label=False, use_events=False):
     if use_events:
         traces = dataset.events
         cell_label = True
         suffix = '_events'
     else:
-        traces = dataset.dff_traces
+        traces = np.array([trace for trace in dataset.dff_traces['dff'].values])
         suffix = ''
     if include_running:
         n = 2
@@ -723,7 +723,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     ymins = []
     ymaxs = []
     for i, cell_index in enumerate(cell_indices):
-        ax[i] = plot_trace(dataset.timestamps_ophys, traces[cell_index, :], ax=ax[i],
+        ax[i] = plot_trace(dataset.ophys_timestamps, traces[cell_index, :], ax=ax[i],
                            title='', ylabel=str(cell_index))
         ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
         ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
@@ -752,7 +752,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
 
     if include_running:
         i += 1
-        ax[i].plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values)
+        ax[i].plot(dataset.stimulus_timestamps, dataset.running_speed)
         ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
         ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
         ax[i].set_ylabel('run speed\n(cm/s)')
@@ -760,13 +760,13 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         sns.despine(ax=ax[i])
 
     ax[i].set_xlabel('time (seconds)')
-    ax[0].set_title(dataset.analysis_folder)
+    ax[0].set_title(dataset.ophys_experiment_id)
     fig.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
-    if save:
-        save_figure(fig, figsize, dataset.analysis_dir, 'example_traces', 'example_traces_' + str(xlim[0]) + suffix)
-        save_figure(fig, figsize, dataset.cache_dir, 'example_traces',
-                    str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
+    if save_dir is not None:
+        save_figure(fig, figsize, save_dir, 'example_traces', 'example_traces_' + str(xlim[0]) + suffix)
+        save_figure(fig, figsize, save_dir, 'example_traces',
+                    str(dataset.ophys_experiment_id) + '_' + str(xlim[0]) + suffix)
         plt.close()
 
 

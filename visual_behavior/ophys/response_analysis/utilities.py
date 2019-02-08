@@ -275,10 +275,11 @@ def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
 def annotate_trial_response_df_with_pref_stim(trial_response_df):
     rdf = trial_response_df.copy()
     rdf['pref_stim'] = False
-    if 'cell_specimen_id' in rdf.keys():
-        cell_key = 'cell_specimen_id'
-    else:
-        cell_key = 'cell'
+    cell_key = 'cell_roi_id'
+    # if 'cell_specimen_id' in rdf.keys():
+    #     cell_key = 'cell_specimen_id'
+    # else:
+    #     cell_key = 'cell'
     mean_response = rdf.groupby([cell_key, 'change_image_name']).apply(get_mean_sem_trace)
     m = mean_response.unstack()
     for cell in m.index:
@@ -310,7 +311,9 @@ def annotate_flash_response_df_with_pref_stim(fdf):
 def annotate_flashes_with_reward_rate(dataset):
     last_time = 0
     reward_rate_by_frame = []
-    trials = dataset.trials[dataset.trials.trial_type != 'aborted']
+    trials = dataset.get_trials()
+    assert 'aborted' not in trials.trial_type.unique()
+    # trials = dataset.trials[dataset.trials.trial_type != 'aborted']
     flashes = dataset.stimulus_table.copy()
     for change_time in trials.change_time.values:
         reward_rate = trials[trials.change_time == change_time].reward_rate.values[0]

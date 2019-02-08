@@ -21,15 +21,16 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     # logger.info(experiment_id)
     print(experiment_id)
     print('saving ', str(experiment_id), 'to', cache_dir)
-    dataset = VisualBehaviorOphysSession(experiment_id, cache_dir)
+    dataset = VisualBehaviorOphysSession(experiment_id)
 
     use_events = False
 
     print('plotting example traces')
-    active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
+    dff_trace_array = np.array([trace for trace in dataset.dff_traces['dff'].values])
+    active_cell_indices = ut.get_active_cell_indices(dff_trace_array)
     length_mins = 1
     for xmin_seconds in np.arange(0, 5000, length_mins * 60):
-        sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
+        sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save_dir=cache_dir,
                                             cell_label=False, include_running=True, use_events=use_events)
 
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
@@ -56,7 +57,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
         print('plotting example traces')
         for xmin_seconds in np.arange(0, 3000, length_mins * 60):
-            sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
+            sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save_dir=cache_dir,
                                                 cell_label=False, include_running=True, use_events=use_events)
 
         print('plotting cell responses')

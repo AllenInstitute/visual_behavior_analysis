@@ -16,7 +16,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
     mega_mdf = pd.DataFrame()
     for experiment_id in experiment_ids:
         print(experiment_id)
-        dataset = VisualBehaviorOphysSession(experiment_id, cache_dir=cache_dir)
+        dataset = VisualBehaviorOphysSession(experiment_id)
         analysis = ResponseAnalysis(dataset, use_events=use_events)
         try:
             if flashes:
@@ -30,18 +30,19 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                                                 flash_response_df.reward_rate.values]
                 mdf = ut.get_mean_df(flash_response_df, analysis,
                                      conditions=conditions, flashes=True)
-                mdf['experiment_id'] = dataset.experiment_id
+                mdf['experiment_id'] = dataset.ophys_experiment_id
                 mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
                 mega_mdf = pd.concat([mega_mdf, mdf])
             else:
                 mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
                                      conditions=conditions)
-                mdf['experiment_id'] = dataset.experiment_id
+                mdf['experiment_id'] = dataset.ophys_experiment_id
                 mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
                 mega_mdf = pd.concat([mega_mdf, mdf])
         except Exception as e:  # flake8: noqa: E722
             print(e)
             print('problem for', experiment_id)
+            raise
     if flashes:
         type = '_flashes_'
     else:

@@ -28,7 +28,8 @@ from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E
 from allensdk.api.cache import memoize
 
 def one(x):
-    assert len(x) == 1
+    if len(x) != 1:
+        raise RuntimeError('Expected length one result: {}'.format(x))
     if isinstance(x,set):
         return list(x)[0]
     else:
@@ -63,11 +64,14 @@ class VisualBehaviorLimsAPI(object):
         self.password = password
         self.port = port
 
-    def query(self, q):
+    def query(self, q, reduce=True):
         conn = psycopg2.connect(dbname=self.dbname, user=self.user, host=self.host, password=self.password, port=self.port)
         cur = conn.cursor()
         cur.execute(q)
-        return one(one(cur.fetchall()))
+        if reduce:
+            return one(one(cur.fetchall()))
+        else:
+            return cur.fetchall()
 
     @memoize
     def get_ophys_experiment_dir(self, *args, **kwargs):
@@ -78,6 +82,20 @@ class VisualBehaviorLimsAPI(object):
                 '''
         ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         return self.query(query.format(ophys_experiment_id))
+
+    @memoize
+    def get_experiment_container_id(self, *args, **kwargs):
+        query = '''
+                SELECT visual_behavior_experiment_container_id 
+                FROM ophys_experiments_visual_behavior_experiment_containers 
+                WHERE ophys_experiment_id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        result = self.query(query.format(ophys_experiment_id), reduce=False)
+        if len(result) == 0:
+            return None
+        else:
+            return one(one(result))
 
     @memoize
     def get_maxint_file(self, *args, **kwargs):
@@ -411,7 +429,6 @@ class VisualBehaviorLimsAPI_hackEvents(VisualBehaviorLimsAPI):
     def get_events(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         ophys_timestamps = self.get_ophys_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
-        print ophys_experiment_id
 
         events_folder = self.event_cache_dir
         if os.path.exists(events_folder):
