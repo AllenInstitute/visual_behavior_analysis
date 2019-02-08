@@ -96,9 +96,10 @@ def plot_roi_validation(roi_names,
                         roi_df,
                         roi_traces,
                         dff_traces_original,
-                        cell_specimen_ids,
+                        roi_ids,
                         cell_indices,
                         roi_masks,
+                        roi_metrics,
                         max_projection,
                         dff_traces,
                         ):
@@ -124,15 +125,17 @@ def plot_roi_validation(roi_names,
         ax[3].set_title('index: ' + str(index) + ', id: ' + str(id))
         ax[3].set_ylabel('dF/F')
 
-        if id in cell_specimen_ids:
-            cell_index = cell_indices[id]
-            ax[2] = plot_cell_zoom(roi_masks, max_projection, id, spacex=10, spacey=10, show_mask=True, ax=ax[2])
+        if id in roi_ids:
+            cell_index = roi_metrics[roi_metrics.roi_id==id].cell_index.values[0]
+            cell_specimen_id = roi_metrics[roi_metrics.roi_id==id].id.values[0]
+            # cell_index = cell_indices[id]
+            ax[2] = plot_cell_zoom(roi_masks, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=True, ax=ax[2])
             ax[2].grid(False)
 
             ax[4].imshow(max_projection, cmap='gray')
-            mask = np.empty(roi_masks[id].shape)
+            mask = np.empty(roi_masks[cell_specimen_id].shape)
             mask[:] = np.nan
-            (y, x) = np.where(roi_masks[id] == 1)
+            (y, x) = np.where(roi_masks[cell_specimen_id] == 1)
             xmin = np.min(x)
             xmax = np.max(x)
             ymin = np.min(y)

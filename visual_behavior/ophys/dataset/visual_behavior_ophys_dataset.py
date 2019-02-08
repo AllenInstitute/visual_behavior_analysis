@@ -296,7 +296,7 @@ class VisualBehaviorOphysDataset(object):
     motion_correction = LazyLoadable('_motion_correction', get_motion_correction)
 
     def get_cell_specimen_ids(self):
-        self._cell_specimen_ids = np.sort(self.roi_metrics.cell_specimen_id.values)
+        self._cell_specimen_ids = np.sort(self.roi_metrics.id.values)
         return self._cell_specimen_ids
 
     cell_specimen_ids = LazyLoadable('_cell_specimen_ids', get_cell_specimen_ids)
