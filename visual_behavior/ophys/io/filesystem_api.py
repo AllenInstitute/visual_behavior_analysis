@@ -2,6 +2,7 @@ import os
 import h5py
 import pandas as pd
 import numpy as np
+import json
 
 import matplotlib.image as mpimg  # NOQA: E402
 
@@ -15,11 +16,21 @@ def read_data_h5(filename, loc):
         data = f[loc].value
     return data
 
+def save_data_json(data, filename):
+    with open(filename, 'w') as f :
+        json.dump(data, f, indent=2)
+
+def read_data_json(filename):
+    with open(filename, 'r') as f :
+        data = json.load(f)
+    return data
+
 def save_df_h5(df, filename, key):
     df.to_hdf(filename, key=key, format='fixed')
 
 def read_df_h5(filename, key):
     return pd.read_hdf(filename, key=key, format='fixed')
+    
 
 class VisualBehaviorFileSystemAPI:
 
@@ -46,6 +57,7 @@ class VisualBehaviorFileSystemAPI:
         self.save_average_image(obj)
         self.save_motion_correction(obj)
         self.save_events(obj)
+        self.save_metadata(obj)
 
 
     @property
@@ -239,3 +251,15 @@ class VisualBehaviorFileSystemAPI:
 
     def save_events(self, obj):
         save_data_h5(obj.events, *self.events_file_info)
+
+
+    @property
+    def metadata_file_info(self):
+        return os.path.join(self.cache_dir, 'metadata.json')
+
+    def get_metadata(self, *args, **kwargs):
+        return read_data_json(self.metadata_file_info)
+
+    def save_metadata(self, obj):
+        print self.metadata_file_info
+        save_data_json(obj.metadata, self.metadata_file_info)

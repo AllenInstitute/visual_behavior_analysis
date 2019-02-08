@@ -21,6 +21,7 @@ class VisualBehaviorOphysSession(object):
     max_projection = LazyProperty(api_method='get_max_projection')
     stimulus_timestamps = LazyProperty(api_method='get_stimulus_timestamps')
     ophys_timestamps = LazyProperty(api_method='get_ophys_timestamps')
+    metadata = LazyProperty(api_method='get_metadata')
     dff_traces = LazyProperty(api_method='get_dff_traces')
     roi_metrics = LazyProperty(api_method='get_roi_metrics')
     roi_masks = LazyProperty(api_method='get_roi_masks')
@@ -148,8 +149,10 @@ def test_visbeh_ophys_data_set(ophys_experiment_id, api):
     # data_set.stimulus_template
     # data_set.average_image
 
-    # Not roud trip tested:
+    # # Round tripped dictionary:
+    # print data_set.metadata
 
+    # Not roud trip tested:
     # assert data_set.max_projection.shape == (512, 449)
 
 def test_get_trials():

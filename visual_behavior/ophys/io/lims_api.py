@@ -369,6 +369,36 @@ class VisualBehaviorLimsAPI(object):
         dff_df = self.get_dff_traces(ophys_experiment_id=ophys_experiment_id, use_acq_trigger=use_acq_trigger)
         print plot_traces_heatmap(dff_df)
 
+    def get_metadata(self, *args, **kwargs):
+        
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        ophys_timestamps = self.get_ophys_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        stimulus_timestamps = self.get_stimulus_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+
+        metadata = {}
+        metadata['ophys_experiment_id'] = ophys_experiment_id
+        metadata['experiment_container_id'] = self.get_experiment_container_id(ophys_experiment_id=metadata['ophys_experiment_id'])
+        # metadata['targeted_structure'] = lims_data.structure.values[0]
+        # metadata['imaging_depth'] = int(lims_data.depth.values[0])
+        # metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
+        # metadata['reporter_line'] = 
+        # metadata['full_genotype'] = metadata['cre_line'] + ';' + metadata['reporter_line']
+        # metadata['session_type'] = 'behavior_session_' + lims_data.session_type.values[0].split('_')[-1]
+        # metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
+        # metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
+        # metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
+        # metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
+        # # metadata['session_name'] = lims_data.session_name.values[0]
+        # # metadata['session_id'] = int(lims_data.session_id.values[0])
+        # # metadata['project_id'] = lims_data.project_id.values[0]
+        # # metadata['rig'] = lims_data.rig.values[0]
+        metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(ophys_timestamps)), 0)
+        metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(stimulus_timestamps)), 0)
+        # # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
+
+
+        return metadata
+
 
 class VisualBehaviorLimsAPI_hackEvents(VisualBehaviorLimsAPI):
     
