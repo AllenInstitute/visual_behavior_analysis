@@ -220,7 +220,7 @@ class ResponseAnalysis(object):
         # repeat = 1 is the first flash after change, repeat = 5 is the 5th flash after a change
         s_corr_data = []
         n_corr_data = []
-        for repeat in [1, 5, 10]:
+        for repeat in [1, 5, 10, 15]:
             tmp_fdf = fdf[fdf.repeat == repeat]
             # create a df with the trial averaged response for each image across flash repeat number
             mfdf = ut.get_mean_df(tmp_fdf, conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
