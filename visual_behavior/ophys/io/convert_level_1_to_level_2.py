@@ -288,7 +288,7 @@ def get_metadata(lims_data, timestamps):
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
     # metadata['session_name'] = lims_data.session_name.values[0]
-    # metadata['session_id'] = int(lims_data.session_id.values[0])
+    metadata['ophys_session_id'] = int(lims_data.session_id.values[0])
     # metadata['project_id'] = lims_data.project_id.values[0]
     # metadata['rig'] = lims_data.rig.values[0]
     metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 0)
