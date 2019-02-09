@@ -46,7 +46,8 @@ if __name__ == '__main__':
        808621015, 806456687, 807752719, 808619543, 811456530, 813083478,
        806455766, 806989729, 807753334, 808621034, 809501118, 811458048]
 
-
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id', 'image_name'], flashes=True)
     get_multi_session_mean_df(experiment_ids, cache_dir,
                                     conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
     get_multi_session_mean_df(experiment_ids, cache_dir,
