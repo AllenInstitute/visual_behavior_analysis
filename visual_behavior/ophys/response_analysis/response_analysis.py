@@ -96,12 +96,13 @@ class ResponseAnalysis(object):
                                                            self.stimulus_frame_rate)
                 df_list.append(
                     [trial, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response, n_events,
-                     p_value, sd_over_baseline, running_speed_trace, running_speed_timestamps,
-                     mean_running_speed, self.dataset.experiment_id])
+                     p_value, sd_over_baseline, mean_running_speed, self.dataset.experiment_id])
+                     #running_speed_trace, running_speed_timestamps,
+
 
         columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
-                   'n_events', 'p_value', 'sd_over_baseline', 'running_speed_trace', 'running_speed_timestamps',
-                   'mean_running_speed', 'experiment_id']
+                   'n_events', 'p_value', 'sd_over_baseline', 'mean_running_speed', 'experiment_id']
+                    #'running_speed_trace', 'running_speed_timestamps',
         trial_response_df = pd.DataFrame(df_list, columns=columns)
         trial_metadata = self.dataset.trials
         trial_metadata = trial_metadata.rename(columns={'response': 'behavioral_response'})

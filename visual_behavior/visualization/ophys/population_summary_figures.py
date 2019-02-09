@@ -32,7 +32,7 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
         label = 'mean event magnitude'
         suffix = '_events'
     else:
-        vmax = 0.3
+        # vmax = 0.3
         label = 'mean dF/F'
         suffix = ''
 

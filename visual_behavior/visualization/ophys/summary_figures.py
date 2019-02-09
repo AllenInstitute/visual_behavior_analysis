@@ -1010,7 +1010,7 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         sd = np.round(mean_df.sd_over_baseline.values[0], 2)
         time_to_peak = np.round(mean_df.time_to_peak.values[0], 3)
         # fano_factor = np.round(mean_df.fano_factor.values[0], 3)
-        fraction_responsive_trials = np.round(mean_df.fraction_nonzero_trials.values[0], 3)
+        fraction_responsive_trials = np.round(mean_df.fraction_responsive_trials.values[0], 3)
         ax[i].set_title(trial_type + ' - mean: ' + str(mean) + '\np_val: ' + str(p_val) + ', sd: ' + str(sd) +
                         '\ntime_to_peak: ' + str(time_to_peak) +
                         '\nfraction_responsive_trials: ' + str(fraction_responsive_trials));
