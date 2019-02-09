@@ -299,7 +299,8 @@ def plot_session_averages_for_cre_lines(metric, session_summary_df, ax=None, yli
     else:
         cre_line_colors = ut.get_colors_for_cre_lines()
         ax = sns.stripplot(data=session_summary_df, x='cre_line', y=metric, jitter=0.05, size=7,
-                       palette=cre_line_colors, hue='cre_line', hue_order=cre_lines, ax=ax, order=cre_ines)
+                       palette=cre_line_colors, hue='cre_line', hue_order=cre_lines, ax=ax, order=cre_lines)
+    ax.get_legend().remove()
     ax.set_title('session averages')
     ax.set_ylim(ylims)
 

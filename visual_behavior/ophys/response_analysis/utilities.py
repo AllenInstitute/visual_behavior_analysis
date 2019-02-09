@@ -116,20 +116,35 @@ def get_fraction_nonzero_trials(group):
     return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
 
 
+# def get_reliability(group):
+#     import scipy as sp
+#     if 'trial' in group.keys():
+#         trials = group['trial'].values
+#     elif 'flash_number' in group.keys():
+#         trials = group['flash_number'].values
+#     corr_values = []
+#     traces = group['trace'].values
+#     for i, t1 in enumerate(trials[:-1]):
+#         for j, t2 in enumerate(trials[:-1]):
+#             trial1 = traces[i]
+#             trial2 = traces[j]
+#             corr = sp.stats.pearsonr(trial1, trial2)[0]
+#             corr_values.append(corr)
+#     corr_values = np.asarray(corr_values)
+#     reliability = np.mean(corr_values)
+#     return pd.Series({'reliability': reliability})
+
+
 def get_reliability(group):
+    from itertools import combinations
     import scipy as sp
-    if 'trial' in group.keys():
-        trials = group['trial'].values
-    elif 'flash_number' in group.keys():
-        trials = group['flash_number'].values
     corr_values = []
     traces = group['trace'].values
-    for i, t1 in enumerate(trials[:-1]):
-        for j, t2 in enumerate(trials[:-1]):
-            trial1 = traces[i]
-            trial2 = traces[j]
-            corr = sp.stats.pearsonr(trial1, trial2)[0]
-            corr_values.append(corr)
+    combos = combinations(traces, 2)
+    corr_values = []
+    for combo in combos:
+        corr = sp.stats.pearsonr(combo[0], combo[1])[0]
+        corr_values.append(corr)
     corr_values = np.asarray(corr_values)
     reliability = np.mean(corr_values)
     return pd.Series({'reliability': reliability})
@@ -160,9 +175,9 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
     mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
 
-    # reliability = rdf.groupby(conditions).apply(get_reliability)
-    # reliability = reliability.reset_index()
-    # mdf['reliability'] = reliability.reliability
+    reliability = rdf.groupby(conditions).apply(get_reliability)
+    reliability = reliability.reset_index()
+    mdf['reliability'] = reliability.reliability
 
     return mdf
 
