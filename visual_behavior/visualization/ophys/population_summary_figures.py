@@ -388,6 +388,7 @@ def plot_distributions_for_repeats(df, metric, cre_line, save_dir=None, folder=N
     if save_figures:
         save_figure(fig ,figsize, save_dir, folder, metric+'_by_flash_number_'+cre_line.split('-')[0]+'_'+image_set)
 
+
 def plot_hist_for_image_sets(df, metric, cre_line=None, ax=None, save_figures=False):
     colors = ut.get_colors_for_image_sets()
     if ax is None:

@@ -40,10 +40,10 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     # esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
     # esf.plot_roi_masks(dataset, save=True)
     #
-    # print('plotting cell responses')
-    # for cell in dataset.get_cell_indices():
-    #     sf.plot_image_response_for_trial_types(analysis, cell, save=True)
-    #     sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
+    print('plotting cell responses')
+    for cell in dataset.get_cell_indices():
+        sf.plot_image_response_for_trial_types(analysis, cell, save=True)
+        sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
 
     if dataset.events is not None:
         use_events = True
