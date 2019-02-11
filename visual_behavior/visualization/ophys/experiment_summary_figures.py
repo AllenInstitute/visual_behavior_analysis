@@ -255,7 +255,7 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
 
 
 def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['go', 'catch'], ax=None, save_dir=None,
-                            use_events=False):
+                            use_events=False, window=[-4,4]):
     data = mean_df[mean_df.pref_stim == True].copy()
     if use_events:
         vmax = 0.03
@@ -286,7 +286,7 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
                 response_array[x, :] = trace
 
             sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=False)
-            xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1)
+            xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1, window=window)
             ax[i].set_xticks(xticks)
             ax[i].set_xticklabels([int(x) for x in xticklabels])
             ax[i].set_yticks(np.arange(0, response_array.shape[0], 10))
@@ -527,7 +527,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
                              conditions=['cell', 'change_image_name', 'behavioral_response_type'])
         ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
                                      condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None,
-                                    use_events=use_events)
+                                    use_events=use_events, window=analysis.trial_window)
     except:
         pass
 

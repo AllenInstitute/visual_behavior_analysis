@@ -388,12 +388,12 @@ def plot_image_change_response(analysis, cell_index, legend=True, save=False, ax
     ax.set_ylabel(ylabel)
     fig.tight_layout()
     if legend:
-        ax.legend(images, loc=9, bbox_to_anchor=(1.2, 1))
+        ax.legend(images, loc=9, bbox_to_anchor=(1.19, 1))
     if save:
         plt.gcf().subplots_adjust(top=0.85)
-        plt.gcf().subplots_adjust(right=0.85)
+        plt.gcf().subplots_adjust(right=0.78)
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'change_responses' + suffix,
-                    'change_response_' + str(cell_index))
+                    analysis.dataset.analysis_folder + '_' + str(cell_index))
         save_figure(fig, figsize, os.path.join(analysis.dataset.cache_dir, 'summary_figures'),
                     'change_responses' + suffix,
                     analysis.dataset.analysis_folder + '_' + str(cell_index))
@@ -713,7 +713,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     fig.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
     if save:
-        save_figure(fig, figsize, dataset.analysis_dir, 'example_traces', 'example_traces_' + str(xlim[0]) + suffix)
+        save_figure(fig, figsize, dataset.analysis_dir, 'example_traces', str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
         save_figure(fig, figsize, dataset.cache_dir, 'example_traces',
                     str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
         plt.close()
