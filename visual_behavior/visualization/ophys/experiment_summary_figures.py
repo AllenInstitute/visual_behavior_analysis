@@ -14,8 +14,8 @@ from visual_behavior import utilities as vbut
 import seaborn as sns
 
 # formatting
-sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
+sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True,})
 sns.set_palette('deep')
 
 
@@ -147,7 +147,7 @@ def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_event
         label = 'dF/F'
         suffix = ''
     if ax is None:
-        figsize = (20, 8)
+        figsize = (14, 5)
         fig, ax = plt.subplots(figsize=figsize)
 
 
@@ -183,7 +183,7 @@ def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
         label = 'dF/F'
         suffix = ''
     if ax is None:
-        figsize = (20, 8)
+        figsize = (14, 5)
         fig, ax = plt.subplots(figsize=figsize)
     cax = ax.pcolormesh(traces, cmap='magma', vmin=0, vmax=vmax)
     ax.set_ylabel('cells')

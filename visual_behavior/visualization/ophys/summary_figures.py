@@ -12,8 +12,8 @@ import matplotlib.pyplot as plt
 from visual_behavior.visualization.utils import save_figure
 
 # formatting
-sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
+sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True,})
 sns.set_palette('deep')
 
 
@@ -220,7 +220,7 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
     return ax
 
 
-def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.15):
+def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.15, facecolor='gray'):
     """
     Function to create transparent gray bars spanning the duration of visual stimulus presentations to overlay on existing figure
 
@@ -245,7 +245,7 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.
     for i, vals in enumerate(array):
         amin = array[i]
         amax = array[i] + (stim_duration * frame_rate)
-        ax.axvspan(amin, amax, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     if trial_type == 'go':
         alpha = alpha * 3
     else:
@@ -254,7 +254,7 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.
     for i, vals in enumerate(array):
         amin = array[i]
         amax = array[i] - (stim_duration * frame_rate)
-        ax.axvspan(amin, amax, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     return ax
 
 
@@ -543,7 +543,7 @@ def plot_trace(timestamps, trace, ax=None, xlabel='time (seconds)', ylabel='fluo
     if ax is None:
         fig, ax = plt.subplots(figsize=(15, 5))
     colors = sns.color_palette()
-    ax.plot(timestamps, trace, color=colors[0], linewidth=3)
+    ax.plot(timestamps, trace, color=colors[0], linewidth=2)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
@@ -665,7 +665,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     xmax_seconds = xmin_seconds + (length_mins * 60) + 1
     xlim = [xmin_seconds, xmax_seconds]
 
-    figsize = (15, 10)
+    figsize = (12, 10)
     fig, ax = plt.subplots(len(cell_indices) + n, 1, figsize=figsize, sharex=True)
     ax = ax.ravel()
 
@@ -687,7 +687,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         sns.despine(ax=ax[i])
 
     for i, cell_index in enumerate(cell_indices):
-        ax[i].set_ylim([np.amin(ymins), np.amax(ymaxs)])
+        ax[i].set_ylim([np.amin(ymins), np.amax(ymaxs)*1.1])
 
     i += 1
     ax[i].set_ylim([np.amin(ymins), 1])
@@ -710,7 +710,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
 
     ax[i].set_xlabel('time (seconds)')
     ax[0].set_title(dataset.analysis_folder)
-    fig.tight_layout()
+    # fig.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
     if save:
         save_figure(fig, figsize, dataset.analysis_dir, 'example_traces', str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)

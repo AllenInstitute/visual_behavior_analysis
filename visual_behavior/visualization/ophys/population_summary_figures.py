@@ -11,8 +11,8 @@ from visual_behavior.visualization.utils import save_figure
 import seaborn as sns
 
 # formatting
-sns.set_style('white')
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
+sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True,})
 sns.set_palette('deep')
 
 
@@ -87,7 +87,7 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
                     'change_response_matrix_' + cre_line + '_' + image_set + '_' + trial_type + suffix)
 
 
-def plot_tuning_curve_heatmap(df, title=None, ax=None, save_dir=None, use_events=False):
+def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, use_events=False):
     # image_set = df.image_set.unique()[0]
     cre_line = df.cre_line.unique()[0]
     # trial_type = df.trial_type.unique()[0]
@@ -112,7 +112,7 @@ def plot_tuning_curve_heatmap(df, title=None, ax=None, save_dir=None, use_events
         label = 'mean event magnitude'
         suffix = suffix+'_events'
     else:
-        vmax = 0.3
+        # vmax = 0.3
         label = 'mean dF/F'
         suffix = suffix
 
@@ -202,7 +202,7 @@ def plot_mean_response_by_repeat_heatmap(df, cre_line, title=None, ax=None, use_
     return ax
 
 
-def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4,4], alpha=0.15):
+def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4,4], alpha=0.15, facecolor='gray'):
     frame_rate = 31.
     stim_duration = .25
     blank_duration = .5
@@ -220,7 +220,7 @@ def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, win
     for i, vals in enumerate(array):
         amin = array[i]
         amax = array[i] + (stim_duration * frame_rate)
-        ax.axvspan(amin, amax, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     if trial_type == 'go':
         alpha = alpha * 3
     else:
@@ -229,7 +229,7 @@ def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, win
     for i, vals in enumerate(array):
         amin = array[i]
         amax = array[i] - (stim_duration * frame_rate)
-        ax.axvspan(amin, amax, facecolor='gray', edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     return ax
 
 
@@ -258,7 +258,7 @@ def plot_hist_for_cre_lines(df, metric, range=None, ax=None, save_figures=False,
     if range is None:
         range = (0,1)
     if ax is None:
-        figsize = (6,5)
+        figsize = (5,5)
         fig, ax = plt.subplots(figsize=figsize)
     cre_lines = ut.get_cre_lines(df)
     for i,cre_line in enumerate(cre_lines):
@@ -287,7 +287,7 @@ def plot_session_averages_for_cre_lines(metric, session_summary_df, ax=None, yli
     else:
         ylims = (0, 1)
     if ax is None:
-        figsize = (6, 5)
+        figsize = (5, 5)
         fig, ax = plt.subplots(figsize=figsize)
     cre_lines = np.sort(session_summary_df.cre_line.unique())
     ax = sns.boxplot(data=session_summary_df, x='cre_line', y=metric, color='white', ax=ax, width=0.4, order=cre_lines)
@@ -325,8 +325,9 @@ def plot_metric_data_for_cre_lines(metric, data, session_summary_df, range=None,
 
 def plot_hist_for_repeats(df, metric, range=None, cre_line=None, ax=None, save_figures=False, save_dir=None, folder=None):
     colors = sns.color_palette()
+    colors = ut.get_colors_for_image_sets()
     if ax is None:
-        figsize = (6,5)
+        figsize = (5,5)
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title(cre_line)
     for i,repeat in enumerate(np.sort(df.repeat.unique())):
@@ -344,8 +345,10 @@ def plot_hist_for_repeats(df, metric, range=None, cre_line=None, ax=None, save_f
 
 def plot_cdf_for_repeats(df, metric, cre_line=None, ax=None, save_figures=False, save_dir=None, folder=None):
     colors = sns.color_palette()
+    colors = ut.get_colors_for_image_sets()
+
     if ax is None:
-        figsize = (6,5)
+        figsize = (5,5)
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title(cre_line)
     for i,repeat in enumerate(np.sort(df.repeat.unique())):
@@ -368,9 +371,9 @@ def plot_session_averages_for_repeats(session_summary_df, metric, ax=None, ylims
     else:
         ylims = (0, 1)
     if ax is None:
-        figsize = (6, 5)
+        figsize = (5, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    cre_lines = np.sort(session_summary_df.cre_line.unique())
+    cre_line = session_summary_df.cre_line.unique()[0]
     ax = sns.boxplot(data=session_summary_df, x='repeat', y=metric, color='white', ax=ax, width=0.4)
     if color_by_area:
         area_colors = ut.get_colors_for_areas(session_summary_df)
@@ -378,22 +381,23 @@ def plot_session_averages_for_repeats(session_summary_df, metric, ax=None, ylims
                            hue='area', palette=area_colors, hue_order=cre_lines, ax=ax)
     else:
         colors = sns.color_palette()
+        colors = ut.get_colors_for_image_sets()
         ax = sns.stripplot(data=session_summary_df, x='repeat', y=metric, jitter=0.05, size=7,
                        palette=colors, hue='repeat', ax=ax)
     ax.get_legend().remove()
-    ax.set_title('session averages')
+    ax.set_title(cre_line)
     ax.set_ylim(ylims)
 
     if save_figures:
         fig.tight_layout()
-        save_figure(fig, figsize, save_dir, folder, metric + '_across_repeats_session_average')
+        save_figure(fig, figsize, save_dir, folder, metric + '_across_repeats_session_average_' + cre_line)
     return ax
 
 
 def plot_violin_for_repeats(df, metric, cre_line=None, ax=None, save_figures=False, save_dir=None, folder=None):
     colors = sns.color_palette()
     if ax is None:
-        figsize = (6,5)
+        figsize = (5,5)
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title(cre_line)
     ax = sns.violinplot(data=df,x='repeat',y=metric,color='white', ax=ax, cut=0-1)
@@ -409,12 +413,15 @@ def plot_distributions_for_repeats(df, session_summary_df, metric, cre_line, sav
     fig, ax = plt.subplots(1,3,figsize=figsize)
     ax = ax.ravel()
     ax[0] = plot_hist_for_repeats(df, metric, ax=ax[0], range=range)
+    ax[0].set_title('cre_line')
     ax[1] = plot_cdf_for_repeats(df, metric, ax=ax[1])
+    ax[1].set_title(cre_line)
     ax[2] = plot_session_averages_for_repeats(session_summary_df, metric, ax=ax[2], ylims=(-0.05, ymax), color_by_area=False)
+    ax[2].set_title(cre_line)
     # ax[2] = plot_violin_for_repeats(df, metric, ax=ax[2])
-    plt.suptitle(cre_line, fontsize=16, x=0.52, y=1.0)
+    # plt.suptitle(cre_line, fontsize=16, x=0.52, y=1.0)
     fig.tight_layout()
-    plt.gcf().subplots_adjust(top=0.9)
+    # plt.gcf().subplots_adjust(top=0.9)
     if save_figures:
         save_figure(fig ,figsize, save_dir, folder, metric+'_by_flash_number_'+cre_line.split('-')[0]+'_'+image_set)
 
@@ -422,7 +429,7 @@ def plot_distributions_for_repeats(df, session_summary_df, metric, cre_line, sav
 def plot_hist_for_image_sets(df, metric, cre_line=None, ax=None, save_figures=False, range=(0,1)):
     colors = ut.get_colors_for_image_sets()
     if ax is None:
-        figsize = (6,5)
+        figsize = (5,5)
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title(cre_line)
     for i,image_set in enumerate(np.sort(df.image_set.unique())):
@@ -440,7 +447,7 @@ def plot_hist_for_image_sets(df, metric, cre_line=None, ax=None, save_figures=Fa
 def plot_cdf_for_image_sets(df, metric, cre_line=None, ax=None, save_figures=False):
     colors = ut.get_colors_for_image_sets()
     if ax is None:
-        figsize = (6,5)
+        figsize = (5,5)
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title(cre_line)
     for i,image_set in enumerate(np.sort(df.image_set.unique())):
@@ -459,7 +466,7 @@ def plot_cdf_for_image_sets(df, metric, cre_line=None, ax=None, save_figures=Fal
 def plot_violin_for_image_sets(df, metric, cre_line=None, ax=None, save_figures=False):
     colors = ut.get_colors_for_image_sets()
     if ax is None:
-        figsize = (6,5)
+        figsize = (5,5)
         fig, ax = plt.subplots(figsize=figsize)
         ax.set_title(cre_line)
     ax = sns.violinplot(data=df,x='image_set',y=metric,color='white', ax=ax, cut=0-1)
@@ -476,9 +483,9 @@ def plot_session_average_for_image_sets(session_summary_df, metric, ax=None, yli
     else:
         ylims = (0, 1)
     if ax is None:
-        figsize = (6, 5)
+        figsize = (5, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    cre_lines = np.sort(session_summary_df.cre_line.unique())
+    cre_line = session_summary_df.cre_line.unique()[0]
     image_sets = ut.get_image_sets(session_summary_df)
     ax = sns.boxplot(data=session_summary_df, x='image_set', y=metric, color='white', ax=ax, width=0.4)
     if color_by_area:
@@ -490,12 +497,12 @@ def plot_session_average_for_image_sets(session_summary_df, metric, ax=None, yli
         ax = sns.stripplot(data=session_summary_df, x='image_set', y=metric, jitter=0.05, size=7,
                        palette=colors, hue='image_set', ax=ax, hue_order=image_sets)
     ax.get_legend().remove()
-    ax.set_title('session averages')
+    ax.set_title(cre_line)
     ax.set_ylim(ylims)
 
     if save_figures:
         fig.tight_layout()
-        save_figure(fig, figsize, save_dir, folder, metric + '_across_image_sets_session_average')
+        save_figure(fig, figsize, save_dir, folder, metric + '_across_image_sets_session_average_'+cre_line)
     return ax
 
 #
@@ -545,6 +552,7 @@ def plot_distributions_for_image_sets(df, session_summary_df, metric, cre_line, 
     ax[1] = plot_cdf_for_image_sets(df, metric, ax=ax[1])
     # ax[2] = plot_violin_for_image_sets(df, metric, ax=ax[2])
     ax[2] = plot_session_average_for_image_sets(session_summary_df, metric, ax=ax[2], ylims=ylims)
+    ax[2].set_title('session averages')
     plt.suptitle(cre_line, fontsize=16, x=0.52, y=1.0)
     fig.tight_layout()
     plt.gcf().subplots_adjust(top=0.9)
