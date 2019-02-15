@@ -233,7 +233,7 @@ def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, win
     return ax
 
 
-def plot_cell_mean_trace_from_mean_df(cell_data, frame_rate=31., ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4],
+def plot_mean_trace_from_mean_df(cell_data, frame_rate=31., ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4],
                     ax=None):
     xlim = [0, xlims[1] + np.abs(xlims[0])]
     if ax is None:
