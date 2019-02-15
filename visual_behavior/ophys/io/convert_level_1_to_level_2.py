@@ -540,17 +540,25 @@ def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
         df = lookup[lookup.ophys_experiment_id == int(lims_data.experiment_id.values[0])]
         if (len(df) > 0):
             if np.isnan(df.cell_specimen_id.values[0])==False:
-                # if lookup file exists, and lookup table has entries for this experiment,
-                # add cell_specimen_id values to roi_metrics and overwrite 'id' column with cell_specimen_ids
-                print('this session has cell matching results, adding cell_specimen_ids and overwriting roi_metrics.id')
-                # cell_specimen_ids = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in roi_ids]
-                # cell_specimen_ids = np.asarray(cell_specimen_ids)
-                roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in
-                                                   roi_metrics.id.values]
-                roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
+                try:
+                    # if lookup file exists, and lookup table has entries for this experiment,
+                    # add cell_specimen_id values to roi_metrics and overwrite 'id' column with cell_specimen_ids
+                    print('this session has cell matching results, adding cell_specimen_ids and overwriting roi_metrics.id')
+                    # cell_specimen_ids = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in roi_ids]
+                    # cell_specimen_ids = np.asarray(cell_specimen_ids)
+                    roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in
+                                                       roi_metrics.id.values]
+                    roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
+                except:
+                    print('something bad happened when trying to assign cell_specimen_ids using lookup table, setting to None')
+                    roi_metrics['cell_specimen_id'] = None
+            else:
+                # no cell_specimen_ids in table, set cell_specimen_id to None
+                print('no cell_specimen_ids for this experiment, using roi_ids')
+                roi_metrics['cell_specimen_id'] = None
         else:
             # if lookup table doesnt exist, set cell_specimen_id to None
-            print('no cell_specimen_ids for this experiment, using roi_ids')
+            print('this experiment not in lookup table, using roi_ids')
             roi_metrics['cell_specimen_id'] = None
     else:
         print('no cache_dir provided, cant look up cell_specimen_ids, using roi_ids')
