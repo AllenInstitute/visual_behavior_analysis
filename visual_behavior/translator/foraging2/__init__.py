@@ -300,30 +300,6 @@ def data_to_time(data):
     return get_time(data)
 
 
-def rebase_trials_inplace(trials, time):
-
-    trials['starttime'] = time[trials['startframe']]
-    trials['endtime'] = time[trials['endframe']]
-    trials['change_time'] = trials['change_frame'].map(lambda x: x if pd.isnull(x) else time[int(x)])
-
-    if 'lick_frames' in trials.columns:
-        trials['lick_times'] = trials['lick_frames'].map(lambda x: time[x])
-    else:
-        logger.warning('cannot rebase `lick_times` column in trials without a `lick_frames` column')
-        trials['lick_times'] = trials['lick_times'].map(lambda x: ['REBASING NOT SUPPORTED', ])
-
-    if 'response_frame' in trials.columns:
-        trials['response_time'] = trials['response_frame'].map(lambda x: time[x])
-    else:
-        logger.warning('cannot rebase `response_time` column in trials without a `response_frame` column')
-        trials['response_time'] = trials['response_time'].map(lambda x: ['REBASING NOT SUPPORTED', ])
-
-    def get_times(frames):
-        return [time[fr] for fr in frames]
-
-    trials['reward_times'] = trials['reward_frames'].map(get_times)
-
-
 def data_to_trials(data, time=None):
     """Generate a trial structure that very closely mirrors the original trials
     structure output by foraging legacy code
@@ -381,10 +357,6 @@ def data_to_trials(data, time=None):
             "initial_orientation": "initial_ori",
         }
     ).reset_index()
-
-    if time is not None:
-        logger.warning('rebasing time of trials dataframe')
-        rebase_trials_inplace(trials, time)
 
     return trials
 
