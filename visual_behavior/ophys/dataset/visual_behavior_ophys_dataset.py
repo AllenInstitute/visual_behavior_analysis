@@ -4,47 +4,41 @@ import platform
 import numpy as np
 import pandas as pd
 import tempfile
-from allensdk.experimental.lazy_property import LazyProperty as LazyPropertyBase
+import inspect
+
+from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
 from visual_behavior.ophys.io.lims_api import VisualBehaviorLimsAPI
 from visual_behavior.ophys.io.filesystem_api import VisualBehaviorFileSystemAPI
 from pandas.util.testing import assert_frame_equal
-import inspect
 
-
-class LazyProperty(LazyPropertyBase):
-    
-    def calculate(self, obj):
-        return getattr(obj.api, self.getter_name)(ophys_experiment_id=obj.ophys_experiment_id, use_acq_trigger=obj.use_acq_trigger)
-
-class VisualBehaviorOphysSession(object):
-
-    max_projection = LazyProperty(api_method='get_max_projection')
-    stimulus_timestamps = LazyProperty(api_method='get_stimulus_timestamps')
-    ophys_timestamps = LazyProperty(api_method='get_ophys_timestamps')
-    metadata = LazyProperty(api_method='get_metadata')
-    dff_traces = LazyProperty(api_method='get_dff_traces')
-    roi_metrics = LazyProperty(api_method='get_roi_metrics')
-    roi_masks = LazyProperty(api_method='get_roi_masks')
-    cell_roi_ids = LazyProperty(api_method='get_cell_roi_ids')
-    running_speed = LazyProperty(api_method='get_running_speed')
-    stimulus_table = LazyProperty(api_method='get_stimulus_table')
-    stimulus_template = LazyProperty(api_method='get_stimulus_template')
-    stimulus_metadata = LazyProperty(api_method='get_stimulus_metadata')
-    licks = LazyProperty(api_method='get_licks')
-    rewards = LazyProperty(api_method='get_rewards')
-    task_parameters = LazyProperty(api_method='get_task_parameters')
-    extended_dataframe = LazyProperty(api_method='get_extended_dataframe')
-    corrected_fluorescence_traces = LazyProperty(api_method='get_corrected_fluorescence_traces')
-    events = LazyProperty(api_method='get_events')
-    average_image = LazyProperty(api_method='get_average_image')
-    motion_correction = LazyProperty(api_method='get_motion_correction')
-
+class VisualBehaviorOphysSession(LazyPropertyMixin):
 
     def __init__(self, ophys_experiment_id, api=None, use_acq_trigger=False):
 
         self.ophys_experiment_id = ophys_experiment_id
         self.api = VisualBehaviorLimsAPI() if api is None else api
         self.use_acq_trigger = use_acq_trigger
+
+        self.max_projection = LazyProperty(self.api.get_max_projection, ophys_experiment_id=self.ophys_experiment_id)
+        self.stimulus_timestamps = LazyProperty(self.api.get_stimulus_timestamps, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        self.ophys_timestamps = LazyProperty(self.api.get_ophys_timestamps, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        self.metadata = LazyProperty(self.api.get_metadata, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        self.dff_traces = LazyProperty(self.api.get_dff_traces, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        self.roi_metrics = LazyProperty(self.api.get_roi_metrics, ophys_experiment_id=self.ophys_experiment_id)
+        self.roi_masks = LazyProperty(self.api.get_roi_masks, ophys_experiment_id=self.ophys_experiment_id)
+        self.cell_roi_ids = LazyProperty(self.api.get_cell_roi_ids, ophys_experiment_id=self.ophys_experiment_id)
+        self.running_speed = LazyProperty(self.api.get_running_speed, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        self.stimulus_table = LazyProperty(self.api.get_stimulus_table, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        self.stimulus_template = LazyProperty(self.api.get_stimulus_template, ophys_experiment_id=self.ophys_experiment_id)
+        self.stimulus_metadata = LazyProperty(self.api.get_stimulus_metadata, ophys_experiment_id=self.ophys_experiment_id)
+        self.licks = LazyProperty(self.api.get_licks, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        self.rewards = LazyProperty(self.api.get_rewards, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        self.task_parameters = LazyProperty(self.api.get_task_parameters, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        self.extended_dataframe = LazyProperty(self.api.get_extended_dataframe, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        self.corrected_fluorescence_traces = LazyProperty(self.api.get_corrected_fluorescence_traces, ophys_experiment_id=self.ophys_experiment_id, use_acq_trigger=self.use_acq_trigger)
+        # self.events = LazyProperty(self.api.get_events, ophys_experiment_id=self.ophys_experiment_id)
+        self.average_image = LazyProperty(self.api.get_average_image, ophys_experiment_id=self.ophys_experiment_id)
+        self.motion_correction = LazyProperty(self.api.get_motion_correction, ophys_experiment_id=self.ophys_experiment_id)
 
     def get_trials(self, columns=None, auto_rewarded=False, aborted=False):
 
@@ -81,8 +75,16 @@ class VisualBehaviorOphysSession(object):
 
     def __eq__(self, other):
 
+        field_set = set()
+        for key, val in self.__dict__.items():
+            if isinstance(val, LazyProperty):
+                field_set.add(key) 
+        for key, val in other.__dict__.items():
+            if isinstance(val, LazyProperty):
+                field_set.add(key) 
+
         try:
-            for field in set(self.lazy_properties).union(other.lazy_properties): 
+            for field in field_set: 
                 x1, x2 = getattr(self, field), getattr(other, field)
                 if isinstance(x1, pd.DataFrame):
                     assert_frame_equal(x1, x2)
@@ -91,7 +93,7 @@ class VisualBehaviorOphysSession(object):
                 elif isinstance(x1, (dict, list)):
                     assert x1 == x2
                 else:
-                    raise Exception('Comparator not implmeneted')
+                    raise Exception('Comparator not implemented')
 
         except NotImplementedError as e:
             self_implements_get_field = hasattr(self.api, getattr(type(self), field).getter_name)
@@ -103,83 +105,88 @@ class VisualBehaviorOphysSession(object):
 
         return True
 
-def test_equal():
 
-    oeid = 702134928
-    d1 = VisualBehaviorOphysSession(oeid)
-    d2 = VisualBehaviorOphysSession(oeid)
-
-    assert d1 == d2
-
-
-
-
-def test_visbeh_ophys_data_set_events():
+# def test_visbeh_ophys_data_set_events():
     
-    ophys_experiment_id = 702134928
-    api = VisualBehaviorLimsAPI_hackEvents(event_cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/events')
-    data_set = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
+#     ophys_experiment_id = 702134928
+#     api = VisualBehaviorLimsAPI_hackEvents(event_cache_dir='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/events')
+#     data_set = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
 
-    # Not round-tripped
-    data_set.events
+#     # Not round-tripped
+#     data_set.events
 
-
+import datetime
 def test_visbeh_ophys_data_set(ophys_experiment_id, api):
 
+    ophys_experiment_id = 789359614
+
     data_set = VisualBehaviorOphysSession(ophys_experiment_id, api=api)
 
-    # # Round tripped DataFrames:
-    # data_set.roi_metrics
-    # data_set.dff_traces
-    # data_set.roi_masks
-    # data_set.running_speed
-    # data_set.stimulus_metadata
-    # data_set.stimulus_table
-    # data_set.licks
-    # data_set.rewards
-    # data_set.task_parameters
+    # TODO: need to improve testing here:
+    # for _, row in data_set.roi_metrics.iterrows():
+    #     print np.array(row.to_dict()['mask']).sum()
+    # print
+    # for _, row in data_set.roi_masks.iterrows():
+    #     print np.array(row.to_dict()['mask']).sum()
+
+
+    print data_set.api.get_foraging_id(ophys_experiment_id)
+    # print data_set.metadata
+
+    for key, val in data_set.task_parameters.iloc[0].to_dict().items():
+        print key, val
     # data_set.extended_dataframe
     # data_set.corrected_fluorescence_traces
     # data_set.motion_correction
 
-    # # Round tripped ndarrays:
-    # data_set.max_projection
-    # data_set.cell_roi_ids
-    # data_set.stimulus_timestamps
-    # data_set.ophys_timestamps
-    # data_set.stimulus_template
-    # data_set.average_image
-
-    # # Round tripped dictionary:
-    # print data_set.metadata
-
-    # Not roud trip tested:
-    # assert data_set.max_projection.shape == (512, 449)
-
-def test_get_trials():
-
-    ophys_experiment_id = 702134928 
-    data_set = VisualBehaviorOphysSession(ophys_experiment_id)
-    print data_set.get_trials()
-
-
-def test_plot_traces_heatmap():
-
-    from visual_behavior.visualization.ophys.experiment_summary_figures import plot_traces_heatmap
-    
-    oeid = 702134928
-    data_set = VisualBehaviorOphysSession(oeid)
-
-    plot_traces_heatmap(data_set)
-
+    # All sorts of assert relationships:
+    # assert data_set.stimulus_template.shape == (8, 918, 1174)
+    # assert len(data_set.licks) == 5941 and list(data_set.licks.columns) == ['frame', 'time']
+    # assert len(data_set.rewards) == 138 and list(data_set.rewards.columns) == ['frame', 'time']
+    # assert sorted(data_set.stimulus_metadata['image_category'].unique()) == sorted(data_set.stimulus_table['image_category'].unique())
+    # assert sorted(data_set.stimulus_metadata['image_name'].unique()) == sorted(data_set.stimulus_table['image_name'].unique())
+    # np.testing.assert_array_almost_equal(data_set.running_speed['time'], data_set.stimulus_timestamps)
+    # assert len(data_set.cell_roi_ids) == len(data_set.dff_traces)
+    # assert data_set.ophys_timestamps.shape == data_set.dff_traces.timestamps.values[0].shape
+    # assert data_set.average_image.shape == data_set.max_projection.shape
+    # assert data_set.metadata == {'stimulus_frame_rate': 60.0, 
+    #                              'full_genotype': 'Vip-IRES-Cre/wt;Ai148(TIT2L-GC6f-ICL-tTA2)/wt', 
+    #                              'ophys_experiment_id': 702134928, 
+    #                              'session_type': None, 
+    #                              'driver_line': 'Vip-IRES-Cre', 
+    #                              'experiment_date': datetime.datetime(2018, 5, 24, 21, 27, 25), 
+    #                              'ophys_frame_rate': 31.0, 
+    #                              'imaging_depth': 175, 
+    #                              'LabTracks_ID': '363887', 
+    #                              'experiment_container_id': None, 
+    #                              'targeted_structure': 'VISal', 
+    #                              'reporter_line': 'Ai148(TIT2L-GC6f-ICL-tTA2)'}
 
 if __name__ == '__main__':
+    test_visbeh_ophys_data_set(702134928, VisualBehaviorLimsAPI())
 
-    # test_visbeh_ophys_data_set(702134928, VisualBehaviorLimsAPI())
+# def test_get_trials():
+
+#     ophys_experiment_id = 702134928 
+#     data_set = VisualBehaviorOphysSession(ophys_experiment_id)
+#     print data_set.get_trials()
+
+
+# def test_plot_traces_heatmap():
+
+#     from visual_behavior.visualization.ophys.experiment_summary_figures import plot_traces_heatmap
+    
+#     oeid = 702134928
+#     data_set = VisualBehaviorOphysSession(oeid)
+
+#     plot_traces_heatmap(data_set)
+
+
+
     # test_visbeh_ophys_data_set_events()
     # test_get_trials()
     # test_plot_traces_heatmap()
-    test_equal()
+    
 
 
 

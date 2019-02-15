@@ -119,7 +119,7 @@ def get_reliability(group):
     return pd.Series({'reliability': reliability})
 
 
-def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False):
+def get_mean_df(response_df, analysis=None, conditions=['cell_roi_id', 'change_image_name'], flashes=False):
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
@@ -165,15 +165,12 @@ def get_image_names(mean_df):
 
 
 def add_metadata_to_mean_df(mdf, metadata):
-    metadata = metadata.reset_index()
-    metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
-    metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
-    metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
-    metadata['image_set'] = metadata.session_type.values[0][-1]
-    metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in
-                                  metadata.image_set.values]
+    for key, val in metadata.items():
+        mdf[key] = val
+    # metadata['image_set'] = metadata.session_type.values[0][-1]
+    # metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in
+                                #   metadata.image_set.values]
     # metadata['session_type'] = ['image_set_' + image_set for image_set in metadata.image_set.values]
-    mdf = mdf.merge(metadata, how='outer', on='experiment_id')
     return mdf
 
 
@@ -260,10 +257,7 @@ def annotate_mean_df_with_pref_stim(mean_df, flashes=False):
         image_name = 'change_image_name'
     mdf = mean_df.reset_index()
     mdf['pref_stim'] = False
-    if 'cell_specimen_id' in mdf.keys():
-        cell_key = 'cell_specimen_id'
-    else:
-        cell_key = 'cell'
+    cell_key = 'cell_roi_id'
     for cell in mdf[cell_key].unique():
         mc = mdf[(mdf[cell_key] == cell)]
         pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))][image_name].values[0]
@@ -292,10 +286,11 @@ def annotate_trial_response_df_with_pref_stim(trial_response_df):
 
 
 def annotate_flash_response_df_with_pref_stim(fdf):
-    if 'cell_specimen_id' in fdf.keys():
-        cell_key = 'cell_specimen_id'
-    else:
-        cell_key = 'cell'
+    cell_key = 'cell_roi_id'
+    # if 'cell_specimen_id' in fdf.keys():
+    #     cell_key = 'cell_specimen_id'
+    # else:
+    #     cell_key = 'cell'
     fdf['pref_stim'] = False
     mean_response = fdf.groupby([cell_key, 'image_name']).apply(get_mean_sem)
     m = mean_response.unstack()
@@ -373,7 +368,7 @@ def add_image_block_to_stimulus_table(stimulus_table):
     for image_name in stimulus_table.image_name.unique():
         block = 0
         for index in stimulus_table[stimulus_table.image_name == image_name].index.values:
-            if stimulus_table.iloc[index]['repeat'] == 1:
+            if stimulus_table.loc[index]['repeat'] == 1:
                 block += 1
             stimulus_table.loc[index, 'image_block'] = int(block)
     stimulus_table['image_block'] = [int(image_block) for image_block in stimulus_table.image_block.values]

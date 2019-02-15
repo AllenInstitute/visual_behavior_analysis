@@ -83,24 +83,25 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
     if ax is None:
         figsize = (5, 10)
         fig, ax = plt.subplots(figsize=figsize)
-    for trial in trials.trial.values:
-        trial_data = trials.iloc[trial]
+    for rid, row in trials.iterrows():
+        # print rid
+        trial_dict = row.to_dict()
         # get times relative to change time
-        trial_start = trial_data.start_time - trial_data.change_time
-        lick_times = [(t - trial_data.change_time) for t in trial_data.lick_times]
-        reward_time = [(t - trial_data.change_time) for t in trial_data.reward_times]
+        trial_start = trial_dict['start_time'] - trial_dict['change_time']
+        lick_times = [(t - trial_dict['change_time']) for t in trial_dict['lick_times']]
+        reward_time = [(t - trial_dict['change_time']) for t in trial_dict['reward_times']]
         # plot trials as colored rows
-        ax.axhspan(trial, trial + 1, -200, 200, color=trial_data.trial_type_color, alpha=.5)
+        ax.axhspan(rid, rid + 1, -200, 200, color=trial_dict['trial_type_color'], alpha=.5)
         # plot reward times
         if len(reward_time) > 0:
-            ax.plot(reward_time[0], trial + 0.5, '.', color='b', label='reward', markersize=6)
-        ax.vlines(trial_start, trial, trial + 1, color='black', linewidth=1)
+            ax.plot(reward_time[0], rid + 0.5, '.', color='b', label='reward', markersize=6)
+        ax.vlines(trial_start, rid, rid + 1, color='black', linewidth=1)
         # plot lick times
-        ax.vlines(lick_times, trial, trial + 1, color='k', linewidth=1)
+        ax.vlines(lick_times, rid, rid + 1, color='k', linewidth=1)
         # annotate change time
-        ax.vlines(0, trial, trial + 1, color=[.5, .5, .5], linewidth=1)
+        ax.vlines(0, rid, rid + 1, color=[.5, .5, .5], linewidth=1)
     # gray bar for response window
-    ax.axvspan(trial_data.response_window[0], trial_data.response_window[1], facecolor='gray', alpha=.4,
+    ax.axvspan(trial_dict['response_window'][0], trial_dict['response_window'][1], facecolor='gray', alpha=.4,
                edgecolor='none')
     ax.grid(False)
     ax.set_ylim(0, len(trials))
@@ -110,12 +111,12 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
     ax.set_title('lick raster')
     plt.gca().invert_yaxis()
 
-    if save_dir:
-        save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
+    # if save_dir:
+    #     save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
 
 def reorder_traces(original_traces, analysis):
     tdf = analysis.trial_response_df.copy()
-    df = ut.get_mean_df(tdf, analysis, conditions=['cell','change_image_name'])
+    df = ut.get_mean_df(tdf, analysis, conditions=['cell_roi_id','change_image_name'])
 
     images = np.sort(df.change_image_name.unique())
 
@@ -123,12 +124,13 @@ def reorder_traces(original_traces, analysis):
     for image in images:
         tmp = df[(df.change_image_name == image) & (df.pref_stim == True)]
         order = np.argsort(tmp.mean_response.values)[::-1]
-        cell_ids = list(tmp.cell.values[order])
+        cell_ids = list(tmp['cell_roi_id'].values[order])
         cell_list = cell_list + cell_ids
 
     reordered_traces = []
-    for cell_index in cell_list:
-        reordered_traces.append(original_traces[cell_index,:])
+    for rid in cell_list:
+        trace = original_traces[original_traces['cell_roi_id']==rid]['dff'].values[0]
+        reordered_traces.append(trace)
     return np.asarray(reordered_traces)
 
 
@@ -155,8 +157,8 @@ def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_event
     ax.set_ylabel('cells')
 
     interval_seconds = 5 * 60
-    ophys_frame_rate = int(dataset.metadata.ophys_frame_rate.values[0])
-    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.timestamps_ophys,
+    ophys_frame_rate = int(dataset.metadata['ophys_frame_rate'])
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.ophys_timestamps,
                                                                                ophys_frame_rate)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
@@ -164,9 +166,9 @@ def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_event
 
     cb = plt.colorbar(cax, pad=0.015)
     cb.set_label(label, labelpad=3)
-    if save:
-        save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary',
-                    str(dataset.experiment_id) + 'sorted_traces_heatmap' + suffix)
+    # if save:
+    #     save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary',
+    #                 str(dataset.experiment_id) + 'sorted_traces_heatmap' + suffix)
     return ax
 
 
@@ -207,10 +209,10 @@ def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
 def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None, use_events=False):
     df = mean_df.copy()
     images = np.sort(df.change_image_name.unique())
-    if 'cell_specimen_id' in df.keys():
-        cell_name = 'cell_specimen_id'
-    else:
-        cell_name = 'cell'
+    # if 'cell_specimen_id' in df.keys():
+    cell_name = 'cell_roi_id'
+    # else:
+    #     cell_name = 'cell'
     cell_list = []
     for image in images:
         tmp = df[(df.change_image_name == image) & (df.pref_stim == True)]
@@ -308,10 +310,12 @@ def get_upper_limit_and_intervals(traces, timestamps_ophys, ophys_frame_rate):
     return upper, time_interval, frame_interval
 
 
-def plot_run_speed(running_speed, timestamps_stimulus, ax=None, label=False):
+def plot_run_speed(running_speed_df, ax=None, label=False):
+    timestamps = running_speed_df.time.values
+    running_speed = running_speed_df.speed.values
     if ax is None:
         fig, ax = plt.subplots(figsize=(15, 5))
-    ax.plot(timestamps_stimulus, running_speed, color='gray')
+    ax.plot(timestamps, running_speed, color='gray')
     if label:
         ax.set_ylabel('run speed (cm/s)')
         ax.set_xlabel('time(s)')
@@ -350,18 +354,19 @@ def plot_reward_rate(trials, ax=None):
     return ax
 
 
-def format_table_data(dataset):
-    table_data = dataset.metadata.copy()
-    table_data = table_data[['donor_id', 'targeted_structure', 'imaging_depth', 'cre_line',
-                             'experiment_date', 'session_type', 'ophys_experiment_id']]
-    table_data = table_data.transpose()
-    return table_data
+# def format_table_data(dataset):
+#     table_data = dataset.metadata.copy()
+#     print table_data
+#     table_data = table_data[['donor_id', 'targeted_structure', 'imaging_depth', 'cre_line',
+#                              'experiment_date', 'session_type', 'ophys_experiment_id']]
+#     table_data = table_data.transpose()
+#     return table_data
 
 
 def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, cmap='RdBu', ax=None, save=False,
                       colorbar=False):
     # roi_dict = dataset.roi_dict.copy()
-    roi_mask_array = dataset.roi_mask_array.copy()
+    # roi_mask_array = dataset.roi_mask_array.copy()
     if cmap == 'hls':
         from matplotlib.colors import ListedColormap
         cmap = ListedColormap(sns.color_palette('hls', 8))
@@ -371,10 +376,10 @@ def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, 
     if max_image is True:
         ax.imshow(dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(dataset.max_projection))
     for roi in cell_list:
-        tmp = roi_mask_array[roi, :, :].copy()
+        tmp = dataset.roi_masks[dataset.roi_masks['cell_roi_id']==roi]['mask'].values[0]
         mask = np.empty(tmp.shape, dtype=np.float)
         mask[:] = np.nan
-        mask[tmp == 1] = metrics[roi]
+        mask[tmp == 1] = -1#metrics[roi]
         cax = ax.imshow(mask, cmap=cmap, alpha=0.5, vmin=np.amin(metrics), vmax=np.amax(metrics))
         ax.set_title(metric_name)
         ax.grid(False)
@@ -383,7 +388,7 @@ def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, 
         plt.colorbar(cax, ax=ax, )
     if save:
         plt.tight_layout()
-        sf.save_figure(fig, figsize, dataset.analysis_dir, fig_title=metric_name, folder='experiment_summary')
+        # sf.save_figure(fig, figsize, dataset.analysis_dir, fig_title=metric_name, folder='experiment_summary')
     return ax
 
 
@@ -449,16 +454,16 @@ def plot_roi_masks(dataset, save=False):
     ax[0].axis('off')
     ax[0].set_title('max intensity projection')
 
-    metrics = np.empty(len(dataset.cell_indices))
+    cell_list = dataset.cell_roi_ids
+    metrics = np.empty(len(cell_list))
     metrics[:] = -1
-    cell_list = dataset.cell_indices
     plot_metrics_mask(dataset, metrics, cell_list, 'roi masks', max_image=True, cmap='hls', ax=ax[1], save=False,
                       colorbar=False)
 
-    plt.suptitle(dataset.analysis_folder, fontsize=16, x=0.5, y=1., horizontalalignment='center')
-    if save:
-        save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', dataset.analysis_folder + '_roi_masks')
-        save_figure(fig, figsize, dataset.cache_dir, 'roi_masks', dataset.analysis_folder + '_roi_masks')
+    # plt.suptitle(dataset.analysis_folder, fontsize=16, x=0.5, y=1., horizontalalignment='center')
+    # if save:
+    #     save_figure(fig, figsize, dataset.analysis_dir, 'experiment_summary', dataset.analysis_folder + '_roi_masks')
+    #     save_figure(fig, figsize, dataset.cache_dir, 'roi_masks', dataset.analysis_folder + '_roi_masks')
 
 
 def plot_experiment_summary_figure(analysis, save_dir=None):
@@ -477,25 +482,25 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     fig = plt.figure(figsize=figsize, facecolor='white')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.8, 0.95), yspan=(0, .3))
-    table_data = format_table_data(analysis.dataset)
-    xtable = ax.table(cellText=table_data.values, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
+    cellText = np.array([[str(analysis.dataset.metadata[x]) for x in ['LabTracks_ID', 'targeted_structure', 'imaging_depth', 'driver_line','experiment_date', 'session_type', 'ophys_experiment_id']]])
+    xtable = ax.table(cellText=cellText, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
     xtable.scale(1.5, 3)
     ax.axis('off')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .22), yspan=(0, .27))
     # metrics = dataset.cell_indices
-    metrics = np.empty(len(analysis.dataset.cell_indices))
+    metrics = np.empty(len(analysis.dataset.cell_roi_ids))
     metrics[:] = -1
-    cell_list = analysis.dataset.cell_indices
+    cell_list = analysis.dataset.cell_roi_ids
     plot_metrics_mask(analysis.dataset, metrics, cell_list, 'cell masks', max_image=True, cmap='hls', ax=ax, save=False,
                       colorbar=False)
     # ax.imshow(analysis.dataset.max_projection, cmap='gray', vmin=0, vmax=np.amax(analysis.dataset.max_projection))
-    ax.set_title(analysis.dataset.experiment_id)
+    ax.set_title(analysis.dataset.ophys_experiment_id)
     ax.axis('off')
 
     upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces,
-                                                                               analysis.dataset.timestamps_ophys,
-                                                                               analysis.ophys_frame_rate)
+                                                                               analysis.dataset.ophys_timestamps,
+                                                                               analysis.dataset.metadata['ophys_frame_rate'])
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.9), yspan=(0, .3))
     # ax = plot_traces_heatmap(analysis.dataset, ax=ax, use_events=use_events)
@@ -505,26 +510,26 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.set_xlabel('time (seconds)')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.8), yspan=(.26, .41))
-    ax = plot_run_speed(analysis.dataset.running_speed.running_speed, analysis.dataset.timestamps_stimulus, ax=ax,
-                        label=True)
+    ax = plot_run_speed(analysis.dataset.running_speed, ax=ax, label=True)
     ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
     ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.8), yspan=(.37, .52))
-    ax = plot_hit_false_alarm_rates(analysis.dataset.trials, ax=ax)
+    trials = analysis.dataset.get_trials()
+    ax = plot_hit_false_alarm_rates(trials, ax=ax)
     ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
     ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
     ax.legend(loc='upper right', ncol=2, borderaxespad=0.)
     ax.set_xlabel('time (seconds)')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .22), yspan=(.25, .8))
-    ax = plot_lick_raster(analysis.dataset.trials, ax=ax, save_dir=None)
+    ax = plot_lick_raster(trials, ax=ax, save_dir=None)
 
     ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35)
     try:
         mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
-                             conditions=['cell', 'change_image_name', 'behavioral_response_type'])
+                             conditions=['cell_roi_id', 'change_image_name', 'behavioral_response_type'])
         ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
                                      condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None,
                                     use_events=use_events)
@@ -532,11 +537,11 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
         pass
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
-    mdf = ut.get_mean_df(analysis.trial_response_df, analysis, conditions=['cell', 'change_image_name'])
+    mdf = ut.get_mean_df(analysis.trial_response_df, analysis, conditions=['cell_roi_id', 'change_image_name'])
     ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None, use_events=use_events)
 
     fig.tight_layout()
 
-    if save_dir:
-        fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder + suffix)
+    # if save_dir:
+    #     fig.tight_layout()
+    #     save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder + suffix)

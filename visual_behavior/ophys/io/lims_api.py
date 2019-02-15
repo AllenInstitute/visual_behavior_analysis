@@ -110,6 +110,17 @@ class VisualBehaviorLimsAPI(object):
         return self.query(query.format(ophys_experiment_id))
 
     @memoize
+    def get_foraging_id(self, *args, **kwargs):
+        query = '''
+                SELECT os.foraging_id
+                FROM ophys_experiments oe
+                LEFT JOIN ophys_sessions os ON oe.ophys_session_id = os.id
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+    @memoize
     def get_sync_file(self, *args, **kwargs):
         query = '''
                 SELECT sync.storage_directory || sync.filename AS sync_file
@@ -200,6 +211,110 @@ class VisualBehaviorLimsAPI(object):
         return self.query(query.format(ophys_experiment_id))
 
     @memoize
+    def get_targeted_structure(self, *args, **kwargs):
+        query = '''
+                SELECT st.acronym
+                FROM ophys_experiments oe
+                LEFT JOIN structures st ON st.id=oe.targeted_structure_id
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+    @memoize
+    def get_imaging_depth(self, *args, **kwargs):
+        query = '''
+                SELECT id.depth
+                FROM ophys_experiments oe
+                JOIN ophys_sessions os ON oe.ophys_session_id = os.id
+                LEFT JOIN imaging_depths id ON id.id=os.imaging_depth_id
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+    @memoize
+    def get_stimulus_name(self, *args, **kwargs):
+        query = '''
+                SELECT os.stimulus_name
+                FROM ophys_experiments oe
+                JOIN ophys_sessions os ON oe.ophys_session_id = os.id
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+    @memoize
+    def get_experiment_date(self, *args, **kwargs):
+        query = '''
+                SELECT os.date_of_acquisition
+                FROM ophys_experiments oe
+                JOIN ophys_sessions os ON oe.ophys_session_id = os.id
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+    @memoize
+    def get_LabTracks_ID(self, *args, **kwargs):
+        query = '''
+                SELECT sp.external_specimen_name
+                FROM ophys_experiments oe
+                JOIN ophys_sessions os ON oe.ophys_session_id = os.id
+                JOIN specimens sp ON sp.id=os.specimen_id
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+
+    @memoize
+    def get_reporter_line(self, *args, **kwargs):
+        query = '''
+                SELECT g.name as reporter_line
+                FROM ophys_experiments oe
+                JOIN ophys_sessions os ON oe.ophys_session_id = os.id
+                JOIN specimens sp ON sp.id=os.specimen_id
+                JOIN donors d ON d.id=sp.donor_id
+                JOIN donors_genotypes dg ON dg.donor_id=d.id
+                JOIN genotypes g ON g.id=dg.genotype_id
+                JOIN genotype_types gt ON gt.id=g.genotype_type_id AND gt.name = 'reporter'
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+    @memoize
+    def get_driver_line(self, *args, **kwargs):
+        query = '''
+                SELECT g.name as driver_line
+                FROM ophys_experiments oe
+                JOIN ophys_sessions os ON oe.ophys_session_id = os.id
+                JOIN specimens sp ON sp.id=os.specimen_id
+                JOIN donors d ON d.id=sp.donor_id
+                JOIN donors_genotypes dg ON dg.donor_id=d.id
+                JOIN genotypes g ON g.id=dg.genotype_id
+                JOIN genotype_types gt ON gt.id=g.genotype_type_id AND gt.name = 'driver'
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+    @memoize
+    def get_full_genotype(self, *args, **kwargs):
+        query = '''
+                SELECT d.full_genotype
+                FROM ophys_experiments oe
+                JOIN ophys_sessions os ON oe.ophys_session_id = os.id
+                JOIN specimens sp ON sp.id=os.specimen_id
+                JOIN donors d ON d.id=sp.donor_id
+                WHERE oe.id= {};
+                '''
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
+        return self.query(query.format(ophys_experiment_id))
+
+
+    @memoize
     def get_max_projection(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         maxInt_a13_file = self.get_maxint_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
@@ -211,7 +326,7 @@ class VisualBehaviorLimsAPI(object):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
         input_extract_traces_file = self.get_input_extract_traces_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         objectlist_file = self.get_objectlist_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
-        return get_roi_metrics(input_extract_traces_file, ophys_experiment_id, objectlist_file)['filtered']
+        return get_roi_metrics(input_extract_traces_file, ophys_experiment_id, objectlist_file)['unfiltered']
 
     @memoize
     def get_roi_masks(self, *args, **kwargs):
@@ -227,7 +342,7 @@ class VisualBehaviorLimsAPI(object):
         input_extract_traces_file = self.get_input_extract_traces_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         with open(input_extract_traces_file, 'r') as w:
             jin = json.load(w)
-        return [roi['id'] for roi in jin['rois']]
+        return np.array([roi['id'] for roi in jin['rois']])
 
     @memoize
     def get_sync_data(self, *args, **kwargs):
@@ -393,27 +508,34 @@ class VisualBehaviorLimsAPI(object):
         ophys_timestamps = self.get_ophys_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         stimulus_timestamps = self.get_stimulus_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
 
+
         metadata = {}
         metadata['ophys_experiment_id'] = ophys_experiment_id
         metadata['experiment_container_id'] = self.get_experiment_container_id(ophys_experiment_id=metadata['ophys_experiment_id'])
-        # metadata['targeted_structure'] = lims_data.structure.values[0]
-        # metadata['imaging_depth'] = int(lims_data.depth.values[0])
+        metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(ophys_timestamps)), 0)
+        metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(stimulus_timestamps)), 0)
+        metadata['targeted_structure'] = self.get_targeted_structure(ophys_experiment_id)
+        metadata['imaging_depth'] = self.get_imaging_depth(ophys_experiment_id)
+        metadata['session_type'] = self.get_stimulus_name(ophys_experiment_id)
+        metadata['experiment_date'] = self.get_experiment_date(ophys_experiment_id)
+        metadata['reporter_line'] = self.get_reporter_line(ophys_experiment_id)
+        metadata['driver_line'] = self.get_driver_line(ophys_experiment_id)
+        metadata['LabTracks_ID'] = self.get_LabTracks_ID(ophys_experiment_id)
+        metadata['full_genotype'] = self.get_full_genotype(ophys_experiment_id)
+
+        # WIP:
         # metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
+
+        # metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
         # metadata['reporter_line'] = 
         # metadata['full_genotype'] = metadata['cre_line'] + ';' + metadata['reporter_line']
-        # metadata['session_type'] = 'behavior_session_' + lims_data.session_type.values[0].split('_')[-1]
-        # metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
-        # metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
         # metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
         # metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
         # # metadata['session_name'] = lims_data.session_name.values[0]
         # # metadata['session_id'] = int(lims_data.session_id.values[0])
         # # metadata['project_id'] = lims_data.project_id.values[0]
         # # metadata['rig'] = lims_data.rig.values[0]
-        metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(ophys_timestamps)), 0)
-        metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(stimulus_timestamps)), 0)
         # # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
-
 
         return metadata
 
@@ -458,7 +580,15 @@ def test_lims_api():
     TD = {'ophys_dir':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/',
          'demix_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5',
          'avgint_a1X_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/avgInt_a1X.png',
-         'rigid_motion_transform_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/702134928_rigid_motion_transform.csv'}
+         'rigid_motion_transform_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/702134928_rigid_motion_transform.csv',
+         'targeted_structure':'VISal',
+         'imaging_depth':175,
+         'stimulus_name':None,
+         'reporter_line':'Ai148(TIT2L-GC6f-ICL-tTA2)',
+         'driver_line':'Vip-IRES-Cre',
+         'LabTracks_ID':'363887',
+         'full_genotype':'Vip-IRES-Cre/wt;Ai148(TIT2L-GC6f-ICL-tTA2)/wt'
+         }
 
     assert api.get_ophys_experiment_dir(oeid) == TD['ophys_dir']
     assert api.get_ophys_experiment_dir(ophys_experiment_id=oeid) == TD['ophys_dir']
@@ -471,6 +601,19 @@ def test_lims_api():
 
     assert api.get_rigid_motion_transform_file(oeid) == TD['rigid_motion_transform_file']
     assert api.get_rigid_motion_transform_file(ophys_experiment_id=oeid) == TD['rigid_motion_transform_file']
+
+    assert api.get_targeted_structure(oeid) == TD['targeted_structure']
+    assert api.get_imaging_depth(oeid) == TD['imaging_depth']
+    assert api.get_stimulus_name(oeid) == TD['stimulus_name']
+
+    assert str(api.get_experiment_date(oeid)) == '2018-05-24 21:27:25'
+    # for key, val in api.get_metadata(oeid, use_acq_trigger=False).items():
+    #     print key, val
+
+    assert api.get_reporter_line(oeid) == TD['reporter_line']
+    assert api.get_driver_line(oeid) == TD['driver_line']
+    assert api.get_LabTracks_ID(oeid) == TD['LabTracks_ID']
+    assert api.get_full_genotype(oeid) == TD['full_genotype']
 
 #     assert lims_data.stim_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_stim.pkl'
 #     assert 'objectlist.txt' in lims_data.objectlist_file

@@ -66,11 +66,8 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     return inner_ax
 
 
-def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
-    if type(roi_mask_dict.keys()[0]) == int:
-        m = roi_mask_dict[int(cell_specimen_id)]
-    else:
-        m = roi_mask_dict[str(cell_specimen_id)]
+def plot_cell_zoom(roi_masks, max_projection, cell_roi_id, spacex=10, spacey=10, show_mask=False, ax=None):
+    m = roi_masks[roi_masks['cell_roi_id']==cell_roi_id]['mask'].values[0]
     (y, x) = np.where(m == 1)
     xmin = np.min(x)
     xmax = np.max(x)
@@ -86,7 +83,7 @@ def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, s
         ax.imshow(mask, cmap='jet', alpha=0.3, vmin=0, vmax=1)
     ax.set_xlim(xmin - spacex, xmax + spacex)
     ax.set_ylim(ymin - spacey, ymax + spacey)
-    ax.set_title('cell ' + str(cell_specimen_id))
+    ax.set_title('cell ' + str(cell_roi_id))
     ax.grid(False)
     ax.axis('off')
     return ax
@@ -295,7 +292,7 @@ def plot_single_trial_trace(trace, timestamps=None, dataset=None, frame_rate=31,
     return ax
 
 
-def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save=False, ax=None):
+def plot_image_response_for_trial_types(analysis, cell_roi_id, legend=True, save=False, ax=None):
     """
     Function to plot trial avereraged response of a cell for all images separately for 'go' and 'catch' trials. Creates figure and axes to plot.
 
@@ -311,19 +308,18 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save=
         suffix = ''
     df = analysis.trial_response_df.copy()
     images = np.sort(df.change_image_name.unique())
-    trials = analysis.dataset.trials.copy()
+    trials = analysis.dataset.get_trials()
     if ax is None:
         figsize = (20, 5)
         fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
-        title = str(cell_index) + '_' + str(
-            df[df.cell == cell_index].cell_specimen_id.values[0]) + '_' + analysis.dataset.analysis_folder
+        title = str(cell_roi_id) + '_' + str(cell_roi_id)
         plt.suptitle(title, x=0.47, y=1., horizontalalignment='center')
     for i, trial_type in enumerate(['go', 'catch']):
         for c, change_image_name in enumerate(images):
             color = get_color_for_image_name(analysis.dataset, change_image_name)
             selected_trials = trials[
                 (trials.change_image_name == change_image_name) & (trials.trial_type == trial_type)].trial.values
-            traces = df[(df.cell == cell_index) & (df.trial.isin(selected_trials))].trace.values
+            traces = df[(df.cell_roi_id == cell_roi_id) & (df.trial.isin(selected_trials))].trace.values
             ax[i] = plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=color,
                                     interval_sec=1,
                                     xlims=[-4, 4], ax=ax[i])
@@ -332,20 +328,20 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save=
     ax[i].set_ylabel('')
     if legend:
         ax[i].legend(images, loc=9, bbox_to_anchor=(1.2, 1))
-    if save:
-        fig.tight_layout()
-        plt.gcf().subplots_adjust(top=0.85)
-        plt.gcf().subplots_adjust(right=0.85)
-        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_responses' + suffix,
-                    analysis.dataset.analysis_folder + '_' + str(cell_index))
+    # if save:
+    #     fig.tight_layout()
+    #     plt.gcf().subplots_adjust(top=0.85)
+    #     plt.gcf().subplots_adjust(right=0.85)
+        # save_figure(fig, figsize, analysis.dataset.analysis_dir, 'image_responses' + suffix,
+        #             analysis.dataset.analysis_folder + '_' + str(cell_roi_id))
 
-        summary_figure_dir = os.path.join(analysis.dataset.cache_dir, 'summary_figures')
-        if not os.path.exists(summary_figure_dir):
-            os.makedirs(summary_figure_dir)
-        save_figure(fig, figsize, summary_figure_dir,
-                    'image_responses' + suffix,
-                    analysis.dataset.analysis_folder + '_' + str(cell_index))
-        plt.close()
+        # summary_figure_dir = os.path.join(analysis.dataset.cache_dir, 'summary_figures')
+        # if not os.path.exists(summary_figure_dir):
+        #     os.makedirs(summary_figure_dir)
+        # save_figure(fig, figsize, summary_figure_dir,
+        #             'image_responses' + suffix,
+        #             analysis.dataset.analysis_folder + '_' + str(cell_roi_id))
+        # plt.close()
     return ax
 
 
@@ -676,26 +672,26 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     xmax = xmin + 60 * length
     interval = 20
-    for cell_index in cell_list:
-        cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell_index)
+    for cell_roi_id in cell_list:
         if ax is None:
             figsize = (15, 4)
             fig, ax = plt.subplots(figsize=figsize)
-        if use_events:
-            ax = plot_trace(dataset.timestamps_ophys, dataset.events[cell_index, :], ax,
-                            title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
-        else:
-            ax = plot_trace(dataset.timestamps_ophys, dataset.dff_traces[cell_index, :], ax,
-                            title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
+        # if use_events:
+        #     ax = plot_trace(dataset.timestamps_ophys, dataset.events[cell_index, :], ax,
+        #                     title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
+        # else:
+        dff_trace = dataset.dff_traces[dataset.dff_traces['cell_roi_id']==cell_roi_id]['dff'].values[0]
+        ax = plot_trace(dataset.ophys_timestamps, dff_trace, ax,
+                        title='cell_specimen_id: ' + str(cell_roi_id), ylabel=ylabel)
         ax = add_stim_color_span(dataset, ax, xlim=[xmin, xmax])
         ax = plot_behavior_events(dataset, ax)
         ax = restrict_axes(xmin, xmax, interval, ax)
-        if save:
-            fig.tight_layout()
-            save_figure(fig, figsize, dataset.analysis_dir, 'behavior_events_traces',
-                        'behavior_events_trace_' + str(cell_specimen_id) + suffix)
-            plt.close()
-            ax = None
+        # if save:
+        #     fig.tight_layout()
+        #     save_figure(fig, figsize, dataset.analysis_dir, 'behavior_events_traces',
+        #                 'behavior_events_trace_' + str(cell_roi_id) + suffix)
+        #     plt.close()
+        #     ax = None
     return ax
 
 
@@ -770,16 +766,15 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         plt.close()
 
 
-def get_colors_for_response_types(values):
-    c = sns.color_palette()
-    colors_dict = {'HIT': c[2], 'MISS': c[8], 'CR': c[0], 'FA': c[3]}
-    colors = []
-    for val in values:
-        colors.append(colors_dict[val])
-    return colors
+# def get_colors_for_response_types(values):
+#     colors_dict = {'HIT': sns.color_palette()[2], 'MISS': sns.color_palette()[8], 'CR': sns.color_palette()[0], 'FA': sns.color_palette()[3]}
+#     colors = []
+#     for val in values:
+#         colors.append(colors_dict[val])
+#     return colors
 
 
-def plot_transition_type_heatmap(analysis, cell_list, cmap='jet', vmax=None, save=False, ax=None, colorbar=True):
+def plot_transition_type_heatmap(analysis, cell_roi_id_list, cmap='jet', vmax=None, save=False, ax=None, colorbar=True):
     response_types = ['HIT', 'MISS', 'FA', 'CR']
     df = analysis.trial_response_df.copy()
     images = np.sort(df.change_image_name.unique())
@@ -787,14 +782,13 @@ def plot_transition_type_heatmap(analysis, cell_list, cmap='jet', vmax=None, sav
     cols = int(len(images) / float(rows))
     figsize = (15, 4 * rows)
     colors = get_colors_for_response_types(response_types)
-    for cell in cell_list:
-        cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
+    for cell_roi_id in cell_roi_id_list:
         if ax is None:
             fig, ax = plt.subplots(rows, cols, figsize=figsize, sharex=True);
             ax = ax.ravel();
         resp_types = []
         for i, image_name in enumerate(images):
-            im_df = df[(df.cell == cell) & (df.change_image_name == image_name) & (df.trial_type != 'autorewarded')]
+            im_df = df[(df.cell_roi_id == cell_roi_id) & (df.change_image_name == image_name) & (df.trial_type != 'autorewarded')]
             n_frames = im_df.trace.values[0].shape[0]
             n_trials = im_df.trace.shape[0]
             response_matrix = np.empty((n_trials, n_frames))
@@ -832,10 +826,10 @@ def plot_transition_type_heatmap(analysis, cell_list, cmap='jet', vmax=None, sav
             if colorbar:
                 plt.colorbar(cax, ax=ax[i]);
         plt.tight_layout()
-        if save:
-            save_figure(fig, figsize, ra.analysis_dir, 'transition_type_heatmap', str(cell_specimen_id))
-            plt.close()
-            ax = None
+        # if save:
+        #     save_figure(fig, figsize, ra.analysis_dir, 'transition_type_heatmap', str(cell_roi_id))
+        #     plt.close()
+        #     ax = None
     return ax
 
 
@@ -872,21 +866,20 @@ def plot_mean_cell_response_heatmap(analysis, cell, values='mean_response', inde
     return ax
 
 
-def plot_ranked_image_tuning_curve_trial_types(analysis, cell, ax=None, save=False, use_events=False):
+def plot_ranked_image_tuning_curve_trial_types(analysis, cell_roi_id, ax=None, save=False, use_events=False):
     from scipy.stats import sem as compute_sem
     from visual_behavior.ophys.response_analysis import utilities as ut
     c = sns.color_palette()
     colors = [c[3], c[0], c[2]]
     ylabel, suffix = get_ylabel_and_suffix(use_events)
-    cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     tdf = ut.get_mean_df(analysis.trial_response_df, analysis,
-                         conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
+                         conditions=['cell_roi_id', 'change_image_name', 'trial_type'])
     if ax is None:
         figsize = (6, 4)
         fig, ax = plt.subplots(figsize=figsize)
     ls_list = []
     for t, trial_type in enumerate(['go', 'catch']):
-        tmp = tdf[(tdf.cell_specimen_id == cell_specimen_id) & (tdf.trial_type == trial_type)]
+        tmp = tdf[(tdf.cell_roi_id == cell_roi_id) & (tdf.trial_type == trial_type)]
         responses = tmp.mean_response.values
         ls = ut.compute_lifetime_sparseness(responses)
         ls_list.append(ls)
@@ -905,9 +898,9 @@ def plot_ranked_image_tuning_curve_trial_types(analysis, cell, ax=None, save=Fal
     ax.legend()
     ax.set_title('lifetime sparseness go: ' + str(np.round(ls_list[0], 3)) + '\nlifetime sparseness catch: ' + str(
         np.round(ls_list[1], 3)));
-    if save:
-        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'lifetime_sparseness' + suffix,
-                    'trial_types_tc_' + str(cell_specimen_id))
+    # if save:
+    #     save_figure(fig, figsize, analysis.dataset.analysis_dir, 'lifetime_sparseness' + suffix,
+    #                 'trial_types_tc_' + str(cell_roi_id))
     return ax
 
 
@@ -946,28 +939,27 @@ def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=Non
     return ax
 
 
-def plot_ranked_image_tuning_curve_flashes(analysis, cell, repeats=[1, 5, 10], ax=None, save=None, use_events=False):
+def plot_ranked_image_tuning_curve_flashes(analysis, cell_roi_id, repeats=[1, 5, 10], ax=None, save=None, use_events=False):
     from scipy.stats import sem as compute_sem
     from visual_behavior.ophys.response_analysis import utilities as ut
     c = sns.color_palette()
     colors = [c[3], c[0], c[2]]
     ylabel, suffix = get_ylabel_and_suffix(use_events)
-    cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     fdf = analysis.flash_response_df.copy()
     fdf = fdf[fdf.repeat.isin(repeats)]
-    fmdf = ut.get_mean_df(fdf, analysis, conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
+    fmdf = ut.get_mean_df(fdf, analysis, conditions=['cell_roi_id', 'image_name', 'repeat'], flashes=True)
     if ax is None:
         figsize = (6, 4)
         fig, ax = plt.subplots(figsize=figsize)
     ls_list = []
     for r, repeat in enumerate(fmdf.repeat.unique()):
-        tmp = fdf[(fdf.cell_specimen_id == cell_specimen_id) & (fdf.repeat == repeat)]
-        responses = fmdf[(fmdf.cell_specimen_id == cell_specimen_id) & (fmdf.repeat == repeat)].mean_response.values
+        tmp = fdf[(fdf.cell_roi_id == cell_roi_id) & (fdf.repeat == repeat)]
+        responses = fmdf[(fmdf.cell_roi_id == cell_roi_id) & (fmdf.repeat == repeat)].mean_response.values
         ls = ut.compute_lifetime_sparseness(responses)
         ls_list.append(ls)
         if r == 0:
             order = np.argsort(responses)[::-1]
-            images = fmdf[(fmdf.cell_specimen_id == cell_specimen_id) & (fmdf.repeat == repeat)].image_name.values
+            images = fmdf[(fmdf.cell_roi_id == cell_roi_id) & (fmdf.repeat == repeat)].image_name.values
             images = images[order]
         for i, image in enumerate(images):
             means = tmp[tmp.image_name == image].mean_response.values
@@ -986,7 +978,7 @@ def plot_ranked_image_tuning_curve_flashes(analysis, cell, repeats=[1, 5, 10], a
     if save:
         fig.tight_layout()
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'lifetime_sparseness_flashes' + suffix,
-                    str(cell_specimen_id))
+                    str(cell_roi_id))
     return ax
 
 
@@ -1033,14 +1025,13 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
     return ax
 
 
-def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use_events=False):
+def plot_mean_response_pref_stim_metrics(analysis, cell_roi_id, ax=None, save=None, use_events=False):
     import visual_behavior.ophys.response_analysis.utilities as ut
-    cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     tdf = analysis.trial_response_df.copy()
-    tdf = tdf[tdf.cell_specimen_id == cell_specimen_id]
+    tdf = tdf[tdf.cell_roi_id == cell_roi_id]
     mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
-                         conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
-    mdf = mdf[mdf.cell_specimen_id == cell_specimen_id]
+                         conditions=['cell_roi_id', 'change_image_name', 'trial_type'])
+    mdf = mdf[mdf.cell_roi_id == cell_roi_id]
     if ax is None:
         figsize = (12, 6)
         fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
@@ -1070,7 +1061,7 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.7)
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'mean_response_pref_stim_metrics',
-                    'metrics_' + str(cell_specimen_id))
+                    'metrics_' + str(cell_roi_id))
         plt.close()
     return ax
 
@@ -1134,33 +1125,33 @@ def plot_images(dataset, orientation='row', color_box=True, save=False, ax=None)
     return ax
 
 
-def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):
+def plot_cell_summary_figure(analysis, cell_roi_id, save=False, show=False, cache_dir=None):
     use_events = analysis.use_events
     dataset = analysis.dataset
     rdf = analysis.trial_response_df.copy()
     fdf = analysis.flash_response_df.copy()
     ylabel, suffix = get_ylabel_and_suffix(use_events)
-    cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index)
 
     figsize = [2 * 11, 2 * 8.5]
     fig = plt.figure(figsize=figsize, facecolor='white')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.2, .7), yspan=(0, .2))
-    ax = plot_behavior_events_trace(dataset, [cell_index], xmin=600, length=2, ax=ax, save=False, use_events=use_events)
-    ax.set_title(dataset.analysis_folder)
+    ax = plot_behavior_events_trace(dataset, [cell_roi_id], xmin=600, length=2, ax=ax, save=False, use_events=use_events)
+    # ax.set_title(dataset.analysis_folder)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .20), yspan=(0, .22))
-    ax = plot_cell_zoom(dataset.roi_mask_dict, dataset.max_projection, cell_specimen_id, spacex=25, spacey=25,
+    ax = plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id, spacex=25, spacey=25,
                         show_mask=True, ax=ax)
-    ax.set_title('cell ' + str(cell_index) + ' - ' + str(cell_specimen_id))
+    ax.set_title('cell ' + str(cell_roi_id))
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .7), yspan=(.16, .35))
-    if use_events:
-        ax = plot_trace(dataset.timestamps_ophys, dataset.events[cell_index, :], ax,
-                        title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
-    else:
-        ax = plot_trace(dataset.timestamps_ophys, dataset.dff_traces[cell_index, :], ax,
-                        title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
+    # if use_events:
+    #     ax = plot_trace(dataset.timestamps_ophys, dataset.events[cell_index, :], ax,
+    #                     title='cell_specimen_id: ' + str(cell_roi_id), ylabel=ylabel)
+    # else:
+    dff_trace = dataset.dff_traces[dataset.dff_traces['cell_roi_id']==cell_roi_id]['dff'].values[0]
+    ax = plot_trace(dataset.ophys_timestamps, dff_trace, ax,
+                    title='cell_roi_id: ' + str(cell_roi_id), ylabel=ylabel)
     ax = plot_behavior_events(dataset, ax)
     ax.set_title('')
 
@@ -1169,11 +1160,11 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     if use_events:
         vmax = 0.03
     else:
-        vmax = np.percentile(dataset.dff_traces[cell_index, :], 99.9)
-    ax = plot_transition_type_heatmap(analysis, [cell_index], vmax=vmax, ax=ax, cmap='magma', colorbar=False)
+        vmax = np.percentile(dff_trace, 99.9)
+    ax = plot_transition_type_heatmap(analysis, [cell_roi_id], vmax=vmax, ax=ax, cmap='magma', colorbar=False)
 
     ax = placeAxesOnGrid(fig, dim=(1, 2), xspan=(.0, .5), yspan=(.53, .75), wspace=0.25, sharex=True, sharey=True)
-    ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save=False, ax=ax)
+    ax = plot_image_response_for_trial_types(analysis, cell_roi_id, legend=False, save=False, ax=ax)
 
     if 'omitted' in analysis.flash_response_df.keys():
         try:
@@ -1210,14 +1201,14 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     #                                     columns='change_image_name', save=False, ax=ax, use_events=use_events)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.5, 0.7), yspan=(0.55, 0.75))
-    ax = plot_ranked_image_tuning_curve_trial_types(analysis, cell_index, ax=ax, save=False, use_events=use_events)
+    ax = plot_ranked_image_tuning_curve_trial_types(analysis, cell_roi_id, ax=ax, save=False, use_events=use_events)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.5, 0.7), yspan=(0.78, 0.99))
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.2, 0.44), yspan=(.79, 1))
-    ax = plot_ranked_image_tuning_curve_flashes(analysis, cell_index, ax=ax, save=False, use_events=use_events)
+    ax = plot_ranked_image_tuning_curve_flashes(analysis, cell_roi_id, ax=ax, save=False, use_events=use_events)
 
     ax = placeAxesOnGrid(fig, dim=(1, 2), xspan=(0.0, 0.5), yspan=(.78, .99), wspace=0.25, sharex=True, sharey=True)
-    ax = plot_mean_response_pref_stim_metrics(analysis, cell_index, ax=ax, save=False, use_events=use_events)
+    ax = plot_mean_response_pref_stim_metrics(analysis, cell_roi_id, ax=ax, save=False, use_events=use_events)
 
     # # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.83, 1), yspan=(.78, 1))
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, .99), yspan=(0.05, .16))
@@ -1227,11 +1218,11 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     # ax.axis('off');
     fig.tight_layout()
     plt.gcf().subplots_adjust(bottom=0.05)
-    if save:
-        save_figure(fig, figsize, analysis.dataset.analysis_dir, 'cell_summary_plots',
-                    str(cell_index) + '_' + str(cell_specimen_id) + suffix)
-        if cache_dir:
-            save_figure(fig, figsize, cache_dir, 'cell_summary_plots',
-                        dataset.analysis_folder + '_' + str(cell_specimen_id) + '_' + str(cell_index) + suffix)
-        if not show:
-            plt.close()
+    # if save:
+    #     save_figure(fig, figsize, analysis.dataset.analysis_dir, 'cell_summary_plots',
+    #                 str(cell_index) + '_' + str(cell_specimen_id) + suffix)
+    #     if cache_dir:
+    #         save_figure(fig, figsize, cache_dir, 'cell_summary_plots',
+    #                     dataset.analysis_folder + '_' + str(cell_specimen_id) + '_' + str(cell_index) + suffix)
+    #     if not show:
+    #         plt.close()

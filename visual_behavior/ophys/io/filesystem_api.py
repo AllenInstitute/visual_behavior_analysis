@@ -3,6 +3,22 @@ import h5py
 import pandas as pd
 import numpy as np
 import json
+from datetime import datetime
+import dateutil.parser
+
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, datetime):
+            return o.isoformat()
+        return json.JSONEncoder.default(self, o)
+
+def date_hook(json_dict):
+    for key, value in json_dict.items():
+        if key == 'experiment_date':
+            json_dict[key] =  dateutil.parser.parse(value)
+        else:
+            pass
+    return json_dict
 
 import matplotlib.image as mpimg  # NOQA: E402
 
@@ -16,13 +32,13 @@ def read_data_h5(filename, loc):
         data = f[loc].value
     return data
 
-def save_data_json(data, filename):
+def save_data_json(data, filename, cls=None):
     with open(filename, 'w') as f :
-        json.dump(data, f, indent=2)
+        json.dump(data, f, indent=2, cls=cls)
 
-def read_data_json(filename):
+def read_data_json(filename, object_hook=None):
     with open(filename, 'r') as f :
-        data = json.load(f)
+        data = json.load(f, object_hook=object_hook)
     return data
 
 def save_df_h5(df, filename, key):
@@ -258,8 +274,8 @@ class VisualBehaviorFileSystemAPI:
         return os.path.join(self.cache_dir, 'metadata.json')
 
     def get_metadata(self, *args, **kwargs):
-        return read_data_json(self.metadata_file_info)
+        return read_data_json(self.metadata_file_info, object_hook=date_hook)
 
     def save_metadata(self, obj):
         print self.metadata_file_info
-        save_data_json(obj.metadata, self.metadata_file_info)
+        save_data_json(obj.metadata, self.metadata_file_info, cls=DateTimeEncoder)

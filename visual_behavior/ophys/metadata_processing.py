@@ -16,4 +16,10 @@ def get_task_parameters(core_data):
     task_parameters['task'] = core_data['metadata']['task']
     task_parameters['n_stimulus_frames'] = core_data['metadata']['n_stimulus_frames']
     task_parameters = pd.DataFrame(task_parameters, columns=task_parameters.keys(), index=['params'])
+
+    for key, val in core_data['metadata'].items():
+        print key, val
+    
+    raise
+
     return task_parameters

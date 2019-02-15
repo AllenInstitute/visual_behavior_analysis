@@ -1,7 +1,7 @@
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 
-def test_lims_database(ophys_experiment_id):
-    
+def test_lims_database():
+    ophys_experiment_id=702134928
     lims_data = LimsDatabase(ophys_experiment_id)
     
     assert lims_data.ophys_experiment_id == ophys_experiment_id

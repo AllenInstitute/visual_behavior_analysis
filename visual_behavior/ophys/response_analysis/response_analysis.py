@@ -192,7 +192,8 @@ class ResponseAnalysis(object):
         flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
 
         flash_response_df['change_time'] = flash_response_df.start_time.values
-        flash_response_df = pd.merge(flash_response_df, self.dataset.all_trials[['change_time', 'trial_type']],
+        all_trials_df = self.dataset.get_trials(auto_rewarded=False, aborted=False, columns=['change_time', 'trial_type'])
+        flash_response_df = pd.merge(flash_response_df, all_trials_df,
                                      on='change_time', how='outer')
 
         # tmp = self.trial_response_df[self.trial_response_df.cell == 0]
