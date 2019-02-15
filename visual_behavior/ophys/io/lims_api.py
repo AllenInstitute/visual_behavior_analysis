@@ -53,223 +53,205 @@ def correct_time_zone(utc_time):
     correct_time = zoned_time.astimezone(timezone('US/Pacific'))
     return correct_time.replace(tzinfo=None)
 
+from allensdk.internal.api import PostgresQueryMixin, OneOrMoreResultExpectedError
 
-class VisualBehaviorLimsAPI(object):
-
-    def __init__(self, dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432):
-
-        self.dbname = dbname
-        self.user = user
-        self.host = host
-        self.password = password
-        self.port = port
-
-    def query(self, q, reduce=True):
-        conn = psycopg2.connect(dbname=self.dbname, user=self.user, host=self.host, password=self.password, port=self.port)
-        cur = conn.cursor()
-        cur.execute(q)
-        if reduce:
-            return one(one(cur.fetchall()))
-        else:
-            return cur.fetchall()
+class VisualBehaviorLimsAPI(PostgresQueryMixin):
 
     @memoize
     def get_ophys_experiment_dir(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT oe.storage_directory
                 FROM ophys_experiments oe
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_experiment_container_id(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT visual_behavior_experiment_container_id 
                 FROM ophys_experiments_visual_behavior_experiment_containers 
                 WHERE ophys_experiment_id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        result = self.query(query.format(ophys_experiment_id), reduce=False)
-        if len(result) == 0:
-            return None
-        else:
-            return one(one(result))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=False)
 
     @memoize
     def get_maxint_file(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT obj.storage_directory || 'maxInt_a13a.png' AS maxint_file
                 FROM ophys_experiments oe
                 LEFT JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id = oe.id AND ocsr.current = 't'
                 LEFT JOIN well_known_files obj ON obj.attachable_id=ocsr.id AND obj.attachable_type = 'OphysCellSegmentationRun' AND obj.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysSegmentationObjects')
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_foraging_id(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT os.foraging_id
                 FROM ophys_experiments oe
                 LEFT JOIN ophys_sessions os ON oe.ophys_session_id = os.id
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_sync_file(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT sync.storage_directory || sync.filename AS sync_file
                 FROM ophys_experiments oe
                 JOIN ophys_sessions os ON oe.ophys_session_id = os.id
                 LEFT JOIN well_known_files sync ON sync.attachable_id=os.id AND sync.attachable_type = 'OphysSession' AND sync.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysRigSync')
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_input_extract_traces_file(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT oe.storage_directory || 'processed/' || oe.id || '_input_extract_traces.json'
                 FROM ophys_experiments oe
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_objectlist_file(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT obj.storage_directory || obj.filename AS obj_file
                 FROM ophys_experiments oe
                 LEFT JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id = oe.id AND ocsr.current = 't'
                 LEFT JOIN well_known_files obj ON obj.attachable_id=ocsr.id AND obj.attachable_type = 'OphysCellSegmentationRun' AND obj.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysSegmentationObjects')
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_dff_file(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT dff.storage_directory || dff.filename AS dff_file
                 FROM ophys_experiments oe
                 LEFT JOIN well_known_files dff ON dff.attachable_id=oe.id AND dff.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysDffTraceFile')
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_stim_file(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT stim.storage_directory || stim.filename AS stim_file
                 FROM ophys_experiments oe
                 JOIN ophys_sessions os ON oe.ophys_session_id = os.id
-                LEFT JOIN well_known_files stim ON stim.attachable_id=os.id AND stim.attachable_type = 'OphysSession' AND stim.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'StimulusPickle')
+                JOIN behavior_sessions bs ON bs.ophys_session_id=os.id
+                LEFT JOIN well_known_files stim ON stim.attachable_id=bs.id AND stim.attachable_type = 'BehaviorSession' AND stim.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'StimulusPickle')
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_demix_file(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT oe.storage_directory || 'demix/' || oe.id || '_demixed_traces.h5' AS demix_file
                 FROM ophys_experiments oe
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_avgint_a1X_file(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT avg.storage_directory || avg.filename AS avgint_file
                 FROM ophys_experiments oe
                 LEFT JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id = oe.id AND ocsr.current = 't'
                 LEFT JOIN well_known_files avg ON avg.attachable_id=ocsr.id AND avg.attachable_type = 'OphysCellSegmentationRun' AND avg.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysAverageIntensityProjectionImage')
                 WHERE oe.id = {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_rigid_motion_transform_file(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT tra.storage_directory || tra.filename AS transform_file
                 FROM ophys_experiments oe
                 LEFT JOIN well_known_files tra ON tra.attachable_id=oe.id AND tra.attachable_type = 'OphysExperiment' AND tra.well_known_file_type_id IN (SELECT id FROM well_known_file_types WHERE name = 'OphysMotionXyOffsetData')
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_targeted_structure(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT st.acronym
                 FROM ophys_experiments oe
                 LEFT JOIN structures st ON st.id=oe.targeted_structure_id
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_imaging_depth(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT id.depth
                 FROM ophys_experiments oe
                 JOIN ophys_sessions os ON oe.ophys_session_id = os.id
                 LEFT JOIN imaging_depths id ON id.id=os.imaging_depth_id
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_stimulus_name(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT os.stimulus_name
                 FROM ophys_experiments oe
                 JOIN ophys_sessions os ON oe.ophys_session_id = os.id
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_experiment_date(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT os.date_of_acquisition
                 FROM ophys_experiments oe
                 JOIN ophys_sessions os ON oe.ophys_session_id = os.id
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_LabTracks_ID(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT sp.external_specimen_name
                 FROM ophys_experiments oe
                 JOIN ophys_sessions os ON oe.ophys_session_id = os.id
                 JOIN specimens sp ON sp.id=os.specimen_id
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
 
     @memoize
     def get_reporter_line(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT g.name as reporter_line
                 FROM ophys_experiments oe
@@ -280,12 +262,12 @@ class VisualBehaviorLimsAPI(object):
                 JOIN genotypes g ON g.id=dg.genotype_id
                 JOIN genotype_types gt ON gt.id=g.genotype_type_id AND gt.name = 'reporter'
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
     @memoize
     def get_driver_line(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT g.name as driver_line
                 FROM ophys_experiments oe
@@ -296,12 +278,16 @@ class VisualBehaviorLimsAPI(object):
                 JOIN genotypes g ON g.id=dg.genotype_id
                 JOIN genotype_types gt ON gt.id=g.genotype_type_id AND gt.name = 'driver'
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)
+        result = self.fetchall(query)
+        if result is None or len(result) < 1:
+            raise OneOrMoreResultExpectedError('Expected one or more, but received: {} results form query'.format(x))
+        return result
+
 
     @memoize
     def get_full_genotype(self, *args, **kwargs):
+        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
         query = '''
                 SELECT d.full_genotype
                 FROM ophys_experiments oe
@@ -309,9 +295,8 @@ class VisualBehaviorLimsAPI(object):
                 JOIN specimens sp ON sp.id=os.specimen_id
                 JOIN donors d ON d.id=sp.donor_id
                 WHERE oe.id= {};
-                '''
-        ophys_experiment_id = kwargs['ophys_experiment_id'] if 'ophys_experiment_id' in kwargs else args[0]
-        return self.query(query.format(ophys_experiment_id))
+                '''.format(ophys_experiment_id)        
+        return self.fetchone(query, strict=True)
 
 
     @memoize
@@ -354,7 +339,8 @@ class VisualBehaviorLimsAPI(object):
     @memoize
     def get_core_data(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
-        pkl = pd.read_pickle(self.get_stim_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs))
+        stim_filepath = self.get_stim_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        pkl = pd.read_pickle(stim_filepath)
         stimulus_timestamps = self.get_stimulus_timestamps(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
         try:
             core_data = foraging.data_to_change_detection_core(pkl, time=stimulus_timestamps)
@@ -488,11 +474,8 @@ class VisualBehaviorLimsAPI(object):
 
     def get_motion_correction(self, *args, **kwargs):
         ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
-        csv_file = self.get_rigid_motion_transform_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
-        csv = pd.read_csv(csv_file, header=None)
-        motion_correction = pd.DataFrame()
-        motion_correction['x_corr'] = csv[1].values
-        motion_correction['y_corr'] = csv[2].values
+        motion_correction_filepath = self.get_rigid_motion_transform_file(*args, ophys_experiment_id=ophys_experiment_id, **kwargs)
+        motion_correction = pd.read_csv(motion_correction_filepath)
         return motion_correction
 
     def get_traces_heatmap(self, ophys_experiment_id=None, use_acq_trigger=False):
@@ -501,6 +484,11 @@ class VisualBehaviorLimsAPI(object):
 
         dff_df = self.get_dff_traces(ophys_experiment_id=ophys_experiment_id, use_acq_trigger=use_acq_trigger)
         print plot_traces_heatmap(dff_df)
+
+    def get_behavior_session_uuid(self, *args, **kwargs):
+        ophys_experiment_id = kwargs.pop('ophys_experiment_id') if 'ophys_experiment_id' in kwargs else args[0]
+        core_data = self.get_core_data(*args, ophys_experiment_id=ophys_experiment_id, use_acq_trigger=False, **kwargs)
+        return core_data['metadata']['behavior_session_uuid']
 
     def get_metadata(self, *args, **kwargs):
         
@@ -522,6 +510,7 @@ class VisualBehaviorLimsAPI(object):
         metadata['driver_line'] = self.get_driver_line(ophys_experiment_id)
         metadata['LabTracks_ID'] = self.get_LabTracks_ID(ophys_experiment_id)
         metadata['full_genotype'] = self.get_full_genotype(ophys_experiment_id)
+        metadata['behavior_session_uuid'] = self.get_behavior_session_uuid(ophys_experiment_id)
 
         # WIP:
         # metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
@@ -571,49 +560,9 @@ class VisualBehaviorLimsAPI_hackEvents(VisualBehaviorLimsAPI):
         return events
 
 
-def test_lims_api():
-
-    oeid = 702134928
-
-    api = VisualBehaviorLimsAPI()
-
-    TD = {'ophys_dir':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/',
-         'demix_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5',
-         'avgint_a1X_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_814561221/avgInt_a1X.png',
-         'rigid_motion_transform_file':'/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/702134928_rigid_motion_transform.csv',
-         'targeted_structure':'VISal',
-         'imaging_depth':175,
-         'stimulus_name':None,
-         'reporter_line':'Ai148(TIT2L-GC6f-ICL-tTA2)',
-         'driver_line':'Vip-IRES-Cre',
-         'LabTracks_ID':'363887',
-         'full_genotype':'Vip-IRES-Cre/wt;Ai148(TIT2L-GC6f-ICL-tTA2)/wt'
-         }
-
-    assert api.get_ophys_experiment_dir(oeid) == TD['ophys_dir']
-    assert api.get_ophys_experiment_dir(ophys_experiment_id=oeid) == TD['ophys_dir']
-
-    assert api.get_demix_file(oeid) == TD['demix_file']
-    assert api.get_demix_file(ophys_experiment_id=oeid) == TD['demix_file']
-
-    assert api.get_avgint_a1X_file(oeid) == TD['avgint_a1X_file']
-    assert api.get_avgint_a1X_file(ophys_experiment_id=oeid) == TD['avgint_a1X_file']
-
-    assert api.get_rigid_motion_transform_file(oeid) == TD['rigid_motion_transform_file']
-    assert api.get_rigid_motion_transform_file(ophys_experiment_id=oeid) == TD['rigid_motion_transform_file']
-
-    assert api.get_targeted_structure(oeid) == TD['targeted_structure']
-    assert api.get_imaging_depth(oeid) == TD['imaging_depth']
-    assert api.get_stimulus_name(oeid) == TD['stimulus_name']
-
-    assert str(api.get_experiment_date(oeid)) == '2018-05-24 21:27:25'
     # for key, val in api.get_metadata(oeid, use_acq_trigger=False).items():
     #     print key, val
 
-    assert api.get_reporter_line(oeid) == TD['reporter_line']
-    assert api.get_driver_line(oeid) == TD['driver_line']
-    assert api.get_LabTracks_ID(oeid) == TD['LabTracks_ID']
-    assert api.get_full_genotype(oeid) == TD['full_genotype']
 
 #     assert lims_data.stim_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_stim.pkl'
 #     assert 'objectlist.txt' in lims_data.objectlist_file
@@ -623,16 +572,20 @@ def test_lims_api():
 #     assert lims_data.sync_file == '/allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/702013508_363887_20180524142941_sync.h5'
 
 
-def test_get_traces_heatmap():
+# def test_get_traces_heatmap():
 
-    oeid = 702134928
+#     oeid = 702134928
 
-    api = VisualBehaviorLimsAPI()
-    api.get_traces_heatmap(ophys_experiment_id=oeid, use_acq_trigger=False)
+#     api = VisualBehaviorLimsAPI()
+#     api.get_traces_heatmap(ophys_experiment_id=oeid, use_acq_trigger=False)
     
 
-if __name__ == '__main__':
-    test_lims_api()
+# if __name__ == '__main__':
+#     test_lims_api()
+
+
+    
+    
     # test_get_traces_heatmap()
 
 # from allensdk.experimental.lazy_property import LazyProperty
