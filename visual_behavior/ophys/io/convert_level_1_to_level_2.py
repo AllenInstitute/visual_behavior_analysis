@@ -79,9 +79,9 @@ def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
     specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
     if len(specimen_driver_line) > 1:
-        specimen_driver_line = specimen_driver_line[0].split('-')[1]
+        specimen_driver_line = specimen_driver_line[1].split('-')[0]
     else:
-        specimen_driver_line = specimen_driver_line[0]
+        specimen_driver_line = specimen_driver_line[0].split('-')[0]
     analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
                            lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
