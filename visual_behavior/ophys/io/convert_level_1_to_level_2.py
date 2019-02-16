@@ -688,15 +688,22 @@ def save_motion_correction(motion_correction, lims_data):
 
 
 def get_max_projection(lims_data):
-    # max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
-    max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
+    max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
+    # max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
     return max_projection
 
 
-def save_max_projection(max_projection, lims_data):
+def save_max_projections(lims_data):
     analysis_dir = get_analysis_dir(lims_data)
+    # regular one
+    max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
     save_data_as_h5(max_projection, 'max_projection', analysis_dir)
     mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
+                 cmap='gray')
+    # contrast enhanced one
+    max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
+    save_data_as_h5(max_projection, 'normalized_max_projection', analysis_dir)
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'), arr=max_projection,
                  cmap='gray')
 
 
@@ -815,7 +822,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     save_motion_correction(motion_correction, lims_data)
 
     max_projection = get_max_projection(lims_data)
-    save_max_projection(max_projection, lims_data)
+    save_max_projections(lims_data)
 
     average_image = get_average_image(lims_data)
     save_average_image(average_image, lims_data)
