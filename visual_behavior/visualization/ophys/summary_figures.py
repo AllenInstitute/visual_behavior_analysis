@@ -10,10 +10,12 @@ import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from visual_behavior.visualization.utils import save_figure
+from visual_behavior.ophys.response_analysis import utilities as ut
 
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True,})
+sns.set_style('white',
+              {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True, })
 sns.set_palette('deep')
 
 
@@ -211,16 +213,19 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
 
         xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec, window=xlims)
-        ax.set_xticks([int(x) for x in xticks])
-        ax.set_xticklabels([int(x) for x in xticklabels])
+        ax.set_xticks(xticks)
+        if interval_sec < 1:
+            ax.set_xticklabels(xticklabels)
+        else:
+            ax.set_xticklabels([int(x) for x in xticklabels])
         ax.set_xlim(xlim[0] * int(frame_rate), xlim[1] * int(frame_rate))
-        ax.set_xlabel('time after change (sec)')
+        ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
 
 
-def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.15, facecolor='gray'):
+def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, flashes=False, alpha=0.15, facecolor='gray'):
     """
     Function to create transparent gray bars spanning the duration of visual stimulus presentations to overlay on existing figure
 
@@ -232,11 +237,18 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, alpha=0.
 
     :return: axis handle
     """
+
     frame_rate = analysis.ophys_frame_rate
     stim_duration = analysis.stimulus_duration
     blank_duration = analysis.blank_duration
-    change_frame = np.abs(analysis.trial_window[0]) * frame_rate
-    end_frame = (analysis.trial_window[1] + np.abs(analysis.trial_window[0])) * frame_rate
+    if flashes:
+        window = analysis.flash_window
+        change_frame = np.abs(window[0]) * frame_rate
+        end_frame = (np.abs(window[0]) + window[1]) * frame_rate
+    else:
+        window = analysis.trial_window
+        change_frame = np.abs(window[0]) * frame_rate
+        end_frame = (window[1] + np.abs(window[0])) * frame_rate
     interval = blank_duration + stim_duration
     if omitted:
         array = np.arange((change_frame + interval) * frame_rate, end_frame, interval * frame_rate)
@@ -372,6 +384,7 @@ def plot_image_change_response(analysis, cell_index, legend=True, save=False, ax
     df = analysis.trial_response_df.copy()
     df = df[df.trial_type == 'go']
     images = np.sort(df.change_image_name.unique())
+    images = images[images != 'omitted']
     trials = analysis.dataset.trials.copy()
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index)
     if ax is None:
@@ -386,10 +399,10 @@ def plot_image_change_response(analysis, cell_index, legend=True, save=False, ax
     ax = plot_flashes_on_trace(ax, analysis, trial_type='go', alpha=0.3)
     ax.set_title('cell_specimen_id: ' + str(cell_specimen_id))
     ax.set_ylabel(ylabel)
-    fig.tight_layout()
     if legend:
         ax.legend(images, loc=9, bbox_to_anchor=(1.19, 1))
     if save:
+        fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(right=0.78)
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'change_responses' + suffix,
@@ -430,7 +443,7 @@ def get_colors_for_response_types(response_types):
 
 
 def plot_trial_trace_heatmap(trial_response_df, cell, cmap='viridis', vmax=0.5, colorbar=False, ax=None, save_dir=None,
-                             window=[-4,4]):
+                             window=[-4, 4]):
     response_types = ['HIT', 'MISS', 'FA', 'CR']
     df = trial_response_df.copy()
     rows = 1
@@ -488,6 +501,7 @@ def plot_trial_trace_heatmap(trial_response_df, cell, cmap='viridis', vmax=0.5, 
 
 def plot_mean_response_by_repeat(analysis, cell, save_dir=None, ax=None):
     flash_response_df = analysis.flash_response_df.copy()
+    flash_response_df = flash_response_df[flash_response_df.omitted == False].copy()
     n_repeats = 15
     palette = sns.color_palette("RdBu", n_colors=n_repeats)
     norm = plt.Normalize(0, n_repeats)
@@ -515,6 +529,7 @@ def plot_mean_response_by_repeat(analysis, cell, save_dir=None, ax=None):
 
 def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
     flash_response_df = analysis.flash_response_df.copy()
+    flash_response_df = flash_response_df[flash_response_df.omitted == False].copy()
     n_blocks = len(flash_response_df.image_block.unique())
     palette = sns.color_palette("RdBu", n_colors=n_blocks)
     norm = plt.Normalize(0, n_blocks)
@@ -563,6 +578,7 @@ def get_ylabel_and_suffix(use_events):
 
 def get_color_for_image_name(dataset, image_name):
     images = np.sort(dataset.stimulus_table.image_name.unique())
+    images = images[images != 'omitted']
     colors = sns.color_palette("hls", len(images))
     image_index = np.where(images == image_name)[0][0]
     color = colors[image_index]
@@ -578,12 +594,13 @@ def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x', zorder=1):
 
 def add_stim_color_span(dataset, ax, xlim=None):
     # xlim should be in seconds
-    stim_table = dataset.stimulus_table.copy()
     if xlim is None:
         stim_table = dataset.stimulus_table.copy()
     else:
         stim_table = dataset.stimulus_table.copy()
         stim_table = stim_table[(stim_table.start_time >= xlim[0]) & (stim_table.end_time <= xlim[1])]
+    if 'omitted' in stim_table.keys():
+        stim_table = stim_table[stim_table.omitted == False].copy()
     for idx in stim_table.index:
         start_time = stim_table.loc[idx]['start_time']
         end_time = stim_table.loc[idx]['end_time']
@@ -687,7 +704,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         sns.despine(ax=ax[i])
 
     for i, cell_index in enumerate(cell_indices):
-        ax[i].set_ylim([np.amin(ymins), np.amax(ymaxs)*1.1])
+        ax[i].set_ylim([np.amin(ymins), np.amax(ymaxs) * 1.1])
 
     i += 1
     ax[i].set_ylim([np.amin(ymins), 1])
@@ -713,7 +730,8 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     # fig.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
     if save:
-        save_figure(fig, figsize, dataset.analysis_dir, 'example_traces', str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
+        save_figure(fig, figsize, dataset.analysis_dir, 'example_traces',
+                    str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
         save_figure(fig, figsize, dataset.cache_dir, 'example_traces',
                     str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
         plt.close()
@@ -868,6 +886,7 @@ def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=Non
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     fdf = analysis.flash_response_df.copy()
+    fdf = fdf[fdf.omitted == False].copy()
     fmdf = ut.get_mean_df(fdf, analysis, conditions=['cell_specimen_id', 'image_name'], flashes=True)
     if ax is None:
         figsize = (6, 4)
@@ -904,6 +923,7 @@ def plot_ranked_image_tuning_curve_flashes(analysis, cell, repeats=[1, 5, 10], a
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     fdf = analysis.flash_response_df.copy()
     fdf = fdf[fdf.repeat.isin(repeats)]
+    fdf = fdf[fdf.omitted == False]
     fmdf = ut.get_mean_df(fdf, analysis, conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
     if ax is None:
         figsize = (6, 4)
@@ -987,6 +1007,8 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     tdf = analysis.trial_response_df.copy()
     tdf = tdf[tdf.cell_specimen_id == cell_specimen_id]
+    fdf = analysis.flash_response_df.copy()
+    fdf = fdf[fdf.cell_specimen_id == cell_specimen_id]
     mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
                          conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     mdf = mdf[mdf.cell_specimen_id == cell_specimen_id]
@@ -995,10 +1017,10 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         figsize = (12, 6)
         fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
         ax = ax.ravel()
+    # pref_image = fdf[fdf.pref_stim == True].image_name.values[0]
     pref_image = tdf[tdf.pref_stim == True].change_image_name.values[0]
-    images = np.sort(tdf.change_image_name.unique())
-    stim_code = np.where(images == pref_image)[0][0]
-    color = get_color_for_image_name(analysis.dataset, pref_image)
+    images = ut.get_image_names(mdf)
+    color = ut.get_color_for_image_name(images, pref_image)
     for i, trial_type in enumerate(['go', 'catch']):
         tmp = tdf[(tdf.trial_type == trial_type) & (tdf.change_image_name == pref_image)]
         mean_df = mdf[(mdf.trial_type == trial_type) & (mdf.change_image_name == pref_image)]
@@ -1009,12 +1031,12 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         p_val = np.round(mean_df.p_value.values[0], 4)
         sd = np.round(mean_df.sd_over_baseline.values[0], 2)
         time_to_peak = np.round(mean_df.time_to_peak.values[0], 3)
-        # fano_factor = np.round(mean_df.fano_factor.values[0], 3)
+        fano_factor = np.round(mean_df.fano_factor.values[0], 3)
         fraction_responsive_trials = np.round(mean_df.fraction_responsive_trials.values[0], 3)
         ax[i].set_title(trial_type + ' - mean: ' + str(mean) + '\np_val: ' + str(p_val) + ', sd: ' + str(sd) +
-                        '\ntime_to_peak: ' + str(time_to_peak) +
-                        '\nfraction_responsive_trials: ' + str(fraction_responsive_trials));
-        # '\nfano_factor: ' + str(fano_factor));
+                        # '\ntime_to_peak: ' + str(time_to_peak) +
+                        '\nfraction_responsive_trials: ' + str(fraction_responsive_trials) +
+                        '\nfano_factor: ' + str(fano_factor));
     ax[1].set_ylabel('')
     if save:
         fig.tight_layout()
@@ -1036,6 +1058,8 @@ def format_table_data(dataset):
 
 def get_color_for_image_name(dataset, image_name):
     images = np.sort(dataset.stimulus_table.image_name.unique())
+    if 'omitted' in images:
+        images = images[images != 'omitted']
     colors = sns.color_palette("hls", len(images))
     image_index = np.where(images == image_name)[0][0]
     color = colors[image_index]
@@ -1061,6 +1085,7 @@ def plot_images(dataset, orientation='row', color_box=True, save=False, ax=None)
 
     stimuli = dataset.stimulus_metadata
     image_names = np.sort(dataset.stimulus_table.image_name.unique())
+    image_names = image_names[image_names != 'omitted']
     colors = sns.color_palette("hls", len(image_names))
     for i, image_name in enumerate(image_names):
         image_index = stimuli[stimuli.image_name == image_name].image_index.values[0]
@@ -1082,6 +1107,33 @@ def plot_images(dataset, orientation='row', color_box=True, save=False, ax=None)
             title = title + '_c'
         save_figure(fig, figsize, dataset.analysis_dir, 'images', title, formats=['.png'])
     return ax
+
+
+def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, save_dir=None, window=None, legend=False):
+    if window is None:
+        window = analysis.flash_window
+    fdf = analysis.flash_response_df.copy()
+    image_names = np.sort(fdf.image_name.unique())[:-1]
+    odf = fdf[fdf.omitted == True].copy()
+    # image_names = np.sort(odf.image_name.unique())
+    # colors = get_colors_for_stim_codes(np.arange(0,len(image_names),1))
+    if ax is None:
+        figsize = (7, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for image_name in image_names:
+        color = ut.get_color_for_image_name(image_names, image_name)
+        traces = odf[(odf.cell_specimen_id == cell_specimen_id) & (odf.image_category == image_name)].trace.values
+        ax = plot_mean_trace(np.asarray(traces), frame_rate=analysis.ophys_frame_rate,
+                             legend_label=image_name, color=color, interval_sec=0.5, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, analysis, flashes=True, trial_type=None, omitted=True, alpha=0.15)
+    ax.set_xlabel('time (sec)')
+    ax.set_title('omitted flash response')
+    if legend:
+        ax.legend(loc=9, bbox_to_anchor=(1.3, 1.3))
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, (6, 5), save_dir, 'omitted_flash_response', str(cell_specimen_id))
+        plt.close()
 
 
 def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):
@@ -1122,30 +1174,28 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
         vmax = np.percentile(dataset.dff_traces[cell_index, :], 99.9)
     ax = plot_transition_type_heatmap(analysis, [cell_index], vmax=vmax, ax=ax, cmap='magma', colorbar=False)
 
-    ax = placeAxesOnGrid(fig, dim=(1, 2), xspan=(.0, .5), yspan=(.53, .75), wspace=0.25, sharex=True, sharey=True)
-    ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save=False, ax=ax)
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .25), yspan=(.53, .75), wspace=0.25, sharex=True, sharey=True)
+    # ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save=False, ax=ax)
+    ax = plot_image_change_response(analysis, cell_index, legend=False, save=False, ax=ax)
 
     if 'omitted' in analysis.flash_response_df.keys():
-        try:
-            ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.46, .66), yspan=(.57, .77))
-            ax = plot_omitted_flash_response_all_stim(analysis.omitted_flash_response_df, cell_index, ax=ax)
-            ax.legend(bbox_to_anchor=(1.4, 2))
-        except:
-            'cant plot omitted flashes'
+        # try:
+        ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.25, .5), yspan=(.53, .75))
+        ax = plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=ax)
+        # ax.legend(bbox_to_anchor=(1.4, 2))
+        # except:
+        #     print('cant plot omitted flashes')
 
     fig.tight_layout()
 
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.0, .2))
     # ax = plot_mean_trace_behavioral_response_types_pref_image(rdf, sdf, cell, behavioral_response_types=['HIT', 'MISS'],
     #                                                              ax=ax)
-    #
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.2, .4))
     # ax = plot_mean_trace_behavioral_response_types_pref_image(rdf, sdf, cell, behavioral_response_types=['FA', 'CR'],
     #                                                              ax=ax)
-    #
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.39, .59))
     # ax = plot_running_not_running(rdf, sdf, cell, trial_type='go', ax=ax)
-    #
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.58, 0.78))
     # ax = plot_engaged_disengaged(rdf, sdf, cell, code='change_image', trial_type='go', ax=ax)
 
@@ -1163,7 +1213,6 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     ax = plot_ranked_image_tuning_curve_trial_types(analysis, cell_index, ax=ax, save=False, use_events=use_events)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.5, 0.7), yspan=(0.78, 0.99))
-    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.2, 0.44), yspan=(.79, 1))
     ax = plot_ranked_image_tuning_curve_flashes(analysis, cell_index, ax=ax, save=False, use_events=use_events)
 
     ax = placeAxesOnGrid(fig, dim=(1, 2), xspan=(0.0, 0.5), yspan=(.78, .99), wspace=0.25, sharex=True, sharey=True)

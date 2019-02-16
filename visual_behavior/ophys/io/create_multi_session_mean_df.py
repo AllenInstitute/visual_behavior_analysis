@@ -12,7 +12,7 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 
 def get_multi_session_mean_df(experiment_ids, cache_dir,
                               conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'],
-                              flashes=False, use_events=False):
+                              flashes=False, use_events=False, omitted=False):
     mega_mdf = pd.DataFrame()
     for experiment_id in experiment_ids:
         print(experiment_id)
@@ -26,6 +26,10 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                     flash_response_df = flash_response_df[flash_response_df.repeat.isin(repeats)]
                 else:
                     flash_response_df = analysis.flash_response_df.copy()
+                if omitted:
+                    flash_response_df = flash_response_df[flash_response_df.omitted==True]
+                else:
+                    flash_response_df = flash_response_df[flash_response_df.omitted==False]
                 flash_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
                                                 flash_response_df.reward_rate.values]
                 mdf = ut.get_mean_df(flash_response_df, analysis,
@@ -43,7 +47,10 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
             print(e)
             print('problem for', experiment_id)
     if flashes:
-        type = '_flashes_'
+        if omitted:
+            type = '_omitted_flashes_'
+        else:
+            type = '_flashes_'
     else:
         type = '_trials_'
     if use_events:

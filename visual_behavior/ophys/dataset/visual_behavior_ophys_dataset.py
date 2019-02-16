@@ -120,9 +120,13 @@ class VisualBehaviorOphysDataset(object):
             key='df', format='fixed'
         )
         self._stimulus_table = self._stimulus_table.reset_index()
+        # self._stimulus_table = self._stimulus_table.drop(
+        #     columns=['orientation', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
+        # )
         self._stimulus_table = self._stimulus_table.drop(
-            columns=['orientation', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
-        )
+            columns=['start_frame', 'end_frame', 'index'])
+        if 'level_0' in self._stimulus_table.keys():
+            self._stimulus_table = self._stimulus_table.drop(columns=['level_0'])
         return self._stimulus_table
 
     stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)

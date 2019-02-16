@@ -202,13 +202,22 @@ def get_image_names(mean_df):
         image_names = np.sort(mean_df.change_image_name.unique())
     else:
         image_names = np.sort(mean_df.image_name.unique())
+        # image_names = image_names[image_names!='omitted']
     return image_names
 
 
 def get_color_for_image_name(image_names, image_name):
-    colors = sns.color_palette("hls", len(image_names))
-    image_index = np.where(image_names == image_name)[0][0]
-    color = colors[image_index]
+    if 'omitted' in image_names:
+        if image_name == 'omitted':
+            color = 'gray'
+        else:
+            colors = sns.color_palette("hls", len(image_names)-1)
+            image_index = np.where(image_names == image_name)[0][0]
+            color = colors[image_index]
+    else:
+        colors = sns.color_palette("hls", len(image_names))
+        image_index = np.where(image_names == image_name)[0][0]
+        color = colors[image_index]
     return color
 
 

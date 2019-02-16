@@ -98,6 +98,8 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     if 'image_name' in df.keys():
         image_name = 'image_name'
         suffix = '_flashes'
+        if 'omitted' in df:
+            df = df[df.omitted==False]
     else:
         image_name = 'change_image_name'
         suffix = '_trials'
@@ -564,7 +566,7 @@ def plot_mean_image_responses_flashes(data, cell_specimen_id, save_figures=False
     image_names = ut.get_image_names(data)
     window = [-0.5, 0.75]
     figsize=(15,3)
-    fig, ax = plt.subplots(1,8, figsize=figsize, sharey=True)
+    fig, ax = plt.subplots(1,len(image_names), figsize=figsize, sharey=True)
     for i,image_name in enumerate(image_names):
         cell_data = data[(data.cell_specimen_id==cell_specimen_id)&(data.image_name==image_name)]
         color = ut.get_color_for_image_name(image_names, image_name)
