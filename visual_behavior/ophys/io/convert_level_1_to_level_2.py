@@ -79,7 +79,7 @@ def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
     specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
     if len(specimen_driver_line) > 1:
-        specimen_driver_line = specimen_driver_line[0].split('-')[0]
+        specimen_driver_line = specimen_driver_line[0].split('-')[1]
     else:
         specimen_driver_line = specimen_driver_line[0]
     analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
@@ -275,9 +275,9 @@ def get_metadata(lims_data, timestamps):
         metadata['imaging_depth'] = None
     else:
         metadata['imaging_depth'] = int(lims_data.depth.values[0])
-    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
+    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[1]
     if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
-        metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0] + ';' + \
+        metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[1] + ';' + \
                                     lims_data['specimen_reporter_line'].values[0].split('(')[0]  # NOQA: E126
     else:
         metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0].split('(')[0]
@@ -288,9 +288,9 @@ def get_metadata(lims_data, timestamps):
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
     # metadata['session_name'] = lims_data.session_name.values[0]
-    # metadata['session_id'] = int(lims_data.session_id.values[0])
-    # metadata['project_id'] = lims_data.project_id.values[0]
-    # metadata['rig'] = lims_data.rig.values[0]
+    metadata['session_id'] = int(lims_data.session_id.values[0])
+    metadata['project_id'] = lims_data.project_id.values[0]
+    metadata['rig'] = lims_data.rig.values[0]
     metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 0)
     metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 0)
     # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
