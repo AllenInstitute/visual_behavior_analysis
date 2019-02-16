@@ -33,7 +33,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     #                                         cell_label=False, include_running=True, use_events=use_events)
 
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
-    pairwise_correlations_df = analysis.get_pairwise_correlations_df()  # flake8: noqa: F841
+    # pairwise_correlations_df = analysis.get_pairwise_correlations_df()  # flake8: noqa: F841
 
     # print('plotting experiment summary figure')
     esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
@@ -48,7 +48,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     if dataset.events is not None:
         use_events = True
         analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
-        pairwise_correlations_df = analysis.get_pairwise_correlations_df()
+        # pairwise_correlations_df = analysis.get_pairwise_correlations_df()
         #
         # print('plotting experiment summary figure')
         # esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
