@@ -39,7 +39,7 @@ class ResponseAnalysis(object):
         self.dataset = dataset
         self.use_events = use_events
         self.overwrite_analysis_files = overwrite_analysis_files
-        self.trial_window = [-2, 8]  # time, in seconds, around change time to extract portion of cell trace
+        self.trial_window = [-4, 8]  # time, in seconds, around change time to extract portion of cell trace
         self.flash_window = [-0.5,
                              0.75]  # time, in seconds, around stimulus flash onset time to extract portion of cell trace
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash

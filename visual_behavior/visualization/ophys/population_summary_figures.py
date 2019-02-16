@@ -210,7 +210,7 @@ def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, win
         change_frame = np.abs(window[0]) * frame_rate
         end_frame = (np.abs(window[0]) + window[1]) * frame_rate
     else:
-        change_frame = window[1] * frame_rate
+        change_frame = np.abs(window[0]) * frame_rate
         end_frame = (window[1] + np.abs(window[0])) * frame_rate
     interval = blank_duration + stim_duration
     if omitted:
