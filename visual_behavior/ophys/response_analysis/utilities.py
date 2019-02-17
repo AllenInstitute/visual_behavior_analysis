@@ -248,6 +248,18 @@ def get_colors_for_image_sets():
     return colors
 
 
+def get_colors_for_changes():
+    colors = [sns.color_palette()[0],
+              sns.color_palette()[3]]
+    return colors
+
+
+def get_colors_for_trained_untrained():
+    colors = [sns.color_palette()[0],
+              sns.color_palette()[3]]
+    return colors
+
+
 def add_metadata_to_mean_df(mdf, metadata):
     metadata = metadata.reset_index()
     metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
@@ -590,3 +602,6 @@ def get_active_cell_indices(dff_traces):
         snr_values.append(snr)
     active_cell_indices = np.argsort(snr_values)[-10:]
     return active_cell_indices
+
+
+

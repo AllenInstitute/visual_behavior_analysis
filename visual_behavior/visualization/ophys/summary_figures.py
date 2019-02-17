@@ -969,19 +969,18 @@ def plot_mean_trace_from_mean_df(mean_df, ophys_frame_rate, label=None, color='k
     times = np.arange(0, len(mean_trace), 1)
     ax.plot(mean_trace, label=label, linewidth=3, color=color)
     ax.fill_between(times, mean_trace + sem, mean_trace - sem, alpha=0.5, color=color)
-    xticks, xticklabels = get_xticks_xticklabels(mean_trace, analysis.ophys_frame_rate, interval_sec=1)
+    xticks, xticklabels = get_xticks_xticklabels(mean_trace, ophys_frame_rate, interval_sec=interval_sec, window=xlims)
     ax.set_xticks(xticks);
     ax.set_xticklabels(xticklabels);
-    ax.set_xlim([xlims[0] * ophys_frame_rate, xlims[1] * ophys_frame_rate])
-    ax.set_xlabel('time after change (s)')
+    ax.set_xlim([xlims[0] * ophys_frame_rate, (np.abs(xlims[0])+xlims[1]) * ophys_frame_rate])
+    ax.set_xlabel('time (sec)')
     ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
 
 
 def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=None, color='k', interval_sec=1,
-                                     xlims=[-4, 4],
-                                     ax=None):
+                                     xlims=[-4, 4], ax=None):
     xlim = [xlims[0] + np.abs(xlims[0]), xlims[1] + np.abs(xlims[0])]
     if ax is None:
         fig, ax = plt.subplots()
@@ -993,9 +992,9 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
             ax.plot(trace, linewidth=1, color='gray')
         ax.plot(mean_trace, label=label, linewidth=3, color=color, zorder=100)
         xticks, xticklabels = get_xticks_xticklabels(mean_trace, frame_rate, interval_sec, window=xlims)
-        ax.set_xticks([int(x) for x in xticks])
-        ax.set_xticklabels([int(x) for x in xticklabels])
-        ax.set_xlim(xlim[0] * int(frame_rate), xlim[1] * int(frame_rate))
+        ax.set_xticks([xticks])
+        ax.set_xticklabels([xticklabels])
+        ax.set_xlim((np.abs(xlim[0])+xlim[1]) * int(frame_rate))
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
@@ -1005,9 +1004,9 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
 def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use_events=False):
     import visual_behavior.ophys.response_analysis.utilities as ut
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
-    tdf = analysis.trial_response_df.copy()
+    tdf = analysis.trial_response_df
     tdf = tdf[tdf.cell_specimen_id == cell_specimen_id]
-    fdf = analysis.flash_response_df.copy()
+    fdf = analysis.flash_response_df
     fdf = fdf[fdf.cell_specimen_id == cell_specimen_id]
     mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
                          conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
@@ -1112,7 +1111,7 @@ def plot_images(dataset, orientation='row', color_box=True, save=False, ax=None)
 def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, save_dir=None, window=None, legend=False):
     if window is None:
         window = analysis.flash_window
-    fdf = analysis.flash_response_df.copy()
+    fdf = analysis.flash_response_df
     image_names = np.sort(fdf.image_name.unique())[:-1]
     odf = fdf[fdf.omitted == True].copy()
     # image_names = np.sort(odf.image_name.unique())
@@ -1123,7 +1122,7 @@ def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, sa
     for image_name in image_names:
         color = ut.get_color_for_image_name(image_names, image_name)
         traces = odf[(odf.cell_specimen_id == cell_specimen_id) & (odf.image_category == image_name)].trace.values
-        ax = plot_mean_trace(np.asarray(traces), frame_rate=analysis.ophys_frame_rate,
+        ax = plot_mean_trace(np.asarray(traces[:-1]), frame_rate=analysis.ophys_frame_rate,
                              legend_label=image_name, color=color, interval_sec=0.5, xlims=window, ax=ax)
     ax = plot_flashes_on_trace(ax, analysis, flashes=True, trial_type=None, omitted=True, alpha=0.15)
     ax.set_xlabel('time (sec)')
@@ -1139,8 +1138,8 @@ def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, sa
 def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):
     use_events = analysis.use_events
     dataset = analysis.dataset
-    rdf = analysis.trial_response_df.copy()
-    fdf = analysis.flash_response_df.copy()
+    rdf = analysis.trial_response_df
+    fdf = analysis.flash_response_df
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index)
 

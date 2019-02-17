@@ -461,6 +461,9 @@ def plot_roi_masks(dataset, save=False):
         save_figure(fig, figsize, dataset.cache_dir, 'roi_masks', dataset.analysis_folder + '_roi_masks')
 
 
+
+
+
 def plot_experiment_summary_figure(analysis, save_dir=None):
     use_events = analysis.use_events
     if use_events:

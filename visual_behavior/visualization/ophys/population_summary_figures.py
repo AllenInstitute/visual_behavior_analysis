@@ -16,8 +16,8 @@ sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'x
 sns.set_palette('deep')
 
 
-def plot_histogram(values, label, color='k', range=(0, 1), ax=None, offset=False):
-    results, edges = np.histogram(values, normed=True, range=range, bins=30)
+def plot_histogram(values, label, color='k', range=(0, 1), ax=None, offset=False, bins=30):
+    results, edges = np.histogram(values, normed=True, range=range, bins=bins)
     binWidth = edges[1] - edges[0]
     if offset:
         ax.bar(edges[:-1]+binWidth, results * binWidth, binWidth, color=color, label=label, alpha=0.5)
@@ -26,7 +26,8 @@ def plot_histogram(values, label, color='k', range=(0, 1), ax=None, offset=False
     return ax
 
 
-def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, folder='figure3', use_events=False):
+def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, folder=None, use_events=False,
+                               interval_sec=1, window=[-4,8]):
     if use_events:
         vmax = 0.003
         label = 'mean event magnitude'
@@ -35,26 +36,28 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
         # vmax = 0.3
         label = 'mean dF/F'
         suffix = ''
-
     image_set = df.image_set.unique()[0]
-    trial_type = df.trial_type.unique()[0]
     cre_line = df.cre_line.unique()[0]
-    image_names = np.sort(df.change_image_name.unique())
+    if 'change_image_name' in df.keys():
+        image_key = 'change_image_name'
+        image_names = np.sort(df.change_image_name.unique())
+        figsize = (20,10)
+    else:
+        image_key = 'image_name'
+        image_names = np.sort(df.image_name.unique())
+        figsize = (12,10)
 
     cells = []
     for image in image_names:
-        tmp = df[(df.change_image_name == image) & (df.pref_stim == True)]
+        tmp = df[(df[image_key] == image) & (df.pref_stim == True)]
         order = np.argsort(tmp.mean_response.values)[::-1]
         cell_ids = list(tmp.cell_specimen_id.values[order])
         cells = cells + cell_ids
-
     if ax is None:
-        figsize = (20, 10)
         fig, ax = plt.subplots(1, len(image_names), figsize=figsize, sharey=True, sharex=True)
         ax = ax.ravel()
-
     for i, image in enumerate(image_names):
-        im_df = df[(df.change_image_name == image)]
+        im_df = df[(df[image_key] == image)]
         len_trace = len(im_df.mean_trace.values[0])
         response_array = np.empty((len(cells), len_trace))
         for x, cell in enumerate(cells):
@@ -65,18 +68,22 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
                 trace = np.empty((len_trace))
                 trace[:] = np.nan
             response_array[x, :] = trace
-        sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='viridis', cbar=colorbar,
+        sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=colorbar,
                     cbar_kws={'label': label})
-        xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=2)
+        xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=interval_sec, window=window)
         ax[i].set_xticks(xticks)
-        ax[i].set_xticklabels([int(x) for x in xticklabels])
+        if interval_sec < 1:
+            ax[i].set_xticklabels(xticklabels)
+        else:
+            ax[i].set_xticklabels([int(x) for x in xticklabels])
         if response_array.shape[0] > 300:
             interval = 100
         else:
             interval = 20
+        ax[i].set_xlim(0, (np.abs(window[0])+window[1])*31.)
         ax[i].set_yticks(np.arange(0, response_array.shape[0], interval))
         ax[i].set_yticklabels(np.arange(0, response_array.shape[0], interval))
-        ax[i].set_xlabel('time after change (s)', fontsize=16)
+        ax[i].set_xlabel('time (sec)', fontsize=16)
         ax[i].set_title(image)
         ax[0].set_ylabel('cells')
     plt.suptitle(cre_line, x=0.52, y=1.02)
@@ -84,11 +91,11 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
     fig.tight_layout()
     if save_dir:
         save_figure(fig, figsize, save_dir, folder,
-                    'change_response_matrix_' + cre_line + '_' + image_set + '_' + trial_type + suffix)
+                    'change_response_matrix_' + cre_line + '_' + image_set + '_' + suffix)
 
 
-def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, use_events=False):
-    # image_set = df.image_set.unique()[0]
+def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, folder=None, use_events=False, colorbar=True):
+    image_set = df.image_set.unique()[0]
     cre_line = df.cre_line.unique()[0]
     # trial_type = df.trial_type.unique()[0]
     #     detectability = get_detectability()
@@ -103,28 +110,20 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     else:
         image_name = 'change_image_name'
         suffix = '_trials'
-    images = np.sort(df[image_name].unique())
-
-    if cre_line == 'Vip-IRES-Cre':
-        interval = 50
-    else:
-        interval = 100
     if use_events:
         vmax = 0.03
         label = 'mean event magnitude'
         suffix = suffix+'_events'
     else:
-        # vmax = 0.3
         label = 'mean dF/F'
         suffix = suffix
-
+    images = np.sort(df[image_name].unique())
     cell_list = []
     for image in images:
         tmp = df[(df[image_name] == image) & (df.pref_stim == True)]
         order = np.argsort(tmp.mean_response.values)[::-1]
         cell_ids = list(tmp.cell_specimen_id.values[order])
         cell_list = cell_list + cell_ids
-
     response_matrix = np.empty((len(cell_list), len(images)))
     for i, cell in enumerate(cell_list):
         responses = []
@@ -132,25 +131,28 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
             response = df[(df.cell_specimen_id == cell) & (df[image_name] == image)].mean_response.values[0]
             responses.append(response)
         response_matrix[i, :] = np.asarray(responses)
-
     if ax is None:
         figsize = (5, 8)
         fig, ax = plt.subplots(figsize=figsize)
         fig.tight_layout()
     ax = sns.heatmap(response_matrix, cmap='magma', linewidths=0, linecolor='white', square=False,
-                     vmin=0, vmax=vmax, robust=True, cbar=True,
+                     vmin=0, vmax=vmax, robust=True, cbar=colorbar,
                      cbar_kws={"drawedges": False, "shrink": 1, "label": label}, ax=ax)
 
     if title is None:
-        title = 'mean response by image'
+        title = 'image set '+image_set
     ax.set_title(title, va='bottom', ha='center')
     ax.set_xticklabels(images, rotation=90)
     ax.set_ylabel('cells')
+    if response_matrix.shape[0] > 300:
+        interval = 100
+    else:
+        interval = 20
     ax.set_yticks(np.arange(0, response_matrix.shape[0], interval))
     ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval))
     if save_dir:
         fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'tuning_curve_heatmaps', title + suffix)
+        save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmap_'+cre_line+'_'+image_set)
 
 
 def plot_mean_response_by_repeat_heatmap(df, cre_line, title=None, ax=None, use_events=False, save_figures=False,
@@ -582,3 +584,78 @@ def plot_mean_image_responses_flashes(data, cell_specimen_id, save_figures=False
     if save_figures:
         save_figure(fig ,figsize, save_dir, folder, str(int(cell_data.experiment_id))+'_'+str(int(cell_specimen_id)))
         plt.close()
+
+
+def plot_change_repeat_response_pref_stim(cdf, cell_specimen_id, window=[-0.5, 0.75], save_figures=False,
+                                          save_dir=None, folder=None, ax=None):
+    cdf = cdf[cdf.pref_stim==True].copy()
+    colors = ut.get_colors_for_changes()
+    if ax is None:
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for c, change in enumerate(np.sort(cdf.change.unique())):
+        if change:
+            label = 'change'
+        else:
+            label = 'repeat'
+        tmp = cdf[cdf.change==change]
+        trace = tmp.mean_trace.values[0]
+        ax = plot_mean_trace_from_mean_df(tmp, 31., legend_label=label, color=colors[c],
+                                         interval_sec=0.5, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, flashes=True, alpha=0.15, window=window)
+    xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=0.5, window=window)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticklabels)
+    ax.set_xlim(0,(np.abs(window[0])+window[1])*31.)
+    ax.legend(bbox_to_anchor=(1.1,1))
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(0, ymax*1.2)
+    if save_figures:
+        save_figure(fig, figsize, save_dir, folder, str(int(cell_specimen_id)))
+    return ax
+
+
+def plot_change_repeat_response_all_stim(cdf, cell_specimen_id, window=[-0.5, 0.75], save_figures=False,
+                                         save_dir=None, folder=None, ax=None):
+    colors = ut.get_colors_for_changes()
+    if ax is None:
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for c, change in enumerate(np.sort(cdf.change.unique())):
+        if change:
+            label = 'change'
+        else:
+            label = 'repeat'
+        tmp = cdf[cdf.change==change]
+        traces = tmp.mean_trace.values
+        ax = sf.plot_mean_trace(traces, 31., legend_label=label, color=colors[c], interval_sec=0.5, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, flashes=True, alpha=0.15, window=window)
+    xticks, xticklabels = sf.get_xticks_xticklabels(np.mean(traces), 31., interval_sec=0.5, window=window)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticklabels)
+    ax.set_xlim(0,(np.abs(window[0])+window[1])*31.)
+    ax.legend(bbox_to_anchor=(1.1,1))
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(0, ymax*1.2)
+    if save_figures:
+        save_figure(fig, figsize, save_dir, folder, str(int(cdf.experiment_id.unique()[0]))+'_'+str(int(cell_specimen_id)))
+        plt.close()
+    return ax
+
+def plot_change_repeat_response(mdf, cell_specimen_id, window=[-0.5, 0.75], save_figures=False,
+                                         save_dir=None, folder=None, ax=None):
+    cdf = mdf[(mdf.cell_specimen_id == cell_specimen_id)].copy()
+    figsize = (10,5)
+    fig, ax = plt.subplots(1,2, figsize=figsize, sharey=True)
+    ax = ax.ravel()
+    ax[0] = plot_change_repeat_response_pref_stim(cdf, cell_specimen_id, window=window, ax=ax[0])
+    ax[0].set_title('preferred image')
+    ax[0].legend_.remove()
+    ax[1] = plot_change_repeat_response_all_stim(cdf, cell_specimen_id, window=window, ax=ax[1])
+    ax[1].set_title('all images')
+    ax[1].set_ylabel('')
+    if save_figures:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, folder, str(int(cdf.experiment_id.unique()[0]))+'_'+str(int(cell_specimen_id)))
+        plt.close()
+    return ax
