@@ -3,7 +3,7 @@ from visual_behavior.ophys.io.convert_level_1_to_level_2 import convert_level_1_
 from visual_behavior.ophys.io.create_analysis_files import create_analysis_files
 from visual_behavior.ophys.io.create_multi_session_mean_df import get_multi_session_mean_df
 
-from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysSession
+from visual_behavior.ophys.dataset.visual_behavior_ophys_session import VisualBehaviorOphysSession
 from visual_behavior.ophys.io.filesystem_api import VisualBehaviorFileSystemAPI
 from visual_behavior.ophys.io.lims_api import VisualBehaviorLimsAPI_hackEvents, VisualBehaviorLimsAPI
 
@@ -13,7 +13,7 @@ import matplotlib
 matplotlib.use('Agg')
 
 
-EXPERIMENT_ID = 702134928
+EXPERIMENT_ID = 789359614
 EVENT_CACHE_DIR = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/events'
 CIRCLECI_SKIPIF = pytest.mark.skipif(os.environ.get('PYTHONPATH','').startswith('/home/circleci'), reason='Cannot test against real files on CircleCI')
 

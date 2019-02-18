@@ -52,7 +52,7 @@ class ResponseAnalysis(object):
         self.baseline_window = np.asarray(
             self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
         self.stimulus_duration = 0.25  # self.dataset.task_parameters['stimulus_duration'].values[0]
-        self.blank_duration = self.dataset.task_parameters['blank_duration'].values[0]
+        self.blank_duration = self.dataset.task_parameters['blank_duration']
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate']
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate']
 
@@ -115,6 +115,7 @@ class ResponseAnalysis(object):
         trial_metadata = trial_metadata.rename(columns={'response_time': 'behavioral_response_time'})
         trial_metadata = trial_metadata.rename(columns={'response_latency': 'behavioral_response_latency'})
         trial_response_df = trial_response_df.merge(trial_metadata, on='trial')
+        trial_response_df.to_pickle('/home/nicholasc/tmp.pkl')
         trial_response_df = ut.annotate_trial_response_df_with_pref_stim(trial_response_df)
         return trial_response_df
 

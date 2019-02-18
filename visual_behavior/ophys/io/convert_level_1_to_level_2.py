@@ -5,7 +5,7 @@
 # """
 
 import os
-from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysSession
+from visual_behavior.ophys.dataset.visual_behavior_ophys_session import VisualBehaviorOphysSession
 from visual_behavior.ophys.io.filesystem_api import VisualBehaviorFileSystemAPI
 from visual_behavior.ophys.io.lims_api import VisualBehaviorLimsAPI_hackEvents
 

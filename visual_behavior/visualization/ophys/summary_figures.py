@@ -695,15 +695,15 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
     return ax
 
 
-def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length_mins, save_dir=None,
-                                     include_running=False, cell_label=False, use_events=False):
-    if use_events:
-        traces = dataset.events
-        cell_label = True
-        suffix = '_events'
-    else:
-        traces = np.array([trace for trace in dataset.dff_traces['dff'].values])
-        suffix = ''
+def plot_example_traces_and_behavior(dataset, cell_roi_ids, xmin_seconds, length_mins, save_dir=None,
+                                     include_running=False, cell_label=False):
+    # if use_events:
+    #     traces = dataset.events
+    #     cell_label = True
+    #     suffix = '_events'
+    # else:
+    # traces = np.array([trace for trace in dataset.dff_traces['dff'].values])
+    suffix = ''
     if include_running:
         n = 2
     else:
@@ -713,12 +713,12 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     xlim = [xmin_seconds, xmax_seconds]
 
     figsize = (15, 10)
-    fig, ax = plt.subplots(len(cell_indices) + n, 1, figsize=figsize, sharex=True)
+    fig, ax = plt.subplots(len(cell_roi_ids) + n, 1, figsize=figsize, sharex=True)
     ax = ax.ravel()
 
     ymins = []
     ymaxs = []
-    for i, cell_index in enumerate(cell_indices):
+    for i, cell_index in enumerate(cell_roi_ids):
         ax[i] = plot_trace(dataset.ophys_timestamps, traces[cell_index, :], ax=ax[i],
                            title='', ylabel=str(cell_index))
         ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
@@ -733,7 +733,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
             ax[i].set_ylabel('dF/F')
         sns.despine(ax=ax[i])
 
-    for i, cell_index in enumerate(cell_indices):
+    for i, cell_roi_id in enumerate(cell_roi_ids):
         ax[i].set_ylim([np.amin(ymins), np.amax(ymaxs)])
 
     i += 1

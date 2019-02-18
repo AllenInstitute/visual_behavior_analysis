@@ -277,11 +277,12 @@ def annotate_trial_response_df_with_pref_stim(trial_response_df):
     mean_response = rdf.groupby([cell_key, 'change_image_name']).apply(get_mean_sem_trace)
     m = mean_response.unstack()
     for cell in m.index:
-        image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
-        pref_image = m.loc[cell]['mean_response'].index[image_index]
-        trials = rdf[(rdf[cell_key] == cell) & (rdf.change_image_name == pref_image)].index
-        for trial in trials:
-            rdf.loc[trial, 'pref_stim'] = True
+        if len(np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0]) > 0:
+            image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
+            pref_image = m.loc[cell]['mean_response'].index[image_index]
+            trials = rdf[(rdf[cell_key] == cell) & (rdf.change_image_name == pref_image)].index
+            for trial in trials:
+                rdf.loc[trial, 'pref_stim'] = True
     return rdf
 
 
@@ -495,12 +496,8 @@ def compute_lifetime_sparseness(image_responses):
     return ls
 
 
-def get_active_cell_indices(dff_traces):
-    snr_values = []
-    for i, trace in enumerate(dff_traces):
-        mean = np.mean(trace, axis=0)
-        std = np.std(trace, axis=0)
-        snr = mean / std
-        snr_values.append(snr)
-    active_cell_indices = np.argsort(snr_values)[-10:]
-    return active_cell_indices
+def get_active_cell_roi_ids(dff_traces_df, N=10):
+    dff_traces_df['mean'] = dff_traces_df['dff'].apply(np.mean)
+    dff_traces_df['std'] = dff_traces_df['dff'].apply(np.std)
+    dff_traces_df['snr'] = dff_traces_df['mean']/dff_traces_df['std']
+    return dff_traces_df.sort_values('snr', ascending=False)['cell_roi_id'].values[:N]

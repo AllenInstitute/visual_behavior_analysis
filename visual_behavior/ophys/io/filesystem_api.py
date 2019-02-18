@@ -4,18 +4,23 @@ import pandas as pd
 import numpy as np
 import json
 from datetime import datetime
+import uuid
 import dateutil.parser
 
 class DateTimeEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, datetime):
             return o.isoformat()
+        elif isinstance(o, uuid.UUID):
+            return str(o)
         return json.JSONEncoder.default(self, o)
 
 def date_hook(json_dict):
     for key, value in json_dict.items():
         if key == 'experiment_date':
             json_dict[key] =  dateutil.parser.parse(value)
+        elif key == 'behavior_session_uuid':
+            json_dict[key] =  uuid.UUID(value)
         else:
             pass
     return json_dict
@@ -72,7 +77,7 @@ class VisualBehaviorFileSystemAPI:
         self.save_corrected_fluorescence_traces(obj)
         self.save_average_image(obj)
         self.save_motion_correction(obj)
-        self.save_events(obj)
+        # self.save_events(obj)
         self.save_metadata(obj)
 
 
@@ -206,13 +211,13 @@ class VisualBehaviorFileSystemAPI:
 
     @property
     def task_parameters_file_info(self):
-        return os.path.join(self.cache_dir, 'task_parameters.h5'), 'data'
+        return os.path.join(self.cache_dir, 'task_parameters.json')
 
     def get_task_parameters(self, *args, **kwargs):
-        return read_df_h5(*self.task_parameters_file_info)
+        return read_data_json(self.task_parameters_file_info, object_hook=date_hook)
 
     def save_task_parameters(self, obj):
-        save_df_h5(obj.task_parameters, *self.task_parameters_file_info)
+        save_data_json(obj.task_parameters, self.task_parameters_file_info, cls=DateTimeEncoder)
 
     @property
     def extended_dataframe_file_info(self):

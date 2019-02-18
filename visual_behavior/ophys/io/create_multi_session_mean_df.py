@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysSession
+from visual_behavior.ophys.dataset.visual_behavior_ophys_session import VisualBehaviorOphysSession
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 import visual_behavior.ophys.response_analysis.utilities as ut
 
