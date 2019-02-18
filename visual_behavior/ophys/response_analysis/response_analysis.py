@@ -120,6 +120,9 @@ class ResponseAnalysis(object):
     def get_trial_response_df(self):
         if self.overwrite_analysis_files:
             print('overwriting analysis files')
+            import h5py
+            file_path = self.get_trial_response_df_path()
+            os.remove(file_path)
             self.trial_response_df = self.generate_trial_response_df()
             self.save_trial_response_df(self.trial_response_df)
         else:
@@ -143,6 +146,7 @@ class ResponseAnalysis(object):
         return path
 
     def generate_flash_response_df(self):
+        print('generating flash response df')
         stimulus_table = ut.annotate_flashes_with_reward_rate(self.dataset)
         row = []
         for cell in self.dataset.cell_indices:
@@ -155,7 +159,7 @@ class ResponseAnalysis(object):
             for flash in stimulus_table.flash_number:
                 flash = int(flash)
                 flash_data = stimulus_table[stimulus_table.flash_number == flash]
-                if 'omitted' in flash_data:
+                if 'omitted' in flash_data.keys():
                     omitted = flash_data.omitted.values[0]
                 else:
                     omitted = False
@@ -213,6 +217,10 @@ class ResponseAnalysis(object):
 
     def get_flash_response_df(self):
         if self.overwrite_analysis_files:
+            # delete old file or else it will keep growing in size
+            import h5py
+            file_path = self.get_flash_response_df_path()
+            os.remove(file_path)
             self.flash_response_df = self.generate_flash_response_df()
             self.save_flash_response_df(self.flash_response_df)
         else:

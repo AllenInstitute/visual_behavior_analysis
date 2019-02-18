@@ -106,9 +106,9 @@ def get_fraction_significant_trials(group):
     return pd.Series({'fraction_significant_trials': fraction_significant_trials})
 
 
-def get_fraction_responsive_trials(group):
-    fraction_responsive_trials = len(group[group.mean_response > 0.05]) / float(len(group))
-    return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
+def get_fraction_active_trials(group):
+    fraction_active_trials = len(group[group.mean_response > 0.05]) / float(len(group))
+    return pd.Series({'fraction_active_trials': fraction_active_trials})
 
 
 def get_fraction_nonzero_trials(group):
@@ -135,11 +135,21 @@ def get_fraction_nonzero_trials(group):
 #     return pd.Series({'reliability': reliability})
 
 
-def get_reliability(group):
+def get_reliability(group, analysis=None, flashes=True):
     from itertools import combinations
     import scipy as sp
+    if analysis and flashes:
+        response_window = [int(np.abs(analysis.flash_window[0]) * 31), int(analysis.flash_window[1] * 31)]
+    elif analysis and not flashes:
+        response_window = [int(np.abs(analysis.trial_window[0]) * 31), int(analysis.trial_window[1] * 31)]
+    elif not analysis and flashes:
+        response_window = [int(0.5 * 31), int(0.75 * 31)]
+    else:
+        response_window = [int(4*31), int(8*31)]
     corr_values = []
     traces = group['trace'].values
+    traces = np.vstack(traces)
+    traces = traces[:, response_window[0]:response_window[1]] #limit to post change window
     combos = combinations(traces, 2)
     corr_values = []
     for combo in combos:
@@ -167,18 +177,17 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     fraction_significant_trials = fraction_significant_trials.reset_index()
     mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
 
-    fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
-    fraction_responsive_trials = fraction_responsive_trials.reset_index()
-    mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
+    fraction_active_trials = rdf.groupby(conditions).apply(get_fraction_active_trials)
+    fraction_active_trials = fraction_active_trials.reset_index()
+    mdf['fraction_active_trials'] = fraction_active_trials.fraction_active_trials
 
     fraction_nonzero_trials = rdf.groupby(conditions).apply(get_fraction_nonzero_trials)
     fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
     mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
 
-    if not flashes: 
-        reliability = rdf.groupby(conditions).apply(get_reliability)
-        reliability = reliability.reset_index()
-        mdf['reliability'] = reliability.reliability
+    # reliability = rdf.groupby(conditions).apply(get_reliability, analysis, flashes)
+    # reliability = reliability.reset_index()
+    # mdf['reliability'] = reliability.reliability
 
     return mdf
 
@@ -362,6 +371,7 @@ def annotate_mean_df_with_pref_stim(mean_df):
         cell_key = 'cell'
     for cell in mdf[cell_key].unique():
         mc = mdf[(mdf[cell_key] == cell)]
+        mc = mc[mc[image_name]!='omitted']
         pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))][image_name].values[0]
         row = mdf[(mdf[cell_key] == cell) & (mdf[image_name] == pref_image)].index
         mdf.loc[row, 'pref_stim'] = True
@@ -443,13 +453,21 @@ def get_gray_response_df(dataset, window=0.5):
 def add_repeat_to_stimulus_table(stimulus_table):
     repeat = []
     n = 0
-    for i, image in enumerate(stimulus_table.image_name.values):
-        if image != stimulus_table.image_name.values[i - 1]:
-            n = 1
-            repeat.append(n)
+    for i, current_image in enumerate(stimulus_table.image_name.values):
+        if current_image == 'omitted':
+            repeat.append(1)
         else:
-            n += 1
-            repeat.append(n)
+            last_image = stimulus_table.image_name.values[i - 1]
+            if last_image == 'omitted':
+                n += 1
+                repeat.append(n)
+            else:
+                if current_image != last_image:
+                    n = 1
+                    repeat.append(n)
+                else:
+                    n += 1
+                    repeat.append(n)
     stimulus_table['repeat'] = repeat
     stimulus_table['repeat'] = [int(r) for r in stimulus_table.repeat.values]
     return stimulus_table

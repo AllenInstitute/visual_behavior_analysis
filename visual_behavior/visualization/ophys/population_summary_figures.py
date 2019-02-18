@@ -45,7 +45,7 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
     else:
         image_key = 'image_name'
         image_names = np.sort(df.image_name.unique())
-        figsize = (12,10)
+        figsize = (12,6)
 
     cells = []
     for image in image_names:
@@ -77,9 +77,9 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
         else:
             ax[i].set_xticklabels([int(x) for x in xticklabels])
         if response_array.shape[0] > 300:
-            interval = 100
+            interval = 500
         else:
-            interval = 20
+            interval = 50
         ax[i].set_xlim(0, (np.abs(window[0])+window[1])*31.)
         ax[i].set_yticks(np.arange(0, response_array.shape[0], interval))
         ax[i].set_yticklabels(np.arange(0, response_array.shape[0], interval))
@@ -153,6 +153,56 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     if save_dir:
         fig.tight_layout()
         save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmap_'+cre_line+'_'+image_set)
+
+
+def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, folder=None,
+                             use_events=False, window=[-4,4]):
+    if use_events:
+        label = 'mean event magnitude'
+        suffix = '_events'
+    else:
+        label = 'mean dF/F'
+        suffix = ''
+    image_set = df.image_set.unique()[0]
+    cre_line = df.cre_line.unique()[0]
+    if ax is None:
+        figsize = (4,7)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    cdf = df[(df.pref_stim==True)]
+    order = np.argsort(cdf.mean_response.values)[::-1]
+    cells = list(cdf.cell_specimen_id.values[order])
+
+    len_trace = len(cdf.mean_trace.values[0])
+    response_array = np.empty((len(cells), len_trace))
+    for x, cell in enumerate(cells):
+        tmp = cdf[cdf.cell_specimen_id == cell]
+        if len(tmp) >= 1:
+            trace = tmp.mean_trace.values[0]
+        else:
+            trace = np.empty((len_trace))
+            trace[:] = np.nan
+        response_array[x, :] = trace
+    sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax, cmap='magma', cbar=colorbar,
+                cbar_kws={'label': label})
+    xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=2, window=window)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([int(xticklabel) for xticklabel in xticklabels])
+    if response_array.shape[0] > 400:
+        interval = 500
+    else:
+        interval = 50
+    ax.set_yticks(np.arange(0, response_array.shape[0], interval))
+    ax.set_yticklabels(np.arange(0, response_array.shape[0], interval))
+    ax.set_xlabel('time after change (s)', fontsize=16)
+    ax.set_title(cre_line)
+    ax.set_ylabel('cells')
+    plt.suptitle('image set '+image_set, x=0.55, y=1.02)
+    plt.gcf().subplots_adjust(top=0.9)
+    fig.tight_layout()
+    if save_dir:
+        save_figure(fig, figsize, save_dir, folder,
+                    'pref_stim_response_matrix_' + cre_line + '_' + image_set + '_' + suffix)
 
 
 def plot_mean_response_by_repeat_heatmap(df, cre_line, title=None, ax=None, use_events=False, save_figures=False,

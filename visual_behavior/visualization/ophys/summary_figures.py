@@ -1031,10 +1031,10 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         sd = np.round(mean_df.sd_over_baseline.values[0], 2)
         time_to_peak = np.round(mean_df.time_to_peak.values[0], 3)
         fano_factor = np.round(mean_df.fano_factor.values[0], 3)
-        fraction_responsive_trials = np.round(mean_df.fraction_responsive_trials.values[0], 3)
+        fraction_active_trials = np.round(mean_df.fraction_active_trials.values[0], 3)
         ax[i].set_title(trial_type + ' - mean: ' + str(mean) + '\np_val: ' + str(p_val) + ', sd: ' + str(sd) +
                         # '\ntime_to_peak: ' + str(time_to_peak) +
-                        '\nfraction_responsive_trials: ' + str(fraction_responsive_trials) +
+                        '\nfraction_active_trials: ' + str(fraction_active_trials) +
                         '\nfano_factor: ' + str(fano_factor));
     ax[1].set_ylabel('')
     if save:
@@ -1133,6 +1133,7 @@ def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, sa
         fig.tight_layout()
         save_figure(fig, (6, 5), save_dir, 'omitted_flash_response', str(cell_specimen_id))
         plt.close()
+    return ax
 
 
 def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):
@@ -1185,8 +1186,6 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
         # except:
         #     print('cant plot omitted flashes')
 
-    fig.tight_layout()
-
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.0, .2))
     # ax = plot_mean_trace_behavioral_response_types_pref_image(rdf, sdf, cell, behavioral_response_types=['HIT', 'MISS'],
     #                                                              ax=ax)
@@ -1197,6 +1196,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     # ax = plot_running_not_running(rdf, sdf, cell, trial_type='go', ax=ax)
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.58, 0.78))
     # ax = plot_engaged_disengaged(rdf, sdf, cell, code='change_image', trial_type='go', ax=ax)
+    fig.tight_layout()
 
     ax = placeAxesOnGrid(fig, dim=(8, 1), xspan=(.68, .86), yspan=(.2, .99), wspace=0.25, hspace=0.25)
     try:
@@ -1223,7 +1223,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     # xtable = ax.table(cellText=table_data.values, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
     # xtable.scale(1, 3)
     # ax.axis('off');
-    fig.tight_layout()
+
     plt.gcf().subplots_adjust(bottom=0.05)
     if save:
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'cell_summary_plots',

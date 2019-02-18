@@ -461,7 +461,60 @@ def plot_roi_masks(dataset, save=False):
         save_figure(fig, figsize, dataset.cache_dir, 'roi_masks', dataset.analysis_folder + '_roi_masks')
 
 
+def plot_average_flash_response_example_cells(analysis, save_figures=False, save_dir=None, folder=None, ax=None):
+    import visual_behavior.ophys.response_analysis.utilities as ut
+    fdf = analysis.flash_response_df.copy()
+    last_flash = fdf.flash_number.unique()[-1] #sometimes last flash is truncated
+    fdf = fdf[fdf.flash_number!=last_flash]
 
+    conditions=['cell_specimen_id', 'image_name']
+    mdf = ut.get_mean_df(fdf, analysis, conditions=conditions, flashes=True)
+
+    active_cell_indices = ut.get_active_cell_indices(analysis.dataset.dff_traces)
+    random_order = np.arange(0,10,1)
+    np.random.shuffle(random_order)
+    active_cell_indices = active_cell_indices[random_order]
+    cell_specimen_ids = [analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index) for cell_index in active_cell_indices]
+
+    image_names = np.sort(mdf.image_name.unique())
+
+    if ax is None:
+        figsize = (12, 10)
+        fig, ax = plt.subplots(len(cell_specimen_ids), len(image_names), figsize=figsize, sharex=True)
+        ax = ax.ravel()
+
+    i = 0
+    for c, cell_specimen_id in enumerate(cell_specimen_ids):
+        cell_data = mdf[(mdf.cell_specimen_id==cell_specimen_id)]
+        maxs = [np.amax(trace) for trace in cell_data.mean_trace.values]
+        ymax = np.amax(maxs)*1.2
+        for m, image_name in enumerate(image_names):
+            cdf = cell_data[(cell_data.image_name==image_name)]
+            color = ut.get_color_for_image_name(image_names, image_name)
+#             ax[i] = psf.plot_mean_trace_from_mean_df(cdf, 31., color=sns.color_palette()[0], interval_sec=0.5,
+#                                                      xlims=analysis.flash_window, ax=ax[i])
+            ax[i] = sf.plot_mean_trace_from_mean_df(cdf, analysis.ophys_frame_rate,
+                                                    color=sns.color_palette()[0], interval_sec=0.5,
+                                                     xlims=analysis.flash_window, ax=ax[i])
+            ax[i] = sf.plot_flashes_on_trace(ax[i], analysis, flashes=True, facecolor=color, alpha=0.3)
+#             ax[i] = psf.plot_flashes_on_trace(ax[i], flashes=True, facecolor=color, window=analysis.flash_window, alpha=0.3)
+            ax[i].vlines(x=-0.05, ymin=0, ymax=0.1, linewidth=3)
+    #         sns.despine(ax=ax[i])
+            ax[i].axis('off')
+            ax[i].set_ylim(-0.05, ymax)
+            if m == 0:
+                ax[i].set_ylabel('x')
+            if c == 0:
+                ax[i].set_title(image_name)
+            if c == len(cell_specimen_ids):
+                ax[i].set_xlabel('time (s)')
+            i+=1
+
+    # fig.tight_layout()
+    if save_figures:
+        if save_dir:
+            sf.save_figure(fig ,figsize, save_dir, folder, dataset.analysis_folder)
+        sf.save_figure(fig ,figsize, analysis.dataset.analysis_dir, 'example_traces_all_flashes', dataset.analysis_folder)
 
 
 def plot_experiment_summary_figure(analysis, save_dir=None):
