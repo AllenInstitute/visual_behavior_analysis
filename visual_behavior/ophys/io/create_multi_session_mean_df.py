@@ -20,6 +20,8 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
         analysis = ResponseAnalysis(dataset, use_events=use_events)
         try:
             if flashes:
+                if 'omitted':
+                    flash_response_df = analysis.omitted_flash_response_df.copy()
                 if 'repeat' in conditions:
                     flash_response_df = analysis.flash_response_df.copy()
                     repeats = [1,5,10,15]
