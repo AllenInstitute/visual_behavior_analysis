@@ -283,7 +283,7 @@ def get_metadata(lims_data, timestamps):
     specimen_driver_line = lims_data['specimen_driver_line'].values[0].split(';')
     if len(specimen_driver_line) > 1:
         metadata['specimen_driver_line'] = specimen_driver_line[1]
-        metadata['cre_line'] = specimen_driver_line[1].split('-')[0]
+        metadata['cre_line'] = specimen_driver_line[1]
     else:
         metadata['cre_line'] = specimen_driver_line[0]
         metadata['specimen_driver_line'] = specimen_driver_line[0]
