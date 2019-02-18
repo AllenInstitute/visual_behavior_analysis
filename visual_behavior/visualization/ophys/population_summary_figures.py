@@ -197,9 +197,9 @@ def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=Non
     ax.set_xlabel('time after change (s)', fontsize=16)
     ax.set_title(cre_line)
     ax.set_ylabel('cells')
-    plt.suptitle('image set '+image_set, x=0.55, y=1.02)
-    plt.gcf().subplots_adjust(top=0.9)
+    plt.suptitle('image set '+image_set, x=0.58, y=1.01, fontsize=18)
     fig.tight_layout()
+    plt.gcf().subplots_adjust(top=0.85)
     if save_dir:
         save_figure(fig, figsize, save_dir, folder,
                     'pref_stim_response_matrix_' + cre_line + '_' + image_set + '_' + suffix)

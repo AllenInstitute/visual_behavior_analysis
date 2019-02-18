@@ -471,7 +471,7 @@ def plot_average_flash_response_example_cells(analysis, save_figures=False, save
     mdf = ut.get_mean_df(fdf, analysis, conditions=conditions, flashes=True)
 
     active_cell_indices = ut.get_active_cell_indices(analysis.dataset.dff_traces)
-    random_order = np.arange(0,10,1)
+    random_order = np.arange(0,len(active_cell_indices),1)
     np.random.shuffle(random_order)
     active_cell_indices = active_cell_indices[random_order]
     cell_specimen_ids = [analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index) for cell_index in active_cell_indices]
@@ -513,8 +513,8 @@ def plot_average_flash_response_example_cells(analysis, save_figures=False, save
     # fig.tight_layout()
     if save_figures:
         if save_dir:
-            sf.save_figure(fig ,figsize, save_dir, folder, dataset.analysis_folder)
-        sf.save_figure(fig ,figsize, analysis.dataset.analysis_dir, 'example_traces_all_flashes', dataset.analysis_folder)
+            sf.save_figure(fig ,figsize, save_dir, folder, analysis.dataset.analysis_folder)
+        sf.save_figure(fig ,figsize, analysis.dataset.analysis_dir, 'example_traces_all_flashes', analysis.dataset.analysis_folder)
 
 
 def plot_experiment_summary_figure(analysis, save_dir=None):
