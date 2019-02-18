@@ -53,8 +53,8 @@ class ResponseAnalysis(object):
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate'].values[0]
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
 
-        self.get_trial_response_df()
-        self.get_flash_response_df()
+        # self.get_trial_response_df()
+        # self.get_flash_response_df()
         self.get_omitted_flash_response_df()
 
     def get_trial_response_df_path(self):
