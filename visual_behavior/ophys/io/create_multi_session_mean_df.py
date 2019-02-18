@@ -18,34 +18,37 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
         print(experiment_id)
         dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
         analysis = ResponseAnalysis(dataset, use_events=use_events)
-        try:
-            if flashes:
-                if omitted:
-                    flash_response_df = analysis.omitted_flash_response_df.copy()
+        # try:
+        if flashes:
+            if omitted:
+                print('using omitted')
+                flash_response_df = analysis.omitted_flash_response_df.copy()
+                print(len(flash_response_df))
+            elif not omitted:
                 if 'repeat' in conditions:
                     flash_response_df = analysis.flash_response_df.copy()
                     repeats = [1,5,10,15]
                     flash_response_df = flash_response_df[flash_response_df.repeat.isin(repeats)]
                 else:
                     flash_response_df = analysis.flash_response_df.copy()
-                flash_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
-                                                flash_response_df.reward_rate.values]
-                last_flash = flash_response_df.flash_number.unique()[-1]  # sometimes last flash is truncated
-                flash_response_df = flash_response_df[flash_response_df.flash_number != last_flash]
-                mdf = ut.get_mean_df(flash_response_df, analysis,
-                                     conditions=conditions, flashes=True)
-                mdf['experiment_id'] = dataset.experiment_id
-                mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
-                mega_mdf = pd.concat([mega_mdf, mdf])
-            else:
-                mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
-                                     conditions=conditions)
-                mdf['experiment_id'] = dataset.experiment_id
-                mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
-                mega_mdf = pd.concat([mega_mdf, mdf])
-        except Exception as e:  # flake8: noqa: E722
-            print(e)
-            print('problem for', experiment_id)
+            flash_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
+                                            flash_response_df.reward_rate.values]
+            last_flash = flash_response_df.flash_number.unique()[-1]  # sometimes last flash is truncated
+            flash_response_df = flash_response_df[flash_response_df.flash_number != last_flash]
+            mdf = ut.get_mean_df(flash_response_df, analysis,
+                                 conditions=conditions, flashes=True)
+            mdf['experiment_id'] = dataset.experiment_id
+            mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
+            mega_mdf = pd.concat([mega_mdf, mdf])
+        else:
+            mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
+                                 conditions=conditions)
+            mdf['experiment_id'] = dataset.experiment_id
+            mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
+            mega_mdf = pd.concat([mega_mdf, mdf])
+        # except Exception as e:  # flake8: noqa: E722
+        #     print(e)
+        #     print('problem for', experiment_id)
     if flashes:
         if omitted:
             type = '_omitted_flashes_'
@@ -105,10 +108,18 @@ if __name__ == '__main__':
                       773816712, 773843260, 774370025, 774379465, 775011398, 775429615,
                       776042634]
 
+    non_omitted = [639253368, 639438856, 639769395, 639932228, 644942849, 645035903,
+                    645086795, 645362806, 646922970, 647108734, 647551128, 647887770, 648647430,
+                    649118720, 649318212, 685744008,686726085]
+
+    experiment_ids = [expt_id for expt_id in experiment_ids if expt_id not in non_omitted]
+
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id', 'image_name'], flashes=True, omitted=True)
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'image_name'], flashes=True)
-    get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
+    # get_multi_session_mean_df(experiment_ids, cache_dir,
+    #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
     # get_multi_session_mean_df(experiment_ids, cache_dir,
