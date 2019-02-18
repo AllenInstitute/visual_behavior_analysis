@@ -26,6 +26,7 @@ def plot_histogram(values, label, color='k', range=(0, 1), ax=None, offset=False
     return ax
 
 
+
 def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, folder=None, use_events=False,
                                interval_sec=1, window=[-4,8]):
     if use_events:
@@ -45,7 +46,7 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
     else:
         image_key = 'image_name'
         image_names = np.sort(df.image_name.unique())
-        figsize = (12,6)
+        figsize = (12,7)
 
     cells = []
     for image in image_names:
@@ -86,9 +87,9 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
         ax[i].set_xlabel('time (sec)', fontsize=16)
         ax[i].set_title(image)
         ax[0].set_ylabel('cells')
-    plt.suptitle(cre_line, x=0.52, y=1.02)
-    plt.gcf().subplots_adjust(top=0.9)
+    plt.suptitle('image set '+image_set+'\n'+cre_line, x=0.52, y=.98, fontsize=18, horizontalalignment='center')
     fig.tight_layout()
+    plt.gcf().subplots_adjust(top=0.85)
     if save_dir:
         save_figure(fig, figsize, save_dir, folder,
                     'change_response_matrix_' + cre_line + '_' + image_set + '_' + suffix)
@@ -139,9 +140,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
                      vmin=0, vmax=vmax, robust=True, cbar=colorbar,
                      cbar_kws={"drawedges": False, "shrink": 1, "label": label}, ax=ax)
 
-    if title is None:
-        title = 'image set '+image_set
-    ax.set_title(title, va='bottom', ha='center')
+    ax.set_title(cre_line, va='bottom', ha='center')
     ax.set_xticklabels(images, rotation=90)
     ax.set_ylabel('cells')
     if response_matrix.shape[0] > 300:
@@ -151,7 +150,9 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     ax.set_yticks(np.arange(0, response_matrix.shape[0], interval))
     ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval))
     if save_dir:
+        plt.suptitle('image set ' + image_set, x=0.46, y=0.99, fontsize=18)
         fig.tight_layout()
+        plt.gcf().subplots_adjust(top=0.9)
         save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmap_'+cre_line+'_'+image_set)
 
 
@@ -197,9 +198,9 @@ def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=Non
     ax.set_xlabel('time after change (s)', fontsize=16)
     ax.set_title(cre_line)
     ax.set_ylabel('cells')
-    plt.suptitle('image set '+image_set, x=0.58, y=1.01, fontsize=18)
+    plt.suptitle('image set '+image_set, x=0.59, y=.99, fontsize=18)
     fig.tight_layout()
-    plt.gcf().subplots_adjust(top=0.85)
+    plt.gcf().subplots_adjust(top=0.9)
     if save_dir:
         save_figure(fig, figsize, save_dir, folder,
                     'pref_stim_response_matrix_' + cre_line + '_' + image_set + '_' + suffix)

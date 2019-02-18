@@ -71,10 +71,12 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
     elif len(conditions) == 2:
         filename = 'mean' + type + conditions[1] + suffix + '_df.h5'
 
+    print('saving multi session mean df to ',filename)
     mega_mdf.to_hdf(
         os.path.join(mega_mdf_write_dir, filename),
         key='df',
         format='fixed')
+    print('saved')
 
 
 if __name__ == '__main__':
