@@ -256,7 +256,6 @@ def plot_mean_response_by_repeat_heatmap(df, cre_line, title=None, ax=None, use_
         save_figure(fig, figsize, save_dir, folder, 'repeat_response_heatmap_'+cre_line+'_'+image_set+suffix)
     return ax
 
-
 def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4,4], alpha=0.15, facecolor='gray'):
     frame_rate = 31.
     stim_duration = .25
@@ -269,7 +268,8 @@ def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, win
         end_frame = (window[1] + np.abs(window[0])) * frame_rate
     interval = blank_duration + stim_duration
     if omitted:
-        array = np.arange((change_frame + interval) * frame_rate, end_frame, interval * frame_rate)
+        array = np.arange((change_frame + interval), end_frame, interval * frame_rate)
+        array = array[1:]
     else:
         array = np.arange(change_frame, end_frame, interval * frame_rate)
     for i, vals in enumerate(array):
@@ -301,7 +301,10 @@ def plot_mean_trace_from_mean_df(cell_data, frame_rate=31., ylabel='dF/F', legen
 
     xticks, xticklabels = sf.get_xticks_xticklabels(trace, frame_rate, interval_sec, window=xlims)
     ax.set_xticks(xticks)
-    ax.set_xticklabels(xticklabels)
+    if interval_sec >=1:
+        ax.set_xticklabels([int(x) for x in xticklabels])
+    else:
+        ax.set_xticklabels(xticklabels)
     ax.set_xlim(xlim[0] * int(frame_rate), xlim[1] * int(frame_rate))
     ax.set_xlabel('time (s)')
     ax.set_ylabel(ylabel)
@@ -656,6 +659,7 @@ def plot_change_repeat_response_pref_stim(cdf, cell_specimen_id, window=[-0.5, 0
     ax = plot_flashes_on_trace(ax, flashes=True, alpha=0.15, window=window)
     xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=0.5, window=window)
     ax.set_xticks(xticks)
+
     ax.set_xticklabels(xticklabels)
     ax.set_xlim(0,(np.abs(window[0])+window[1])*31.)
     ax.legend(bbox_to_anchor=(1.1,1))
