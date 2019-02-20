@@ -6,6 +6,7 @@ import pandas as pd
 from ..trials import masks
 from ...utilities import get_response_rates, flatten_list
 from ...metrics import d_prime
+from ...translator.core.annotate import assign_trial_description
 
 
 def discrim(
@@ -111,7 +112,8 @@ def peak_false_alarm_rate(session_trials):
 
 
 def fraction_time_by_trial_type(session_trials, trial_type='aborted'):
-    trial_fractions = session_trials.groupby('trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
+    session_trials['full_trial_type'] = session_trials.apply(assign_trial_description,axis=1)
+    trial_fractions = session_trials.groupby('full_trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
     try:
         return trial_fractions[trial_type]
     except KeyError:
