@@ -388,7 +388,24 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     licks = core_data['licks']
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
-    stimulus_table = core_data['visual_stimuli'][:-10].copy() # ignore last 10 flashes
+    stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
+    if 'omitted_stimuli' in core_data:
+        if len(core_data['omitted_stimuli']) > 0: #sometimes there is a key but empty values
+            omitted_flash = core_data['omitted_stimuli'].copy()
+            omitted_flash = omitted_flash[['frame']]
+            omitted_flash['omitted'] = True
+            flashes = stimulus_table.merge(omitted_flash, how='outer', on='frame')
+            flashes['omitted'] = [True if omitted is True else False for omitted in flashes.omitted.values]
+            flashes = flashes.sort_values(by='frame').reset_index().drop(columns=['index']).fillna(method='ffill')
+            flashes = flashes[['frame', 'end_frame', 'time', 'image_category', 'image_name', 'omitted']]
+            flashes = flashes.reset_index()
+            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for row
+                                  in range(len(flashes))]
+            stimulus_table = flashes.copy()
+        else:
+            stimulus_table['omitted'] = False
+    else:
+        stimulus_table['omitted'] = False
     # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
     if 'omitted_stimuli' in core_data:
         if len(core_data['omitted_stimuli']) > 0: #sometimes there is a key but empty values
