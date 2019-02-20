@@ -76,6 +76,7 @@ DEFAULT_SUMMARY_METRICS = dict(
     change_time_distribution=session_metrics.change_time_distribution,
     # trial_duration=session_metrics.trial_duration,
     user_id=session_metrics.user_id,
+    rig_id=session_metrics.rig_id,
     # filename=session_metrics.filename,
     stimulus=session_metrics.stimulus,
     stage=session_metrics.training_stage,
