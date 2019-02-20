@@ -112,7 +112,7 @@ def peak_false_alarm_rate(session_trials):
 
 
 def fraction_time_by_trial_type(session_trials, trial_type='aborted'):
-    session_trials['full_trial_type'] = session_trials.apply(assign_trial_description,axis=1)
+    session_trials['full_trial_type'] = session_trials.apply(assign_trial_description, axis=1)
     trial_fractions = session_trials.groupby('full_trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
     try:
         return trial_fractions[trial_type]
@@ -185,6 +185,10 @@ def trial_duration(session_trials):
 
 def user_id(session_trials):
     return session_trials.iloc[0].user_id
+
+
+def rig_id(session_trials):
+    return session_trials.iloc[0].rig_id
 
 
 def filename(session_trials):
