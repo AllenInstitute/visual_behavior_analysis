@@ -407,23 +407,6 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     else:
         stimulus_table['omitted'] = False
     # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
-    if 'omitted_stimuli' in core_data:
-        if len(core_data['omitted_stimuli']) > 0: #sometimes there is a key but empty values
-            omitted_flash = core_data['omitted_stimuli'].copy()
-            omitted_flash = omitted_flash[['frame']]
-            omitted_flash['omitted'] = True
-            flashes = stimulus_table.merge(omitted_flash, how='outer', on='frame')
-            flashes['omitted'] = [True if omitted is True else False for omitted in flashes.omitted.values]
-            flashes = flashes.sort_values(by='frame').reset_index().drop(columns=['index']).fillna(method='ffill')
-            flashes = flashes[['frame', 'end_frame', 'time', 'image_category', 'image_name', 'omitted']]
-            flashes = flashes.reset_index()
-            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for row
-                                  in range(len(flashes))]
-            stimulus_table = flashes.copy()
-        else:
-            stimulus_table['omitted'] = False
-    else:
-        stimulus_table['omitted'] = False
     if np.isnan(stimulus_table.loc[0, 'end_frame']): #exception for cases where the first flash in the session is omitted
         stimulus_table = stimulus_table.drop(index=0)
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
