@@ -604,6 +604,10 @@ def colormap(trial_type, palette='trial_types'):
     return colors.get(trial_type, 'white')
 
 
+def assign_trial_description(trial, palette='trial_types'):
+    return trial_translator(trial['trial_type'], trial['response'])
+
+
 def assign_color(trial, palette='trial_types'):
 
     trial_type = trial_translator(trial['trial_type'], trial['response'])
