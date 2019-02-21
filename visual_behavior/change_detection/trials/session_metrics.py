@@ -6,6 +6,8 @@ import pandas as pd
 from ..trials import masks
 from ...utilities import get_response_rates, flatten_list
 from ...metrics import d_prime
+from ...translator.core.annotate import assign_trial_description
+from ...devices import get_rig_id
 
 
 def discrim(
@@ -57,6 +59,7 @@ def lick_latency(session_trials, percentile=50, trial_types=('go', )):
     """
     mask = masks.trial_types(session_trials, trial_types)
     quantile = session_trials[mask]['response_latency']\
+        .replace([np.inf, -np.inf], np.nan) \
         .dropna() \
         .quantile(percentile / 100.0)
 
@@ -86,6 +89,8 @@ def earned_water(session_trials):
 def peak_dprime(session_trials):
     mask = (session_trials['trial_type'] != 'aborted')
     _, _, dp = get_response_rates(session_trials[mask], sliding_window=100)
+    if all(np.isnan(dp)):
+        return np.nan
     try:
         return np.nanmax(dp[50:])
     except ValueError:
@@ -95,6 +100,8 @@ def peak_dprime(session_trials):
 def peak_hit_rate(session_trials):
     mask = (session_trials['trial_type'] != 'aborted')
     hr, _, _ = get_response_rates(session_trials[mask], sliding_window=100)
+    if all(np.isnan(hr)):
+        return np.nan
     try:
         return np.nanmax(hr[50:])
     except ValueError:
@@ -104,6 +111,8 @@ def peak_hit_rate(session_trials):
 def peak_false_alarm_rate(session_trials):
     mask = (session_trials['trial_type'] != 'aborted')
     _, far, _ = get_response_rates(session_trials[mask], sliding_window=100)
+    if all(np.isnan(far)):
+        return np.nan
     try:
         return np.nanmax(far[50:])
     except ValueError:
@@ -111,7 +120,8 @@ def peak_false_alarm_rate(session_trials):
 
 
 def fraction_time_by_trial_type(session_trials, trial_type='aborted'):
-    trial_fractions = session_trials.groupby('trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
+    session_trials['full_trial_type'] = session_trials.apply(assign_trial_description, axis=1)
+    trial_fractions = session_trials.groupby('full_trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
     try:
         return trial_fractions[trial_type]
     except KeyError:
@@ -183,6 +193,16 @@ def trial_duration(session_trials):
 
 def user_id(session_trials):
     return session_trials.iloc[0].user_id
+
+
+def rig_id(session_trials):
+    if 'computer_name' in session_trials.columns:
+        return get_rig_id(session_trials.iloc[0].computer_name)
+    else:
+        try:
+            return session_trials.iloc[0].rig_id
+        except AttributeError:
+            return 'unknown'
 
 
 def filename(session_trials):

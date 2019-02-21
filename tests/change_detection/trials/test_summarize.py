@@ -14,7 +14,7 @@ def test_session_level_summary(mock_trials_fixture, session_summary):
     )
 
 
-def test_epoch_level_summary(mock_trials_fixture,epoch_summary):
+def test_epoch_level_summary(mock_trials_fixture, epoch_summary):
     summary = summarize.epoch_level_summary(mock_trials_fixture)
     print(summary)
     print(epoch_summary)
