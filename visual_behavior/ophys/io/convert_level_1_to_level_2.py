@@ -401,6 +401,8 @@ def get_task_parameters(core_data):
     task_parameters['stimulus_duration'] = core_data['metadata']['stim_duration']
     if 'omitted_flash_fraction' in core_data['metadata']['params'].keys():
         task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['omitted_flash_fraction']
+    elif 'flash_omit_probability' in core_data['metadata']['params'].keys():
+        task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['flash_omit_probability']
     else:
         task_parameters['omitted_flash_fraction'] = None
     task_parameters['response_window'] = [core_data['metadata']['response_window']]
@@ -429,12 +431,30 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
     stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
+    if 'omitted_stimuli' in core_data:
+        if len(core_data['omitted_stimuli']) > 0:  # sometimes there is a key but empty values
+            omitted_flash = core_data['omitted_stimuli'].copy()
+            omitted_flash = omitted_flash[['frame']]
+            omitted_flash['omitted'] = True
+            flashes = stimulus_table.merge(omitted_flash, how='outer', on='frame')
+            flashes['omitted'] = [True if omitted is True else False for omitted in flashes.omitted.values]
+            flashes = flashes.sort_values(by='frame').reset_index().drop(columns=['index']).fillna(method='ffill')
+            flashes = flashes[['frame', 'end_frame', 'time', 'image_category', 'image_name', 'omitted']]
+            flashes = flashes.reset_index()
+            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for
+                                  row
+                                  in range(len(flashes))]
+            stimulus_table = flashes.copy()
+        else:
+            stimulus_table['omitted'] = False
+    else:
+        stimulus_table['omitted'] = False
     # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
     start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
     stimulus_table.start_time = start_time
-    end_time = [timestamps_stimulus[end_frame] for end_frame in stimulus_table.end_frame.values]
+    end_time = [timestamps_stimulus[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
     stimulus_table.insert(loc=4, column='end_time', value=end_time)
     save_dataframe_as_h5(stimulus_table, 'stimulus_table', get_analysis_dir(lims_data))
 
@@ -837,8 +857,8 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     average_image = get_average_image(lims_data)
     save_average_image(average_image, lims_data)
 
-    # roi_validation = get_roi_validation(lims_data)
-    # save_roi_validation(roi_validation, lims_data)
+    roi_validation = get_roi_validation(lims_data)
+    save_roi_validation(roi_validation, lims_data)
 
     logger.info('done converting')
     print('done converting')
