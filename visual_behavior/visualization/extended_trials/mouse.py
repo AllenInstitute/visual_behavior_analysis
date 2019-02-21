@@ -4,7 +4,7 @@ import pandas as pd
 import warnings
 from visual_behavior.utilities import flatten_list
 from visual_behavior.change_detection.trials import summarize
-from visual_behavior.translator.core.annotate import colormap, assign_color, categorize_one_trial
+from visual_behavior.translator.core.annotate import colormap
 
 
 def modify_xticks(ax, xticks, xticklabels=None, vertical_gridlines=None, gridline_alpha=0.25):
@@ -162,7 +162,7 @@ def make_trial_count_plot(df_summary, ax):
     )
 
     ax.set_title('Trial Count')
-    ax.set_xlabel('number of\ngo\catch trials')
+    ax.set_xlabel('number of\ngo & catch trials')
     ax.set_xlim(0, 500)
     modify_xticks(ax, xticks=[0, 100, 200, 300, 400, 500], xticklabels=['0', '', '200', '', '400'], vertical_gridlines=[0, 100, 200, 300, 400])
 
