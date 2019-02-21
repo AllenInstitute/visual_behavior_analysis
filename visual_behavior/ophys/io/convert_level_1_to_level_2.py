@@ -400,7 +400,7 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
     start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
     stimulus_table.start_time = start_time
-    end_time = [timestamps_stimulus[end_frame] for end_frame in stimulus_table.end_frame.values]
+    end_time = [timestamps_stimulus[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
     stimulus_table.insert(loc=4, column='end_time', value=end_time)
     save_dataframe_as_h5(stimulus_table, 'stimulus_table', get_analysis_dir(lims_data))
 
