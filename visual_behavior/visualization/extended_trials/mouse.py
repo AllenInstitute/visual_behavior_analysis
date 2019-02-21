@@ -181,7 +181,12 @@ def add_y_labels(df_summary, ax):
         tick.label1.set_color(color)
 
 
-def make_summary_figure(df_summary, mouse_id=None, palette='trial_types', row_height=0.4):
+def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_height=0.4):
+
+    if len(df_input['startdatetime'].unique()) == len(df_input):
+        df_summary = df_input
+    else:
+        df_summary = summarize.session_level_summary(df_input)
     if mouse_id is None:
         mouse_id = df_summary.mouse_id.unique()[0]
         if len(df_summary.mouse_id.unique()) > 1:
