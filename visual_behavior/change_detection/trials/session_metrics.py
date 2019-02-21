@@ -196,7 +196,13 @@ def user_id(session_trials):
 
 
 def rig_id(session_trials):
-    return get_rig_id(session_trials.iloc[0].computer_name)
+    if 'computer_name' in session_trials.columns:
+        return get_rig_id(session_trials.iloc[0].computer_name)
+    else:
+        try:
+            return session_trials.iloc[0].rig_id
+        except AttributeError:
+            return 'unknown'
 
 
 def filename(session_trials):
