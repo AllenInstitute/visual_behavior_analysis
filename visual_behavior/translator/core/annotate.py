@@ -565,9 +565,11 @@ def check_responses(trials, reward_window=None):
     return did_respond
 
 
-def trial_translator(trial_type, response_type):
+def trial_translator(trial_type, response_type, auto_rewarded=False):
     if trial_type == 'aborted':
         return 'aborted'
+    elif auto_rewarded == True:
+        return 'auto_rewarded'
     elif trial_type == 'autorewarded':
         return 'auto_rewarded'
     elif trial_type == 'go':
@@ -605,7 +607,7 @@ def colormap(trial_type, palette='trial_types'):
 
 
 def assign_trial_description(trial, palette='trial_types'):
-    return trial_translator(trial['trial_type'], trial['response'])
+    return trial_translator(trial['trial_type'], trial['response'], trial['auto_rewarded'])
 
 
 def assign_color(trial, palette='trial_types'):
