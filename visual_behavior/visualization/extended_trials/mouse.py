@@ -38,15 +38,12 @@ def make_ILI_plot(dfm, session_dates, ax):
     ax.set_ylim(-1, len(session_dates[:]))
     # ax.set_yticklabels(dates)
     ax.set_title('Inter-lick \nintervals')
-    ax.invert_yaxis()
     vplot = ax.violinplot(ILIs, positions, widths=0.8, showmeans=False, showextrema=False, vert=False)
     for patch in vplot['bodies']:
         patch.set_color('black'), patch.set_alpha(0.5)
 
 
 def make_lick_count_plot(df_summary, ax, height=0.8):
-
-    df_summary.sort_values(by='startdatetime', inplace=True)
 
     ax.barh(
         np.arange(len(df_summary)),
@@ -57,18 +54,15 @@ def make_lick_count_plot(df_summary, ax, height=0.8):
     ax.set_xlabel('total lick count')
     ax.set_yticks(np.arange(0, len(df_summary)))
     ax.set_title('Lick Count')
-    ax.invert_yaxis()
 
 
 def make_trial_type_plot(df_summary, ax, palette='trial_types'):
 
     trial_types = ['aborted', 'auto_rewarded', 'hit', 'miss', 'false_alarm', 'correct_reject']
 
-    df_summary.sort_values(by='startdatetime', inplace=True)
-
     cumsum = np.zeros(len(df_summary))
     for ii, trial_type in enumerate(trial_types):
-        fractions = df_summary.sort_values(by='startdatetime')['fraction_time_{}'.format(trial_type)]
+        fractions = df_summary['fraction_time_{}'.format(trial_type)]
         ax.barh(
             np.arange(len(df_summary)),
             fractions,
@@ -83,7 +77,6 @@ def make_trial_type_plot(df_summary, ax, palette='trial_types'):
     ax.set_title('fraction of time in \neach trial type')
     ax.set_xlabel('Time fraction\nof session')
     ax.set_yticks(np.arange(len(df_summary)))
-    ax.invert_yaxis()
 
 
 def make_performance_plot(df_summary, ax, palette='trial_types'):
@@ -113,7 +106,6 @@ def make_performance_plot(df_summary, ax, palette='trial_types'):
     ax.set_xlabel('Max Response\nProbability')
     ax.set_xlim(0, 1)
     ax.set_ylim(-1, len(dates))
-    ax.invert_yaxis()
 
 
 def make_dprime_plot(df_summary, ax, reward_window=None, sliding_window=100, height=0.8):
@@ -129,7 +121,6 @@ def make_dprime_plot(df_summary, ax, reward_window=None, sliding_window=100, hei
     ax.set_title('PEAK \ndprime')
     ax.set_xlabel('Max dprime')
     ax.set_xlim(0, 4.75)
-    ax.invert_yaxis()
 
 
 def make_total_volume_plot(df_summary, ax):
@@ -143,7 +134,11 @@ def make_total_volume_plot(df_summary, ax):
     ax.set_title('Total \nVolume Earned')
     ax.set_xlabel('Volume (mL)')
     ax.set_xlim(0, 1.5)
-    ax.invert_yaxis()
+    ticks = [0.5, 1, 1.5]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels(ticks)
+    for tick in ticks:
+        ax.axvline(0.5, color='gray', alpha=0.5)
 
 
 def make_trial_count_plot(df_summary, ax):
@@ -155,14 +150,11 @@ def make_trial_count_plot(df_summary, ax):
     )
 
     ax.set_title('Trial Count')
-    ax.set_xlabel('number of\nnon-aborted trials')
-    ax.set_xlim(0, 1.5)
-    ax.invert_yaxis()
+    ax.set_xlabel('number of\ngo\catch trials')
+    ax.set_xlim(0, 500)
 
 
 def add_y_labels(df_summary, ax):
-
-    df_summary.sort_values(by='startdatetime', inplace=True)
 
     dates = [d.strftime('%Y-%m-%d') for d in df_summary.startdatetime]
     days_of_week = df_summary['startdatetime'].map(lambda x: pd.to_datetime(x).weekday_name)
@@ -186,29 +178,32 @@ def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_heig
         df_summary = df_input
     else:
         df_summary = summarize.session_level_summary(df_input)
+
     if mouse_id is None:
         mouse_id = df_summary.mouse_id.unique()[0]
         if len(df_summary.mouse_id.unique()) > 1:
             warnings.warn('More than one mouse ID present in this data, using only {}'.format(mouse_id))
 
-    df_summary = df_summary.sort_values(by='startdatetime').reset_index(drop=True)
+    df_summary.sort_values(by='startdatetime', inplace=True)
 
-    fig, ax = plt.subplots(1, 5, figsize=(11.5, row_height * len(df_summary)), sharey=True)
+    fig, ax = plt.subplots(1, 6, figsize=(11.5, row_height * len(df_summary)), sharey=True)
 
     make_lick_count_plot(df_summary, ax[0])
 
     make_trial_type_plot(df_summary, ax[1], palette)
     make_performance_plot(df_summary, ax[2], palette=palette)
     make_dprime_plot(df_summary, ax[3])
-
     make_total_volume_plot(df_summary, ax[4])
+    make_trial_count_plot(df_summary, ax[5])
 
     add_y_labels(df_summary, ax[0])
 
+    ax[0].invert_yaxis()
+
     # make alternating horizontal bands on plot
     bar_colors = ['lightgray', 'darkgray']
-    for i in range(len(df_summary)):
-        for axis in ax:
+    for axis in ax:
+        for i in range(len(df_summary)):
             axis.axhspan(i - 0.5, i + 0.5, color=bar_colors[i % 2], zorder=-1, alpha=0.25)
 
     fig.tight_layout()
