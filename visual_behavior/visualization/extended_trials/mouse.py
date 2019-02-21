@@ -63,7 +63,7 @@ def make_lick_count_plot(df_summary, ax, height=0.8):
 
     ax.set_xlabel('total lick count')
     ax.set_yticks(np.arange(0, len(df_summary)))
-    ax.set_title('Lick Count')
+    ax.set_title('Lick count')
 
 
 def make_trial_type_plot(df_summary, ax, palette='trial_types'):
@@ -84,7 +84,7 @@ def make_trial_type_plot(df_summary, ax, palette='trial_types'):
 
     ax.set_xlim(0, 1)
     ax.set_ylim(-1, len(df_summary))
-    ax.set_title('fraction of time in \neach trial type')
+    ax.set_title('Fraction of time in \neach trial type')
     ax.set_xlabel('Time fraction\nof session')
     ax.set_yticks(np.arange(len(df_summary)))
     # note: nudge the outermost ticklabels slightly inward to avoid overlap with the next plot
@@ -114,7 +114,7 @@ def make_performance_plot(df_summary, ax, palette='trial_types'):
         alpha=1
     )
 
-    ax.set_title('PEAK Hit \nand FA Rates')
+    ax.set_title('PEAK Hit \nand FA rates')
     ax.set_xlabel('Max Response\nProbability')
     ax.set_xlim(0, 1)
     ax.set_ylim(-1, len(dates))
@@ -147,7 +147,7 @@ def make_total_volume_plot(df_summary, ax):
         color='royalblue',
     )
 
-    ax.set_title('Total \nVolume Earned')
+    ax.set_title('Total \nvolume earned')
     ax.set_xlabel('Volume (mL)')
     ax.set_xlim(0, 1.5)
     ticks = [0.5, 1, 1.5]
@@ -157,16 +157,24 @@ def make_total_volume_plot(df_summary, ax):
     modify_xticks(ax, xticks=[0.025, 0.5, 1, 1.425], xticklabels=[0, 0.5, 1, 1.5], vertical_gridlines=[0, 0.5, 1, 1.5])
 
 
-def make_trial_count_plot(df_summary, ax):
+def make_trial_count_plot(df_summary, ax, palette='trial_types'):
 
-    ax.barh(
-        np.arange(len(df_summary)),
-        df_summary['num_contingent_trials'],
-        color='DimGray',
-    )
+    trial_types = ['hit', 'miss', 'false_alarm', 'correct_reject']
 
-    ax.set_title('Trial Count')
-    ax.set_xlabel('number of\ngo & catch trials')
+    cumsum = np.zeros(len(df_summary))
+    for ii, trial_type in enumerate(trial_types):
+        counts = df_summary['number_of_{}_trials'.format(trial_type)]
+        ax.barh(
+            np.arange(len(df_summary)),
+            counts,
+            color=colormap(trial_type, palette),
+            left=cumsum,
+            height=0.6
+        )
+        cumsum += counts  # ensure that next bar starts at edge of existing bars
+
+    ax.set_title('Trial count\nby trial type')
+    ax.set_xlabel('number of trials')
     ax.set_xlim(0, 500)
     # note: nudge the outermost ticklabels slightly inward to avoid overlap with the next plot
     modify_xticks(ax, xticks=[0.025, 100, 200, 300, 400, 500], xticklabels=['0', '', '200', '', '400'], vertical_gridlines=[0, 100, 200, 300, 400])
@@ -208,11 +216,11 @@ def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_heig
 
     make_lick_count_plot(df_summary, ax[0])
 
-    make_trial_type_plot(df_summary, ax[1], palette)
-    make_performance_plot(df_summary, ax[2], palette=palette)
-    make_dprime_plot(df_summary, ax[3])
-    make_total_volume_plot(df_summary, ax[4])
-    make_trial_count_plot(df_summary, ax[5])
+    make_trial_type_plot(df_summary, ax[1], palette=palette)
+    make_trial_count_plot(df_summary, ax[2], palette=palette)
+    make_performance_plot(df_summary, ax[3], palette=palette)
+    make_dprime_plot(df_summary, ax[4])
+    make_total_volume_plot(df_summary, ax[5])
 
     add_y_labels(df_summary, ax[0])
 
