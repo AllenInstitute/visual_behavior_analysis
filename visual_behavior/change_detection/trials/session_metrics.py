@@ -89,6 +89,8 @@ def earned_water(session_trials):
 def peak_dprime(session_trials):
     mask = (session_trials['trial_type'] != 'aborted')
     _, _, dp = get_response_rates(session_trials[mask], sliding_window=100)
+    if all(np.isnan(dp)):
+        return np.nan
     try:
         return np.nanmax(dp[50:])
     except ValueError:
@@ -98,6 +100,8 @@ def peak_dprime(session_trials):
 def peak_hit_rate(session_trials):
     mask = (session_trials['trial_type'] != 'aborted')
     hr, _, _ = get_response_rates(session_trials[mask], sliding_window=100)
+    if all(np.isnan(hr)):
+        return np.nan
     try:
         return np.nanmax(hr[50:])
     except ValueError:
@@ -107,6 +111,8 @@ def peak_hit_rate(session_trials):
 def peak_false_alarm_rate(session_trials):
     mask = (session_trials['trial_type'] != 'aborted')
     _, far, _ = get_response_rates(session_trials[mask], sliding_window=100)
+    if all(np.isnan(far)):
+        return np.nan
     try:
         return np.nanmax(far[50:])
     except ValueError:
