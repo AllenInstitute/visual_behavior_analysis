@@ -87,7 +87,8 @@ def make_trial_type_plot(df_summary, ax, palette='trial_types'):
     ax.set_title('fraction of time in \neach trial type')
     ax.set_xlabel('Time fraction\nof session')
     ax.set_yticks(np.arange(len(df_summary)))
-    modify_xticks(ax, xticks=[0, 0.5, 1], xticklabels=[0, 0.5, 1], vertical_gridlines=None)
+    # note: nudge the outermost ticklabels slightly inward to avoid overlap with the next plot
+    modify_xticks(ax, xticks=[0.025, 0.5, 0.975], xticklabels=[0, 0.5, 1], vertical_gridlines=None)
 
 
 def make_performance_plot(df_summary, ax, palette='trial_types'):
@@ -117,7 +118,8 @@ def make_performance_plot(df_summary, ax, palette='trial_types'):
     ax.set_xlabel('Max Response\nProbability')
     ax.set_xlim(0, 1)
     ax.set_ylim(-1, len(dates))
-    modify_xticks(ax, xticks=[0, 0.5, 1], xticklabels=[0, 0.5, 1], vertical_gridlines=[0.5])
+    # note: nudge the outermost ticklabels slightly inward to avoid overlap with the next plot
+    modify_xticks(ax, xticks=[0.025, 0.5, 0.975], xticklabels=[0, 0.5, 1], vertical_gridlines=[0.5])
 
 
 def make_dprime_plot(df_summary, ax, reward_window=None, sliding_window=100, height=0.8):
@@ -133,7 +135,8 @@ def make_dprime_plot(df_summary, ax, reward_window=None, sliding_window=100, hei
     ax.set_title('PEAK \ndprime')
     ax.set_xlabel('Max dprime')
     ax.set_xlim(0, 4.75)
-    modify_xticks(ax, xticks=[0, 1, 2, 3, 4], xticklabels=[0, 1, 2, 3, 4], vertical_gridlines=[0, 1, 2, 3, 4])
+    # note: nudge the outermost ticklabels slightly inward to avoid overlap with the next plot
+    modify_xticks(ax, xticks=[0.025, 1, 2, 3, 4], xticklabels=[0, 1, 2, 3, 4], vertical_gridlines=[0, 1, 2, 3, 4])
 
 
 def make_total_volume_plot(df_summary, ax):
@@ -150,7 +153,8 @@ def make_total_volume_plot(df_summary, ax):
     ticks = [0.5, 1, 1.5]
     ax.set_xticks(ticks)
     ax.set_xticklabels(ticks)
-    modify_xticks(ax, xticks=[0, 0.5, 1, 1.5], xticklabels=[0, 0.5, 1, 1.5], vertical_gridlines=[0, 0.5, 1, 1.5])
+    # note: nudge the outermost ticklabels slightly inward to avoid overlap with the next plot
+    modify_xticks(ax, xticks=[0.025, 0.5, 1, 1.425], xticklabels=[0, 0.5, 1, 1.5], vertical_gridlines=[0, 0.5, 1, 1.5])
 
 
 def make_trial_count_plot(df_summary, ax):
@@ -164,7 +168,8 @@ def make_trial_count_plot(df_summary, ax):
     ax.set_title('Trial Count')
     ax.set_xlabel('number of\ngo & catch trials')
     ax.set_xlim(0, 500)
-    modify_xticks(ax, xticks=[0, 100, 200, 300, 400, 500], xticklabels=['0', '', '200', '', '400'], vertical_gridlines=[0, 100, 200, 300, 400])
+    # note: nudge the outermost ticklabels slightly inward to avoid overlap with the next plot
+    modify_xticks(ax, xticks=[0.025, 100, 200, 300, 400, 500], xticklabels=['0', '', '200', '', '400'], vertical_gridlines=[0, 100, 200, 300, 400])
 
 
 def add_y_labels(df_summary, ax):
@@ -221,7 +226,7 @@ def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_heig
             axis.axhspan(i - 0.5, i + 0.5, color=bar_colors[i % 2], zorder=-1, alpha=0.25)
 
     fig.tight_layout()
-    plt.subplots_adjust(top=0.90, wspace=0.15)
+    plt.subplots_adjust(top=0.90, wspace=0.075)
     fig.suptitle('MOUSE = ' + mouse_id, fontsize=18)
 
     return fig
