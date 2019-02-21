@@ -170,7 +170,7 @@ def make_trial_count_plot(df_summary, ax):
 def add_y_labels(df_summary, ax):
 
     dates = [d.strftime('%Y-%m-%d') for d in df_summary.startdatetime]
-    days_of_week = df_summary['startdatetime'].map(lambda x: pd.to_datetime(x).weekday_name)
+    days_of_week = df_summary['startdatetime'].map(lambda x: pd.to_datetime(x).day_name())
     stages = [s for s in df_summary.stage]
     users = [user for user in df_summary.user_id]
     rigs = [rig for rig in df_summary.rig_id]
@@ -216,10 +216,7 @@ def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_heig
     # make alternating horizontal bands on plot
     bar_colors = ['lightgray', 'darkgray']
     for col, axis in enumerate(ax):
-        # removing the spines
-        # for loc in ['left', 'bottom', 'right', 'top']:
-        #     axis.spines[loc].set_visible(False)
-        axis.tick_params(bottom="off", left="off")
+        axis.tick_params(bottom=False, left=False)
         for i in range(len(df_summary)):
             axis.axhspan(i - 0.5, i + 0.5, color=bar_colors[i % 2], zorder=-1, alpha=0.25)
 
