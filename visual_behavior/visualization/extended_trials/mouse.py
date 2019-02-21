@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import warnings
-from visual_behavior.plotting import placeAxesOnGrid
 from visual_behavior.utilities import flatten_list
 from visual_behavior.change_detection.trials import summarize
 from visual_behavior.translator.core.annotate import colormap, assign_color, categorize_one_trial
