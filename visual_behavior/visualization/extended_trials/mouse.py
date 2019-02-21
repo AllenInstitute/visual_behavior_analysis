@@ -130,24 +130,34 @@ def make_dprime_plot(df_summary, ax, reward_window=None, sliding_window=100, hei
     ax.set_title('PEAK \ndprime')
     ax.set_xlabel('Max dprime')
     ax.set_xlim(0, 4.75)
-    ax.set_ylim(-1, len(dates))
     ax.invert_yaxis()
 
 
 def make_total_volume_plot(df_summary, ax):
 
-    ax.plot(
-        df_summary['total_water'],
+    ax.barh(
         np.arange(len(df_summary)),
-        'o-',
+        df_summary['total_water'],
         color='blue',
-        alpha=1
     )
 
     ax.set_title('Total \nVolume Earned')
     ax.set_xlabel('Volume (mL)')
     ax.set_xlim(0, 1.5)
-    ax.set_ylim(-1, len(dates))
+    ax.invert_yaxis()
+
+
+def make_trial_count_plot(df_summary, ax):
+
+    ax.barh(
+        np.arange(len(df_summary)),
+        df_summary['num_contingent_trials'],
+        color='black',
+    )
+
+    ax.set_title('Trial Count')
+    ax.set_xlabel('number of\nnon-aborted trials')
+    ax.set_xlim(0, 1.5)
     ax.invert_yaxis()
 
 
@@ -171,20 +181,17 @@ def add_y_labels(df_summary, ax):
         tick.label1.set_color(color)
 
 
-def make_summary_figure_new(df_summary, mouse_id=None, palette='trial_types', row_height=0.4):
+def make_summary_figure(df_summary, mouse_id=None, palette='trial_types', row_height=0.4):
     if mouse_id is None:
-        mouse_id = df.mouse_id.unique()[0]
-        if len(df.mouse_id.unique()) > 1:
+        mouse_id = df_summary.mouse_id.unique()[0]
+        if len(df_summary.mouse_id.unique()) > 1:
             warnings.warn('More than one mouse ID present in this data, using only {}'.format(mouse_id))
 
-    dfm = df[(df.mouse_id == mouse_id)]
     df_summary = df_summary.sort_values(by='startdatetime').reset_index(drop=True)
 
-    session_dates = np.sort(df_summary.startdatetime.unique())
+    fig, ax = plt.subplots(1, 5, figsize=(11.5, row_height * len(df_summary)), sharey=True)
 
-    fig, ax = plt.subplots(1, 5, figsize=(11.5, row_height * len(session_dates)), sharey=True)
-
-    make_lick_plot(df_summary, ax[0])
+    make_lick_count_plot(df_summary, ax[0])
 
     make_trial_type_plot(df_summary, ax[1], palette)
     make_performance_plot(df_summary, ax[2], palette=palette)
@@ -196,7 +203,7 @@ def make_summary_figure_new(df_summary, mouse_id=None, palette='trial_types', ro
 
     # make alternating horizontal bands on plot
     bar_colors = ['lightgray', 'darkgray']
-    for i in range(len(session_dates)):
+    for i in range(len(df_summary)):
         for axis in ax:
             axis.axhspan(i - 0.5, i + 0.5, color=bar_colors[i % 2], zorder=-1, alpha=0.25)
 
