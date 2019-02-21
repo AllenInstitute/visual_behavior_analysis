@@ -128,6 +128,15 @@ def fraction_time_by_trial_type(session_trials, trial_type='aborted'):
         return 0.0
 
 
+def trial_count_by_trial_type(session_trials, trial_type='hit'):
+    session_trials['full_trial_type'] = session_trials.apply(assign_trial_description, axis=1)
+    trial_count = session_trials.groupby('full_trial_type')['trial_length'].count()
+    try:
+        return trial_count[trial_type]
+    except KeyError:
+        return 0.0
+
+
 def total_number_of_licks(session_trials):
     '''
     total number of licks in the session
