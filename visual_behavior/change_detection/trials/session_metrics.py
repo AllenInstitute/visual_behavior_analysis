@@ -59,6 +59,7 @@ def lick_latency(session_trials, percentile=50, trial_types=('go', )):
     """
     mask = masks.trial_types(session_trials, trial_types)
     quantile = session_trials[mask]['response_latency']\
+        .replace([np.inf, -np.inf], np.nan) \
         .dropna() \
         .quantile(percentile / 100.0)
 
