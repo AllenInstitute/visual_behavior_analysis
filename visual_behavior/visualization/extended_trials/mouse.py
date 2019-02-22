@@ -198,7 +198,12 @@ def add_y_labels(df_summary, ax):
         tick.label1.set_color(color)
 
 
-def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_height=0.4):
+def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_height='variable'):
+
+    if row_height == 'variable':
+        # plots with few rows look overcrowded. They need a larger row size to accomodate.
+        # decrease row height linearly to a minimum of 0.5
+        row_height = max((-0.25 * len(df_input) + 1.25, 0.5))
 
     if len(df_input['startdatetime'].unique()) == len(df_input):
         df_summary = df_input
