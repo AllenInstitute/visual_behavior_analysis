@@ -5,7 +5,7 @@ RUN apt-get update -yqq && apt-get install -yqq --no-install-recommends xvfb ema
 
 # Install python dependencies:
 RUN conda update -n base conda
-RUN conda install -y scipy numpy pandas scikit-learn subprocess32 cython
+RUN conda install -y scipy numpy pandas scikit-learn subprocess32 cython entrypoints
 
 # Set up build:
 RUN mkdir -p /data

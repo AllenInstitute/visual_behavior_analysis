@@ -250,6 +250,10 @@ def session_summary():
     summary['fraction_time_correct_reject'] = 0.638
     summary['fraction_time_false_alarm'] = 0.150
     summary['fraction_time_auto_rewarded'] = 0.0
+    summary['number_of_hits'] = np.nan
+    summary['number_of_misses'] = np.nan
+    summary['number_of_false_alarms'] = np.nan
+    summary['number_of_correct_rejects'] = np.nan
     summary['rig_id'] = 'unknown'
     return summary
 
