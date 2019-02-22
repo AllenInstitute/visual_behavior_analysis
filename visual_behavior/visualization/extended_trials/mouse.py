@@ -233,8 +233,4 @@ def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_heig
         for i in range(len(df_summary)):
             axis.axhspan(i - 0.5, i + 0.5, color=bar_colors[i % 2], zorder=-1, alpha=0.25)
 
-    fig.tight_layout()
-    plt.subplots_adjust(top=0.90, wspace=0.075)
-    fig.suptitle('MOUSE = ' + mouse_id, fontsize=18)
-
     return fig
