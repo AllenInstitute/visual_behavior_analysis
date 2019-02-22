@@ -151,9 +151,20 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     return mdf
 
 
+
 def get_cre_lines(mean_df):
     cre_lines = np.sort(mean_df.cre_line.unique())
     return cre_lines
+
+
+def get_colors_for_cre_lines():
+    colors = [sns.color_palette()[2], sns.color_palette()[4]]
+    return colors
+
+
+def get_image_sets(mean_df):
+    image_sets = np.sort(mean_df.image_set.unique())
+    return image_sets
 
 
 def get_image_names(mean_df):
@@ -161,7 +172,49 @@ def get_image_names(mean_df):
         image_names = np.sort(mean_df.change_image_name.unique())
     else:
         image_names = np.sort(mean_df.image_name.unique())
+        # image_names = image_names[image_names!='omitted']
     return image_names
+
+
+def get_color_for_image_name(image_names, image_name):
+    if 'omitted' in image_names:
+        if image_name == 'omitted':
+            color = 'gray'
+        else:
+            colors = sns.color_palette("hls", len(image_names)-1)
+            image_index = np.where(image_names == image_name)[0][0]
+            color = colors[image_index]
+    else:
+        colors = sns.color_palette("hls", len(image_names))
+        image_index = np.where(image_names == image_name)[0][0]
+        color = colors[image_index]
+    return color
+
+
+def get_color_for_area(area):
+    colors = sns.color_palette()
+    if area=='VISp':
+        color = colors[7]
+    elif area=='VISal':
+        color = colors[9]
+    return color
+
+
+def get_colors_for_areas(df):
+    if 'area' in df:
+        area = 'area'
+    else:
+        area = 'targeted_structure'
+    colors = []
+    for area in np.sort(df[area].unique()):
+        colors.append(get_color_for_area(area))
+    return colors
+
+
+def get_colors_for_image_sets():
+    colors = sns.color_palette()
+    colors = [colors[3],colors[0],colors[2],colors[4]]
+    return colors
 
 
 def add_metadata_to_mean_df(mdf, metadata):
