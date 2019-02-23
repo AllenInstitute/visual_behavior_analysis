@@ -401,6 +401,9 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
             flashes = flashes.reset_index()
             flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for row
                                   in range(len(flashes))]
+            # infer end time for omitted flashes as 16 frames after start frame (250ms*60Hz stim frame rate)
+            flashes['end_frame'] = [flashes.loc[idx, 'end_frame'] if flashes.loc[idx, 'omitted'] == False else
+                    flashes.loc[idx, 'frame'] + 16 for idx in flashes.index.values]
             stimulus_table = flashes.copy()
         else:
             stimulus_table['omitted'] = False
