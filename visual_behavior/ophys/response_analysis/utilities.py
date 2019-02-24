@@ -168,15 +168,19 @@ def get_fraction_nonzero_trials(group):
 #     return pd.Series({'reliability': reliability})
 
 
-def get_reliability(group, analysis=None, flashes=True):
+def get_reliability(group, analysis=None, flashes=True, omitted=False):
     from itertools import combinations
     import scipy as sp
-    if analysis and flashes:
+    if analysis and flashes and not omitted:
         response_window = [int(np.abs(analysis.flash_window[0]) * 31), int(analysis.flash_window[1] * 31)]
-    elif analysis and not flashes:
+    elif analysis and omitted:
+        response_window = [int(np.abs(analysis.omitted_flash_window[0]) * 31), int(omitted_flash_window.flash_window[1] * 31)]
+    elif analysis and not flashes and not omitted:
         response_window = [int(np.abs(analysis.trial_window[0]) * 31), int(analysis.trial_window[1] * 31)]
-    elif not analysis and flashes:
-        response_window = [int(0.5 * 31), int(0.75 * 31)]
+    elif not analysis and flashes and not omitted:
+        response_window = [int(0.5 * 31), int(1.25 * 31)]
+    elif not analysis and omitted and not flashes:
+        response_window = [int(3 * 31), int(6 * 31)]
     else:
         response_window = [int(4*31), int(8*31)]
     corr_values = []
@@ -193,7 +197,8 @@ def get_reliability(group, analysis=None, flashes=True):
     return pd.Series({'reliability': reliability})
 
 
-def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, get_reliability=False):
+def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
+                get_reliability=False):
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
@@ -219,7 +224,7 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
 
     if get_reliability:
-        reliability = rdf.groupby(conditions).apply(get_reliability, analysis, flashes)
+        reliability = rdf.groupby(conditions).apply(get_reliability, analysis, flashes, omitted)
         reliability = reliability.reset_index()
         mdf['reliability'] = reliability.reliability
 
