@@ -193,7 +193,7 @@ def get_reliability(group, analysis=None, flashes=True):
     return pd.Series({'reliability': reliability})
 
 
-def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False):
+def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, get_reliability=False):
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
@@ -218,9 +218,10 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
     mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
 
-    reliability = rdf.groupby(conditions).apply(get_reliability, analysis, flashes)
-    reliability = reliability.reset_index()
-    mdf['reliability'] = reliability.reliability
+    if get_reliability:
+        reliability = rdf.groupby(conditions).apply(get_reliability, analysis, flashes)
+        reliability = reliability.reset_index()
+        mdf['reliability'] = reliability.reliability
 
     return mdf
 
