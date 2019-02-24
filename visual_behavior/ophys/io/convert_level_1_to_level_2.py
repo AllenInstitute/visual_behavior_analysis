@@ -77,11 +77,13 @@ def get_lims_id(lims_data):
 
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
-    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
-    if len(specimen_driver_line) > 1:
-        specimen_driver_line = specimen_driver_line[1].split('-')[0]
+    specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_lines) > 1:
+        for i in range(len(specimen_driver_lines)):
+            if 'S' in specimen_driver_lines[i]:
+                specimen_driver_line = specimen_driver_lines[i].split('-')[0]
     else:
-        specimen_driver_line = specimen_driver_line[0].split('-')[0]
+        specimen_driver_line = specimen_driver_lines[0].split('-')[0]
     analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
                            lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
@@ -280,13 +282,16 @@ def get_metadata(lims_data, timestamps):
         metadata['imaging_depth'] = None
     else:
         metadata['imaging_depth'] = int(lims_data.depth.values[0])
-    specimen_driver_line = lims_data['specimen_driver_line'].values[0].split(';')
-    if len(specimen_driver_line) > 1:
-        metadata['specimen_driver_line'] = specimen_driver_line[1]
-        metadata['cre_line'] = specimen_driver_line[1]
+
+    specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_lines) > 1:
+        for i in range(len(specimen_driver_lines)):
+            if 'S' in specimen_driver_lines[i]:
+                specimen_driver_line = specimen_driver_lines[i]
     else:
-        metadata['cre_line'] = specimen_driver_line[0]
-        metadata['specimen_driver_line'] = specimen_driver_line[0]
+        specimen_driver_line = specimen_driver_lines[0]
+    metadata['specimen_driver_line'] = specimen_driver_line
+    metadata['cre_line'] = specimen_driver_line
     if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
         metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0] + ';' + \
                                     lims_data['specimen_reporter_line'].values[0].split('(')[0]  # NOQA: E126
