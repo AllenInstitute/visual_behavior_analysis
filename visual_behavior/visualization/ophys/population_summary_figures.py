@@ -714,3 +714,113 @@ def plot_change_repeat_response(mdf, cell_specimen_id, window=[-0.5, 0.75], save
         save_figure(fig, figsize, save_dir, folder, str(int(cdf.experiment_id.unique()[0]))+'_'+str(int(cell_specimen_id)))
         plt.close()
     return ax
+
+
+def plot_response_across_conditions_population(df, condition='repeat', conditions=[1,10],
+                                    window=[-0.5, 0.75], save_figures=False, colors=None, autoscale=False,
+                                    save_dir=None, folder=None, ax=None, pref_stim=True):
+    image_set = df.image_set.unique()[0]
+    cre_line = df.cre_line.unique()[0]
+    if pref_stim:
+        df = df[df.pref_stim==True].copy()
+    if ax is None:
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for c, condition_value in enumerate(conditions):
+        tmp = df[df[condition]==condition_value]
+        if condition_value is False:
+            tmp = tmp[tmp.pref_stim==True]
+        if colors is None:
+            image_lookup = get_image_color_lookup(mdf)
+            image_names = df[df.image_set==image_set].image_name.unique()
+            colors = get_colors_for_image_names(image_names, image_lookup)
+        traces = tmp.mean_trace.values
+        trace = np.mean(traces)
+        ax = sf.plot_mean_trace(traces, 31., legend_label=condition_value, color=colors[c],
+                                interval_sec=0.5, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, flashes=False, alpha=0.15, window=window, omitted=True)
+    xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1, window=window)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([int(x) for x in xticklabels])
+#     ax.set_xlim(0,(np.abs(window[0])+window[1])*31.)
+    ax.legend(bbox_to_anchor=(1.1,1), title=condition)
+    if not autoscale:
+        ymin, ymax = ax.get_ylim()
+        if ymin>0:
+            ax.set_ylim(0, ymax*1.2)
+        else:
+            ax.set_ylim(ymin*1.2, ymax*1.2)
+    ax.set_title(image_set)
+    if save_figures:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, folder, 'population_response_across_'+condition+'_'+cre_line)
+    return ax
+
+def plot_omitted_flash_response_all_stim(odf, cell_specimen_id, ax=None, save_dir=None, window=[-2,3], legend=False):
+    cdf = odf[odf.cell_specimen_id==cell_specimen_id]
+    image_names = np.sort(cdf.image_name.unique())
+    if ax is None:
+        figsize = (7, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for image_name in image_names:
+        color = ut.get_color_for_image_name(image_names, image_name)
+        ax = plot_mean_trace_from_mean_df(cdf[cdf.image_name==image_name],
+                                              31., legend_label=None, color=color,
+                             interval_sec=1, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, trial_type=None, alpha=0.3, window=window, omitted=True, flashes=False)
+    ax.set_xlabel('time (sec)')
+    ax.set_title('omitted flash response')
+    if legend:
+        ax.legend(loc=9, bbox_to_anchor=(1.3, 1.3))
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, (6, 5), save_dir, 'omitted_flash_response', str(cell_specimen_id))
+        plt.close()
+    return ax
+
+
+def plot_image_change_response(tdf, cell_specimen_id, legend=True, save=False, ax=None, window=[-2,3]):
+    suffix = ''
+    ylabel = 'mean dF/F'
+    cdf = tdf[tdf.cell_specimen_id==cell_specimen_id]
+    images = np.sort(cdf.change_image_name.unique())
+    images = images[images != 'omitted']
+    if ax is None:
+        figsize = (7, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for c, change_image_name in enumerate(images):
+        color = ut.get_color_for_image_name(images, change_image_name)
+        ax = plot_mean_trace_from_mean_df(cdf[cdf.change_image_name==change_image_name],
+                                              31., legend_label=None, color=color,
+                             interval_sec=1, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, trial_type='go', alpha=0.3, window=window)
+    ax.set_title('cell_specimen_id: ' + str(cell_specimen_id))
+    ax.set_ylabel(ylabel)
+    if legend:
+        ax.legend(images, loc=9, bbox_to_anchor=(1.19, 1))
+    return ax
+
+
+def plot_change_omitted_responses(tdf, odf, cell_specimen_id, save_figures=False, save_dir=None, folder=None):
+    figsize = (10,4)
+    fig, ax = plt.subplots(1,2, figsize=figsize, sharey=True)
+    ax = ax.ravel()
+
+    cdf = tdf[tdf.cell_specimen_id==cell_specimen_id]
+    cre_line = cdf.cre_line.unique()[0]
+    image_set = cdf.image_set.unique()[0]
+    area = cdf.image_set.unique()[0]
+    ax[0] = plot_image_change_response(tdf, cell_specimen_id, legend=False, save=False, ax=ax[0], window=[-4,8])
+    ax[0].set_xlim(2*31, 7*31)
+    ax[0].set_title('change flash response')
+    ax[1] = plot_omitted_flash_response_all_stim(odf, cell_specimen_id, ax=ax[1], window=[-2,3])
+    ax[1].set_ylabel('')
+    fig.tight_layout()
+
+    if save_figures:
+        fig.tight_layout()
+        filename = str(int(cdf.experiment_id.unique()[0]))+'_'+str(int(cell_specimen_id))+'_'+cre_line+'_'+area+'_'+image_set
+        save_figure(fig, figsize, save_dir, folder, filename)
+        plt.close()
+
+
