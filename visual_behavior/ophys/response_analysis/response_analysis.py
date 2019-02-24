@@ -211,7 +211,8 @@ class ResponseAnalysis(object):
         flash_response_df = flash_response_df[
             (flash_response_df.flash_number > 10) & (flash_response_df.trial_type != 'autorewarded')]
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
-        if 'omitted' in flash_data.keys():
+        if 'omitted' in stimulus_table.image_name.unique():
+            print('computing p-values from shuffled omitted flash responses')
             p_values_from_shuffle = ut.get_p_values_from_shuffle(self.dataset, stimulus_table, flash_response_df)
             p_values = []
             for flash_number in flash_response_df.flash_number.unique():
@@ -336,7 +337,7 @@ class ResponseAnalysis(object):
             if os.path.exists(file_path):
                 os.remove(file_path)
             self.omitted_flash_response_df = self.generate_omitted_flash_response_df()
-            self.save_flash_response_df(self.omitted_flash_response_df)
+            self.save_omitted_flash_response_df(self.omitted_flash_response_df)
         else:
             if os.path.exists(self.get_omitted_flash_response_df_path()):
                 print('loading omitted flash response dataframe')
