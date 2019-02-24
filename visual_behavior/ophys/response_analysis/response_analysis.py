@@ -42,7 +42,7 @@ class ResponseAnalysis(object):
         self.trial_window = [-4, 8]  # time, in seconds, around change time to extract portion of cell trace
         self.flash_window = [-0.5,
                              0.75]  # time, in seconds, around stimulus flash onset time to extract portion of cell trace
-        self.omitted_flash_window = [-2,3]
+        self.omitted_flash_window = [-3,3]
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
         self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
                                 0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
@@ -53,8 +53,8 @@ class ResponseAnalysis(object):
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate'].values[0]
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
 
-        # self.get_trial_response_df()
-        # self.get_flash_response_df()
+        self.get_trial_response_df()
+        self.get_flash_response_df()
         self.get_omitted_flash_response_df()
 
     def get_trial_response_df_path(self):
@@ -124,7 +124,8 @@ class ResponseAnalysis(object):
             print('overwriting analysis files')
             import h5py
             file_path = self.get_trial_response_df_path()
-            os.remove(file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
             self.trial_response_df = self.generate_trial_response_df()
             self.save_trial_response_df(self.trial_response_df)
         else:
@@ -178,7 +179,7 @@ class ResponseAnalysis(object):
                     0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
                 baseline_window = [np.abs(flash_window[0]) - self.response_window_duration, (np.abs(flash_window[0]))]
                 # baseline_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) - self.response_window_duration]
-                p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
+                p_value_baseline = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
                                                            baseline_window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate, self.use_events)
@@ -188,13 +189,13 @@ class ResponseAnalysis(object):
                 reward_rate = flash_data.reward_rate.values[0]
 
                 row.append([int(cell), int(cell_specimen_id), int(flash), omitted, flash_time, image_name, image_category,
-                            trace, timestamps, mean_response, baseline_response, n_events, p_value, sd_over_baseline,
+                            trace, timestamps, mean_response, baseline_response, n_events, p_value_baseline, sd_over_baseline,
                             reward_rate, int(self.dataset.experiment_id)])
 
         flash_response_df = pd.DataFrame(data=row,
                                          columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
                                                   'image_name', 'image_category', 'trace', 'timestamps', 'mean_response',
-                                                  'baseline_response', 'n_events', 'p_value', 'sd_over_baseline',
+                                                  'baseline_response', 'n_events', 'p_value_baseline', 'sd_over_baseline',
                                                   'reward_rate', 'experiment_id'])
         flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
@@ -210,6 +211,14 @@ class ResponseAnalysis(object):
         flash_response_df = flash_response_df[
             (flash_response_df.flash_number > 10) & (flash_response_df.trial_type != 'autorewarded')]
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
+        if 'omitted' in flash_data.keys():
+            p_values_from_shuffle = ut.get_p_values_from_shuffle(self.dataset, stimulus_table, flash_response_df)
+            p_values = []
+            for flash_number in flash_response_df.flash_number.unique():
+                p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
+            flash_response_df['p_value'] = p_values
+        else:
+            flash_response_df['p_value'] = None
 
         return flash_response_df
 
@@ -222,7 +231,8 @@ class ResponseAnalysis(object):
             # delete old file or else it will keep growing in size
             import h5py
             file_path = self.get_flash_response_df_path()
-            os.remove(file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
             self.flash_response_df = self.generate_flash_response_df()
             self.save_flash_response_df(self.flash_response_df)
         else:
@@ -323,7 +333,8 @@ class ResponseAnalysis(object):
             # delete old file or else it will keep growing in size
             import h5py
             file_path = self.get_omitted_flash_response_df_path()
-            os.remove(file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
             self.omitted_flash_response_df = self.generate_omitted_flash_response_df()
             self.save_flash_response_df(self.omitted_flash_response_df)
         else:

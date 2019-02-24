@@ -84,6 +84,39 @@ def ptest(x, num_conditions):
     return ptest
 
 
+def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
+    #data munging
+    fdf = flash_response_df.copy()
+    odf = fdf[fdf.omitted==True].copy()
+    st = stimulus_table.copy()
+    included_flashes = fdf.flash_number.unique()
+    st = st[st.flash_number.isin(included_flashes)]
+    ost = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
+    ost['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in ost.start_time.values]
+    ost['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in ost.end_time.values]
+    #set params
+    stim_duration = 0.25
+    frame_rate = 31
+    stim_frames = int(np.round(stim_duration*frame_rate,0)) #stimulus window = 0.25ms*31Hz = 7.75 frames
+    cell_indices = dataset.get_cell_indices()
+    n_cells = len(cell_indices)
+    #get shuffled values from omitted flash sweeps
+    shuffled_responses = np.empty((n_cells, 10000, stim_frames))
+    idx = np.random.choice(ost.start_frame.values, 10000)
+    for i in range(stim_frames):
+        shuffled_responses[:,:,i] = dataset.dff_traces[:,idx+i]
+    shuffled_mean = shuffled_responses.mean(axis=2)
+    #compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep
+    flash_p_values = pd.DataFrame(index = st.index.values, columns=np.array(range(n_cells)).astype(str))
+    for i,cell_index in enumerate(cell_indices):
+        responses = fdf[fdf.cell==cell_index].mean_response.values
+        null_dist_mat = np.tile(shuffled_mean[i,:], reps=(len(responses),1))
+        actual_is_less = responses.reshape(len(responses),1) <= null_dist_mat
+        p_values = np.mean(actual_is_less, axis=1)
+        flash_p_values[str(cell_index)] = p_values
+    return flash_p_values
+
+
 def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
     mean_responses = group['mean_response'].values
@@ -184,10 +217,10 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     fraction_nonzero_trials = rdf.groupby(conditions).apply(get_fraction_nonzero_trials)
     fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
     mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
-    #
-    # reliability = rdf.groupby(conditions).apply(get_reliability, analysis, flashes)
-    # reliability = reliability.reset_index()
-    # mdf['reliability'] = reliability.reliability
+
+    reliability = rdf.groupby(conditions).apply(get_reliability, analysis, flashes)
+    reliability = reliability.reset_index()
+    mdf['reliability'] = reliability.reliability
 
     return mdf
 
