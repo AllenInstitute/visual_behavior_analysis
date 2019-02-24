@@ -42,7 +42,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
             mega_mdf = pd.concat([mega_mdf, mdf])
         else:
             mdf = ut.get_mean_df(analysis.trial_response_df, analysis, conditions=conditions,
-                                 flashes=flashes, omitted==omitted, get_reliability=get_reliability)
+                                 flashes=flashes, omitted=omitted, get_reliability=get_reliability)
             mdf['experiment_id'] = dataset.experiment_id
             mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
             mega_mdf = pd.concat([mega_mdf, mdf])
