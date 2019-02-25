@@ -144,6 +144,11 @@ def get_fraction_active_trials(group):
     return pd.Series({'fraction_active_trials': fraction_active_trials})
 
 
+def get_fraction_responsive_trials(group):
+    fraction_responsive_trials = len(group[group.p_value < 0.05]) / float(len(group))
+    return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
+
+
 def get_fraction_nonzero_trials(group):
     fraction_nonzero_trials = len(group[group.n_events > 0]) / float(len(group))
     return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
@@ -171,15 +176,15 @@ def get_fraction_nonzero_trials(group):
 def compute_reliability(group, analysis=None, flashes=True, omitted=False):
     from itertools import combinations
     import scipy as sp
-    if analysis and flashes and not omitted:
-        response_window = [int(np.abs(analysis.flash_window[0]) * 31), int(analysis.flash_window[1] * 31)]
-    elif analysis and omitted:
+    if analysis and omitted:
         response_window = [int(np.abs(analysis.omitted_flash_window[0]) * 31), int(omitted_flash_window.flash_window[1] * 31)]
+    elif analysis and flashes and not omitted:
+        response_window = [int(np.abs(analysis.flash_window[0]) * 31), int(analysis.flash_window[1] * 31)]
     elif analysis and not flashes and not omitted:
         response_window = [int(np.abs(analysis.trial_window[0]) * 31), int(analysis.trial_window[1] * 31)]
     elif not analysis and flashes and not omitted:
         response_window = [int(0.5 * 31), int(1.25 * 31)]
-    elif not analysis and omitted and not flashes:
+    elif not analysis and omitted:
         response_window = [int(3 * 31), int(6 * 31)]
     else:
         response_window = [int(4*31), int(8*31)]
@@ -197,8 +202,26 @@ def compute_reliability(group, analysis=None, flashes=True, omitted=False):
     return pd.Series({'reliability': reliability})
 
 
+def get_window(analysis=None, flashes=False, omitted=False):
+    if analysis and omitted:
+        window = analysis.omitted_flash_window
+    elif analysis and flashes and not omitted:
+        window = analysis.flash_window
+    elif analysis and not flashes and not omitted:
+        window = analysis.trial_window
+    elif not analysis and flashes and not omitted:
+        window = [-0.5, 0.75]
+    elif not analysis and omitted:
+        window = [-3, 3]
+    else:
+        window = [-4, 8]
+    return window
+
 def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
                 get_reliability=False):
+
+    window = get_window(analysis, flashes, omitted)
+
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
@@ -206,9 +229,9 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     mdf = mdf.reset_index()
     mdf = annotate_mean_df_with_pref_stim(mdf)
     if analysis is not None:
-        mdf = annotate_mean_df_with_p_value(analysis, mdf, flashes=flashes)
-        mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, flashes=flashes)
-        mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, flashes=flashes)
+        mdf = annotate_mean_df_with_p_value(analysis, mdf, window)
+        mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
+        mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
         mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
 
     fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
@@ -321,13 +344,9 @@ def add_metadata_to_mean_df(mdf, metadata):
     return mdf
 
 
-def get_time_to_peak(analysis, trace, flashes=False):
-    if flashes:
-        response_window_duration = analysis.response_window_duration
-        flash_window = analysis.flash_window
-        response_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) + response_window_duration]
-    else:
-        response_window = analysis.response_window
+def get_time_to_peak(analysis, trace, window=[-4,8]):
+    response_window_duration = analysis.response_window_duration
+    response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
     frame_rate = analysis.ophys_frame_rate
     response_window_trace = trace[int(response_window[0] * frame_rate):(int(response_window[1] * frame_rate))]
     peak_response = np.amax(response_window_trace)
@@ -336,12 +355,12 @@ def get_time_to_peak(analysis, trace, flashes=False):
     return peak_response, time_to_peak
 
 
-def annotate_mean_df_with_time_to_peak(analysis, mean_df, flashes=False):
+def annotate_mean_df_with_time_to_peak(analysis, mean_df, window=[-4,8]):
     ttp_list = []
     peak_list = []
     for idx in mean_df.index:
         mean_trace = mean_df.iloc[idx].mean_trace
-        peak_response, time_to_peak = get_time_to_peak(analysis, mean_trace, flashes=flashes)
+        peak_response, time_to_peak = get_time_to_peak(analysis, mean_trace, window=window)
         ttp_list.append(time_to_peak)
         peak_list.append(peak_response)
     mean_df['peak_response'] = peak_list
@@ -361,13 +380,9 @@ def annotate_mean_df_with_fano_factor(analysis, mean_df):
     return mean_df
 
 
-def annotate_mean_df_with_p_value(analysis, mean_df, flashes=False):
-    if flashes:
-        response_window_duration = analysis.response_window_duration
-        flash_window = [-response_window_duration, response_window_duration]
-        response_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) + response_window_duration]
-    else:
-        response_window = analysis.response_window
+def annotate_mean_df_with_p_value(analysis, mean_df, window=[-4,8]):
+    response_window_duration = analysis.response_window_duration
+    response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
     frame_rate = analysis.ophys_frame_rate
     p_val_list = []
     for idx in mean_df.index:
@@ -378,15 +393,10 @@ def annotate_mean_df_with_p_value(analysis, mean_df, flashes=False):
     return mean_df
 
 
-def annotate_mean_df_with_sd_over_baseline(analysis, mean_df, flashes=False):
-    if flashes:
-        response_window_duration = analysis.response_window_duration
-        flash_window = [-response_window_duration, response_window_duration]
-        response_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) + response_window_duration]
-        baseline_window = [np.abs(flash_window[0]) - response_window_duration, (np.abs(flash_window[0]))]
-    else:
-        response_window = analysis.response_window
-        baseline_window = analysis.baseline_window
+def annotate_mean_df_with_sd_over_baseline(analysis, mean_df, window=[-4,8]):
+    response_window_duration = analysis.response_window_duration
+    response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
+    baseline_window = [np.abs(window[0]) - response_window_duration, (np.abs(window[0]))]
     frame_rate = analysis.ophys_frame_rate
     sd_list = []
     for idx in mean_df.index:
