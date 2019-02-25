@@ -168,7 +168,7 @@ def get_fraction_nonzero_trials(group):
 #     return pd.Series({'reliability': reliability})
 
 
-def get_reliability(group, analysis=None, flashes=True, omitted=False):
+def compute_reliability(group, analysis=None, flashes=True, omitted=False):
     from itertools import combinations
     import scipy as sp
     if analysis and flashes and not omitted:
@@ -224,7 +224,7 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
 
     if get_reliability:
-        reliability = rdf.groupby(conditions).apply(get_reliability, analysis, flashes, omitted)
+        reliability = rdf.groupby(conditions).apply(compute_reliability, analysis, flashes, omitted)
         reliability = reliability.reset_index()
         mdf['reliability'] = reliability.reliability
 
