@@ -446,6 +446,7 @@ def annotate_trial_response_df_with_pref_stim(trial_response_df):
 
 
 def annotate_flash_response_df_with_pref_stim(fdf):
+    fdf = fdf.reset_index()
     if 'cell_specimen_id' in fdf.keys():
         cell_key = 'cell_specimen_id'
     else:
@@ -454,7 +455,7 @@ def annotate_flash_response_df_with_pref_stim(fdf):
     mean_response = fdf.groupby([cell_key, 'image_name']).apply(get_mean_sem)
     m = mean_response.unstack()
     for cell in m.index:
-        image_index = np.where(m.loc[cell]['mean_response'].values == np.max(m.loc[cell]['mean_response'].values))[0][0]
+        image_index = np.where(m.loc[cell]['mean_response'].values == np.nanmax(m.loc[cell]['mean_response'].values))[0][0]
         pref_image = m.loc[cell]['mean_response'].index[image_index]
         trials = fdf[(fdf[cell_key] == cell) & (fdf.image_name == pref_image)].index
         for trial in trials:
@@ -502,21 +503,28 @@ def get_gray_response_df(dataset, window=0.5):
 def add_repeat_to_stimulus_table(stimulus_table):
     repeat = []
     n = 0
-    for i, current_image in enumerate(stimulus_table.image_name.values):
-        if current_image == 'omitted':
-            repeat.append(1)
+    for i, image in enumerate(stimulus_table.image_name.values):
+        if image != stimulus_table.image_name.values[i-1]:
+            n = 1
+            repeat.append(n)
         else:
-            last_image = stimulus_table.image_name.values[i - 1]
-            if last_image == 'omitted':
-                n += 1
-                repeat.append(n)
-            else:
-                if current_image != last_image:
-                    n = 1
-                    repeat.append(n)
-                else:
-                    n += 1
-                    repeat.append(n)
+            n += 1
+            repeat.append(n)
+    # for i, current_image in enumerate(stimulus_table.image_name.values):
+    #     if current_image == 'omitted':
+    #         repeat.append(1)
+    #     else:
+    #         last_image = stimulus_table.image_name.values[i - 1]
+    #         if last_image == 'omitted':
+    #             n += 1
+    #             repeat.append(n)
+    #         else:
+    #             if current_image != last_image:
+    #                 n = 1
+    #                 repeat.append(n)
+    #             else:
+    #                 n += 1
+    #                 repeat.append(n)
     stimulus_table['repeat'] = repeat
     stimulus_table['repeat'] = [int(r) for r in stimulus_table.repeat.values]
     return stimulus_table
