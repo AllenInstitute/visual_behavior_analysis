@@ -45,8 +45,8 @@ python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_analysis_f
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords2'
 
 job_settings = {'queue': 'braintv',
-                'mem': '80g',
-                'walltime': '5:00:00',
+                'mem': '60g',
+                'walltime': '4:00:00',
                 'ppn': 1,
                 'jobdir': jobdir,
                 }
