@@ -83,7 +83,7 @@ def make_info_table(extended_trials, ax):
             cell_dict[cell].set_width(0.5)
 
 
-def make_session_timeline_plot(extended_trials, ax, palette='trial_types'):
+def make_session_timeline_plot(extended_trials, ax, palette='trial_types', demarcate_trials=False):
     licks = list(extended_trials['lick_times'])
     rewards = list(extended_trials['reward_times'])
     stimuli = list(extended_trials['change_time'])
@@ -97,6 +97,8 @@ def make_session_timeline_plot(extended_trials, ax, palette='trial_types'):
     spanstart = 0
     trial = 0
     for trial in range(1, len(local_df)):
+        if demarcate_trials:
+            ax.axvline(local_df.iloc[trial]['starttime'], color='k', linewidth=0.5, alpha=0.75)
         if local_df.iloc[trial]['trial_outcome'] != local_df.iloc[trial - 1]['trial_outcome']:
             # if the trial_outcome is different on this trial than the last, end the previous span at the start of this trial
             #  then start another at the start of this trial that will continue until the trial type changes again
