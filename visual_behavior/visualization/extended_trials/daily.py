@@ -88,28 +88,30 @@ def make_session_timeline_plot(extended_trials, ax, palette='trial_types'):
     rewards = list(extended_trials['reward_times'])
     stimuli = list(extended_trials['change_time'])
 
-    extended_trials['trial_outcome'] = extended_trials.apply(assign_trial_description, axis=1)
+    # make a local copy of the extended trial dataframe containing only the columns necessary to make this plot:
+    local_df = extended_trials[['trial_type', 'auto_rewarded', 'response', 'starttime', 'trial_length']].copy()
+    local_df['trial_outcome'] = local_df.apply(assign_trial_description, axis=1)
 
     # This plots a vertical span of a defined color for every trial type
     # to save time, I'm only plotting a span when the trial type changes
     spanstart = 0
     trial = 0
-    for trial in range(1, len(extended_trials)):
-        if extended_trials.iloc[trial]['trial_outcome'] != extended_trials.iloc[trial - 1]['trial_outcome']:
+    for trial in range(1, len(local_df)):
+        if local_df.iloc[trial]['trial_outcome'] != local_df.iloc[trial - 1]['trial_outcome']:
             # if the trial_outcome is different on this trial than the last, end the previous span at the start of this trial
             #  then start another at the start of this trial that will continue until the trial type changes again
             ax.axvspan(
                 spanstart,
-                extended_trials.iloc[trial]['starttime'],
-                color=colormap(extended_trials.iloc[trial - 1]['trial_outcome'], palette),
+                local_df.iloc[trial]['starttime'],
+                color=colormap(local_df.iloc[trial - 1]['trial_outcome'], palette),
                 alpha=0.75
             )
-            spanstart = extended_trials.iloc[trial]['starttime']
+            spanstart = local_df.iloc[trial]['starttime']
     # plot a span for the final trial(s)
-    trial_type = trial_translator(extended_trials.iloc[trial - 1]['trial_type'], extended_trials.iloc[trial - 1]['response'])
+    trial_type = trial_translator(local_df.iloc[trial - 1]['trial_type'], local_df.iloc[trial - 1]['response'])
     ax.axvspan(
         spanstart,
-        extended_trials.iloc[trial]['starttime'] + extended_trials.iloc[trial]['trial_length'],
+        local_df.iloc[trial]['starttime'] + local_df.iloc[trial]['trial_length'],
         color=colormap(trial_type, palette),
         alpha=0.75
     )
