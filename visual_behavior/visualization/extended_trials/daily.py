@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from visual_behavior.plotting import placeAxesOnGrid
 from visual_behavior.utilities import flatten_list, get_response_rates
 from visual_behavior.translator.core.annotate import check_responses
-from visual_behavior.translator.core.annotate import colormap, trial_translator
+from visual_behavior.translator.core.annotate import colormap, trial_translator, assign_trial_description
 from visual_behavior.change_detection.trials import session_metrics
 
 
@@ -88,17 +88,20 @@ def make_session_timeline_plot(extended_trials, ax, palette='trial_types'):
     rewards = list(extended_trials['reward_times'])
     stimuli = list(extended_trials['change_time'])
 
+    extended_trials['trial_outcome'] = extended_trials.apply(assign_trial_description, axis=1)
+
     # This plots a vertical span of a defined color for every trial type
     # to save time, I'm only plotting a span when the trial type changes
     spanstart = 0
     trial = 0
     for trial in range(1, len(extended_trials)):
-        if extended_trials.iloc[trial]['trial_type'] != extended_trials.iloc[trial - 1]['trial_type']:
-            trial_type = trial_translator(extended_trials.iloc[trial - 1]['trial_type'], extended_trials.iloc[trial - 1]['response'])
+        if extended_trials.iloc[trial]['trial_outcome'] != extended_trials.iloc[trial - 1]['trial_outcome']:
+            # if the trial_outcome is different on this trial than the last, end the previous span at the start of this trial
+            #  then start another at the start of this trial that will continue until the trial type changes again
             ax.axvspan(
                 spanstart,
                 extended_trials.iloc[trial]['starttime'],
-                color=colormap(trial_type, palette),
+                color=colormap(extended_trials.iloc[trial - 1]['trial_outcome'], palette),
                 alpha=0.75
             )
             spanstart = extended_trials.iloc[trial]['starttime']
