@@ -151,6 +151,7 @@ class ResponseAnalysis(object):
     def generate_flash_response_df(self):
         print('generating flash response df')
         stimulus_table = ut.annotate_flashes_with_reward_rate(self.dataset)
+        running_speed = self.dataset.running_speed.running_speed.values
         row = []
         for cell in self.dataset.cell_indices:
             cell = int(cell)
@@ -183,32 +184,39 @@ class ResponseAnalysis(object):
                 baseline_response = ut.get_mean_in_window(trace, baseline_window,
                                                           self.ophys_frame_rate, self.use_events)
                 n_events = ut.get_n_nonzero_in_window(trace, response_window, self.ophys_frame_rate)
+                running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(flash_time,
+                                                                                              running_speed,
+                                                                                              self.dataset.timestamps_stimulus,
+                                                                                              flash_window,
+                                                                                              self.stimulus_frame_rate)
+                mean_running_speed = ut.get_mean_in_window(running_speed_trace, response_window,
+                                                           self.stimulus_frame_rate)
                 reward_rate = flash_data.reward_rate.values[0]
 
                 row.append([int(cell), int(cell_specimen_id), int(flash), omitted, flash_time, image_name, image_category,
                             trace, timestamps, mean_response, baseline_response, n_events, p_value_baseline, sd_over_baseline,
-                            reward_rate, int(self.dataset.experiment_id)])
+                            reward_rate, mean_running_speed, int(self.dataset.experiment_id)])
 
         flash_response_df = pd.DataFrame(data=row,
                                          columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
                                                   'image_name', 'image_category', 'trace', 'timestamps', 'mean_response',
                                                   'baseline_response', 'n_events', 'p_value_baseline', 'sd_over_baseline',
-                                                  'reward_rate', 'experiment_id'])
+                                                  'reward_rate', 'mean_running_speed', 'experiment_id'])
         flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
         flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
 
-        flash_response_df['change_time'] = flash_response_df.start_time.values
-        flash_response_df = pd.merge(flash_response_df, self.dataset.all_trials[['change_time', 'trial_type']],
-                                     on='change_time', how='outer')
-        if 'index' in flash_response_df.keys():
-            flash_response_df = flash_response_df.drop(columns=['index']).reset_index()
+        # flash_response_df['change_time'] = flash_response_df.start_time.values
+        # flash_response_df = pd.merge(flash_response_df, self.dataset.trials[['change_time', 'trial_type']],
+        #                              on='change_time', how='outer')
         # tmp = self.trial_response_df[self.trial_response_df.cell == 0]
         # flash_response_df = pd.merge(flash_response_df, tmp[['change_time',
         #                             'lick_times', 'reward_times']], on='change_time', how='outer')
         # flash_response_df = flash_response_df[
         #     (flash_response_df.flash_number > 10) & (flash_response_df.trial_type != 'autorewarded')]
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
+        if 'index' in flash_response_df.keys():
+            flash_response_df = flash_response_df.drop(columns=['index']).reset_index()
         if 'omitted' in stimulus_table.image_name.unique():
             print('computing p-values from shuffled omitted flash responses')
             p_values_from_shuffle = ut.get_p_values_from_shuffle(self.dataset, stimulus_table, flash_response_df)
