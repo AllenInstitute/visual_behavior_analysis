@@ -21,14 +21,18 @@ def test_dump_load_schema(exemplar_extended_trials_fixture):
         many=True,
     )
 
-    # # print exemplar_extended_trials_records[0]['startdatetime'], deserialized_extended_trials_records[0]['startdatetime']
+    # Useful for debugging
+    # import json
+    # print exemplar_extended_trials_records[0]['startdatetime']
+    # print json.loads(serialized_extended_trials)[0]['startdatetime']
+    # print deserialized_extended_trials_records[0]['startdatetime']
     assert exemplar_extended_trials_records[0] == deserialized_extended_trials_records[0]
 
     deserialized_extended_trials = pd.DataFrame(deserialized_extended_trials_records)
 
     pd.testing.assert_frame_equal(
-        deserialized_extended_trials,
         exemplar_extended_trials_fixture,
+        deserialized_extended_trials,
         check_column_type=False,
         check_index_type=False,
         check_dtype=False,

@@ -3,6 +3,7 @@ import py
 import os
 import tempfile
 import datetime
+from dateutil.tz import tzutc
 import numpy as np
 import pandas as pd
 import pytz
@@ -183,7 +184,7 @@ def exemplar_extended_trials_fixture():
         'endtime', 'reward_licks', 'reward_lick_count', 'reward_lick_latency',
         'reward_rate', 'response', 'trial_length', 'color'
     ])
-    trials['startdatetime'] = trials['startdatetime'].dt.tz_localize('America/Los_Angeles')
+    trials['startdatetime'] = [pd.Timestamp(d).tz_localize('America/Los_Angeles').astimezone(tzutc()) for d in trials['startdatetime']]
     trials['behavior_session_uuid'] = uuid.UUID('66750c6b-0a0e-43bd-9cb3-fc511c34dc0e')
     return trials
 

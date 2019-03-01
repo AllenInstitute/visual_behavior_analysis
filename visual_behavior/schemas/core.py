@@ -90,6 +90,7 @@ class TrialSchema(Schema):
     change_frame = fields.Float(
         description='The stimulus frame when the change occured on this trial',
         required=True,
+        allow_nan=True,
     )
     scheduled_change_time = fields.Float(
         description='The time when the change was scheduled to occur on this trial',
@@ -98,6 +99,7 @@ class TrialSchema(Schema):
     change_time = fields.Float(
         description='The time when the change occured on this trial',
         required=True,
+        allow_nan=True,
     )
 
     # image parameters
@@ -142,6 +144,7 @@ class TrialSchema(Schema):
         description='The orientation of the change orientation on this trial',
         required=True,
         allow_none=True,
+        allow_nan=True,
     )
     delta_ori = fields.Float(
         description='The difference between the initial and change orientations on this trial',
@@ -158,6 +161,7 @@ class TrialSchema(Schema):
     response_latency = fields.Float(
         description='The latency between the change and the first lick on this trial',
         required=True,
+        allow_nan=True,
     )
     response_time = fields.List(
         fields.Float,
