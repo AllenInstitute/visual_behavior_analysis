@@ -50,14 +50,11 @@ def _test_core_data_schemas(core_data):
     for row, row_errors in errors.items():
         assert len(row_errors)==0, row_errors
 
-    simple_schemas = (
-        (MetadataSchema, core_data['metadata']),
-        (ImageSetSchema, core_data['image_set']),
-    )
+    errors = MetadataSchema().validate(core_data['metadata'])
+    assert len(errors)==0, errors.keys()
 
-    for Schema, data in simple_schemas:
-        errors = Schema().validate(data)
-        assert len(errors)==0, errors.keys()
+    errors = ImageSetSchema().validate(core_data['image_set'])
+    assert len(errors)==0, errors.keys()
 
 
 def test_foraging2_translator_schema(foraging2_data_stage4_2018_05_10):

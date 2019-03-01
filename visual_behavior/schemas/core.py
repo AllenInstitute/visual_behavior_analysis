@@ -20,14 +20,15 @@ class RewardSchema(TimeSeriesSchema):
     """ schema for water reward presentations
 
     """
-    # volume = fields.Float(
-    #     description='Volume of water dispensed on this reward presentation in mL',
-    #     required=True,
-    # )
-    # lickspout = fields.Int(
-    #     description='The water line on which this reward was dispensed',
-    #     required=True,
-    # )
+    volume = fields.Float(
+        description='Volume of water dispensed on this reward presentation in mL',
+        required=False,
+    )
+    lickspout = fields.Int(
+        description='The water line on which this reward was dispensed',
+        required=False,
+        allow_none=True,
+    )
 
 
 class LickSchema(TimeSeriesSchema):
@@ -49,11 +50,13 @@ class RunningSchema(TimeSeriesSchema):
         description='The reference voltage for the encoder.',
         required=True,
         allow_none=True,
+        allow_nan=True,
     )
-    v_in = fields.Float(
+    v_sig = fields.Float(
         description='The input voltage for the encoder.',
         required=True,
         allow_none=True,
+        allow_nan=True,
     )
 
 
@@ -212,6 +215,11 @@ class TrialSchema(Schema):
 
 
 class StimulusSchema(TimeSeriesSchema):
+    contrast = fields.Float(
+        description='The contrast',
+        required=False,
+        allow_none=True,
+    )
     duration = fields.Float(
         description='duration of the stimulus',
         required=True,
@@ -230,6 +238,7 @@ class StimulusSchema(TimeSeriesSchema):
         description='The orientation of a grating stimulus',
         required=True,
         allow_none=True,
+        allow_nan=True,
     )
     end_frame = fields.Int(
         description='The last frame of this stimulus, non-inclusive',
@@ -238,6 +247,16 @@ class StimulusSchema(TimeSeriesSchema):
 
 
 class MetadataSchema(Schema):
+    rig_id = fields.String(
+        required=True,
+    )
+    reward_volume = fields.Float(
+        required=False,
+    )
+    trial_duration = fields.Float(
+        required=False,
+        allow_none=True,
+    )
     startdatetime = fields.String(
         description='Start time of visual behavior session in ISO 8601',
         required=True,
@@ -249,6 +268,10 @@ class MetadataSchema(Schema):
     rewardvol = fields.Float(
         description='volume of rewards for this session',
         required=True,
+    )
+    reward_vol = fields.Float(
+        description='volume of rewards for this session',
+        required=False,
     )
     params = fields.Dict(
         description='record of parameters passed into script',
@@ -270,7 +293,7 @@ class MetadataSchema(Schema):
     stage = fields.String(
         description='name of training stage',
         required=True,
-    ),
+    )
     stoptime = fields.Float(
         description='time when experiment ended (in seconds)',
         required=True,
