@@ -38,7 +38,7 @@ if __name__ == '__main__':
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'image_name'], flashes=True, get_reliability=False)
     get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True, get_reliability=False)
+                              conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True, get_reliability=True)
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'image_name', 'engaged', 'repeat'], flashes=True,
     #                           get_reliability=False)

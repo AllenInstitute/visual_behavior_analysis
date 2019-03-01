@@ -241,17 +241,18 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, flashes=
     frame_rate = analysis.ophys_frame_rate
     stim_duration = analysis.stimulus_duration
     blank_duration = analysis.blank_duration
-    if flashes:
+    if flashes and not omitted:
         window = analysis.flash_window
-        change_frame = np.abs(window[0]) * frame_rate
-        end_frame = (np.abs(window[0]) + window[1]) * frame_rate
+    elif omitted:
+        window = analysis.omitted_flash_window
     else:
         window = analysis.trial_window
-        change_frame = np.abs(window[0]) * frame_rate
-        end_frame = (window[1] + np.abs(window[0])) * frame_rate
+    change_frame = np.abs(window[0]) * frame_rate
+    end_frame = (window[1] + np.abs(window[0])) * frame_rate
     interval = blank_duration + stim_duration
     if omitted:
-        array = np.arange((change_frame + interval) * frame_rate, end_frame, interval * frame_rate)
+        array = np.arange((change_frame + interval), end_frame, interval * frame_rate)
+        array = array[1:]
     else:
         array = np.arange(change_frame, end_frame, interval * frame_rate)
     for i, vals in enumerate(array):

@@ -502,37 +502,43 @@ def get_gray_response_df(dataset, window=0.5):
 
 def add_repeat_to_stimulus_table(stimulus_table):
     repeat = []
+    post_omitted = []
     n = 0
-    for i, image in enumerate(stimulus_table.image_name.values):
-        if image != stimulus_table.image_name.values[i-1]:
-            n = 1
-            repeat.append(n)
-        else:
-            n += 1
-            repeat.append(n)
-    # for i, current_image in enumerate(stimulus_table.image_name.values):
-    #     if current_image == 'omitted':
-    #         repeat.append(1)
+    # for i, image in enumerate(stimulus_table.image_name.values):
+    #     if image != stimulus_table.image_name.values[i-1]:
+    #         n = 1
+    #         repeat.append(n)
     #     else:
-    #         last_image = stimulus_table.image_name.values[i - 1]
-    #         if last_image == 'omitted':
-    #             n += 1
-    #             repeat.append(n)
-    #         else:
-    #             if current_image != last_image:
-    #                 n = 1
-    #                 repeat.append(n)
-    #             else:
-    #                 n += 1
-    #                 repeat.append(n)
+    #         n += 1
+    #         repeat.append(n)
+    for i, current_image in enumerate(stimulus_table.image_name.values):
+        if current_image == 'omitted':
+            repeat.append(1)
+            post_omitted.append(False)
+        else:
+            last_image = stimulus_table.image_name.values[i - 1]
+            if last_image == 'omitted':
+                n += 1
+                repeat.append(n)
+                post_omitted.append(True)
+            else:
+                if current_image != last_image:
+                    n = 1
+                    repeat.append(n)
+                    post_omitted.append(False)
+                else:
+                    n += 1
+                    repeat.append(n)
+                    post_omitted.append(False)
     stimulus_table['repeat'] = repeat
     stimulus_table['repeat'] = [int(r) for r in stimulus_table.repeat.values]
+    stimulus_table['post_omitted'] = post_omitted
     return stimulus_table
 
 
 def add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table):
     stimulus_table = add_repeat_to_stimulus_table(stimulus_table)
-    flash_response_df = flash_response_df.merge(stimulus_table[['flash_number', 'repeat']], on='flash_number')
+    flash_response_df = flash_response_df.merge(stimulus_table[['flash_number', 'repeat', 'post_omitted']], on='flash_number')
     return flash_response_df
 
 

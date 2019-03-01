@@ -415,8 +415,8 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     else:
         stimulus_table['omitted'] = False
     # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
-    if np.isnan(stimulus_table.loc[0, 'end_frame']): #exception for cases where the first flash in the session is omitted
-        stimulus_table = stimulus_table.drop(index=0)
+    # if np.isnan(stimulus_table.loc[0, 'end_frame']): #exception for cases where the first flash in the session is omitted
+    #     stimulus_table = stimulus_table.drop(index=0)
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
     start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
@@ -787,7 +787,7 @@ def save_roi_validation(roi_validation, lims_data):
                     str(index) + '_' + str(id) + '_' + str(cell_index))
 
 
-def convert_level_1_to_level_2(lims_id, cache_dir=None):
+def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
     logger.info('converting', lims_id)
     print('converting', lims_id)
     lims_data = get_lims_data(lims_id)
@@ -835,8 +835,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     average_image = get_average_image(lims_data)
     save_average_image(average_image, lims_data)
 
-    roi_validation = get_roi_validation(lims_data)
-    save_roi_validation(roi_validation, lims_data)
+    if plot_roi_validation:
+        roi_validation = get_roi_validation(lims_data)
+        save_roi_validation(roi_validation, lims_data)
 
     logger.info('done converting')
     print('done converting')

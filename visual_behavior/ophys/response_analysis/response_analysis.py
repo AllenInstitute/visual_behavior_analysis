@@ -169,16 +169,13 @@ class ResponseAnalysis(object):
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
                 image_category = flash_data.image_category.values[0]
-                # flash_window = [-self.response_window_duration, self.response_window_duration]
                 flash_window = self.flash_window
                 trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
                                                                   flash_window, self.ophys_frame_rate)
-                # response_window = [self.response_window_duration, self.response_window_duration * 2]
                 response_window = [np.abs(flash_window[0]), np.abs(flash_window[
                     0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
                 baseline_window = [np.abs(flash_window[0]) - self.response_window_duration, (np.abs(flash_window[0]))]
-                # baseline_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) - self.response_window_duration]
                 p_value_baseline = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
                                                            baseline_window, self.ophys_frame_rate)
@@ -204,12 +201,13 @@ class ResponseAnalysis(object):
         flash_response_df['change_time'] = flash_response_df.start_time.values
         flash_response_df = pd.merge(flash_response_df, self.dataset.all_trials[['change_time', 'trial_type']],
                                      on='change_time', how='outer')
-
+        if 'index' in flash_response_df.keys():
+            flash_response_df = flash_response_df.drop(columns=['index']).reset_index()
         # tmp = self.trial_response_df[self.trial_response_df.cell == 0]
         # flash_response_df = pd.merge(flash_response_df, tmp[['change_time',
         #                             'lick_times', 'reward_times']], on='change_time', how='outer')
-        flash_response_df = flash_response_df[
-            (flash_response_df.flash_number > 10) & (flash_response_df.trial_type != 'autorewarded')]
+        # flash_response_df = flash_response_df[
+        #     (flash_response_df.flash_number > 10) & (flash_response_df.trial_type != 'autorewarded')]
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
         if 'omitted' in stimulus_table.image_name.unique():
             print('computing p-values from shuffled omitted flash responses')
@@ -240,7 +238,6 @@ class ResponseAnalysis(object):
             if os.path.exists(self.get_flash_response_df_path()):
                 print('loading flash response dataframe')
                 self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
-                # this is driving me nuts, why does it always load things as floats when i saved them as ints?!
                 fdf = self.flash_response_df
                 fdf.cell = [int(cell) for cell in fdf.cell.values]
                 fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
@@ -280,16 +277,13 @@ class ResponseAnalysis(object):
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_category.values[0]
                 image_category = flash_data.image_category.values[0]
-                # flash_window = [-self.response_window_duration, self.response_window_duration]
                 flash_window = self.omitted_flash_window
                 trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
                                                                   flash_window, self.ophys_frame_rate)
-                # response_window = [self.response_window_duration, self.response_window_duration * 2]
                 response_window = [np.abs(flash_window[0]), np.abs(flash_window[
                     0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
                 baseline_window = [np.abs(flash_window[0]) - self.response_window_duration, (np.abs(flash_window[0]))]
-                # baseline_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) - self.response_window_duration]
                 p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
                                                            baseline_window, self.ophys_frame_rate)
@@ -309,18 +303,6 @@ class ResponseAnalysis(object):
                                                   'baseline_response', 'n_events', 'p_value', 'sd_over_baseline',
                                                   'reward_rate', 'experiment_id'])
         # flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
-        # flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
-        # flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
-
-        # flash_response_df['change_time'] = flash_response_df.start_time.values
-        # flash_response_df = pd.merge(flash_response_df, self.dataset.all_trials[['change_time', 'trial_type']],
-        #                              on='change_time', how='outer')
-
-        # tmp = self.trial_response_df[self.trial_response_df.cell == 0]
-        # flash_response_df = pd.merge(flash_response_df, tmp[['change_time',
-        #                             'lick_times', 'reward_times']], on='change_time', how='outer')
-        # flash_response_df = flash_response_df[
-        #     (flash_response_df.flash_number > 10) & (flash_response_df.trial_type != 'autorewarded')]
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
         omitted_flash_response_df = flash_response_df
         return omitted_flash_response_df
@@ -342,11 +324,9 @@ class ResponseAnalysis(object):
             if os.path.exists(self.get_omitted_flash_response_df_path()):
                 print('loading omitted flash response dataframe')
                 self.omitted_flash_response_df = pd.read_hdf(self.get_omitted_flash_response_df_path(), key='df', format='fixed')
-                # this is driving me nuts, why does it always load things as floats when i saved them as ints?!
                 fdf = self.omitted_flash_response_df
                 fdf.cell = [int(cell) for cell in fdf.cell.values]
                 fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
-                # fdf.flash_number = [int(flash_number) for flash_number in fdf.flash_number.values]
                 self.omitted_flash_response_df = fdf
             else:
                 self.omitted_flash_response_df = self.generate_omitted_flash_response_df()

@@ -106,8 +106,8 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     if 'image_name' in df.keys():
         image_name = 'image_name'
         suffix = '_flashes'
-        if 'omitted' in df:
-            df = df[df.omitted==False]
+        if 'omitted' in df.image_name.unique():
+            df = df[df.image_name != 'omitted']
     else:
         image_name = 'change_image_name'
         suffix = '_trials'
@@ -143,10 +143,10 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     ax.set_title(cre_line, va='bottom', ha='center')
     ax.set_xticklabels(images, rotation=90)
     ax.set_ylabel('cells')
-    if response_matrix.shape[0] > 300:
-        interval = 100
+    if response_matrix.shape[0] > 1000:
+        interval = 500
     else:
-        interval = 20
+        interval = 50
     ax.set_yticks(np.arange(0, response_matrix.shape[0], interval))
     ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval))
     if save_dir:
@@ -154,6 +154,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
         fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.9)
         save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmap_'+cre_line+'_'+image_set)
+    return ax
 
 
 def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, folder=None,
@@ -198,12 +199,13 @@ def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=Non
     ax.set_xlabel('time after change (s)', fontsize=16)
     ax.set_title(cre_line)
     ax.set_ylabel('cells')
-    plt.suptitle('image set '+image_set, x=0.59, y=.99, fontsize=18)
-    fig.tight_layout()
-    plt.gcf().subplots_adjust(top=0.9)
     if save_dir:
+        plt.suptitle('image set ' + image_set, x=0.59, y=.99, fontsize=18)
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(top=0.9)
         save_figure(fig, figsize, save_dir, folder,
                     'pref_stim_response_matrix_' + cre_line + '_' + image_set + '_' + suffix)
+    return ax
 
 
 def plot_mean_response_by_repeat_heatmap(df, cre_line, title=None, ax=None, use_events=False, save_figures=False,
@@ -260,12 +262,8 @@ def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, win
     frame_rate = 31.
     stim_duration = .25
     blank_duration = .5
-    if flashes:
-        change_frame = np.abs(window[0]) * frame_rate
-        end_frame = (np.abs(window[0]) + window[1]) * frame_rate
-    else:
-        change_frame = np.abs(window[0]) * frame_rate
-        end_frame = (window[1] + np.abs(window[0])) * frame_rate
+    change_frame = np.abs(window[0]) * frame_rate
+    end_frame = (np.abs(window[0]) + window[1]) * frame_rate
     interval = blank_duration + stim_duration
     if omitted:
         array = np.arange((change_frame + interval), end_frame, interval * frame_rate)
@@ -811,9 +809,9 @@ def plot_change_omitted_responses(tdf, odf, cell_specimen_id, save_figures=False
     image_set = cdf.image_set.unique()[0]
     area = cdf.image_set.unique()[0]
     ax[0] = plot_image_change_response(tdf, cell_specimen_id, legend=False, save=False, ax=ax[0], window=[-4,8])
-    ax[0].set_xlim(2*31, 7*31)
+    ax[0].set_xlim(1*31, 7*31)
     ax[0].set_title('change flash response')
-    ax[1] = plot_omitted_flash_response_all_stim(odf, cell_specimen_id, ax=ax[1], window=[-2,3])
+    ax[1] = plot_omitted_flash_response_all_stim(odf, cell_specimen_id, ax=ax[1], window=[-3,3])
     ax[1].set_ylabel('')
     fig.tight_layout()
 
