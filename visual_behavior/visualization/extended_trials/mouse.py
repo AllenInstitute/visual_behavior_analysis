@@ -203,7 +203,7 @@ def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_heig
     if row_height == 'variable':
         # plots with few rows look overcrowded. They need a larger row size to accomodate.
         # decrease row height linearly to a minimum of 0.5
-        row_height = max((-0.25 * len(df_input) + 2.25, 0.5))
+        row_height = max((-0.5 * len(df_input) + 2.25, 0.75))
 
     if len(df_input['startdatetime'].unique()) == len(df_input):
         df_summary = df_input
@@ -238,8 +238,8 @@ def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_heig
         for i in range(len(df_summary)):
             axis.axhspan(i - 0.5, i + 0.5, color=bar_colors[i % 2], zorder=-1, alpha=0.25)
 
-    fig.tight_layout()
     if len(df_summary) > 1:
+        fig.tight_layout()
         plt.subplots_adjust(wspace=0.075)
 
     return fig
