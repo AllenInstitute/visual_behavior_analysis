@@ -225,7 +225,7 @@ class ResponseAnalysis(object):
                 p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
             flash_response_df['p_value'] = p_values
         else:
-            flash_response_df['p_value'] = None
+            flash_response_df['p_value'] = np.nan
 
         return flash_response_df
 
