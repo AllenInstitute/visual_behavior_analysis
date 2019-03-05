@@ -39,6 +39,7 @@ def event_detection(lims_id, cache_dir, events_dir, plot=True):
 
 if __name__ == '__main__':
     import sys
+    import os
 
     lims_id = sys.argv[1]
 
