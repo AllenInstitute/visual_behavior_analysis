@@ -365,6 +365,11 @@ def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, 
     if cmap == 'hls':
         from matplotlib.colors import ListedColormap
         cmap = ListedColormap(sns.color_palette('hls', 8))
+        vmin = 0
+        vmax = 8
+    else:
+        vmin = np.amin(metrics)
+        vmax = np.amax(metrics)
     if ax is None:
         figsize = (10, 10)
         fig, ax = plt.subplots(figsize=figsize)
@@ -375,12 +380,12 @@ def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, 
         mask = np.empty(tmp.shape, dtype=np.float)
         mask[:] = np.nan
         mask[tmp == 1] = metrics[roi]
-        cax = ax.imshow(mask, cmap=cmap, alpha=0.5, vmin=np.amin(metrics), vmax=np.amax(metrics))
+        cax = ax.imshow(mask, cmap=cmap, alpha=0.5, vmin=vmin, vmax=vmax)
         ax.set_title(metric_name)
         ax.grid(False)
         ax.axis('off')
     if colorbar:
-        plt.colorbar(cax, ax=ax, )
+        plt.colorbar(cax, ax=ax)
     if save:
         plt.tight_layout()
         sf.save_figure(fig, figsize, dataset.analysis_dir, fig_title=metric_name, folder='experiment_summary')
