@@ -555,11 +555,11 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
     return ax
 
 
-def plot_trace(timestamps, trace, ax=None, xlabel='time (seconds)', ylabel='fluorescence', title='roi'):
+def plot_trace(timestamps, trace, ax=None, xlabel='time (seconds)', ylabel='fluorescence', title='roi',
+               color=sns.color_palette()[0]):
     if ax is None:
         fig, ax = plt.subplots(figsize=(15, 5))
-    colors = sns.color_palette()
-    ax.plot(timestamps, trace, color=colors[0], linewidth=2)
+    ax.plot(timestamps, trace, color=color, linewidth=2)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
@@ -1225,6 +1225,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     # xtable.scale(1, 3)
     # ax.axis('off');
 
+    fig.tight_layout()
     plt.gcf().subplots_adjust(bottom=0.05)
     if save:
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'cell_summary_plots',

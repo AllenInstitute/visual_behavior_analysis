@@ -314,8 +314,9 @@ def get_colors_for_areas(df):
 
 
 def get_colors_for_image_sets():
-    colors = sns.color_palette()
-    colors = [colors[3],colors[0],colors[2],colors[4]]
+    colors = [sns.color_palette()[3]]+sns.color_palette('Blues_r',5)[:3]
+    # colors = sns.color_palette()
+    # colors = [colors[3],colors[0],colors[2],colors[4]]
     return colors
 
 
