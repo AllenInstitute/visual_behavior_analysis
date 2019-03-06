@@ -320,6 +320,13 @@ def get_colors_for_image_sets():
     return colors
 
 
+def get_colors_for_repeats():
+    greens = sns.light_palette("green",5)[::-1]
+    purple = sns.dark_palette("purple")[-1]
+    colors = [list(purple), list(greens[0]), list(greens[1]), list(greens[2])]
+    return colors
+
+
 def get_colors_for_changes():
     colors = [sns.color_palette()[0],
               sns.color_palette()[3]]
