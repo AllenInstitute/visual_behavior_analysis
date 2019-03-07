@@ -97,11 +97,6 @@ if __name__ == '__main__':
                       773816712, 773843260, 774370025, 774379465, 775011398, 775429615,
                       776042634]
     import os
-    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
     for experiment_id in experiment_ids:
-        folder = [folder for folder in os.listdir(cache_dir) if str(experiment_id) in folder]
-        if len(folder) > 0:
-            file = [file for file in os.listdir(os.path.join(cache_dir, folder[0])) if 'flash_response_df' in file]
-            if len(file) != 0:
-                # print('no flash events for',experiment_id,'- generating')
-                create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)
+        create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)

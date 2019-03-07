@@ -166,13 +166,6 @@ def get_segmentation_dir(lims_data):
     segmentation_folder = [file for file in os.listdir(processed_dir) if 'segmentation' in file]
     segmentation_folder.sort()
     segmentation_dir = os.path.join(processed_dir, segmentation_folder[-1])
-    segmentation_folders = [file for file in os.listdir(processed_dir) if 'segmentation' in file]
-    if len(segmentation_folders) > 0:  # if theres more than one folder
-        # sort them to get most recent - should be highest number run
-        segmentation_folders = np.sort(segmentation_folders)[::-1]
-        segmentation_dir = os.path.join(processed_dir, segmentation_folders[0])
-    else:
-        segmentation_dir = os.path.join(processed_dir, segmentation_folders[0])  # otherwise just pick the only one
     return segmentation_dir
 
 

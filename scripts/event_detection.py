@@ -43,6 +43,6 @@ if __name__ == '__main__':
 
     lims_id = sys.argv[1]
 
-    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis'
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
     events_dir = os.path.join(cache_dir, 'events')
     event_detection(lims_id,cache_dir=cache_dir,events_dir=events_dir)

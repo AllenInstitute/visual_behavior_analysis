@@ -94,7 +94,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
 
 
 if __name__ == '__main__':
-    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
+    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
 
     # VisualBehavior production as of 2/4/19
     experiment_ids = [775614751, 778644591, 787461073, 788490510, 792812544,
@@ -109,12 +109,6 @@ if __name__ == '__main__':
        799366517, 805100431, 805784313, 807753920,
        808621015, 806456687, 807752719, 808619543, 811456530, 813083478,
        806455766, 806989729, 807753334, 808621034, 809501118, 811458048]
-
-    # non_omitted = [639253368, 639438856, 639769395, 639932228, 644942849, 645035903,
-    #                 645086795, 645362806, 646922970, 647108734, 647551128, 647887770, 648647430,
-    #                 649118720, 649318212, 685744008,686726085]
-    #
-    # experiment_ids = [expt_id for expt_id in experiment_ids if expt_id not in non_omitted]
 
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'image_name'], flashes=True, omitted=True)
