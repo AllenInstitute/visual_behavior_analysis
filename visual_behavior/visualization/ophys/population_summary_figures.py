@@ -98,11 +98,16 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
 def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, folder=None, use_events=False, colorbar=True):
     image_set = df.image_set.unique()[0]
     cre_line = df.cre_line.unique()[0]
+    # trial_type = df.trial_type.unique()[0]
+    #     detectability = get_detectability()
+    #     d = detectability[detectability.image_set==image_set]
+    #     order = np.argsort(d.detectability.values)
+    #     images = d.image_name.values[order]
     if 'image_name' in df.keys():
         image_name = 'image_name'
         suffix = '_flashes'
-        if 'omitted' in df:
-            df = df[df.omitted==False]
+        if 'omitted' in df.image_name.unique():
+            df = df[df.image_name != 'omitted']
     else:
         image_name = 'change_image_name'
         suffix = '_trials'
@@ -138,10 +143,10 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     ax.set_title(cre_line, va='bottom', ha='center')
     ax.set_xticklabels(images, rotation=90)
     ax.set_ylabel('cells')
-    if response_matrix.shape[0] > 300:
-        interval = 100
+    if response_matrix.shape[0] > 1000:
+        interval = 500
     else:
-        interval = 20
+        interval = 50
     ax.set_yticks(np.arange(0, response_matrix.shape[0], interval))
     ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval))
     if save_dir:
@@ -149,6 +154,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
         fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.9)
         save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmap_'+cre_line+'_'+image_set)
+    return ax
 
 
 def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, folder=None,
@@ -193,24 +199,71 @@ def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=Non
     ax.set_xlabel('time after change (s)', fontsize=16)
     ax.set_title(cre_line)
     ax.set_ylabel('cells')
-    plt.suptitle('image set '+image_set, x=0.59, y=.99, fontsize=18)
-    fig.tight_layout()
-    plt.gcf().subplots_adjust(top=0.9)
     if save_dir:
+        plt.suptitle('image set ' + image_set, x=0.59, y=.99, fontsize=18)
+        fig.tight_layout()
+        plt.gcf().subplots_adjust(top=0.9)
         save_figure(fig, figsize, save_dir, folder,
                     'pref_stim_response_matrix_' + cre_line + '_' + image_set + '_' + suffix)
+    return ax
 
+
+def plot_mean_response_by_repeat_heatmap(df, cre_line, title=None, ax=None, use_events=False, save_figures=False,
+                                         save_dir=None, folder=None):
+    # repeats = np.arange(1,11,1)
+    repeats = np.sort(df.repeat.unique())
+    df = df[(df.cre_line==cre_line)&(df.pref_stim==True)&(df.repeat.isin(repeats))]
+    image_set = df.image_set.unique()[0]
+    tmp = df[df.repeat==1]
+#     tmp = cell_summary_df[cell_summary_df.cre_line==cre_line]
+
+    if cre_line == 'Vip-IRES-Cre':
+        interval = 100
+    else:
+        interval = 200
+    if use_events:
+        vmax = 0.03
+        label = 'mean event magnitude'
+        suffix = '_events'
+    else:
+        vmax = 0.3
+        label = 'mean dF/F'
+    order = np.argsort(tmp.mean_response.values)
+    cell_ids = list(tmp.cell_specimen_id.values[order])
+    cell_list = cell_ids
+    # cell_list = cell_list + cell_ids
+#     cell_list = tmp.sort_values(by=['adaptation_index']).cell_specimen_id.values
+    response_matrix = np.empty((len(cell_list), len(repeats)))
+    for i, cell in enumerate(cell_list):
+        responses = []
+        for repeat in repeats:
+            response = df[(df.cell_specimen_id == cell) & (df.repeat == repeat)].mean_response.values[0]
+            responses.append(response)
+        response_matrix[i, :] = np.asarray(responses)
+    if ax is None:
+        figsize = (5, 8)
+        fig, ax = plt.subplots(figsize=figsize)
+        fig.tight_layout()
+    ax = sns.heatmap(response_matrix, cmap='magma', linewidths=0, linecolor='white', square=False,
+                     vmin=0, vmax=vmax, robust=True, cbar=True,
+                     cbar_kws={"drawedges": False, "shrink": 1, "label": label}, ax=ax)
+    ax.set_title(cre_line + '-' + image_set, va='bottom', ha='center')
+    ax.set_xticklabels(repeats, rotation=90);
+    ax.set_ylabel('cells');
+    ax.set_xlabel('repeat')
+    ax.set_yticks(np.arange(0, response_matrix.shape[0], interval));
+    ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval));
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, folder, 'repeat_response_heatmap_'+cre_line+'_'+image_set+suffix)
+    return ax
 
 def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4,4], alpha=0.15, facecolor='gray'):
     frame_rate = 31.
     stim_duration = .25
     blank_duration = .5
-    if flashes:
-        change_frame = np.abs(window[0]) * frame_rate
-        end_frame = (np.abs(window[0]) + window[1]) * frame_rate
-    else:
-        change_frame = np.abs(window[0]) * frame_rate
-        end_frame = (window[1] + np.abs(window[0])) * frame_rate
+    change_frame = np.abs(window[0]) * frame_rate
+    end_frame = (np.abs(window[0]) + window[1]) * frame_rate
     interval = blank_duration + stim_duration
     if omitted:
         array = np.arange((change_frame + interval), end_frame, interval * frame_rate)
@@ -295,6 +348,7 @@ def plot_session_averages_for_cre_lines(metric, session_summary_df, ax=None, yli
     cre_lines = np.sort(session_summary_df.cre_line.unique())
     ax = sns.boxplot(data=session_summary_df, x='cre_line', y=metric, color='white', ax=ax, width=0.4, order=cre_lines)
     if color_by_area:
+        #         area_colors = [ut.get_color_for_area(area) for area in np.sort(fdf.targeted_structure.unique())]
         area_colors = ut.get_colors_for_areas(session_summary_df)
         ax = sns.stripplot(data=session_summary_df, x='cre_line', y=metric, jitter=0.05, size=7, order=cre_lines,
                            hue='area', palette=area_colors, hue_order=cre_lines, ax=ax)
@@ -420,6 +474,7 @@ def plot_distributions_for_repeats(df, session_summary_df, metric, cre_line, sav
     ax[1].set_title(cre_line)
     ax[2] = plot_session_averages_for_repeats(session_summary_df, metric, ax=ax[2], ylims=(-0.05, ymax), color_by_area=False)
     ax[2].set_title(cre_line)
+    # ax[2] = plot_violin_for_repeats(df, metric, ax=ax[2])
     # plt.suptitle(cre_line, fontsize=16, x=0.52, y=1.0)
     fig.tight_layout()
     # plt.gcf().subplots_adjust(top=0.9)
@@ -506,6 +561,43 @@ def plot_session_average_for_image_sets(session_summary_df, metric, ax=None, yli
         save_figure(fig, figsize, save_dir, folder, metric + '_across_image_sets_session_average_'+cre_line)
     return ax
 
+#
+# def plot_session_average_for_image_sets(df, metric, cre_line=None, ax=None, save_figures=False, ymax=None, range=(0,1)):
+#     if ax is None:
+#         figsize = (6,5)
+#         fig, ax = plt.subplots(figsize=figsize)
+#         ax.set_title(cre_line)
+#     image_sets = ut.get_image_sets(df)
+#     for i,image_set in enumerate(np.sort(df.image_set.unique())):
+#         idf = df[(df.image_set==image_set)]
+#         for experiment_id in idf.experiment_id.unique():
+#             edf = idf[(idf.experiment_id==experiment_id)]
+#             area = edf.area.unique()[0]
+#             color = ut.get_color_for_area(area)
+#             mean = np.nanmean(edf[metric].values)
+#             ax.plot(i ,mean, 'o', color=color)
+#     ax.set_xlabel('image_set')
+#     ax.set_ylabel(metric)
+#     ax.set_title('session average')
+#     ax.set_xticks(np.arange(0,4,1))
+#     ax.set_xticklabels(image_sets)
+#     if ymax is None:
+#         y_min, y_max = ax.get_ylim()
+#         ax.set_ylim([0,y_max+(0.1*y_max)])
+#     else:
+#         ax.set_ylim([0,ymax])
+#     # make legend just for 2 points
+#     for area in np.sort(df.area.unique())[::-1]:
+#         experiment_id = idf[idf.area=='VISp'].experiment_id.unique()[0] #get one experiment for this area
+#         mean = np.nanmean(df[df.experiment_id==experiment_id][metric].values)
+#         color = ut.get_color_for_area(area)
+#         ax.plot(0 ,mean, 'o', color=color, label=area)
+#     ax.legend()
+#     #     if save_figures:
+#     #         fig.tight_layout()
+#     #         psf.save_figure(fig ,figsize, save_dir, 'figure4', metric+'_by_flash_number_cdf_'+cre_line.split('-')[0])
+#     return ax
+
 
 def plot_distributions_for_image_sets(df, session_summary_df, metric, cre_line, save_dir=None, folder=None,
                                       save_figures=False, ylims=(0,1), range=(0,1)):
@@ -543,6 +635,190 @@ def plot_mean_image_responses_flashes(data, cell_specimen_id, save_figures=False
 
     if save_figures:
         save_figure(fig ,figsize, save_dir, folder, str(int(cell_data.experiment_id))+'_'+str(int(cell_specimen_id)))
+        plt.close()
+
+
+def plot_change_repeat_response_pref_stim(cdf, cell_specimen_id, window=[-0.5, 0.75], save_figures=False,
+                                          save_dir=None, folder=None, ax=None):
+    cdf = cdf[cdf.pref_stim==True].copy()
+    colors = ut.get_colors_for_changes()
+    if ax is None:
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for c, change in enumerate(np.sort(cdf.change.unique())):
+        if change:
+            label = 'change'
+        else:
+            label = 'repeat'
+        tmp = cdf[cdf.change==change]
+        trace = tmp.mean_trace.values[0]
+        ax = plot_mean_trace_from_mean_df(tmp, 31., legend_label=label, color=colors[c],
+                                         interval_sec=0.5, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, flashes=True, alpha=0.15, window=window)
+    xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=0.5, window=window)
+    ax.set_xticks(xticks)
+
+    ax.set_xticklabels(xticklabels)
+    ax.set_xlim(0,(np.abs(window[0])+window[1])*31.)
+    ax.legend(bbox_to_anchor=(1.1,1))
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(0, ymax*1.2)
+    if save_figures:
+        save_figure(fig, figsize, save_dir, folder, str(int(cell_specimen_id)))
+    return ax
+
+
+def plot_change_repeat_response_all_stim(cdf, cell_specimen_id, window=[-0.5, 0.75], save_figures=False,
+                                         save_dir=None, folder=None, ax=None):
+    colors = ut.get_colors_for_changes()
+    if ax is None:
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for c, change in enumerate(np.sort(cdf.change.unique())):
+        if change:
+            label = 'change'
+        else:
+            label = 'repeat'
+        tmp = cdf[cdf.change==change]
+        traces = tmp.mean_trace.values
+        ax = sf.plot_mean_trace(traces, 31., legend_label=label, color=colors[c], interval_sec=0.5, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, flashes=True, alpha=0.15, window=window)
+    xticks, xticklabels = sf.get_xticks_xticklabels(np.mean(traces), 31., interval_sec=0.5, window=window)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels(xticklabels)
+    ax.set_xlim(0,(np.abs(window[0])+window[1])*31.)
+    ax.legend(bbox_to_anchor=(1.1,1))
+    ymin, ymax = ax.get_ylim()
+    ax.set_ylim(0, ymax*1.2)
+    if save_figures:
+        save_figure(fig, figsize, save_dir, folder, str(int(cdf.experiment_id.unique()[0]))+'_'+str(int(cell_specimen_id)))
+        plt.close()
+    return ax
+
+def plot_change_repeat_response(mdf, cell_specimen_id, window=[-0.5, 0.75], save_figures=False,
+                                         save_dir=None, folder=None, ax=None):
+    cdf = mdf[(mdf.cell_specimen_id == cell_specimen_id)].copy()
+    figsize = (10,5)
+    fig, ax = plt.subplots(1,2, figsize=figsize, sharey=True)
+    ax = ax.ravel()
+    ax[0] = plot_change_repeat_response_pref_stim(cdf, cell_specimen_id, window=window, ax=ax[0])
+    ax[0].set_title('preferred image')
+    ax[0].legend_.remove()
+    ax[1] = plot_change_repeat_response_all_stim(cdf, cell_specimen_id, window=window, ax=ax[1])
+    ax[1].set_title('all images')
+    ax[1].set_ylabel('')
+    if save_figures:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, folder, str(int(cdf.experiment_id.unique()[0]))+'_'+str(int(cell_specimen_id)))
+        plt.close()
+    return ax
+
+
+def plot_response_across_conditions_population(df, condition='repeat', conditions=[1,10],
+                                    window=[-0.5, 0.75], save_figures=False, colors=None, autoscale=False,
+                                    save_dir=None, folder=None, ax=None, pref_stim=True):
+    image_set = df.image_set.unique()[0]
+    cre_line = df.cre_line.unique()[0]
+    if pref_stim:
+        df = df[df.pref_stim==True].copy()
+    if ax is None:
+        figsize = (5,5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for c, condition_value in enumerate(conditions):
+        tmp = df[df[condition]==condition_value]
+        if condition_value is False:
+            tmp = tmp[tmp.pref_stim==True]
+        if colors is None:
+            image_lookup = get_image_color_lookup(mdf)
+            image_names = df[df.image_set==image_set].image_name.unique()
+            colors = get_colors_for_image_names(image_names, image_lookup)
+        traces = tmp.mean_trace.values
+        trace = np.mean(traces)
+        ax = sf.plot_mean_trace(traces, 31., legend_label=condition_value, color=colors[c],
+                                interval_sec=0.5, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, flashes=False, alpha=0.15, window=window, omitted=True)
+    xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1, window=window)
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([int(x) for x in xticklabels])
+#     ax.set_xlim(0,(np.abs(window[0])+window[1])*31.)
+    ax.legend(bbox_to_anchor=(1.1,1), title=condition)
+    if not autoscale:
+        ymin, ymax = ax.get_ylim()
+        if ymin>0:
+            ax.set_ylim(0, ymax*1.2)
+        else:
+            ax.set_ylim(ymin*1.2, ymax*1.2)
+    ax.set_title(image_set)
+    if save_figures:
+        fig.tight_layout()
+        save_figure(fig, figsize, save_dir, folder, 'population_response_across_'+condition+'_'+cre_line)
+    return ax
+
+def plot_omitted_flash_response_all_stim(odf, cell_specimen_id, ax=None, save_dir=None, window=[-2,3], legend=False):
+    cdf = odf[odf.cell_specimen_id==cell_specimen_id]
+    image_names = np.sort(cdf.image_name.unique())
+    if ax is None:
+        figsize = (7, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for image_name in image_names:
+        color = ut.get_color_for_image_name(image_names, image_name)
+        ax = plot_mean_trace_from_mean_df(cdf[cdf.image_name==image_name],
+                                              31., legend_label=None, color=color,
+                             interval_sec=1, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, trial_type=None, alpha=0.3, window=window, omitted=True, flashes=False)
+    ax.set_xlabel('time (sec)')
+    ax.set_title('omitted flash response')
+    if legend:
+        ax.legend(loc=9, bbox_to_anchor=(1.3, 1.3))
+    if save_dir:
+        fig.tight_layout()
+        save_figure(fig, (6, 5), save_dir, 'omitted_flash_response', str(cell_specimen_id))
+        plt.close()
+    return ax
+
+
+def plot_image_change_response(tdf, cell_specimen_id, legend=True, save=False, ax=None, window=[-2,3]):
+    suffix = ''
+    ylabel = 'mean dF/F'
+    cdf = tdf[tdf.cell_specimen_id==cell_specimen_id]
+    images = np.sort(cdf.change_image_name.unique())
+    images = images[images != 'omitted']
+    if ax is None:
+        figsize = (7, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for c, change_image_name in enumerate(images):
+        color = ut.get_color_for_image_name(images, change_image_name)
+        ax = plot_mean_trace_from_mean_df(cdf[cdf.change_image_name==change_image_name],
+                                              31., legend_label=None, color=color,
+                             interval_sec=1, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, trial_type='go', alpha=0.3, window=window)
+    ax.set_title('cell_specimen_id: ' + str(cell_specimen_id))
+    ax.set_ylabel(ylabel)
+    if legend:
+        ax.legend(images, loc=9, bbox_to_anchor=(1.19, 1))
+    return ax
+
+
+def plot_change_omitted_responses(tdf, odf, cell_specimen_id, save_figures=False, save_dir=None, folder=None):
+    figsize = (10,4)
+    fig, ax = plt.subplots(1,2, figsize=figsize, sharey=True)
+    ax = ax.ravel()
+
+    cdf = tdf[tdf.cell_specimen_id==cell_specimen_id]
+    cre_line = cdf.cre_line.unique()[0]
+    image_set = cdf.image_set.unique()[0]
+    area = cdf.image_set.unique()[0]
+    ax[0] = plot_image_change_response(tdf, cell_specimen_id, legend=False, save=False, ax=ax[0], window=[-4,8])
+    ax[0].set_xlim(1*31, 7*31)
+    ax[0].set_title('change flash response')
+    ax[1] = plot_omitted_flash_response_all_stim(odf, cell_specimen_id, ax=ax[1], window=[-3,3])
+    ax[1].set_ylabel('')
+    fig.tight_layout()
+
+    if save_figures:
+        fig.tight_layout()
+        filename = str(int(cdf.experiment_id.unique()[0]))+'_'+str(int(cell_specimen_id))+'_'+cre_line+'_'+area+'_'+image_set
+        save_figure(fig, figsize, save_dir, folder, filename)
         plt.close()
 
 

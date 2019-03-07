@@ -241,17 +241,18 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, flashes=
     frame_rate = analysis.ophys_frame_rate
     stim_duration = analysis.stimulus_duration
     blank_duration = analysis.blank_duration
-    if flashes:
+    if flashes and not omitted:
         window = analysis.flash_window
-        change_frame = np.abs(window[0]) * frame_rate
-        end_frame = (np.abs(window[0]) + window[1]) * frame_rate
+    elif omitted:
+        window = analysis.omitted_flash_window
     else:
         window = analysis.trial_window
-        change_frame = np.abs(window[0]) * frame_rate
-        end_frame = (window[1] + np.abs(window[0])) * frame_rate
+    change_frame = np.abs(window[0]) * frame_rate
+    end_frame = (window[1] + np.abs(window[0])) * frame_rate
     interval = blank_duration + stim_duration
     if omitted:
-        array = np.arange((change_frame + interval) * frame_rate, end_frame, interval * frame_rate)
+        array = np.arange((change_frame + interval), end_frame, interval * frame_rate)
+        array = array[1:]
     else:
         array = np.arange(change_frame, end_frame, interval * frame_rate)
     for i, vals in enumerate(array):
@@ -554,11 +555,11 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
     return ax
 
 
-def plot_trace(timestamps, trace, ax=None, xlabel='time (seconds)', ylabel='fluorescence', title='roi'):
+def plot_trace(timestamps, trace, ax=None, xlabel='time (seconds)', ylabel='fluorescence', title='roi',
+               color=sns.color_palette()[0]):
     if ax is None:
         fig, ax = plt.subplots(figsize=(15, 5))
-    colors = sns.color_palette()
-    ax.plot(timestamps, trace, color=colors[0], linewidth=2)
+    ax.plot(timestamps, trace, color=color, linewidth=2)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
@@ -992,8 +993,8 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
             ax.plot(trace, linewidth=1, color='gray')
         ax.plot(mean_trace, label=label, linewidth=3, color=color, zorder=100)
         xticks, xticklabels = get_xticks_xticklabels(mean_trace, frame_rate, interval_sec, window=xlims)
-        ax.set_xticks([xticks])
-        ax.set_xticklabels([xticklabels])
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticklabels)
         ax.set_xlim((np.abs(xlim[0])+xlim[1]) * int(frame_rate))
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
@@ -1108,12 +1109,12 @@ def plot_images(dataset, orientation='row', color_box=True, save=False, ax=None)
     return ax
 
 
-def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, save_dir=None, window=None, legend=False):
+def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, save_dir=None, window=[-3,3], legend=False):
     if window is None:
-        window = analysis.flash_window
+        window = analysis.omitted_flash_window
     fdf = analysis.flash_response_df
     image_names = np.sort(fdf.image_name.unique())[:-1]
-    odf = fdf[fdf.omitted == True].copy()
+    odf = analysis.omitted_flash_response_df.copy()
     # image_names = np.sort(odf.image_name.unique())
     # colors = get_colors_for_stim_codes(np.arange(0,len(image_names),1))
     if ax is None:
@@ -1123,8 +1124,8 @@ def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, sa
         color = ut.get_color_for_image_name(image_names, image_name)
         traces = odf[(odf.cell_specimen_id == cell_specimen_id) & (odf.image_category == image_name)].trace.values
         ax = plot_mean_trace(np.asarray(traces[:-1]), frame_rate=analysis.ophys_frame_rate,
-                             legend_label=image_name, color=color, interval_sec=0.5, xlims=window, ax=ax)
-    ax = plot_flashes_on_trace(ax, analysis, flashes=True, trial_type=None, omitted=True, alpha=0.15)
+                             legend_label=image_name, color=color, interval_sec=1, xlims=window, ax=ax)
+    ax = plot_flashes_on_trace(ax, analysis, omitted=True, alpha=0.15)
     ax.set_xlabel('time (sec)')
     ax.set_title('omitted flash response')
     if legend:
@@ -1134,6 +1135,7 @@ def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, sa
         save_figure(fig, (6, 5), save_dir, 'omitted_flash_response', str(cell_specimen_id))
         plt.close()
     return ax
+
 
 
 def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):
@@ -1178,7 +1180,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     # ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save=False, ax=ax)
     ax = plot_image_change_response(analysis, cell_index, legend=False, save=False, ax=ax)
 
-    if 'omitted' in analysis.flash_response_df.keys():
+    if 'omitted' in analysis.flash_response_df.image_name.unique():
         # try:
         ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.25, .5), yspan=(.53, .75))
         ax = plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=ax)
@@ -1224,6 +1226,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     # xtable.scale(1, 3)
     # ax.axis('off');
 
+    fig.tight_layout()
     plt.gcf().subplots_adjust(bottom=0.05)
     if save:
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'cell_summary_plots',
