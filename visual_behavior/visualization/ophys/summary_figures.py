@@ -182,6 +182,8 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1, window=None):
         xticklabels = xticklabels - n_sec / 2
     else:
         xticklabels = xticklabels + window[0]
+    if interval_sec >= 1:
+        xticklabels = [int(x) for x in xticklabels]
     return xticks, xticklabels
 
 
@@ -981,8 +983,7 @@ def plot_mean_trace_from_mean_df(mean_df, ophys_frame_rate, label=None, color='k
 
 
 def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=None, color='k', interval_sec=1,
-                                     xlims=[-4, 4], ax=None):
-    xlim = [xlims[0] + np.abs(xlims[0]), xlims[1] + np.abs(xlims[0])]
+                                     xlims=[-4, 8], ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
@@ -995,14 +996,13 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
         xticks, xticklabels = get_xticks_xticklabels(mean_trace, frame_rate, interval_sec, window=xlims)
         ax.set_xticks(xticks)
         ax.set_xticklabels(xticklabels)
-        ax.set_xlim((np.abs(xlim[0])+xlim[1]) * int(frame_rate))
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
 
 
-def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use_events=False):
+def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use_events=False, xlims=[-2,2]):
     import visual_behavior.ophys.response_analysis.utilities as ut
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     tdf = analysis.trial_response_df
@@ -1012,12 +1012,11 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
     mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
                          conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     mdf = mdf[mdf.cell_specimen_id == cell_specimen_id]
-    xlims = [-2, 2]
+    frame_rate = analysis.ophys_frame_rate
     if ax is None:
         figsize = (12, 6)
         fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
         ax = ax.ravel()
-    # pref_image = fdf[fdf.pref_stim == True].image_name.values[0]
     pref_image = tdf[tdf.pref_stim == True].change_image_name.values[0]
     images = ut.get_image_names(mdf)
     color = ut.get_color_for_image_name(images, pref_image)
@@ -1025,8 +1024,10 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         tmp = tdf[(tdf.trial_type == trial_type) & (tdf.change_image_name == pref_image)]
         mean_df = mdf[(mdf.trial_type == trial_type) & (mdf.change_image_name == pref_image)]
         ax[i] = plot_mean_trace_with_variability(tmp.trace.values, analysis.ophys_frame_rate, label=None, color=color,
-                                                 interval_sec=1, xlims=xlims, ax=ax[i])
+                                                 interval_sec=1, xlims=analysis.trial_window, ax=ax[i])
         ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=.05 * 8)
+        ax[i].set_xlim((np.abs(analysis.trial_window[0])+xlims[0])*frame_rate,
+                       (np.abs(analysis.trial_window[0])+xlims[1])*frame_rate)
         mean = np.round(mean_df.mean_response.values[0], 3)
         p_val = np.round(mean_df.p_value.values[0], 4)
         sd = np.round(mean_df.sd_over_baseline.values[0], 2)
@@ -1034,7 +1035,6 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         fano_factor = np.round(mean_df.fano_factor.values[0], 3)
         fraction_active_trials = np.round(mean_df.fraction_active_trials.values[0], 3)
         ax[i].set_title(trial_type + ' - mean: ' + str(mean) + '\np_val: ' + str(p_val) + ', sd: ' + str(sd) +
-                        # '\ntime_to_peak: ' + str(time_to_peak) +
                         '\nfraction_active_trials: ' + str(fraction_active_trials) +
                         '\nfano_factor: ' + str(fano_factor));
     ax[1].set_ylabel('')
@@ -1188,12 +1188,6 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
         # except:
         #     print('cant plot omitted flashes')
 
-    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.0, .2))
-    # ax = plot_mean_trace_behavioral_response_types_pref_image(rdf, sdf, cell, behavioral_response_types=['HIT', 'MISS'],
-    #                                                              ax=ax)
-    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.2, .4))
-    # ax = plot_mean_trace_behavioral_response_types_pref_image(rdf, sdf, cell, behavioral_response_types=['FA', 'CR'],
-    #                                                              ax=ax)
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.39, .59))
     # ax = plot_running_not_running(rdf, sdf, cell, trial_type='go', ax=ax)
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, 0.88), yspan=(.58, 0.78))
@@ -1218,13 +1212,6 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
 
     ax = placeAxesOnGrid(fig, dim=(1, 2), xspan=(0.0, 0.5), yspan=(.78, .99), wspace=0.25, sharex=True, sharey=True)
     ax = plot_mean_response_pref_stim_metrics(analysis, cell_index, ax=ax, save=False, use_events=use_events)
-
-    # # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.83, 1), yspan=(.78, 1))
-    # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.7, .99), yspan=(0.05, .16))
-    # table_data = format_table_data(dataset)
-    # xtable = ax.table(cellText=table_data.values, cellLoc='left', rowLoc='left', loc='center', fontsize=12)
-    # xtable.scale(1, 3)
-    # ax.axis('off');
 
     fig.tight_layout()
     plt.gcf().subplots_adjust(bottom=0.05)
