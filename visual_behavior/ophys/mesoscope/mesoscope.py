@@ -158,7 +158,35 @@ class MesoscopeDataset(object):
 
         return experiment.loc[experiment.structure == structure]
 
-    
+    def get_full_field_tiff(self, full_field_path_offline=''):
+
+        if full_field_path_offline != '':
+            # use full field path to the tiff:
+            full_field_tiff = os.path.join(full_field_path_offline, f"{session_id}_fullfield.tif")
+
+            if os.path.isfile(full_field_tiff):
+                self.full_field_present = True
+            else:
+                full_field_tiff = ''
+                logger.error("Can't find full field tiff at offline path, check if file exists")
+                self.full_field_present = False
+
+        else:
+            # see if file exists in lims:
+            session_folder = self.get_session_folder()
+            full_field_tiff = os.path.join(session_folder, f"{session_id}_fullfield.tif")
+
+            if os.path.isfile(full_field_tiff):
+                self.full_field_tiff = full_field_tiff
+                self.full_field_present = True
+            else:
+                full_field_tiff = ''
+                logger.error("Full field tiff is absent in session folder, provide offline path")
+                self.full_field_present = False
+
+        return full_field_tiff
+
+
 
 
 
