@@ -3,6 +3,8 @@ import psycopg2
 import psycopg2.extras
 import pandas as pd
 import logging
+import json
+
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +125,40 @@ class MesoscopeDataset(object):
         session_folder = _session['session_folder']
 
         return session_folder.values[0]
+
+    def get_splitting_json(self):
+
+        session_folder = self.get_session_folder()
+        splitting_json = os.path.join(session_folder, f"MESOSCOPE_FILE_SPLITTING_QUEUE_{session_id}_input.json")
+
+        if os.path.isfile(splitting_json):
+            self.splitting_json_present = True
+        else:
+            logger.error("Unable to find splitting json: {}".format(e))
+            self.splitting_json_present = False
+
+        return splitting_json
+
+    def get_paired_planes(self):
+
+        splitting_json = self.get_splitting_json()
+
+        with open(splitting_json, "r") as f:
+            data = json.load(f)
+
+        pairs = []
+        for pg in data.get("plane_groups", []):
+            pairs.append([p["experiment_id"] for p in pg.get("ophys_experiments", [])])
+
+        return pairs
+
+    def get_exp_by_structure (self, structure) :
+
+        experiments = self.get_mesoscope_experiment_data()
+
+        return experiment.loc[experiment.structure == structure]
+
+    
 
 
 
