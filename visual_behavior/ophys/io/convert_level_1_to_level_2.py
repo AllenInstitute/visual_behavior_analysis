@@ -83,7 +83,7 @@ def get_analysis_folder_name(lims_data):
             if 'S' in specimen_driver_lines[i]:
                 specimen_driver_line = specimen_driver_lines[i].split('-')[0]
     else:
-        specimen_driver_line = specimen_driver_line[0]
+        specimen_driver_line = specimen_driver_lines[0]
     if lims_data.depth.values[0] is None:
         depth = 0
     else:
