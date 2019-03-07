@@ -471,7 +471,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
         suffix = ''
 
     interval_seconds = 600
-    ophys_frame_rate = 31
+    ophys_frame_rate = int(analysis.ophys_frame_rate)
 
     figsize = [2 * 11, 2 * 8.5]
     fig = plt.figure(figsize=figsize, facecolor='white')

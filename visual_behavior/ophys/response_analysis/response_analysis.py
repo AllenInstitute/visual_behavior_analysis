@@ -156,6 +156,10 @@ class ResponseAnalysis(object):
                     omitted = False
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
+                if image_name == 'omitted':
+                    omitted = True
+                else:
+                    omitted = False
                 # flash_window = [-self.response_window_duration, self.response_window_duration]
                 flash_window = self.flash_window
                 trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
@@ -175,13 +179,13 @@ class ResponseAnalysis(object):
                 n_events = ut.get_n_nonzero_in_window(trace, response_window, self.ophys_frame_rate)
                 reward_rate = flash_data.reward_rate.values[0]
 
-                row.append([cell, cell_specimen_id, flash, omitted, flash_time, image_name, trace, timestamps, mean_response,
+                row.append([cell, cell_specimen_id, flash, flash_time, image_name, omitted, trace, timestamps, mean_response,
                             baseline_response, n_events, p_value, sd_over_baseline, reward_rate,
                             self.dataset.experiment_id])
 
         flash_response_df = pd.DataFrame(data=row,
-                                         columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
-                                                  'image_name', 'trace', 'timestamps', 'mean_response',
+                                         columns=['cell', 'cell_specimen_id', 'flash_number', 'start_time',
+                                                  'image_name', 'omitted', 'trace', 'timestamps', 'mean_response',
                                                   'baseline_response', 'n_events', 'p_value', 'sd_over_baseline',
                                                   'reward_rate', 'experiment_id'])
         flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
