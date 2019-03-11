@@ -42,7 +42,7 @@ class MesoscopeDataset(object):
 
         return response
 
-    def get_mesoscope_session_data(self):
+    def get_mesoscope_session_data(self, session_id):
 
         try:
 
@@ -66,7 +66,7 @@ class MesoscopeDataset(object):
                 " and os.id='{}'  ",
             ))
 
-            lims_data = self.psycopg2_select(query.format(self.session_id))
+            lims_data = self.psycopg2_select(query.format(session_id))
 
             if lims_data == []:
                 self.data_present = False
@@ -80,7 +80,7 @@ class MesoscopeDataset(object):
 
         return lims_data
 
-    def get_mesoscope_experiment_data(self):
+    def get_mesoscope_experiment_data(self, experiment_id):
 
         try:
 
@@ -104,7 +104,7 @@ class MesoscopeDataset(object):
                 " and oe.id='{}'  ",
             ))
 
-            lims_data = self.psycopg2_select(query.format(self.experiment_id))
+            lims_data = self.psycopg2_select(query.format(experiment_id))
 
             if lims_data == []:
                 self.data_present = False
@@ -186,7 +186,7 @@ class MesoscopeDataset(object):
 
         return full_field_tiff
 
-    
+
 
 
 
