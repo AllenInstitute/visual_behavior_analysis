@@ -140,8 +140,8 @@ def get_processed_dir(lims_data):
 
 def get_segmentation_dir(lims_data):
     processed_dir = get_processed_dir(lims_data)
-    segmentation_folder = [file for file in os.listdir(processed_dir) if 'segmentation' in file]
-    segmentation_dir = os.path.join(processed_dir, segmentation_folder[0])
+    segmentation_folder = sorted([file for file in os.listdir(processed_dir) if 'segmentation' in file])
+    segmentation_dir = os.path.join(processed_dir, segmentation_folder[-1])
     return segmentation_dir
 
 
