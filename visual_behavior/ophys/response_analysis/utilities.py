@@ -38,6 +38,16 @@ def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate)
     return trace, timepoints
 
 
+def get_responses_around_event_times(trace, timestamps, event_times, frame_rate, window=[-2,3]):
+    responses = []
+    for event_time in event_times:
+        response, times = get_trace_around_timepoint(event_time, trace, timestamps,
+                                                             frame_rate=frame_rate, window=window)
+        responses.append(response)
+    responses = np.asarray(responses)
+    return responses
+
+
 def get_mean_in_window(trace, window, frame_rate, use_events=False):
     # if use_events:
     #     trace[trace==0] = np.nan
@@ -173,7 +183,24 @@ def get_fraction_nonzero_trials(group):
 #     return pd.Series({'reliability': reliability})
 
 
+def compute_reliability_for_traces(traces):
+    # computes trial to trial correlation across input traces, across entire trace timeseries
+    import scipy as sp
+    from itertools import combinations
+    traces = np.vstack(traces)
+    combos = combinations(traces, 2)
+    corr_values = []
+    for combo in combos:
+        corr = sp.stats.pearsonr(combo[0], combo[1])[0]
+        corr_values.append(corr)
+    corr_values = np.asarray(corr_values)
+    reliability = np.mean(corr_values)
+    return reliability
+
+
 def compute_reliability(group, analysis=None, flashes=True, omitted=False):
+    # computes trial to trial correlation across input traces in group,
+    # only for portion of the trace after the change time or flash onset time
     from itertools import combinations
     import scipy as sp
     if analysis and omitted:
@@ -336,6 +363,12 @@ def get_colors_for_changes():
 def get_colors_for_trained_untrained():
     colors = [sns.color_palette()[0],
               sns.color_palette()[3]]
+    return colors
+
+
+def get_colors_for_behavioral_response_types():
+    colors = sns.color_palette()
+    colors = [colors[2],colors[8],colors[0],colors[3]]
     return colors
 
 
@@ -690,7 +723,29 @@ def get_active_cell_indices(dff_traces):
         snr = mean / std
         snr_values.append(snr)
     active_cell_indices = np.argsort(snr_values)[-10:]
+    random_order = np.arange(0, len(active_cell_indices), 1)
+    np.random.shuffle(random_order)
+    active_cell_indices = active_cell_indices[random_order]
     return active_cell_indices
 
 
+def get_unrewarded_first_lick_times(dataset):
+    trials = dataset.trials.copy()
+    all_licks = dataset.licks.time.values
+#     rewarded_lick_times = trials[trials.trial_type=='go'].lick_times.values
+    rewarded_lick_times = trials[trials.response_type.isin(['HIT'])].lick_times.values
+    rewarded_lick_times = np.hstack(list(rewarded_lick_times))
+    unrewarded_lick_times = [lick for lick in all_licks if lick not in rewarded_lick_times]
+    unrewarded_lick_times = np.asarray(unrewarded_lick_times)
 
+    median_inter_lick_interval = np.median(np.diff(unrewarded_lick_times))
+#     print median_inter_lick_interval
+
+    first_licks = []
+    for i,lick in enumerate(unrewarded_lick_times):
+#         print lick, unrewarded_lick_times[i-1], lick - unrewarded_lick_times[i-1]
+        if lick - unrewarded_lick_times[i-1] > median_inter_lick_interval*3:
+#             print 'first lick '
+            first_licks.append(lick)
+    first_lick_times = np.asarray(first_licks)
+    return first_lick_times

@@ -11,6 +11,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from visual_behavior.visualization.utils import save_figure
 from visual_behavior.ophys.response_analysis import utilities as ut
+# from visual_behavior.visualization.ophys import population_summary_figures as psf
+
 
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
@@ -206,7 +208,7 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
-        trace = np.mean(traces)
+        trace = np.mean(traces, axis=0)
         times = np.arange(0, len(trace), 1)
         sem = (traces.std()) / np.sqrt(float(len(traces)))
         ax.plot(trace, label=legend_label, linewidth=3, color=color)
@@ -225,7 +227,7 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
     return ax
 
 
-def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, flashes=False, alpha=0.15, facecolor='gray'):
+def plot_flashes_on_trace(ax, analysis, window=[-4,8], trial_type=None, omitted=False, flashes=False, alpha=0.15, facecolor='gray'):
     """
     Function to create transparent gray bars spanning the duration of visual stimulus presentations to overlay on existing figure
 
@@ -241,7 +243,9 @@ def plot_flashes_on_trace(ax, analysis, trial_type=None, omitted=False, flashes=
     frame_rate = analysis.ophys_frame_rate
     stim_duration = analysis.stimulus_duration
     blank_duration = analysis.blank_duration
-    if flashes and not omitted:
+    if window:
+        window = window
+    elif flashes and not omitted:
         window = analysis.flash_window
     elif omitted:
         window = analysis.omitted_flash_window
@@ -622,12 +626,13 @@ def plot_behavior_events(dataset, ax, behavior_only=False):
         ymin, ymax = ax.get_ylim()
         lick_y = ymin + (ymax * 0.05)
         reward_y = ymin + (ymax * 0.1)
+        ax.set_ylim([ymin*1.3, ymax])
     lick_y_array = np.empty(len(lick_times))
     lick_y_array[:] = lick_y
     reward_y_array = np.empty(len(reward_times))
     reward_y_array[:] = reward_y
-    ax.plot(lick_times, lick_y_array, '|', color='g', markeredgewidth=1, label='licks')
-    ax.plot(reward_times, reward_y_array, 'o', markerfacecolor='purple', markeredgecolor='purple', markeredgewidth=0.1,
+    ax.plot(lick_times, lick_y_array, '|', color='g', markeredgewidth=2, label='licks')
+    ax.plot(reward_times, reward_y_array, 'o', markerfacecolor='purple', markeredgecolor='purple', markeredgewidth=0.2,
             label='rewards')
     return ax
 
@@ -666,8 +671,8 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
     return ax
 
 
-def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length_mins, save=False,
-                                     include_running=False, cell_label=False, use_events=False):
+def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length_mins, save_figures=False,
+                                     include_running=False, cell_label=False, use_events=False, save_dir=None):
     if use_events:
         traces = dataset.events
         cell_label = True
@@ -683,7 +688,10 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     xmax_seconds = xmin_seconds + (length_mins * 60) + 1
     xlim = [xmin_seconds, xmax_seconds]
 
-    figsize = (12, 10)
+    if len(cell_indices) < 10:
+        figsize = (12, 8.3)
+    else:
+        figsize = (12, 10)
     fig, ax = plt.subplots(len(cell_indices) + n, 1, figsize=figsize, sharex=True)
     ax = ax.ravel()
 
@@ -691,50 +699,154 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     ymaxs = []
     for i, cell_index in enumerate(cell_indices):
         ax[i] = plot_trace(dataset.timestamps_ophys, traces[cell_index, :], ax=ax[i],
-                           title='', ylabel=str(cell_index))
+                           title='', ylabel=str(cell_index), color=[.5, .5, .5])
         ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
         ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
+        ax[i].set_xticks(np.arange(xmin_seconds, xmax_seconds, interval_seconds))
+        xticklabels = np.arange(xmin_seconds, xmax_seconds, interval_seconds) - xmin_seconds
+        ax[i].set_xticklabels([int(x) for x in xticklabels])
         ax[i].set_xlabel('')
         ymin, ymax = ax[i].get_ylim()
         ymins.append(ymin)
         ymaxs.append(ymax)
-        if cell_label:
-            ax[i].set_ylabel(str(cell_index))
-        else:
-            ax[i].set_ylabel('dF/F')
-        sns.despine(ax=ax[i])
+        ax[i].set_ylabel('')
+        ax[i].set_yticklabels('')
+        sns.despine(ax=ax[i], left=True, bottom=False)
+        #         ymin, ymax = ax[i].get_ylim()
+        if 'Vip' in dataset.metadata.cre_line.values[0]:
+            ax[i].vlines(x=xmin_seconds - 0.05, ymin=0, ymax=2, linewidth=4)
+            ax[i].set_ylim(ymin=-0.5, ymax=5)
+        elif 'Slc' in dataset.metadata.cre_line.values[0]:
+            ax[i].vlines(x=xmin_seconds - 0.05, ymin=0, ymax=1, linewidth=4)
+            ax[i].set_ylim(ymin=-0.5, ymax=3)
 
-    for i, cell_index in enumerate(cell_indices):
-        ax[i].set_ylim([np.amin(ymins), np.amax(ymaxs) * 1.1])
+            #     for i, cell_index in enumerate(cell_indices):
+            #         ax[i].set_ylim([np.amin(ymins), np.amax(ymaxs)])
 
     i += 1
-    ax[i].set_ylim([np.amin(ymins), 1])
     ax[i] = plot_behavior_events(dataset, ax=ax[i], behavior_only=True)
     ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
     ax[i].set_xlim(xlim)
     ax[i].set_ylabel('')
     ax[i].axes.get_yaxis().set_visible(False)
-    ax[i].legend(loc='upper left', fontsize=14)
-    sns.despine(ax=ax[i])
+    # ax[i].legend(loc='upper left', fontsize=14)
+    sns.despine(ax=ax[i], left=True)
+    l = ax[i].legend(fontsize='small', loc='upper left')
+    plt.setp(l.get_title(), fontsize='small')
 
     if include_running:
         i += 1
         ax[i].plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values)
         ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
         ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
-        ax[i].set_ylabel('run speed\n(cm/s)')
+        #         ax[i].set_ylabel('run speed\n(cm/s)')
         #         ax[i].axes.get_yaxis().set_visible(False)
-        sns.despine(ax=ax[i])
+        ax[i].set_ylabel('')
+        ax[i].set_yticklabels('')
+        sns.despine(ax=ax[i], left=True)
+        ax[i].vlines(x=-0.5, ymin=0, ymax=30, linewidth=4)
 
     ax[i].set_xlabel('time (seconds)')
     ax[0].set_title(dataset.analysis_folder)
     # fig.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
-    if save:
+    if save_figures:
         save_figure(fig, figsize, dataset.analysis_dir, 'example_traces',
-                    str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
+                       str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
         save_figure(fig, figsize, dataset.cache_dir, 'example_traces',
-                    str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
+                       str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
+        if save_dir:
+            save_figure(fig, figsize, save_dir, 'example_traces',
+                           str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
+        plt.close()
+
+
+def plot_average_flash_response_example_cells(analysis, active_cell_indices, save_figures=False, save_dir=None, folder=None, ax=None):
+    dataset = analysis.dataset
+    fdf = analysis.flash_response_df.copy()
+    last_flash = fdf.flash_number.unique()[-1] #sometimes last flash is truncated
+    fdf = fdf[fdf.flash_number!=last_flash]
+
+    conditions=['cell_specimen_id', 'image_name']
+    mdf = ut.get_mean_df(fdf, analysis, conditions=conditions, flashes=True)
+
+    cell_specimen_ids = [dataset.get_cell_specimen_id_for_cell_index(cell_index) for cell_index in active_cell_indices]
+
+    image_names = np.sort(mdf.image_name.unique())
+
+    if ax is None:
+        if len(active_cell_indices)<10:
+            figsize = (12, 8.3)
+        else:
+            figsize = (12, 10)
+        fig, ax = plt.subplots(len(cell_specimen_ids), len(image_names), figsize=figsize, sharex=True)
+        ax = ax.ravel()
+
+    i = 0
+    for c, cell_specimen_id in enumerate(cell_specimen_ids):
+        cell_data = mdf[(mdf.cell_specimen_id==cell_specimen_id)]
+        maxs = [np.amax(trace) for trace in cell_data.mean_trace.values]
+        ymax = np.amax(maxs)*1.2
+        for m, image_name in enumerate(image_names):
+            cdf = cell_data[(cell_data.image_name==image_name)]
+            color = ut.get_color_for_image_name(image_names, image_name)
+            ax[i] = sf.plot_mean_trace_from_mean_df(cdf, color=[.5,.5,.5], interval_sec=0.5,
+                                                     xlims=analysis.flash_window, ax=ax[i])
+            ax[i] = sf.plot_flashes_on_trace(ax[i], analysis, flashes=True, facecolor=color, alpha=0.3)
+            if 'Vip' in dataset.metadata.cre_line.values[0]:
+                ax[i].vlines(x=0, ymin=0, ymax=.25, linewidth=4)
+            elif 'Slc' in dataset.metadata.cre_line.values[0]:
+                ax[i].vlines(x=0, ymin=0, ymax=.25, linewidth=4)
+    #         sns.despine(ax=ax[i])
+            ax[i].axis('off')
+            ax[i].set_ylim(-0.05, ymax)
+            if m == 0:
+                ax[i].set_ylabel('x')
+            if c == 0:
+                ax[i].set_title(image_name)
+            if c == len(cell_specimen_ids):
+                ax[i].set_xlabel('time (s)')
+            i+=1
+
+    # fig.tight_layout()
+    if save_figures:
+        if save_dir:
+            save_figure(fig ,figsize, save_dir, folder, dataset.analysis_folder)
+        save_figure(fig ,figsize, analysis.dataset.analysis_dir, 'example_traces_all_flashes', dataset.analysis_folder)
+        plt.close()
+
+
+def plot_reliability_trials(analysis, tdf, mean_tdf, cell, xlims=[-4,8], save_figures=False, save_dir=None, folder=None):
+    cell_specimen_id = tdf[tdf.cell==cell].cell_specimen_id.values[0]
+    figsize=(4,3)
+    fig, ax = plt.subplots(figsize=figsize)
+    traces = tdf[(tdf.cell==cell)&(tdf.pref_stim==True) &(tdf.trial_type=='go')].trace.values
+    ax = plot_mean_trace_with_variability(traces, frame_rate=31., ylabel='dF/F', label=None, color=[.3,.3,.3], interval_sec=2,
+                                         xlims=xlims, ax=ax)
+    ax = plot_flashes_on_trace(ax, analysis, trial_type='go', window=xlims)
+    reliability = mean_tdf[(mean_tdf.cell==cell)&(mean_tdf.pref_stim==True)&(mean_tdf.trial_type=='go')].reliability.values[0]
+    ax.set_title('reliability: '+str(np.round(reliability,2)))
+    fig.tight_layout()
+
+    if save_figures:
+        save_figure(fig ,figsize, save_dir, folder, analysis.dataset.analysis_folder+'_reliability_trials_'+str(cell_specimen_id))
+        plt.close()
+
+
+def plot_reliability_flashes(analysis, fdf, mean_fdf, cell, xlims=[-0.5, 0.75], save_figures=False, save_dir=None, folder=None):
+    cell_specimen_id = fdf[fdf.cell==cell].cell_specimen_id.values[0]
+    figsize=(4,3)
+    fig, ax = plt.subplots(figsize=figsize)
+    traces = fdf[(fdf.cell==cell)&(fdf.pref_stim==True) &(fdf.repeat==1)].trace.values
+    ax = plot_mean_trace_with_variability(traces, frame_rate=31., ylabel='dF/F', label=None, color=[.3,.3,.3], interval_sec=0.5,
+                                         xlims=xlims, ax=ax)
+    ax = plot_flashes_on_trace(ax, analysis, flashes=True, window=xlims)
+    reliability = mean_fdf[(mean_fdf.cell==cell)&(mean_fdf.pref_stim==True)&(mean_fdf.repeat==1)].reliability.values[0]
+    ax.set_title('reliability: '+str(np.round(reliability,2)))
+
+    fig.tight_layout()
+    if save_figures:
+        save_figure(fig ,figsize, save_dir, folder, analysis.dataset.analysis_folder+'_reliability_flashes_'+str(cell_specimen_id))
         plt.close()
 
 
@@ -981,12 +1093,12 @@ def plot_mean_trace_from_mean_df(mean_df, ophys_frame_rate, label=None, color='k
 
 
 def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=None, color='k', interval_sec=1,
-                                     xlims=[-4, 4], ax=None):
-    xlim = [xlims[0] + np.abs(xlims[0]), xlims[1] + np.abs(xlims[0])]
+                                     xlims=[-4, 4], ax=None, flashes=True):
+#     xlim = [xlims[0] + np.abs(xlims[0]), xlims[1] + np.abs(xlims[0])]
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
-        mean_trace = np.mean(traces)
+        mean_trace = np.mean(traces, axis=0)
         times = np.arange(0, len(mean_trace), 1)
         sem = (traces.std()) / np.sqrt(float(len(traces)))
         for trace in traces:
@@ -994,11 +1106,11 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
         ax.plot(mean_trace, label=label, linewidth=3, color=color, zorder=100)
         xticks, xticklabels = get_xticks_xticklabels(mean_trace, frame_rate, interval_sec, window=xlims)
         ax.set_xticks(xticks)
-        ax.set_xticklabels(xticklabels)
-        ax.set_xlim((np.abs(xlim[0])+xlim[1]) * int(frame_rate))
+        ax.set_xticklabels([int(x) for x in xticklabels])
+        ax.set_xlim(0,(np.abs(xlims[0])+xlims[1]) * int(frame_rate))
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)
-    sns.despine(ax=ax)
+        sns.despine(ax=ax)
     return ax
 
 
@@ -1012,6 +1124,7 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
     mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
                          conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     mdf = mdf[mdf.cell_specimen_id == cell_specimen_id]
+    trial_window = analysis.trial_window
     xlims = [-2, 2]
     if ax is None:
         figsize = (12, 6)
@@ -1025,8 +1138,10 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         tmp = tdf[(tdf.trial_type == trial_type) & (tdf.change_image_name == pref_image)]
         mean_df = mdf[(mdf.trial_type == trial_type) & (mdf.change_image_name == pref_image)]
         ax[i] = plot_mean_trace_with_variability(tmp.trace.values, analysis.ophys_frame_rate, label=None, color=color,
-                                                 interval_sec=1, xlims=xlims, ax=ax[i])
+                                                 interval_sec=1, xlims=trial_window, ax=ax[i])
         ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=.05 * 8)
+        ax[i].set_xlim((np.abs(trial_window[0])+xlims[0])*analysis.ophys_frame_rate,
+                       (np.abs(trial_window[0])+xlims[1])*analysis.ophys_frame_rate)
         mean = np.round(mean_df.mean_response.values[0], 3)
         p_val = np.round(mean_df.p_value.values[0], 4)
         sd = np.round(mean_df.sd_over_baseline.values[0], 2)
@@ -1066,15 +1181,15 @@ def get_color_for_image_name(dataset, image_name):
     return color
 
 
-def plot_images(dataset, orientation='row', color_box=True, save=False, ax=None):
+def plot_images(dataset, orientation='row', rows=1, color_box=True, save=False, ax=None):
     orientation = 'row'
     if orientation == 'row':
         figsize = (20, 5)
         cols = len(dataset.stimulus_metadata)
         rows = 1
-        if rows == 2:
-            cols = cols / 2
-            figsize = (10, 4)
+    if rows == 2:
+        cols = cols / 2
+        figsize = (10, 4)
     elif orientation == 'column':
         figsize = (5, 20)
         cols = 1
@@ -1136,6 +1251,143 @@ def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, sa
         plt.close()
     return ax
 
+
+def plot_reward_triggered_average(dataset, cell, window=[-2, 3], variability=True, show_reliability=True,
+                                  ax=None, save_figures=False, save_dir=None):
+    reward_times = dataset.rewards.time.values
+    trace = dataset.dff_traces[cell]
+    cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell)
+    responses = ut.get_responses_around_event_times(trace, dataset.timestamps_ophys, reward_times,
+                                                    frame_rate=31., window=window)
+
+    if ax is None:
+        figsize = (5, 4)
+        fig, ax = plt.subplots(figsize=figsize)
+    if variability:
+        suffix = '_variability'
+        ax = plot_mean_trace_with_variability(responses, frame_rate=31., ylabel='dF/F', label=None,
+                                                 color=[.3, .3, .3],
+                                                 interval_sec=1, xlims=window, ax=ax)
+    else:
+        suffix = '_sem'
+        ax = plot_mean_trace(responses, frame_rate=31., ylabel='dF/F', color=[.3, .3, .3], interval_sec=1,
+                                xlims=window, ax=ax)
+    ax.set_xlabel('time since reward (sec)')
+    if show_reliability:
+        reliability = ut.compute_reliability_for_traces(responses)
+        ax.set_title('reliability: ' + str(np.round(reliability, 2)))
+    fig.tight_layout()
+
+    if save_figures:
+        if save_dir:
+            save_figure(fig, figsize, save_dir, 'reward_triggered_average',
+                           dataset.analysis_folder + '_' + str(cell_specimen_id) + suffix)
+        save_figure(fig, figsize, dataset.analysis_dir, 'reward_triggered_average', str(cell_specimen_id) + suffix)
+        plt.close()
+    return ax
+
+
+def plot_lick_triggered_average(dataset, cell, window=[-2, 3], variability=True, show_reliability=False,
+                                ax=None, save_figures=False, save_dir=None):
+    lick_times = ut.get_unrewarded_first_lick_times(dataset)
+    trace = dataset.dff_traces[cell]
+    cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell)
+    responses = ut.get_responses_around_event_times(trace, dataset.timestamps_ophys, lick_times,
+                                                    frame_rate=31., window=window)
+    responses = responses[:-1]  # last one can be trucated if at end of session
+
+    if ax is None:
+        figsize = (5, 4)
+        fig, ax = plt.subplots(figsize=figsize)
+    if variability:
+        suffix = '_variability'
+        ax = plot_mean_trace_with_variability(responses, frame_rate=31., ylabel='dF/F', label=None,
+                                                 color=[.3, .3, .3],
+                                                 interval_sec=1, xlims=window, ax=ax)
+    else:
+        suffix = '_sem'
+        ax = plot_mean_trace(responses, frame_rate=31., ylabel='dF/F', color=[.3, .3, .3], interval_sec=1,
+                                xlims=window, ax=ax)
+    ax.set_xlabel('time since first lick (sec)')
+    if show_reliability:
+        reliability = ut.compute_reliability_for_traces(responses)
+        ax.set_title('reliability: ' + str(np.round(reliability, 2)))
+    fig.tight_layout()
+
+    if save_figures:
+        if save_dir:
+            save_figure(fig, figsize, save_dir, 'lick_triggered_average',
+                           dataset.analysis_folder + '_' + str(cell_specimen_id) + suffix)
+        save_figure(fig, figsize, dataset.analysis_dir, 'lick_triggered_average', str(cell_specimen_id) + suffix)
+        plt.close()
+    return ax
+
+def plot_lick_triggered_running_average(dataset, cell, window=[-2,3], variability=True, show_reliability=False,
+                                  ax=None, save_figures=False, save_dir=None):
+    # window = [-2,3]
+    # variability = False
+    # show_reliability = False
+    # ax = None
+    lick_times = ut.get_unrewarded_first_lick_times(dataset)
+    trace = dataset.running_speed.running_speed.values
+    #     cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell)
+    responses = ut.get_responses_around_event_times(trace, dataset.timestamps_stimulus, lick_times,
+                                                 frame_rate=60, window=window)
+    responses = responses[1:] #first one is zero for some reason
+    responses = responses[:-1] #last one is truncated
+
+    if ax is None:
+        figsize=(5,4)
+        fig, ax = plt.subplots(figsize=figsize)
+    if variability:
+        suffix = '_variability'
+        ax = plot_mean_trace_with_variability(responses, frame_rate=60., ylabel='run speed (cm/s)', label=None, color=[.3,.3,.3],
+                                                 interval_sec=1, xlims=window, ax=ax)
+    else:
+        suffix = '_sem'
+        ax = plot_mean_trace(responses, frame_rate=60., ylabel='run speed (cm/s)', color=[.3,.3,.3], interval_sec=1,
+                                         xlims=window, ax=ax)
+    ax.set_xlabel('time since first lick (sec)')
+    if show_reliability:
+        reliability = ut.compute_reliability_for_traces(responses)
+        ax.set_title('reliability: '+str(np.round(reliability,2)))
+    fig.tight_layout()
+
+    if save_figures:
+        if save_dir:
+            save_figure(fig, figsize, save_dir, 'lick_triggered_average', dataset.analysis_folder+'_running_speed'+suffix)
+        save_figure(fig, figsize, dataset.analysis_dir, 'lick_triggered_average', 'running_speed'+suffix)
+        plt.close()
+    return ax
+
+
+def diff(x):
+    return x[-1] - x[0]
+
+def plot_running_and_behavior(dataset, start_time, duration, save_figures=False, save_dir=None):
+    xlim = (start_time,start_time+duration)
+    running_speed = dataset.running_speed.running_speed.values
+    running_times = dataset.running_speed.time.values
+    running_diff = dataset.running_speed.running_speed.rolling(window=15).apply(diff)
+    figsize = (15,2)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(running_times, running_speed, color=sns.color_palette()[0])
+#     ax.plot(running_times, running_diff, color=sns.color_palette()[3])
+    ax = plot_behavior_events(dataset, ax)
+    ax = add_stim_color_span(dataset, ax, xlim=xlim)
+    ax.set_xlim(xlim)
+    ax.set_ylabel('run speed\n(cm/s)')
+    ax.set_xlabel('time (seconds)')
+    ax.set_xticks(np.arange(xlim[0], xlim[1], 5))
+    xticklabels = np.arange(xlim[0], xlim[1], 5) - xlim[0]
+    ax.set_xticklabels([int(x) for x in xticklabels])
+    # fig.tight_layout()
+    plt.gcf().subplots_adjust(bottom=0.3)
+    if save_figures:
+        if save_dir:
+            save_figure(fig, figsize, save_dir, 'running_and_behavior', dataset.analysis_folder+'_'+str(start_time))
+        save_figure(fig, figsize, dataset.analysis_dir, 'running_and_behavior', str(start_time))
+        plt.close()
 
 
 def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):
