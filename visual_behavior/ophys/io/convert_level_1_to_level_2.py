@@ -75,26 +75,41 @@ def get_lims_id(lims_data):
     return lims_id
 
 
-def get_analysis_folder_name(lims_data, cache_dir=None):
-    expt_id = lims_data.lims_id.values[0]
-    if cache_dir is not None:
-        folder = [folder for folder in os.listdir(cache_dir) if str(expt_id) in folder]
+def get_analysis_folder_name(lims_data):
+    date = str(lims_data.experiment_date.values[0])[:10].split('-')
+    specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_lines) > 1:
+        for i in range(len(specimen_driver_lines)):
+            if 'S' in specimen_driver_lines[i]:
+                specimen_driver_line = specimen_driver_lines[i].split('-')[0]
     else:
-        folder = []
-    if len(folder) > 0:
-        analysis_folder_name = os.path.join(cache_dir, folder[0])
+        specimen_driver_line = specimen_driver_lines[0]
+    if lims_data.depth.values[0] is None:
+        depth = 0
     else:
-        date = str(lims_data.experiment_date.values[0])[:10].split('-')
-        specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
-        if len(specimen_driver_line) > 1:
-            specimen_driver_line = specimen_driver_line[1].split('-')[0]
-        else:
-            specimen_driver_line = specimen_driver_line[0]
+        depth = lims_data.depth.values[0]
+    date = str(lims_data.experiment_date.values[0])[:10].split('-')
+    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_line) > 1:
+        specimen_driver_line = specimen_driver_line[0].split('-')[0]
+    else:
+        specimen_driver_line = specimen_driver_line[0]
+
+    if lims_data.rig.values[0][0] == 'M':
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                               lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
+                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
+                                   2] + '_' + \
+                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+                               specimen_driver_line + '_' + lims_data.rig.values[0] + \
+                               '_' + lims_data.session_type.values[0]  # NOQA: E127
+    else:
+        analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
+                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
+                                   2] + '_' + \
+                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
                                specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
                                lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E127
+
     return analysis_folder_name
 
 
@@ -149,8 +164,28 @@ def get_processed_dir(lims_data):
 def get_segmentation_dir(lims_data):
     processed_dir = get_processed_dir(lims_data)
     segmentation_folder = [file for file in os.listdir(processed_dir) if 'segmentation' in file]
-    segmentation_dir = os.path.join(processed_dir, segmentation_folder[0])
+    segmentation_folder.sort()
+    segmentation_dir = os.path.join(processed_dir, segmentation_folder[-1])
     return segmentation_dir
+
+
+def get_roi_group(lims_data):
+    experiment_id = int(lims_data.experiment_id.values[0])
+    ophys_session_dir = get_ophys_session_dir(lims_data)
+    import json
+    json_file = [file for file in os.listdir(ophys_session_dir) if ('SPLITTING' in file) and ('input.json' in file)]
+    json_path = os.path.join(ophys_session_dir, json_file[0])
+    with open(json_path, 'r') as w:
+        jin = json.load(w)
+    # figure out which roi_group the current experiment belongs to
+    plane_data = pd.DataFrame()
+    for i, roi_group in enumerate(range(len(jin['plane_groups']))):
+        group = jin['plane_groups'][roi_group]['ophys_experiments']
+        for j, plane in enumerate(range(len(group))):
+            expt_id = int(group[plane]['experiment_id'])
+            if expt_id == experiment_id:
+                expt_roi_group = i
+    return expt_roi_group
 
 
 def get_sync_path(lims_data):
@@ -219,15 +254,25 @@ def get_sync_data(lims_data, use_acq_trigger):
         stim_photodiode = sync_dataset.get_rising_edges('photodiode') / sample_freq
     if 'cam1_exposure' in meta_data['line_labels']:
         eye_tracking = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
+    elif 'cam1' in meta_data['line_labels']:
+        eye_tracking = sync_dataset.get_rising_edges('cam1') / sample_freq
     elif 'eye_tracking' in meta_data['line_labels']:
         eye_tracking = sync_dataset.get_rising_edges('eye_tracking') / sample_freq
     if 'cam2_exposure' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
+    elif 'cam2' in meta_data['line_labels']:
+        behavior_monitoring = sync_dataset.get_rising_edges('cam2') / sample_freq
     elif 'behavior_monitoring' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('behavior_monitoring') / sample_freq
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only
     if use_acq_trigger:
         frames_2p = frames_2p[frames_2p > trigger[0]]
+    print(len(frames_2p))
+    if lims_data.rig.values[0][0] == 'M': #if Mesoscope
+        print('resampling mesoscope 2P frame times')
+        roi_group = get_roi_group(lims_data) #get roi_group order
+        frames_2p = frames_2p[roi_group::4] #resample sync times
+    print(len(frames_2p))
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
     # put sync data in format to be compatible with downstream analysis
@@ -283,7 +328,16 @@ def get_metadata(lims_data, timestamps):
         metadata['imaging_depth'] = None
     else:
         metadata['imaging_depth'] = int(lims_data.depth.values[0])
-    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
+
+    specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_lines) > 1:
+        for i in range(len(specimen_driver_lines)):
+            if 'S' in specimen_driver_lines[i]:
+                specimen_driver_line = specimen_driver_lines[i]
+    else:
+        specimen_driver_line = specimen_driver_lines[0]
+    metadata['specimen_driver_line'] = specimen_driver_line
+    metadata['cre_line'] = specimen_driver_line
     if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
         metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0] + ';' + \
                                     lims_data['specimen_reporter_line'].values[0].split('(')[0]  # NOQA: E126
@@ -296,9 +350,9 @@ def get_metadata(lims_data, timestamps):
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
     # metadata['session_name'] = lims_data.session_name.values[0]
-    metadata['ophys_session_id'] = int(lims_data.session_id.values[0])
-    # metadata['project_id'] = lims_data.project_id.values[0]
-    # metadata['rig'] = lims_data.rig.values[0]
+    metadata['session_id'] = int(lims_data.session_id.values[0])
+    metadata['project_id'] = lims_data.project_id.values[0]
+    metadata['rig'] = lims_data.rig.values[0]
     metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 0)
     metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 0)
     # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
@@ -358,6 +412,8 @@ def get_task_parameters(core_data):
     task_parameters['stimulus_duration'] = core_data['metadata']['stim_duration']
     if 'omitted_flash_fraction' in core_data['metadata']['params'].keys():
         task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['omitted_flash_fraction']
+    elif 'flash_omit_probability' in core_data['metadata']['params'].keys():
+        task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['flash_omit_probability']
     else:
         task_parameters['omitted_flash_fraction'] = None
     task_parameters['response_window'] = [core_data['metadata']['response_window']]
@@ -386,13 +442,39 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
     stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
+    if 'omitted_stimuli' in core_data:
+        if len(core_data['omitted_stimuli']) > 0: #sometimes there is a key but empty values
+            omitted_flash = core_data['omitted_stimuli'].copy()
+            omitted_flash = omitted_flash[['frame']]
+            omitted_flash['omitted'] = True
+            flashes = stimulus_table.merge(omitted_flash, how='outer', on='frame')
+            flashes['omitted'] = [True if omitted is True else False for omitted in flashes.omitted.values]
+            flashes = flashes.sort_values(by='frame').reset_index().drop(columns=['index']).fillna(method='ffill')
+            flashes = flashes[['frame', 'end_frame', 'time', 'image_category', 'image_name', 'omitted']]
+            flashes = flashes.reset_index()
+            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for row
+                                  in range(len(flashes))]
+            # infer end time for omitted flashes as 16 frames after start frame (250ms*60Hz stim frame rate)
+            flashes['end_frame'] = [flashes.loc[idx, 'end_frame'] if flashes.loc[idx, 'omitted'] == False else
+                    flashes.loc[idx, 'frame'] + 16 for idx in flashes.index.values]
+            stimulus_table = flashes.copy()
+        else:
+            stimulus_table['omitted'] = False
+    else:
+        stimulus_table['omitted'] = False
     # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
+    # if np.isnan(stimulus_table.loc[0, 'end_frame']): #exception for cases where the first flash in the session is omitted
+    #     stimulus_table = stimulus_table.drop(index=0)
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
     start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
     stimulus_table.start_time = start_time
-    end_time = [timestamps_stimulus[end_frame] for end_frame in stimulus_table.end_frame.values]
+    end_time = [timestamps_stimulus[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
+    # end_time = [timestamps_stimulus[int(end_frame)] if np.isnan(end_frame) is False else np.nan()
+    #             for end_frame in stimulus_table.end_frame.values]
     stimulus_table.insert(loc=4, column='end_time', value=end_time)
+    if 'level_0' in stimulus_table.keys():
+        stimulus_table.drop(columns=['level_0'])
     save_dataframe_as_h5(stimulus_table, 'stimulus_table', get_analysis_dir(lims_data))
 
     task_parameters = get_task_parameters(core_data)
@@ -707,15 +789,22 @@ def save_motion_correction(motion_correction, lims_data):
 
 
 def get_max_projection(lims_data):
-    # max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
-    max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
+    max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
+    # max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
     return max_projection
 
 
-def save_max_projection(max_projection, lims_data):
+def save_max_projections(lims_data):
     analysis_dir = get_analysis_dir(lims_data)
+    # regular one
+    max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
     save_data_as_h5(max_projection, 'max_projection', analysis_dir)
     mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
+                 cmap='gray')
+    # contrast enhanced one
+    max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
+    save_data_as_h5(max_projection, 'normalized_max_projection', analysis_dir)
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'), arr=max_projection,
                  cmap='gray')
 
 
@@ -795,7 +884,7 @@ def save_roi_validation(roi_validation, lims_data):
                     str(index) + '_' + str(id) + '_' + str(cell_index))
 
 
-def convert_level_1_to_level_2(lims_id, cache_dir=None):
+def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
     logger.info('converting', lims_id)
     print('converting', lims_id)
     lims_data = get_lims_data(lims_id)
@@ -839,13 +928,14 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None):
     save_motion_correction(motion_correction, lims_data)
 
     max_projection = get_max_projection(lims_data)
-    save_max_projection(max_projection, lims_data)
+    save_max_projections(lims_data)
 
     average_image = get_average_image(lims_data)
     save_average_image(average_image, lims_data)
 
-    roi_validation = get_roi_validation(lims_data, cache_dir)
-    save_roi_validation(roi_validation, lims_data)
+    if plot_roi_validation:
+        roi_validation = get_roi_validation(lims_data)
+        save_roi_validation(roi_validation, lims_data)
 
     logger.info('done converting')
     print('done converting')
