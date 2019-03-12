@@ -22,49 +22,32 @@ def flatten_list(in_list):
     return out_list
 
 
-def get_response_rates(df_in2, sliding_window=100, reward_window=None):
+def get_response_rates(df_in, sliding_window=100):
+    """ 
+    calculates the rolling hit rate, false alarm rate, and dprime value
+    Note that the pandas rolling metric deals with NaN values by propogating the previous non-NaN value
 
-    df_in = df_in2.copy()
-    try:
-        df_in.reset_index(inplace=True)
-    except ValueError:
-        del df_in['level_0']
-        df_in.reset_index(inplace=True)
+    Parameters
+    ----------
+    sliding_window : int
+        Number of trials over which to calculate metrics
 
-    go_responses = pd.Series([np.nan] * len(df_in))
-    go_responses[
-        df_in[
-            (df_in.trial_type == 'go')
-            & (df_in.response == 1)
-            & (df_in.auto_rewarded != True)
-        ].index
-    ] = 1
-    go_responses[
-        df_in[
-            (df_in.trial_type == 'go')
-            & ((df_in.response == 0) | np.isnan(df_in.response))
-            & (df_in.auto_rewarded != True)
-        ].index
-    ] = 0
+    Returns
+    -------
+    tuple containing hit rate, false alarm rate, d_prime
+
+    """
+
+    from visual_behavior.translator.core.annotate import is_catch, is_hit
+
+    go_responses = df_in.apply(is_hit, axis=1)
 
     hit_rate = go_responses.rolling(
         window=sliding_window,
         min_periods=0,
     ).mean()
 
-    catch_responses = pd.Series([np.nan] * len(df_in))
-    catch_responses[
-        df_in[
-            (df_in.trial_type == 'catch')
-            & (df_in.response == 1)
-        ].index
-    ] = 1
-    catch_responses[
-        df_in[
-            (df_in.trial_type == 'catch')
-            & ((df_in.response == 0) | np.isnan(df_in.response))
-        ].index
-    ] = 0
+    catch_responses = go_responses = df_in.apply(is_catch, axis=1)
 
     catch_rate = catch_responses.rolling(
         window=sliding_window,
