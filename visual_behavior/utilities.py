@@ -23,7 +23,7 @@ def flatten_list(in_list):
 
 
 def get_response_rates(df_in, sliding_window=100):
-    """ 
+    """
     calculates the rolling hit rate, false alarm rate, and dprime value
     Note that the pandas rolling metric deals with NaN values by propogating the previous non-NaN value
 
