@@ -316,7 +316,6 @@ def make_daily_figure(
     hit_rate, fa_rate, d_prime = get_response_rates(
         df_nonaborted,
         sliding_window=sliding_window,
-        reward_window=reward_window
     )
     make_rolling_response_probability_plot(hit_rate, fa_rate, ax[2], palette=palette)
     mean_rate = np.mean(check_responses(df_nonaborted, reward_window=reward_window) == 1.0)
