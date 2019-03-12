@@ -2,23 +2,17 @@ import psycopg2
 import psycopg2.extras
 import pandas as pd
 import logging
-import json
-import tifffile
-import numpy as np
 import os
-
+import tifffile
+import json
+import numpy as np
 logger = logging.getLogger(__name__)
-
-
 class MesoscopeDataset(object):
-
     def __init__(self, session_id, experiment_id=None):
-
         self.session_id = session_id
         self.experiment_id = experiment_id
         self.data_pointer = None
         self.data_present = False
-
         self._database = 'lims2'
         self._host = 'limsdb2'
         self._port = 5432
@@ -32,28 +26,26 @@ class MesoscopeDataset(object):
         self.full_field_present = None
         self.splitting_json_present = None
 
-    def psycopg2_select(self, query):
+    def get_session_id(self):
+        return self.session_id
 
+    def psycopg2_select(self, query):
         connection = psycopg2.connect(host=self._host, port=self._port,
                                       dbname=self._database, user=self._username,
                                       password=self._password,
                                       cursor_factory=psycopg2.extras.RealDictCursor)
         cursor = connection.cursor()
-
         try:
             cursor.execute(query)
             response = cursor.fetchall()
         finally:
             cursor.close()
             connection.close()
-
         return response
 
     def get_mesoscope_session_data(self, session_id=None):
         lims_data = None
-
         session_id = session_id or self.session_id
-
         if not session_id:
             lims_data = None
             logger.error("Provide Session ID")
@@ -118,7 +110,6 @@ class MesoscopeDataset(object):
                 "= 'qc') and os.workflow_state ='uploaded' "
                 " and oe.id='{}'  ",
             ))
-
             lims_data = self.psycopg2_select(query.format(experiment_id))
 
             if not lims_data:
@@ -126,51 +117,42 @@ class MesoscopeDataset(object):
             else:
                 self.data_pointer = lims_data
                 self.data_present = True
-
         except Exception as e:
             logger.error("Unable to query LIMS database: {}".format(e))
             self.data_present = False
-
         return lims_data
 
     def get_session_folder(self):
-
-        _session = pd.DataFrame(self.get_mesoscope_session_data())
-        self.session_folder = _session['session_folder'].values[0]
-
+        data = self.data_pointer or self.get_mesoscope_session_data()
+        if data:
+            data_frame = pd.DataFrame(data)
+            self.session_folder = data_frame['session_folder'].values[0]
+        else:
+            logger.error("Session does not exist in LIMS")
+            self.session_foder = None
         return self.session_folder
 
     def get_splitting_json(self):
-
         session_folder = self.get_session_folder()
-        splitting_json = os.path.join(session_folder,
-                                      f"MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json")
-
+        splitting_json = os.path.join(session_folder, f"MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json")
         if os.path.isfile(splitting_json):
             self.splitting_json_present = True
         else:
             logger.error("Unable to find splitting json")
             self.splitting_json_present = False
-
         return splitting_json
 
     def get_paired_planes(self):
-
         splitting_json = self.get_splitting_json()
-
         with open(splitting_json, "r") as f:
             data = json.load(f)
-
         pairs = []
         for pg in data.get("plane_groups", []):
             pairs.append([p["experiment_id"] for p in pg.get("ophys_experiments", [])])
-
         return pairs
 
     def get_exp_by_structure(self, structure):
-
         experiment = pd.DataFrame(self.get_mesoscope_session_data())
-
         return experiment.loc[experiment.structure == structure]
 
     def get_full_field_tiff(self, full_field_path_offline=None):
@@ -348,17 +330,12 @@ class MesoscopeDataset(object):
                 roi_new_size_y = np.int16(np.round(roi_data.loc[f'roi{k}_pix']['sizeY'] * roi_scale_y))
                 # scaling roi:
                 roi_image_ds = np.uint16(resize(surface_roi[k, :, :], np.int16([roi_new_size_x, roi_new_size_y])) * 2 ** 16)
-
                 # calc insertion coordinates for roi1:
                 a = np.uint16(np.round(roi_data.loc[f'roi{k}_pix']['centerX'] - roi_image_ds.shape[0] / 2.0))
                 b = np.uint16(np.round(roi_data.loc[f'roi{k}_pix']['centerX'] + roi_image_ds.shape[0] / 2.0))
-
                 c = np.uint16(np.round(roi_data.loc[f'roi{k}_pix']['centerY'] - roi_image_ds.shape[1] / 2.0))
                 d = np.uint16(np.round(roi_data.loc[f'roi{k}_pix']['centerY'] + roi_image_ds.shape[1] / 2.0))
-
                 # insert roi1 into full field image
                 image_ff_roi[c:d, a:b] = roi_image_ds
-
             k += 1
-
         return image_ff_roi
