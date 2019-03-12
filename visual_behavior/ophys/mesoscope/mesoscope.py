@@ -25,6 +25,7 @@ class MesoscopeDataset(object):
         self.data_present = None
         self.full_field_present = None
         self.splitting_json_present = None
+        self.exp_id = None
 
     def get_session_id(self):
         return self.session_id
@@ -121,6 +122,13 @@ class MesoscopeDataset(object):
             logger.error("Unable to query LIMS database: {}".format(e))
             self.data_present = False
         return lims_data
+
+    def get_exp_folder(self, exp_id):
+        self.exp_id = exp_id
+        exp = pd.DataFrame(self.get_mesoscope_experiment_data(exp_id))
+        exp_folder = exp['experiment_folder'].values[0]
+        self.exp_folder = exp_folder
+        return exp_folder
 
     def get_session_folder(self):
         data = self.data_pointer or self.get_mesoscope_session_data()
