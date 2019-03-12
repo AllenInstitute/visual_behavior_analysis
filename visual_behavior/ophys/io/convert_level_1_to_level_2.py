@@ -129,7 +129,7 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     if 'analysis_dir' in lims_data.columns:
         return lims_data['analysis_dir'].values[0]
 
-    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data, cache_dir))
+    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
     if not os.path.exists(analysis_dir):
         os.mkdir(analysis_dir)
     if cache_on_lims_data:
@@ -268,10 +268,10 @@ def get_sync_data(lims_data, use_acq_trigger):
     if use_acq_trigger:
         frames_2p = frames_2p[frames_2p > trigger[0]]
     print(len(frames_2p))
-    if lims_data.rig.values[0][0] == 'M': #if Mesoscope
+    if lims_data.rig.values[0][0] == 'M':  # if Mesoscope
         print('resampling mesoscope 2P frame times')
-        roi_group = get_roi_group(lims_data) #get roi_group order
-        frames_2p = frames_2p[roi_group::4] #resample sync times
+        roi_group = get_roi_group(lims_data)  # get roi_group order
+        frames_2p = frames_2p[roi_group::4]  # resample sync times
     print(len(frames_2p))
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
@@ -443,7 +443,7 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
 
     stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
     if 'omitted_stimuli' in core_data:
-        if len(core_data['omitted_stimuli']) > 0: #sometimes there is a key but empty values
+        if len(core_data['omitted_stimuli']) > 0:  # sometimes there is a key but empty values
             omitted_flash = core_data['omitted_stimuli'].copy()
             omitted_flash = omitted_flash[['frame']]
             omitted_flash['omitted'] = True
@@ -452,11 +452,12 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
             flashes = flashes.sort_values(by='frame').reset_index().drop(columns=['index']).fillna(method='ffill')
             flashes = flashes[['frame', 'end_frame', 'time', 'image_category', 'image_name', 'omitted']]
             flashes = flashes.reset_index()
-            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for row
+            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for
+                                  row
                                   in range(len(flashes))]
             # infer end time for omitted flashes as 16 frames after start frame (250ms*60Hz stim frame rate)
             flashes['end_frame'] = [flashes.loc[idx, 'end_frame'] if flashes.loc[idx, 'omitted'] == False else
-                    flashes.loc[idx, 'frame'] + 16 for idx in flashes.index.values]
+                                    flashes.loc[idx, 'frame'] + 16 for idx in flashes.index.values]
             stimulus_table = flashes.copy()
         else:
             stimulus_table['omitted'] = False
@@ -621,18 +622,21 @@ def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
         lookup = pd.read_csv(os.path.join(cache_dir, matching_file[0]))
         df = lookup[lookup.ophys_experiment_id == int(lims_data.experiment_id.values[0])]
         if (len(df) > 0):
-            if np.isnan(df.cell_specimen_id.values[0])==False:
+            if np.isnan(df.cell_specimen_id.values[0]) == False:
                 try:
                     # if lookup file exists, and lookup table has entries for this experiment,
                     # add cell_specimen_id values to roi_metrics and overwrite 'id' column with cell_specimen_ids
-                    print('this session has cell matching results, adding cell_specimen_ids and overwriting roi_metrics.id')
+                    print(
+                        'this session has cell matching results, adding cell_specimen_ids and overwriting roi_metrics.id')
                     # cell_specimen_ids = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in roi_ids]
                     # cell_specimen_ids = np.asarray(cell_specimen_ids)
-                    roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in
+                    roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for
+                                                       roi_id in
                                                        roi_metrics.id.values]
                     roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
                 except:
-                    print('something bad happened when trying to assign cell_specimen_ids using lookup table, setting to None')
+                    print(
+                        'something bad happened when trying to assign cell_specimen_ids using lookup table, setting to None')
                     roi_metrics['cell_specimen_id'] = None
             else:
                 # no cell_specimen_ids in table, set cell_specimen_id to None
@@ -654,7 +658,8 @@ def get_cell_specimen_ids(roi_metrics):
         cell_specimen_ids = roi_ids
     else:
         # make sure cell_specimen_ids are retrieved in the same order as roi_ids, as these correspond to order of trace and roi maskindices
-        cell_specimen_ids = [int(roi_metrics[roi_metrics.roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in roi_ids]
+        cell_specimen_ids = [int(roi_metrics[roi_metrics.roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in
+                             roi_ids]
         cell_specimen_ids = np.asarray(cell_specimen_ids)
     return cell_specimen_ids
 
@@ -804,7 +809,8 @@ def save_max_projections(lims_data):
     # contrast enhanced one
     max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
     save_data_as_h5(max_projection, 'normalized_max_projection', analysis_dir)
-    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'), arr=max_projection,
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'),
+                 arr=max_projection,
                  cmap='gray')
 
 
@@ -846,7 +852,7 @@ def run_roi_validation(lims_data, cache_dir=None):
     max_projection = get_max_projection(lims_data)
 
     # cell_indices = {id: get_cell_index_for_cell_specimen_id(id, cell_specimen_ids) for id in cell_specimen_ids}
-    cell_indices = {id: np.where(roi_ids==id)[0][0] for id in roi_ids}
+    cell_indices = {id: np.where(roi_ids == id)[0][0] for id in roi_ids}
 
     return roi_names, roi_df, roi_traces, dff_traces_original, roi_ids, cell_indices, roi_masks, roi_metrics, max_projection, dff_traces
 
