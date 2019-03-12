@@ -1,4 +1,3 @@
-
 import psycopg2
 import psycopg2.extras
 import pandas as pd
@@ -8,13 +7,12 @@ import tifffile
 import numpy as np
 import os
 
-
 logger = logging.getLogger(__name__)
 
 
 class MesoscopeDataset(object):
 
-    def __init__(self, session_id='', experiment_id=''):
+    def __init__(self, session_id, experiment_id=None):
 
         self.session_id = session_id
         self.experiment_id = experiment_id
@@ -51,10 +49,15 @@ class MesoscopeDataset(object):
 
         return response
 
-    def get_mesoscope_session_data(self, session_id=''):
-        if session_id != '':
-            lims_data = []
-            self.session_id = session_id
+    def get_mesoscope_session_data(self, session_id=None):
+        lims_data = None
+
+        session_id = session_id or self.session_id
+
+        if not session_id:
+            lims_data = None
+            logger.error("Provide Session ID")
+        else:
             try:
                 query = ' '.join((
                     "SELECT oe.id as experiment_id, os.id as session_id",
@@ -63,7 +66,7 @@ class MesoscopeDataset(object):
                     ", os.date_of_acquisition as date",
                     ", imaging_depths.depth as depth",
                     ", st.acronym as structure",
-                    ", os.≤parent_session_id as parent_id",
+                    ", os.parent_session_id as parent_id",
                     ", oe.workflow_state",
                     ", os.stimulus_name as stimulus",
                     " FROM ophys_experiments oe",
@@ -86,65 +89,61 @@ class MesoscopeDataset(object):
             except Exception as e:
                 logger.error("Unable to query LIMS database: {}".format(e))
                 self.data_present = False
-        else:
-            lims_data = []
-            logger.error("Provide Session ID")
-
         return lims_data
 
-    def get_mesoscope_experiment_data(self, experiment_id=''):
-        lims_data = []
-        if experiment_id != '':
-            self.experiment_id = experiment_id
-            try:
+    def get_mesoscope_experiment_data(self, experiment_id):
 
-                query = ' '.join((
-                    "SELECT oe.id as experiment_id, os.id as session_id",
-                    ", os.storage_directory as session_folder, oe.storage_directory as experiment_folder",
-                    ", sp.name as specimen",
-                    ", os.date_of_acquisition as date",
-                    ", imaging_depths.depth as depth",
-                    ", st.acronym as structure",
-                    ", os.parent_session_id as parent_id",
-                    ", oe.workflow_state",
-                    ", os.stimulus_name as stimulus",
-                    " FROM ophys_experiments oe",
-                    "join ophys_sessions os on os.id = oe.ophys_session_id "
-                    "join specimens sp on sp.id = os.specimen_id "
-                    "join projects p on p.id = os.project_id "
-                    "join imaging_depths on imaging_depths.id = oe.imaging_depth_id "
-                    "join structures st on st.id = oe.targeted_structure_id "
-                    "where p.code = 'MesoscopeDevelopment' and (oe.workflow_state = 'processing' or oe.workflow_state "
-                    "= 'qc') and os.workflow_state ='uploaded' "
-                    " and oe.id='{}'  ",
-                ))
+        lims_data = None
 
-                lims_data = self.psycopg2_select(query.format(experiment_id))
+        self.experiment_id = experiment_id
+        try:
 
-                if not lims_data:
-                    self.data_present = False
-                else:
-                    self.data_pointer = lims_data
-                    self.data_present = True
+            query = ' '.join((
+                "SELECT oe.id as experiment_id, os.id as session_id",
+                ", os.storage_directory as session_folder, oe.storage_directory as experiment_folder",
+                ", sp.name as specimen",
+                ", os.date_of_acquisition as date",
+                ", imaging_depths.depth as depth",
+                ", st.acronym as structure",
+                ", os.parent_session_id as parent_id",
+                ", oe.workflow_state",
+                ", os.stimulus_name as stimulus",
+                " FROM ophys_experiments oe",
+                "join ophys_sessions os on os.id = oe.ophys_session_id "
+                "join specimens sp on sp.id = os.specimen_id "
+                "join projects p on p.id = os.project_id "
+                "join imaging_depths on imaging_depths.id = oe.imaging_depth_id "
+                "join structures st on st.id = oe.targeted_structure_id "
+                "where p.code = 'MesoscopeDevelopment' and (oe.workflow_state = 'processing' or oe.workflow_state "
+                "= 'qc') and os.workflow_state ='uploaded' "
+                " and oe.id='{}'  ",
+            ))
 
-            except Exception as e:
-                logger.error("Unable to query LIMS database: {}".format(e))
+            lims_data = self.psycopg2_select(query.format(experiment_id))
+
+            if not lims_data:
                 self.data_present = False
-        else:
-            logger.error("Provide experiment ID")
+            else:
+                self.data_pointer = lims_data
+                self.data_present = True
+
+        except Exception as e:
+            logger.error("Unable to query LIMS database: {}".format(e))
+            self.data_present = False
 
         return lims_data
 
     def get_session_folder(self):
 
-        _session = pd.DataFrame(self.get_mesoscope_session_data(self.session_id))
+        _session = pd.DataFrame(self.get_mesoscope_session_data())
         self.session_folder = _session['session_folder'].values[0]
 
         return self.session_folder
 
     def get_splitting_json(self):
 
-        splitting_json = os.path.join(self.session_folder,
+        session_folder = self.get_session_folder()
+        splitting_json = os.path.join(session_folder,
                                       f"MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json")
 
         if os.path.isfile(splitting_json):
@@ -170,29 +169,25 @@ class MesoscopeDataset(object):
 
     def get_exp_by_structure(self, structure):
 
-        experiment = pd.DataFrame(self.get_mesoscope_session_data(self.session_id))
+        experiment = pd.DataFrame(self.get_mesoscope_session_data())
 
         return experiment.loc[experiment.structure == structure]
 
-    def get_full_field_tiff(self, full_field_path_offline=''):
-
-        if full_field_path_offline != '':
+    def get_full_field_tiff(self, full_field_path_offline=None):
+        if not full_field_path_offline:
             # use full field path to the tiff:
             full_field_path = os.path.join(full_field_path_offline, f"{self.session_id}_fullfield.tif")
             self.full_field_path = full_field_path
-
             if os.path.isfile(full_field_path):
                 self.full_field_present = True
             else:
-                full_field_path = ''
+                full_field_path = None
                 logger.error("Can't find full field tiff at offline path, check if file exists")
                 self.full_field_present = False
-
         else:
             # see if file exists in lims:
             session_folder = self.get_session_folder()
             full_field_path = os.path.join(session_folder, f"{self.session_id}_fullfield.tif")
-
             if os.path.isfile(full_field_path):
                 self.full_field_path = full_field_path
                 self.full_field_present = True
@@ -200,15 +195,13 @@ class MesoscopeDataset(object):
                 full_field_path = ''
                 logger.error("Full field tiff is absent in session folder, provide offline path")
                 self.full_field_present = False
-
         return full_field_path
 
     def stitch_full_field(self, summ=True):
         full_field_tiff_path = self.full_field_path
         ff_path = full_field_tiff_path
         image_stitched = None
-        image_sum = None
-        if full_field_tiff_path != '':
+        if full_field_tiff_path:
             tiff = tifffile.TiffFile(full_field_tiff_path)
             meta = tiff.scanimage_metadata
             image = tiff.asarray()
@@ -227,13 +220,145 @@ class MesoscopeDataset(object):
             ff_stitch_summ_name = os.path.dirname(ff_path) + '/' + ff_image_name.split('.')[0] + '_stitched_sum.tif'
             for j in range(slices):
                 for i in range(roi_num):
-                    image_stitched[j, :, i * image_npixels:(i + 1) * image_npixels] = image[j, i * (pixel_res_y + y_gap):(i + 1) * pixel_res_y + i * y_gap,:]
+                    image_stitched[j, :, i * image_npixels:(i + 1) * image_npixels] = image[j, i * (pixel_res_y + y_gap):(i + 1) * pixel_res_y + i * y_gap, :]
             if summ:
                 image_sum = np.int16(image_stitched.mean(axis=0))
                 tifffile.imsave(ff_stitch_summ_name, image_sum)
             tifffile.imsave(ff_stitch_name, image_stitched)
-
         else:
-            full_field_path = ''
             logger.error("Full field tiff is absent in session folder, provide offline path")
         return image_stitched, image_sum, meta
+
+    def register_rois_to_FullFOV(self):
+        # from MDF of scanimage, but can be read from metadata
+        # factor to translate from angular to linear coordinates, microns per degree
+
+        ses = self.get_mesoscope_session_data()
+
+        # get full field image -> stitch full field image
+        # !!!not tested!!! - test on a dataset with valid full field
+        json_output = os.path.join(self.get_session_folder(), 'MESOSCOPE_FILE_SPLITTING_QUEUE_', self.session_id,
+                                   '_output.json')
+
+        _ = self.get_full_field_tiff()
+        _, ff_image, ff_meta = self.stitch_full_field()
+
+        mpg = ff_meta['FrameData']['SI.objectiveResolution']
+
+        input_json = os.path.join(self.get_session_folder(), f'MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json')
+
+        with open(input_json) as f:
+            all_meta = json.load(f)
+
+        surface_raw_file = all_meta["surface_tif"]
+
+        json_output = os.path.join(self.get_session_folder(),
+                                   f'MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_output.json')
+
+        with open(json_output) as f:
+            all_meta = json.load(f)
+
+        for file in all_meta["file_metadata"]:
+            if file['input_tif'] == surface_raw_file:
+                rois_meta = file['roi_metadata']
+
+        ff_rois = ff_meta['RoiGroups']['imagingRoiGroup']['rois']
+        rois_rois = rois_meta['RoiGroups']['imagingRoiGroup']['rois']
+
+        roi_data = pd.DataFrame(
+            index=('FF_deg', 'roi1_deg', 'roi2_deg', 'FF_pix', 'roi1_pix', 'roi2_pix', 'FF_um', 'roi1_um', 'roi2_um'),
+            columns=('sizeX', 'sizeY', 'centerX', 'centerY', 'resX', 'resY'))
+
+        roi_data.loc['FF_deg']['sizeX'] = ff_rois[0]['scanfields']['sizeXY'][0] * len(ff_rois)
+        roi_data.loc['FF_deg']['sizeY'] = ff_rois[1]['scanfields']['sizeXY'][1]
+
+        roi_data.loc['FF_deg']['centerX'] = ff_rois[0]['scanfields']['centerXY'][0] + (
+                ff_rois[len(ff_rois) - 1]['scanfields']['centerXY'][0] - ff_rois[0]['scanfields']['centerXY'][0]) / 2
+        roi_data.loc['FF_deg']['centerY'] = ff_rois[0]['scanfields']['centerXY'][1]
+
+        roi_data.loc['FF_pix']['sizeX'] = ff_rois[1]['scanfields']['pixelResolutionXY'][0] * len(ff_rois)
+        roi_data.loc['FF_pix']['sizeY'] = ff_rois[1]['scanfields']['pixelResolutionXY'][1]
+        roi_data.loc['FF_pix']['centerX'] = roi_data.loc['FF_pix']['sizeX'] / 2
+        roi_data.loc['FF_pix']['centerY'] = roi_data.loc['FF_pix']['sizeY'] / 2
+
+        roi_data.loc['FF_deg']['resX'] = roi_data.loc['FF_pix']['sizeX'] / roi_data.loc['FF_deg']['sizeX']
+        roi_data.loc['FF_deg']['resY'] = roi_data.loc['FF_pix']['sizeY'] / roi_data.loc['FF_deg']['sizeY']
+
+        roi_data.loc['FF_um']['sizeX'] = roi_data.loc['FF_deg']['sizeX'] * mpg
+        roi_data.loc['FF_um']['sizeY'] = roi_data.loc['FF_deg']['sizeY'] * mpg
+        roi_data.loc['FF_um']['centerX'] = roi_data.loc['FF_deg']['centerX'] * mpg
+        roi_data.loc['FF_um']['centerY'] = roi_data.loc['FF_deg']['centerY'] * mpg
+
+        roi_data.loc['FF_um']['resX'] = roi_data.loc['FF_um']['sizeX'] / roi_data.loc['FF_pix']['sizeX']
+        roi_data.loc['FF_um']['resY'] = roi_data.loc['FF_um']['sizeY'] / roi_data.loc['FF_pix']['sizeY']
+
+        k = 0
+
+        for roi in rois_rois:
+            k += 1
+
+            roi_data.loc['roi{}_deg'.format(k)]['sizeX'] = roi['scanfields']['sizeXY'][0]
+            roi_data.loc['roi{}_deg'.format(k)]['sizeY'] = roi['scanfields']['sizeXY'][1]
+            roi_data.loc['roi{}_deg'.format(k)]['centerX'] = roi['scanfields']['centerXY'][0]
+            roi_data.loc['roi{}_deg'.format(k)]['centerY'] = roi['scanfields']['centerXY'][1]
+
+            roi_data.loc['roi{}_pix'.format(k)]['sizeX'] = roi['scanfields']['pixelResolutionXY'][0]
+            roi_data.loc['roi{}_pix'.format(k)]['sizeY'] = roi['scanfields']['pixelResolutionXY'][1]
+
+            roi_data.loc['roi{}_deg'.format(k)]['resX'] = roi_data.loc['roi{}_pix'.format(k)]['sizeX'] / \
+                                                          roi_data.loc['roi{}_deg'.format(k)]['sizeX']
+            roi_data.loc['roi{}_deg'.format(k)]['resY'] = roi_data.loc['roi{}_pix'.format(k)]['sizeY'] / \
+                                                          roi_data.loc['roi{}_deg'.format(k)]['sizeY']
+
+            roi_data.loc['roi{}_um'.format(k)]['sizeX'] = roi_data.loc['roi{}_deg'.format(k)]['sizeX'] * mpg
+            roi_data.loc['roi{}_um'.format(k)]['sizeY'] = roi_data.loc['roi{}_deg'.format(k)]['sizeY'] * mpg
+            roi_data.loc['roi{}_um'.format(k)]['centerX'] = roi_data.loc['roi{}_deg'.format(k)]['centerX'] * mpg
+            roi_data.loc['roi{}_um'.format(k)]['centerY'] = roi_data.loc['roi{}_deg'.format(k)]['centerY'] * mpg
+
+            roi_data.loc['roi{}_um'.format(k)]['resX'] = roi_data.loc['roi{}_um'.format(k)]['sizeX'] / \
+                                                         roi_data.loc['roi{}_pix'.format(k)]['sizeX']
+            roi_data.loc['roi{}_um'.format(k)]['resY'] = roi_data.loc['roi{}_um'.format(k)]['sizeY'] / \
+                                                         roi_data.loc['roi{}_pix'.format(k)]['sizeY']
+
+            roi_data.loc['roi{}_pix'.format(k)]['centerX'] = roi_data.loc['FF_pix']['centerX'] + (
+                    roi_data.loc['roi{}_deg'.format(k)]['centerX'] - roi_data.loc['FF_deg']['centerX']) * \
+                                                             roi_data.loc['FF_deg']['resX']
+            roi_data.loc['roi{}_pix'.format(k)]['centerY'] = roi_data.loc['FF_pix']['centerY'] + (
+                    roi_data.loc['roi{}_deg'.format(k)]['centerY'] - roi_data.loc['FF_deg']['centerY']) * \
+                                                             roi_data.loc['FF_deg']['resY']
+        # finding and reading surface tiffs
+        structures = ses.drop_duplicates('structure')
+        exp_folder_unique_structure = {}
+        surface_roi = np.zeros([structures.shape[0], 512, 512])
+        k = 0
+        image_ff_roi = ff_image
+        # loop that reads surface tiff files and inserts them into full field tiff
+        for i, _ in structures.iterrows():
+            exp_id = str(structures.loc[i]['experiment_id'])
+            exp_folder_unique_structure[k] = os.path.join(structures.loc[i]['experiment_folder'], f'{exp_id}_surface.tif')
+            if os.path.isfile(exp_folder_unique_structure[k]):
+                roi_tiff = tifffile.TiffFile(exp_folder_unique_structure[k])
+                surface_roi[k, :, :] = roi_tiff.asarray()
+                roi_tiff.close()
+                # scaling factors:
+                roi_scale_x = roi_data.loc[f'roi{k}_um']['resX'] / roi_data.loc['FF_um']['resX']
+                roi_scale_y = roi_data.loc[f'roi{k}_um']['resY'] / roi_data.loc['FF_um']['resY']
+                # new size:
+                roi_new_size_x = np.int16(np.round(roi_data.loc[f'roi{k}_pix']['sizeX'] * roi_scale_x))
+                roi_new_size_y = np.int16(np.round(roi_data.loc[f'roi{k}_pix']['sizeY'] * roi_scale_y))
+                # scaling roi:
+                roi_image_ds = np.uint16(resize(surface_roi[k, :, :], np.int16([roi_new_size_x, roi_new_size_y])) * 2 ** 16)
+
+                # calc insertion coordinates for roi1:
+                a = np.uint16(np.round(roi_data.loc[f'roi{k}_pix']['centerX'] - roi_image_ds.shape[0] / 2.0))
+                b = np.uint16(np.round(roi_data.loc[f'roi{k}_pix']['centerX'] + roi_image_ds.shape[0] / 2.0))
+
+                c = np.uint16(np.round(roi_data.loc[f'roi{k}_pix']['centerY'] - roi_image_ds.shape[1] / 2.0))
+                d = np.uint16(np.round(roi_data.loc[f'roi{k}_pix']['centerY'] + roi_image_ds.shape[1] / 2.0))
+
+                # insert roi1 into full field image
+                image_ff_roi[c:d, a:b] = roi_image_ds
+
+            k += 1
+
+        return image_ff_roi
