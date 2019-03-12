@@ -134,7 +134,11 @@ def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
     # fill all values up to the last nan with nan
     d_prime[:last_nan] = np.nan
 
-    return d_prime
+    if len(d_prime) == 1:
+        # if the result is a 1-length vector, return as a scalar
+        return d_prime[0]
+    else:
+        return d_prime
 
 
 def calc_deriv(x, time):
