@@ -67,7 +67,7 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
 
 def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
-    if type(roi_mask_dict.keys()[0]) == int:
+    if type(list(roi_mask_dict.keys())[0]) == int:
         m = roi_mask_dict[int(cell_specimen_id)]
     else:
         m = roi_mask_dict[str(cell_specimen_id)]
@@ -768,15 +768,6 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         save_figure(fig, figsize, dataset.cache_dir, 'example_traces',
                     str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
         plt.close()
-
-
-def get_colors_for_response_types(values):
-    c = sns.color_palette()
-    colors_dict = {'HIT': c[2], 'MISS': c[8], 'CR': c[0], 'FA': c[3]}
-    colors = []
-    for val in values:
-        colors.append(colors_dict[val])
-    return colors
 
 
 def plot_transition_type_heatmap(analysis, cell_list, cmap='jet', vmax=None, save=False, ax=None, colorbar=True):
