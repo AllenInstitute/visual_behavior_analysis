@@ -584,6 +584,36 @@ def trial_translator(trial_type, response_type, auto_rewarded=False):
             return 'correct_reject'
 
 
+def is_hit(trial):
+    '''returns:
+        True if trial is a hit
+        False if trial is a miss
+        NaN otherwise
+    '''
+    trial_description = assign_trial_description(trial)
+    if trial_description == 'hit':
+        return True
+    elif trial_description == 'miss':
+        return False
+    else:
+        return np.nan
+
+
+def is_catch(trial):
+    '''returns:
+        True if trial is a false alarm
+        False if trial is a correct rejection
+        NaN otherwise
+    '''
+    trial_description = assign_trial_description(trial)
+    if trial_description == 'false_alarm':
+        return True
+    elif trial_description == 'correct_reject':
+        return False
+    else:
+        return np.nan
+
+
 def colormap(trial_type, palette='trial_types'):
     if palette.lower() == 'trial_types':
         colors = {

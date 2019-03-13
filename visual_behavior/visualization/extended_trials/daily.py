@@ -206,6 +206,9 @@ def make_rolling_response_probability_plot(hit_rate, fa_rate, ax, palette='trial
 
 
 def make_rolling_dprime_plot(d_prime, ax, format='vertical', peak_dprime=None):
+    # if d_prime is a scalar, make it an array to avoid issues below
+    if not hasattr(d_prime, '__len__'):
+        d_prime = np.array([d_prime])
     if format == 'vertical':
         ax.plot(d_prime, np.arange(len(d_prime)), color='black', linewidth=2)
         ax.set_xlabel("d'", fontsize=14)
@@ -316,7 +319,6 @@ def make_daily_figure(
     hit_rate, fa_rate, d_prime = get_response_rates(
         df_nonaborted,
         sliding_window=sliding_window,
-        reward_window=reward_window
     )
     make_rolling_response_probability_plot(hit_rate, fa_rate, ax[2], palette=palette)
     mean_rate = np.mean(check_responses(df_nonaborted, reward_window=reward_window) == 1.0)
