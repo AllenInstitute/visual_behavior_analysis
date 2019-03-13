@@ -160,3 +160,4 @@ class Mesoscope_ICA(object):
         self.scale_top = scale_top.x
         self.scale_bot = scale_bot.x
         return scale_top.x, scale_bot.x
+    
