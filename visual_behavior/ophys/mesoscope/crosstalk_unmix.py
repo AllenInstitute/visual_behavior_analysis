@@ -273,4 +273,23 @@ class Mesoscope_ICA(object):
             self.plane2_ica_input = plane2_ica_input
             self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
             self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset, }
-        return 
+        return
+
+    def unmix_traces(self, max_iter=50):
+        traces = np.array([self.plane1_ica_input, self.plane2_ica_input]).T
+        self.found_solution = False
+        for i in range(max_iter):
+            ica = FastICA(n_components=2)
+            s = ica.fit_transform(traces)  # Reconstruct signals
+            a = ica.mixing_  # Get estimated mixing matrix
+            if (np.all(a > 0)) & (a[0][0] > a[1][0]):
+                self.found_solution = True
+                logger.warning("ICA successful")
+                self.matrix = a
+                self.traces_unmix = s
+                break
+        if not self.found_solution:
+            print(self.found_solution)
+            logger.error("Failed to find solution, try increasing `max_iter`")
+
+        return self.found_solution
