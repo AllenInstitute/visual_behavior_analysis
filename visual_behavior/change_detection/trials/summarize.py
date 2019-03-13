@@ -114,19 +114,18 @@ def session_level_summary(trials, groupby=('mouse_id', 'behavior_session_uuid', 
 def epoch_level_summary(trials, epoch_length=10.0, **kwargs):
     trials = annotate_epochs(trials, epoch_length)
 
-    summarizer = create_summarizer(
-        num_contingent_trials=session_metrics.num_contingent_trials,
-        d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime),
-        response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
-        earned_water=session_metrics.earned_water,
-        lick_latency_median=session_metrics.lick_latency,
-        fraction_time_aborted=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'aborted'),
-        hit_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.hit_rate),
-        false_alarm_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.false_alarm_rate),
+    trials = annotate_change_detect(trials)
+
+    epoch_level_summary_metrics = dict(
         reward_lick_count=session_metrics.reward_lick_count,
         reward_lick_latency=session_metrics.reward_lick_latency,
         **kwargs
     )
+
+    summary_metrics = DEFAULT_SUMMARY_METRICS.copy()
+    summary_metrics.update(epoch_level_summary_metrics)
+    summary_metrics.update(**kwargs)
+    summarizer = create_summarizer(**summary_metrics)
 
     epoch_summary = (
         trials
