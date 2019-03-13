@@ -97,10 +97,6 @@ def session_level_summary(trials, groupby=('mouse_id', 'behavior_session_uuid', 
 
     trials = annotate_change_detect(trials)
 
-    # print('calling label_auto_rewards')
-    # trials = label_auto_rewards(trials)
-    # print(trials.trial_type.unique())
-
     session_summary = (
         trials
         .groupby(list(groupby))
