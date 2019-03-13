@@ -293,3 +293,13 @@ class Mesoscope_ICA(object):
             logger.error("Failed to find solution, try increasing `max_iter`")
 
         return self.found_solution
+
+    def ica_err(self, scale, traces_ica, trace_orig):
+        return np.sqrt((traces_ica * scale[0] - trace_orig) ** 2).mean()
+
+    def find_scale_ica(self):
+        scale_top = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 0], self.plane1_ica_input))
+        scale_bot = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 1], self.plane2_ica_input))
+        self.scale_top = scale_top.x
+        self.scale_bot = scale_bot.x
+        return scale_top.x, scale_bot.x
