@@ -93,9 +93,7 @@ def peak_dprime(session_trials):
         return np.nan
     try:
         return np.nanmax(dp[50:])
-    except IndexError:
-        return np.nan
-    except ValueError:
+    except (IndexError, ValueError):
         return np.nan
 
 
@@ -106,9 +104,7 @@ def peak_hit_rate(session_trials):
         return np.nan
     try:
         return np.nanmax(hr[50:])
-    except IndexError:
-        return np.nan
-    except ValueError:
+    except (IndexError, ValueError):
         return np.nan
 
 
