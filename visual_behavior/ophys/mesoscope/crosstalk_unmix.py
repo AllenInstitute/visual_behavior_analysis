@@ -5,11 +5,11 @@ import os
 import h5py
 from scipy.ndimage import label
 import numpy as np
-from sklearn.decomposition import FastICA
-import scipy.optimize as opt
 import logging
 logger = logging.getLogger(__name__)
 
+from sklearn.decomposition import FastICA
+import scipy.optimize as opt
 from scipy.linalg import sqrtm,inv
 import scipy.ndimage as ndim
 import matplotlib.pylab as plt
@@ -72,9 +72,10 @@ class Mesoscope_ICA(object):
         self.plane2_ica_output = None  # output of unmix_traces
         self.plane2_ica_output_pointer = None
 
-        self.found_solution = None  # output of unmix_traces
+        self.plane1_offset = None
+        self.plane2_offset = None
 
-        self.offset = None
+        self.found_solution = None  # output of unmix_traces
 
         self.matrix = None
         self.cache = cache
@@ -100,7 +101,7 @@ class Mesoscope_ICA(object):
         if not (os.path.isfile(path_traces_plane1) and os.path.isfile(path_traces_plane2)):
             # -------------------------------------------------------------------------------------------
             # retrieve both planes experiment path
-            print('Traces dont exist in cache dir, extracting')
+            logger.warning('Traces dont exist in cache dir, extracting')
 
             plane1_folder = self.dataset.get_exp_folder(plane1_exp_id)
             plane2_folder = self.dataset.get_exp_folder(plane2_exp_id)
@@ -162,7 +163,7 @@ class Mesoscope_ICA(object):
                     with h5py.File(path_traces_plane2, "w") as f:
                         f.create_dataset(f"data", data=self.plane2_traces_orig)
         else:
-            print('Found traces, reading form file')
+            logger.warning('Found traces, reading form file')
             # read traces form h5 file:
             with h5py.File(path_traces_plane1, "r") as f:
                 plane1_traces_original = f["data"].value
@@ -182,58 +183,94 @@ class Mesoscope_ICA(object):
 
     def combine_debias_traces(self):
 
-        if self.found_ica_traces:
+        plane1_ica_input_pointer = os.path.join(self.ica_traces_dir,
+                                                f'traces_ica_input_{self.plane1_exp_id}.h5')
 
-            plane1_sig = self.plane1_traces_orig[0]
-            plane1_ct = self.plane1_traces_orig[1]
+        if os.path.isfile(plane1_ica_input_pointer):
+            self.plane1_ica_input_pointer = plane1_ica_input_pointer
+            # file already exists, skip debiasing
 
-            plane2_sig = self.plane2_traces_orig[0]
-            plane2_ct = self.plane2_traces_orig[1]
+        plane2_ica_input_pointer = os.path.join(self.ica_traces_dir,
+                                                f'traces_ica_input_{self.plane2_exp_id}.h5')
 
-            # subtract offset plane 1:
-            nc = plane1_sig.shape[0]
-            plane1_sig_offset = np.mean(plane1_sig, axis=1).reshape(nc, 1)
-            plane1_sig_m0 = plane1_sig - plane1_sig_offset
+        if os.path.isfile(plane2_ica_input_pointer):
+            self.plane2_ica_input_pointer = plane2_ica_input_pointer
+            # file already exists, skip debiasing
 
-            nc = plane1_ct.shape[0]
-            plane1_ct_offset = np.mean(plane1_ct, axis=1).reshape(nc, 1)
-            plane1_ct_m0 = plane1_ct - plane1_ct_offset
+        if not (self.plane1_ica_input_pointer and self.plane2_ica_input_pointer):
 
-            # subtract offset for plane 2:
-            nc = plane2_sig.shape[0]
-            plane2_sig_offset = np.mean(plane2_sig, axis=1).reshape(nc, 1)
-            plane2_sig_m0 = plane2_sig - plane2_sig_offset
+            self.plane1_ica_input_pointer = plane1_ica_input_pointer
+            self.plane2_ica_input_pointer = plane2_ica_input_pointer
 
-            nc = plane2_ct.shape[0]
-            plane2_ct_offset = np.mean(plane2_ct, axis=1).reshape(nc, 1)
-            plane2_ct_m0 = plane2_ct - plane2_ct_offset
+            logger.warning("debiased traces do not exist, running offset subtraction")
 
-            self.offset = {'plane1_sig_offset': plane1_sig_offset, 'plane2_sig_offset': plane2_sig_offset,
-                           'plane1_ct_offset': plane1_ct_offset, 'plane2_ct_offset': plane2_ct_offset, }
+            if self.found_ica_traces:
 
-            trace_sig_p1 = plane1_sig_m0.flatten()
-            trace_ct_p1 = plane1_ct_m0.flatten()
-            trace_sig_p2 = plane2_sig_m0.flatten()
-            trace_ct_p2 = plane2_ct_m0.flatten()
+                plane1_sig = self.plane1_traces_orig[0]
+                plane1_ct = self.plane1_traces_orig[1]
 
-            plane1_ica_input = np.append(trace_sig_p1, trace_ct_p2, axis=0)
-            plane2_ica_input = np.append(trace_ct_p1, trace_sig_p2, axis=0)
+                plane2_sig = self.plane2_traces_orig[0]
+                plane2_ct = self.plane2_traces_orig[1]
 
+                # subtract offset plane 1:
+                nc = plane1_sig.shape[0]
+                plane1_sig_offset = np.mean(plane1_sig, axis=1).reshape(nc, 1)
+                plane1_sig_m0 = plane1_sig - plane1_sig_offset
+
+                nc = plane1_ct.shape[0]
+                plane1_ct_offset = np.mean(plane1_ct, axis=1).reshape(nc, 1)
+                plane1_ct_m0 = plane1_ct - plane1_ct_offset
+
+                # subtract offset for plane 2:
+                nc = plane2_sig.shape[0]
+                plane2_sig_offset = np.mean(plane2_sig, axis=1).reshape(nc, 1)
+                plane2_sig_m0 = plane2_sig - plane2_sig_offset
+
+                nc = plane2_ct.shape[0]
+                plane2_ct_offset = np.mean(plane2_ct, axis=1).reshape(nc, 1)
+                plane2_ct_m0 = plane2_ct - plane2_ct_offset
+
+                self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
+                self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset, }
+
+                trace_sig_p1 = plane1_sig_m0.flatten()
+                trace_ct_p1 = plane1_ct_m0.flatten()
+                trace_sig_p2 = plane2_sig_m0.flatten()
+                trace_ct_p2 = plane2_ct_m0.flatten()
+
+                plane1_ica_input = np.append(trace_sig_p1, trace_ct_p2, axis=0)
+                plane2_ica_input = np.append(trace_ct_p1, trace_sig_p2, axis=0)
+
+                self.plane1_ica_input = plane1_ica_input
+                self.plane2_ica_input = plane2_ica_input
+
+                # write ica input traces to disk
+
+                if not os.path.isfile(self.plane1_ica_input_pointer):
+                    with h5py.File(self.plane1_ica_input_pointer, "w") as f:
+                        f.create_dataset("debiased_traces", data=self.plane1_ica_input)
+                        f.create_dataset('sig_offset', data=plane1_sig_offset)
+                        f.create_dataset('ct_offset', data=plane1_ct_offset)
+
+                if not os.path.isfile(self.plane2_ica_input_pointer):
+                    with h5py.File(self.plane2_ica_input_pointer, "w") as f:
+                        f.create_dataset("debiased_traces", data=self.plane2_ica_input)
+                        f.create_dataset('sig_offset', data=plane2_sig_offset)
+                        f.create_dataset('ct_offset', data=plane2_ct_offset)
+            else:
+                logger.error('Extract traces first')
+        else:
+            logger.warning("Debiased traces exist, reading from h5 file")
+            with h5py.File(self.plane1_ica_input_pointer, "r") as f:
+                plane1_ica_input = f["debiased_traces"].value
+                plane1_sig_offset = f['sig_offset'].value
+                plane1_ct_offset = f['ct_offset'].value
+            with h5py.File(self.plane2_ica_input_pointer, "r") as f:
+                plane2_ica_input = f["debiased_traces"].value
+                plane2_sig_offset = f['sig_offset'].value
+                plane2_ct_offset = f['ct_offset'].value
             self.plane1_ica_input = plane1_ica_input
             self.plane2_ica_input = plane2_ica_input
-
-            self.plane1_ica_input_pointer = os.path.join(self.ica_traces_dir,
-                                                         f'traces_ica_input_{self.plane1_exp_id}')
-            self.plane2_ica_input_pointer = os.path.join(self.ica_traces_dir,
-                                                         f'traces_ica_input_{self.plane2_exp_id}')
-            # write ica input traces to disk
-
-            if not os.path.isfile(self.plane1_ica_input_pointer):
-                with h5py.File(self.plane1_ica_input_pointer, "w") as f:
-                    f.create_dataset(f"data", data=self.plane1_ica_input)
-            if not os.path.isfile(self.plane2_ica_input_pointer):
-                with h5py.File(self.plane2_ica_input_pointer, "w") as f:
-                    f.create_dataset(f"data", data=self.plane2_ica_input)
-        else:
-            logger.error('Extract traces first')
-        return
+            self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
+            self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset, }
+        return 
