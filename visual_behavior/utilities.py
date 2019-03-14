@@ -129,7 +129,10 @@ def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
     last_nan = np.max((last_hit_nan, last_fa_nan))
 
     # fill nans with 0.5 to avoid warning about nans
-    d_prime = Z(pd.Series(hit_rate).fillna(0.5)) - Z(pd.Series(fa_rate).fillna(0.5))
+    if (hasattr(hit_rate, '__len__') and len(hit_rate) == 0) or (hasattr(fa_rate, '__len__') and len(fa_rate) == 0):
+        return np.nan
+    else:
+        d_prime = Z(pd.Series(hit_rate).fillna(0.5)) - Z(pd.Series(fa_rate).fillna(0.5))
 
     # fill all values up to the last nan with nan
     d_prime[:last_nan] = np.nan
