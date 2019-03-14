@@ -10,12 +10,12 @@ logger = logging.getLogger(__name__)
 
 
 def create_extended_dataframe(
-        trials, 
-        metadata, 
-        licks, 
-        time, 
-        is_ophys=False, 
-        *args, 
+        trials,
+        metadata,
+        licks,
+        time,
+        is_ophys=False,
+        *args,
         **kwargs
 ):
     """ creates a trials dataframe from a detection-of-change session
