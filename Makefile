@@ -30,6 +30,7 @@ build: clean
 	cp /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/ophys_cell_segmentation_run_800402935/maxInt_a13a.png fixtures
 	cp /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/demix/702134928_demixed_traces.h5 fixtures
 	cp /allen/programs/braintv/production/neuralcoding/prod0/specimen_652073919/ophys_session_702013508/ophys_experiment_702134928/processed/roi_traces.h5 fixtures
+	cp /allen/programs/braintv/production/visualbehavior/prod0/specimen_789113132/behavior_session_815348761/815160769.pkl fixtures
 
 	# --no-cache
 	docker build --build-arg PKG=$(PKG) -t $(PKG):latest -f Dockerfile . 
