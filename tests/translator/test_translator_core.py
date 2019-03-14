@@ -19,7 +19,7 @@ def test_data():
 )
 def test_fix_482_endframe_bug(test_data):
     core_data = data_to_change_detection_core(test_data)
-    trials = create_extended_dataframe(**core_data, is_ophys=True)
+    trials = create_extended_dataframe(is_ophys=True, **core_data)
     last_two_endframes = trials.tail()['endframe'][-2:]
 
     assert last_two_endframes.iloc[1] - last_two_endframes.iloc[0] < 10000, \
