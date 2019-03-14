@@ -356,7 +356,7 @@ class Mesoscope_ICA(object):
                     f.create_dataset(f"data", data=self.plane2_traces_orig)
         else:
             logger.warning("Unmixed traces exist in cache, reading from h5 file")
-
+            self.found_solution = True
             with h5py.File(self.plane1_ica_output_pointer, "r") as f:
                 plane1_ica_output = f["data"].value
 
