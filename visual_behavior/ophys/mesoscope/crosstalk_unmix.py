@@ -75,6 +75,8 @@ class Mesoscope_ICA(object):
         self.plane1_offset = None
         self.plane2_offset = None
 
+        self.ica_scale = None
+
         self.found_solution = None  # output of unmix_traces
 
         self.matrix = None
@@ -101,7 +103,13 @@ class Mesoscope_ICA(object):
         if not (os.path.isfile(path_traces_plane1) and os.path.isfile(path_traces_plane2)):
             # -------------------------------------------------------------------------------------------
             # retrieve both planes experiment path
-            logger.warning('Traces dont exist in cache dir, extracting')
+            logger.warning('Traces dont exist in cache, extracting')
+
+            self.plane1_ica_input_pointer = None
+            self.plane2_ica_input_pointer = None
+
+            self.plane1_ica_output_pointer = None
+            self.plane2_ica_output_pointer = None
 
             plane1_folder = self.dataset.get_exp_folder(plane1_exp_id)
             plane2_folder = self.dataset.get_exp_folder(plane2_exp_id)
@@ -163,7 +171,7 @@ class Mesoscope_ICA(object):
                     with h5py.File(path_traces_plane2, "w") as f:
                         f.create_dataset(f"data", data=self.plane2_traces_orig)
         else:
-            logger.warning('Found traces, reading form file')
+            logger.warning('Found traces in cache, reading from h5 file')
             # read traces form h5 file:
             with h5py.File(path_traces_plane1, "r") as f:
                 plane1_traces_original = f["data"].value
@@ -202,7 +210,7 @@ class Mesoscope_ICA(object):
             self.plane1_ica_input_pointer = plane1_ica_input_pointer
             self.plane2_ica_input_pointer = plane2_ica_input_pointer
 
-            logger.warning("debiased traces do not exist, running offset subtraction")
+            logger.warning("debiased traces do not exist in cache, running offset subtraction")
 
             if self.found_ica_traces:
 
@@ -260,46 +268,120 @@ class Mesoscope_ICA(object):
             else:
                 logger.error('Extract traces first')
         else:
-            logger.warning("Debiased traces exist, reading from h5 file")
+            logger.warning("Debiased traces exist in cache, reading from h5 file")
+
             with h5py.File(self.plane1_ica_input_pointer, "r") as f:
                 plane1_ica_input = f["debiased_traces"].value
                 plane1_sig_offset = f['sig_offset'].value
                 plane1_ct_offset = f['ct_offset'].value
+
             with h5py.File(self.plane2_ica_input_pointer, "r") as f:
                 plane2_ica_input = f["debiased_traces"].value
                 plane2_sig_offset = f['sig_offset'].value
                 plane2_ct_offset = f['ct_offset'].value
+
             self.plane1_ica_input = plane1_ica_input
             self.plane2_ica_input = plane2_ica_input
             self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
             self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset, }
+
         return
 
-    def unmix_traces(self, max_iter=50):
-        traces = np.array([self.plane1_ica_input, self.plane2_ica_input]).T
-        self.found_solution = False
-        for i in range(max_iter):
-            ica = FastICA(n_components=2)
-            s = ica.fit_transform(traces)  # Reconstruct signals
-            a = ica.mixing_  # Get estimated mixing matrix
-            if (np.all(a > 0)) & (a[0][0] > a[1][0]):
-                self.found_solution = True
-                logger.warning("ICA successful")
-                self.matrix = a
-                self.traces_unmix = s
-                break
-        if not self.found_solution:
-            print(self.found_solution)
-            logger.error("Failed to find solution, try increasing `max_iter`")
+    def unmix_traces(self, max_iter=10):
 
-        return self.found_solution
+        plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
+                                                 f'traces_ica_output_{self.plane1_exp_id}.h5')
 
-    def ica_err(self, scale, traces_ica, trace_orig):
+        if os.path.isfile(plane1_ica_output_pointer):
+            self.plane1_ica_output_pointer = plane1_ica_output_pointer
+            # file already exists, skip unmixing
+
+        plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
+                                                 f'traces_ica_output_{self.plane2_exp_id}.h5')
+
+        if os.path.isfile(plane2_ica_output_pointer):
+            self.plane2_ica_output_pointer = plane2_ica_output_pointer
+            # file already exists, skip unmixing
+
+        if not (self.plane1_ica_output_pointer and self.plane2_ica_output_pointer):
+            self.plane1_ica_output_pointer = plane1_ica_output_pointer
+            self.plane2_ica_output_pointer = plane2_ica_output_pointer
+            logger.warning("unmixed traces do not exist in cache, running ICA")
+            traces = np.array([self.plane1_ica_input, self.plane2_ica_input]).T
+            self.found_solution = False
+            for i in range(max_iter):
+                ica = FastICA(n_components=2)
+                s = ica.fit_transform(traces)  # Reconstruct signals
+                a = ica.mixing_  # Get estimated mixing matrix
+                if (np.all(a > 0)) & (a[0][0] > a[1][0]):
+                    self.found_solution = True
+                    logger.warning("ICA successful")
+                    self.matrix = a
+                    self.traces_unmix = s
+                    break
+            if not self.found_solution:
+                logger.error("Failed to find solution, try increasing `max_iter`")
+
+            if self.found_solution:
+                # rescaling traces back:
+                self.ica_scale = self.find_scale_ica
+
+                plane1_ica_output = self.traces_unmix[:, 0] + self.ica_scale[0]
+                plane2_ica_output = self.traces_unmix[:, 1] + self.ica_scale[1]
+
+                # reshaping traces
+
+                plane1_ica_output = plane1_ica_output.reshape(
+                    [self.plane1_traces_orig.shape[1] + self.plane2_traces_orig.shape[1],
+                     self.plane1_traces_orig.shape[2]])
+                plane2_ica_output = plane2_ica_output.reshape(
+                    [self.plane1_traces_orig.shape[1] + self.plane2_traces_orig.shape[1],
+                     self.plane1_traces_orig.shape[2]])
+
+                plane1_out_sig = plane1_ica_output[0:self.plane1_traces_orig.shape[1], :]
+                plane1_out_ct = plane2_ica_output[0:self.plane1_traces_orig.shape[1], :]
+
+                plane2_out_ct = plane1_ica_output[self.plane1_traces_orig.shape[1]:plane1_ica_output.shape[0], :]
+                plane2_out_sig = plane2_ica_output[self.plane1_traces_orig.shape[1]:plane1_ica_output.shape[0], :]
+
+                # adding offset
+                plane1_out_sig = plane1_out_sig + self.plane1_offset['plane1_sig_offset']
+                plane1_out_ct = plane1_out_ct + self.plane1_offset['plane1_ct_offset']
+
+                plane2_out_sig = plane2_out_sig + self.plane2_offset['plane2_sig_offset']
+                plane2_out_ct = plane2_out_ct + self.plane2_offset['plane2_ct_offset']
+
+                plane1_ica_output = np.array([plane1_out_sig, plane1_out_ct])
+                plane2_ica_output = np.array([plane2_out_sig, plane2_out_ct])
+
+                self.plane1_ica_output = plane1_ica_output
+                self.plane2_ica_output = plane2_ica_output
+
+                # writing ica output traces to disk
+                with h5py.File(self.plane1_ica_output_pointer, "w") as f:
+                    f.create_dataset(f"data", data=self.plane1_ica_output)
+
+                with h5py.File(self.plane2_ica_output_pointer, "w") as f:
+                    f.create_dataset(f"data", data=self.plane2_traces_orig)
+        else:
+            logger.warning("Unmixed traces exist in cache, reading from h5 file")
+
+            with h5py.File(self.plane1_ica_output_pointer, "r") as f:
+                plane1_ica_output = f["data"].value
+
+            with h5py.File(self.plane2_ica_output_pointer, "r") as f:
+                plane2_ica_output = f["data"].value
+
+            self.plane1_ica_output = plane1_ica_output
+            self.plane2_ica_output = plane2_ica_output
+        return
+
+    @staticmethod
+    def ica_err(scale, traces_ica, trace_orig):
         return np.sqrt((traces_ica * scale[0] - trace_orig) ** 2).mean()
 
+    @property
     def find_scale_ica(self):
         scale_top = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 0], self.plane1_ica_input))
         scale_bot = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 1], self.plane2_ica_input))
-        self.scale_top = scale_top.x
-        self.scale_bot = scale_bot.x
         return scale_top.x, scale_bot.x
