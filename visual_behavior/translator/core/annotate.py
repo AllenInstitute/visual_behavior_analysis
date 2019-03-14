@@ -9,9 +9,15 @@ from ...utilities import inplace
 
 
 @inplace
-def make_trials_contiguous(trials, time):
-    trials['endframe'] = trials['startframe'].shift(-1).fillna(len(time) - 1).astype(int)
-    trials['endtime'] = trials['starttime'].shift(-1).fillna(time.max())
+def make_trials_contiguous(trials, time, endframe=None):
+    if endframe is None:  # imply endframe
+        endframe = len(time) - 1
+        endtime = time.max()
+    else:
+        endtime = time[endframe]
+
+    trials['endframe'] = trials['startframe'].shift(-1).fillna(endframe).astype(int)
+    trials['endtime'] = trials['starttime'].shift(-1).fillna(endtime)
     trials['trial_length'] = trials['endtime'] - trials['starttime']
 
 
