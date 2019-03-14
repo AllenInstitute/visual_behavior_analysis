@@ -75,41 +75,26 @@ def get_lims_id(lims_data):
     return lims_id
 
 
-def get_analysis_folder_name(lims_data):
-    date = str(lims_data.experiment_date.values[0])[:10].split('-')
-    specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
-    if len(specimen_driver_lines) > 1:
-        for i in range(len(specimen_driver_lines)):
-            if 'S' in specimen_driver_lines[i]:
-                specimen_driver_line = specimen_driver_lines[i].split('-')[0]
+def get_analysis_folder_name(lims_data, cache_dir=None):
+    expt_id = lims_data.lims_id.values[0]
+    if cache_dir is not None:
+        folder = [folder for folder in os.listdir(cache_dir) if str(expt_id) in folder]
     else:
-        specimen_driver_line = specimen_driver_lines[0]
-    if lims_data.depth.values[0] is None:
-        depth = 0
+        folder = []
+    if len(folder) > 0:
+        analysis_folder_name = os.path.join(cache_dir, folder[0])
     else:
-        depth = lims_data.depth.values[0]
-    date = str(lims_data.experiment_date.values[0])[:10].split('-')
-    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
-    if len(specimen_driver_line) > 1:
-        specimen_driver_line = specimen_driver_line[0].split('-')[0]
-    else:
-        specimen_driver_line = specimen_driver_line[0]
-
-    if lims_data.rig.values[0][0] == 'M':
+        date = str(lims_data.experiment_date.values[0])[:10].split('-')
+        specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
+        if len(specimen_driver_line) > 1:
+            specimen_driver_line = specimen_driver_line[1].split('-')[0]
+        else:
+            specimen_driver_line = specimen_driver_line[0]
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
-                                   2] + '_' + \
-                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
-                               specimen_driver_line + '_' + lims_data.rig.values[0] + \
-                               '_' + lims_data.session_type.values[0]  # NOQA: E127
-    else:
-        analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
-                                   2] + '_' + \
-                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+                               lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
                                specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
                                lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E127
-
     return analysis_folder_name
 
 
@@ -129,7 +114,7 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     if 'analysis_dir' in lims_data.columns:
         return lims_data['analysis_dir'].values[0]
 
-    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
+    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data, cache_dir))
     if not os.path.exists(analysis_dir):
         os.mkdir(analysis_dir)
     if cache_on_lims_data:
@@ -164,28 +149,8 @@ def get_processed_dir(lims_data):
 def get_segmentation_dir(lims_data):
     processed_dir = get_processed_dir(lims_data)
     segmentation_folder = [file for file in os.listdir(processed_dir) if 'segmentation' in file]
-    segmentation_folder.sort()
-    segmentation_dir = os.path.join(processed_dir, segmentation_folder[-1])
+    segmentation_dir = os.path.join(processed_dir, segmentation_folder[0])
     return segmentation_dir
-
-
-def get_roi_group(lims_data):
-    experiment_id = int(lims_data.experiment_id.values[0])
-    ophys_session_dir = get_ophys_session_dir(lims_data)
-    import json
-    json_file = [file for file in os.listdir(ophys_session_dir) if ('SPLITTING' in file) and ('input.json' in file)]
-    json_path = os.path.join(ophys_session_dir, json_file[0])
-    with open(json_path, 'r') as w:
-        jin = json.load(w)
-    # figure out which roi_group the current experiment belongs to
-    plane_data = pd.DataFrame()
-    for i, roi_group in enumerate(range(len(jin['plane_groups']))):
-        group = jin['plane_groups'][roi_group]['ophys_experiments']
-        for j, plane in enumerate(range(len(group))):
-            expt_id = int(group[plane]['experiment_id'])
-            if expt_id == experiment_id:
-                expt_roi_group = i
-    return expt_roi_group
 
 
 def get_sync_path(lims_data):
@@ -254,25 +219,15 @@ def get_sync_data(lims_data, use_acq_trigger):
         stim_photodiode = sync_dataset.get_rising_edges('photodiode') / sample_freq
     if 'cam1_exposure' in meta_data['line_labels']:
         eye_tracking = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
-    elif 'cam1' in meta_data['line_labels']:
-        eye_tracking = sync_dataset.get_rising_edges('cam1') / sample_freq
     elif 'eye_tracking' in meta_data['line_labels']:
         eye_tracking = sync_dataset.get_rising_edges('eye_tracking') / sample_freq
     if 'cam2_exposure' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
-    elif 'cam2' in meta_data['line_labels']:
-        behavior_monitoring = sync_dataset.get_rising_edges('cam2') / sample_freq
     elif 'behavior_monitoring' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('behavior_monitoring') / sample_freq
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only
     if use_acq_trigger:
         frames_2p = frames_2p[frames_2p > trigger[0]]
-    print(len(frames_2p))
-    if lims_data.rig.values[0][0] == 'M':  # if Mesoscope
-        print('resampling mesoscope 2P frame times')
-        roi_group = get_roi_group(lims_data)  # get roi_group order
-        frames_2p = frames_2p[roi_group::4]  # resample sync times
-    print(len(frames_2p))
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
     # put sync data in format to be compatible with downstream analysis
@@ -328,16 +283,7 @@ def get_metadata(lims_data, timestamps):
         metadata['imaging_depth'] = None
     else:
         metadata['imaging_depth'] = int(lims_data.depth.values[0])
-
-    specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
-    if len(specimen_driver_lines) > 1:
-        for i in range(len(specimen_driver_lines)):
-            if 'S' in specimen_driver_lines[i]:
-                specimen_driver_line = specimen_driver_lines[i]
-    else:
-        specimen_driver_line = specimen_driver_lines[0]
-    metadata['specimen_driver_line'] = specimen_driver_line
-    metadata['cre_line'] = specimen_driver_line
+    metadata['cre_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0]
     if len(lims_data['specimen_driver_line'].values[0].split(';')) > 1:
         metadata['reporter_line'] = lims_data['specimen_driver_line'].values[0].split(';')[0] + ';' + \
                                     lims_data['specimen_reporter_line'].values[0].split('(')[0]  # NOQA: E126
@@ -350,9 +296,9 @@ def get_metadata(lims_data, timestamps):
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['specimen_id'] = int(lims_data.specimen_id.values[0])
     # metadata['session_name'] = lims_data.session_name.values[0]
-    metadata['session_id'] = int(lims_data.session_id.values[0])
-    metadata['project_id'] = lims_data.project_id.values[0]
-    metadata['rig'] = lims_data.rig.values[0]
+    metadata['ophys_session_id'] = int(lims_data.session_id.values[0])
+    # metadata['project_id'] = lims_data.project_id.values[0]
+    # metadata['rig'] = lims_data.rig.values[0]
     metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 0)
     metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 0)
     # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
@@ -412,8 +358,6 @@ def get_task_parameters(core_data):
     task_parameters['stimulus_duration'] = core_data['metadata']['stim_duration']
     if 'omitted_flash_fraction' in core_data['metadata']['params'].keys():
         task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['omitted_flash_fraction']
-    elif 'flash_omit_probability' in core_data['metadata']['params'].keys():
-        task_parameters['omitted_flash_fraction'] = core_data['metadata']['params']['flash_omit_probability']
     else:
         task_parameters['omitted_flash_fraction'] = None
     task_parameters['response_window'] = [core_data['metadata']['response_window']]
@@ -442,40 +386,13 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
     stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
-    if 'omitted_stimuli' in core_data:
-        if len(core_data['omitted_stimuli']) > 0:  # sometimes there is a key but empty values
-            omitted_flash = core_data['omitted_stimuli'].copy()
-            omitted_flash = omitted_flash[['frame']]
-            omitted_flash['omitted'] = True
-            flashes = stimulus_table.merge(omitted_flash, how='outer', on='frame')
-            flashes['omitted'] = [True if omitted is True else False for omitted in flashes.omitted.values]
-            flashes = flashes.sort_values(by='frame').reset_index().drop(columns=['index']).fillna(method='ffill')
-            flashes = flashes[['frame', 'end_frame', 'time', 'image_category', 'image_name', 'omitted']]
-            flashes = flashes.reset_index()
-            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for
-                                  row
-                                  in range(len(flashes))]
-            # infer end time for omitted flashes as 16 frames after start frame (250ms*60Hz stim frame rate)
-            flashes['end_frame'] = [flashes.loc[idx, 'end_frame'] if flashes.loc[idx, 'omitted'] == False else
-                                    flashes.loc[idx, 'frame'] + 16 for idx in flashes.index.values]
-            stimulus_table = flashes.copy()
-        else:
-            stimulus_table['omitted'] = False
-    else:
-        stimulus_table['omitted'] = False
     # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
-    # if np.isnan(stimulus_table.loc[0, 'end_frame']): #exception for cases where the first flash in the session is omitted
-    #     stimulus_table = stimulus_table.drop(index=0)
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
     start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
     stimulus_table.start_time = start_time
-    end_time = [timestamps_stimulus[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
-    # end_time = [timestamps_stimulus[int(end_frame)] if np.isnan(end_frame) is False else np.nan()
-    #             for end_frame in stimulus_table.end_frame.values]
+    end_time = [timestamps_stimulus[end_frame] for end_frame in stimulus_table.end_frame.values]
     stimulus_table.insert(loc=4, column='end_time', value=end_time)
-    if 'level_0' in stimulus_table.keys():
-        stimulus_table.drop(columns=['level_0'])
     save_dataframe_as_h5(stimulus_table, 'stimulus_table', get_analysis_dir(lims_data))
 
     task_parameters = get_task_parameters(core_data)
@@ -615,40 +532,117 @@ def get_roi_ids(roi_metrics):
     return roi_ids
 
 
-def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
-    roi_ids = get_roi_ids(roi_metrics)
-    if cache_dir is not None:
-        matching_file = [file for file in os.listdir(cache_dir) if 'cell_matching_lookup_table' in file]
-        lookup = pd.read_csv(os.path.join(cache_dir, matching_file[0]))
-        df = lookup[lookup.ophys_experiment_id == int(lims_data.experiment_id.values[0])]
-        if (len(df) > 0):
-            if np.isnan(df.cell_specimen_id.values[0]) == False:
-                try:
-                    # if lookup file exists, and lookup table has entries for this experiment,
-                    # add cell_specimen_id values to roi_metrics and overwrite 'id' column with cell_specimen_ids
-                    print(
-                        'this session has cell matching results, adding cell_specimen_ids and overwriting roi_metrics.id')
-                    # cell_specimen_ids = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in roi_ids]
-                    # cell_specimen_ids = np.asarray(cell_specimen_ids)
-                    roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for
-                                                       roi_id in
-                                                       roi_metrics.id.values]
-                    roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
-                except:
-                    print(
-                        'something bad happened when trying to assign cell_specimen_ids using lookup table, setting to None')
-                    roi_metrics['cell_specimen_id'] = None
-            else:
-                # no cell_specimen_ids in table, set cell_specimen_id to None
-                print('no cell_specimen_ids for this experiment, using roi_ids')
-                roi_metrics['cell_specimen_id'] = None
-        else:
-            # if lookup table doesnt exist, set cell_specimen_id to None
-            print('this experiment not in lookup table, using roi_ids')
+# def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
+#     roi_ids = get_roi_ids(roi_metrics)
+#     if cache_dir is not None:
+#         matching_file = [file for file in os.listdir(cache_dir) if 'cell_matching_lookup_table' in file]
+#         lookup = pd.read_csv(os.path.join(cache_dir, matching_file[0]))
+#         df = lookup[lookup.ophys_experiment_id == int(lims_data.experiment_id.values[0])]
+#         if (len(df) > 0):
+#             if np.isnan(df.cell_specimen_id.values[0])==False:
+#                 try:
+#                     # if lookup file exists, and lookup table has entries for this experiment,
+#                     # add cell_specimen_id values to roi_metrics and overwrite 'id' column with cell_specimen_ids
+#                     print('this session has cell matching results, adding cell_specimen_ids and overwriting roi_metrics.id')
+#                     # cell_specimen_ids = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in roi_ids]
+#                     # cell_specimen_ids = np.asarray(cell_specimen_ids)
+#                     roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in
+#                                                        roi_metrics.id.values]
+#                     roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
+#                 except:
+#                     print('something bad happened when trying to assign cell_specimen_ids using lookup table, setting to None')
+#                     roi_metrics['cell_specimen_id'] = None
+#             else:
+#                 # no cell_specimen_ids in table, set cell_specimen_id to None
+#                 print('no cell_specimen_ids for this experiment, using roi_ids')
+#                 roi_metrics['cell_specimen_id'] = None
+#         else:
+#             # if lookup table doesnt exist, set cell_specimen_id to None
+#             print('this experiment not in lookup table, using roi_ids')
+#             roi_metrics['cell_specimen_id'] = None
+#     else:
+#         print('no cache_dir provided, cant look up cell_specimen_ids, using roi_ids')
+#         roi_metrics['cell_specimen_id'] = None
+#     return roi_metrics
+
+
+
+
+def sql_lims_query(query):
+    import psycopg2
+    '''
+    Performs SQL query to lims using any properly formated SQL query.
+    
+    :param query (str): properly formatted SQL query
+    
+    '''
+    #connect to LIMS using read only
+    conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+    cur = conn.cursor()
+    
+    #execute query
+    cur.execute(query)
+    
+    #fetch results
+    return (cur.fetchall())
+    
+
+def get_cell_roi_id (mouse_id):
+    '''
+    Performs SQL query to lims to get matching specimen ids when they exist (for cell matching across imaging sessions)
+    
+    :param mouse_id (int): external_specimen_id, typically mouse_id 
+    
+    '''
+    #define sql lims query
+    big_query='''
+    SELECT sp.external_specimen_name, vbec.id AS container_id, csd.id AS cell_specimen_id, cr.valid_roi, cr.id AS cell_roi_id
+    FROM ophys_experiments_visual_behavior_experiment_containers oevbec
+    JOIN visual_behavior_experiment_containers vbec ON vbec.id=oevbec.visual_behavior_experiment_container_id
+    JOIN visual_behavior_container_runs runs ON runs.visual_behavior_experiment_container_id=vbec.id AND runs.current = 't'
+    JOIN ophys_experiments oe ON oe.id=oevbec.ophys_experiment_id
+    JOIN ophys_sessions os ON os.id=oe.ophys_session_id JOIN specimens sp ON sp.id=os.specimen_id
+    LEFT JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id = oe.id AND ocsr.current = 't'
+    LEFT JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id
+    LEFT JOIN specimens csd ON csd.id=cr.cell_specimen_id
+    WHERE 
+    cr.valid_roi = 't' AND 
+    sp.external_specimen_name IN('{mouse_id}')
+    ORDER BY 1,2,3,4,5;'''.format(mouse_id=mouse_id)
+    query=big_query
+    #Result of the query are
+    #external_specimen_name,container_id,cell_specimen_id,valid_roi,cell_roi_id
+
+    results=sql_lims_query(big_query)
+    if len(results)==0:
+        print ("No results found")
+    return results   
+
+def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics,cache_dir):
+    lims_data=lims
+
+    roi_ids = lone.get_roi_ids(roi_metrics)
+    mouse_id=int(lims_data['external_specimen_id'])
+    
+    #Sql query lims to see if there are matching cell ids 
+    ids=get_cell_roi_id(mouse_id)
+    if len(ids)>0:
+        try:
+            df=pd.DataFrame(ids, columns=['mouse','container_id','cell_specimen_id','valid_roi','cell_roi_id'])
+            df[df.cell_roi_id == roi_id].cell_specimen_id.values
+            #match the ROI ids to the corresponding specimen ids
+            roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values) for roi_id in roi_metrics.id.values ]  
+            #replace the id with the cell specimen ID
+            roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
+        except:
+            print('something bad happened when trying to assign cell_specimen_ids using lookup table, setting to None')
             roi_metrics['cell_specimen_id'] = None
+        
     else:
-        print('no cache_dir provided, cant look up cell_specimen_ids, using roi_ids')
+        # if lookup table doesnt exist, set cell_specimen_id to None
+        print('this experiment not in lookup table, using roi_ids')
         roi_metrics['cell_specimen_id'] = None
+    
     return roi_metrics
 
 
@@ -658,8 +652,7 @@ def get_cell_specimen_ids(roi_metrics):
         cell_specimen_ids = roi_ids
     else:
         # make sure cell_specimen_ids are retrieved in the same order as roi_ids, as these correspond to order of trace and roi maskindices
-        cell_specimen_ids = [int(roi_metrics[roi_metrics.roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in
-                             roi_ids]
+        cell_specimen_ids = [int(roi_metrics[roi_metrics.roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in roi_ids]
         cell_specimen_ids = np.asarray(cell_specimen_ids)
     return cell_specimen_ids
 
@@ -794,23 +787,15 @@ def save_motion_correction(motion_correction, lims_data):
 
 
 def get_max_projection(lims_data):
-    max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
-    # max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
+    # max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
+    max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
     return max_projection
 
 
-def save_max_projections(lims_data):
+def save_max_projection(max_projection, lims_data):
     analysis_dir = get_analysis_dir(lims_data)
-    # regular one
-    max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
     save_data_as_h5(max_projection, 'max_projection', analysis_dir)
     mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
-                 cmap='gray')
-    # contrast enhanced one
-    max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
-    save_data_as_h5(max_projection, 'normalized_max_projection', analysis_dir)
-    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'),
-                 arr=max_projection,
                  cmap='gray')
 
 
@@ -852,7 +837,7 @@ def run_roi_validation(lims_data, cache_dir=None):
     max_projection = get_max_projection(lims_data)
 
     # cell_indices = {id: get_cell_index_for_cell_specimen_id(id, cell_specimen_ids) for id in cell_specimen_ids}
-    cell_indices = {id: np.where(roi_ids == id)[0][0] for id in roi_ids}
+    cell_indices = {id: np.where(roi_ids==id)[0][0] for id in roi_ids}
 
     return roi_names, roi_df, roi_traces, dff_traces_original, roi_ids, cell_indices, roi_masks, roi_metrics, max_projection, dff_traces
 
@@ -890,7 +875,7 @@ def save_roi_validation(roi_validation, lims_data):
                     str(index) + '_' + str(id) + '_' + str(cell_index))
 
 
-def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
+def convert_level_1_to_level_2(lims_id, cache_dir=None):
     logger.info('converting', lims_id)
     print('converting', lims_id)
     lims_data = get_lims_data(lims_id)
@@ -934,14 +919,13 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
     save_motion_correction(motion_correction, lims_data)
 
     max_projection = get_max_projection(lims_data)
-    save_max_projections(lims_data)
+    save_max_projection(max_projection, lims_data)
 
     average_image = get_average_image(lims_data)
     save_average_image(average_image, lims_data)
 
-    if plot_roi_validation:
-        roi_validation = get_roi_validation(lims_data)
-        save_roi_validation(roi_validation, lims_data)
+    roi_validation = get_roi_validation(lims_data, cache_dir)
+    save_roi_validation(roi_validation, lims_data)
 
     logger.info('done converting')
     print('done converting')
