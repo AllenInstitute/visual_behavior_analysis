@@ -6,7 +6,44 @@ import os
 import tifffile
 import json
 import numpy as np
+from skimage.transform import resize
+
+
 logger = logging.getLogger(__name__)
+DEFAULT_DATABASE = 'lims2'
+DEFAULT_HOST = 'limsdb2'
+DEFAULT_PORT = 5432
+DEFAULT_USERNAME = 'limsreader'
+PW = 'limsro'
+
+
+def psycopg2_select(query, database=DEFAULT_DATABASE, host=DEFAULT_HOST, port=DEFAULT_PORT, username=DEFAULT_USERNAME, password=PW):
+    connection = psycopg2.connect(
+        host=host, port=port, dbname=database, user=username, password=password,
+        cursor_factory=psycopg2.extras.RealDictCursor
+    )
+    cursor = connection.cursor()
+    try:
+        cursor.execute(query)
+        response = cursor.fetchall()
+    finally:
+        cursor.close()
+        connection.close()
+    return response
+
+def get_all_mesoscope_data():
+    query = ("select os.id as session_id, oe.id as experiment_id, "
+             "os.storage_directory as session_folder, oe.storage_directory as experiment_folder, "
+             "sp.name as specimen, "
+             "os.date_of_acquisition as date "
+             "from ophys_experiments oe "
+             "join ophys_sessions os on os.id = oe.ophys_session_id "
+             "join specimens sp on sp.id = os.specimen_id "
+             "join projects p on p.id = os.project_id "
+             "where p.code = 'MesoscopeDevelopment' and (oe.workflow_state = 'processing' or oe.workflow_state = 'qc') and os.workflow_state ='uploaded' "
+             "order by session_id")
+    return pd.DataFrame(psycopg2_select(query))
+
 class MesoscopeDataset(object):
     def __init__(self, session_id, experiment_id=None):
         self.session_id = session_id

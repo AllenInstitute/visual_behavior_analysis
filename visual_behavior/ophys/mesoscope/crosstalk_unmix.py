@@ -10,15 +10,6 @@ logger = logging.getLogger(__name__)
 
 from sklearn.decomposition import FastICA
 import scipy.optimize as opt
-from scipy.linalg import sqrtm,inv
-import scipy.ndimage as ndim
-import matplotlib.pylab as plt
-import pandas as pd
-import psycopg2
-import psycopg2.extras
-import json
-
-from PIL import Image
 
 IMAGEH, IMAGEW = 512, 512
 
