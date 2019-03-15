@@ -4,6 +4,7 @@ import time
 from multiprocessing import Process
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import visual_behavior.ophys.mesoscope.mesoscope as ms
+import os
 
 meso_data = ms.get_all_mesoscope_data()
 
