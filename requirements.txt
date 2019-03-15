@@ -1,3 +1,6 @@
+scikit-image
+psutil
+tifffile
 six>=1.11.0
 numpy==1.15.0
 pandas==0.23.4

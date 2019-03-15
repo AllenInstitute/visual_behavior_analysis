@@ -8,7 +8,6 @@ import json
 import numpy as np
 from skimage.transform import resize
 
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
@@ -19,7 +18,8 @@ DEFAULT_USERNAME = 'limsreader'
 PW = 'limsro'
 
 
-def psycopg2_select(query, database=DEFAULT_DATABASE, host=DEFAULT_HOST, port=DEFAULT_PORT, username=DEFAULT_USERNAME, password=PW):
+def psycopg2_select(query, database=DEFAULT_DATABASE, host=DEFAULT_HOST, port=DEFAULT_PORT, username=DEFAULT_USERNAME,
+                    password=PW):
     connection = psycopg2.connect(
         host=host, port=port, dbname=database, user=username, password=password,
         cursor_factory=psycopg2.extras.RealDictCursor
@@ -32,6 +32,7 @@ def psycopg2_select(query, database=DEFAULT_DATABASE, host=DEFAULT_HOST, port=DE
         cursor.close()
         connection.close()
     return response
+
 
 def get_all_mesoscope_data():
     query = ("select os.id as session_id, oe.id as experiment_id, "
@@ -46,8 +47,10 @@ def get_all_mesoscope_data():
              "order by session_id")
     return pd.DataFrame(psycopg2_select(query))
 
+
 class MesoscopeDataset(object):
     def __init__(self, session_id, experiment_id=None):
+        self.exp_folder = None
         self.session_id = session_id
         self.experiment_id = experiment_id
         self.data_pointer = None
@@ -176,7 +179,7 @@ class MesoscopeDataset(object):
             self.session_folder = data_frame['session_folder'].values[0]
         else:
             logger.error("Session does not exist in LIMS")
-            self.session_foder = None
+            self.session_folder = None
         return self.session_folder
 
     def get_splitting_json(self):
@@ -249,7 +252,10 @@ class MesoscopeDataset(object):
             ff_stitch_summ_name = os.path.dirname(ff_path) + '/' + ff_image_name.split('.')[0] + '_stitched_sum.tif'
             for j in range(slices):
                 for i in range(roi_num):
-                    image_stitched[j, :, i * image_npixels:(i + 1) * image_npixels] = image[j, i * (pixel_res_y + y_gap):(i + 1) * pixel_res_y + i * y_gap, :]
+                    image_stitched[j, :, i * image_npixels:(i + 1) * image_npixels] = image[j,
+                                                                                      i * (pixel_res_y + y_gap):(
+                                                                                                                            i + 1) * pixel_res_y + i * y_gap,
+                                                                                      :]
             if summ:
                 image_sum = np.int16(image_stitched.mean(axis=0))
                 tifffile.imsave(ff_stitch_summ_name, image_sum)
@@ -259,7 +265,6 @@ class MesoscopeDataset(object):
         return image_stitched, image_sum, meta
 
     def register_rois_to_FullFOV(self):
-
 
         ses = self.get_mesoscope_session_data()
 
@@ -275,7 +280,8 @@ class MesoscopeDataset(object):
         # factor to translate from angular to linear coordinates, microns per degree
         mpg = ff_meta['FrameData']['SI.objectiveResolution']
 
-        input_json = os.path.join(self.get_session_folder(), f'MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json')
+        input_json = os.path.join(self.get_session_folder(),
+                                  f'MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json')
 
         with open(input_json) as f:
             all_meta = json.load(f)
@@ -365,7 +371,8 @@ class MesoscopeDataset(object):
         # loop that reads surface tiff files and inserts them into full field tiff
         for i, _ in structures.iterrows():
             exp_id = str(structures.loc[i]['experiment_id'])
-            exp_folder_unique_structure[k] = os.path.join(structures.loc[i]['experiment_folder'], f'{exp_id}_surface.tif')
+            exp_folder_unique_structure[k] = os.path.join(structures.loc[i]['experiment_folder'],
+                                                          f'{exp_id}_surface.tif')
             if os.path.isfile(exp_folder_unique_structure[k]):
                 roi_tiff = tifffile.TiffFile(exp_folder_unique_structure[k])
                 surface_roi[k, :, :] = roi_tiff.asarray()
@@ -377,7 +384,8 @@ class MesoscopeDataset(object):
                 roi_new_size_x = np.int16(np.round(roi_data.loc[f'roi{k}_pix']['sizeX'] * roi_scale_x))
                 roi_new_size_y = np.int16(np.round(roi_data.loc[f'roi{k}_pix']['sizeY'] * roi_scale_y))
                 # scaling roi:
-                roi_image_ds = np.uint16(resize(surface_roi[k, :, :], np.int16([roi_new_size_x, roi_new_size_y])) * 2 ** 16)
+                roi_image_ds = np.uint16(
+                    resize(surface_roi[k, :, :], np.int16([roi_new_size_x, roi_new_size_y])) * 2 ** 16)
                 # calc insertion coordinates for roi1:
                 a = np.uint16(np.round(roi_data.loc[f'roi{k}_pix']['centerX'] - roi_image_ds.shape[0] / 2.0))
                 b = np.uint16(np.round(roi_data.loc[f'roi{k}_pix']['centerX'] + roi_image_ds.shape[0] / 2.0))
