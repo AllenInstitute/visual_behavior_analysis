@@ -10,6 +10,8 @@ from skimage.transform import resize
 
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+
 DEFAULT_DATABASE = 'lims2'
 DEFAULT_HOST = 'limsdb2'
 DEFAULT_PORT = 5432
@@ -257,8 +259,7 @@ class MesoscopeDataset(object):
         return image_stitched, image_sum, meta
 
     def register_rois_to_FullFOV(self):
-        # from MDF of scanimage, but can be read from metadata
-        # factor to translate from angular to linear coordinates, microns per degree
+
 
         ses = self.get_mesoscope_session_data()
 
@@ -270,6 +271,8 @@ class MesoscopeDataset(object):
         _ = self.get_full_field_tiff()
         _, ff_image, ff_meta = self.stitch_full_field()
 
+        # from MDF of scanimage, or tiff.scanimagemetadata
+        # factor to translate from angular to linear coordinates, microns per degree
         mpg = ff_meta['FrameData']['SI.objectiveResolution']
 
         input_json = os.path.join(self.get_session_folder(), f'MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json')

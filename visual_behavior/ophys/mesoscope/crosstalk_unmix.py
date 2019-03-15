@@ -7,6 +7,7 @@ from scipy.ndimage import label
 import numpy as np
 import logging
 logger = logging.getLogger(__name__)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 from sklearn.decomposition import FastICA
 import scipy.optimize as opt
@@ -94,7 +95,7 @@ class Mesoscope_ICA(object):
         if not (os.path.isfile(path_traces_plane1) and os.path.isfile(path_traces_plane2)):
             # -------------------------------------------------------------------------------------------
             # retrieve both planes experiment path
-            logger.warning('Traces dont exist in cache, extracting')
+            logger.info('Traces dont exist in cache, extracting')
 
             self.plane1_ica_input_pointer = None
             self.plane2_ica_input_pointer = None
@@ -162,7 +163,7 @@ class Mesoscope_ICA(object):
                     with h5py.File(path_traces_plane2, "w") as f:
                         f.create_dataset(f"data", data=self.plane2_traces_orig)
         else:
-            logger.warning('Found traces in cache, reading from h5 file')
+            logger.info('Found traces in cache, reading from h5 file')
             # read traces form h5 file:
             with h5py.File(path_traces_plane1, "r") as f:
                 plane1_traces_original = f["data"].value
@@ -201,7 +202,7 @@ class Mesoscope_ICA(object):
             self.plane1_ica_input_pointer = plane1_ica_input_pointer
             self.plane2_ica_input_pointer = plane2_ica_input_pointer
 
-            logger.warning("debiased traces do not exist in cache, running offset subtraction")
+            logger.info("debiased traces do not exist in cache, running offset subtraction")
 
             if self.found_ica_traces:
 
@@ -259,7 +260,7 @@ class Mesoscope_ICA(object):
             else:
                 logger.error('Extract traces first')
         else:
-            logger.warning("Debiased traces exist in cache, reading from h5 file")
+            logger.info("Debiased traces exist in cache, reading from h5 file")
 
             with h5py.File(self.plane1_ica_input_pointer, "r") as f:
                 plane1_ica_input = f["debiased_traces"].value
@@ -297,7 +298,7 @@ class Mesoscope_ICA(object):
         if not (self.plane1_ica_output_pointer and self.plane2_ica_output_pointer):
             self.plane1_ica_output_pointer = plane1_ica_output_pointer
             self.plane2_ica_output_pointer = plane2_ica_output_pointer
-            logger.warning("unmixed traces do not exist in cache, running ICA")
+            logger.info("unmixed traces do not exist in cache, running ICA")
             traces = np.array([self.plane1_ica_input, self.plane2_ica_input]).T
             self.found_solution = False
             for i in range(max_iter):
@@ -306,7 +307,7 @@ class Mesoscope_ICA(object):
                 a = ica.mixing_  # Get estimated mixing matrix
                 if (np.all(a > 0)) & (a[0][0] > a[1][0]):
                     self.found_solution = True
-                    logger.warning("ICA successful")
+                    logger.info("ICA successful")
                     self.matrix = a
                     self.traces_unmix = s
                     break
@@ -355,7 +356,7 @@ class Mesoscope_ICA(object):
                 with h5py.File(self.plane2_ica_output_pointer, "w") as f:
                     f.create_dataset(f"data", data=self.plane2_traces_orig)
         else:
-            logger.warning("Unmixed traces exist in cache, reading from h5 file")
+            logger.info("Unmixed traces exist in cache, reading from h5 file")
             self.found_solution = True
             with h5py.File(self.plane1_ica_output_pointer, "r") as f:
                 plane1_ica_output = f["data"].value
