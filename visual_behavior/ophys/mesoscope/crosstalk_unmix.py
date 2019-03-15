@@ -83,7 +83,8 @@ class Mesoscope_ICA(object):
         self.ica_traces_dir = os.path.join(session_dir, f'ica_traces_{pair[0]}_{pair[1]}/')
         self.plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
                                                       f'traces_ica_output_{pair[0]}.h5')
-        self.plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
+        self.plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
+                                                      
                                                       f'traces_ica_output_{pair[1]}.h5')
         return
 
