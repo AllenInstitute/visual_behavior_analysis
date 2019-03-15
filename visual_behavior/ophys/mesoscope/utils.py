@@ -7,9 +7,10 @@ import visual_behavior.ophys.mesoscope.mesoscope as ms
 import os
 
 meso_data = ms.get_all_mesoscope_data()
+meso_data['ICA_demix_exp'] = 0
+meso_data['ICA_demix_session'] = 0
 
-
-def run_ica_on_session(session):
+def run_ica_on_session(session, meso_data):
     ica_obj = ica.Mesoscope_ICA(session_id=session, cache='/media/NCRAID/MesoscopeAnalysis/')
     pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
@@ -17,11 +18,11 @@ def run_ica_on_session(session):
         ica_obj.combine_debias_traces()
         ica_obj.unmix_traces()
         if ica_obj.found_solution:
-            meso_data['ICA_demix'].loc[meso_data['experiment_id'] == pair[0]] = 0
+            meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
     return
 
 
-def parallelize(sessions, thread_count=20):
+def parallelize (sessions, meso_data, thread_count = 20) :
     process_name = []
     process_status = []
     nproc = resource.getrlimit(resource.RLIMIT_NPROC)
@@ -29,8 +30,8 @@ def parallelize(sessions, thread_count=20):
         resource.setrlimit(resource.RLIMIT_NPROC, (nproc[1] - 1000, nproc[1]))
     while len(sessions) > 0:
         while thread_count > 0:
-            for session in sessions:
-                p = Process(target=run_ica_on_session, args=(session,))
+            for session in sessions :
+                p = Process(target=run_ica_on_session, args=(session, meso_data))
                 p.daemon = True
                 p.start()
                 process_name.append([p.pid])
@@ -47,6 +48,10 @@ def parallelize(sessions, thread_count=20):
 
 
 def get_ica_sessions(sessions):
+    meso_data = ms.get_all_mesoscope_data()
+    meso_data['ICA_demix_exp'] = 0
+    meso_data['ICA_demix_session'] = 0
+
     for session in sessions:
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
@@ -62,6 +67,7 @@ def get_ica_sessions(sessions):
             if all(session_data.ICA_demix_exp == 1):
                 for exp in session_data.experiment_id:
                     meso_data['ICA_demix_session'].loc[meso_data.experiment_id == exp] = 1
+
     ica_success = meso_data.loc[meso_data['ICA_demix_session'] == 1]
     ica_fail = meso_data.loc[meso_data['ICA_demix_session'] == 0]
     return ica_success, ica_fail
