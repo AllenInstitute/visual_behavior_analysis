@@ -210,6 +210,13 @@ def get_sync_data(lims_data, use_acq_trigger):
     logger.info('getting sync data')
     sync_path = get_sync_path(lims_data)
     sync_dataset = SyncDataset(sync_path)
+    # Handle mesoscope missing labels
+    try:
+        sync_dataset.get_rising_edges('2p_vsync')
+    except:
+        sync_dataset.line_labels=['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '', 'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
+        sync_dataset.meta_data['line_labels']=sync_dataset.line_labels
+
     meta_data = sync_dataset.meta_data
     sample_freq = meta_data['ni_daq']['counter_output_freq']
     # 2P vsyncs
