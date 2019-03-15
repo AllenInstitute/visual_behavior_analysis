@@ -43,3 +43,24 @@ def parallelize(sessions, thread_count=20):
                 process_status.append(psutil.pid_exists(pid))
         else:
             thread_count = thread_count + process_status.count(False)
+
+
+def get_ica_sessions(sessions):
+    for session in sessions:
+        dataset = ms.MesoscopeDataset(session)
+        pairs = dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj = ica.Mesoscope_ICA(session, cache='/media/NCRAID/MesoscopeAnalysis')
+            ica_obj.set_ica_traces_dir(pair)
+            ica_obj.plane1_ica_output_pointer
+            if os.path.isfile(ica_obj.plane1_ica_output_pointer):
+                meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
+            if os.path.isfile(ica_obj.plane2_ica_output_pointer):
+                meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[1]] = 1
+            session_data = meso_data.loc[meso_data['session_id'] == session]
+            if all(session_data.ICA_demix_exp == 1):
+                for exp in session_data.experiment_id:
+                    meso_data['ICA_demix_session'].loc[meso_data.experiment_id == exp] = 1
+    ica_success = meso_data.loc[meso_data['ICA_demix_session'] == 1]
+    ica_fail = meso_data.loc[meso_data['ICA_demix_session'] == 0]
+    return ica_success, ica_fail
