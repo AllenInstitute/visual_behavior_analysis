@@ -74,6 +74,19 @@ class Mesoscope_ICA(object):
         self.matrix = None
         self.cache = cache
 
+    def set_analysis_session_dir(self):
+        self.session_cache_dir = os.path.join(self.cache, f'session_{self.session_id}')
+        return self.session_cache_dir
+
+    def set_ica_traces_dir(self, pair):
+        session_dir = self.set_analysis_session_dir()
+        self.ica_traces_dir = os.path.join(session_dir, f'ica_traces_{pair[0]}_{pair[1]}/')
+        self.plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
+                                                      f'traces_ica_output_{pair[0]}.h5')
+        self.plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
+                                                      f'traces_ica_output_{pair[1]}.h5')
+        return
+
     def get_ica_traces(self, pair):
 
         self.found_ica_traces = [False, False]
@@ -307,7 +320,7 @@ class Mesoscope_ICA(object):
                 a = ica.mixing_  # Get estimated mixing matrix
                 if (np.all(a > 0)) & (a[0][0] > a[1][0]):
                     self.found_solution = True
-                    logger.info("ICA successful")
+                    logger.warning("ICA successful")
                     self.matrix = a
                     self.traces_unmix = s
                     break
@@ -356,7 +369,7 @@ class Mesoscope_ICA(object):
                 with h5py.File(self.plane2_ica_output_pointer, "w") as f:
                     f.create_dataset(f"data", data=self.plane2_traces_orig)
         else:
-            logger.warning("Unmixed traces exist in cache, reading from h5 file")
+            logger.info("Unmixed traces exist in cache, reading from h5 file")
             self.found_solution = True
             with h5py.File(self.plane1_ica_output_pointer, "r") as f:
                 plane1_ica_output = f["data"].value
@@ -377,3 +390,4 @@ class Mesoscope_ICA(object):
         scale_top = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 0], self.plane1_ica_input))
         scale_bot = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 1], self.plane2_ica_input))
         return scale_top.x, scale_bot.x
+
