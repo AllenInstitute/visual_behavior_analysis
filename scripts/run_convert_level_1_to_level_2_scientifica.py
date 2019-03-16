@@ -23,7 +23,7 @@ cache_dir = r"\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visua
        ] """
  
 experiment_ids = []
-list_of_exp_cursor = util.mongo.db.ophys_experiment_log.find({"$and":[{'project_code': "MesoscopeDevelopment"},{"experiment_obj.status": "qc"}]})
+list_of_exp_cursor = util.mongo.db.ophys_experiment_log.find({"$and":[{'project_code': "VisualBehavior"},{"experiment_obj.status": "passed"}]})
 for indiv_exp in list_of_exp_cursor:
     lims_id = indiv_exp['experiment_obj']['id']
     experiment_ids.append(lims_id)
