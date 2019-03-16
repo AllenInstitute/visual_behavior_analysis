@@ -718,13 +718,13 @@ def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-        logger.info('length of ophys timestamps >  length of traces by %d frames, truncating ophys timestamps', str(difference))
+        logger.info('length of ophys timestamps >  length of traces by %s frames, truncating ophys timestamps', str(difference))
 
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
     # account for dropped ophys frames - a rare but unfortunate issue
     if dff_traces.shape[1] > timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-        logger.info('length of ophys timestamps <  length of traces by %d frames, truncating traces', str(difference))
+        logger.info('length of ophys timestamps <  length of traces by %s frames, truncating traces', str(difference))
         dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
         save_dff_traces(dff_traces, roi_metrics, lims_data)
     # make sure length of timestamps equals length of running traces
