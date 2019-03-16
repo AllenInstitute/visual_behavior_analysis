@@ -33,12 +33,15 @@ for experiment_id in experiment_ids:
     tmp_folder = get_analysis_dir(lims_data, cache_dir=cache_dir, cache_on_lims_data=False)
 
     if  len(os.listdir(tmp_folder))<5:
-        ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
+        try:
+            ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir)
 
-        # TODO: Need to consolidate event extraction code with its own class
-        #lims_data = get_lims_data(lims_id)
-        #exp_cach_folder = get_ophys_experiment_dir(lims_data)
-        #events_dir = os.path.join(exp_cach_folder, 'events')
-        #event_detection(lims_id,cache_dir=cache_dir,events_dir=events_dir)
+            # TODO: Need to consolidate event extraction code with its own class
+            #lims_data = get_lims_data(lims_id)
+            #exp_cach_folder = get_ophys_experiment_dir(lims_data)
+            #events_dir = os.path.join(exp_cach_folder, 'events')
+            #event_detection(lims_id,cache_dir=cache_dir,events_dir=events_dir)
 
-        create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)
+            create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)
+        except:
+            print("issues with "+str(experiment_id))
