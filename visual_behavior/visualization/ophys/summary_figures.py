@@ -615,7 +615,7 @@ def add_stim_color_span(dataset, ax, xlim=None):
     return ax
 
 
-def plot_behavior_events(dataset, ax, behavior_only=False):
+def plot_behavior_events(dataset, ax, behavior_only=False, linewidth=2):
     lick_times = dataset.licks.time.values
     reward_times = dataset.rewards.time.values
     if behavior_only:
@@ -631,11 +631,76 @@ def plot_behavior_events(dataset, ax, behavior_only=False):
     lick_y_array[:] = lick_y
     reward_y_array = np.empty(len(reward_times))
     reward_y_array[:] = reward_y
-    ax.plot(lick_times, lick_y_array, '|', color='g', markeredgewidth=2, label='licks')
-    ax.plot(reward_times, reward_y_array, 'o', markerfacecolor='purple', markeredgecolor='purple', markeredgewidth=0.2,
+    ax.plot(lick_times, lick_y_array, '|', color='g', markeredgewidth=linewidth, label='licks')
+    ax.plot(reward_times, reward_y_array, 'o', markerfacecolor='purple', markeredgecolor='purple', markeredgewidth=linewidth/10.,
             label='rewards')
     return ax
 
+
+def plot_behavior(dataset, cache_dir):
+    flashes = dataset.stimulus_table.copy()
+    flashes = ut.annotate_flashes_with_reward_rate(dataset)
+    figsize = (15,4)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values)
+    ax.set_ylabel('running speed(cm/s)')
+    ax2 = ax.twinx()
+    ax2.plot(flashes.start_time.values, flashes.reward_rate.values, color='red')
+    ax2.set_ylabel('reward rate')
+    ax = plot_behavior_events(dataset, ax)
+    sns.despine(ax=ax2, right=False)
+    ax.set_xlabel('time in session (seconds)')
+    ax.set_title(dataset.analysis_folder)
+    fig.tight_layout()
+    save_figure(fig, figsize, dataset.analysis_dir, 'behavior', 'behavior')
+    save_figure(fig, figsize, os.path.join(cache_dir, 'multi_session_summary_figures'), 'behavior', dataset.analysis_folder)
+
+
+def plot_behavior_annotated(dataset, xmin=1800, duration=20, plot_reward_rate=False, cache_dir=None, show=True):
+    xlim = (xmin, xmin + duration)
+    all_trials = dataset.all_trials.copy()
+    trial_starts = all_trials[all_trials.trial_type!='aborted'].starttime.values
+    ts = trial_starts[(trial_starts>xlim[0])]
+    ts = ts[(ts<xlim[1])]
+    abort_starts = all_trials[all_trials.trial_type=='aborted'].starttime.values
+    ab = abort_starts[(abort_starts>xlim[0])]
+    ab = ab[(ab<xlim[1])]
+    flashes = dataset.stimulus_table.copy()
+    flashes = ut.annotate_flashes_with_reward_rate(dataset)
+    figsize = (15,4)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = add_stim_color_span(dataset, ax=ax, xlim=xlim)
+    ax.plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values, label='run speed', linewidth=2)
+    ax.set_ylabel('running speed(cm/s)')
+    if plot_reward_rate:
+        ax2 = ax.twinx()
+        ax2.plot(flashes.start_time.values, flashes.reward_rate.values, color=sns.color_palette()[4], label='reward rate')
+        ax2.set_ylabel('reward rate')
+        sns.despine(ax=ax2, right=False)
+    ax = plot_behavior_events(dataset, ax, linewidth=4)
+    ymin, ymax = ax.get_ylim()
+    for a in ab:
+        ax.vlines(x=a, ymin=ymin, ymax=ymax, color='red', linewidth=2)
+    if len(ab)>0:
+        a = ab[0]
+        ax.vlines(x=a, ymin=ymin, ymax=ymax, color='red', linewidth=2, label='aborted trial start')
+    for t in ts:
+        ax.vlines(x=t, ymin=ymin, ymax=ymax, color='green', linewidth=2)
+    if len(ts)>0:
+        t = ts[0]
+        ax.vlines(x=t, ymin=ymin, ymax=ymax, color='green', linewidth=2, label='go/catch trial start')
+    ax.set_xlabel('time in session (seconds)')
+    ax.set_title(dataset.analysis_folder)
+    ax.set_xlim(xlim)
+    ax.legend(loc='upper left', fontsize='x-small')
+#     ax.legend(bbox_to_anchor=(0.05,1.1), ncol=5, loc='upper left')
+    fig.tight_layout()
+    fig.subplots_adjust(top=.8)
+    save_figure(fig, figsize, dataset.analysis_dir, 'behavior', 'behavior_'+str(xlim[0]))
+    if cache_dir:
+        save_figure(fig, figsize, os.path.join(cache_dir, 'multi_session_summary_figures'), 'behavior', dataset.analysis_folder+'_'+str(xlim[0]))
+    if not show:
+        plt.close()
 
 def restrict_axes(xmin, xmax, interval, ax):
     xticks = np.arange(xmin, xmax, interval)

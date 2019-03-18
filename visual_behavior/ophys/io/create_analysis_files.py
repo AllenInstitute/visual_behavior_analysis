@@ -25,6 +25,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
     use_events = False
 
+    plot_behavior(dataset, cache_dir)
     # print('plotting example traces')
     # active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
     # length_mins = 1
