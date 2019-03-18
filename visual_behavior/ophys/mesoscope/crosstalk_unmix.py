@@ -21,6 +21,11 @@ def get_traces(movie_h5, masks):
     traces = roi_masks.calculate_roi_and_neuropil_traces(movie_h5, rois, motion_border=[IMAGEW-1,0,IMAGEH-1,0])[0]
     return traces
 
+def get_neuropil_traces(movie_h5, masks):
+    rois = [roi_masks.create_roi_mask(IMAGEW, IMAGEH, border=[IMAGEW - 1, 0, IMAGEH - 1, 0], roi_mask=roi, label='{}'.format(i))
+            for i, roi in enumerate(masks)]
+    neuropil_traces = roi_masks.calculate_roi_and_neuropil_traces(movie_h5, rois, motion_border=[IMAGEW - 1, 0, IMAGEH - 1, 0])[1]
+    return neuropil_traces
 
 def get_roi_masks(hdf_filename):
     masks = []
