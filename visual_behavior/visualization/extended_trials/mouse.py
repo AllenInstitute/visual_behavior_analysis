@@ -205,7 +205,12 @@ def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_heig
         # decrease row height linearly to a minimum of 0.5
         row_height = max((-0.5 * len(df_input) + 2.25, 0.75))
 
+    if any(df_input.duplicated()):
+        df_input = df_input[df_input.duplicated() == False].copy()
+        warnings.warn('Found duplicate rows in input dataframe for summary figure. Duplicates were removed.')
+
     if len(df_input['startdatetime'].unique()) == len(df_input):
+        # if there are the same number of dataframe rows as unique dates, the input dataframe must have been a summary dataframe
         df_summary = df_input
     else:
         df_summary = summarize.session_level_summary(df_input)
