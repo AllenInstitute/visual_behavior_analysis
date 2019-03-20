@@ -75,26 +75,41 @@ def get_lims_id(lims_data):
     return lims_id
 
 
-def get_analysis_folder_name(lims_data, cache_dir=None):
-    expt_id = lims_data.lims_id.values[0]
-    if cache_dir is not None:
-        folder = [folder for folder in os.listdir(cache_dir) if str(expt_id) in folder]
+def get_analysis_folder_name(lims_data):
+    date = str(lims_data.experiment_date.values[0])[:10].split('-')
+    specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_lines) > 1:
+        for i in range(len(specimen_driver_lines)):
+            if 'S' in specimen_driver_lines[i]:
+                specimen_driver_line = specimen_driver_lines[i].split('-')[0]
     else:
-        folder = []
-    if len(folder) > 0:
-        analysis_folder_name = os.path.join(cache_dir, folder[0])
+        specimen_driver_line = specimen_driver_lines[0]
+    if lims_data.depth.values[0] is None:
+        depth = 0
     else:
-        date = str(lims_data.experiment_date.values[0])[:10].split('-')
-        specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
-        if len(specimen_driver_line) > 1:
-            specimen_driver_line = specimen_driver_line[1].split('-')[0]
-        else:
-            specimen_driver_line = specimen_driver_line[0]
+        depth = lims_data.depth.values[0]
+    date = str(lims_data.experiment_date.values[0])[:10].split('-')
+    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
+    if len(specimen_driver_line) > 1:
+        specimen_driver_line = specimen_driver_line[0].split('-')[0]
+    else:
+        specimen_driver_line = specimen_driver_line[0]
+
+    if lims_data.rig.values[0][0] == 'M':
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                               lims_data.structure.values[0] + '_' + str(lims_data.depth.values[0]) + '_' + \
+                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
+                                   2] + '_' + \
+                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+                               specimen_driver_line + '_' + lims_data.rig.values[0] + \
+                               '_' + lims_data.session_type.values[0]  # NOQA: E127
+    else:
+        analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
+                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
+                                   2] + '_' + \
+                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
                                specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
                                lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E127
+
     return analysis_folder_name
 
 
