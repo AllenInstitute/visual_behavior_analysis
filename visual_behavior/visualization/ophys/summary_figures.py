@@ -1430,7 +1430,7 @@ def diff(x):
     return x[-1] - x[0]
 
 def plot_running_and_behavior(dataset, start_time, duration, save_figures=False, save_dir=None):
-    xlim = (start_time,start_time+duration)
+    xlim = (start_time,start_time+duration+1)
     running_speed = dataset.running_speed.running_speed.values
     running_times = dataset.running_speed.time.values
     running_diff = dataset.running_speed.running_speed.rolling(window=15).apply(diff)
@@ -1443,8 +1443,8 @@ def plot_running_and_behavior(dataset, start_time, duration, save_figures=False,
     ax.set_xlim(xlim)
     ax.set_ylabel('run speed\n(cm/s)')
     ax.set_xlabel('time (seconds)')
-    ax.set_xticks(np.arange(xlim[0], xlim[1], 5))
-    xticklabels = np.arange(xlim[0], xlim[1], 5) - xlim[0]
+    ax.set_xticks(np.arange(xlim[0], xlim[1], 10))
+    xticklabels = np.arange(xlim[0], xlim[1], 10) - xlim[0]
     ax.set_xticklabels([int(x) for x in xticklabels])
     # fig.tight_layout()
     plt.gcf().subplots_adjust(bottom=0.3)
