@@ -448,7 +448,7 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
     stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
-    if 'omitted_stimuli' in core_data:
+    if 'omitted_stimuli' in core_data.keys():
         if len(core_data['omitted_stimuli']) > 0: #sometimes there is a key but empty values
             omitted_flash = core_data['omitted_stimuli'].copy()
             omitted_flash = omitted_flash[['frame']]
