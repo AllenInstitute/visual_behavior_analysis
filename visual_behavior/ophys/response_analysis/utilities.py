@@ -28,9 +28,16 @@ def get_nearest_frame(timepoint, timestamps):
         nearest_frame = nearest_frame + 1  # use next frame to ensure nearest (2P) follows input timepoint (stim), 190127
     return nearest_frame
 
+def get_successive_frame_list(timepoints_array, timestanps):
+    # This is a modification of get_nearest_frame for speedup
+    #  This implementation looks for the first 2p frame consecutive to the stim
+    successive_frames = np.searchsorted(timestanps, timepoints_array)
+
+    return successive_frames
 
 def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate):
-    frame_for_timepoint = get_nearest_frame(timepoint, timestamps)
+ #   frame_for_timepoint = get_nearest_frame(timepoint, timestamps)
+    frame_for_timepoint = get_successive_frame_list(timepoint, timestamps)
     lower_frame = frame_for_timepoint + (window[0] * frame_rate)
     upper_frame = frame_for_timepoint + (window[1] * frame_rate)
     trace = trace[int(lower_frame):int(upper_frame)]
@@ -92,8 +99,13 @@ def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
     included_flashes = fdf.flash_number.unique()
     st = st[st.flash_number.isin(included_flashes)]
     ost = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
-    ost['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in ost.start_time.values]
-    ost['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in ost.end_time.values]
+    
+    #ost['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in ost.start_time.values]
+    #ost['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in ost.end_time.values]
+ 
+    ost['start_frame'] = get_successive_frame_list(ost.start_time.values, dataset.timestamps_ophys)
+    ost['end_frame'] = get_successive_frame_list(ost.end_time.values, dataset.timestamps_ophys)
+    
     #set params
     stim_duration = 0.25
     frame_rate = 31
@@ -602,7 +614,9 @@ def add_ophys_times_to_behavior_df(behavior_df, timestamps_ophys):
     """
     behavior_df can be dataset.running, dataset.licks or dataset.rewards
     """
-    ophys_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in behavior_df.time.values]
+    #ophys_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in behavior_df.time.values]
+    ophys_frames = get_successive_frame_list(behavior_df.time.values, timestamps_ophys)
+    
     ophys_times = [timestamps_ophys[frame] for frame in ophys_frames]
     behavior_df['ophys_frame'] = ophys_frames
     behavior_df['ophys_time'] = ophys_times
@@ -610,13 +624,16 @@ def add_ophys_times_to_behavior_df(behavior_df, timestamps_ophys):
 
 
 def add_ophys_times_to_stimulus_table(stimulus_table, timestamps_ophys):
-    ophys_start_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in
-                          stimulus_table.start_time.values]
+    #ophys_start_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in
+    #                      stimulus_table.start_time.values]
+    ophys_start_frames = get_successive_frame_list(stimulus_table.start_time.values, timestamps_ophys)
+
     ophys_start_times = [timestamps_ophys[frame] for frame in ophys_start_frames]
     stimulus_table['ophys_start_frame'] = ophys_start_frames
     stimulus_table['ophys_start_time'] = ophys_start_times
 
-    ophys_end_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in stimulus_table.end_time.values]
+    ophys_end_frames = get_successive_frame_list(stimulus_table.end_time.values, timestamps_ophys)
+#    ophys_end_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in stimulus_table.end_time.values]
     ophys_end_times = [timestamps_ophys[frame] for frame in ophys_end_frames]
     stimulus_table['ophys_end_frame'] = ophys_end_frames
     stimulus_table['ophys_end_time'] = ophys_end_times

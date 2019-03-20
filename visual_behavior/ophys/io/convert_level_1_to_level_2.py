@@ -166,7 +166,7 @@ def get_sync_path(lims_data):
         sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file][0]
         sync_path = os.path.join(ophys_session_dir, sync_file)
     if sync_file not in os.listdir(analysis_dir):
-        logger.info('moving ', sync_file, ' to analysis dir')  # flake8: noqa: E999
+        logger.info('moving %s to analysis dir', sync_file)  # flake8: noqa: E999
         shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
     return sync_path
 
@@ -175,6 +175,13 @@ def get_sync_data(lims_data, use_acq_trigger):
     logger.info('getting sync data')
     sync_path = get_sync_path(lims_data)
     sync_dataset = SyncDataset(sync_path)
+    # Handle mesoscope missing labels
+    try:
+        sync_dataset.get_rising_edges('2p_vsync')
+    except:
+        sync_dataset.line_labels=['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '', 'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
+        sync_dataset.meta_data['line_labels']=sync_dataset.line_labels
+
     meta_data = sync_dataset.meta_data
     sample_freq = meta_data['ni_daq']['counter_output_freq']
     # 2P vsyncs
@@ -334,7 +341,7 @@ def get_pkl(lims_data):
     pkl_file = os.path.basename(stimulus_pkl_path)
     analysis_dir = get_analysis_dir(lims_data)
     if pkl_file not in os.listdir(analysis_dir):
-        logger.info('moving ', pkl_file, ' to analysis dir')
+        logger.info('moving %s to analysis dir', pkl_file)
         shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
     logger.info('getting stimulus data from pkl')
     pkl = pd.read_pickle(stimulus_pkl_path)
@@ -724,10 +731,10 @@ def get_dff_traces(roi_metrics, lims_data):
     final_dff_traces = []
     for i, dff in enumerate(dff_traces):
         if np.isnan(dff).any():
-            logger.info('NaN trace detected, removing cell_index:', i)
+            logger.info('NaN trace detected, removing cell_index: %d', i)
             bad_cell_indices.append(i)
         elif np.amax(dff) > 20:
-            logger.info('outlier trace detected, removing cell_index', i)
+            logger.info('outlier trace detected, removing cell_index %d', i)
             bad_cell_indices.append(i)
         else:
             final_dff_traces.append(dff)
@@ -737,8 +744,8 @@ def get_dff_traces(roi_metrics, lims_data):
     cell_index = [np.where(np.sort(roi_metrics.roi_id.values) == id)[0][0] for id in
                   roi_metrics.roi_id.values]
     roi_metrics['cell_index'] = cell_index
-    logger.info('length of traces:', dff_traces.shape[1])
-    logger.info('number of segmented cells:', dff_traces.shape[0])
+    logger.info('length of traces: %d', dff_traces.shape[1])
+    logger.info('number of segmented cells: %d', dff_traces.shape[0])
     return dff_traces, roi_metrics
 
 
@@ -754,14 +761,13 @@ def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-        logger.info('length of ophys timestamps >  length of traces by', str(difference),
-                    'frames , truncating ophys timestamps')
+        logger.info('length of ophys timestamps >  length of traces by %s frames, truncating ophys timestamps', str(difference))
+
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
     # account for dropped ophys frames - a rare but unfortunate issue
     if dff_traces.shape[1] > timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-        logger.info('length of ophys timestamps <  length of traces by', str(difference),
-                    'frames , truncating traces')
+        logger.info('length of ophys timestamps <  length of traces by %s frames, truncating traces', str(difference))
         dff_traces = dff_traces[:, :timestamps['ophys_frames']['timestamps'].shape[0]]
         save_dff_traces(dff_traces, roi_metrics, lims_data)
     # make sure length of timestamps equals length of running traces
@@ -875,8 +881,8 @@ def save_roi_validation(roi_validation, lims_data):
                     str(index) + '_' + str(id) + '_' + str(cell_index))
 
 
-def convert_level_1_to_level_2(lims_id, cache_dir=None):
-    logger.info('converting', lims_id)
+def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
+    logger.info('converting %d', lims_id)
     print('converting', lims_id)
     lims_data = get_lims_data(lims_id)
 
