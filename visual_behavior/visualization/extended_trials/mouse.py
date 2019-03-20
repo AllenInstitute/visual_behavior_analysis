@@ -205,8 +205,19 @@ def make_summary_figure(df_input, mouse_id=None, palette='trial_types', row_heig
         # decrease row height linearly to a minimum of 0.5
         row_height = max((-0.5 * len(df_input) + 2.25, 0.75))
 
-    if any(df_input.duplicated()):
-        df_input = df_input[df_input.duplicated() == False].copy()
+    # the 'duplicates' method fails on unhashable column types.
+    # the loop below determines which are hashable to avoid the error when checking for duplicates below
+    hashable_cols = []
+    for col in df_input.columns:
+        try:
+            df_input[[col]].duplicated()
+            hashable_cols.append(col)
+        except TypeError:
+            pass
+
+    # only check for duplicates amongst the hashable columns
+    if any(df_input[hashable_cols].duplicated()):
+        df_input = df_input[df_input[hashable_cols].duplicated() == False].copy()
         warnings.warn('Found duplicate rows in input dataframe for summary figure. Duplicates were removed.')
 
     if len(df_input['startdatetime'].unique()) == len(df_input):
