@@ -509,10 +509,6 @@ def get_roi_metrics(lims_data):
     unfiltered_roi_metrics = roi_metrics
     # remove invalid roi_metrics
     roi_metrics = roi_metrics[roi_metrics.valid == True]
-    # hack for expt 692342909 with 2 rois at same location - need a long term solution for this!
-    if get_lims_id(lims_data) == 692342909:
-        logger.info('removing bad cell')
-        roi_metrics = roi_metrics[roi_metrics.roi_id.isin([692357032, 692356966]) == False]
     # hack to get rid of cases with 2 rois at the same location
     for roi_id in roi_metrics.roi_id.values:
         roi_data = roi_metrics[roi_metrics.roi_id == roi_id]
@@ -573,8 +569,6 @@ def get_roi_ids(roi_metrics):
 #     return roi_metrics
 
 
-
-
 def sql_lims_query(query):
     import psycopg2
     '''
@@ -594,7 +588,7 @@ def sql_lims_query(query):
     return (cur.fetchall())
     
 
-def get_cell_roi_id (mouse_id):
+def get_cell_specimen_ids_from_lims(mouse_id):
     '''
     Performs SQL query to lims to get matching specimen ids when they exist (for cell matching across imaging sessions)
     
@@ -625,31 +619,25 @@ def get_cell_roi_id (mouse_id):
         print ("No results found")
     return results   
 
-def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics,cache_dir):
-    lims_data=lims
-
-    roi_ids = lone.get_roi_ids(roi_metrics)
+def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
+    # roi_ids = get_roi_ids(roi_metrics)
     mouse_id=int(lims_data['external_specimen_id'])
-    
-    #Sql query lims to see if there are matching cell ids 
-    ids=get_cell_roi_id(mouse_id)
+    # Sql query lims to see if there are matching cell ids
+    ids=get_cell_specimen_ids_from_lims(mouse_id)
     if len(ids)>0:
         try:
-            df=pd.DataFrame(ids, columns=['mouse','container_id','cell_specimen_id','valid_roi','cell_roi_id'])
-            df[df.cell_roi_id == roi_id].cell_specimen_id.values
-            #match the ROI ids to the corresponding specimen ids
-            roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values) for roi_id in roi_metrics.id.values ]  
-            #replace the id with the cell specimen ID
+            df = pd.DataFrame(ids, columns=['mouse','container_id','cell_specimen_id','valid_roi','cell_roi_id'])
+            # match the ROI ids to the corresponding specimen ids
+            roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values) for roi_id in roi_metrics.id.values ]
+            # replace the id with the cell specimen ID
             roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
         except:
-            print('something bad happened when trying to assign cell_specimen_ids using lookup table, setting to None')
+            print('something bad happened when trying to get cell specimen ids from lims, setting to None')
             roi_metrics['cell_specimen_id'] = None
-        
     else:
-        # if lookup table doesnt exist, set cell_specimen_id to None
-        print('this experiment not in lookup table, using roi_ids')
+        # if lims query returns nothing, set cell_specimen_id to None
+        print('no cell specimen ids from lims, using roi_ids')
         roi_metrics['cell_specimen_id'] = None
-    
     return roi_metrics
 
 
@@ -930,8 +918,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
     average_image = get_average_image(lims_data)
     save_average_image(average_image, lims_data)
 
-    roi_validation = get_roi_validation(lims_data, cache_dir)
-    save_roi_validation(roi_validation, lims_data)
+    if plot_roi_validation:
+        roi_validation = get_roi_validation(lims_data, cache_dir)
+        save_roi_validation(roi_validation, lims_data)
 
     logger.info('done converting')
     print('done converting')
