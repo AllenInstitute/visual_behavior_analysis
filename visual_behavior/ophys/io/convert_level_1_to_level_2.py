@@ -441,7 +441,6 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     running = core_data['running']
     running_speed = running.rename(columns={'speed': 'running_speed'})
     # filter to get rid of encoder spikes
-    # happens in 645086795, 645362806
     running_speed['running_speed'] = medfilt(running_speed.running_speed.values, kernel_size=5)
     save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
@@ -469,16 +468,12 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
             stimulus_table['omitted'] = False
     else:
         stimulus_table['omitted'] = False
-    # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
-    # if np.isnan(stimulus_table.loc[0, 'end_frame']): #exception for cases where the first flash in the session is omitted
-    #     stimulus_table = stimulus_table.drop(index=0)
+    # rename columns to harmonize with visual coding and rebase timestamps to sync time
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
     start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
     stimulus_table.start_time = start_time
     end_time = [timestamps_stimulus[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
-    # end_time = [timestamps_stimulus[int(end_frame)] if np.isnan(end_frame) is False else np.nan()
-    #             for end_frame in stimulus_table.end_frame.values]
     stimulus_table.insert(loc=4, column='end_time', value=end_time)
     if 'level_0' in stimulus_table.keys():
         stimulus_table.drop(columns=['level_0'])
@@ -591,10 +586,6 @@ def get_roi_metrics(lims_data):
     unfiltered_roi_metrics = roi_metrics
     # remove invalid roi_metrics
     roi_metrics = roi_metrics[roi_metrics.valid == True]
-    # hack for expt 692342909 with 2 rois at same location - need a long term solution for this!
-    if get_lims_id(lims_data) == 692342909:
-        logger.info('removing bad cell')
-        roi_metrics = roi_metrics[roi_metrics.cell_specimen_id.isin([692357032, 692356966]) == False]
     # hack to get rid of cases with 2 rois at the same location
     for cell_specimen_id in roi_metrics.cell_specimen_id.values:
         roi_data = roi_metrics[roi_metrics.cell_specimen_id == cell_specimen_id]
