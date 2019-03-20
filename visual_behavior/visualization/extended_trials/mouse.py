@@ -182,7 +182,7 @@ def make_trial_count_plot(df_summary, ax, palette='trial_types'):
 
 def add_y_labels(df_summary, ax):
 
-    dates = [d.strftime('%Y-%m-%d') for d in df_summary.startdatetime]
+    dates = [pd.to_datetime(d).strftime('%Y-%m-%d') for d in df_summary['startdatetime']]
     days_of_week = df_summary['startdatetime'].map(lambda x: pd.to_datetime(x).day_name())
     stages = [s for s in df_summary.stage]
     users = [user for user in df_summary.user_id]
