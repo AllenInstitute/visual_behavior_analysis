@@ -149,11 +149,9 @@ def run_demixing_on_ica(exp_id, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
                                               demix_masks,
                                               trace_ids[valid_idxs],
                                               plot_dir)
-
     # negative baseline rois (and those that overlap with them) become nans
     logging.debug("rois with negative baselines (or overlap with them): %s", str(trace_ids[valid_idxs][nb_inds]))
     demixed_traces[nb_inds, :] = np.nan
-
     logging.info("Saving output")
     out_traces = np.zeros(traces.shape, dtype=demix_traces.dtype)
     out_traces[:] = np.nan
