@@ -15,15 +15,15 @@ meso_data = ms.get_all_mesoscope_data()
 meso_data['ICA_demix_exp'] = 0
 meso_data['ICA_demix_session'] = 0
 
-def run_ica_on_session(session, meso_data):
+def run_ica_on_session(session):
     ica_obj = ica.Mesoscope_ICA(session_id=session, cache='/media/NCRAID/MesoscopeAnalysis/')
     pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
         ica_obj.get_ica_traces(pair)
         ica_obj.combine_debias_traces()
         ica_obj.unmix_traces()
-        if ica_obj.found_solution:
-            meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
+        # if ica_obj.found_solution:
+        #     meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
     return
 
 def parallelize (sessions, meso_data, thread_count = 20) :
