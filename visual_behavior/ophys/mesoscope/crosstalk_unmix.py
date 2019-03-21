@@ -14,7 +14,6 @@ import scipy.optimize as opt
 
 IMAGEH, IMAGEW = 512, 512
 
-
 def get_traces(movie_h5, masks):
     rois = [roi_masks.create_roi_mask(IMAGEW, IMAGEH, border=[IMAGEW-1,0,IMAGEH-1,0], roi_mask=roi, label='{}'.format(i))
                 for i, roi in enumerate(masks)]
@@ -326,7 +325,7 @@ class Mesoscope_ICA(object):
                 a = ica.mixing_  # Get estimated mixing matrix
                 if (np.all(a > 0)) & (a[0][0] > a[1][0]):
                     self.found_solution = True
-                    logger.warning("ICA successful")
+                    logger.info("ICA successful")
                     self.matrix = a
                     self.traces_unmix = s
                     break
@@ -337,11 +336,10 @@ class Mesoscope_ICA(object):
                 # rescaling traces back:
                 self.ica_scale = self.find_scale_ica
 
-                plane1_ica_output = self.traces_unmix[:, 0] + self.ica_scale[0]
-                plane2_ica_output = self.traces_unmix[:, 1] + self.ica_scale[1]
+                plane1_ica_output = self.traces_unmix[:, 0] * self.ica_scale[0]
+                plane2_ica_output = self.traces_unmix[:, 1] * self.ica_scale[1]
 
                 # reshaping traces
-
                 plane1_ica_output = plane1_ica_output.reshape(
                     [self.plane1_traces_orig.shape[1] + self.plane2_traces_orig.shape[1],
                      self.plane1_traces_orig.shape[2]])

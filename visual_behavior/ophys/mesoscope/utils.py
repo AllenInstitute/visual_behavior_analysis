@@ -5,7 +5,6 @@ from multiprocessing import Process
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import visual_behavior.ophys.mesoscope.mesoscope as ms
 import allensdk.internal.core.lims_utilities as lu
-import visual_behavior.ophys.mesoscope.utils as mu
 import os
 import h5py
 import numpy as np
@@ -26,7 +25,6 @@ def run_ica_on_session(session, meso_data):
         if ica_obj.found_solution:
             meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
     return
-
 
 def parallelize (sessions, meso_data, thread_count = 20) :
     process_name = []
@@ -106,7 +104,7 @@ def run_demixing_on_ica(exp_id, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
     md = ms.get_all_mesoscope_data()
     s = md.session_id
     us = s.drop_duplicates()
-    mds, _ = mu.get_ica_sessions(us)
+    mds, _ = get_ica_sessions(us)
     exp_dir = mds['experiment_folder'].loc[mds['experiment_id'] == exp_id].values[0]
 
     rois = f'traces_ica_output_{exp_id}.h5'
@@ -130,10 +128,12 @@ def run_demixing_on_ica(exp_id, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
 
     demixed_traces, drop_frames = demixer.demix_time_dep_masks(demix_traces, movie, demix_masks)
 
-    demix_path = os.path.join(an_dir, f'demixing_{exp_id}')
-    os.mkdir(demix_path)
+    demix_path = os.path.join(exp_dir, f'demixing_{exp_id}')
+    if not os.path.isdir(demix_path):
+        os.mkdir(demix_path)
     plot_dir = os.path.join(demix_path, 'plots')
-    os.mkdir(plot_dir)
+    if not os.path.isdir(plot_dir):
+        os.mkdir(plot_dir)
 
     nt_inds = demixer.plot_negative_transients(demix_traces,
                                                demixed_traces,
@@ -175,7 +175,7 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
 
     with h5py.File(traces_h5_ica, "r") as f:
         traces = f["data"].value
-    traces = traces[1, :, :]
+    traces = traces[0, :, :]
 
     with h5py.File(traces_h5, "r") as f:
         trace_ids = [int(rid) for rid in f["roi_names"].value]
