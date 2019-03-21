@@ -129,7 +129,7 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     if 'analysis_dir' in lims_data.columns:
         return lims_data['analysis_dir'].values[0]
 
-    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data, cache_dir))
+    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
     if not os.path.exists(analysis_dir):
         os.mkdir(analysis_dir)
     if cache_on_lims_data:
