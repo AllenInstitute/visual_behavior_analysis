@@ -406,7 +406,7 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     licks = core_data['licks']
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
-    stimulus_table = core_data['visual_stimuli'][:-10].copy() # ignore last 10 flashes
+    stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
     if 'omitted_stimuli' in core_data.keys():
         if len(core_data['omitted_stimuli']) > 0: #sometimes there is a key but empty values
             omitted_flash = core_data['omitted_stimuli'].copy()
@@ -427,16 +427,12 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
             stimulus_table['omitted'] = False
     else:
         stimulus_table['omitted'] = False
-    if np.isnan(stimulus_table.loc[0, 'end_frame']): #exception for cases where the first flash in the session is omitted
-        stimulus_table = stimulus_table.drop(index=0)
-    # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
+    # rename columns to harmonize with visual coding and rebase timestamps to sync time
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
     start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
     stimulus_table.start_time = start_time
     end_time = [timestamps_stimulus[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
-    # end_time = [timestamps_stimulus[int(end_frame)] if np.isnan(end_frame) is False else np.nan()
-    #             for end_frame in stimulus_table.end_frame.values]
     stimulus_table.insert(loc=4, column='end_time', value=end_time)
     if 'level_0' in stimulus_table.keys():
         stimulus_table.drop(columns=['level_0'])
