@@ -892,7 +892,7 @@ def save_average_image(average_image, lims_data):
                  cmap='gray')
 
 
-def run_roi_validation(lims_data):
+def run_roi_validation(lims_data, cache_dir):
     processed_dir = get_processed_dir(lims_data)
     file_path = os.path.join(processed_dir, 'roi_traces.h5')
 
@@ -1006,7 +1006,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
     save_average_image(average_image, lims_data)
 
     if plot_roi_validation:
-        roi_validation = get_roi_validation(lims_data)
+        roi_validation = get_roi_validation(lims_data, cache_dir)
         save_roi_validation(roi_validation, lims_data)
 
     logger.info('done converting')

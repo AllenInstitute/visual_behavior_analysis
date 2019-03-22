@@ -25,33 +25,26 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
     use_events = False
 
-    # print('plotting example traces')
-    # active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
-    # length_mins = 1
-    # for xmin_seconds in np.arange(0, 5000, length_mins * 60):
-    #     sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
-    #                                         cell_label=False, include_running=True, use_events=use_events)
-
-    analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
-    # pairwise_correlations_df = analysis.get_pairwise_correlations_df()  # flake8: noqa: F841
-
-    # print('plotting experiment summary figure')
-    # esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
-    # esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
-    # esf.plot_roi_masks(dataset, save=True)
-    # esf.plot_average_flash_response_example_cells(analysis, save_figures=True, save_dir=cache_dir, folder='mean_flash_response_average')
-    # #
-    print('plotting cell responses')
-    for cell in dataset.get_cell_indices():
-        # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
-        sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
-
     print('plotting example traces')
     active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
     length_mins = 1
     for xmin_seconds in np.arange(0, 5000, length_mins * 60):
         sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
                                             cell_label=False, include_running=True, use_events=use_events)
+
+    analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
+    # pairwise_correlations_df = analysis.get_pairwise_correlations_df()  # flake8: noqa: F841
+
+    print('plotting experiment summary figure')
+    esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
+    esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
+    esf.plot_roi_masks(dataset, save=True)
+    # esf.plot_average_flash_response_example_cells(analysis, save_figures=True, save_dir=cache_dir, folder='mean_flash_response_average')
+    # #
+    print('plotting cell responses')
+    for cell in dataset.get_cell_indices():
+        # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
+        sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
 
     if dataset.events is not None:
         use_events = True
