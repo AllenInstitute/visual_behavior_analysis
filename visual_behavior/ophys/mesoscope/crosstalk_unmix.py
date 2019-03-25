@@ -1,30 +1,43 @@
+import logging
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.backends.backend_pdf
+logger = logging.getLogger(__name__)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 from allensdk.brain_observatory import roi_masks
 import visual_behavior.ophys.mesoscope.mesoscope as ms
-import glob
+import allensdk.internal.core.lims_utilities as lu
 import os
 import h5py
 from scipy.ndimage import label
 import numpy as np
 import logging
-logger = logging.getLogger(__name__)
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-
+import json
 from sklearn.decomposition import FastICA
 import scipy.optimize as opt
 
 IMAGEH, IMAGEW = 512, 512
 
-def get_traces(movie_h5, masks):
-    rois = [roi_masks.create_roi_mask(IMAGEW, IMAGEH, border=[IMAGEW-1,0,IMAGEH-1,0], roi_mask=roi, label='{}'.format(i))
-                for i, roi in enumerate(masks)]
-    traces = roi_masks.calculate_roi_and_neuropil_traces(movie_h5, rois, motion_border=[IMAGEW-1,0,IMAGEH-1,0])[0]
-    return traces
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.backends.backend_pdf
 
-def get_neuropil_traces(movie_h5, masks):
-    rois = [roi_masks.create_roi_mask(IMAGEW, IMAGEH, border=[IMAGEW - 1, 0, IMAGEH - 1, 0], roi_mask=roi, label='{}'.format(i))
+IMAGEH, IMAGEW = 512, 512
+
+def get_traces(movie_h5, masks, exp_dir, exp_id):
+    motion_border_path = os.path.join(exp_dir, f"processed/{exp_id}_input_extract_traces.json")
+
+    with open(motion_border_path, "r") as f:
+        data = json.load(f)
+
+    motion_border = data.get("motion_border", [])
+    motion_border = [motion_border["x0"], motion_border["x1"], motion_border["y0"], motion_border["y1"], ]
+    rois = [roi_masks.create_roi_mask(IMAGEW, IMAGEH, border=motion_border, roi_mask=roi,
+                                      label='{}'.format(i))
             for i, roi in enumerate(masks)]
-    neuropil_traces = roi_masks.calculate_roi_and_neuropil_traces(movie_h5, rois, motion_border=[IMAGEW - 1, 0, IMAGEH - 1, 0])[1]
-    return neuropil_traces
+    traces, neuropil_traces = roi_masks.calculate_roi_and_neuropil_traces(movie_h5, rois, motion_border)
+    return traces, neuropil_traces
 
 def get_roi_masks(hdf_filename):
     masks = []
@@ -88,9 +101,18 @@ class Mesoscope_ICA(object):
         self.plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
                                                       f'traces_ica_output_{pair[0]}.h5')
         self.plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                      
+
                                                       f'traces_ica_output_{pair[1]}.h5')
         return
+
+    def get_valid_seg_run(self, exp_id):
+        query = f"""
+        select *
+        from ophys_cell_segmentation_runs
+        where current = True and ophys_experiment_id = {exp_id}
+        """
+        seg_run = lu.query(query)[0]['id']
+        return seg_run
 
     def get_ica_traces(self, pair):
 
@@ -117,42 +139,19 @@ class Mesoscope_ICA(object):
 
             self.plane1_ica_input_pointer = None
             self.plane2_ica_input_pointer = None
-
             self.plane1_ica_output_pointer = None
             self.plane2_ica_output_pointer = None
 
             plane1_folder = self.dataset.get_exp_folder(plane1_exp_id)
             plane2_folder = self.dataset.get_exp_folder(plane2_exp_id)
-            plane1_path = glob.glob(plane1_folder + f"{plane1_exp_id}.h5")
-            plane2_path = glob.glob(plane2_folder + f"{plane2_exp_id}.h5")
-            plane1_h5_mask_file = glob.glob(plane1_folder + f"processed/ophys_cell_segmentation_run*/maxInt_masks.h5")
-            plane2_h5_mask_file = glob.glob(plane2_folder + f"processed/ophys_cell_segmentation_run*/maxInt_masks.h5")
-
-            # find most recent segmentation run for pane1 experiment
-            if len(plane1_h5_mask_file) > 1:
-                plane1_h5_mask_name = max(plane1_h5_mask_file, key=os.path.getctime)
-                plane1_masks = get_roi_masks(plane1_h5_mask_name)
-            else:
-                plane1_masks = get_roi_masks(plane1_h5_mask_file[0])
 
             # extract signal and crosstalk traces for plane 1
-            plane1_sig_traces = get_traces(plane1_path[0], plane1_masks)
-            plane1_ct_traces = get_traces(plane2_path[0], plane1_masks)
-            self.plane1_sig = plane1_sig_traces
-            self.plane1_ct = plane1_sig_traces
-
-            # find most recent segmentation run for plane 2 experiment
-            if len(plane2_h5_mask_file) > 1:
-                plane2_h5_mask_name = max(plane2_h5_mask_file, key=os.path.getctime)
-                plane2_masks = get_roi_masks(plane2_h5_mask_name)
-            else:
-                plane2_masks = get_roi_masks(plane2_h5_mask_file[0])
+            plane1_sig_traces, _ = get_traces(plane1_folder, plane1_exp_id, plane1_folder, plane1_exp_id)
+            plane1_ct_traces, _ = get_traces(plane2_folder, plane2_exp_id, plane1_folder, plane1_exp_id)
 
             # extract signal and crosstalk traces for plane 2
-            plane2_sig_traces = get_traces(plane2_path[0], plane2_masks)
-            plane2_ct_traces = get_traces(plane1_path[0], plane2_masks)
-            self.plane2_sig = plane2_sig_traces
-            self.plane2_ct = plane2_ct_traces
+            plane2_sig_traces, _ = get_traces(plane2_folder, plane2_exp_id, plane2_folder, plane2_exp_id)
+            plane2_ct_traces, _ = get_traces(plane1_folder, plane1_exp_id, plane2_folder, plane2_exp_id)
 
             if (not plane2_sig_traces.any() == None) and (not plane2_ct_traces.any() == None):
                 self.found_ica_traces[0] = True
@@ -174,12 +173,12 @@ class Mesoscope_ICA(object):
             if self.found_ica_traces[0]:
                 if not os.path.isfile(path_traces_plane1):
                     with h5py.File(path_traces_plane1, "w") as f:
-                        f.create_dataset(f"data", data=self.plane1_traces_orig)
+                        f.create_dataset(f"data", data=plane1_traces_original)
 
             if self.found_ica_traces[1]:
                 if not os.path.isfile(path_traces_plane2):
                     with h5py.File(path_traces_plane2, "w") as f:
-                        f.create_dataset(f"data", data=self.plane2_traces_orig)
+                        f.create_dataset(f"data", data=plane2_traces_original)
         else:
             logger.info('Found traces in cache, reading from h5 file')
             # read traces form h5 file:
@@ -368,10 +367,10 @@ class Mesoscope_ICA(object):
 
                 # writing ica output traces to disk
                 with h5py.File(self.plane1_ica_output_pointer, "w") as f:
-                    f.create_dataset(f"data", data=self.plane1_ica_output)
+                    f.create_dataset(f"data", data=plane1_ica_output)
 
                 with h5py.File(self.plane2_ica_output_pointer, "w") as f:
-                    f.create_dataset(f"data", data=self.plane2_traces_orig)
+                    f.create_dataset(f"data", data=plane2_ica_output)
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
             self.found_solution = True
@@ -383,6 +382,72 @@ class Mesoscope_ICA(object):
 
             self.plane1_ica_output = plane1_ica_output
             self.plane2_ica_output = plane2_ica_output
+        return
+
+    def plot_ica_traces(self, pair):
+        orig_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
+        orig_trace_plane1_ct = self.plane1_traces_orig[1, :, :]
+        ica_trace_plane1_sig = self.plane1_ica_output[0, :, :]
+        ica_trace_plane1_ct = self.plane1_ica_output[1, :, :]
+        logging.info(f'creating figures for experiment {pair[0]}')
+        for cell in range(orig_trace_plane1_sig.shape[0]):
+            plot_dir = os.path.join(self.session_cache_dir, f'ica_traces_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
+            if not os.path.isdir(plot_dir):
+                os.mkdir(plot_dir)
+            logging.info(f"creating figures for cell {cell}")
+            pdf = matplotlib.backends.backend_pdf.PdfPages(
+                os.path.join(plot_dir, f"ica_plots_{pair[0]}_cell_{cell}.pdf"))
+            for i in range(int(orig_trace_plane1_sig.shape[1] / 10000) + 1):
+                orig_plane1_sig = orig_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
+                orig_plane1_ct = orig_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
+                ica_plane1_sig = ica_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
+                ica_plane1_ct = ica_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
+
+                f = plt.figure(figsize=(20, 10))
+                plt.subplot(211)
+                plt.plot(orig_plane1_sig, 'r-', label='signal plane')
+                plt.plot(orig_plane1_ct, 'g-', label='cross-talk plane')
+                plt.title(f'original traces for cell # {cell}')
+                plt.legend(loc='upper left')
+                plt.subplot(212)
+                plt.plot(ica_plane1_sig, 'r-', label='signal plane')
+                plt.plot(ica_plane1_ct, 'g-', label='cross-talk plane')
+                plt.title(f'post-ica traces, cell # {cell}')
+                plt.legend(loc='upper left')
+                pdf.savefig(f)
+            pdf.close()
+
+        orig_trace_plane2_sig = self.plane2_traces_orig[0, :, :]
+        orig_trace_plane2_ct = self.plane2_traces_orig[1, :, :]
+        ica_trace_plane2_sig = self.plane2_ica_output[0, :, :]
+        ica_trace_plane2_ct = self.plane2_ica_output[1, :, :]
+        logging.info(f'creating figures for experiment {pair[1]}')
+        for cell in range(orig_trace_plane2_sig.shape[0]):
+            plot_dir = os.path.join(self.session_cache_dir, f'ica_traces_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
+            if not os.path.isdir(plot_dir):
+                os.mkdir(plot_dir)
+            logging.info(f'creating figures for cell {cell}')
+            pdf = matplotlib.backends.backend_pdf.PdfPages(
+                os.path.join(plot_dir, f"ica_plots_{pair[1]}_cell_{cell}.pdf"))
+            for i in range(int(orig_trace_plane2_sig.shape[1] / 10000) + 1):
+                orig_plane2_sig = orig_trace_plane2_sig[cell, i * 10000:(i + 1) * 10000]
+                orig_plane2_ct = orig_trace_plane2_ct[cell, i * 10000:(i + 1) * 10000]
+                ica_plane2_sig = ica_trace_plane2_sig[cell, i * 10000:(i + 1) * 10000]
+                ica_plane2_ct = ica_trace_plane2_ct[cell, i * 10000:(i + 1) * 10000]
+                f = plt.figure(figsize=(20, 10))
+                plt.subplot(211)
+                plt.plot(orig_plane2_sig, 'r-', label='signal plane')
+                plt.plot(orig_plane2_ct, 'g-', label='cross-talk plane')
+                plt.title(f'original traces for cell # {cell}')
+                plt.legend(loc='upper left')
+                plt.subplot(212)
+                plt.plot(ica_plane2_sig, 'r-', label='signal plane')
+                plt.plot(ica_plane2_ct, 'g-', label='cross-talk plane')
+                plt.title(f'post-ica traces, cell # {cell}')
+                plt.legend(loc='upper left')
+                pdf.savefig(f)
+                plt.close()
+            pdf.close()
         return
 
     @staticmethod
