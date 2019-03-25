@@ -25,31 +25,56 @@ import matplotlib.backends.backend_pdf
 
 IMAGEH, IMAGEW = 512, 512
 
-def get_traces(movie_h5, masks, exp_dir, exp_id):
-    motion_border_path = os.path.join(exp_dir, f"processed/{exp_id}_input_extract_traces.json")
+def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
+    jin_movie_path = os.path.join(movie_exp_dir, f"processed/{movie_exp_id}_input_extract_traces.json")
 
-    with open(motion_border_path, "r") as f:
-        data = json.load(f)
+    jin_mask_path = os.path.join(mask_exp_dir, f"processed/{mask_exp_id}_input_extract_traces.json")
 
-    motion_border = data.get("motion_border", [])
+    with open(jin_movie_path, "r") as f:
+        jin_movie = json.load(f)
+
+    motion_border = jin_movie.get("motion_border", [])
     motion_border = [motion_border["x0"], motion_border["x1"], motion_border["y0"], motion_border["y1"], ]
-    rois = [roi_masks.create_roi_mask(IMAGEW, IMAGEH, border=motion_border, roi_mask=roi,
-                                      label='{}'.format(i))
-            for i, roi in enumerate(masks)]
-    traces, neuropil_traces = roi_masks.calculate_roi_and_neuropil_traces(movie_h5, rois, motion_border)
+
+    movie_h5 = jin_movie["motion_corrected_stack"]
+
+    with h5py.File(movie_h5, "r") as f:
+        d = f["data"]
+        h = d.shape[1]
+        w = d.shape[2]
+
+    # reading traces extracting json for masks
+    with open(jin_mask_path, "r") as f:
+        jin_mask = json.load(f)
+
+    rois = jin_mask["rois"]
+
+    roi_mask_list = create_roi_masks(rois, w, h, motion_border)
+
+    traces, neuropil_traces = roi_masks.calculate_roi_and_neuropil_traces(movie_h5, roi_mask_list, motion_border)
+
     return traces, neuropil_traces
 
-def get_roi_masks(hdf_filename):
-    masks = []
-    with h5py.File(hdf_filename, "r") as f:
-        stack = f["data"].value
-        if stack.ndim == 2:
-            stack = stack.reshape((1,) + stack.shape)
-    for page in stack:
-        labeled_page, nlabels = label(page)
-        for i in range(nlabels):
-            masks.append(labeled_page == i+1)
-    return masks
+def create_roi_masks(rois, w, h, motion_border):
+    roi_list = []
+
+    for roi in rois:
+        mask = np.array(roi["mask"], dtype=bool)
+        px = np.argwhere(mask)
+        px[:,0] += roi["y"]
+        px[:,1] += roi["x"]
+
+        mask = roi_masks.create_roi_mask(w, h, motion_border,
+                                         pix_list=px[:,[1,0]],
+                                         label=str(roi["id"]),
+                                         mask_group=roi.get("mask_page",-1))
+
+        roi_list.append(mask)
+
+    # sort by roi id
+    roi_list.sort(key=lambda x: x.label)
+
+    return roi_list
 
 
 class Mesoscope_ICA(object):
