@@ -38,7 +38,6 @@ from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_de
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 
-
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
     f.create_dataset('data', data=data)
@@ -839,7 +838,6 @@ def save_roi_validation(roi_validation, lims_data):
 
         save_figure(fig, (20, 10), analysis_dir, 'roi_validation',
                     str(index) + '_' + str(id) + '_' + str(cell_index))
-
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
     logger.info('converting %d', lims_id)

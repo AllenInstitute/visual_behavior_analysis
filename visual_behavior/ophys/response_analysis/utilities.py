@@ -99,12 +99,17 @@ def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
     included_flashes = fdf.flash_number.unique()
     st = st[st.flash_number.isin(included_flashes)]
     ost = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
-    
+
+    # Slower code   
     #ost['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in ost.start_time.values]
     #ost['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in ost.end_time.values]
  
-    ost['start_frame'] = get_successive_frame_list(ost.start_time.values, dataset.timestamps_ophys)
-    ost['end_frame'] = get_successive_frame_list(ost.end_time.values, dataset.timestamps_ophys)
+    # Code making unnecessary copu
+    #ost['start_frame'] = get_successive_frame_list(ost.start_time.values, dataset.timestamps_ophys)
+    #ost['end_frame'] = get_successive_frame_list(ost.end_time.values, dataset.timestamps_ophys) 
+
+    ost.loc[:, 'start_frame'] = get_successive_frame_list(ost.start_time.values, dataset.timestamps_ophys)
+    ost.loc[:, 'end_frame'] = get_successive_frame_list(ost.end_time.values, dataset.timestamps_ophys)
     
     #set params
     stim_duration = 0.25
