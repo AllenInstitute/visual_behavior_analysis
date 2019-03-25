@@ -440,7 +440,6 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     running = core_data['running']
     running_speed = running.rename(columns={'speed': 'running_speed'})
     # filter to get rid of encoder spikes
-    # happens in 645086795, 645362806
     running_speed['running_speed'] = medfilt(running_speed.running_speed.values, kernel_size=5)
     save_dataframe_as_h5(running_speed, 'running_speed', get_analysis_dir(lims_data))
 
@@ -448,7 +447,7 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     save_dataframe_as_h5(licks, 'licks', get_analysis_dir(lims_data))
 
     stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
-    if 'omitted_stimuli' in core_data:
+    if 'omitted_stimuli' in core_data.keys():
         if len(core_data['omitted_stimuli']) > 0: #sometimes there is a key but empty values
             omitted_flash = core_data['omitted_stimuli'].copy()
             omitted_flash = omitted_flash[['frame']]
@@ -468,16 +467,12 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
             stimulus_table['omitted'] = False
     else:
         stimulus_table['omitted'] = False
-    # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
-    # if np.isnan(stimulus_table.loc[0, 'end_frame']): #exception for cases where the first flash in the session is omitted
-    #     stimulus_table = stimulus_table.drop(index=0)
+    # rename columns to harmonize with visual coding and rebase timestamps to sync time
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
     start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
     stimulus_table.start_time = start_time
     end_time = [timestamps_stimulus[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
-    # end_time = [timestamps_stimulus[int(end_frame)] if np.isnan(end_frame) is False else np.nan()
-    #             for end_frame in stimulus_table.end_frame.values]
     stimulus_table.insert(loc=4, column='end_time', value=end_time)
     if 'level_0' in stimulus_table.keys():
         stimulus_table.drop(columns=['level_0'])
@@ -562,7 +557,7 @@ def get_roi_locations(lims_data):
     return roi_locations
 
 
-def add_cell_specimen_ids_to_roi_metrics(roi_metrics, roi_locations):
+def add_roi_ids_to_roi_metrics(roi_metrics, roi_locations):
     # add roi ids to objectlist
     ids = []
     for row in roi_metrics.index:
@@ -570,7 +565,7 @@ def add_cell_specimen_ids_to_roi_metrics(roi_metrics, roi_locations):
         miny = roi_metrics.iloc[row][' miny']
         id = roi_locations[(roi_locations.x == minx) & (roi_locations.y == miny)].id.values[0]
         ids.append(id)
-    roi_metrics['cell_specimen_id'] = ids
+    roi_metrics['roi_id'] = ids
     return roi_metrics
 
 
@@ -583,26 +578,22 @@ def get_roi_metrics(lims_data):
     roi_names = np.sort(roi_locations.id.values)
     roi_locations['unfiltered_cell_index'] = [np.where(roi_names == id)[0][0] for id in roi_locations.id.values]
     # add cell ids to roi_metrics from roi_locations
-    roi_metrics = add_cell_specimen_ids_to_roi_metrics(roi_metrics, roi_locations)
+    roi_metrics = add_roi_ids_to_roi_metrics(roi_metrics, roi_locations)
     # merge roi_metrics and roi_locations
-    roi_metrics['id'] = roi_metrics.cell_specimen_id.values
+    roi_metrics['id'] = roi_metrics.roi_id.values
     roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
     unfiltered_roi_metrics = roi_metrics
     # remove invalid roi_metrics
     roi_metrics = roi_metrics[roi_metrics.valid == True]
-    # hack for expt 692342909 with 2 rois at same location - need a long term solution for this!
-    if get_lims_id(lims_data) == 692342909:
-        logger.info('removing bad cell')
-        roi_metrics = roi_metrics[roi_metrics.cell_specimen_id.isin([692357032, 692356966]) == False]
     # hack to get rid of cases with 2 rois at the same location
-    for cell_specimen_id in roi_metrics.cell_specimen_id.values:
-        roi_data = roi_metrics[roi_metrics.cell_specimen_id == cell_specimen_id]
+    for roi_id in roi_metrics.roi_id.values:
+        roi_data = roi_metrics[roi_metrics.roi_id == roi_id]
         if len(roi_data) > 1:
             ind = roi_data.index
             roi_metrics = roi_metrics.drop(index=ind.values)
     # add filtered cell index
-    cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
-                  roi_metrics.cell_specimen_id.values]
+    cell_index = [np.where(np.sort(roi_metrics.roi_id.values) == id)[0][0] for id in
+                  roi_metrics.roi_id.values]
     roi_metrics['cell_index'] = cell_index
     return roi_metrics, unfiltered_roi_metrics
 
@@ -615,8 +606,128 @@ def save_unfiltered_roi_metrics(unfiltered_roi_metrics, lims_data):
     save_dataframe_as_h5(unfiltered_roi_metrics, 'unfiltered_roi_metrics', get_analysis_dir(lims_data))
 
 
+def get_roi_ids(roi_metrics):
+    roi_ids = np.unique(np.sort(roi_metrics.roi_id.values))
+    return roi_ids
+
+
+# def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
+#     roi_ids = get_roi_ids(roi_metrics)
+#     if cache_dir is not None:
+#         matching_file = [file for file in os.listdir(cache_dir) if 'cell_matching_lookup_table' in file]
+#         lookup = pd.read_csv(os.path.join(cache_dir, matching_file[0]))
+#         df = lookup[lookup.ophys_experiment_id == int(lims_data.experiment_id.values[0])]
+#         if (len(df) > 0):
+#             if np.isnan(df.cell_specimen_id.values[0])==False:
+#                 try:
+#                     # if lookup file exists, and lookup table has entries for this experiment,
+#                     # add cell_specimen_id values to roi_metrics and overwrite 'id' column with cell_specimen_ids
+#                     print('this session has cell matching results, adding cell_specimen_ids and overwriting roi_metrics.id')
+#                     # cell_specimen_ids = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in roi_ids]
+#                     # cell_specimen_ids = np.asarray(cell_specimen_ids)
+#                     roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in
+#                                                        roi_metrics.id.values]
+#                     roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
+#                 except:
+#                     print('something bad happened when trying to assign cell_specimen_ids using lookup table, setting to None')
+#                     roi_metrics['cell_specimen_id'] = None
+#             else:
+#                 # no cell_specimen_ids in table, set cell_specimen_id to None
+#                 print('no cell_specimen_ids for this experiment, using roi_ids')
+#                 roi_metrics['cell_specimen_id'] = None
+#         else:
+#             # if lookup table doesnt exist, set cell_specimen_id to None
+#             print('this experiment not in lookup table, using roi_ids')
+#             roi_metrics['cell_specimen_id'] = None
+#     else:
+#         print('no cache_dir provided, cant look up cell_specimen_ids, using roi_ids')
+#         roi_metrics['cell_specimen_id'] = None
+#     return roi_metrics
+
+
+def sql_lims_query(query):
+    import psycopg2
+    '''
+    Performs SQL query to lims using any properly formated SQL query.
+
+    :param query (str): properly formatted SQL query
+
+    '''
+    # connect to LIMS using read only
+    conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+    cur = conn.cursor()
+
+    # execute query
+    cur.execute(query)
+
+    # fetch results
+    return (cur.fetchall())
+
+
+def get_cell_specimen_ids_from_lims(mouse_id):
+    '''
+    Performs SQL query to lims to get matching specimen ids when they exist (for cell matching across imaging sessions)
+
+    :param mouse_id (int): external_specimen_id, typically mouse_id
+
+    '''
+    # define sql lims query
+    big_query = '''
+    SELECT sp.external_specimen_name, vbec.id AS container_id, csd.id AS cell_specimen_id, cr.valid_roi, cr.id AS cell_roi_id
+    FROM ophys_experiments_visual_behavior_experiment_containers oevbec
+    JOIN visual_behavior_experiment_containers vbec ON vbec.id=oevbec.visual_behavior_experiment_container_id
+    JOIN visual_behavior_container_runs runs ON runs.visual_behavior_experiment_container_id=vbec.id AND runs.current = 't'
+    JOIN ophys_experiments oe ON oe.id=oevbec.ophys_experiment_id
+    JOIN ophys_sessions os ON os.id=oe.ophys_session_id JOIN specimens sp ON sp.id=os.specimen_id
+    LEFT JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id = oe.id AND ocsr.current = 't'
+    LEFT JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id
+    LEFT JOIN specimens csd ON csd.id=cr.cell_specimen_id
+    WHERE 
+    cr.valid_roi = 't' AND 
+    sp.external_specimen_name IN('{mouse_id}')
+    ORDER BY 1,2,3,4,5;'''.format(mouse_id=mouse_id)
+    query = big_query
+    # Result of the query are
+    # external_specimen_name,container_id,cell_specimen_id,valid_roi,cell_roi_id
+
+    results = sql_lims_query(big_query)
+    if len(results) == 0:
+        print("No results found")
+    return results
+
+
+def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
+    # roi_ids = get_roi_ids(roi_metrics)
+    mouse_id = int(lims_data['external_specimen_id'])
+    # Sql query lims to see if there are matching cell ids
+    ids = get_cell_specimen_ids_from_lims(mouse_id)
+    if len(ids) > 0:
+        try:
+            df = pd.DataFrame(ids, columns=['mouse', 'container_id', 'cell_specimen_id', 'valid_roi', 'cell_roi_id'])
+            # match the ROI ids to the corresponding specimen ids
+            roi_metrics['cell_specimen_id'] = [int(df[df.cell_roi_id == roi_id].cell_specimen_id.values) for roi_id in
+                                               roi_metrics.id.values]
+            # replace the id with the cell specimen ID
+            roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
+        except:
+            print('something bad happened when trying to get cell specimen ids from lims, setting to None')
+            roi_metrics['cell_specimen_id'] = None
+    else:
+        # if lims query returns nothing, set cell_specimen_id to None
+        print('no cell specimen ids from lims, using roi_ids')
+        roi_metrics['cell_specimen_id'] = None
+    return roi_metrics
+
+
 def get_cell_specimen_ids(roi_metrics):
-    cell_specimen_ids = np.unique(np.sort(roi_metrics.cell_specimen_id.values))
+    roi_ids = get_roi_ids(roi_metrics)
+    if roi_metrics.cell_specimen_id.values[0] is None:
+        cell_specimen_ids = roi_ids
+    else:
+        # make sure cell_specimen_ids are retrieved in the same order as roi_ids, as these correspond to order of trace and roi maskindices
+        cell_specimen_ids = [int(roi_metrics[roi_metrics.roi_id == roi_id].cell_specimen_id.values[0]) for roi_id in
+                             roi_ids]
+        cell_specimen_ids = np.asarray(cell_specimen_ids)
     return cell_specimen_ids
 
 
@@ -697,8 +808,8 @@ def get_dff_traces(roi_metrics, lims_data):
     dff_traces = np.asarray(final_dff_traces)
     roi_metrics = roi_metrics[roi_metrics.cell_index.isin(bad_cell_indices) == False]
     # reset cell index after removing bad cells
-    cell_index = [np.where(np.sort(roi_metrics.cell_specimen_id.values) == id)[0][0] for id in
-                  roi_metrics.cell_specimen_id.values]
+    cell_index = [np.where(np.sort(roi_metrics.roi_id.values) == id)[0][0] for id in
+                  roi_metrics.roi_id.values]
     roi_metrics['cell_index'] = cell_index
     logger.info('length of traces: %d', dff_traces.shape[1])
     logger.info('number of segmented cells: %d', dff_traces.shape[0])
@@ -780,7 +891,7 @@ def save_average_image(average_image, lims_data):
                  cmap='gray')
 
 
-def run_roi_validation(lims_data):
+def run_roi_validation(lims_data, cache_dir):
     processed_dir = get_processed_dir(lims_data)
     file_path = os.path.join(processed_dir, 'roi_traces.h5')
 
@@ -798,19 +909,22 @@ def run_roi_validation(lims_data):
 
     roi_df = get_roi_locations(lims_data)
     roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
+    roi_metrics = add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir)
     roi_masks = get_roi_masks(roi_metrics, lims_data)
     dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
     cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
+    roi_ids = get_roi_ids(roi_metrics)
     max_projection = get_max_projection(lims_data)
 
-    cell_indices = {id: get_cell_index_for_cell_specimen_id(id, cell_specimen_ids) for id in cell_specimen_ids}
+    # cell_indices = {id: get_cell_index_for_cell_specimen_id(id, cell_specimen_ids) for id in cell_specimen_ids}
+    cell_indices = {id: np.where(roi_ids == id)[0][0] for id in roi_ids}
 
-    return roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces
+    return roi_names, roi_df, roi_traces, dff_traces_original, roi_ids, cell_indices, roi_masks, roi_metrics, max_projection, dff_traces
 
 
-def get_roi_validation(lims_data, save_plots=False):
-    roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, max_projection, dff_traces = run_roi_validation(
-        lims_data)
+def get_roi_validation(lims_data, cache_dir=None, save_plots=False):
+    roi_names, roi_df, roi_traces, dff_traces_original, cell_specimen_ids, cell_indices, roi_masks, roi_metrics, max_projection, dff_traces = run_roi_validation(
+        lims_data, cache_dir)
 
     roi_validation = plot_roi_validation(
         roi_names,
@@ -820,6 +934,7 @@ def get_roi_validation(lims_data, save_plots=False):
         cell_specimen_ids,
         cell_indices,
         roi_masks,
+        roi_metrics,
         max_projection,
         dff_traces,
     )
@@ -863,6 +978,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
     save_visual_stimulus_data(stimulus_template, stimulus_metadata, lims_data)
 
     roi_metrics, unfiltered_roi_metrics = get_roi_metrics(lims_data)
+    roi_metrics = add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir)
 
     dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
     save_dff_traces(dff_traces, roi_metrics, lims_data)
@@ -888,7 +1004,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
     save_average_image(average_image, lims_data)
 
     if plot_roi_validation:
-        roi_validation = get_roi_validation(lims_data)
+        roi_validation = get_roi_validation(lims_data, cache_dir)
         save_roi_validation(roi_validation, lims_data)
 
     logger.info('done converting')

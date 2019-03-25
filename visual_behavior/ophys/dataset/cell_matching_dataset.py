@@ -41,9 +41,9 @@ class CellMatchingDataset(object):
     def get_cache_dir(self):
         if self.cache_dir is None:
             if platform.system() == 'Linux':
-                cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/BehaviorImaging/DoC/2P6_data_analysis'
+                cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
             else:
-                cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\BehaviorImaging\DoC\2P6_data_analysis'
+                cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
             print('using default cache_dir:', cache_dir)
         else:
             cache_dir = self.cache_dir
@@ -51,18 +51,6 @@ class CellMatchingDataset(object):
         return self.cache_dir
 
     def get_lims_data(self):
-        # if self.from_processed_data is True:
-        #     lims_data = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
-        #     self.experiment_id = lims_data.ophys_experiment_id.values[0]
-        #     self.session_name = lims_data.session_type.values[0].split('_')[-1]
-        #     self.structure = lims_data.targeted_structure.values[0]
-        #     self.specimen_driver_line = lims_data.cre_line.values[0]
-        #     self.depth = lims_data.imaging_depth.values[0]
-        #     self.experiment_date = str(lims_data.experiment_date.values[0])[:10]
-        #     self.experiment_name = lims_data.session_type.values[0]
-        #     mouse_id = lims_data.specimen_id.values[0]
-        #     self.mouse_id = np.int(mouse_id)
-        # else:
         ld = LimsDatabase(self.lims_id)
         lims_data = ld.get_qc_param()
         lims_data.insert(loc=2, column='experiment_id', value=lims_data.lims_id.values[0])
@@ -74,6 +62,7 @@ class CellMatchingDataset(object):
         self.experiment_date = str(lims_data.experiment_date.values[0])[:10]
         self.experiment_name = lims_data.experiment_name.values[0]
         mouse_id = lims_data.external_specimen_id.values[0]
+        lims_data.mouse_id = mouse_id
         self.mouse_id = np.int(mouse_id)
         self.session_id = lims_data.session_id.values[0]
         self.ophys_session_dir = lims_data.datafolder.values[0][:-28]
@@ -84,23 +73,23 @@ class CellMatchingDataset(object):
             self.ophys_session_dir = '\\' + self.ophys_session_dir
 
         self.lims_data = lims_data
-        return self
+        return self.lims_data
 
     def get_analysis_folder_name(self):
         folder = [file for file in os.listdir(self.cache_dir) if str(self.experiment_id) in file]
         if len(folder) > 0:
             self.analysis_folder_name = folder[0]
         else:
-            print('no analysis folder')
-        #
-        # lims_data = self.lims_data
-        # date = str(lims_data.experiment_date)[:10].split('-')
-        # analysis_folder_name = str(lims_data.lims_id) + '_' + \
-        #                        str(lims_data.mouse_id) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-        #                        lims_data.structure + '_' + str(lims_data.depth) + '_' + \
-        #                        lims_data.specimen_driver_line.split('-')[0] + '_' + lims_data.rig[3:5] + \
-        #                        lims_data.rig[6] + '_' + lims_data.session_type
-        # self.analysis_folder_name = analysis_folder_name
+            print('no analysis folder in cache')
+            print('creating analysis folder')
+            lims_data = self.lims_data
+            date = str(lims_data.experiment_date)[:10].split('-')
+            analysis_folder_name = str(lims_data.lims_id) + '_' + \
+                                   str(lims_data.mouse_id) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+                                   lims_data.structure + '_' + str(lims_data.depth) + '_' + \
+                                   lims_data.specimen_driver_line.split('-')[0] + '_' + lims_data.rig[3:5] + \
+                                   lims_data.rig[6] + '_' + lims_data.session_type
+            self.analysis_folder_name = analysis_folder_name
         return self.analysis_folder_name
 
     def get_directories(self):

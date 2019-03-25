@@ -25,22 +25,23 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
     use_events = False
 
-    # print('plotting example traces')
-    # active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
-    # length_mins = 1
-    # for xmin_seconds in np.arange(0, 5000, length_mins * 60):
-    #     sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
-    #                                         cell_label=False, include_running=True, use_events=use_events)
+    print('plotting example traces')
+    active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
+    length_mins = 1
+    for xmin_seconds in np.arange(0, 5000, length_mins * 60):
+        sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
+                                            cell_label=False, include_running=True, use_events=use_events)
 
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
     # pairwise_correlations_df = analysis.get_pairwise_correlations_df()  # flake8: noqa: F841
 
-    # print('plotting experiment summary figure')
-    # esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
-    # esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
-    # esf.plot_roi_masks(dataset, save=True)
+    print('plotting experiment summary figure')
+    esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
+    esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
+    esf.plot_roi_masks(dataset, save=True)
     # esf.plot_average_flash_response_example_cells(analysis, save_figures=True, save_dir=cache_dir, folder='mean_flash_response_average')
     # #
+<<<<<<< HEAD
     if not(turn_off_plotting):
         print('plotting cell responses')
         for cell in dataset.get_cell_indices():
@@ -53,6 +54,12 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         for xmin_seconds in np.arange(0, 5000, length_mins * 60):
             sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
                                                 cell_label=False, include_running=True, use_events=use_events)
+=======
+    print('plotting cell responses')
+    for cell in dataset.get_cell_indices():
+        # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
+        sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
+>>>>>>> d1a797a09ed74227368d6a3239bc95fb17234549
 
     if dataset.events is not None:
         use_events = True
@@ -77,26 +84,27 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
 
 if __name__ == '__main__':
-    # #VisualBehaviorDevelopment - complete dataset as of 11/15/18
-    experiment_ids = [639253368, 639438856, 639769395, 639932228, 644942849, 645035903,
-                      645086795, 645362806, 646922970, 647108734, 647551128, 647887770,
-                      648647430, 649118720, 649318212, 661423848, 663771245, 663773621,
-                      664886336, 665285900, 665286182, 670396087, 671152642, 672185644,
-                      672584839, 673139359, 673460976, 685744008, 686726085, 692342909,
-                      692841424, 693272975, 693862238, 695471168, 696136550, 698244621,
-                      698724265, 700914412, 701325132, 702134928, 702723649, 712178916,
-                      712860764, 713525580, 714126693, 715161256, 715228642, 715887471,
-                      715887497, 716327871, 716337289, 716600289, 716602547, 719321260,
-                      719996589, 720001924, 720793118, 723037901, 723064523, 723748162,
-                      723750115, 729951441, 730863840, 731936595, 732911072, 733691636,
-                      736490031, 736927574, 737471012, 745353761, 745637183, 747248249,
-                      750469573, 751935154, 752966796, 753931104, 754552635, 754566180,
-                      754943841, 756715598, 758274779, 760003838, 760400119, 760696146,
-                      760986090, 761861597, 762214438, 762214650, 766779984, 767424894,
-                      768223868, 768224465, 768225217, 768865460, 768871217, 769514560,
-                      770094844, 771381093, 771427955, 772131949, 772696884, 772735942,
-                      773816712, 773843260, 774370025, 774379465, 775011398, 775429615,
-                      776042634]
+    # VisualBehavior production as of 3/20/19
+    experiment_ids = [775614751, 778644591, 782675436, 783927872, 783928214, 784482326,
+                      787461073, 787498309, 787501821, 788488596, 788489531, 788490510,
+                      789359614, 790149413, 790709081, 791119849, 791453282,
+                      791980891, 792812544, 792813858, 792815735, 792816531, 794378505,
+                      794381992, 795073741, 795075034, 795076128, 795948257, 795952471,
+                      795952488, 795953296, 796105304, 796105823, 796106321, 796106850,
+                      796108483, 796306417, 796308505, 797255551, 798392580, 798403387,
+                      798404219, 799366517, 799368262, 799368904, 803736273, 805100431,
+                      805784313, 805784331, 806455766, 806456687, 806989729, 807752719,
+                      807753318, 807753334, 807753920, 808619543, 808621015, 808621034,
+                      808621958, 809497730, 809501118, 811456530, 811458048, 813083478,
+                      814610580, 815097949, 815652334, 817267785, 817267860, 818073631,
+                      819432482, 819434449, 820307518, 822024770,
+                      822028017, 822028587, 822641265, 822647116, 822647135, 822656725,
+                      823392290, 823396897, 823401226, 824333777, 825120601, 825130141,
+                      825623170, 826583436, 826585773, 826587940, 830093338, 830700781,
+                      830700800, 831330404, 832117336, 833629926, 833629942, 833631914,
+                      834275020, 834275038, 834279496, 836258936, 836258957, 836260147,
+                      836910438, 836911939, 837296345, 837729902, 838849930]
+
     import os
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
     for experiment_id in experiment_ids:

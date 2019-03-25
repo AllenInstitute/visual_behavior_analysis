@@ -158,7 +158,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
 
 
 def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, folder=None,
-                             use_events=False, window=[-4,4]):
+                             use_events=False, window=[-4,4], interval_sec=2):
     if use_events:
         label = 'mean event magnitude'
         suffix = '_events'
@@ -187,7 +187,7 @@ def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=Non
         response_array[x, :] = trace
     sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax, cmap='magma', cbar=colorbar,
                 cbar_kws={'label': label})
-    xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=2, window=window)
+    xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=interval_sec, window=window)
     ax.set_xticks(xticks)
     ax.set_xticklabels([int(xticklabel) for xticklabel in xticklabels])
     if response_array.shape[0] > 400:

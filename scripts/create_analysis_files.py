@@ -11,4 +11,4 @@ if __name__ == '__main__':
     import sys
     experiment_id = sys.argv[1]
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
-    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)
+    create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)

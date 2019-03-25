@@ -74,6 +74,7 @@ class ResponseAnalysis(object):
             else:
                 cell_trace = self.dataset.dff_traces[cell_index, :].copy()
             for trial in self.dataset.trials.trial.values[:-1]:  # ignore last trial to avoid truncated traces
+                cell_matching_has_been_run = self.dataset.cell_matching
                 cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
                 change_time = self.dataset.trials[self.dataset.trials.trial == trial].change_time.values[0]
                 # get dF/F trace & metrics
@@ -98,12 +99,12 @@ class ResponseAnalysis(object):
                                                            self.stimulus_frame_rate)
                 df_list.append(
                     [trial, int(cell_index), int(cell_specimen_id), trace, timestamps, mean_response, baseline_response, n_events,
-                     p_value, sd_over_baseline, mean_running_speed, self.dataset.experiment_id])
+                     p_value, sd_over_baseline, mean_running_speed, cell_matching_has_been_run, self.dataset.experiment_id])
                      #running_speed_trace, running_speed_timestamps,
 
 
         columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
-                   'n_events', 'p_value', 'sd_over_baseline', 'mean_running_speed', 'experiment_id']
+                   'n_events', 'p_value', 'sd_over_baseline', 'mean_running_speed', 'cell_matching_has_been_run', 'experiment_id']
                     #'running_speed_trace', 'running_speed_timestamps',
         trial_response_df = pd.DataFrame(df_list, columns=columns)
         trial_metadata = self.dataset.trials
@@ -156,6 +157,7 @@ class ResponseAnalysis(object):
         for cell in self.dataset.cell_indices:
             cell = int(cell)
             cell_specimen_id = int(self.dataset.get_cell_specimen_id_for_cell_index(cell))
+            cell_matching_has_been_run = self.dataset.cell_matching
             if self.use_events:
                 cell_trace = self.dataset.events[cell, :].copy()
             else:
@@ -195,13 +197,13 @@ class ResponseAnalysis(object):
 
                 row.append([int(cell), int(cell_specimen_id), int(flash), omitted, flash_time, image_name, image_category,
                             trace, timestamps, mean_response, baseline_response, n_events, p_value_baseline, sd_over_baseline,
-                            reward_rate, mean_running_speed, int(self.dataset.experiment_id)])
+                            reward_rate, mean_running_speed, cell_matching_has_been_run, int(self.dataset.experiment_id)])
 
         flash_response_df = pd.DataFrame(data=row,
                                          columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
                                                   'image_name', 'image_category', 'trace', 'timestamps', 'mean_response',
                                                   'baseline_response', 'n_events', 'p_value_baseline', 'sd_over_baseline',
-                                                  'reward_rate', 'mean_running_speed', 'experiment_id'])
+                                                  'reward_rate', 'mean_running_speed', 'cell_matching_has_been_run', 'experiment_id'])
         flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
         flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
@@ -271,6 +273,7 @@ class ResponseAnalysis(object):
         for cell in self.dataset.cell_indices:
             cell = int(cell)
             cell_specimen_id = int(self.dataset.get_cell_specimen_id_for_cell_index(cell))
+            cell_matching_has_been_run = self.dataset.cell_matching
             if self.use_events:
                 cell_trace = self.dataset.events[cell, :].copy()
             else:
@@ -303,13 +306,13 @@ class ResponseAnalysis(object):
 
                 row.append([int(cell), int(cell_specimen_id), int(flash), omitted, flash_time, image_name, image_category,
                             trace, timestamps, mean_response, baseline_response, n_events, p_value, sd_over_baseline,
-                            reward_rate, int(self.dataset.experiment_id)])
+                            reward_rate, cell_matching_has_been_run, int(self.dataset.experiment_id)])
 
         flash_response_df = pd.DataFrame(data=row,
                                          columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
                                                   'image_name', 'image_category', 'trace', 'timestamps', 'mean_response',
                                                   'baseline_response', 'n_events', 'p_value', 'sd_over_baseline',
-                                                  'reward_rate', 'experiment_id'])
+                                                  'reward_rate', 'cell_matching_has_been_run', 'experiment_id'])
         # flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
         omitted_flash_response_df = flash_response_df
