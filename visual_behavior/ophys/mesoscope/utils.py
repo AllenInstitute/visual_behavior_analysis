@@ -15,6 +15,7 @@ meso_data = ms.get_all_mesoscope_data()
 meso_data['ICA_demix_exp'] = 0
 meso_data['ICA_demix_session'] = 0
 
+
 def run_ica_on_session(session):
     ica_obj = ica.Mesoscope_ICA(session_id=session, cache='/media/NCRAID/MesoscopeAnalysis/')
     pairs = ica_obj.dataset.get_paired_planes()
@@ -22,25 +23,29 @@ def run_ica_on_session(session):
         ica_obj.get_ica_traces(pair)
         ica_obj.combine_debias_traces()
         ica_obj.unmix_traces()
-        # if ica_obj.found_solution:
+        ica_obj.plot_ica_traces(pair)
+        # if np.all(ica_obj.found_solution == True) :
         #     meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
     return
 
-def parallelize (sessions, meso_data, thread_count = 20) :
+
+def parallelize(sessions, thread_count=20):
     process_name = []
     process_status = []
     nproc = resource.getrlimit(resource.RLIMIT_NPROC)
     if nproc[0] < nproc[1]:
         resource.setrlimit(resource.RLIMIT_NPROC, (nproc[1] - 1000, nproc[1]))
+
     while len(sessions) > 0:
         while thread_count > 0:
-            for session in sessions :
-                p = Process(target=run_ica_on_session, args=(session, meso_data))
+            for session in sessions:
+                p = Process(target=run_ica_on_session, args=(session, ))
                 p.daemon = True
                 p.start()
                 process_name.append([p.pid])
                 process_status.append([p.is_alive])
                 thread_count = -1
+                sessions = sessions.drop(sessions.index[sessions == session])
         if process_status.count(True) == thread_count:
             time.sleep(0.25)
             # update current process statuses here:
@@ -75,6 +80,7 @@ def get_ica_sessions(sessions):
     ica_success = meso_data.loc[meso_data['ICA_demix_session'] == 1]
     ica_fail = meso_data.loc[meso_data['ICA_demix_session'] == 0]
     return ica_success, ica_fail
+
 
 def run_demixing_on_ica(exp_id, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
     query = f"""
@@ -160,7 +166,6 @@ def run_demixing_on_ica(exp_id, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
     with h5py.File(output_h5, 'w') as f:
         f.create_dataset("data", data=out_traces, compression="gzip")
         f.create_dataset("roi_names", data=[str(rn) for rn in trace_ids])
-
     return
 
 
@@ -205,6 +210,7 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
 
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
+
 def assert_exists(file_name):
     if not os.path.exists(file_name):
         raise IOError("file does not exist: %s" % file_name)
@@ -212,13 +218,13 @@ def assert_exists(file_name):
 
 def get_path(obj, key, check_exists):
     try:
-         path = obj[key]
+        path = obj[key]
     except KeyError:
         raise KeyError("required input field '%s' does not exist" % key)
     if check_exists:
         assert_exists(path)
     return path
 
-def run_neuropil_s_on_exp(exp_id):
 
+def run_neuropil_s_on_exp(exp_id):
     return
