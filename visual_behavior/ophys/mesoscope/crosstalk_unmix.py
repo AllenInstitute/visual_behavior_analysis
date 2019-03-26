@@ -157,6 +157,7 @@ class MesoscopeICA(object):
     def get_ica_traces(self, pair):
 
         self.found_ica_traces = [False, False]
+        self.found_ica_neuropil = [False, False]
 
         plane1_exp_id = pair[0]
         plane2_exp_id = pair[1]
