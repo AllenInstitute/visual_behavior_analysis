@@ -12,7 +12,6 @@ import matplotlib.backends.backend_pdf
 import matplotlib.pyplot as plt
 import matplotlib
 
-
 matplotlib.use('Agg')
 
 logger = logging.getLogger(__name__)
@@ -532,7 +531,7 @@ class MesoscopeICA(object):
 
             if self.found_solution:
                 # rescaling traces back:
-                self.ica_traces_scale_top, self.ica_traces_scale_bot, _, _ = self.find_scale_ica
+                self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_traces
 
                 plane1_ica_output = self.traces_unmix[:, 0] * self.ica_traces_scale_top
                 plane2_ica_output = self.traces_unmix[:, 1] * self.ica_traces_scale_bot
@@ -620,7 +619,7 @@ class MesoscopeICA(object):
 
             if self.found_solution_neuropil:
                 # rescaling traces back:
-                _, _, self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica
+                self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil
 
                 plane1_ica_neuropil_output = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
                 plane2_ica_neuropil_output = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
@@ -674,7 +673,7 @@ class MesoscopeICA(object):
         return
 
     def plot_ica_traces(self, pair):
-    #if figures don't exist!
+        #    if figures don't exist!
         if self.plane1_ica_output_pointer and self.plane2_ica_output_pointer:
 
             orig_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
@@ -759,14 +758,17 @@ class MesoscopeICA(object):
         return seg_run
 
     @property
-    def find_scale_ica(self):
+    def find_scale_ica_traces(self):
         # for traces:
         scale_top = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 0], self.plane1_ica_input))
         scale_bot = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 1], self.plane2_ica_input))
-        # for neuropil:
+
+        return scale_top.x, scale_bot.x
+
+    @property
+    def find_scale_ica_neuropil(self):
         scale_top_neuropil = opt.minimize(self.ica_err, [1],
                                           (self.neuropil_unmix[:, 0], self.plane1_ica_neuropil_input))
         scale_bot_neuropil = opt.minimize(self.ica_err, [1],
                                           (self.neuropil_unmix[:, 1], self.plane2_ica_neuropil_input))
-
-        return scale_top.x, scale_bot.x, scale_top_neuropil.x, scale_bot_neuropil.x
+        return scale_top_neuropil.x, scale_bot_neuropil.x
