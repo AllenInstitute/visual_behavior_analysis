@@ -172,6 +172,11 @@ class MesoscopeICA(object):
         path_traces_plane1 = f'{ica_traces_dir}traces_original_{plane1_exp_id}.h5'
         path_traces_plane2 = f'{ica_traces_dir}traces_original_{plane2_exp_id}.h5'
 
+        ica_neuropil_dir = os.path.join(session_dir, f'ica_neuropil_{plane1_exp_id}_{plane2_exp_id}/')
+        self.ica_neuropil_dir = ica_neuropil_dir
+        path_neuropil_plane1 = f'{ica_neuropil_dir}neuropil_original_{plane1_exp_id}.h5'
+        path_neuropil_plane2 = f'{ica_neuropil_dir}neuropil_original_{plane2_exp_id}.h5'
+
         if not (os.path.isfile(path_traces_plane1) and os.path.isfile(path_traces_plane2)):
             # -------------------------------------------------------------------------------------------
             # retrieve both planes experiment path
@@ -186,23 +191,38 @@ class MesoscopeICA(object):
             plane2_folder = self.dataset.get_exp_folder(plane2_exp_id)
 
             # extract signal and crosstalk traces for plane 1
-            plane1_sig_traces, _ = get_traces(plane1_folder, plane1_exp_id, plane1_folder, plane1_exp_id)
-            plane1_ct_traces, _ = get_traces(plane2_folder, plane2_exp_id, plane1_folder, plane1_exp_id)
+            plane1_sig_traces, plane1_sig_neuropil = get_traces(plane1_folder, plane1_exp_id, plane1_folder,
+                                                                plane1_exp_id)
+            plane1_ct_traces, plane1_ct_neuropil = get_traces(plane2_folder, plane2_exp_id, plane1_folder,
+                                                              plane1_exp_id)
 
             # extract signal and crosstalk traces for plane 2
-            plane2_sig_traces, _ = get_traces(plane2_folder, plane2_exp_id, plane2_folder, plane2_exp_id)
-            plane2_ct_traces, _ = get_traces(plane1_folder, plane1_exp_id, plane2_folder, plane2_exp_id)
+            plane2_sig_traces, plane2_sig_neuropil = get_traces(plane2_folder, plane2_exp_id, plane2_folder,
+                                                                plane2_exp_id)
+            plane2_ct_traces, plane2_ct_neuropil = get_traces(plane1_folder, plane1_exp_id, plane2_folder,
+                                                              plane2_exp_id)
 
             if (not plane2_sig_traces.any() is None) and (not plane2_ct_traces.any() is None):
                 self.found_ica_traces[0] = True
             if (not plane2_sig_traces.any() is None) and (not plane2_ct_traces.any() is None):
                 self.found_ica_traces[1] = True
 
+            if (not plane2_sig_neuropil.any() is None) and (not plane2_ct_neuropil.any() is None):
+                self.found_ica_neuropil[0] = True
+            if (not plane2_sig_neuropil.any() is None) and (not plane2_ct_neuropil.any() is None):
+                self.found_ica_neuropil[1] = True
+
             plane1_traces_original = np.array([plane1_sig_traces, plane1_ct_traces])
             plane2_traces_original = np.array([plane2_sig_traces, plane2_ct_traces])
 
+            plane1_neuropil_original = np.array([plane1_sig_neuropil, plane1_ct_neuropil])
+            plane2_neuropil_original = np.array([plane2_sig_neuropil, plane2_ct_neuropil])
+
             self.plane1_traces_orig = plane1_traces_original
             self.plane2_traces_orig = plane2_traces_original
+
+            self.plane1_neuropil_orig = plane1_neuropil_original
+            self.plane2_neuropil_orig = plane2_neuropil_original
 
             # saving extracted traces:
             if not os.path.isdir(session_dir):
@@ -219,6 +239,23 @@ class MesoscopeICA(object):
                 if not os.path.isfile(path_traces_plane2):
                     with h5py.File(path_traces_plane2, "w") as f:
                         f.create_dataset(f"data", data=plane2_traces_original)
+
+            # saving extracted neuropil:
+            if not os.path.isdir(session_dir):
+                os.mkdir(session_dir)
+            if not os.path.isdir(ica_neuropil_dir):
+                os.mkdir(ica_neuropil_dir)
+
+            if self.found_ica_neuropil[0]:
+                if not os.path.isfile(path_neuropil_plane1):
+                    with h5py.File(path_neuropil_plane1, "w") as f:
+                        f.create_dataset(f"data", data=plane1_neuropil_original)
+
+            if self.found_ica_neuropil[1]:
+                if not os.path.isfile(path_neuropil_plane2):
+                    with h5py.File(path_neuropil_plane2, "w") as f:
+                        f.create_dataset(f"data", data=plane2_neuropil_original)
+
         else:
             logger.info('Found traces in cache, reading from h5 file')
             # read traces form h5 file:
@@ -227,16 +264,32 @@ class MesoscopeICA(object):
             with h5py.File(path_traces_plane2, "r") as f:
                 plane2_traces_original = f["data"].value
 
+            # read neuropil traces form h5 file:
+            with h5py.File(path_neuropil_plane1, "r") as f:
+                plane1_neuropil_original = f["data"].value
+            with h5py.File(path_neuropil_plane2, "r") as f:
+                plane2_neuropil_original = f["data"].value
+
             self.plane1_traces_orig_pointer = path_traces_plane1
             self.plane2_traces_orig_pointer = path_traces_plane2
 
             self.plane1_traces_orig = plane1_traces_original
             self.plane2_traces_orig = plane2_traces_original
 
-            # set foudn traces flag True
+            #           same for neuropil:
+            self.plane1_neuropil_orig_pointer = path_neuropil_plane1
+            self.plane2_neuropil_orig_pointer = path_neuropil_plane2
+
+            self.plane1_neuropil_orig = plane1_neuropil_original
+            self.plane2_neuropil_orig = plane2_neuropil_original
+
+            # set found traces flag True
             self.found_ica_traces = [True, True]
 
-        return self.found_ica_traces
+            # set found neuropil traces flag True
+            self.found_ica_neuropil = [True, True]
+
+        return self.found_ica_traces, self.found_ica_neuropil
 
     def combine_debias_traces(self):
 
@@ -620,7 +673,7 @@ class MesoscopeICA(object):
         return
 
     def plot_ica_traces(self, pair):
-
+    #if figures don't exist!
         if self.plane1_ica_output_pointer and self.plane2_ica_output_pointer:
 
             orig_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
