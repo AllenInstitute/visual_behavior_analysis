@@ -1,6 +1,7 @@
 import multiprocessing as mp
-import visual_behavior.ophys.mesoscope.utils as mu
 import visual_behavior.ophys.mesoscope.mesoscope as ms
+import visual_behavior.ophys.mesoscope.utils as mu
+
 
 def main ():
     meso_data = ms.get_all_mesoscope_data()
