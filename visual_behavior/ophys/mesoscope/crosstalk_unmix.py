@@ -516,6 +516,8 @@ class MesoscopeICA(object):
         if not (self.plane1_ica_output_pointer and self.plane2_ica_output_pointer):
             self.plane1_ica_output_pointer = plane1_ica_output_pointer
             self.plane2_ica_output_pointer = plane2_ica_output_pointer
+            self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
+
             logger.info("unmixed traces do not exist in cache, running ICA")
             traces = np.array([self.plane1_ica_input, self.plane2_ica_input]).T
             self.found_solution = False
@@ -606,6 +608,7 @@ class MesoscopeICA(object):
         if (not (self.plane1_ica_neuropil_output_pointer is None)) and (not (self.plane2_ica_neuropil_output_pointer is None)):
             self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
             self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
+            self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
             logger.info("unmixed neuropil traces do not exist in cache, running ICA")
             traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
             self.found_solution = False
