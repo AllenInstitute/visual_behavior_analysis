@@ -117,6 +117,9 @@ class MesoscopeICA(object):
         self.plane2_ica_output_pointer = None
         self.plane2_ica_neuropil_output_pointer = None
 
+        self.ica_mixing_matrix_traces_pointer = None
+        self.ica_mixing_matrix_neuropil_pointer = None
+
         self.plane1_offset = None
         self.plane2_offset = None
 
@@ -151,6 +154,8 @@ class MesoscopeICA(object):
         self.plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
 
                                                       f'traces_ica_output_{pair[1]}.h5')
+        self.ica_mixing_matrix_pointer = os.path.join(self.ica_traces_dir,
+                                                 f'traces_ica_mixing.h5')
         return
 
     def get_ica_traces(self, pair):
@@ -498,17 +503,15 @@ class MesoscopeICA(object):
 
         plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
                                                  f'traces_ica_output_{self.plane1_exp_id}.h5')
-
-        if os.path.isfile(plane1_ica_output_pointer):
-            self.plane1_ica_output_pointer = plane1_ica_output_pointer
-            # file already exists, skip unmixing
-
         plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
                                                  f'traces_ica_output_{self.plane2_exp_id}.h5')
-
-        if os.path.isfile(plane2_ica_output_pointer):
+        ica_mixing_matrix_traces_pointer = os.path.join(self.ica_traces_dir,
+                                                        f'traces_ica_mixing.h5')
+        # file already exists, skip unmixing
+        if os.path.isfile(plane1_ica_output_pointer) and os.path.isfile(plane2_ica_output_pointer) and os.path.isfile(ica_mixing_matrix_traces_pointer):
+            self.plane1_ica_output_pointer = plane1_ica_output_pointer
             self.plane2_ica_output_pointer = plane2_ica_output_pointer
-            # file already exists, skip unmixing
+            self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
 
         if not (self.plane1_ica_output_pointer and self.plane2_ica_output_pointer):
             self.plane1_ica_output_pointer = plane1_ica_output_pointer
@@ -569,6 +572,9 @@ class MesoscopeICA(object):
 
                 with h5py.File(self.plane2_ica_output_pointer, "w") as f:
                     f.create_dataset(f"data", data=plane2_ica_output)
+
+                with h5py.File(self.ica_mixing_matrix_traces_pointer, "w") as f:
+                    f.create_dataset(f"mixing", data=self.traces_unmix)
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
             self.found_solution = True
@@ -585,20 +591,19 @@ class MesoscopeICA(object):
     def unmix_neuropil(self, max_iter=10):
 
         plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'traces_ica_output_{self.plane1_exp_id}.h5')
-
-        if os.path.isfile(plane1_ica_neuropil_output_pointer):
-            self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-            # file already exists, skip unmixing
-
+                                                          f'neuropil_ica_output_{self.plane1_exp_id}.h5')
         plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'traces_ica_output_{self.plane2_exp_id}.h5')
+                                                          f'neuropil_ica_output_{self.plane2_exp_id}.h5')
+        ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir,
+                                                          f'neuropil_ica_mixing.h5')
 
-        if os.path.isfile(plane2_ica_neuropil_output_pointer):
+        # file already exists, skip unmixing
+        if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(plane2_ica_neuropil_output_pointer) and os.path.isfile(ica_mixing_matrix_neuropil_pointer):
+            self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
             self.plane2_ica_output_pointer = plane2_ica_neuropil_output_pointer
-            # file already exists, skip unmixing
+            self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
 
-        if not (self.plane1_ica_neuropil_output_pointer and self.plane2_ica_neuropil_output_pointer):
+        if (not (self.plane1_ica_neuropil_output_pointer is None)) and (not (self.plane2_ica_neuropil_output_pointer is None)):
             self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
             self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
             logger.info("unmixed neuropil traces do not exist in cache, running ICA")
@@ -660,7 +665,7 @@ class MesoscopeICA(object):
                 with h5py.File(self.plane2_ica_neuropil_output_pointer, "w") as f:
                     f.create_dataset(f"data", data=plane2_ica_neuropil_output)
         else:
-            logger.info("Unmixed traces exist in cache, reading from h5 file")
+            logger.info("Unmixed neuropil traces exist in cache, reading from h5 file")
             self.found_solution_neuropil = True
             with h5py.File(self.plane1_ica_neuropil_output_pointer, "r") as f:
                 plane1_ica_neuropil_output = f["data"].value
@@ -739,7 +744,7 @@ class MesoscopeICA(object):
                     plt.close()
                 pdf.close()
         else:
-            logging.info(f'ICA tracs for pair {pair[0]}/{pair[1]} don''t exist, nothing to plot.')
+            logging.info(f'ICA traces for pair {pair[0]}/{pair[1]} don''t exist, nothing to plot.')
 
         return
 
