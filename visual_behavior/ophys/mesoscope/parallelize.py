@@ -30,6 +30,7 @@ if __name__ == '__main__':
                 print(f'processing session :{session}')
                 p.daemon = True
                 p.start()
+                p.join()
                 process_name.append([p.pid])
                 process_status.append([p.is_alive()])
                 thread_count -= 1
