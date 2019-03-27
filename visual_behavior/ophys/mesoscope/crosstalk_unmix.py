@@ -7,12 +7,12 @@ import numpy as np
 import logging
 import json
 from sklearn.decomposition import FastICA
-import scipy.optimize as opt
-import matplotlib.backends.backend_pdf
-import matplotlib.pyplot as plt
 import matplotlib
 
 matplotlib.use('Agg')
+import scipy.optimize as opt
+import matplotlib.backends.backend_pdf
+import matplotlib.pyplot as plt
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -76,8 +76,6 @@ def create_roi_masks(rois, w, h, motion_border):
 class MesoscopeICA(object):
 
     def __init__(self, session_id, cache):
-        self.plane1_offset_neuropil = None
-        self.plane2_offset_neuropil = None
 
         self.session_id = session_id
         self.dataset = ms.MesoscopeDataset(session_id)
@@ -155,7 +153,7 @@ class MesoscopeICA(object):
 
                                                       f'traces_ica_output_{pair[1]}.h5')
         self.ica_mixing_matrix_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'traces_ica_mixing.h5')
+                                                      f'traces_ica_mixing.h5')
         return
 
     def get_ica_traces(self, pair):
@@ -300,24 +298,20 @@ class MesoscopeICA(object):
 
         plane1_ica_input_pointer = os.path.join(self.ica_traces_dir,
                                                 f'traces_ica_input_{self.plane1_exp_id}.h5')
-
-        if os.path.isfile(plane1_ica_input_pointer):
-            self.plane1_ica_input_pointer = plane1_ica_input_pointer
-            # file already exists, skip debiasing
-
         plane2_ica_input_pointer = os.path.join(self.ica_traces_dir,
                                                 f'traces_ica_input_{self.plane2_exp_id}.h5')
-
-        if os.path.isfile(plane2_ica_input_pointer):
+        # file already exists, skip debiasing
+        if os.path.isfile(plane1_ica_input_pointer) and os.path.isfile(plane2_ica_input_pointer):
+            self.plane1_ica_input_pointer = plane1_ica_input_pointer
             self.plane2_ica_input_pointer = plane2_ica_input_pointer
-            # file already exists, skip debiasing
 
+        # if ica input traces don't exist, run debiasing
         if not (self.plane1_ica_input_pointer and self.plane2_ica_input_pointer):
 
             self.plane1_ica_input_pointer = plane1_ica_input_pointer
             self.plane2_ica_input_pointer = plane2_ica_input_pointer
 
-            logger.info("debiased traces do not exist in cache, running offset subtraction")
+            logger.info("Debiased traces do not exist in cache, running offset subtraction")
 
             if self.found_ica_traces:
 
@@ -346,7 +340,7 @@ class MesoscopeICA(object):
                 plane2_ct_m0 = plane2_ct - plane2_ct_offset
 
                 self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
-                self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset, }
+                self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset}
 
                 trace_sig_p1 = plane1_sig_m0.flatten()
                 trace_ct_p1 = plane1_ct_m0.flatten()
@@ -390,23 +384,18 @@ class MesoscopeICA(object):
             self.plane1_ica_input = plane1_ica_input
             self.plane2_ica_input = plane2_ica_input
             self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
-            self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset, }
-
+            self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset}
         return
 
     def combine_debias_neuropil(self):
 
         plane1_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
                                                          f'neuropil_ica_input_{self.plane1_exp_id}.h5')
-
-        if os.path.isfile(plane1_ica_neuropil_input_pointer):
-            self.plane1_ica_neuropil_input_pointer = plane1_ica_neuropil_input_pointer
-            # file already exists, skip debiasing
-
         plane2_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
                                                          f'neuropil_ica_input_{self.plane2_exp_id}.h5')
 
-        if os.path.isfile(plane2_ica_neuropil_input_pointer):
+        if os.path.isfile(plane1_ica_neuropil_input_pointer) and os.path.isfile(plane2_ica_neuropil_input_pointer):
+            self.plane1_ica_neuropil_input_pointer = plane1_ica_neuropil_input_pointer
             self.plane2_ica_neuropil_input_pointer = plane2_ica_neuropil_input_pointer
             # file already exists, skip debiasing
 
@@ -443,10 +432,10 @@ class MesoscopeICA(object):
                 plane2_ct_offset = np.mean(plane2_ct, axis=1).reshape(nc, 1)
                 plane2_ct_m0 = plane2_ct - plane2_ct_offset
 
-                self.plane1_offset_neuropil = {'plane1_sig_offset': plane1_sig_offset,
-                                               'plane1_ct_offset': plane1_ct_offset}
-                self.plane2_offset_neuropil = {'plane2_sig_offset': plane2_sig_offset,
-                                               'plane2_ct_offset': plane2_ct_offset, }
+                self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_offset,
+                                               'plane1_ct_neuropil_offset': plane1_ct_offset}
+                self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_offset,
+                                               'plane2_ct_neuropil_offset': plane2_ct_offset, }
 
                 neuropil_sig_p1 = plane1_sig_m0.flatten()
                 neuropil_ct_p1 = plane1_ct_m0.flatten()
@@ -460,9 +449,6 @@ class MesoscopeICA(object):
                 self.plane2_ica_neuropil_input = plane2_ica_neuropil_input
 
                 # write ica neuropil input traces to disk
-
-                #                same for neuropil:
-
                 if not os.path.isfile(self.plane1_ica_neuropil_input_pointer):
                     with h5py.File(self.plane1_ica_neuropil_input_pointer, "w") as f:
                         f.create_dataset("debiased_traces", data=self.plane1_ica_neuropil_input)
@@ -492,11 +478,11 @@ class MesoscopeICA(object):
 
             self.plane1_ica_neuropil_input = plane1_ica_neuropil_input
             self.plane2_ica_neuropil_input = plane2_ica_neuropil_input
+
             self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_neuropil_offset,
                                            'plane1_ct_neuropil_offset': plane1_ct_neuropil_offset}
             self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_neuropil_offset,
                                            'plane2_ct_neuropil_offset': plane2_ct_neuropil_offset, }
-
         return
 
     def unmix_traces(self, max_iter=10):
@@ -508,13 +494,14 @@ class MesoscopeICA(object):
         ica_mixing_matrix_traces_pointer = os.path.join(self.ica_traces_dir,
                                                         f'traces_ica_mixing.h5')
         # file already exists, skip unmixing
-        if os.path.isfile(plane1_ica_output_pointer) and os.path.isfile(plane2_ica_output_pointer) and os.path.isfile(ica_mixing_matrix_traces_pointer):
+        if os.path.isfile(plane1_ica_output_pointer) and os.path.isfile(plane2_ica_output_pointer) and os.path.isfile(
+                ica_mixing_matrix_traces_pointer):
             self.plane1_ica_output_pointer = plane1_ica_output_pointer
             self.plane2_ica_output_pointer = plane2_ica_output_pointer
             self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
 
         if not (self.plane1_ica_output_pointer and self.plane2_ica_output_pointer):
-            #if unmixed traces don't exist, run unmixing
+            # if unmixed traces don't exist, run unmixing
             self.plane1_ica_output_pointer = plane1_ica_output_pointer
             self.plane2_ica_output_pointer = plane2_ica_output_pointer
             self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
@@ -577,7 +564,7 @@ class MesoscopeICA(object):
                     f.create_dataset(f"data", data=plane2_ica_output)
 
                 with h5py.File(self.ica_mixing_matrix_traces_pointer, "w") as f:
-                    f.create_dataset(f"mixing", data=self.traces_unmix)
+                    f.create_dataset(f"data", data=self.traces_unmix)
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
             self.found_solution = True
@@ -587,8 +574,13 @@ class MesoscopeICA(object):
             with h5py.File(self.plane2_ica_output_pointer, "r") as f:
                 plane2_ica_output = f["data"].value
 
+            with h5py.File(self.ica_mixing_matrix_traces_pointer, "r") as f:
+                traces_unmix = f["data"].value
+
             self.plane1_ica_output = plane1_ica_output
             self.plane2_ica_output = plane2_ica_output
+            self.traces_unmix = traces_unmix
+
         return
 
     def unmix_neuropil(self, max_iter=10):
@@ -601,17 +593,18 @@ class MesoscopeICA(object):
                                                           f'neuropil_ica_mixing.h5')
 
         # file already exists, skip unmixing
-        if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(plane2_ica_neuropil_output_pointer) and os.path.isfile(ica_mixing_matrix_neuropil_pointer):
+        if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(
+                plane2_ica_neuropil_output_pointer) and os.path.isfile(ica_mixing_matrix_neuropil_pointer):
             self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-            self.plane2_ica_output_pointer = plane2_ica_neuropil_output_pointer
+            self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
             self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
 
-        if not (self.plane1_ica_neuropil_output_pointer and not self.plane2_ica_neuropil_output_pointer):
+        if not (self.plane1_ica_neuropil_output_pointer and self.plane2_ica_neuropil_output_pointer):
             # if unmixed traces don't exist, run unmixing
             self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
             self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
             self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
-            logger.info("unmixed neuropil traces do not exist in cache, running ICA")
+            logger.info("Unmixed neuropil traces do not exist in cache, running ICA")
             traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
             self.found_solution = False
             for i in range(max_iter):
@@ -651,11 +644,11 @@ class MesoscopeICA(object):
                                  self.plane1_neuropil_orig.shape[1]:plane1_ica_neuropil_output.shape[0], :]
 
                 # adding offset
-                plane1_out_sig = plane1_out_sig + self.plane1_neuropil_offset['plane1_sig_offset']
-                plane1_out_ct = plane1_out_ct + self.plane1_neuropil_offset['plane1_ct_offset']
+                plane1_out_sig = plane1_out_sig + self.plane1_neuropil_offset['plane1_sig_neuropil_offset']
+                plane1_out_ct = plane1_out_ct + self.plane1_neuropil_offset['plane1_ct_neuropil_offset']
 
-                plane2_out_sig = plane2_out_sig + self.plane2_neuropil_offset['plane2_sig_offset']
-                plane2_out_ct = plane2_out_ct + self.plane2_neuropil_offset['plane2_ct_offset']
+                plane2_out_sig = plane2_out_sig + self.plane2_neuropil_offset['plane2_sig_neuropil_offset']
+                plane2_out_ct = plane2_out_ct + self.plane2_neuropil_offset['plane2_ct_neuropil_offset']
 
                 plane1_ica_neuropil_output = np.array([plane1_out_sig, plane1_out_ct])
                 plane2_ica_neuropil_output = np.array([plane2_out_sig, plane2_out_ct])
@@ -666,24 +659,32 @@ class MesoscopeICA(object):
                 # writing ica output traces to disk
                 with h5py.File(self.plane1_ica_neuropil_output_pointer, "w") as f:
                     f.create_dataset(f"data", data=plane1_ica_neuropil_output)
-
                 with h5py.File(self.plane2_ica_neuropil_output_pointer, "w") as f:
                     f.create_dataset(f"data", data=plane2_ica_neuropil_output)
+                with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "w") as f:
+                    f.create_dataset(f"data", data=self.neuropil_unmix)
         else:
             logger.info("Unmixed neuropil traces exist in cache, reading from h5 file")
+
             self.found_solution_neuropil = True
+
             with h5py.File(self.plane1_ica_neuropil_output_pointer, "r") as f:
                 plane1_ica_neuropil_output = f["data"].value
 
             with h5py.File(self.plane2_ica_neuropil_output_pointer, "r") as f:
                 plane2_ica_neuropil_output = f["data"].value
 
+            with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "r") as f:
+                neuropil_unmix = f["data"].value
+
             self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
             self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
+            self.neuropil_unmix = neuropil_unmix
         return
 
     def plot_ica_traces(self, pair):
         #    if figures don't exist!
+
         if self.plane1_ica_output_pointer and self.plane2_ica_output_pointer:
 
             orig_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
@@ -695,28 +696,32 @@ class MesoscopeICA(object):
                 plot_dir = os.path.join(self.session_cache_dir, f'ica_traces_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
                 if not os.path.isdir(plot_dir):
                     os.mkdir(plot_dir)
-                logging.info(f"creating figures for cell {cell}")
-                pdf = matplotlib.backends.backend_pdf.PdfPages(
-                    os.path.join(plot_dir, f"ica_plots_{pair[0]}_cell_{cell}.pdf"))
-                for i in range(int(orig_trace_plane1_sig.shape[1] / 10000) + 1):
-                    orig_plane1_sig = orig_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
-                    orig_plane1_ct = orig_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
-                    ica_plane1_sig = ica_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
-                    ica_plane1_ct = ica_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
+                pdf_name = os.path.join(plot_dir, f"ica_plots_{pair[0]}_cell_{cell}.pdf")
+                if os.path.isfile(pdf_name):
+                    logging.info(f"cell trace figure exist for {pair[0]} cell {cell}")
+                    continue
+                else:
+                    pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+                    logging.info(f"creating figures for cell {cell}")
+                    for i in range(int(orig_trace_plane1_sig.shape[1] / 10000) + 1):
+                        orig_plane1_sig = orig_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
+                        orig_plane1_ct = orig_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
+                        ica_plane1_sig = ica_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
+                        ica_plane1_ct = ica_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
 
-                    f = plt.figure(figsize=(20, 10))
-                    plt.subplot(211)
-                    plt.plot(orig_plane1_sig, 'r-', label='signal plane')
-                    plt.plot(orig_plane1_ct, 'g-', label='cross-talk plane')
-                    plt.title(f'original traces for cell # {cell}')
-                    plt.legend(loc='upper left')
-                    plt.subplot(212)
-                    plt.plot(ica_plane1_sig, 'r-', label='signal plane')
-                    plt.plot(ica_plane1_ct, 'g-', label='cross-talk plane')
-                    plt.title(f'post-ica traces, cell # {cell}')
-                    plt.legend(loc='upper left')
-                    pdf.savefig(f)
-                pdf.close()
+                        f = plt.figure(figsize=(20, 10))
+                        plt.subplot(211)
+                        plt.plot(orig_plane1_sig, 'r-', label='signal plane')
+                        plt.plot(orig_plane1_ct, 'g-', label='cross-talk plane')
+                        plt.title(f'original traces for cell # {cell}')
+                        plt.legend(loc='upper left')
+                        plt.subplot(212)
+                        plt.plot(ica_plane1_sig, 'r-', label='signal plane')
+                        plt.plot(ica_plane1_ct, 'g-', label='cross-talk plane')
+                        plt.title(f'post-ica traces, cell # {cell}')
+                        plt.legend(loc='upper left')
+                        pdf.savefig(f)
+                    pdf.close()
             orig_trace_plane2_sig = self.plane2_traces_orig[0, :, :]
             orig_trace_plane2_ct = self.plane2_traces_orig[1, :, :]
             ica_trace_plane2_sig = self.plane2_ica_output[0, :, :]
@@ -726,28 +731,33 @@ class MesoscopeICA(object):
                 plot_dir = os.path.join(self.session_cache_dir, f'ica_traces_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
                 if not os.path.isdir(plot_dir):
                     os.mkdir(plot_dir)
-                logging.info(f'creating figures for cell {cell}')
-                pdf = matplotlib.backends.backend_pdf.PdfPages(
-                    os.path.join(plot_dir, f"ica_plots_{pair[1]}_cell_{cell}.pdf"))
-                for i in range(int(orig_trace_plane2_sig.shape[1] / 10000) + 1):
-                    orig_plane2_sig = orig_trace_plane2_sig[cell, i * 10000:(i + 1) * 10000]
-                    orig_plane2_ct = orig_trace_plane2_ct[cell, i * 10000:(i + 1) * 10000]
-                    ica_plane2_sig = ica_trace_plane2_sig[cell, i * 10000:(i + 1) * 10000]
-                    ica_plane2_ct = ica_trace_plane2_ct[cell, i * 10000:(i + 1) * 10000]
-                    f = plt.figure(figsize=(20, 10))
-                    plt.subplot(211)
-                    plt.plot(orig_plane2_sig, 'r-', label='signal plane')
-                    plt.plot(orig_plane2_ct, 'g-', label='cross-talk plane')
-                    plt.title(f'original traces for cell # {cell}')
-                    plt.legend(loc='upper left')
-                    plt.subplot(212)
-                    plt.plot(ica_plane2_sig, 'r-', label='signal plane')
-                    plt.plot(ica_plane2_ct, 'g-', label='cross-talk plane')
-                    plt.title(f'post-ica traces, cell # {cell}')
-                    plt.legend(loc='upper left')
-                    pdf.savefig(f)
-                    plt.close()
-                pdf.close()
+
+                pdf_name = os.path.join(plot_dir, f"ica_plots_{pair[1]}_cell_{cell}.pdf")
+                if os.path.isfile(pdf_name):
+                    logging.info(f"cell trace figure exist for {pair[1]} cell {cell}")
+                    continue
+                else:
+                    logging.info(f'creating figures for cell {cell}')
+                    pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+                    for i in range(int(orig_trace_plane2_sig.shape[1] / 10000) + 1):
+                        orig_plane2_sig = orig_trace_plane2_sig[cell, i * 10000:(i + 1) * 10000]
+                        orig_plane2_ct = orig_trace_plane2_ct[cell, i * 10000:(i + 1) * 10000]
+                        ica_plane2_sig = ica_trace_plane2_sig[cell, i * 10000:(i + 1) * 10000]
+                        ica_plane2_ct = ica_trace_plane2_ct[cell, i * 10000:(i + 1) * 10000]
+                        f = plt.figure(figsize=(20, 10))
+                        plt.subplot(211)
+                        plt.plot(orig_plane2_sig, 'r-', label='signal plane')
+                        plt.plot(orig_plane2_ct, 'g-', label='cross-talk plane')
+                        plt.title(f'original traces for cell # {cell}')
+                        plt.legend(loc='upper left')
+                        plt.subplot(212)
+                        plt.plot(ica_plane2_sig, 'r-', label='signal plane')
+                        plt.plot(ica_plane2_ct, 'g-', label='cross-talk plane')
+                        plt.title(f'post-ica traces, cell # {cell}')
+                        plt.legend(loc='upper left')
+                        pdf.savefig(f)
+                        plt.close()
+                    pdf.close()
         else:
             logging.info(f'ICA traces for pair {pair[0]}/{pair[1]} don''t exist, nothing to plot.')
 
@@ -781,4 +791,5 @@ class MesoscopeICA(object):
                                           (self.neuropil_unmix[:, 0], self.plane1_ica_neuropil_input))
         scale_bot_neuropil = opt.minimize(self.ica_err, [1],
                                           (self.neuropil_unmix[:, 1], self.plane2_ica_neuropil_input))
+
         return scale_top_neuropil.x, scale_bot_neuropil.x
