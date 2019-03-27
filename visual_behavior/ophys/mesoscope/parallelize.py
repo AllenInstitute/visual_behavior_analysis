@@ -1,4 +1,6 @@
 import multiprocessing as mp
+import matplotlib
+matplotlib.use('Agg')
 import visual_behavior.ophys.mesoscope.mesoscope as ms
 import visual_behavior.ophys.mesoscope.utils as mu
 
