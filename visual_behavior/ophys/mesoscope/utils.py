@@ -14,7 +14,7 @@ meso_data['ICA_demix_exp'] = 0
 meso_data['ICA_demix_session'] = 0
 
 
-def run_ica_on_session(session, meso_data):
+def run_ica_on_session(session):
     ica_obj = ica.MesoscopeICA(session_id=session, cache='/media/NCRAID/MesoscopeAnalysis/')
     pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
@@ -24,8 +24,8 @@ def run_ica_on_session(session, meso_data):
         ica_obj.unmix_traces(max_iter=50)
         ica_obj.unmix_neuropil(max_iter=100)
         ica_obj.plot_ica_traces(pair)
-        if np.all(ica_obj.found_solution == True):
-            meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
+        # if np.all(ica_obj.found_solution == True):
+        #     meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
     return
 
 
