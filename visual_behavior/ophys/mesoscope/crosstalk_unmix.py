@@ -168,12 +168,12 @@ class MesoscopeICA(object):
         self.plane1_exp_id = plane1_exp_id
         self.plane2_exp_id = plane2_exp_id
 
-        #retrieve session dir:
+        # retrieve session dir:
         session_dir = os.path.join(self.cache, f'session_{self.session_id}')
         self.session_cache_dir = session_dir
 
-        #path to ica traces:
-        #for roi
+        # path to ica traces:
+        # for roi
         ica_traces_dir = os.path.join(session_dir, f'ica_traces_{plane1_exp_id}_{plane2_exp_id}/')
         self.ica_traces_dir = ica_traces_dir
         path_traces_plane1 = f'{ica_traces_dir}traces_original_{plane1_exp_id}.h5'
@@ -185,7 +185,8 @@ class MesoscopeICA(object):
         path_neuropil_plane2 = f'{ica_neuropil_dir}neuropil_original_{plane2_exp_id}.h5'
 
         # let's see if all traces exist already:
-        if os.path.isfile(path_traces_plane1) and os.path.isfile(path_traces_plane2) and os.path.isfile(path_neuropil_plane1) and os.path.isfile(path_neuropil_plane2):
+        if os.path.isfile(path_traces_plane1) and os.path.isfile(path_traces_plane2) and os.path.isfile(
+                path_neuropil_plane1) and os.path.isfile(path_neuropil_plane2):
             # if both traces exist, skip extracting:
 
             logger.info('Found traces in cache, reading from h5 file')
@@ -216,11 +217,11 @@ class MesoscopeICA(object):
             # set found neuropil traces flag True
             self.found_original_neuropil = [True, True]
         else:
-            #some traces are missing, run extraction:
+            # some traces are missing, run extraction:
             logger.info('Traces dont exist in cache, extracting')
 
-            #if traces don't exist, do we need to re-set unmixed and debiased traces flaggs to none?
-            #yes, as we want unmixed traces be output on ICA using original traces
+            # if traces don't exist, do we need to re-set unmixed and debiased traces flaggs to none?
+            # yes, as we want unmixed traces be output on ICA using original traces
             self.plane1_ica_input_pointer = None
             self.plane2_ica_input_pointer = None
             self.plane1_ica_output_pointer = None
@@ -244,7 +245,7 @@ class MesoscopeICA(object):
                                                                 plane2_exp_id)
             plane2_ct_traces, plane2_ct_neuropil = get_traces(plane1_folder, plane1_exp_id, plane2_folder,
                                                               plane2_exp_id)
-            #setting traces valid flag: if none is None
+            # setting traces valid flag: if none is None
             if (not plane1_sig_traces.any() is None) and (not plane1_ct_traces.any() is None):
                 self.found_original_traces[0] = True
             if (not plane2_sig_traces.any() is None) and (not plane2_ct_traces.any() is None):
@@ -262,26 +263,26 @@ class MesoscopeICA(object):
 
             # if extracted traces valid, save to disk:
             if self.found_original_traces[0] and self.found_original_traces[1]:
-                #combining traces, saving to self, writing to disk:
+                # combining traces, saving to self, writing to disk:
                 plane1_traces_original = np.array([plane1_sig_traces, plane1_ct_traces])
                 self.plane1_traces_orig = plane1_traces_original
                 self.plane1_traces_orig_pointer = path_traces_plane1
                 with h5py.File(path_traces_plane1, "w") as f:
                     f.create_dataset(f"data", data=plane1_traces_original)
-                #same for plane 2:
+                # same for plane 2:
                 plane2_traces_original = np.array([plane2_sig_traces, plane2_ct_traces])
                 self.plane2_traces_orig = plane2_traces_original
                 self.plane2_traces_orig_pointer = path_traces_plane2
                 with h5py.File(path_traces_plane2, "w") as f:
                     f.create_dataset(f"data", data=plane2_traces_original)
 
-            #DOES NEUROPIL traces DIR EXIST?
+            # DOES NEUROPIL traces DIR EXIST?
             if not os.path.isdir(session_dir):
                 os.mkdir(session_dir)
             if not os.path.isdir(ica_neuropil_dir):
                 os.mkdir(ica_neuropil_dir)
 
-            #if extracted traces valid, save to disk:
+            # if extracted traces valid, save to disk:
             if self.found_original_neuropil[0] and self.found_original_neuropil[1]:
                 # combining traces, saving to self, writing to disk:
                 plane1_neuropil_original = np.array([plane1_sig_neuropil, plane1_ct_neuropil])
@@ -312,9 +313,9 @@ class MesoscopeICA(object):
             self.plane1_ica_input_pointer = plane1_ica_input_pointer
             self.plane2_ica_input_pointer = plane2_ica_input_pointer
 
-        #original traces exist, run bediasing:
+        # original traces exist, run bediasing:
         if self.found_original_traces:
-            #if debiased traces don't exist, run debiasing - pointers are both None
+            # if debiased traces don't exist, run debiasing - pointers are both None
             if (not self.plane1_ica_input_pointer) and (not self.plane2_ica_input_pointer):
                 self.found_ica_input = [False, False]
                 self.found_ica_offset = [False, False]
@@ -337,7 +338,7 @@ class MesoscopeICA(object):
                 nc = plane2_ct.shape[0]
                 plane2_ct_offset = np.mean(plane2_ct, axis=1).reshape(nc, 1)
                 plane2_ct_m0 = plane2_ct - plane2_ct_offset
-                #check in traces aren't none
+                # check in traces aren't none
                 if (not plane1_sig_m0.any() is None) and (not plane1_ct_m0.any() is None):
                     self.found_ica_input[0] = True
                 if (not plane2_sig_m0.any() is None) and (not plane2_ct_m0.any() is None):
@@ -346,8 +347,8 @@ class MesoscopeICA(object):
                     self.found_ica_offset[1] = True
                 if (not plane2_sig_offset.any() is None) and (not plane2_ct_offset.any() is None):
                     self.found_ica_offset[1] = True
-                #if all flags true, combine, flatten, write to disk:
-                if self.found_ica_input and self.found_ica_offset :
+                # if all flags true, combine, flatten, write to disk:
+                if self.found_ica_input and self.found_ica_offset:
                     self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
                     self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset}
 
@@ -414,7 +415,7 @@ class MesoscopeICA(object):
         # original traces exist, run bediasing:
         if self.found_original_neuropil:
             # if debiased traces don't exist, run debiasing - pointers are both None
-            if (not self.plane1_ica_input_pointer) and (not self.plane2_ica_input_pointer):
+            if (not self.plane1_ica_neuropil_input_pointer) and (not self.plane2_ica_neuropil_input_pointer):
                 self.found_ica_neuropil_input = [False, False]
                 self.found_ica_neuropil_offset = [False, False]
                 logger.info("debiased neuropil traces do not exist in cache, running offset subtraction")
@@ -446,8 +447,10 @@ class MesoscopeICA(object):
                 if (not plane2_sig_offset.any() is None) and (not plane2_ct_offset.any() is None):
                     self.found_ica_neuropil_offset[1] = True
                 if self.found_ica_neuropil_input and self.found_ica_neuropil_offset:
-                    self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_offset, 'plane1_ct_neuropil_offset': plane1_ct_offset}
-                    self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_offset, 'plane2_ct_neuropil_offset': plane2_ct_offset}
+                    self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_offset,
+                                                   'plane1_ct_neuropil_offset': plane1_ct_offset}
+                    self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_offset,
+                                                   'plane2_ct_neuropil_offset': plane2_ct_offset}
                     neuropil_sig_p1 = plane1_sig_m0.flatten()
                     neuropil_ct_p1 = plane1_ct_m0.flatten()
                     neuropil_sig_p2 = plane2_sig_m0.flatten()
@@ -561,6 +564,10 @@ class MesoscopeICA(object):
                 self.plane1_ica_output = plane1_ica_output
                 self.plane2_ica_output = plane2_ica_output
 
+                self.plane1_ica_output_pointer = plane1_ica_output_pointer
+                self.plane2_ica_output_pointer = plane2_ica_output_pointer
+                self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
+
                 # writing ica output traces to disk
                 with h5py.File(self.plane1_ica_output_pointer, "w") as f:
                     f.create_dataset(f"data", data=plane1_ica_output)
@@ -571,11 +578,11 @@ class MesoscopeICA(object):
                 with h5py.File(self.ica_mixing_matrix_traces_pointer, "w") as f:
                     f.create_dataset(f"data", data=self.traces_matrix)
 
-                self.plane1_ica_output_pointer = plane1_ica_output_pointer
-                self.plane2_ica_output_pointer = plane2_ica_output_pointer
-                self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
+            self.plane1_ica_output_pointer = plane1_ica_output_pointer
+            self.plane2_ica_output_pointer = plane2_ica_output_pointer
+            self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
             self.found_solution = True
             with h5py.File(self.plane1_ica_output_pointer, "r") as f:
                 plane1_ica_output = f["data"].value
@@ -587,9 +594,6 @@ class MesoscopeICA(object):
             self.plane1_ica_output = plane1_ica_output
             self.plane2_ica_output = plane2_ica_output
             self.traces_unmix = traces_unmix
-            self.plane1_ica_output_pointer = plane1_ica_output_pointer
-            self.plane2_ica_output_pointer = plane2_ica_output_pointer
-            self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
 
         return
 
@@ -662,7 +666,9 @@ class MesoscopeICA(object):
 
                 self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
                 self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
-
+                self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
+                self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
+                self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
                 # writing ica output traces to disk
                 with h5py.File(self.plane1_ica_neuropil_output_pointer, "w") as f:
                     f.create_dataset(f"data", data=plane1_ica_neuropil_output)
@@ -671,13 +677,15 @@ class MesoscopeICA(object):
                 with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "w") as f:
                     f.create_dataset(f"data", data=self.neuropil_matrix)
 
-                self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-                self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
-                self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
+
         else:
             logger.info("Unmixed neuropil traces exist in cache, reading from h5 file")
 
             self.found_solution_neuropil = True
+
+            self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
+            self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
+            self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
 
             with h5py.File(self.plane1_ica_neuropil_output_pointer, "r") as f:
                 plane1_ica_neuropil_output = f["data"].value
@@ -691,10 +699,6 @@ class MesoscopeICA(object):
             self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
             self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
             self.neuropil_unmix = neuropil_unmix
-
-            self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-            self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
-            self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
 
         return
 
@@ -724,7 +728,6 @@ class MesoscopeICA(object):
                         orig_plane1_ct = orig_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
                         ica_plane1_sig = ica_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
                         ica_plane1_ct = ica_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
-
                         f = plt.figure(figsize=(20, 10))
                         plt.subplot(211)
                         plt.plot(orig_plane1_sig, 'r-', label='signal plane')
