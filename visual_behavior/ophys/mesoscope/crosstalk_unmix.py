@@ -320,7 +320,8 @@ class MesoscopeICA(object):
         if self.found_ica_traces:
             #if debiased traces don't exist, run debiasing - pointers are both None
             if (not self.plane1_ica_input_pointer) and (not self.plane2_ica_input_pointer):
-                self.found_ica_input, self.found_ica_offset = [False, False]
+                self.found_ica_input = [False, False]
+                self.found_ica_offset = [False, False]
                 logger.info("Debiased ROI traces do not exist in cache, running offset subtraction")
                 plane1_sig = self.plane1_traces_orig[0]
                 plane1_ct = self.plane1_traces_orig[1]
@@ -418,7 +419,8 @@ class MesoscopeICA(object):
         if self.found_ica_neuropil:
             # if debiased traces don't exist, run debiasing - pointers are both None
             if (not self.plane1_ica_input_pointer) and (not self.plane2_ica_input_pointer):
-                self.found_ica_neuropil_input, self.found_ica_neuropil_offset = [False, False]
+                self.found_ica_neuropil_input = [False, False]
+                self.found_ica_neuropil_offset = [False, False]
                 logger.info("debiased neuropil traces do not exist in cache, running offset subtraction")
                 plane1_sig = self.plane1_neuropil_orig[0]
                 plane1_ct = self.plane1_neuropil_orig[1]
