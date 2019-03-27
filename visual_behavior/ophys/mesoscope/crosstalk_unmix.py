@@ -619,7 +619,7 @@ class MesoscopeICA(object):
                 s = ica.fit_transform(traces)  # Reconstruct signals
                 a = ica.mixing_  # Get estimated mixing matrix
                 if (np.all(a > 0)) & (a[0][0] > a[1][0]):
-                    self.found_solution = True
+                    self.found_solution_neuropil = True
                     logger.info("ICA successful")
                     self.neuropil_matrix = a
                     self.neuropil_unmix = s
