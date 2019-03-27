@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 from allensdk.brain_observatory import roi_masks
 import visual_behavior.ophys.mesoscope.mesoscope as ms
 import allensdk.internal.core.lims_utilities as lu
@@ -7,9 +9,6 @@ import numpy as np
 import logging
 import json
 from sklearn.decomposition import FastICA
-import matplotlib
-
-matplotlib.use('Agg')
 import scipy.optimize as opt
 import matplotlib.backends.backend_pdf
 import matplotlib.pyplot as plt
