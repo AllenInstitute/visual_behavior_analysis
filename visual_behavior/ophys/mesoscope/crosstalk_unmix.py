@@ -128,10 +128,10 @@ class MesoscopeICA(object):
         self.found_solution = None  # output of unmix_traces
         self.found_solution_neuropil = None
 
-        self.found_ica_input = None
-        self.found_ica_offset = None
-        self.found_ica_neuropil_input = None
-        self.found_ica_neuropil_offset = None
+        self.found_ica_input = [None, None]
+        self.found_ica_offset = [None, None]
+        self.found_ica_neuropil_input = [None, None]
+        self.found_ica_neuropil_offset = [None, None]
 
         self.traces_matrix = None
         self.neuropil_matrix = None
