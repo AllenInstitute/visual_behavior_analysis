@@ -14,5 +14,5 @@ def main ():
     for _ in pool.imap_unordered(mu.run_ica_on_session, sessions):
         pass
 if __name__ == '__main__':
-    #main()
-    pass
+    main()
+    
