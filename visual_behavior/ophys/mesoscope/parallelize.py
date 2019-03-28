@@ -9,6 +9,8 @@ def main ():
     meso_data = ms.get_all_mesoscope_data()
     sessions = meso_data['session_id']
     sessions = sessions.drop_duplicates()
+    sessions = sessions[5:]
+
     thread_count = 20
     pool = mp.Pool(thread_count)
     for _ in pool.imap_unordered(mu.run_ica_on_session, sessions):
