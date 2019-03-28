@@ -208,7 +208,6 @@ class MesoscopeICA(object):
             #           same for neuropil:
             self.plane1_neuropil_orig_pointer = path_neuropil_plane1
             self.plane2_neuropil_orig_pointer = path_neuropil_plane2
-
             self.plane1_neuropil_orig = plane1_neuropil_original
             self.plane2_neuropil_orig = plane2_neuropil_original
             # set found traces flag True
@@ -311,6 +310,9 @@ class MesoscopeICA(object):
         if os.path.isfile(plane1_ica_input_pointer) and os.path.isfile(plane2_ica_input_pointer):
             self.plane1_ica_input_pointer = plane1_ica_input_pointer
             self.plane2_ica_input_pointer = plane2_ica_input_pointer
+        else:
+            self.plane1_ica_input_pointer = None
+            self.plane2_ica_input_pointer = None
 
         # original traces exist, run bediasing:
         if self.found_original_traces:
@@ -410,6 +412,9 @@ class MesoscopeICA(object):
             # file already exists, skip debiasing
             self.plane1_ica_neuropil_input_pointer = plane1_ica_neuropil_input_pointer
             self.plane2_ica_neuropil_input_pointer = plane2_ica_neuropil_input_pointer
+        else:
+            self.plane1_ica_neuropil_input_pointer = None
+            self.plane2_ica_neuropil_input_pointer = None
 
         # original traces exist, run bediasing:
         if self.found_original_neuropil:
@@ -510,8 +515,12 @@ class MesoscopeICA(object):
             self.plane1_ica_output_pointer = plane1_ica_output_pointer
             self.plane2_ica_output_pointer = plane2_ica_output_pointer
             self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
+        else:
+            self.plane1_ica_output_pointer = None
+            self.plane2_ica_output_pointer = None
+            self.ica_mixing_matrix_traces_pointer = None
 
-        if not (self.plane1_ica_output_pointer and self.plane2_ica_output_pointer):
+        if (self.plane1_ica_output_pointer is None) or (self.plane2_ica_output_pointer is None):
             # if unmixed traces don't exist, run unmixing
             if np.any(np.isnan(self.plane1_ica_neuropil_input)) or np.any(np.isinf(self.plane1_ica_neuropil_input)):
                 logger.info("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
@@ -614,8 +623,12 @@ class MesoscopeICA(object):
             self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
             self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
             self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
+        else:
+            self.plane1_ica_neuropil_output_pointer = None
+            self.plane2_ica_neuropil_output_pointer = None
+            self.ica_mixing_matrix_neuropil_pointer = None
 
-        if not (self.plane1_ica_neuropil_output_pointer and self.plane2_ica_neuropil_output_pointer):
+        if (self.plane1_ica_neuropil_output_pointer is None) or (self.plane2_ica_neuropil_output_pointer is None):
             # if unmixed traces don't exist, run unmixing
             logger.info("Unmixed neuropil traces do not exist in cache, running ICA")
 
@@ -815,5 +828,4 @@ class MesoscopeICA(object):
                                           (self.neuropil_unmix[:, 0], self.plane1_ica_neuropil_input))
         scale_bot_neuropil = opt.minimize(self.ica_err, [1],
                                           (self.neuropil_unmix[:, 1], self.plane2_ica_neuropil_input))
-
         return scale_top_neuropil.x, scale_bot_neuropil.x
