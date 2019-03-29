@@ -1,4 +1,5 @@
 import matplotlib
+
 matplotlib.use('Agg')
 from allensdk.brain_observatory import roi_masks
 import visual_behavior.ophys.mesoscope.mesoscope as ms
@@ -501,7 +502,7 @@ class MesoscopeICA(object):
             logger.error('Extract neuropil traces first')
         return
 
-    def unmix_traces(self, max_iter=10):
+    def unmix_traces(self, max_iter=50):
 
         plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
                                                  f'traces_ica_output_{self.plane1_exp_id}.h5')
@@ -522,7 +523,8 @@ class MesoscopeICA(object):
 
         if (self.plane1_ica_output_pointer is None) or (self.plane2_ica_output_pointer is None):
             # if unmixed traces don't exist, run unmixing
-            if np.any(np.isnan(self.plane1_ica_neuropil_input)) or np.any(np.isinf(self.plane1_ica_neuropil_input)):
+            if np.any(np.isnan(self.plane1_ica_input)) or np.any(np.isinf(self.plane1_ica_input)) or np.any(
+                    np.isnan(self.plane2_ica_input)) or np.any(np.isinf(self.plane2_ica_input)):
                 logger.info("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
             else:
                 logger.info("unmixed traces do not exist in cache, running ICA")
@@ -543,7 +545,7 @@ class MesoscopeICA(object):
 
                 if self.found_solution:
                     # rescaling traces back:
-                    self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_traces
+                    self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_traces()
 
                     plane1_ica_output = self.traces_unmix[:, 0] * self.ica_traces_scale_top
                     plane2_ica_output = self.traces_unmix[:, 1] * self.ica_traces_scale_bot
@@ -600,11 +602,11 @@ class MesoscopeICA(object):
             with h5py.File(self.plane2_ica_output_pointer, "r") as f:
                 plane2_ica_output = f["data"].value
             with h5py.File(self.ica_mixing_matrix_traces_pointer, "r") as f:
-                traces_unmix = f["data"].value
+                traces_matrix = f["data"].value
 
             self.plane1_ica_output = plane1_ica_output
             self.plane2_ica_output = plane2_ica_output
-            self.traces_unmix = traces_unmix
+            self.traces_matrix = traces_matrix
 
         return
 
@@ -632,7 +634,9 @@ class MesoscopeICA(object):
             # if unmixed traces don't exist, run unmixing
             logger.info("Unmixed neuropil traces do not exist in cache, running ICA")
 
-            if np.any(np.isnan(self.plane1_ica_neuropil_input)) or np.any(np.isinf(self.plane1_ica_neuropil_input)):
+            if np.any(np.isnan(self.plane1_ica_neuropil_input)) or np.any(
+                    np.isinf(self.plane1_ica_neuropil_input)) or np.any(
+                np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
                 logger.info("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
 
             else:
@@ -653,7 +657,7 @@ class MesoscopeICA(object):
 
                 if self.found_solution_neuropil:
                     # rescaling traces back:
-                    self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil
+                    self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil()
 
                     plane1_ica_neuropil_output = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
                     plane2_ica_neuropil_output = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
@@ -712,11 +716,11 @@ class MesoscopeICA(object):
                 plane2_ica_neuropil_output = f["data"].value
 
             with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "r") as f:
-                neuropil_unmix = f["data"].value
+                neuropil_matrix = f["data"].value
 
             self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
             self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
-            self.neuropil_unmix = neuropil_unmix
+            self.neuropil_matrix = neuropil_matrix
 
         return
 
@@ -814,7 +818,6 @@ class MesoscopeICA(object):
         seg_run = lu.query(query)[0]['id']
         return seg_run
 
-    @property
     def find_scale_ica_traces(self):
         # for traces:
         scale_top = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 0], self.plane1_ica_input))
@@ -822,10 +825,10 @@ class MesoscopeICA(object):
 
         return scale_top.x, scale_bot.x
 
-    @property
     def find_scale_ica_neuropil(self):
         scale_top_neuropil = opt.minimize(self.ica_err, [1],
                                           (self.neuropil_unmix[:, 0], self.plane1_ica_neuropil_input))
         scale_bot_neuropil = opt.minimize(self.ica_err, [1],
                                           (self.neuropil_unmix[:, 1], self.plane2_ica_neuropil_input))
+
         return scale_top_neuropil.x, scale_bot_neuropil.x
