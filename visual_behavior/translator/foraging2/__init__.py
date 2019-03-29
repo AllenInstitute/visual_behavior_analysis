@@ -21,6 +21,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
 
 from .extract_stimuli import get_visual_stimuli, check_for_omitted_flashes
 from .extract_images import get_image_metadata
+from .extract_movies import get_movie_image_epochs, get_movie_metadata
 from ..foraging.extract_images import get_image_data
 
 import logging
@@ -362,15 +363,26 @@ def data_to_trials(data, time=None):
 
 
 def data_to_visual_stimuli(data, time=None):
+    MAYBE_A_MOVIE = [
+        'countdown',
+        'fingerprint',
+    ]
+
     if time is None:
         time = get_time(data)
 
-    stimuli = data['items']['behavior']['stimuli']
-
-    return pd.DataFrame(data=get_visual_stimuli(
-        stimuli,
+    static_image_epochs = get_visual_stimuli(
+        data['items']['behavior']['stimuli'], 
         time,
-    ))
+    )
+    
+    for name, stim_item in data['items']['behavior'].get('items', {}).items():
+        if name.lower() in MAYBE_A_MOVIE:
+            static_image_epochs.append(
+                get_movie_image_epochs(name, stim_item, time, )
+            )
+
+    return pd.DataFrame(data=static_image_epochs)
 
 
 def data_to_omitted_stimuli(data, time=None):
@@ -386,6 +398,18 @@ def data_to_omitted_stimuli(data, time=None):
 
 
 def data_to_images(data):
+    MAYBE_A_MOVIE = [
+        'countdown',
+        'fingerprint',
+    ]
+
+    static_stimuli_names = [
+        k
+        for k in data['items']['behavior'].get('items', {}).keys()
+        if k in MAYBE_A_MOVIE
+    ]
+    if len(static_stimuli_names) > 0:  # has static stimuli
+        movie_metadata = get_movie_metadata(data)
 
     if 'images' in data["items"]["behavior"]["stimuli"]:
 
@@ -400,7 +424,7 @@ def data_to_images(data):
             image_set = load_pickle(ifile)
         except FileNotFoundError:
             logger.critical('Image file not found: {0}'.format(metadata['image_set']))
-            return dict(
+            images_table=dict(
                 metadata={},
                 images=[],
                 image_attributes=[],
@@ -408,14 +432,19 @@ def data_to_images(data):
 
         images, images_meta = get_image_data(image_set)
 
-        return dict(
+        image_table=dict(
             metadata=metadata,
             images=images,
             image_attributes=images_meta,
         )
     else:
-        return dict(
+        image_table=dict(
             metadata={},
             images=[],
             image_attributes=[],
         )
+
+    for name, meta in movie_metadata.items():
+        image_table['metadata']['movie:%s' % name] = meta
+
+    return image_table
