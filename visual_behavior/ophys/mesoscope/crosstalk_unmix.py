@@ -641,7 +641,7 @@ class MesoscopeICA(object):
 
             else:
                 traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
-                self.found_solution = False
+                self.found_solution_neuropil = False
                 for i in range(max_iter):
                     ica = FastICA(n_components=2)
                     s = ica.fit_transform(traces)  # Reconstruct signals
