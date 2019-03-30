@@ -1,19 +1,16 @@
 import logging
-import numpy as np
 import os
-import pandas as pd
-from six import iteritems
 
 
 logger = logging.getLogger(__name__)
 
 
 class Epoch(object):
-    
+
     def __init__(
         self,
-        movie_path, 
-        movie_index, 
+        movie_path,
+        movie_index,
         start_frame,
         frame_times,
         movie_name=None,  # we will try to supply this in the future...
@@ -28,10 +25,10 @@ class Epoch(object):
                 os.path.basename(self.__movie_path),
             )
         self.__movie_name = movie_name
-        
+
     def extend_epoch(self, stop_frame):
         self.__stop_frame = stop_frame
-    
+
     def dump(self):
         # the dict is the expected shape of an image epoch
         return {
@@ -43,23 +40,23 @@ class Epoch(object):
             "time": self.__frame_times[self.__start_frame],
             'duration': self.__frame_times[self.__stop_frame],
         }
-     
+
     @property
     def movie_index(self):
         return self.__movie_index
 
 
 def get_movie_image_epochs(movie_name, movie_item, frame_times, ):
-    """extracts movie presentation periods as a list of image stimulus 
+    """extracts movie presentation periods as a list of image stimulus
     epochs
     """
     movie_path = movie_item['static_stimulus']['movie_path']
     frame_list = movie_item['static_stimulus']['frame_list']
     sweep_frames = range(
-        movie_item['starting_frame'], 
+        movie_item['starting_frame'],
         movie_item['ending_frame'],
     )  # pretty sure these bounds are correct
-    
+
     epochs = []
     # hopefully these values dont get decoupled improperly?
     epoch = Epoch(
@@ -81,7 +78,7 @@ def get_movie_image_epochs(movie_name, movie_item, frame_times, ):
                 start_frame=sweep_frame_index,
                 frame_times=frame_times,
             )
-        
+
     epochs.append(epoch.dump())
 
     return epochs
@@ -90,7 +87,7 @@ def get_movie_image_epochs(movie_name, movie_item, frame_times, ):
 def get_movie_metadata(data):
     MAYBE_A_MOVIE = [
         'countdown',
-        'fingerprint', 
+        'fingerprint',
     ]
 
     try:

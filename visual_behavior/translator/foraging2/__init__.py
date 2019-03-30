@@ -372,10 +372,10 @@ def data_to_visual_stimuli(data, time=None):
         time = get_time(data)
 
     static_image_epochs = get_visual_stimuli(
-        data['items']['behavior']['stimuli'], 
+        data['items']['behavior']['stimuli'],
         time,
     )
-    
+
     for name, stim_item in data['items']['behavior'].get('items', {}).items():
         if name.lower() in MAYBE_A_MOVIE:
             static_image_epochs.append(
@@ -402,49 +402,51 @@ def data_to_images(data):
         'countdown',
         'fingerprint',
     ]
-
-    static_stimuli_names = [
-        k
-        for k in data['items']['behavior'].get('items', {}).keys()
-        if k in MAYBE_A_MOVIE
-    ]
-    if len(static_stimuli_names) > 0:  # has static stimuli
-        movie_metadata = get_movie_metadata(data)
-
     if 'images' in data["items"]["behavior"]["stimuli"]:
 
         # Sometimes the source is a zipped pickle:
         metadata = get_image_metadata(data)
         try:
             image_set = load_pickle(open(metadata['image_set'], 'rb'))
+            images, images_meta = get_image_data(image_set)
+            image_table = dict(
+                metadata=metadata,
+                images=images,
+                image_attributes=images_meta,
+            )
         except (AttributeError, UnicodeDecodeError, pickle.UnpicklingError):
             zfile = zipfile.ZipFile(metadata['image_set'])
             finfo = zfile.infolist()[0]
             ifile = zfile.open(finfo)
             image_set = load_pickle(ifile)
+            images, images_meta = get_image_data(image_set)
+            image_table = dict(
+                metadata=metadata,
+                images=images,
+                image_attributes=images_meta,
+            )
         except FileNotFoundError:
             logger.critical('Image file not found: {0}'.format(metadata['image_set']))
-            images_table=dict(
+            image_table = dict(
                 metadata={},
                 images=[],
                 image_attributes=[],
             )
-
-        images, images_meta = get_image_data(image_set)
-
-        image_table=dict(
-            metadata=metadata,
-            images=images,
-            image_attributes=images_meta,
-        )
     else:
-        image_table=dict(
+        image_table = dict(
             metadata={},
             images=[],
             image_attributes=[],
         )
 
-    for name, meta in movie_metadata.items():
-        image_table['metadata']['movie:%s' % name] = meta
+    # TODO: make this better, all we need to know is if there's at least one key...
+    static_stimuli_names = [
+        k
+        for k in data['items']['behavior'].get('items', {}).keys()
+        if k in MAYBE_A_MOVIE
+    ]
+    if len(static_stimuli_names) > 0:  # has static stimuli
+        for name, meta in get_movie_metadata(data).items():
+            image_table['metadata']['movie:%s' % name] = meta  # prefix each name with 'movie:' maybe this is good?
 
     return image_table
