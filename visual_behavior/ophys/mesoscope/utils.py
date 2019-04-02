@@ -13,6 +13,21 @@ meso_data['ICA_demix_exp'] = 0
 meso_data['ICA_demix_session'] = 0
 
 
+def assert_exists(file_name):
+    if not os.path.exists(file_name):
+        raise IOError("file does not exist: %s" % file_name)
+
+
+def get_path(obj, key, check_exists):
+    try:
+        path = obj[key]
+    except KeyError:
+        raise KeyError("required input field '%s' does not exist" % key)
+    if check_exists:
+        assert_exists(path)
+    return path
+
+
 def run_ica_on_session(session):
     ica_obj = ica.MesoscopeICA(session_id=session, cache='/media/NCRAID/MesoscopeAnalysis/')
     pairs = ica_obj.dataset.get_paired_planes()
@@ -53,6 +68,48 @@ def get_ica_sessions():
     ica_success = meso_data.loc[meso_data['ICA_demix_session'] == 1]
     ica_fail = meso_data.loc[meso_data['ICA_demix_session'] == 0]
     return ica_success, ica_fail
+
+
+def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
+    movie_h5 = get_path(data, "movie_h5", True)
+    traces_h5 = get_path(data, "traces_h5", True)
+    traces_h5_ica = get_path(data, "traces_h5_ica", True)
+    output_h5 = get_path(data, "output_file", False)
+
+    with h5py.File(movie_h5, "r") as f:
+        movie_shape = f["data"].shape[1:]
+
+    with h5py.File(traces_h5_ica, "r") as f:
+        traces = f["data"].value
+    traces = traces[0, :, :]
+
+    with h5py.File(traces_h5, "r") as f:
+        trace_ids = [int(rid) for rid in f["roi_names"].value]
+
+    rois = get_path(data, "roi_masks", False)
+    masks = None
+    valid = None
+
+    for roi in rois:
+        mask = np.zeros(movie_shape, dtype=bool)
+        mask_matrix = np.array(roi["mask"], dtype=bool)
+        mask[roi["y"]:roi["y"] + roi["height"], roi["x"]:roi["x"] + roi["width"]] = mask_matrix
+
+        if masks is None:
+            masks = np.zeros((len(rois), mask.shape[0], mask.shape[1]), dtype=bool)
+            valid = np.zeros(len(rois), dtype=bool)
+
+        rid = int(roi["id"])
+        try:
+            ridx = trace_ids.index(rid)
+        except ValueError as e:
+            raise ValueError("Could not find cell roi id %d in roi traces file" % rid)
+
+        masks[ridx, :, :] = mask
+
+        valid[ridx] = len(set(exclude_labels) & set(roi.get("exclusion_labels", []))) == 0
+
+    return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
 
 def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
@@ -143,61 +200,4 @@ def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
                 f.create_dataset("roi_names", data=[np.string_(rn) for rn in trace_ids])
 
     return
-
-
-def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
-    movie_h5 = get_path(data, "movie_h5", True)
-    traces_h5 = get_path(data, "traces_h5", True)
-    traces_h5_ica = get_path(data, "traces_h5_ica", True)
-    output_h5 = get_path(data, "output_file", False)
-
-    with h5py.File(movie_h5, "r") as f:
-        movie_shape = f["data"].shape[1:]
-
-    with h5py.File(traces_h5_ica, "r") as f:
-        traces = f["data"].value
-    traces = traces[0, :, :]
-
-    with h5py.File(traces_h5, "r") as f:
-        trace_ids = [int(rid) for rid in f["roi_names"].value]
-
-    rois = get_path(data, "roi_masks", False)
-    masks = None
-    valid = None
-
-    for roi in rois:
-        mask = np.zeros(movie_shape, dtype=bool)
-        mask_matrix = np.array(roi["mask"], dtype=bool)
-        mask[roi["y"]:roi["y"] + roi["height"], roi["x"]:roi["x"] + roi["width"]] = mask_matrix
-
-        if masks is None:
-            masks = np.zeros((len(rois), mask.shape[0], mask.shape[1]), dtype=bool)
-            valid = np.zeros(len(rois), dtype=bool)
-
-        rid = int(roi["id"])
-        try:
-            ridx = trace_ids.index(rid)
-        except ValueError as e:
-            raise ValueError("Could not find cell roi id %d in roi traces file" % rid)
-
-        masks[ridx, :, :] = mask
-
-        valid[ridx] = len(set(exclude_labels) & set(roi.get("exclusion_labels", []))) == 0
-
-    return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
-
-
-def assert_exists(file_name):
-    if not os.path.exists(file_name):
-        raise IOError("file does not exist: %s" % file_name)
-
-
-def get_path(obj, key, check_exists):
-    try:
-        path = obj[key]
-    except KeyError:
-        raise KeyError("required input field '%s' does not exist" % key)
-    if check_exists:
-        assert_exists(path)
-    return path
 
