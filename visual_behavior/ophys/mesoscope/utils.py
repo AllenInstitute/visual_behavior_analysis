@@ -38,9 +38,8 @@ def get_ica_sessions(sessions):
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
         for pair in pairs:
-            ica_obj = ica.Mesoscope_ICA(session, cache='/media/NCRAID/MesoscopeAnalysis')
+            ica_obj = ica.MesoscopeICA(session, cache='/media/NCRAID/MesoscopeAnalysis')
             ica_obj.set_ica_traces_dir(pair)
-            ica_obj.plane1_ica_output_pointer
             if os.path.isfile(ica_obj.plane1_ica_output_pointer):
                 meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
             if os.path.isfile(ica_obj.plane2_ica_output_pointer):
