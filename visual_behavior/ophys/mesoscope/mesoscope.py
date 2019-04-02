@@ -43,7 +43,7 @@ def get_all_mesoscope_data():
              "join ophys_sessions os on os.id = oe.ophys_session_id "
              "join specimens sp on sp.id = os.specimen_id "
              "join projects p on p.id = os.project_id "
-             "where p.code = 'MesoscopeDevelopment' and (oe.workflow_state = 'processing' or oe.workflow_state = 'qc') and os.workflow_state ='uploaded' "
+             "where (p.code = 'MesoscopeDevelopment' or p.code = 'VisualBehaviorMultiscope') and (oe.workflow_state = 'processing' or oe.workflow_state = 'qc') and os.workflow_state ='uploaded' "
              "order by session_id")
     return pd.DataFrame(psycopg2_select(query))
 
@@ -110,7 +110,7 @@ class MesoscopeDataset(object):
                     "join projects p on p.id = os.project_id "
                     "join imaging_depths on imaging_depths.id = oe.imaging_depth_id "
                     "join structures st on st.id = oe.targeted_structure_id "
-                    "where p.code = 'MesoscopeDevelopment' and (oe.workflow_state = 'processing' or oe.workflow_state "
+                    "where (p.code = 'MesoscopeDevelopment' or p.code = 'VisualBehaviorMultiscope') and (oe.workflow_state = 'processing' or oe.workflow_state "
                     "= 'qc') and os.workflow_state ='uploaded' "
                     " and os.id='{}'  ",
                 ))
@@ -149,7 +149,7 @@ class MesoscopeDataset(object):
                 "join projects p on p.id = os.project_id "
                 "join imaging_depths on imaging_depths.id = oe.imaging_depth_id "
                 "join structures st on st.id = oe.targeted_structure_id "
-                "where p.code = 'MesoscopeDevelopment' and (oe.workflow_state = 'processing' or oe.workflow_state "
+                "where (p.code = 'MesoscopeDevelopment' or p.code = 'VisualBehaviorMultiscope') and (oe.workflow_state = 'processing' or oe.workflow_state "
                 "= 'qc') and os.workflow_state ='uploaded' "
                 " and oe.id='{}'  ",
             ))
