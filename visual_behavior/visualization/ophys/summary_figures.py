@@ -370,7 +370,7 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save=
     return ax
 
 
-def plot_image_change_response(analysis, cell_index, legend=True, save=False, ax=None):
+def plot_image_change_response(analysis, cell_index, cell_order, legend=False, save=False, show=False, ax=None):
     """
     Function to plot trial avereraged response of a cell for all images 'go' trials. Creates figure and axes to plot.
 
@@ -393,28 +393,34 @@ def plot_image_change_response(analysis, cell_index, legend=True, save=False, ax
     trials = analysis.dataset.trials.copy()
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index)
     if ax is None:
-        figsize = (7, 5)
+        figsize = (5,3)
         fig, ax = plt.subplots(figsize=figsize)
     for c, change_image_name in enumerate(images):
-        color = get_color_for_image_name(analysis.dataset, change_image_name)
+        color = sf.get_color_for_image_name(analysis.dataset, change_image_name)
         selected_trials = trials[(trials.change_image_name == change_image_name)].trial.values
         traces = df[(df.cell == cell_index) & (df.trial.isin(selected_trials))].trace.values
-        ax = plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=color,
-                             interval_sec=1, xlims=analysis.trial_window, ax=ax)
-    ax = plot_flashes_on_trace(ax, analysis, trial_type='go', alpha=0.3)
-    ax.set_title('cell_specimen_id: ' + str(cell_specimen_id))
+        ax = sf.plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=color,
+                             interval_sec=2, xlims=analysis.trial_window, ax=ax)
+    ax = sf.plot_flashes_on_trace(ax, analysis, trial_type='go', alpha=0.3)
+    ax.set_title('cell_index: '+str(cell_index)+', cell_specimen_id: ' + str(cell_specimen_id))
+    ax.set_title('cell '+str(cell_order))
+    ax.set_xlabel('time after change (sec)')
+    ax.set_ylabel('dF/F')
     ax.set_ylabel(ylabel)
     if legend:
-        ax.legend(images, loc=9, bbox_to_anchor=(1.19, 1))
+        ax.legend(images, loc=9, bbox_to_anchor=(1.18, 1), fontsize='x-small')
     if save:
-        fig.tight_layout()
+#         fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(right=0.78)
+        plt.gcf().subplots_adjust(left=0.2)
+        plt.gcf().subplots_adjust(bottom=0.25)
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'change_responses' + suffix,
                     analysis.dataset.analysis_folder + '_' + str(cell_index))
-        save_figure(fig, figsize, os.path.join(analysis.dataset.cache_dir, 'summary_figures'),
+        sf.save_figure(fig, figsize, os.path.join(analysis.dataset.cache_dir, 'summary_figures'),
                     'change_responses' + suffix,
-                    analysis.dataset.analysis_folder + '_' + str(cell_index))
+                    analysis.dataset.analysis_folder+'_'+str(cell_specimen_id)+'_'+str(cell_order)+'_'+str(cell_index))
+    if not show:
         plt.close()
     return ax
 
