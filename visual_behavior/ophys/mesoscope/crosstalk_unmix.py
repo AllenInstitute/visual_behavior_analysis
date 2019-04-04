@@ -173,7 +173,7 @@ class MesoscopeICA(object):
 
     def get_ica_traces(self, pair):
 
-        # we will first chekc if traces exist, if yes - read them, if not - extract them
+        # we will first check if traces exist, if yes - read them, if not - extract them
 
         self.found_original_traces = [False, False]
         self.found_original_neuropil = [False, False]
@@ -216,6 +216,7 @@ class MesoscopeICA(object):
             # read neuropil traces form h5 file:
             with h5py.File(path_neuropil_plane1, "r") as f:
                 plane1_neuropil_original = f["data"].value
+
             with h5py.File(path_neuropil_plane2, "r") as f:
                 plane2_neuropil_original = f["data"].value
 
@@ -226,7 +227,7 @@ class MesoscopeICA(object):
             self.plane1_roi_names = plane1_roi_names
             self.plane2_roi_names = plane2_roi_names
 
-            #           same for neuropil:
+            #  same for neuropil:
             self.plane1_neuropil_orig_pointer = path_neuropil_plane1
             self.plane2_neuropil_orig_pointer = path_neuropil_plane2
             self.plane1_neuropil_orig = plane1_neuropil_original
@@ -240,14 +241,14 @@ class MesoscopeICA(object):
             # some traces are missing, run extraction:
             logger.info('Traces dont exist in cache, extracting')
 
-            # if traces don't exist, do we need to re-set unmixed and debiased traces flags to none?
+            # if traces don't exist, do we need to re-set unmixed and debiased traces flaggs to none?
             # yes, as we want unmixed traces be output on ICA using original traces
             self.plane1_ica_input_pointer = None
             self.plane2_ica_input_pointer = None
             self.plane1_ica_output_pointer = None
             self.plane2_ica_output_pointer = None
 
-            plane1_ica_neuropil_input_pointer = None
+            self.plane1_ica_neuropil_input_pointer = None
             self.plane2_ica_neuropil_input_pointer = None
             self.plane1_ica_neuropil_output_pointer = None
             self.plane2_ica_neuropil_output_pointer = None
@@ -256,11 +257,15 @@ class MesoscopeICA(object):
             plane2_folder = self.dataset.get_exp_folder(plane2_exp_id)
 
             # extract signal and crosstalk traces for plane 1
-            plane1_sig_traces, plane1_sig_neuropil, plane1_roi_names = get_traces(plane1_folder, plane1_exp_id, plane1_folder, plane1_exp_id)
-            plane1_ct_traces, plane1_ct_neuropil, _ = get_traces(plane2_folder, plane2_exp_id, plane1_folder, plane1_exp_id)
+            plane1_sig_traces, plane1_sig_neuropil, plane1_roi_names = get_traces(plane1_folder, plane1_exp_id,
+                                                                                      plane1_folder, plane1_exp_id)
+            plane1_ct_traces, plane1_ct_neuropil, _ = get_traces(plane2_folder, plane2_exp_id, plane1_folder,
+                                                                     plane1_exp_id)
             # extract signal and crosstalk traces for plane 2
-            plane2_sig_traces, plane2_sig_neuropil, plane2_roi_names = get_traces(plane2_folder, plane2_exp_id, plane2_folder, plane2_exp_id)
-            plane2_ct_traces, plane2_ct_neuropil, _ = get_traces(plane1_folder, plane1_exp_id, plane2_folder, plane2_exp_id)
+            plane2_sig_traces, plane2_sig_neuropil, plane2_roi_names = get_traces(plane2_folder, plane2_exp_id,
+                                                                                      plane2_folder, plane2_exp_id)
+            plane2_ct_traces, plane2_ct_neuropil, _ = get_traces(plane1_folder, plane1_exp_id, plane2_folder,
+                                                                     plane2_exp_id)
 
             # setting traces valid flag: if none is None
             if (not plane1_sig_traces.any() is None) and (not plane1_ct_traces.any() is None):
@@ -284,6 +289,7 @@ class MesoscopeICA(object):
 
                 self.plane1_traces_orig = plane1_traces_original
                 self.plane1_traces_orig_pointer = path_traces_plane1
+                self.plane1_roi_names = plane1_roi_names
                 with h5py.File(path_traces_plane1, "w") as f:
                     f.create_dataset(f"data", data=plane1_traces_original)
                     f.create_dataset(f"roi_names", data=np.int_(plane1_roi_names))
@@ -292,6 +298,7 @@ class MesoscopeICA(object):
                 plane2_traces_original = np.array([plane2_sig_traces, plane2_ct_traces])
                 self.plane2_traces_orig = plane2_traces_original
                 self.plane2_traces_orig_pointer = path_traces_plane2
+                self.plane2_roi_names = plane2_roi_names
                 with h5py.File(path_traces_plane2, "w") as f:
                     f.create_dataset(f"data", data=plane2_traces_original)
                     f.create_dataset(f"roi_names", data=np.int_(plane2_roi_names))
