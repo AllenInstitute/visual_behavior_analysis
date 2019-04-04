@@ -8,6 +8,7 @@ verify_ssl = true
 [packages]
 pandas = "*"
 visual-behavior = {editable = true, path = "./.."}
+pytest = "*"
 
 [requires]
 python_version = "3.6"

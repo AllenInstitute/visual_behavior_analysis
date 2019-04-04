@@ -1,6 +1,16 @@
 import pytest
 
+import os
 import pandas as pd
+
+
+TEST_DIR = os.path.dirname(
+    os.path.abspath(__file__),
+)
+ASSETS_DIR = os.path.join(
+    TEST_DIR,
+    'assets',
+)
 
 
 @pytest.fixture(
@@ -9,7 +19,7 @@ import pandas as pd
         'issue_467.pkl',
     ],
     params=[
-        {'path': './assets/issue_467.pkl', }, 
+        {'path': os.path.join(ASSETS_DIR, 'issue_467.pkl', ), }, 
     ],
 )
 def ophys_data(request):

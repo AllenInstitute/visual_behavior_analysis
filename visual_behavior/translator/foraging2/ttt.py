@@ -31,10 +31,10 @@ class Epoch(object):
 
     def dump(self):
         # the dict is the expected shape of an image epoch
-        if self.__movie_index == -1:  # grayscreen
+        if movie_index == -1:  # kinda implies it was grayscreen
             image_name = 'grayscreen'
             image_category = 'grayscreen'
-        else:  # not grayscreen
+        else:
             image_name = '{}:{}'.format(
                 self.__movie_name,
                 self.__movie_index,
@@ -115,3 +115,43 @@ def get_movie_metadata(data):
     })
 
     return movie_metadata
+
+    import pytest
+
+from visual_behavior.translator.core import create_extended_dataframe
+from visual_behavior.translator.foraging2 import data_to_change_detection_core
+
+
+@pytest.fixture
+def core_data(
+    ophys_data,
+):
+  return data_to_change_detection_core(ophys_data)
+
+
+def test_issue_467_static_movies_present_2(
+    core_data,
+):
+    """ensures issue 467 is resolved:
+    - static movies are present in 'visual_stimuli' key of core data 
+    object
+    """
+    import visual_behavior
+    raise ValueError(
+        core_data['visual_stimuli'].image_name.unique(),
+    )
+    # raise ValueError(ophys_data['items']['behavior']['items'], extended.initial_image_name.unique())
+
+
+def test_issue_467_static_movies_present(
+    core_data,
+):
+    """ensures issue 467 is resolved:
+    - static movies are present in 
+    extended trials object
+    """
+    raise ValueError(
+        core_data.columns,
+        core_data.initial_image_name.unique()
+    )
+    # raise ValueError(ophys_data['items']['behavior']['items'], extended.initial_image_name.unique())

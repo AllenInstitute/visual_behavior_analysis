@@ -12,10 +12,9 @@ clean:
 	docker volume rm vba-assets
 
 test-env:
-	pip install pip -U
-	pip install pipenv
-	pipenv install .
+	python -m pip install pip -U
+	python -m pip install pipenv
+	python -m pipenv install .
 
 test:
-	cd ./tests && python -m pipenv run pytest
-	cd ..
+	python -m pipenv run python -m pytest
