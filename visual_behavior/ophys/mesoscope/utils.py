@@ -100,6 +100,8 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
     masks = None
     valid = None
 
+    exclude_labels = set(exclude_labels)
+
     for roi in rois:
         mask = np.zeros(movie_shape, dtype=bool)
         mask_matrix = np.array(roi["mask"], dtype=bool)
@@ -117,7 +119,8 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
 
         masks[ridx, :, :] = mask
 
-        valid[ridx] = len(set(exclude_labels) & set(roi.get("exclusion_labels", []))) == 0
+        current_exclusion_labels = set(roi.get("exclusion_labels", []))
+        valid[ridx] = len(exclude_labels & current_exclusion_labels) == 0
 
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
