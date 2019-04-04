@@ -143,6 +143,18 @@ class MesoscopeICA(object):
 
         self.cache = cache
 
+        self.plane1_roi_traces_valid = None
+        self.plane2_roi_traces_valid = None
+
+        self.plane1_roi_traces_valid_pointer = None
+        self.plane2_roi_traces_valid_pointer = None
+
+        self.plane1_neuropil_traces_valid_pointer = None
+        self.plane2_neuropil_traces_valid_pointer = None
+
+        self.plane1_neuropil_traces_valid = None
+        self.plane2_neuropil_traces_valid = None
+
     def set_analysis_session_dir(self):
         self.session_cache_dir = os.path.join(self.cache, f'session_{self.session_id}')
         return self.session_cache_dir
@@ -160,6 +172,9 @@ class MesoscopeICA(object):
         return
 
     def get_ica_traces(self, pair):
+
+        # we will first chekc if traces exist, if yes - read them, if not - extract them
+
         self.found_original_traces = [False, False]
         self.found_original_neuropil = [False, False]
 
@@ -193,8 +208,10 @@ class MesoscopeICA(object):
             # read traces form h5 file:
             with h5py.File(path_traces_plane1, "r") as f:
                 plane1_traces_original = f["data"].value
+                plane1_roi_names = f["roi_names"].value
             with h5py.File(path_traces_plane2, "r") as f:
                 plane2_traces_original = f["data"].value
+                plane2_roi_names = f["roi_names"].value
 
             # read neuropil traces form h5 file:
             with h5py.File(path_neuropil_plane1, "r") as f:
@@ -206,6 +223,9 @@ class MesoscopeICA(object):
             self.plane2_traces_orig_pointer = path_traces_plane2
             self.plane1_traces_orig = plane1_traces_original
             self.plane2_traces_orig = plane2_traces_original
+            self.plane1_roi_names = plane1_roi_names
+            self.plane2_roi_names = plane2_roi_names
+
             #           same for neuropil:
             self.plane1_neuropil_orig_pointer = path_neuropil_plane1
             self.plane2_neuropil_orig_pointer = path_neuropil_plane2
@@ -220,7 +240,7 @@ class MesoscopeICA(object):
             # some traces are missing, run extraction:
             logger.info('Traces dont exist in cache, extracting')
 
-            # if traces don't exist, do we need to re-set unmixed and debiased traces flaggs to none?
+            # if traces don't exist, do we need to re-set unmixed and debiased traces flags to none?
             # yes, as we want unmixed traces be output on ICA using original traces
             self.plane1_ica_input_pointer = None
             self.plane2_ica_input_pointer = None
@@ -251,75 +271,7 @@ class MesoscopeICA(object):
                 self.found_original_neuropil[0] = True
             if (not plane2_sig_neuropil.any() is None) and (not plane2_ct_neuropil.any() is None):
                 self.found_original_neuropil[1] = True
-            # roi traces, plane 1:
-            plane1_sig_trace_valid = {}
-            num_traces, _ = plane1_sig_traces.shape
-            for n in range(num_traces):
-                trace = plane1_sig_traces[n]
-                if np.any(np.isnan(trace)):
-                    plane1_sig_trace_valid[plane1_roi_names[n]] = False
-                else:
-                    plane1_sig_trace_valid[plane1_roi_names[n]] = True
-            plane1_ct_trace_valid = {}
-            num_traces, _ = plane1_ct_traces.shape
-            for n in range(num_traces):
-                trace = plane1_ct_traces[n]
-                if np.any(np.isnan(trace)):
-                    plane1_ct_trace_valid[plane1_roi_names[n]] = False
-                else:
-                    plane1_ct_trace_valid[plane1_roi_names[n]] = True
-            # roi traces, plane 2:
-            plane2_sig_trace_valid = {}
-            num_traces, _ = plane2_sig_traces.shape
-            for n in range(num_traces):
-                trace = plane2_sig_traces[n]
-                if np.any(np.isnan(trace)):
-                    plane2_sig_trace_valid[plane2_roi_names[n]] = False
-                else:
-                    plane2_sig_trace_valid[plane2_roi_names[n]] = True
-            plane2_ct_trace_valid = {}
-            num_traces, _ = plane2_ct_traces.shape
-            for n in range(num_traces):
-                trace = plane2_ct_traces[n]
-                if np.any(np.isnan(trace)):
-                    plane2_ct_trace_valid[plane2_roi_names[n]] = False
-                else:
-                    plane2_ct_trace_valid[plane2_roi_names[n]] = True
-            # neuropil traces, plane 1:
-            plane1_sig_neuropil_valid = {}
-            num_traces, _ = plane1_sig_neuropil.shape
-            for n in range(num_traces):
-                trace = plane1_sig_neuropil[n]
-                if np.any(np.isnan(trace)):
-                    plane1_sig_neuropil_valid[plane1_roi_names[n]] = False
-                else:
-                    plane1_sig_neuropil_valid[plane1_roi_names[n]] = True
-            plane1_ct_neuropil_valid = {}
-            num_traces, _ = plane1_ct_neuropil.shape
-            for n in range(num_traces):
-                trace = plane1_ct_neuropil[n]
-                if np.any(np.isnan(trace)):
-                    plane1_ct_neuropil_valid[plane1_roi_names[n]] = False
-                else:
-                    plane1_ct_neuropil_valid[plane1_roi_names[n]] = True
-            # neuropil traces, plane 2:
-            plane2_sig_neuropil_valid = {}
-            num_traces, _ = plane2_sig_neuropil.shape
 
-            for n in range(num_traces):
-                trace = plane2_sig_neuropil[n]
-                if np.any(np.isnan(trace)):
-                    plane2_sig_neuropil_valid[plane2_roi_names[n]] = False
-                else:
-                    plane2_sig_neuropil_valid[plane2_roi_names[n]] = True
-            plane2_ct_neuropil_valid = {}
-            num_traces, _ = plane2_ct_neuropil.shape
-            for n in range(num_traces):
-                trace = plane2_ct_neuropil[n]
-                if np.any(np.isnan(trace)):
-                    plane2_ct_neuropil_valid[plane2_roi_names[n]] = False
-                else:
-                    plane2_ct_neuropil_valid[plane2_roi_names[n]] = True
             # DOES ROI traces DIR EXIST?
             if not os.path.isdir(session_dir):
                 os.mkdir(session_dir)
@@ -343,14 +295,13 @@ class MesoscopeICA(object):
                 with h5py.File(path_traces_plane2, "w") as f:
                     f.create_dataset(f"data", data=plane2_traces_original)
                     f.create_dataset(f"roi_names", data=np.int_(plane2_roi_names))
-                    # DOES NEUROPIL traces DIR EXIST?
 
             if not os.path.isdir(session_dir):
                 os.mkdir(session_dir)
             if not os.path.isdir(ica_neuropil_dir):
                 os.mkdir(ica_neuropil_dir)
 
-            # if extracted traces valid, save to disk:
+            # if extracted traces not None, save to disk:
             if self.found_original_neuropil[0] and self.found_original_neuropil[1]:
                 # combining traces, saving to self, writing to disk:
                 plane1_neuropil_original = np.array([plane1_sig_neuropil, plane1_ct_neuropil])
@@ -367,29 +318,162 @@ class MesoscopeICA(object):
                     f.create_dataset(f"data", data=plane2_neuropil_original)
                     f.create_dataset(f"roi_names", data=np.int_(plane2_roi_names))
 
-            # combine two dictionareies!
-            plane1_roi_traces_valid = {'signal': plane1_sig_trace_valid,
-                                       "crosstalk": plane1_ct_trace_valid}
-            plane1_neuropil_traces_valid = {'signal': plane1_sig_neuropil_valid,
-                                            "crosstalk": plane1_ct_neuropil_valid}
-            plane2_roi_traces_valid = {'signal': plane2_sig_trace_valid,
-                                       "crosstalk": plane2_ct_trace_valid}
-            plane2_neuropil_traces_valid = {'signal': plane2_sig_neuropil_valid,
-                                            "crosstalk": plane2_ct_neuropil_valid}
-
-            valid_json = os.path.join(ica_traces_dir, f'valid_{plane1_exp_id}.json')
-            ju.write(valid_json, plane1_roi_traces_valid)
-
-            valid_json = os.path.join(ica_traces_dir, f'valid_{plane2_exp_id}.json')
-            ju.write(valid_json, plane2_roi_traces_valid)
-
-            valid_json = os.path.join(ica_neuropil_dir, f'valid_{plane1_exp_id}.json')
-            ju.write(valid_json, plane1_neuropil_traces_valid)
-
-            valid_json = os.path.join(ica_neuropil_dir, f'valid_{plane2_exp_id}.json')
-            ju.write(valid_json, plane2_neuropil_traces_valid)
         return self.found_original_traces, self.found_original_neuropil
 
+    def validate_traces(self):
+
+        self.plane1_roi_traces_valid_pointer = None
+        self.plane2_roi_traces_valid_pointer = None
+
+        plane1_roi_traces_valid_pointer = os.path.join(self.ica_traces_dir, f'valid_{self.plane1_exp_id}.json')
+        plane2_roi_traces_valid_pointer = os.path.join(self.ica_traces_dir, f'valid_{self.plane2_exp_id}.json')
+
+        # validation json already exists, skip validating
+        if os.path.isfile(plane1_roi_traces_valid_pointer) and os.path.isfile(plane2_roi_traces_valid_pointer):
+            self.plane1_roi_traces_valid_pointer = plane1_roi_traces_valid_pointer
+            self.plane2_roi_traces_valid_pointer = plane2_roi_traces_valid_pointer
+        else:
+            self.plane1_roi_traces_valid_pointer = None
+            self.plane2_roi_traces_valid_pointer = None
+
+        if (not self.plane1_roi_traces_valid_pointer) and (not self.plane2_roi_traces_valid_pointer):
+            # traces need validation:
+            if self.found_original_traces[0] and self.found_original_traces[1]:
+
+                # roi traces, plane 1:
+                plane1_sig_trace_valid = {}
+                num_traces, _ = self.plane1_traces_orig[0].shape
+                for n in range(num_traces):
+                    trace = self.plane1_traces_orig[0][n]
+                    if np.any(np.isnan(trace)):
+                        plane1_sig_trace_valid[str(self.plane1_roi_names[n])] = False
+                    else:
+                        plane1_sig_trace_valid[str(self.plane1_roi_names[n])] = True
+                plane1_ct_trace_valid = {}
+                num_traces, _ = self.plane1_traces_orig[1].shape
+                for n in range(num_traces):
+                    trace = self.plane1_traces_orig[1][n]
+                    if np.any(np.isnan(trace)):
+                        plane1_ct_trace_valid[str(self.plane1_roi_names[n])] = False
+                    else:
+                        plane1_ct_trace_valid[str(self.plane1_roi_names[n])] = True
+                # roi traces, plane 2:
+                plane2_sig_trace_valid = {}
+                num_traces, _ = self.plane2_traces_orig[0].shape
+                for n in range(num_traces):
+                    trace = self.plane2_traces_orig[0][n]
+                    if np.any(np.isnan(trace)):
+                        plane2_sig_trace_valid[str(self.plane2_roi_names[n])] = False
+                    else:
+                        plane2_sig_trace_valid[str(self.plane2_roi_names[n])] = True
+                plane2_ct_trace_valid = {}
+                num_traces, _ = self.plane2_traces_orig[1].shape
+                for n in range(num_traces):
+                    trace = self.plane2_traces_orig[1][n]
+                    if np.any(np.isnan(trace)):
+                        plane2_ct_trace_valid[str(self.plane2_roi_names[n])] = False
+                    else:
+                        plane2_ct_trace_valid[str(self.plane2_roi_names[n])] = True
+                # combining dictionaries for signal and crosstalk
+                plane1_roi_traces_valid = {"signal": plane1_sig_trace_valid,
+                                           "crosstalk": plane1_ct_trace_valid}
+                plane2_roi_traces_valid = {"signal": plane2_sig_trace_valid,
+                                           "crosstalk": plane2_ct_trace_valid}
+                # saving to json:
+
+                self.plane1_roi_traces_valid_pointer = plane1_roi_traces_valid_pointer
+                ju.write(plane1_roi_traces_valid_pointer, plane1_roi_traces_valid)
+                self.plane1_roi_traces_valid = plane1_roi_traces_valid
+
+                self.plane2_roi_traces_valid_pointer = plane2_roi_traces_valid_pointer
+                ju.write(plane2_roi_traces_valid_pointer, plane2_roi_traces_valid)
+                self.plane2_roi_traces_valid = plane2_roi_traces_valid
+
+            else:
+                logger.info('ROI traces dont exist in cache, run get_ica_traces first')
+        else:
+            # traces has been validated, read the jsons
+            plane1_roi_traces_valid = ju.read(plane1_roi_traces_valid_pointer)
+            plane2_roi_traces_valid = ju.read(plane2_roi_traces_valid_pointer)
+            self.plane1_roi_traces_valid = plane1_roi_traces_valid
+            self.plane2_roi_traces_valid = plane2_roi_traces_valid
+
+        ####validating neuropil traces#####
+
+        self.plane1_neuropil_traces_valid_pointer = None
+        self.plane2_neuropil_traces_valid_pointer = None
+
+        plane1_neuropil_traces_valid_pointer = os.path.join(self.ica_neuropil_dir, f'valid_{self.plane1_exp_id}.json')
+        plane2_neuropil_traces_valid_pointer = os.path.join(self.ica_neuropil_dir, f'valid_{self.plane2_exp_id}.json')
+
+        # validation json already exists, skip validating
+        if os.path.isfile(plane1_neuropil_traces_valid_pointer) and os.path.isfile(
+                plane2_neuropil_traces_valid_pointer):
+            self.plane1_neuropil_traces_valid_pointer = plane1_neuropil_traces_valid_pointer
+            self.plane2_neuropil_traces_valid_pointer = plane2_neuropil_traces_valid_pointer
+        else:
+            self.plane1_neuropil_traces_valid_pointer = None
+            self.plane2_neuropil_traces_valid_pointer = None
+
+        if (not self.plane1_neuropil_traces_valid_pointer) and (not self.plane2_neuropil_traces_valid_pointer):
+
+            if self.found_original_neuropil[0] and self.found_original_neuropil[1]:
+                # neuropil traces, plane 1:
+                plane1_sig_neuropil_valid = {}
+                num_traces, _ = self.plane1_neuropil_orig[0].shape
+                for n in range(num_traces):
+                    trace = self.plane1_neuropil_orig[0][n]
+                    if np.any(np.isnan(trace)):
+                        plane1_sig_neuropil_valid[str(self.plane1_roi_names[n])] = False
+                    else:
+                        plane1_sig_neuropil_valid[str(self.plane1_roi_names[n])] = True
+                plane1_ct_neuropil_valid = {}
+                num_traces, _ = self.plane1_neuropil_orig[1].shape
+                for n in range(num_traces):
+                    trace = self.plane1_neuropil_orig[1][n]
+                    if np.any(np.isnan(trace)):
+                        plane1_ct_neuropil_valid[str(self.plane1_roi_names[n])] = False
+                    else:
+                        plane1_ct_neuropil_valid[str(self.plane1_roi_names[n])] = True
+                # neuropil traces, plane 2:
+                plane2_sig_neuropil_valid = {}
+                num_traces, _ = self.plane2_neuropil_orig[0].shape
+
+                for n in range(num_traces):
+                    trace = self.plane2_neuropil_orig[0][n]
+                    if np.any(np.isnan(trace)):
+                        plane2_sig_neuropil_valid[str(self.plane2_roi_names[n])] = False
+                    else:
+                        plane2_sig_neuropil_valid[str(self.plane2_roi_names[n])] = True
+                plane2_ct_neuropil_valid = {}
+                num_traces, _ = self.plane2_neuropil_orig[1].shape
+                for n in range(num_traces):
+                    trace = self.plane2_neuropil_orig[1][n]
+                    if np.any(np.isnan(trace)):
+                        plane2_ct_neuropil_valid[str(self.plane2_roi_names[n])] = False
+                    else:
+                        plane2_ct_neuropil_valid[str(self.plane2_roi_names[n])] = True
+
+                # combine two dictionareies
+                plane1_neuropil_traces_valid = {"signal": plane1_sig_neuropil_valid,
+                                                "crosstalk": plane1_ct_neuropil_valid}
+                plane2_neuropil_traces_valid = {"signal": plane2_sig_neuropil_valid,
+                                                "crosstalk": plane2_ct_neuropil_valid}
+
+                self.plane1_neuropil_traces_valid_pointer = plane1_neuropil_traces_valid_pointer
+                ju.write(plane1_neuropil_traces_valid_pointer, plane1_neuropil_traces_valid)
+                self.plane2_neuropil_traces_valid_pointer = plane2_neuropil_traces_valid_pointer
+                ju.write(plane2_neuropil_traces_valid_pointer, plane2_neuropil_traces_valid)
+            else:
+                logger.info('Neuropil traces dont exist in cache, run get_ica_traces first')
+        else:
+            # traces has been validated, read the jsons
+            plane1_neuropil_traces_valid = ju.read(plane1_neuropil_traces_valid_pointer)
+            plane2_neuropil_traces_valid = ju.read(plane2_neuropil_traces_valid_pointer)
+            self.plane1_neuropil_traces_valid = plane1_neuropil_traces_valid
+            self.plane2_neuropil_traces_valid = plane2_neuropil_traces_valid
+
+        return
     def combine_debias_traces(self):
 
         self.plane1_ica_input_pointer = None
