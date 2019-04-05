@@ -810,12 +810,11 @@ class MesoscopeICA(object):
                     plane2_ica_output = self.traces_unmix[:, 1] * self.ica_traces_scale_bot
 
                     # reshaping traces
-                    plane1_ica_output = plane1_ica_output.reshape(
-                        [self.plane1_traces_orig.shape[1] + self.plane2_traces_orig.shape[1],
-                         self.plane1_traces_orig.shape[2]])
-                    plane2_ica_output = plane2_ica_output.reshape(
-                        [self.plane1_traces_orig.shape[1] + self.plane2_traces_orig.shape[1],
-                         self.plane1_traces_orig.shape[2]])
+                    plane1_new_shape = [int(plane1_ica_output.shape[0] / self.plane1_traces_orig.shape[2]), self.plane1_traces_orig.shape[2]]
+                    plane1_ica_output = plane1_ica_output.reshape(plane1_new_shape)
+
+                    plane2_new_shape = [int(plane2_ica_output.shape[0] / self.plane2_traces_orig.shape[2]), self.plane2_traces_orig.shape[2]]
+                    plane2_ica_output = plane2_ica_output.reshape(plane2_new_shape)
 
                     plane1_out_sig = plane1_ica_output[0:self.plane1_traces_orig.shape[1], :]
                     plane1_out_ct = plane2_ica_output[0:self.plane1_traces_orig.shape[1], :]
@@ -922,12 +921,14 @@ class MesoscopeICA(object):
                     plane2_ica_neuropil_output = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
 
                     # reshaping traces
-                    plane1_ica_neuropil_output = plane1_ica_neuropil_output.reshape(
-                        [self.plane1_neuropil_orig.shape[1] + self.plane2_neuropil_orig.shape[1],
-                         self.plane1_neuropil_orig.shape[2]])
-                    plane2_ica_neuropil_output = plane2_ica_neuropil_output.reshape(
-                        [self.plane1_neuropil_orig.shape[1] + self.plane2_neuropil_orig.shape[1],
-                         self.plane1_neuropil_orig.shape[2]])
+                    # reshaping traces
+                    plane1_new_shape = [int(plane1_ica_neuropil_output.shape[0] / self.plane1_neuropil_orig.shape[2]),
+                                        self.plane1_neuropil_orig.shape[2]]
+                    plane1_ica_neuropil_output = plane1_ica_neuropil_output.reshape(plane1_new_shape)
+
+                    plane2_new_shape = [int(plane2_ica_neuropil_output.shape[0] / self.plane2_neuropil_orig.shape[2]),
+                                        self.plane2_neuropil_orig.shape[2]]
+                    plane2_ica_neuropil_output = plane2_ica_neuropil_output.reshape(plane2_new_shape)
 
                     plane1_out_sig = plane1_ica_neuropil_output[0:self.plane1_neuropil_orig.shape[1], :]
                     plane1_out_ct = plane2_ica_neuropil_output[0:self.plane1_neuropil_orig.shape[1], :]
