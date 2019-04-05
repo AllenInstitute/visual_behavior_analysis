@@ -190,15 +190,18 @@ def get_roi_group(lims_data):
 def get_sync_path(lims_data):
     ophys_session_dir = get_ophys_session_dir(lims_data)
     analysis_dir = get_analysis_dir(lims_data)
-    # try getting sync file from analysis folder first - needed for early mesoscope data where lims sync file is missing line labels
-    try:
-        logger.info('using sync file from analysis directory instead of lims')
-        sync_file = [file for file in os.listdir(analysis_dir) if 'sync' in file][0]
-        sync_path = os.path.join(analysis_dir, sync_file)
-    except Exception as e:
-        print(e)
-        sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file][0]
-        sync_path = os.path.join(ophys_session_dir, sync_file)
+
+    # First attempt
+    sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file]
+    if len(sync_file)>0:
+        sync_file = sync_file[0]
+    else: 
+        json_path = [file for file in os.listdir(ophys_session_dir) if '_platform.json' in file][0]
+        with open(os.path.join(ophys_session_dir, json_path)) as pointer_json:
+            json_data = json.load(pointer_json)
+            sync_file = json_data['sync_file']
+    sync_path = os.path.join(ophys_session_dir, sync_file)
+
     if sync_file not in os.listdir(analysis_dir):
         logger.info('moving %s to analysis dir', sync_file)  # flake8: noqa: E999
         shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
@@ -373,7 +376,7 @@ def save_metadata(metadata, lims_data):
 def get_stimulus_pkl_path(lims_data):
     ophys_session_dir = get_ophys_session_dir(lims_data)
     # first try lims folder
-    pkl_file = [file for file in os.listdir(ophys_session_dir) if 'stim.pkl' in file]
+    pkl_file = [file for file in os.listdir(ophys_session_dir) if '.pkl' in file]
     if len(pkl_file) > 0:
         stimulus_pkl_path = os.path.join(ophys_session_dir, pkl_file[0])
     else:  # then try behavior directory
