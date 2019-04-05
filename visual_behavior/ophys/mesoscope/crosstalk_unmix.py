@@ -174,6 +174,8 @@ class MesoscopeICA(object):
     def get_ica_traces(self, pair):
 
         # we will first check if traces exist, if yes - read them, if not - extract them
+        self.plane1_roi_names = None
+        self.plane2_roi_names = None
 
         self.found_original_traces = [False, False]
         self.found_original_neuropil = [False, False]
