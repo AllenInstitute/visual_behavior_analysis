@@ -352,8 +352,8 @@ class MesoscopeICA(object):
         # validation json already exists, skip validating
         if os.path.isfile(plane1_roi_traces_valid_pointer) and os.path.isfile(
                 plane2_roi_traces_valid_pointer) and os.path.isfile(
-                plane1_neuropil_traces_valid_pointer) and os.path.isfile(
-                plane2_neuropil_traces_valid_pointer):
+            plane1_neuropil_traces_valid_pointer) and os.path.isfile(
+            plane2_neuropil_traces_valid_pointer):
             self.plane1_roi_traces_valid_pointer = plane1_roi_traces_valid_pointer
             self.plane2_roi_traces_valid_pointer = plane2_roi_traces_valid_pointer
             self.plane1_neuropil_traces_valid_pointer = plane1_neuropil_traces_valid_pointer
@@ -364,48 +364,43 @@ class MesoscopeICA(object):
             self.plane1_neuropil_traces_valid_pointer = None
             self.plane2_neuropil_traces_valid_pointer = None
 
-        if (not self.plane1_roi_traces_valid_pointer) and (not self.plane2_roi_traces_valid_pointer) and (not self.plane1_neuropil_traces_valid_pointer) and (not self.plane2_neuropil_traces_valid_pointer):
+        if (not self.plane1_roi_traces_valid_pointer) and (not self.plane2_roi_traces_valid_pointer) and (
+        not self.plane1_neuropil_traces_valid_pointer) and (not self.plane2_neuropil_traces_valid_pointer):
 
             # traces need validation:
-            if self.found_original_traces[0] and self.found_original_traces[1] and self.found_original_neuropil[0] and self.found_original_neuropil[1]:
+            if self.found_original_traces[0] and self.found_original_traces[1] and self.found_original_neuropil[0] and \
+                    self.found_original_neuropil[1]:
                 # traces, plane 1:
-                # signal:
+
                 plane1_sig_trace_valid = {}
                 plane1_sig_neuropil_valid = {}
-
-                num_traces_roi, _ = self.plane1_traces_orig[0].shape
-                num_traces_neuropil, _ = self.plane1_neuropil_orig[1].shape
-
-                if not (num_traces_roi == num_traces_neuropil):
-                    logger.info('Neuropil and ROI traces are not aligned')
-                else:
-                    for n in range(num_traces_roi):
-                        trace_roi = self.plane1_traces_orig[0][n]
-                        trace_neuropil = self.plane1_neuropil_orig[0][n]
-                        if np.any(np.isnan(trace_roi)) or np.any(np.isnan(trace_neuropil)):
-                            plane1_sig_trace_valid[str(self.plane1_roi_names[n])] = False
-                            plane1_sig_neuropil_valid[str(self.plane1_roi_names[n])] = False
-                        else:
-                            plane1_sig_trace_valid[str(self.plane1_roi_names[n])] = True
-                            plane1_sig_neuropil_valid[str(self.plane1_roi_names[n])] = True
-
-                # crosstalk:
                 plane1_ct_trace_valid = {}
                 plane1_ct_neuropil_valid = {}
 
-                num_traces_neuropil, _ = self.plane1_neuropil_orig[1].shape
-                num_traces_roi, _ = self.plane1_traces_orig[1].shape
+                num_traces_roi_sig, _ = self.plane1_traces_orig[0].shape
+                num_traces_neuropil_sig, _ = self.plane1_neuropil_orig[0].shape
+                num_traces_roi_ct, _ = self.plane1_traces_orig[1].shape
+                num_traces_neuropil_ct, _ = self.plane1_neuropil_orig[1].shape
 
-                if not (num_traces_roi == num_traces_neuropil):
+                if not (num_traces_roi_sig == num_traces_neuropil_sig) or not (
+                        num_traces_roi_ct == num_traces_neuropil_ct):
                     logger.info('Neuropil and ROI traces are not aligned')
                 else:
-                    for n in range(num_traces_roi):
-                        trace_roi = self.plane1_traces_orig[1][n]
-                        trace_neuropil = self.plane1_neuropil_orig[1][n]
-                        if np.any(np.isnan(trace_roi)) or np.any(np.isnan(trace_neuropil)):
+                    for n in range(num_traces_roi_sig):
+                        trace_roi_sig = self.plane1_traces_orig[0][n]
+                        trace_neuropil_sig = self.plane1_neuropil_orig[0][n]
+                        trace_roi_ct = self.plane1_traces_orig[1][n]
+                        trace_neuropil_ct = self.plane1_neuropil_orig[1][n]
+
+                        if np.any(np.isnan(trace_roi_sig)) or np.any(np.isnan(trace_neuropil_sig)) or np.any(
+                                np.isnan(trace_roi_ct)) or np.any(np.isnan(trace_neuropil_ct)):
+                            plane1_sig_trace_valid[str(self.plane1_roi_names[n])] = False
+                            plane1_sig_neuropil_valid[str(self.plane1_roi_names[n])] = False
                             plane1_ct_trace_valid[str(self.plane1_roi_names[n])] = False
                             plane1_ct_neuropil_valid[str(self.plane1_roi_names[n])] = False
                         else:
+                            plane1_sig_trace_valid[str(self.plane1_roi_names[n])] = True
+                            plane1_sig_neuropil_valid[str(self.plane1_roi_names[n])] = True
                             plane1_ct_trace_valid[str(self.plane1_roi_names[n])] = True
                             plane1_ct_neuropil_valid[str(self.plane1_roi_names[n])] = True
 
@@ -413,40 +408,33 @@ class MesoscopeICA(object):
                 # signal:
                 plane2_sig_trace_valid = {}
                 plane2_sig_neuropil_valid = {}
-
-                num_traces_roi, _ = self.plane2_traces_orig[0].shape
-                num_traces_neuropil, _ = self.plane2_neuropil_orig[0].shape
-
-                if not (num_traces_roi == num_traces_neuropil):
-                    logger.info('Neuropil and ROI traces are not aligned')
-                else:
-                    for n in range(num_traces_roi):
-                        trace_roi = self.plane2_traces_orig[0][n]
-                        trace_neuropil = self.plane2_neuropil_orig[0][n]
-                        if np.any(np.isnan(trace_roi)) or np.any(np.isnan(trace_neuropil)):
-                            plane2_sig_trace_valid[str(self.plane2_roi_names[n])] = False
-                            plane2_sig_neuropil_valid[str(self.plane2_roi_names[n])] = False
-                        else:
-                            plane2_sig_trace_valid[str(self.plane2_roi_names[n])] = True
-                            plane2_sig_neuropil_valid[str(self.plane2_roi_names[n])] = True
-
-                # crosstalk:
                 plane2_ct_trace_valid = {}
                 plane2_ct_neuropil_valid = {}
 
-                num_traces_roi, _ = self.plane2_traces_orig[1].shape
-                num_traces_neuropil, _ = self.plane2_neuropil_orig[1].shape
+                num_traces_roi_sig, _ = self.plane2_traces_orig[0].shape
+                num_traces_neuropil_sig, _ = self.plane2_neuropil_orig[0].shape
+                num_traces_roi_ct, _ = self.plane2_traces_orig[1].shape
+                num_traces_neuropil_ct, _ = self.plane2_neuropil_orig[1].shape
 
-                if not (num_traces_roi == num_traces_neuropil):
+                if not (num_traces_roi_sig == num_traces_neuropil_sig) or not (
+                        num_traces_roi_ct == num_traces_neuropil_ct):
                     logger.info('Neuropil and ROI traces are not aligned')
                 else:
-                    for n in range(num_traces_roi):
-                        trace_roi = self.plane2_traces_orig[1][n]
-                        trace_neuropil = self.plane2_neuropil_orig[1][n]
-                        if np.any(np.isnan(trace_roi)) or np.any(np.isnan(trace_neuropil)):
+                    for n in range(num_traces_roi_sig):
+                        trace_roi_sig = self.plane2_traces_orig[0][n]
+                        trace_neuropil_sig = self.plane2_neuropil_orig[0][n]
+                        trace_roi_ct = self.plane2_traces_orig[1][n]
+                        trace_neuropil_ct = self.plane2_neuropil_orig[1][n]
+
+                        if np.any(np.isnan(trace_roi_sig)) or np.any(np.isnan(trace_neuropil_sig)) or np.any(
+                                np.isnan(trace_roi_ct)) or np.any(np.isnan(trace_neuropil_ct)):
+                            plane2_sig_trace_valid[str(self.plane2_roi_names[n])] = False
+                            plane2_sig_neuropil_valid[str(self.plane2_roi_names[n])] = False
                             plane2_ct_trace_valid[str(self.plane2_roi_names[n])] = False
                             plane2_ct_neuropil_valid[str(self.plane2_roi_names[n])] = False
                         else:
+                            plane2_sig_trace_valid[str(self.plane2_roi_names[n])] = True
+                            plane2_sig_neuropil_valid[str(self.plane2_roi_names[n])] = True
                             plane2_ct_trace_valid[str(self.plane2_roi_names[n])] = True
                             plane2_ct_neuropil_valid[str(self.plane2_roi_names[n])] = True
 
