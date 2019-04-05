@@ -506,7 +506,7 @@ class MesoscopeICA(object):
             self.plane1_ica_input_pointer = None
             self.plane2_ica_input_pointer = None
 
-        # original traces exist, run bediasing:
+        # original traces exist, run debiasing:
         if self.found_original_traces[0] and self.found_original_traces[1]:
             # if debiased traces don't exist, run debiasing - pointers are both None
             if (not self.plane1_ica_input_pointer) and (not self.plane2_ica_input_pointer):
@@ -643,10 +643,10 @@ class MesoscopeICA(object):
             self.plane1_ica_neuropil_input_pointer = None
             self.plane2_ica_neuropil_input_pointer = None
 
-        # original traces exist, run bediasing:
+        # original traces exist, run debiasing:
         if self.found_original_neuropil[0] and self.found_original_neuropil[1]:
             # if debiased traces don't exist, run debiasing - pointers are both None
-            if (not self.plane1_ica_neuropil_input_pointer) and (not self.plane2_ica_neuropil_input_pointer):
+            if (self.plane1_ica_neuropil_input_pointer is None) and (self.plane2_ica_neuropil_input_pointer is None):
                 self.found_ica_neuropil_input = [False, False]
                 self.found_ica_neuropil_offset = [False, False]
                 logger.info("Debiased neuropil traces do not exist in cache, running offset subtraction")
@@ -718,6 +718,7 @@ class MesoscopeICA(object):
                     self.found_ica_neuropil_offset[1] = True
                 if (not plane2_sig_offset.any() is None) and (not plane2_ct_offset.any() is None):
                     self.found_ica_neuropil_offset[1] = True
+
                 if self.found_ica_neuropil_input and self.found_ica_neuropil_offset:
                     self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_offset, 'plane1_ct_neuropil_offset': plane1_ct_offset}
                     self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_offset, 'plane2_ct_neuropil_offset': plane2_ct_offset}
