@@ -481,6 +481,7 @@ class MesoscopeICA(object):
             self.plane2_neuropil_traces_valid = plane2_neuropil_traces_valid
 
         return
+
     def combine_debias_traces(self):
 
         self.plane1_ica_input_pointer = None
@@ -490,6 +491,7 @@ class MesoscopeICA(object):
                                                 f'traces_ica_input_{self.plane1_exp_id}.h5')
         plane2_ica_input_pointer = os.path.join(self.ica_traces_dir,
                                                 f'traces_ica_input_{self.plane2_exp_id}.h5')
+
         # file already exists, skip debiasing
         if os.path.isfile(plane1_ica_input_pointer) and os.path.isfile(plane2_ica_input_pointer):
             self.plane1_ica_input_pointer = plane1_ica_input_pointer
@@ -499,16 +501,58 @@ class MesoscopeICA(object):
             self.plane2_ica_input_pointer = None
 
         # original traces exist, run bediasing:
-        if self.found_original_traces:
+        if self.found_original_traces[0] and self.found_original_traces[1]:
             # if debiased traces don't exist, run debiasing - pointers are both None
             if (not self.plane1_ica_input_pointer) and (not self.plane2_ica_input_pointer):
                 self.found_ica_input = [False, False]
                 self.found_ica_offset = [False, False]
                 logger.info("Debiased ROI traces do not exist in cache, running offset subtraction")
+
                 plane1_sig = self.plane1_traces_orig[0]
                 plane1_ct = self.plane1_traces_orig[1]
+                plane1_valid = self.plane1_roi_traces_valid
+
+                plane1_valid_sig = plane1_valid['signal']
+                plane1_valid_ct = plane1_valid['crosstalk']
+
                 plane2_sig = self.plane2_traces_orig[0]
                 plane2_ct = self.plane2_traces_orig[1]
+                plane2_valid = self.plane2_roi_traces_valid
+
+                plane2_valid_sig = plane2_valid['signal']
+                plane2_valid_ct = plane2_valid['crosstalk']
+
+                # only include cells that don't have nans in traces (valid = True)
+                # check if traces aligned:
+                if len(self.plane1_roi_names) == len(plane1_sig):
+                    plane1_sig_valid_idx = np.array([plane1_valid_sig[str(tid)] for tid in self.plane1_roi_names])
+                    plane1_sig_valid = plane1_sig[plane1_sig_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                if len(self.plane1_roi_names) == len(plane1_ct):
+                    plane1_ct_valid_idx = np.array([plane1_valid_ct[str(tid)] for tid in self.plane1_roi_names])
+                    plane1_ct_valid = plane1_ct[plane1_ct_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                if len(self.plane2_roi_names) == len(plane2_sig):
+                    plane2_sig_valid_idx = np.array([plane2_valid_sig[str(tid)] for tid in self.plane2_roi_names])
+                    plane2_sig_valid = plane2_sig[plane2_sig_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                if len(self.plane2_roi_names) == len(plane2_ct):
+                    plane2_ct_valid_idx = np.array([plane2_valid_ct[str(tid)] for tid in self.plane2_roi_names])
+                    plane2_ct_valid = plane2_ct[plane2_ct_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                plane1_sig = plane1_sig_valid
+                plane1_ct = plane1_ct_valid
+                plane2_sig = plane2_sig_valid
+                plane2_ct = plane2_ct_valid
+
                 # subtract offset plane 1:
                 nc = plane1_sig.shape[0]
                 plane1_sig_offset = np.mean(plane1_sig, axis=1).reshape(nc, 1)
@@ -609,8 +653,49 @@ class MesoscopeICA(object):
                 logger.info("debiased neuropil traces do not exist in cache, running offset subtraction")
                 plane1_sig = self.plane1_neuropil_orig[0]
                 plane1_ct = self.plane1_neuropil_orig[1]
+
+                plane1_valid = self.plane1_neuropil_traces_valid
+                plane1_valid_sig = plane1_valid['signal']
+                plane1_valid_ct = plane1_valid['crosstalk']
+
                 plane2_sig = self.plane2_neuropil_orig[0]
                 plane2_ct = self.plane2_neuropil_orig[1]
+
+                plane2_valid = self.plane2_neuropil_traces_valid
+                plane2_valid_sig = plane2_valid['signal']
+                plane2_valid_ct = plane2_valid['crosstalk']
+
+                # only include cells that don't have nans in traces (valid = True)
+                # check if traces aligned:
+                if len(self.plane1_roi_names) == len(plane1_sig):
+                    plane1_sig_valid_idx = np.array([plane1_valid_sig[str(tid)] for tid in self.plane1_roi_names])
+                    plane1_sig_valid = plane1_sig[plane1_sig_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                if len(self.plane1_roi_names) == len(plane1_ct):
+                    plane1_ct_valid_idx = np.array([plane1_valid_ct[str(tid)] for tid in self.plane1_roi_names])
+                    plane1_ct_valid = plane1_ct[plane1_ct_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                if len(self.plane2_roi_names) == len(plane2_sig):
+                    plane2_sig_valid_idx = np.array([plane2_valid_sig[str(tid)] for tid in self.plane2_roi_names])
+                    plane2_sig_valid = plane2_sig[plane2_sig_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                if len(self.plane2_roi_names) == len(plane2_ct):
+                    plane2_ct_valid_idx = np.array([plane2_valid_ct[str(tid)] for tid in self.plane2_roi_names])
+                    plane2_ct_valid = plane2_ct[plane2_ct_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                plane1_sig = plane1_sig_valid
+                plane1_ct = plane1_ct_valid
+                plane2_sig = plane2_sig_valid
+                plane2_ct = plane2_ct_valid
+
                 # subtract offset plane 1:
                 nc = plane1_sig.shape[0]
                 plane1_sig_offset = np.mean(plane1_sig, axis=1).reshape(nc, 1)
