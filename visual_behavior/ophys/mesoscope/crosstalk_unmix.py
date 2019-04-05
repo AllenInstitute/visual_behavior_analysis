@@ -142,6 +142,9 @@ class MesoscopeICA(object):
         self.neuropil_unmix = None
 
         self.cache = cache
+        
+        self.plane1_roi_names = None
+        self.plane2_roi_names = None
 
         self.plane1_roi_traces_valid = None
         self.plane2_roi_traces_valid = None
@@ -254,6 +257,9 @@ class MesoscopeICA(object):
             self.plane2_ica_neuropil_input_pointer = None
             self.plane1_ica_neuropil_output_pointer = None
             self.plane2_ica_neuropil_output_pointer = None
+
+            self.plane1_roi_names = None
+            self.plane2_roi_names = None
 
             plane1_folder = self.dataset.get_exp_folder(plane1_exp_id)
             plane2_folder = self.dataset.get_exp_folder(plane2_exp_id)
@@ -519,8 +525,8 @@ class MesoscopeICA(object):
 
                 plane2_sig = self.plane2_traces_orig[0]
                 plane2_ct = self.plane2_traces_orig[1]
-                plane2_valid = self.plane2_roi_traces_valid
 
+                plane2_valid = self.plane2_roi_traces_valid
                 plane2_valid_sig = plane2_valid['signal']
                 plane2_valid_ct = plane2_valid['crosstalk']
 
