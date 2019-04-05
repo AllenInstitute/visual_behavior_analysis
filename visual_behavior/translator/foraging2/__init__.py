@@ -375,13 +375,13 @@ def data_to_visual_stimuli(data, time=None):
         data['items']['behavior']['stimuli'],
         time,
     )
-    
+
     for name, stim_item in data['items']['behavior'].get('items', {}).items():
         if name.lower() in MAYBE_A_MOVIE:
             static_image_epochs.extend(
                 get_movie_image_epochs(name, stim_item, time, )
             )
-    
+
     return pd.DataFrame(data=static_image_epochs)
 
 

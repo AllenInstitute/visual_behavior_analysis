@@ -1,7 +1,18 @@
 import pytest
 
+import os
+import glob
 from visual_behavior.translator.core import create_extended_dataframe
 from visual_behavior.translator.foraging2 import data_to_change_detection_core
+
+
+TEST_DIR = os.path.dirname(
+    os.path.abspath(__file__),
+)
+ASSETS_DIR = os.path.join(
+    TEST_DIR,
+    'assets',
+)
 
 
 @pytest.fixture
@@ -11,6 +22,10 @@ def core_data(
   return data_to_change_detection_core(ophys_data)
 
 
+@pytest.mark.skipif(
+    not glob.glob(os.path.join(ASSETS_DIR, '*.pkl', )),
+    reason="no assets to test",
+)
 def test_issue_467_static_movies_present(
     core_data,
 ):
