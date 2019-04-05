@@ -142,7 +142,7 @@ class MesoscopeICA(object):
         self.neuropil_unmix = None
 
         self.cache = cache
-        
+
         self.plane1_roi_names = None
         self.plane2_roi_names = None
 
@@ -495,13 +495,11 @@ class MesoscopeICA(object):
         self.plane1_ica_input_pointer = None
         self.plane2_ica_input_pointer = None
 
-        plane1_ica_input_pointer = os.path.join(self.ica_traces_dir,
-                                                f'traces_ica_input_{self.plane1_exp_id}.h5')
-        plane2_ica_input_pointer = os.path.join(self.ica_traces_dir,
-                                                f'traces_ica_input_{self.plane2_exp_id}.h5')
+        plane1_ica_input_pointer = os.path.join(self.ica_traces_dir, f'traces_ica_input_{self.plane1_exp_id}.h5')
+        plane2_ica_input_pointer = os.path.join(self.ica_traces_dir, f'traces_ica_input_{self.plane2_exp_id}.h5')
 
-        # file already exists, skip debiasing
         if os.path.isfile(plane1_ica_input_pointer) and os.path.isfile(plane2_ica_input_pointer):
+            # file already exists, skip debiasing
             self.plane1_ica_input_pointer = plane1_ica_input_pointer
             self.plane2_ica_input_pointer = plane2_ica_input_pointer
         else:
@@ -588,21 +586,16 @@ class MesoscopeICA(object):
                 if self.found_ica_input and self.found_ica_offset:
                     self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
                     self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset}
-
                     trace_sig_p1 = plane1_sig_m0.flatten()
                     trace_ct_p1 = plane1_ct_m0.flatten()
                     trace_sig_p2 = plane2_sig_m0.flatten()
                     trace_ct_p2 = plane2_ct_m0.flatten()
-
                     plane1_ica_input = np.append(trace_sig_p1, trace_ct_p2, axis=0)
                     plane2_ica_input = np.append(trace_ct_p1, trace_sig_p2, axis=0)
-
                     self.plane1_ica_input = plane1_ica_input
                     self.plane2_ica_input = plane2_ica_input
-
                     self.plane1_ica_input_pointer = plane1_ica_input_pointer
                     self.plane2_ica_input_pointer = plane2_ica_input_pointer
-
                     # write ica input traces to disk
                     with h5py.File(self.plane1_ica_input_pointer, "w") as f:
                         f.create_dataset("debiased_traces", data=self.plane1_ica_input)
@@ -639,10 +632,8 @@ class MesoscopeICA(object):
         self.plane1_ica_neuropil_input_pointer = None
         self.plane2_ica_neuropil_input_pointer = None
 
-        plane1_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
-                                                         f'neuropil_ica_input_{self.plane1_exp_id}.h5')
-        plane2_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
-                                                         f'neuropil_ica_input_{self.plane2_exp_id}.h5')
+        plane1_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_input_{self.plane1_exp_id}.h5')
+        plane2_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_input_{self.plane2_exp_id}.h5')
 
         if os.path.isfile(plane1_ica_neuropil_input_pointer) and os.path.isfile(plane2_ica_neuropil_input_pointer):
             # file already exists, skip debiasing
@@ -653,12 +644,12 @@ class MesoscopeICA(object):
             self.plane2_ica_neuropil_input_pointer = None
 
         # original traces exist, run bediasing:
-        if self.found_original_neuropil:
+        if self.found_original_neuropil[0] and self.found_original_neuropil[1]:
             # if debiased traces don't exist, run debiasing - pointers are both None
             if (not self.plane1_ica_neuropil_input_pointer) and (not self.plane2_ica_neuropil_input_pointer):
                 self.found_ica_neuropil_input = [False, False]
                 self.found_ica_neuropil_offset = [False, False]
-                logger.info("debiased neuropil traces do not exist in cache, running offset subtraction")
+                logger.info("Debiased neuropil traces do not exist in cache, running offset subtraction")
                 plane1_sig = self.plane1_neuropil_orig[0]
                 plane1_ct = self.plane1_neuropil_orig[1]
 
@@ -728,10 +719,8 @@ class MesoscopeICA(object):
                 if (not plane2_sig_offset.any() is None) and (not plane2_ct_offset.any() is None):
                     self.found_ica_neuropil_offset[1] = True
                 if self.found_ica_neuropil_input and self.found_ica_neuropil_offset:
-                    self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_offset,
-                                                   'plane1_ct_neuropil_offset': plane1_ct_offset}
-                    self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_offset,
-                                                   'plane2_ct_neuropil_offset': plane2_ct_offset}
+                    self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_offset, 'plane1_ct_neuropil_offset': plane1_ct_offset}
+                    self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_offset, 'plane2_ct_neuropil_offset': plane2_ct_offset}
                     neuropil_sig_p1 = plane1_sig_m0.flatten()
                     neuropil_ct_p1 = plane1_ct_m0.flatten()
                     neuropil_sig_p2 = plane2_sig_m0.flatten()
@@ -770,10 +759,8 @@ class MesoscopeICA(object):
                     plane2_ct_neuropil_offset = f['ct_offset'].value
                 self.plane1_ica_neuropil_input = plane1_ica_neuropil_input
                 self.plane2_ica_neuropil_input = plane2_ica_neuropil_input
-                self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_neuropil_offset,
-                                               'plane1_ct_neuropil_offset': plane1_ct_neuropil_offset}
-                self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_neuropil_offset,
-                                               'plane2_ct_neuropil_offset': plane2_ct_neuropil_offset, }
+                self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_neuropil_offset, 'plane1_ct_neuropil_offset': plane1_ct_neuropil_offset}
+                self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_neuropil_offset, 'plane2_ct_neuropil_offset': plane2_ct_neuropil_offset, }
         else:
             logger.error('Extract neuropil traces first')
         return
