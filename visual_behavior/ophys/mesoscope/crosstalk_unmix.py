@@ -991,74 +991,91 @@ class MesoscopeICA(object):
 
             orig_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
             orig_trace_plane1_ct = self.plane1_traces_orig[1, :, :]
+            plane1_roi_names = self.plane1_roi_names
+            plane1_roi_valid = self.plane1_roi_traces_valid['signal']
             ica_trace_plane1_sig = self.plane1_ica_output[0, :, :]
             ica_trace_plane1_ct = self.plane1_ica_output[1, :, :]
+
             logging.info(f'creating figures for experiment {pair[0]}')
+
+            plot_dir = os.path.join(self.session_cache_dir, f'ica_traces_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
+            if not os.path.isdir(plot_dir):
+                os.mkdir(plot_dir)
             for cell in range(orig_trace_plane1_sig.shape[0]):
-                plot_dir = os.path.join(self.session_cache_dir, f'ica_traces_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
-                if not os.path.isdir(plot_dir):
-                    os.mkdir(plot_dir)
-                pdf_name = os.path.join(plot_dir, f"ica_plots_{pair[0]}_cell_{cell}.pdf")
-                if os.path.isfile(pdf_name):
-                    logging.info(f"cell trace figure exist for {pair[0]} cell {cell}")
-                    continue
+                #check in this roi is valid:
+                if plane1_roi_valid[str(plane1_roi_names[cell])] :
+                    #Plot cell
+                    pdf_name = os.path.join(plot_dir, f"ica_plots_{pair[0]}_cell_{plane1_roi_names[cell]}.pdf")
+                    if os.path.isfile(pdf_name):
+                        logging.info(f"cell trace figure exist for {pair[0]} cell {plane1_roi_names[cell]}")
+                        continue
+                    else:
+                        pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+                        logging.info(f"creating figures for cell {plane1_roi_names[cell]}")
+                        for i in range(int(orig_trace_plane1_sig.shape[1] / 10000) + 1):
+                            orig_plane1_sig = orig_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
+                            orig_plane1_ct = orig_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
+                            ica_plane1_sig = ica_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
+                            ica_plane1_ct = ica_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
+                            f = plt.figure(figsize=(20, 10))
+                            plt.subplot(211)
+                            plt.plot(orig_plane1_sig, 'r-', label='signal plane')
+                            plt.plot(orig_plane1_ct, 'g-', label='cross-talk plane')
+                            plt.title(f'original traces for cell {plane1_roi_names[cell]}')
+                            plt.legend(loc='upper left')
+                            plt.subplot(212)
+                            plt.plot(ica_plane1_sig, 'r-', label='signal plane')
+                            plt.plot(ica_plane1_ct, 'g-', label='cross-talk plane')
+                            plt.title(f'post-ica traces, cell # {plane1_roi_names[cell]}')
+                            plt.legend(loc='upper left')
+                            pdf.savefig(f)
+                        pdf.close()
                 else:
-                    pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
-                    logging.info(f"creating figures for cell {cell}")
-                    for i in range(int(orig_trace_plane1_sig.shape[1] / 10000) + 1):
-                        orig_plane1_sig = orig_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
-                        orig_plane1_ct = orig_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
-                        ica_plane1_sig = ica_trace_plane1_sig[cell, i * 10000:(i + 1) * 10000]
-                        ica_plane1_ct = ica_trace_plane1_ct[cell, i * 10000:(i + 1) * 10000]
-                        f = plt.figure(figsize=(20, 10))
-                        plt.subplot(211)
-                        plt.plot(orig_plane1_sig, 'r-', label='signal plane')
-                        plt.plot(orig_plane1_ct, 'g-', label='cross-talk plane')
-                        plt.title(f'original traces for cell # {cell}')
-                        plt.legend(loc='upper left')
-                        plt.subplot(212)
-                        plt.plot(ica_plane1_sig, 'r-', label='signal plane')
-                        plt.plot(ica_plane1_ct, 'g-', label='cross-talk plane')
-                        plt.title(f'post-ica traces, cell # {cell}')
-                        plt.legend(loc='upper left')
-                        pdf.savefig(f)
-                    pdf.close()
+                    logging.info(f'Cell {plane1_roi_names[cell]} is invalid, skipping plotting')
+
             orig_trace_plane2_sig = self.plane2_traces_orig[0, :, :]
             orig_trace_plane2_ct = self.plane2_traces_orig[1, :, :]
+            plane2_roi_names = self.plane2_roi_names
+            plane2_roi_valid = self.plane2_roi_traces_valid['signal']
             ica_trace_plane2_sig = self.plane2_ica_output[0, :, :]
             ica_trace_plane2_ct = self.plane2_ica_output[1, :, :]
             logging.info(f'creating figures for experiment {pair[1]}')
-            for cell in range(orig_trace_plane2_sig.shape[0]):
-                plot_dir = os.path.join(self.session_cache_dir, f'ica_traces_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
-                if not os.path.isdir(plot_dir):
-                    os.mkdir(plot_dir)
+            plot_dir = os.path.join(self.session_cache_dir, f'ica_traces_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
+            if not os.path.isdir(plot_dir):
+                os.mkdir(plot_dir)
 
-                pdf_name = os.path.join(plot_dir, f"ica_plots_{pair[1]}_cell_{cell}.pdf")
-                if os.path.isfile(pdf_name):
-                    logging.info(f"cell trace figure exist for {pair[1]} cell {cell}")
-                    continue
+            for cell in range(orig_trace_plane2_sig.shape[0]):
+                # check in this roi is valid:
+                if plane2_roi_valid[str(plane2_roi_names[cell])]:
+                # Plot cell
+                    pdf_name = os.path.join(plot_dir, f"ica_plots_{pair[1]}_cell_{plane2_roi_names[cell]}.pdf")
+                    if os.path.isfile(pdf_name):
+                        logging.info(f"cell trace figure exist for {pair[1]} cell {plane2_roi_names[cell]}")
+                        continue
+                    else:
+                        logging.info(f'creating figures for cell {plane2_roi_names[cell]}')
+                        pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+                        for i in range(int(orig_trace_plane2_sig.shape[1] / 10000) + 1):
+                            orig_plane2_sig = orig_trace_plane2_sig[cell, i * 10000:(i + 1) * 10000]
+                            orig_plane2_ct = orig_trace_plane2_ct[cell, i * 10000:(i + 1) * 10000]
+                            ica_plane2_sig = ica_trace_plane2_sig[cell, i * 10000:(i + 1) * 10000]
+                            ica_plane2_ct = ica_trace_plane2_ct[cell, i * 10000:(i + 1) * 10000]
+                            f = plt.figure(figsize=(20, 10))
+                            plt.subplot(211)
+                            plt.plot(orig_plane2_sig, 'r-', label='signal plane')
+                            plt.plot(orig_plane2_ct, 'g-', label='cross-talk plane')
+                            plt.title(f'original traces for cell # {plane2_roi_names[cell]}')
+                            plt.legend(loc='upper left')
+                            plt.subplot(212)
+                            plt.plot(ica_plane2_sig, 'r-', label='signal plane')
+                            plt.plot(ica_plane2_ct, 'g-', label='cross-talk plane')
+                            plt.title(f'post-ica traces, cell # {plane2_roi_names[cell]}')
+                            plt.legend(loc='upper left')
+                            pdf.savefig(f)
+                            plt.close()
+                        pdf.close()
                 else:
-                    logging.info(f'creating figures for cell {cell}')
-                    pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
-                    for i in range(int(orig_trace_plane2_sig.shape[1] / 10000) + 1):
-                        orig_plane2_sig = orig_trace_plane2_sig[cell, i * 10000:(i + 1) * 10000]
-                        orig_plane2_ct = orig_trace_plane2_ct[cell, i * 10000:(i + 1) * 10000]
-                        ica_plane2_sig = ica_trace_plane2_sig[cell, i * 10000:(i + 1) * 10000]
-                        ica_plane2_ct = ica_trace_plane2_ct[cell, i * 10000:(i + 1) * 10000]
-                        f = plt.figure(figsize=(20, 10))
-                        plt.subplot(211)
-                        plt.plot(orig_plane2_sig, 'r-', label='signal plane')
-                        plt.plot(orig_plane2_ct, 'g-', label='cross-talk plane')
-                        plt.title(f'original traces for cell # {cell}')
-                        plt.legend(loc='upper left')
-                        plt.subplot(212)
-                        plt.plot(ica_plane2_sig, 'r-', label='signal plane')
-                        plt.plot(ica_plane2_ct, 'g-', label='cross-talk plane')
-                        plt.title(f'post-ica traces, cell # {cell}')
-                        plt.legend(loc='upper left')
-                        pdf.savefig(f)
-                        plt.close()
-                    pdf.close()
+                    logging.info(f'Cell {plane2_roi_names[cell]} is invalid, skipping plotting')
         else:
             logging.info(f'ICA traces for pair {pair[0]}/{pair[1]} don''t exist, nothing to plot.')
 
