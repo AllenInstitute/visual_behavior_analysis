@@ -1,15 +1,13 @@
+import matplotlib
 import logging
 import os
 import allensdk.internal.brain_observatory.demixer as demixer
 import allensdk.internal.core.lims_utilities as lu
 import h5py
 import numpy as np
-
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import visual_behavior.ophys.mesoscope.mesoscope as ms
-
 import shutil
-import matplotlib
 
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
