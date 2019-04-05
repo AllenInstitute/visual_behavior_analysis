@@ -43,6 +43,7 @@ def run_ica_on_session(session):
     pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
         ica_obj.get_ica_traces(pair)
+        ica_obj.validate_traces()
         ica_obj.combine_debias_traces()
         ica_obj.combine_debias_neuropil()
         ica_obj.unmix_traces(max_iter=50)
@@ -51,7 +52,6 @@ def run_ica_on_session(session):
         # if np.all(ica_obj.found_solution == True):
         #     meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
     return
-
 
 def get_ica_sessions():
     meso_data = ms.get_all_mesoscope_data()
