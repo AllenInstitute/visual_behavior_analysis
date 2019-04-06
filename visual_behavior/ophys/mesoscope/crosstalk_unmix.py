@@ -802,53 +802,61 @@ class MesoscopeICA(object):
                 if not self.found_solution:
                     logger.error("Failed to find solution, try increasing `max_iter`")
 
-                if self.found_solution:
-                    # rescaling traces back:
-                    self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_traces()
+            if self.found_solution:
+                # rescaling traces back:
+                self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_traces()
 
-                    plane1_ica_output = self.traces_unmix[:, 0] * self.ica_traces_scale_top
-                    plane2_ica_output = self.traces_unmix[:, 1] * self.ica_traces_scale_bot
+                plane1_ica_output = self.traces_unmix[:, 0] * self.ica_traces_scale_top
+                plane2_ica_output = self.traces_unmix[:, 1] * self.ica_traces_scale_bot
 
-                    # reshaping traces
-                    plane1_new_shape = [int(plane1_ica_output.shape[0] / self.plane1_traces_orig.shape[2]), self.plane1_traces_orig.shape[2]]
-                    plane1_ica_output = plane1_ica_output.reshape(plane1_new_shape)
+                # reshaping traces
+                plane1_new_shape = [int(plane1_ica_output.shape[0] / self.plane1_traces_orig.shape[2]),
+                                    self.plane1_traces_orig.shape[2]]
+                plane1_ica_output = plane1_ica_output.reshape(plane1_new_shape)
 
-                    plane2_new_shape = [int(plane2_ica_output.shape[0] / self.plane2_traces_orig.shape[2]), self.plane2_traces_orig.shape[2]]
-                    plane2_ica_output = plane2_ica_output.reshape(plane2_new_shape)
+                plane2_new_shape = [int(plane2_ica_output.shape[0] / self.plane2_traces_orig.shape[2]),
+                                    self.plane2_traces_orig.shape[2]]
+                plane2_ica_output = plane2_ica_output.reshape(plane2_new_shape)
 
-                    plane1_out_sig = plane1_ica_output[0:self.plane1_traces_orig.shape[1], :]
-                    plane1_out_ct = plane2_ica_output[0:self.plane1_traces_orig.shape[1], :]
+                #
+                plane1_valid_shape = np.array(
+                    [self.plane1_roi_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
+                plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
+                plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
 
-                    plane2_out_ct = plane1_ica_output[self.plane1_traces_orig.shape[1]:plane1_ica_output.shape[0], :]
-                    plane2_out_sig = plane2_ica_output[self.plane1_traces_orig.shape[1]:plane1_ica_output.shape[0], :]
+                plane2_valid_shape = np.array(
+                    [self.plane2_roi_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
+                plane2_out_ct = plane1_ica_output[
+                                plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                plane2_out_sig = plane2_ica_output[
+                                 plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
-                    # adding offset
-                    plane1_out_sig = plane1_out_sig + self.plane1_offset['plane1_sig_offset']
-                    plane1_out_ct = plane1_out_ct + self.plane1_offset['plane1_ct_offset']
+                # adding offset
+                plane1_out_sig = plane1_out_sig + self.plane1_offset['plane1_sig_offset']
+                plane1_out_ct = plane1_out_ct + self.plane1_offset['plane1_ct_offset']
 
-                    plane2_out_sig = plane2_out_sig + self.plane2_offset['plane2_sig_offset']
-                    plane2_out_ct = plane2_out_ct + self.plane2_offset['plane2_ct_offset']
+                plane2_out_sig = plane2_out_sig + self.plane2_offset['plane2_sig_offset']
+                plane2_out_ct = plane2_out_ct + self.plane2_offset['plane2_ct_offset']
 
-                    plane1_ica_output = np.array([plane1_out_sig, plane1_out_ct])
-                    plane2_ica_output = np.array([plane2_out_sig, plane2_out_ct])
+                plane1_ica_output = np.array([plane1_out_sig, plane1_out_ct])
+                plane2_ica_output = np.array([plane2_out_sig, plane2_out_ct])
 
-                    self.plane1_ica_output = plane1_ica_output
-                    self.plane2_ica_output = plane2_ica_output
+                self.plane1_ica_output = plane1_ica_output
+                self.plane2_ica_output = plane2_ica_output
 
-                    self.plane1_ica_output_pointer = plane1_ica_output_pointer
-                    self.plane2_ica_output_pointer = plane2_ica_output_pointer
-                    self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
+                self.plane1_ica_output_pointer = plane1_ica_output_pointer
+                self.plane2_ica_output_pointer = plane2_ica_output_pointer
+                self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
 
-                    # writing ica output traces to disk
-                    with h5py.File(self.plane1_ica_output_pointer, "w") as f:
-                        f.create_dataset(f"data", data=plane1_ica_output)
+                # writing ica output traces to disk
+                with h5py.File(self.plane1_ica_output_pointer, "w") as f:
+                    f.create_dataset(f"data", data=plane1_ica_output)
 
-                    with h5py.File(self.plane2_ica_output_pointer, "w") as f:
-                        f.create_dataset(f"data", data=plane2_ica_output)
+                with h5py.File(self.plane2_ica_output_pointer, "w") as f:
+                    f.create_dataset(f"data", data=plane2_ica_output)
 
-                    with h5py.File(self.ica_mixing_matrix_traces_pointer, "w") as f:
-                        f.create_dataset(f"data", data=self.traces_matrix)
-
+                with h5py.File(self.ica_mixing_matrix_traces_pointer, "w") as f:
+                    f.create_dataset(f"data", data=self.traces_matrix)
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
             self.plane1_ica_output_pointer = plane1_ica_output_pointer
@@ -921,22 +929,26 @@ class MesoscopeICA(object):
                     plane2_ica_neuropil_output = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
 
                     # reshaping traces
-                    # reshaping traces
                     plane1_new_shape = [int(plane1_ica_neuropil_output.shape[0] / self.plane1_neuropil_orig.shape[2]),
                                         self.plane1_neuropil_orig.shape[2]]
-                    plane1_ica_neuropil_output = plane1_ica_neuropil_output.reshape(plane1_new_shape)
+                    plane1_ica_output = plane1_ica_neuropil_output.reshape(plane1_new_shape)
 
                     plane2_new_shape = [int(plane2_ica_neuropil_output.shape[0] / self.plane2_neuropil_orig.shape[2]),
                                         self.plane2_neuropil_orig.shape[2]]
-                    plane2_ica_neuropil_output = plane2_ica_neuropil_output.reshape(plane2_new_shape)
+                    plane2_ica_output = plane2_ica_neuropil_output.reshape(plane2_new_shape)
 
-                    plane1_out_sig = plane1_ica_neuropil_output[0:self.plane1_neuropil_orig.shape[1], :]
-                    plane1_out_ct = plane2_ica_neuropil_output[0:self.plane1_neuropil_orig.shape[1], :]
+                    #
+                    plane1_valid_shape = np.array(
+                        [self.plane1_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
+                    plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
+                    plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
 
-                    plane2_out_ct = plane1_ica_neuropil_output[
-                                    self.plane1_neuropil_orig.shape[1]:plane1_ica_neuropil_output.shape[0], :]
-                    plane2_out_sig = plane2_ica_neuropil_output[
-                                     self.plane1_neuropil_orig.shape[1]:plane1_ica_neuropil_output.shape[0], :]
+                    plane2_valid_shape = np.array(
+                        [self.plane2_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
+                    plane2_out_ct = plane1_ica_output[
+                                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                    plane2_out_sig = plane2_ica_output[
+                                     plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
                     # adding offset
                     plane1_out_sig = plane1_out_sig + self.plane1_neuropil_offset['plane1_sig_neuropil_offset']
