@@ -3,6 +3,7 @@ import logging
 import os
 import allensdk.internal.brain_observatory.demixer as demixer
 import allensdk.internal.core.lims_utilities as lu
+import allensdk.core.json_utilities as ju
 import h5py
 import numpy as np
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
@@ -12,6 +13,7 @@ import shutil
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -47,6 +49,7 @@ def run_ica_on_session(session):
         ica_obj.unmix_traces(max_iter=50)
         ica_obj.unmix_neuropil(max_iter=100)
         ica_obj.plot_ica_traces(pair)
+
         # if np.all(ica_obj.found_solution == True):
         #     meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
     return
@@ -79,10 +82,12 @@ def get_ica_sessions():
 
 
 def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
+    exclude_labels = ["union", "duplicate", "motion_border"]
     movie_h5 = get_path(data, "movie_h5", True)
     traces_h5 = get_path(data, "traces_h5", True)
     traces_h5_ica = get_path(data, "traces_h5_ica", True)
     output_h5 = get_path(data, "output_file", False)
+    traces_valid = get_path(data, "traces_valid", True)
 
     with h5py.File(movie_h5, "r") as f:
         movie_shape = f["data"].shape[1:]
@@ -94,6 +99,8 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
     with h5py.File(traces_h5, "r") as f:
         trace_ids = [int(rid) for rid in f["roi_names"].value]
 
+    exp_traces_valid = ju.read(traces_valid)["signal"]
+
     rois = get_path(data, "roi_masks", False)
     masks = None
     valid = None
@@ -101,24 +108,25 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
     exclude_labels = set(exclude_labels)
 
     for roi in rois:
-        mask = np.zeros(movie_shape, dtype=bool)
-        mask_matrix = np.array(roi["mask"], dtype=bool)
-        mask[roi["y"]:roi["y"] + roi["height"], roi["x"]:roi["x"] + roi["width"]] = mask_matrix
+        if exp_traces_valid[str(roi["id"])]:
+            mask = np.zeros(movie_shape, dtype=bool)
+            mask_matrix = np.array(roi["mask"], dtype=bool)
+            mask[roi["y"]:roi["y"] + roi["height"], roi["x"]:roi["x"] + roi["width"]] = mask_matrix
 
-        if masks is None:
-            masks = np.zeros((len(rois), mask.shape[0], mask.shape[1]), dtype=bool)
-            valid = np.zeros(len(rois), dtype=bool)
+            if masks is None:
+                masks = np.zeros((len(rois), mask.shape[0], mask.shape[1]), dtype=bool)
+                valid = np.zeros(len(rois), dtype=bool)
 
-        rid = int(roi["id"])
-        try:
-            ridx = trace_ids.index(rid)
-        except ValueError as e:
-            raise ValueError("Could not find cell roi id %d in roi traces file" % rid)
+            rid = int(roi["id"])
+            try:
+                ridx = trace_ids.index(rid)
+            except ValueError as e:
+                raise ValueError("Could not find cell roi id %d in roi traces file" % rid)
 
-        masks[ridx, :, :] = mask
+            masks[ridx, :, :] = mask
 
-        current_exclusion_labels = set(roi.get("exclusion_labels", []))
-        valid[ridx] = len(exclude_labels & current_exclusion_labels) == 0
+            current_exclusion_labels = set(roi.get("exclusion_labels", []))
+            valid[ridx] = len(exclude_labels & current_exclusion_labels) == 0
 
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
@@ -144,6 +152,7 @@ def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
             where ophys_cell_segmentation_run_id = {seg_run}
             """
             rois = lu.query(query)
+
             nrois = {roi['id']: dict(width=roi['width'],
                                      height=roi['height'],
                                      x=roi['x'],
@@ -154,21 +163,25 @@ def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
                                      exclusion_labels=[])
                      for roi in rois}
 
-            ica_dir = f'session_{session}/ica_traces_{pair[0]}_{pair[1]}/traces_ica_output_{exp_id}.h5'
             demix_path = os.path.join(an_dir, f'session_{session}/demixing_{exp_id}')
-            input_data = {
+            ica_dir = f'session_{session}/ica_traces_{pair[0]}_{pair[1]}/'
+
+            traces_valid = os.path.join(an_dir, ica_dir, f'valid_{exp_id}.json')
+
+            data = {
                 "movie_h5": os.path.join(exp_dir, "processed", "concat_31Hz_0.h5"),
-                "traces_h5_ica": os.path.join(an_dir, ica_dir),
+                "traces_h5_ica": os.path.join(an_dir, ica_dir, f'traces_ica_output_{exp_id}.h5'),
                 "traces_h5": os.path.join(exp_dir, "processed", "roi_traces.h5"),
                 "roi_masks": nrois.values(),
+                "traces_valid": traces_valid,
                 "output_file": os.path.join(demix_path, f"traces_demixing_output_{exp_id}.h5")
             }
 
-            traces, masks, valid, trace_ids, movie_h5, output_h5 = parse_input(input_data)
+            traces, masks, valid, trace_ids, movie_h5, output_h5 = parse_input(data)
 
             # only demix non-union, non-duplicate ROIs
             valid_idxs = np.where(valid)
-            demix_traces = traces[valid_idxs]
+            demix_traces = traces
             demix_masks = masks[valid_idxs]
 
             with h5py.File(movie_h5, 'r') as f:
@@ -203,8 +216,8 @@ def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
             demixed_traces[nb_inds, :] = np.nan
             logging.info("Saving output")
             out_traces = np.zeros(traces.shape, dtype=demix_traces.dtype)
-            out_traces[:] = np.nan
-            out_traces[valid_idxs] = demixed_traces
+
+            out_traces = demixed_traces
 
             with h5py.File(output_h5, 'w') as f:
                 f.create_dataset("data", data=out_traces, compression="gzip")
