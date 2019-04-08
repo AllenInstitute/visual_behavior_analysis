@@ -8,7 +8,7 @@ from six import iteritems
 from ...analyze import compute_running_speed  # , calc_deriv
 from ...uuid_utils import make_deterministic_session_uuid
 from ...utilities import local_time
-
+from ... import devices
 
 logger = logging.getLogger(__name__)
 
@@ -1122,6 +1122,43 @@ def get_device_name(exp_data):
     """
     return exp_data['platform_info']['computer_name']
 
+def get_rig_id(exp_data):
+    """ Get the ID of the rig on which the experiment was run
+
+    TODO: Add the date when data files started including it.
+    Rig ID is now included in the experiment data (as of XXXX).
+    For loading old data we still need to use the mapping in
+    devices to get the rig ID from the computer name.
+
+    Parameters
+    ----------
+    exp_data: Mapping
+        foraging2 experiment output data
+
+    Returns
+    -------
+    rig_id: str
+        id of the rig or 'unknown' if not found
+    """
+    try:
+        rig_id = exp_data['platform_info']['rig_id']
+    except KeyError:
+        rig_id = 'unknown'
+    if rig_id == 'unknown':
+        # If the 'rig_id' field is 'unknown', we need to get the ID by using devices.
+        # This should only happen with old data from before 'rig_id' was included.
+        experiment_date = exp_data['start_time']
+        computer_name = get_device_name(exp_data)
+        if experiment_date < devices.VALID_BEFORE_DATE:
+            # This experiment comes from a time when the mappings in the devices.py
+            # file are valid.
+            return devices.get_rig_id(computer_name)
+        else:
+            logger.warning(("rig_id unknown, no valid mapping exists for computer "
+            "{} on {}").format(computer_name, experiment_date))
+            return 'unknown'
+    else:
+        return rig_id
 
 def get_image_path(data):
     """Get path to pickle that stores images to be drawn

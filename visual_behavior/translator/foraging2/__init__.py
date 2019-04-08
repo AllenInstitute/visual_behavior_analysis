@@ -4,7 +4,6 @@ import pickle
 
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
 
-from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     annotate_licks, annotate_rewards, annotate_optogenetics, annotate_responses, \
     annotate_schedule_time, annotate_stimuli, get_user_id, get_mouse_id, \
@@ -16,8 +15,8 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stimulus_window, get_volume_limit, get_failure_repeats, \
     get_catch_frequency, get_free_reward_trials, get_min_no_lick_time, \
     get_max_session_duration, get_abort_on_early_response, get_session_id, \
-    get_even_sampling, get_auto_reward_delay, get_periodic_flash, get_platform_info
-
+    get_even_sampling, get_auto_reward_delay, get_periodic_flash, get_platform_info, \
+    get_rig_id
 
 from .extract_stimuli import get_visual_stimuli, check_for_omitted_flashes
 from .extract_images import get_image_metadata
@@ -159,7 +158,6 @@ def data_to_metadata(data):
 
     behavior_session_uuid = get_session_id(data, create_if_missing=True)
 
-    device_name = get_device_name(data)
     params = get_params(data)  # this joins both params and commandline params
 
     stim_tables = data["items"]["behavior"]["stimuli"]
@@ -176,8 +174,8 @@ def data_to_metadata(data):
 
     metadata = {
         "startdatetime": start_time_datetime_local,
-        "rig_id": get_rig_id(device_name),
-        "computer_name": device_name,
+        "rig_id": get_rig_id(data),
+        "computer_name": get_device_name(data),
         "reward_vol": get_reward_volume(data),
         "rewardvol": get_reward_volume(data),  # for compatibility with legacy code
         "auto_reward_vol": get_auto_reward_volume(data),
