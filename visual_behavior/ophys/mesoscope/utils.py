@@ -140,10 +140,10 @@ def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
             demix_path = os.path.join(an_dir, f'session_{session}/demixing_{exp_id}')
 
             if os.path.isfile(demix_path):
-                logging.info("Demixed traces exist for experiment {exp_id}, skipping demixing")
+                logging.info(f"Demixed traces exist for experiment {exp_id}, skipping demixing")
                 continue
             else:
-                logging.info("Demixing {exp_id}")
+                logging.info(f"Demixing {exp_id}")
                 exp_dir = mds['experiment_folder'].loc[mds['experiment_id'] == exp_id].values[0]
                 query = f"""
                 select *
@@ -264,10 +264,10 @@ def run_neuropil_correction_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnaly
                                          f'neuropil_ica_output_{exp_id}.h5')
 
             if os.path.isfile(neuropil_file):
-                logging.info("Neuropil corrected traces exist for experiment {exp_id}, skipping neuropil correction")
+                logging.info(f"Neuropil corrected traces exist for experiment {exp_id}, skipping neuropil correction")
                 continue
             else:
-                logging.info("Running neuropil correction on {exp_id}")
+                logging.info(f"Running neuropil correction on {exp_id}")
                 demix_dir = os.path.join(ses_dir, f'demixing_{exp_id}')
                 trace_file = os.path.join(demix_dir, f'traces_demixing_output_{exp_id}.h5')
                 storage_dir = os.path.join(ses_dir, f'neuropil_corrected_{exp_id}')
