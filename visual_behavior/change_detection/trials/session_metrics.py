@@ -210,6 +210,7 @@ def rig_id(session_trials):
         rig_id = 'unknown'
     return rig_id
 
+
 def filename(session_trials):
     return session_trials.iloc[0].filename
 

@@ -1122,6 +1122,7 @@ def get_device_name(exp_data):
     """
     return exp_data['platform_info']['computer_name']
 
+
 def get_rig_id(exp_data):
     """ Get the ID of the rig on which the experiment was run
 
@@ -1155,10 +1156,11 @@ def get_rig_id(exp_data):
             return devices.get_rig_id(computer_name)
         else:
             logger.warning(("rig_id unknown, no valid mapping exists for computer "
-            "{} on {}").format(computer_name, experiment_date))
+                            "{} on {}").format(computer_name, experiment_date))
             return 'unknown'
     else:
         return rig_id
+
 
 def get_image_path(data):
     """Get path to pickle that stores images to be drawn
