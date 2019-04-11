@@ -128,10 +128,11 @@ def plot_roi_validation(roi_names,
         ax[3].set_ylabel('dF/F')
 
         if id in roi_ids:
-            cell_index = roi_metrics[roi_metrics.roi_id==id].cell_index.values[0]
-            cell_specimen_id = roi_metrics[roi_metrics.roi_id==id].id.values[0]
+            cell_index = roi_metrics[roi_metrics.roi_id == id].cell_index.values[0]
+            cell_specimen_id = roi_metrics[roi_metrics.roi_id == id].id.values[0]
             # cell_index = cell_indices[id]
-            ax[2] = plot_cell_zoom(roi_masks, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=True, ax=ax[2])
+            ax[2] = plot_cell_zoom(roi_masks, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=True,
+                                   ax=ax[2])
             ax[2].grid(False)
 
             ax[4].imshow(max_projection, cmap='gray')
@@ -978,7 +979,7 @@ def plot_mean_trace_from_mean_df(mean_df, ophys_frame_rate, label=None, color='k
     xticks, xticklabels = get_xticks_xticklabels(mean_trace, ophys_frame_rate, interval_sec=interval_sec, window=xlims)
     ax.set_xticks(xticks);
     ax.set_xticklabels(xticklabels);
-    ax.set_xlim([xlims[0] * ophys_frame_rate, (np.abs(xlims[0])+xlims[1]) * ophys_frame_rate])
+    ax.set_xlim([xlims[0] * ophys_frame_rate, (np.abs(xlims[0]) + xlims[1]) * ophys_frame_rate])
     ax.set_xlabel('time (sec)')
     ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
@@ -1005,7 +1006,7 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
     return ax
 
 
-def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use_events=False, xlims=[-2,2]):
+def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use_events=False, xlims=[-2, 2]):
     import visual_behavior.ophys.response_analysis.utilities as ut
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
     tdf = analysis.trial_response_df
@@ -1029,8 +1030,8 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         ax[i] = plot_mean_trace_with_variability(tmp.trace.values, analysis.ophys_frame_rate, label=None, color=color,
                                                  interval_sec=1, xlims=analysis.trial_window, ax=ax[i])
         ax[i] = plot_flashes_on_trace(ax[i], analysis, trial_type=trial_type, omitted=False, alpha=.05 * 8)
-        ax[i].set_xlim((np.abs(analysis.trial_window[0])+xlims[0])*frame_rate,
-                       (np.abs(analysis.trial_window[0])+xlims[1])*frame_rate)
+        ax[i].set_xlim((np.abs(analysis.trial_window[0]) + xlims[0]) * frame_rate,
+                       (np.abs(analysis.trial_window[0]) + xlims[1]) * frame_rate)
         mean = np.round(mean_df.mean_response.values[0], 3)
         p_val = np.round(mean_df.p_value.values[0], 4)
         sd = np.round(mean_df.sd_over_baseline.values[0], 2)
@@ -1112,7 +1113,8 @@ def plot_images(dataset, orientation='row', color_box=True, save=False, ax=None)
     return ax
 
 
-def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, save_dir=None, window=[-3,3], legend=False):
+def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, save_dir=None, window=[-3, 3],
+                                         legend=False):
     if window is None:
         window = analysis.omitted_flash_window
     fdf = analysis.flash_response_df
@@ -1138,7 +1140,6 @@ def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, sa
         save_figure(fig, (6, 5), save_dir, 'omitted_flash_response', str(cell_specimen_id))
         plt.close()
     return ax
-
 
 
 def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):

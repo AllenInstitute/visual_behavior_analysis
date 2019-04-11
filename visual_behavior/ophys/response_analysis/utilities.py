@@ -8,11 +8,11 @@ logger = logging.getLogger(__name__)
 
 
 def filter_by_responsiveness(data, use_events=False):
-    df = data[data.pref_stim==True].copy()
+    df = data[data.pref_stim == True].copy()
     if use_events:
-        filtered_df = df[(df.mean_response>0.005) & (df.fraction_nonzero_trials>0.25)]
+        filtered_df = df[(df.mean_response > 0.005) & (df.fraction_nonzero_trials > 0.25)]
     else:
-        filtered_df = df[(df.mean_response>0.05) & (df.fraction_significant_trials>0.25)]
+        filtered_df = df[(df.mean_response > 0.05) & (df.fraction_significant_trials > 0.25)]
     return filtered_df
 
 
@@ -28,6 +28,7 @@ def get_nearest_frame(timepoint, timestamps):
         nearest_frame = nearest_frame + 1  # use next frame to ensure nearest (2P) follows input timepoint (stim), 190127
     return nearest_frame
 
+
 def get_successive_frame_list(timepoints_array, timestanps):
     # This is a modification of get_nearest_frame for speedup
     #  This implementation looks for the first 2p frame consecutive to the stim
@@ -35,8 +36,9 @@ def get_successive_frame_list(timepoints_array, timestanps):
 
     return successive_frames
 
+
 def get_trace_around_timepoint(timepoint, trace, timestamps, window, frame_rate):
- #   frame_for_timepoint = get_nearest_frame(timepoint, timestamps)
+    #   frame_for_timepoint = get_nearest_frame(timepoint, timestamps)
     frame_for_timepoint = get_successive_frame_list(timepoint, timestamps)
     lower_frame = frame_for_timepoint + (window[0] * frame_rate)
     upper_frame = frame_for_timepoint + (window[1] * frame_rate)
@@ -49,7 +51,7 @@ def get_mean_in_window(trace, window, frame_rate, use_events=False):
     # if use_events:
     #     trace[trace==0] = np.nan
     # mean = np.nanmean(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]) # 181212
-    mean = np.nanmean(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)]) # modified 190127
+    mean = np.nanmean(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])  # modified 190127
     # if np.isnan(mean):
     #     mean = 0
     return mean
@@ -92,43 +94,34 @@ def ptest(x, num_conditions):
 
 
 def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
-    #data munging
+    # data munging
     fdf = flash_response_df.copy()
-    odf = fdf[fdf.omitted==True].copy()
     st = stimulus_table.copy()
     included_flashes = fdf.flash_number.unique()
     st = st[st.flash_number.isin(included_flashes)]
-    ost = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
-
-    # Slower code   
-    #ost['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in ost.start_time.values]
-    #ost['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in ost.end_time.values]
- 
-    # Code making unnecessary copu
-    #ost['start_frame'] = get_successive_frame_list(ost.start_time.values, dataset.timestamps_ophys)
-    #ost['end_frame'] = get_successive_frame_list(ost.end_time.values, dataset.timestamps_ophys) 
+    ost = dataset.stimulus_table[dataset.stimulus_table.omitted == True]
 
     ost.loc[:, 'start_frame'] = get_successive_frame_list(ost.start_time.values, dataset.timestamps_ophys)
     ost.loc[:, 'end_frame'] = get_successive_frame_list(ost.end_time.values, dataset.timestamps_ophys)
-    
-    #set params
+
+    # set params
     stim_duration = 0.25
     frame_rate = 31
-    stim_frames = int(np.round(stim_duration*frame_rate,0)) #stimulus window = 0.25ms*31Hz = 7.75 frames
+    stim_frames = int(np.round(stim_duration * frame_rate, 0))  # stimulus window = 0.25ms*31Hz = 7.75 frames
     cell_indices = dataset.get_cell_indices()
     n_cells = len(cell_indices)
-    #get shuffled values from omitted flash sweeps
+    # get shuffled values from omitted flash sweeps
     shuffled_responses = np.empty((n_cells, 10000, stim_frames))
     idx = np.random.choice(ost.start_frame.values, 10000)
     for i in range(stim_frames):
-        shuffled_responses[:,:,i] = dataset.dff_traces[:,idx+i]
+        shuffled_responses[:, :, i] = dataset.dff_traces[:, idx + i]
     shuffled_mean = shuffled_responses.mean(axis=2)
-    #compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep
-    flash_p_values = pd.DataFrame(index = st.index.values, columns=np.array(range(n_cells)).astype(str))
-    for i,cell_index in enumerate(cell_indices):
-        responses = fdf[fdf.cell==cell_index].mean_response.values
-        null_dist_mat = np.tile(shuffled_mean[i,:], reps=(len(responses),1))
-        actual_is_less = responses.reshape(len(responses),1) <= null_dist_mat
+    # compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep
+    flash_p_values = pd.DataFrame(index=st.index.values, columns=np.array(range(n_cells)).astype(str))
+    for i, cell_index in enumerate(cell_indices):
+        responses = fdf[fdf.cell == cell_index].mean_response.values
+        null_dist_mat = np.tile(shuffled_mean[i, :], reps=(len(responses), 1))
+        actual_is_less = responses.reshape(len(responses), 1) <= null_dist_mat
         p_values = np.mean(actual_is_less, axis=1)
         flash_p_values[str(cell_index)] = p_values
     return flash_p_values
@@ -194,7 +187,8 @@ def compute_reliability(group, analysis=None, flashes=True, omitted=False):
     from itertools import combinations
     import scipy as sp
     if analysis and omitted:
-        response_window = [int(np.abs(analysis.omitted_flash_window[0]) * 31), int(omitted_flash_window.flash_window[1] * 31)]
+        response_window = [int(np.abs(analysis.omitted_flash_window[0]) * 31),
+                           int(analysis.omitted_flash_window[1] * 31)]
     elif analysis and flashes and not omitted:
         response_window = [int(np.abs(analysis.flash_window[0]) * 31), int(analysis.flash_window[1] * 31)]
     elif analysis and not flashes and not omitted:
@@ -204,11 +198,11 @@ def compute_reliability(group, analysis=None, flashes=True, omitted=False):
     elif not analysis and omitted:
         response_window = [int(3 * 31), int(6 * 31)]
     else:
-        response_window = [int(4*31), int(8*31)]
+        response_window = [int(4 * 31), int(8 * 31)]
     corr_values = []
     traces = group['trace'].values
     traces = np.vstack(traces)
-    traces = traces[:, response_window[0]:response_window[1]] #limit to post change window
+    traces = traces[:, response_window[0]:response_window[1]]  # limit to post change window
     combos = combinations(traces, 2)
     corr_values = []
     for combo in combos:
@@ -234,9 +228,9 @@ def get_window(analysis=None, flashes=False, omitted=False):
         window = [-4, 8]
     return window
 
+
 def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
                 get_reliability=False):
-
     window = get_window(analysis, flashes, omitted)
 
     rdf = response_df.copy()
@@ -271,7 +265,6 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     return mdf
 
 
-
 def get_cre_lines(mean_df):
     cre_lines = np.sort(mean_df.cre_line.unique())
     return cre_lines
@@ -301,7 +294,7 @@ def get_color_for_image_name(image_names, image_name):
         if image_name == 'omitted':
             color = 'gray'
         else:
-            colors = sns.color_palette("hls", len(image_names)-1)
+            colors = sns.color_palette("hls", len(image_names) - 1)
             image_index = np.where(image_names == image_name)[0][0]
             color = colors[image_index]
     else:
@@ -313,9 +306,9 @@ def get_color_for_image_name(image_names, image_name):
 
 def get_color_for_area(area):
     colors = sns.color_palette()
-    if area=='VISp':
+    if area == 'VISp':
         color = colors[7]
-    elif area=='VISal':
+    elif area == 'VISal':
         color = colors[9]
     return color
 
@@ -332,14 +325,14 @@ def get_colors_for_areas(df):
 
 
 def get_colors_for_image_sets():
-    colors = [sns.color_palette()[3]]+sns.color_palette('Blues_r',5)[:3]
+    colors = [sns.color_palette()[3]] + sns.color_palette('Blues_r', 5)[:3]
     # colors = sns.color_palette()
     # colors = [colors[3],colors[0],colors[2],colors[4]]
     return colors
 
 
 def get_colors_for_repeats():
-    greens = sns.light_palette("green",5)[::-1]
+    greens = sns.light_palette("green", 5)[::-1]
     purple = sns.dark_palette("purple")[-1]
     colors = [list(purple), list(greens[0]), list(greens[1]), list(greens[2])]
     return colors
@@ -370,7 +363,7 @@ def add_metadata_to_mean_df(mdf, metadata):
     return mdf
 
 
-def get_time_to_peak(analysis, trace, window=[-4,8]):
+def get_time_to_peak(analysis, trace, window=[-4, 8]):
     response_window_duration = analysis.response_window_duration
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
     frame_rate = analysis.ophys_frame_rate
@@ -381,7 +374,7 @@ def get_time_to_peak(analysis, trace, window=[-4,8]):
     return peak_response, time_to_peak
 
 
-def annotate_mean_df_with_time_to_peak(analysis, mean_df, window=[-4,8]):
+def annotate_mean_df_with_time_to_peak(analysis, mean_df, window=[-4, 8]):
     ttp_list = []
     peak_list = []
     for idx in mean_df.index:
@@ -406,7 +399,7 @@ def annotate_mean_df_with_fano_factor(analysis, mean_df):
     return mean_df
 
 
-def annotate_mean_df_with_p_value(analysis, mean_df, window=[-4,8]):
+def annotate_mean_df_with_p_value(analysis, mean_df, window=[-4, 8]):
     response_window_duration = analysis.response_window_duration
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
     frame_rate = analysis.ophys_frame_rate
@@ -419,7 +412,7 @@ def annotate_mean_df_with_p_value(analysis, mean_df, window=[-4,8]):
     return mean_df
 
 
-def annotate_mean_df_with_sd_over_baseline(analysis, mean_df, window=[-4,8]):
+def annotate_mean_df_with_sd_over_baseline(analysis, mean_df, window=[-4, 8]):
     response_window_duration = analysis.response_window_duration
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
     baseline_window = [np.abs(window[0]) - response_window_duration, (np.abs(window[0]))]
@@ -446,7 +439,7 @@ def annotate_mean_df_with_pref_stim(mean_df):
         cell_key = 'cell'
     for cell in mdf[cell_key].unique():
         mc = mdf[(mdf[cell_key] == cell)]
-        mc = mc[mc[image_name]!='omitted']
+        mc = mc[mc[image_name] != 'omitted']
         pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))][image_name].values[0]
         row = mdf[(mdf[cell_key] == cell) & (mdf[image_name] == pref_image)].index
         mdf.loc[row, 'pref_stim'] = True
@@ -564,7 +557,8 @@ def add_repeat_to_stimulus_table(stimulus_table):
 
 def add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table):
     stimulus_table = add_repeat_to_stimulus_table(stimulus_table)
-    flash_response_df = flash_response_df.merge(stimulus_table[['flash_number', 'repeat', 'post_omitted']], on='flash_number')
+    flash_response_df = flash_response_df.merge(stimulus_table[['flash_number', 'repeat', 'post_omitted']],
+                                                on='flash_number')
     return flash_response_df
 
 
@@ -619,9 +613,9 @@ def add_ophys_times_to_behavior_df(behavior_df, timestamps_ophys):
     """
     behavior_df can be dataset.running, dataset.licks or dataset.rewards
     """
-    #ophys_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in behavior_df.time.values]
+    # ophys_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in behavior_df.time.values]
     ophys_frames = get_successive_frame_list(behavior_df.time.values, timestamps_ophys)
-    
+
     ophys_times = [timestamps_ophys[frame] for frame in ophys_frames]
     behavior_df['ophys_frame'] = ophys_frames
     behavior_df['ophys_time'] = ophys_times
@@ -629,7 +623,7 @@ def add_ophys_times_to_behavior_df(behavior_df, timestamps_ophys):
 
 
 def add_ophys_times_to_stimulus_table(stimulus_table, timestamps_ophys):
-    #ophys_start_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in
+    # ophys_start_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in
     #                      stimulus_table.start_time.values]
     ophys_start_frames = get_successive_frame_list(stimulus_table.start_time.values, timestamps_ophys)
 
@@ -638,7 +632,7 @@ def add_ophys_times_to_stimulus_table(stimulus_table, timestamps_ophys):
     stimulus_table['ophys_start_time'] = ophys_start_times
 
     ophys_end_frames = get_successive_frame_list(stimulus_table.end_time.values, timestamps_ophys)
-#    ophys_end_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in stimulus_table.end_time.values]
+    #    ophys_end_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in stimulus_table.end_time.values]
     ophys_end_times = [timestamps_ophys[frame] for frame in ophys_end_frames]
     stimulus_table['ophys_end_frame'] = ophys_end_frames
     stimulus_table['ophys_end_time'] = ophys_end_times
@@ -714,6 +708,3 @@ def get_active_cell_indices(dff_traces):
         snr_values.append(snr)
     active_cell_indices = np.argsort(snr_values)[-10:]
     return active_cell_indices
-
-
-

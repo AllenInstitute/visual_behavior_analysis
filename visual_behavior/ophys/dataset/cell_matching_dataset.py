@@ -85,10 +85,10 @@ class CellMatchingDataset(object):
             lims_data = self.lims_data
             date = str(lims_data.experiment_date)[:10].split('-')
             analysis_folder_name = str(lims_data.lims_id) + '_' + \
-                                   str(lims_data.mouse_id) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                                   lims_data.structure + '_' + str(lims_data.depth) + '_' + \
-                                   lims_data.specimen_driver_line.split('-')[0] + '_' + lims_data.rig[3:5] + \
-                                   lims_data.rig[6] + '_' + lims_data.session_type
+                str(lims_data.mouse_id) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+                lims_data.structure + '_' + str(lims_data.depth) + '_' + \
+                lims_data.specimen_driver_line.split('-')[0] + '_' + lims_data.rig[3:5] + \
+                lims_data.rig[6] + '_' + lims_data.session_type
             self.analysis_folder_name = analysis_folder_name
         return self.analysis_folder_name
 
