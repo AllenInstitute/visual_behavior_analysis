@@ -1126,8 +1126,7 @@ def get_device_name(exp_data):
 def get_rig_id(exp_data):
     """ Get the ID of the rig on which the experiment was run
 
-    TODO: Add the date when data files started including it.
-    Rig ID is now included in the experiment data (as of XXXX).
+    Rig ID is now included in the behavior pickle files (as of XXXX).
     For loading old data we still need to use the mapping in
     devices to get the rig ID from the computer name.
 
@@ -1142,11 +1141,9 @@ def get_rig_id(exp_data):
         id of the rig or 'unknown' if not found
     """
     try:
-        rig_id = exp_data['platform_info']['rig_id']
+        rig_id = exp_data['rig_id']
     except KeyError:
-        rig_id = 'unknown'
-    if rig_id == 'unknown':
-        # If the 'rig_id' field is 'unknown', we need to get the ID by using devices.
+        # If there is no 'rig_id' field, we need to get the ID by using devices.
         # This should only happen with old data from before 'rig_id' was included.
         experiment_date = exp_data['start_time']
         computer_name = get_device_name(exp_data)
@@ -1158,8 +1155,7 @@ def get_rig_id(exp_data):
             logger.warning(("rig_id unknown, no valid mapping exists for computer "
                             "{} on {}").format(computer_name, experiment_date))
             return 'unknown'
-    else:
-        return rig_id
+    return rig_id
 
 
 def get_image_path(data):
