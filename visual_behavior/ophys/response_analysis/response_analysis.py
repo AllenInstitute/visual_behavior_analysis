@@ -132,7 +132,6 @@ class ResponseAnalysis(object):
         else:
             if os.path.exists(self.get_trial_response_df_path()):
                 print('loading trial response dataframe')
-                # self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
                 self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df')
                 tdf = self.trial_response_df
                 tdf.cell = [int(cell) for cell in tdf.cell.values]
@@ -248,7 +247,6 @@ class ResponseAnalysis(object):
         else:
             if os.path.exists(self.get_flash_response_df_path()):
                 print('loading flash response dataframe')
-                # self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
                 self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df')
                 fdf = self.flash_response_df
                 fdf.cell = [int(cell) for cell in fdf.cell.values]
@@ -336,7 +334,6 @@ class ResponseAnalysis(object):
         else:
             if os.path.exists(self.get_omitted_flash_response_df_path()):
                 print('loading omitted flash response dataframe')
-                # self.omitted_flash_response_df = pd.read_hdf(self.get_omitted_flash_response_df_path(), key='df', format='fixed')
                 self.omitted_flash_response_df = pd.read_hdf(self.get_omitted_flash_response_df_path(), key='df')
                 fdf = self.omitted_flash_response_df
                 fdf.cell = [int(cell) for cell in fdf.cell.values]
