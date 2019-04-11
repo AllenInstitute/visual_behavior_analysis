@@ -14,14 +14,16 @@ def test_rig_id_included():
 
 def test_old_data_unknown_rig():
     experiment_date = DEVICES_DATE - datetime.timedelta(days=1)
-    old_data_unknown_rig = {'start_time':experiment_date}
+    old_data_unknown_rig = {'start_time':experiment_date,
+                            'platform_info':{'computer_name':'W7DTMJ19R2F'}}
     expected = 'A1'
     output = get_rig_id(old_data_unknown_rig)
     assert output == expected
 
 def test_new_data_unknown_rig(caplog):
     experiment_date = DEVICES_DATE + datetime.timedelta(days=1)
-    new_data_unknown_rig = {'start_time':experiment_date}
+    new_data_unknown_rig = {'start_time':experiment_date,
+                            'platform_info':{'computer_name':'W7DTMJ19R2F'}}
     expected = 'unknown'
     expected_log = ("rig_id unknown, no valid mapping exists for computer "
                     "{} on {}").format('W7DTMJ19R2F', experiment_date)
