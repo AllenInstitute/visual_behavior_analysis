@@ -323,7 +323,7 @@ def get_timestamps_ophys(timestamps):
     return timestamps_ophys
 
 
-def get_metadata(lims_data, timestamps):
+def get_metadata(lims_data, timestamps, core_data):
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     timestamps_ophys = get_timestamps_ophys(timestamps)
     metadata = OrderedDict()
@@ -340,9 +340,10 @@ def get_metadata(lims_data, timestamps):
 
     specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
     if len(specimen_driver_lines) > 1:
-        for i in range(len(specimen_driver_lines)):
-            if 'S' in specimen_driver_lines[i]:
-                specimen_driver_line = specimen_driver_lines[i]
+        if 'Camk2a' in specimen_driver_lines[0]:
+            specimen_driver_line = specimen_driver_lines[1]
+        else:
+            specimen_driver_line = specimen_driver_lines[0]
     else:
         specimen_driver_line = specimen_driver_lines[0]
     metadata['specimen_driver_line'] = specimen_driver_line
@@ -354,6 +355,7 @@ def get_metadata(lims_data, timestamps):
         metadata['reporter_line'] = lims_data['specimen_reporter_line'].values[0].split('(')[0]
     metadata['full_genotype'] = metadata['cre_line'] + ';' + metadata['reporter_line']
     metadata['session_type'] = 'behavior_session_' + lims_data.session_type.values[0].split('_')[-1]
+    metadata['stage'] = core_data['metadata']['stage']
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
     metadata['experiment_date'] = str(lims_data.experiment_date.values[0])[:10]
     metadata['donor_id'] = int(lims_data.external_specimen_id.values[0])
@@ -966,13 +968,13 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
 
     timestamps = get_timestamps(lims_data, analysis_dir)
 
-    metadata = get_metadata(lims_data, timestamps)
-    save_metadata(metadata, lims_data)
-
     pkl = get_pkl(lims_data)
     timestamps_stimulus = get_timestamps_stimulus(timestamps)
     core_data = get_core_data(pkl, timestamps_stimulus)
     save_core_data_components(core_data, lims_data, timestamps_stimulus)
+
+    metadata = get_metadata(lims_data, timestamps, core_data)
+    save_metadata(metadata, lims_data)
 
     trials = get_trials(core_data)
     save_trials(trials, lims_data)
