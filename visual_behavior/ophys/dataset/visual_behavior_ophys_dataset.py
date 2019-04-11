@@ -261,7 +261,6 @@ class VisualBehaviorOphysDataset(object):
     roi_metrics = LazyLoadable('_roi_metrics', get_roi_metrics)
 
     def get_roi_mask_dict(self):
-        cell_specimen_ids = self.get_cell_specimen_ids()
         f = h5py.File(os.path.join(self.analysis_dir, 'roi_masks.h5'), 'r')
         roi_mask_dict = {}
         for key in f.keys():
@@ -308,7 +307,7 @@ class VisualBehaviorOphysDataset(object):
 
     def get_cell_specimen_ids(self):
         roi_metrics = self.roi_metrics
-        self._cell_specimen_ids = np.asarray([roi_metrics[roi_metrics.roi_id==roi_id].id.values[0]
+        self._cell_specimen_ids = np.asarray([roi_metrics[roi_metrics.roi_id == roi_id].id.values[0]
                                               for roi_id in np.sort(self.roi_metrics.roi_id.values)])
         return self._cell_specimen_ids
 
@@ -322,12 +321,12 @@ class VisualBehaviorOphysDataset(object):
 
     def get_cell_specimen_id_for_cell_index(self, cell_index):
         roi_metrics = self.roi_metrics
-        cell_specimen_id = roi_metrics[roi_metrics.cell_index==cell_index].id.values[0]
+        cell_specimen_id = roi_metrics[roi_metrics.cell_index == cell_index].id.values[0]
         return cell_specimen_id
 
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
         roi_metrics = self.roi_metrics
-        cell_index = roi_metrics[roi_metrics.id==cell_specimen_id].cell_index.values[0]
+        cell_index = roi_metrics[roi_metrics.id == cell_specimen_id].cell_index.values[0]
         return cell_index
 
     @classmethod
