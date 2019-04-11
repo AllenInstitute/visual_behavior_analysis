@@ -8,12 +8,49 @@ from dateutil import parser
 from ...utilities import inplace
 
 
+def _infer_last_trial_frame(trials, visual_stimuli):
+    """attempts to infer the last frame index of the trials
+
+    Parameters
+    ----------
+    trials : `pd.Dataframe`
+        core trials dataframe
+    visual_stimuli : `pd.Dataframe`
+        core visual stimuli dataframe
+
+    Returns
+    -------
+    int
+        last frame index of the last trial
+
+    Notes
+    -----
+    - this is meant to address issue #482 with `make_trials_contiguous` which 
+    assumed that the last experiment frame would be a trial frame but breaks for
+    experiments where the last frame is a movie frame or grayscreen
+    """
+    last_trial_end_frame = (trials.iloc[-1]).endframe
+    filtered_vs = visual_stimuli[visual_stimuli.frame >= last_trial_end_frame]
+
+    return (filtered_vs.iloc[0]).frame
+
+
 @inplace
-def make_trials_contiguous(trials, time):
-    trials['endframe'] = trials['startframe'].shift(-1).fillna(len(time) - 1).astype(int)
-    trials['endtime'] = trials['starttime'].shift(-1).fillna(time.max())
+def make_trials_contiguous(trials, time, visual_stimuli=None):
+    if visual_stimuli is not None:
+        trial_end_frame = _infer_last_trial_frame(trials, visual_stimuli, )
+    else:
+        trial_end_frame = len(time) - 1
+    trial_end_time = time[trial_end_frame]
+
+    trials['endframe'] = trials['startframe'] \
+        .shift(-1) \
+        .fillna(trial_end_frame) \
+        .astype(int)
+    trials['endtime'] = trials['starttime'] \
+        .shift(-1) \
+        .fillna(trial_end_time)
     trials['trial_length'] = trials['endtime'] - trials['starttime']
-    pass
 
 
 @inplace
