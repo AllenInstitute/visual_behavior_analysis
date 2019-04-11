@@ -7,26 +7,21 @@ from visual_behavior import devices
 DEVICES_DATE = devices.VALID_BEFORE_DATE
 
 def test_rig_id_included():
-    data_with_rig_id = {'platform_info':{'computer_name':'W7DTMJ19R2F',
-                                        'rig_id':'A1_fromfile'}}
+    data_with_rig_id = {'rig_id':'A1_fromfile'}
     expected = 'A1_fromfile'
     output = get_rig_id(data_with_rig_id)
     assert output == expected
 
 def test_old_data_unknown_rig():
     experiment_date = DEVICES_DATE - datetime.timedelta(days=1)
-    old_data_unknown_rig = {'platform_info':{'computer_name':'W7DTMJ19R2F',
-                                            'rig_id':'unknown'},
-                            'start_time':experiment_date}
+    old_data_unknown_rig = {'start_time':experiment_date}
     expected = 'A1'
     output = get_rig_id(old_data_unknown_rig)
     assert output == expected
 
 def test_new_data_unknown_rig(caplog):
     experiment_date = DEVICES_DATE + datetime.timedelta(days=1)
-    new_data_unknown_rig = {'platform_info':{'computer_name':'W7DTMJ19R2F',
-                                            'rig_id':'unknown'},
-                            'start_time':experiment_date}
+    new_data_unknown_rig = {'start_time':experiment_date}
     expected = 'unknown'
     expected_log = ("rig_id unknown, no valid mapping exists for computer "
                     "{} on {}").format('W7DTMJ19R2F', experiment_date)
