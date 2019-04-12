@@ -21,6 +21,7 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
 
 from .extract_stimuli import get_visual_stimuli, check_for_omitted_flashes
 from .extract_images import get_image_metadata
+from .extract_movies import get_movie_image_epochs, get_movie_metadata
 from ..foraging.extract_images import get_image_data
 
 import logging
@@ -362,15 +363,26 @@ def data_to_trials(data, time=None):
 
 
 def data_to_visual_stimuli(data, time=None):
+    MAYBE_A_MOVIE = [
+        'countdown',
+        'fingerprint',
+    ]
+
     if time is None:
         time = get_time(data)
 
-    stimuli = data['items']['behavior']['stimuli']
-
-    return pd.DataFrame(data=get_visual_stimuli(
-        stimuli,
+    static_image_epochs = get_visual_stimuli(
+        data['items']['behavior']['stimuli'],
         time,
-    ))
+    )
+
+    for name, stim_item in data['items']['behavior'].get('items', {}).items():
+        if name.lower() in MAYBE_A_MOVIE:
+            static_image_epochs.extend(
+                get_movie_image_epochs(name, stim_item, time, )
+            )
+
+    return pd.DataFrame(data=static_image_epochs)
 
 
 def data_to_omitted_stimuli(data, time=None):
@@ -386,36 +398,55 @@ def data_to_omitted_stimuli(data, time=None):
 
 
 def data_to_images(data):
-
+    MAYBE_A_MOVIE = [
+        'countdown',
+        'fingerprint',
+    ]
     if 'images' in data["items"]["behavior"]["stimuli"]:
 
         # Sometimes the source is a zipped pickle:
         metadata = get_image_metadata(data)
         try:
             image_set = load_pickle(open(metadata['image_set'], 'rb'))
+            images, images_meta = get_image_data(image_set)
+            image_table = dict(
+                metadata=metadata,
+                images=images,
+                image_attributes=images_meta,
+            )
         except (AttributeError, UnicodeDecodeError, pickle.UnpicklingError):
             zfile = zipfile.ZipFile(metadata['image_set'])
             finfo = zfile.infolist()[0]
             ifile = zfile.open(finfo)
             image_set = load_pickle(ifile)
+            images, images_meta = get_image_data(image_set)
+            image_table = dict(
+                metadata=metadata,
+                images=images,
+                image_attributes=images_meta,
+            )
         except FileNotFoundError:
             logger.critical('Image file not found: {0}'.format(metadata['image_set']))
-            return dict(
+            image_table = dict(
                 metadata={},
                 images=[],
                 image_attributes=[],
             )
-
-        images, images_meta = get_image_data(image_set)
-
-        return dict(
-            metadata=metadata,
-            images=images,
-            image_attributes=images_meta,
-        )
     else:
-        return dict(
+        image_table = dict(
             metadata={},
             images=[],
             image_attributes=[],
         )
+
+    # TODO: make this better, all we need to know is if there's at least one key...
+    static_stimuli_names = [
+        k
+        for k in data['items']['behavior'].get('items', {}).keys()
+        if k in MAYBE_A_MOVIE
+    ]
+    if len(static_stimuli_names) > 0:  # has static stimuli
+        for name, meta in get_movie_metadata(data).items():
+            image_table['metadata']['movie:%s' % name] = meta  # prefix each name with 'movie:' maybe this is good?
+
+    return image_table
