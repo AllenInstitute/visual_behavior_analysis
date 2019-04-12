@@ -36,5 +36,5 @@ def test_issue_482_last_trial(
         visual_stimuli=core_data['visual_stimuli'],
     )
 
-    assert (extended_data['trial_length'].iloc[-1]) < 100, 
+    assert (extended_data['trial_length'].iloc[-1]) < 100, \
         "last trial length should be less than a 'really long time'(100 seconds)"

@@ -20,19 +20,20 @@ def _infer_last_trial_frame(trials, visual_stimuli):
 
     Returns
     -------
-    int
+    int or None
         last frame index of the last trial
 
     Notes
     -----
-    - this is meant to address issue #482 with `make_trials_contiguous` which 
+    - this is meant to address issue #482 with `make_trials_contiguous` which
     assumed that the last experiment frame would be a trial frame but breaks for
     experiments where the last frame is a movie frame or grayscreen
     """
     last_trial_end_frame = (trials.iloc[-1]).endframe
     filtered_vs = visual_stimuli[visual_stimuli.frame >= last_trial_end_frame]
 
-    return (filtered_vs.iloc[0]).frame
+    if len(filtered_vs.index) > 0:
+        return (filtered_vs.iloc[0]).frame
 
 
 @inplace
@@ -40,7 +41,11 @@ def make_trials_contiguous(trials, time, visual_stimuli=None):
     if visual_stimuli is not None:
         trial_end_frame = _infer_last_trial_frame(trials, visual_stimuli, )
     else:
+        trial_end_frame = None
+
+    if trial_end_frame is None:
         trial_end_frame = len(time) - 1
+
     trial_end_time = time[trial_end_frame]
 
     trials['endframe'] = trials['startframe'] \
