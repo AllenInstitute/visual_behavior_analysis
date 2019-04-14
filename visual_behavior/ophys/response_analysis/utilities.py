@@ -274,9 +274,11 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
 
     if get_reliability:
+        print('computing reliability')
         reliability = rdf.groupby(conditions).apply(compute_reliability, analysis, flashes, omitted)
         reliability = reliability.reset_index()
         mdf['reliability'] = reliability.reliability
+        print('done computing reliability')
 
     return mdf
 
