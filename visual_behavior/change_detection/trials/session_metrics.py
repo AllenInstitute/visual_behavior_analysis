@@ -86,35 +86,35 @@ def earned_water(session_trials):
     return total_water(session_trials, ('go', ))
 
 
-def peak_dprime(session_trials):
+def peak_dprime(session_trials, first_valid_trial=50, sliding_window=100, calculate_limits_on_trial_number=False):
     mask = (session_trials['trial_type'] != 'aborted')
-    _, _, dp = get_response_rates(session_trials[mask], sliding_window=100)
+    _, _, dp = get_response_rates(session_trials[mask], sliding_window=sliding_window, calculate_limits_on_trial_number=calculate_limits_on_trial_number)
     if np.all(np.isnan(dp)):
         return np.nan
     try:
-        return np.nanmax(dp[50:])
+        return np.nanmax(dp[first_valid_trial:])
     except (IndexError, ValueError):
         return np.nan
 
 
-def peak_hit_rate(session_trials):
+def peak_hit_rate(session_trials, first_valid_trial=50):
     mask = (session_trials['trial_type'] != 'aborted')
     hr, _, _ = get_response_rates(session_trials[mask], sliding_window=100)
     if all(np.isnan(hr)):
         return np.nan
     try:
-        return np.nanmax(hr[50:])
+        return np.nanmax(hr[first_valid_trial:])
     except (IndexError, ValueError):
         return np.nan
 
 
-def peak_false_alarm_rate(session_trials):
+def peak_false_alarm_rate(session_trials, first_valid_trial=50):
     mask = (session_trials['trial_type'] != 'aborted')
     _, far, _ = get_response_rates(session_trials[mask], sliding_window=100)
     if all(np.isnan(far)):
         return np.nan
     try:
-        return np.nanmax(far[50:])
+        return np.nanmax(far[first_valid_trial:])
     except ValueError:
         return np.nan
 

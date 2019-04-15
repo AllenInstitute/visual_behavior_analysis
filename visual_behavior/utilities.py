@@ -22,7 +22,7 @@ def flatten_list(in_list):
     return out_list
 
 
-def get_response_rates(df_in, sliding_window=100):
+def get_response_rates(df_in, sliding_window=100, calculate_limits_on_trial_number=False):
     """
     calculates the rolling hit rate, false alarm rate, and dprime value
     Note that the pandas rolling metric deals with NaN values by propogating the previous non-NaN value
@@ -89,7 +89,7 @@ class RisingEdge():
 
 
 # -> metrics
-def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
+def dprime(hit_rate, fa_rate, limits=(0.01, 0.99), hit_rate_limits=None, fa_rate_limits=None):
     """ calculates the d-prime for a given hit rate and false alarm rate
 
     https://en.wikipedia.org/wiki/Sensitivity_index
@@ -102,19 +102,35 @@ def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
         rate of false alarms in the False class
     limits : tuple, optional
         limits on extreme values, which distort. default: (0.01,0.99)
+    hit_rate_limits : tuple, optional
+        limits on extreme values for hit rate alone. Useful for unbalanced trial numbers. Defaults to `limits` if None
+    fa_rate_limits : tuple, optional
+        limits on extreme values for false alarm rate alone. Useful for unbalanced trial numbers. Defaults to `limits` if None
 
     Returns
     -------
     d_prime
 
     """
+    if hit_rate_limits is None:
+        hit_rate_limits = limits
+    if fa_rate_limits is None:
+        fa_rate_limits = limits
+        
     assert limits[0] > 0.0, 'limits[0] must be greater than 0.0'
     assert limits[1] < 1.0, 'limits[1] must be less than 1.0'
+
+    assert hit_rate_limits[0] > 0.0, 'hit_rate_limits[0] must be greater than 0.0'
+    assert hit_rate_limits[1] < 1.0, 'hit_rate_limits[1] must be less than 1.0'
+
+    assert fa_rate_limits[0] > 0.0, 'fa_rate_limits[0] must be greater than 0.0'
+    assert fa_rate_limits[1] < 1.0, 'fa_rate_limits[1] must be less than 1.0'
+
     Z = norm.ppf
 
     # Limit values in order to avoid d' infinity
-    hit_rate = np.clip(hit_rate, limits[0], limits[1])
-    fa_rate = np.clip(fa_rate, limits[0], limits[1])
+    hit_rate = np.clip(hit_rate, hit_rate_limits[0], hit_rate_limits[1])
+    fa_rate = np.clip(fa_rate, fa_rate_limits[0], fa_rate_limits[1])
 
     try:
         last_hit_nan = np.where(np.isnan(hit_rate))[0].max()
