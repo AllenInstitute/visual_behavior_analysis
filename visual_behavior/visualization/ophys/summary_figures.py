@@ -1142,6 +1142,60 @@ def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, sa
     return ax
 
 
+def plot_change_omitted_response(dataset, analysis, cell_specimen_id, save_figures=False, save_dir=None, folder=None):
+    tdf = analysis.trial_response_df.copy()
+    odf = analysis.omitted_flash_response_df.copy()
+    cell_index = dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id)
+    figsize = (10, 4)
+    fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=True)
+    ax = ax.ravel()
+
+    cdf = tdf[tdf.cell_specimen_id == cell_specimen_id]
+    ax[0] = plot_image_change_response(analysis, cell_index, legend=False, save=False, ax=ax[0])
+    ax[0].set_xlim(1 * 31, 7 * 31)
+    ax[0].set_title('change flash response')
+    ax[1] = plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=ax[1], window=[-3, 3])
+    ax[1].set_ylabel('')
+    fig.tight_layout()
+
+    if save_figures:
+        fig.tight_layout()
+        save_figure(fig, figsize, dataset.analysis_dir, 'change_omitted_response', str(cell_specimen_id))
+        plt.close()
+
+
+
+def plot_mean_response_with_spontaneous(dataset, analysis, cell_specimen_id, save=False):
+    fdf = analysis.flash_response_df.copy()
+    spontaneous_frames = ut.get_spontaneous_frames(dataset)
+    cell_index = dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id)
+    spont_mean = np.mean(dataset.dff_traces[cell_index,spontaneous_frames])
+    spont_std = np.std(dataset.dff_traces[cell_index,spontaneous_frames])
+    figsize = (6,5)
+    fig, ax = plt.subplots(figsize=figsize)
+    image_names = np.sort(fdf.image_name.unique())
+    for i,image_name in enumerate(image_names):
+        cdf = fdf[(fdf.cell_specimen_id==cell_specimen_id)&(fdf.image_name==image_name)]
+        ax.plot(i, cdf.mean_response.mean(), 'o', color=ut.get_color_for_image_name(image_names, image_name))
+        ax.errorbar(i, cdf.mean_response.mean(), yerr=cdf.mean_response.std(), color=ut.get_color_for_image_name(image_names, image_name))
+    ax.set_xticks(np.arange(0,len(image_names),1))
+    ax.set_xticklabels(image_names, rotation=90)
+    ax.set_ylabel('mean dF/F')
+    cdf = fdf[(fdf.cell_specimen_id==cell_specimen_id)&(fdf.pref_stim==True)]
+    fraction_sig = len(cdf[cdf.p_value<0.05])/float(len(cdf))
+    fraction_sig_omitted = len(cdf[cdf.p_value_omitted<0.05])/float(len(cdf))
+    ax.set_title('cell_specimen_id: '+str(cell_specimen_id)+
+                 '\n fraction sig trials spontaneous: '+str(np.round(fraction_sig,3))+
+                '\n fraction sign trials omitted: '+str(np.round(fraction_sig_omitted,3)))
+    ax.hlines(spont_mean, xmin=-0.5, xmax=len(image_names)+0.5, color='gray')
+    ax.fill_between(x=np.arange(-0.5,len(image_names)+0.5,1), y1=spont_mean+spont_std, y2=spont_mean-spont_std, alpha=0.2, color='gray')
+    ax.set_xlim(-0.5, len(image_names)-0.5)
+    fig.tight_layout()
+    if save:
+        save_figure(fig, figsize, dataset.analysis_dir, 'mean_image_response_with_spontaneous', str(cell_specimen_id))
+
+
+
 def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):
     use_events = analysis.use_events
     dataset = analysis.dataset
