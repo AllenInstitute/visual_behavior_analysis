@@ -29,10 +29,10 @@ def get_nearest_frame(timepoint, timestamps):
     return nearest_frame
 
 
-def get_successive_frame_list(timepoints_array, timestanps):
+def get_successive_frame_list(timepoints_array, timestamps):
     # This is a modification of get_nearest_frame for speedup
     #  This implementation looks for the first 2p frame consecutive to the stim
-    successive_frames = np.searchsorted(timestanps, timepoints_array)
+    successive_frames = np.searchsorted(timestamps, timepoints_array)
 
     return successive_frames
 
@@ -93,7 +93,7 @@ def ptest(x, num_conditions):
     return ptest
 
 
-def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
+def get_p_values_from_shuffle_omitted(dataset, stimulus_table, flash_response_df, response_window_duration):
     # data munging
     fdf = flash_response_df.copy()
     st = stimulus_table.copy()
@@ -105,15 +105,76 @@ def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
     ost.loc[:, 'end_frame'] = get_successive_frame_list(ost.end_time.values, dataset.timestamps_ophys)
 
     # set params
-    stim_duration = 0.25
     frame_rate = 31
-    stim_frames = int(np.round(stim_duration * frame_rate, 0))  # stimulus window = 0.25ms*31Hz = 7.75 frames
+    stim_frames = int(np.round(response_window_duration * frame_rate, 0))  # mean_response_window = 0.5s*31Hz = 16 frames
     cell_indices = dataset.get_cell_indices()
     n_cells = len(cell_indices)
     # get shuffled values from omitted flash sweeps
     shuffled_responses = np.empty((n_cells, 10000, stim_frames))
     idx = np.random.choice(ost.start_frame.values, 10000)
     for i in range(stim_frames):
+        shuffled_responses[:, :, i] = dataset.dff_traces[:, idx + i]
+    shuffled_mean = shuffled_responses.mean(axis=2)
+    # compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep
+    flash_p_values = pd.DataFrame(index=st.index.values, columns=np.array(range(n_cells)).astype(str))
+    for i, cell_index in enumerate(cell_indices):
+        responses = fdf[fdf.cell == cell_index].mean_response.values
+        null_dist_mat = np.tile(shuffled_mean[i, :], reps=(len(responses), 1))
+        actual_is_less = responses.reshape(len(responses), 1) <= null_dist_mat
+        p_values = np.mean(actual_is_less, axis=1)
+        flash_p_values[str(cell_index)] = p_values
+    return flash_p_values
+
+
+def get_spontaneous_frames(dataset):
+    st = dataset.stimulus_table.copy()
+
+    # dont use full 5 mins to avoid fingerprint and countdown
+    spont_duration_frames = 4 * 60 * 60  # 4 mins * * 60s/min * 60Hz
+    spont_duration = 4 * 60  # 4mins * 60sec
+
+    # for spontaneous at beginning of session
+    behavior_start_time = st.iloc[0].start_time
+    spontaneous_start_time_pre = behavior_start_time - spont_duration
+    spontaneous_end_time_pre = behavior_start_time
+    spontaneous_start_frame_pre = get_successive_frame_list(spontaneous_start_time_pre, dataset.timestamps_ophys)
+    spontaneous_end_frame_pre = get_successive_frame_list(spontaneous_end_time_pre, dataset.timestamps_ophys)
+    spontaneous_frames_pre = np.arange(spontaneous_start_frame_pre, spontaneous_end_frame_pre, 1)
+
+    # for spontaneous epoch at end of session
+    behavior_end_time = st.iloc[-1].end_time
+    spontaneous_start_time_post = behavior_end_time
+    spontaneous_end_time_post = behavior_end_time + spont_duration
+    spontaneous_start_frame_post = get_successive_frame_list(spontaneous_start_time_post, dataset.timestamps_ophys)
+    spontaneous_end_frame_post = get_successive_frame_list(spontaneous_end_time_post, dataset.timestamps_ophys)
+    spontaneous_frames_post = np.arange(spontaneous_start_frame_post, spontaneous_end_frame_post, 1)
+
+    # add them together
+    spontaneous_frames = list(spontaneous_frames_pre) + (list(spontaneous_frames_post))
+    return spontaneous_frames
+
+
+def get_p_values_from_shuffle_spontaneous(dataset, flash_response_df, response_window_duration=0.5):
+    # data munging
+    fdf = flash_response_df.copy()
+    st = dataset.stimulus_table.copy()
+    included_flashes = fdf.flash_number.unique()
+    st = st[st.flash_number.isin(included_flashes)]
+
+    spontaneous_frames = get_spontaneous_frames(dataset)
+
+    #  params
+    ophys_frame_rate = 31
+    n_mean_response_window_frames = int(
+        np.round(response_window_duration * ophys_frame_rate, 0))  # stimulus window = 0.25ms*31Hz = 7.75 frames
+    cell_indices = dataset.get_cell_indices()
+    n_cells = len(cell_indices)
+    # get shuffled values from spontaneous periods
+    shuffled_responses = np.empty((n_cells, 10000, n_mean_response_window_frames))
+    idx = np.random.choice(spontaneous_frames, 10000)
+    # get mean response for 10000 shuffles of the spontaneous activity frames
+    # in a window the same size as the stim response window duration
+    for i in range(n_mean_response_window_frames):
         shuffled_responses[:, :, i] = dataset.dff_traces[:, idx + i]
     shuffled_mean = shuffled_responses.mean(axis=2)
     # compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep

@@ -224,15 +224,21 @@ class ResponseAnalysis(object):
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
         if 'index' in flash_response_df.keys():
             flash_response_df = flash_response_df.drop(columns=['index']).reset_index()
+        print('computing p-values from shuffled spontaneous activity')
+        p_values_from_shuffle = ut.get_p_values_from_shuffle_spontaneous(self.dataset, flash_response_df, self.response_window_duration)
+        p_values = []
+        for flash_number in flash_response_df.flash_number.unique():
+            p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
+        flash_response_df['p_value'] = p_values
         if 'omitted' in stimulus_table.image_name.unique():
             print('computing p-values from shuffled omitted flash responses')
-            p_values_from_shuffle = ut.get_p_values_from_shuffle(self.dataset, stimulus_table, flash_response_df)
+            p_values_from_shuffle = ut.get_p_values_from_shuffle_omitted(self.dataset, stimulus_table, flash_response_df, self.response_window_duration)
             p_values = []
             for flash_number in flash_response_df.flash_number.unique():
                 p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
-            flash_response_df['p_value'] = p_values
+            flash_response_df['p_value_omitted'] = p_values
         else:
-            flash_response_df['p_value'] = np.nan
+            flash_response_df['p_value_omitted'] = np.nan
 
         return flash_response_df
 
