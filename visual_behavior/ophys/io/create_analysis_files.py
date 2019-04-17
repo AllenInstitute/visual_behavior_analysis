@@ -42,7 +42,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
                                             folder='change_and_omitted_response')
             sf.plot_mean_response_with_spontaneous(dataset, analysis, cell_specimen_id, save=True)
             # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
-            sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
+            # sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
 
         # print('plotting example traces')
         # active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
