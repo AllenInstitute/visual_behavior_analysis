@@ -418,7 +418,8 @@ def add_metadata_to_mean_df(mdf, metadata):
     metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
     metadata['image_set'] = metadata.session_type.values[0][-1]
     metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in
-                                  metadata.image_set.values]
+    #                               metadata.image_set.values]
+    metadata['stage'] = metadata.stage.values[0]
     # metadata['session_type'] = ['image_set_' + image_set for image_set in metadata.image_set.values]
     mdf = mdf.merge(metadata, how='outer', on='experiment_id')
     return mdf
