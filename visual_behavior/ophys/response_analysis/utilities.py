@@ -106,7 +106,8 @@ def get_p_values_from_shuffle_omitted(dataset, stimulus_table, flash_response_df
 
     # set params
     frame_rate = 31
-    stim_frames = int(np.round(response_window_duration * frame_rate, 0))  # mean_response_window = 0.5s*31Hz = 16 frames
+    stim_frames = int(
+        np.round(response_window_duration * frame_rate, 0))  # mean_response_window = 0.5s*31Hz = 16 frames
     cell_indices = dataset.get_cell_indices()
     n_cells = len(cell_indices)
     # get shuffled values from omitted flash sweeps
@@ -130,7 +131,7 @@ def get_spontaneous_frames(dataset):
     st = dataset.stimulus_table.copy()
 
     # dont use full 5 mins to avoid fingerprint and countdown
-    spont_duration_frames = 4 * 60 * 60  # 4 mins * * 60s/min * 60Hz
+    # spont_duration_frames = 4 * 60 * 60  # 4 mins * * 60s/min * 60Hz
     spont_duration = 4 * 60  # 4mins * 60sec
 
     # for spontaneous at beginning of session
@@ -417,8 +418,7 @@ def add_metadata_to_mean_df(mdf, metadata):
     metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
     metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
     metadata['image_set'] = metadata.session_type.values[0][-1]
-    metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in
-    #                               metadata.image_set.values]
+    metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in metadata.image_set.values]
     metadata['stage'] = metadata.stage.values[0]
     # metadata['session_type'] = ['image_set_' + image_set for image_set in metadata.image_set.values]
     mdf = mdf.merge(metadata, how='outer', on='experiment_id')

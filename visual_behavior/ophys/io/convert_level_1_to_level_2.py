@@ -38,6 +38,7 @@ from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_de
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 
+
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
     f.create_dataset('data', data=data)
@@ -193,9 +194,9 @@ def get_sync_path(lims_data):
 
     # First attempt
     sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file]
-    if len(sync_file)>0:
+    if len(sync_file) > 0:
         sync_file = sync_file[0]
-    else: 
+    else:
         json_path = [file for file in os.listdir(ophys_session_dir) if '_platform.json' in file][0]
         with open(os.path.join(ophys_session_dir, json_path)) as pointer_json:
             json_data = json.load(pointer_json)
@@ -216,8 +217,10 @@ def get_sync_data(lims_data, use_acq_trigger):
     try:
         sync_dataset.get_rising_edges('2p_vsync')
     except:
-        sync_dataset.line_labels=['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '', 'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
-        sync_dataset.meta_data['line_labels']=sync_dataset.line_labels
+        sync_dataset.line_labels = ['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '',
+                                    'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '',
+                                    '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
+        sync_dataset.meta_data['line_labels'] = sync_dataset.line_labels
 
     meta_data = sync_dataset.meta_data
     sample_freq = meta_data['ni_daq']['counter_output_freq']
@@ -277,10 +280,10 @@ def get_sync_data(lims_data, use_acq_trigger):
     if use_acq_trigger:
         frames_2p = frames_2p[frames_2p > trigger[0]]
     print(len(frames_2p))
-    if lims_data.rig.values[0][0] == 'M': #if Mesoscope
+    if lims_data.rig.values[0][0] == 'M':  # if Mesoscope
         print('resampling mesoscope 2P frame times')
-        roi_group = get_roi_group(lims_data) #get roi_group order
-        frames_2p = frames_2p[roi_group::4] #resample sync times
+        roi_group = get_roi_group(lims_data)  # get roi_group order
+        frames_2p = frames_2p[roi_group::4]  # resample sync times
     print(len(frames_2p))
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
@@ -453,7 +456,7 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
 
     stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
     if 'omitted_stimuli' in core_data.keys():
-        if len(core_data['omitted_stimuli']) > 0: #sometimes there is a key but empty values
+        if len(core_data['omitted_stimuli']) > 0:  # sometimes there is a key but empty values
             omitted_flash = core_data['omitted_stimuli'].copy()
             omitted_flash = omitted_flash[['frame']]
             omitted_flash['omitted'] = True
@@ -462,11 +465,12 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
             flashes = flashes.sort_values(by='frame').reset_index().drop(columns=['index']).fillna(method='ffill')
             flashes = flashes[['frame', 'end_frame', 'time', 'image_category', 'image_name', 'omitted']]
             flashes = flashes.reset_index()
-            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for row
+            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for
+                                  row
                                   in range(len(flashes))]
             # infer end time for omitted flashes as 16 frames after start frame (250ms*60Hz stim frame rate)
             flashes['end_frame'] = [flashes.loc[idx, 'end_frame'] if flashes.loc[idx, 'omitted'] == False else
-                    flashes.loc[idx, 'frame'] + 16 for idx in flashes.index.values]
+                                    flashes.loc[idx, 'frame'] + 16 for idx in flashes.index.values]
             stimulus_table = flashes.copy()
         else:
             stimulus_table['omitted'] = False
@@ -833,7 +837,8 @@ def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-        logger.info('length of ophys timestamps >  length of traces by %s frames, truncating ophys timestamps', str(difference))
+        logger.info('length of ophys timestamps >  length of traces by %s frames, truncating ophys timestamps',
+                    str(difference))
 
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
     # account for dropped ophys frames - a rare but unfortunate issue
@@ -880,7 +885,8 @@ def save_max_projections(lims_data):
     # contrast enhanced one
     max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
     save_data_as_h5(max_projection, 'normalized_max_projection', analysis_dir)
-    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'), arr=max_projection,
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'),
+                 arr=max_projection,
                  cmap='gray')
 
 
@@ -958,6 +964,7 @@ def save_roi_validation(roi_validation, lims_data):
 
         save_figure(fig, (20, 10), analysis_dir, 'roi_validation',
                     str(index) + '_' + str(id) + '_' + str(cell_index))
+
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
     logger.info('converting %d', lims_id)
