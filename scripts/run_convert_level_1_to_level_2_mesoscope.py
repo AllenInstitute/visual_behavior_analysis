@@ -10,7 +10,7 @@ from ophysextractor.utils import logger, util
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 def run_analysis():
-       cache_dir = r"\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis"
+       cache_dir = r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis"
 
        experiment_ids = []
        list_of_exp_cursor = util.mongo.db.ophys_experiment_log.find({"$and":[{'project_code': "MesoscopeDevelopment"},{"experiment_obj.status": "qc"}]})
