@@ -172,7 +172,7 @@ def get_stim_names(cell_matching_dataset_dict, lims_ids):
 
 
 def plot_ssim_matrix(matrix, container_id, lims_ids, cell_matching_dataset_dict, label='stim_names'):
-    if label is 'stim_names':
+    if label == 'stim_names':
         stim_names = get_stim_names(cell_matching_dataset_dict, lims_ids)
         labels = stim_names
         fig_title = 'registered_ssim_matrix_stim_names'
