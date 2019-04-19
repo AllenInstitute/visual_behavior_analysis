@@ -17,10 +17,10 @@ from visual_behavior.visualization.ophys import summary_figures as sf
 # logger = logging.getLogger(__name__)
 
 
-def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True, turn_off_plotting = False):
+def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True, turn_off_plotting=False):
     # logger.info(experiment_id)
     print(experiment_id)
-    print('saving '+str(experiment_id)+' to '+cache_dir)
+    print('saving ' + str(experiment_id) + ' to ' + cache_dir)
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
 
     use_events = False
@@ -34,11 +34,12 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     esf.plot_roi_masks(dataset, save=True)
     # esf.plot_average_flash_response_example_cells(analysis, save_figures=True, save_dir=cache_dir, folder='mean_flash_response_average')
 
-    if not(turn_off_plotting):
+    if not (turn_off_plotting):
         print('plotting cell responses')
         for cell in dataset.get_cell_indices():
             cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell)
-            sf.plot_change_omitted_response(dataset, analysis, cell_specimen_id, save_figures=True, save_dir=dataset.analysis_dir,
+            sf.plot_change_omitted_response(dataset, analysis, cell_specimen_id, save_figures=True,
+                                            save_dir=dataset.analysis_dir,
                                             folder='change_and_omitted_response')
             sf.plot_mean_response_with_spontaneous(dataset, analysis, cell_specimen_id, save=True)
             # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
@@ -96,6 +97,7 @@ if __name__ == '__main__':
                       836910438, 836911939, 837296345, 837729902, 838849930]
 
     import os
+
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
     for experiment_id in experiment_ids:
         create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
