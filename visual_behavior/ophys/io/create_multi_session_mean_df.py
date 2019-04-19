@@ -27,7 +27,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                 elif not omitted:
                     if 'repeat' in conditions:
                         flash_response_df = analysis.flash_response_df.copy()
-                        repeats = [1,5,10,15]
+                        repeats = [1, 5, 10, 15]
                         flash_response_df = flash_response_df[flash_response_df.repeat.isin(repeats)]
                     else:
                         flash_response_df = analysis.flash_response_df.copy()
@@ -44,7 +44,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                     mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
                     mega_mdf = pd.concat([mega_mdf, mdf])
                 else:
-                    print('no omitted flashes for',experiment_id)
+                    print('no omitted flashes for', experiment_id)
                     pass
             else:
                 trial_response_df = analysis.trial_response_df.copy()
@@ -79,13 +79,13 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
         os.makedirs(mega_mdf_write_dir)
 
     if len(conditions) == 4:
-        filename = 'mean' + type + conditions[1] +'_'+ conditions[2] +'_'+ conditions[3] + suffix + '_df.h5'
+        filename = 'mean' + type + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + suffix + '_df.h5'
     elif len(conditions) == 3:
-        filename = 'mean' + type + conditions[1] +'_'+ conditions[2] + suffix + '_df.h5'
+        filename = 'mean' + type + conditions[1] + '_' + conditions[2] + suffix + '_df.h5'
     elif len(conditions) == 2:
         filename = 'mean' + type + conditions[1] + suffix + '_df.h5'
 
-    print('saving multi session mean df to ',filename)
+    print('saving multi session mean df to ', filename)
     mega_mdf.to_hdf(
         os.path.join(mega_mdf_write_dir, filename),
         key='df',
