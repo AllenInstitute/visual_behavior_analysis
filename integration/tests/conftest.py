@@ -14,6 +14,19 @@ ASSETS_DIR = os.path.join(
 
 
 @pytest.fixture(
+    scope='function',
+    ids=[
+        'issue_482.pkl',
+    ],
+    params=[
+        {'path': os.path.join(ASSETS_DIR, 'issue_482.pkl', ), },
+    ]
+)
+def doc_data(request):
+    return pd.read_pickle(request.param['path'])
+
+
+@pytest.fixture(
     scope='function',  # less efficient but easier for humans...
     ids=[
         'issue_467.pkl',
