@@ -691,8 +691,8 @@ def get_cell_specimen_ids_from_lims(mouse_id):
     LEFT JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id = oe.id AND ocsr.current = 't'
     LEFT JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id
     LEFT JOIN specimens csd ON csd.id=cr.cell_specimen_id
-    WHERE 
-    cr.valid_roi = 't' AND 
+    WHERE
+    cr.valid_roi = 't' AND
     sp.external_specimen_name IN('{mouse_id}')
     ORDER BY 1,2,3,4,5;'''.format(mouse_id=mouse_id)
     query = big_query
