@@ -21,7 +21,7 @@ def test_old_data_unknown_rig():
     assert output == expected
 
 def test_new_data_unknown_rig(caplog):
-    experiment_date = DEVICES_DATE + datetime.timedelta(days=1)
+    experiment_date = DEVICES_DATE
     new_data_unknown_rig = {'start_time':experiment_date,
                             'platform_info':{'computer_name':'W7DTMJ19R2F'}}
     expected = 'unknown'
