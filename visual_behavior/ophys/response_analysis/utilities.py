@@ -416,11 +416,14 @@ def add_metadata_to_mean_df(mdf, metadata):
     metadata = metadata.reset_index()
     metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
     metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
-    metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
+    if metadata['experiment_container_id'].values[0] == None:
+        metadata['experiment_container_id'] = 0
+    else:
+        metadata['experiment_container_id'] = float(metadata['experiment_container_id'].values[0])
+    metadata['experiment_id'] = float(metadata.experiment_id.values[0])
     metadata['image_set'] = metadata.session_type.values[0][-1]
     metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in metadata.image_set.values]
-    metadata['stage'] = metadata.stage.values[0]
-    # metadata['session_type'] = ['image_set_' + image_set for image_set in metadata.image_set.values]
+    metadata['stage'] = str(metadata.stage.values[0])
     mdf = mdf.merge(metadata, how='outer', on='experiment_id')
     return mdf
 
