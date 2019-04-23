@@ -9,7 +9,15 @@ from visual_behavior.translator.core import annotate
 logger = logging.getLogger(__name__)
 
 
-def create_extended_dataframe(trials, metadata, licks, time, *args, **kwargs):
+def create_extended_dataframe(
+        trials,
+        metadata,
+        licks,
+        time,
+        visual_stimuli=None,
+        *args,
+        **kwargs
+):
     """ creates a trials dataframe from a detection-of-change session
 
     Parameters
@@ -60,7 +68,7 @@ def create_extended_dataframe(trials, metadata, licks, time, *args, **kwargs):
             trials[col] = None
 
     # add some columns that require calculation
-    annotate.make_trials_contiguous(trials, time, inplace=True)
+    annotate.make_trials_contiguous(trials, time, visual_stimuli, inplace=True)
 
     trials['trial_type'] = annotate.categorize_trials(trials)
     trials['lick_frames'] = annotate.get_lick_frames(trials, licks)
