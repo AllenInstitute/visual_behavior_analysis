@@ -220,7 +220,7 @@ def get_fraction_active_trials(group):
 
 
 def get_fraction_responsive_trials(group):
-    fraction_responsive_trials = len(group[group.p_value < 0.05]) / float(len(group))
+    fraction_responsive_trials = len(group[(group.p_value_baseline < 0.05)&(group.mean_response>group.baseline_response)]) / float(len(group))
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
 
@@ -329,6 +329,10 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
     fraction_significant_trials = fraction_significant_trials.reset_index()
     mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
+
+    fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
+    fraction_responsive_trials = fraction_responsive_trials.reset_index()
+    mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
 
     fraction_active_trials = rdf.groupby(conditions).apply(get_fraction_active_trials)
     fraction_active_trials = fraction_active_trials.reset_index()

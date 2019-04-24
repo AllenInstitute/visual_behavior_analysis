@@ -1460,6 +1460,29 @@ def plot_running_and_behavior(dataset, start_time, duration, save_figures=False,
         save_figure(fig, figsize, dataset.analysis_dir, 'running_and_behavior', str(start_time))
         plt.close()
 
+def plot_omission_over_time(dataset, omitted_flash_response_df, cell_specimen_id, save=True):
+    odf = omitted_flash_response_df.copy()
+    cdf = odf[(odf.cell_specimen_id==cell_specimen_id)]
+
+    traces = cdf.trace.values
+    response_matrix = np.empty((len(traces),len(traces[0])))
+    for i,trace in enumerate(traces):
+        response_matrix[i,:] = trace
+
+    figsize = (5,6)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.heatmap(response_matrix, vmin=0, vmax=np.percentile(response_matrix,95), cmap='magma', ax=ax, cbar_kws={'label': 'dF/F'})
+    xticks, xticklabels = get_xticks_xticklabels(response_matrix[0,:], 31, interval_sec=1, window=[-3,3])
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([int(x) for x in xticklabels])
+    ax.set_yticks(np.arange(0,len(response_matrix), 30))
+    ax.set_ylabel('omission number')
+    ax.set_xlabel('time after omission (sec)')
+    ax.set_title('cell '+str(cell_specimen_id))
+    fig.tight_layout()
+    if save:
+        save_figure(fig, figsize, dataset.analysis_dir, 'omission_over_time', str(cell_specimen_id))
+        plt.close()
 
 def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):
     use_events = analysis.use_events

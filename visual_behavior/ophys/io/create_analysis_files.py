@@ -25,7 +25,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
 
     use_events = False
 
-    plot_behavior(dataset, cache_dir)
+    # plot_behavior(dataset, cache_dir)
     # print('plotting example traces')
     # active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
     # length_mins = 1
@@ -42,19 +42,19 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     # esf.plot_roi_masks(dataset, save=True)
     # esf.plot_average_flash_response_example_cells(analysis, save_figures=True, save_dir=cache_dir, folder='mean_flash_response_average')
     # #
-    print('plotting cell responses')
-    for cell in dataset.get_cell_indices():
-        # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
-        sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
+    # print('plotting cell responses')
+    # for cell in dataset.get_cell_indices():
+    #     # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
+    #     sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
 
-    if dataset.events is not None:
-        use_events = True
-        analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
-        pairwise_correlations_df = analysis.get_pairwise_correlations_df()
-        #
-        print('plotting experiment summary figure')
-        esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
-        esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
+    # if dataset.events is not None:
+    #     use_events = True
+    #     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
+    #     pairwise_correlations_df = analysis.get_pairwise_correlations_df()
+    #     #
+    #     print('plotting experiment summary figure')
+    #     esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
+    #     esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
         #
         # print('plotting example traces')
         # for xmin_seconds in np.arange(0, 3000, length_mins * 60):
@@ -62,15 +62,15 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
         #                                         cell_label=False, include_running=True, use_events=use_events)
         #
         # print('plotting cell responses')
-        for cell in dataset.get_cell_indices():
-            # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
-            sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
-    else:
-        print('no events for', experiment_id)
+    #     for cell in dataset.get_cell_indices():
+    #         # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
+    #         sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
+    # else:
+    #     print('no events for', experiment_id)
 
 
 if __name__ == '__main__':
-    # #VisualBehaviorDevelopment - complete dataset as of 11/15/18
+    # Visual Behavior pilot complete dataset
     experiment_ids = [639253368, 639438856, 639769395, 639932228, 644942849, 645035903,
                       645086795, 645362806, 646922970, 647108734, 647551128, 647887770,
                       648647430, 649118720, 649318212, 661423848, 663771245, 663773621,
@@ -90,12 +90,11 @@ if __name__ == '__main__':
                       770094844, 771381093, 771427955, 772131949, 772696884, 772735942,
                       773816712, 773843260, 774370025, 774379465, 775011398, 775429615,
                       776042634]
+
+    experiment_ids = [776042634]
+    experiment_ids = [771381093]
+    experiment_ids = [772735942]
     import os
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_analysis'
     for experiment_id in experiment_ids:
-        folder = [folder for folder in os.listdir(cache_dir) if str(experiment_id) in folder]
-        if len(folder) > 0:
-            file = [file for file in os.listdir(os.path.join(cache_dir, folder[0])) if 'flash_response_df' in file]
-            if len(file) != 0:
-                # print('no flash events for',experiment_id,'- generating')
-                create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)
+        create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
