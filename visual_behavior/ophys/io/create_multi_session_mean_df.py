@@ -50,6 +50,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                 trial_response_df = analysis.trial_response_df.copy()
                 trial_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
                                                 trial_response_df.reward_rate.values]
+                trial_response_df = trial_response_df[trial_response_df.trial_type=='go']
                 mdf = ut.get_mean_df(trial_response_df, analysis, conditions=conditions,
                                      flashes=flashes, omitted=omitted, get_reliability=get_reliability)
                 mdf['experiment_id'] = dataset.experiment_id
