@@ -94,6 +94,39 @@ def ptest(x, num_conditions):
     return ptest
 
 
+# def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
+#     #data munging
+#     fdf = flash_response_df.copy()
+#     odf = fdf[fdf.omitted==True].copy()
+#     st = stimulus_table.copy()
+#     included_flashes = fdf.flash_number.unique()
+#     st = st[st.flash_number.isin(included_flashes)]
+#     ost = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
+#     ost['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in ost.start_time.values]
+#     ost['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in ost.end_time.values]
+#     #set params
+#     stim_duration = 0.25
+#     frame_rate = 31
+#     stim_frames = int(np.round(stim_duration*frame_rate,0)) #stimulus window = 0.25ms*31Hz = 7.75 frames
+#     cell_indices = dataset.get_cell_indices()
+#     n_cells = len(cell_indices)
+#     #get shuffled values from omitted flash sweeps
+#     shuffled_responses = np.empty((n_cells, 10000, stim_frames))
+#     idx = np.random.choice(ost.start_frame.values, 10000)
+#     for i in range(stim_frames):
+#         shuffled_responses[:,:,i] = dataset.dff_traces[:,idx+i]
+#     shuffled_mean = shuffled_responses.mean(axis=2)
+#     #compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep
+#     flash_p_values = pd.DataFrame(index = st.index.values, columns=np.array(range(n_cells)).astype(str))
+#     for i,cell_index in enumerate(cell_indices):
+#         responses = fdf[fdf.cell==cell_index].mean_response.values
+#         null_dist_mat = np.tile(shuffled_mean[i,:], reps=(len(responses),1))
+#         actual_is_less = responses.reshape(len(responses),1) <= null_dist_mat
+#         p_values = np.mean(actual_is_less, axis=1)
+#         flash_p_values[str(cell_index)] = p_values
+#     return flash_p_values
+
+
 def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
     #data munging
     fdf = flash_response_df.copy()
@@ -101,9 +134,9 @@ def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
     st = stimulus_table.copy()
     included_flashes = fdf.flash_number.unique()
     st = st[st.flash_number.isin(included_flashes)]
-    ost = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
-    ost['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in ost.start_time.values]
-    ost['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in ost.end_time.values]
+    omitted_flashes = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
+    omitted_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in omitted_flashes.start_time.values]
+    omitted_flashes['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in omitted_flashes.end_time.values]
     #set params
     stim_duration = 0.25
     frame_rate = 31
@@ -111,11 +144,11 @@ def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
     cell_indices = dataset.get_cell_indices()
     n_cells = len(cell_indices)
     #get shuffled values from omitted flash sweeps
-    shuffled_responses = np.empty((n_cells, 10000, stim_frames))
-    idx = np.random.choice(ost.start_frame.values, 10000)
+    shuffled_omitted_responses = np.empty((n_cells, 10000, stim_frames))
+    omitted_idx = np.random.choice(omitted_flashes.start_frame.values, 10000)
     for i in range(stim_frames):
-        shuffled_responses[:,:,i] = dataset.dff_traces[:,idx+i]
-    shuffled_mean = shuffled_responses.mean(axis=2)
+        shuffled_omitted_responses[:,:,i] = dataset.dff_traces[:,omitted_idx+i]
+    shuffled_mean = shuffled_omitted_responses.mean(axis=2)
     #compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep
     flash_p_values = pd.DataFrame(index = st.index.values, columns=np.array(range(n_cells)).astype(str))
     for i,cell_index in enumerate(cell_indices):
@@ -125,6 +158,38 @@ def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
         p_values = np.mean(actual_is_less, axis=1)
         flash_p_values[str(cell_index)] = p_values
     return flash_p_values
+
+
+def get_p_values_from_shuffle_omitted(dataset, stimulus_table, omitted_flash_response_df):
+    #data munging
+    odf = omitted_flash_response_df.copy()
+    ost = stimulus_table.copy()
+    included_flashes = odf.flash_number.unique()
+    ost = ost[ost.flash_number.isin(included_flashes)]
+    stimulus_flashes = dataset.stimulus_table[dataset.stimulus_table.omitted == False]
+    stimulus_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in stimulus_flashes.start_time.values]
+    stimulus_flashes['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in stimulus_flashes.end_time.values]
+    #set params
+    stim_duration = 0.25
+    frame_rate = 31
+    stim_frames = int(np.round(stim_duration*frame_rate,0)) #stimulus window = 0.25ms*31Hz = 7.75 frames
+    cell_indices = dataset.get_cell_indices()
+    n_cells = len(cell_indices)
+    #get shuffled values from stimulus flashes
+    shuffled_stimulus_responses = np.empty((n_cells, 10000, stim_frames))
+    stimulus_idx = np.random.choice(stimulus_flashes.start_frame.values, 10000) #get random stimulus start times
+    for i in range(stim_frames): #make a fake trace of len(stim_duration) to take a shuffled mean
+        shuffled_stimulus_responses[:,:,i] = dataset.dff_traces[:,stimulus_idx+i]
+    shuffled_mean = shuffled_stimulus_responses.mean(axis=2) #take mean of shuffled trace
+    #compare omitted responses to shuffled stimulus values and make a dataframe of p_value for cell by sweep
+    omitted_flash_p_values = pd.DataFrame(index = ost.index.values, columns=np.array(range(n_cells)).astype(str))
+    for i,cell_index in enumerate(cell_indices):
+        responses = odf[odf.cell==cell_index].mean_response.values
+        null_dist_mat = np.tile(shuffled_mean[i,:], reps=(len(responses),1))
+        actual_is_less = responses.reshape(len(responses),1) <= null_dist_mat
+        p_values = np.mean(actual_is_less, axis=1)
+        omitted_flash_p_values[str(cell_index)] = p_values
+    return omitted_flash_p_values
 
 
 def get_mean_sem_trace(group):

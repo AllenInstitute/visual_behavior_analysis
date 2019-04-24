@@ -55,7 +55,7 @@ class ResponseAnalysis(object):
 
         # self.get_trial_response_df()
         self.get_flash_response_df()
-        # self.get_omitted_flash_response_df()
+        self.get_omitted_flash_response_df()
 
     def get_trial_response_df_path(self):
         if self.use_events:
@@ -292,7 +292,7 @@ class ResponseAnalysis(object):
                 response_window = [np.abs(flash_window[0]), np.abs(flash_window[
                     0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
                 baseline_window = [np.abs(flash_window[0]) - self.response_window_duration, (np.abs(flash_window[0]))]
-                p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
+                p_value_baseline = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
                                                            baseline_window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate, self.use_events)
@@ -302,17 +302,29 @@ class ResponseAnalysis(object):
                 reward_rate = flash_data.reward_rate.values[0]
 
                 row.append([int(cell), int(cell_specimen_id), int(flash), omitted, flash_time, image_name, image_category,
-                            trace, timestamps, mean_response, baseline_response, n_events, p_value, sd_over_baseline,
+                            trace, timestamps, mean_response, baseline_response, n_events, p_value_baseline, sd_over_baseline,
                             reward_rate, int(self.dataset.experiment_id)])
 
         flash_response_df = pd.DataFrame(data=row,
                                          columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
                                                   'image_name', 'image_category', 'trace', 'timestamps', 'mean_response',
-                                                  'baseline_response', 'n_events', 'p_value', 'sd_over_baseline',
+                                                  'baseline_response', 'n_events', 'p_value_baseline', 'sd_over_baseline',
                                                   'reward_rate', 'experiment_id'])
         # flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
         omitted_flash_response_df = flash_response_df
+        # omitted_flash_response_df = omitted_flash_response_df.reset_index().drop(columns=['index'])
+        # print len(omitted_flash_response_df)
+        # print len(omitted_flash_response_df.cell.unique())
+        if len(omitted_flash_response_df) > 2:
+            print('computing p-values for omitted from shuffled stimulus responses')
+            omitted_flash_p_values = ut.get_p_values_from_shuffle_omitted(self.dataset, stimulus_table, omitted_flash_response_df)
+            p_values = []
+            for flash_number in omitted_flash_response_df.flash_number.unique():
+                p_values = p_values + list(omitted_flash_p_values.loc[flash_number, :].values)
+            omitted_flash_response_df['p_value'] = p_values
+        else:
+            omitted_flash_response_df['p_value'] = np.nan
         return omitted_flash_response_df
 
     def save_omitted_flash_response_df(self, omitted_flash_response_df):
