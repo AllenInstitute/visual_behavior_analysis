@@ -82,7 +82,8 @@ def get_ica_sessions():
 
 
 def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
-    exclude_labels = ["union", "duplicate", "motion_border"]
+
+    exclude_labels=["union", "duplicate", "motion_border"]
     movie_h5 = get_path(data, "movie_h5", True)
     traces_h5 = get_path(data, "traces_h5", True)
     traces_h5_ica = get_path(data, "traces_h5_ica", True)
@@ -108,7 +109,7 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
     exclude_labels = set(exclude_labels)
 
     for roi in rois:
-        if exp_traces_valid[str(roi["id"])]:
+        if exp_traces_valid[str(roi["id"])] :
             mask = np.zeros(movie_shape, dtype=bool)
             mask_matrix = np.array(roi["mask"], dtype=bool)
             mask[roi["y"]:roi["y"] + roi["height"], roi["x"]:roi["x"] + roi["width"]] = mask_matrix
@@ -131,15 +132,15 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
 def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
-    mds, _ = get_ica_sessions()
+    mds, _ = mu.get_ica_sessions()
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
 
     for pair in pairs:
         for exp_id in pair:
             demix_path = os.path.join(an_dir, f'session_{session}/demixing_{exp_id}')
-
-            if os.path.isfile(demix_path):
+            demix_file = os.path.join(demix_path, f'traces_demixing_output_{exp_id}.h5')
+            if os.path.isfile(demix_file):
                 logging.info(f"Demixed traces exist for experiment {exp_id}, skipping demixing")
                 continue
             else:
@@ -228,7 +229,6 @@ def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
                 with h5py.File(output_h5, 'w') as f:
                     f.create_dataset("data", data=out_traces, compression="gzip")
                     f.create_dataset("roi_names", data=[np.string_(rn) for rn in trace_ids])
-
     return
 
 def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=None, err_vals=None):
@@ -250,7 +250,6 @@ def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=
     plt.savefig(file_name)
     plt.close()
 
-
 def run_neuropil_correction_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
@@ -260,16 +259,18 @@ def run_neuropil_correction_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnaly
             # prelude -- get processing metadata
             ses_dir = os.path.join(an_dir, f'session_{session}')
 
-            neuropil_file = os.path.join(ses_dir, f'ica_neuropil_{pair[0]}_{pair[1]}',
-                                         f'neuropil_ica_output_{exp_id}.h5')
+            neuropil_file = os.path.join(ses_dir, f'neuropil_corrected_{exp_id}',
+                                         f'neuropil_correction.h5')
 
             if os.path.isfile(neuropil_file):
                 logging.info(f"Neuropil corrected traces exist for experiment {exp_id}, skipping neuropil correction")
                 continue
             else:
-                logging.info(f"Running neuropil correction on {exp_id}")
+
                 demix_dir = os.path.join(ses_dir, f'demixing_{exp_id}')
                 trace_file = os.path.join(demix_dir, f'traces_demixing_output_{exp_id}.h5')
+                neuropil_ica_dir = os.path.join(ses_dir, f'ica_neuropil_{pair[0]}_{pair[1]}')
+                neuropil_trace_file = os.path.join(neuropil_ica_dir,  f'neuropil_ica_output_{exp_id}.h5')
                 storage_dir = os.path.join(ses_dir, f'neuropil_corrected_{exp_id}')
                 if not os.path.isdir(storage_dir):
                     os.mkdir(storage_dir)
@@ -284,6 +285,7 @@ def run_neuropil_correction_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnaly
                 except:
                     pass
 
+                logging.info(f"Running neuropil correction on {exp_id}")
                 logging.info("Neuropil correcting '%s'", trace_file)
 
                 ########################################################################
@@ -296,9 +298,9 @@ def run_neuropil_correction_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnaly
                     raise
 
                 try:
-                    neuropil_traces = h5py.File(neuropil_file, "r")
+                    neuropil_traces = h5py.File(neuropil_trace_file, "r")
                 except:
-                    logging.error("Error: unable to open neuropil trace file '%s'", neuropil_file)
+                    logging.error("Error: unable to open neuropil trace file '%s'", neuropil_trace_file)
                     raise
 
                 '''
