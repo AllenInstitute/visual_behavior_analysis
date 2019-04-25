@@ -4,6 +4,7 @@ import os
 import allensdk.internal.brain_observatory.demixer as demixer
 import allensdk.internal.core.lims_utilities as lu
 import allensdk.core.json_utilities as ju
+from allensdk.brain_observatory.dff import calculate_dff
 import h5py
 import numpy as np
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
@@ -415,3 +416,41 @@ def run_neuropil_correction_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnaly
 
                 logging.info("finished")
     return
+
+
+def run_dff_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
+
+    dataset = ms.MesoscopeDataset(session)
+    pairs = dataset.get_paired_planes()
+    ses_dir = os.path.join(an_dir, f'session_{session}')
+
+    for pair in pairs:
+        for exp_id in pair:
+
+            input_file = os.path.join(ses_dir, f'neuropil_corrected_{exp_id}/neuropil_correction.h5')
+            output_file = os.path.join(ses_dir, f'{exp_id}_dff.h5')
+
+            if os.path.exists(output_file) :
+                logging.info(f"df/f traces exist for experiment {exp_id} in {output_file}")
+                continue
+            else:
+                if not os.path.exists(input_file):
+                    raise IOError("input file does not exists: %s" % input_file)
+                logging.info(f"Calculating df/f traces for {input_file}")
+
+                # read from "data"
+                input_h5 = h5py.File(input_file, "r")
+                traces = input_h5['FC'].value
+                input_h5.close()
+
+                dff = calculate_dff(traces)
+
+                logging.info(f"Writing to disk {output_file}")
+                # write to "data"
+                output_h5 = h5py.File(output_file, "w")
+                output_h5['data'] = dff
+                output_h5.close()
+
+    return
+
+
