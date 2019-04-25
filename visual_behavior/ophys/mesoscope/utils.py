@@ -8,6 +8,7 @@ import h5py
 import numpy as np
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import visual_behavior.ophys.mesoscope.mesoscope as ms
+
 import shutil
 
 matplotlib.use('agg')
@@ -132,7 +133,7 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
 def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
-    mds, _ = mu.get_ica_sessions()
+    mds, _ = get_ica_sessions()
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
 
