@@ -174,6 +174,16 @@ class MesoscopeICA(object):
                                                       f'traces_ica_mixing.h5')
         return
 
+    def set_neuropil_ica_traces_dir(self, pair):
+            session_dir = self.set_analysis_session_dir()
+            self.ica_neuropil_dir = os.path.join(session_dir, f'ica_neuropil_{pair[0]}_{pair[1]}/')
+
+            self.plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_output_{pair[0]}.h5')
+            self.plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_output_{pair[1]}.h5')
+            self.ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_mixing.h5')
+
+            return
+
     def get_ica_traces(self, pair):
 
         # we will first check if traces exist, if yes - read them, if not - extract them

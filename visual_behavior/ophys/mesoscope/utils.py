@@ -68,9 +68,11 @@ def get_ica_sessions():
         for pair in pairs:
             ica_obj = ica.MesoscopeICA(session, cache='/media/NCRAID/MesoscopeAnalysis')
             ica_obj.set_ica_traces_dir(pair)
-            if os.path.isfile(ica_obj.plane1_ica_output_pointer):
+            ica_obj.set_neuropil_ica_dir(pair)
+
+            if os.path.isfile(ica_obj.plane1_ica_output_pointer) and os.path.isfile(ica_obj.plane1_ica_neuropil_output_pointer):
                 meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
-            if os.path.isfile(ica_obj.plane2_ica_output_pointer):
+            if os.path.isfile(ica_obj.plane2_ica_output_pointer) and os.path.isfile(ica_obj.plane2_ica_neuropil_output_pointer):
                 meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[1]] = 1
             session_data = meso_data.loc[meso_data['session_id'] == session]
             if all(session_data.ICA_demix_exp == 1):
