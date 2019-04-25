@@ -174,7 +174,7 @@ class MesoscopeICA(object):
                                                       f'traces_ica_mixing.h5')
         return
 
-    def set_neuropil_ica_traces_dir(self, pair):
+    def set_neuropil_ica_dir(self, pair):
             session_dir = self.set_analysis_session_dir()
             self.ica_neuropil_dir = os.path.join(session_dir, f'ica_neuropil_{pair[0]}_{pair[1]}/')
 
