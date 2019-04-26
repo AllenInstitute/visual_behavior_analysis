@@ -172,23 +172,7 @@ def annotate_startdatetime(trials, metadata):
     trials['startdatetime'] = parser.parse(metadata['startdatetime'])
 
 
-@inplace
-def assign_session_id(trials):
-    """ adds a column with a unique ID for the session defined as
-            a combination of the mouse ID and startdatetime
 
-    Parameters
-    ----------
-    trials : pandas DataFrame
-        dataframe of trials
-    inplace : bool, optional
-        modify `trials` in place. if False, returns a copy. default: True
-
-    See Also
-    --------
-    io.load_trials
-    """
-    trials['session_id'] = trials['mouse_id'] + '_' + trials['startdatetime'].map(lambda x: x.isoformat())
 
 
 @inplace
@@ -250,63 +234,6 @@ def fix_autorearded(df):
     io.load_trials
     """
     df.rename(columns={'auto_rearded': 'auto_rewarded'}, inplace=True)
-
-
-@inplace
-def annotate_change_detect(trials):
-    """ adds `change` and `detect` columns to dataframe
-
-    Parameters
-    ----------
-    trials : pandas DataFrame
-        dataframe of trials
-    inplace : bool, optional
-        modify `trials` in place. if False, returns a copy. default: True
-
-    See Also
-    --------
-    io.load_trials
-    """
-
-    trials['change'] = trials['trial_type'] == 'go'
-    trials['detect'] = trials['response'] == 1.0
-
-
-@inplace
-def fix_change_time(trials):
-    """ forces `None` values in the `change_time` column to numpy NaN
-
-    Parameters
-    ----------
-    trials : pandas DataFrame
-        dataframe of trials
-    inplace : bool, optional
-        modify `trials` in place. if False, returns a copy. default: True
-
-    See Also
-    --------
-    io.load_trials
-    """
-    trials['change_time'] = trials['change_time'].map(lambda x: np.nan if x is None else x)
-
-
-@inplace
-def explode_response_window(trials):
-    """ explodes the `response_window` column in lower & upper columns
-
-    Parameters
-    ----------
-    trials : pandas DataFrame
-        dataframe of trials
-    inplace : bool, optional
-        modify `trials` in place. if False, returns a copy. default: True
-
-    See Also
-    --------
-    io.load_trials
-    """
-    trials['response_window_lower'] = trials['response_window'].map(lambda x: x[0])
-    trials['response_window_upper'] = trials['response_window'].map(lambda x: x[1])
 
 
 @inplace
@@ -392,38 +319,6 @@ def annotate_lick_vigor(trials, licks, window=3.5):
             return np.min(lks)
 
     trials['reward_lick_latency'] = trials['reward_licks'].map(min_licks)
-
-
-@inplace
-def annotate_trials(trials):
-    """ performs multiple annotatations:
-
-    - annotate_change_detect
-    - fix_change_time
-    - explode_response_window
-
-    Parameters
-    ----------
-    trials : pandas DataFrame
-        dataframe of trials
-    inplace : bool, optional
-        modify `trials` in place. if False, returns a copy. default: True
-
-    See Also
-    --------
-    io.load_trials
-    """
-    # build arrays for change detection
-    annotate_change_detect(trials, inplace=True)
-
-    # assign a session ID to each row
-    assign_session_id(trials, inplace=True)
-
-    # calculate reaction times
-    fix_change_time(trials, inplace=True)
-
-    # unwrap the response window
-    explode_response_window(trials, inplace=True)
 
 
 @inplace

@@ -1,3 +1,4 @@
+-i https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple
 six>=1.11.0
 numpy==1.15.0
 pandas==0.23.4
@@ -9,6 +10,7 @@ deepdish>=0.3.6
 python-dateutil>=2.6.1
 marshmallow==3.0.0rc4
 h5py>=2.7.1
+allensdk==1.0.0.dev7
 psycopg2
 seaborn
 zipfile2; python_version < '3.5'

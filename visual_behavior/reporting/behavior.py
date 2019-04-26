@@ -1,6 +1,7 @@
 from ..translator.core import create_extended_dataframe
-from ..translator.core.annotate import annotate_change_detect
 from ..change_detection.trials.summarize import DEFAULT_SUMMARY_METRICS
+
+from allensdk.brain_observatory.behavior.mtrain import annotate_change_detect
 
 
 def change_detection_metrics(core_data):

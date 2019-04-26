@@ -3,7 +3,9 @@ import pandas as pd
 import numpy as np
 from . import session_metrics
 from ... import metrics
-from ...translator.core.annotate import annotate_epochs, annotate_change_detect
+from ...translator.core.annotate import annotate_epochs
+
+from allensdk.brain_observatory.behavior.mtrain import annotate_change_detect
 
 
 def create_summarizer(**kwargs):
