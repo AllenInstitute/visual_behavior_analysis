@@ -33,13 +33,15 @@ if __name__ == '__main__':
            836910438, 836911939, 837296345, 837729902, 838849930]
 
     get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'change_image_name', 'trial_type', 'engaged'])
+                              conditions=['cell_specimen_id', 'image_name', ], flashes=True, omitted=True)
     get_multi_session_mean_df(experiment_ids, cache_dir,
-                                    conditions=['cell_specimen_id', 'image_name', 'engaged'], flashes=True)
+                              conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     get_multi_session_mean_df(experiment_ids, cache_dir,
-                                      conditions=['cell_specimen_id', 'image_name', 'engaged', 'repeat'], flashes=True)
+                                    conditions=['cell_specimen_id', 'image_name', ], flashes=True)
     get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'])
+                                      conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
+    # get_multi_session_mean_df(experiment_ids, cache_dir,
+    #                           conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'])
 
 
     # get_multi_session_mean_df(experiment_ids, cache_dir,
