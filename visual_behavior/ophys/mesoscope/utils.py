@@ -82,7 +82,7 @@ def get_ica_sessions():
 
     ica_success = meso_data.loc[meso_data['ICA_demix_session'] == 1]
     ica_fail = meso_data.loc[meso_data['ICA_demix_session'] == 0]
-    return ica_success, ica_fail
+    return ica_success, ica_fail, meso_data
 
 
 def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
