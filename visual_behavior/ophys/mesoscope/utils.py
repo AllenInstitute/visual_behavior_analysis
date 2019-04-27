@@ -85,6 +85,33 @@ def get_ica_sessions():
     return ica_success, ica_fail, meso_data
 
 
+def get_ica_exp_by_cre_line(cre_line, md):
+
+    md_success = md.loc[md['ICA_demix_session'] == 1]
+    md_fail = md.loc[md['ICA_demix_session'] == 0]
+
+    cre_md_success = md_success.loc[md_success['specimen'].str.contains(cre_line)]
+    cre_md_fail =  md_fail.loc[md_fail['specimen'].str.contains(cre_line)]
+
+    cre_exp_success = cre_md_success['experiment_id']
+    cre_exp_fail = cre_md_fail['experiment_id']
+
+    return cre_exp_success, cre_exp_fail
+
+def get_ica_ses_by_cre_line(cre_line, md):
+
+    md_success = md.loc[md['ICA_demix_session'] == 1]
+    md_fail = md.loc[md['ICA_demix_session'] == 0]
+
+    cre_md_success = md_success.loc[md_success['specimen'].str.contains(cre_line)]
+    cre_md_fail = md_fail.loc[md_fail['specimen'].str.contains(cre_line)]
+
+    cre_ses_success = cre_md_success.drop_duplicates('session_id')['session_id']
+    cre_ses_fail = cre_md_fail.drop_duplicates('session_id')['session_id']
+
+    return cre_ses_success, cre_ses_fail
+
+
 def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
 
     exclude_labels=["union", "duplicate", "motion_border"]
