@@ -75,7 +75,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
     if 'index' in mega_mdf.keys():
         mega_mdf = mega_mdf.drop(columns='index')
 
-    mega_mdf_write_dir = os.path.join(cache_dir, 'multi_session_summary_dfs')
+    mega_mdf_write_dir = os.path.join(cache_dir, 'multi_session_summary_dfs_mesoscope')
     if not os.path.exists(mega_mdf_write_dir):
         os.makedirs(mega_mdf_write_dir)
 
