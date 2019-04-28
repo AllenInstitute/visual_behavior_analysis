@@ -1035,3 +1035,12 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
             average_image=average_image,
         ))  # flake8: noqa: F841
     return core_data
+
+
+
+if __name__ == '__main__':
+
+    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
+    experiment_id = 839717713
+    for experiment_id in experiment_ids:
+        ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir, plot_roi_validation=False);

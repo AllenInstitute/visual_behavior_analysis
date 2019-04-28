@@ -98,7 +98,6 @@ if __name__ == '__main__':
                       836910438, 836911939, 837296345, 837729902, 838849930]
 
     import os
-
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
     for experiment_id in experiment_ids:
         create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)
