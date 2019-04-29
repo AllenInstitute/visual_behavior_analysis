@@ -123,6 +123,9 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
                 was_true_omitted = np.logical_not(matched_any_offset)  # bool
                 omitted_flash_frames_to_keep = omitted_flash_frames[was_true_omitted]
 
+                # Have to remove frames that are double-counted in omitted log
+                omitted_flash_frames_to_keep = np.unique(omitted_flash_frames_to_keep)
+
                 omitted_flash_times = [time[frame] for frame in omitted_flash_frames_to_keep]
 
                 for omitted_flash_frame, omitted_flash_time in zip(omitted_flash_frames_to_keep,
