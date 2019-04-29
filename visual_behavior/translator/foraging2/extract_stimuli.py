@@ -113,8 +113,8 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
 
                 #  Test offsets of omitted flash frames to see if they are in the stim log
                 offsets = np.arange(-3, 4)
-                offsetArr = np.add(np.repeat(omittedFrames[:, np.newaxis], offsets.shape[0], axis=1), offsets)
-                matched_any_offset = np.any(np.isin(offsetArr, stimFrames), axis=1)
+                offset_arr = np.add(np.repeat(omitted_flash_frames[:, np.newaxis], offsets.shape[0], axis=1), offsets)
+                matched_any_offset = np.any(np.isin(offset_arr, stim_frames), axis=1)
 
                 #  Remove omitted flashes that also exist in the stimulus log
                 if np.any(matched_any_offset):
