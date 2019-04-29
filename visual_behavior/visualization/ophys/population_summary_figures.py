@@ -193,8 +193,10 @@ def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=Non
     ax.set_xticklabels([int(xticklabel) for xticklabel in xticklabels])
     if response_array.shape[0] > 400:
         interval = 500
-    else:
+    elif (response_array.shape[0] < 400) and (response_array.shape[0] > 100):
         interval = 50
+    elif response_array.shape[0] < 100:
+        interval = 20
     ax.set_yticks(np.arange(0, response_array.shape[0], interval))
     ax.set_yticklabels(np.arange(0, response_array.shape[0], interval))
     ax.set_xlabel('time after change (s)', fontsize=16)
@@ -260,9 +262,8 @@ def plot_mean_response_by_repeat_heatmap(df, cre_line, title=None, ax=None, use_
     return ax
 
 
-def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4, 4], alpha=0.15,
+def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4, 4], alpha=0.15, frame_rate=31.,
                           facecolor='gray'):
-    frame_rate = 31.
     stim_duration = .25
     blank_duration = .5
     change_frame = np.abs(window[0]) * frame_rate

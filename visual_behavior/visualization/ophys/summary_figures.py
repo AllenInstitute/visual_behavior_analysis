@@ -212,7 +212,7 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
     if ax is None:
         fig, ax = plt.subplots()
     if len(traces) > 0:
-        trace = np.mean(traces)
+        trace = np.mean(traces, axis=0)
         times = np.arange(0, len(trace), 1)
         sem = (traces.std()) / np.sqrt(float(len(traces)))
         ax.plot(trace, label=legend_label, linewidth=3, color=color)

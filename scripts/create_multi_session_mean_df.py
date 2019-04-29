@@ -99,12 +99,12 @@ if __name__ == '__main__':
 
     save_folder = 'scientifia'
 
-    # get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
-    #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
-    # get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
-    #                                   conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
-    # get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
-    #                           conditions=['cell_specimen_id', 'image_name'], flashes=True)
+    get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
+                              conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
+    get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
+                                      conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True, get_reliability=True)
+    get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
+                              conditions=['cell_specimen_id', 'image_name'], flashes=True)
     get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
                               conditions=['cell_specimen_id', 'image_name'], flashes=True, omitted=True)
     # get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,

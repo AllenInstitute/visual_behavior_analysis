@@ -23,6 +23,8 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                 if omitted:
                     print('using omitted flash response df')
                     flash_response_df = analysis.omitted_flash_response_df.copy()
+                    ##### hack ##### remove
+                    flash_response_df['p_value'] = flash_response_df.p_value_baseline.values
                     print(len(flash_response_df))
                 elif not omitted:
                     if 'repeat' in conditions:
@@ -185,7 +187,7 @@ if __name__ == '__main__':
     #                   856967230, 856967232, 856967234, 856967237, 856967241, 856967243,
     #                   856967245, 856967247]
 
-    # # mesoscope LI
+    # mesoscope LI
     # experiment_ids = [839717709, 839717711, 839717713, 839717715, 839717717, 839717719, 839717721, 839717723]
 
     save_folder = 'scientifica'
@@ -193,7 +195,7 @@ if __name__ == '__main__':
     get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
                               conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
-                              conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
+                              conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True, get_reliability=False)
     get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
                               conditions=['cell_specimen_id', 'image_name'], flashes=True)
     get_multi_session_mean_df(experiment_ids, cache_dir, save_folder=save_folder,
