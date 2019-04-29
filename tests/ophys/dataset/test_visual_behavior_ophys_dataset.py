@@ -120,6 +120,12 @@ def motion_correction():
         'y_corr': [0.9, 0.4, 1.0]
     })
     
+@pytest.fixture
+def roi_metrics():
+    return pd.DataFrame({
+        'x': [0.0, 1.0, 2.0],
+        'y': [2.0, 3.0, 4.0]
+    })
     
 @pytest.fixture
 def ophys_data_dir(tmpdir_factory, 
@@ -181,6 +187,10 @@ def ophys_data_dir(tmpdir_factory,
     # motion correction
     motion_correction_path = os.path.join(analysis_folder_path, 'motion_correction.h5')
     motion_correction.to_hdf(motion_correction_path, key='df', format='fixed')
+
+    # roi metrics
+    roi_metrics_path = os.path.join(analysis_folder_path, 'roi_metrics.h5')
+    roi_metrics.to_hdf(roi_metrics_path, key='df', format='fixed')
     
     return tmp_dir
 
