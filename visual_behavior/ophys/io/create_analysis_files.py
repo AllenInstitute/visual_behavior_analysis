@@ -2,11 +2,11 @@
 @author: marinag
 """
 
-import numpy as np
+# import numpy as np
 
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
-import visual_behavior.ophys.response_analysis.utilities as ut
+# import visual_behavior.ophys.response_analysis.utilities as ut
 
 from visual_behavior.visualization.ophys import experiment_summary_figures as esf
 from visual_behavior.visualization.ophys import summary_figures as sf
@@ -20,7 +20,7 @@ from visual_behavior.visualization.ophys import summary_figures as sf
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True, turn_off_plotting=False):
     # logger.info(experiment_id)
     print(experiment_id)
-    print('saving '+str(experiment_id)+' to '+cache_dir)
+    print('saving ' + str(experiment_id) + ' to ' + cache_dir)
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
 
     use_events = False

@@ -107,7 +107,7 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
 
         elif omitted_flash_frame_log is not None:
             for stimuli_group_name, omitted_flash_frames in iteritems(omitted_flash_frame_log):
-                ### Remove omitted flashes that also exist in the stimulus log
+                # Remove omitted flashes that also exist in the stimulus log
                 stim_frames = stimulus_df['frame'].values
                 omitted_flash_frames = np.array(omitted_flash_frames)
                 offsets_to_test = np.arange(-3, 4)
@@ -117,14 +117,14 @@ def check_for_omitted_flashes(stimulus_df, time, omitted_flash_frame_log=None, p
                                             dtype=bool)
                 # Test to see if omitted frames are in stim frames for each offset
                 for indOffset, offset in enumerate(offsets_to_test):
-                    omitted_in_stims[indOffset,:] = np.in1d(omitted_flash_frames+offset,
-                                                            stim_frames)
+                    omitted_in_stims[indOffset, :] = np.in1d(omitted_flash_frames + offset,
+                                                             stim_frames)
                 # Filter out any frames that matched for any offset
                 matched_any_offset = np.any(omitted_in_stims, axis=0)
                 if np.any(matched_any_offset):
                     logger.warn("Removing {} omitted stimuli that also exist in frame log".format(
                         np.sum(matched_any_offset)))
-                was_true_omitted = np.logical_not(matched_any_offset) #bool
+                was_true_omitted = np.logical_not(matched_any_offset)  # bool
                 omitted_flash_frames_to_keep = omitted_flash_frames[was_true_omitted]
 
                 omitted_flash_times = [time[frame] for frame in omitted_flash_frames_to_keep]

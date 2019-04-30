@@ -172,7 +172,7 @@ def get_stim_names(cell_matching_dataset_dict, lims_ids):
 
 
 def plot_ssim_matrix(matrix, container_id, lims_ids, cell_matching_dataset_dict, label='stim_names'):
-    if label is 'stim_names':
+    if label == 'stim_names':
         stim_names = get_stim_names(cell_matching_dataset_dict, lims_ids)
         labels = stim_names
         fig_title = 'registered_ssim_matrix_stim_names'
@@ -348,7 +348,7 @@ def get_cell_matching_matrix(container_id, cell_matching_dataset_dict):
 def plot_matched_cells_matrix(container_id, cell_matching_dataset_dict, label='stim_names'):
     lims_ids = get_lims_ids_for_container(container_id)
     matrix = get_cell_matching_matrix(container_id, cell_matching_dataset_dict)
-    if label is 'stim_names':
+    if label == 'stim_names':
         stim_names = get_stim_names(cell_matching_dataset_dict, lims_ids)
         labels = stim_names
         fig_title = 'n_matched_cells_matrix_stim_names'
@@ -370,7 +370,7 @@ def plot_matched_cells_matrix(container_id, cell_matching_dataset_dict, label='s
 def plot_fraction_matched_cells_matrix(container_id, cell_matching_dataset_dict, label='stim_names'):
     lims_ids = get_lims_ids_for_container(container_id)
     matrix = get_cell_matching_matrix(container_id, cell_matching_dataset_dict)
-    if label is 'stim_names':
+    if label == 'stim_names':
         stim_names = get_stim_names(cell_matching_dataset_dict, lims_ids)
         labels = stim_names
         fig_title = 'fraction_matched_cells_matrix_stim_names'
