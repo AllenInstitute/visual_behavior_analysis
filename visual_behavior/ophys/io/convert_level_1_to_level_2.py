@@ -178,7 +178,7 @@ def get_roi_group(lims_data):
     with open(json_path, 'r') as w:
         jin = json.load(w)
     # figure out which roi_group the current experiment belongs to
-    plane_data = pd.DataFrame()
+    # plane_data = pd.DataFrame()
     for i, roi_group in enumerate(range(len(jin['plane_groups']))):
         group = jin['plane_groups'][roi_group]['ophys_experiments']
         for j, plane in enumerate(range(len(group))):
@@ -216,7 +216,7 @@ def get_sync_data(lims_data, use_acq_trigger):
     # Handle mesoscope missing labels
     try:
         sync_dataset.get_rising_edges('2p_vsync')
-    except:
+    except Exception:
         sync_dataset.line_labels = ['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '', 'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
         sync_dataset.meta_data['line_labels'] = sync_dataset.line_labels
 
@@ -691,8 +691,8 @@ def get_cell_specimen_ids_from_lims(mouse_id):
     WHERE 
     cr.valid_roi = 't' AND 
     sp.external_specimen_name IN('{mouse_id}')
-    ORDER BY 1,2,3,4,5;'''.format(mouse_id=mouse_id)
-    query = big_query
+    ORDER BY 1,2,3,4,5;'''.format(mouse_id=mouse_id) # NOQA: W291
+    # query = big_query
     # Result of the query are
     # external_specimen_name,container_id,cell_specimen_id,valid_roi,cell_roi_id
 
@@ -715,7 +715,7 @@ def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
                                                roi_metrics.id.values]
             # replace the id with the cell specimen ID
             roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
-        except:
+        except Exception:
             print('something bad happened when trying to get cell specimen ids from lims, setting to None')
             roi_metrics['cell_specimen_id'] = None
     else:
@@ -918,7 +918,7 @@ def run_roi_validation(lims_data, cache_dir):
     roi_metrics = add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir)
     roi_masks = get_roi_masks(roi_metrics, lims_data)
     dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
-    cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
+    # cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
     roi_ids = get_roi_ids(roi_metrics)
     max_projection = get_max_projection(lims_data)
 
