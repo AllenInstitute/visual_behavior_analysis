@@ -56,7 +56,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     if dataset.events is not None:
         use_events = True
         analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
-        pairwise_correlations_df = analysis.get_pairwise_correlations_df()
+        # pairwise_correlations_df = analysis.get_pairwise_correlations_df()
         #
         print('plotting experiment summary figure')
         esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
@@ -97,7 +97,7 @@ if __name__ == '__main__':
                       834275020, 834275038, 834279496, 836258936, 836258957, 836260147,
                       836910438, 836911939, 837296345, 837729902, 838849930]
 
-    import os
+    # import os
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
     for experiment_id in experiment_ids:
         create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=False)

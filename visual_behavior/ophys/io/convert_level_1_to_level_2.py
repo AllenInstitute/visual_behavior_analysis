@@ -691,7 +691,7 @@ def get_cell_specimen_ids_from_lims(mouse_id):
     WHERE 
     cr.valid_roi = 't' AND 
     sp.external_specimen_name IN('{mouse_id}')
-    ORDER BY 1,2,3,4,5;'''.format(mouse_id=mouse_id) # NOQA: W291
+    ORDER BY 1,2,3,4,5;'''.format(mouse_id=mouse_id)  # NOQA: W291
     # query = big_query
     # Result of the query are
     # external_specimen_name,container_id,cell_specimen_id,valid_roi,cell_roi_id
