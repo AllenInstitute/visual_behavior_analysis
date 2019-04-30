@@ -40,7 +40,7 @@ def get_path(obj, key, check_exists):
     return path
 
 
-def run_ica_on_session(session):
+def run_ica_on_session(session,  iter_ica, iter_neuropil):
     ica_obj = ica.MesoscopeICA(session_id=session, cache='/media/NCRAID/MesoscopeAnalysis/')
     pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
@@ -48,22 +48,19 @@ def run_ica_on_session(session):
         ica_obj.validate_traces()
         ica_obj.combine_debias_traces()
         ica_obj.combine_debias_neuropil()
-        ica_obj.unmix_traces(max_iter=50)
-        ica_obj.unmix_neuropil(max_iter=100)
+        ica_obj.unmix_traces(max_iter=iter_ica)
+        ica_obj.unmix_neuropil(max_iter=iter_neuropil)
         ica_obj.plot_ica_traces(pair)
-
-        # if np.all(ica_obj.found_solution == True):
-        #     meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
     return
 
-def run_ica_on_pair(session, pair):
+def run_ica_on_pair(session, pair, iter_ica, iter_neuropil):
     ica_obj = ica.MesoscopeICA(session_id=session, cache='/media/NCRAID/MesoscopeAnalysis/')
     ica_obj.get_ica_traces(pair)
     ica_obj.validate_traces()
     ica_obj.combine_debias_traces()
     ica_obj.combine_debias_neuropil()
-    ica_obj.unmix_traces(max_iter=50)
-    ica_obj.unmix_neuropil(max_iter=100)
+    ica_obj.unmix_traces(max_iter=iter_ica)
+    ica_obj.unmix_neuropil(max_iter=iter_neuropil)
     ica_obj.plot_ica_traces(pair)
     return
 
@@ -174,7 +171,7 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
 def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
-    mds, _ = get_ica_sessions()
+    mds, _, _ = get_ica_sessions()
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
 
