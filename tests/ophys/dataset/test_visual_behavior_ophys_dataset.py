@@ -130,7 +130,7 @@ def roi_metrics():
 @pytest.fixture
 def ophys_data_dir(tmpdir_factory, 
     ophys_metadata, ophys_timestamps, ophys_stimulus_table, stimulus_template, stimulus_metadata, running_speed,
-    licks, rewards, task_parameters, max_projection, motion_correction
+    licks, rewards, task_parameters, max_projection, motion_correction, roi_metrics
 ):
     warnings.simplefilter("ignore") # pandas yells about hdf object columns - it IS a problem for cross-version compatibility
     
