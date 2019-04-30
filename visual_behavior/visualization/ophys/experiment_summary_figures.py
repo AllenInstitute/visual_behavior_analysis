@@ -329,7 +329,7 @@ def plot_d_prime(trials, d_prime, ax=None):
 
 def plot_hit_false_alarm_rates(trials, ax=None):
     trials['auto_rewarded'] = False
-    hr, cr, d_prime = vbut.get_response_rates(trials, sliding_window=100, reward_window=None)
+    hr, cr, d_prime = vbut.get_response_rates(trials, sliding_window=100)
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 2))
