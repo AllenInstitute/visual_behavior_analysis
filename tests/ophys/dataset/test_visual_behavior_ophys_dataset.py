@@ -123,8 +123,7 @@ def motion_correction():
 
 @pytest.fixture
 def roi_metrics():
-    return pd.DataFrame({
-        {'index': {3: 4, 6: 7, 8: 9},
+    return pd.DataFrame({'index': {3: 4, 6: 7, 8: 9},
          ' traceindex': {3: 2, 6: 5, 8: 7},
          ' tempIndex': {3: 17, 6: 12, 8: 2},
          ' cx': {3: 127, 6: 234, 8: 299},
@@ -168,7 +167,7 @@ def roi_metrics():
             'unfiltered_cell_index': {3: 20, 6: 17, 8: 21},
             'cell_index': {3: 5, 6: 4, 8: 6},
             'cell_specimen_id': {3: 815268274, 6: 815266942, 8: 815267016}}
-    })
+    )
     
 @pytest.fixture
 def ophys_data_dir(tmpdir_factory, 
