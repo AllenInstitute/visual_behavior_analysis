@@ -715,8 +715,9 @@ def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
                                                roi_metrics.id.values]
             # replace the id with the cell specimen ID
             roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
-        except ValueError:
+        except Exception as e:
             print('something bad happened when trying to get cell specimen ids from lims, setting to None')
+            print(e)
             roi_metrics['cell_specimen_id'] = None
     else:
         # if lims query returns nothing, set cell_specimen_id to None
