@@ -7,7 +7,8 @@ from visual_behavior import devices
 DEVICES_DATE = devices.VALID_BEFORE_DATE
 
 def test_rig_id_included():
-    data_with_rig_id = {'rig_id':'A1_fromfile'}
+    data_with_rig_id = {'rig_id':'A1_fromfile',
+                        'comp_id':'A1_fromfile'}  # to use until MPE fixes rig_id
     expected = 'A1_fromfile'
     output = get_rig_id(data_with_rig_id)
     assert output == expected
