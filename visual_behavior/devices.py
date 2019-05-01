@@ -4,8 +4,8 @@ import datetime
 # These mappings between computer name and rig name will break when computers
 # are updated by MPE, and are only valid before this date.
 # TODO: Set this to the date MPE changes the computers and breaks this mapping.
-# VALID_BEFORE_DATE = datetime.datetime(2019, 5, 1)
-VALID_BEFORE_DATE = datetime.datetime.max  # Set to midnight, Dec 31, year 9999 for now.
+VALID_BEFORE_DATE = datetime.datetime(2019, 5, 1)
+# VALID_BEFORE_DATE = datetime.datetime.max  # Set to midnight, Dec 31, year 9999 for now.
 
 RIG_NAME = {
     'W7DTMJ19R2F': 'A1',
