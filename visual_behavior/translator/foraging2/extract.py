@@ -1141,7 +1141,7 @@ def get_rig_id(exp_data):
         id of the rig or 'unknown' if not found
     """
     try:
-        rig_id = exp_data['rig_id']
+        rig_id = exp_data['comp_id']
     except KeyError:
         # If there is no 'rig_id' field, we need to get the ID by using devices.
         # This should only happen with old data from before 'rig_id' was included.
