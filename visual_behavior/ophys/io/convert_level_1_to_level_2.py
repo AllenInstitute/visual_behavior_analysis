@@ -216,7 +216,7 @@ def get_sync_data(lims_data, use_acq_trigger):
     # Handle mesoscope missing labels
     try:
         sync_dataset.get_rising_edges('2p_vsync')
-    except Exception:
+    except ValueError:
         sync_dataset.line_labels = ['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '', 'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
         sync_dataset.meta_data['line_labels'] = sync_dataset.line_labels
 
@@ -715,7 +715,7 @@ def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
                                                roi_metrics.id.values]
             # replace the id with the cell specimen ID
             roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
-        except Exception:
+        except ValueError:
             print('something bad happened when trying to get cell specimen ids from lims, setting to None')
             roi_metrics['cell_specimen_id'] = None
     else:
