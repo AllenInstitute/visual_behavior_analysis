@@ -1,11 +1,9 @@
 from six import iteritems
 import datetime
 
-# These mappings between computer name and rig name will break when computers
-# are updated by MPE, and are only valid before this date.
-# TODO: Set this to the date MPE changes the computers and breaks this mapping.
+# These mappings between computer name and rig name broke when computers
+# were updated by MPE, and are only valid before this date.
 VALID_BEFORE_DATE = datetime.datetime(2019, 5, 1)
-# VALID_BEFORE_DATE = datetime.datetime.max  # Set to midnight, Dec 31, year 9999 for now.
 
 RIG_NAME = {
     'W7DTMJ19R2F': 'A1',
@@ -76,12 +74,11 @@ def get_rig_id(computer_name):
     '''
     This provides a map between the computer name and the rig ID.
 
-    TODO: Put the relevant dates in this docstring when we know them.
-    For data files generated before XXXX, the rig ID is not included
-    and instead must be determined by using the computer name. For data
-    produced after this date, the rig ID is included in the pkl file and should
-    not be determined by using this function. On XXXX the names of the
-    computers changed, and so any attempt to use this function to determine
+    For data files generated before the release of camstim 5.1 , the rig ID
+    is not included and instead must be determined by using the computer name.
+    For data produced after, the rig ID is included in the pkl file and should
+    not be determined by using this function. On 2019-05-01 the names of the
+    computers began to change, and so any attempt to use this function to determine
     rig names from computer names for data generated after this date will fail.
 
     Parameters
