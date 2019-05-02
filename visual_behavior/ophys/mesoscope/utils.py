@@ -113,7 +113,7 @@ def get_ica_roi_sessions():
             if os.path.isfile(ica_obj.plane2_ica_output_pointer) :
                 meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[1]] = 1
             session_data = meso_data.loc[meso_data['session_id'] == session]
-            if all(session_data.ICA_demix_exp == 1):
+            if all(session_data.ICA_demix_roi_exp == 1):
                 for exp in session_data.experiment_id:
                     meso_data['ICA_demix_roi_session'].loc[meso_data.experiment_id == exp] = 1
 
