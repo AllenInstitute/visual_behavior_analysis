@@ -93,6 +93,34 @@ def get_ica_sessions():
     return ica_success, ica_fail, meso_data
 
 
+def get_ica_roi_sessions():
+    meso_data = ms.get_all_mesoscope_data()
+    meso_data['ICA_demix_roi_exp'] = 0
+    meso_data['ICA_demix_roi_session'] = 0
+    sessions = meso_data['session_id']
+    sessions = sessions.drop_duplicates()
+
+    for session in sessions:
+        dataset = ms.MesoscopeDataset(session)
+        pairs = dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj = ica.MesoscopeICA(session, cache='/media/NCRAID/MesoscopeAnalysis')
+            ica_obj.set_ica_traces_dir(pair)
+            ica_obj.set_neuropil_ica_dir(pair)
+
+            if os.path.isfile(ica_obj.plane1_ica_output_pointer) :
+                meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
+            if os.path.isfile(ica_obj.plane2_ica_output_pointer) :
+                meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[1]] = 1
+            session_data = meso_data.loc[meso_data['session_id'] == session]
+            if all(session_data.ICA_demix_exp == 1):
+                for exp in session_data.experiment_id:
+                    meso_data['ICA_demix_roi_session'].loc[meso_data.experiment_id == exp] = 1
+
+    ica_roi_success = meso_data.loc[meso_data['ICA_demix_roi_session'] == 1]
+    ica_roi_fail = meso_data.loc[meso_data['ICA_demix_roi_session'] == 0]
+    return ica_roi_success, ica_roi_fail, meso_data
+
 def get_ica_exp_by_cre_line(cre_line, md):
 
     md_success = md.loc[md['ICA_demix_session'] == 1]
@@ -171,7 +199,7 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
 def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
-    mds, _, _ = get_ica_sessions()
+    mds, _, _ = get_ica_roi_sessions()
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
 
