@@ -7,7 +7,6 @@ from ..trials import masks
 from ...utilities import get_response_rates, flatten_list
 from ...metrics import d_prime
 from ...translator.core.annotate import assign_trial_description
-from ...devices import get_rig_id
 
 
 def discrim(
@@ -205,13 +204,11 @@ def user_id(session_trials):
 
 
 def rig_id(session_trials):
-    if 'computer_name' in session_trials.columns:
-        return get_rig_id(session_trials.iloc[0].computer_name)
-    else:
-        try:
-            return session_trials.iloc[0].rig_id
-        except AttributeError:
-            return 'unknown'
+    try:
+        rig_id = session_trials['rig_id'].iloc[0]
+    except KeyError:
+        rig_id = 'unknown'
+    return rig_id
 
 
 def filename(session_trials):
