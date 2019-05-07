@@ -56,6 +56,39 @@ class Epoch(object):
         return self.__movie_index
 
 
+class VisualPresentationEpoch(object):
+
+    def __init__(
+        self,
+        movie_path,
+        movie_index,
+        start_frame,
+        frame_times,
+    ):
+        self.__movie_index = movie_index
+        self.__start_frame = start_frame
+        self.__stop_frame = start_frame
+        self.__movie_path = movie_path
+        self.__frame_times = frame_times
+
+    def extend_epoch(self, stop_frame, ):
+        self.__stop_frame = stop_frame
+
+    def dump(self):
+        return {
+            'movie_path': self.__movie_path,
+            'movie_index': self.__movie_index,  # this is the best compromise i think we can make at this time :(...
+            'frame': self.__start_frame,
+            'end_frame': self.__stop_frame,
+            "time": self.__frame_times[self.__start_frame],
+            'duration': self.__frame_times[self.__stop_frame],
+        }
+
+    @property
+    def movie_index(self):
+        return self.__movie_index
+
+
 def get_movie_image_epochs(movie_name, movie_item, frame_times, ):
     """extracts movie presentation periods as a list of image stimulus
     epochs
@@ -115,3 +148,36 @@ def get_movie_metadata(data):
     })
 
     return movie_metadata
+
+
+def get_visual_presentation_epochs(movie_item, frame_times, ):
+    movie_path = movie_item['static_stimulus']['movie_path']
+    frame_list = movie_item['static_stimulus']['frame_list']
+    sweep_frames = range(
+        movie_item['starting_frame'],
+        movie_item['ending_frame'],
+    )  # pretty sure these bounds are correct
+
+    epochs = []
+    epoch = VisualPresentationEpoch(
+        movie_path=movie_path,
+        movie_index=frame_list[0],
+        start_frame=sweep_frames[0],
+        frame_times=frame_times,
+    )
+    for sweep_frame_index, movie_frame_index in \
+            zip(sweep_frames[1:], frame_list[1:]):
+        if movie_frame_index == epoch.movie_index:
+            epoch.extend_epoch(sweep_frame_index)
+        else:
+            epochs.append(epoch.dump())
+            epoch = VisualPresentationEpoch(
+                movie_path=movie_path,
+                movie_index=movie_frame_index,
+                start_frame=sweep_frame_index,
+                frame_times=frame_times,
+            )
+
+    epochs.append(epoch.dump())
+
+    return epochs

@@ -4,6 +4,7 @@ import pickle
 
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
 
+from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     annotate_licks, annotate_rewards, annotate_optogenetics, annotate_responses, \
     annotate_schedule_time, annotate_stimuli, get_user_id, get_mouse_id, \
@@ -15,12 +16,14 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stimulus_window, get_volume_limit, get_failure_repeats, \
     get_catch_frequency, get_free_reward_trials, get_min_no_lick_time, \
     get_max_session_duration, get_abort_on_early_response, get_session_id, \
-    get_even_sampling, get_auto_reward_delay, get_periodic_flash, get_platform_info, \
-    get_rig_id
+    get_even_sampling, get_auto_reward_delay, get_periodic_flash, \
+    get_platform_info
+
 
 from .extract_stimuli import get_visual_stimuli, check_for_omitted_flashes
 from .extract_images import get_image_metadata
-from .extract_movies import get_movie_image_epochs, get_movie_metadata
+from .extract_movies import get_movie_image_epochs, get_movie_metadata, \
+    get_visual_presentation_epochs
 from ..foraging.extract_images import get_image_data
 
 import logging
@@ -159,6 +162,7 @@ def data_to_metadata(data):
 
     behavior_session_uuid = get_session_id(data, create_if_missing=True)
 
+    device_name = get_device_name(data)
     params = get_params(data)  # this joins both params and commandline params
 
     stim_tables = data["items"]["behavior"]["stimuli"]
@@ -175,8 +179,8 @@ def data_to_metadata(data):
 
     metadata = {
         "startdatetime": start_time_datetime_local,
-        "rig_id": get_rig_id(data),
-        "computer_name": get_device_name(data),
+        "rig_id": get_rig_id(device_name),
+        "computer_name": device_name,
         "reward_vol": get_reward_volume(data),
         "rewardvol": get_reward_volume(data),  # for compatibility with legacy code
         "auto_reward_vol": get_auto_reward_volume(data),
@@ -448,3 +452,29 @@ def data_to_images(data):
             image_table['metadata']['movie:%s' % name] = meta  # prefix each name with 'movie:' maybe this is good?
 
     return image_table
+
+
+def data_to_visual_presentation_table(data, time=None):
+    MAYBE_A_MOVIE = [
+        'countdown',
+        'fingerprint',
+    ]
+
+    if time is None:
+        time = get_time(data)
+
+    try:
+        items = data['items']['behavior'].get('items', {})
+    except KeyError:
+        items = data.get('items', {})
+
+    visual_presentation_epochs = []
+    for key, item in items.items():
+        if key in MAYBE_A_MOVIE:
+            visual_presentation_epochs.extend(
+                get_visual_presentation_epochs(item, time, )
+            )
+
+    return pd.DataFrame(
+        data=visual_presentation_epochs,
+    )
