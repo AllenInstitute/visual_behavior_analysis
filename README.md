@@ -103,6 +103,7 @@ Pull requests are welcome.
 - Nicholas Cain - nicholasc@alleninstitute.org
 - Ryan Valenza - ryanv@alleninstitute.org
 - Marina Garrett - marinag@alleninstitute.org
+- Nick Ponvert - nick.ponvert@alleninstitute.org
 
 
 ## Additional Links
