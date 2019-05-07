@@ -3,7 +3,19 @@ Visual Behavior
 
 Package for analyzing behavioral data from the BrainTV Visual Behavior Project.
 
+## Before installing, it's recommended to set up a new Python environment:
+
+For example, using Conda:
+
+    conda create -n visual_behavior_analysis python=3.7
+
+Then activate the environment:
+
+    conda activate visual_behavior_analysis
+
 ## Quickstart
+
+and install with pip:
 
     pip install git+http://stash.corp.alleninstitute.org/scm/vb/visual_behavior_analysis.git
 
@@ -26,6 +38,21 @@ This ensures that Python uses the current, active files in the folder (even whil
 To install from with in the AIBS local network from a whl using pip:
    
    pip install -i http://aibs-artifactory/artifactory/api/pypi/pypi-local/simple --trusted-host aibs-artifactory --extra-index-url https://pypi.org/simple visual_behavior==0.5.0.dev5
+
+
+## To ensure that the newly created environment is visible in Jupyter:
+
+Activate the environment:
+
+    conda activate visual_behavior_analysis
+
+Install ipykernel:
+
+    pip install ipykernel
+
+Register the environment with Jupyter:
+
+    python -m ipykernel install --user --name visual_behavior_analysis
 
 ## Use
 
@@ -65,7 +92,7 @@ Pull requests are welcome.
 2. Create a feature branch
 3. Commit your changes
 4. Create a pull request
-5. Tag `justink` to review
+5. Tag `@dougollerenshaw`, `@matchings`, `@nicain` or `@nickponvert` to review
 
 ## Contributors:
 
