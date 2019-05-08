@@ -1123,6 +1123,7 @@ def get_device_name(exp_data):
     """
     return exp_data['platform_info']['computer_name']
 
+
 def convert_rig_id(mpe_notation):
     '''
     converts MPE rig notation to historical Visual Behavior notation
@@ -1145,14 +1146,15 @@ def convert_rig_id(mpe_notation):
         'NP.3-Stim': 'NP3',
         'NP.4-Stim': 'NP4',
     }
-    
+
     pattern = re.compile(r'BEH\.(?P<cluster_name>[A-Z])-Box(?P<rig_number>\d+)')
     regex_output = pattern.match(mpe_notation)
     if regex_output:
         rig_id = regex_output['cluster_name'] + regex_output['rig_number']
     else:
-        rig_id = rig_map.get(mpe_notation,mpe_notation)
+        rig_id = rig_map.get(mpe_notation, mpe_notation)
     return rig_id
+
 
 def get_rig_id(exp_data):
     """ Get the ID of the rig on which the experiment was run
