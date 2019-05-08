@@ -1139,10 +1139,10 @@ def convert_rig_id(mpe_notation):
         'CAM2P.5-Stim': '2P5',
         'MESO.1-Stim': 'MS1',
         'MESO.2-Stim': 'MS2',
-        'NP.1-Stim': 'NP1'
-        'NP.2-Stim': 'NP2'
-        'NP.3-Stim': 'NP3'
-        'NP.4-Stim': 'NP4'
+        'NP.1-Stim': 'NP1',
+        'NP.2-Stim': 'NP2',
+        'NP.3-Stim': 'NP3',
+        'NP.4-Stim': 'NP4',
     }
     
     pattern = re.compile(r'BEH\.(?P<cluster_name>[A-Z])-Box(?P<rig_number>\d+)')
