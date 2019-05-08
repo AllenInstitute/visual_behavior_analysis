@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from copy import deepcopy
 from six import iteritems
+import re
 
 from ...analyze import compute_running_speed  # , calc_deriv
 from ...uuid_utils import make_deterministic_session_uuid
