@@ -731,3 +731,8 @@ def test_get_platform_info(foraging2_data_stage4_2018_05_10):
         'rig_id': 'unknown',
     }
     assert extract.get_platform_info(foraging2_data_stage4_2018_05_10) == EXPECTED
+
+def test_convert_rig_id():
+    assert extract.convert_rig_id('BEH.B-Box4') == 'B4'
+    assert extract.convert_rig_id('B4') == 'B4'
+    assert extract.convert_rig_id('CAM2P.3-STIM') == '2P3'
