@@ -1129,7 +1129,7 @@ def convert_rig_id(mpe_notation):
     converts MPE rig notation to historical Visual Behavior notation
 
     ### MPE nomenclature rules:
-        * If it's a behavior box, it's 'BEH.' + {cluster} + '-Box' + {rig_number}  
+        * If it's a behavior box, it's 'BEH.' + {cluster} + '-Box' + {rig_number}
         * If it's a physiology rig, it's {cluster} + '.' + {rig_number} + '-STIM' (or '-Stim') where cluster = 'CAM2P', 'MESO' or 'NP'
 
     ### Visual Behavior Group nomenclature rules:
