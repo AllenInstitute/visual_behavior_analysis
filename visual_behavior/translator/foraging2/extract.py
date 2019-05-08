@@ -1122,6 +1122,36 @@ def get_device_name(exp_data):
     """
     return exp_data['platform_info']['computer_name']
 
+def convert_rig_id(mpe_notation):
+    '''
+    converts MPE rig notation to historical Visual Behavior notation
+
+    ### MPE nomenclature rules:
+        * If it's a behavior box, it's 'BEH.' + {cluster} + '-Box' + {rig_number}  
+        * If it's a physiology rig, it's {cluster} + '.' + {rig_number} + '-STIM' (or '-Stim') where cluster = 'CAM2P', 'MESO' or 'NP'
+
+    ### Visual Behavior Group nomenclature rules:
+        * name is {cluster} + {rig_number}
+    '''
+    rig_map = {
+        'CAM2P.3-STIM': '2P3',
+        'CAM2P.4-STIM': '2P3',
+        'CAM2P.5-Stim': '2P5',
+        'MESO.1-Stim': 'MS1',
+        'MESO.2-Stim': 'MS2',
+        'NP.1-Stim': 'NP1'
+        'NP.2-Stim': 'NP2'
+        'NP.3-Stim': 'NP3'
+        'NP.4-Stim': 'NP4'
+    }
+    
+    pattern = re.compile(r'BEH\.(?P<cluster_name>[A-Z])-Box(?P<rig_number>\d+)')
+    regex_output = pattern.match(mpe_notation)
+    if regex_output:
+        rig_id = regex_output['cluster_name'] + regex_output['rig_number']
+    else:
+        rig_id = rig_map.get(mpe_notation,mpe_notation)
+    return rig_id
 
 def get_rig_id(exp_data):
     """ Get the ID of the rig on which the experiment was run
@@ -1155,7 +1185,7 @@ def get_rig_id(exp_data):
             logger.warning(("rig_id unknown, no valid mapping exists for computer "
                             "{} on {}").format(computer_name, experiment_date))
             return 'unknown'
-    return rig_id
+    return convert_rig_id(rig_id)
 
 
 def get_image_path(data):
