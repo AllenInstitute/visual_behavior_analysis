@@ -8,7 +8,7 @@ export TMPDIR=${bamboo_build_working_directory}
 export CONDA_PATH_BACKUP=${CONDA_PATH_BACKUP:-$PATH}
 export CONDA_PREFIX=${CONDA_PREFIX:-}
 export CONDA_PS1_BACKUP=${CONDA_PS1_BACKUP:-}
-conda create -y -v --prefix ${bamboo_build_working_directory}/.conda/conda_test_env python=3.6
+conda create -y -v --prefix ${bamboo_build_working_directory}/.conda/conda_test_env python=${PYTHONVERSION}
 source activate ${bamboo_build_working_directory}/.conda/conda_test_env
 cd ${bamboo_build_working_directory}
 pip install -r requirements.txt
