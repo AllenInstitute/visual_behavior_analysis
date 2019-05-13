@@ -1141,6 +1141,3 @@ class MesoscopeICA(object):
 
         return scale_top_neuropil.x, scale_bot_neuropil.x
 
-    def estimate_crosstalk(self, session):
-
-
