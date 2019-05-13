@@ -20,7 +20,6 @@ logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 IMAGEH, IMAGEW = 512, 512
 
-
 def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
     jin_movie_path = os.path.join(movie_exp_dir, f"processed/{movie_exp_id}_input_extract_traces.json")
 
@@ -533,7 +532,7 @@ class MesoscopeICA(object):
                 plane2_valid_sig = plane2_valid['signal']
                 plane2_valid_ct = plane2_valid['crosstalk']
 
-                # only include cells that don't have nans in traces (valid = True)
+                # only include cells that don't have nans  (valid = True)
                 # check if traces aligned:
                 if len(self.plane1_roi_names) == len(plane1_sig):
                     plane1_sig_valid_idx = np.array([plane1_valid_sig[str(tid)] for tid in self.plane1_roi_names])
@@ -578,7 +577,7 @@ class MesoscopeICA(object):
                 nc = plane2_ct.shape[0]
                 plane2_ct_offset = np.mean(plane2_ct, axis=1).reshape(nc, 1)
                 plane2_ct_m0 = plane2_ct - plane2_ct_offset
-                # check in traces aren't none
+                # check if traces aren't none
                 if (not plane1_sig_m0.any() is None) and (not plane1_ct_m0.any() is None):
                     self.found_ica_input[0] = True
                 if (not plane2_sig_m0.any() is None) and (not plane2_ct_m0.any() is None):
@@ -622,6 +621,8 @@ class MesoscopeICA(object):
                     plane2_ica_input = f["debiased_traces"].value
                     plane2_sig_offset = f['sig_offset'].value
                     plane2_ct_offset = f['ct_offset'].value
+
+                self.found_ica_input = [True, True]                
                 self.plane1_ica_input = plane1_ica_input
                 self.plane2_ica_input = plane2_ica_input
                 self.plane1_ica_input_pointer = plane1_ica_input_pointer
@@ -753,6 +754,7 @@ class MesoscopeICA(object):
                     logger.info("Neuropil debiasing failed")
             else:
                 logger.info("Debiased neuropil traces exist in cache, reading from h5 file")
+                self.found_ica_neuropil_input = [True, True]
                 self.plane1_ica_neuropil_input_pointer = plane1_ica_neuropil_input_pointer
                 self.plane2_ica_neuropil_input_pointer = plane2_ica_neuropil_input_pointer
                 with h5py.File(self.plane1_ica_neuropil_input_pointer, "r") as f:
@@ -1138,3 +1140,7 @@ class MesoscopeICA(object):
                                           (self.neuropil_unmix[:, 1], self.plane2_ica_neuropil_input))
 
         return scale_top_neuropil.x, scale_bot_neuropil.x
+
+    def estimate_crosstalk(self, session):
+
+
