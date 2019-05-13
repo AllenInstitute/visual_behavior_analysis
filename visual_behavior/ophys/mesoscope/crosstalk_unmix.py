@@ -629,6 +629,7 @@ class MesoscopeICA(object):
                 self.plane2_ica_input_pointer = plane2_ica_input_pointer
                 self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
                 self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset}
+                self.found_ica_offset = [True, True]
         else:
             logger.error('Extract ROI traces first')
         return
@@ -769,6 +770,7 @@ class MesoscopeICA(object):
                 self.plane2_ica_neuropil_input = plane2_ica_neuropil_input
                 self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_neuropil_offset, 'plane1_ct_neuropil_offset': plane1_ct_neuropil_offset}
                 self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_neuropil_offset, 'plane2_ct_neuropil_offset': plane2_ct_neuropil_offset, }
+                self.found_ica_neuropil_offset = [True, True]
         else:
             logger.error('Extract neuropil traces first')
         return
