@@ -221,18 +221,18 @@ class MesoscopeICA(object):
             logger.info('Found traces in cache, reading from h5 file')
             # read traces form h5 file:
             with h5py.File(path_traces_plane1, "r") as f:
-                plane1_traces_original = f["data"].value
-                plane1_roi_names = f["roi_names"].value
+                plane1_traces_original = f["data"][()]
+                plane1_roi_names = f["roi_names"][()]
             with h5py.File(path_traces_plane2, "r") as f:
-                plane2_traces_original = f["data"].value
-                plane2_roi_names = f["roi_names"].value
+                plane2_traces_original = f["data"][()]
+                plane2_roi_names = f["roi_names"][()]
 
             # read neuropil traces form h5 file:
             with h5py.File(path_neuropil_plane1, "r") as f:
-                plane1_neuropil_original = f["data"].value
+                plane1_neuropil_original = f["data"][()]
 
             with h5py.File(path_neuropil_plane2, "r") as f:
-                plane2_neuropil_original = f["data"].value
+                plane2_neuropil_original = f["data"][()]
 
             self.plane1_traces_orig_pointer = path_traces_plane1
             self.plane2_traces_orig_pointer = path_traces_plane2
@@ -614,13 +614,13 @@ class MesoscopeICA(object):
             else:
                 logger.info("Debiased ROI traces exist in cache, reading from h5 file")
                 with h5py.File(self.plane1_ica_input_pointer, "r") as f:
-                    plane1_ica_input = f["debiased_traces"].value
-                    plane1_sig_offset = f['sig_offset'].value
-                    plane1_ct_offset = f['ct_offset'].value
+                    plane1_ica_input = f["debiased_traces"][()]
+                    plane1_sig_offset = f['sig_offset'][()]
+                    plane1_ct_offset = f['ct_offset'][()]
                 with h5py.File(self.plane2_ica_input_pointer, "r") as f:
-                    plane2_ica_input = f["debiased_traces"].value
-                    plane2_sig_offset = f['sig_offset'].value
-                    plane2_ct_offset = f['ct_offset'].value
+                    plane2_ica_input = f["debiased_traces"][()]
+                    plane2_sig_offset = f['sig_offset'][()]
+                    plane2_ct_offset = f['ct_offset'][()]
 
                 self.found_ica_input = [True, True]                
                 self.plane1_ica_input = plane1_ica_input
@@ -758,13 +758,13 @@ class MesoscopeICA(object):
                 self.plane1_ica_neuropil_input_pointer = plane1_ica_neuropil_input_pointer
                 self.plane2_ica_neuropil_input_pointer = plane2_ica_neuropil_input_pointer
                 with h5py.File(self.plane1_ica_neuropil_input_pointer, "r") as f:
-                    plane1_ica_neuropil_input = f["debiased_traces"].value
-                    plane1_sig_neuropil_offset = f['sig_offset'].value
-                    plane1_ct_neuropil_offset = f['ct_offset'].value
+                    plane1_ica_neuropil_input = f["debiased_traces"][()]
+                    plane1_sig_neuropil_offset = f['sig_offset'][()]
+                    plane1_ct_neuropil_offset = f['ct_offset'][()]
                 with h5py.File(self.plane2_ica_neuropil_input_pointer, "r") as f:
-                    plane2_ica_neuropil_input = f["debiased_traces"].value
-                    plane2_sig_neuropil_offset = f['sig_offset'].value
-                    plane2_ct_neuropil_offset = f['ct_offset'].value
+                    plane2_ica_neuropil_input = f["debiased_traces"][()]
+                    plane2_sig_neuropil_offset = f['sig_offset'][()]
+                    plane2_ct_neuropil_offset = f['ct_offset'][()]
                 self.plane1_ica_neuropil_input = plane1_ica_neuropil_input
                 self.plane2_ica_neuropil_input = plane2_ica_neuropil_input
                 self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_neuropil_offset, 'plane1_ct_neuropil_offset': plane1_ct_neuropil_offset}
@@ -876,11 +876,11 @@ class MesoscopeICA(object):
             self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
             self.found_solution = True
             with h5py.File(self.plane1_ica_output_pointer, "r") as f:
-                plane1_ica_output = f["data"].value
+                plane1_ica_output = f["data"][()]
             with h5py.File(self.plane2_ica_output_pointer, "r") as f:
-                plane2_ica_output = f["data"].value
+                plane2_ica_output = f["data"][()]
             with h5py.File(self.ica_mixing_matrix_traces_pointer, "r") as f:
-                traces_matrix = f["data"].value
+                traces_matrix = f["data"][()]
 
             self.plane1_ica_output = plane1_ica_output
             self.plane2_ica_output = plane2_ica_output
@@ -994,13 +994,13 @@ class MesoscopeICA(object):
             self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
 
             with h5py.File(self.plane1_ica_neuropil_output_pointer, "r") as f:
-                plane1_ica_neuropil_output = f["data"].value
+                plane1_ica_neuropil_output = f["data"][()]
 
             with h5py.File(self.plane2_ica_neuropil_output_pointer, "r") as f:
-                plane2_ica_neuropil_output = f["data"].value
+                plane2_ica_neuropil_output = f["data"][()]
 
             with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "r") as f:
-                neuropil_matrix = f["data"].value
+                neuropil_matrix = f["data"][()]
 
             self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
             self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
@@ -1140,4 +1140,3 @@ class MesoscopeICA(object):
                                           (self.neuropil_unmix[:, 1], self.plane2_ica_neuropil_input))
 
         return scale_top_neuropil.x, scale_bot_neuropil.x
-

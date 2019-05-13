@@ -161,11 +161,11 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
         movie_shape = f["data"].shape[1:]
 
     with h5py.File(traces_h5_ica, "r") as f:
-        traces = f["data"].value
+        traces = f["data"][()]
     traces = traces[0, :, :]
 
     with h5py.File(traces_h5, "r") as f:
-        trace_ids = [int(rid) for rid in f["roi_names"].value]
+        trace_ids = [int(rid) for rid in f["roi_names"][()]]
 
     exp_traces_valid = ju.read(traces_valid)["signal"]
 
@@ -259,7 +259,7 @@ def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
                 demix_masks = masks[valid_idxs]
 
                 with h5py.File(movie_h5, 'r') as f:
-                    movie = f['data'].value
+                    movie = f['data'][()]
 
                 demixed_traces, drop_frames = demixer.demix_time_dep_masks(demix_traces, movie, demix_masks)
 
@@ -503,7 +503,7 @@ def run_dff_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
 
                 # read from "data"
                 input_h5 = h5py.File(input_file, "r")
-                traces = input_h5['FC'].value
+                traces = input_h5['FC'][()]
                 input_h5.close()
 
                 dff = calculate_dff(traces)
