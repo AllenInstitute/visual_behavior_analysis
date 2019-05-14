@@ -38,6 +38,7 @@ from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_de
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 
+
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
     f.create_dataset('data', data=data)
@@ -177,7 +178,7 @@ def get_roi_group(lims_data):
     with open(json_path, 'r') as w:
         jin = json.load(w)
     # figure out which roi_group the current experiment belongs to
-    plane_data = pd.DataFrame()
+    # plane_data = pd.DataFrame()
     for i, roi_group in enumerate(range(len(jin['plane_groups']))):
         group = jin['plane_groups'][roi_group]['ophys_experiments']
         for j, plane in enumerate(range(len(group))):
@@ -193,9 +194,9 @@ def get_sync_path(lims_data):
 
     # First attempt
     sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file]
-    if len(sync_file)>0:
+    if len(sync_file) > 0:
         sync_file = sync_file[0]
-    else: 
+    else:
         json_path = [file for file in os.listdir(ophys_session_dir) if '_platform.json' in file][0]
         with open(os.path.join(ophys_session_dir, json_path)) as pointer_json:
             json_data = json.load(pointer_json)
@@ -215,9 +216,9 @@ def get_sync_data(lims_data, use_acq_trigger):
     # Handle mesoscope missing labels
     try:
         sync_dataset.get_rising_edges('2p_vsync')
-    except:
-        sync_dataset.line_labels=['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '', 'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
-        sync_dataset.meta_data['line_labels']=sync_dataset.line_labels
+    except ValueError:
+        sync_dataset.line_labels = ['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '', 'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
+        sync_dataset.meta_data['line_labels'] = sync_dataset.line_labels
 
     meta_data = sync_dataset.meta_data
     sample_freq = meta_data['ni_daq']['counter_output_freq']
@@ -277,10 +278,10 @@ def get_sync_data(lims_data, use_acq_trigger):
     if use_acq_trigger:
         frames_2p = frames_2p[frames_2p > trigger[0]]
     print(len(frames_2p))
-    if lims_data.rig.values[0][0] == 'M': #if Mesoscope
+    if lims_data.rig.values[0][0] == 'M':  # if Mesoscope
         print('resampling mesoscope 2P frame times')
-        roi_group = get_roi_group(lims_data) #get roi_group order
-        frames_2p = frames_2p[roi_group::4] #resample sync times
+        roi_group = get_roi_group(lims_data)  # get roi_group order
+        frames_2p = frames_2p[roi_group::4]  # resample sync times
     print(len(frames_2p))
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
@@ -453,7 +454,7 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
 
     stimulus_table = core_data['visual_stimuli'][:-10]  # ignore last 10 flashes
     if 'omitted_stimuli' in core_data.keys():
-        if len(core_data['omitted_stimuli']) > 0: #sometimes there is a key but empty values
+        if len(core_data['omitted_stimuli']) > 0:  # sometimes there is a key but empty values
             omitted_flash = core_data['omitted_stimuli'].copy()
             omitted_flash = omitted_flash[['frame']]
             omitted_flash['omitted'] = True
@@ -466,7 +467,7 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
                                   in range(len(flashes))]
             # infer end time for omitted flashes as 16 frames after start frame (250ms*60Hz stim frame rate)
             flashes['end_frame'] = [flashes.loc[idx, 'end_frame'] if flashes.loc[idx, 'omitted'] == False else
-                    flashes.loc[idx, 'frame'] + 16 for idx in flashes.index.values]
+                                    flashes.loc[idx, 'frame'] + 16 for idx in flashes.index.values]
             stimulus_table = flashes.copy()
         else:
             stimulus_table['omitted'] = False
@@ -690,8 +691,8 @@ def get_cell_specimen_ids_from_lims(mouse_id):
     WHERE 
     cr.valid_roi = 't' AND 
     sp.external_specimen_name IN('{mouse_id}')
-    ORDER BY 1,2,3,4,5;'''.format(mouse_id=mouse_id)
-    query = big_query
+    ORDER BY 1,2,3,4,5;'''.format(mouse_id=mouse_id)  # NOQA: W291
+    # query = big_query
     # Result of the query are
     # external_specimen_name,container_id,cell_specimen_id,valid_roi,cell_roi_id
 
@@ -714,8 +715,9 @@ def add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir):
                                                roi_metrics.id.values]
             # replace the id with the cell specimen ID
             roi_metrics['id'] = roi_metrics['cell_specimen_id'].values
-        except:
+        except Exception as e:
             print('something bad happened when trying to get cell specimen ids from lims, setting to None')
+            print(e)
             roi_metrics['cell_specimen_id'] = None
     else:
         # if lims query returns nothing, set cell_specimen_id to None
@@ -917,7 +919,7 @@ def run_roi_validation(lims_data, cache_dir):
     roi_metrics = add_cell_specimen_ids_to_roi_metrics(lims_data, roi_metrics, cache_dir)
     roi_masks = get_roi_masks(roi_metrics, lims_data)
     dff_traces, roi_metrics = get_dff_traces(roi_metrics, lims_data)
-    cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
+    # cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
     roi_ids = get_roi_ids(roi_metrics)
     max_projection = get_max_projection(lims_data)
 
@@ -958,6 +960,7 @@ def save_roi_validation(roi_validation, lims_data):
 
         save_figure(fig, (20, 10), analysis_dir, 'roi_validation',
                     str(index) + '_' + str(id) + '_' + str(cell_index))
+
 
 def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
     logger.info('converting %d', lims_id)
