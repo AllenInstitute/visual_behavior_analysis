@@ -1150,7 +1150,7 @@ def convert_rig_id(mpe_notation):
     # this is the pattern, for behavior boxes: 'BEH' + {cluster_name} + '-Box' + {rig_number}
     pattern = re.compile(r'BEH\.(?P<cluster_name>[A-Z])-Box(?P<rig_number>\d+)')
     regex_output = pattern.match(mpe_notation)
-    
+
     if regex_output:
         # if the notation mateches the pattern, regex output will be a dictionary with keys 'cluster_name', 'rig_number'
         rig_id = regex_output['cluster_name'] + regex_output['rig_number']
