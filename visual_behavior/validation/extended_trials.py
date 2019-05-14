@@ -3,6 +3,8 @@ import pandas as pd
 import six
 from scipy import stats
 
+from visual_behavior.translator.core import annotate
+
 from ..schemas.extended_trials import ExtendedTrialSchema
 from .utils import assert_is_valid_dataframe, nanis_equal, all_close
 
@@ -425,14 +427,16 @@ def validate_never_more_than_one_reward(trials):
     return np.max(trials['number_of_rewards']) <= 1
 
 
-def validate_lick_after_scheduled_on_go_catch_trials(trials, abort_on_early_response, distribution_type, tolerance=0.01):
+def validate_lick_after_scheduled_on_go_catch_trials(core_data, abort_on_early_response, distribution_type, tolerance=0.01):
     '''
     if licks occur before a scheduled change time/flash, the trial ends
     Therefore, no non-aborted trials should have a lick before the scheduled change time,
     except when abort_on_early_response is False
     '''
 
-    nonaborted_trials = trials[trials.trial_type != 'aborted']
+    trials = core_data['trials']
+    trial_type = annotate.categorize_trials(trials)
+    nonaborted_trials = trials[trial_type != 'aborted']
     # We can only check this if there is at least 1 nonaborted trial.
     if distribution_type.lower() == 'geometric':
         return True
