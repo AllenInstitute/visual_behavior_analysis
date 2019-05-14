@@ -366,12 +366,14 @@ def validate_max_change_time(trials, pre_change_time, stimulus_window, distribut
             return True
 
 
-def validate_reward_when_lick_in_window(trials, tolerance=0.01):
+def validate_reward_when_lick_in_window(core_data, tolerance=0.01):
     '''for every trial with a lick in the response window, there should be a reward'''
     # get all go_trials without auto_rewards
+    trials = core_data['trials']
+    trial_type = annotate.categorize_trials(trials)
     contingent_go_trials = trials[
-        (trials.trial_type == 'go') &
-        (trials.auto_rewarded == False)
+        (trial_type == 'go') &
+        (trials['auto_rewarded'] == False)
     ]
 
     # get first lick in response window, relative to change time

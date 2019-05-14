@@ -62,7 +62,7 @@ def define_validation_functions(core_data):
         et.validate_intial_and_final_in_non_aborted: (trials,),
         et.validate_min_change_time: (trials, PRE_CHANGE_TIME,),
         et.validate_max_change_time: (trials, PRE_CHANGE_TIME, STIMULUS_WINDOW, DISTRIBUTION),
-        et.validate_reward_when_lick_in_window: (trials,),
+        et.validate_reward_when_lick_in_window: (core_data,),
         et.validate_licks_near_every_reward: (trials, ),
         et.validate_never_more_than_one_reward: (trials,),
         et.validate_lick_after_scheduled_on_go_catch_trials: (core_data, ABORT_ON_EARLY_RESPONSE, DISTRIBUTION),
