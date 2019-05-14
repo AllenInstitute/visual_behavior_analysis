@@ -48,7 +48,7 @@ class DataCheck(object):
 
 
 
-
+@pytest.mark.slow
 @pytest.mark.parametrize("session_key, filename", sessions.items())
 @pytest.mark.skipif(not os.path.exists('//allen/programs/braintv'), reason="no access to network path, skipping test on network PKL files")
 def test_sessions(session_key, filename):
