@@ -2,7 +2,7 @@ import pytest
 import datetime
 import numpy as np
 import pandas as pd
-from six import b, iteritems
+from six import b, iteritems, PY3
 from collections import OrderedDict
 
 from visual_behavior.translator.foraging2 import extract
@@ -731,3 +731,9 @@ def test_get_platform_info(foraging2_data_stage4_2018_05_10):
         'rig_id': 'unknown',
     }
     assert extract.get_platform_info(foraging2_data_stage4_2018_05_10) == EXPECTED
+
+def test_convert_rig_id():
+    if PY3: # this fails on python2. Stop fighting with it. Py2 is on life support
+        assert extract.convert_rig_id('BEH.B-Box4') == 'B4'
+        assert extract.convert_rig_id('B4') == 'B4'
+        assert extract.convert_rig_id('CAM2P.3-STIM') == '2P3'

@@ -65,7 +65,7 @@ def define_validation_functions(core_data):
         et.validate_reward_when_lick_in_window: (trials,),
         et.validate_licks_near_every_reward: (trials, ),
         et.validate_never_more_than_one_reward: (trials,),
-        et.validate_lick_after_scheduled_on_go_catch_trials: (trials, ABORT_ON_EARLY_RESPONSE, DISTRIBUTION),
+        et.validate_lick_after_scheduled_on_go_catch_trials: (core_data, ABORT_ON_EARLY_RESPONSE, DISTRIBUTION),
         et.validate_initial_matches_final: (trials,),
         et.validate_first_lick_after_change_on_nonaborted: (trials, ABORT_ON_EARLY_RESPONSE),
         et.validate_trial_ends_without_licks: (trials, MIN_NO_LICK_TIME,),
