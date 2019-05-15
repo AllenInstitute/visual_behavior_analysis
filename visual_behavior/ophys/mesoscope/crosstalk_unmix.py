@@ -14,6 +14,8 @@ import scipy.optimize as opt
 import matplotlib.backends.backend_pdf
 import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as ju
+import scipy.stats
+
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -1142,3 +1144,8 @@ class MesoscopeICA(object):
                                           (self.neuropil_unmix[:, 1], self.plane2_ica_neuropil_input))
 
         return scale_top_neuropil.x, scale_bot_neuropil.x
+
+    @staticmethod
+    def estimate_crosstalk(trace_sig, trace_ct):
+        slope, offset, r_value, p_value, std_err = scipy.stats.linregress(trace_sig, trace_ct)
+        return slope, offset, r_value**2, p_value, std_err
