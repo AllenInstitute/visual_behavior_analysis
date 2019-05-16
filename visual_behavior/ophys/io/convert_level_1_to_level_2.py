@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # from .lims_database import LimsDatabase
 
 # relative import doesnt work on cluster
+from allensdk.internal.api import behavior_ophys_api
 from visual_behavior.ophys.io.lims_database import LimsDatabase  # NOQA: E402
 from visual_behavior.translator import foraging2, foraging  # NOQA: E402
 from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E402
@@ -396,7 +397,8 @@ def get_stimulus_pkl_path(lims_data):
 
 
 def get_pkl(lims_data):
-    stimulus_pkl_path = get_stimulus_pkl_path(lims_data)
+    api = behavior_ophys_api.BehaviorOphysLimsApi(lims_data['experiment_id'][0])
+    stimulus_pkl_path = api.get_behavior_stimulus_file()
     pkl_file = os.path.basename(stimulus_pkl_path)
     analysis_dir = get_analysis_dir(lims_data)
     if pkl_file not in os.listdir(analysis_dir):
