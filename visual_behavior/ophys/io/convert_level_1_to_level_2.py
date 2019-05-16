@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # from .lims_database import LimsDatabase
 
 # relative import doesnt work on cluster
-from allensdk.internal.api import behavior_ophys_api
+from allensdk.internal.api import behavior_ophys_api  # NOQA: E402
 from visual_behavior.ophys.io.lims_database import LimsDatabase  # NOQA: E402
 from visual_behavior.translator import foraging2, foraging  # NOQA: E402
 from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E402
