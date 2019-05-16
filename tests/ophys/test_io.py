@@ -6,6 +6,9 @@ from visual_behavior.ophys.io.create_multi_session_mean_df import get_multi_sess
 import pytest
 import os
 import matplotlib
+import platform
+pytestmark = pytest.mark.skipif(platform.python_version() < '3.0.0',
+                                reason='Requires Python 3')
 matplotlib.use('Agg')
 
 
