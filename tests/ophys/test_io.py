@@ -1,14 +1,14 @@
+import pytest
+import platform
+pytestmark = pytest.mark.skipif(platform.python_version() < '3.0.0',
+                                reason='Requires Python 3')
 
 from visual_behavior.ophys.io.convert_level_1_to_level_2 import convert_level_1_to_level_2
 from visual_behavior.ophys.io.create_analysis_files import create_analysis_files
 from visual_behavior.ophys.io.create_multi_session_mean_df import get_multi_session_mean_df
 
-import pytest
 import os
 import matplotlib
-import platform
-pytestmark = pytest.mark.skipif(platform.python_version() < '3.0.0',
-                                reason='Requires Python 3')
 matplotlib.use('Agg')
 
 
