@@ -1,3 +1,5 @@
+import pytest
+
 import matplotlib
 matplotlib.use('Agg')
 
@@ -77,6 +79,7 @@ def test_foraging2_translator_schema(foraging2_data_stage4_2018_05_10):
     make_summary_figure(trials,core_data['metadata']['mouseid'])
 
 
+@pytest.mark.slow
 def test_foraging_translator_schema(behavioral_session_output_fixture):
 
     core_data = foraging.data_to_change_detection_core(
