@@ -1146,6 +1146,6 @@ class MesoscopeICA(object):
         return scale_top_neuropil.x, scale_bot_neuropil.x
 
     @staticmethod
-    def estimate_crosstalk(trace_sig, trace_ct):
+    def estimate_crosstalk_roi(trace_sig, trace_ct):
         slope, offset, r_value, p_value, std_err = scipy.stats.linregress(trace_sig, trace_ct)
         return slope, offset, r_value**2, p_value, std_err
