@@ -94,39 +94,6 @@ def ptest(x, num_conditions):
     return ptest
 
 
-# def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
-#     #data munging
-#     fdf = flash_response_df.copy()
-#     odf = fdf[fdf.omitted==True].copy()
-#     st = stimulus_table.copy()
-#     included_flashes = fdf.flash_number.unique()
-#     st = st[st.flash_number.isin(included_flashes)]
-#     ost = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
-#     ost['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in ost.start_time.values]
-#     ost['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in ost.end_time.values]
-#     #set params
-#     stim_duration = 0.25
-#     frame_rate = 31
-#     stim_frames = int(np.round(stim_duration*frame_rate,0)) #stimulus window = 0.25ms*31Hz = 7.75 frames
-#     cell_indices = dataset.get_cell_indices()
-#     n_cells = len(cell_indices)
-#     #get shuffled values from omitted flash sweeps
-#     shuffled_responses = np.empty((n_cells, 10000, stim_frames))
-#     idx = np.random.choice(ost.start_frame.values, 10000)
-#     for i in range(stim_frames):
-#         shuffled_responses[:,:,i] = dataset.dff_traces[:,idx+i]
-#     shuffled_mean = shuffled_responses.mean(axis=2)
-#     #compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep
-#     flash_p_values = pd.DataFrame(index = st.index.values, columns=np.array(range(n_cells)).astype(str))
-#     for i,cell_index in enumerate(cell_indices):
-#         responses = fdf[fdf.cell==cell_index].mean_response.values
-#         null_dist_mat = np.tile(shuffled_mean[i,:], reps=(len(responses),1))
-#         actual_is_less = responses.reshape(len(responses),1) <= null_dist_mat
-#         p_values = np.mean(actual_is_less, axis=1)
-#         flash_p_values[str(cell_index)] = p_values
-#     return flash_p_values
-
-
 def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
     #data munging
     fdf = flash_response_df.copy()
@@ -229,25 +196,6 @@ def get_fraction_nonzero_trials(group):
     return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
 
 
-# def get_reliability(group):
-#     import scipy as sp
-#     if 'trial' in group.keys():
-#         trials = group['trial'].values
-#     elif 'flash_number' in group.keys():
-#         trials = group['flash_number'].values
-#     corr_values = []
-#     traces = group['trace'].values
-#     for i, t1 in enumerate(trials[:-1]):
-#         for j, t2 in enumerate(trials[:-1]):
-#             trial1 = traces[i]
-#             trial2 = traces[j]
-#             corr = sp.stats.pearsonr(trial1, trial2)[0]
-#             corr_values.append(corr)
-#     corr_values = np.asarray(corr_values)
-#     reliability = np.mean(corr_values)
-#     return pd.Series({'reliability': reliability})
-
-
 def compute_reliability_for_traces(traces):
     # computes trial to trial correlation across input traces, across entire trace timeseries
     import scipy as sp
@@ -268,18 +216,25 @@ def compute_reliability(group, analysis=None, flashes=True, omitted=False):
     # only for portion of the trace after the change time or flash onset time
     from itertools import combinations
     import scipy as sp
-    if analysis and omitted:
-        response_window = [int(np.abs(analysis.omitted_flash_window[0]) * 31), int(omitted_flash_window.flash_window[1] * 31)]
-    elif analysis and flashes and not omitted:
-        response_window = [int(np.abs(analysis.flash_window[0]) * 31), int(analysis.flash_window[1] * 31)]
-    elif analysis and not flashes and not omitted:
-        response_window = [int(np.abs(analysis.trial_window[0]) * 31), int(analysis.trial_window[1] * 31)]
-    elif not analysis and flashes and not omitted:
-        response_window = [int(0.5 * 31), int(1.25 * 31)]
-    elif not analysis and omitted:
-        response_window = [int(3 * 31), int(6 * 31)]
+    if analysis:
+        fr = analysis.ophys_frame_rate
     else:
-        response_window = [int(4*31), int(8*31)]
+        fr = 31.
+    if analysis and omitted:
+        response_window = [int(np.abs(analysis.omitted_flash_window[0]) * fr),
+                           int((np.abs(analysis.omitted_flash_window[0]) + omitted_flash_window.flash_window[1]) * fr)]
+    elif analysis and flashes and not omitted:
+        response_window = [int(np.abs(analysis.flash_window[0]) * fr),
+                           int((np.abs(analysis.flash_window[0]) + analysis.flash_window[1]) * fr)]
+    elif analysis and not flashes and not omitted:
+        response_window = [int(np.abs(analysis.trial_window[0]) * fr),
+                           int((np.abs(analysis.trial_window[0]) + analysis.trial_window[1]) * fr)]
+    elif not analysis and flashes and not omitted:
+        response_window = [int(0.5 * fr), int(1.25 * fr)]
+    elif not analysis and omitted:
+        response_window = [int(3 * fr), int(6 * fr)]
+    else:
+        response_window = [int(4 * fr), int(8 * fr)]
     corr_values = []
     traces = group['trace'].values
     traces = np.vstack(traces)
@@ -357,6 +312,11 @@ def get_cre_lines(mean_df):
     return cre_lines
 
 
+def get_cell_classes(mean_df):
+    cell_classes = np.sort(mean_df.cell_class.unique())
+    return cell_classes
+
+
 def get_colors_for_cre_lines():
     colors = [sns.color_palette()[2], sns.color_palette()[4]]
     return colors
@@ -365,6 +325,11 @@ def get_colors_for_cre_lines():
 def get_image_sets(mean_df):
     image_sets = np.sort(mean_df.image_set.unique())
     return image_sets
+
+
+def get_visual_areas(mean_df):
+    areas = np.sort(mean_df.area.unique())[::-1]
+    return areas
 
 
 def get_image_names(mean_df):
@@ -394,7 +359,7 @@ def get_color_for_image_name(image_names, image_name):
 def get_color_for_area(area):
     colors = sns.color_palette()
     if area=='VISp':
-        color = colors[7]
+        color = colors[4]
     elif area=='VISal':
         color = colors[9]
     return color
