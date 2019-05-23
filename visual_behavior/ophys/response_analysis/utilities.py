@@ -222,7 +222,7 @@ def compute_reliability(group, analysis=None, flashes=True, omitted=False):
         fr = 31.
     if analysis and omitted:
         response_window = [int(np.abs(analysis.omitted_flash_window[0]) * fr),
-                           int((np.abs(analysis.omitted_flash_window[0]) + omitted_flash_window.flash_window[1]) * fr)]
+                           int((np.abs(analysis.omitted_flash_window[0]) + analysis.omitted_flash_window[1]) * fr)]
     elif analysis and flashes and not omitted:
         response_window = [int(np.abs(analysis.flash_window[0]) * fr),
                            int((np.abs(analysis.flash_window[0]) + analysis.flash_window[1]) * fr)]

@@ -2,7 +2,7 @@ import os
 import matplotlib as mpl
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png', '.pdf']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
