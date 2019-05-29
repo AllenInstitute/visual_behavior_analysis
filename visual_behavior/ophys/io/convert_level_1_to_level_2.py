@@ -380,9 +380,6 @@ def save_metadata(metadata, lims_data):
 def get_stimulus_pkl_path(lims_data):
     api = behavior_ophys_api.BehaviorOphysLimsApi(lims_data['experiment_id'][0])
     stimulus_pkl_path = api.get_behavior_stimulus_file()
-    if os.name == 'nt':
-        stimulus_pkl_path = stimulus_pkl_path.replace('/', '\\')
-        stimulus_pkl_path = '\\' + stimulus_pkl_path
     return stimulus_pkl_path
 
 
