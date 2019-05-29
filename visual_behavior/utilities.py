@@ -1,10 +1,11 @@
 from __future__ import print_function
-from dateutil import tz
+from dateutil import parser, tz
 from functools import wraps
 import logging
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
+import datetime
 
 
 def flatten_list(in_list):
@@ -168,10 +169,14 @@ def deg_to_dist(speed_deg_per_s):
 
 
 def local_time(iso_timestamp, timezone=None):
-    datetime = pd.to_datetime(iso_timestamp)
-    if not datetime.tzinfo:
-        datetime = datetime.replace(tzinfo=tz.gettz('America/Los_Angeles'))
-    return datetime.isoformat()
+    if isinstance(iso_timestamp, datetime.datetime):
+        dt = iso_timestamp
+    else:
+        dt = parser.parse(iso_timestamp)
+
+    if not dt.tzinfo:
+        dt = dt.replace(tzinfo=tz.gettz('America/Los_Angeles'))
+    return dt.isoformat()
 
 
 class ListHandler(logging.Handler):
