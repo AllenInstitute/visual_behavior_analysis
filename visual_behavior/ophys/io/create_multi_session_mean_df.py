@@ -84,6 +84,8 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
         filename = 'mean' + type + conditions[1] +'_'+ conditions[2] + suffix + '_df.h5'
     elif len(conditions) == 2:
         filename = 'mean' + type + conditions[1] + suffix + '_df.h5'
+    elif len(conditions) == 1:
+        filename = 'mean' + type + suffix + '_df.h5'
 
     print('saving multi session mean df to ',filename)
     mega_mdf.to_hdf(
@@ -118,7 +120,7 @@ if __name__ == '__main__':
                       776042634]
 
     get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'image_name',], flashes=True, omitted=True, get_reliability=True)
+                              conditions=['cell_specimen_id'], flashes=True, omitted=True, get_reliability=True)
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type', 'engaged'])
     # get_multi_session_mean_df(experiment_ids, cache_dir,

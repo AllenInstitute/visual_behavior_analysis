@@ -600,7 +600,7 @@ def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, win
 
 
 def plot_mean_trace_from_mean_df(cell_data, frame_rate=31., ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4],
-                    ax=None):
+                    ax=None, plot_sem=True):
     xlim = [0, xlims[1] + np.abs(xlims[0])]
     if ax is None:
         fig, ax = plt.subplots()
@@ -608,7 +608,8 @@ def plot_mean_trace_from_mean_df(cell_data, frame_rate=31., ylabel='dF/F', legen
     times = np.arange(0, len(trace), 1)
     sem = cell_data.sem_trace.values[0]
     ax.plot(trace, label=legend_label, linewidth=3, color=color)
-    ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
+    if plot_sem:
+        ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
 
     xticks, xticklabels = sf.get_xticks_xticklabels(trace, frame_rate, interval_sec, window=xlims)
     ax.set_xticks(xticks)
