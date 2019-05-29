@@ -378,27 +378,16 @@ def save_metadata(metadata, lims_data):
 
 
 def get_stimulus_pkl_path(lims_data):
-    ophys_session_dir = get_ophys_session_dir(lims_data)
-    # first try lims folder
-    pkl_file = [file for file in os.listdir(ophys_session_dir) if '.pkl' in file]
-    if len(pkl_file) > 0:
-        stimulus_pkl_path = os.path.join(ophys_session_dir, pkl_file[0])
-    else:  # then try behavior directory
-        expt_date = get_experiment_date(lims_data)
-        mouse_id = get_mouse_id(lims_data)
-        pkl_dir = os.path.join(r'/allen/programs/braintv/workgroups/neuralcoding/Behavior/Data',
-                               'M' + str(mouse_id), 'output')
-        if os.name == 'nt':
-            pkl_dir = pkl_dir.replace('/', '\\')
-            pkl_dir = '\\' + pkl_dir
-        pkl_file = [file for file in os.listdir(pkl_dir) if file.startswith(expt_date)][0]
-        stimulus_pkl_path = os.path.join(pkl_dir, pkl_file)
+    api = behavior_ophys_api.BehaviorOphysLimsApi(lims_data['experiment_id'][0])
+    stimulus_pkl_path = api.get_behavior_stimulus_file()
+    if os.name == 'nt':
+        stimulus_pkl_path = stimulus_pkl_path.replace('/', '\\')
+        stimulus_pkl_path = '\\' + stimulus_pkl_path
     return stimulus_pkl_path
 
 
 def get_pkl(lims_data):
-    api = behavior_ophys_api.BehaviorOphysLimsApi(lims_data['experiment_id'][0])
-    stimulus_pkl_path = api.get_behavior_stimulus_file()
+    stimulus_pkl_path = get_stimulus_pkl_path(lims_data)
     pkl_file = os.path.basename(stimulus_pkl_path)
     analysis_dir = get_analysis_dir(lims_data)
     if pkl_file not in os.listdir(analysis_dir):
