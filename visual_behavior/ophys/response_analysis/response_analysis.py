@@ -219,7 +219,7 @@ class ResponseAnalysis(object):
             flash_response_df = flash_response_df.drop(columns=['index']).reset_index()
         if 'omitted' in stimulus_table.image_name.unique():
             print('computing p-values from shuffled omitted flash responses')
-            p_values_from_shuffle = ut.get_p_values_from_shuffle(self.dataset, stimulus_table, flash_response_df)
+            p_values_from_shuffle = ut.get_p_values_from_shuffle(self, stimulus_table, flash_response_df)
             p_values = []
             for flash_number in flash_response_df.flash_number.unique():
                 p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
@@ -318,7 +318,7 @@ class ResponseAnalysis(object):
         # print len(omitted_flash_response_df.cell.unique())
         if len(omitted_flash_response_df) > 2:
             print('computing p-values for omitted from shuffled stimulus responses')
-            omitted_flash_p_values = ut.get_p_values_from_shuffle_omitted(self.dataset, stimulus_table, omitted_flash_response_df)
+            omitted_flash_p_values = ut.get_p_values_from_shuffle_omitted(self, stimulus_table, omitted_flash_response_df)
             p_values = []
             for flash_number in omitted_flash_response_df.flash_number.unique():
                 p_values = p_values + list(omitted_flash_p_values.loc[flash_number, :].values)

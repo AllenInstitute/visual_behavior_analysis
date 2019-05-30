@@ -94,7 +94,8 @@ def ptest(x, num_conditions):
     return ptest
 
 
-def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
+def get_p_values_from_shuffle(analysis, stimulus_table, flash_response_df):
+    dataset = analysis.dataset
     #data munging
     fdf = flash_response_df.copy()
     odf = fdf[fdf.omitted==True].copy()
@@ -105,9 +106,9 @@ def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
     omitted_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in omitted_flashes.start_time.values]
     omitted_flashes['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in omitted_flashes.end_time.values]
     #set params
-    stim_duration = 0.25
-    frame_rate = 31
-    stim_frames = int(np.round(stim_duration*frame_rate,0)) #stimulus window = 0.25ms*31Hz = 7.75 frames
+    response_window = analysis.response_window_duration
+    frame_rate = analysis.ophys_frame_rate
+    stim_frames = int(np.round(response_window*frame_rate,0))
     cell_indices = dataset.get_cell_indices()
     n_cells = len(cell_indices)
     #get shuffled values from omitted flash sweeps
@@ -127,7 +128,8 @@ def get_p_values_from_shuffle(dataset, stimulus_table, flash_response_df):
     return flash_p_values
 
 
-def get_p_values_from_shuffle_omitted(dataset, stimulus_table, omitted_flash_response_df):
+def get_p_values_from_shuffle_omitted(analysis, stimulus_table, omitted_flash_response_df):
+    dataset = analysis.dataset
     #data munging
     odf = omitted_flash_response_df.copy()
     ost = stimulus_table.copy()
@@ -137,9 +139,9 @@ def get_p_values_from_shuffle_omitted(dataset, stimulus_table, omitted_flash_res
     stimulus_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in stimulus_flashes.start_time.values]
     stimulus_flashes['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in stimulus_flashes.end_time.values]
     #set params
-    stim_duration = 0.25
-    frame_rate = 31
-    stim_frames = int(np.round(stim_duration*frame_rate,0)) #stimulus window = 0.25ms*31Hz = 7.75 frames
+    response_window = analysis.response_window_duration
+    frame_rate = analysis.ophys_frame_rate
+    stim_frames = int(np.round(response_window*frame_rate,0)) #stimulus window = 0.25ms*31Hz = 7.75 frames
     cell_indices = dataset.get_cell_indices()
     n_cells = len(cell_indices)
     #get shuffled values from stimulus flashes
