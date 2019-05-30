@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # from .lims_database import LimsDatabase
 
 # relative import doesnt work on cluster
+from allensdk.internal.api import behavior_ophys_api  # NOQA: E402
 from visual_behavior.ophys.io.lims_database import LimsDatabase  # NOQA: E402
 from visual_behavior.translator import foraging2, foraging  # NOQA: E402
 from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E402
@@ -377,21 +378,8 @@ def save_metadata(metadata, lims_data):
 
 
 def get_stimulus_pkl_path(lims_data):
-    ophys_session_dir = get_ophys_session_dir(lims_data)
-    # first try lims folder
-    pkl_file = [file for file in os.listdir(ophys_session_dir) if '.pkl' in file]
-    if len(pkl_file) > 0:
-        stimulus_pkl_path = os.path.join(ophys_session_dir, pkl_file[0])
-    else:  # then try behavior directory
-        expt_date = get_experiment_date(lims_data)
-        mouse_id = get_mouse_id(lims_data)
-        pkl_dir = os.path.join(r'/allen/programs/braintv/workgroups/neuralcoding/Behavior/Data',
-                               'M' + str(mouse_id), 'output')
-        if os.name == 'nt':
-            pkl_dir = pkl_dir.replace('/', '\\')
-            pkl_dir = '\\' + pkl_dir
-        pkl_file = [file for file in os.listdir(pkl_dir) if file.startswith(expt_date)][0]
-        stimulus_pkl_path = os.path.join(pkl_dir, pkl_file)
+    api = behavior_ophys_api.BehaviorOphysLimsApi(lims_data['experiment_id'][0])
+    stimulus_pkl_path = api.get_behavior_stimulus_file()
     return stimulus_pkl_path
 
 
@@ -875,23 +863,15 @@ def get_max_projection(lims_data):
 def save_max_projections(lims_data):
     analysis_dir = get_analysis_dir(lims_data)
     # regular one
-    if os.path.exists(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png')):
-        print('loading max')
-        max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
-        save_data_as_h5(max_projection, 'max_projection', analysis_dir)
-        mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
-                     cmap='gray')
-    else:
-        print('max_downsample_4Hz_0.png no longer exists, using normalized max projection from segmentation output instead')
-        # contrast enhanced one
-        max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
-        save_data_as_h5(max_projection, 'max_projection', analysis_dir)
-        mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'),
-                     arr=max_projection, cmap='gray')
+    # max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
+    # save_data_as_h5(max_projection, 'max_projection', analysis_dir)
+    # mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
+    #              cmap='gray')
+
     # contrast enhanced one
     max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
-    save_data_as_h5(max_projection, 'normalized_max_projection', analysis_dir)
-    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'), arr=max_projection,
+    save_data_as_h5(max_projection, 'max_projection', analysis_dir)
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
                  cmap='gray')
 
 
