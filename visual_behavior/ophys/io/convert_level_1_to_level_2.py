@@ -867,7 +867,7 @@ def save_max_projections(lims_data):
     # save_data_as_h5(max_projection, 'max_projection', analysis_dir)
     # mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
     #              cmap='gray')
-    
+
     # contrast enhanced one
     max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
     save_data_as_h5(max_projection, 'max_projection', analysis_dir)
