@@ -1151,15 +1151,21 @@ def convert_rig_id(mpe_notation):
     pattern = re.compile(r'BEH\.(?P<cluster_name>[A-Z])-Box(?P<rig_number>\d+)')
     regex_output = pattern.match(mpe_notation)
 
-    if regex_output:
-        # if the notation mateches the pattern, regex output will be a dictionary with keys 'cluster_name', 'rig_number'
-        rig_id = regex_output['cluster_name'] + regex_output['rig_number']
-    else:
-        # otherwise, the regex output will be None, in which case we check the rig_map dictionary above
-        rig_id = rig_map.get(mpe_notation, mpe_notation)
-        # note that the syntax above will return the input key if the key doesn't exist in the dictionary
-        # so, if all else fails, this function will just return the input
-    return rig_id
+    try:
+        if regex_output:
+            # if the notation mateches the pattern, regex output will be a dictionary with keys 'cluster_name', 'rig_number'
+            rig_id = regex_output['cluster_name'] + regex_output['rig_number']
+        else:
+            # otherwise, the regex output will be None, in which case we check the rig_map dictionary above
+            rig_id = rig_map.get(mpe_notation, mpe_notation)
+            # note that the syntax above will return the input key if the key doesn't exist in the dictionary
+            # so, if all else fails, this function will just return the input
+        return rig_id
+    except TypeError:
+        logger.warn(
+            'Error calling foraging2.extract.convert_rig_id',
+            exc_info=True,
+        )
 
 
 def get_rig_id(exp_data):
