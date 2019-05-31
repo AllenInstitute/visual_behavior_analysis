@@ -1,6 +1,7 @@
 import pandas as pd
 from six import PY3
 import pickle
+from time import mktime
 
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
 
@@ -369,9 +370,17 @@ def data_to_visual_stimuli(data, time=None):
     if time is None:
         time = get_time(data)
 
+    exp_start_time = mktime(data['start_time'].timetuple()) + \
+        (data['start_time'].microsecond / 1000000)
+    exp_end_time = mktime(data['stop_time'].timetuple()) + \
+        (data['stop_time'].microsecond / 1000000)
+
+    inferred_exp_end_frame_time = exp_end_time - exp_start_time
+
     static_image_epochs = get_visual_stimuli(
         data['items']['behavior']['stimuli'],
         time,
+        last_frame_end_time=inferred_exp_end_frame_time,
     )
 
     for name, stim_item in data['items']['behavior'].get('items', {}).items():

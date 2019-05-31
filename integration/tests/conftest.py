@@ -37,3 +37,20 @@ def doc_data(request):
 )
 def ophys_data(request):
     return pd.read_pickle(request.param['path'])
+
+
+@pytest.fixture(
+    scope='function',
+    ids=[
+        'issue_572_0.pkl',
+        'issue_572_1.pkl',
+        'issue_572_2.pkl',
+    ],
+    params=[
+        {'path': os.path.join(ASSETS_DIR, 'issue_572_0.pkl', ), },  # early end, 35.2 min duration
+        {'path': os.path.join(ASSETS_DIR, 'issue_572_1.pkl', ), },  # early end, 43.75 min duration
+        {'path': os.path.join(ASSETS_DIR, 'issue_572_2.pkl', ), },  # scheduled end, 60.75 min duration
+    ],
+)
+def issue_572_data(request):
+    return pd.read_pickle(request.param['path'])

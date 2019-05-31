@@ -8,7 +8,11 @@ import warnings
 logger = logging.getLogger(__name__)
 
 
-def get_visual_stimuli(stimuli, time):
+def get_visual_stimuli(
+    stimuli,
+    time,
+    last_frame_end_time=None,
+):
     n_frames = len(time)
 
     data = []
@@ -46,6 +50,23 @@ def get_visual_stimuli(stimuli, time):
                 epoch_start += 1
                 epoch_end += 1
 
+                if epoch_end > n_frames:
+                    # this can happen because changes are scheduled for the next frame,
+                    # if our epoch ends before the next frame we assume the stim has
+                    # changed to either gray or something else
+                    if last_frame_end_time is None:
+                        raise ValueError(
+                            'Epoch end is scheduled past the last frame, '
+                            'likely due to the experiment ending earlier than '
+                            'the scheduled duration, '
+                            'but no end frame time is specified to calculate '
+                            'stimulus duration.'
+                        )
+                    else:
+                        epoch_end_time = last_frame_end_time
+                else:
+                    epoch_end_time = time[epoch_end]
+
                 data.append({
                     "orientation": orientation,
                     "image_name": image_name,
@@ -53,9 +74,8 @@ def get_visual_stimuli(stimuli, time):
                     "frame": epoch_start,
                     "end_frame": epoch_end,
                     "time": time[epoch_start],
-                    "duration": time[epoch_end] - time[epoch_start],  # this will always work because an epoch will never occur near the end of time
+                    "duration": epoch_end_time - time[epoch_start],  # this will always work because an epoch will never occur near the end of time
                 })
-
     return data
 
 
