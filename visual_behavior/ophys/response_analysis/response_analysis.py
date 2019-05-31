@@ -84,7 +84,7 @@ class ResponseAnalysis(object):
                                                       self.use_events)
                 baseline_response = ut.get_mean_in_window(trace, self.baseline_window, self.ophys_frame_rate,
                                                           self.use_events)
-                p_value = ut.get_p_val(trace, self.response_window, self.ophys_frame_rate)
+                p_value_baseline = ut.get_p_val(trace, self.response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(trace, self.response_window, self.baseline_window,
                                                            self.ophys_frame_rate)
                 n_events = ut.get_n_nonzero_in_window(trace, self.response_window, self.ophys_frame_rate)
@@ -98,14 +98,16 @@ class ResponseAnalysis(object):
                                                            self.stimulus_frame_rate)
                 df_list.append(
                     [trial, int(cell_index), int(cell_specimen_id), trace, timestamps, mean_response, baseline_response, n_events,
-                     p_value, sd_over_baseline, mean_running_speed, self.dataset.experiment_id])
+                     p_value_baseline, sd_over_baseline, mean_running_speed, self.dataset.experiment_id])
                      #running_speed_trace, running_speed_timestamps,
 
 
         columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
-                   'n_events', 'p_value', 'sd_over_baseline', 'mean_running_speed', 'experiment_id']
+                   'n_events', 'p_value_baseline', 'sd_over_baseline', 'mean_running_speed', 'experiment_id']
                     #'running_speed_trace', 'running_speed_timestamps',
         trial_response_df = pd.DataFrame(df_list, columns=columns)
+
+
         trial_metadata = self.dataset.trials
         trial_metadata = trial_metadata.rename(columns={'response': 'behavioral_response'})
         trial_metadata = trial_metadata.rename(columns={'response_type': 'behavioral_response_type'})
@@ -197,6 +199,7 @@ class ResponseAnalysis(object):
                             trace, timestamps, mean_response, baseline_response, n_events, p_value_baseline, sd_over_baseline,
                             reward_rate, mean_running_speed, int(self.dataset.experiment_id)])
 
+        print('flash response df created')
         flash_response_df = pd.DataFrame(data=row,
                                          columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
                                                   'image_name', 'image_category', 'trace', 'timestamps', 'mean_response',
@@ -205,28 +208,23 @@ class ResponseAnalysis(object):
         flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
         flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
-
-        # flash_response_df['change_time'] = flash_response_df.start_time.values
-        # flash_response_df = pd.merge(flash_response_df, self.dataset.trials[['change_time', 'trial_type']],
-        #                              on='change_time', how='outer')
-        # tmp = self.trial_response_df[self.trial_response_df.cell == 0]
-        # flash_response_df = pd.merge(flash_response_df, tmp[['change_time',
-        #                             'lick_times', 'reward_times']], on='change_time', how='outer')
-        # flash_response_df = flash_response_df[
-        #     (flash_response_df.flash_number > 10) & (flash_response_df.trial_type != 'autorewarded')]
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
         if 'index' in flash_response_df.keys():
             flash_response_df = flash_response_df.drop(columns=['index']).reset_index()
         if 'omitted' in stimulus_table.image_name.unique():
             print('computing p-values from shuffled omitted flash responses')
-            p_values_from_shuffle = ut.get_p_values_from_shuffle(self, stimulus_table, flash_response_df)
+            p_values_from_shuffle = ut.get_p_values_from_shuffle(self, flash_response_df)
+            p_values_from_shuffle_synth = ut.get_p_values_from_shuffle_synthetic(self, stimulus_table, flash_response_df)
             p_values = []
+            p_values_synth = []
             for flash_number in flash_response_df.flash_number.unique():
                 p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
+                p_values_synth = p_values_synth + list(p_values_from_shuffle_synth.loc[flash_number, :].values)
             flash_response_df['p_value'] = p_values
+            flash_response_df['p_value_synthetic'] = p_values_synth
         else:
             flash_response_df['p_value'] = np.nan
-
+            flash_response_df['p_value_synthetic'] = np.nan
         return flash_response_df
 
     def save_flash_response_df(self, flash_response_df):

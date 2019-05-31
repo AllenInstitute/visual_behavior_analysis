@@ -94,36 +94,106 @@ def ptest(x, num_conditions):
     return ptest
 
 
-def get_p_values_from_shuffle(analysis, stimulus_table, flash_response_df):
+# def get_p_values_from_shuffle(analysis, stimulus_table, flash_response_df):
+#     dataset = analysis.dataset
+#     #data munging
+#     fdf = flash_response_df.copy()
+#     odf = fdf[fdf.omitted==True].copy()
+#     st = stimulus_table.copy()
+#     included_flashes = fdf.flash_number.unique()
+#     st = st[st.flash_number.isin(included_flashes)]
+#     omitted_flashes = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
+#     omitted_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in omitted_flashes.start_time.values]
+#     omitted_flashes['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in omitted_flashes.end_time.values]
+#     #set params
+#     response_window = analysis.response_window_duration
+#     frame_rate = analysis.ophys_frame_rate
+#     stim_frames = int(np.round(response_window*frame_rate,0))
+#     cell_indices = dataset.get_cell_indices()
+#     n_cells = len(cell_indices)
+#     #get shuffled values from omitted flash sweeps
+#     shuffled_omitted_responses = np.empty((n_cells, 10000, stim_frames))
+#     omitted_idx = np.random.choice(omitted_flashes.start_frame.values, 10000)
+#     for i in range(stim_frames):
+#         shuffled_omitted_responses[:,:,i] = dataset.dff_traces[:,omitted_idx+i]
+#     shuffled_mean = shuffled_omitted_responses.mean(axis=2)
+#     #compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep
+#     flash_p_values = pd.DataFrame(index = st.index.values, columns=np.array(range(n_cells)).astype(str))
+#     for i,cell_index in enumerate(cell_indices):
+#         responses = fdf[fdf.cell==cell_index].mean_response.values
+#         null_dist_mat = np.tile(shuffled_mean[i,:], reps=(len(responses),1))
+#         actual_is_less = responses.reshape(len(responses),1) <= null_dist_mat
+#         p_values = np.mean(actual_is_less, axis=1)
+#         flash_p_values[str(cell_index)] = p_values
+#     return flash_p_values
+
+
+
+# changed variable names and used longer response window
+def get_p_values_from_shuffle_synthetic(analysis, stimulus_table, flash_response_df):
+    #get data
     dataset = analysis.dataset
-    #data munging
     fdf = flash_response_df.copy()
     odf = fdf[fdf.omitted==True].copy()
-    st = stimulus_table.copy()
+    stim_table = stimulus_table.copy()
     included_flashes = fdf.flash_number.unique()
-    st = st[st.flash_number.isin(included_flashes)]
-    omitted_flashes = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
+    stim_table = stim_table[stim_table.flash_number.isin(included_flashes)]
+    omitted_flashes = stim_table[stim_table.omitted==True]
     omitted_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in omitted_flashes.start_time.values]
-    omitted_flashes['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in omitted_flashes.end_time.values]
     #set params
+    n_shuffles = 10000
     response_window = analysis.response_window_duration
     frame_rate = analysis.ophys_frame_rate
-    stim_frames = int(np.round(response_window*frame_rate,0))
+    n_mean_window_frames = int(np.round(response_window*frame_rate,0)) #500ms response window * 31Hz = 16 frames
     cell_indices = dataset.get_cell_indices()
     n_cells = len(cell_indices)
-    #get shuffled values from omitted flash sweeps
-    shuffled_omitted_responses = np.empty((n_cells, 10000, stim_frames))
-    omitted_idx = np.random.choice(omitted_flashes.start_frame.values, 10000)
-    for i in range(stim_frames):
-        shuffled_omitted_responses[:,:,i] = dataset.dff_traces[:,omitted_idx+i]
-    shuffled_mean = shuffled_omitted_responses.mean(axis=2)
-    #compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep
-    flash_p_values = pd.DataFrame(index = st.index.values, columns=np.array(range(n_cells)).astype(str))
+    #get omitted flash frames across full response window
+    omitted_start_times = omitted_flashes.start_frame.values
+    #shuffle omitted flash frames
+    shuffled_omitted_start_frames = np.random.choice(omitted_start_times, n_shuffles)
+    # create synthetic traces by drawing from shuffled omitted frames
+    shuffled_omitted_responses = np.empty((n_cells, n_shuffles, n_mean_window_frames))
+    for mean_window_frame in range(n_mean_window_frames):
+        shuffled_omitted_responses[:,:,mean_window_frame] = dataset.dff_traces[:,shuffled_omitted_start_frames+mean_window_frame]
+    #average across mean response window
+    shuffled_means = shuffled_omitted_responses.mean(axis=2)
+    #compare flash responses to shuffled mean response values and make a dataframe of p_value for cell by sweep
+    flash_p_values = pd.DataFrame(index = stim_table.index.values, columns=np.array(range(n_cells)).astype(str))
     for i,cell_index in enumerate(cell_indices):
-        responses = fdf[fdf.cell==cell_index].mean_response.values
-        null_dist_mat = np.tile(shuffled_mean[i,:], reps=(len(responses),1))
-        actual_is_less = responses.reshape(len(responses),1) <= null_dist_mat
-        p_values = np.mean(actual_is_less, axis=1)
+        flash_responses = fdf[fdf.cell==cell_index].mean_response.values
+        null_distribution_matrix = np.tile(shuffled_means[i,:], reps=(len(flash_responses),1))
+        #compute the number of times out of the 10000 shuffles where the flash response is less than the null
+        flash_response_is_less = flash_responses.reshape(len(flash_responses),1) <= null_distribution_matrix
+        p_values = np.mean(flash_response_is_less, axis=1)
+        flash_p_values[str(cell_index)] = p_values
+    return flash_p_values
+
+
+# modified code to compute null distribution from shuffled mean responses rather than creating a synthetic trace
+def get_p_values_from_shuffle(analysis, flash_response_df):
+    #get data
+    dataset = analysis.dataset
+    fdf = flash_response_df.copy()
+    odf = fdf[fdf.omitted==True].copy()
+    #set params
+    n_shuffles = 10000
+    cell_indices = dataset.get_cell_indices()
+    n_cells = len(cell_indices)
+    n_omitted_flashes = len(odf.flash_number.unique())
+    #create p-values by comparing flash responses to shuffled omitted responses
+    flash_p_values = pd.DataFrame(index=fdf.flash_number.unique(), columns=cell_indices.astype(str))
+    for i, cell_index in enumerate(cell_indices):
+        cell_omitted_responses = odf[odf.cell==cell_index].mean_response.values
+        #shuffle omitted flash responses
+        shuffled_omitted_responses = np.random.choice(cell_omitted_responses, n_shuffles)
+        #compare flash responses to shuffled mean response values
+        flash_responses = fdf[fdf.cell==cell_index].mean_response.values
+        #create null distribution of shuffled values to compare each flash to
+        null_distribution_matrix = np.tile(shuffled_omitted_responses, reps=(len(flash_responses),1))
+        #compare all flash responses for this cell to the null distribution
+        flash_response_is_less = flash_responses.reshape(len(flash_responses),1) <= null_distribution_matrix
+        #p_value is the average number of times where the flash response is less than the null
+        p_values = np.mean(flash_response_is_less, axis=1)
         flash_p_values[str(cell_index)] = p_values
     return flash_p_values
 
@@ -181,6 +251,11 @@ def get_mean_sem(group):
 def get_fraction_significant_trials(group):
     fraction_significant_trials = len(group[group.p_value < 0.05]) / float(len(group))
     return pd.Series({'fraction_significant_trials': fraction_significant_trials})
+
+
+def get_fraction_significant_trials_synthetic(group):
+    fraction_significant_trials = len(group[group.p_value_synthetic < 0.05]) / float(len(group))
+    return pd.Series({'fraction_significant_trials_synthetic': fraction_significant_trials})
 
 
 def get_fraction_active_trials(group):
@@ -283,9 +358,15 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
         mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
 
-    fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
-    fraction_significant_trials = fraction_significant_trials.reset_index()
-    mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
+    if flashes or omitted:
+        fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
+        fraction_significant_trials = fraction_significant_trials.reset_index()
+        mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
+
+    if flashes and not omitted:
+        fraction_significant_trials_synthetic = rdf.groupby(conditions).apply(get_fraction_significant_trials_synthetic)
+        fraction_significant_trials_synthetic = fraction_significant_trials_synthetic.reset_index()
+        mdf['fraction_significant_trials_synthetic'] = fraction_significant_trials_synthetic.fraction_significant_trials_synthetic
 
     fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
     fraction_responsive_trials = fraction_responsive_trials.reset_index()
@@ -295,9 +376,9 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     fraction_active_trials = fraction_active_trials.reset_index()
     mdf['fraction_active_trials'] = fraction_active_trials.fraction_active_trials
 
-    fraction_nonzero_trials = rdf.groupby(conditions).apply(get_fraction_nonzero_trials)
-    fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
-    mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
+    # fraction_nonzero_trials = rdf.groupby(conditions).apply(get_fraction_nonzero_trials)
+    # fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
+    # mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
 
     if get_reliability:
         print('computing reliability')
