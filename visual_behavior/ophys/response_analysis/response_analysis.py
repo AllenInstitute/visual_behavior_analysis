@@ -48,13 +48,14 @@ class ResponseAnalysis(object):
                                 0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         self.baseline_window = np.asarray(
             self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
+        self.omission_response_window_duration = 0.75 # compute omission mean response and baseline response over 750ms
         self.stimulus_duration = 0.25  # self.dataset.task_parameters['stimulus_duration'].values[0]
         self.blank_duration = self.dataset.task_parameters['blank_duration'].values[0]
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate'].values[0]
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
 
-        self.get_trial_response_df()
-        self.get_flash_response_df()
+        # self.get_trial_response_df()
+        # self.get_flash_response_df()
         self.get_omitted_flash_response_df()
 
     def get_trial_response_df_path(self):
@@ -288,8 +289,8 @@ class ResponseAnalysis(object):
                                                                   self.dataset.timestamps_ophys,
                                                                   flash_window, self.ophys_frame_rate)
                 response_window = [np.abs(flash_window[0]), np.abs(flash_window[
-                    0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
-                baseline_window = [np.abs(flash_window[0]) - self.response_window_duration, (np.abs(flash_window[0]))]
+                    0]) + self.omission_response_window_duration]  # time, in seconds, around flash time to take the mean response
+                baseline_window = [np.abs(flash_window[0]) - self.omission_response_window_duration, (np.abs(flash_window[0]))]
                 p_value_baseline = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
                                                            baseline_window, self.ophys_frame_rate)
@@ -311,9 +312,6 @@ class ResponseAnalysis(object):
         # flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
         omitted_flash_response_df = flash_response_df
-        # omitted_flash_response_df = omitted_flash_response_df.reset_index().drop(columns=['index'])
-        # print len(omitted_flash_response_df)
-        # print len(omitted_flash_response_df.cell.unique())
         if len(omitted_flash_response_df) > 2:
             print('computing p-values for omitted from shuffled stimulus responses')
             omitted_flash_p_values = ut.get_p_values_from_shuffle_omitted(self, stimulus_table, omitted_flash_response_df)

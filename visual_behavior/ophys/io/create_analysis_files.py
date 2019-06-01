@@ -28,7 +28,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
     # pairwise_correlations_df = analysis.get_pairwise_correlations_df()  # flake8: noqa: F841
 
-    plot_behavior(dataset, cache_dir)
+    sf.plot_behavior(dataset, cache_dir)
     # print('plotting example traces')
     # active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
     # length_mins = 1
