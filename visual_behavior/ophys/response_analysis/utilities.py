@@ -149,6 +149,7 @@ def get_p_values_from_shuffle_synthetic(analysis, stimulus_table, flash_response
     n_cells = len(cell_indices)
     #get omitted flash frames across full response window
     omitted_start_times = omitted_flashes.start_frame.values
+    omitted_start_times = omitted_start_times[:-1] #exclude last omission for cases where it occured at the end of the recording
     #shuffle omitted flash frames
     shuffled_omitted_start_frames = np.random.choice(omitted_start_times, n_shuffles)
     # create synthetic traces by drawing from shuffled omitted frames
