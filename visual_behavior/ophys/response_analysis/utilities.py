@@ -94,41 +94,6 @@ def ptest(x, num_conditions):
     return ptest
 
 
-# def get_p_values_from_shuffle(analysis, stimulus_table, flash_response_df):
-#     dataset = analysis.dataset
-#     #data munging
-#     fdf = flash_response_df.copy()
-#     odf = fdf[fdf.omitted==True].copy()
-#     st = stimulus_table.copy()
-#     included_flashes = fdf.flash_number.unique()
-#     st = st[st.flash_number.isin(included_flashes)]
-#     omitted_flashes = dataset.stimulus_table[dataset.stimulus_table.omitted==True]
-#     omitted_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in omitted_flashes.start_time.values]
-#     omitted_flashes['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in omitted_flashes.end_time.values]
-#     #set params
-#     response_window = analysis.response_window_duration
-#     frame_rate = analysis.ophys_frame_rate
-#     stim_frames = int(np.round(response_window*frame_rate,0))
-#     cell_indices = dataset.get_cell_indices()
-#     n_cells = len(cell_indices)
-#     #get shuffled values from omitted flash sweeps
-#     shuffled_omitted_responses = np.empty((n_cells, 10000, stim_frames))
-#     omitted_idx = np.random.choice(omitted_flashes.start_frame.values, 10000)
-#     for i in range(stim_frames):
-#         shuffled_omitted_responses[:,:,i] = dataset.dff_traces[:,omitted_idx+i]
-#     shuffled_mean = shuffled_omitted_responses.mean(axis=2)
-#     #compare flash responses to shuffled values and make a dataframe of p_value for cell by sweep
-#     flash_p_values = pd.DataFrame(index = st.index.values, columns=np.array(range(n_cells)).astype(str))
-#     for i,cell_index in enumerate(cell_indices):
-#         responses = fdf[fdf.cell==cell_index].mean_response.values
-#         null_dist_mat = np.tile(shuffled_mean[i,:], reps=(len(responses),1))
-#         actual_is_less = responses.reshape(len(responses),1) <= null_dist_mat
-#         p_values = np.mean(actual_is_less, axis=1)
-#         flash_p_values[str(cell_index)] = p_values
-#     return flash_p_values
-
-
-
 # changed variable names and used longer response window
 def get_p_values_from_shuffle_synthetic(analysis, stimulus_table, flash_response_df):
     #get data
@@ -172,6 +137,7 @@ def get_p_values_from_shuffle_synthetic(analysis, stimulus_table, flash_response
 
 # modified code to compute null distribution from shuffled mean responses rather than creating a synthetic trace
 def get_p_values_from_shuffle(analysis, flash_response_df):
+    # test similar to: https: // genomicsclass.github.io / book / pages / permutation_tests.html
     #get data
     dataset = analysis.dataset
     fdf = flash_response_df.copy()
