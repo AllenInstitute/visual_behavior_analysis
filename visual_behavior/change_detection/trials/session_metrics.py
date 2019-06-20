@@ -86,13 +86,17 @@ def earned_water(session_trials):
     return total_water(session_trials, ('go', ))
 
 
-def peak_dprime(session_trials):
+def peak_dprime(session_trials, first_valid_trial=50, sliding_window=100, apply_trial_number_limit=False):
     mask = (session_trials['trial_type'] != 'aborted')
-    _, _, dp = get_response_rates(session_trials[mask], sliding_window=100)
+    _, _, dp = get_response_rates(
+        session_trials[mask], 
+        sliding_window=sliding_window, 
+        apply_trial_number_limit=apply_trial_number_limit
+        )
     if np.all(np.isnan(dp)):
         return np.nan
     try:
-        return np.nanmax(dp[50:])
+        return np.nanmax(dp[first_valid_trial:])
     except (IndexError, ValueError):
         return np.nan
 
