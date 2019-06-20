@@ -318,7 +318,8 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
     mdf = mdf.reset_index()
-    mdf = annotate_mean_df_with_pref_stim(mdf)
+    if len(conditions) > 1:
+        mdf = annotate_mean_df_with_pref_stim(mdf)
     if analysis is not None:
         mdf = annotate_mean_df_with_p_value(analysis, mdf, window)
         mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
