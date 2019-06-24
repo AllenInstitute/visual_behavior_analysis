@@ -65,7 +65,7 @@ target/
 # data & analysis
 data/
 # notebooks/
-notebooks/.ipynb_checkpoints/
+.ipynb_checkpoints
 figures/
 
 # vs code
