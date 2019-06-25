@@ -17,11 +17,16 @@ def event_detection(lims_id, cache_dir, events_dir, plot=True):
         genotype = 'Ai93'
         dataset.metadata['genotype'] = genotype
         halflife = 314
+    elif 'Sst' in dataset.metadata.cre_line.values[0]:
+        print('Sst, using Ai93 halflife')
+        genotype = 'Ai93'
+        dataset.metadata['genotype'] = genotype
+        halflife = 314
     elif 'Vip' in dataset.metadata.cre_line.values[0]:
         print('Vip, using Ai93 halflife')
-        genotype = 'Ai94'
+        genotype = 'Ai93'
         dataset.metadata['genotype'] = genotype
-        halflife = 649
+        halflife = 314
 
     l0 = L0_analysis(dataset, cache_directory=events_dir, genotype=genotype, halflife_ms=halflife)
 

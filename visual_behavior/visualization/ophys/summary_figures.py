@@ -69,7 +69,7 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
 
 def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
-    if type(roi_mask_dict.keys()[0]) == int:
+    if type(list(roi_mask_dict.keys())[0]) == int:
         m = roi_mask_dict[int(cell_specimen_id)]
     else:
         m = roi_mask_dict[str(cell_specimen_id)]
