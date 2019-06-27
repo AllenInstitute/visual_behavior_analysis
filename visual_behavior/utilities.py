@@ -47,7 +47,7 @@ def get_response_rates(df_in, sliding_window=100, apply_trial_number_limit=False
         min_periods=0,
     ).mean().values
 
-    catch_responses = go_responses = df_in.apply(is_catch, axis=1)
+    catch_responses = df_in.apply(is_catch, axis=1)
 
     catch_rate = catch_responses.rolling(
         window=sliding_window,
