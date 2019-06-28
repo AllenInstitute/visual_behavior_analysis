@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 # from .lims_database import LimsDatabase
 
 # relative import doesnt work on cluster
-from allensdk.internal.api import behavior_ophys_api  # NOQA: E402
 from visual_behavior.ophys.io.lims_database import LimsDatabase  # NOQA: E402
 from visual_behavior.translator import foraging2, foraging  # NOQA: E402
 from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E402
@@ -38,6 +37,9 @@ from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NO
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
+
+from visual_behavior.ophys.io.get_extract_json_file import get_extract_json_file  # NOQA: E402
+from ophysextractor.utils.util import get_psql_dict_cursor
 
 
 def save_data_as_h5(data, name, analysis_dir):
@@ -378,8 +380,26 @@ def save_metadata(metadata, lims_data):
 
 
 def get_stimulus_pkl_path(lims_data):
-    api = behavior_ophys_api.BehaviorOphysLimsApi(lims_data['experiment_id'][0])
-    stimulus_pkl_path = api.get_behavior_stimulus_file()
+    ophys_session_dir = get_ophys_session_dir(lims_data)
+    # first try lims folder
+    pkl_file = [file for file in os.listdir(ophys_session_dir) if '.pkl' in file]
+    # remove tiny pkl files (less than 8KB)
+    all_files = [os.path.join(ophys_session_dir, pkl_file[i]) for i in range(len(pkl_file))]
+    all_files_valid = np.array(all_files)[[os.path.getsize(i)>8000 for i in all_files]]
+    pkl_file = [os.path.basename(all_files_valid[i]) for i in range(len(all_files_valid))]    
+    if len(pkl_file) > 0:
+        stimulus_pkl_path = os.path.join(ophys_session_dir, pkl_file[0])
+    else:  # then try behavior directory
+        expt_date = get_experiment_date(lims_data)
+        mouse_id = get_mouse_id(lims_data)
+        pkl_dir = os.path.join(r'/allen/programs/braintv/workgroups/neuralcoding/Behavior/Data',
+                               'M' + str(mouse_id), 'output')
+        if os.name == 'nt':
+            pkl_dir = pkl_dir.replace('/', '\\')
+            pkl_dir = '\\' + pkl_dir
+        pkl_file = [file for file in os.listdir(pkl_dir) if file.startswith(expt_date)][0]
+        stimulus_pkl_path = os.path.join(pkl_dir, pkl_file)
+    print(stimulus_pkl_path)
     return stimulus_pkl_path
 
 
@@ -390,7 +410,7 @@ def get_pkl(lims_data):
     if pkl_file not in os.listdir(analysis_dir):
         logger.info('moving %s to analysis dir', pkl_file)
         shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
-    logger.info('getting stimulus data from pkl')
+    logger.info('getting stimulus data from pkl')    
     pkl = pd.read_pickle(stimulus_pkl_path)
     # from visual_behavior.translator.foraging2 import data_to_change_detection_core
     # core_data = data_to_change_detection_core(pkl)
@@ -526,10 +546,35 @@ def parse_mask_string(mask_string):
     return np.asarray(mask)
 
 
+def get_extract_json_file(experiment_id):
+    
+    QUERY='''
+    SELECT storage_directory || filename 
+    FROM well_known_files 
+    WHERE well_known_file_type_id = 
+      (SELECT id FROM well_known_file_types WHERE name = 'OphysExtractedTracesInputJson') 
+    AND attachable_id = '{0}';
+    '''
+
+    lims_cursor = get_psql_dict_cursor()
+    lims_cursor.execute(QUERY.format(experiment_id))
+    
+    return(lims_cursor.fetchall()) #    return(lims_cursor.fetchone())    
+    
+    
 def get_input_extract_traces_json(lims_data):
-    processed_dir = get_processed_dir(lims_data)
-    json_file = [file for file in os.listdir(processed_dir) if 'input_extract_traces.json' in file]
-    json_path = os.path.join(processed_dir, json_file[0])
+    # old method
+#    processed_dir = get_processed_dir(lims_data)    
+#    json_file = [file for file in os.listdir(processed_dir) if 'input_extract_traces.json' in file]
+    # new method, uses sql query (FN)
+    f = get_extract_json_file(lims_data['lims_id'].values[0])
+    json_file = os.path.basename(f[0]['?column?'])
+    json_path = f[0]['?column?']
+#    print(processed_dir)
+    print(json_path)
+    print(json_file)
+    # old method
+#    json_path = os.path.join(processed_dir, json_file[0])
     with open(json_path, 'r') as w:
         jin = json.load(w)
     return jin
@@ -786,8 +831,11 @@ def get_dff_traces(roi_metrics, lims_data):
     dff_path = os.path.join(get_ophys_experiment_dir(lims_data), str(get_lims_id(lims_data)) + '_dff.h5')
     g = h5py.File(dff_path)
     dff_traces = np.asarray(g['data'])
+#    print(dff_traces.shape)
+#    print(roi_metrics.unfiltered_cell_index)
     valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
     dff_traces = dff_traces[valid_roi_indices]
+    print(dff_traces.shape)
     # find cells with NaN traces
     bad_cell_indices = []
     final_dff_traces = []
@@ -801,6 +849,7 @@ def get_dff_traces(roi_metrics, lims_data):
         else:
             final_dff_traces.append(dff)
     dff_traces = np.asarray(final_dff_traces)
+    print(dff_traces.shape)
     roi_metrics = roi_metrics[roi_metrics.cell_index.isin(bad_cell_indices) == False]
     # reset cell index after removing bad cells
     cell_index = [np.where(np.sort(roi_metrics.roi_id.values) == id)[0][0] for id in
@@ -863,15 +912,23 @@ def get_max_projection(lims_data):
 def save_max_projections(lims_data):
     analysis_dir = get_analysis_dir(lims_data)
     # regular one
-    # max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
-    # save_data_as_h5(max_projection, 'max_projection', analysis_dir)
-    # mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
-    #              cmap='gray')
-
+    if os.path.exists(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png')):
+        print('loading max')
+        max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
+        save_data_as_h5(max_projection, 'max_projection', analysis_dir)
+        mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
+                     cmap='gray')
+    else:
+        print('max_downsample_4Hz_0.png no longer exists, using normalized max projection from segmentation output instead')
+        # contrast enhanced one
+        max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
+        save_data_as_h5(max_projection, 'max_projection', analysis_dir)
+        mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'),
+                     arr=max_projection, cmap='gray')
     # contrast enhanced one
     max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
-    save_data_as_h5(max_projection, 'max_projection', analysis_dir)
-    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
+    save_data_as_h5(max_projection, 'normalized_max_projection', analysis_dir)
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'), arr=max_projection,
                  cmap='gray')
 
 
