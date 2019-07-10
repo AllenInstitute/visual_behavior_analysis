@@ -85,6 +85,17 @@ experiment_ids = [816242065, 816242073, 816242080, 816242091,
        856967230, 856967232, 856967234, 856967237, 856967241, 856967243,
        856967245, 856967247]
 
+experiment_ids = [893832486,  # 1_images_G
+                    894726047,  # 1_images_E
+                    895421150,  # 1_images_G, fail z-drift
+                    896164962,  # 3_images_G, fail low d prime
+                    897385282, # 3_images_G
+                    897385227,  #1_images_E
+                    897766332,  #1_images_G
+                    898747809,  #3_images_E, fail low d prime
+                    899085549, #3_images_E, failed dropped frames
+                    90055097]  #1_3images_E
+
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_analysis_files.py"
 
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords2'

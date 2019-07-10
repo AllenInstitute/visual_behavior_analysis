@@ -18,7 +18,10 @@ from visual_behavior.visualization.ophys import summary_figures as sf
 
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True, turn_off_plotting=False):
-    # logger.info(experiment_id)
+
+    from visual_behavior.ophys.io.convert_level_1_to_level_2 import convert_level_1_to_level_2
+    ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir, plot_roi_validation=False);
+
     print(experiment_id)
     print('saving ' + str(experiment_id) + ' to ' + cache_dir)
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
@@ -97,6 +100,18 @@ if __name__ == '__main__':
                       834275020, 834275038, 834279496, 836258936, 836258957, 836260147,
                       836910438, 836911939, 837296345, 837729902, 838849930]
 
+    # mouse 458155
+    experiment_ids = [893832486,  # 1_images_G
+                    894726047,  # 1_images_E
+                    895421150,  # 1_images_G, fail z-drift
+                    896164962,  # 3_images_G, fail low d prime
+                    897385282] # 3_images_G
+    # # # mouse 451790
+    # experiment_id = [897385227,  #1_images_E
+    #                 897766332,  #1_images_G
+    #                 898747809,  #3_images_E, fail low d prime
+    #                 899085549, #3_images_E, failed dropped frames
+    #                 90055097]  #1_3images_E
     # import os
     cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
     for experiment_id in experiment_ids:
