@@ -39,6 +39,11 @@ from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_de
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 
+import warnings
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore",category=DeprecationWarning)
+    import h5py
+
 
 def save_data_as_h5(data, name, analysis_dir):
     f = h5py.File(os.path.join(analysis_dir, name + '.h5'), 'w')
@@ -278,12 +283,10 @@ def get_sync_data(lims_data, use_acq_trigger):
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only
     if use_acq_trigger:
         frames_2p = frames_2p[frames_2p > trigger[0]]
-    print(len(frames_2p))
     if lims_data.rig.values[0][0] == 'M':  # if Mesoscope
         print('resampling mesoscope 2P frame times')
         roi_group = get_roi_group(lims_data)  # get roi_group order
         frames_2p = frames_2p[roi_group::4]  # resample sync times
-    print(len(frames_2p))
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
     # put sync data in format to be compatible with downstream analysis
@@ -526,10 +529,60 @@ def parse_mask_string(mask_string):
     return np.asarray(mask)
 
 
+# def get_input_extract_traces_json(lims_data):
+#     processed_dir = get_processed_dir(lims_data)
+#     json_file = [file for file in os.listdir(processed_dir) if 'input_extract_traces.json' in file]
+#     json_path = os.path.join(processed_dir, json_file[0])
+#     with open(json_path, 'r') as w:
+#         jin = json.load(w)
+#     return jin
+
+def get_psql_dict_cursor(dbname='lims2', user='limsreader', host='limsdb2', password='limsro', port=5432):
+    """Set up a connection to a psql db server with a dict cursor"""
+    from psycopg2 import connect, extras
+    con = connect(dbname=dbname,
+                  user=user,
+                  host=host,
+                  password=password,
+                  port=port)
+    con.set_session(readonly=True, autocommit=True)
+    return con.cursor(cursor_factory = extras.RealDictCursor)
+
+
+def get_extract_json_file(experiment_id):
+    QUERY = '''
+    SELECT storage_directory || filename 
+    FROM well_known_files 
+    WHERE well_known_file_type_id = 
+      (SELECT id FROM well_known_file_types WHERE name = 'OphysExtractedTracesInputJson') 
+    AND attachable_id = '{0}';
+    '''
+
+    lims_cursor = get_psql_dict_cursor()
+    lims_cursor.execute(QUERY.format(experiment_id))
+
+    return (lims_cursor.fetchall())  # return(lims_cursor.fetchone())
+
+
 def get_input_extract_traces_json(lims_data):
     processed_dir = get_processed_dir(lims_data)
     json_file = [file for file in os.listdir(processed_dir) if 'input_extract_traces.json' in file]
-    json_path = os.path.join(processed_dir, json_file[0])
+    if len(json_file)>0:
+        json_path = os.path.join(processed_dir, json_file[0])
+    else:
+        print('using new json file name')
+        experiment_dir = get_ophys_experiment_dir(lims_data)
+        json_file = [file for file in os.listdir(experiment_dir) if ('OPHYS_EXTRACT_TRACES_QUEUE' in file) and ('_input.json' in file)]
+        print(json_file[0])
+        json_path = os.path.join(experiment_dir, json_file[0])
+    # new method, uses sql query (FN)
+    # f = get_extract_json_file(lims_data['lims_id'].values[0])
+    # json_file = os.path.basename(f[0]['?column?'])
+    # json_path = f[0]['?column?']
+    # from pathlib import Path
+    # json_path = Path(json_path)
+    # print(json_path)
+    # print(json_file)
     with open(json_path, 'r') as w:
         jin = json.load(w)
     return jin
@@ -744,8 +797,11 @@ def get_cell_index_for_cell_specimen_id(cell_specimen_id, cell_specimen_ids):
 def get_roi_masks(roi_metrics, lims_data):
     # make roi_dict with ids as keys and roi_mask_array
     jin = get_input_extract_traces_json(lims_data)
-    h = jin["image"]["height"]
-    w = jin["image"]["width"]
+    # h = jin["image"]["height"]
+    # w = jin["image"]["width"]
+    mp = get_max_projection(lims_data)
+    h = mp.shape[0]
+    w = mp.shape[1]
     cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
     roi_masks = {}
     for i, id in enumerate(cell_specimen_ids):
