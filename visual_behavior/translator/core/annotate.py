@@ -539,14 +539,12 @@ def calculate_latency(trials):
 @inplace
 def calculate_reward_rate(
         df,
-        window=1.0,
         trial_window=25,
         remove_aborted=False
 ):
     # written by Dan Denman (stolen from http://stash.corp.alleninstitute.org/users/danield/repos/djd/browse/calculate_reward_rate.py)
     # add a column called reward_rate to the input dataframe
     # the reward_rate column contains a rolling average of rewards/min
-    # window sets the window in which a response is considered correct, so a window of 1.0 means licks before 1.0 second are considered correct
     # remove_aborted flag needs work, don't use it for now
     reward_rate = np.zeros(np.shape(df.change_time))
     c = 0
@@ -566,8 +564,7 @@ def calculate_reward_rate(
                 min_index = np.max((0, trial - trial_window))
                 max_index = np.min((trial + trial_window, len(df_temp)))
                 df_roll = df_temp.iloc[min_index:max_index]
-
-                correct = len(df_roll[df_roll.response_latency < window])  # get a rolling number of correct trials
+                correct = len(df_roll[df_roll.response_type == 'HIT'])
                 time_elapsed = df_roll.starttime.iloc[-1] - df_roll.starttime.iloc[0]  # get the time elapsed over the trials
                 reward_rate_on_this_lap = correct / time_elapsed  # calculate the reward rate
 
