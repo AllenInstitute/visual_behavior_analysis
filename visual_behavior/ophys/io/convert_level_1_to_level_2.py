@@ -38,8 +38,19 @@ from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_de
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 
+from psycopg2 import connect, extras
 from visual_behavior.ophys.io.get_extract_json_file import get_extract_json_file  # NOQA: E402
-from ophysextractor.utils.util import get_psql_dict_cursor
+#from ophysextractor.utils.util import get_psql_dict_cursor
+
+def get_psql_dict_cursor(dbname='lims2', user='limsreader', host='limsdb2', password='limsro', port=5432):
+    """Set up a connection to a psql db server with a dict cursor"""
+    con = connect(dbname=dbname,
+                  user=user,
+                  host=host,
+                  password=password,
+                  port=port)
+    con.set_session(readonly=True, autocommit=True)
+    return con.cursor(cursor_factory = extras.RealDictCursor)
 
 
 def save_data_as_h5(data, name, analysis_dir):
@@ -192,6 +203,7 @@ def get_roi_group(lims_data):
 
 
 def get_sync_path(lims_data):
+#    import shutil
     ophys_session_dir = get_ophys_session_dir(lims_data)
     analysis_dir = get_analysis_dir(lims_data)
 
@@ -208,7 +220,12 @@ def get_sync_path(lims_data):
 
     if sync_file not in os.listdir(analysis_dir):
         logger.info('moving %s to analysis dir', sync_file)  # flake8: noqa: E999
-        shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
+#        print(sync_path, os.path.join(analysis_dir, sync_file))
+        try:
+            shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
+        except:
+            print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
+            pass
     return sync_path
 
 
@@ -399,17 +416,24 @@ def get_stimulus_pkl_path(lims_data):
             pkl_dir = '\\' + pkl_dir
         pkl_file = [file for file in os.listdir(pkl_dir) if file.startswith(expt_date)][0]
         stimulus_pkl_path = os.path.join(pkl_dir, pkl_file)
-    print(stimulus_pkl_path)
+#    print(stimulus_pkl_path)
     return stimulus_pkl_path
 
 
 def get_pkl(lims_data):
+#    import shutil
     stimulus_pkl_path = get_stimulus_pkl_path(lims_data)
     pkl_file = os.path.basename(stimulus_pkl_path)
     analysis_dir = get_analysis_dir(lims_data)
     if pkl_file not in os.listdir(analysis_dir):
         logger.info('moving %s to analysis dir', pkl_file)
-        shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
+#        print(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
+        try:
+            shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
+        except:
+            print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
+            pass
+
     logger.info('getting stimulus data from pkl')    
     pkl = pd.read_pickle(stimulus_pkl_path)
     # from visual_behavior.translator.foraging2 import data_to_change_detection_core
@@ -567,12 +591,14 @@ def get_input_extract_traces_json(lims_data):
 #    processed_dir = get_processed_dir(lims_data)    
 #    json_file = [file for file in os.listdir(processed_dir) if 'input_extract_traces.json' in file]
     # new method, uses sql query (FN)
+#    print(lims_data.iloc[0])
     f = get_extract_json_file(lims_data['lims_id'].values[0])
-    json_file = os.path.basename(f[0]['?column?'])
+#    print(f)
+#    json_file = os.path.basename(f[0]['?column?'])
     json_path = f[0]['?column?']
 #    print(processed_dir)
-    print(json_path)
-    print(json_file)
+#    print(json_path)
+#    print(json_file)
     # old method
 #    json_path = os.path.join(processed_dir, json_file[0])
     with open(json_path, 'r') as w:
@@ -786,11 +812,34 @@ def get_cell_index_for_cell_specimen_id(cell_specimen_id, cell_specimen_ids):
     return cell_index
 
 
+
+def get_fov_dims(experiment_id):
+    from allensdk.internal.api.ophys_lims_api import OphysLimsApi
+    
+#    meso_exp_id = 896160394
+    api = OphysLimsApi(experiment_id)    
+#    print(api.get_metadata())
+    image_metadata = api.get_metadata()
+    return image_metadata
+
+
+
+
 def get_roi_masks(roi_metrics, lims_data):
     # make roi_dict with ids as keys and roi_mask_array
     jin = get_input_extract_traces_json(lims_data)
-    h = jin["image"]["height"]
-    w = jin["image"]["width"]
+    
+    try:
+        h = jin["image"]["height"]
+        w = jin["image"]["width"]
+        print(h,w)
+    except:
+#        print(lims_data)
+        image_metadata = get_fov_dims(lims_data['lims_id'].iloc[0])
+        h = image_metadata['field_of_view_height']
+        w = image_metadata['field_of_view_width']
+        print(h,w)
+
     cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
     roi_masks = {}
     for i, id in enumerate(cell_specimen_ids):
@@ -1011,7 +1060,10 @@ def save_roi_validation(roi_validation, lims_data):
 def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
     logger.info('converting %d', lims_id)
     print('converting', lims_id)
+    
     lims_data = get_lims_data(lims_id)
+    
+    print(lims_data.iloc[0])
 
     analysis_dir = get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
 
