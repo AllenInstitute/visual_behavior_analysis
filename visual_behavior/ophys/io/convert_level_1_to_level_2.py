@@ -39,7 +39,7 @@ from visual_behavior.visualization.ophys.summary_figures import plot_roi_validat
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 
 from psycopg2 import connect, extras
-from visual_behavior.ophys.io.get_extract_json_file import get_extract_json_file  # NOQA: E402
+# from visual_behavior.ophys.io.get_extract_json_file import get_extract_json_file  # NOQA: E402
 #from ophysextractor.utils.util import get_psql_dict_cursor
 
 def get_psql_dict_cursor(dbname='lims2', user='limsreader', host='limsdb2', password='limsro', port=5432):
@@ -587,21 +587,12 @@ def get_extract_json_file(experiment_id):
     
     
 def get_input_extract_traces_json(lims_data):
-    # old method
-#    processed_dir = get_processed_dir(lims_data)    
-#    json_file = [file for file in os.listdir(processed_dir) if 'input_extract_traces.json' in file]
-    # new method, uses sql query (FN)
-#    print(lims_data.iloc[0])
     f = get_extract_json_file(lims_data['lims_id'].values[0])
-#    print(f)
-#    json_file = os.path.basename(f[0]['?column?'])
     json_path = f[0]['?column?']
-#    print(processed_dir)
-#    print(json_path)
-#    print(json_file)
-    # old method
-#    json_path = os.path.join(processed_dir, json_file[0])
-    with open(json_path, 'r') as w:
+    json_file_name = json_path.split('/')[-1]
+    expt_dir = get_ophys_experiment_dir(lims_data)
+    json_path = os.path.join(expt_dir, json_file_name)
+    with open(json_path, 'rb') as w:
         jin = json.load(w)
     return jin
 
