@@ -91,13 +91,13 @@ class VisualBehaviorOphysDataset(object):
     analysis_dir = LazyLoadable('_analysis_dir', get_analysis_dir)
 
     def get_metadata(self):
-        self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
+        self._metadata = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df')
         return self._metadata
 
     metadata = LazyLoadable('_metadata', get_metadata)
 
     def get_timestamps(self):
-        self._timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df', format='fixed')
+        self._timestamps = pd.read_hdf(os.path.join(self.analysis_dir, 'timestamps.h5'), key='df')
         return self._timestamps
 
     timestamps = LazyLoadable('_timestamps', get_timestamps)
@@ -116,9 +116,7 @@ class VisualBehaviorOphysDataset(object):
 
     def get_stimulus_table(self):
         self._stimulus_table = pd.read_hdf(
-            os.path.join(self.analysis_dir, 'stimulus_table.h5'),
-            key='df', format='fixed'
-        )
+            os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df')
         self._stimulus_table = self._stimulus_table.reset_index()
         # self._stimulus_table = self._stimulus_table.drop(
         #     columns=['orientation', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
@@ -140,43 +138,39 @@ class VisualBehaviorOphysDataset(object):
 
     def get_stimulus_metadata(self):
         self._stimulus_metadata = pd.read_hdf(
-            os.path.join(self.analysis_dir, 'stimulus_metadata.h5'),
-            key='df', format='fixed'
-        )
+            os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df')
         self._stimulus_metadata = self._stimulus_metadata.drop(columns='image_category')
         return self._stimulus_metadata
 
     stimulus_metadata = LazyLoadable('_stimulus_metadata', get_stimulus_metadata)
 
     def get_running_speed(self):
-        self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df', format='fixed')
+        self._running_speed = pd.read_hdf(os.path.join(self.analysis_dir, 'running_speed.h5'), key='df')
         return self._running_speed
 
     running_speed = LazyLoadable('_running_speed', get_running_speed)
 
     def get_licks(self):
-        self._licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df', format='fixed')
+        self._licks = pd.read_hdf(os.path.join(self.analysis_dir, 'licks.h5'), key='df')
         return self._licks
 
     licks = LazyLoadable('_licks', get_licks)
 
     def get_rewards(self):
-        self._rewards = pd.read_hdf(os.path.join(self.analysis_dir, 'rewards.h5'), key='df', format='fixed')
+        self._rewards = pd.read_hdf(os.path.join(self.analysis_dir, 'rewards.h5'), key='df')
         return self._rewards
 
     rewards = LazyLoadable('_rewards', get_rewards)
 
     def get_task_parameters(self):
         self._task_parameters = pd.read_hdf(
-            os.path.join(self.analysis_dir, 'task_parameters.h5'),
-            key='df', format='fixed'
-        )
+            os.path.join(self.analysis_dir, 'task_parameters.h5'), key='df')
         return self._task_parameters
 
     task_parameters = LazyLoadable('_task_parameters', get_task_parameters)
 
     def get_all_trials(self):
-        self._all_trials = pd.read_hdf(os.path.join(self.analysis_dir, 'trials.h5'), key='df', format='fixed')
+        self._all_trials = pd.read_hdf(os.path.join(self.analysis_dir, 'trials.h5'), key='df')
         return self._all_trials
 
     all_trials = LazyLoadable('_all_trials', get_all_trials)
@@ -249,7 +243,7 @@ class VisualBehaviorOphysDataset(object):
     events = LazyLoadable('_events', get_events)
 
     def get_roi_metrics(self):
-        self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df', format='fixed')
+        self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df')
         return self._roi_metrics
 
     roi_metrics = LazyLoadable('_roi_metrics', get_roi_metrics)
@@ -292,9 +286,7 @@ class VisualBehaviorOphysDataset(object):
 
     def get_motion_correction(self):
         self._motion_correction = pd.read_hdf(
-            os.path.join(self.analysis_dir, 'motion_correction.h5'),
-            key='df', format='fixed'
-        )
+            os.path.join(self.analysis_dir, 'motion_correction.h5'), key='df')
         return self._motion_correction
 
     motion_correction = LazyLoadable('_motion_correction', get_motion_correction)
