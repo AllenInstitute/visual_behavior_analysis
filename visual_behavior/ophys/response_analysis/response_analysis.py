@@ -120,7 +120,7 @@ class ResponseAnalysis(object):
 
     def save_trial_response_df(self, trial_response_df):
         print('saving trial response dataframe')
-        trial_response_df.to_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
+        trial_response_df.to_hdf(self.get_trial_response_df_path(), key='df')
 
     def get_trial_response_df(self):
         if self.overwrite_analysis_files:
@@ -134,7 +134,7 @@ class ResponseAnalysis(object):
         else:
             if os.path.exists(self.get_trial_response_df_path()):
                 print('loading trial response dataframe')
-                self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
+                self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df')
                 tdf = self.trial_response_df
                 tdf.cell = [int(cell) for cell in tdf.cell.values]
                 tdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in tdf.cell_specimen_id.values]
@@ -230,7 +230,7 @@ class ResponseAnalysis(object):
 
     def save_flash_response_df(self, flash_response_df):
         print('saving flash response dataframe')
-        flash_response_df.to_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
+        flash_response_df.to_hdf(self.get_flash_response_df_path(), key='df')
 
     def get_flash_response_df(self):
         if self.overwrite_analysis_files:
@@ -244,7 +244,7 @@ class ResponseAnalysis(object):
         else:
             if os.path.exists(self.get_flash_response_df_path()):
                 print('loading flash response dataframe')
-                self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
+                self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df')
                 fdf = self.flash_response_df
                 fdf.cell = [int(cell) for cell in fdf.cell.values]
                 fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
@@ -325,7 +325,7 @@ class ResponseAnalysis(object):
 
     def save_omitted_flash_response_df(self, omitted_flash_response_df):
         print('saving omitted flash response dataframe')
-        omitted_flash_response_df.to_hdf(self.get_omitted_flash_response_df_path(), key='df', format='fixed')
+        omitted_flash_response_df.to_hdf(self.get_omitted_flash_response_df_path(), key='df')
 
     def get_omitted_flash_response_df(self):
         if self.overwrite_analysis_files:
@@ -339,7 +339,7 @@ class ResponseAnalysis(object):
         else:
             if os.path.exists(self.get_omitted_flash_response_df_path()):
                 print('loading omitted flash response dataframe')
-                self.omitted_flash_response_df = pd.read_hdf(self.get_omitted_flash_response_df_path(), key='df', format='fixed')
+                self.omitted_flash_response_df = pd.read_hdf(self.get_omitted_flash_response_df_path(), key='df')
                 fdf = self.omitted_flash_response_df
                 fdf.cell = [int(cell) for cell in fdf.cell.values]
                 fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
@@ -431,12 +431,12 @@ class ResponseAnalysis(object):
 
     def save_pairwise_correlations_df(self, pairwise_correlations_df):
         print('saving pairwise correlations dataframe')
-        pairwise_correlations_df.to_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
+        pairwise_correlations_df.to_hdf(self.get_pairwise_correlations_path(), key='df')
 
     def get_pairwise_correlations_df(self):
         # if os.path.exists(self.get_pairwise_correlations_path()):
         #     print('loading pairwise correlations dataframe')
-        #     self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
+        #     self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df')
         # else:
         print('generating pairwise correlations dataframe')
         self.pairwise_correlations_df = self.compute_pairwise_correlations()
