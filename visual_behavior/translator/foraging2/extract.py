@@ -747,7 +747,7 @@ def get_running_speed(exp_data, smooth=False, time=None):
     exp_data: Mapping
         experiment data
     smooth: boolean, default=False
-        not implemented
+        implements a median filter, kernal=5
     time: numpy.array, default=None
         array of times for each stimulus frame
 
@@ -776,7 +776,7 @@ def get_running_speed(exp_data, smooth=False, time=None):
         v_sig = v_sig[:len(time)]
         v_in = v_in[:len(time)]
 
-    speed = compute_running_speed(dx_raw, time, v_sig, v_in)
+    speed = compute_running_speed(dx_raw, time, v_sig, v_in, smooth)
 
     # accel = calc_deriv(speed, time)
     # jerk = calc_deriv(accel, time)

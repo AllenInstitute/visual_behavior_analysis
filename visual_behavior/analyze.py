@@ -42,7 +42,7 @@ def compute_running_speed(dx_raw, time, v_sig, v_in, smooth=False):
     v_in: numpy.ndarray
         v_in for each stimulus frame: currently unused
     smooth: boolean, default=False
-        flag to smooth output: not implemented
+        flag to smooth output using medfilt
 
     Returns
     -------
