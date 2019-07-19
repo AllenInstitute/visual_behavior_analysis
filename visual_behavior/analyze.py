@@ -49,12 +49,13 @@ def compute_running_speed(dx_raw, time, v_sig, v_in, smooth=False):
     numpy.ndarray
         Running speed (cm/s)
     """
-    dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
+    if smooth:
+        dx = medfilt(dx_raw, kernel_size=5)  # remove big, single frame spikes in encoder values
+    else:
+        dx = dx_raw
+
     dx = np.cumsum(dx)  # wheel rotations
     speed = calc_deriv(dx, time)  # speed in degrees/s
     speed = deg_to_dist(speed)
-
-    if smooth:
-        raise NotImplementedError
 
     return speed
