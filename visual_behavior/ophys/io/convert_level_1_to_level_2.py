@@ -91,6 +91,7 @@ def get_lims_id(lims_data):
 
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
+
     specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
     if len(specimen_driver_lines) > 1:
         for i in range(len(specimen_driver_lines)):
@@ -98,16 +99,22 @@ def get_analysis_folder_name(lims_data):
                 specimen_driver_line = specimen_driver_lines[i].split('-')[0]
     else:
         specimen_driver_line = specimen_driver_lines[0]
+
+    if specimen_driver_line=='':
+        raise Exception('specimen_driver_line is empty! check why! This will result in "multiple analysis folders".')
+
+    
     if lims_data.depth.values[0] is None:
         depth = 0
     else:
         depth = lims_data.depth.values[0]
-    date = str(lims_data.experiment_date.values[0])[:10].split('-')
-    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
-    if len(specimen_driver_line) > 1:
-        specimen_driver_line = specimen_driver_line[0].split('-')[0]
-    else:
-        specimen_driver_line = specimen_driver_line[0]
+
+#    date = str(lims_data.experiment_date.values[0])[:10].split('-')
+#    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
+#    if len(specimen_driver_line) > 1:
+#        specimen_driver_line = specimen_driver_line[0].split('-')[0]
+#    else:
+#        specimen_driver_line = specimen_driver_line[0]
 
     if lims_data.rig.values[0][0] == 'M':
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
@@ -590,8 +597,8 @@ def get_input_extract_traces_json(lims_data):
     f = get_extract_json_file(lims_data['lims_id'].values[0])
     json_path = f[0]['?column?']
     json_file_name = json_path.split('/')[-1]
-    expt_dir = get_ophys_experiment_dir(lims_data)
-    json_path = os.path.join(expt_dir, json_file_name)
+    processed_dir = get_processed_dir(lims_data)
+    json_path = os.path.join(processed_dir, json_file_name)
     with open(json_path, 'rb') as w:
         jin = json.load(w)
     return jin
