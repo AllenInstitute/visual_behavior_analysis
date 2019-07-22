@@ -10,9 +10,28 @@ from ophysextractor.utils import logger, util
 
 
 #%%
+from ophysextractor.utils.util import mongo, get_psql_dict_cursor
+
+def get_stage_mongo(session_id):
+
+    DB = mongo.db.ophys_session_log 
+    db_cursor_sess = DB.find({"id":session_id})
+
+   
+    ######### get stage from mongo
+    a = list(db_cursor_sess[0]['name'])
+    ai = (np.argwhere([a[i]=='_' for i in range(len(a))]).flatten()[-1]).astype(int)
+    stage_mongo = str(db_cursor_sess[0]['name'][ai+1:])
+    
+    return stage_mongo
+
+
+#%%
+# dates2analyze = '20190602'
 def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''): 
     # dates2analyze='20190602' # means analyze all days recorded on this date and after.
     
+    #%%
     cache_dir = r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis"
     
     #%% Get the list of all visBehMult experiments that are in qc or passed
@@ -36,7 +55,7 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
         a = indiv_exp['storage_directory'].find('ophys_session'); 
         b = indiv_exp['storage_directory'].find('/ophys_experiment'); 
         session_ids.append(int(indiv_exp['storage_directory'][a+14 : b]))
-      
+          
     
     #%% Extract experiments based on their acquision date
     
@@ -44,11 +63,31 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
         experiment_ids = np.array(experiment_ids)[np.array(experiment_dates) > dates2analyze]
         session_ids = np.array(session_ids)[np.array(experiment_dates) > dates2analyze]
         experiment_dates = np.array(experiment_dates)[np.array(experiment_dates) > dates2analyze]
-        [u, iu] = np.unique(session_ids, return_index=True)
-        print('============================================================== \nAssessing %d sessions, %d experiments\n==============================================================' %(len(u), len(experiment_ids)))
-        print('expriments:\n%s' %experiment_ids)
-        print('expriment dates:\n%s' %experiment_dates[iu])
-        print('sessions:\n%s' %session_ids[iu])
+
+    experiment_ids0 = experiment_ids
+    session_ids0 = session_ids
+    experiment_dates0 = experiment_dates
+
+    
+    #%% Remove ophys7 sessions, because they cannot be analyzed by the convert code!
+
+    print('Removing ophys7 sessions, because they cannot be analyzed by the convert code!')
+    stage_mongo_all = [get_stage_mongo(int(session_id)) for session_id in np.unique(session_ids)]
+    ophys7s = np.in1d(stage_mongo_all, ['Ophys7', 'ophys7', '7', '7RF', 'test'])
+    print('%d sessions are ophys7 and test' %sum(ophys7s))
+    
+    experiment_ids = experiment_ids[~np.in1d(session_ids0, np.unique(session_ids0)[ophys7s])]
+    experiment_dates = experiment_dates[~np.in1d(session_ids0, np.unique(session_ids0)[ophys7s])]
+    session_ids = session_ids[~np.in1d(session_ids0, np.unique(session_ids0)[ophys7s])]
+    
+    
+    #%% Print sessions to be assessed for analysis
+    
+    [u, iu] = np.unique(session_ids, return_index=True)
+    print('============================================================== \nAssessing %d sessions, %d experiments\n==============================================================' %(len(u), len(experiment_ids)))
+    print('expriments:\n%s' %experiment_ids)
+    print('expriment dates:\n%s' %experiment_dates[iu])
+    print('sessions:\n%s' %session_ids[iu])
     
     
     #%% Find the experiments without an analysis folder
@@ -59,6 +98,7 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
     experiment_ids_2analyse = []
     
     for experiment_id in experiment_ids: # experiment_id = experiment_ids[0]
+        experiment_id = int(experiment_id)
         lims_data = get_lims_data(experiment_id) 
         tmp_folder = get_analysis_dir(lims_data, cache_dir=cache_dir, cache_on_lims_data=False)
         cnt = cnt+1
@@ -94,6 +134,8 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
     print('expriment dates:\n%s' %experiment_dates_2analyse[iu])
     print('sessions:\n%s' %session_ids_2analyse[iu])
         
+    
+    
         
     #%% Run the convert code if the analysis folder does not exist.   
 
@@ -101,7 +143,7 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
     for experiment_id in experiment_ids_2analyse: # experiment_id = experiment_ids[0]
         cnt = cnt+1
         try: 
-            print("==============================================================\ndate %s, session %d, experiment number %d: %d\n==============================================================" %(experiment_dates_2analyse[cnt], session_ids_2analyse[cnt], cnt, experiment_id))
+            print("==============================================================\ndate %s, session %d, experiment %d (#%d out of %d)\n==============================================================" %(experiment_dates_2analyse[cnt], session_ids_2analyse[cnt], experiment_id, cnt, len(experiment_ids_2analyse)))
             ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir,  plot_roi_validation=False)
 
         except: 
@@ -111,7 +153,22 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
 
 
 #%%
-run_convert_level_1_to_level_2_mesoscope_2(dates2analyze='20190602')
+run_convert_level_1_to_level_2_mesoscope_2(dates2analyze='20190705')
+
+
+#%%
+'''
+07/12: 
+Running convert code on 3 sessions, 13 experiments
+==============================================================
+expriments:
+[901665958 901665969 901665971 901665963 901665956 901665961 901665954
+ 901665967 904352694 904352686 904363930 904363932 904363928]
+expriment dates:
+['20190708' '20190711' '20190711']
+sessions:
+[901149889 903621170 903813946]
+'''
 
         
 #%% Run the function every 2 minutes

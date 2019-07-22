@@ -150,9 +150,28 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     if 'analysis_dir' in lims_data.columns:
         return lims_data['analysis_dir'].values[0]
 
-    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
+    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))    
+    print(analysis_dir)
+    
     if not os.path.exists(analysis_dir):
         os.mkdir(analysis_dir)
+        
+    # Check if more than one analysis folder exists
+    allFiles = os.listdir(cache_dir)
+    inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
+    existingFolders = np.argwhere(np.array(inds)!=-1)
+    # Get the modification times of the existing analysis folders
+    modifTimes = [os.path.getmtime(os.path.join(cache_dir, \
+         allFiles[np.squeeze(existingFolders[i])])) for i in range(len(existingFolders))]
+    # Find all the old analysis folders                               
+    indsOld = np.argsort(modifTimes)[:-1]
+    oldFiles = [os.path.join(cache_dir, \
+       allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]                                   
+    # Remove old analysis folders 
+    for i in range(len(oldFiles)):
+        print('Removing old analysis folder : %s' %oldFiles[i])
+        shutil.rmtree(oldFiles[i])    
+        
     if cache_on_lims_data:
         lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
     return analysis_dir
@@ -598,6 +617,7 @@ def get_input_extract_traces_json(lims_data):
     json_path = f[0]['?column?']
     json_file_name = json_path.split('/')[-1]
     processed_dir = get_processed_dir(lims_data)
+    print(json_path)
     json_path = os.path.join(processed_dir, json_file_name)
     with open(json_path, 'rb') as w:
         jin = json.load(w)
