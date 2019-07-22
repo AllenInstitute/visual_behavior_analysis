@@ -6,7 +6,8 @@ from copy import deepcopy
 from six import iteritems
 import re
 
-from ...analyze import compute_running_speed  # , calc_deriv
+from scipy.signal import medfilt
+from ...analyze import compute_running_speed, compute_running_speed_sdk
 from ...uuid_utils import make_deterministic_session_uuid
 from ...utilities import local_time
 from ... import devices
@@ -739,7 +740,7 @@ def get_even_sampling(data):
     return False
 
 
-def get_running_speed(exp_data, smooth=False, time=None):
+def get_running_speed(exp_data, smooth=False, time=None, sdk_method=False):
     """Get running speed
 
     Parameters
@@ -747,15 +748,14 @@ def get_running_speed(exp_data, smooth=False, time=None):
     exp_data: Mapping
         experiment data
     smooth: boolean, default=False
-        implements a median filter, kernal=5
+        implements a median filter on derived speed, kernal=5
     time: numpy.array, default=None
         array of times for each stimulus frame
 
     Returns
     -------
     pandas.DataFrame
-        dataframe with 'time', 'speed (cm/s)', 'acceleration (cm/s^2)',
-        'jerk (cm/s^3)'
+        dataframe with 'time', 'speed (cm/s)'
 
     Notes
     -----
@@ -771,12 +771,18 @@ def get_running_speed(exp_data, smooth=False, time=None):
     v_in = get_vin(exp_data)
 
     if len(time) < len(dx_raw):
+        print(len(time), len(dx_raw))
         logger.error('intervalsms record appears to be missing entries')
         dx_raw = dx_raw[:len(time)]
         v_sig = v_sig[:len(time)]
         v_in = v_in[:len(time)]
 
-    speed = compute_running_speed(dx_raw, time, v_sig, v_in, smooth)
+    if sdk_method:
+        speed, dx_raw, time, v_sig, v_in = compute_running_speed_sdk(dx_raw, time, v_sig, v_in)
+        if smooth:
+            speed = medfilt(speed, kernel_size=5)  # remove big, single frame spikes in encoder values
+    else:
+        speed = compute_running_speed(dx_raw, time, v_sig, v_in)
 
     # accel = calc_deriv(speed, time)
     # jerk = calc_deriv(accel, time)
