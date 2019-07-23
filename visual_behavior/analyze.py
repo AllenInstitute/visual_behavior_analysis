@@ -50,8 +50,8 @@ def compute_running_speed(dx_raw, time, v_sig, v_in):
         Running speed (cm/s)
     """
 
-    dx = np.cumsum(dx)  # wheel rotations
-    speed = calc_deriv(dx, time)  # speed in degrees/s
+    dx_raw = np.cumsum(dx_raw)  # wheel rotations
+    speed = calc_deriv(dx_raw, time)  # speed in degrees/s
     speed = deg_to_dist(speed)
 
     return speed
