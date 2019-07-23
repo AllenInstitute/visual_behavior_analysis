@@ -740,7 +740,7 @@ def get_even_sampling(data):
     return False
 
 
-def get_running_speed(exp_data, smooth=False, time=None, sdk_method=False):
+def get_running_speed(exp_data, smooth=True, time=None, sdk_method=False):
     """Get running speed
 
     Parameters
@@ -779,10 +779,12 @@ def get_running_speed(exp_data, smooth=False, time=None, sdk_method=False):
 
     if sdk_method:
         speed, dx_raw, time, v_sig, v_in = compute_running_speed_sdk(dx_raw, time, v_sig, v_in)
-        if smooth:
-            speed = medfilt(speed, kernel_size=5)  # remove big, single frame spikes in encoder values
     else:
         speed = compute_running_speed(dx_raw, time, v_sig, v_in)
+
+    # remove big, single frame spikes in encoder values
+    if smooth:
+        speed = medfilt(speed, kernel_size=5) 
 
     # accel = calc_deriv(speed, time)
     # jerk = calc_deriv(accel, time)
