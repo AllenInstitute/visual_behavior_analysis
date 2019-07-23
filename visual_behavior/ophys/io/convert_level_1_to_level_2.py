@@ -97,6 +97,8 @@ def get_analysis_folder_name(lims_data):
         for i in range(len(specimen_driver_lines)):
             if 'S' in specimen_driver_lines[i]:
                 specimen_driver_line = specimen_driver_lines[i].split('-')[0]
+            else:
+                specimen_driver_line = specimen_driver_lines[0]
     else:
         specimen_driver_line = specimen_driver_lines[0]
 
@@ -323,12 +325,12 @@ def get_sync_data(lims_data, use_acq_trigger):
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only
     if use_acq_trigger:
         frames_2p = frames_2p[frames_2p > trigger[0]]
-    print(len(frames_2p))
+    # print(len(frames_2p))
     if lims_data.rig.values[0][0] == 'M':  # if Mesoscope
         print('resampling mesoscope 2P frame times')
         roi_group = get_roi_group(lims_data)  # get roi_group order
         frames_2p = frames_2p[roi_group::4]  # resample sync times
-    print(len(frames_2p))
+    # print(len(frames_2p))
     logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
     logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
     # put sync data in format to be compatible with downstream analysis
@@ -617,8 +619,12 @@ def get_input_extract_traces_json(lims_data):
     json_path = f[0]['?column?']
     json_file_name = json_path.split('/')[-1]
     processed_dir = get_processed_dir(lims_data)
-    print(json_path)
-    json_path = os.path.join(processed_dir, json_file_name)
+    # print(json_path)
+    if json_file_name in os.listdir(processed_dir):
+        json_path = os.path.join(processed_dir, json_file_name)
+    else:
+        experiment_dir = get_ophys_experiment_dir(lims_data)
+        json_path = os.path.join(experiment_dir, json_file_name)
     with open(json_path, 'rb') as w:
         jin = json.load(w)
     return jin
@@ -833,9 +839,7 @@ def get_cell_index_for_cell_specimen_id(cell_specimen_id, cell_specimen_ids):
 
 def get_fov_dims(experiment_id):
     from allensdk.internal.api.ophys_lims_api import OphysLimsApi
-    
-#    meso_exp_id = 896160394
-    api = OphysLimsApi(experiment_id)    
+    api = OphysLimsApi(experiment_id)
 #    print(api.get_metadata())
     image_metadata = api.get_metadata()
     return image_metadata
@@ -850,13 +854,10 @@ def get_roi_masks(roi_metrics, lims_data):
     try:
         h = jin["image"]["height"]
         w = jin["image"]["width"]
-        print(h,w)
     except:
-#        print(lims_data)
         image_metadata = get_fov_dims(lims_data['lims_id'].iloc[0])
         h = image_metadata['field_of_view_height']
         w = image_metadata['field_of_view_width']
-        print(h,w)
 
     cell_specimen_ids = get_cell_specimen_ids(roi_metrics)
     roi_masks = {}
@@ -1081,7 +1082,7 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
     
     lims_data = get_lims_data(lims_id)
     
-    print(lims_data.iloc[0])
+    # print(lims_data.iloc[0])
 
     analysis_dir = get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
 
