@@ -227,7 +227,7 @@ def find_nearest_index(val, time_array):
     Returns the index or indices of the time points in time_array that are closest to val
     '''
     if hasattr(val, "__len__"):
-        idx = np.zeros(len(val),dtype=int)
+        idx = np.zeros(len(val), dtype=int)
         for i, v in enumerate(val):
             idx[i] = np.argmin(np.abs(v - np.array(time_array)))
     else:
