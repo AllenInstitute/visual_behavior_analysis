@@ -298,10 +298,10 @@ class Movie(object):
 
     def get_frame(self, frame=None, time=None, timestamps='sync'):
         if time and timestamps == 'sync':
-            assert self.sync_timestamps, 'sync timestamps do not exist'
+            assert self.sync_timestamps is not None, 'sync timestamps do not exist'
             timestamps = self.sync_timestamps
         elif time and timestamps == 'file':
-            assert self.timestamps_from_file, 'timestamps from file do not exist'
+            assert self.timestamps_from_file is not None, 'timestamps from file do not exist'
             timestamps = self.timestamps_from_file
         else:
             timestamps = None
