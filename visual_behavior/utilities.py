@@ -8,6 +8,8 @@ from scipy.stats import norm
 import os
 import h5py
 import cv2
+import warnings
+
 
 def flatten_list(in_list):
     out_list = []
@@ -225,14 +227,15 @@ def find_nearest_index(val, time_array):
     Returns the index or indices of the time points in time_array that are closest to val
     '''
     if hasattr(val, "__len__"):
-        idx = np.empty(len(val))*np.nan
+        idx = np.empty(len(val)) * np.nan
         for i, v in enumerate(val):
-            tmp = np.abs(v-np.array(time_array))
+            tmp = np.abs(v - np.array(time_array))
             idx[i] = int(np.where(np.isclose(tmp, np.min(tmp)))[0][0])
     else:
-        tmp = np.abs(val-np.array(time_array))
+        tmp = np.abs(val - np.array(time_array))
         idx = int(np.where(np.isclose(tmp, np.min(tmp)))[0][0])
     return idx
+
 
 class Movie(object):
     '''
@@ -269,7 +272,6 @@ class Movie(object):
         self.frame_count = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
 
         if sync_timestamps is not None:
             self.sync_timestamps = sync_timestamps
@@ -329,9 +331,8 @@ class Movie(object):
 
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         for N in range(self.frame_count):
-            found_frame,frame = self.cap.read()
+            found_frame, frame = self.cap.read()
             if not found_frame:
                 print('something went wrong on frame {}, stopping'.format(frame))
                 break
-            self.array[N,:,:] = frame[:,:,0]
- 
+            self.array[N, :, :] = frame[:, :, 0]
