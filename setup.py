@@ -23,7 +23,7 @@ setuptools.setup(
         "seaborn",
         'zipfile2; python_version < "3.5"',
         'zipfile36; python_version >= "3.5"',
-
+        'opencv-python',
     ],
     tests_require=[
         "flake8",
