@@ -37,7 +37,6 @@ from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NO
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
-
 from psycopg2 import connect, extras
 
 
@@ -146,13 +145,11 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
     existingFolders = np.argwhere(np.array(inds) != -1)
     # Get the modification times of the existing analysis folders
-    modifTimes = [os.path.getmtime(os.path.join(cache_dir, \
-                                                allFiles[np.squeeze(existingFolders[i])])) for i in
+    modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in
                   range(len(existingFolders))]
     # Find all the old analysis folders                               
     indsOld = np.argsort(modifTimes)[:-1]
-    oldFiles = [os.path.join(cache_dir, \
-                             allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
+    oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
     # Remove old analysis folders 
     for i in range(len(oldFiles)):
         print('Removing old analysis folder : %s' % oldFiles[i])
@@ -234,7 +231,7 @@ def get_sync_path(lims_data):
         #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except:
+        except Exception as e:
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
     return sync_path
@@ -443,7 +440,7 @@ def get_pkl(lims_data):
         #        print(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
         try:
             shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
-        except:
+        except KeyError:
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
 
@@ -550,7 +547,7 @@ def save_trials(trials, lims_data):
 def get_visual_stimulus_data(pkl):
     try:
         images = foraging2.data_to_images(pkl)
-    except KeyError:
+    except Exception as e:
         images = foraging.load_images(pkl)
 
     stimulus_template = images['images']
@@ -588,8 +585,7 @@ def get_extract_json_file(experiment_id):
     QUERY = '''
     SELECT storage_directory || filename 
     FROM well_known_files 
-    WHERE well_known_file_type_id = 
-      (SELECT id FROM well_known_file_types WHERE name = 'OphysExtractedTracesInputJson') 
+    WHERE well_known_file_type_id = (SELECT id FROM well_known_file_types WHERE name = 'OphysExtractedTracesInputJson') 
     AND attachable_id = '{0}';
     '''
 
@@ -836,7 +832,7 @@ def get_roi_masks(roi_metrics, lims_data):
     try:
         h = jin["image"]["height"]
         w = jin["image"]["width"]
-    except:
+    except Exception as e:
         image_metadata = get_fov_dims(lims_data['lims_id'].iloc[0])
         h = image_metadata['field_of_view_height']
         w = image_metadata['field_of_view_width']
