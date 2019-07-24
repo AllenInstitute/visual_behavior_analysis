@@ -37,7 +37,7 @@ from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NO
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
-from psycopg2 import connect, extras # NOQA: E402
+from psycopg2 import connect, extras  # NOQA: E402
 
 
 def get_psql_dict_cursor(dbname='lims2', user='limsreader', host='limsdb2', password='limsro', port=5432):
@@ -145,8 +145,7 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
     existingFolders = np.argwhere(np.array(inds) != -1)
     # Get the modification times of the existing analysis folders
-    modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in
-       range(len(existingFolders))]
+    modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in range(len(existingFolders))]
     # Find all the old analysis folders                               
     indsOld = np.argsort(modifTimes)[:-1]
     oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
@@ -585,7 +584,7 @@ def get_extract_json_file(experiment_id):
     FROM well_known_files 
     WHERE well_known_file_type_id = (SELECT id FROM well_known_file_types WHERE name = 'OphysExtractedTracesInputJson') 
     AND attachable_id = '{0}';
-    ''' # NOQA: W291
+    '''  # NOQA: W291
     lims_cursor = get_psql_dict_cursor()
     lims_cursor.execute(QUERY.format(experiment_id))
     return (lims_cursor.fetchall())  # return(lims_cursor.fetchone())
