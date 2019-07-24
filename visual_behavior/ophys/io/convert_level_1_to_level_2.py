@@ -37,7 +37,7 @@ from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NO
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
-from psycopg2 import connect, extras
+from psycopg2 import connect, extras # NOQA: E402
 
 
 def get_psql_dict_cursor(dbname='lims2', user='limsreader', host='limsdb2', password='limsro', port=5432):
@@ -146,7 +146,7 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     existingFolders = np.argwhere(np.array(inds) != -1)
     # Get the modification times of the existing analysis folders
     modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in
-                  range(len(existingFolders))]
+       range(len(existingFolders))]
     # Find all the old analysis folders                               
     indsOld = np.argsort(modifTimes)[:-1]
     oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
@@ -231,7 +231,7 @@ def get_sync_path(lims_data):
         #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except Exception as e:
+        except ValueError:
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
     return sync_path
@@ -440,7 +440,7 @@ def get_pkl(lims_data):
         #        print(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
         try:
             shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
-        except KeyError:
+        except ValueError:
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
 
@@ -547,12 +547,10 @@ def save_trials(trials, lims_data):
 def get_visual_stimulus_data(pkl):
     try:
         images = foraging2.data_to_images(pkl)
-    except Exception as e:
+    except ValueError:
         images = foraging.load_images(pkl)
-
     stimulus_template = images['images']
     stimulus_metadata = pd.DataFrame(images['image_attributes'])
-
     return stimulus_template, stimulus_metadata
 
 
@@ -587,11 +585,9 @@ def get_extract_json_file(experiment_id):
     FROM well_known_files 
     WHERE well_known_file_type_id = (SELECT id FROM well_known_file_types WHERE name = 'OphysExtractedTracesInputJson') 
     AND attachable_id = '{0}';
-    '''
-
+    ''' # NOQA: W291
     lims_cursor = get_psql_dict_cursor()
     lims_cursor.execute(QUERY.format(experiment_id))
-
     return (lims_cursor.fetchall())  # return(lims_cursor.fetchone())
 
 
@@ -832,7 +828,7 @@ def get_roi_masks(roi_metrics, lims_data):
     try:
         h = jin["image"]["height"]
         w = jin["image"]["width"]
-    except Exception as e:
+    except ValueError:
         image_metadata = get_fov_dims(lims_data['lims_id'].iloc[0])
         h = image_metadata['field_of_view_height']
         w = image_metadata['field_of_view_width']
