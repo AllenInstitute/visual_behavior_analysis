@@ -12,7 +12,7 @@ deepdish>=0.3.6
 python-dateutil>=2.6.1
 marshmallow==3.0.0b11
 h5py>=2.7.1
-psycopg2
+psycopg2-binary
 seaborn
 zipfile2; python_version < '3.5'
 zipfile36; python_version >= '3.5'
