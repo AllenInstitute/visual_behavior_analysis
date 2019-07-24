@@ -39,8 +39,7 @@ from visual_behavior.visualization.ophys.summary_figures import plot_roi_validat
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 
 from psycopg2 import connect, extras
-# from visual_behavior.ophys.io.get_extract_json_file import get_extract_json_file  # NOQA: E402
-#from ophysextractor.utils.util import get_psql_dict_cursor
+
 
 def get_psql_dict_cursor(dbname='lims2', user='limsreader', host='limsdb2', password='limsro', port=5432):
     """Set up a connection to a psql db server with a dict cursor"""
@@ -50,7 +49,7 @@ def get_psql_dict_cursor(dbname='lims2', user='limsreader', host='limsdb2', pass
                   password=password,
                   port=port)
     con.set_session(readonly=True, autocommit=True)
-    return con.cursor(cursor_factory = extras.RealDictCursor)
+    return con.cursor(cursor_factory=extras.RealDictCursor)
 
 
 def save_data_as_h5(data, name, analysis_dir):
@@ -91,7 +90,6 @@ def get_lims_id(lims_data):
 
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
-
     specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
     if len(specimen_driver_lines) > 1:
         for i in range(len(specimen_driver_lines)):
@@ -101,23 +99,12 @@ def get_analysis_folder_name(lims_data):
                 specimen_driver_line = specimen_driver_lines[0]
     else:
         specimen_driver_line = specimen_driver_lines[0]
-
-    if specimen_driver_line=='':
+    if specimen_driver_line == '':
         raise Exception('specimen_driver_line is empty! check why! This will result in "multiple analysis folders".')
-
-    
     if lims_data.depth.values[0] is None:
         depth = 0
     else:
         depth = lims_data.depth.values[0]
-
-#    date = str(lims_data.experiment_date.values[0])[:10].split('-')
-#    specimen_driver_line = lims_data.specimen_driver_line.values[0].split(';')
-#    if len(specimen_driver_line) > 1:
-#        specimen_driver_line = specimen_driver_line[0].split('-')[0]
-#    else:
-#        specimen_driver_line = specimen_driver_line[0]
-
     if lims_data.rig.values[0][0] == 'M':
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
                                str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
@@ -148,32 +135,28 @@ def get_experiment_date(lims_data):
 
 def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     cache_dir = get_cache_dir(cache_dir=cache_dir)
-
     if 'analysis_dir' in lims_data.columns:
         return lims_data['analysis_dir'].values[0]
-
-    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))    
+    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
     print(analysis_dir)
-    
     if not os.path.exists(analysis_dir):
         os.mkdir(analysis_dir)
-        
     # Check if more than one analysis folder exists
     allFiles = os.listdir(cache_dir)
     inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
-    existingFolders = np.argwhere(np.array(inds)!=-1)
+    existingFolders = np.argwhere(np.array(inds) != -1)
     # Get the modification times of the existing analysis folders
     modifTimes = [os.path.getmtime(os.path.join(cache_dir, \
-         allFiles[np.squeeze(existingFolders[i])])) for i in range(len(existingFolders))]
+                                                allFiles[np.squeeze(existingFolders[i])])) for i in
+                  range(len(existingFolders))]
     # Find all the old analysis folders                               
     indsOld = np.argsort(modifTimes)[:-1]
     oldFiles = [os.path.join(cache_dir, \
-       allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]                                   
+                             allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
     # Remove old analysis folders 
     for i in range(len(oldFiles)):
-        print('Removing old analysis folder : %s' %oldFiles[i])
-        shutil.rmtree(oldFiles[i])    
-        
+        print('Removing old analysis folder : %s' % oldFiles[i])
+        shutil.rmtree(oldFiles[i])
     if cache_on_lims_data:
         lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
     return analysis_dir
@@ -231,7 +214,7 @@ def get_roi_group(lims_data):
 
 
 def get_sync_path(lims_data):
-#    import shutil
+    #    import shutil
     ophys_session_dir = get_ophys_session_dir(lims_data)
     analysis_dir = get_analysis_dir(lims_data)
 
@@ -248,7 +231,7 @@ def get_sync_path(lims_data):
 
     if sync_file not in os.listdir(analysis_dir):
         logger.info('moving %s to analysis dir', sync_file)  # flake8: noqa: E999
-#        print(sync_path, os.path.join(analysis_dir, sync_file))
+        #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
         except:
@@ -265,7 +248,9 @@ def get_sync_data(lims_data, use_acq_trigger):
     try:
         sync_dataset.get_rising_edges('2p_vsync')
     except ValueError:
-        sync_dataset.line_labels = ['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '', 'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
+        sync_dataset.line_labels = ['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '',
+                                    'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '',
+                                    '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
         sync_dataset.meta_data['line_labels'] = sync_dataset.line_labels
 
     meta_data = sync_dataset.meta_data
@@ -430,8 +415,8 @@ def get_stimulus_pkl_path(lims_data):
     pkl_file = [file for file in os.listdir(ophys_session_dir) if '.pkl' in file]
     # remove tiny pkl files (less than 8KB)
     all_files = [os.path.join(ophys_session_dir, pkl_file[i]) for i in range(len(pkl_file))]
-    all_files_valid = np.array(all_files)[[os.path.getsize(i)>8000 for i in all_files]]
-    pkl_file = [os.path.basename(all_files_valid[i]) for i in range(len(all_files_valid))]    
+    all_files_valid = np.array(all_files)[[os.path.getsize(i) > 8000 for i in all_files]]
+    pkl_file = [os.path.basename(all_files_valid[i]) for i in range(len(all_files_valid))]
     if len(pkl_file) > 0:
         stimulus_pkl_path = os.path.join(ophys_session_dir, pkl_file[0])
     else:  # then try behavior directory
@@ -444,25 +429,25 @@ def get_stimulus_pkl_path(lims_data):
             pkl_dir = '\\' + pkl_dir
         pkl_file = [file for file in os.listdir(pkl_dir) if file.startswith(expt_date)][0]
         stimulus_pkl_path = os.path.join(pkl_dir, pkl_file)
-#    print(stimulus_pkl_path)
+    #    print(stimulus_pkl_path)
     return stimulus_pkl_path
 
 
 def get_pkl(lims_data):
-#    import shutil
+    #    import shutil
     stimulus_pkl_path = get_stimulus_pkl_path(lims_data)
     pkl_file = os.path.basename(stimulus_pkl_path)
     analysis_dir = get_analysis_dir(lims_data)
     if pkl_file not in os.listdir(analysis_dir):
         logger.info('moving %s to analysis dir', pkl_file)
-#        print(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
+        #        print(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
         try:
             shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
         except:
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
 
-    logger.info('getting stimulus data from pkl')    
+    logger.info('getting stimulus data from pkl')
     pkl = pd.read_pickle(stimulus_pkl_path)
     # from visual_behavior.translator.foraging2 import data_to_change_detection_core
     # core_data = data_to_change_detection_core(pkl)
@@ -523,7 +508,8 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
             flashes = flashes.sort_values(by='frame').reset_index().drop(columns=['index']).fillna(method='ffill')
             flashes = flashes[['frame', 'end_frame', 'time', 'image_category', 'image_name', 'omitted']]
             flashes = flashes.reset_index()
-            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for row
+            flashes.image_name = ['omitted' if flashes.iloc[row].omitted == True else flashes.iloc[row].image_name for
+                                  row
                                   in range(len(flashes))]
             # infer end time for omitted flashes as 16 frames after start frame (250ms*60Hz stim frame rate)
             flashes['end_frame'] = [flashes.loc[idx, 'end_frame'] if flashes.loc[idx, 'omitted'] == False else
@@ -599,8 +585,7 @@ def parse_mask_string(mask_string):
 
 
 def get_extract_json_file(experiment_id):
-    
-    QUERY='''
+    QUERY = '''
     SELECT storage_directory || filename 
     FROM well_known_files 
     WHERE well_known_file_type_id = 
@@ -610,10 +595,10 @@ def get_extract_json_file(experiment_id):
 
     lims_cursor = get_psql_dict_cursor()
     lims_cursor.execute(QUERY.format(experiment_id))
-    
-    return(lims_cursor.fetchall()) #    return(lims_cursor.fetchone())    
-    
-    
+
+    return (lims_cursor.fetchall())  # return(lims_cursor.fetchone())
+
+
 def get_input_extract_traces_json(lims_data):
     f = get_extract_json_file(lims_data['lims_id'].values[0])
     json_path = f[0]['?column?']
@@ -836,21 +821,18 @@ def get_cell_index_for_cell_specimen_id(cell_specimen_id, cell_specimen_ids):
     return cell_index
 
 
-
 def get_fov_dims(experiment_id):
     from allensdk.internal.api.ophys_lims_api import OphysLimsApi
     api = OphysLimsApi(experiment_id)
-#    print(api.get_metadata())
+    #    print(api.get_metadata())
     image_metadata = api.get_metadata()
     return image_metadata
-
-
 
 
 def get_roi_masks(roi_metrics, lims_data):
     # make roi_dict with ids as keys and roi_mask_array
     jin = get_input_extract_traces_json(lims_data)
-    
+
     try:
         h = jin["image"]["height"]
         w = jin["image"]["width"]
@@ -899,8 +881,8 @@ def get_dff_traces(roi_metrics, lims_data):
     dff_path = os.path.join(get_ophys_experiment_dir(lims_data), str(get_lims_id(lims_data)) + '_dff.h5')
     g = h5py.File(dff_path)
     dff_traces = np.asarray(g['data'])
-#    print(dff_traces.shape)
-#    print(roi_metrics.unfiltered_cell_index)
+    #    print(dff_traces.shape)
+    #    print(roi_metrics.unfiltered_cell_index)
     valid_roi_indices = np.sort(roi_metrics.unfiltered_cell_index.values)
     dff_traces = dff_traces[valid_roi_indices]
     print(dff_traces.shape)
@@ -940,7 +922,8 @@ def save_timestamps(timestamps, dff_traces, core_data, roi_metrics, lims_data):
     # remove spurious frames at end of ophys session - known issue with Scientifica data
     if dff_traces.shape[1] < timestamps['ophys_frames']['timestamps'].shape[0]:
         difference = timestamps['ophys_frames']['timestamps'].shape[0] - dff_traces.shape[1]
-        logger.info('length of ophys timestamps >  length of traces by %s frames, truncating ophys timestamps', str(difference))
+        logger.info('length of ophys timestamps >  length of traces by %s frames, truncating ophys timestamps',
+                    str(difference))
 
         timestamps['ophys_frames']['timestamps'] = timestamps['ophys_frames']['timestamps'][:dff_traces.shape[1]]
     # account for dropped ophys frames - a rare but unfortunate issue
@@ -987,7 +970,8 @@ def save_max_projections(lims_data):
         mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
                      cmap='gray')
     else:
-        print('max_downsample_4Hz_0.png no longer exists, using normalized max projection from segmentation output instead')
+        print(
+            'max_downsample_4Hz_0.png no longer exists, using normalized max projection from segmentation output instead')
         # contrast enhanced one
         max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
         save_data_as_h5(max_projection, 'max_projection', analysis_dir)
@@ -996,7 +980,8 @@ def save_max_projections(lims_data):
     # contrast enhanced one
     max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
     save_data_as_h5(max_projection, 'normalized_max_projection', analysis_dir)
-    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'), arr=max_projection,
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'),
+                 arr=max_projection,
                  cmap='gray')
 
 
@@ -1079,9 +1064,9 @@ def save_roi_validation(roi_validation, lims_data):
 def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
     logger.info('converting %d', lims_id)
     print('converting', lims_id)
-    
+
     lims_data = get_lims_data(lims_id)
-    
+
     # print(lims_data.iloc[0])
 
     analysis_dir = get_analysis_dir(lims_data, cache_on_lims_data=True, cache_dir=cache_dir)
