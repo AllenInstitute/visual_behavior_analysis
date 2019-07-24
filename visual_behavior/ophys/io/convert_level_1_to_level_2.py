@@ -230,7 +230,8 @@ def get_sync_path(lims_data):
         #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except ValueError:
+        except exception as E:
+            print(e)
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
     return sync_path
@@ -827,7 +828,8 @@ def get_roi_masks(roi_metrics, lims_data):
     try:
         h = jin["image"]["height"]
         w = jin["image"]["width"]
-    except ValueError:
+    except Exception as e:
+        print(e)
         image_metadata = get_fov_dims(lims_data['lims_id'].iloc[0])
         h = image_metadata['field_of_view_height']
         w = image_metadata['field_of_view_width']
