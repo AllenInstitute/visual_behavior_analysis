@@ -10,7 +10,7 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 # logger = logging.getLogger(__name__)
 
 
-def get_multi_session_mean_df(experiment_ids, cache_dir,
+def get_multi_session_mean_df(experiment_ids, cache_dir, platform,
                               conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'],
                               flashes=False, use_events=False, omitted=False, get_reliability=False):
     mega_mdf = pd.DataFrame()
@@ -74,7 +74,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
     if 'index' in mega_mdf.keys():
         mega_mdf = mega_mdf.drop(columns='index')
 
-    mega_mdf_write_dir = os.path.join(cache_dir, 'multi_session_summary_dfs_mesoscope')
+    mega_mdf_write_dir = os.path.join(cache_dir, 'multi_session_summary_dfs', platform)
     if not os.path.exists(mega_mdf_write_dir):
         os.makedirs(mega_mdf_write_dir)
 
@@ -84,6 +84,8 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
         filename = 'mean' + type + conditions[1] + '_' + conditions[2] + suffix + '_df.h5'
     elif len(conditions) == 2:
         filename = 'mean' + type + conditions[1] + suffix + '_df.h5'
+    elif len(conditions) == 1:
+        filename = 'mean' + type + suffix + '_df.h5'
 
     print('saving multi session mean df to ', filename)
     mega_mdf.to_hdf(
