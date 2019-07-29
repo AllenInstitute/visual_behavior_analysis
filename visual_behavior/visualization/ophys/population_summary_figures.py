@@ -696,7 +696,7 @@ def plot_change_repeat_response_all_stim(cdf, cell_specimen_id, window=[-0.5, 0.
         traces = tmp.mean_trace.values
         ax = sf.plot_mean_trace(traces, 31., legend_label=label, color=colors[c], interval_sec=0.5, xlims=window, ax=ax)
     ax = plot_flashes_on_trace(ax, flashes=True, alpha=0.15, window=window)
-    xticks, xticklabels = sf.get_xticks_xticklabels(np.mean(traces), 31., interval_sec=0.5, window=window)
+    xticks, xticklabels = sf.get_xticks_xticklabels(np.mean(traces, axis=0), 31., interval_sec=0.5, window=window)
     ax.set_xticks(xticks)
     ax.set_xticklabels(xticklabels)
     ax.set_xlim(0, (np.abs(window[0]) + window[1]) * 31.)
@@ -747,7 +747,7 @@ def plot_response_across_conditions_population(df, condition='repeat', condition
         if colors is None:
             colors = sns.color_palette()
         traces = tmp.mean_trace.values
-        trace = np.mean(traces)
+        trace = np.mean(traces, axis=0)
         ax = sf.plot_mean_trace(traces, 31., legend_label=condition_value, color=colors[c],
                                 interval_sec=0.5, xlims=window, ax=ax)
     ax = plot_flashes_on_trace(ax, flashes=False, alpha=0.15, window=window, omitted=True)
