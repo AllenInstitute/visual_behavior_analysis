@@ -47,14 +47,14 @@ if __name__ == '__main__':
 
     platform = 'scientifica'
 
-    get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
-                              conditions=['cell_specimen_id', 'image_name', ], flashes=True)
-    get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
-                              conditions=['cell_specimen_id', 'image_name', ], flashes=True, omitted=True)
+    # get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
+    #                           conditions=['cell_specimen_id', 'image_name', ], flashes=True)
+    # get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
+    #                           conditions=['cell_specimen_id', 'image_name', ], flashes=True, omitted=True)
     # get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
     #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
-    # get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
-    #                                   conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
+    get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
+                                      conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
 
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                               conditions=['cell_specimen_id', 'change_image_name', 'trial_type'], use_events=True)
