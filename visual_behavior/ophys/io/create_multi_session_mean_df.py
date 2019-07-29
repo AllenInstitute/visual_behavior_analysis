@@ -48,6 +48,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, platform,
                     pass
             else:
                 trial_response_df = analysis.trial_response_df.copy()
+                trial_response_df = trial_response_df[trial_response_df.trial_type == 'go']
                 trial_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
                                                 trial_response_df.reward_rate.values]
                 mdf = ut.get_mean_df(trial_response_df, analysis, conditions=conditions,
@@ -193,14 +194,14 @@ if __name__ == '__main__':
 
     platform = 'scientifica'
 
-    get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
-                              conditions=['cell_specimen_id', 'image_name'], flashes=True, omitted=False)
     # get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
-    #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type', 'engaged'])
+    #                           conditions=['cell_specimen_id', 'image_name'], flashes=True, omitted=False)
+    # get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
+    #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     # get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
     #                           conditions=['cell_specimen_id', 'image_name', 'engaged'], flashes=True)
-    # get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
-    #                           conditions=['cell_specimen_id', 'image_name', 'engaged', 'repeat'], flashes=True)
+    get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
+                              conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
     # get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
     #                           conditions=['cell_specimen_id', 'image_name', 'engaged', 'repeat'], flashes=True)
     # get_multi_session_mean_df(experiment_ids, cache_dir, platform=platform,
