@@ -159,7 +159,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
 
 
 def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, folder=None,
-                             use_events=False, window=[-4, 4], interval_sec=2):
+                             use_events=False, window=[-4, 4], interval_sec=2, ophys_frame_rate=31.):
     if use_events:
         label = 'mean event magnitude'
         suffix = '_events'
@@ -188,11 +188,13 @@ def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=Non
         response_array[x, :] = trace
     sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax, cmap='magma', cbar=colorbar,
                 cbar_kws={'label': label})
-    xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=interval_sec, window=window)
+    xticks, xticklabels = sf.get_xticks_xticklabels(trace, ophys_frame_rate, interval_sec=interval_sec, window=window)
     ax.set_xticks(xticks)
     ax.set_xticklabels([int(xticklabel) for xticklabel in xticklabels])
+    if response_array.shape[0] > 2000:
+        interval = 1000
     if response_array.shape[0] > 400:
-        interval = 500
+        interval = 200
     else:
         interval = 50
     ax.set_yticks(np.arange(0, response_array.shape[0], interval))
@@ -261,8 +263,8 @@ def plot_mean_response_by_repeat_heatmap(df, cre_line, title=None, ax=None, use_
 
 
 def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4, 4], alpha=0.15,
-                          facecolor='gray'):
-    frame_rate = 31.
+                          facecolor='gray', ophys_frame_rate=31.):
+    frame_rate = ophys_frame_rate
     stim_duration = .25
     blank_duration = .5
     change_frame = np.abs(window[0]) * frame_rate
@@ -702,6 +704,7 @@ def plot_change_repeat_response_all_stim(cdf, cell_specimen_id, window=[-0.5, 0.
     ax.set_xlim(0, (np.abs(window[0]) + window[1]) * 31.)
     ax.legend(bbox_to_anchor=(1.1, 1))
     ymin, ymax = ax.get_ylim()
+    ax.set_ylim(0, ymax * 1.2)
     ax.set_ylim(0, ymax * 1.2)
     if save_figures:
         save_figure(fig, figsize, save_dir, folder,
