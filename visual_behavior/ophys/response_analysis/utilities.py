@@ -217,8 +217,11 @@ def get_fraction_active_trials(group):
     return pd.Series({'fraction_active_trials': fraction_active_trials})
 
 
-def get_fraction_responsive_trials(group):
-    fraction_responsive_trials = len(group[group.p_value_omitted < 0.05]) / float(len(group))
+def get_fraction_responsive_trials(group, omitted):
+    if omitted:
+        fraction_responsive_trials = len(group[(group.p_value_baseline < 0.05)&(group.mean_response>group.baseline_response)]) / float(len(group))
+    else:
+        fraction_responsive_trials = len(group[group.p_value_omitted < 0.05]) / float(len(group))
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
 
@@ -313,8 +316,8 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     fraction_significant_trials = fraction_significant_trials.reset_index()
     mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
 
-    if flashes and not omitted:
-        fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
+    if flashes:
+        fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials, omitted)
         fraction_responsive_trials = fraction_responsive_trials.reset_index()
         mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
 
