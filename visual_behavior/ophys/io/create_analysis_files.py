@@ -40,10 +40,10 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     # esf.plot_average_flash_response_example_cells(analysis, save_figures=True, save_dir=cache_dir, folder='mean_flash_response_average')
     # #
     # if not(turn_off_plotting):
-    print('plotting cell responses')
-    for cell in dataset.get_cell_indices():
-        # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
-        sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
+    # print('plotting cell responses')
+    # for cell in dataset.get_cell_indices():
+    #     # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
+    #     sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
     #
     # print('plotting example traces')
     # active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
