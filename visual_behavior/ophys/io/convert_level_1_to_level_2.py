@@ -93,7 +93,7 @@ def get_analysis_folder_name(lims_data):
     if len(specimen_driver_lines) > 1:
         for i in range(len(specimen_driver_lines)):
             if 'S' in specimen_driver_lines[i]:
-                specimen_driver_line = specimen_driver_lines[i].split('-')[0]
+                specimen_driver_line = specimen_driver_lines[i]#.split('-')[0]
             else:
                 specimen_driver_line = specimen_driver_lines[0]
     else:
@@ -139,7 +139,10 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
     print(analysis_dir)
     if not os.path.exists(analysis_dir):
+        print('Creating a new analysis folder')
         os.mkdir(analysis_dir)
+    else:
+        print('Analysis folder already exists!')
     # Check if more than one analysis folder exists
     allFiles = os.listdir(cache_dir)
     inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
@@ -151,7 +154,7 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
     # Remove old analysis folders 
     for i in range(len(oldFiles)):
-        print('Removing old analysis folder : %s' % oldFiles[i])
+        print('Removing old analysis folder : \n%s' % oldFiles[i])
         shutil.rmtree(oldFiles[i])
     if cache_on_lims_data:
         lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
@@ -230,7 +233,8 @@ def get_sync_path(lims_data):
         #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except ValueError:
+        except exception as E:
+            print(e)
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
     return sync_path
@@ -827,7 +831,8 @@ def get_roi_masks(roi_metrics, lims_data):
     try:
         h = jin["image"]["height"]
         w = jin["image"]["width"]
-    except ValueError:
+    except Exception as e:
+        print(e)
         image_metadata = get_fov_dims(lims_data['lims_id'].iloc[0])
         h = image_metadata['field_of_view_height']
         w = image_metadata['field_of_view_width']
