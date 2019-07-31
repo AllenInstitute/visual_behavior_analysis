@@ -154,7 +154,7 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
     # Remove old analysis folders 
     for i in range(len(oldFiles)):
-        print('Removing old analysis folder : \n%s' % oldFiles[i])
+        print('Removing old analysis folder : %s' % oldFiles[i])
         shutil.rmtree(oldFiles[i])
     if cache_on_lims_data:
         lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
@@ -233,7 +233,7 @@ def get_sync_path(lims_data):
         #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except exception as E:
+        except Exception as e:
             print(e)
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
