@@ -81,66 +81,70 @@ def make_trial_df(session, running_speed, running_speed_times, win=(-0.5, 1.5)):
 	return trial_df
 
 
-def plot_running_by_response(trial_df):
+def plot_running_by_response(hit_df, miss_df):
 
 	fig,ax=plt.subplots(1,2, figsize=(10,4))
 
 	# plot hit running
-	for r,run in enumerate(run_hit['win_running_speed'].values):
-	    ax[0].plot(run_hit['win_running_times'].iloc[r], run, 'k', alpha=.2)
+	for r,run in enumerate(hit_df['win_running_speed'].values):
+	    ax[0].plot(hit_df['win_running_times'].iloc[r], run, 'k', alpha=.2)
 	    
 	# plot miss running
-	for r,run in enumerate(run_miss['win_running_speed'].values):
-	    ax[1].plot(run_miss['win_running_times'].iloc[r], run, 'r', alpha=.2)
+	for r,run in enumerate(miss_df['win_running_speed'].values):
+	    ax[1].plot(miss_df['win_running_times'].iloc[r], run, 'r', alpha=.2)
 
 
-def compare_running(trial_df, run_hit, run_miss, win=(-0.5, 1.5), resamp_win=120):
+def compare_running(trial_df, hit_df, miss_df, win=(-0.5, 1.5), resamp_win=120):
 
 	rssamp_ts = np.linspace(win[0],win[1],resamp_win)
 
 	hit_mat = []
-	for r,run in enumerate(run_hit['win_running_speed'].values):
-	    run_resamp = np.interp(rssamp_ts, run_hit['win_running_times'].iloc[r], run)
-	    hit_mat.append(run_resamp) 
-	hit_mat = np.array(hit_mat)
-
+	for r,run in enumerate(hit_df['win_running_speed'].values):
+	    run_resamp = np.interp(rssamp_ts, hit_df['win_running_times'].iloc[r], run)
+	    hit_mat.append(run_resamp) 	
 	template = np.mean(hit_mat, axis=0)
+	hit_mse = [((template - run)**2).mean(axis=None) for run in hit_mat]
+	hit_mat = np.array(hit_mat)
 
 	mse = []
 	miss_mat = []
-	for r,run in enumerate(run_miss['win_running_speed'].values):
-	    run_resamp = np.interp(rssamp_ts, run_miss['win_running_times'].iloc[r], run)
+	for r,run in enumerate(miss_df['win_running_speed'].values):
+	    run_resamp = np.interp(rssamp_ts, miss_df['win_running_times'].iloc[r], run)
 	    mse.append(((template - run_resamp)**2).mean(axis=None))
 	    miss_mat.append(run_resamp)
 	miss_mat = np.array(miss_mat)
 
-	mse_order = np.argsort(mse)
+	miss_mse_order = np.argsort(mse)
 	miss_sort = miss_mat[mse_order]
+	miss_df = miss_df.iloc[miss_mse_order] # sort so that first rows have best match to template
 
-	return mse, miss_sort, hit_mat, miss_mat, template, rssamp_ts
+	hit_mse_order = np.argsort(hit_mse)
+	hit_df = hit_df.iloc[hit_mse_order] # sort so that first rows have best match to template
+
+	return mse, hit_mat, miss_mat, template, rssamp_ts
 
 
-def get_matching_running(mse, run_miss, thresh):
+def get_matching_running(mse, miss_df, thresh):
 
 	low_mse_idx = np.where(np.array(mse)<thresh)[0]
 	high_mse_idx = np.where(np.array(mse)>thresh)[0]
 
 	mse_order = np.argsort(mse)
 
-	miss_tocheck = run_miss['change_time'].iloc[low_mse_idx]
+	miss_tocheck = miss_df['change_time'].iloc[low_mse_idx]
 
-	if len(miss_tocheck) > 10:
+	if len(miss_tocheck) > 10: # we don't want to check too many trials, so take no more than the top 10 matches
 		print(str(len(miss_tocheck)) + ' trials below threshold')
 		low_mse_idx = mse_order[:10]
 		high_mse_idx = mse_order[-10:]
-		miss_tocheck = run_miss['change_time'].iloc[low_mse_idx]
+		miss_tocheck = miss_df['change_time'].iloc[low_mse_idx]
 
 	return miss_tocheck, low_mse_idx, high_mse_idx
 
 
-def plot_template_matches(trial_df, run_hit, run_miss, mse, hit_mat, miss_mat, template, rssamp_ts, thresh):
+def plot_template_matches(trial_df, hit_df, miss_df, mse, hit_mat, miss_mat, template, rssamp_ts, thresh):
 
-	miss_tocheck, low_mse_idx, high_mse_idx = get_matching_running(mse, run_miss, thresh)
+	miss_tocheck, low_mse_idx, high_mse_idx = get_matching_running(mse, miss_df, thresh)
 
 	# plot running around hits and misses
 	fig,ax=plt.subplots(1,2, figsize=(10,4))
@@ -346,18 +350,18 @@ def find_miss_licks():
 			thresh = 200 # take this number of hte best fits NOT A THRESHOLD
 
 			trial_df = make_trial_df(session, running_speed, running_speed_times, win=win)
-			run_hit = trial_df[trial_df.hit==True]
-			run_miss = trial_df[trial_df.miss==True]
+			hit_df = trial_df[trial_df.hit==True]
+			miss_df = trial_df[trial_df.miss==True]
 
-			mse, miss_sort, hit_mat, miss_mat, template, rssamp_ts = compare_running(trial_df, run_hit, run_miss, win=win, resamp_win=120)
+			mse, hit_mat, miss_mat, template, rssamp_ts = compare_running(trial_df, hit_df, miss_df, win=win, resamp_win=120)
 
-			if not (len(run_hit)>50) and (len(run_miss)>10):
-				print('Not enough hits or misses: ' + str(len(run_hit)) + ' hits, ' + str(len(run_miss)) + ' misses')
+			if not (len(hit_df)>50) and (len(miss_df)>10):
+				print('Not enough hits or misses: ' + str(len(hit_df)) + ' hits, ' + str(len(miss_df)) + ' misses')
 				continue
 
-			miss_tocheck, low_mse_idx, high_mse_idx = get_matching_running(mse, run_miss, thresh=thresh)
+			miss_tocheck, low_mse_idx, high_mse_idx = get_matching_running(mse, miss_df, thresh=thresh)
 
-			plot_template_matches(trial_df, run_hit, run_miss, mse, hit_mat, miss_mat, template, rssamp_ts, thresh=thresh)
+			plot_template_matches(trial_df, hit_df, miss_df, mse, hit_mat, miss_mat, template, rssamp_ts, thresh=thresh)
 			plt.show()
 			go_on = audit_running_template()
 
@@ -422,18 +426,18 @@ def plot_specific_sessions(session_list):
 		thresh = 200 # take this number of the best fits NOT A THRESHOLD
 
 		trial_df = make_trial_df(session, running_speed, running_speed_times, win=win)
-		run_hit = trial_df[trial_df.hit==True]
-		run_miss = trial_df[trial_df.miss==True]
+		hit_df = trial_df[trial_df.hit==True]
+		miss_df = trial_df[trial_df.miss==True]
 
-		mse, miss_sort, hit_mat, miss_mat, template, rssamp_ts = compare_running(trial_df, run_hit, run_miss, win=win, resamp_win=120)
+		mse, hit_mat, miss_mat, template, rssamp_ts = compare_running(trial_df, hit_df, miss_df, win=win, resamp_win=120)
 
-		if not (len(run_hit)>50) and (len(run_miss)>10):
-			print('Not enough hits or misses: ' + str(len(run_hit)) + ' hits, ' + str(len(run_miss)) + ' misses')
+		if not (len(hit_df)>50) and (len(miss_df)>10):
+			print('Not enough hits or misses: ' + str(len(hit_df)) + ' hits, ' + str(len(miss_df)) + ' misses')
 			continue
 
-		miss_tocheck, low_mse_idx, high_mse_idx = get_matching_running(mse, run_miss, thresh=thresh)
+		miss_tocheck, low_mse_idx, high_mse_idx = get_matching_running(mse, miss_df, thresh=thresh)
 
-		plot_template_matches(trial_df, run_hit, run_miss, mse, hit_mat, miss_mat, template, rssamp_ts, thresh=thresh)
+		plot_template_matches(trial_df, hit_df, miss_df, mse, hit_mat, miss_mat, template, rssamp_ts, thresh=thresh)
 
 		labtracks_id = str(session.metadata['LabTracks_ID'])
 		ophys_experiment_id = str(temp_df['ophys_experiment_id'].values[0])
@@ -448,14 +452,51 @@ def plot_specific_sessions(session_list):
 		plt.savefig(output_filepath_mov)
 
 
-exp_list = ['specimen_823826986/ophys_session_852794147/',
-    'specimen_814111935/ophys_session_846605051/',
-    'specimen_823826986/ophys_session_858863712/',
-    'specimen_814111935/ophys_session_842752650/',
-    'specimen_813703544/ophys_session_845219209/',
+def plot_just_hits(session_list):
+
+	master_df = get_master_df()
+
+	basepath = r'\\allen\programs\braintv\workgroups\nc-ophys\Matt\VB_QC\miss_licks'
+	output_base_folder = make_output_dir(basepath)
+
+	for s,session_path in enumerate(session_list):
+		unix_path = '/allen/programs/braintv/production/visualbehavior/prod0'
+		full_path = unix_path + '/' + session_path
+		temp_df = master_df[master_df['storage_directory']==full_path].copy()
+
+		try:
+			session = get_session(temp_df)
+			df, movie = get_video(temp_df)
+			running_speed, running_speed_times = process_running(session)
+		except:
+			print('Cannot load data from ophys_experiment_id ' + str(temp_df['ophys_experiment_id'].values))
+			continue
+
+		trial_df = make_trial_df(session, running_speed, running_speed_times, win=(-0.5, 1.5))
+		hit_df = trial_df[trial_df.hit==True]
+
+		labtracks_id = str(session.metadata['LabTracks_ID'])
+		ophys_experiment_id = str(temp_df['ophys_experiment_id'].values[0])
+		fig_savestring = labtracks_id + '_' + ophys_experiment_id
+		output_filepath_mov = os.path.join(output_base_folder,  fig_savestring+'_mov.png')
+
+		plot_stop_frames(movie, hit_df['change_time'].iloc[0], labtracks_id, ophys_experiment_id)
+		plt.gca()
+		plt.savefig(output_filepath_mov)
+
+
+
+
+exp_list = [#'specimen_823826986/ophys_session_852794147/',
+    #'specimen_814111935/ophys_session_846605051/',
+    #'specimen_823826986/ophys_session_858863712/',
+    #'specimen_814111935/ophys_session_842752650/',
+    #'specimen_813703544/ophys_session_845219209/',
     'specimen_834823477/ophys_session_878918807/',
     'specimen_784057626/ophys_session_833812106/',
     'specimen_847076524/ophys_session_894204946/',
     'specimen_803258386/ophys_session_848253761/']
 
-plot_specific_sessions(exp_list)
+#plot_specific_sessions(exp_list)
+plot_just_hits(exp_list)
+
