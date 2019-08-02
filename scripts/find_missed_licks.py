@@ -110,18 +110,28 @@ def compare_running(trial_df, hit_df, miss_df, win=(-0.5, 1.5), resamp_win=120):
 	miss_mat = []
 	for r,run in enumerate(miss_df['win_running_speed'].values):
 	    run_resamp = np.interp(rssamp_ts, miss_df['win_running_times'].iloc[r], run)
-	    mse.append(((template - run_resamp)**2).mean(axis=None))
 	    miss_mat.append(run_resamp)
 	miss_mat = np.array(miss_mat)
 
+	# calculate mean-squared-error between the tempalte and the miss running speed
+	miss_norm = normalize_rows(miss_mat)
+	temp_norm = normalize_rows(template)
+	mse = ((miss_norm - temp_norm) ** 2).mean(axis=1)
+
 	miss_mse_order = np.argsort(mse)
-	miss_sort = miss_mat[mse_order]
+	miss_sort = miss_mat[miss_mse_order]
 	miss_df = miss_df.iloc[miss_mse_order] # sort so that first rows have best match to template
 
 	hit_mse_order = np.argsort(hit_mse)
 	hit_df = hit_df.iloc[hit_mse_order] # sort so that first rows have best match to template
 
 	return mse, hit_mat, miss_mat, template, rssamp_ts
+
+
+def normalize_rows(dat):
+	# scale to zero mean, unit variance
+	dat = (dat - dat.mean(axis=0)) / dat.std(axis=0)
+	return dat
 
 
 def get_matching_running(mse, miss_df, thresh):
@@ -132,12 +142,6 @@ def get_matching_running(mse, miss_df, thresh):
 	mse_order = np.argsort(mse)
 
 	miss_tocheck = miss_df['change_time'].iloc[low_mse_idx]
-
-	if len(miss_tocheck) > 10: # we don't want to check too many trials, so take no more than the top 10 matches
-		print(str(len(miss_tocheck)) + ' trials below threshold')
-		low_mse_idx = mse_order[:10]
-		high_mse_idx = mse_order[-10:]
-		miss_tocheck = miss_df['change_time'].iloc[low_mse_idx]
 
 	return miss_tocheck, low_mse_idx, high_mse_idx
 
@@ -204,7 +208,7 @@ def plot_stop_frames(movie, miss_time, labtracks_id, ophys_experiment_id):
 	num_cols = int(np.ceil(len(time_lags)/4.0))
 	fig,ax=plt.subplots(4,num_cols,figsize=(num_cols*3,12))
 
-	mov = movie['cam1']
+	mov = movie['cam1'] # cam1 is body cam, cam2 is eye cam
 
 	for i, ax in enumerate(fig.axes):
 		if i < len(time_lags):
@@ -423,7 +427,7 @@ def plot_specific_sessions(session_list):
 			continue
 
 		win=(-0.5, 1.5)
-		thresh = 200 # take this number of the best fits NOT A THRESHOLD
+		thresh = 1.0 # take this number of the best fits
 
 		trial_df = make_trial_df(session, running_speed, running_speed_times, win=win)
 		hit_df = trial_df[trial_df.hit==True]
@@ -480,23 +484,59 @@ def plot_just_hits(session_list):
 		fig_savestring = labtracks_id + '_' + ophys_experiment_id
 		output_filepath_mov = os.path.join(output_base_folder,  fig_savestring+'_mov.png')
 
-		plot_stop_frames(movie, hit_df['change_time'].iloc[0], labtracks_id, ophys_experiment_id)
+		plot_stop_frames(movie, hit_df['change_time'].iloc[10], labtracks_id, ophys_experiment_id)
 		plt.gca()
 		plt.savefig(output_filepath_mov)
 
 
+def compare_missed_licks_dprime(session_list, thresh=1.0):
+
+	master_df = get_master_df()
+
+	basepath = r'\\allen\programs\braintv\workgroups\nc-ophys\Matt\VB_QC\miss_licks'
+	output_base_folder = make_output_dir(basepath)
+
+	for s,session_path in enumerate(session_list):
+		unix_path = '/allen/programs/braintv/production/visualbehavior/prod0'
+		full_path = unix_path + '/' + session_path
+		temp_df = master_df[master_df['storage_directory']==full_path].copy()
+
+		try:
+			session = get_session(temp_df)
+			df, movie = get_video(temp_df)
+			running_speed, running_speed_times = process_running(session)
+		except:
+			print('Cannot load data from ophys_experiment_id ' + str(temp_df['ophys_experiment_id'].values))
+			continue
+
+		win=(-0.5, 1.5)
+
+		trial_df = make_trial_df(session, running_speed, running_speed_times, win=win)
+		hit_df = trial_df[trial_df.hit==True]
+		miss_df = trial_df[trial_df.miss==True]
+
+		mse, hit_mat, miss_mat, template, rssamp_ts = compare_running(trial_df, hit_df, miss_df, win=win, resamp_win=120)
+
+		if not (len(hit_df)>50) and (len(miss_df)>10):
+			print('Not enough hits or misses: ' + str(len(hit_df)) + ' hits, ' + str(len(miss_df)) + ' misses')
+			continue
+
+		miss_tocheck, low_mse_idx, high_mse_idx = get_matching_running(mse, miss_df, thresh=thresh)
+
+		return len(low_mse_idx), session
 
 
-exp_list = [#'specimen_823826986/ophys_session_852794147/',
-    #'specimen_814111935/ophys_session_846605051/',
-    #'specimen_823826986/ophys_session_858863712/',
-    #'specimen_814111935/ophys_session_842752650/',
-    #'specimen_813703544/ophys_session_845219209/',
+
+
+exp_list = ['specimen_823826986/ophys_session_852794147/',
+    'specimen_814111935/ophys_session_846605051/',
+    'specimen_823826986/ophys_session_858863712/',
+    'specimen_814111935/ophys_session_842752650/',
+    'specimen_813703544/ophys_session_845219209/',
     'specimen_834823477/ophys_session_878918807/',
     'specimen_784057626/ophys_session_833812106/',
     'specimen_847076524/ophys_session_894204946/',
     'specimen_803258386/ophys_session_848253761/']
 
-#plot_specific_sessions(exp_list)
-plot_just_hits(exp_list)
-
+plot_specific_sessions(exp_list)
+#plot_just_hits(exp_list)
