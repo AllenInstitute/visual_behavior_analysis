@@ -264,6 +264,10 @@ def get_master_df():
 	query_string = ' and '.join(conditions)
 	experiment_df = experiment_df.query(query_string)
 
+	# filter out passive sessions
+	passive_mask = [l for l,label in enumerate(experiment_df['session_name'].values) if not fnmatch.fnmatch(label, '*passive')]
+	experiment_df = experiment_df['session_name'].iloc[passive_mask]
+
 	return experiment_df
 
 
@@ -319,14 +323,18 @@ def make_output_dir(basepath):
 	return output_base_folder
 
 
-def find_miss_licks():
+def find_miss_licks(input_paths=False, random_sample=False, num_samples=10):
 	# execute to sort miss trials by their matched running-speed to hit trials and display facecam video of licking 
 
 	output_base_folder = make_output_dir(r'\\allen\programs\braintv\workgroups\nc-ophys\Matt\VB_QC\miss_licks')
+	posix_base_folder = '/allen/programs/braintv/production/visualbehavior/prod0/'
 
 	master_df = get_master_df()
 
-	sample = np.random.choice(list(np.arange(0,len(master_df))), 100, replace=False)
+	if random_sample:
+		sample = np.random.choice(list(np.arange(0,len(master_df))), num_samples, replace=False)
+	else:
+		sample = list(np.arange(0,len(master_df)))
 
 	# pull 10 sessions, don't count sesions that can't load
 	donors = []
@@ -335,63 +343,65 @@ def find_miss_licks():
 	nolick_indices = []
 	lick_indices = []
 	all_trial_dfs = []
-	i=0
 
 	for s,d in enumerate(sample):
 
-		while i<10:
-
+		if random_sample:
 			temp_df = master_df.iloc[d:d+1].copy()
-			try:
-				session = get_session(temp_df)
-				df, movie = get_video(temp_df)
-				running_speed, running_speed_times = process_running(session)
-			except:
-				print('Cannot load data from ophys_experiment_id ' + str(temp_df['ophys_experiment_id'].values))
-				continue
+		elif input_paths:
+			posix_path = posix_base_folder + input_paths[s]
+			temp_df = master_df[master_df['storage_directory']==posix_path]
 
-			win=(-0.5, 1.5)
-			thresh = 200 # take this number of hte best fits NOT A THRESHOLD
+		try:
+			session = get_session(temp_df)
+			df, movie = get_video(temp_df)
+			running_speed, running_speed_times = process_running(session)
+		except:
+			print('Cannot load data from ophys_experiment_id ' + str(temp_df['ophys_experiment_id'].values))
+			continue
 
-			trial_df = make_trial_df(session, running_speed, running_speed_times, win=win)
-			hit_df = trial_df[trial_df.hit==True]
-			miss_df = trial_df[trial_df.miss==True]
+		win=(-0.5, 1.5)
+		thresh = 1 # take this number of hte best fits NOT A THRESHOLD
 
-			mse, hit_mat, miss_mat, template, rssamp_ts = compare_running(trial_df, hit_df, miss_df, win=win, resamp_win=120)
+		trial_df = make_trial_df(session, running_speed, running_speed_times, win=win)
+		hit_df = trial_df[trial_df.hit==True]
+		miss_df = trial_df[trial_df.miss==True]
 
-			if not (len(hit_df)>50) and (len(miss_df)>10):
-				print('Not enough hits or misses: ' + str(len(hit_df)) + ' hits, ' + str(len(miss_df)) + ' misses')
-				continue
+		mse, hit_mat, miss_mat, template, rssamp_ts = compare_running(trial_df, hit_df, miss_df, win=win, resamp_win=120)
 
-			miss_tocheck, low_mse_idx, high_mse_idx = get_matching_running(mse, miss_df, thresh=thresh)
+		if not (len(hit_df)>50) and (len(miss_df)>10):
+			print('Not enough hits or misses: ' + str(len(hit_df)) + ' hits, ' + str(len(miss_df)) + ' misses')
+			continue
 
-			plot_template_matches(trial_df, hit_df, miss_df, mse, hit_mat, miss_mat, template, rssamp_ts, thresh=thresh)
+		miss_tocheck, low_mse_idx, high_mse_idx = get_matching_running(mse, miss_df, thresh=thresh)
+
+		plot_template_matches(trial_df, hit_df, miss_df, mse, hit_mat, miss_mat, template, rssamp_ts, thresh=thresh)
+		plt.show()
+		go_on = audit_running_template()
+
+		if not go_on:
+			continue
+
+		#if len(miss_tocheck)>5:
+		#	tocheck = np.random.choice(list(miss_tocheck.values), 5, replace=False)
+		#else:
+		tocheck = miss_tocheck.values
+		print(tocheck)
+
+		annotated_lick_inds = []
+		annotated_no_lick_inds = []
+		for f in tocheck:
+			print(f)
+			plot_stop_frames(movie, f,[],[])
 			plt.show()
-			go_on = audit_running_template()
+			annotate_lick(f, annotated_lick_inds, annotated_no_lick_inds)
 
-			if not go_on:
-				continue
-
-			if len(miss_tocheck)>5:
-				tocheck = np.random.choice(list(miss_tocheck.values), 5, replace=False)
-			else:
-				tocheck = list(miss_tocheck.values)
-
-			annotated_lick_inds = []
-			annotated_no_lick_inds = []
-			for f in tocheck:
-				plot_stop_frames(movie, f,[],[])
-				plt.show()
-				annotate_lick(f, annotated_lick_inds, annotated_no_lick_inds)
-
-			donors.append(temp_df['donor_id'])
-			experiments.append(temp_df['ophys_experiment_id'])
-			containers.append(temp_df['container_id'])
-			lick_indices.append(annotated_lick_inds)
-			nolick_indices.append(annotated_lick_inds)
-			all_trial_dfs.append(trial_df)
-
-			i+=1
+		donors.append(temp_df['donor_id'])
+		experiments.append(temp_df['ophys_experiment_id'])
+		containers.append(temp_df['container_id'])
+		lick_indices.append(annotated_lick_inds)
+		nolick_indices.append(annotated_lick_inds)
+		all_trial_dfs.append(trial_df)
 
 	summary_df = pd.DataFrame()
 	summary_df['donor_id'] = donors
@@ -528,15 +538,16 @@ def compare_missed_licks_dprime(session_list, thresh=1.0):
 
 
 
-exp_list = ['specimen_823826986/ophys_session_852794147/',
-    'specimen_814111935/ophys_session_846605051/',
-    'specimen_823826986/ophys_session_858863712/',
-    'specimen_814111935/ophys_session_842752650/',
-    'specimen_813703544/ophys_session_845219209/',
-    'specimen_834823477/ophys_session_878918807/',
-    'specimen_784057626/ophys_session_833812106/',
-    'specimen_847076524/ophys_session_894204946/',
-    'specimen_803258386/ophys_session_848253761/']
+exp_list = [#'specimen_823826986/ophys_session_852794147/',
+    #'specimen_814111935/ophys_session_846605051/',
+    'specimen_823826986/ophys_session_858863712/']#,
+    #'specimen_814111935/ophys_session_842752650/',
+    #'specimen_813703544/ophys_session_845219209/',
+    #'specimen_834823477/ophys_session_878918807/',
+    #'specimen_784057626/ophys_session_833812106/',
+    #'specimen_847076524/ophys_session_894204946/',
+    #'specimen_803258386/ophys_session_848253761/']
 
-plot_specific_sessions(exp_list)
+find_miss_licks(input_paths=exp_list)
+#plot_specific_sessions(exp_list)
 #plot_just_hits(exp_list)
