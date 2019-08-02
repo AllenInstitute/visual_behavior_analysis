@@ -224,15 +224,24 @@ class ResponseAnalysis(object):
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
         if 'index' in flash_response_df.keys():
             flash_response_df = flash_response_df.drop(columns=['index']).reset_index()
+        print('computing p-values from shuffled spontaneous activity')
+        p_values_from_shuffle = ut.get_p_values_from_shuffle_spontaneous(self.dataset, flash_response_df,
+                                                                         self.response_window_duration)
+        p_values = []
+        for flash_number in flash_response_df.flash_number.unique():
+            p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
+        flash_response_df['p_value'] = p_values
         if 'omitted' in stimulus_table.image_name.unique():
             print('computing p-values from shuffled omitted flash responses')
-            p_values_from_shuffle = ut.get_p_values_from_shuffle(self.dataset, stimulus_table, flash_response_df)
+            p_values_from_shuffle = ut.get_p_values_from_shuffle_omitted(self.dataset, stimulus_table,
+                                                                         flash_response_df,
+                                                                         self.response_window_duration)
             p_values = []
             for flash_number in flash_response_df.flash_number.unique():
                 p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
-            flash_response_df['p_value'] = p_values
+            flash_response_df['p_value_omitted'] = p_values
         else:
-            flash_response_df['p_value'] = np.nan
+            flash_response_df['p_value_omitted'] = np.nan
 
         return flash_response_df
 
@@ -300,6 +309,7 @@ class ResponseAnalysis(object):
                     0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
                 baseline_window = [np.abs(flash_window[0]) - self.response_window_duration, (np.abs(flash_window[0]))]
                 p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
+                p_value_baseline = p_value
                 sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
                                                            baseline_window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate, self.use_events)
@@ -310,14 +320,14 @@ class ResponseAnalysis(object):
 
                 row.append(
                     [int(cell), int(cell_specimen_id), int(flash), omitted, flash_time, image_name, image_category,
-                     trace, timestamps, mean_response, baseline_response, n_events, p_value, sd_over_baseline,
+                     trace, timestamps, mean_response, baseline_response, n_events, p_value, p_value_baseline, sd_over_baseline,
                      reward_rate, cell_matching_has_been_run, int(self.dataset.experiment_id)])
 
         flash_response_df = pd.DataFrame(data=row,
                                          columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
                                                   'image_name', 'image_category', 'trace', 'timestamps',
-                                                  'mean_response',
-                                                  'baseline_response', 'n_events', 'p_value', 'sd_over_baseline',
+                                                  'mean_response', 'baseline_response', 'n_events',
+                                                  'p_value', 'p_value_baseline', 'sd_over_baseline',
                                                   'reward_rate', 'cell_matching_has_been_run', 'experiment_id'])
         # flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
