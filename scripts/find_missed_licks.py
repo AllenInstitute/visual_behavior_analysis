@@ -139,8 +139,6 @@ def get_matching_running(mse, miss_df, thresh):
 	low_mse_idx = np.where(np.array(mse)<thresh)[0]
 	high_mse_idx = np.where(np.array(mse)>thresh)[0]
 
-	mse_order = np.argsort(mse)
-
 	miss_tocheck = miss_df['change_time'].iloc[low_mse_idx]
 
 	return miss_tocheck, low_mse_idx, high_mse_idx
@@ -216,7 +214,7 @@ def plot_stop_frames(movie, miss_time, labtracks_id, ophys_experiment_id):
 			frame = mov.get_frame(time=miss_time+time_lags[i])
 			ax.imshow(frame)
 			ax.axis('off')
-			fig.suptitle('labtracks_ID: '+labtracks_id+', ophys_experiment_id:'+ ophys_experiment_id+', change at {}'.format(miss_time))
+			#fig.suptitle('labtracks_ID: '+labtracks_id+', ophys_experiment_id:'+ ophys_experiment_id+', change at '+str(miss_time))
 		else:
 			ax.axis('off')
 
@@ -265,8 +263,9 @@ def get_master_df():
 	experiment_df = experiment_df.query(query_string)
 
 	# filter out passive sessions
-	passive_mask = [l for l,label in enumerate(experiment_df['session_name'].values) if not fnmatch.fnmatch(label, '*passive')]
-	experiment_df = experiment_df['session_name'].iloc[passive_mask]
+	passive_mask = [fnmatch.fnmatch(label, '*passive') for label in experiment_df['session_name'].values]
+	passive_mask = [not i for i in passive_mask] # invert the mask
+	experiment_df = experiment_df[passive_mask]
 
 	return experiment_df
 
@@ -334,7 +333,7 @@ def find_miss_licks(input_paths=False, random_sample=False, num_samples=10):
 	if random_sample:
 		sample = np.random.choice(list(np.arange(0,len(master_df))), num_samples, replace=False)
 	else:
-		sample = list(np.arange(0,len(master_df)))
+		sample = list(np.arange(0,len(input_paths)))
 
 	# pull 10 sessions, don't count sesions that can't load
 	donors = []
@@ -343,13 +342,14 @@ def find_miss_licks(input_paths=False, random_sample=False, num_samples=10):
 	nolick_indices = []
 	lick_indices = []
 	all_trial_dfs = []
+	mse_to_check = []
 
-	for s,d in enumerate(sample):
+	for d in sample:
 
 		if random_sample:
 			temp_df = master_df.iloc[d:d+1].copy()
 		elif input_paths:
-			posix_path = posix_base_folder + input_paths[s]
+			posix_path = posix_base_folder + input_paths[d]
 			temp_df = master_df[master_df['storage_directory']==posix_path]
 
 		try:
@@ -361,18 +361,21 @@ def find_miss_licks(input_paths=False, random_sample=False, num_samples=10):
 			continue
 
 		win=(-0.5, 1.5)
-		thresh = 1 # take this number of hte best fits NOT A THRESHOLD
+		thresh = 100.0 
 
+		print('making trial df')
 		trial_df = make_trial_df(session, running_speed, running_speed_times, win=win)
 		hit_df = trial_df[trial_df.hit==True]
 		miss_df = trial_df[trial_df.miss==True]
 
+		print('compare_running')
 		mse, hit_mat, miss_mat, template, rssamp_ts = compare_running(trial_df, hit_df, miss_df, win=win, resamp_win=120)
 
 		if not (len(hit_df)>50) and (len(miss_df)>10):
 			print('Not enough hits or misses: ' + str(len(hit_df)) + ' hits, ' + str(len(miss_df)) + ' misses')
 			continue
 
+		print('get_matching_running')
 		miss_tocheck, low_mse_idx, high_mse_idx = get_matching_running(mse, miss_df, thresh=thresh)
 
 		plot_template_matches(trial_df, hit_df, miss_df, mse, hit_mat, miss_mat, template, rssamp_ts, thresh=thresh)
@@ -382,14 +385,11 @@ def find_miss_licks(input_paths=False, random_sample=False, num_samples=10):
 		if not go_on:
 			continue
 
-		#if len(miss_tocheck)>5:
-		#	tocheck = np.random.choice(list(miss_tocheck.values), 5, replace=False)
-		#else:
 		tocheck = miss_tocheck.values
-		print(tocheck)
 
 		annotated_lick_inds = []
 		annotated_no_lick_inds = []
+		print('plot_stop_frames')
 		for f in tocheck:
 			print(f)
 			plot_stop_frames(movie, f,[],[])
@@ -402,6 +402,7 @@ def find_miss_licks(input_paths=False, random_sample=False, num_samples=10):
 		lick_indices.append(annotated_lick_inds)
 		nolick_indices.append(annotated_lick_inds)
 		all_trial_dfs.append(trial_df)
+		mse_to_check.append(mse[low_mse_idx])
 
 	summary_df = pd.DataFrame()
 	summary_df['donor_id'] = donors
@@ -410,6 +411,7 @@ def find_miss_licks(input_paths=False, random_sample=False, num_samples=10):
 	summary_df['lick_indx'] = lick_indices
 	summary_df['nolick_indx'] = nolick_indices
 	summary_df['trial_df'] = all_trial_dfs
+	summary_df['mse_to_check'] = mse_to_check
 
 	output_filename = 'summary_df.pkl'
 	output_filepath = os.path.join(output_base_folder, output_filename)
