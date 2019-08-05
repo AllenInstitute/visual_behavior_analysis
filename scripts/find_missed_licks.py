@@ -53,7 +53,7 @@ def make_trial_df(session, running_speed, running_speed_times, win=(-0.5, 1.5)):
 	# get change times
 	trial_df = copy.deepcopy(session.trials)
 	trial_df = trial_df[trial_df['auto_rewarded']==False]
-	ct = trial_df.change_time
+	ct = trial_df.change_time[trial_df['stimulus_change']] # get only change times where the stimulus actually changes
 
 	# extract running speed in window around each event
 
@@ -270,16 +270,16 @@ def get_master_df():
 	return experiment_df
 
 
-def annotate_lick(ind_frame, annotated_lick_inds, annotated_no_lick_inds):
+def annotate_lick(annotated_lick_inds):
     print("Is there a real lick? [y/n]")
     response = input()
     if response=='y':
-        annotated_lick_inds.append(ind_frame)
+        annotated_lick_inds.append(1)
     elif response=='n':
-        annotated_no_lick_inds.append(ind_frame)
+        annotated_lick_inds.append(0)
     else:
         print("Please enter y or n")
-        annotate_lick(ind_frame, annotated_lick_inds, annotated_no_lick_inds)
+        annotate_lick(annotated_lick_inds)
 
 
 def audit_running_template():
@@ -361,7 +361,7 @@ def find_miss_licks(input_paths=False, random_sample=False, num_samples=10):
 			continue
 
 		win=(-0.5, 1.5)
-		thresh = 100.0 
+		thresh = 100
 
 		print('making trial df')
 		trial_df = make_trial_df(session, running_speed, running_speed_times, win=win)
@@ -388,19 +388,16 @@ def find_miss_licks(input_paths=False, random_sample=False, num_samples=10):
 		tocheck = miss_tocheck.values
 
 		annotated_lick_inds = []
-		annotated_no_lick_inds = []
 		print('plot_stop_frames')
-		for f in tocheck:
-			print(f)
-			plot_stop_frames(movie, f,[],[])
+		for f,t in enumerate(tocheck):
+			plot_stop_frames(movie, t,[],[])
 			plt.show()
-			annotate_lick(f, annotated_lick_inds, annotated_no_lick_inds)
+			annotate_lick(annotated_lick_inds)
 
 		donors.append(temp_df['donor_id'])
 		experiments.append(temp_df['ophys_experiment_id'])
 		containers.append(temp_df['container_id'])
 		lick_indices.append(annotated_lick_inds)
-		nolick_indices.append(annotated_lick_inds)
 		all_trial_dfs.append(trial_df)
 		mse_to_check.append(mse[low_mse_idx])
 
@@ -409,7 +406,6 @@ def find_miss_licks(input_paths=False, random_sample=False, num_samples=10):
 	summary_df['experiment_id'] = experiments
 	summary_df['container_id'] = containers
 	summary_df['lick_indx'] = lick_indices
-	summary_df['nolick_indx'] = nolick_indices
 	summary_df['trial_df'] = all_trial_dfs
 	summary_df['mse_to_check'] = mse_to_check
 
@@ -538,18 +534,81 @@ def compare_missed_licks_dprime(session_list, thresh=1.0):
 		return len(low_mse_idx), session
 
 
+def score_all_sessions_mse():
+
+	output_base_folder = make_output_dir(r'\\allen\programs\braintv\workgroups\nc-ophys\Matt\VB_QC\miss_licks')
+	posix_base_folder = '/allen/programs/braintv/production/visualbehavior/prod0/'
+
+	master_df = get_master_df()
+
+	donors = []
+	containers = []
+	experiments = []
+	all_trial_dfs = []
+	mse_to_check = []
+	all_hit_mat = []
+	all_miss_mat = []
+
+	for d in range(len(master_df)):
+
+		temp_df = master_df.iloc[d:d+1].copy()
+
+		try:
+			session = get_session(temp_df)
+			df, movie = get_video(temp_df)
+			running_speed, running_speed_times = process_running(session)
+			print('loaded ophys_experiment_id: ' + str(temp_df['ophys_experiment_id']))
+		except:
+			print('Cannot load data from ophys_experiment_id ' + str(temp_df['ophys_experiment_id'].values))
+			continue
+
+		win=(-0.5, 1.5)
+
+		trial_df = make_trial_df(session, running_speed, running_speed_times, win=win)
+		hit_df = trial_df[trial_df.hit==True]
+		miss_df = trial_df[trial_df.miss==True]
+
+		if not (len(hit_df)>50) and (len(miss_df)>1):
+			print('Not enough hits or misses: ' + str(len(hit_df)) + ' hits, ' + str(len(miss_df)) + ' misses')
+			continue
+
+		mse, hit_mat, miss_mat, template, rssamp_ts = compare_running(trial_df, hit_df, miss_df, win=win, resamp_win=120)
+
+		donors.append(temp_df['donor_id'])
+		experiments.append(temp_df['ophys_experiment_id'])
+		containers.append(temp_df['container_id'])
+		all_trial_dfs.append(trial_df)
+		mse_to_check.append(mse)
+		all_hit_mat.append(hit_mat)
+		all_miss_mat.append(miss_mat)
+
+	summary_df = pd.DataFrame()
+	summary_df['donor_id'] = donors
+	summary_df['experiment_id'] = experiments
+	summary_df['container_id'] = containers
+	summary_df['trial_df'] = all_trial_dfs
+	summary_df['mse_to_check'] = mse_to_check
+	summary_df['hit_mat'] = all_hit_mat
+	summary_df['miss_mat'] = all_miss_mat
+
+	output_filename = 'summary_df.pkl'
+	output_filepath = os.path.join(output_base_folder, output_filename)
+	summary_df.to_pickle(output_filepath)
+
+
 
 
 exp_list = [#'specimen_823826986/ophys_session_852794147/',
     #'specimen_814111935/ophys_session_846605051/',
-    'specimen_823826986/ophys_session_858863712/']#,
-    #'specimen_814111935/ophys_session_842752650/',
+    'specimen_823826986/ophys_session_858863712/',
+    'specimen_814111935/ophys_session_842752650/',
     #'specimen_813703544/ophys_session_845219209/',
-    #'specimen_834823477/ophys_session_878918807/',
+    'specimen_834823477/ophys_session_878918807/']#,
     #'specimen_784057626/ophys_session_833812106/',
     #'specimen_847076524/ophys_session_894204946/',
     #'specimen_803258386/ophys_session_848253761/']
 
-find_miss_licks(input_paths=exp_list)
+#find_miss_licks(input_paths=exp_list)
 #plot_specific_sessions(exp_list)
 #plot_just_hits(exp_list)
+score_all_sessions_mse()
