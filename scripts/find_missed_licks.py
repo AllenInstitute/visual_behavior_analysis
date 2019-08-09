@@ -16,6 +16,7 @@ from allensdk.brain_observatory.extract_running_speed.__main__ import extract_ru
 from allensdk.internal.api import behavior_ophys_api as boa
 from allensdk.brain_observatory.behavior import behavior_ophys_session as bos
 from allensdk.internal.api import PostgresQueryMixin
+from scripts import make_visual_manifest # visual_behavior_analaysis.scripts
 from visual_behavior.utilities import Movie
 import sync
 from sync import Dataset
@@ -53,27 +54,27 @@ def make_trial_df(session, running_speed, running_speed_times, win=(-0.5, 1.5)):
 	# get change times
 	trial_df = copy.deepcopy(session.trials)
 	trial_df = trial_df[trial_df['auto_rewarded']==False]
-	ct = trial_df.change_time[trial_df['stimulus_change']] # get only change times where the stimulus actually changes
 
 	# extract running speed in window around each event
 
 	all_segs = []
 	all_times = []
-	for c,change in enumerate(ct):
-	    if ~np.isnan(change):
-	        rs_idx = [t for t,time in enumerate(running_speed_times) if (time>(change+win[0])) and (time<(change+win[1]))]
-	        run_seg = running_speed[rs_idx]
-	        run_times = running_speed_times[rs_idx]-change
-	        if len(run_seg) != len(run_times):
-	            print("ERROR")
-	            all_segs.append(np.nan)
-	            all_times.append(np.nan)
-	            continue
-	        all_times.append(run_times)
-	        all_segs.append(run_seg)
-	    else:
-	        all_segs.append(np.nan)
-	        all_times.append(np.nan)
+	for c,row in trial_df.iterrows():
+		if row.stimulus_change: # get only change times where the stimulus actually changes
+			change = row.change_time
+			rs_idx = [t for t,time in enumerate(running_speed_times) if (time>(change+win[0])) and (time<(change+win[1]))]
+			run_seg = running_speed[rs_idx]
+			run_times = running_speed_times[rs_idx]-change
+			if len(run_seg) != len(run_times):
+				print("ERROR")
+				all_segs.append(np.nan)
+				all_times.append(np.nan)
+				continue
+			all_times.append(run_times)
+			all_segs.append(run_seg)
+		else:
+			all_segs.append(np.nan)
+			all_times.append(np.nan)
 
 	trial_df['win_running_speed'] = all_segs
 	trial_df['win_running_times'] = all_times
@@ -113,7 +114,7 @@ def compare_running(trial_df, hit_df, miss_df, win=(-0.5, 1.5), resamp_win=120):
 	    miss_mat.append(run_resamp)
 	miss_mat = np.array(miss_mat)
 
-	# calculate mean-squared-error between the tempalte and the miss running speed
+	# calculate mean-squared-error between the template and the miss running speed
 	miss_norm = normalize_rows(miss_mat)
 	temp_norm = normalize_rows(template)
 	mse = ((miss_norm - temp_norm) ** 2).mean(axis=1)
@@ -130,8 +131,13 @@ def compare_running(trial_df, hit_df, miss_df, win=(-0.5, 1.5), resamp_win=120):
 
 def normalize_rows(dat):
 	# scale to zero mean, unit variance
-	dat = (dat - dat.mean(axis=0)) / dat.std(axis=0)
-	return dat
+	if dat.ndim==2:
+		dat = dat.T
+		dat = (dat - dat.mean(axis=0)) / dat.std(axis=0)
+		return dat.T
+	elif dat.ndim==1:
+		dat = (dat - dat.mean(axis=0)) / dat.std(axis=0)
+		return dat
 
 
 def get_matching_running(mse, miss_df, thresh):
@@ -539,7 +545,11 @@ def score_all_sessions_mse():
 	output_base_folder = make_output_dir(r'\\allen\programs\braintv\workgroups\nc-ophys\Matt\VB_QC\miss_licks')
 	posix_base_folder = '/allen/programs/braintv/production/visualbehavior/prod0/'
 
-	master_df = get_master_df()
+	#master_df = get_master_df()
+	#master_df = make_visual_manifest.run()
+	#master_df.to_csv(output_base_folder+'visual_behavior_data_manifest.csv')
+	df_path = r"C:\Users\mattv\Dropbox\AIBS\aibs code\behavior code\visual_behavior_data_manifest.csv"
+	master_df = pd.read_csv(df_path)
 
 	donors = []
 	containers = []
@@ -548,6 +558,7 @@ def score_all_sessions_mse():
 	mse_to_check = []
 	all_hit_mat = []
 	all_miss_mat = []
+	behavior_sessions = []
 
 	for d in range(len(master_df)):
 
@@ -574,9 +585,10 @@ def score_all_sessions_mse():
 
 		mse, hit_mat, miss_mat, template, rssamp_ts = compare_running(trial_df, hit_df, miss_df, win=win, resamp_win=120)
 
-		donors.append(temp_df['donor_id'])
-		experiments.append(temp_df['ophys_experiment_id'])
-		containers.append(temp_df['container_id'])
+		donors.append(temp_df['donor_id'].values)
+		behavior_sessions.append(temp_df['behavior_session_id'].values)
+		experiments.append(temp_df['ophys_experiment_id'].values)
+		containers.append(temp_df['container_id'].values)
 		all_trial_dfs.append(trial_df)
 		mse_to_check.append(mse)
 		all_hit_mat.append(hit_mat)
@@ -584,6 +596,7 @@ def score_all_sessions_mse():
 
 	summary_df = pd.DataFrame()
 	summary_df['donor_id'] = donors
+	summary_df['behavior_session_id'] = behavior_sessions
 	summary_df['experiment_id'] = experiments
 	summary_df['container_id'] = containers
 	summary_df['trial_df'] = all_trial_dfs
