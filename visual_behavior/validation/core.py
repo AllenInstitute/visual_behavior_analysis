@@ -136,27 +136,28 @@ def validate_encoder_voltage(core_data, range_threshold=3, wrap_threshold=2):
     Note that both failure modes can result from a stationary mouse (or a test session with no mouse). 
     '''
     running = core_data['running']
-    
+
     # filter out voltage artifacts
-    filtered_vsig = medfilt(running['v_sig'],kernel_size=5)
+    filtered_vsig = medfilt(running['v_sig'], kernel_size=5)
 
     v_sig_range = filtered_vsig.max() - filtered_vsig.min()
 
-    def get_wrap_ratio(forward_wraps,backward_wraps):
+    def get_wrap_ratio(forward_wraps, backward_wraps):
         if backward_wraps == 0:
             return np.inf
         else:
-            return forward_wraps/backward_wraps
+            return forward_wraps / backward_wraps
 
     wrap_ratio = get_wrap_ratio(
-        count_wraps(running,'forward'),
-        count_wraps(running,'backward')
+        count_wraps(running, 'forward'),
+        count_wraps(running, 'backward')
     )
 
     if v_sig_range < range_threshold or wrap_ratio < wrap_threshold:
         return False
     else:
         return True
+
 
 def validate_licks(core_data, lick_spout_present):
     """

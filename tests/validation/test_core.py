@@ -76,33 +76,33 @@ def test_validate_running_data():
 
 def test_validate_encoder_voltage():
     # good data: spans range from 0 to 5V
-    GOOD_DATA = {'running':pd.DataFrame({'v_sig':np.arange(0,5,0.1)})}
+    GOOD_DATA = {'running': pd.DataFrame({'v_sig': np.arange(0, 5, 0.1)})}
     assert validate_encoder_voltage(GOOD_DATA) == True
 
     # bad data: spans a smaller range from 1-3V
-    BAD_DATA = {'running':pd.DataFrame({'v_sig':np.arange(1,3,0.1)})}
+    BAD_DATA = {'running': pd.DataFrame({'v_sig': np.arange(1, 3, 0.1)})}
     assert validate_encoder_voltage(BAD_DATA) == False
 
     # good data, monotonically increasing with resets at 5V
     arr = np.hstack((
-        np.arange(0,5,0.1),
-        np.arange(0,5,0.1),
-        np.arange(0,5,0.1),
-        np.arange(0,5,0.1),
+        np.arange(0, 5, 0.1),
+        np.arange(0, 5, 0.1),
+        np.arange(0, 5, 0.1),
+        np.arange(0, 5, 0.1),
     ))
-    GOOD_DATA = {'running':pd.DataFrame({'v_sig':arr})}
+    GOOD_DATA = {'running': pd.DataFrame({'v_sig': arr})}
     assert validate_encoder_voltage(GOOD_DATA) == True
 
     # bad data: oscillating around the 0/5V transition
     arr = np.hstack((
-        0.01*np.ones(10),
-        5*np.ones(10),
-        0.01*np.ones(10),
-        5*np.ones(10),
-        0.01*np.ones(10),
-        5*np.ones(10),
+        0.01 * np.ones(10),
+        5 * np.ones(10),
+        0.01 * np.ones(10),
+        5 * np.ones(10),
+        0.01 * np.ones(10),
+        5 * np.ones(10),
     ))
-    BAD_DATA = {'running':pd.DataFrame({'v_sig':arr})}
+    BAD_DATA = {'running': pd.DataFrame({'v_sig': arr})}
     assert validate_encoder_voltage(BAD_DATA) == False
 
 
