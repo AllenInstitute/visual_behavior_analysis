@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from .extended_trials import get_first_lick_relative_to_scheduled_change
 from visual_behavior.change_detection.running.metrics import count_wraps
+from scipy.signal import medfilt
 
 
 def parse_log(log_record):
@@ -154,6 +155,8 @@ def validate_encoder_voltage(core_data, range_threshold=3, wrap_threshold=2):
 
     if v_sig_range < range_threshold or wrap_ratio < wrap_threshold:
         return False
+    else:
+        return True
 
 def validate_licks(core_data, lick_spout_present):
     """
