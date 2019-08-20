@@ -1,6 +1,7 @@
 import pandas as pd
 
-def count_wraps(running_df,direction='forward',lower_threshold=1.5,upper_threshold=3.5):
+
+def count_wraps(running_df, direction='forward', lower_threshold=1.5, upper_threshold=3.5):
     '''
     count instances of encoder crossing the 5V/0V threshold. A proxy for the number of rotations.
     '''
@@ -13,4 +14,3 @@ def count_wraps(running_df,direction='forward',lower_threshold=1.5,upper_thresho
         wraps = running_df.query("v_sig > @upper_threshold and v_sig_last < @lower_threshold")
 
     return len(wraps)
-
