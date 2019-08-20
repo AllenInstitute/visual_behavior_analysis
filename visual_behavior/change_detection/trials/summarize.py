@@ -53,7 +53,6 @@ DEFAULT_SUMMARY_METRICS = dict(
     # behavior_session_uuid=session_metrics.session_id,
     session_duration=session_metrics.session_duration,
     d_prime_peak=session_metrics.peak_dprime,
-    d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime),
     discrim_p=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.discrim_p),
     response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
     earned_water=session_metrics.earned_water,
@@ -116,7 +115,6 @@ def epoch_level_summary(trials, epoch_length=10.0, **kwargs):
 
     summarizer = create_summarizer(
         num_contingent_trials=session_metrics.num_contingent_trials,
-        d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime),
         response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
         earned_water=session_metrics.earned_water,
         lick_latency_median=session_metrics.lick_latency,
