@@ -1,4 +1,3 @@
-import pandas as pd
 
 
 def count_wraps(running_df, direction='forward', lower_threshold=1.5, upper_threshold=3.5):
