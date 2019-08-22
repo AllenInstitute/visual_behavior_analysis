@@ -230,7 +230,6 @@ def validate_reward_follows_first_lick_in_window(core_data, reward_latency_thres
     on non-autorewarded go trials, the first lick in the response window should have
     a reward that follows it by a short latency (reward_latency_threshold, default = 1 ms)
     '''
-    response_window = core_data['metadata']['response_window']
     tr = core_data['trials']
 
     # add some columns for convenience
