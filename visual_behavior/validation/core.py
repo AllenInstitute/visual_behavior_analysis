@@ -196,3 +196,62 @@ def validate_omitted_flashes_are_omitted(core_data):
                 return False
     else:
         return True
+
+def get_licks_in_response_window(row,response_window=[0,0],response_window_threshold=1/60/2):
+    '''
+    get all licks in the response window
+    adds response windows_threshold to start of window and subtracts same from end of window:
+        threshold is 1/2 frame width by defaul
+        this gives a 1/2 frame buffer on timing
+    '''
+    if len(row['lick_times']) > 0 and not pd.isnull(row['change_time']):
+        lick_times = np.array(row['lick_times'])
+        in_window_indices = np.where(
+            (lick_times - row['change_time'] >= response_window[0]+response_window_threshold)
+            &(lick_times - row['change_time'] <= response_window[1]-response_window_threshold)
+        )
+        licks_in_window = np.array(row['lick_times'])[in_window_indices]
+    else:
+        licks_in_window = np.array([])
+    return licks_in_window
+
+def get_first_lick_reward_latency(row):
+    if len(row['licks_in_response_window']) > 0:
+        if len(row['reward_times']) == 0:
+            return np.inf
+        else:
+            return row['reward_times'][0] - row['licks_in_response_window'][0]
+                                                    
+def validate_reward_follows_first_lick_in_window(core_data,reward_latency_threshold=0.001):
+    '''
+    on non-autorewarded go trials, the first lick in the response window should have
+    a reward that follows it by a short latency (reward_latency_threshold, default = 1 ms)
+    '''
+    response_window = core_data['metadata']['response_window']
+    tr = core_data['trials']
+    
+    # add some columns for convenience
+    tr['licks_in_response_window'] = tr.apply(get_licks_in_response_window, axis=1, response_window=core_data['metadata']['response_window'])
+    tr['number_of_licks_in_response_window'] = tr['licks_in_response_window'].map(lambda x:len(x))
+    tr['lick_reward_latency'] = tr.apply(get_first_lick_reward_latency, axis=1)
+    
+    # find errant trials
+    errant_trials = tr[
+        (tr['number_of_licks_in_response_window']>0) # trials with licks
+        &(tr['rewarded']==True) # go trials (rewarded means reward was available, not necessarily delivered)
+        &(tr['auto_rewarded']==False) # not autorewarded trials
+        &(~tr['lick_reward_latency'].between(0,reward_latency_threshold))
+    ]
+    
+    # fail if there were any errant trials
+    if len(errant_trials) > 0:
+        for idx,trial in errant_trials.iterrows():
+            # print out the reason for the failure
+            print('trial {} had a latency of {:.5f} seconds between the first lick and the reward, the maximum allowable latency is {}'.format(
+                idx,
+                trial['lick_reward_latency'],
+                reward_latency_threshold
+            ))
+        return False
+    else:
+        return True
