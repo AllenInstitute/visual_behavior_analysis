@@ -85,7 +85,7 @@ def define_validation_functions(core_data):
             core_data['omitted_stimuli'], PERIODIC_FLASH,
         ),  # this one doesn't take trials
         et.validate_aborted_change_time: (trials,),
-        cd.test_validate_reward_follows_first_lick_in_window: (core_data,),
+        cd.validate_reward_follows_first_lick_in_window: (core_data,),
         cd.validate_lick_before_scheduled_on_aborted_trials: (core_data,),
         cd.validate_running_data: (core_data,),  # this one doesn't take trials
         cd.validate_licks: (core_data, LICK_SPOUT_PRESENT),  # this one doesn't take trials
