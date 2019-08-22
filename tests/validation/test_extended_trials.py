@@ -511,3 +511,18 @@ def test_validate_licks_near_every_reward():
     })
 
     assert validate_licks_near_every_reward(BAD_DATA) == False
+
+def test_validate_aborted_change_time():
+    # good data: change time is nan for every aborted trial
+    GOOD_DATA = pd.DataFrame({
+        'trial_type':['aborted','aborted','go'],
+        'change_time':[np.nan, np.nan, 10]
+    })
+    assert validate_aborted_change_time(GOOD_DATA) == True
+
+    # bad data: change time on second aborted trial is not nan
+    BAD_DATA = pd.DataFrame({
+        'trial_type':['aborted','aborted','go'],
+        'change_time':[np.nan, 5, 10]
+    })
+    assert validate_aborted_change_time(BAD_DATA) == False
