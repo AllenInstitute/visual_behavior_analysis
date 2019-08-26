@@ -1,19 +1,19 @@
 --extra-index-url https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple
+h5py>=2.7.1
+opencv-python
 allensdk==1.0.0.dev7; python_version >= '3.0'
 six>=1.11.0
-numpy==1.15.0
+numpy==1.15.4 # numpy>=1.9.0 was in setup.py
 pandas==0.23.4
 scipy>=1.0.0
 matplotlib>=2.1.1
 scikit-learn==0.19.2; python_version < '3.5'
 scikit-learn>=0.19.2; python_version >= '3.5'
-tables==3.4.2
+tables
 deepdish>=0.3.6
 python-dateutil>=2.6.1
-marshmallow==3.0.0rc4
-h5py>=2.7.1
+marshmallow==3.0.0rc4 # marshmallow==3.0.0b20 was in setup.py
 psycopg2-binary
 seaborn
 zipfile2; python_version < '3.5'
 zipfile36; python_version >= '3.5'
-
