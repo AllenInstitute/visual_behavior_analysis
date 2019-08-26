@@ -3,6 +3,8 @@ import warnings
 import numpy as np
 import pandas as pd
 from .extended_trials import get_first_lick_relative_to_scheduled_change
+from visual_behavior.change_detection.running.metrics import count_wraps
+from scipy.signal import medfilt
 
 
 def parse_log(log_record):
@@ -113,6 +115,48 @@ def validate_running_data(core_data):
     all_same = all(running_data['speed'].values == running_data['speed'].values[0])
 
     return length_correct and not all_same
+
+
+def validate_encoder_voltage(core_data, range_threshold=3, wrap_threshold=2):
+    '''
+    check for potentially anomolous encoder voltage traces
+
+    Two failure modes we're checking here:
+    1) voltage range is less than the range_threshold.
+        A single rotation of the encoder will give a voltage range of ~5V, so a small range indicates
+        that the encoder makes less than 1 full rotation.
+
+    2) The ratio of forward wraps to backward wraps is less than the wrap_threshold:
+        When the encoder spinning clockwise (rotation direction for forward motion by the mouse),
+        the encoder transitions (wraps) from 5V to 0V once per rotation. If the encoder spinning CCW,
+        the transition will be from 0V to 5V. So assuming that the mouse is walking forward, there should be
+        far more forward wraps (5V-to-0V) than backward wraps (0V-to-5V). If the ratio is close to 1, this likely indicates
+        an encoder that is oscillating back and forth across the zero-point due to noise
+
+    Note that both failure modes can result from a stationary mouse (or a test session with no mouse).
+    '''
+    running = core_data['running']
+
+    # filter out voltage artifacts
+    filtered_vsig = medfilt(running['v_sig'], kernel_size=5)
+
+    v_sig_range = filtered_vsig.max() - filtered_vsig.min()
+
+    def get_wrap_ratio(forward_wraps, backward_wraps):
+        if backward_wraps == 0:
+            return np.inf
+        else:
+            return forward_wraps / backward_wraps
+
+    wrap_ratio = get_wrap_ratio(
+        count_wraps(running, 'forward'),
+        count_wraps(running, 'backward')
+    )
+
+    if v_sig_range < range_threshold or wrap_ratio < wrap_threshold:
+        return False
+    else:
+        return True
 
 
 def validate_licks(core_data, lick_spout_present):
