@@ -13,8 +13,8 @@ def get_sessions_to_load(ms,vb):
         right_on='behavior_session_uuid',
         how='outer'
     )
-    merged['to_load'] = pd.isnull(merged['behavior_session_uuid'])
-    return merged.query('to_load == True')['foraging_id']
+    merged['to_load'] = (pd.isnull(merged['behavior_session_uuid'])) & (~pd.isnull(merged['foraging_id']))
+    return merged.query('to_load == True')['foraging_id'].drop_duplicates()
 
 def add_session_to_db(session_id):
     print('adding session {}'.format(session_id))
