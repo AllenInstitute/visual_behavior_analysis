@@ -1,10 +1,8 @@
 import setuptools
-import os
 
 # https://packaging.python.org/discussions/install-requires-vs-requirements/ this is the way i think it should be -Chris
 
-requirements_file = os.path.join(os.getcwd(),'requirements.txt')
-with open(requirements_file) as f:
+with open('requirements.txt') as f:
     requirements = f.read().splitlines()
 
 setuptools.setup(
