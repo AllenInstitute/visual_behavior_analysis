@@ -242,7 +242,7 @@ def validate_reward_follows_first_lick_in_window(core_data, reward_latency_thres
         (tr['number_of_licks_in_response_window'] > 0)  # trials with licks
         & (tr['rewarded'] == True)  # go trials (rewarded means reward was available, not necessarily delivered)
         & (tr['auto_rewarded'] == False)  # not autorewarded trials
-        & (~tr['lick_reward_latency'].between(0, reward_latency_threshold))
+        & (tr['lick_reward_latency'] > reward_latency_threshold) # trials that exceed threshold
     ]
 
     # fail if there were any errant trials
