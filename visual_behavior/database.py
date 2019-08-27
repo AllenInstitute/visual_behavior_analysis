@@ -115,6 +115,19 @@ def _get_trials(db, table_name, session_id=None, id_type='behavior_session_uuid'
     session_id, id_type = _check_name_schema('visual_behavior_data', session_id, id_type)
     return pd.DataFrame(list(db.behavior_data[table_name].find({id_type:session_id})))
 
+def get_behavior_session_summary(exclude_error_sessions=True):
+    '''
+    a convenience function to get the summary dataframe from the visual behavior database
+    by default: sessions that VBA could not load are excluded
+    '''
+    vb = Database('visual_behavior_data')
+    summary = vb.query('behavior_data','summary')
+    if exclude_error_sessions:
+        # missing values imply false, but are returned as NaN. Cast to float, then filter out ones:
+        summary = summary[summary['error_on_load'].astype(float) != 1].reset_index(drop=True)
+    vb.close()
+    return summary
+
 def get_pkl_path(session_id=None, id_type='behavior_session_uuid'):
     '''
     get the path to a pkl file for a given session
