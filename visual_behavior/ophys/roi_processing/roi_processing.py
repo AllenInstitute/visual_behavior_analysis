@@ -8,6 +8,7 @@ from psycopg2 import connect, extras
 
 import pandas as pd
 import numpy as np
+from pathlib import Path
 import os
 
 get_psql_dict_cursor = convert.get_psql_dict_cursor
@@ -18,8 +19,9 @@ get_lims_data = convert.get_lims_data
  ########  From LIMS 
 
 
-def get_masks_from_lims_cell_rois_table(lims_data):
+def get_masks_from_lims_cell_rois_table(experiment_id):
     # make roi_dict with ids as keys and roi_mask_array
+    lims_data = get_lims_data(experiment_id)
     lims_cell_rois_table = get_lims_cell_rois_table(lims_data['lims_id'].values[0])
     
     h = lims_cell_rois_table["height"]
@@ -97,15 +99,51 @@ def get_objectlisttxt_location(segmentation_run_id):
     return objecttxt_info
 
 def load_current_objectlisttxt_file(experiment_id):
-    """[summary]
+    """loads the objectlist.txt file for the current segmentation run, then "cleans" the column names and returns a dataframe
     
     Arguments:
-        experiment_id {[type]} -- [description]
+        experiment_id {[int]} -- 9 digit unique identifier for the experiment
+    
+    Returns:
+        dataframe -- dataframe with the following columns:
+            trace_index:
+            center_x:
+            center_y:
+            frame_of_max_intensity_masks_file:
+            frame_of_enhanced_movie:
+            layer_of_max_intensity_file:
+            bbox_min_x:
+            bbox_min_y:
+            bbox_max_x:
+            bbox_max_y:
+            area:
+            ellipseness:
+            compactness:
+            exclude_code:
+            mean_intensity:
+            mean_enhanced_intensity:
+            max_intensity:
+            max_enhanced_intensity:
+            intensity_ratio:
+            soma_minus_np_mean:
+            soma_minus_np_std:
+            sig_active_frames_2_5:
+            sig_active_frames_4:
+            overlap_count:
+            percent_area_overlap:
+            overlap_obj0_index:
+            overlap_obj1_index:
+            soma_obj0_overlap_trace_corr:
+            soma_obj1_overlap_trace_corr:
     """
     current_segmentation_run_id = get_current_segmentation_run_id(experiment_id)
-    objectlist_location_info = get_objectlisttxt_location(current_segmentation_run_id).values[0]
+    objectlist_location_info = get_objectlisttxt_location(current_segmentation_run_id)
     objectlist_path = objectlist_location_info[0]['storage_directory']
-    objectlist_name = json_path.split('/')[-1]
+    objectlist_file = objectlist_location_info[0]["filename"]
+    full_name = os.path.join(objectlist_path, objectlist_file).replace('/allen','//allen') #works with windows and linux filepaths
+    objectlist_dataframe = pd.read_csv(full_name)
+    objectlist_dataframe = clean_objectlist_col_labels(objectlist_dataframe) #"clean" columns names to be more meaningful
+    return objectlist_dataframe
 
 
 def get_lims_cell_rois_table(experiment_id):
@@ -146,7 +184,7 @@ def get_lims_cell_rois_table(experiment_id):
     lims_cell_rois_table =  mixin.select(query)
     return lims_cell_rois_table
 
-def roi_locations_from_cell_rois_table(lims_data):
+def roi_locations_from_cell_rois_table(experiment_id):
     """takes the lims_cell_rois_table and pares it down to just what's relevent to join with the roi metrics table. 
        Renames columns to maintain continuity between the tables. 
     
@@ -157,6 +195,7 @@ def roi_locations_from_cell_rois_table(lims_data):
         dataframe -- pared down dataframe
     """
     #get the cell_rois_table for that experiment
+    lims_data = get_lims_data(experiment_id)
     exp_cell_rois_table = get_lims_cell_rois_table(lims_data['lims_id'].values[0])
     
     #select only the relevent columns
@@ -168,7 +207,7 @@ def roi_locations_from_cell_rois_table(lims_data):
 
 
 
-def get_roi_metrics(lims_data):
+def get_roi_metrics(experiment_id):
     """[summary]
     
     Arguments:
@@ -178,8 +217,9 @@ def get_roi_metrics(lims_data):
         [type] -- [description]
     """
     # objectlist.txt contains metrics associated with segmentation masks
-    segmentation_dir = get_segmentation_dir(lims_data)
+    segmentation_dir = get_segmentation_dir(experiment_id)
     roi_metrics = pd.read_csv(os.path.join(segmentation_dir, 'objectlist.txt'))
+    
     # get roi_locations and add unfiltered cell index
     roi_locations = roi_locations_from_cell_rois_table(lims_data)
     roi_names = np.sort(roi_locations.id.values)
@@ -251,20 +291,20 @@ def get_failed_roi_exclusion_labels(experiment_id):
 
 
 
-def clean_objectlist_col_labels(dataframe):
+def clean_objectlist_col_labels(objectlist_dataframe):
     """take the roi metrics from the objectlist.txt file and renames them to be more explicit and descriptive.  
         -removes single blank space at the beginning of column names
         -enforced naming scheme(no capitolization, added _)
         -renamed columns to be more descriptive/reflect contents of column
     
     Arguments:
-        dataframe {pandas dataframe} -- [roi metrics dataframe or dataframe generated from the objectlist.txt file]
+        objectlist_dataframe {pandas dataframe} -- [roi metrics dataframe or dataframe generated from the objectlist.txt file]
     
     Returns:
         [pandas dataframe] -- [same dataframe with same information but with more informative column names
     """
     
-    dataframe = dataframe.rename(index = str, columns = {' traceindex' :"trace_index", 
+    objectlist_dataframe = objectlist_dataframe.rename(index = str, columns = {' traceindex' :"trace_index", 
                                                         ' cx':'center_x',
                                                         ' cy':'center_y',
                                                         ' mask2Frame':'frame_of_max_intensity_masks_file',
@@ -293,7 +333,7 @@ def clean_objectlist_col_labels(dataframe):
                                                         ' OvlpObj1':"overlap_obj1_index",
                                                         ' corcoef0':"soma_obj0_overlap_trace_corr",
                                                         ' corcoef1':"soma_obj1_overlap_trace_corr"})
-    return dataframe
+    return objectlist_dataframe
 
 
 ########  From SDK 
