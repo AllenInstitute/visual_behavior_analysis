@@ -106,6 +106,27 @@ def test_validate_encoder_voltage():
     assert validate_encoder_voltage(BAD_DATA) == False
 
 
+def test_validate_reward_follows_first_lick_in_window():
+    core_data = {}
+    core_data['metadata'] = {}
+    core_data['metadata']['response_window'] = (0.15, 0.75)
+    change_times = np.arange(0, 60, 10)
+    core_data['trials'] = pd.DataFrame({
+        'change_time': np.arange(0, 60, 10),
+        'lick_times': [[ct + 0.2, ct + 0.3] for ct in change_times],
+        'reward_times': [[ct + 0.2005] for ct in change_times],
+        'rewarded': [True for ct in change_times],
+        'auto_rewarded': [False for ct in change_times],
+    })
+    GOOD_DATA = core_data
+    assert validate_reward_follows_first_lick_in_window(core_data) == True
+
+    # delay one reward to turn the data into bad data (there would now be a 200.5 ms delay between lick and reward)
+    core_data['trials'].at[3, 'reward_times'] = [rt + 0.2 for rt in core_data['trials'].at[3, 'reward_times']]
+    BAD_DATA = core_data
+    assert validate_reward_follows_first_lick_in_window(core_data) == False
+
+
 def test_validate_licks():
     GOOD_DATA = {}
     GOOD_DATA['licks'] = pd.DataFrame({
