@@ -122,27 +122,17 @@ def validate_encoder_voltage(core_data, range_threshold=3, wrap_threshold=2):
     check for potentially anomolous encoder voltage traces
 
     Two failure modes we're checking here:
-<<<<<<< HEAD
     1) voltage range is less than the range_threshold.
         A single rotation of the encoder will give a voltage range of ~5V, so a small range indicates
         that the encoder makes less than 1 full rotation.
 
     2) The ratio of forward wraps to backward wraps is less than the wrap_threshold:
         When the encoder spinning clockwise (rotation direction for forward motion by the mouse),
-=======
-    1) voltage range is less than the range_threshold. 
-        A single rotation of the encoder will give a voltage range of ~5V, so a small range indicates 
-        that the encoder makes less than 1 full rotation.
-
-    2) The ratio of forward wraps to backward wraps is less than the wrap_threshold:
-        When the encoder spinning clockwise (rotation direction for forward motion by the mouse),  
->>>>>>> 6dde90e... a validation function on the encoder voltage
         the encoder transitions (wraps) from 5V to 0V once per rotation. If the encoder spinning CCW,
         the transition will be from 0V to 5V. So assuming that the mouse is walking forward, there should be
         far more forward wraps (5V-to-0V) than backward wraps (0V-to-5V). If the ratio is close to 1, this likely indicates
         an encoder that is oscillating back and forth across the zero-point due to noise
 
-<<<<<<< HEAD
     Note that both failure modes can result from a stationary mouse (or a test session with no mouse).
     '''
     running = core_data['running']
@@ -161,36 +151,13 @@ def validate_encoder_voltage(core_data, range_threshold=3, wrap_threshold=2):
     wrap_ratio = get_wrap_ratio(
         count_wraps(running, 'forward'),
         count_wraps(running, 'backward')
-=======
-    Note that both failure modes can result from a stationary mouse (or a test session with no mouse). 
-    '''
-    running = core_data['running']
-    
-    # filter out voltage artifacts
-    filtered_vsig = medfilt(running['v_sig'],kernel_size=5)
-
-    v_sig_range = filtered_vsig.max() - filtered_vsig.min()
-
-    def get_wrap_ratio(forward_wraps,backward_wraps):
-        if backward_wraps == 0:
-            return np.inf
-        else:
-            return forward_wraps/backward_wraps
-
-    wrap_ratio = get_wrap_ratio(
-        count_wraps(running,'forward'),
-        count_wraps(running,'backward')
->>>>>>> 6dde90e... a validation function on the encoder voltage
     )
 
     if v_sig_range < range_threshold or wrap_ratio < wrap_threshold:
         return False
-<<<<<<< HEAD
     else:
         return True
 
-=======
->>>>>>> 6dde90e... a validation function on the encoder voltage
 
 def validate_licks(core_data, lick_spout_present):
     """

@@ -36,6 +36,14 @@ def define_validation_functions(core_data):
 
     PERIODIC_FLASH = core_data['metadata']['periodic_flash']
 
+    # When checking validate_flash_blank_durations, we need to send only the periodic flash stimuli
+    # presented during trials, and not the movie stimuli that can be included at the end of
+    # sessions. We also want to exclude any countdown stimuli from before the first trial starts.
+
+    # Boolean array for selecting stimuli that were presented as part of a trial
+    trial_stimuli = ((core_data['visual_stimuli']['frame'] >= core_data['trials'].iloc[0]['startframe']) &
+                     (core_data['visual_stimuli']['end_frame'] <= core_data['trials'].iloc[-1]['endframe'])).values
+
     validation_functions = {
         # et.validate_schema
         et.validate_autoreward_volume: (trials, AUTO_REWARD_VOLUME,),
@@ -90,7 +98,7 @@ def define_validation_functions(core_data):
         # f2.validate_frame_intervals_exists:(data), # this one doesn't take trials
         cd.validate_no_read_errors: (core_data,),
         cd.validate_omitted_flashes_are_omitted: (core_data, ),
-        cd.validate_encoder_voltage: (core_data),
+        cd.validate_encoder_voltage: (core_data,),
     }
 
     return validation_functions
