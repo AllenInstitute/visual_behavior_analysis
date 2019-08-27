@@ -2,18 +2,20 @@ import setuptools
 
 # https://packaging.python.org/discussions/install-requires-vs-requirements/ this is the way i think it should be -Chris
 
-with open('requirements.txt') as f:
-    requirements = f.read().splitlines()
+def get_requirements():
+    with open('requirements.txt') as f:
+        requirements = f.read().splitlines()
+    return requirements
 
 setuptools.setup(
     name="visual-behavior",
     version="0.6.0.dev0",
-    author="Nicholas Cain, Marina Garrett, Justin Kiggins, Doug Ollerenshaw, Nick Ponvert, and many others",
-    author_email="nicholasc, marinag, dougo, nick.ponvert <user>@alleninstitute.org",
+    author="Nicholas Cain, Marina Garrett, Justin Kiggins, Chris Mochizuki, Doug Ollerenshaw, Nick Ponvert, and many others",
+    author_email="nicholasc, marinag, chrism, dougo, nick.ponvert <user>@alleninstitute.org",
     description="analysis package for visual behavior",
     packages=setuptools.find_packages(exclude=['data', 'figures', 'notebooks', 'scripts']),
     package_data={'': ['requirements.txt']},
-    install_requires=requirements[1:], #ignore the first line which has --extra-index-url https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple
+    install_requires=get_requirements()[1:], #ignore the first line which has --extra-index-url https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple
     dependency_links=['https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple/allensdk'],
     tests_require=[
         "flake8",
