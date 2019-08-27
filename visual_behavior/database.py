@@ -105,8 +105,21 @@ def _check_name_schema(database,session_id,id_type):
     return session_id, id_type
 
 def _get_table(db, table_name, session_id=None, id_type='behavior_session_uuid'):
+    '''
+    a general function for getting behavior data tables
+    special cases:
+        `time` has an unlabeled column - label it
+        `running` is missing time data, which was done to reduce storage space. Merge time back in
+    '''
     session_id, id_type = _check_name_schema('visual_behavior_data', session_id, id_type)
-    return pd.DataFrame(list(db.behavior_data[table_name].find({id_type:session_id}))[0]['data'])
+    res = pd.DataFrame(list(db.behavior_data[table_name].find({id_type:session_id}))[0]['data'])
+    if table_name == 'time':
+        res = res.rename(columns={0:'time'})
+    if table_name == 'running':
+        # time was stripped from running to save space. add it back in:
+        time_df = pd.DataFrame(list(db.behavior_data['time'].find({id_type:session_id}))[0]['data']).rename(columns={0:'time'})
+        res = res.merge(time_df,left_index=True,right_index=True)
+    return res
 
 def _get_trials(db, table_name, session_id=None, id_type='behavior_session_uuid'):
     '''
