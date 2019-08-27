@@ -151,7 +151,7 @@ def validate_encoder_voltage(core_data, range_threshold=3, wrap_threshold=2):
     wrap_ratio = get_wrap_ratio(
         count_wraps(running, 'forward'),
         count_wraps(running, 'backward')
-        )
+    )
 
     if v_sig_range < range_threshold or wrap_ratio < wrap_threshold:
         return False

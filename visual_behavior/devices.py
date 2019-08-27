@@ -62,7 +62,7 @@ RIG_NAME = {
     'WXVS-SYSLOGIC35': 'E5',
     'WXVS-SYSLOGIC36': 'E6',
     'W7DT102905': 'F1',
-    'W10DT102905' : 'F1',
+    'W10DT102905': 'F1',
     'W7DT102904': 'F2',
     'W7DT102903': 'F3',
     'W7DT102914': 'F4',
