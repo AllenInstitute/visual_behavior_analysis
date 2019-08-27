@@ -182,6 +182,19 @@ def uuid_to_lims_id(uuid):
         return int(res['id'].iloc[0])
 
 
+def get_mouseseeks_qc_results(session_id=None, id_type='behavior_session_uuid'):
+    '''get qc results from mouseseeks'''
+    session_id, id_type = _check_name_schema('mouseseeks', session_id, id_type)
+    if id_type == 'foraging_id':
+        session_id = uuid_to_lims_id(session_id)
+
+    mouseseeks = Database('mouseseeks')
+    res = list(mouseseeks.qc.metrics.find({'lims_id':session_id}))
+    mouseseeks.close()
+    if len(res) > 0:
+        return res[0]
+    
+
 def is_int(n):
     return isinstance(n, (int, np.integer))
 
