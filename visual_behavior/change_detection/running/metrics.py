@@ -12,3 +12,4 @@ def count_wraps(running_df, direction='forward', lower_threshold=1.5, upper_thre
         wraps = running_df.query("v_sig > @upper_threshold and v_sig_last < @lower_threshold")
 
     return len(wraps)
+    
