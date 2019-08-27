@@ -12,6 +12,7 @@ setuptools.setup(
     author_email="nicholasc, marinag, dougo, nick.ponvert <user>@alleninstitute.org",
     description="analysis package for visual behavior",
     packages=setuptools.find_packages(exclude=['data', 'figures', 'notebooks', 'scripts']),
+    package_data={'': ['requirements.txt']},
     install_requires=requirements[1:], #ignore the first line which has --extra-index-url https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple
     dependency_links=['https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple/allensdk'],
     tests_require=[
