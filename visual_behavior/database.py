@@ -35,10 +35,17 @@ class Database(object):
         # this will provide flexibility in how the tables are called
         self.database = {}
         self.database_names = []
-        for db in [db for db in self.client.database_names() if db != 'admin']:
+        databases = [db for db in self.client.database_names() if db != 'admin']
+        for db in databases:
             self.database_names.append(db)
             self.database[db] = self.client[db]
             setattr(self, db, self.client[db])
+        # make subscriptable
+        self._db_names = {db:self.client[db] for db in databases}
+
+    def __getitem__(self, item):
+        # this allows databases to be accessed by name
+        return self._db_names[item]
 
     def query(self, database, collection, query={}, return_as='dataframe'):
         '''
@@ -107,7 +114,7 @@ def _check_name_schema(database, session_id, id_type):
     return session_id, id_type
 
 
-def _get_table(db, table_name, session_id=None, id_type='behavior_session_uuid'):
+def _get_table(db, table_name, session_id=None, id_type='behavior_session_uuid', db_name='behavior_data'):
     '''
     a general function for getting behavior data tables
     special cases:
@@ -115,22 +122,22 @@ def _get_table(db, table_name, session_id=None, id_type='behavior_session_uuid')
         `running` is missing time data, which was done to reduce storage space. Merge time back in
     '''
     session_id, id_type = _check_name_schema('visual_behavior_data', session_id, id_type)
-    res = pd.DataFrame(list(db.behavior_data[table_name].find({id_type: session_id}))[0]['data'])
+    res = pd.DataFrame(list(db[db_name][table_name].find({id_type: session_id}))[0]['data'])
     if table_name == 'time':
         res = res.rename(columns={0: 'time'})
     if table_name == 'running':
         # time was stripped from running to save space. add it back in:
-        time_df = pd.DataFrame(list(db.behavior_data['time'].find({id_type: session_id}))[0]['data']).rename(columns={0: 'time'})
+        time_df = pd.DataFrame(list(db[db_name]['time'].find({id_type: session_id}))[0]['data']).rename(columns={0: 'time'})
         res = res.merge(time_df, left_index=True, right_index=True)
     return res
 
 
-def _get_trials(db, table_name, session_id=None, id_type='behavior_session_uuid'):
+def _get_trials(db, table_name, session_id=None, id_type='behavior_session_uuid', db_name='behavior_data'):
     '''
     get trials table for a given session
     '''
     session_id, id_type = _check_name_schema('visual_behavior_data', session_id, id_type)
-    return pd.DataFrame(list(db.behavior_data[table_name].find({id_type: session_id})))
+    return pd.DataFrame(list(db[db_name][table_name].find({id_type: session_id})))
 
 
 def get_behavior_session_summary(exclude_error_sessions=True):
@@ -203,7 +210,7 @@ def is_float(n):
     return isinstance(n, (float, np.float))
 
 
-def add_behavior_record(behavior_session_uuid, overwrite=False, db_connection=None):
+def add_behavior_record(behavior_session_uuid, overwrite=False, db_connection=None, db_name='behavior_data'):
     '''
     for a given behavior_session_uuid:
       - opens the data with VBA
@@ -261,7 +268,7 @@ def add_behavior_record(behavior_session_uuid, overwrite=False, db_connection=No
 
     if db_connection is None:
         db_conn = Database('visual_behavior_data')
-        db = db_conn.behavior_data
+        db = db_conn[db_name]
     else:
         db = db_connection
 
