@@ -195,6 +195,9 @@ def add_behavior_record(behavior_session_uuid, overwrite=False,db_connection=Non
         - omitted_stimuli
         - metadata
         - log
+    if the session fails to open with VBA:
+        - adds a row to summary with 'error_on_load' = True
+        - saves traceback and time to 'error_log' table
     '''
     
     def insert(db, table, lims_id, behavior_session_uuid, dtype, data_to_insert):
@@ -259,16 +262,16 @@ def add_behavior_record(behavior_session_uuid, overwrite=False,db_connection=Non
     summary = add_metadata_to_summary(summary, lims_id, pkl_path, behavior_session_uuid)
     trials['behavior_session_uuid'] = behavior_session_uuid
 
+    # insert summary if not already in table
     if behavior_session_uuid in db.summary.distinct('behavior_session_uuid'):
         print('session with uuid {} already in summary'.format(behavior_session_uuid))
     else:
-        # insert summary
         insert_summary_row(summary)
 
+    # insert trials if not already in table
     if behavior_session_uuid in db.trials.distinct('behavior_session_uuid'):
         print('session with uuid {} already in trials'.format(behavior_session_uuid,'trials'))
     else:
-        # insert trials
         for idx,row in trials.iterrows():
             trials_row = {k:v for k,v in zip(list(row.keys()),list(row.values))}
             trials_row['reward_times'] = trials_row['reward_times'].tolist()
@@ -298,7 +301,7 @@ def add_behavior_record(behavior_session_uuid, overwrite=False,db_connection=Non
                     dtype = 'dict'
                 insert(db, key, lims_id, behavior_session_uuid, dtype, data_to_insert)
 
-    # insert running
+    # insert running if not already in table
     if behavior_session_uuid in db.running.distinct('behavior_session_uuid'):
         print('session with uuid {} already in {}'.format(behavior_session_uuid,'running'))
     else:
@@ -308,7 +311,7 @@ def add_behavior_record(behavior_session_uuid, overwrite=False,db_connection=Non
         data_to_insert = json.loads(running.to_json(orient='records'))
         insert(db, 'running', lims_id, behavior_session_uuid, dtype, data_to_insert)
     
-    # insert time
+    # insert time if not already in table
     if behavior_session_uuid in db.time.distinct('behavior_session_uuid'):
         print('session with uuid {} already in time'.format(behavior_session_uuid))
     else:
