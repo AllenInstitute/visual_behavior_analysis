@@ -51,7 +51,7 @@ class Database(object):
         '''
         Run a query on a collection in the database.
         The query should be formated as set of key/value pairs
-        Sending an empty query will return the entire collection 
+        Sending an empty query will return the entire collection
         '''
 
         return pd.DataFrame(list(self.database[database][collection].find(query)))
