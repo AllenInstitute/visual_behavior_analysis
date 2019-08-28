@@ -51,7 +51,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     # for xmin_seconds in np.arange(0, 5000, length_mins * 60):
     #     sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
     #                                         cell_label=False, include_running=True, use_events=use_events)
-    if (use_events==True) and (dataset.events is not None):
+    if (use_events == True) and (dataset.events is not None):
         analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
         # pairwise_correlations_df = analysis.get_pairwise_correlations_df()
         #

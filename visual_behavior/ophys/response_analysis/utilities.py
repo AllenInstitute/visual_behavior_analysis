@@ -93,7 +93,6 @@ def ptest(x, num_conditions):
     return ptest
 
 
-
 def get_p_values_from_shuffle_omitted(dataset, stimulus_table, flash_response_df, response_window_duration):
     # data munging
     fdf = flash_response_df.copy()
@@ -219,7 +218,7 @@ def get_fraction_active_trials(group):
 
 def get_fraction_responsive_trials(group, omitted):
     if omitted:
-        fraction_responsive_trials = len(group[(group.p_value_baseline < 0.05)&(group.mean_response>group.baseline_response)]) / float(len(group))
+        fraction_responsive_trials = len(group[(group.p_value_baseline < 0.05) & (group.mean_response > group.baseline_response)]) / float(len(group))
     else:
         fraction_responsive_trials = len(group[group.p_value_omitted < 0.05]) / float(len(group))
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})

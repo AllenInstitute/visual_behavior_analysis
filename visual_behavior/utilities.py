@@ -8,6 +8,8 @@ from scipy.stats import norm
 import os
 import h5py
 import cv2
+import warnings
+
 
 def flatten_list(in_list):
     out_list = []
@@ -97,6 +99,7 @@ class RisingEdge():
     ```
 
     """
+
     def __init__(self):
         self.firstall = False
 
@@ -172,6 +175,7 @@ def local_time(iso_timestamp, timezone=None):
 
 class ListHandler(logging.Handler):
     """docstring for ListHandler."""
+
     def __init__(self, log_list):
         super(ListHandler, self).__init__()
         self.log_list = log_list
@@ -218,12 +222,13 @@ def find_nearest_index(val, time_array):
     Returns the index or indices of the time points in time_array that are closest to val
     '''
     if hasattr(val, "__len__"):
-        idx = np.zeros(len(val),dtype=int)
+        idx = np.zeros(len(val), dtype=int)
         for i, v in enumerate(val):
             idx[i] = np.argmin(np.abs(v - np.array(time_array)))
     else:
         idx = np.argmin(np.abs(val - np.array(time_array)))
     return idx
+
 
 class Movie(object):
     '''
@@ -234,7 +239,7 @@ class Movie(object):
     filepath (string):
         path to the movie file
     sync_timestamps (array), optional:
-        array of timestamps acquired by sync. None by default 
+        array of timestamps acquired by sync. None by default
     h5_filename (string), optional:
         path to h5 file. assumes by default that filename matches movie filename, but with .h5 extension
     lazy_load (boolean), defaults True:
@@ -260,7 +265,6 @@ class Movie(object):
         self.frame_count = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
 
         if sync_timestamps is not None:
             self.sync_timestamps = sync_timestamps
@@ -320,9 +324,8 @@ class Movie(object):
 
         self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         for N in range(self.frame_count):
-            found_frame,frame = self.cap.read()
+            found_frame, frame = self.cap.read()
             if not found_frame:
                 print('something went wrong on frame {}, stopping'.format(frame))
                 break
-            self.array[N,:,:] = frame[:,:,0]
- 
+            self.array[N, :, :] = frame[:, :, 0]

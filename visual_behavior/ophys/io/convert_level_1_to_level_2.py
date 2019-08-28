@@ -93,7 +93,7 @@ def get_analysis_folder_name(lims_data):
     if len(specimen_driver_lines) > 1:
         for i in range(len(specimen_driver_lines)):
             if 'S' in specimen_driver_lines[i]:
-                specimen_driver_line = specimen_driver_lines[i].split('-')[0]
+                specimen_driver_line = specimen_driver_lines[i]  # .split('-')[0]
             else:
                 specimen_driver_line = specimen_driver_lines[0]
     else:
@@ -139,17 +139,20 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
     print(analysis_dir)
     if not os.path.exists(analysis_dir):
+        print('Creating a new analysis folder')
         os.mkdir(analysis_dir)
+    else:
+        print('Analysis folder already exists!')
     # Check if more than one analysis folder exists
     allFiles = os.listdir(cache_dir)
     inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
     existingFolders = np.argwhere(np.array(inds) != -1)
     # Get the modification times of the existing analysis folders
     modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in range(len(existingFolders))]
-    # Find all the old analysis folders                               
+    # Find all the old analysis folders
     indsOld = np.argsort(modifTimes)[:-1]
     oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
-    # Remove old analysis folders 
+    # Remove old analysis folders
     for i in range(len(oldFiles)):
         print('Removing old analysis folder : %s' % oldFiles[i])
         shutil.rmtree(oldFiles[i])
@@ -230,7 +233,7 @@ def get_sync_path(lims_data):
         #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except exception as E:
+        except Exception as e:
             print(e)
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
