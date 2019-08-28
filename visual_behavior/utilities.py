@@ -239,7 +239,7 @@ class Movie(object):
     filepath (string):
         path to the movie file
     sync_timestamps (array), optional:
-        array of timestamps acquired by sync. None by default 
+        array of timestamps acquired by sync. None by default
     h5_filename (string), optional:
         path to h5 file. assumes by default that filename matches movie filename, but with .h5 extension
     lazy_load (boolean), defaults True:
