@@ -41,7 +41,7 @@ class Database(object):
             self.database[db] = self.client[db]
             setattr(self, db, self.client[db])
         # make subscriptable
-        self._db_names = {db:self.client[db] for db in databases}
+        self._db_names = {db: self.client[db] for db in databases}
 
     def __getitem__(self, item):
         # this allows databases to be accessed by name
@@ -196,11 +196,11 @@ def get_mouseseeks_qc_results(session_id=None, id_type='behavior_session_uuid'):
         session_id = uuid_to_lims_id(session_id)
 
     mouseseeks = Database('mouseseeks')
-    res = list(mouseseeks.qc.metrics.find({'lims_id':session_id}))
+    res = list(mouseseeks.qc.metrics.find({'lims_id': session_id}))
     mouseseeks.close()
     if len(res) > 0:
         return res[0]
-    
+
 
 def is_int(n):
     return isinstance(n, (int, np.integer))
