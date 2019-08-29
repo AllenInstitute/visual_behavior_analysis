@@ -19,24 +19,6 @@ get_lims_data = convert.get_lims_data
  ########  From LIMS 
 
 
-def get_masks_from_lims_cell_rois_table(experiment_id):
-    # make roi_dict with ids as keys and roi_mask_array
-    lims_data = get_lims_data(experiment_id)
-    lims_cell_rois_table = get_lims_cell_rois_table(lims_data['lims_id'].values[0])
-    
-    h = lims_cell_rois_table["height"]
-    w = lims_cell_rois_table["width"]
-    cell_specimen_ids = lims_cell_rois_table["cell_specimen_id"]
-    
-    roi_masks = {}
-    for i, id in enumerate(cell_specimen_ids):
-        m = roi_metrics[roi_metrics.id == id].iloc[0]
-        mask = np.asarray(m['mask'])
-        binary_mask = np.zeros((h, w), dtype=np.uint8)
-        binary_mask[int(m.y):int(m.y) + int(m.height), int(m.x):int(m.x) + int(m.width)] = mask
-        roi_masks[int(id)] = binary_mask
-    return roi_masks
-
 
 def get_lims_cell_segmentation_run_info(experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve information on all segmentations run in the 
@@ -146,6 +128,51 @@ def load_current_objectlisttxt_file(experiment_id):
     return objectlist_dataframe
 
 
+def clean_objectlist_col_labels(objectlist_dataframe):
+    """take the roi metrics from the objectlist.txt file and renames them to be more explicit and descriptive.  
+        -removes single blank space at the beginning of column names
+        -enforced naming scheme(no capitolization, added _)
+        -renamed columns to be more descriptive/reflect contents of column
+    
+    Arguments:
+        objectlist_dataframe {pandas dataframe} -- [roi metrics dataframe or dataframe generated from the objectlist.txt file]
+    
+    Returns:
+        [pandas dataframe] -- [same dataframe with same information but with more informative column names
+    """
+    
+    objectlist_dataframe = objectlist_dataframe.rename(index = str, columns = {' traceindex' :"trace_index", 
+                                                        ' cx':'center_x',
+                                                        ' cy':'center_y',
+                                                        ' mask2Frame':'frame_of_max_intensity_masks_file',
+                                                        ' frame':'frame_of_enhanced_movie',
+                                                        ' object':'layer_of_max_intensity_file',
+                                                        ' minx':'bbox_min_x',
+                                                        ' miny':'bbox_min_y',
+                                                        ' maxx':'bbox_max_x',
+                                                        ' maxy':'bbox_max_y',
+                                                        ' area':'area',
+                                                        ' shape0':'ellipseness',
+                                                        ' shape1':"compactness",
+                                                        ' eXcluded':"exclude_code",
+                                                        ' meanInt0':"mean_intensity",
+                                                        ' meanInt1':"mean_enhanced_intensity",
+                                                        ' maxInt0':"max_intensity",
+                                                        ' maxInt1':"max_enhanced_intensity",
+                                                        ' maxMeanRatio':"intensity_ratio",
+                                                        ' snpoffsetmean':"soma_minus_np_mean",
+                                                        ' snpoffsetstdv':"soma_minus_np_std",
+                                                        ' act2':"sig_active_frames_2_5",
+                                                        ' act3':"sig_active_frames_4",
+                                                        ' OvlpCount':"overlap_count",
+                                                        ' OvlpAreaPer':"percent_area_overlap",
+                                                        ' OvlpObj0':"overlap_obj0_index",
+                                                        ' OvlpObj1':"overlap_obj1_index",
+                                                        ' corcoef0':"soma_obj0_overlap_trace_corr",
+                                                        ' corcoef1':"soma_obj1_overlap_trace_corr"})
+    return objectlist_dataframe
+
+
 def get_lims_cell_rois_table(experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve everything in the cell_rois table for a given experiment
     
@@ -201,50 +228,88 @@ def roi_locations_from_cell_rois_table(experiment_id):
     #select only the relevent columns
     roi_locations = exp_cell_rois_table[["id", "x", "y", "width", "height", "valid_roi", "mask_matrix"]]
     
-    #rename columns to be able to merge them with the roi metrics
-    roi_locations = roi_locations.rename(columns={"valid_roi":"valid", "mask_matrix":"mask"})
+    #rename columns 
+    roi_locations = clean_roi_locations_column_labels(roi_locations)
+    
+    #from Marinas code
+    roi_names = np.sort(roi_locations.id.values)
+    roi_locations['unfiltered_cell_index'] = [np.where(roi_names == id)[0][0] for id in roi_locations.id.values]
     return roi_locations
 
 
 
-def get_roi_metrics(experiment_id):
-    """[summary]
+def clean_roi_locations_column_labels(roi_locations_dataframe):
+    """takes some column labels from the roi_locations dataframe and  renames them to be more explicit and descriptive, and to match the column labels
+        from the objectlist dataframe.
     
     Arguments:
-        lims_data {[type]} -- [description]
+        roi_locations_dataframe {dataframe} -- dataframe with roi id and location information
     
     Returns:
-        [type] -- [description]
+        dataframe -- [description]
     """
-    # objectlist.txt contains metrics associated with segmentation masks
-    segmentation_dir = get_segmentation_dir(experiment_id)
-    roi_metrics = pd.read_csv(os.path.join(segmentation_dir, 'objectlist.txt'))
+    roi_locations_dataframe = roi_locations_dataframe.rename(columns={"valid_roi":"valid", 
+                                                            "mask_matrix":"mask",
+                                                            "x":"bbox_min_x",
+                                                            "y":"bbox_min_y"})
+    return roi_locations_dataframe
+
+
+def join_locations_objectlist_dataframes(objectlist_dataframe, roi_locations_dataframe):
+
+
+
+# def get_roi_metrics(experiment_id):
+
+#     # objectlist.txt contains metrics associated with segmentation masks
+#     roi_metrics = load_current_objectlisttxt_file(experiment_id))
     
-    # get roi_locations and add unfiltered cell index
-    roi_locations = roi_locations_from_cell_rois_table(lims_data)
-    roi_names = np.sort(roi_locations.id.values)
-    roi_locations['unfiltered_cell_index'] = [np.where(roi_names == id)[0][0] for id in roi_locations.id.values]
-    # add cell ids to roi_metrics from roi_locations
-    roi_metrics = add_roi_ids_to_roi_metrics(roi_metrics, roi_locations)
-    # merge roi_metrics and roi_locations
-    roi_metrics['id'] = roi_metrics.roi_id.values
-    roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
-    unfiltered_roi_metrics = roi_metrics
-    # remove invalid roi_metrics
-    roi_metrics = roi_metrics[roi_metrics.valid == True]
-    # hack to get rid of cases with 2 rois at the same location
-    for roi_id in roi_metrics.roi_id.values:
-        roi_data = roi_metrics[roi_metrics.roi_id == roi_id]
-        if len(roi_data) > 1:
-            ind = roi_data.index
-            roi_metrics = roi_metrics.drop(index=ind.values)
-    # add filtered cell index
-    cell_index = [np.where(np.sort(roi_metrics.roi_id.values) == id)[0][0] for id in
-                  roi_metrics.roi_id.values]
-    roi_metrics['cell_index'] = cell_index
-    return roi_metrics, unfiltered_roi_metrics
+#     # get roi_locations and add unfiltered cell index
+#     roi_locations = roi_locations_from_cell_rois_table(lims_data)
+#     roi_names = np.sort(roi_locations.id.values)
+#     roi_locations['unfiltered_cell_index'] = [np.where(roi_names == id)[0][0] for id in roi_locations.id.values]
+    
+#     # add cell ids to roi_metrics from roi_locations
+#     roi_metrics = add_roi_ids_to_roi_metrics(roi_metrics, roi_locations)
+    
+#     # merge roi_metrics and roi_locations
+#     roi_metrics['id'] = roi_metrics.roi_id.values
+#     roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
+#     unfiltered_roi_metrics = roi_metrics
+    
+#     # remove invalid roi_metrics
+#     roi_metrics = roi_metrics[roi_metrics.valid == True]
+    
+#     # hack to get rid of cases with 2 rois at the same location
+#     for roi_id in roi_metrics.roi_id.values:
+#         roi_data = roi_metrics[roi_metrics.roi_id == roi_id]
+#         if len(roi_data) > 1:
+#             ind = roi_data.index
+#             roi_metrics = roi_metrics.drop(index=ind.values)
+    
+#     # add filtered cell index
+#     cell_index = [np.where(np.sort(roi_metrics.roi_id.values) == id)[0][0] for id in
+#                   roi_metrics.roi_id.values]
+#     roi_metrics['cell_index'] = cell_index
+#     return roi_metrics, unfiltered_roi_metrics
 
-
+def get_masks_from_lims_cell_rois_table(experiment_id):
+    # make roi_dict with ids as keys and roi_mask_array
+    lims_data = get_lims_data(experiment_id)
+    lims_cell_rois_table = get_lims_cell_rois_table(lims_data['lims_id'].values[0])
+    
+    h = lims_cell_rois_table["height"]
+    w = lims_cell_rois_table["width"]
+    cell_specimen_ids = lims_cell_rois_table["cell_specimen_id"]
+    
+    roi_masks = {}
+    for i, id in enumerate(cell_specimen_ids):
+        m = roi_metrics[roi_metrics.id == id].iloc[0]
+        mask = np.asarray(m['mask'])
+        binary_mask = np.zeros((h, w), dtype=np.uint8)
+        binary_mask[int(m.y):int(m.y) + int(m.height), int(m.x):int(m.x) + int(m.width)] = mask
+        roi_masks[int(id)] = binary_mask
+    return roi_masks
 
 
 def get_failed_roi_exclusion_labels(experiment_id):
@@ -291,49 +356,7 @@ def get_failed_roi_exclusion_labels(experiment_id):
 
 
 
-def clean_objectlist_col_labels(objectlist_dataframe):
-    """take the roi metrics from the objectlist.txt file and renames them to be more explicit and descriptive.  
-        -removes single blank space at the beginning of column names
-        -enforced naming scheme(no capitolization, added _)
-        -renamed columns to be more descriptive/reflect contents of column
-    
-    Arguments:
-        objectlist_dataframe {pandas dataframe} -- [roi metrics dataframe or dataframe generated from the objectlist.txt file]
-    
-    Returns:
-        [pandas dataframe] -- [same dataframe with same information but with more informative column names
-    """
-    
-    objectlist_dataframe = objectlist_dataframe.rename(index = str, columns = {' traceindex' :"trace_index", 
-                                                        ' cx':'center_x',
-                                                        ' cy':'center_y',
-                                                        ' mask2Frame':'frame_of_max_intensity_masks_file',
-                                                        ' frame':'frame_of_enhanced_movie',
-                                                        ' object':'layer_of_max_intensity_file',
-                                                        ' minx':'bbox_min_x',
-                                                        ' miny':'bbox_min_y',
-                                                        ' maxx':'bbox_max_x',
-                                                        ' maxy':'bbox_max_y',
-                                                        ' area':'area',
-                                                        ' shape0':'ellipseness',
-                                                        ' shape1':"compactness",
-                                                        ' eXcluded':"exclude_code",
-                                                        ' meanInt0':"mean_intensity",
-                                                        ' meanInt1':"mean_enhanced_intensity",
-                                                        ' maxInt0':"max_intensity",
-                                                        ' maxInt1':"max_enhanced_intensity",
-                                                        ' maxMeanRatio':"intensity_ratio",
-                                                        ' snpoffsetmean':"soma_minus_np_mean",
-                                                        ' snpoffsetstdv':"soma_minus_np_std",
-                                                        ' act2':"sig_active_frames_2_5",
-                                                        ' act3':"sig_active_frames_4",
-                                                        ' OvlpCount':"overlap_count",
-                                                        ' OvlpAreaPer':"percent_area_overlap",
-                                                        ' OvlpObj0':"overlap_obj0_index",
-                                                        ' OvlpObj1':"overlap_obj1_index",
-                                                        ' corcoef0':"soma_obj0_overlap_trace_corr",
-                                                        ' corcoef1':"soma_obj1_overlap_trace_corr"})
-    return objectlist_dataframe
+
 
 
 ########  From SDK 
