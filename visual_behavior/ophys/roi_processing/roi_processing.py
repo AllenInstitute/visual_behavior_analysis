@@ -40,6 +40,9 @@ def get_lims_cell_segmentation_run_info(experiment_id):
     WHERE ophys_experiment_id = {} '''.format(experiment_id)
     return mixin.select(query)
 
+
+
+
 def get_current_segmentation_run_id(experiment_id):
     """gets the id for the current cell segmentation run for a given experiment. 
         Queries LIMS via AllenSDK PostgresQuery function.
@@ -54,6 +57,9 @@ def get_current_segmentation_run_id(experiment_id):
     segmentation_run_table = get_lims_cell_segmentation_run_info(experiment_id)
     current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"]==True, ["id"][0]][0]
     return current_segmentation_run_id
+
+
+
 
 def get_objectlisttxt_location(segmentation_run_id):
     """use SQL and the LIMS well known file system to get the location information for the objectlist.txt file
@@ -79,6 +85,9 @@ def get_objectlisttxt_location(segmentation_run_id):
     lims_cursor.execute(QUERY.format(segmentation_run_id))
     objecttxt_info = (lims_cursor.fetchall())
     return objecttxt_info
+
+
+
 
 def load_current_objectlisttxt_file(experiment_id):
     """loads the objectlist.txt file for the current segmentation run, then "cleans" the column names and returns a dataframe
@@ -128,6 +137,8 @@ def load_current_objectlisttxt_file(experiment_id):
     return objectlist_dataframe
 
 
+
+
 def clean_objectlist_col_labels(objectlist_dataframe):
     """take the roi metrics from the objectlist.txt file and renames them to be more explicit and descriptive.  
         -removes single blank space at the beginning of column names
@@ -173,6 +184,8 @@ def clean_objectlist_col_labels(objectlist_dataframe):
     return objectlist_dataframe
 
 
+
+
 def get_lims_cell_rois_table(experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve everything in the cell_rois table for a given experiment
     
@@ -211,6 +224,8 @@ def get_lims_cell_rois_table(experiment_id):
     lims_cell_rois_table =  mixin.select(query)
     return lims_cell_rois_table
 
+
+
 def roi_locations_from_cell_rois_table(experiment_id):
     """takes the lims_cell_rois_table and pares it down to just what's relevent to join with the roi metrics table. 
        Renames columns to maintain continuity between the tables. 
@@ -238,6 +253,7 @@ def roi_locations_from_cell_rois_table(experiment_id):
 
 
 
+
 def clean_roi_locations_column_labels(roi_locations_dataframe):
     """takes some column labels from the roi_locations dataframe and  renames them to be more explicit and descriptive, and to match the column labels
         from the objectlist dataframe.
@@ -249,7 +265,7 @@ def clean_roi_locations_column_labels(roi_locations_dataframe):
         dataframe -- [description]
     """
     roi_locations_dataframe = roi_locations_dataframe.rename(columns={"valid_roi":"valid",
-                                                            "id":"cell_roi_id" 
+                                                            "id":"cell_roi_id",
                                                             "mask_matrix":"mask",
                                                             "x":"bbox_min_x",
                                                             "y":"bbox_min_y"})
@@ -294,6 +310,9 @@ def join_locations_objectlist_dataframes(objectlist_dataframe, roi_locations_dat
 #     roi_metrics['cell_index'] = cell_index
 #     return roi_metrics, unfiltered_roi_metrics
 
+
+
+
 def get_masks_from_lims_cell_rois_table(experiment_id):
     # make roi_dict with ids as keys and roi_mask_array
     lims_data = get_lims_data(experiment_id)
@@ -311,6 +330,8 @@ def get_masks_from_lims_cell_rois_table(experiment_id):
         binary_mask[int(m.y):int(m.y) + int(m.height), int(m.x):int(m.x) + int(m.width)] = mask
         roi_masks[int(id)] = binary_mask
     return roi_masks
+
+
 
 
 def get_failed_roi_exclusion_labels(experiment_id):
@@ -359,6 +380,9 @@ def get_failed_roi_exclusion_labels(experiment_id):
 
 ########  From SDK 
 
+
+
+
 def get_session_from_sdk(experiment_id):
     """Use LIMS API to return session object
     
@@ -371,6 +395,9 @@ def get_session_from_sdk(experiment_id):
     api = BehaviorOphysLimsApi(experiment_id)
     session = BehaviorOphysSession(api)
     return session
+
+
+
 
 def get_sdk_cell_specimen_table(experiment_id):
     """returns cell specimen table using the SDK LIMS API
@@ -397,8 +424,12 @@ def get_sdk_cell_specimen_table(experiment_id):
     """
     session = get_session_from_sdk(experiment_id)
     cell_specimen_table = session.cell_specimen_table
-    cell_specimen_table = clean_cell_specimen_table_column_labels(cell_specimen_table) #rename columns to be consistent with roi_locations_dataframe and objectlist 
+    cell_specimen_table = clean_cell_specimen_table_column_labels(cell_specimen_table) #rename columns to be consistent with roi_locations_dataframe and objectlist
+    cell_specimen_table["cell_specimen_id"] =  cell_specimen_table.index #make cell_specimen_id a column so it can be merged on 
     return cell_specimen_table
+
+
+
 
 def clean_cell_specimen_table_column_labels(cell_specimen_table):
     """takes some column names from the cell specimen dataframe and renames them to be more explicit and descriptive, and to match the column labels
@@ -414,6 +445,9 @@ def clean_cell_specimen_table_column_labels(cell_specimen_table):
                                                             "x":"bbox_min_x",
                                                             "y":"bbox_min_y"})
     return cell_specimen_table
+
+
+
 
 
 def get_binary_mask_for_cell_specimen_id(experiment_id, cell_specimen_id):
@@ -451,6 +485,7 @@ def get_binary_mask_for_cell_specimen_id(experiment_id, cell_specimen_id):
         #where new mask is one, change binary mask to 1, so now all nans and 1s where roi is
     binary_mask[new_mask==1] = 1
     return binary_mask
+
 
 
 
