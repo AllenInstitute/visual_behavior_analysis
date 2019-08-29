@@ -280,8 +280,8 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
     else:
         db = db_connection
 
-    assert not all((behavior_session_uuid == None, pkl_path == None)), "either a behavior_session_uuid or a pkl_path must be specified"
-    assert behavior_session_uuid == None or pkl_path == None, "both a behavior_session_uuid and a pkl_path cannot be specified, choose one"
+    assert not all((behavior_session_uuid is None, pkl_path is None)), "either a behavior_session_uuid or a pkl_path must be specified"
+    assert behavior_session_uuid is None or pkl_path is None, "both a behavior_session_uuid and a pkl_path cannot be specified, choose one"
 
     lims_id = None
 
