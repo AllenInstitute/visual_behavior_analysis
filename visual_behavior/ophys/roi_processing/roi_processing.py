@@ -96,36 +96,40 @@ def load_current_objectlisttxt_file(experiment_id):
         experiment_id {[int]} -- 9 digit unique identifier for the experiment
     
     Returns:
-        dataframe -- dataframe with the following columns:
-            trace_index:
-            center_x:
-            center_y:
-            frame_of_max_intensity_masks_file:
-            frame_of_enhanced_movie:
-            layer_of_max_intensity_file:
-            bbox_min_x:
-            bbox_min_y:
-            bbox_max_x:
-            bbox_max_y:
-            area:
-            ellipseness:
-            compactness:
-            exclude_code:
-            mean_intensity:
-            mean_enhanced_intensity:
-            max_intensity:
-            max_enhanced_intensity:
-            intensity_ratio:
-            soma_minus_np_mean:
-            soma_minus_np_std:
-            sig_active_frames_2_5:
-            sig_active_frames_4:
-            overlap_count:
-            percent_area_overlap:
-            overlap_obj0_index:
-            overlap_obj1_index:
-            soma_obj0_overlap_trace_corr:
-            soma_obj1_overlap_trace_corr:
+        dataframe -- dataframe with the following columns: (from http://confluence.corp.alleninstitute.org/display/IT/Ophys+Segmentation)
+            trace_index:The index to the corresponding trace plot computed  (order of the computed traces in file _somaneuropiltraces.h5)
+            center_x: The x coordinate of the centroid of the object in image pixels
+            center_y:The y coordinate of the centroid of the object in image pixels
+            frame_of_max_intensity_masks_file: The frame the object mask is in maxInt_masks2.tif
+            frame_of_enhanced_movie: The frame in the movie enhimgseq.tif that best shows the object
+            layer_of_max_intensity_file: The layer of the maxInt file where the object can be seen
+            bbox_min_x: coordinates delineating a bounding box that contains the object, in image pixels (upper left corner)
+            bbox_min_y: coordinates delineating a bounding box that contains the object, in image pixels (upper left corner)
+            bbox_max_x: coordinates delineating a bounding box that contains the object, in image pixels (bottom right corner)
+            bbox_max_y: coordinates delineating a bounding box that contains the object, in image pixels (bottom right corner)
+            area: Total area of the segmented object
+            ellipseness: The "ellipticalness" of the object, i.e. length of long axis divided by length of short axis
+            compactness: Compactness :  perimeter^2 divided by area
+            exclude_code: A non-zero value indicates the object should be excluded from further analysis.  Based on measurements in objectlist.txt
+                        0 = not excluded
+                        1 = doublet cell
+                        2 = boundary cell
+                        Others = classified as not complete soma, apical dendrite, ....
+            mean_intensity: Correlates with delta F/F.  Mean brightness of the object
+            mean_enhanced_intensity: Mean enhanced brightness of the object
+            max_intensity: Max brightness of the object
+            max_enhanced_intensity: Max enhanced brightness of the object
+            intensity_ratio: (max_enhanced_intensity - mean_enhanced_intensity) / mean_enhanced_intensity, for detecting dendrite objects
+            soma_minus_np_mean: mean of (soma trace – its neuropil trace)
+            soma_minus_np_std: 1-sided stdv of (soma trace – its neuropil trace)
+            sig_active_frames_2_5:# frames with significant detected activity (spiking)   : Sum ( soma_trace > (np_trace + Snpoffsetmean+ 2.5 * Snpoffsetstdv)   trace_38_soma.png  See example traces attached.
+            sig_active_frames_4: # frames with significant detected activity (spiking)   : Sum ( soma_trace > (np_trace + Snpoffsetmean+ 4.0 * Snpoffsetstdv)
+            overlap_count: 	Number of other objects the object overlaps with
+            percent_area_overlap: the percentage of total object area that overlaps with other objects
+            overlap_obj0_index: The index of the first object with which this object overlaps
+            overlap_obj1_index: The index of the second object with which this object overlaps
+            soma_obj0_overlap_trace_corr: trace correlation coefficient between soma and overlap soma0  (-1.0:  excluded cell,  0.0 : NA)
+            soma_obj1_overlap_trace_corr: trace correlation coefficient between soma and overlap soma1
     """
     current_segmentation_run_id = get_current_segmentation_run_id(experiment_id)
     objectlist_location_info = get_objectlisttxt_location(current_segmentation_run_id)
@@ -227,7 +231,7 @@ def get_lims_cell_rois_table(experiment_id):
 
 
 def roi_locations_from_cell_rois_table(experiment_id):
-    """takes the lims_cell_rois_table and pares it down to just what's relevent to join with the roi metrics table. 
+    """takes the lims_cell_rois_table and pares it down to just what's relevent to join with the objectlist.txt table. 
        Renames columns to maintain continuity between the tables. 
     
     Arguments:
@@ -245,10 +249,6 @@ def roi_locations_from_cell_rois_table(experiment_id):
     
     #rename columns 
     roi_locations = clean_roi_locations_column_labels(roi_locations)
-    
-    # #from Marinas code
-    # roi_names = np.sort(roi_locations.id.values)
-    # roi_locations['unfiltered_cell_index'] = [np.where(roi_names == id)[0][0] for id in roi_locations.id.values]
     return roi_locations
 
 
@@ -271,43 +271,31 @@ def clean_roi_locations_column_labels(roi_locations_dataframe):
     return roi_locations_dataframe
 
 
-# def join_locations_objectlist_dataframes(objectlist_dataframe, roi_locations_dataframe):
+def gen_roi_metrics_dataframe(experiment_id):
+    objectlist_df = load_current_objectlisttxt_file(experiment_id)  
+    roi_locations_df = roi_locations_from_cell_rois_table(experiment_id)
+    cell_specimen_table = get_sdk_cell_specimen_table(experiment_id)
+    failed_roi_exclusion_labels = gen_roi_exclusion_labels_lists(experiment_id)
+    
+
+    obj_loc_df = pd.merge(objectlist_df, roi_locations_df, how = "outer", on= ["bbox_min_x", "bbox_min_y"])
+    roi_metrics_df = pd.merge(obj_loc_df, cell_specimen_table, how = "outer", on= ["cell_roi_id", "bbox_min_x", "bbox_min_y", "valid_roi"])
+    roi_metrics_df = pd.merge(roi_metrics_df, failed_roi_exclusion_labels, how = "outer", on="cell_roi_id")
+    return roi_metrics_df
+
+
+def gen_roi_exclusion_labels_lists(experiment_id):
+    roi_exclusion_table = get_failed_roi_exclusion_labels(experiment_id)
+    roi_exclusion_table = roi_exclusion_table[["cell_roi_id", "exclusion_label_name"]]
+    exclusion_list_per_invalid_roi = roi_exclusion_table.groupby(["cell_roi_id"]).agg(lambda x: tuple(x)).applymap(list).reset_index()
+    return exclusion_list_per_invalid_roi
 
 
 
-# def get_roi_metrics(experiment_id):
 
-#     # objectlist.txt contains metrics associated with segmentation masks
-#     roi_metrics = load_current_objectlisttxt_file(experiment_id))
-    
-#     # get roi_locations and add unfiltered cell index
-#     roi_locations = roi_locations_from_cell_rois_table(lims_data)
-#     roi_names = np.sort(roi_locations.id.values)
-#     roi_locations['unfiltered_cell_index'] = [np.where(roi_names == id)[0][0] for id in roi_locations.id.values]
-    
-#     # add cell ids to roi_metrics from roi_locations
-#     roi_metrics = add_roi_ids_to_roi_metrics(roi_metrics, roi_locations)
-    
-#     # merge roi_metrics and roi_locations
-#     roi_metrics['id'] = roi_metrics.roi_id.values
-#     roi_metrics = pd.merge(roi_metrics, roi_locations, on='id')
-#     unfiltered_roi_metrics = roi_metrics
-    
-#     # remove invalid roi_metrics
-#     roi_metrics = roi_metrics[roi_metrics.valid == True]
-    
-#     # hack to get rid of cases with 2 rois at the same location
-#     for roi_id in roi_metrics.roi_id.values:
-#         roi_data = roi_metrics[roi_metrics.roi_id == roi_id]
-#         if len(roi_data) > 1:
-#             ind = roi_data.index
-#             roi_metrics = roi_metrics.drop(index=ind.values)
-    
-#     # add filtered cell index
-#     cell_index = [np.where(np.sort(roi_metrics.roi_id.values) == id)[0][0] for id in
-#                   roi_metrics.roi_id.values]
-#     roi_metrics['cell_index'] = cell_index
-#     return roi_metrics, unfiltered_roi_metrics
+
+
+
 
 
 
@@ -377,10 +365,6 @@ def get_failed_roi_exclusion_labels(experiment_id):
 
 
 ########  From SDK 
-
-
-
-
 def get_session_from_sdk(experiment_id):
     """Use LIMS API to return session object
     
