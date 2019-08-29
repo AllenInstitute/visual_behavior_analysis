@@ -246,9 +246,9 @@ def roi_locations_from_cell_rois_table(experiment_id):
     #rename columns 
     roi_locations = clean_roi_locations_column_labels(roi_locations)
     
-    #from Marinas code
-    roi_names = np.sort(roi_locations.id.values)
-    roi_locations['unfiltered_cell_index'] = [np.where(roi_names == id)[0][0] for id in roi_locations.id.values]
+    # #from Marinas code
+    # roi_names = np.sort(roi_locations.id.values)
+    # roi_locations['unfiltered_cell_index'] = [np.where(roi_names == id)[0][0] for id in roi_locations.id.values]
     return roi_locations
 
 
@@ -264,15 +264,14 @@ def clean_roi_locations_column_labels(roi_locations_dataframe):
     Returns:
         dataframe -- [description]
     """
-    roi_locations_dataframe = roi_locations_dataframe.rename(columns={"valid_roi":"valid",
-                                                            "id":"cell_roi_id",
-                                                            "mask_matrix":"mask",
+    roi_locations_dataframe = roi_locations_dataframe.rename(columns={"id":"cell_roi_id",
+                                                            "mask_matrix":"roi_mask",
                                                             "x":"bbox_min_x",
                                                             "y":"bbox_min_y"})
     return roi_locations_dataframe
 
 
-def join_locations_objectlist_dataframes(objectlist_dataframe, roi_locations_dataframe):
+# def join_locations_objectlist_dataframes(objectlist_dataframe, roi_locations_dataframe):
 
 
 
@@ -309,7 +308,6 @@ def join_locations_objectlist_dataframes(objectlist_dataframe, roi_locations_dat
 #                   roi_metrics.roi_id.values]
 #     roi_metrics['cell_index'] = cell_index
 #     return roi_metrics, unfiltered_roi_metrics
-
 
 
 
@@ -410,7 +408,7 @@ def get_sdk_cell_specimen_table(experiment_id):
                     cell_specimen_id(index):
                     cell_roi_id:
                     height:
-                    image_mask:
+                    image_mask: roi mask put within the motion corrected 2photon FOV (always the upper left corner of the image)
                     mask_image_plane:
                     max_correction_down:
                     max_correction_left:
@@ -441,8 +439,7 @@ def clean_cell_specimen_table_column_labels(cell_specimen_table):
     Returns:
         dataframe -- dataframe with some column names/labels changed
     """
-    cell_specimen_table = cell_specimen_table.rename(columns={"valid_roi":"valid",
-                                                            "x":"bbox_min_x",
+    cell_specimen_table = cell_specimen_table.rename(columns={"x":"bbox_min_x",
                                                             "y":"bbox_min_y"})
     return cell_specimen_table
 
@@ -450,7 +447,7 @@ def clean_cell_specimen_table_column_labels(cell_specimen_table):
 
 
 
-def get_binary_mask_for_cell_specimen_id(experiment_id, cell_specimen_id):
+def get_binary_mask_for_cell_specimen_id(experiment_id, cell_roi_id):
     """[summary]
     
     Arguments:
@@ -465,18 +462,34 @@ def get_binary_mask_for_cell_specimen_id(experiment_id, cell_specimen_id):
     ##retrieve the mask & the x & y shift
         #cell_specimen_id is the index col so thats why use .index
         #get the mask
-    roi_mask = cell_specimen_table.loc[cell_specimen_table.index==cell_specimen_id,"image_mask"].values[0]
+    roi_image_mask = cell_specimen_table.loc[cell_specimen_table["cell_roi_id"]==cell_roi_id,"image_mask"].values[0]
+    shifted_roi = shift_mask_to_roi_location_in_image(roi_mask, cell_specimen_table) #shift ROI to correction location in FOV
+    binary_mask = change_mask_from_bool_to_binary(shifted_roi) #change mask from bool to binary
+    return binary_mask
+
+
+def shift_mask_to_roi_location_in_image(roi_image_mask, cell_specimen_table):
+    """Takes the image mask and rolls it such that the ROI is in the correction location within the FOV
     
-        #get the x & y shift, x & y cols are the x & y min for roi bounding box (upper left corner)
-    x_shift = int(cell_specimen_table.loc[cell_specimen_table.index==cell_specimen_id,"x"]) 
-    y_shift = int(cell_specimen_table.loc[cell_specimen_table.index==cell_specimen_id,"y"])
+    Arguments:
+        roi_mask {[type]} -- [description]
+        cell_specimen_table {[type]} -- [description]
     
+    Returns:
+        [type] -- [description]
+    """
+    #get the x & y shift, x & y cols are the x & y min for roi bounding box (upper left corner)
+    x_shift = int(cell_specimen_table.loc[cell_specimen_table["cell_roi_id"]==cell_roi_id, "bbox_min_x"]) 
+    y_shift = int(cell_specimen_table.loc[cell_specimen_table["cell_roi_id"]==cell_roi_id, "bbox_min_y"])
     ##shift the roi mask to the correct position by using np roll
-    shifted_roi=np.roll(roi_mask,(x_shift,y_shift),axis=(1,0))
-    
+    shifted_roi_image_mask=np.roll(roi_image_mask,(x_shift,y_shift),axis=(1,0))
+    return shifted_roi_image_mask
+
+
+def change_mask_from_bool_to_binary(mask):
     ##change the background from true/false to nan & 1, so area not masked will be transparent for plotting over ave proj
         #make a new mask (0,1) by copying the shifted mask
-    new_mask = shifted_roi.copy()
+    new_mask = mask.copy()
     new_mask = new_mask.astype(int)
         #create an all 0s(binary) mask of the same shape
     binary_mask = np.zeros(new_mask.shape)
@@ -486,6 +499,7 @@ def get_binary_mask_for_cell_specimen_id(experiment_id, cell_specimen_id):
     binary_mask[new_mask==1] = 1
     return binary_mask
 
+    
 
 
 
