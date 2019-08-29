@@ -7,7 +7,8 @@ import os
 import glob
 import traceback
 import datetime
-from .translator.foraging2 import data_to_change_detection_core
+from .translator.foraging2 import data_to_change_detection_core as foraging2_translator
+from .translator.foraging import data_to_change_detection_core as foraging1_translator
 from .translator.core import create_extended_dataframe
 from .change_detection.trials import summarize
 
@@ -210,7 +211,7 @@ def is_float(n):
     return isinstance(n, (float, np.float))
 
 
-def add_behavior_record(behavior_session_uuid, overwrite=False, db_connection=None, db_name='behavior_data'):
+def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=False, db_connection=None, db_name='behavior_data', data_type='foraging2'):
     '''
     for a given behavior_session_uuid:
       - opens the data with VBA
@@ -228,6 +229,13 @@ def add_behavior_record(behavior_session_uuid, overwrite=False, db_connection=No
         - adds a row to summary with 'error_on_load' = True
         - saves traceback and time to 'error_log' table
     '''
+
+    if data_type.lower() == 'foraging2':
+        data_to_change_detection_core = foraging2_translator
+    elif data_type.lower() == 'foraging1':
+        data_to_change_detection_core = foraging1_translator
+    else:
+        raise NameError('data_type must be either `foraging1` or `foraging2`')
 
     def insert(db, table, lims_id, behavior_session_uuid, dtype, data_to_insert):
         db[table].insert_one({
@@ -272,19 +280,27 @@ def add_behavior_record(behavior_session_uuid, overwrite=False, db_connection=No
     else:
         db = db_connection
 
-    # get lims ID
-    lims_id = uuid_to_lims_id(behavior_session_uuid)
+    assert not all((behavior_session_uuid == None, pkl_path == None)), "either a behavior_session_uuid or a pkl_path must be specified"
+    assert behavior_session_uuid == None or pkl_path == None, "both a behavior_session_uuid and a pkl_path cannot be specified, choose one"
+
+    lims_id = None
 
     # load behavior data
     try:
-        pkl_path = get_pkl_path(behavior_session_uuid)
+        if pkl_path is None:
+            pkl_path = get_pkl_path(behavior_session_uuid)
         data = pd.read_pickle(pkl_path)
         core_data = data_to_change_detection_core(data)
+        if behavior_session_uuid is None:
+            behavior_session_uuid = str(core_data['metadata']['behavior_session_uuid'])
         trials = create_extended_dataframe(**core_data).drop(columns=['date', 'LDT_mode'])
         summary = summarize.session_level_summary(trials).sort_values(by='startdatetime').reset_index(drop=True)
     except Exception as err:
         log_error_data(err)
         return
+
+    # get lims ID
+    lims_id = uuid_to_lims_id(behavior_session_uuid)
 
     # add some columns to trials and summary
     trials['lims_id'] = lims_id
@@ -299,9 +315,9 @@ def add_behavior_record(behavior_session_uuid, overwrite=False, db_connection=No
 
     # insert trials if not already in table
     if behavior_session_uuid in db.trials.distinct('behavior_session_uuid'):
-        print('session with uuid {} already in trials'.format(behavior_session_uuid, 'trials'))
+        print('session with uuid {} already in trials'.format(behavior_session_uuid))
     else:
-        for idx, row in trials.iterrows():
+        for _, row in trials.iterrows():
             trials_row = {k: v for k, v in zip(list(row.keys()), list(row.values))}
             trials_row['reward_times'] = trials_row['reward_times'].tolist()
             trials_row['startdatetime'] = pd.to_datetime(str(trials_row['startdatetime']))
