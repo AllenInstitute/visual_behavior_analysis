@@ -248,7 +248,8 @@ def clean_roi_locations_column_labels(roi_locations_dataframe):
     Returns:
         dataframe -- [description]
     """
-    roi_locations_dataframe = roi_locations_dataframe.rename(columns={"valid_roi":"valid", 
+    roi_locations_dataframe = roi_locations_dataframe.rename(columns={"valid_roi":"valid",
+                                                            "id":"cell_roi_id" 
                                                             "mask_matrix":"mask",
                                                             "x":"bbox_min_x",
                                                             "y":"bbox_min_y"})
@@ -356,9 +357,6 @@ def get_failed_roi_exclusion_labels(experiment_id):
 
 
 
-
-
-
 ########  From SDK 
 
 def get_session_from_sdk(experiment_id):
@@ -399,6 +397,22 @@ def get_sdk_cell_specimen_table(experiment_id):
     """
     session = get_session_from_sdk(experiment_id)
     cell_specimen_table = session.cell_specimen_table
+    cell_specimen_table = clean_cell_specimen_table_column_labels(cell_specimen_table) #rename columns to be consistent with roi_locations_dataframe and objectlist 
+    return cell_specimen_table
+
+def clean_cell_specimen_table_column_labels(cell_specimen_table):
+    """takes some column names from the cell specimen dataframe and renames them to be more explicit and descriptive, and to match the column labels
+        from the objectlist dataframe and the roi locations dataframe.
+    
+    Arguments:
+        cell_specimen_table {dataframe} -- dataframe with various metrics
+    
+    Returns:
+        dataframe -- dataframe with some column names/labels changed
+    """
+    cell_specimen_table = cell_specimen_table.rename(columns={"valid_roi":"valid",
+                                                            "x":"bbox_min_x",
+                                                            "y":"bbox_min_y"})
     return cell_specimen_table
 
 
