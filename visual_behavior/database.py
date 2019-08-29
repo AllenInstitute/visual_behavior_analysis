@@ -180,7 +180,7 @@ def uuid_to_lims_id(uuid):
     '''translates uuid to lims_id'''
     db = Database('mouseseeks')
     res = db.query('db', 'behavior_session_log', query={'foraging_id': uuid})
-    db.close
+    db.close()
 
     if len(res) == 0:
         return None
