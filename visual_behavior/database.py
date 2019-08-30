@@ -83,11 +83,14 @@ def get_behavior_data(table_name, session_id=None, id_type='behavior_session_uui
     '''
     db = Database('visual_behavior_data')
     session_id, id_type = _check_name_schema('visual_behavior_data', session_id, id_type)
-    nested_tables = ['time', 'running', 'licks', 'rewards', 'visual_stimuli', 'omitted_stimuli']  # ,'metadata','log']
+    nested_tables = ['time', 'running', 'licks', 'rewards', 'visual_stimuli', 'omitted_stimuli']
+    nested_dicts = ['metadata', 'log']
 
     if table_name.lower() in nested_tables:
         # these collections have the data of interest in a document called 'data'
-        return _get_table(db, table_name, session_id, id_type)
+        return _get_table(db, table_name, session_id, id_type, return_as='dataframe')
+    elif table_name.lower() in nested_dicts:
+        return _get_table(db, table_name, session_id, id_type, return_as='dict')
     elif table_name.lower() == 'trials':
         # trials is a flat collection: each entry is a row in the desired trials table
         return _get_trials(db, table_name, session_id, id_type)
@@ -115,7 +118,7 @@ def _check_name_schema(database, session_id, id_type):
     return session_id, id_type
 
 
-def _get_table(db, table_name, session_id=None, id_type='behavior_session_uuid', db_name='behavior_data'):
+def _get_table(db, table_name, session_id=None, id_type='behavior_session_uuid', db_name='behavior_data', return_as='dataframe'):
     '''
     a general function for getting behavior data tables
     special cases:
@@ -123,7 +126,10 @@ def _get_table(db, table_name, session_id=None, id_type='behavior_session_uuid',
         `running` is missing time data, which was done to reduce storage space. Merge time back in
     '''
     session_id, id_type = _check_name_schema('visual_behavior_data', session_id, id_type)
-    res = pd.DataFrame(list(db[db_name][table_name].find({id_type: session_id}))[0]['data'])
+    if return_as == 'dataframe':
+        res = pd.DataFrame(list(db[db_name][table_name].find({id_type: session_id}))[0]['data'])
+    else:
+        res = list(db[db_name][table_name].find({id_type: session_id}))[0]['data']
     if table_name == 'time':
         res = res.rename(columns={0: 'time'})
     if table_name == 'running':
