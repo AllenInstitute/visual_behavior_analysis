@@ -411,15 +411,25 @@ def gen_roi_metrics_dataframe(experiment_id):
     roi_metrics_df = pd.merge(roi_metrics_df, failed_roi_exclusion_labels, how = "outer", on="cell_roi_id")
     return roi_metrics_df
 
-def determine_roi_id_type(dataframe, roi_id):
-    if roi_id in pd.Series(dataframe["cell_specimen_id"]).values = True:
+def determine_roi_id_type(experiment_id, roi_id):
+    """[summary]
+    
+    Arguments:
+        experiment_id {[type]} -- [description]
+        roi_id {[type]} -- [description]
+    
+    Returns:
+        [type] -- [description]
+    """
+    roi_metrics = gen_roi_metrics_dataframe(experiment_id)
+    if roi_id in pd.Series(roi_metrics["cell_specimen_id"]).values = True:
         print("cell_specimen_id")
         return "cell_specimen_id"
-    elif roi_id in pd.Series(dataframe["cell_roi_id"]).values = True:
+    elif roi_id in pd.Series(roi_metrics["cell_roi_id"]).values = True:
         print("cell_roi_id")
         return "cell_roi_id"
     else:
-        print("roi id not listed in dataframe")
+        print("roi id not listed in experiment dataframe")
 
 
 ##################Manipulating ROI Masks 
