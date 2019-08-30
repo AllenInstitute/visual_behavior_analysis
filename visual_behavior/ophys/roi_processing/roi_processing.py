@@ -141,8 +141,6 @@ def load_current_objectlisttxt_file(experiment_id):
     return objectlist_dataframe
 
 
-
-
 def clean_objectlist_col_labels(objectlist_dataframe):
     """take the roi metrics from the objectlist.txt file and renames them to be more explicit and descriptive.  
         -removes single blank space at the beginning of column names
@@ -269,41 +267,6 @@ def clean_roi_locations_column_labels(roi_locations_dataframe):
     return roi_locations_dataframe
 
 
-def gen_roi_metrics_dataframe(experiment_id):
-    """[summary]
-    
-    Arguments:
-        experiment_id {[type]} -- [description]
-    
-    Returns:
-        [type] -- [description]
-    """
-    objectlist_df = load_current_objectlisttxt_file(experiment_id)  
-    roi_locations_df = roi_locations_from_cell_rois_table(experiment_id)
-    cell_specimen_table = get_sdk_cell_specimen_table(experiment_id)
-    failed_roi_exclusion_labels = gen_roi_exclusion_labels_lists(experiment_id)
-    
-
-    obj_loc_df = pd.merge(objectlist_df, roi_locations_df, how = "outer", on= ["bbox_min_x", "bbox_min_y"])
-    roi_metrics_df = pd.merge(obj_loc_df, cell_specimen_table, how = "outer", on= ["cell_roi_id", "bbox_min_x", "bbox_min_y", "valid_roi"])
-    roi_metrics_df = pd.merge(roi_metrics_df, failed_roi_exclusion_labels, how = "outer", on="cell_roi_id")
-    return roi_metrics_df
-
-
-def gen_roi_exclusion_labels_lists(experiment_id):
-    """[summary]
-    
-    Arguments:
-        experiment_id {[type]} -- [description]
-    
-    Returns:
-        [type] -- [description]
-    """
-    roi_exclusion_table = get_failed_roi_exclusion_labels(experiment_id)
-    roi_exclusion_table = roi_exclusion_table[["cell_roi_id", "exclusion_label_name"]]
-    exclusion_list_per_invalid_roi = roi_exclusion_table.groupby(["cell_roi_id"]).agg(lambda x: tuple(x)).applymap(list).reset_index()
-    return exclusion_list_per_invalid_roi
-
 
 
 def get_failed_roi_exclusion_labels(experiment_id):
@@ -348,6 +311,20 @@ def get_failed_roi_exclusion_labels(experiment_id):
     failed_roi_exclusion_labels =  mixin.select(query)
     return failed_roi_exclusion_labels
 
+
+def gen_roi_exclusion_labels_lists(experiment_id):
+    """[summary]
+    
+    Arguments:
+        experiment_id {[type]} -- [description]
+    
+    Returns:
+        [type] -- [description]
+    """
+    roi_exclusion_table = get_failed_roi_exclusion_labels(experiment_id)
+    roi_exclusion_table = roi_exclusion_table[["cell_roi_id", "exclusion_label_name"]]
+    exclusion_list_per_invalid_roi = roi_exclusion_table.groupby(["cell_roi_id"]).agg(lambda x: tuple(x)).applymap(list).reset_index()
+    return exclusion_list_per_invalid_roi
 
 
 ########  From SDK 
@@ -414,10 +391,31 @@ def clean_cell_specimen_table_column_labels(cell_specimen_table):
     return cell_specimen_table
 
 
+def gen_roi_metrics_dataframe(experiment_id):
+    """[summary]
+    
+    Arguments:
+        experiment_id {[type]} -- [description]
+    
+    Returns:
+        [type] -- [description]
+    """
+    objectlist_df = load_current_objectlisttxt_file(experiment_id)  
+    roi_locations_df = roi_locations_from_cell_rois_table(experiment_id)
+    cell_specimen_table = get_sdk_cell_specimen_table(experiment_id)
+    failed_roi_exclusion_labels = gen_roi_exclusion_labels_lists(experiment_id)
+    
+
+    obj_loc_df = pd.merge(objectlist_df, roi_locations_df, how = "outer", on= ["bbox_min_x", "bbox_min_y"])
+    roi_metrics_df = pd.merge(obj_loc_df, cell_specimen_table, how = "outer", on= ["cell_roi_id", "bbox_min_x", "bbox_min_y", "valid_roi"])
+    roi_metrics_df = pd.merge(roi_metrics_df, failed_roi_exclusion_labels, how = "outer", on="cell_roi_id")
+    return roi_metrics_df
 
 
 
-def get_binary_mask_for_cell_specimen_id(experiment_id, cell_roi_id):
+##################Manipulating ROI Masks 
+
+def get_binary_mask_for_cell_roi_id(experiment_id, cell_roi_id):
     """[summary]
     
     Arguments:

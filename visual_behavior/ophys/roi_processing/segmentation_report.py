@@ -21,26 +21,41 @@ import os
 exclusion_labels_list = ["apical_dendrite", "bad_shape", "boundary", "demix_error", "duplicate", "empty_neropil_mask",
 "empty_roi_mask", "low_signal", "motion_border", "small_size", "union", "zero_pixels"]
 
-def get_unique_exclusion_labels():
-     mixin = PostgresQueryMixin()
-     query ='''
-     Select 
-     DISTINCT name
-     From
-     roi_exclusion_labels'''.format(experiment_id)
-     return mixin.select(query)
+# def get_unique_exclusion_labels():
+#      mixin = PostgresQueryMixin()
+#      query ='''
+#      Select 
+#      DISTINCT name
+#      From
+#      roi_exclusion_labels'''
+#      return mixin.select(query)
 
 
-def exclusion_label_roi_dict(experiment_id):
+def gen_exclusion_label_cell_roi_id_dict(experiment_id):
+    """generates a dictionary where keys are strings of all exclusion labels possible, and 
+       values are all the cell roi ids that were tagged with that exclusion label
+    
+    Arguments:
+        experiment_id {[type]} -- [description]
+    
+    Returns:
+        dictionary -- [description]
+    """
     exclusion_labels_df = roi.get_failed_roi_exclusion_labels(experiment_id)
+    exclusion_labels_roi_dict = {}
+    for label in exclusion_labels_list:
+        exclusion_labels_roi_dict[label] = exclusion_labels_df.loc[exclusion_labels_df["exclusion_label_name"]==label, ["cell_roi_id"]].values
+    return exclusion_labels_roi_dict
+
+
 
 
 
 
 def get_masks_from_lims_cell_rois_table(experiment_id):
     # make roi_dict with ids as keys and roi_mask_array
-    lims_data = get_lims_data(experiment_id)
-    lims_cell_rois_table = get_lims_cell_rois_table(lims_data['lims_id'].values[0])
+    lims_data = roi.get_lims_data(experiment_id)
+    lims_cell_rois_table = roi.get_lims_cell_rois_table(lims_data['lims_id'].values[0])
     
     h = lims_cell_rois_table["height"]
     w = lims_cell_rois_table["width"]
@@ -77,7 +92,7 @@ def gen_multi_roi_mask(experiment_id, roi_list):
     Returns:
         [type] -- [description]
     """
-    cell_specimen_table = get_sdk_cell_specimen_table(experiment_id)
+    cell_specimen_table = roi.get_sdk_cell_specimen_table(experiment_id)
     starting_mask = cell_specimen_table.loc[cell_specimen_table.index==roi_list[0],"image_mask"].values[0]
     #make a general mask of the correcte shape to be used for multiple rois
     multi_roi_mask = np.zeros(starting_mask.shape)
@@ -85,7 +100,7 @@ def gen_multi_roi_mask(experiment_id, roi_list):
     
     for roi in roi_list:
         #create the binary mask for that roi
-        roi_mask = get_binary_mask_for_cell_specimen_id(sdk_cell_specimen_table, roi)
+        roi_mask = roi.get_binary_mask_for_cell_specimen_id(sdk_cell_specimen_table, roi)
         #make a 3d array with the roi mask and the starting mask
         masks_3d = np.array([multi_roi_mask,roi_mask])
         combo_mask = np.nansum(masks_3d, axis = 0)
