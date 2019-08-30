@@ -98,9 +98,9 @@ def gen_multi_roi_mask(experiment_id, roi_list):
     multi_roi_mask = np.zeros(starting_mask.shape)
     multi_roi_mask[:] = np.nan
     
-    for roi in roi_list:
+    for roi_id in roi_list:
         #create the binary mask for that roi
-        roi_mask = roi.get_binary_mask_for_cell_specimen_id(sdk_cell_specimen_table, roi)
+        roi_mask = roi.get_binary_mask_for_cell_specimen_id(sdk_cell_specimen_table, roi_id)
         #make a 3d array with the roi mask and the starting mask
         masks_3d = np.array([multi_roi_mask,roi_mask])
         combo_mask = np.nansum(masks_3d, axis = 0)
