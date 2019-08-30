@@ -422,10 +422,10 @@ def determine_roi_id_type(experiment_id, roi_id):
         [type] -- [description]
     """
     roi_metrics = gen_roi_metrics_dataframe(experiment_id)
-    if roi_id in pd.Series(roi_metrics["cell_specimen_id"]).values = True:
+    if roi_id in pd.Series(roi_metrics["cell_specimen_id"]).values == True:
         print("cell_specimen_id")
         return "cell_specimen_id"
-    elif roi_id in pd.Series(roi_metrics["cell_roi_id"]).values = True:
+    elif roi_id in pd.Series(roi_metrics["cell_roi_id"]).values == True:
         print("cell_roi_id")
         return "cell_roi_id"
     else:
