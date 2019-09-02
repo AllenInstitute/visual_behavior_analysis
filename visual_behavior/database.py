@@ -7,6 +7,7 @@ import os
 import glob
 import traceback
 import datetime
+from allensdk.internal.api import PostgresQueryMixin
 from .translator.foraging2 import data_to_change_detection_core as foraging2_translator
 from .translator.foraging import data_to_change_detection_core as foraging1_translator
 from .translator.core import create_extended_dataframe
@@ -67,7 +68,7 @@ class Database(object):
 def get_behavior_data(table_name, session_id=None, id_type='behavior_session_uuid'):
     '''
     look up behavior data for a given behavior session
-    look up by behavior_session_uuid or lims_id
+    look up by behavior_session_uuid or behavior_session_id (the latter is the LIMS ID)
     available data types:
         trials = all trials for the session
         time = time vector
@@ -105,13 +106,15 @@ def get_behavior_data(table_name, session_id=None, id_type='behavior_session_uui
 
 def _check_name_schema(database, session_id, id_type):
     '''
-    lims_id should be int
+    lims_id (aka behavior_session_id) should be int
     behavior_session_uuid should be string
 
     in mouseseeks, behavior_session_uuid is foraging_id
     '''
-    if id_type == 'lims_id':
+    if id_type == 'behavior_session_id':
         session_id = int(session_id)
+        if database == 'mouseseeks':
+            id_type = 'lims_id'  # this is what it is called in mouseseeks
     elif id_type == 'behavior_session_uuid' and database == 'mouseseeks':
         id_type = 'foraging_id'  # the name is different in mouseseeks
 
@@ -182,28 +185,145 @@ def get_pkl_path(session_id=None, id_type='behavior_session_uuid'):
             return pkls[0]
 
 
-def uuid_to_lims_id(uuid):
-    '''translates uuid to lims_id'''
-    db = Database('mouseseeks')
-    res = db.query('db', 'behavior_session_log', query={'foraging_id': uuid})
-    db.close()
-
-    if len(res) == 0:
+def get_value_from_table(search_key, search_value, target_table, target_key):
+    '''
+    a general function for getting a value from a LIMS table
+    '''
+    api = PostgresQueryMixin()
+    query = f'''
+    select {target_key}
+    from {target_table}
+    where {search_key} = '{search_value}'
+    '''
+    result = pd.read_sql(query, api.get_connection())
+    if len(result) == 1:
+        return result[target_key].item()
+    else:
         return None
-    elif len(res) == 1:
-        return int(res['id'].item())
-    elif len(res) > 1:
-        return int(res['id'].iloc[0])
+
+
+def populate_id_dict(input_id_dict):
+    '''
+    an ophys session has 5 different keys by which it can be identified
+    this function will take an input key/value pair that represents one possible ID and returns a dictionary containing all IDs
+
+    * `behavior_session_uuid` (aka `foraging_id` in LIMS): a 36 digit string generated with the UUID python module by camstim at runtime
+      * `foraging_id` in the LIMS `ophys_sessions` table
+      * `foraging_id` in the LIMS `behavior_sessions` table
+    * `behavior_session_id`: a 9 digit integer identifying the behavior session
+      * `id` in the LIMS `behavior_sessions` table
+    * `ophys_session_id`: a 9 digit integer identifying the ophys session. Every ophys session has an associated behavior session.
+      * `id` in the LIMS `ophys_sessions` table
+      * `ophys_session_id` in LIMS `behavior_sessions` table
+      * `ophys_session_id` in LIMS `ophys_experiments` table
+    * `ophys_experiment_id`: a 9 digit integer. Each ophys session has one experiment.
+      * `id` in the LIMS `ophys_experiments` table
+
+    For example, for the session run by mouse 450471 on 2P3 on June 4, 2019:
+    * behavior_session_uuid = 4d4dfd3e-e1bf-4ad8-9775-1273ce7e5189
+    * LIMS behavior session ID = 880784794
+    * LIMS ophys session ID = 880753403
+    * LIMS ophys_experiment ID = 880961028
+
+    example:
+        >> populate_id_dict({'ophys_experiment_id': 880961028,})
+
+        returns:
+        {'behavior_session_id': 880784794,
+         'behavior_session_uuid': '4d4dfd3e-e1bf-4ad8-9775-1273ce7e5189',
+         'foraging_id': '4d4dfd3e-e1bf-4ad8-9775-1273ce7e5189',
+         'ophys_experiment_id': 880961028,
+         'ophys_session_id': 880753403}
+
+    '''
+    ids = {
+        'behavior_session_uuid': None,
+        'foraging_id': None,
+        'behavior_session_id': None,
+        'ophys_session_id': None,
+        'ophys_experiment_id': None,
+    }
+
+    assert(len(input_id_dict) == 1), "use only one ID type to identify others"
+    for key in input_id_dict:
+        assert key in ids.keys(), "input key must be one of {}".format(list(ids.keys()))
+        ids[key] = input_id_dict[key]
+
+    for i in range(3):  # maximum of three passes are required to fill all key/value pairs
+        # foraging_id and behavior_session_id are equivalent:
+        if ids['behavior_session_uuid']:
+            ids['foraging_id'] = ids['behavior_session_uuid']
+
+        # if we have foraging_id, get behavior_session_uuid, behavior_session_id, ophys_session_id
+        if ids['foraging_id']:
+            ids['behavior_session_uuid'] = ids['foraging_id']
+            ids['behavior_session_id'] = get_value_from_table('foraging_id', ids['foraging_id'], 'behavior_sessions', 'id')
+            ids['ophys_session_id'] = get_value_from_table('foraging_id', ids['foraging_id'], 'ophys_sessions', 'id')
+
+        # if we have behavior_session_id, get foraging_id and ophys_session_id:
+        if ids['behavior_session_id']:
+            ids['foraging_id'] = get_value_from_table('id', ids['behavior_session_id'], 'behavior_sessions', 'foraging_id')
+
+        # if we have ophys_session_id, get ophys_experiment_id:
+        if ids['ophys_session_id']:
+            ids['ophys_experiment_id'] = get_value_from_table('ophys_session_id', ids['ophys_session_id'], 'ophys_experiments', 'id')
+            ids['foraging_id'] = get_value_from_table('id', ids['ophys_session_id'], 'ophys_sessions', 'foraging_id')
+
+        # if we have ophys_experiment_id, get ophys_session_id:
+        if ids['ophys_experiment_id']:
+            ids['ophys_session_id'] = get_value_from_table('id', ids['ophys_experiment_id'], 'ophys_experiments', 'ophys_session_id')
+
+        existing_keys = [(k, v) for k, v in ids.items() if v]
+        if len(existing_keys) == 5:
+            break
+
+    return ids
+
+
+def convert_id(input_dict, desired_key):
+    '''
+    an ophys session has 5 different keys by which it can be identified
+    this function will convert between keys. 
+
+    It takes the following inputs:
+        a key/value pair that represents one possible ID
+        the desired key
+
+    It returns
+        the value matching the desired key
+
+    The following keys may exist for a given Visual Behavior session:
+
+    * `behavior_session_uuid`: a 36 digit string generated with the UUID python module by camstim at runtime
+    * `foraging_id`: Alternate nomenclature for `behavior_session_uuid` used by LIMS
+    * `behavior_session_id`: a 9 digit integer identifying the behavior session
+    * `ophys_session_id`: a 9 digit integer identifying the ophys session. Every ophys session has an associated behavior session.
+    * `ophys_experiment_id`: a 9 digit integer. Each ophys session has one experiment.
+
+    For example, for the session run by mouse 450471 on 2P3 on June 4, 2019:
+    * behavior_session_uuid = 4d4dfd3e-e1bf-4ad8-9775-1273ce7e5189
+    * LIMS behavior session ID = 880784794
+    * LIMS ophys session ID = 880753403
+    * LIMS ophys_experiment ID = 880961028
+
+    example:
+        >> convert_id({'ophys_session_id': 880753403}, 'behavior_session_uuid')
+
+            '4d4dfd3e-e1bf-4ad8-9775-1273ce7e5189'
+
+    '''
+    all_ids = populate_id_dict(input_dict)
+    return all_ids[desired_key]
 
 
 def get_mouseseeks_qc_results(session_id=None, id_type='behavior_session_uuid'):
     '''get qc results from mouseseeks'''
     session_id, id_type = _check_name_schema('mouseseeks', session_id, id_type)
     if id_type == 'foraging_id':
-        session_id = uuid_to_lims_id(session_id)
+        session_id = convert_id({'foraging_id': session_id}, 'behavior_session_id')
 
     mouseseeks = Database('mouseseeks')
-    res = list(mouseseeks.qc.metrics.find({'lims_id': session_id}))
+    res = list(mouseseeks.qc.metrics.find({'behavior_session_id': session_id}))
     mouseseeks.close()
     if len(res) > 0:
         return res[0]
@@ -243,9 +363,9 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
     else:
         raise NameError('data_type must be either `foraging1` or `foraging2`')
 
-    def insert(db, table, lims_id, behavior_session_uuid, dtype, data_to_insert):
+    def insert(db, table, behavior_session_id, behavior_session_uuid, dtype, data_to_insert):
         db[table].insert_one({
-            'lims_id': lims_id,
+            'behavior_session_id': behavior_session_id,
             'behavior_session_uuid': behavior_session_uuid,
             'dtype': dtype,
             'data': data_to_insert
@@ -259,8 +379,8 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
         summary_row = {k: (float(v) if is_float(v) else v) for k, v in summary_row.items()}
         db.summary.insert_one(summary_row)
 
-    def add_metadata_to_summary(summary, lims_id, pkl_path, behavior_session_uuid):
-        summary['lims_id'] = lims_id
+    def add_metadata_to_summary(summary, behavior_session_id, pkl_path, behavior_session_uuid):
+        summary['behavior_session_id'] = behavior_session_id
         summary['pkl_path'] = pkl_path
         summary['behavior_session_uuid'] = behavior_session_uuid
         return summary
@@ -268,7 +388,7 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
     def log_error_data(err):
         tb = traceback.format_tb(err.__traceback__)
         db['error_log'].insert_one({
-            'lims_id': lims_id,
+            'behavior_session_id': behavior_session_id,
             'behavior_session_uuid': behavior_session_uuid,
             'error_log': tb,
             'local_time': str(datetime.datetime.now()),
@@ -276,7 +396,7 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
         })
         print('error on session {}, writing to error table'.format(behavior_session_uuid))
         summary = {}
-        summary = add_metadata_to_summary(summary, lims_id, pkl_path, behavior_session_uuid)
+        summary = add_metadata_to_summary(summary, behavior_session_id, pkl_path, behavior_session_uuid)
         summary['error_on_load'] = True
         insert_summary_row(summary)
 
@@ -289,7 +409,7 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
     assert not all((behavior_session_uuid is None, pkl_path is None)), "either a behavior_session_uuid or a pkl_path must be specified"
     assert behavior_session_uuid is None or pkl_path is None, "both a behavior_session_uuid and a pkl_path cannot be specified, choose one"
 
-    lims_id = None
+    behavior_session_id = None
 
     # load behavior data
     try:
@@ -306,11 +426,12 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
         return
 
     # get lims ID
-    lims_id = uuid_to_lims_id(behavior_session_uuid)
+    behavior_session_id = convert_id({'behavior_session_uuid': behavior_session_uuid
+                                     }, 'behavior_session_id')
 
     # add some columns to trials and summary
-    trials['lims_id'] = lims_id
-    summary = add_metadata_to_summary(summary, lims_id, pkl_path, behavior_session_uuid)
+    trials['behavior_session_id'] = behavior_session_id
+    summary = add_metadata_to_summary(summary, behavior_session_id, pkl_path, behavior_session_uuid)
     trials['behavior_session_uuid'] = behavior_session_uuid
 
     # insert summary if not already in table
@@ -350,7 +471,7 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
                 elif type(core_data[key]) == dict:
                     data_to_insert = core_data[key]
                     dtype = 'dict'
-                insert(db, key, lims_id, behavior_session_uuid, dtype, data_to_insert)
+                insert(db, key, behavior_session_id, behavior_session_uuid, dtype, data_to_insert)
 
     # insert running if not already in table
     if behavior_session_uuid in db.running.distinct('behavior_session_uuid'):
@@ -360,13 +481,13 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
         running = core_data['running'].drop(columns=['time', 'dx']).set_index('frame')
         dtype = 'dataframe'
         data_to_insert = json.loads(running.to_json(orient='records'))
-        insert(db, 'running', lims_id, behavior_session_uuid, dtype, data_to_insert)
+        insert(db, 'running', behavior_session_id, behavior_session_uuid, dtype, data_to_insert)
 
     # insert time if not already in table
     if behavior_session_uuid in db.time.distinct('behavior_session_uuid'):
         print('session with uuid {} already in time'.format(behavior_session_uuid))
     else:
-        insert(db, 'time', lims_id, behavior_session_uuid, 'list', core_data['time'].tolist())
+        insert(db, 'time', behavior_session_id, behavior_session_uuid, 'list', core_data['time'].tolist())
 
     if db_connection is None:
         db_conn.close()
