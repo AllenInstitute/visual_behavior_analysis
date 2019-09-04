@@ -280,6 +280,13 @@ def populate_id_dict(input_id_dict):
     return ids
 
 
+def get_alternate_ids(uuid):
+    '''
+    get all LIMS ids for a given session UUID
+    '''
+    return populate_id_dict({'behavior_session_uuid': uuid})
+
+
 def convert_id(input_dict, desired_key):
     '''
     an ophys session has 5 different keys by which it can be identified
@@ -363,13 +370,14 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
     else:
         raise NameError('data_type must be either `foraging1` or `foraging2`')
 
-    def insert(db, table, behavior_session_id, behavior_session_uuid, dtype, data_to_insert):
-        db[table].insert_one({
-            'behavior_session_id': behavior_session_id,
+    def insert(db, table, behavior_session_uuid, dtype, data_to_insert):
+        entry = {
             'behavior_session_uuid': behavior_session_uuid,
             'dtype': dtype,
             'data': data_to_insert
-        })
+        }
+        entry.update(get_alternate_ids(behavior_session_uuid))
+        db[table].insert_one(entry)
 
     def insert_summary_row(summary_row):
         if type(summary_row) == pd.DataFrame:
@@ -379,24 +387,25 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
         summary_row = {k: (float(v) if is_float(v) else v) for k, v in summary_row.items()}
         db.summary.insert_one(summary_row)
 
-    def add_metadata_to_summary(summary, behavior_session_id, pkl_path, behavior_session_uuid):
-        summary['behavior_session_id'] = behavior_session_id
+    def add_metadata_to_summary(summary, pkl_path, behavior_session_uuid):
         summary['pkl_path'] = pkl_path
         summary['behavior_session_uuid'] = behavior_session_uuid
+        summary.update(get_alternate_ids(behavior_session_uuid))
         return summary
 
     def log_error_data(err):
         tb = traceback.format_tb(err.__traceback__)
-        db['error_log'].insert_one({
-            'behavior_session_id': behavior_session_id,
+        entry = {
             'behavior_session_uuid': behavior_session_uuid,
             'error_log': tb,
             'local_time': str(datetime.datetime.now()),
             'utc_time': str(datetime.datetime.utcnow())
-        })
+        }
+        entry.update(get_alternate_ids(behavior_session_uuid))
+        db['error_log'].insert_one(entry)
         print('error on session {}, writing to error table'.format(behavior_session_uuid))
         summary = {}
-        summary = add_metadata_to_summary(summary, behavior_session_id, pkl_path, behavior_session_uuid)
+        summary = add_metadata_to_summary(summary, pkl_path, behavior_session_uuid)
         summary['error_on_load'] = True
         insert_summary_row(summary)
 
@@ -409,8 +418,6 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
     assert not all((behavior_session_uuid is None, pkl_path is None)), "either a behavior_session_uuid or a pkl_path must be specified"
     assert behavior_session_uuid is None or pkl_path is None, "both a behavior_session_uuid and a pkl_path cannot be specified, choose one"
 
-    behavior_session_id = None
-
     # load behavior data
     try:
         if pkl_path is None:
@@ -420,18 +427,17 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
         if behavior_session_uuid is None:
             behavior_session_uuid = str(core_data['metadata']['behavior_session_uuid'])
         trials = create_extended_dataframe(**core_data).drop(columns=['date', 'LDT_mode'])
-        summary = summarize.session_level_summary(trials).sort_values(by='startdatetime').reset_index(drop=True)
+        summary = summarize.session_level_summary(trials).iloc[0].to_dict()
     except Exception as err:
         log_error_data(err)
         return
 
-    # get lims ID
-    behavior_session_id = convert_id({'behavior_session_uuid': behavior_session_uuid
-                                     }, 'behavior_session_id')
-
     # add some columns to trials and summary
-    trials['behavior_session_id'] = behavior_session_id
-    summary = add_metadata_to_summary(summary, behavior_session_id, pkl_path, behavior_session_uuid)
+    trials['behavior_session_id'] = convert_id(
+        {'behavior_session_uuid': behavior_session_uuid},
+        'behavior_session_id'
+    )
+    summary = add_metadata_to_summary(summary, pkl_path, behavior_session_uuid)
     trials['behavior_session_uuid'] = behavior_session_uuid
 
     # insert summary if not already in table
@@ -471,7 +477,7 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
                 elif type(core_data[key]) == dict:
                     data_to_insert = core_data[key]
                     dtype = 'dict'
-                insert(db, key, behavior_session_id, behavior_session_uuid, dtype, data_to_insert)
+                insert(db, key, behavior_session_uuid, dtype, data_to_insert)
 
     # insert running if not already in table
     if behavior_session_uuid in db.running.distinct('behavior_session_uuid'):
@@ -481,13 +487,13 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
         running = core_data['running'].drop(columns=['time', 'dx']).set_index('frame')
         dtype = 'dataframe'
         data_to_insert = json.loads(running.to_json(orient='records'))
-        insert(db, 'running', behavior_session_id, behavior_session_uuid, dtype, data_to_insert)
+        insert(db, 'running', behavior_session_uuid, dtype, data_to_insert)
 
     # insert time if not already in table
     if behavior_session_uuid in db.time.distinct('behavior_session_uuid'):
         print('session with uuid {} already in time'.format(behavior_session_uuid))
     else:
-        insert(db, 'time', behavior_session_id, behavior_session_uuid, 'list', core_data['time'].tolist())
+        insert(db, 'time', behavior_session_uuid, 'list', core_data['time'].tolist())
 
     if db_connection is None:
         db_conn.close()
