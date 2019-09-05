@@ -498,7 +498,39 @@ def change_mask_from_bool_to_binary(mask):
     
 
 
+def gen_multi_roi_mask(experiment_id, roi_id_list):
+    """[summary]
+    
+    Arguments:
+        experiment_id {[type]} -- [description]
+        roi_list {[type]} -- [description]
+    
+    Returns:
+        [type] -- [description]
+    """
+    roi_metrics = gen_roi_metrics_dataframe(experiment_id)
+    id_type = determine_roi_type(experiment_id, roi_id_list[0])
+    
+    # #determine what type of roi/cell_id is given in the list
+    # cell_roi_id_type = roi.determine_roi_id_type(experiment_id, roi_list[0]) 
 
+    starting_mask = roi_metrics.loc[roi_metrics[id_type]==roi_id_list[0],["image_mask"]].values[0]
+    #make a general mask of the correcte shape to be used for multiple rois
+    multi_roi_mask = np.zeros(starting_mask.shape)
+    multi_roi_mask[:] = np.nan
+    
+    for roi_id in roi_id_list:
+        #create the binary mask for that roi
+        roi_mask = get_binary_mask_for_roi(experiment_id, roi_id, id_type = id_type)
+        #make a 3d array with the roi mask and the starting mask
+        masks_3d = np.array([multi_roi_mask, roi_mask])
+        combo_mask = np.nansum(masks_3d, axis = 0)
+        multi_roi_mask = combo_mask
+    
+    binary_mask = np.zeros(multi_roi_mask.shape)
+    binary_mask[:]=np.nan
+    binary_mask[multi_roi_mask==1]=1
+    return binary_mask
 
 
  
