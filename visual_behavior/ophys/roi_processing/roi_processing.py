@@ -509,7 +509,7 @@ def gen_multi_roi_mask(experiment_id, roi_id_list):
         [type] -- [description]
     """
     roi_metrics = gen_roi_metrics_dataframe(experiment_id)
-    id_type = determine_roi_type(experiment_id, roi_id_list[0])
+    id_type = determine_roi_id_type(experiment_id, roi_id_list[0])
     
     # #determine what type of roi/cell_id is given in the list
     # cell_roi_id_type = roi.determine_roi_id_type(experiment_id, roi_list[0]) 
