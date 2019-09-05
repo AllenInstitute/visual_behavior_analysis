@@ -44,10 +44,8 @@ def gen_exclusion_label_cell_roi_id_dict(experiment_id):
     exclusion_labels_df = roi.get_failed_roi_exclusion_labels(experiment_id)
     exclusion_labels_roi_dict = {}
     for label in exclusion_labels_list:
-        exclusion_labels_roi_dict[label] = exclusion_labels_df.loc[exclusion_labels_df["exclusion_label_name"]==label, ["cell_roi_id"]].values
+        exclusion_labels_roi_dict[label] = exclusion_labels_df.loc[exclusion_labels_df["exclusion_label_name"]==label, "cell_roi_id"].values
     return exclusion_labels_roi_dict
-
-
 
 
 
@@ -82,7 +80,7 @@ def gen_roi_exclusion_category_masks(experiment_id):
 
 
 
-def gen_multi_roi_mask(experiment_id, roi_list):
+def gen_multi_roi_mask(experiment_id, cell_roi_id_list):
     """[summary]
     
     Arguments:
@@ -92,17 +90,21 @@ def gen_multi_roi_mask(experiment_id, roi_list):
     Returns:
         [type] -- [description]
     """
-    cell_specimen_table = roi.get_sdk_cell_specimen_table(experiment_id)
-    starting_mask = cell_specimen_table.loc[cell_specimen_table.index==roi_list[0],"image_mask"].values[0]
+    roi_metrics = roi.gen_roi_metrics_dataframe(experiment_id)
+    
+    # #determine what type of roi/cell_id is given in the list
+    # cell_roi_id_type = roi.determine_roi_id_type(experiment_id, roi_list[0]) 
+
+    starting_mask = roi_metrics.loc[roi_metrics["cell_roi_id"]==cell_roi_id_list[0],["image_mask"]].values[0]
     #make a general mask of the correcte shape to be used for multiple rois
     multi_roi_mask = np.zeros(starting_mask.shape)
     multi_roi_mask[:] = np.nan
     
-    for roi_id in roi_list:
+    for roi_id in cell_roi_id_list:
         #create the binary mask for that roi
-        roi_mask = roi.get_binary_mask_for_cell_specimen_id(sdk_cell_specimen_table, roi_id)
+        roi_mask = roi.get_binary_mask_for_cell_roi_id(experiment_id, roi_id)
         #make a 3d array with the roi mask and the starting mask
-        masks_3d = np.array([multi_roi_mask,roi_mask])
+        masks_3d = np.array([multi_roi_mask, roi_mask])
         combo_mask = np.nansum(masks_3d, axis = 0)
         multi_roi_mask = combo_mask
     

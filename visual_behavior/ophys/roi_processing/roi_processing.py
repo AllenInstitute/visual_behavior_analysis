@@ -370,7 +370,6 @@ def get_sdk_cell_specimen_table(experiment_id):
     session = get_session_from_sdk(experiment_id)
     cell_specimen_table = session.cell_specimen_table
     cell_specimen_table = clean_cell_specimen_table_column_labels(cell_specimen_table) #rename columns to be consistent with roi_locations_dataframe and objectlist
-    cell_specimen_table["cell_specimen_id"] =  cell_specimen_table.index #make cell_specimen_id a column so it can be merged on 
     return cell_specimen_table
 
 
@@ -388,6 +387,7 @@ def clean_cell_specimen_table_column_labels(cell_specimen_table):
     """
     cell_specimen_table = cell_specimen_table.rename(columns={"x":"bbox_min_x",
                                                             "y":"bbox_min_y"})
+    cell_specimen_table["cell_specimen_id"] =  cell_specimen_table.index #make cell_specimen_id a column so it can be merged on
     return cell_specimen_table
 
 
@@ -422,10 +422,12 @@ def determine_roi_id_type(experiment_id, roi_id):
         [type] -- [description]
     """
     roi_metrics = gen_roi_metrics_dataframe(experiment_id)
-    if roi_id in pd.Series(roi_metrics["cell_specimen_id"]).values == True:
+    is_cell_specimen_id = roi_id in pd.Series(roi_metrics["cell_specimen_id"]).values
+    is_cell_roi_id = roi_id in pd.Series(roi_metrics["cell_roi_id"]).values
+    if is_cell_specimen_id == True:
         print("cell_specimen_id")
         return "cell_specimen_id"
-    elif roi_id in pd.Series(roi_metrics["cell_roi_id"]).values == True:
+    elif is_cell_roi_id == True:
         print("cell_roi_id")
         return "cell_roi_id"
     else:
@@ -450,7 +452,7 @@ def get_binary_mask_for_cell_roi_id(experiment_id, cell_roi_id):
         #cell_specimen_id is the index col so thats why use .index
         #get the mask
     roi_image_mask = cell_specimen_table.loc[cell_specimen_table["cell_roi_id"]==cell_roi_id,"image_mask"].values[0]
-    shifted_roi = shift_mask_to_roi_location_in_image(roi_mask, cell_specimen_table) #shift ROI to correction location in FOV
+    shifted_roi = shift_mask_to_roi_location_in_image(roi_image_mask, cell_specimen_table) #shift ROI to correction location in FOV
     binary_mask = change_mask_from_bool_to_binary(shifted_roi) #change mask from bool to binary
     return binary_mask
 
@@ -476,7 +478,7 @@ def get_binary_mask_for_cell_specimen_id(experiment_id, cell_specimen_id):
     return binary_mask
 
 
-def shift_mask_to_roi_location_in_image(roi_image_mask, cell_specimen_table):
+def shift_mask_to_roi_location_in_image(experiment_id, cell_roi_id):
     """Takes the image mask and rolls it such that the ROI is in the correction location within the FOV
     
     Arguments:
