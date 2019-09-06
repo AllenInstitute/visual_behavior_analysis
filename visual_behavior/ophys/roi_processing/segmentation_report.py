@@ -21,31 +21,70 @@ import os
 exclusion_labels_list = ["apical_dendrite", "bad_shape", "boundary", "demix_error", "duplicate", "empty_neropil_mask",
 "empty_roi_mask", "low_signal", "motion_border", "small_size", "union", "zero_pixels"]
 
+roi_id_types_list = ["cell_specimen_id", "cell_roi_id"]
 
-def gen_exclusion_label_roi_dict(experiment_id):
-    roi_id_types = ["cell_specimen_id", "cell_roi_id"]
+
+
+
+# def gen_exclusion_label_roi_dict(experiment_id):
+#     roi_id_types = ["cell_specimen_id", "cell_roi_id"]
+#     exclusion_labels_df = roi.get_failed_roi_exclusion_labels(experiment_id)
+#     exclusion_labels_roi_dict = {}
+    
+#     for label in exclusion_labels_list:
+#         id_type_dict = {}
+#         for id_type in roi_id_types:
+#             id_type_dict[id_type]= exclusion_labels_df.loc[exclusion_labels_df["exclusion_label_name"]==label, id_type].values
+#             exclusion_labels_roi_dict[label] = id_type_dict
+    
+#     all_invalid_id_type_dict = {}
+#     for id_type in roi_id_types:
+#         all_invalid_id_type_dict[id_type] = exclusion_labels_df[id_type].unique()
+    
+#     exclusion_labels_roi_dict["all_invalid"] = all_invalid_id_type_dict
+#     return exclusion_labels_roi_dict
+
+def gen_exclusion_label_roi_df(experiment_id):
     exclusion_labels_df = roi.get_failed_roi_exclusion_labels(experiment_id)
-    exclusion_labels_roi_dict = {}
-    
-    for label in exclusion_labels_list:
-        id_type_dict = {}
-        for id_type in roi_id_types:
-            id_type_dict[id_type]= exclusion_labels_df.loc[exclusion_labels_df["exclusion_label_name"]==label, id_type].values
-            exclusion_labels_roi_dict[label] = id_type_dict
-    
-    all_invalid_id_type_dict = {}
-    for id_type in roi_id_types:
-        all_invalid_id_type_dict[id_type]=exclusion_labels_roi_dict[id_type].unique()
-    
-    exclusion_labels_roi_dict["all_invalid"] = id_type_dict
-    return exclusion_labels_roi_dict
+    excl_label_roi_df = pd.DataFrame(columns=["label","cell_specimen_ids", "cell_roi_ids"])
+
+    for ex_label in exclusion_labels_list:
+        label = ex_label
+        cell_spec_ids = exclusion_labels_df.loc[exclusion_labels_df["exclusion_label_name"]==label, "cell_specimen_id"].values
+        cell_r_ids = exclusion_labels_df.loc[exclusion_labels_df["exclusion_label_name"]==label, "cell_roi_id"].values
+        df = pd.DataFrame({"label":label,"cell_specimen_ids":[cell_spec_ids], "cell_roi_ids":[cell_r_ids]})
+        excl_label_roi_df = excl_label_roi_df.append(df)
+    return excl_label_roi_df
 
 
-def roi_exclusion_label_dict_to_df(exclusion_dict, roi_id_type):
-    exclsuion_df = pd.DataFrame(list(exclusion_roi_dict.items()))
-    exclsuion_df =exclsuion_df.rename (columns = {0: "label", 1:roi_id_type})
+def gen_roi_validity_df(experiment_id):
+    cell_specimen_table = roi.get_sdk_cell_specimen_table(experiment_id)
+    validity_df = pd.DataFrame(columns=["label","cell_specimen_ids", "cell_roi_ids"])
+    boolean = [True, False]
+    for b in boolean:
+        cell_spec_ids = cell_specimen_table.loc[cell_specimen_table["valid_roi"]==b, "cell_specimen_id"].values
+        cell_roi_ids = cell_specimen_table.loc[cell_specimen_table["valid_roi"]==b, "cell_specimen_id"].values
+        df = pd.DataFrame({"label":b,"cell_specimen_ids":[cell_spec_ids], "cell_roi_ids":[cell_roi_ids]})
+        validity_df = validity_df.append(df)
+        validity_df["label"] = np.where(validity_df["label"], "all_valid", "all_invalid")
+    return validity_df
 
-def gen_segmentation_report_dataframe (experiment_id)
+def gen_segmentation_df(experiment_id):
+    exclusion_df = gen_exclusion_label_roi_df(experiment_id)
+    roi_validity_df = gen_roi_validity_df(experiment_id)
+    seg_df = roi_validity_df.append(exclusion_labels_df)
+    seg_df = seg_df.reset_index(drop=True)
+    seg_df["number_rois"]=seg_df['cell_specimen_ids'].str.len()
+
+
+
+
+
+
+
+
+
+
 
 
 def gen_roi_exclusion_masks_dict(experiment_id):
