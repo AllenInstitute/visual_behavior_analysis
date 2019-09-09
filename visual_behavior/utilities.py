@@ -57,14 +57,14 @@ def get_response_rates(df_in, sliding_window=100, apply_trial_number_limit=False
     if apply_trial_number_limit:
         # avoid values close to 0 and 1
         go_count = go_responses.rolling(
-                window=sliding_window,
-                min_periods=0,
-            ).count()
+            window=sliding_window,
+            min_periods=0,
+        ).count()
 
         catch_count = catch_responses.rolling(
-                window=sliding_window,
-                min_periods=0,
-            ).count()
+            window=sliding_window,
+            min_periods=0,
+        ).count()
 
         hit_rate = np.vectorize(trial_number_limit)(hit_rate, go_count)
         catch_rate = np.vectorize(trial_number_limit)(catch_rate, catch_count)
@@ -104,13 +104,14 @@ class RisingEdge():
 
 
 # -> metrics
-def trial_number_limit(p,N):
+def trial_number_limit(p, N):
     if N == 0:
         return np.nan
     if not pd.isnull(p):
-        p = np.max((p,1./(2*N)))
-        p = np.min((p,1-1./(2*N)))
+        p = np.max((p, 1. / (2 * N)))
+        p = np.min((p, 1 - 1. / (2 * N)))
     return p
+
 
 def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
     """ calculates the d-prime for a given hit rate and false alarm rate
