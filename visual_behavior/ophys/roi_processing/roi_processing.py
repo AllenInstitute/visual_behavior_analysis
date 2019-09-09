@@ -495,29 +495,27 @@ def change_mask_from_bool_to_binary(mask):
     binary_mask[new_mask==1] = 1
     return binary_mask
 
-    
-
-
-def gen_multi_roi_mask(experiment_id, roi_id_list):
-    """[summary]
+def gen_blank_mask_of_FOV_dimensions(experiment_id):
+    """generates a transparent mask the same dimensions as the microscope FOV after motion correction 
+        & cell segmentation
     
     Arguments:
         experiment_id {[type]} -- [description]
-        roi_list {[type]} -- [description]
     
     Returns:
         [type] -- [description]
     """
     roi_metrics = gen_roi_metrics_dataframe(experiment_id)
-    id_type = determine_roi_id_type(experiment_id, roi_id_list[0])
-    
-    # #determine what type of roi/cell_id is given in the list
-    # cell_roi_id_type = roi.determine_roi_id_type(experiment_id, roi_list[0]) 
-
-    starting_mask = roi_metrics.loc[roi_metrics[id_type]==roi_id_list[0],["image_mask"]].values[0]
     #make a general mask of the correcte shape to be used for multiple rois
-    multi_roi_mask = np.zeros(starting_mask.shape)
-    multi_roi_mask[:] = np.nan
+    FOV_dimension = roi_metrics["image_mask"][0].shape
+    blank_mask = np.zeros(FOV_dimension)
+    blank_mask[:] = np.nan
+    return blank_mask
+
+
+def gen_multi_roi_mask(experiment_id, roi_id_list):
+    id_type = determine_roi_id_type(experiment_id, roi_id_list[0])
+    multi_roi_mask = gen_blank_mask_of_FOV_dimensions(experiment_id)
     
     for roi_id in roi_id_list:
         #create the binary mask for that roi
