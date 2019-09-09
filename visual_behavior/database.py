@@ -290,7 +290,7 @@ def get_alternate_ids(uuid):
 def convert_id(input_dict, desired_key):
     '''
     an ophys session has 5 different keys by which it can be identified
-    this function will convert between keys. 
+    this function will convert between keys.
 
     It takes the following inputs:
         a key/value pair that represents one possible ID
