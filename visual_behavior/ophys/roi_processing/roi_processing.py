@@ -400,8 +400,32 @@ def clean_cell_specimen_table_column_labels(cell_specimen_table):
     cell_specimen_table["cell_specimen_id"] =  cell_specimen_table.index #make cell_specimen_id a column so it can be merged on
     return cell_specimen_table
 
+def dataframe_shift_fov_mask(row):
+    """acts on a datframe row- for use in specifically in roi_metrics_dataframe
+        applies the np.roll to move an image mask, on to every row in a dataframe, row by row
+    
+    Arguments:
+        row {[type]} -- [description]
+    
+    Returns:
+        [type] -- [description]
+    """
+    return np.roll(row["image_mask"], (row["bbox_min_x"], row["bbox_min_y"]),axis=(1,0))
 
-def gen_roi_metrics_dataframe(experiment_id):
+def dataframe_binarize_mask(row):
+    """acts on a datframe row- for use in specifically in roi_metrics_dataframe.
+        applies the change-mask_from_bool_to_binary on a dataframe row
+
+    
+    Arguments:
+        row {[type]} -- dataframe row
+    
+    Returns:
+        r -- [description]
+    """
+    return change_mask_from_bool_to_binary(row["shifted_image_mask"])
+
+def gen_roi_metrics_dataframe(experiment_id, shift = False):
     """[summary]
     
     Arguments:
@@ -419,6 +443,12 @@ def gen_roi_metrics_dataframe(experiment_id):
     obj_loc_df = pd.merge(objectlist_df, roi_locations_df, how = "outer", on= ["bbox_min_x", "bbox_min_y"])
     roi_metrics_df = pd.merge(obj_loc_df, cell_specimen_table, how = "outer", on= ["cell_roi_id", "bbox_min_x", "bbox_min_y", "valid_roi"])
     roi_metrics_df = pd.merge(roi_metrics_df, failed_roi_exclusion_labels, how = "outer", on="cell_roi_id")
+    roi_metrics_df["experiment_id"]= experiment_id
+
+    if shift== True:
+        roi_metrics_df["shifted_image_mask"]= roi_metrics_df.apply(dataframe_shift_fov_mask, axis=1)
+        # roi_metrics_df["shifted_image_mask"]=roi_metrics_df.apply(dataframe_binarize_mask, axis=1)
+
     return roi_metrics_df
 
 def determine_roi_id_type(experiment_id, roi_id, print_stmnts = False):
@@ -480,6 +510,7 @@ def shift_roi_FOV_mask_to_roi_FOV_location(roi_metrics, unshifted_roi_image_mask
     return shifted_roi_image_mask
 
 
+
 def change_mask_from_bool_to_binary(mask):
     """change a mask from bool to binary so the backgroun is 0s and transparent, which allows it to be plotted over another image
         such as a max intensity projection or an average projection
@@ -520,22 +551,17 @@ def gen_blank_mask_of_FOV_dimensions(experiment_id):
     return blank_mask
 
 
-def gen_multi_roi_mask(experiment_id, roi_id_list):
+def gen_multi_roi_mask(experiment_id, roi_id_list, mask_type = "binary"):
+    roi_metrics = gen_roi_metrics_dataframe(experiment_id, shift= True)
     id_type = determine_roi_id_type(experiment_id, roi_id_list[0])
-    multi_roi_mask = gen_blank_mask_of_FOV_dimensions(experiment_id)
-    
-    for roi_id in roi_id_list:
-        #create the binary mask for that roi
-        roi_mask = get_transparent_roi_FOV_mask(experiment_id, roi_id, id_type = id_type)
-        #make a 3d array with the roi mask and the starting mask
-        masks_3d = np.array([multi_roi_mask, roi_mask])
-        combo_mask = np.nansum(masks_3d, axis = 0)
-        multi_roi_mask = combo_mask
-    
-    binary_mask = np.zeros(multi_roi_mask.shape)
-    binary_mask[:]=np.nan
-    binary_mask[multi_roi_mask==1]=1
-    return binary_mask
-
-
+    roi_list_df = roi_metrics[roi_metrics[id_type].isin(roi_id_list)]
+    roi_masks = roi_list_df["shifted_image_mask"].values
+    bool_multi_roi_mask = np.sum(roi_masks,0)
+    binary_multi_roi_mask = change_mask_from_bool_to_binary(bool_multi_roi_mask)
+    if mask_type =="binary":
+        return binary_multi_roi_mask
+    elif mask_type =="bool":
+        return bool_multi_roi_mask
+    else:
+        print("please specify 'bool' or 'binary' for mask_type")
  
