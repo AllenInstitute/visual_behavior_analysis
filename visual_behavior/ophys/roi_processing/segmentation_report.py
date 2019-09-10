@@ -80,24 +80,7 @@ def gen_segmentation_dataframe(experiment_id):
     label_mask_df = gen_label_masks_df(experiment_id)
     segmentation_df = pd.merge(seg_labels_df, label_mask_df, how = "outer", on ="label")
     return segmentation_df
-
-
-def gen_roi_exclusion_masks_dict(experiment_id):
-    exclusion_rois_dict = gen_exclusion_label_cell_roi_id_dict(experiment_id)
-    exclusion_masks_dict = {}
-    for label in exclusion_labels_list:
-        exclusion_masks_dict[label] = roi.gen_multi_roi_mask(experiment_id, exclusion_rois_dict[label])
-    return exclusion_masks_dict
-
-
-# def gen_roi_exclusion_category_masks(experiment_id):
-#     roi_metrics = rois.loc[rois["experiment_id"]==str(experiment_id), ["bbox_min_x", "bbox_min_y", "exclusion_labels"]]
-#     cell_specimen_table = cell_specimen_table.rename(columns = {"y":"bbox_min_y", "x":"bbox_min_x"})
-#     #merging will reset the index & you'll lose the cell_spec_id so need to make it a col that's not the index
-#     cell_specimen_table["cell_specimen_id"]=cell_specimen_table.index 
-#     merged_cell_specimen_table = pd.merge(cell_specimen_table, roi_metrics, how ="left", on=["bbox_min_x", "bbox_min_y"])
-#     exp_roi_failtags = gen_failtag_roi_df(merged_cell_specimen_table) 
-
+    
 
 # def plot_exclusion_label_masks(experiment_id, segmentation_df):
 #     ave_proj = roi.get_sdk_ave_projection(experiment_id)
