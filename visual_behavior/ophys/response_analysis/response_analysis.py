@@ -124,7 +124,7 @@ class ResponseAnalysis(object):
         else:
             if os.path.exists(self.get_trial_response_df_path()):
                 print('loading trial response dataframe')
-                self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', format='fixed')
+                self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', )
             else:
                 self.trial_response_df = self.generate_trial_response_df()
                 self.save_trial_response_df(self.trial_response_df)
@@ -208,7 +208,7 @@ class ResponseAnalysis(object):
         else:
             if os.path.exists(self.get_flash_response_df_path()):
                 print('loading flash response dataframe')
-                self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
+                self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', )
             else:
                 self.flash_response_df = self.generate_flash_response_df()
                 self.save_flash_response_df(self.flash_response_df)
@@ -293,7 +293,7 @@ class ResponseAnalysis(object):
     def get_pairwise_correlations_df(self):
         if os.path.exists(self.get_pairwise_correlations_path()):
             print('loading pairwise correlations dataframe')
-            self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
+            self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df', )
         else:
             print('generating pairwise correlations dataframe')
             self.pairwise_correlations_df = self.compute_pairwise_correlations()
