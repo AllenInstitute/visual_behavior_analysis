@@ -15,7 +15,6 @@ sessions = {
     'TRAINING_2_gratings_flashed_416656': '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/181119150503_416656_2b0893fe-843d-495e-bceb-83b13f2b02dc.pkl',
     'TRAINING_3_images_A_10uL_reward_424460': '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/181119135416_424460_b6daf247-2caf-4f38-9eb1-ab97825923cd.pkl',
     'TRAINING_4_images_A_handoff_ready_402329': '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/181119134201_402329_b75a87d0-8178-4171-a3b2-7cea3ae8e118.pkl',
-    'OPHYS_IMAGES_A_412364': '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/778113069_stim.pkl',
     'TRAINING_2_gratings_flashed_428136': '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/190124093821_428136_d22c9f16-12e6-4b21-b04c-843495560b5a.pkl'
 }
 
