@@ -40,15 +40,16 @@ def get_warmup_trials(trials):
         return pd.DataFrame()
 
 
-def get_first_lick_in_response_window(row, tolerance=0.01, tolerance_direction='inside'):
+def get_first_lick_in_response_window(row, tolerance=0.01, tolerance_direction='inside', response_window=None):
     '''
     returns first lick that falls in response window, nan if no such lick
     exists
     '''
+    assert response_window, "must pass a response window"
     # only look for licks in window if there were licks and a change time
     if len(row['lick_times']) > 0 and not pd.isnull(row['change_time']):
-        left_edge = np.subtract(row['response_window'][0], tolerance) if tolerance_direction == 'outside' else np.add(row['response_window'][0], tolerance)
-        right_edge = np.add(row['response_window'][1], tolerance) if tolerance_direction == 'outside' else np.subtract(row['response_window'][1], tolerance)
+        left_edge = np.subtract(response_window[0], tolerance) if tolerance_direction == 'outside' else np.add(response_window[0], tolerance)
+        right_edge = np.add(response_window[1], tolerance) if tolerance_direction == 'outside' else np.subtract(response_window[1], tolerance)
 
         licks = np.array(row['lick_times']) - row['change_time']
         licks_in_window = licks[
@@ -366,12 +367,14 @@ def validate_max_change_time(trials, pre_change_time, stimulus_window, distribut
             return True
 
 
-def validate_reward_when_lick_in_window(trials, tolerance=0.01):
+def validate_reward_when_lick_in_window(core_data, tolerance=0.01):
     '''for every trial with a lick in the response window, there should be a reward'''
     # get all go_trials without auto_rewards
+    trials = core_data['trials']
+    trial_type = annotate.categorize_trials(trials)
     contingent_go_trials = trials[
-        (trials.trial_type == 'go') &
-        (trials.auto_rewarded == False)
+        (trial_type == 'go') &
+        (trials['auto_rewarded'] == False)
     ]
 
     # get first lick in response window, relative to change time
@@ -379,7 +382,8 @@ def validate_reward_when_lick_in_window(trials, tolerance=0.01):
         get_first_lick_in_response_window,
         axis=1,
         tolerance=0.01,
-        tolerance_direction='inside'
+        tolerance_direction='inside',
+        response_window=core_data['metadata']['response_window'],
     )
     first_lick_in_window.name = 'first_lick'
 
