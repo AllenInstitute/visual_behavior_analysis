@@ -1,21 +1,13 @@
 
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
+
+import visual_behavior.ophys.roi_processing.cell_matching_report as matching
 import visual_behavior.ophys.roi_processing.roi_processing as roi
-from allensdk.internal.api import PostgresQueryMixin
-from psycopg2 import connect, extras
 
 import matplotlib.pyplot as plt
-
-
-import scipy.stats as stats
-
-import SimpleITK as sitk
-import networkx as nx
-import seaborn as sns
 import pandas as pd
 import numpy as np
-import json
 import os
 
 exclusion_labels_list = ["apical_dendrite", "bad_shape", "boundary", "demix_error", "duplicate", "empty_neropil_mask",
@@ -23,6 +15,7 @@ exclusion_labels_list = ["apical_dendrite", "bad_shape", "boundary", "demix_erro
 
 roi_id_types_list = ["cell_specimen_id", "cell_roi_id"]
 
+##################################  EXPERIMENT LEVEL FUNCTIONS
 def gen_exclusion_label_roi_df(experiment_id):
     exclusion_labels_df = roi.get_failed_roi_exclusion_labels(experiment_id)
     excl_label_roi_df = pd.DataFrame(columns=["label","cell_specimen_ids", "cell_roi_ids"])
@@ -88,6 +81,28 @@ def gen_segmentation_dataframe(experiment_id):
 #     for label in exclsuion_labels_list:
 #         lab = label
 #         label_df = segmentation_df.loc[segmentation_df["label"]==lab]
+
+
+
+##################################  CONTAINER LEVEL FUNCTIONS
+
+
+
+
+
+def from_manifest_container_matched_cells_roi_metrics(manifest, container_id):
+    container_roi_metrics = roi.for_manifest_get_container_roi_metrics(container_id)
+
+
+
+
+
+
+
+
+
+
+##################################  MANIFEST LEVEL FUNCTIONS 
 
 
 

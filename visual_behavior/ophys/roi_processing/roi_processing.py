@@ -5,10 +5,10 @@ from allensdk.internal.api import PostgresQueryMixin
 from psycopg2 import connect, extras 
 
 
-
+from pathlib import Path
 import pandas as pd
 import numpy as np
-from pathlib import Path
+
 import os
 
 get_psql_dict_cursor = convert.get_psql_dict_cursor
@@ -565,3 +565,24 @@ def gen_multi_roi_mask(experiment_id, roi_id_list, mask_type = "binary"):
     else:
         print("please specify 'bool' or 'binary' for mask_type")
  
+##################################  CONTAINER LEVEL FUNCTIONS
+ 
+ 
+def for_manifest_get_container_roi_metrics(manifest, container_id):
+    container_df = manifest.loc[manifest["container_id"]==container_id]
+    container_df = container_df.reset_index(drop=True)
+
+    container_roi_metrics_df = gen_roi_metrics_dataframe(container_df["ophys_experiment_id"].values[0])
+    container_roi_metrics_df["stage_name"]= container_df["stage_name"][0]
+    container_roi_metrics_df["full_genotype"] = container_df["full_genotype"][0]
+    container_roi_metrics_df["valid_cell_matching"]= container_df["valid_cell_matching"][0]
+    
+    for experiment_id in container_df["ophys_experiment_id"].values[1:]:
+        experiment_roi_metrics_df = gen_roi_metrics_dataframe(experiment_id)
+        experiment_roi_metrics_df["stage_name"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "stage_name"].values[0]
+        experiment_roi_metrics_df["full_genotype"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "full_genotype"].values[0]
+        experiment_roi_metrics_df["valid_cell_matching"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "valid_cell_matching"].values[0]
+        container_roi_metrics_df =container_roi_metrics_df.append(experiment_roi_metrics_df)
+        container_roi_metrics_df = container_roi_metrics_df.reset_index(drop=True)
+
+    return container_roi_metrics_df
