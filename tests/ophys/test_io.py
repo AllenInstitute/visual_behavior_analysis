@@ -12,18 +12,21 @@ matplotlib.use('Agg')
 EXPERIMENT_ID = 702134928
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(os.environ.get('PYTHONPATH','').startswith('/home/circleci'), reason='Cannot test against real files on CircleCI')
 def test_convert_level_1_to_level_2(cache_dir):
 
     convert_level_1_to_level_2(EXPERIMENT_ID, cache_dir=cache_dir)
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(os.environ.get('PYTHONPATH','').startswith('/home/circleci'), reason='Cannot test against real files on CircleCI')
 def test_create_analysis(cache_dir):
 
     create_analysis_files(EXPERIMENT_ID, cache_dir, overwrite_analysis_files=True)
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(os.environ.get('PYTHONPATH','').startswith('/home/circleci'), reason='Cannot test against real files on CircleCI')
 def test_create_multi_session_mean_df(cache_dir):
 

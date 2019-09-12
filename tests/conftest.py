@@ -256,6 +256,7 @@ def session_summary():
     summary['number_of_false_alarms'] = np.nan
     summary['number_of_correct_rejects'] = np.nan
     summary['rig_id'] = 'unknown'
+    summary.drop('d_prime',axis=1,inplace=True) # note: metric removed in PR #580
     return summary
 
 
@@ -268,6 +269,7 @@ def epoch_summary():
     summary['startdatetime'] = datetime.datetime(2017, 7, 19, 10, 35, 8, 369000, tzinfo=pytz.utc)
     summary['startdatetime'] = pd.to_datetime(summary['startdatetime'])
     summary['behavior_session_uuid'] = summary['behavior_session_uuid'].map(uuid.UUID)
+    summary.drop('d_prime',axis=1,inplace=True) # note: metric removed in PR #580
     return summary
 
 

@@ -23,7 +23,10 @@ setuptools.setup(
         "seaborn",
         'zipfile2; python_version < "3.5"',
         'zipfile36; python_version >= "3.5"',
-
+        'opencv-python',
+        'pymongo',
+        'pyyaml',
+        'h5py>=2.7.1',
     ],
     tests_require=[
         "flake8",
