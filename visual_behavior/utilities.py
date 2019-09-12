@@ -1,10 +1,15 @@
 from __future__ import print_function
-from dateutil import tz
+from dateutil import parser, tz
 from functools import wraps
 import logging
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
+import datetime
+import os
+import h5py
+import cv2
+import warnings
 
 
 def flatten_list(in_list):
@@ -168,10 +173,14 @@ def deg_to_dist(speed_deg_per_s):
 
 
 def local_time(iso_timestamp, timezone=None):
-    datetime = pd.to_datetime(iso_timestamp)
-    if not datetime.tzinfo:
-        datetime = datetime.replace(tzinfo=tz.gettz('America/Los_Angeles'))
-    return datetime.isoformat()
+    if isinstance(iso_timestamp, datetime.datetime):
+        dt = iso_timestamp
+    else:
+        dt = parser.parse(iso_timestamp)
+
+    if not dt.tzinfo:
+        dt = dt.replace(tzinfo=tz.gettz('America/Los_Angeles'))
+    return dt.isoformat()
 
 
 class ListHandler(logging.Handler):
@@ -215,3 +224,118 @@ def inplace(func):
             return None
 
     return df_wrapper
+
+
+def find_nearest_index(val, time_array):
+    '''
+    Takes an input (can be a scalar, list, or array) and a time_array
+    Returns the index or indices of the time points in time_array that are closest to val
+    '''
+    if hasattr(val, "__len__"):
+        idx = np.zeros(len(val), dtype=int)
+        for i, v in enumerate(val):
+            idx[i] = np.argmin(np.abs(v - np.array(time_array)))
+    else:
+        idx = np.argmin(np.abs(val - np.array(time_array)))
+    return idx
+
+
+class Movie(object):
+    '''
+    a class for loading movies captured with videomon
+
+    Args
+    ----------
+    filepath (string):
+        path to the movie file
+    sync_timestamps (array), optional:
+        array of timestamps acquired by sync. None by default
+    h5_filename (string), optional:
+        path to h5 file. assumes by default that filename matches movie filename, but with .h5 extension
+    lazy_load (boolean), defaults True:
+        when True, each frame is loaded from disk when requested. When False, the entire movie is loaded into memory on intialization (can be very slow)
+
+    Attributes:
+    ------------
+    frame_count (int):
+        number of frames in movie
+    width (int):
+        width of each frame
+    height (int):
+        height of each frame
+
+    Todo:
+    --------------
+    - non-lazy-load a defined interval (would this be useful?)
+    '''
+
+    def __init__(self, filepath, sync_timestamps=None, h5_filename=None, lazy_load=True):
+
+        self.cap = cv2.VideoCapture(filepath)
+        self.frame_count = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        if sync_timestamps is not None:
+            self.sync_timestamps = sync_timestamps
+        else:
+            self.sync_timestamps = None
+
+        if not h5_filename:
+            h5_filename = filepath.replace('.avi', '.h5')
+        if os.path.exists(h5_filename):
+            timestamp_file = h5py.File(filepath.replace('.avi', '.h5'))
+
+            # videomon saves an h5 file with frame intervals. Take cumulative sum to get timestamps
+            self.timestamps_from_file = np.hstack((0, np.cumsum(timestamp_file['frame_intervals'])))
+            if self.sync_timestamps is not None and len(self.sync_timestamps) != len(self.timestamps_from_file):
+                warnings.warn('NONMATCHING timestamp counts\nThere are {} timestamps in sync and {} timestamps in the associated camera file\nthese should match'.format(
+                    len(self.sync_timestamps), len(self.timestamps_from_file)))
+        else:
+            warnings.warn('Movies often have a companion h5 file with a corresponding name. None found for this movie. Expected {}'.format(h5_filename))
+            self.timestamps_from_file = None
+
+        self._lazy_load = lazy_load
+        if self._lazy_load == False:
+            self._get_array()
+        else:
+            self.array = None
+
+    def get_frame(self, frame=None, time=None, timestamps='sync'):
+        if time and timestamps == 'sync':
+            assert self.sync_timestamps is not None, 'sync timestamps do not exist'
+            timestamps = self.sync_timestamps
+        elif time and timestamps == 'file':
+            assert self.timestamps_from_file is not None, 'timestamps from file do not exist'
+            timestamps = self.timestamps_from_file
+        else:
+            timestamps = None
+
+        if time is not None and frame is None:
+            assert timestamps is not None, 'must pass a timestamp array if referencing by time'
+            frame = find_nearest_index(time, timestamps)
+
+        # use open CV to get the frame from disk if lazy mode is True
+        if self._lazy_load:
+            self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame)
+            found_frame, frame_array = self.cap.read()
+            if found_frame == True:
+                return frame_array
+            else:
+                warnings.warn("Couldn't find frame {}, returning None".format(frame))
+                return None
+        # or get the frame the preloaded array
+        else:
+            return self.array[frame, :, :]
+
+    def _get_array(self, dtype='uint8'):
+        '''iterate over movie, load frames into an in-memory numpy array one at a time (slow and memory intensive)'''
+        self.array = np.empty((self.frame_count, self.height, self.width), np.dtype(dtype))
+
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        for N in range(self.frame_count):
+            found_frame, frame = self.cap.read()
+            if not found_frame:
+                print('something went wrong on frame {}, stopping'.format(frame))
+                break
+            self.array[N, :, :] = frame[:, :, 0]
