@@ -27,7 +27,7 @@ def flatten_list(in_list):
     return out_list
 
 
-def get_response_rates(df_in, sliding_window=100):
+def get_response_rates(df_in, sliding_window=100, apply_trial_number_limit=False):
     """
     calculates the rolling hit rate, false alarm rate, and dprime value
     Note that the pandas rolling metric deals with NaN values by propogating the previous non-NaN value
@@ -50,18 +50,33 @@ def get_response_rates(df_in, sliding_window=100):
     hit_rate = go_responses.rolling(
         window=sliding_window,
         min_periods=0,
-    ).mean()
+    ).mean().values
 
-    catch_responses = go_responses = df_in.apply(is_catch, axis=1)
+    catch_responses = df_in.apply(is_catch, axis=1)
 
     catch_rate = catch_responses.rolling(
         window=sliding_window,
         min_periods=0,
-    ).mean()
+    ).mean().values
+
+    if apply_trial_number_limit:
+        # avoid values close to 0 and 1
+        go_count = go_responses.rolling(
+            window=sliding_window,
+            min_periods=0,
+        ).count()
+
+        catch_count = catch_responses.rolling(
+            window=sliding_window,
+            min_periods=0,
+        ).count()
+
+        hit_rate = np.vectorize(trial_number_limit)(hit_rate, go_count)
+        catch_rate = np.vectorize(trial_number_limit)(catch_rate, catch_count)
 
     d_prime = dprime(hit_rate, catch_rate)
 
-    return hit_rate.values, catch_rate.values, d_prime
+    return hit_rate, catch_rate, d_prime
 
 
 class RisingEdge():
@@ -94,6 +109,15 @@ class RisingEdge():
 
 
 # -> metrics
+def trial_number_limit(p, N):
+    if N == 0:
+        return np.nan
+    if not pd.isnull(p):
+        p = np.max((p, 1. / (2 * N)))
+        p = np.min((p, 1 - 1. / (2 * N)))
+    return p
+
+
 def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
     """ calculates the d-prime for a given hit rate and false alarm rate
 
