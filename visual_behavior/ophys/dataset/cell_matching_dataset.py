@@ -52,7 +52,7 @@ class CellMatchingDataset(object):
 
     def get_lims_data(self):
         # if self.from_processed_data is True:
-        #     lims_data = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', format='fixed')
+        #     lims_data = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', )
         #     self.experiment_id = lims_data.ophys_experiment_id.values[0]
         #     self.session_name = lims_data.session_type.values[0].split('_')[-1]
         #     self.structure = lims_data.targeted_structure.values[0]
