@@ -499,6 +499,7 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
     if db_connection is None:
         db_conn.close()
 
+
 def get_well_known_files(ophys_session_id):
     lims_api = PostgresQueryMixin()
     query = '''
@@ -518,9 +519,5 @@ def get_well_known_files(ophys_session_id):
     JOIN welL_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
     WHERE os.id = {};
     '''.format(ophys_session_id)
-    result = pd.read_sql(query, api.get_connection())
+    result = pd.read_sql(query, lims_api.get_connection())
     return result
-
-
-    
-
