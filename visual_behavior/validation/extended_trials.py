@@ -383,7 +383,7 @@ def validate_reward_when_lick_in_window(core_data, tolerance=0.01):
         axis=1,
         tolerance=0.01,
         tolerance_direction='inside',
-        response_window = core_data['metadata']['response_window'],
+        response_window=core_data['metadata']['response_window'],
     )
     first_lick_in_window.name = 'first_lick'
 
