@@ -514,7 +514,7 @@ def get_well_known_files(ophys_session_id):
     LEFT JOIN well_known_files wkf ON os.id=wkf.attachable_id
         OR oe.id=wkf.attachable_id
         OR bs.id=wkf.attachable_id
-        
+
     JOIN welL_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
     WHERE os.id = {};
     '''.format(ophys_session_id)
