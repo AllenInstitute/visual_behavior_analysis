@@ -515,7 +515,7 @@ def get_well_known_files(ophys_session_id):
         OR oe.id=wkf.attachable_id
         OR bs.id=wkf.attachable_id
 
-    JOIN welL_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
+    JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
     WHERE os.id = {};
     '''.format(ophys_session_id)
     result = pd.read_sql(query, lims_api.get_connection())
