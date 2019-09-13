@@ -190,7 +190,7 @@ def get_value_from_table(search_key, search_value, target_table, target_key):
     a general function for getting a value from a LIMS table
     '''
     api = PostgresQueryMixin()
-    query = f'''
+    query = '''
     select {target_key}
     from {target_table}
     where {search_key} = '{search_value}'
