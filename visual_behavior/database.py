@@ -7,11 +7,11 @@ import os
 import glob
 import traceback
 import datetime
-from allensdk.internal.api import PostgresQueryMixin
 from .translator.foraging2 import data_to_change_detection_core as foraging2_translator
 from .translator.foraging import data_to_change_detection_core as foraging1_translator
 from .translator.core import create_extended_dataframe
 from .change_detection.trials import summarize
+from allensdk.internal.api import PostgresQueryMixin
 
 
 class Database(object):
@@ -497,3 +497,26 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
 
     if db_connection is None:
         db_conn.close()
+
+
+def get_well_known_files(ophys_session_id):
+    lims_api = PostgresQueryMixin()
+    query = '''
+    SELECT wkf.storage_directory || wkf.filename as full_path,
+           wkf.filename,
+           wkf.attachable_type,
+           wkft.name
+
+    FROM ophys_sessions os
+    JOIN ophys_experiments oe ON oe.ophys_session_id=os.id
+    JOIN behavior_sessions bs ON bs.ophys_session_id = os.id
+
+    LEFT JOIN well_known_files wkf ON os.id=wkf.attachable_id
+        OR oe.id=wkf.attachable_id
+        OR bs.id=wkf.attachable_id
+
+    JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
+    WHERE os.id = {};
+    '''.format(ophys_session_id)
+    result = pd.read_sql(query, lims_api.get_connection())
+    return result
