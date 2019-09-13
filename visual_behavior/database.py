@@ -7,7 +7,6 @@ import os
 import glob
 import traceback
 import datetime
-from allensdk.internal.api import PostgresQueryMixin
 from .translator.foraging2 import data_to_change_detection_core as foraging2_translator
 from .translator.foraging import data_to_change_detection_core as foraging1_translator
 from .translator.core import create_extended_dataframe
@@ -507,7 +506,7 @@ def get_well_known_files(ophys_session_id):
            wkf.filename,
            wkf.attachable_type,
            wkft.name
-           
+
     FROM ophys_sessions os
     JOIN ophys_experiments oe ON oe.ophys_session_id=os.id
     JOIN behavior_sessions bs ON bs.ophys_session_id = os.id
