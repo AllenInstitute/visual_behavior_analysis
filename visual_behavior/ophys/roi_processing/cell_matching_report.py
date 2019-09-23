@@ -44,8 +44,8 @@ def from_manifest_container_matched_roi_morphology_metrics(manifest, container_i
     return matched_roi_morphology_metrics
 
 
-def from_manifest_container_matched_roi_response_metrics(manifest, container_id):
-    
+# def from_manifest_container_matched_roi_response_metrics(manifest, container_id):
+
 # def plot_cell_zoom(roi_mask, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
 #     m = roi_mask 
 #     (y, x) = np.where(m == 1)

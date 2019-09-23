@@ -568,53 +568,37 @@ def gen_multi_roi_mask(experiment_id, roi_id_list, mask_type = "binary"):
 
 ##################################  CONTAINER LEVEL FUNCTIONS
 
-def get_LIMS_container_information(container_id):
-     """Queries several lims tables to create a dataframe containing information about an experiment container.
-        tables queried: 
-        ohys_experiments_visual_behavior_experiment_containers
-        ophys_experiments
-        ophys_sessions
-        structures
-        imaging_depth
-        equipment
-        specimens 
-    
-    Arguments:
-        container_id {int} -- [9 digit unique identifier for the container]
-    
-    Returns:
-        dataframe -- 
-    """
-    #query from AllenSDK
+def get_lims_container_info(container_id):
     mixin = PostgresQueryMixin()
     #build query
     query = '''
     SELECT
-	
     container.visual_behavior_experiment_container_id as container_id,
-	oe.id as ophys_experiment_id,
-	oe.name as session_name_string,
-	oe.workflow_state,
-	specimens.name as mouse_info,
-	structures.acronym as targeted_structure,
-	imaging_depths.depth,
-	equipment.name as rig,
-	os.date_of_acquisition
+    oe.id as ophys_experiment_id,
+    oe.name as session_name_string,
+    os.stimulus_name as stage_name,
+    oe.workflow_state,
+    specimens.name as mouse_info,
+    specimens.donor_id as mouse_donor_id,
+    structures.acronym as targeted_structure,
+    imaging_depths.depth,
+    equipment.name as rig,
+    os.date_of_acquisition
     
     FROM 
-	ophys_experiments_visual_behavior_experiment_containers container
-	join ophys_experiments oe on oe.id = container.ophys_experiment_id
-	join ophys_sessions os on os.id = oe.ophys_session_id
-	join structures on structures.id = oe.targeted_structure_id
-	join imaging_depths on imaging_depths.id = oe.imaging_depth_id
-	join specimens on specimens.id = os.specimen_id
-	join equipment on equipment.id = os.equipment_id
+    ophys_experiments_visual_behavior_experiment_containers container
+    join ophys_experiments oe on oe.id = container.ophys_experiment_id
+    join ophys_sessions os on os.id = oe.ophys_session_id
+    join structures on structures.id = oe.targeted_structure_id
+    join imaging_depths on imaging_depths.id = oe.imaging_depth_id
+    join specimens on specimens.id = os.specimen_id
+    join equipment on equipment.id = os.equipment_id
     
     where 
-    container.visual_behavior_experiment_container_id ={}'''.format(experiment_id)
+    container.visual_behavior_experiment_container_id ={}'''.format(container_id)
 
-    LIMS_container_info=  mixin.select(query)
-    return LIMS_container_info
+    lims_container_info =  mixin.select(query)
+    return lims_container_info
  
  
 def for_manifest_get_container_roi_metrics(manifest, container_id):
