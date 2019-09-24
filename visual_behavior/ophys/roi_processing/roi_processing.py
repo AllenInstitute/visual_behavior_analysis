@@ -575,8 +575,8 @@ def get_lims_container_info(container_id):
     SELECT
     container.visual_behavior_experiment_container_id as container_id,
     oe.id as ophys_experiment_id,
-    oe.name as session_name_string,
     os.stimulus_name as stage_name,
+    os.foraging_id,
     oe.workflow_state,
     specimens.name as mouse_info,
     specimens.donor_id as mouse_donor_id,
@@ -599,7 +599,106 @@ def get_lims_container_info(container_id):
 
     lims_container_info =  mixin.select(query)
     return lims_container_info
- 
+
+def get_stage_name_from_mtrain_sqldb(lims_container_info_df):
+    foraging_ids = lims_container_info_df['foraging_id'][~pd.isnull(lims_container_info_df['foraging_id'])]
+    mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="mtrainro", port=5432)
+    query = """
+            SELECT
+		    stages.name as stage_name, 
+		    bs.id as foraging_id
+		    FROM behavior_sessions bs
+		    LEFT JOIN states ON states.id = bs.state_id
+		    LEFT JOIN stages ON stages.id = states.stage_id
+            WHERE bs.id IN ({})
+        """.format(",".join(["'{}'".format(x) for x in foraging_ids]))
+    mtrain_response = pd.read_sql(query, mtrain_api.get_connection())
+    lims_container_info_df = lims_container_info_df.merge(mtrain_response, on='foraging_id', how='left')
+    lims_container_info_df = lims_container_info_df.rename(columns={"stage_name_x":"stage_name_lims", "stage_name_y":"stage_name_mtrain"})
+    return lims_container_info_df
+
+def get_6digit_mouse_id(lims_container_info_df):
+    mouse_id = lims_container_info_df["mouse_info"][0][-6:]
+    mouse_id = int(mouse_id)
+    lims_container_info_df["mouse_id"] = mouse_id
+    return lims_container_info_df
+
+
+def full_geno(lims_container_info_df):
+    full_geno = lims_container_info_df["mouse_info"][0][:-7]
+    lims_container_info_df["full_genotype"]= full_geno
+    return lims_container_info_df
+
+
+def calc_retake_number(lims_container_info_df, stage_name_source= "mtrain"):
+    
+    #using the stage name from LIMS database or mtrain? LIMS DB needs updating to be accurate 9/24/19
+    if stage_name_source== "mtrain":
+        stage_name_column = "stage_name_mtrain"
+    elif stage_name_source == "lims":
+        stage_name_column = "stage_name_lims"
+    else: 
+        print ("please enter a valid stage name source, either 'mtrain' or 'lims'")
+
+    stage_gb = lims_container_info_df.groupby(stage_name_column)
+    unique_stages = lims_container_info_df[stage_name_column][~pd.isnull(lims_container_info_df[stage_name_column])].unique()
+    for stage_name in unique_stages:
+        # Iterate through the sessions sorted by date and save the index to the row
+        sessions_this_stage = stage_gb.get_group(stage_name).sort_values('date_of_acquisition')
+        for ind_enum, (ind_row, row) in enumerate(sessions_this_stage.iterrows()):
+            lims_container_info_df.at[ind_row, 'retake_number'] = ind_enum
+    return lims_container_info_df
+
+
+def gen_container_manifest(container_id):
+    lims_container_info_df = get_lims_container_info(container_id)
+    lims_container_info_df = get_6digit_mouse_id(lims_container_info_df)
+    lims_container_info_df = full_geno(lims_container_info_df)
+    lims_container_info_df = get_stage_name_from_mtrain_sqldb(lims_container_info_df)
+    lims_container_info_df = calc_retake_number(lims_container_info_df)
+    lims_container_info_df = lims_container_info_df.drop(["mouse_info", "foraging_id"], axis = 1)
+    return lims_container_info_df
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# def dataframe_mouseinfo_split(row):
+#     return row["mouse_info"].split('-')[:-1]
+
+# def get_6digit_mouse_id(lims_container_info_df):
+#     lims_container_info_df['mouse_id'] = lims_container_info_df.apply(dataframe_mouseinfo_split, axis =1)
+#     lims_container_info_df["mouse_id"]= lims_container_info_df["mouse_id"].astype(int)
+#     return lims_container_info_df
+
+
+
+
+
+def get_container_roi_metrics(container_id):
+    container_manifest= get_lims_container_info(container_id)
+    passed_experiments = container_manifest.loc[container_manifest["workflow_state"]=="passed", "ophys_experiment_id"].values
+    container_roi_metrics_df = gen_roi_metrics_dataframe(passed_experiments[0])
+    container_roi_metrics_df["stage_name"]= container_manifest["stage_name"][0]
+    container_roi_metrics_df["full_genotype"] = container_manifest["full_genotype"][0]
+
+    for experiment_id in passed_experiments[1:]:
+        experiment_roi_metrics_df = gen_roi_metrics_dataframe(experiment_id)
+        experiment_roi_metrics_df["stage_name"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "stage_name"].values[0]
+        experiment_roi_metrics_df["full_genotype"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "full_genotype"].values[0]
+        container_roi_metrics_df =container_roi_metrics_df.append(experiment_roi_metrics_df)
+        container_roi_metrics_df = container_roi_metrics_df.reset_index(drop=True)
+    return container_roi_metrics_df
+
  
 def for_manifest_get_container_roi_metrics(manifest, container_id):
     container_df = manifest.loc[manifest["container_id"]==container_id]

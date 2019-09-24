@@ -90,9 +90,6 @@ def gen_segmentation_dataframe(experiment_id):
 
 
 
-def from_manifest_container_matched_cells_roi_metrics(manifest, container_id):
-    container_roi_metrics = roi.for_manifest_get_container_roi_metrics(container_id)
-
 
 
 
