@@ -46,6 +46,8 @@ def make_trials_contiguous(trials, time, visual_stimuli=None):
     if trial_end_frame is None:
         trial_end_frame = len(time) - 1
 
+    trial_end_frame = min(trial_end_frame, len(time) - 1)  # ensure that trial end frame doesn't exceed length of time vector
+
     trial_end_time = time[trial_end_frame]
 
     trials['endframe'] = trials['startframe'] \
