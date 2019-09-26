@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import itertools
 import json
 import os
 
@@ -25,23 +26,90 @@ def remove_unmatched_rois(dataframe):
     matched_dataframe = dataframe.loc[dataframe["number_exps_roi_matched"]!=1]
     return matched_dataframe
 
-
-def from_manifest_container_matched_roi_metrics(manifest, container_id):
-    container_roi_metrics = roi.for_manifest_get_container_roi_metrics(manifest, container_id)
+def container_matched_roi_metrics(container_id):
+    container_manifest = roi.gen_container_manifest(container_id)
+    container_roi_metrics = roi.get_container_roi_metrics(container_id)
     container_roi_metrics = get_number_exps_rois_matched(container_roi_metrics)
     container_roi_metrics = remove_unmatched_rois(container_roi_metrics)
     container_roi_metrics.set_index("cell_specimen_id", inplace = True)
     container_roi_metrics.sort_index(inplace=True)
-   
     return container_roi_metrics
+
+def container_matched_roi_morphology_metrics(container_id):
+    container_matched_metrics = container_matched_roi_metrics(container_id)
+    morphology_metrics_columns = ["number_exps_roi_matched", "experiment_id", 'area', 'ellipseness', 'compactness',
+       'mean_intensity', 'max_intensity', 'mean_enhanced_intensity','valid_roi','exclusion_label_name', 'stage_name']
+    container_matched_morph_metrics = container_matched_metrics[morphology_metrics_columns]
+    return container_matched_morph_metrics
+    
+
+
+
+
+# def from_manifest_container_matched_roi_metrics(manifest, container_id):
+#     container_roi_metrics = roi.for_manifest_get_container_roi_metrics(manifest, container_id)
+#     container_roi_metrics = get_number_exps_rois_matched(container_roi_metrics)
+#     container_roi_metrics = remove_unmatched_rois(container_roi_metrics)
+#     container_roi_metrics.set_index("cell_specimen_id", inplace = True)
+#     container_roi_metrics.sort_index(inplace=True)
+   
+#     return container_roi_metrics
 
 def from_manifest_container_matched_roi_morphology_metrics(manifest, container_id):
     container_matched_metrics = from_manifest_container_matched_roi_metrics(manifest, container_id)
     morphology_metrics_columns = ["number_exps_roi_matched", "experiment_id", 'area', 'ellipseness', 'compactness',
-       'mean_intensity', 'max_intensity', 'mean_enhanced_intensity','valid_roi','exclusion_label_name', 'stage_name', 'valid_cell_matching']
+       'mean_intensity', 'max_intensity', 'mean_enhanced_intensity','valid_roi','exclusion_label_name', 'stage_name']
     
     matched_roi_morphology_metrics = container_matched_metrics[morphology_metrics_columns]
     return matched_roi_morphology_metrics
+
+def get_experiment_pairs(group):
+    pairs = itertools.combinations(group['experiment_id'], 2)
+    return pairs)
+
+
+def get_matched_cells_experiment_pairs_df(matched_roi_morphology_metrics_df):
+    morph_gb = matched_morph_metrics.groupby(by="cell_specimen_id")
+    columns = ["cell_specimen_id", "exp1", "exp2"]
+    cell_match_exp_pairs = pd.DataFrame(columns = columns)
+    
+    for cell_specimen_id in matched_morph_metrics.index.unique():
+        pairs = list(pd.DataFrame(morph_gb.apply(get_experiment_pairs)).loc[cell_specimen_id].values[0])
+        pairs = np.asarray(pairs)
+        pairs_df = pd.DataFrame({"exp1":pairs[:,0], "exp2":pairs[:,1]})
+        pairs_df["cell_specimen_id"] = cell_specimen_id
+        pairs_df = pairs_df[["cell_specimen_id", "exp1", "exp2"]]
+        cell_match_exp_pairs = cell_match_exp_pairs.append(pairs_df)
+    cell_match_exp_pairs= cell_match_exp_pairs.reset_index(drop=True)
+    return cell_match_exp_pairs
+    
+def get_cell_matched_exp_pairs_morph_metrics(matched_roi_morphology_metrics_df, cell_match_exp_pairs_df):
+    frame = pd.DataFrame(index=cell_match_exp_pairs.index)
+    for metric in metrics_list:
+        col_name1 = str(metric + "_exp1")
+        col_name2 = str(metric + "_exp2")
+        df_list = []
+        for idx in cell_match_exp_pairs.index:
+            expt_1_value = matched_morph_metrics[(matched_morph_metrics["experiment_id"]==cell_match_exp_pairs.at[idx, "exp1"]) & 
+                      (matched_morph_metrics["cell_specimen_id"]==cell_match_exp_pairs.at[idx, "cell_specimen_id"])][metric].values[0]
+            expt_2_value =matched_morph_metrics[(matched_morph_metrics["experiment_id"]==cell_match_exp_pairs.at[idx, "exp2"]) & 
+                      (matched_morph_metrics["cell_specimen_id"]==cell_match_exp_pairs.at[idx, "cell_specimen_id"])][metric].values[0]
+            df_list.append([expt_1_value, expt_2_value])
+            df = pd.DataFrame(df_list, columns=[col_name1, col_name2])
+            frame[col_name1] = df[col_name1]
+            frame[col_name2] = df[col_name2]
+    return frame
+
+def gen_experiment_pair_morph_metrics(container_id):
+    matched_roi_morphology_metrics_df = container_matched_roi_morphology_metrics(container_id)
+    experiment_pairs = get_matched_cells_experiment_pairs_df(matched_roi_morphology_metrics_df)
+    morph_metrics_pairs = get_cell_matched_exp_pairs_metrics(matched_roi_morphology_metrics_df, experiment_pairs)
+    exp_pair_morph_metrics = experiment_pairs.join(morph_metrics_pairs, how = "outer")
+    exp_pair_morph_metrics["container_id"]= container_id
+
+    
+
+
 
 
 # def from_manifest_container_matched_roi_response_metrics(manifest, container_id):

@@ -545,7 +545,8 @@ def gen_blank_mask_of_FOV_dimensions(experiment_id):
     """
     roi_metrics = gen_roi_metrics_dataframe(experiment_id)
     #make a general mask of the correcte shape to be used for multiple rois
-    FOV_dimension = roi_metrics["image_mask"][0].shape
+    first_mask_index = roi_metrics["image_mask"].first_valid_index()
+    FOV_dimension = roi_metrics["image_mask"][first_mask_index].shape
     blank_mask = np.zeros(FOV_dimension)
     blank_mask[:] = np.nan
     return blank_mask
@@ -685,16 +686,16 @@ def gen_container_manifest(container_id):
 
 
 def get_container_roi_metrics(container_id):
-    container_manifest= get_lims_container_info(container_id)
+    container_manifest= gen_container_manifest(container_id)
     passed_experiments = container_manifest.loc[container_manifest["workflow_state"]=="passed", "ophys_experiment_id"].values
     container_roi_metrics_df = gen_roi_metrics_dataframe(passed_experiments[0])
-    container_roi_metrics_df["stage_name"]= container_manifest["stage_name"][0]
+    container_roi_metrics_df["stage_name"]= container_manifest["stage_name_mtrain"][0]
     container_roi_metrics_df["full_genotype"] = container_manifest["full_genotype"][0]
 
     for experiment_id in passed_experiments[1:]:
         experiment_roi_metrics_df = gen_roi_metrics_dataframe(experiment_id)
-        experiment_roi_metrics_df["stage_name"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "stage_name"].values[0]
-        experiment_roi_metrics_df["full_genotype"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "full_genotype"].values[0]
+        experiment_roi_metrics_df["stage_name"] = container_manifest.loc[container_manifest["ophys_experiment_id"]==experiment_id, "stage_name_mtrain"].values[0]
+        experiment_roi_metrics_df["full_genotype"] = container_manifest.loc[container_manifest["ophys_experiment_id"]==experiment_id, "full_genotype"].values[0]
         container_roi_metrics_df =container_roi_metrics_df.append(experiment_roi_metrics_df)
         container_roi_metrics_df = container_roi_metrics_df.reset_index(drop=True)
     return container_roi_metrics_df
