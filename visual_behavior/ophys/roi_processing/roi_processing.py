@@ -15,10 +15,8 @@ get_psql_dict_cursor = convert.get_psql_dict_cursor
 get_lims_data = convert.get_lims_data
 
 
-######################## RETRIEVING DATA ##############
+######################## DATABASE QUERIES ##############
  ########  From LIMS 
-
-
 
 def get_lims_cell_segmentation_run_info(experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve information on all segmentations run in the 
@@ -39,26 +37,6 @@ def get_lims_cell_segmentation_run_info(experiment_id):
     FROM ophys_cell_segmentation_runs
     WHERE ophys_experiment_id = {} '''.format(experiment_id)
     return mixin.select(query)
-
-
-
-
-def get_current_segmentation_run_id(experiment_id):
-    """gets the id for the current cell segmentation run for a given experiment. 
-        Queries LIMS via AllenSDK PostgresQuery function.
-    
-    Arguments:
-        experiment_id {int} -- 9 digit experiment id
-    
-    Returns:
-        int -- current cell segmentation run id
-    """
-    
-    segmentation_run_table = get_lims_cell_segmentation_run_info(experiment_id)
-    current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"]==True, ["id"][0]][0]
-    return current_segmentation_run_id
-
-
 
 
 def get_objectlisttxt_location(segmentation_run_id):
@@ -85,6 +63,169 @@ def get_objectlisttxt_location(segmentation_run_id):
     lims_cursor.execute(QUERY.format(segmentation_run_id))
     objecttxt_info = (lims_cursor.fetchall())
     return objecttxt_info
+
+
+def get_lims_cell_rois_table(experiment_id):
+    """Queries LIMS via AllenSDK PostgresQuery function to retrieve everything in the cell_rois table for a given experiment
+    
+    Arguments:
+        experiment_id {int} -- 9 digit unique identifier for an ophys experiment
+    
+    Returns:
+        dataframe -- returns dataframe with the following columns:
+            id:
+            cell_specimen_id:
+            ophys_experiment_id:
+            x:
+            y:
+            width:
+            height:
+            valid_roi: boolean(true/false), whether the roi passes or fails roi filtering
+            mask_matrix: boolean mask of roi
+            max_correction_up:
+            max_correction_down:
+            max_correction_right:
+            max_correction_left:
+            mask_image_plane:
+            ophys_cell_segmentation_run_id:
+
+    """
+    #query from AllenSDK
+
+    mixin = PostgresQueryMixin()
+    query ='''select cell_rois.*
+
+    from 
+
+    ophys_experiments oe
+    join cell_rois on oe.id = cell_rois.ophys_experiment_id
+
+    where oe.id = {}'''.format(experiment_id)
+    lims_cell_rois_table =  mixin.select(query)
+    return lims_cell_rois_table
+
+
+def get_failed_roi_exclusion_labels(experiment_id):
+    """Queries LIMS  roi_exclusion_labels table via AllenSDK PostgresQuery function to retrieve and build a 
+         table of all failed ROIS for a particular experiment, and their exclusion labels.
+         
+         Failed rois will be listed multiple times/in multiple rows depending upon how many exclusion 
+         labels they have.  
+    
+    Arguments:
+        experiment_id {int} -- [9 digit unique identifier for the experiment]
+    
+    Returns:
+        dataframe -- returns a dataframe with the following columns:
+            ophys_experiment_id: 9 digit unique identifier for the experiment
+            cell_roi_id:unique identifier for each roi (created after segmentation, before cell matching)
+            cell_specimen_id: unique identifier for each roi (created after cell matching, so could be blank for some experiments/rois depending on processing step)
+            valid_roi: boolean true/false, should be false for all entries, since dataframe should only list failed/invalid rois
+            exclusion_label_name: label/tag for why the roi was deemed invalid
+    """
+    #query from AllenSDK
+    experiment_id = int(experiment_id)
+    mixin = PostgresQueryMixin()
+    #build query
+    query = '''
+    select 
+
+    oe.id as ophys_experiment_id,
+    cell_rois.id as cell_roi_id,
+    cell_rois.valid_roi,
+    cell_rois.cell_specimen_id,
+    el.name as exclusion_label_name
+
+    from 
+
+    ophys_experiments oe
+    join cell_rois on oe.id = cell_rois.ophys_experiment_id
+    join cell_rois_roi_exclusion_labels crel on crel.cell_roi_id = cell_rois.id
+    join roi_exclusion_labels el on el.id = crel.roi_exclusion_label_id 
+
+    where oe.id = {}'''.format(experiment_id)
+
+    failed_roi_exclusion_labels =  mixin.select(query)
+    return failed_roi_exclusion_labels
+
+def get_lims_container_info(container_id):
+    container_id = int(container_id)
+
+    mixin = PostgresQueryMixin()
+    #build query
+    query = '''
+    SELECT
+    container.visual_behavior_experiment_container_id as container_id,
+    oe.id as ophys_experiment_id,
+    os.stimulus_name as stage_name,
+    os.foraging_id,
+    oe.workflow_state,
+    specimens.name as mouse_info,
+    specimens.donor_id as mouse_donor_id,
+    structures.acronym as targeted_structure,
+    imaging_depths.depth,
+    equipment.name as rig,
+    os.date_of_acquisition
+    
+    FROM 
+    ophys_experiments_visual_behavior_experiment_containers container
+    join ophys_experiments oe on oe.id = container.ophys_experiment_id
+    join ophys_sessions os on os.id = oe.ophys_session_id
+    join structures on structures.id = oe.targeted_structure_id
+    join imaging_depths on imaging_depths.id = oe.imaging_depth_id
+    join specimens on specimens.id = os.specimen_id
+    join equipment on equipment.id = os.equipment_id
+    
+    where 
+    container.visual_behavior_experiment_container_id ={}'''.format(container_id)
+
+    lims_container_info =  mixin.select(query)
+    return lims_container_info
+
+
+
+######## MTRAIN QUERY
+def get_stage_name_from_mtrain_sqldb(lims_container_info_df):
+    foraging_ids = lims_container_info_df['foraging_id'][~pd.isnull(lims_container_info_df['foraging_id'])]
+    mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="mtrainro", port=5432)
+    query = """
+            SELECT
+		    stages.name as stage_name, 
+		    bs.id as foraging_id
+		    FROM behavior_sessions bs
+		    LEFT JOIN states ON states.id = bs.state_id
+		    LEFT JOIN stages ON stages.id = states.stage_id
+            WHERE bs.id IN ({})
+        """.format(",".join(["'{}'".format(x) for x in foraging_ids]))
+    mtrain_response = pd.read_sql(query, mtrain_api.get_connection())
+    lims_container_info_df = lims_container_info_df.merge(mtrain_response, on='foraging_id', how='left')
+    lims_container_info_df = lims_container_info_df.rename(columns={"stage_name_x":"stage_name_lims", "stage_name_y":"stage_name_mtrain"})
+    return lims_container_info_df
+
+
+
+
+
+
+def get_current_segmentation_run_id(experiment_id):
+    """gets the id for the current cell segmentation run for a given experiment. 
+        Queries LIMS via AllenSDK PostgresQuery function.
+    
+    Arguments:
+        experiment_id {int} -- 9 digit experiment id
+    
+    Returns:
+        int -- current cell segmentation run id
+    """
+    
+    segmentation_run_table = get_lims_cell_segmentation_run_info(experiment_id)
+    current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"]==True, ["id"][0]][0]
+    return current_segmentation_run_id
+
+
+
+
+
 
 
 
@@ -188,43 +329,7 @@ def clean_objectlist_col_labels(objectlist_dataframe):
 
 
 
-def get_lims_cell_rois_table(experiment_id):
-    """Queries LIMS via AllenSDK PostgresQuery function to retrieve everything in the cell_rois table for a given experiment
-    
-    Arguments:
-        experiment_id {int} -- 9 digit unique identifier for an ophys experiment
-    
-    Returns:
-        dataframe -- returns dataframe with the following columns:
-            id:
-            cell_specimen_id:
-            ophys_experiment_id:
-            x:
-            y:
-            width:
-            height:
-            valid_roi: boolean(true/false), whether the roi passes or fails roi filtering
-            mask_matrix: boolean mask of roi
-            max_correction_up:
-            max_correction_down:
-            max_correction_right:
-            max_correction_left:
-            mask_image_plane:
-            ophys_cell_segmentation_run_id:
 
-    """
-    #query from AllenSDK
-    mixin = PostgresQueryMixin()
-    query ='''select cell_rois.*
-
-    from 
-
-    ophys_experiments oe
-    join cell_rois on oe.id = cell_rois.ophys_experiment_id
-
-    where oe.id = {}'''.format(experiment_id)
-    lims_cell_rois_table =  mixin.select(query)
-    return lims_cell_rois_table
 
 
 
@@ -269,47 +374,7 @@ def clean_roi_locations_column_labels(roi_locations_dataframe):
 
 
 
-def get_failed_roi_exclusion_labels(experiment_id):
-    """Queries LIMS  roi_exclusion_labels table via AllenSDK PostgresQuery function to retrieve and build a 
-         table of all failed ROIS for a particular experiment, and their exclusion labels.
-         
-         Failed rois will be listed multiple times/in multiple rows depending upon how many exclusion 
-         labels they have.  
-    
-    Arguments:
-        experiment_id {int} -- [9 digit unique identifier for the experiment]
-    
-    Returns:
-        dataframe -- returns a dataframe with the following columns:
-            ophys_experiment_id: 9 digit unique identifier for the experiment
-            cell_roi_id:unique identifier for each roi (created after segmentation, before cell matching)
-            cell_specimen_id: unique identifier for each roi (created after cell matching, so could be blank for some experiments/rois depending on processing step)
-            valid_roi: boolean true/false, should be false for all entries, since dataframe should only list failed/invalid rois
-            exclusion_label_name: label/tag for why the roi was deemed invalid
-    """
-    #query from AllenSDK
-    mixin = PostgresQueryMixin()
-    #build query
-    query = '''
-    select 
 
-    oe.id as ophys_experiment_id,
-    cell_rois.id as cell_roi_id,
-    cell_rois.valid_roi,
-    cell_rois.cell_specimen_id,
-    el.name as exclusion_label_name
-
-    from 
-
-    ophys_experiments oe
-    join cell_rois on oe.id = cell_rois.ophys_experiment_id
-    join cell_rois_roi_exclusion_labels crel on crel.cell_roi_id = cell_rois.id
-    join roi_exclusion_labels el on el.id = crel.roi_exclusion_label_id 
-
-    where oe.id = {}'''.format(experiment_id)
-
-    failed_roi_exclusion_labels =  mixin.select(query)
-    return failed_roi_exclusion_labels
 
 
 def gen_roi_exclusion_labels_lists(experiment_id):
@@ -338,7 +403,7 @@ def get_session_from_sdk(experiment_id):
         session object -- session object from SDK
     """
     api = BehaviorOphysLimsApi(experiment_id)
-    session = BehaviorOphysSession(api)
+    session = BehaviorOphysSession(api, filter_invalid_rois=False)
     return session
 
 
@@ -443,6 +508,8 @@ def gen_roi_metrics_dataframe(experiment_id, shift = False):
     obj_loc_df = pd.merge(objectlist_df, roi_locations_df, how = "outer", on= ["bbox_min_x", "bbox_min_y"])
     roi_metrics_df = pd.merge(obj_loc_df, cell_specimen_table, how = "outer", on= ["cell_roi_id", "bbox_min_x", "bbox_min_y", "valid_roi"])
     roi_metrics_df = pd.merge(roi_metrics_df, failed_roi_exclusion_labels, how = "outer", on="cell_roi_id")
+    roi_metrics_df = roi_metrics_df.dropna(subset=["cell_specimen_id"])
+    roi_metrics_df.cell_specimen_id= roi_metrics_df.cell_specimen_id.astype('int32', copy=False)
     roi_metrics_df["experiment_id"]= experiment_id
 
     if shift== True:
@@ -569,54 +636,8 @@ def gen_multi_roi_mask(experiment_id, roi_id_list, mask_type = "binary"):
 
 ##################################  CONTAINER LEVEL FUNCTIONS
 
-def get_lims_container_info(container_id):
-    mixin = PostgresQueryMixin()
-    #build query
-    query = '''
-    SELECT
-    container.visual_behavior_experiment_container_id as container_id,
-    oe.id as ophys_experiment_id,
-    os.stimulus_name as stage_name,
-    os.foraging_id,
-    oe.workflow_state,
-    specimens.name as mouse_info,
-    specimens.donor_id as mouse_donor_id,
-    structures.acronym as targeted_structure,
-    imaging_depths.depth,
-    equipment.name as rig,
-    os.date_of_acquisition
-    
-    FROM 
-    ophys_experiments_visual_behavior_experiment_containers container
-    join ophys_experiments oe on oe.id = container.ophys_experiment_id
-    join ophys_sessions os on os.id = oe.ophys_session_id
-    join structures on structures.id = oe.targeted_structure_id
-    join imaging_depths on imaging_depths.id = oe.imaging_depth_id
-    join specimens on specimens.id = os.specimen_id
-    join equipment on equipment.id = os.equipment_id
-    
-    where 
-    container.visual_behavior_experiment_container_id ={}'''.format(container_id)
 
-    lims_container_info =  mixin.select(query)
-    return lims_container_info
 
-def get_stage_name_from_mtrain_sqldb(lims_container_info_df):
-    foraging_ids = lims_container_info_df['foraging_id'][~pd.isnull(lims_container_info_df['foraging_id'])]
-    mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="mtrainro", port=5432)
-    query = """
-            SELECT
-		    stages.name as stage_name, 
-		    bs.id as foraging_id
-		    FROM behavior_sessions bs
-		    LEFT JOIN states ON states.id = bs.state_id
-		    LEFT JOIN stages ON stages.id = states.stage_id
-            WHERE bs.id IN ({})
-        """.format(",".join(["'{}'".format(x) for x in foraging_ids]))
-    mtrain_response = pd.read_sql(query, mtrain_api.get_connection())
-    lims_container_info_df = lims_container_info_df.merge(mtrain_response, on='foraging_id', how='left')
-    lims_container_info_df = lims_container_info_df.rename(columns={"stage_name_x":"stage_name_lims", "stage_name_y":"stage_name_mtrain"})
-    return lims_container_info_df
 
 def get_6digit_mouse_id(lims_container_info_df):
     mouse_id = lims_container_info_df["mouse_info"][0][-6:]
@@ -651,66 +672,78 @@ def calc_retake_number(lims_container_info_df, stage_name_source= "mtrain"):
     return lims_container_info_df
 
 
-def gen_container_manifest(container_id):
+def gen_container_manifest(container_id, include_ffield_test= False, include_failed = False):
     lims_container_info_df = get_lims_container_info(container_id)
     lims_container_info_df = get_6digit_mouse_id(lims_container_info_df)
     lims_container_info_df = full_geno(lims_container_info_df)
     lims_container_info_df = get_stage_name_from_mtrain_sqldb(lims_container_info_df)
     lims_container_info_df = calc_retake_number(lims_container_info_df)
     lims_container_info_df = lims_container_info_df.drop(["mouse_info", "foraging_id"], axis = 1)
+    
+    # ## remove full filed test imaging sessions from the dataframe and don't generate metrics for them
+    if include_ffield_test== False:
+        lims_container_info_df =lims_container_info_df.dropna(subset=["stage_name_mtrain"])
+    
+    if include_failed ==False:
+        lims_container_info_df= lims_container_info_df.loc[lims_container_info_df["workflow_state"]=="passed"]
+    
     return lims_container_info_df
 
 
 
+def get_container_roi_metrics(container_id, include_ffield_test= False, include_failed = False):
+    
+    if include_ffield_test==True and include_failed == False:
+        container_manifest = gen_container_manifest(container_id, include_ffield_test=True)
+    
+    elif include_ffield_test==False and include_failed== True:
+        container_manifest== gen_container_manifest(container_id, include_failed=True)
+    
+    else: 
+        container_manifest = gen_container_manifest(container_id)
 
-
-
-
-
-
-
-
-
-
-
-# def dataframe_mouseinfo_split(row):
-#     return row["mouse_info"].split('-')[:-1]
-
-# def get_6digit_mouse_id(lims_container_info_df):
-#     lims_container_info_df['mouse_id'] = lims_container_info_df.apply(dataframe_mouseinfo_split, axis =1)
-#     lims_container_info_df["mouse_id"]= lims_container_info_df["mouse_id"].astype(int)
-#     return lims_container_info_df
-
-
-
-
-
-def get_container_roi_metrics(container_id):
-    container_manifest= gen_container_manifest(container_id)
-    passed_experiments = container_manifest.loc[container_manifest["workflow_state"]=="passed", "ophys_experiment_id"].values
-    container_roi_metrics_df = gen_roi_metrics_dataframe(passed_experiments[0])
+    container_manifest = container_manifest.reset_index(drop=True) ##need to reset index because of filtering above
+    
+    experiments_list = container_manifest["ophys_experiment_id"].values
+    experiments_list = experiments_list.tolist()
+    
+    container_roi_metrics_df = gen_roi_metrics_dataframe(experiments_list[0])
     container_roi_metrics_df["stage_name"]= container_manifest["stage_name_mtrain"][0]
     container_roi_metrics_df["full_genotype"] = container_manifest["full_genotype"][0]
 
-    for experiment_id in passed_experiments[1:]:
+    for experiment_id in experiments_list[1:]:
         experiment_roi_metrics_df = gen_roi_metrics_dataframe(experiment_id)
         experiment_roi_metrics_df["stage_name"] = container_manifest.loc[container_manifest["ophys_experiment_id"]==experiment_id, "stage_name_mtrain"].values[0]
         experiment_roi_metrics_df["full_genotype"] = container_manifest.loc[container_manifest["ophys_experiment_id"]==experiment_id, "full_genotype"].values[0]
         container_roi_metrics_df =container_roi_metrics_df.append(experiment_roi_metrics_df)
         container_roi_metrics_df = container_roi_metrics_df.reset_index(drop=True)
+        
+    ###If cell_specimen_ids duplicated for a single exp id drop them here
+    duplicates = container_roi_metrics_df[["cell_specimen_id", "experiment_id"]]
+    duplicates["duplicated"]=duplicates.duplicated()
+    dup_indexes = duplicates.loc[duplicates["duplicated"]==True].index.values.tolist()
+    container_roi_metrics_df.drop(container_roi_metrics_df.index[dup_indexes], inplace=True)
+    
+
     return container_roi_metrics_df
 
  
 def for_manifest_get_container_roi_metrics(manifest, container_id):
     container_df = manifest.loc[manifest["container_id"]==container_id]
     container_df = container_df.reset_index(drop=True)
+    
+    #must be list not array for lims query to work
+    experiments_list = container_df["ophys_experiment_id"].values
+    experiments_list = experiments_list.tolist()
 
-    container_roi_metrics_df = gen_roi_metrics_dataframe(container_df["ophys_experiment_id"].values[0])
+    container_roi_metrics_df = gen_roi_metrics_dataframe(experiments_list[0])
     container_roi_metrics_df["stage_name"]= container_df["stage_name"][0]
     container_roi_metrics_df["full_genotype"] = container_df["full_genotype"][0]
     container_roi_metrics_df["valid_cell_matching"]= container_df["valid_cell_matching"][0]
+
     
-    for experiment_id in container_df["ophys_experiment_id"].values[1:]:
+    
+    for experiment_id in experiments_list[1:]:
         experiment_roi_metrics_df = gen_roi_metrics_dataframe(experiment_id)
         experiment_roi_metrics_df["stage_name"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "stage_name"].values[0]
         experiment_roi_metrics_df["full_genotype"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "full_genotype"].values[0]
