@@ -542,6 +542,20 @@ def determine_roi_id_type(experiment_id, roi_id, print_stmnts = False):
     else:
         print("roi id not listed in experiment dataframe")
 
+def roi_id_type_from_df(roi_metrics_df, roi_id, print_stmnts = False):
+    is_cell_specimen_id = roi_id in pd.Series(roi_metrics_df["cell_specimen_id"]).values
+    is_cell_roi_id = roi_id in pd.Series(roi_metrics_df["cell_roi_id"]).values
+    if is_cell_specimen_id == True:
+        if print_stmnts == True:
+            print("cell_specimen_id")
+        return "cell_specimen_id"
+    elif is_cell_roi_id == True:
+        if print_stmnts == True:
+            print("cell_roi_id")
+        return "cell_roi_id"
+    else:
+        print("roi id not listed in experiment dataframe")
+
 
 ##################Manipulating ROI Masks 
 
@@ -621,7 +635,7 @@ def gen_blank_mask_of_FOV_dimensions(experiment_id):
 
 def gen_multi_roi_mask(experiment_id, roi_id_list, mask_type = "binary"):
     roi_metrics = gen_roi_metrics_dataframe(experiment_id, shift= True)
-    id_type = determine_roi_id_type(experiment_id, roi_id_list[0])
+    id_type = roi_id_type_from_df(roi_metrics, roi_id_list[0])
     roi_list_df = roi_metrics[roi_metrics[id_type].isin(roi_id_list)]
     roi_masks = roi_list_df["shifted_image_mask"].values
     bool_multi_roi_mask = np.sum(roi_masks,0)
@@ -632,6 +646,22 @@ def gen_multi_roi_mask(experiment_id, roi_id_list, mask_type = "binary"):
         return bool_multi_roi_mask
     else:
         print("please specify 'bool' or 'binary' for mask_type")
+
+def multi_roi_mask_from_df(roi_metrics_df, roi_id_list, mask_type="binary"):
+    id_type = roi_id_type_from_df(roi_metrics_df, roi_id_list[0])
+    roi_list_df = roi_metrics_df[roi_metrics_df[id_type].isin(roi_id_list)]
+    roi_masks = roi_list_df["shifted_image_mask"].values
+    bool_multi_roi_mask = np.sum(roi_masks,0)
+    binary_multi_roi_mask = change_mask_from_bool_to_binary(bool_multi_roi_mask)
+    if mask_type =="binary":
+        return binary_multi_roi_mask
+    elif mask_type =="bool":
+        return bool_multi_roi_mask
+    else:
+        print("please specify 'bool' or 'binary' for mask_type")
+
+
+
 
 
 ##################################  CONTAINER LEVEL FUNCTIONS
@@ -672,7 +702,7 @@ def calc_retake_number(lims_container_info_df, stage_name_source= "mtrain"):
     return lims_container_info_df
 
 
-def gen_container_manifest(container_id, include_ffield_test= False, include_failed = False):
+def gen_container_manifest(container_id, include_ffield_test= False, include_failed_sessions = False):
     lims_container_info_df = get_lims_container_info(container_id)
     lims_container_info_df = get_6digit_mouse_id(lims_container_info_df)
     lims_container_info_df = full_geno(lims_container_info_df)
@@ -684,47 +714,67 @@ def gen_container_manifest(container_id, include_ffield_test= False, include_fai
     if include_ffield_test== False:
         lims_container_info_df =lims_container_info_df.dropna(subset=["stage_name_mtrain"])
     
-    if include_failed ==False:
+    if include_failed_sessions ==False:
         lims_container_info_df= lims_container_info_df.loc[lims_container_info_df["workflow_state"]=="passed"]
+    
+    lims_container_info_df = lims_container_info_df.reset_index(drop=True)
     
     return lims_container_info_df
 
 
 
-def get_container_roi_metrics(container_id, include_ffield_test= False, include_failed = False):
+def get_container_roi_metrics(container_id, include_ffield_test= False, include_failed_sessions = False, include_failed_rois = True):
+    """[summary]
     
-    if include_ffield_test==True and include_failed == False:
+    Arguments:
+        container_id {[type]} -- [description]
+    
+    Keyword Arguments:
+        include_ffield_test {bool} -- [include metrics for the "fulll field test imaging session] (default: {False})
+        include_failed_sessions {bool} -- [include metrics for imaging sessions that failed in manifest] (default: {False})
+        include_failed_rois {bool} -- [include rois that are invalid] (default: {True})
+    
+    Returns:
+        [type] -- [description]
+    """
+
+    if include_ffield_test==True and include_failed_sessions == False:
         container_manifest = gen_container_manifest(container_id, include_ffield_test=True)
     
-    elif include_ffield_test==False and include_failed== True:
+    elif include_ffield_test==False and include_failed_sessions== True:
         container_manifest== gen_container_manifest(container_id, include_failed=True)
     
     else: 
         container_manifest = gen_container_manifest(container_id)
 
-    container_manifest = container_manifest.reset_index(drop=True) ##need to reset index because of filtering above
+    # container_manifest = container_manifest.reset_index(drop=True) ##need to reset index because of filtering above
     
     experiments_list = container_manifest["ophys_experiment_id"].values
     experiments_list = experiments_list.tolist()
     
     container_roi_metrics_df = gen_roi_metrics_dataframe(experiments_list[0])
-    container_roi_metrics_df["stage_name"]= container_manifest["stage_name_mtrain"][0]
-    container_roi_metrics_df["full_genotype"] = container_manifest["full_genotype"][0]
+    container_roi_metrics_df.loc[:,"stage_name"]= container_manifest["stage_name_mtrain"][0]
+    container_roi_metrics_df.loc[:,"full_genotype"] = container_manifest["full_genotype"][0]
 
     for experiment_id in experiments_list[1:]:
         experiment_roi_metrics_df = gen_roi_metrics_dataframe(experiment_id)
-        experiment_roi_metrics_df["stage_name"] = container_manifest.loc[container_manifest["ophys_experiment_id"]==experiment_id, "stage_name_mtrain"].values[0]
-        experiment_roi_metrics_df["full_genotype"] = container_manifest.loc[container_manifest["ophys_experiment_id"]==experiment_id, "full_genotype"].values[0]
+        experiment_roi_metrics_df.loc[:,"stage_name"] = container_manifest.loc[container_manifest["ophys_experiment_id"]==experiment_id, "stage_name_mtrain"].values[0]
+        experiment_roi_metrics_df.loc[:,"full_genotype"] = container_manifest.loc[container_manifest["ophys_experiment_id"]==experiment_id, "full_genotype"].values[0]
         container_roi_metrics_df =container_roi_metrics_df.append(experiment_roi_metrics_df)
         container_roi_metrics_df = container_roi_metrics_df.reset_index(drop=True)
         
     ###If cell_specimen_ids duplicated for a single exp id drop them here
-    duplicates = container_roi_metrics_df[["cell_specimen_id", "experiment_id"]]
-    duplicates["duplicated"]=duplicates.duplicated()
+    duplicates = container_roi_metrics_df[["cell_specimen_id", "experiment_id"]].copy()
+    duplicates.loc[:,"duplicated"]=duplicates.duplicated()
     dup_indexes = duplicates.loc[duplicates["duplicated"]==True].index.values.tolist()
     container_roi_metrics_df.drop(container_roi_metrics_df.index[dup_indexes], inplace=True)
-    
 
+    if include_failed_rois == False:
+        container_roi_metrics_df = container_roi_metrics_df.loc[container_roi_metrics_df["valid_roi"]==True]
+
+    
+    container_roi_metrics_df = container_roi_metrics_df.reset_index(drop = True)
+    
     return container_roi_metrics_df
 
  

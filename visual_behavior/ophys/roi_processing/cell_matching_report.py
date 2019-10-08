@@ -67,33 +67,16 @@ def container_matched_roi_metrics(container_id, remove_unmatched = True, include
 
 def container_matched_roi_morphology_metrics(container_id):
     container_matched_metrics = container_matched_roi_metrics(container_id)
-    morphology_metrics_columns = ["cell_specimen_id","number_exps_roi_matched", "experiment_id", 'area', 'ellipseness', 'compactness',
-       'mean_intensity', 'max_intensity', 'mean_enhanced_intensity','valid_roi','exclusion_label_name', 'stage_name']
+    morphology_metrics_columns = ["cell_specimen_id","number_exps_roi_matched", "experiment_id", 
+                                'area', 'ellipseness', 'compactness',
+                                'mean_intensity', 'max_intensity', 'mean_enhanced_intensity', 'intensity_ratio',
+                                'soma_minus_np_mean','soma_minus_np_std',
+                                'valid_roi','exclusion_label_name', 'stage_name']
+                                
     container_matched_morph_metrics = container_matched_metrics[morphology_metrics_columns]
     container_matched_morph_metrics["container_id"]= container_id
     container_matched_morph_metrics = container_matched_morph_metrics.reset_index(drop=True)
     return container_matched_morph_metrics
-    
-
-
-
-
-# def from_manifest_container_matched_roi_metrics(manifest, container_id):
-#     container_roi_metrics = roi.for_manifest_get_container_roi_metrics(manifest, container_id)
-#     container_roi_metrics = get_number_exps_rois_matched(container_roi_metrics)
-#     container_roi_metrics = remove_unmatched_rois(container_roi_metrics)
-#     container_roi_metrics.set_index("cell_specimen_id", inplace = True)
-#     container_roi_metrics.sort_index(inplace=True)
-   
-#     return container_roi_metrics
-
-# def from_manifest_container_matched_roi_morphology_metrics(manifest, container_id):
-#     container_matched_metrics = from_manifest_container_matched_roi_metrics(manifest, container_id)
-#     morphology_metrics_columns = ["number_exps_roi_matched", "experiment_id", 'area', 'ellipseness', 'compactness',
-#        'mean_intensity', 'max_intensity', 'mean_enhanced_intensity','valid_roi','exclusion_label_name', 'stage_name']
-    
-#     matched_roi_morphology_metrics = container_matched_metrics[morphology_metrics_columns]
-#     return matched_roi_morphology_metrics
 
 def get_experiment_pairs(group):
     pairs = itertools.combinations(group['experiment_id'], 2)
@@ -157,18 +140,9 @@ def gen_experiment_pair_morph_metrics(container_id):
     experiment_pairs = get_matched_cells_experiment_pairs_df(matched_roi_morphology_metrics_df)
     exp_pair_morph_metrics = get_cell_matched_exp_pairs_morph_metrics(matched_roi_morphology_metrics_df, experiment_pairs)
     morph_metrics_pairs = get_cell_matched_exp_pairs_morph_metrics(matched_roi_morphology_metrics_df, experiment_pairs)
-    exp_pair_morph_metrics["container_id"]= container_id
+    exp_pair_morph_metrics.loc[:,"container_id"]= container_id
     return exp_pair_morph_metrics
 
-# def get_container_cell_match_counts(container_id):
-#     num_exps_matched_list = [1,2,3,4,5,6]
-    
-#     match_metrics= container_matched_roi_metrics(container_id, remove_unmatched = False)
-#     for exp_id in match_metrics["experiment_id"].unique():
-#         for num_exps in num_exps_matched_list:
-        
-#         count_col = str(num_exps) +"_exp_matched_count"
-#         cell_ids_col = str(num_exps)+"_exp_matched_cell_specimen_ids"
         
 
 def experiment_match_summary_df(container_id, masks = False):
@@ -191,6 +165,7 @@ def experiment_match_summary_df(container_id, masks = False):
             total_seg_cells = len(matched_morph_metrics.loc[matched_morph_metrics["experiment_id"]==experiment_id, "cell_specimen_id"].unique())
             total_valid_seg_cells = len(matched_morph_metrics.loc[(matched_morph_metrics["experiment_id"]==experiment_id) & 
                                                                 (matched_morph_metrics["valid_roi"]==True), "cell_specimen_id"].unique())
+            
             for num_exps in num_exps_matched_list:
                 # print(num_exps)
                
@@ -216,32 +191,39 @@ def experiment_match_summary_df(container_id, masks = False):
                                     "matched_count": matched_count, "valid_count":valid_count, "invalid_count":invalid_count, 
                                     "all_cell_specimen_ids":[matched_cell_spec_ids], "valid_cell_specimen_ids":[valid_cell_spec_ids], "invalid_cell_specimen_ids":[invalid_cell_spec_ids]})
                 
-                exp_match_summary_df = exp_match_summary_df.append(df)
-    
-        exp_match_summary_df["container_id"]= container_id
+                exp_match_summary_df = exp_match_summary_df.append(df) 
                 
+        exp_match_summary_df["container_id"]= container_id
+        exp_match_summary_df = exp_match_summary_df.reset_index(drop=True)
+        
         exp_match_summary_df= exp_match_summary_df[["container_id", "experiment_id", "total_seg_cells", "total_valid_seg_cells",  "num_exps_matched", "matched_count", "valid_count", "invalid_count", 
                                                 "all_cell_specimen_ids", "valid_cell_specimen_ids", "invalid_cell_specimen_ids"]]
+        
+    
+    
     ###IF YOU DO WANT TO GENERATE THE MASKS- THIS TAKES A TON OF TIME AND IS NOT EFFICIENT
     else:
         exp_match_summary_df = pd.DataFrame(columns=["experiment_id","num_exps_matched",
                                                 "matched_count","valid_count", "invalid_count", 
                                                 "all_cell_specimen_ids", "valid_cell_specimen_ids", "invalid_cell_specimen_ids", 
                                                 "all_cells_mask", "valid_cells_mask", "invalid_cells_mask"])
-        if max_6 ==True:
-            matched_morph_metrics[["number_exps_roi_matched"]]=matched_morph_metrics[["number_exps_roi_matched"]].replace(7,6)
     
         #must be list not array for lims query to work
         experiments_list= matched_morph_metrics["experiment_id"].unique()
         experiments_list = experiments_list.tolist()
         
-
         for experiment_id in experiments_list:
             # print(experiment_id)
             total_seg_cells = len(matched_morph_metrics.loc[matched_morph_metrics["experiment_id"]==experiment_id, "cell_specimen_id"].unique())
             total_valid_seg_cells = len(matched_morph_metrics.loc[(matched_morph_metrics["experiment_id"]==experiment_id) & 
                                                                 (matched_morph_metrics["valid_roi"]==True), "cell_specimen_id"].unique())
+            
+            
+            blank_mask = roi.gen_blank_mask_of_FOV_dimensions(experiment_id)
+            roi_metrics = roi.gen_roi_metrics_dataframe(experiment_id, shift= True)
+            
             for num_exps in num_exps_matched_list:
+                
                 # print(num_exps)
                
                 #Get cell specimen IDs
@@ -263,112 +245,79 @@ def experiment_match_summary_df(container_id, masks = False):
                 invalid_count = len(invalid_cell_spec_ids)
 
                 ####make masks
-                blank_mask = roi.gen_blank_mask_of_FOV_dimensions(experiment_id)
                 mask_df = pd.DataFrame(columns=["num_exps_matched", "all_cells_mask", "valid_cells_mask", "invalid_cells_mask" ])
-
-               
+                
                 if matched_count == 0:
                     all_cells_mask = blank_mask
                     valid_cells_mask = blank_mask
                     invalid_cells_mask = blank_mask
                 
                 elif invalid_count == 0 and valid_count !=0:
-                    all_cells_mask = roi.gen_multi_roi_mask(experiment_id, matched_cell_spec_ids)
-                    valid_cells_mask = roi.gen_multi_roi_mask(experiment_id, valid_cell_spec_ids)
+                    all_cells_mask = roi.multi_roi_mask_from_df(roi_metrics, matched_cell_spec_ids)
+                    valid_cells_mask = roi.multi_roi_mask_from_df(roi_metrics, valid_cell_spec_ids)
                     invalid_cells_mask = blank_mask
                 
                 elif valid_count == 0 and invalid_count !=0:
-                    all_cells_mask = roi.gen_multi_roi_mask(experiment_id, matched_cell_spec_ids)
+                    all_cells_mask = roi.multi_roi_mask_from_df(roi_metrics, matched_cell_spec_ids)
                     valid_cells_mask = blank_mask
-                    invalid_cells_mask = roi.gen_multi_roi_mask(experiment_id, invalid_cell_spec_ids)
+                    invalid_cells_mask = roi.multi_roi_mask_from_df(roi_metrics, invalid_cell_spec_ids)
                 
                 else:
-                    all_cells_mask = roi.gen_multi_roi_mask(experiment_id, matched_cell_spec_ids)
-                    valid_cells_mask = roi.gen_multi_roi_mask(experiment_id, valid_cell_spec_ids)
-                    invalid_cells_mask = roi.gen_multi_roi_mask(experiment_id, invalid_cell_spec_ids)
-                
+                    all_cells_mask = roi.multi_roi_mask_from_df(roi_metrics, matched_cell_spec_ids)
+                    valid_cells_mask = roi.multi_roi_mask_from_df(roi_metrics, valid_cell_spec_ids)
+                    invalid_cells_mask = roi.multi_roi_mask_from_df(roi_metrics, invalid_cell_spec_ids)
+        
                 df = pd.DataFrame({"experiment_id":experiment_id,  "total_seg_cells": total_seg_cells, "total_valid_seg_cells":total_valid_seg_cells,"num_exps_matched":num_exps, 
                                     "matched_count": matched_count, "valid_count":valid_count, "invalid_count":invalid_count, 
                                     "all_cell_specimen_ids":[matched_cell_spec_ids], "valid_cell_specimen_ids":[valid_cell_spec_ids], "invalid_cell_specimen_ids":[invalid_cell_spec_ids],
                                     "all_cells_mask":[all_cells_mask], "valid_cells_mask":[valid_cells_mask], "invalid_cells_mask":[invalid_cells_mask]})
                 
                 exp_match_summary_df = exp_match_summary_df.append(df)
-                       
+        
         exp_match_summary_df["container_id"]= container_id
+        exp_match_summary_df = exp_match_summary_df.reset_index(drop=True)               
                 
         exp_match_summary_df= exp_match_summary_df[["container_id","experiment_id", "total_seg_cells", "total_valid_seg_cells","num_exps_matched", "matched_count", "valid_count", "invalid_count", 
                                                     "all_cell_specimen_ids", "valid_cell_specimen_ids", "invalid_cell_specimen_ids", 
                                                     "all_cells_mask", "valid_cells_mask", "invalid_cells_mask"]]
-
-
+    
     return exp_match_summary_df
 
+
+
+# def gen_num_exp_masks_df(matched_count, valid_count, invalid_count):
+#     num_exps_matched_list = [1,2,3,4,5,6]
+#     df =experiment_match_summary_df(container_id)
+    
+#     experiments_list= df["experiment_id"].unique()
+#     experiments_list = experiments_list.tolist()
+    
+#     for experiment_id in experiments_list:
+#         blank_mask = roi.gen_blank_mask_of_FOV_dimensions(experiment_id)
+#         roi_metrics = gen_roi_metrics_dataframe(experiment_id, shift= True)
+        
+#         for num_exps in num_exps_matched_list:
+             
+#              if matched_count == 0:
+#                 all_cells_mask = blank_mask
+#                 valid_cells_mask = blank_mask
+#                 invalid_cells_mask = blank_mask
                 
-        
-    
+#             elif invalid_count == 0 and valid_count !=0:
+#                 all_cells_mask = roi.multi_roi_mask_from_cell_list(matched_cell_spec_ids)
+#                 valid_cells_mask = roi.multi_roi_mask_from_cell_list(valid_cell_spec_ids)
+#                 invalid_cells_mask = blank_mask
+                
+#             elif valid_count == 0 and invalid_count !=0:
+#                 all_cells_mask = roi.multi_roi_mask_from_cell_list(matched_cell_spec_ids)
+#                 valid_cells_mask = blank_mask
+#                 invalid_cells_mask = roi.multi_roi_mask_from_cell_list(invalid_cell_spec_ids)
+                
+#             else:
+#                 all_cells_mask = roi.multi_roi_mask_from_cell_list(matched_cell_spec_ids)
+#                 valid_cells_mask = roi.multi_roi_mask_from_cell_list(valid_cell_spec_ids)
+#                 invalid_cells_mask = roi.multi_roi_mask_from_cell_list(invalid_cell_spec_ids)
 
-
-        
-    
-    
-
-    # num_matched_gb = matched_metrics.groupby(by = ["experiment_id", "number_exps_roi_matched"]).describe()
-    # num_matched_gb = num_matched_gb.reset_index()
-    # temp_df = num_matched_gb[["experiment_id", "number_exps_roi_matched"]]
-
-    # temp_df["count"] = num_matched_gb[('area', 'count')]
-    # temp_df = temp_df.pivot(index = "experiment_id", columns = "number_exps_roi_matched", values = "count")
-    # temp_df= temp_df.fillna(0)
-
-
-    
-
-
-
-
-
-# def gen_number_matched_masks_df(experiment_id):
-
-    
-    
-    
-    # seg_labels_df = gen_seg_labels_df(experiment_id)
-    # mask_df = pd.DataFrame(columns=["label", "multi_roi_mask"])
-    # blank_mask = roi.gen_blank_mask_of_FOV_dimensions(experiment_id)
-    # for label in seg_labels_df["label"]:
-    #     lab = label
-    #     print(lab)
-    #     label_df = seg_labels_df.loc[seg_labels_df["label"]==lab]
-    #     if label_df["number_rois"].values[0]== 0:
-    #         label_mask = blank_mask
-    #     else:
-    #         label_mask = roi.gen_multi_roi_mask(experiment_id, seg_labels_df.loc[seg_labels_df["label"]==lab, "cell_roi_ids"].values[0])
-    #     df = pd.DataFrame({"label":[lab],"multi_roi_mask":[label_mask]})
-    #     mask_df = mask_df.append(df)
-    # return mask_df
-
-
-
-# def from_manifest_container_matched_roi_response_metrics(manifest, container_id):
-
-# def plot_cell_zoom(roi_mask, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
-#     m = roi_mask 
-#     (y, x) = np.where(m == 1)
-#     xmin = np.min(x)
-#     xmax = np.max(x)
-#     ymin = np.min(y)
-#     ymax = np.max(y)
-#     mask = np.empty(m.shape)
-#     mask[:] = np.nan
-#     mask[y, x] = 1
-#     if ax is None:
-#         fig, ax = plt.subplots()
-#     ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection))
-#     if show_mask:
-#         ax.imshow(mask, cmap='jet', alpha=0.3, vmin=0, vmax=1)
-#     ax.set_xlim(xmin - spacex, xmax + spacex)
-#     ax.set_ylim(ymin - spacey, ymax + spacey)
-#     ax.set_title('cell ' + str(cell_specimen_id))
-#     ax.grid(False)
-#     ax.axis('off')
-#     return ax
+#     roi_list_df = roi_metrics[roi_metrics[id_type].isin(roi_id_list)]
+#     roi_masks = roi_list_df["shifted_image_mask"].values
+#     binary_multi_roi_mask = roi.change_mask_from_bool_to_binary(bool_multi_roi_mask)

@@ -51,10 +51,29 @@ def gen_seg_labels_df(experiment_id):
     return seg_labels_df
 
 
+# def gen_label_masks_df(experiment_id):
+#     seg_labels_df = gen_seg_labels_df(experiment_id)
+#     mask_df = pd.DataFrame(columns=["label", "multi_roi_mask"])
+#     blank_mask = roi.gen_blank_mask_of_FOV_dimensions(experiment_id)
+#     for label in seg_labels_df["label"]:
+#         lab = label
+#         print(lab)
+#         label_df = seg_labels_df.loc[seg_labels_df["label"]==lab]
+#         if label_df["number_rois"].values[0]== 0:
+#             label_mask = blank_mask
+#         else:
+#             label_mask = roi.gen_multi_roi_mask(experiment_id, seg_labels_df.loc[seg_labels_df["label"]==lab, "cell_roi_ids"].values[0])
+#         df = pd.DataFrame({"label":[lab],"multi_roi_mask":[label_mask]})
+#         mask_df = mask_df.append(df)
+#     return mask_df
+
+
 def gen_label_masks_df(experiment_id):
     seg_labels_df = gen_seg_labels_df(experiment_id)
-    mask_df = pd.DataFrame(columns=["label", "multi_roi_mask"])
+    roi_metrics = roi.gen_roi_metrics_dataframe(experiment_id, shift= True)
     blank_mask = roi.gen_blank_mask_of_FOV_dimensions(experiment_id)
+
+    mask_df = pd.DataFrame(columns=["label", "multi_roi_mask"])
     for label in seg_labels_df["label"]:
         lab = label
         print(lab)
@@ -62,7 +81,7 @@ def gen_label_masks_df(experiment_id):
         if label_df["number_rois"].values[0]== 0:
             label_mask = blank_mask
         else:
-            label_mask = roi.gen_multi_roi_mask(experiment_id, seg_labels_df.loc[seg_labels_df["label"]==lab, "cell_roi_ids"].values[0])
+            label_mask = roi.multi_roi_mask_from_df(roi_metrics, seg_labels_df.loc[seg_labels_df["label"]==lab, "cell_roi_ids"].values[0])
         df = pd.DataFrame({"label":[lab],"multi_roi_mask":[label_mask]})
         mask_df = mask_df.append(df)
     return mask_df
