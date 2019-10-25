@@ -5,6 +5,10 @@ from allensdk.internal.api import PostgresQueryMixin
 from psycopg2 import connect, extras 
 
 
+import visual_behavior.ophys.roi_processing.cell_matching_report as matching
+import visual_behavior.ophys.roi_processing.segmentation_report as seg
+import visual_behavior.ophys.roi_processing.data_loading as load
+
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -15,370 +19,53 @@ get_psql_dict_cursor = convert.get_psql_dict_cursor
 get_lims_data = convert.get_lims_data
 
 
-######################## DATABASE QUERIES ##############
- ########  From LIMS 
+######################## EXPERIMENT LEVEL INFORMATION ##############
 
-def get_lims_cell_segmentation_run_info(experiment_id):
-    """Queries LIMS via AllenSDK PostgresQuery function to retrieve information on all segmentations run in the 
-        ophys_cell_segmenatation_runs table for a given experiment
+ def experiment_info_df(experiment_id):
+     """ "manifest" styple information about a specific experiment
+     
+     Arguments:
+         experiment_id {[type]} -- [description]
     
     Returns:
-        dataframe -- dataframe with the following columns:
-            id {int}:  9 digit segmentation run id
-            run_number {int}: segmentation run number
-            ophys_experiment_id{int}: 9 digit ophys experiment id
-            current{boolean}: True/False True: most current segmentation run; False: not the most current segmentation run
-            created_at{timestamp}:
-            updated_at{timestamp}:
-    """
-    mixin = PostgresQueryMixin()
-    query ='''
-    select *
-    FROM ophys_cell_segmentation_runs
-    WHERE ophys_experiment_id = {} '''.format(experiment_id)
-    return mixin.select(query)
+        dataframe -- dataframe with the following columns: 
+                                                "experiment_id", 
+                                                "container_id", 
+                                                "workflow_state",
+                                                "stage_name_lims", 
+                                                "full_genotype", 
+                                                "targeted_structure", 
+                                                "depth", 
+                                                "mouse_id", 
+                                                "mouse_donor_id",
+                                                "date_of_acquisition",
+                                                "rig",
+                                                "stage_name_mtrain"
+     """
+    lims_experiment_info = load.get_lims_experiment_info(experiment_id)
+    lims_experiment_info = get_6digit_mouse_id(lims_experiment_info)
+    lims_experiment_info = full_geno(lims_experiment_info)
+    lims_experiment_info = load.get_stage_name_from_mtrain_sqldb(lims_experiment_info)
+    lims_experiment_info = lims_experiment_info.drop(["mouse_info", "foraging_id"], axis =1)
 
-
-def get_objectlisttxt_location(segmentation_run_id):
-    """use SQL and the LIMS well known file system to get the location information for the objectlist.txt file
-        for a given cell segmentation run 
-    
-    Arguments:
-        segmentation_run_id {int} -- 9 digit segmentation run id
-    
-    Returns:
-        list -- list with storage directory and filename
-    """
-    
-    QUERY = '''
-    SELECT wkf.storage_directory, wkf.filename 
-    FROM well_known_files wkf
-    JOIN well_known_file_types wkft on wkf.well_known_file_type_id = wkft.id
-    JOIN ophys_cell_segmentation_runs ocsr on wkf.attachable_id = ocsr.id
-    WHERE wkft.name = 'OphysSegmentationObjects'
-    AND wkf.attachable_type = 'OphysCellSegmentationRun'
-    AND ocsr.id = {0}
-    '''  
-    lims_cursor = get_psql_dict_cursor()
-    lims_cursor.execute(QUERY.format(segmentation_run_id))
-    objecttxt_info = (lims_cursor.fetchall())
-    return objecttxt_info
-
-
-def get_lims_cell_rois_table(experiment_id):
-    """Queries LIMS via AllenSDK PostgresQuery function to retrieve everything in the cell_rois table for a given experiment
-    
-    Arguments:
-        experiment_id {int} -- 9 digit unique identifier for an ophys experiment
-    
-    Returns:
-        dataframe -- returns dataframe with the following columns:
-            id:
-            cell_specimen_id:
-            ophys_experiment_id:
-            x:
-            y:
-            width:
-            height:
-            valid_roi: boolean(true/false), whether the roi passes or fails roi filtering
-            mask_matrix: boolean mask of roi
-            max_correction_up:
-            max_correction_down:
-            max_correction_right:
-            max_correction_left:
-            mask_image_plane:
-            ophys_cell_segmentation_run_id:
-
-    """
-    #query from AllenSDK
-
-    mixin = PostgresQueryMixin()
-    query ='''select cell_rois.*
-
-    from 
-
-    ophys_experiments oe
-    join cell_rois on oe.id = cell_rois.ophys_experiment_id
-
-    where oe.id = {}'''.format(experiment_id)
-    lims_cell_rois_table =  mixin.select(query)
-    return lims_cell_rois_table
-
-
-def get_failed_roi_exclusion_labels(experiment_id):
-    """Queries LIMS  roi_exclusion_labels table via AllenSDK PostgresQuery function to retrieve and build a 
-         table of all failed ROIS for a particular experiment, and their exclusion labels.
-         
-         Failed rois will be listed multiple times/in multiple rows depending upon how many exclusion 
-         labels they have.  
-    
-    Arguments:
-        experiment_id {int} -- [9 digit unique identifier for the experiment]
-    
-    Returns:
-        dataframe -- returns a dataframe with the following columns:
-            ophys_experiment_id: 9 digit unique identifier for the experiment
-            cell_roi_id:unique identifier for each roi (created after segmentation, before cell matching)
-            cell_specimen_id: unique identifier for each roi (created after cell matching, so could be blank for some experiments/rois depending on processing step)
-            valid_roi: boolean true/false, should be false for all entries, since dataframe should only list failed/invalid rois
-            exclusion_label_name: label/tag for why the roi was deemed invalid
-    """
-    #query from AllenSDK
-    experiment_id = int(experiment_id)
-    mixin = PostgresQueryMixin()
-    #build query
-    query = '''
-    select 
-
-    oe.id as ophys_experiment_id,
-    cell_rois.id as cell_roi_id,
-    cell_rois.valid_roi,
-    cell_rois.cell_specimen_id,
-    el.name as exclusion_label_name
-
-    from 
-
-    ophys_experiments oe
-    join cell_rois on oe.id = cell_rois.ophys_experiment_id
-    join cell_rois_roi_exclusion_labels crel on crel.cell_roi_id = cell_rois.id
-    join roi_exclusion_labels el on el.id = crel.roi_exclusion_label_id 
-
-    where oe.id = {}'''.format(experiment_id)
-
-    failed_roi_exclusion_labels =  mixin.select(query)
-    return failed_roi_exclusion_labels
-
-def get_lims_container_info(container_id):
-    container_id = int(container_id)
-
-    mixin = PostgresQueryMixin()
-    #build query
-    query = '''
-    SELECT
-    container.visual_behavior_experiment_container_id as container_id,
-    oe.id as ophys_experiment_id,
-    os.stimulus_name as stage_name,
-    os.foraging_id,
-    oe.workflow_state,
-    specimens.name as mouse_info,
-    specimens.donor_id as mouse_donor_id,
-    structures.acronym as targeted_structure,
-    imaging_depths.depth,
-    equipment.name as rig,
-    os.date_of_acquisition
-    
-    FROM 
-    ophys_experiments_visual_behavior_experiment_containers container
-    join ophys_experiments oe on oe.id = container.ophys_experiment_id
-    join ophys_sessions os on os.id = oe.ophys_session_id
-    join structures on structures.id = oe.targeted_structure_id
-    join imaging_depths on imaging_depths.id = oe.imaging_depth_id
-    join specimens on specimens.id = os.specimen_id
-    join equipment on equipment.id = os.equipment_id
-    
-    where 
-    container.visual_behavior_experiment_container_id ={}'''.format(container_id)
-
-    lims_container_info =  mixin.select(query)
-    return lims_container_info
+    lims_experiment_info = lims_experiment_info[["experiment_id", 
+                                                "container_id", 
+                                                "workflow_state",
+                                                "stage_name_lims", 
+                                                "full_genotype", 
+                                                "targeted_structure", 
+                                                "depth", 
+                                                "mouse_id", 
+                                                "mouse_donor_id",
+                                                "date_of_acquisition",
+                                                "rig",
+                                                "stage_name_mtrain"]]
+    return lims_experiment_info  
 
 
 
-######## MTRAIN QUERY
-def get_stage_name_from_mtrain_sqldb(lims_container_info_df):
-    foraging_ids = lims_container_info_df['foraging_id'][~pd.isnull(lims_container_info_df['foraging_id'])]
-    mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="mtrainro", port=5432)
-    query = """
-            SELECT
-		    stages.name as stage_name, 
-		    bs.id as foraging_id
-		    FROM behavior_sessions bs
-		    LEFT JOIN states ON states.id = bs.state_id
-		    LEFT JOIN stages ON stages.id = states.stage_id
-            WHERE bs.id IN ({})
-        """.format(",".join(["'{}'".format(x) for x in foraging_ids]))
-    mtrain_response = pd.read_sql(query, mtrain_api.get_connection())
-    lims_container_info_df = lims_container_info_df.merge(mtrain_response, on='foraging_id', how='left')
-    lims_container_info_df = lims_container_info_df.rename(columns={"stage_name_x":"stage_name_lims", "stage_name_y":"stage_name_mtrain"})
-    return lims_container_info_df
-
-
-
-
-
-
-def get_current_segmentation_run_id(experiment_id):
-    """gets the id for the current cell segmentation run for a given experiment. 
-        Queries LIMS via AllenSDK PostgresQuery function.
-    
-    Arguments:
-        experiment_id {int} -- 9 digit experiment id
-    
-    Returns:
-        int -- current cell segmentation run id
-    """
-    
-    segmentation_run_table = get_lims_cell_segmentation_run_info(experiment_id)
-    current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"]==True, ["id"][0]][0]
-    return current_segmentation_run_id
-
-
-
-
-
-
-
-
-
-def load_current_objectlisttxt_file(experiment_id):
-    """loads the objectlist.txt file for the current segmentation run, then "cleans" the column names and returns a dataframe
-    
-    Arguments:
-        experiment_id {[int]} -- 9 digit unique identifier for the experiment
-    
-    Returns:
-        dataframe -- dataframe with the following columns: (from http://confluence.corp.alleninstitute.org/display/IT/Ophys+Segmentation)
-            trace_index:The index to the corresponding trace plot computed  (order of the computed traces in file _somaneuropiltraces.h5)
-            center_x: The x coordinate of the centroid of the object in image pixels
-            center_y:The y coordinate of the centroid of the object in image pixels
-            frame_of_max_intensity_masks_file: The frame the object mask is in maxInt_masks2.tif
-            frame_of_enhanced_movie: The frame in the movie enhimgseq.tif that best shows the object
-            layer_of_max_intensity_file: The layer of the maxInt file where the object can be seen
-            bbox_min_x: coordinates delineating a bounding box that contains the object, in image pixels (upper left corner)
-            bbox_min_y: coordinates delineating a bounding box that contains the object, in image pixels (upper left corner)
-            bbox_max_x: coordinates delineating a bounding box that contains the object, in image pixels (bottom right corner)
-            bbox_max_y: coordinates delineating a bounding box that contains the object, in image pixels (bottom right corner)
-            area: Total area of the segmented object
-            ellipseness: The "ellipticalness" of the object, i.e. length of long axis divided by length of short axis
-            compactness: Compactness :  perimeter^2 divided by area
-            exclude_code: A non-zero value indicates the object should be excluded from further analysis.  Based on measurements in objectlist.txt
-                        0 = not excluded
-                        1 = doublet cell
-                        2 = boundary cell
-                        Others = classified as not complete soma, apical dendrite, ....
-            mean_intensity: Correlates with delta F/F.  Mean brightness of the object
-            mean_enhanced_intensity: Mean enhanced brightness of the object
-            max_intensity: Max brightness of the object
-            max_enhanced_intensity: Max enhanced brightness of the object
-            intensity_ratio: (max_enhanced_intensity - mean_enhanced_intensity) / mean_enhanced_intensity, for detecting dendrite objects
-            soma_minus_np_mean: mean of (soma trace – its neuropil trace)
-            soma_minus_np_std: 1-sided stdv of (soma trace – its neuropil trace)
-            sig_active_frames_2_5:# frames with significant detected activity (spiking)   : Sum ( soma_trace > (np_trace + Snpoffsetmean+ 2.5 * Snpoffsetstdv)   trace_38_soma.png  See example traces attached.
-            sig_active_frames_4: # frames with significant detected activity (spiking)   : Sum ( soma_trace > (np_trace + Snpoffsetmean+ 4.0 * Snpoffsetstdv)
-            overlap_count: 	Number of other objects the object overlaps with
-            percent_area_overlap: the percentage of total object area that overlaps with other objects
-            overlap_obj0_index: The index of the first object with which this object overlaps
-            overlap_obj1_index: The index of the second object with which this object overlaps
-            soma_obj0_overlap_trace_corr: trace correlation coefficient between soma and overlap soma0  (-1.0:  excluded cell,  0.0 : NA)
-            soma_obj1_overlap_trace_corr: trace correlation coefficient between soma and overlap soma1
-    """
-    current_segmentation_run_id = get_current_segmentation_run_id(experiment_id)
-    objectlist_location_info = get_objectlisttxt_location(current_segmentation_run_id)
-    objectlist_path = objectlist_location_info[0]['storage_directory']
-    objectlist_file = objectlist_location_info[0]["filename"]
-    full_name = os.path.join(objectlist_path, objectlist_file).replace('/allen','//allen') #works with windows and linux filepaths
-    objectlist_dataframe = pd.read_csv(full_name)
-    objectlist_dataframe = clean_objectlist_col_labels(objectlist_dataframe) #"clean" columns names to be more meaningful
-    return objectlist_dataframe
-
-
-def clean_objectlist_col_labels(objectlist_dataframe):
-    """take the roi metrics from the objectlist.txt file and renames them to be more explicit and descriptive.  
-        -removes single blank space at the beginning of column names
-        -enforced naming scheme(no capitolization, added _)
-        -renamed columns to be more descriptive/reflect contents of column
-    
-    Arguments:
-        objectlist_dataframe {pandas dataframe} -- [roi metrics dataframe or dataframe generated from the objectlist.txt file]
-    
-    Returns:
-        [pandas dataframe] -- [same dataframe with same information but with more informative column names
-    """
-    
-    objectlist_dataframe = objectlist_dataframe.rename(index = str, columns = {' traceindex' :"trace_index", 
-                                                        ' cx':'center_x',
-                                                        ' cy':'center_y',
-                                                        ' mask2Frame':'frame_of_max_intensity_masks_file',
-                                                        ' frame':'frame_of_enhanced_movie',
-                                                        ' object':'layer_of_max_intensity_file',
-                                                        ' minx':'bbox_min_x',
-                                                        ' miny':'bbox_min_y',
-                                                        ' maxx':'bbox_max_x',
-                                                        ' maxy':'bbox_max_y',
-                                                        ' area':'area',
-                                                        ' shape0':'ellipseness',
-                                                        ' shape1':"compactness",
-                                                        ' eXcluded':"exclude_code",
-                                                        ' meanInt0':"mean_intensity",
-                                                        ' meanInt1':"mean_enhanced_intensity",
-                                                        ' maxInt0':"max_intensity",
-                                                        ' maxInt1':"max_enhanced_intensity",
-                                                        ' maxMeanRatio':"intensity_ratio",
-                                                        ' snpoffsetmean':"soma_minus_np_mean",
-                                                        ' snpoffsetstdv':"soma_minus_np_std",
-                                                        ' act2':"sig_active_frames_2_5",
-                                                        ' act3':"sig_active_frames_4",
-                                                        ' OvlpCount':"overlap_count",
-                                                        ' OvlpAreaPer':"percent_area_overlap",
-                                                        ' OvlpObj0':"overlap_obj0_index",
-                                                        ' OvlpObj1':"overlap_obj1_index",
-                                                        ' corcoef0':"soma_obj0_overlap_trace_corr",
-                                                        ' corcoef1':"soma_obj1_overlap_trace_corr"})
-    return objectlist_dataframe
-
-
-
-
-
-
-
-
-def roi_locations_from_cell_rois_table(experiment_id):
-    """takes the lims_cell_rois_table and pares it down to just what's relevent to join with the objectlist.txt table. 
-       Renames columns to maintain continuity between the tables. 
-    
-    Arguments:
-        lims_cell_rois_table {dataframe} -- dataframe from LIMS with roi location information
-    
-    Returns:
-        dataframe -- pared down dataframe
-    """
-    #get the cell_rois_table for that experiment
-    lims_data = get_lims_data(experiment_id)
-    exp_cell_rois_table = get_lims_cell_rois_table(lims_data['lims_id'].values[0])
-    
-    #select only the relevent columns
-    roi_locations = exp_cell_rois_table[["id", "x", "y", "width", "height", "valid_roi", "mask_matrix"]]
-    
-    #rename columns 
-    roi_locations = clean_roi_locations_column_labels(roi_locations)
-    return roi_locations
-
-
-def clean_roi_locations_column_labels(roi_locations_dataframe):
-    """takes some column labels from the roi_locations dataframe and  renames them to be more explicit and descriptive, and to match the column labels
-        from the objectlist dataframe.
-    
-    Arguments:
-        roi_locations_dataframe {dataframe} -- dataframe with roi id and location information
-    
-    Returns:
-        dataframe -- [description]
-    """
-    roi_locations_dataframe = roi_locations_dataframe.rename(columns={"id":"cell_roi_id",
-                                                            "mask_matrix":"roi_mask",
-                                                            "x":"bbox_min_x",
-                                                            "y":"bbox_min_y"})
-    return roi_locations_dataframe
-
-
-
-
-
-
-
-def gen_roi_exclusion_labels_lists(experiment_id):
-    """[summary]
+def exp_roi_metrics_dataframe(experiment_id, mask_shift = False, include_failed_rois = True):
+    """creates a dataframe with metrics about the rois/cells associated with a particular experiment id
     
     Arguments:
         experiment_id {[type]} -- [description]
@@ -386,123 +73,10 @@ def gen_roi_exclusion_labels_lists(experiment_id):
     Returns:
         [type] -- [description]
     """
-    roi_exclusion_table = get_failed_roi_exclusion_labels(experiment_id)
-    roi_exclusion_table = roi_exclusion_table[["cell_roi_id", "exclusion_label_name"]]
-    exclusion_list_per_invalid_roi = roi_exclusion_table.groupby(["cell_roi_id"]).agg(lambda x: tuple(x)).applymap(list).reset_index()
-    return exclusion_list_per_invalid_roi
-
-
-########  From SDK 
-def get_session_from_sdk(experiment_id):
-    """Use LIMS API to return session object
-    
-    Arguments:
-        experiment_id {int} -- 9 digit experiment ID (same as LIMS ID)
-    
-    Returns:
-        session object -- session object from SDK
-    """
-    api = BehaviorOphysLimsApi(experiment_id)
-    session = BehaviorOphysSession(api, filter_invalid_rois=False)
-    return session
-
-
-def get_sdk_max_projection(experiment_id):
-    session = roi.get_session_from_sdk(experiment_id)
-    max_projection = session.max_projection
-    return max_projection
-
-def get_sdk_ave_projection(experiment_id):
-    session = roi.get_session_from_sdk(experiment_id)
-    ave_projection = session.average_projection
-    return ave_projection
-
-
-
-def get_sdk_cell_specimen_table(experiment_id):
-    """returns cell specimen table using the SDK LIMS API
-    
-    Arguments:
-        experiment_id {int} -- 9 digit experiment id
-    
-    Returns:
-        cell specimen table {pandas dataframe} -- dataframe with the following columns:
-                    cell_specimen_id(index):
-                    cell_roi_id:
-                    height:
-                    image_mask: roi mask put within the motion corrected 2photon FOV (always the upper left corner of the image)
-                    mask_image_plane:
-                    max_correction_down:
-                    max_correction_left:
-                    max_correction_right:
-                    max_correction_up:
-                    valid_roi:
-                    width:
-                    bbox_min_x:
-                    bbox_min_y:
-
-    """
-    session = get_session_from_sdk(experiment_id)
-    cell_specimen_table = session.cell_specimen_table
-    cell_specimen_table = clean_cell_specimen_table_column_labels(cell_specimen_table) #rename columns to be consistent with roi_locations_dataframe and objectlist
-    return cell_specimen_table
-
-
-
-
-def clean_cell_specimen_table_column_labels(cell_specimen_table):
-    """takes some column names from the cell specimen dataframe and renames them to be more explicit and descriptive, and to match the column labels
-        from the objectlist dataframe and the roi locations dataframe.
-    
-    Arguments:
-        cell_specimen_table {dataframe} -- dataframe with various metrics
-    
-    Returns:
-        dataframe -- dataframe with some column names/labels changed
-    """
-    cell_specimen_table = cell_specimen_table.rename(columns={"x":"bbox_min_x",
-                                                            "y":"bbox_min_y"})
-    cell_specimen_table["cell_specimen_id"] =  cell_specimen_table.index #make cell_specimen_id a column so it can be merged on
-    return cell_specimen_table
-
-def dataframe_shift_fov_mask(row):
-    """acts on a datframe row- for use in specifically in roi_metrics_dataframe
-        applies the np.roll to move an image mask, on to every row in a dataframe, row by row
-    
-    Arguments:
-        row {[type]} -- [description]
-    
-    Returns:
-        [type] -- [description]
-    """
-    return np.roll(row["image_mask"], (row["bbox_min_x"], row["bbox_min_y"]),axis=(1,0))
-
-def dataframe_binarize_mask(row):
-    """acts on a datframe row- for use in specifically in roi_metrics_dataframe.
-        applies the change-mask_from_bool_to_binary on a dataframe row
-
-    
-    Arguments:
-        row {[type]} -- dataframe row
-    
-    Returns:
-        r -- [description]
-    """
-    return change_mask_from_bool_to_binary(row["shifted_image_mask"])
-
-def gen_roi_metrics_dataframe(experiment_id, shift = False):
-    """[summary]
-    
-    Arguments:
-        experiment_id {[type]} -- [description]
-    
-    Returns:
-        [type] -- [description]
-    """
-    objectlist_df = load_current_objectlisttxt_file(experiment_id)  
-    roi_locations_df = roi_locations_from_cell_rois_table(experiment_id)
-    cell_specimen_table = get_sdk_cell_specimen_table(experiment_id)
-    failed_roi_exclusion_labels = gen_roi_exclusion_labels_lists(experiment_id)
+    objectlist_df = load.load_current_objectlisttxt_file(experiment_id)  
+    roi_locations_df = load.roi_locations_from_cell_rois_table(experiment_id)
+    cell_specimen_table = load.get_sdk_cell_specimen_table(experiment_id)
+    failed_roi_exclusion_labels = load.gen_roi_exclusion_labels_lists(experiment_id)
     
 
     obj_loc_df = pd.merge(objectlist_df, roi_locations_df, how = "outer", on= ["bbox_min_x", "bbox_min_y"])
@@ -510,54 +84,170 @@ def gen_roi_metrics_dataframe(experiment_id, shift = False):
     roi_metrics_df = pd.merge(roi_metrics_df, failed_roi_exclusion_labels, how = "outer", on="cell_roi_id")
     roi_metrics_df = roi_metrics_df.dropna(subset=["cell_specimen_id"])
     roi_metrics_df.cell_specimen_id= roi_metrics_df.cell_specimen_id.astype('int32', copy=False)
-    roi_metrics_df["experiment_id"]= experiment_id
+    roi_metrics_df.loc[:,"experiment_id"]= experiment_id
+    
 
-    if shift== True:
+    #delete duplicated cell specimen IDs
+    duplicates = roi_metrics_df[["cell_specimen_id"]].copy()
+    duplicates.loc[:,"duplicated"]=duplicates.duplicated()
+    dup_indexes = duplicates.loc[duplicates["duplicated"]==True].index.values.tolist()
+    roi_metrics_df.drop(roi_metrics_df.index[dup_indexes], inplace=True)
+
+    if mask_shift== True:
         roi_metrics_df["shifted_image_mask"]= roi_metrics_df.apply(dataframe_shift_fov_mask, axis=1)
-        # roi_metrics_df["shifted_image_mask"]=roi_metrics_df.apply(dataframe_binarize_mask, axis=1)
 
+    if include_failed_rois ==False:
+        roi_metrics_df = roi_metrics_df.loc[croi_metrics_df["valid_roi"]==True]
+
+    #reset index since potentially filtered out some cells with the dropping of duplicates or failed rois
+    roi_metrics_df = roi_metrics_df.reset_index(drop=True)
+    
     return roi_metrics_df
 
-def determine_roi_id_type(experiment_id, roi_id, print_stmnts = False):
-    """[summary]
+
+def roi_metrics_for_experiment_list(experiment_list, include_failed_rois = True):
+    """get roi metrics for a list of experiments
     
     Arguments:
-        experiment_id {[type]} -- [description]
-        roi_id {[type]} -- [description]
+        experiment_list {[type]} -- [description]
+    
+    Keyword Arguments:
+        include_failed_rois {bool} -- [description] (default: {True})
     
     Returns:
         [type] -- [description]
     """
-    roi_metrics = gen_roi_metrics_dataframe(experiment_id)
-    is_cell_specimen_id = roi_id in pd.Series(roi_metrics["cell_specimen_id"]).values
-    is_cell_roi_id = roi_id in pd.Series(roi_metrics["cell_roi_id"]).values
-    if is_cell_specimen_id == True:
-        if print_stmnts == True:
-            print("cell_specimen_id")
-        return "cell_specimen_id"
-    elif is_cell_roi_id == True:
-        if print_stmnts == True:
-            print("cell_roi_id")
-        return "cell_roi_id"
-    else:
-        print("roi id not listed in experiment dataframe")
+    roi_metrics = pd.DataFrame()
+    experiments_info_df = pd.DataFrame()
+    
+    for experiment_id in experiment_list:
+        experiment_roi_metrics_df = exp_roi_metrics_dataframe(experiment_id, include_failed_rois = include_failed_rois)
+        
+        exp_info_df = experiment_info_df(experiment_id)
+        
+        roi_metrics =roi_metrics.append(experiment_roi_metrics_df, sort=True)
+        experiments_info_df = experiments_info_df.append(exp_info_df, sort=True)
+        
+    roi_metrics = roi_metrics.reset_index(drop = True)
+    roi_metrics= matching.get_number_exps_rois_matched(roi_metrics)
 
-def roi_id_type_from_df(roi_metrics_df, roi_id, print_stmnts = False):
-    is_cell_specimen_id = roi_id in pd.Series(roi_metrics_df["cell_specimen_id"]).values
-    is_cell_roi_id = roi_id in pd.Series(roi_metrics_df["cell_roi_id"]).values
-    if is_cell_specimen_id == True:
-        if print_stmnts == True:
-            print("cell_specimen_id")
-        return "cell_specimen_id"
-    elif is_cell_roi_id == True:
-        if print_stmnts == True:
-            print("cell_roi_id")
-        return "cell_roi_id"
-    else:
-        print("roi id not listed in experiment dataframe")
+    experiments_info_df = experiments_info_df.reset_index(drop=True)
+
+    master_df = pd.merge(roi_metrics, experiments_info_df, how="inner", on="experiment_id")
+
+    return master_df
 
 
-##################Manipulating ROI Masks 
+
+
+######################## CONTAINER LEVEL INFORMATION ##############
+
+
+def gen_container_manifest(container_id, 
+                        include_ffield_test= False, 
+                        include_failed_sessions = False):
+
+    lims_container_info_df = load.get_lims_container_info(container_id)
+    lims_container_info_df = get_6digit_mouse_id(lims_container_info_df)
+    lims_container_info_df = full_geno(lims_container_info_df)
+    lims_container_info_df = load.get_stage_name_from_mtrain_sqldb(lims_container_info_df)
+    lims_container_info_df = calc_retake_number(lims_container_info_df)
+    lims_container_info_df = lims_container_info_df.drop(["mouse_info", "foraging_id"], axis = 1)
+    lims_container_info_df = lims_container_info_df.rename(columns={"ophys_experiment_id":"experiment_id"})
+    
+    # ## remove full field & receptive field test imaging sessions from the dataframe and don't generate metrics for them
+    if include_ffield_test== False:
+        lims_container_info_df = lims_container_info_df.dropna(subset=["stage_name_mtrain"])
+        lims_container_info_df = lims_container_info_df.loc[lims_container_info_df["stage_name_lims"]!= "OPHYS_7_receptive_field_mapping"]
+        lims_container_info_df = lims_container_info_df.loc[lims_container_info_df["stage_name_mtrain"]!= "OPHYS_7_receptive_field_mapping"]
+    
+    if include_failed_sessions ==False:
+        lims_container_info_df= lims_container_info_df.loc[lims_container_info_df["workflow_state"]=="passed"]
+    
+    lims_container_info_df = lims_container_info_df.reset_index(drop=True)
+    
+    return lims_container_info_df
+
+
+def get_container_roi_metrics(container_id, 
+                            include_ffield_test= False, 
+                            include_failed_sessions = False, 
+                            include_failed_rois = True):
+    """[summary]
+    
+    Arguments:
+        container_id {[type]} -- [description]
+    
+    Keyword Arguments:
+        include_ffield_test {bool} -- [include metrics for the "fulll field test imaging session] (default: {False})
+        include_failed_sessions {bool} -- [include metrics for imaging sessions that failed in manifest] (default: {False})
+        include_failed_rois {bool} -- [include rois that are invalid] (default: {True})
+    
+    Returns:
+        [type] -- [description]
+    """
+
+    container_manifest = gen_container_manifest(container_id, 
+                                                include_ffield_test= include_ffield_test, 
+                                                include_failed_sessions = include_failed_sessions)
+    
+    experiments_list = container_manifest["experiment_id"].values
+    experiments_list = experiments_list.tolist()
+    
+    container_roi_metrics_df = pd.DataFrame()
+
+    for experiment_id in experiments_list:
+        experiment_roi_metrics_df = exp_roi_metrics_dataframe(experiment_id)
+        experiment_roi_metrics_df.loc[:,"stage_name"] = container_manifest.loc[container_manifest["experiment_id"]==experiment_id, "stage_name_mtrain"].values[0]
+        experiment_roi_metrics_df.loc[:,"full_genotype"] = container_manifest.loc[container_manifest["experiment_id"]==experiment_id, "full_genotype"].values[0]
+        container_roi_metrics_df =container_roi_metrics_df.append(experiment_roi_metrics_df, sort=True)
+        container_roi_metrics_df.loc[:,"container_id"]= container_id
+        container_roi_metrics_df = container_roi_metrics_df.reset_index(drop=True)
+        
+    ###If cell_specimen_ids duplicated for a single exp id drop them here
+    duplicates = container_roi_metrics_df[["cell_specimen_id", "experiment_id"]].copy()
+    duplicates.loc[:,"duplicated"]=duplicates.duplicated()
+    dup_indexes = duplicates.loc[duplicates["duplicated"]==True].index.values.tolist()
+    container_roi_metrics_df.drop(container_roi_metrics_df.index[dup_indexes], inplace=True)
+
+    if include_failed_rois == False:
+        container_roi_metrics_df = container_roi_metrics_df.loc[container_roi_metrics_df["valid_roi"]==True]
+
+    container_roi_metrics_df= matching.get_number_exps_rois_matched(container_roi_metrics_df)
+    container_roi_metrics_df = container_roi_metrics_df.reset_index(drop = True)
+    
+    return container_roi_metrics_df
+
+ 
+def for_manifest_get_container_roi_metrics(manifest, container_id):
+    container_df = manifest.loc[manifest["container_id"]==container_id]
+    container_df = container_df.reset_index(drop=True)
+    
+    #must be list not array for lims query to work
+    experiments_list = container_df["experiment_id"].values
+    experiments_list = experiments_list.tolist()
+
+    container_roi_metrics_df = exp_roi_metrics_dataframe(experiments_list[0])
+    container_roi_metrics_df["stage_name"]= container_df["stage_name"][0]
+    container_roi_metrics_df["full_genotype"] = container_df["full_genotype"][0]
+    container_roi_metrics_df["valid_cell_matching"]= container_df["valid_cell_matching"][0]
+
+    
+    
+    for experiment_id in experiments_list[1:]:
+        experiment_roi_metrics_df = exp_roi_metrics_dataframe(experiment_id)
+        experiment_roi_metrics_df["stage_name"] = container_df.loc[container_df["experiment_id"]==experiment_id, "stage_name"].values[0]
+        experiment_roi_metrics_df["full_genotype"] = container_df.loc[container_df["experiment_id"]==experiment_id, "full_genotype"].values[0]
+        experiment_roi_metrics_df["valid_cell_matching"] = container_df.loc[container_df["experiment_id"]==experiment_id, "valid_cell_matching"].values[0]
+        container_roi_metrics_df =container_roi_metrics_df.append(experiment_roi_metrics_df, sort=True)
+        container_roi_metrics_df = container_roi_metrics_df.reset_index(drop=True)
+    return container_roi_metrics_df
+
+
+
+
+
+######################## ROI LEVEL INFORMATION ##############
 
 def get_transparent_roi_FOV_mask(experiment_id, roi_id, id_type = False):
     if id_type ==False: 
@@ -565,7 +255,7 @@ def get_transparent_roi_FOV_mask(experiment_id, roi_id, id_type = False):
     else: 
         roi_id_type = id_type
     
-    roi_metrics = gen_roi_metrics_dataframe(experiment_id)
+    roi_metrics = exp_roi_metrics_dataframe(experiment_id)
     
     unshifted_roi_image_mask = roi_metrics.loc[roi_metrics[roi_id_type]==roi_id,"image_mask"].values[0]
     shifted_roi = shift_roi_FOV_mask_to_roi_FOV_location(roi_metrics, unshifted_roi_image_mask, roi_id, roi_id_type) #shift ROI to correction location in FOV
@@ -590,6 +280,17 @@ def shift_roi_FOV_mask_to_roi_FOV_location(roi_metrics, unshifted_roi_image_mask
     shifted_roi_image_mask=np.roll(unshifted_roi_image_mask,(x_shift,y_shift),axis=(1,0))
     return shifted_roi_image_mask
 
+def dataframe_shift_fov_mask(row):
+    """acts on a datframe row- for use in specifically in roi_metrics_dataframe
+        applies the np.roll to move an image mask, on to every row in a dataframe, row by row
+    
+    Arguments:
+        row {[type]} -- [description]
+    
+    Returns:
+        [type] -- [description]
+    """
+    return np.roll(row["image_mask"], (row["bbox_min_x"], row["bbox_min_y"]),axis=(1,0))
 
 
 def change_mask_from_bool_to_binary(mask):
@@ -614,6 +315,19 @@ def change_mask_from_bool_to_binary(mask):
     binary_mask[new_mask==1] = 1
     return binary_mask
 
+def dataframe_binarize_mask(row):
+    """acts on a datframe row- for use in specifically in roi_metrics_dataframe.
+        applies the change-mask_from_bool_to_binary on a dataframe row
+
+    
+    Arguments:
+        row {[type]} -- dataframe row
+    
+    Returns:
+        r -- [description]
+    """
+    return change_mask_from_bool_to_binary(row["shifted_image_mask"])
+
 def gen_blank_mask_of_FOV_dimensions(experiment_id):
     """generates a transparent mask the same dimensions as the microscope FOV after motion correction 
         & cell segmentation
@@ -624,7 +338,7 @@ def gen_blank_mask_of_FOV_dimensions(experiment_id):
     Returns:
         [type] -- [description]
     """
-    roi_metrics = gen_roi_metrics_dataframe(experiment_id)
+    roi_metrics = exp_roi_metrics_dataframe(experiment_id)
     #make a general mask of the correcte shape to be used for multiple rois
     first_mask_index = roi_metrics["image_mask"].first_valid_index()
     FOV_dimension = roi_metrics["image_mask"][first_mask_index].shape
@@ -634,7 +348,7 @@ def gen_blank_mask_of_FOV_dimensions(experiment_id):
 
 
 def gen_multi_roi_mask(experiment_id, roi_id_list, mask_type = "binary"):
-    roi_metrics = gen_roi_metrics_dataframe(experiment_id, shift= True)
+    roi_metrics = exp_roi_metrics_dataframe(experiment_id, shift= True)
     id_type = roi_id_type_from_df(roi_metrics, roi_id_list[0])
     roi_list_df = roi_metrics[roi_metrics[id_type].isin(roi_id_list)]
     roi_masks = roi_list_df["shifted_image_mask"].values
@@ -664,11 +378,8 @@ def multi_roi_mask_from_df(roi_metrics_df, roi_id_list, mask_type="binary"):
 
 
 
-##################################  CONTAINER LEVEL FUNCTIONS
 
-
-
-
+######################## UTILITIES FUNCTIONS ##############
 def get_6digit_mouse_id(lims_container_info_df):
     mouse_id = lims_container_info_df["mouse_info"][0][-6:]
     mouse_id = int(mouse_id)
@@ -701,104 +412,47 @@ def calc_retake_number(lims_container_info_df, stage_name_source= "mtrain"):
             lims_container_info_df.at[ind_row, 'retake_number'] = ind_enum
     return lims_container_info_df
 
+def stage_num(row):
+    return row["stage_name"][6]
 
-def gen_container_manifest(container_id, include_ffield_test= False, include_failed_sessions = False):
-    lims_container_info_df = get_lims_container_info(container_id)
-    lims_container_info_df = get_6digit_mouse_id(lims_container_info_df)
-    lims_container_info_df = full_geno(lims_container_info_df)
-    lims_container_info_df = get_stage_name_from_mtrain_sqldb(lims_container_info_df)
-    lims_container_info_df = calc_retake_number(lims_container_info_df)
-    lims_container_info_df = lims_container_info_df.drop(["mouse_info", "foraging_id"], axis = 1)
-    
-    # ## remove full filed test imaging sessions from the dataframe and don't generate metrics for them
-    if include_ffield_test== False:
-        lims_container_info_df =lims_container_info_df.dropna(subset=["stage_name_mtrain"])
-    
-    if include_failed_sessions ==False:
-        lims_container_info_df= lims_container_info_df.loc[lims_container_info_df["workflow_state"]=="passed"]
-    
-    lims_container_info_df = lims_container_info_df.reset_index(drop=True)
-    
-    return lims_container_info_df
+def get_stage_num(dataframe):
+    dataframe.loc[:,"stage_num"] = dataframe.apply(stage_num, axis=1)
+    return dataframe
 
+def roi_id_type_from_df(roi_metrics_df, roi_id, print_stmnts = False):
+    is_cell_specimen_id = roi_id in pd.Series(roi_metrics_df["cell_specimen_id"]).values
+    is_cell_roi_id = roi_id in pd.Series(roi_metrics_df["cell_roi_id"]).values
+    if is_cell_specimen_id == True:
+        if print_stmnts == True:
+            print("cell_specimen_id")
+        return "cell_specimen_id"
+    elif is_cell_roi_id == True:
+        if print_stmnts == True:
+            print("cell_roi_id")
+        return "cell_roi_id"
+    else:
+        print("roi id not listed in experiment dataframe")
 
-
-def get_container_roi_metrics(container_id, include_ffield_test= False, include_failed_sessions = False, include_failed_rois = True):
-    """[summary]
+def determine_roi_id_type(experiment_id, roi_id, print_stmnts = False):
+    """if you provide either an roi_id or a cell_specimen_id it will determine the id type
     
     Arguments:
-        container_id {[type]} -- [description]
-    
-    Keyword Arguments:
-        include_ffield_test {bool} -- [include metrics for the "fulll field test imaging session] (default: {False})
-        include_failed_sessions {bool} -- [include metrics for imaging sessions that failed in manifest] (default: {False})
-        include_failed_rois {bool} -- [include rois that are invalid] (default: {True})
+        experiment_id {[type]} -- [description]
+        roi_id {[type]} -- [description]
     
     Returns:
         [type] -- [description]
     """
-
-    if include_ffield_test==True and include_failed_sessions == False:
-        container_manifest = gen_container_manifest(container_id, include_ffield_test=True)
-    
-    elif include_ffield_test==False and include_failed_sessions== True:
-        container_manifest== gen_container_manifest(container_id, include_failed=True)
-    
-    else: 
-        container_manifest = gen_container_manifest(container_id)
-
-    # container_manifest = container_manifest.reset_index(drop=True) ##need to reset index because of filtering above
-    
-    experiments_list = container_manifest["ophys_experiment_id"].values
-    experiments_list = experiments_list.tolist()
-    
-    container_roi_metrics_df = gen_roi_metrics_dataframe(experiments_list[0])
-    container_roi_metrics_df.loc[:,"stage_name"]= container_manifest["stage_name_mtrain"][0]
-    container_roi_metrics_df.loc[:,"full_genotype"] = container_manifest["full_genotype"][0]
-
-    for experiment_id in experiments_list[1:]:
-        experiment_roi_metrics_df = gen_roi_metrics_dataframe(experiment_id)
-        experiment_roi_metrics_df.loc[:,"stage_name"] = container_manifest.loc[container_manifest["ophys_experiment_id"]==experiment_id, "stage_name_mtrain"].values[0]
-        experiment_roi_metrics_df.loc[:,"full_genotype"] = container_manifest.loc[container_manifest["ophys_experiment_id"]==experiment_id, "full_genotype"].values[0]
-        container_roi_metrics_df =container_roi_metrics_df.append(experiment_roi_metrics_df)
-        container_roi_metrics_df = container_roi_metrics_df.reset_index(drop=True)
-        
-    ###If cell_specimen_ids duplicated for a single exp id drop them here
-    duplicates = container_roi_metrics_df[["cell_specimen_id", "experiment_id"]].copy()
-    duplicates.loc[:,"duplicated"]=duplicates.duplicated()
-    dup_indexes = duplicates.loc[duplicates["duplicated"]==True].index.values.tolist()
-    container_roi_metrics_df.drop(container_roi_metrics_df.index[dup_indexes], inplace=True)
-
-    if include_failed_rois == False:
-        container_roi_metrics_df = container_roi_metrics_df.loc[container_roi_metrics_df["valid_roi"]==True]
-
-    
-    container_roi_metrics_df = container_roi_metrics_df.reset_index(drop = True)
-    
-    return container_roi_metrics_df
-
- 
-def for_manifest_get_container_roi_metrics(manifest, container_id):
-    container_df = manifest.loc[manifest["container_id"]==container_id]
-    container_df = container_df.reset_index(drop=True)
-    
-    #must be list not array for lims query to work
-    experiments_list = container_df["ophys_experiment_id"].values
-    experiments_list = experiments_list.tolist()
-
-    container_roi_metrics_df = gen_roi_metrics_dataframe(experiments_list[0])
-    container_roi_metrics_df["stage_name"]= container_df["stage_name"][0]
-    container_roi_metrics_df["full_genotype"] = container_df["full_genotype"][0]
-    container_roi_metrics_df["valid_cell_matching"]= container_df["valid_cell_matching"][0]
-
-    
-    
-    for experiment_id in experiments_list[1:]:
-        experiment_roi_metrics_df = gen_roi_metrics_dataframe(experiment_id)
-        experiment_roi_metrics_df["stage_name"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "stage_name"].values[0]
-        experiment_roi_metrics_df["full_genotype"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "full_genotype"].values[0]
-        experiment_roi_metrics_df["valid_cell_matching"] = container_df.loc[container_df["ophys_experiment_id"]==experiment_id, "valid_cell_matching"].values[0]
-        container_roi_metrics_df =container_roi_metrics_df.append(experiment_roi_metrics_df)
-        container_roi_metrics_df = container_roi_metrics_df.reset_index(drop=True)
-    return container_roi_metrics_df
-
+    roi_metrics = exp_roi_metrics_dataframe(experiment_id)
+    is_cell_specimen_id = roi_id in pd.Series(roi_metrics["cell_specimen_id"]).values
+    is_cell_roi_id = roi_id in pd.Series(roi_metrics["cell_roi_id"]).values
+    if is_cell_specimen_id == True:
+        if print_stmnts == True:
+            print("cell_specimen_id")
+        return "cell_specimen_id"
+    elif is_cell_roi_id == True:
+        if print_stmnts == True:
+            print("cell_roi_id")
+        return "cell_roi_id"
+    else:
+        print("roi id not listed in experiment dataframe")

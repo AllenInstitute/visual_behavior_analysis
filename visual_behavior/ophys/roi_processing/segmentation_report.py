@@ -68,15 +68,16 @@ def gen_seg_labels_df(experiment_id):
 #     return mask_df
 
 
-def gen_label_masks_df(experiment_id):
+def gen_label_masks_df(experiment_id, print = False):
     seg_labels_df = gen_seg_labels_df(experiment_id)
-    roi_metrics = roi.gen_roi_metrics_dataframe(experiment_id, shift= True)
+    roi_metrics = roi.exp_roi_metrics_dataframe(experiment_id, shift= True)
     blank_mask = roi.gen_blank_mask_of_FOV_dimensions(experiment_id)
 
     mask_df = pd.DataFrame(columns=["label", "multi_roi_mask"])
     for label in seg_labels_df["label"]:
         lab = label
-        print(lab)
+        if print == True:
+            print(lab)
         label_df = seg_labels_df.loc[seg_labels_df["label"]==lab]
         if label_df["number_rois"].values[0]== 0:
             label_mask = blank_mask
@@ -93,6 +94,62 @@ def gen_segmentation_dataframe(experiment_id):
     segmentation_df = pd.merge(seg_labels_df, label_mask_df, how = "outer", on ="label")
     return segmentation_df
     
+def gen_exp_seg_validity_summary_df(experiment_id, masks = True):
+    roi_metrics = roi.exp_roi_metrics_dataframe(experiment_id, shift= True)
+    blank_mask = roi.gen_blank_mask_of_FOV_dimensions(experiment_id)
+    
+    valid_csi = roi_metrics.loc[roi_metrics["valid_roi"]==True, "cell_specimen_id"].values
+    invalid_csi = roi_metrics.loc[roi_metrics["valid_roi"]==False, "cell_specimen_id"].values
+
+    valid_count = len(valid_csi)
+    invalid_count = len(invalid_csi)
+
+    if masks == False:
+        exp_seg_validity_summary = pd.DataFrame({"experiment_id":experiment_id, 
+                                    "valid_count": valid_count, "invalid_count":invalid_count, 
+                                    "valid_csis": [valid_csi], "invalid_csis": [invalid_csi]})
+
+    else:  
+        if valid_count ==0:
+            valid_mask = blank_mask
+        else: 
+            valid_mask = roi.multi_roi_mask_from_df(roi_metrics, valid_csi)
+
+        if invalid_count ==0:
+            invalid_mask = blank_mask
+        else: 
+            invalid_mask = roi.multi_roi_mask_from_df(roi_metrics, invalid_csi)
+
+        exp_seg_validity_summary = pd.DataFrame({"experiment_id":experiment_id, 
+                                    "valid_count": valid_count, "invalid_count":invalid_count, 
+                                    "valid_csis": [valid_csi], "invalid_csis": [invalid_csi],
+                                    "valid_mask": [valid_mask], "invalid_mask": [invalid_mask]})
+    
+    return exp_seg_validity_summary
+
+def gen_container_seg_validitity_summary_df(container_id, masks = True):
+    container_manifest = roi.gen_container_manifest(container_id)
+    
+    experiment_id_list = container_manifest["experiment_id"].unique()
+    experiment_id_list = experiment_id_list.tolist()
+
+    container_seg_validity_df = pd.DataFrame()
+
+    for experiment_id in experiment_id_list:
+        exp_seg_validity_summary = gen_exp_seg_validity_summary_df(experiment_id, masks = masks)
+
+        container_seg_validity_df = container_seg_validity_df.append(exp_seg_validity_summary)
+    
+    container_seg_validity_df.loc[:,"container_id"]= container_id
+    container_seg_validity_df = container_seg_validity_df.reset_index(drop = True)
+
+    return container_seg_validity_df
+
+
+
+
+
+
 
 # def plot_exclusion_label_masks(experiment_id, segmentation_df):
 #     ave_proj = roi.get_sdk_ave_projection(experiment_id)
