@@ -7,7 +7,7 @@ from visual_behavior.ophys.io.create_multi_session_mean_df import get_multi_sess
 
 if __name__ == '__main__':
 
-    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_manuscript'
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/visual_behavior_pilot_manuscript_resubmission'
     # manifest = pd.read_csv(os.path.join(cache_dir, 'visual_behavior_data_manifest.csv'))
     # experiment_ids = manifest.experiment_id.values
 

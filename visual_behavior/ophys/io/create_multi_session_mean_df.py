@@ -96,7 +96,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
 
 
 if __name__ == '__main__':
-    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_manuscript'
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/visual_behavior_pilot_manuscript_resubmission'
 
     # Visual Behavior pilot complete dataset
     # experiment_ids = [639253368, 639438856, 639769395, 639932228, 644942849, 645035903,

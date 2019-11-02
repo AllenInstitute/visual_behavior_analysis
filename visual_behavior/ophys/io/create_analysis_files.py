@@ -110,6 +110,6 @@ if __name__ == '__main__':
                        648647430, 649118720, 649318212, 673139359, 673460976]
 
     import os
-    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_pilot_manuscript'
+    cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_pilot_analysis/visual_behavior_pilot_manuscript_resubmission'
     for experiment_id in experiment_ids:
         create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True)

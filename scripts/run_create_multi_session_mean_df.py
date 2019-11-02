@@ -17,7 +17,7 @@ job_settings = {'queue': 'braintv',
 
 PythonJob(
     python_file,
-    python_executable='/home/marinag/anaconda2/envs/visual_behavior_ophys/bin/python',
+    python_executable='/home/marinag/anaconda2/envs/visual_behavior_sdk/bin/python',
     python_args=None,
     conda_env=None,
     jobname='process_multi_session_df',
