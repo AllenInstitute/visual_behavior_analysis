@@ -137,9 +137,15 @@ class VisualBehaviorOphysDataset(object):
     stimulus_template = LazyLoadable('_stimulus_template', get_stimulus_template)
 
     def get_stimulus_metadata(self):
-        self._stimulus_metadata = pd.read_hdf(
+        stimulus_metadata = pd.read_hdf(
             os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df')
-        self._stimulus_metadata = self._stimulus_metadata.drop(columns='image_category')
+        stimulus_metadata = stimulus_metadata.drop(columns='image_category')
+        # Add an entry for omitted stimuli
+        omitted_df = pd.DataFrame({'image_name': ['omitted'],
+                                   'image_index': [stimulus_metadata['image_index'].max() + 1]})
+        stimulus_metadata = stimulus_metadata.append(omitted_df, ignore_index=True, sort=False)
+        # stimulus_metadata.set_index(['image_index'], inplace=True, drop=True)
+        self._stimulus_metadata = stimulus_metadata
         return self._stimulus_metadata
 
     stimulus_metadata = LazyLoadable('_stimulus_metadata', get_stimulus_metadata)
@@ -194,15 +200,15 @@ class VisualBehaviorOphysDataset(object):
 
     trials = LazyLoadable('_trials', get_trials)
 
-    def get_dff_traces(self):
+    def get_dff_traces_array(self):
         with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
             dff_traces = []
             for key in dff_traces_file.keys():
                 dff_traces.append(np.asarray(dff_traces_file[key]))
-        self._dff_traces = np.asarray(dff_traces)
-        return self._dff_traces
+        self._dff_traces_array = np.asarray(dff_traces)
+        return self._dff_traces_array
 
-    dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
+    dff_traces_array = LazyLoadable('_dff_traces_array', get_dff_traces_array)
 
     def get_corrected_fluorescence_traces(self):
         with h5py.File(os.path.join(self.analysis_dir, 'corrected_fluorescence_traces.h5'),
@@ -309,6 +315,47 @@ class VisualBehaviorOphysDataset(object):
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
         return np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
 
+    def get_dff_traces(self):
+        self._dff_traces = pd.DataFrame({'dff': [x for x in self.dff_traces_array]}, index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        return self._dff_traces
+
+    dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
+
+
+    def get_stimulus_presentations(self):
+        stimulus_presentations_df = self.stimulus_table.copy()
+        stimulus_presentations_df = stimulus_presentations_df.rename(columns={'flash_number': 'stimulus_presentations_id'})
+        stimulus_presentations_df.set_index('stimulus_presentations_id', inplace=True)
+        stimulus_metadata_df = self.get_stimulus_metadata()
+        idx_name = stimulus_presentations_df.index.name
+        stimulus_presentations_df = stimulus_presentations_df.reset_index().merge(stimulus_metadata_df, on=['image_name']).set_index(idx_name)
+        stimulus_presentations_df.sort_index(inplace=True)
+        return stimulus_presentations_df
+
+    stimulus_presentations = LazyLoadable('_stimulus_presentations', get_stimulus_presentations)
+
+
+    def get_extended_stimulus_presentations(self):
+        '''
+        Calculates additional information for each stimulus presentation
+        '''
+        import visual_behavior.ophys.dataset.stimulus_processing as sp
+        stimulus_presentations_pre = self.get_stimulus_presentations()
+        change_times = self.trials['change_time'].values
+        change_times = change_times[~np.isnan(change_times)]
+        extended_stimulus_presentations = sp.get_extended_stimulus_presentations(
+            stimulus_presentations_df=stimulus_presentations_pre,
+            licks=self.licks,
+            rewards=self.rewards,
+            change_times=change_times,
+            running_speed_df=self.running_speed
+        )
+        return extended_stimulus_presentations
+
+    extended_stimulus_presentations = LazyLoadable('_extended_stimulus_presentations', get_extended_stimulus_presentations)
+
+
+
     @classmethod
     def construct_and_load(cls, experiment_id, cache_dir=None, **kwargs):
         ''' Instantiate a VisualBehaviorOphysDataset and load its data
@@ -337,7 +384,7 @@ class VisualBehaviorOphysDataset(object):
         obj.get_rewards()
         obj.get_task_parameters()
         obj.get_trials()
-        obj.get_dff_traces()
+        obj.get_dff_traces_array()
         obj.get_corrected_fluorescence_traces()
         obj.get_events()
         obj.get_roi_metrics()
@@ -348,5 +395,8 @@ class VisualBehaviorOphysDataset(object):
         obj.get_max_projection()
         obj.get_average_image()
         obj.get_motion_correction()
+        obj.get_dff_traces()
+        obj.get_stimulus_presentations()
+        # obj.get_extended_stimulus_presentations()
 
         return obj
