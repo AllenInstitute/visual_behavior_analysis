@@ -104,7 +104,7 @@ def get_p_values_from_shuffle_synthetic(analysis, stimulus_table, flash_response
     included_flashes = fdf.flash_number.unique()
     stim_table = stim_table[stim_table.flash_number.isin(included_flashes)]
     omitted_flashes = stim_table[stim_table.omitted==True]
-    omitted_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in omitted_flashes.start_time.values]
+    omitted_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.ophys_timestamps) for start_time in omitted_flashes.start_time.values]
     #set params
     n_shuffles = 10000
     response_window = analysis.response_window_duration
@@ -173,8 +173,8 @@ def get_p_values_from_shuffle_omitted(analysis, stimulus_table, omitted_flash_re
     included_flashes = odf.flash_number.unique()
     ost = ost[ost.flash_number.isin(included_flashes)]
     stimulus_flashes = dataset.stimulus_table[dataset.stimulus_table.omitted == False]
-    stimulus_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.timestamps_ophys) for start_time in stimulus_flashes.start_time.values]
-    stimulus_flashes['end_frame'] = [get_nearest_frame(end_time, dataset.timestamps_ophys) for end_time in stimulus_flashes.end_time.values]
+    stimulus_flashes['start_frame'] = [get_nearest_frame(start_time, dataset.ophys_timestamps) for start_time in stimulus_flashes.start_time.values]
+    stimulus_flashes['end_frame'] = [get_nearest_frame(end_time, dataset.ophys_timestamps) for end_time in stimulus_flashes.end_time.values]
     #set params
     response_window = analysis.response_window_duration
     frame_rate = analysis.ophys_frame_rate
@@ -617,10 +617,10 @@ def get_gray_response_df(dataset, window=0.5):
     for cell in range(dataset.dff_traces.shape[0]):
         for x, gray_start_time in enumerate(
                 flashes.end_time[:-5]):  # exclude the last 5 frames to prevent truncation of traces
-            ophys_start_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - gray_start_time)))
+            ophys_start_frame = int(np.nanargmin(abs(dataset.ophys_timestamps - gray_start_time)))
             ophys_end_time = gray_start_time + int(dataset.metadata.ophys_frame_rate.values[0] * 0.5)
             gray_end_time = gray_start_time + window
-            ophys_end_frame = int(np.nanargmin(abs(dataset.timestamps_ophys - ophys_end_time)))
+            ophys_end_frame = int(np.nanargmin(abs(dataset.ophys_timestamps - ophys_end_time)))
             mean_response = np.mean(dataset.dff_traces[cell][ophys_start_frame:ophys_end_frame])
             row.append([cell, x, gray_start_time, gray_end_time, mean_response])
     gray_response_df = pd.DataFrame(data=row, columns=['cell', 'gray_number', 'gray_start_time', 'gray_end_time',
@@ -717,39 +717,39 @@ def add_early_late_block_ratio_for_fdf(fdf, repeat=1, pref_stim=True):
     return data
 
 
-def add_ophys_times_to_behavior_df(behavior_df, timestamps_ophys):
+def add_ophys_times_to_behavior_df(behavior_df, ophys_timestamps):
     """
     behavior_df can be dataset.running, dataset.licks or dataset.rewards
     """
-    ophys_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in behavior_df.time.values]
-    ophys_times = [timestamps_ophys[frame] for frame in ophys_frames]
+    ophys_frames = [get_nearest_frame(timepoint, ophys_timestamps) for timepoint in behavior_df.time.values]
+    ophys_times = [ophys_timestamps[frame] for frame in ophys_frames]
     behavior_df['ophys_frame'] = ophys_frames
     behavior_df['ophys_time'] = ophys_times
     return behavior_df
 
 
-def add_ophys_times_to_stimulus_table(stimulus_table, timestamps_ophys):
-    ophys_start_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in
+def add_ophys_times_to_stimulus_table(stimulus_table, ophys_timestamps):
+    ophys_start_frames = [get_nearest_frame(timepoint, ophys_timestamps) for timepoint in
                           stimulus_table.start_time.values]
-    ophys_start_times = [timestamps_ophys[frame] for frame in ophys_start_frames]
+    ophys_start_times = [ophys_timestamps[frame] for frame in ophys_start_frames]
     stimulus_table['ophys_start_frame'] = ophys_start_frames
     stimulus_table['ophys_start_time'] = ophys_start_times
 
-    ophys_end_frames = [get_nearest_frame(timepoint, timestamps_ophys) for timepoint in stimulus_table.end_time.values]
-    ophys_end_times = [timestamps_ophys[frame] for frame in ophys_end_frames]
+    ophys_end_frames = [get_nearest_frame(timepoint, ophys_timestamps) for timepoint in stimulus_table.end_time.values]
+    ophys_end_times = [ophys_timestamps[frame] for frame in ophys_end_frames]
     stimulus_table['ophys_end_frame'] = ophys_end_frames
     stimulus_table['ophys_end_time'] = ophys_end_times
     return stimulus_table
 
 
-def get_running_speed_ophys_time(running_speed, timestamps_ophys):
+def get_running_speed_ophys_time(running_speed, ophys_timestamps):
     """
     running_speed dataframe must have column 'ophys_times'
     """
     if 'ophys_time' not in running_speed.keys():
         logger.info('ophys_times not in running_speed dataframe')
-    running_speed_ophys_time = np.empty(timestamps_ophys.shape)
-    for i, ophys_time in enumerate(timestamps_ophys):
+    running_speed_ophys_time = np.empty(ophys_timestamps.shape)
+    for i, ophys_time in enumerate(ophys_timestamps):
         run_df = running_speed[running_speed.ophys_time == ophys_time]
         if len(run_df) > 0:
             run_speed = run_df.running_speed.mean()
@@ -759,11 +759,11 @@ def get_running_speed_ophys_time(running_speed, timestamps_ophys):
     return running_speed_ophys_time
 
 
-def get_binary_mask_for_behavior_events(behavior_df, timestamps_ophys):
+def get_binary_mask_for_behavior_events(behavior_df, ophys_timestamps):
     """
     behavior_df must have column 'ophys_times' from add_ophys_times_to_behavior_df
     """
-    binary_mask = [1 if time in behavior_df.ophys_time.values else 0 for time in timestamps_ophys]
+    binary_mask = [1 if time in behavior_df.ophys_time.values else 0 for time in ophys_timestamps]
     binary_mask = np.asarray(binary_mask)
     return binary_mask
 
@@ -779,12 +779,12 @@ def get_image_for_ophys_time(ophys_timestamp, stimulus_table):
         return None
 
 
-def get_stimulus_df_for_ophys_times(stimulus_table, timestamps_ophys):
-    timestamps_df = pd.DataFrame(timestamps_ophys, columns=['ophys_timestamp'])
+def get_stimulus_df_for_ophys_times(stimulus_table, ophys_timestamps):
+    timestamps_df = pd.DataFrame(ophys_timestamps, columns=['ophys_timestamp'])
     timestamps_df['image'] = timestamps_df['ophys_timestamp'].map(lambda x: get_image_for_ophys_time(x, stimulus_table))
     stimulus_df = pd.get_dummies(timestamps_df, columns=['image'])
     stimulus_df.insert(loc=1, column='image', value=timestamps_df['image'])
-    stimulus_df.insert(loc=0, column='ophys_frame', value=np.arange(0, len(timestamps_ophys), 1))
+    stimulus_df.insert(loc=0, column='ophys_frame', value=np.arange(0, len(ophys_timestamps), 1))
     return stimulus_df
 
 

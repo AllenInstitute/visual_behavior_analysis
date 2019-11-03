@@ -102,17 +102,17 @@ class VisualBehaviorOphysDataset(object):
 
     timestamps = LazyLoadable('_timestamps', get_timestamps)
 
-    def get_timestamps_stimulus(self):
-        self._timestamps_stimulus = self.timestamps['stimulus_frames']['timestamps']
-        return self._timestamps_stimulus
+    def get_stimulus_timestamps(self):
+        self._stimulus_timestamps = self.timestamps['stimulus_frames']['timestamps']
+        return self._stimulus_timestamps
 
-    timestamps_stimulus = LazyLoadable('_timestamps_stimulus', get_timestamps_stimulus)
+    stimulus_timestamps = LazyLoadable('_stimulus_timestamps', get_stimulus_timestamps)
 
-    def get_timestamps_ophys(self):
-        self._timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
-        return self._timestamps_ophys
+    def get_ophys_timestamps(self):
+        self._ophys_timestamps = self.timestamps['ophys_frames']['timestamps']
+        return self._ophys_timestamps
 
-    timestamps_ophys = LazyLoadable('_timestamps_ophys', get_timestamps_ophys)
+    ophys_timestamps = LazyLoadable('_ophys_timestamps', get_ophys_timestamps)
 
     def get_stimulus_table(self):
         self._stimulus_table = pd.read_hdf(
@@ -231,11 +231,11 @@ class VisualBehaviorOphysDataset(object):
                 f = np.load(os.path.join(events_folder, events_file[0]))
                 events = np.asarray(f['ev'])
                 f.close()
-                if events.shape[1] > self.timestamps_ophys.shape[0]:
-                    difference = self.timestamps_ophys.shape[0] - events.shape[1]
+                if events.shape[1] > self.ophys_timestamps.shape[0]:
+                    difference = self.ophys_timestamps.shape[0] - events.shape[1]
                     logger.info('length of ophys timestamps <  length of events by', str(difference),
                                 'frames , truncating events')
-                    events = events[:, :self.timestamps_ophys.shape[0]]
+                    events = events[:, :self.ophys_timestamps.shape[0]]
             else:
                 logger.info('no events for this experiment')
                 events = None
@@ -374,8 +374,8 @@ class VisualBehaviorOphysDataset(object):
         obj.get_analysis_dir()
         obj.get_metadata()
         obj.get_timestamps()
-        obj.get_timestamps_ophys()
-        obj.get_timestamps_stimulus()
+        obj.get_ophys_timestamps()
+        obj.get_stimulus_timestamps()
         obj.get_stimulus_table()
         obj.get_stimulus_template()
         obj.get_stimulus_metadata()

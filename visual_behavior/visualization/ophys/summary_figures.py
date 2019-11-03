@@ -648,7 +648,7 @@ def plot_behavior(dataset, cache_dir):
     flashes = ut.annotate_flashes_with_reward_rate(dataset)
     figsize = (15,4)
     fig, ax = plt.subplots(figsize=figsize)
-    ax.plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values)
+    ax.plot(dataset.stimulus_timestamps, dataset.running_speed.running_speed.values)
     ax.set_ylabel('running speed(cm/s)')
     ax2 = ax.twinx()
     ax2.plot(flashes.start_time.values, flashes.reward_rate.values, color='red')
@@ -676,7 +676,7 @@ def plot_behavior_annotated(dataset, xmin=1800, duration=20, plot_reward_rate=Fa
     figsize = (15,4)
     fig, ax = plt.subplots(figsize=figsize)
     ax = add_stim_color_span(dataset, ax=ax, xlim=xlim)
-    ax.plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values, label='run speed', linewidth=2)
+    ax.plot(dataset.stimulus_timestamps, dataset.running_speed.running_speed.values, label='run speed', linewidth=2)
     ax.set_ylabel('running speed(cm/s)')
     if plot_reward_rate:
         ax2 = ax.twinx()
@@ -725,10 +725,10 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
             figsize = (15, 4)
             fig, ax = plt.subplots(figsize=figsize)
         if use_events:
-            ax = plot_trace(dataset.timestamps_ophys, dataset.events[cell_index, :], ax,
+            ax = plot_trace(dataset.ophys_timestamps, dataset.events[cell_index, :], ax,
                             title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
         else:
-            ax = plot_trace(dataset.timestamps_ophys, dataset.dff_traces[cell_index, :], ax,
+            ax = plot_trace(dataset.ophys_timestamps, dataset.dff_traces[cell_index, :], ax,
                             title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
         ax = add_stim_color_span(dataset, ax, xlim=[xmin, xmax])
         ax = plot_behavior_events(dataset, ax)
@@ -769,7 +769,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     ymins = []
     ymaxs = []
     for i, cell_index in enumerate(cell_indices):
-        ax[i] = plot_trace(dataset.timestamps_ophys, traces[cell_index, :], ax=ax[i],
+        ax[i] = plot_trace(dataset.ophys_timestamps, traces[cell_index, :], ax=ax[i],
                            title='', ylabel=str(cell_index), color=[.5, .5, .5])
         ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
         ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
@@ -807,7 +807,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
 
     if include_running:
         i += 1
-        ax[i].plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values)
+        ax[i].plot(dataset.stimulus_timestamps, dataset.running_speed.running_speed.values)
         ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
         ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
         #         ax[i].set_ylabel('run speed\n(cm/s)')
@@ -1328,7 +1328,7 @@ def plot_reward_triggered_average(dataset, cell, window=[-2, 3], variability=Tru
     reward_times = dataset.rewards.time.values
     trace = dataset.dff_traces[cell]
     cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell)
-    responses = ut.get_responses_around_event_times(trace, dataset.timestamps_ophys, reward_times,
+    responses = ut.get_responses_around_event_times(trace, dataset.ophys_timestamps, reward_times,
                                                     frame_rate=31., window=window)
 
     if ax is None:
@@ -1363,7 +1363,7 @@ def plot_lick_triggered_average(dataset, cell, window=[-2, 3], variability=True,
     lick_times = ut.get_unrewarded_first_lick_times(dataset)
     trace = dataset.dff_traces[cell]
     cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell)
-    responses = ut.get_responses_around_event_times(trace, dataset.timestamps_ophys, lick_times,
+    responses = ut.get_responses_around_event_times(trace, dataset.ophys_timestamps, lick_times,
                                                     frame_rate=31., window=window)
     responses = responses[:-1]  # last one can be trucated if at end of session
 
@@ -1402,7 +1402,7 @@ def plot_lick_triggered_running_average(dataset, cell, window=[-2,3], variabilit
     lick_times = ut.get_unrewarded_first_lick_times(dataset)
     trace = dataset.running_speed.running_speed.values
     #     cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell)
-    responses = ut.get_responses_around_event_times(trace, dataset.timestamps_stimulus, lick_times,
+    responses = ut.get_responses_around_event_times(trace, dataset.stimulus_timestamps, lick_times,
                                                  frame_rate=60, window=window)
     responses = responses[1:] #first one is zero for some reason
     responses = responses[:-1] #last one is truncated
@@ -1506,10 +1506,10 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .7), yspan=(.16, .35))
     if use_events:
-        ax = plot_trace(dataset.timestamps_ophys, dataset.events[cell_index, :], ax,
+        ax = plot_trace(dataset.ophys_timestamps, dataset.events[cell_index, :], ax,
                         title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
     else:
-        ax = plot_trace(dataset.timestamps_ophys, dataset.dff_traces[cell_index, :], ax,
+        ax = plot_trace(dataset.ophys_timestamps, dataset.dff_traces[cell_index, :], ax,
                         title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
     ax = plot_behavior_events(dataset, ax)
     ax.set_title('')

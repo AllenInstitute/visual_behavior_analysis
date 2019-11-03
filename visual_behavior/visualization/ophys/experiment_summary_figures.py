@@ -156,7 +156,7 @@ def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_event
 
     interval_seconds = 5 * 60
     ophys_frame_rate = int(dataset.metadata.ophys_frame_rate.values[0])
-    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.timestamps_ophys,
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.ophys_timestamps,
                                                                                ophys_frame_rate)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
@@ -190,7 +190,7 @@ def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
 
     interval_seconds = 5 * 60
     ophys_frame_rate = int(dataset.metadata.ophys_frame_rate.values[0])
-    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.timestamps_ophys,
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.ophys_timestamps,
                                                                                ophys_frame_rate)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
@@ -300,18 +300,18 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
         save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_trace_heatmap_' + condition + suffix)
 
 
-def get_upper_limit_and_intervals(traces, timestamps_ophys, ophys_frame_rate):
+def get_upper_limit_and_intervals(traces, ophys_timestamps, ophys_frame_rate):
     upper = np.round(traces.shape[1], -3) + 1000
     interval = 5 * 60  # use 5 min interval
     frame_interval = np.arange(0, traces.shape[1], interval * ophys_frame_rate)
-    time_interval = np.uint64(np.round(np.arange(timestamps_ophys[0], timestamps_ophys[-1], interval), 1))
+    time_interval = np.uint64(np.round(np.arange(ophys_timestamps[0], ophys_timestamps[-1], interval), 1))
     return upper, time_interval, frame_interval
 
 
-def plot_run_speed(running_speed, timestamps_stimulus, ax=None, label=False):
+def plot_run_speed(running_speed, stimulus_timestamps, ax=None, label=False):
     if ax is None:
         fig, ax = plt.subplots(figsize=(15, 5))
-    ax.plot(timestamps_stimulus, running_speed, color='gray')
+    ax.plot(stimulus_timestamps, running_speed, color='gray')
     if label:
         ax.set_ylabel('run speed (cm/s)')
         ax.set_xlabel('time(s)')
@@ -555,7 +555,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.axis('off')
 
     upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces,
-                                                                               analysis.dataset.timestamps_ophys,
+                                                                               analysis.dataset.ophys_timestamps,
                                                                                analysis.ophys_frame_rate)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.9), yspan=(0, .3))
@@ -566,7 +566,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.set_xlabel('time (seconds)')
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.8), yspan=(.26, .41))
-    ax = plot_run_speed(analysis.dataset.running_speed.running_speed, analysis.dataset.timestamps_stimulus, ax=ax,
+    ax = plot_run_speed(analysis.dataset.running_speed.running_speed, analysis.dataset.stimulus_timestamps, ax=ax,
                         label=True)
     ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
     ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))

@@ -231,20 +231,20 @@ def test_get_timestamps(fn, ophys_dataset, ophys_timestamps):
     
     
 @pytest.mark.parametrize('fn', [
-    lambda ds: ds.timestamps_stimulus,
-    lambda ds: ds.get_timestamps_stimulus()
+    lambda ds: ds.stimulus_timestamps,
+    lambda ds: ds.get_stimulus_timestamps()
 ])
-def test_get_timestamps_stimulus(fn, ophys_dataset, ophys_timestamps):
+def test_get_stimulus_timestamps(fn, ophys_dataset, ophys_timestamps):
     
     obtained = fn(ophys_dataset)
     assert np.allclose(obtained, ophys_timestamps['stimulus_frames']['timestamps'])
     
     
 @pytest.mark.parametrize('fn', [
-    lambda ds: ds.timestamps_ophys,
-    lambda ds: ds.get_timestamps_ophys()
+    lambda ds: ds.ophys_timestamps,
+    lambda ds: ds.get_ophys_timestamps()
 ])
-def test_get_timestamps_ophys(fn, ophys_dataset, ophys_timestamps):
+def test_get_ophys_timestamps(fn, ophys_dataset, ophys_timestamps):
     
     obtained = fn(ophys_dataset)
     assert np.allclose(obtained, ophys_timestamps['ophys_frames']['timestamps'])
@@ -265,7 +265,7 @@ def test_get_stimulus_table(fn, ophys_dataset, ophys_stimulus_table):
     lambda ds: ds.stimulus_template,
     lambda ds: ds.get_stimulus_template()
 ])
-def test_get_timestamps_ophys(fn, ophys_dataset, stimulus_template):
+def test_get_ophys_timestamps(fn, ophys_dataset, stimulus_template):
     
     obtained = fn(ophys_dataset)
     assert np.allclose(obtained, stimulus_template)

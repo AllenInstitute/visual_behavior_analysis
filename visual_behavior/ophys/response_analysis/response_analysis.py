@@ -79,7 +79,7 @@ class ResponseAnalysis(object):
                 change_time = self.dataset.trials[self.dataset.trials.trial == trial].change_time.values[0]
                 # get dF/F trace & metrics
                 trace, timestamps = ut.get_trace_around_timepoint(change_time, cell_trace,
-                                                                  self.dataset.timestamps_ophys,
+                                                                  self.dataset.ophys_timestamps,
                                                                   self.trial_window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, self.response_window, self.ophys_frame_rate,
                                                       self.use_events)
@@ -92,7 +92,7 @@ class ResponseAnalysis(object):
                 # this is redundant because its the same for every cell. do we want to keep this?
                 running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(change_time,
                                                                                               running_speed,
-                                                                                              self.dataset.timestamps_stimulus,
+                                                                                              self.dataset.stimulus_timestamps,
                                                                                               self.trial_window,
                                                                                               self.stimulus_frame_rate)
                 mean_running_speed = ut.get_mean_in_window(running_speed_trace, self.response_window,
@@ -175,7 +175,7 @@ class ResponseAnalysis(object):
                 image_category = flash_data.image_category.values[0]
                 flash_window = self.flash_window
                 trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
-                                                                  self.dataset.timestamps_ophys,
+                                                                  self.dataset.ophys_timestamps,
                                                                   flash_window, self.ophys_frame_rate)
                 response_window = [np.abs(flash_window[0]), np.abs(flash_window[
                     0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
@@ -189,7 +189,7 @@ class ResponseAnalysis(object):
                 n_events = ut.get_n_nonzero_in_window(trace, response_window, self.ophys_frame_rate)
                 running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(flash_time,
                                                                                               running_speed,
-                                                                                              self.dataset.timestamps_stimulus,
+                                                                                              self.dataset.stimulus_timestamps,
                                                                                               flash_window,
                                                                                               self.stimulus_frame_rate)
                 mean_running_speed = ut.get_mean_in_window(running_speed_trace, response_window,
@@ -286,7 +286,7 @@ class ResponseAnalysis(object):
                 image_category = flash_data.image_category.values[0]
                 flash_window = self.omitted_flash_window
                 trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
-                                                                  self.dataset.timestamps_ophys,
+                                                                  self.dataset.ophys_timestamps,
                                                                   flash_window, self.ophys_frame_rate)
                 response_window = [np.abs(flash_window[0]), np.abs(flash_window[
                     0]) + self.omission_response_window_duration]  # time, in seconds, around flash time to take the mean response

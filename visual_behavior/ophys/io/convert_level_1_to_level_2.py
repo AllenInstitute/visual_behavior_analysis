@@ -258,19 +258,19 @@ def get_timestamps(lims_data, analysis_dir):
     return timestamps
 
 
-def get_timestamps_stimulus(timestamps):
-    timestamps_stimulus = timestamps['stimulus_frames']['timestamps']
-    return timestamps_stimulus
+def get_stimulus_timestamps(timestamps):
+    stimulus_timestamps = timestamps['stimulus_frames']['timestamps']
+    return stimulus_timestamps
 
 
-def get_timestamps_ophys(timestamps):
-    timestamps_ophys = timestamps['ophys_frames']['timestamps']
-    return timestamps_ophys
+def get_ophys_timestamps(timestamps):
+    ophys_timestamps = timestamps['ophys_frames']['timestamps']
+    return ophys_timestamps
 
 
 def get_metadata(lims_data, timestamps):
-    timestamps_stimulus = get_timestamps_stimulus(timestamps)
-    timestamps_ophys = get_timestamps_ophys(timestamps)
+    stimulus_timestamps = get_stimulus_timestamps(timestamps)
+    ophys_timestamps = get_ophys_timestamps(timestamps)
     metadata = OrderedDict()
     metadata['ophys_experiment_id'] = lims_data['experiment_id'].values[0]
     if lims_data.parent_session_id.values[0]:
@@ -307,8 +307,8 @@ def get_metadata(lims_data, timestamps):
     metadata['session_id'] = int(lims_data.session_id.values[0])
     metadata['project_id'] = lims_data.project_id.values[0]
     metadata['rig'] = lims_data.rig.values[0]
-    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 0)
-    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 0)
+    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(ophys_timestamps)), 0)
+    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(stimulus_timestamps)), 0)
     # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
     metadata = pd.DataFrame(metadata, index=[metadata['ophys_experiment_id']])
     return metadata
@@ -352,11 +352,11 @@ def get_pkl(lims_data):
     return pkl
 
 
-def get_core_data(pkl, timestamps_stimulus):
+def get_core_data(pkl, stimulus_timestamps):
     try:
-        core_data = foraging.data_to_change_detection_core(pkl, time=timestamps_stimulus)
+        core_data = foraging.data_to_change_detection_core(pkl, time=stimulus_timestamps)
     except KeyError:
-        core_data = foraging2.data_to_change_detection_core(pkl, time=timestamps_stimulus)
+        core_data = foraging2.data_to_change_detection_core(pkl, time=stimulus_timestamps)
     return core_data
 
 
@@ -381,7 +381,7 @@ def get_task_parameters(core_data):
     return task_parameters
 
 
-def save_core_data_components(core_data, lims_data, timestamps_stimulus):
+def save_core_data_components(core_data, lims_data, stimulus_timestamps):
     rewards = core_data['rewards']
     save_dataframe_as_h5(rewards, 'rewards', get_analysis_dir(lims_data))
 
@@ -421,10 +421,10 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
     # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
-    start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
+    start_time = [stimulus_timestamps[start_frame] for start_frame in stimulus_table.start_frame.values]
     stimulus_table.start_time = start_time
-    end_time = [timestamps_stimulus[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
-    # end_time = [timestamps_stimulus[int(end_frame)] if np.isnan(end_frame) is False else np.nan()
+    end_time = [stimulus_timestamps[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
+    # end_time = [stimulus_timestamps[int(end_frame)] if np.isnan(end_frame) is False else np.nan()
     #             for end_frame in stimulus_table.end_frame.values]
     stimulus_table.insert(loc=4, column='end_time', value=end_time)
     if 'level_0' in stimulus_table.keys():
@@ -802,9 +802,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
     save_metadata(metadata, lims_data)
 
     pkl = get_pkl(lims_data)
-    timestamps_stimulus = get_timestamps_stimulus(timestamps)
-    core_data = get_core_data(pkl, timestamps_stimulus)
-    save_core_data_components(core_data, lims_data, timestamps_stimulus)
+    stimulus_timestamps = get_stimulus_timestamps(timestamps)
+    core_data = get_core_data(pkl, stimulus_timestamps)
+    save_core_data_components(core_data, lims_data, stimulus_timestamps)
 
     trials = get_trials(core_data)
     save_trials(trials, lims_data)
