@@ -5,6 +5,7 @@ Created on Sunday July 15 2018
 """
 
 from visual_behavior.ophys.response_analysis import utilities as ut
+import visual_behavior.ophys.response_analysis.response_processing as rp
 
 import os
 import numpy as np
@@ -56,7 +57,10 @@ class ResponseAnalysis(object):
 
         self.get_trial_response_df()
         self.get_flash_response_df()
-        self.get_omitted_flash_response_df()
+        if 'omitted' in self.dataset.stimulus_presentations.image_name.unique():
+            self.get_omitted_flash_response_df()
+        else:
+            print('no omitted flashes in this experiment')
 
     def get_trial_response_df_path(self):
         if self.use_events:
@@ -129,19 +133,31 @@ class ResponseAnalysis(object):
             file_path = self.get_trial_response_df_path()
             if os.path.exists(file_path):
                 os.remove(file_path)
-            self.trial_response_df = self.generate_trial_response_df()
+            # self.trial_response_df = self.generate_trial_response_df()
+            self.trial_response_df = rp.trial_response_df(rp.trial_response_xr(self.dataset))
             self.save_trial_response_df(self.trial_response_df)
         else:
             if os.path.exists(self.get_trial_response_df_path()):
                 print('loading trial response dataframe')
                 self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df')
-                tdf = self.trial_response_df
-                tdf.cell = [int(cell) for cell in tdf.cell.values]
-                tdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in tdf.cell_specimen_id.values]
-                self.trial_response_df = tdf
+                # tdf = self.trial_response_df
+                # tdf.cell = [int(cell) for cell in tdf.cell.values]
+                # tdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in tdf.cell_specimen_id.values]
+                # self.trial_response_df = tdf
             else:
-                self.trial_response_df = self.generate_trial_response_df()
+                # self.trial_response_df = self.generate_trial_response_df()
+                self.trial_response_df = rp.trial_response_df(rp.trial_response_xr(self.dataset))
                 self.save_trial_response_df(self.trial_response_df)
+        trials = self.dataset.trials
+        trials = trials.rename(columns={'response': 'behavioral_response', 'response_type': 'behavioral_response_type',
+                               'response_time': 'behavioral_response_time', 'response_latency': 'behavioral_response_latency'})
+        self.trial_response_df = self.trial_response_df.merge(trials, right_on='trials_id', left_on='trials_id')
+        self.trial_response_df.rename(columns={'dff_trace': 'trace', 'dff_trace_timestamps': 'trace_timestamps'},
+                                      inplace=True)
+        self.trial_response_df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id)
+                                                  for cell_specimen_id in
+                                                  self.trial_response_df.cell_specimen_id.values]
+        self.trial_response_df = ut.annotate_trial_response_df_with_pref_stim(self.trial_response_df)
         return self.trial_response_df
 
     def get_flash_response_df_path(self):
@@ -239,20 +255,28 @@ class ResponseAnalysis(object):
             file_path = self.get_flash_response_df_path()
             if os.path.exists(file_path):
                 os.remove(file_path)
-            self.flash_response_df = self.generate_flash_response_df()
+            # self.flash_response_df = self.generate_flash_response_df()
+            self.flash_response_df = rp.stimulus_response_df(rp.stimulus_response_xr(self.dataset))
             self.save_flash_response_df(self.flash_response_df)
         else:
             if os.path.exists(self.get_flash_response_df_path()):
                 print('loading flash response dataframe')
                 self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df')
-                fdf = self.flash_response_df
-                fdf.cell = [int(cell) for cell in fdf.cell.values]
-                fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
-                fdf.flash_number = [int(flash_number) for flash_number in fdf.flash_number.values]
-                self.flash_response_df = fdf
+                # fdf = self.flash_response_df
+                # fdf.cell = [int(cell) for cell in fdf.cell.values]
+                # fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
+                # fdf.flash_number = [int(flash_number) for flash_number in fdf.flash_number.values]
+                # self.flash_response_df = fdf
             else:
-                self.flash_response_df = self.generate_flash_response_df()
+                # self.flash_response_df = self.generate_flash_response_df()
+                self.flash_response_df = rp.stimulus_response_df(rp.stimulus_response_xr(self.dataset))
                 self.save_flash_response_df(self.flash_response_df)
+        self.flash_response_df = self.flash_response_df.merge(self.dataset.extended_stimulus_presentations.reset_index(),
+                                     right_on='stimulus_presentations_id',
+                                     left_on='stimulus_presentations_id')
+        self.flash_response_df['repeat'] = self.flash_response_df.index_within_block.values
+        self.flash_response_df.rename(columns={'dff_trace': 'trace', 'dff_trace_timestamps': 'trace_timestamps'}, inplace=True)
+        self.flash_response_df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id) for cell_specimen_id in self.flash_response_df.cell_specimen_id.values]
         return self.flash_response_df
 
     def get_omitted_flash_response_df_path(self):
@@ -334,19 +358,29 @@ class ResponseAnalysis(object):
             file_path = self.get_omitted_flash_response_df_path()
             if os.path.exists(file_path):
                 os.remove(file_path)
-            self.omitted_flash_response_df = self.generate_omitted_flash_response_df()
+            # self.omitted_flash_response_df = self.generate_omitted_flash_response_df()
+            self.omitted_flash_response_df = rp.omission_response_df(rp.omission_response_xr(self.dataset))
             self.save_omitted_flash_response_df(self.omitted_flash_response_df)
         else:
             if os.path.exists(self.get_omitted_flash_response_df_path()):
                 print('loading omitted flash response dataframe')
                 self.omitted_flash_response_df = pd.read_hdf(self.get_omitted_flash_response_df_path(), key='df')
-                fdf = self.omitted_flash_response_df
-                fdf.cell = [int(cell) for cell in fdf.cell.values]
-                fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
-                self.omitted_flash_response_df = fdf
+                # fdf = self.omitted_flash_response_df
+                # fdf.cell = [int(cell) for cell in fdf.cell.values]
+                # fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
+                # self.omitted_flash_response_df = fdf
             else:
-                self.omitted_flash_response_df = self.generate_omitted_flash_response_df()
+                # self.omitted_flash_response_df = self.generate_omitted_flash_response_df()
+                self.omitted_flash_response_df = rp.omission_response_df(rp.omission_response_xr(self.dataset))
                 self.save_omitted_flash_response_df(self.omitted_flash_response_df)
+        self.omitted_flash_response_df = self.omitted_flash_response_df.merge(
+            self.dataset.extended_stimulus_presentations[self.dataset.extended_stimulus_presentations.omitted == True],
+            right_on='stimulus_presentations_id', left_on='stimulus_presentations_id')
+        self.omitted_flash_response_df.rename(columns={'dff_trace': 'trace', 'dff_trace_timestamps': 'trace_timestamps'},
+                                      inplace=True)
+        self.omitted_flash_response_df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id)
+                                                  for cell_specimen_id in self.omitted_flash_response_df.cell_specimen_id.values]
+
         return self.omitted_flash_response_df
 
 

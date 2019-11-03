@@ -61,7 +61,7 @@ def get_default_omission_response_params():
         Returns
             (dict) dict of response window params for computing omission_response_xr
         '''
-    stimulus_response_params = {
+    omission_response_params = {
         "window_around_timepoint_seconds": [-3, 3],
         "response_window_duration_seconds": 0.5,
         "baseline_window_duration_seconds": 0.25
@@ -141,7 +141,7 @@ def trial_response_xr(session, response_analysis_params=None):
         coords={
             "eventlocked_timestamps": trace_timebase,
             "trials_id": change_trials.index.values,
-            "cell_specimen_id": session.cell_specimen_table.index.values
+            "cell_specimen_id": session.cell_specimen_ids
         }
     )
 
@@ -157,11 +157,23 @@ def trial_response_xr(session, response_analysis_params=None):
     ].mean(['eventlocked_timestamps'])
 
     dff_traces_arr = np.stack(session.dff_traces['dff'].values)
-    p_values = get_p_value_from_shuffled_spontaneous(mean_response,
-                                                     session.stimulus_presentations,
-                                                     session.ophys_timestamps,
-                                                     dff_traces_arr,
-                                                     response_analysis_params['response_window_duration_seconds'])
+
+    # p_values = get_p_value_from_shuffled_spontaneous(mean_response,
+    #                                                  session.stimulus_presentations,
+    #                                                  session.ophys_timestamps,
+    #                                                  dff_traces_arr,
+    #                                                  response_analysis_params['response_window_duration_seconds'])
+    if True not in session.stimulus_presentations.omitted.unique():
+        nan_values = np.zeros((len(mean_response), len(session.cell_specimen_ids)))
+        nan_values[:] = np.nan
+        p_values = xr.DataArray(data=nan_values,
+                     coords=mean_response.coords)
+    else:
+        p_values = get_p_value_from_shuffled_omissions(mean_response,
+                                                   session.stimulus_presentations,
+                                                   session.ophys_timestamps,
+                                                   dff_traces_arr,
+                                                   response_analysis_params['response_window_duration_seconds'])
     result = xr.Dataset({
         'eventlocked_traces': eventlocked_traces_xr,
         'mean_response': mean_response,
@@ -223,7 +235,13 @@ def stimulus_response_xr(session, response_analysis_params=None):
         {'eventlocked_timestamps': slice(*baseline_range)}
     ].mean(['eventlocked_timestamps'])
 
-    p_values = get_p_value_from_shuffled_spontaneous(mean_response,
+    if True not in session.stimulus_presentations.omitted.unique():
+        nan_values = np.zeros((len(mean_response), len(session.cell_specimen_ids)))
+        nan_values[:] = np.nan
+        p_values = xr.DataArray(data=nan_values,
+                     coords=mean_response.coords)
+    else:
+        p_values = get_p_value_from_shuffled_omissions(mean_response,
                                                      session.stimulus_presentations,
                                                      session.ophys_timestamps,
                                                      dff_traces_arr,
@@ -239,8 +257,11 @@ def stimulus_response_xr(session, response_analysis_params=None):
     mean_response_per_image = result[['mean_response', 'image_index']].groupby('image_index').mean(
         dim='stimulus_presentations_id')
     image_indices = mean_response_per_image.coords['image_index']
-    pref_image_index = mean_response_per_image.drop(8, dim='image_index')['mean_response'].argmax(
-        dim='image_index')  # drop omitted
+    if 8 in session.stimulus_presentations.image_index.unique():
+        pref_image_index = mean_response_per_image.drop(8, dim='image_index')['mean_response'].argmax(
+            dim='image_index')  # drop omitted
+    else:
+        pref_image_index = mean_response_per_image['mean_response'].argmax(dim='image_index')
     result['pref_image_index'] = pref_image_index
     result['pref_image_bool'] = result['image_index'] == result['pref_image_index']
 
@@ -251,14 +272,14 @@ def omission_response_xr(session, response_analysis_params=None):
     if response_analysis_params is None:
         response_analysis_params = get_default_omission_response_params()
 
-    # get rid of cells that are invalid and have NaNs in their traces
-    if not session.filter_invalid_rois:
-        nan_cell_ids = get_nan_trace_cell_specimen_ids(session.dff_traces)
-        dff_traces = session.dff_traces.drop(labels=nan_cell_ids)
-        cell_specimen_table = session.cell_specimen_table.drop(labels=nan_cell_ids)
-    else:
-        dff_traces = session.dff_traces
-        cell_specimen_table = session.cell_specimen_table
+    # # get rid of cells that are invalid and have NaNs in their traces
+    # if not session.filter_invalid_rois:
+    #     nan_cell_ids = get_nan_trace_cell_specimen_ids(session.dff_traces)
+    #     dff_traces = session.dff_traces.drop(labels=nan_cell_ids)
+    #     cell_specimen_table = session.cell_specimen_table.drop(labels=nan_cell_ids)
+    # else:
+    dff_traces = session.dff_traces
+    # cell_specimen_table = session.cell_specimen_table
 
     dff_traces_arr = np.stack(dff_traces['dff'].values)
     # get omissions only
@@ -280,14 +301,16 @@ def omission_response_xr(session, response_analysis_params=None):
         coords={
             "eventlocked_timestamps": trace_timebase,
             "stimulus_presentations_id": omission_presentations.index.values,
-            "cell_specimen_id": cell_specimen_table.index.values
+            "cell_specimen_id": session.cell_specimen_ids
         }
     )
 
-    response_range = [0, response_analysis_params['response_window_duration_seconds']]
+    # use 0.25 here to start instead of 0 to make mean response window go from 250ms-750ms after omission
+    # average over 500ms before the next image flash
+    response_range = [0.25, response_analysis_params['response_window_duration_seconds']]
     baseline_range = [-1 * response_analysis_params['baseline_window_duration_seconds']]
 
-    mean_response = eventlocked_traces_xr.loc[
+    mean_responses = eventlocked_traces_xr.loc[
         {'eventlocked_timestamps': slice(*response_range)}
     ].mean(['eventlocked_timestamps'])
 
@@ -295,14 +318,16 @@ def omission_response_xr(session, response_analysis_params=None):
         {'eventlocked_timestamps': slice(*baseline_range)}
     ].mean(['eventlocked_timestamps'])
 
-    p_values = get_p_value_from_shuffled_spontaneous(mean_response,
-                                                     omission_presentations,
+    # use flashes instead of spontaneous for pilot data
+    p_values = get_p_value_from_shuffled_flashes(mean_responses,
+                                                     session.stimulus_presentations,
                                                      session.ophys_timestamps,
                                                      dff_traces_arr,
                                                      response_analysis_params['response_window_duration_seconds'])
+
     result = xr.Dataset({
         'eventlocked_traces': eventlocked_traces_xr,
-        'mean_response': mean_response,
+        'mean_response': mean_responses,
         'mean_baseline': mean_baseline,
         'p_value': p_values
     })
@@ -494,6 +519,114 @@ def get_p_value_from_shuffled_spontaneous(mean_responses,
     result = xr.DataArray(data=proportion_spont_larger_than_sample,
                           coords=mean_responses.coords)
     return result
+
+def get_p_value_from_shuffled_omissions(mean_responses,
+                                          stimulus_presentations_df,
+                                          ophys_timestamps,
+                                          dff_traces_arr,
+                                          response_window_duration,
+                                          ophys_frame_rate=None,
+                                          number_of_shuffles=10000):
+    '''
+    Args:
+        mean_responses (xarray.DataArray): Mean response values, shape (nConditions, nCells)
+        stimulus_presentations_df (pandas.DataFrame): Table of stimulus presentations, including start_time and stop_time
+        ophys_timestamps (np.array): Timestamps of each ophys frame
+        dff_traces_arr (np.array): Dff values, shape (nSamples, nCells)
+        response_window_duration (int): Number of frames averaged to produce mean response values
+        number_of_shuffles (int): Number of shuffles of spontaneous activity used to produce the p-value
+    Returns:
+        p_values (xarray.DataArray): p-value for each response mean, shape (nConditions, nCells)
+    '''
+
+    import visual_behavior.ophys.response_analysis.utilities as ut
+    # spontaneous_frames = get_spontaneous_frames(stimulus_presentations_df, ophys_timestamps)
+    # shuffled_spont_inds = np.random.choice(spontaneous_frames, number_of_shuffles)
+
+    stim_table = stimulus_presentations_df.copy()
+    omitted_flashes = stim_table[stim_table.omitted == True]
+    omitted_flashes['start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
+                                      omitted_flashes.start_time.values]
+    omitted_start_frames = omitted_flashes.start_frame.values
+    omitted_start_frames = omitted_start_frames[:-1]  # exclude last omission for cases where it occured at the end of the recording
+    # shuffle omitted flash frames
+    shuffled_omitted_start_frames = np.random.choice(omitted_start_frames, number_of_shuffles)
+
+    if ophys_frame_rate is None:
+        ophys_frame_rate = 1 / np.diff(ophys_timestamps).mean()
+
+    trace_len = np.round(response_window_duration * ophys_frame_rate).astype(int)
+    start_ind_offset = 0
+    end_ind_offset = trace_len
+    omission_traces = eventlocked_traces(dff_traces_arr, shuffled_omitted_start_frames, start_ind_offset, end_ind_offset)
+    omission_mean = omission_traces.mean(axis=0)  # Returns (nShuffles, nCells)
+
+    # Goal is to figure out how each response compares to the shuffled distribution, which is just
+    # a searchsorted call if we first sort the shuffled.
+    omission_mean_sorted = np.sort(omission_mean, axis=0)
+    response_insertion_ind = np.empty(mean_responses.data.shape)
+    for ind_cell in range(mean_responses.data.shape[1]):
+        response_insertion_ind[:, ind_cell] = np.searchsorted(omission_mean_sorted[:, ind_cell],
+                                                              mean_responses.data[:, ind_cell])
+
+    proportion_omission_larger_than_sample = 1 - (response_insertion_ind / number_of_shuffles)
+    result = xr.DataArray(data=proportion_omission_larger_than_sample, coords=mean_responses.coords)
+    return result
+
+
+def get_p_value_from_shuffled_flashes(mean_responses,
+                                          stimulus_presentations_df,
+                                          ophys_timestamps,
+                                          dff_traces_arr,
+                                          response_window_duration,
+                                          ophys_frame_rate=None,
+                                          number_of_shuffles=10000):
+    '''
+    Args:
+        mean_responses (xarray.DataArray): Mean response values for omissions, shape (nConditions, nCells)
+        stimulus_presentations_df (pandas.DataFrame): Table of stimulus presentations, including start_time and stop_time
+        ophys_timestamps (np.array): Timestamps of each ophys frame
+        dff_traces_arr (np.array): Dff values, shape (nSamples, nCells)
+        response_window_duration (int): Number of frames averaged to produce mean response values
+        number_of_shuffles (int): Number of shuffles of spontaneous activity used to produce the p-value
+    Returns:
+        p_values (xarray.DataArray): p-value for each response mean, shape (nConditions, nCells)
+    '''
+
+    import visual_behavior.ophys.response_analysis.utilities as ut
+    # spontaneous_frames = get_spontaneous_frames(stimulus_presentations_df, ophys_timestamps)
+    # shuffled_spont_inds = np.random.choice(spontaneous_frames, number_of_shuffles)
+
+    stim_table = stimulus_presentations_df.copy()
+    stimulus_flashes = stim_table[stim_table.omitted == False]
+    stimulus_flashes['start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
+                                       stimulus_flashes.start_time.values]
+    stimulus_flash_start_frames = stimulus_flashes.start_frame.values
+    stimulus_flash_start_frames = stimulus_flash_start_frames[:-1]  # exclude last one
+    # shuffle omitted flash frames
+    shuffled_stimulus_flash_start_frames = np.random.choice(stimulus_flash_start_frames, number_of_shuffles)
+
+    if ophys_frame_rate is None:
+        ophys_frame_rate = 1 / np.diff(ophys_timestamps).mean()
+
+    trace_len = np.round(response_window_duration * ophys_frame_rate).astype(int)
+    start_ind_offset = 0
+    end_ind_offset = trace_len
+    flash_traces = eventlocked_traces(dff_traces_arr, shuffled_stimulus_flash_start_frames, start_ind_offset, end_ind_offset)
+    flash_mean = flash_traces.mean(axis=0)  # Returns (nShuffles, nCells)
+
+    # Goal is to figure out how each response compares to the shuffled distribution, which is just
+    # a searchsorted call if we first sort the shuffled.
+    flash_mean_sorted = np.sort(flash_mean, axis=0)
+    response_insertion_ind = np.empty(mean_responses.data.shape)
+    for ind_cell in range(mean_responses.data.shape[1]):
+        response_insertion_ind[:, ind_cell] = np.searchsorted(flash_mean_sorted[:, ind_cell],
+                                                              mean_responses.data[:, ind_cell])
+
+    proportion_flash_larger_than_sample = 1 - (response_insertion_ind / number_of_shuffles)
+    result = xr.DataArray(data=proportion_flash_larger_than_sample, coords=mean_responses.coords)
+    return result
+
 
 
 def get_flash_response_df():

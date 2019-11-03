@@ -141,7 +141,7 @@ def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_event
         label = 'event magnitude'
         suffix = '_events'
     else:
-        traces = dataset.dff_traces
+        traces = dataset.dff_traces_array
         traces = reorder_traces(traces, analysis)
         vmax = np.percentile(traces, 99)
         label = 'dF/F'
@@ -178,7 +178,7 @@ def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
         label = 'event magnitude'
         suffix = '_events'
     else:
-        traces = dataset.dff_traces
+        traces = dataset.dff_traces_array
         vmax = np.percentile(traces, 99)
         label = 'dF/F'
         suffix = ''
@@ -286,7 +286,7 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
                 response_array[x, :] = trace
 
             sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=False)
-            xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1, window=window)
+            xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=2, window=window)
             ax[i].set_xticks(xticks)
             ax[i].set_xticklabels([int(x) for x in xticklabels])
             ax[i].set_yticks(np.arange(0, response_array.shape[0], 10))
@@ -396,14 +396,14 @@ def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=No
     fdf = analysis.flash_response_df.copy()
     fdf.image_block = [int(image_block) for image_block in fdf.image_block.values]
     data = fdf[(fdf.repeat == 1) & (fdf.pref_stim == True)]
-    mean_response = data.groupby(['cell']).apply(ut.get_mean_sem)
+    mean_response = data.groupby(['cell_specimen_id']).apply(ut.get_mean_sem)
     mean_response = mean_response.unstack()
 
     cell_order = np.argsort(mean_response.mean_response.values)
     if ax is None:
         figsize = (15, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data=data, x="image_block", y="mean_response", kind="point", hue='cell', hue_order=cell_order,
+    ax = sns.pointplot(data=data, x="image_block", y="mean_response", kind="point", hue='cell_specimen_id', hue_order=cell_order,
                        palette='Blues', ax=ax)
     # ax.legend(bbox_to_anchor=(1,1))
     ax.legend_.remove()
@@ -428,7 +428,7 @@ def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=N
         figsize = (6, 5)
         fig, ax = plt.subplots(figsize=figsize)
     ax = sns.pointplot(data=data, x="block_set", y="mean_response", kind="point", palette='RdBu', ax=ax,
-                       hue='cell', hue_order=cell_order)
+                       hue='cell_specimen_id', hue_order=cell_order)
     # ax.legend(bbox_to_anchor=(1,1))
     ax.legend_.remove()
     min = np.amin(data.early_late_block_ratio.unique())
@@ -475,7 +475,7 @@ def plot_average_flash_response_example_cells(analysis, save_figures=False, save
     conditions=['cell_specimen_id', 'image_name']
     mdf = ut.get_mean_df(fdf, analysis, conditions=conditions, flashes=True)
 
-    active_cell_indices = ut.get_active_cell_indices(analysis.dataset.dff_traces)
+    active_cell_indices = ut.get_active_cell_indices(analysis.dataset.dff_traces_array)
     random_order = np.arange(0,len(active_cell_indices),1)
     np.random.shuffle(random_order)
     active_cell_indices = active_cell_indices[random_order]
@@ -528,7 +528,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
         traces = analysis.dataset.events.copy()
         suffix = '_events'
     else:
-        traces = analysis.dataset.dff_traces.copy()
+        traces = analysis.dataset.dff_traces_array.copy()
         suffix = ''
 
     interval_seconds = 600
@@ -593,7 +593,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
         pass
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
-    mdf = ut.get_mean_df(analysis.trial_response_df, analysis, conditions=['cell', 'change_image_name'])
+    mdf = ut.get_mean_df(analysis.trial_response_df, analysis, conditions=['cell_specimen_id', 'change_image_name'])
     ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None, use_events=use_events)
 
     fig.tight_layout()

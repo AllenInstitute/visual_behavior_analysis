@@ -123,7 +123,7 @@ class VisualBehaviorOphysDataset(object):
         # )
         self._stimulus_table = self._stimulus_table.drop(
             columns=['start_frame', 'end_frame', 'index'])
-        if 'level_0' in self._stimulus_table.keys():
+        if 'level_0' in list(self._stimulus_table.keys()):
             self._stimulus_table = self._stimulus_table.drop(columns=['level_0'])
         return self._stimulus_table
 
@@ -195,6 +195,8 @@ class VisualBehaviorOphysDataset(object):
              'reward_times',
              'reward_volume', 'reward_rate', 'start_time', 'end_time', 'trial_length', 'mouse_id',
              'start_date_time']]
+        trials['trials_id'] = trials.trial.values
+        trials.set_index('trials_id', inplace=True)
         self._trials = trials
         return self._trials
 
@@ -257,7 +259,7 @@ class VisualBehaviorOphysDataset(object):
     def get_roi_mask_dict(self):
         f = h5py.File(os.path.join(self.analysis_dir, 'roi_masks.h5'), 'r')
         roi_mask_dict = {}
-        for key in f.keys():
+        for key in list(f.keys()):
             roi_mask_dict[key] = np.asarray(f[key])
         f.close()
         self._roi_mask_dict = roi_mask_dict
@@ -266,8 +268,8 @@ class VisualBehaviorOphysDataset(object):
     roi_mask_dict = LazyLoadable('_roi_mask_dict', get_roi_mask_dict)
 
     def get_roi_mask_array(self):
-        w, h = self.roi_mask_dict[self.roi_mask_dict.keys()[0]].shape
-        roi_mask_array = np.empty((len(self.roi_mask_dict.keys()), w, h))
+        w, h = self.roi_mask_dict[list(self.roi_mask_dict.keys())[0]].shape
+        roi_mask_array = np.empty((len(list(self.roi_mask_dict.keys())), w, h))
         for cell_specimen_id in self.cell_specimen_ids:
             cell_index = self.get_cell_index_for_cell_specimen_id(int(cell_specimen_id))
             roi_mask_array[cell_index] = self.roi_mask_dict[str(cell_specimen_id)]
@@ -277,7 +279,7 @@ class VisualBehaviorOphysDataset(object):
     roi_mask_array = LazyLoadable('_roi_mask_array', get_roi_mask_array)
 
     def get_max_projection(self):
-        with h5py.File(os.path.join(self.analysis_dir, 'max_projection.h5'), 'r') as max_projection_file:
+        with h5py.File(os.path.join(self.analysis_dir, 'normalized_max_projection.h5'), 'r') as max_projection_file:
             self._max_projection = np.asarray(max_projection_file['data'])
         return self._max_projection
 

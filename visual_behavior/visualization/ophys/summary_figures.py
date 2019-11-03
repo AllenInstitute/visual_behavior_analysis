@@ -71,7 +71,7 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
 
 def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
-    if type(roi_mask_dict.keys()[0]) == int:
+    if type(list(roi_mask_dict.keys())[0]) == int:
         m = roi_mask_dict[int(cell_specimen_id)]
     else:
         m = roi_mask_dict[str(cell_specimen_id)]
@@ -104,7 +104,7 @@ def plot_roi_validation(roi_names,
                         cell_indices,
                         roi_masks,
                         max_projection,
-                        dff_traces,
+                        dff_traces_array,
                         ):
     roi_validation = []
 
@@ -146,7 +146,7 @@ def plot_roi_validation(roi_names,
             ax[4].set_ylim(ymin - 10, ymax + 10)
             ax[4].grid(False)
 
-            ax[5].plot(dff_traces[cell_index])
+            ax[5].plot(dff_traces_array[cell_index])
             ax[5].set_title('roi index: ' + str(cell_index) + ', id: ' + str(id))
             ax[5].set_ylabel('dF/F')
             ax[5].set_xlabel('frames')
@@ -425,14 +425,14 @@ def plot_image_change_response(analysis, cell_index, cell_order, legend=False, s
     return ax
 
 
-def plot_event_detection(dff_traces, events, analysis_dir):
+def plot_event_detection(dff_traces_array, events, analysis_dir):
     figsize = (20, 15)
-    xlims_list = [[0, dff_traces[0].shape[0]], [2000, 10000], [60000, 62000]]
-    for cell in range(len(dff_traces)):
+    xlims_list = [[0, dff_traces_array[0].shape[0]], [2000, 10000], [60000, 62000]]
+    for cell in range(len(dff_traces_array)):
         fig, ax = plt.subplots(3, 1, figsize=figsize)
         ax = ax.ravel()
         for i, xlims in enumerate(xlims_list):
-            ax[i].plot(dff_traces[cell], label='dF/F from L0')
+            ax[i].plot(dff_traces_array[cell], label='dF/F from L0')
             ax[i].plot(events[cell], color='r', label='events')
             ax[i].set_title('roi ' + str(cell))
             ax[i].set_xlabel('2P frames')
@@ -503,7 +503,7 @@ def plot_trial_trace_heatmap(trial_response_df, cell, cmap='viridis', vmax=0.5, 
         resp_types.append(response_type_list)
     plt.tight_layout()
     if colorbar:
-        plt.colorbar(cax, ax=ax[i])
+        plt.colorbar(cax, ax=ax[i], use_gridspec=True)
     if save_dir:
         fig.tight_layout()
         save_figure(fig, figsize, save_dir, 'trial_trace_heatmap', 'roi_' + str(cell))
@@ -527,7 +527,7 @@ def plot_mean_response_by_repeat(analysis, cell, save_dir=None, ax=None):
                        palette=palette)
     ax.set_xticklabels(df.image_name.unique(), rotation=90)
     ax.legend_.remove()
-    cbar = ax.figure.colorbar(mappable=sm, ax=ax)
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax, use_gridspec=True)
     cbar.set_label('repeat')
     ax.set_title(str(cell) + '_' + analysis.dataset.analysis_folder, fontsize=14)
     if save_dir:
@@ -554,7 +554,7 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
                        palette=palette)
     ax.set_xticklabels(df.image_name.unique(), rotation=90)
     ax.legend_.remove()
-    cbar = ax.figure.colorbar(mappable=sm, ax=ax)
+    cbar = ax.figure.colorbar(mappable=sm, ax=ax, use_gridspec=True)
     cbar.set_label('image_block')
     ax.set_title(str(cell) + '_' + analysis.dataset.analysis_folder, fontsize=14)
     if save_dir:
@@ -659,7 +659,7 @@ def plot_behavior(dataset, cache_dir):
     ax.set_title(dataset.analysis_folder)
     fig.tight_layout()
     save_figure(fig, figsize, dataset.analysis_dir, 'behavior', 'behavior')
-    save_figure(fig, figsize, os.path.join(cache_dir, 'multi_session_summary_figures'), 'behavior', dataset.analysis_folder)
+    save_figure(fig, figsize, os.path.join(cache_dir, 'summary_figures'), 'behavior', dataset.analysis_folder)
 
 
 def plot_behavior_annotated(dataset, xmin=1800, duration=20, plot_reward_rate=False, cache_dir=None, show=True):
@@ -704,7 +704,7 @@ def plot_behavior_annotated(dataset, xmin=1800, duration=20, plot_reward_rate=Fa
     fig.subplots_adjust(top=.8)
     save_figure(fig, figsize, dataset.analysis_dir, 'behavior', 'behavior_'+str(xlim[0]))
     if cache_dir:
-        save_figure(fig, figsize, os.path.join(cache_dir, 'multi_session_summary_figures'), 'behavior', dataset.analysis_folder+'_'+str(xlim[0]))
+        save_figure(fig, figsize, os.path.join(cache_dir, 'summary_figures'), 'behavior', dataset.analysis_folder+'_'+str(xlim[0]))
     if not show:
         plt.close()
 
@@ -728,7 +728,7 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
             ax = plot_trace(dataset.ophys_timestamps, dataset.events[cell_index, :], ax,
                             title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
         else:
-            ax = plot_trace(dataset.ophys_timestamps, dataset.dff_traces[cell_index, :], ax,
+            ax = plot_trace(dataset.ophys_timestamps, dataset.dff_traces_array[cell_index, :], ax,
                             title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
         ax = add_stim_color_span(dataset, ax, xlim=[xmin, xmax])
         ax = plot_behavior_events(dataset, ax)
@@ -749,7 +749,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         cell_label = True
         suffix = '_events'
     else:
-        traces = dataset.dff_traces
+        traces = dataset.dff_traces_array
         suffix = ''
     if include_running:
         n = 2
@@ -981,7 +981,7 @@ def plot_transition_type_heatmap(analysis, cell_list, cmap='jet', vmax=None, sav
             ax[0].set_ylabel('trials')
             resp_types.append(response_type_list)
             if colorbar:
-                plt.colorbar(cax, ax=ax[i]);
+                plt.colorbar(cax, ax=ax[i], use_gridspec=True);
         plt.tight_layout()
         if save:
             save_figure(fig, figsize, ra.analysis_dir, 'transition_type_heatmap', str(cell_specimen_id))
@@ -1215,14 +1215,15 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
                        (np.abs(trial_window[0])+xlims[1])*analysis.ophys_frame_rate)
         mean = np.round(mean_df.mean_response.values[0], 3)
         p_val = np.round(mean_df.p_value.values[0], 4)
-        sd = np.round(mean_df.sd_over_baseline.values[0], 2)
-        time_to_peak = np.round(mean_df.time_to_peak.values[0], 3)
-        fano_factor = np.round(mean_df.fano_factor.values[0], 3)
-        fraction_active_trials = np.round(mean_df.fraction_active_trials.values[0], 3)
-        ax[i].set_title(trial_type + ' - mean: ' + str(mean) + '\np_val: ' + str(p_val) + ', sd: ' + str(sd) +
+        # sd = np.round(mean_df.sd_over_baseline.values[0], 2)
+        # time_to_peak = np.round(mean_df.time_to_peak.values[0], 3)
+        # fano_factor = np.round(mean_df.fano_factor.values[0], 3)
+        # fraction_active_trials = np.round(mean_df.fraction_active_trials.values[0], 3)
+        fraction_sig_trials = np.round(mean_df.fraction_significant_trials.values[0], 3)
+        ax[i].set_title(trial_type + ' - mean: ' + str(mean) + '\np_val: ' + str(p_val) + #', sd: ' + str(sd) +
                         # '\ntime_to_peak: ' + str(time_to_peak) +
-                        '\nfraction_active_trials: ' + str(fraction_active_trials) +
-                        '\nfano_factor: ' + str(fano_factor));
+                        '\nfraction_sig_trials: ' + str(fraction_sig_trials));# +
+                        # '\nfano_factor: ' + str(fano_factor));
     ax[1].set_ylabel('')
     if save:
         fig.tight_layout()
@@ -1326,7 +1327,7 @@ def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, sa
 def plot_reward_triggered_average(dataset, cell, window=[-2, 3], variability=True, show_reliability=True,
                                   ax=None, save_figures=False, save_dir=None):
     reward_times = dataset.rewards.time.values
-    trace = dataset.dff_traces[cell]
+    trace = dataset.dff_traces_array[cell]
     cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell)
     responses = ut.get_responses_around_event_times(trace, dataset.ophys_timestamps, reward_times,
                                                     frame_rate=31., window=window)
@@ -1361,7 +1362,7 @@ def plot_reward_triggered_average(dataset, cell, window=[-2, 3], variability=Tru
 def plot_lick_triggered_average(dataset, cell, window=[-2, 3], variability=True, show_reliability=False,
                                 ax=None, save_figures=False, save_dir=None):
     lick_times = ut.get_unrewarded_first_lick_times(dataset)
-    trace = dataset.dff_traces[cell]
+    trace = dataset.dff_traces_array[cell]
     cell_specimen_id = dataset.get_cell_specimen_id_for_cell_index(cell)
     responses = ut.get_responses_around_event_times(trace, dataset.ophys_timestamps, lick_times,
                                                     frame_rate=31., window=window)
@@ -1509,26 +1510,26 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
         ax = plot_trace(dataset.ophys_timestamps, dataset.events[cell_index, :], ax,
                         title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
     else:
-        ax = plot_trace(dataset.ophys_timestamps, dataset.dff_traces[cell_index, :], ax,
+        ax = plot_trace(dataset.ophys_timestamps, dataset.dff_traces_array[cell_index, :], ax,
                         title='cell_specimen_id: ' + str(cell_specimen_id), ylabel=ylabel)
     ax = plot_behavior_events(dataset, ax)
     ax.set_title('')
 
-    ax = placeAxesOnGrid(fig, dim=(1, len(rdf.change_image_name.unique())), xspan=(.0, .7), yspan=(.33, .55),
+    ax = placeAxesOnGrid(fig, dim=(1, len(rdf.change_image_name.unique())), xspan=(.0, .7), yspan=(.35, .55),
                          wspace=0.35)
     if use_events:
         vmax = 0.03
     else:
-        vmax = np.percentile(dataset.dff_traces[cell_index, :], 99.9)
+        vmax = np.percentile(dataset.dff_traces_array[cell_index, :], 99.9)
     ax = plot_transition_type_heatmap(analysis, [cell_index], vmax=vmax, ax=ax, cmap='magma', colorbar=False)
 
-    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .25), yspan=(.53, .75), wspace=0.25, sharex=True, sharey=True)
+    ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.0, .25), yspan=(.55, .75), wspace=0.25, sharex=True, sharey=True)
     # ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save=False, ax=ax)
     ax = plot_image_change_response(analysis, cell_index, cell_index, legend=False, save=False, ax=ax)
 
     if 'omitted' in analysis.flash_response_df.image_name.unique():
         # try:
-        ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.25, .5), yspan=(.53, .75))
+        ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.25, .5), yspan=(.55, .75))
         ax = plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=ax)
         # ax.legend(bbox_to_anchor=(1.4, 2))
         # except:
@@ -1572,8 +1573,9 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     # xtable.scale(1, 3)
     # ax.axis('off');
 
+    fig.canvas.draw()
     fig.tight_layout()
-    plt.gcf().subplots_adjust(bottom=0.05)
+    # plt.gcf().subplots_adjust(bottom=0.05)
     if save:
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'cell_summary_plots',
                     str(cell_index) + '_' + str(cell_specimen_id) + suffix)
