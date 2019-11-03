@@ -21,21 +21,21 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
             analysis = ResponseAnalysis(dataset, use_events=use_events)
             if flashes:
                 if omitted:
-                    print('using omitted flash response df')
-                    flash_response_df = analysis.omitted_flash_response_df.copy()
-                    print(len(flash_response_df))
+                    # print('using omitted flash response df')
+                    flash_response_df = analysis.get_omitted_flash_response_df()
+                    # print(len(flash_response_df))
                 elif not omitted:
                     if 'repeat' in conditions:
-                        flash_response_df = analysis.flash_response_df.copy()
-                        repeats = [1,5,10,15]
+                        flash_response_df = analysis.get_flash_response_df()
+                        repeats = [0,5,10,15]
                         flash_response_df = flash_response_df[flash_response_df.repeat.isin(repeats)]
                     else:
-                        flash_response_df = analysis.flash_response_df.copy()
+                        flash_response_df = analysis.get_flash_response_df()
                 if len(flash_response_df) > 0:
                     flash_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
                                                     flash_response_df.reward_rate.values]
-                    last_flash = flash_response_df.flash_number.unique()[-1]  # sometimes last flash is truncated
-                    flash_response_df = flash_response_df[flash_response_df.flash_number != last_flash]
+                    last_flash = flash_response_df.stimulus_presentations_id.unique()[-1]  # sometimes last flash is truncated
+                    flash_response_df = flash_response_df[flash_response_df.stimulus_presentations_id != last_flash]
                     if 'index' in flash_response_df.keys():
                         flash_response_df = flash_response_df.drop(columns=['index'])
                     mdf = ut.get_mean_df(flash_response_df, analysis, conditions=conditions,
@@ -44,10 +44,10 @@ def get_multi_session_mean_df(experiment_ids, cache_dir,
                     mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
                     mega_mdf = pd.concat([mega_mdf, mdf])
                 else:
-                    print('no omitted flashes for',experiment_id)
+                    print('no response_df for',experiment_id)
                     pass
             else:
-                trial_response_df = analysis.trial_response_df.copy()
+                trial_response_df = analysis.get_trial_response_df()
                 trial_response_df['engaged'] = [True if reward_rate > 2 else False for reward_rate in
                                                 trial_response_df.reward_rate.values]
                 mdf = ut.get_mean_df(trial_response_df, analysis, conditions=conditions,
@@ -138,18 +138,20 @@ if __name__ == '__main__':
                       762214438, 768225217, 774379465, 775011398, 775429615, 776042634,
                       648647430, 649118720, 649318212, 673139359, 673460976]
 
-    # get_multi_session_mean_df(experiment_ids, cache_dir,
-    #                           conditions=['cell_specimen_id','image_name'], flashes=True, omitted=True, get_reliability=False)
-    # get_multi_session_mean_df(experiment_ids, cache_dir,
-    #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
-    # get_multi_session_mean_df(experiment_ids, cache_dir,
-    #                           conditions=['cell_specimen_id', 'image_name'], flashes=True, get_reliability=True)
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id'], flashes=True, omitted=True, get_reliability=True)
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id','image_name'], flashes=True, omitted=True, get_reliability=True)
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id', 'image_name'], flashes=True, get_reliability=True)
     get_multi_session_mean_df(experiment_ids, cache_dir,
                               conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True, get_reliability=True)
-    # get_multi_session_mean_df(experiment_ids, cache_dir,
-    #                           conditions=['cell_specimen_id', 'image_name', 'engaged', 'repeat'], flashes=True)
-    # get_multi_session_mean_df(experiment_ids, cache_dir,
-    #                           conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'])
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id', 'image_name', 'engaged'], flashes=True)
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id', 'image_name', 'engaged', 'repeat'], flashes=True)
     #
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type'], use_events=True)
