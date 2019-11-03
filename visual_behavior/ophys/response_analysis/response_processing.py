@@ -125,7 +125,7 @@ def trial_response_xr(session, response_analysis_params=None):
         response_analysis_params = get_default_trial_response_params()
 
     dff_traces_arr = np.stack(session.dff_traces['dff'].values)
-    change_trials = session.trials[~pd.isnull(session.trials['change_time'])]
+    change_trials = session.trials[~pd.isnull(session.trials['change_time'])][:-1] #last trial can get cut off
     event_times = change_trials['change_time'].values
 
     event_indices, start_ind_offset, end_ind_offset, trace_timebase = slice_inds_and_offsets(
@@ -285,7 +285,7 @@ def omission_response_xr(session, response_analysis_params=None):
     # get omissions only
     stimuli = session.stimulus_presentations
     omission_presentations = stimuli[stimuli.image_name == 'omitted']
-    event_times = omission_presentations['start_time'].values
+    event_times = omission_presentations['start_time'].values[:-1] #last omission can get truncated
     event_indices = index_of_nearest_value(session.ophys_timestamps, event_times)
 
     event_indices, start_ind_offset, end_ind_offset, trace_timebase = slice_inds_and_offsets(
@@ -300,7 +300,7 @@ def omission_response_xr(session, response_analysis_params=None):
         dims=("eventlocked_timestamps", "stimulus_presentations_id", "cell_specimen_id"),
         coords={
             "eventlocked_timestamps": trace_timebase,
-            "stimulus_presentations_id": omission_presentations.index.values,
+            "stimulus_presentations_id": omission_presentations.index.values[:-1],
             "cell_specimen_id": session.cell_specimen_ids
         }
     )
