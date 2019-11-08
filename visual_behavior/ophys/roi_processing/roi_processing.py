@@ -1,6 +1,5 @@
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
-import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api import PostgresQueryMixin
 from psycopg2 import connect, extras 
 
@@ -15,14 +14,10 @@ import numpy as np
 
 import os
 
-get_psql_dict_cursor = convert.get_psql_dict_cursor
-get_lims_data = convert.get_lims_data
-
 
 ######################## EXPERIMENT LEVEL INFORMATION ##############
-
- def experiment_info_df(experiment_id):
-     """ "manifest" styple information about a specific experiment
+def experiment_info_df(experiment_id):
+    """"manifest" styple information about a specific experiment
      
      Arguments:
          experiment_id {[type]} -- [description]
@@ -41,7 +36,7 @@ get_lims_data = convert.get_lims_data
                                                 "date_of_acquisition",
                                                 "rig",
                                                 "stage_name_mtrain"
-     """
+    """
     lims_experiment_info = load.get_lims_experiment_info(experiment_id)
     lims_experiment_info = get_6digit_mouse_id(lims_experiment_info)
     lims_experiment_info = full_geno(lims_experiment_info)
@@ -191,8 +186,8 @@ def get_container_roi_metrics(container_id,
                                                 include_ffield_test= include_ffield_test, 
                                                 include_failed_sessions = include_failed_sessions)
     
-    experiments_list = container_manifest["experiment_id"].values
-    experiments_list = experiments_list.tolist()
+    experiments_list = container_manifest["experiment_id"].values.tolist()
+
     
     container_roi_metrics_df = pd.DataFrame()
 
@@ -348,7 +343,7 @@ def gen_blank_mask_of_FOV_dimensions(experiment_id):
 
 
 def gen_multi_roi_mask(experiment_id, roi_id_list, mask_type = "binary"):
-    roi_metrics = exp_roi_metrics_dataframe(experiment_id, shift= True)
+    roi_metrics = exp_roi_metrics_dataframe(experiment_id, mask_shift= True)
     id_type = roi_id_type_from_df(roi_metrics, roi_id_list[0])
     roi_list_df = roi_metrics[roi_metrics[id_type].isin(roi_id_list)]
     roi_masks = roi_list_df["shifted_image_mask"].values

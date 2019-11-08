@@ -438,7 +438,16 @@ def get_session_from_sdk(experiment_id):
     api = BehaviorOphysLimsApi(experiment_id)
     session = BehaviorOphysSession(api, filter_invalid_rois=False)
     return session
+    
+def get_sdk_max_projection(experiment_id):
+    session = get_session_from_sdk(experiment_id)
+    max_projection = session.max_projection
+    return max_projection
 
+def get_sdk_ave_projection(experiment_id):
+    session = get_session_from_sdk(experiment_id)
+    ave_projection = session.average_projection
+    return ave_projection
 
 def get_sdk_cell_specimen_table(experiment_id):
     """returns cell specimen table using the SDK LIMS API

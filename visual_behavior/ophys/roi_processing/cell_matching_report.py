@@ -3,6 +3,7 @@ from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 
 import visual_behavior.ophys.roi_processing.segmentation_report as seg
 import visual_behavior.ophys.roi_processing.roi_processing as roi
+import visual_behavior.ophys.roi_processing.data_loading as load
 
 
 import matplotlib.pyplot as plt
