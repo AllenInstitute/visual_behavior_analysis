@@ -252,10 +252,7 @@ class MesoscopeDataset(object):
             ff_stitch_summ_name = os.path.dirname(ff_path) + '/' + ff_image_name.split('.')[0] + '_stitched_sum.tif'
             for j in range(slices):
                 for i in range(roi_num):
-                    image_stitched[j, :, i * image_npixels:(i + 1) * image_npixels] = image[j,
-                                                                                      i * (pixel_res_y + y_gap):(
-                                                                                                                            i + 1) * pixel_res_y + i * y_gap,
-                                                                                      :]
+                    image_stitched[j, :, i * image_npixels:(i + 1) * image_npixels] = image[j,i * (pixel_res_y + y_gap):(i + 1) * pixel_res_y + i * y_gap, :]
             if summ:
                 image_sum = np.int16(image_stitched.mean(axis=0))
                 tifffile.imsave(ff_stitch_summ_name, image_sum)
@@ -270,8 +267,7 @@ class MesoscopeDataset(object):
 
         # get full field image -> stitch full field image
         # !!!not tested!!! - test on a dataset with valid full field
-        json_output = os.path.join(self.get_session_folder(), 'MESOSCOPE_FILE_SPLITTING_QUEUE_', self.session_id,
-                                   '_output.json')
+        json_output = os.path.join(self.get_session_folder(), 'MESOSCOPE_FILE_SPLITTING_QUEUE_', self.session_id, '_output.json')
 
         _ = self.get_full_field_tiff()
         _, ff_image, ff_meta = self.stitch_full_field()

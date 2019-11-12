@@ -80,42 +80,42 @@ class MesoscopeICA(object):
         self.dataset = ms.MesoscopeDataset(session_id)
         self.session_cache_dir = None
 
-        self.plane1_exp_id = None
-        self.plane2_exp_id = None
-
-        self.ica_traces_dir = None
-        self.ica_neuropil_dir = None
+        # self.plane1_exp_id = None
+        # self.plane2_exp_id = None
+        #
+        # self.ica_traces_dir = None
+        # self.ica_neuropil_dir = None
         self.found_original_traces = None  # output of get_traces
         self.found_original_neuropil = None  # output of get_traces
 
-        self.plane1_traces_orig = None
-        self.plane1_neuropil_orig = None
-        self.plane1_traces_orig_pointer = None
-        self.plane1_neuropil_orig_pointer = None
-        self.plane1_ica_input = None
-        self.plane1_ica_neuropil_input = None
-        self.plane1_ica_input_pointer = None
-        self.plane1_ica_neuropil_input_pointer = None
-        self.plane1_ica_output = None
-        self.plane1_ica_neuropil_output = None
-        self.plane1_ica_output_pointer = None
-        self.plane1_ica_neuropil_output_pointer = None
+        # self.plane1_traces_orig = None
+        # self.plane1_neuropil_orig = None
+        # self.plane1_traces_orig_pointer = None
+        # self.plane1_neuropil_orig_pointer = None
+        # self.plane1_ica_input = None
+        # self.plane1_ica_neuropil_input = None
+        # self.plane1_ica_input_pointer = None
+        # self.plane1_ica_neuropil_input_pointer = None
+        # self.plane1_ica_output = None
+        # self.plane1_ica_neuropil_output = None
+        # self.plane1_ica_output_pointer = None
+        # self.plane1_ica_neuropil_output_pointer = None
 
-        self.plane2_traces_orig = None  # output of get_traces
-        self.plane2_neuropil_orig = None
-        self.plane2_traces_orig_pointer = None
-        self.plane2_neuropil_orig_pointer = None
-        self.plane2_ica_input = None  # output of combine_debiase
-        self.plane2_ica_neuropil_input = None
-        self.plane2_ica_input_pointer = None
-        self.plane2_ica_neuropil_input_pointer = None
-        self.plane2_ica_output = None  # output of unmix_traces
-        self.plane2_ica_neuropil_output = None
-        self.plane2_ica_output_pointer = None
-        self.plane2_ica_neuropil_output_pointer = None
+        # self.plane2_traces_orig = None  # output of get_traces
+        # self.plane2_neuropil_orig = None
+        # self.plane2_traces_orig_pointer = None
+        # self.plane2_neuropil_orig_pointer = None
+        # self.plane2_ica_input = None  # output of combine_debiase
+        # self.plane2_ica_neuropil_input = None
+        # self.plane2_ica_input_pointer = None
+        # self.plane2_ica_neuropil_input_pointer = None
+        # self.plane2_ica_output = None  # output of unmix_traces
+        # self.plane2_ica_neuropil_output = None
+        # self.plane2_ica_output_pointer = None
+        # self.plane2_ica_neuropil_output_pointer = None
 
-        self.ica_mixing_matrix_traces_pointer = None
-        self.ica_mixing_matrix_neuropil_pointer = None
+        # self.ica_mixing_matrix_traces_pointer = None
+        # self.ica_mixing_matrix_neuropil_pointer = None
 
         self.plane1_offset = None
         self.plane2_offset = None
