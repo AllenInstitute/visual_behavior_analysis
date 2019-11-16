@@ -760,9 +760,9 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     xlim = [xmin_seconds, xmax_seconds]
 
     if len(cell_indices) < 10:
-        figsize = (12, 8.3)
+        figsize = (14, 8.3)
     else:
-        figsize = (12, 10)
+        figsize = (14, 10)
     fig, ax = plt.subplots(len(cell_indices) + n, 1, figsize=figsize, sharex=True)
     ax = ax.ravel()
 
@@ -782,14 +782,18 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         ymaxs.append(ymax)
         ax[i].set_ylabel('')
         ax[i].set_yticklabels('')
-        sns.despine(ax=ax[i], left=True, bottom=False)
+        sns.despine(ax=ax[i], left=True, bottom=True)
         #         ymin, ymax = ax[i].get_ylim()
         if 'Vip' in dataset.metadata.cre_line.values[0]:
-            ax[i].vlines(x=xmin_seconds - 0.05, ymin=0, ymax=2, linewidth=4)
+            ax[i].vlines(x=xmin_seconds, ymin=0, ymax=2, linewidth=4)
             ax[i].set_ylim(ymin=-0.5, ymax=5)
         elif 'Slc' in dataset.metadata.cre_line.values[0]:
-            ax[i].vlines(x=xmin_seconds - 0.05, ymin=0, ymax=1, linewidth=4)
+            ax[i].vlines(x=xmin_seconds, ymin=0, ymax=1, linewidth=4)
             ax[i].set_ylim(ymin=-0.5, ymax=3)
+        ax[i].tick_params(which='both', bottom='off', top='off', right='off', left='off',
+                          labeltop='off', labelright='off', labelleft='off', labelbottom='off')
+        ax[i].axes.get_yaxis().set_visible(False)
+        ax[i].axes.get_xaxis().set_visible(False)
 
             #     for i, cell_index in enumerate(cell_indices):
             #         ax[i].set_ylim([np.amin(ymins), np.amax(ymaxs)])
