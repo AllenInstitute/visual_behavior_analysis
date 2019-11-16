@@ -44,15 +44,16 @@ if __name__ == '__main__':
                       978866896, 978866898, 978866900, 978866902, 978866904, 978866906, 978866908, 978866910,
                       979726720, 979726722, 979726725, 979726727, 979726729, 979726731, 979726733, 979726736]
 
+
     get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id'], flashes=True, omitted=True, get_reliability=False)
-    get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'image_name'], flashes=True, omitted=True,
-                              get_reliability=False)
+                              conditions=['cell_specimen_id', 'image_name'], flashes=True, get_reliability=False)
     get_multi_session_mean_df(experiment_ids, cache_dir,
                               conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'image_name'], flashes=True, get_reliability=False)
+                              conditions=['cell_specimen_id'], flashes=True, omitted=True, get_reliability=False)
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id', 'prior_image_name'], flashes=True, omitted=True,
+                              get_reliability=False)
     get_multi_session_mean_df(experiment_ids, cache_dir,
                               conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True,
                               get_reliability=False)
