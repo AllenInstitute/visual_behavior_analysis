@@ -26,6 +26,9 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     use_events = False
 
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
+    fdf = analysis.flash_response_df.copy()
+    odf = analysis.omitted_flash_response_df.copy()
+    tdf = analysis.trial_response_df.copy()
     # pairwise_correlations_df = analysis.get_pairwise_correlations_df()  # flake8: noqa: F841
 
     sf.plot_behavior(dataset, cache_dir)
