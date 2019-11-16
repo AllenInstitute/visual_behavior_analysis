@@ -204,7 +204,7 @@ def stimulus_response_xr(session, response_analysis_params=None):
     # cell_specimen_table = session.cell_specimen_table
 
     dff_traces_arr = np.stack(dff_traces['dff'].values)
-    event_times = session.stimulus_presentations['start_time'].values[:-1] #last one can get truncated
+    event_times = session.stimulus_presentations['start_time'].values #[:-2] #last one can get truncated
     event_indices = index_of_nearest_value(session.ophys_timestamps, event_times)
 
     event_indices, start_ind_offset, end_ind_offset, trace_timebase = slice_inds_and_offsets(
@@ -219,7 +219,7 @@ def stimulus_response_xr(session, response_analysis_params=None):
         dims=("eventlocked_timestamps", "stimulus_presentations_id", "cell_specimen_id"),
         coords={
             "eventlocked_timestamps": trace_timebase,
-            "stimulus_presentations_id": session.stimulus_presentations.index.values[:-1],
+            "stimulus_presentations_id": session.stimulus_presentations.index.values, #[:-2],
             "cell_specimen_id": session.cell_specimen_ids
         }
     )
