@@ -139,6 +139,9 @@ class VisualBehaviorOphysDataset(object):
     def get_stimulus_metadata(self):
         stimulus_metadata = pd.read_hdf(
             os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df')
+        stimulus_metadata['image_name'] = [
+            image_name.decode('unicode_escape') if type(image_name) != str else image_name for image_name in
+            stimulus_metadata.image_name.values]
         stimulus_metadata = stimulus_metadata.drop(columns='image_category')
         # Add an entry for omitted stimuli
         omitted_df = pd.DataFrame({'image_name': ['omitted'],
@@ -300,7 +303,10 @@ class VisualBehaviorOphysDataset(object):
     motion_correction = LazyLoadable('_motion_correction', get_motion_correction)
 
     def get_cell_specimen_ids(self):
-        self._cell_specimen_ids = np.sort(self.roi_metrics.cell_specimen_id.values)
+        if self.roi_metrics.cell_specimen_id.values[0] is None:
+            self._cell_specimen_ids = np.sort(self.roi_metrics.id.values)
+        else:
+            self._cell_specimen_ids = np.sort(self.roi_metrics.cell_specimen_id.values)
         return self._cell_specimen_ids
 
     cell_specimen_ids = LazyLoadable('_cell_specimen_ids', get_cell_specimen_ids)
