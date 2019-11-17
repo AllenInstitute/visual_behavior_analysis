@@ -536,7 +536,9 @@ def annotate_mean_df_with_sd_over_baseline(analysis, mean_df, window=[-4,8]):
 
 
 def annotate_mean_df_with_pref_stim(mean_df):
-    if 'image_name' in mean_df.keys():
+    if 'prior_image_name' in mean_df.keys():
+        image_name = 'prior_image_name'
+    elif 'image_name' in mean_df.keys():
         image_name = 'image_name'
     else:
         image_name = 'change_image_name'
@@ -548,7 +550,8 @@ def annotate_mean_df_with_pref_stim(mean_df):
         cell_key = 'cell'
     for cell in mdf[cell_key].unique():
         mc = mdf[(mdf[cell_key] == cell)]
-        mc = mc[mc[image_name]!='omitted']
+        if 'omitted' in mdf[image_name].unique():
+            mc = mc[mc[image_name]!='omitted']
         pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))][image_name].values[0]
         row = mdf[(mdf[cell_key] == cell) & (mdf[image_name] == pref_image)].index
         mdf.loc[row, 'pref_stim'] = True
