@@ -7,10 +7,7 @@ import os
 import glob
 import traceback
 import datetime
-from .translator.foraging2 import data_to_change_detection_core as foraging2_translator
-from .translator.foraging import data_to_change_detection_core as foraging1_translator
-from .translator.core import create_extended_dataframe
-from .change_detection.trials import summarize
+
 from allensdk.internal.api import PostgresQueryMixin
 
 
@@ -362,6 +359,11 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
         - adds a row to summary with 'error_on_load' = True
         - saves traceback and time to 'error_log' table
     '''
+
+    from .translator.foraging2 import data_to_change_detection_core as foraging2_translator
+    from .translator.foraging import data_to_change_detection_core as foraging1_translator
+    from .translator.core import create_extended_dataframe
+    from .change_detection.trials import summarize
 
     if data_type.lower() == 'foraging2':
         data_to_change_detection_core = foraging2_translator
