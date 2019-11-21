@@ -346,7 +346,7 @@ def annotate_epochs(trials, epoch_length=5.0):
 
 
 @inplace
-def annotate_lick_vigor(trials, licks, window=3.5):
+def annotate_lick_vigor(trials, licks, window=5):
     """ annotates the dataframe with two columns that indicate the number of
     licks and lick rate in 1/s
 
