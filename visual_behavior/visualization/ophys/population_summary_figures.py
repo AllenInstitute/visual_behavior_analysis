@@ -342,7 +342,7 @@ def generate_figures_for_cell_summary_image_sets(cell_summary_df, metric, cdf_ra
 
 
 def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, folder=None, use_events=False,
-                               interval_sec=1, window=[-4,8]):
+                               interval_sec=1, window=[-4,8], frame_rate=31.):
     if use_events:
         vmax = 0.003
         label = 'mean event magnitude'
@@ -385,7 +385,7 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
             response_array[x, :] = trace
         sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=colorbar,
                     cbar_kws={'label': label})
-        xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=interval_sec, window=window)
+        xticks, xticklabels = sf.get_xticks_xticklabels(trace, frame_rate, interval_sec=interval_sec, window=window)
         ax[i].set_xticks(xticks)
         if interval_sec < 1:
             ax[i].set_xticklabels(xticklabels)
@@ -395,7 +395,7 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
             interval = 500
         else:
             interval = 50
-        ax[i].set_xlim(0, (np.abs(window[0])+window[1])*31.)
+        ax[i].set_xlim(0, (np.abs(window[0])+window[1])*frame_rate)
         ax[i].set_yticks(np.arange(0, response_array.shape[0], interval))
         ax[i].set_yticklabels(np.arange(0, response_array.shape[0], interval))
         ax[i].set_xlabel('time (sec)', fontsize=16)
@@ -472,7 +472,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
 
 
 def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=None, folder=None, interval_sec=2,
-                             use_events=False, window=[-4,4]):
+                             use_events=False, window=[-4,4], pref_stim=True, frame_rate=31.):
     if use_events:
         label = 'mean event magnitude'
         suffix = '_events'
@@ -485,7 +485,10 @@ def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=Non
         figsize = (4,7)
         fig, ax = plt.subplots(figsize=figsize)
 
-    cdf = df[(df.pref_stim==True)]
+    if pref_stim:
+        cdf = df[(df.pref_stim==True)]
+    else:
+        cdf = df
     order = np.argsort(cdf.mean_response.values)[::-1]
     cells = list(cdf.cell_specimen_id.values[order])
 
@@ -501,7 +504,7 @@ def plot_pref_stim_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=Non
         response_array[x, :] = trace
     sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax, cmap='magma', cbar=colorbar,
                 cbar_kws={'label': label})
-    xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=interval_sec, window=window)
+    xticks, xticklabels = sf.get_xticks_xticklabels(trace, frame_rate, interval_sec=interval_sec, window=window)
     ax.set_xticks(xticks)
     ax.set_xticklabels([int(xticklabel) for xticklabel in xticklabels])
     if response_array.shape[0] > 500:
