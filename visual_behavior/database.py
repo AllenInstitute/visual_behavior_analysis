@@ -504,21 +504,12 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
 def get_well_known_files(ophys_session_id):
     lims_api = PostgresQueryMixin()
     query = '''
-    SELECT wkf.storage_directory || wkf.filename as full_path,
-           wkf.filename,
-           wkf.attachable_type,
-           wkft.name
-
-    FROM ophys_sessions os
-    JOIN ophys_experiments oe ON oe.ophys_session_id=os.id
-    JOIN behavior_sessions bs ON bs.ophys_session_id = os.id
-
-    LEFT JOIN well_known_files wkf ON os.id=wkf.attachable_id
-        OR oe.id=wkf.attachable_id
-        OR bs.id=wkf.attachable_id
-
-    JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
-    WHERE os.id = {};
+    select * from well_known_files wkf 
+    join well_known_file_types wkft 
+    on wkft.id = wkf.well_known_file_type_id 
+    where wkf.attachable_type = 'OphysSession'
+    and wkf.attachable_id in ({});
     '''.format(ophys_session_id)
+
     result = pd.read_sql(query, lims_api.get_connection())
     return result
