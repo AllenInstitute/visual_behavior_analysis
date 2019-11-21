@@ -145,24 +145,9 @@ def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
     hit_rate = np.clip(hit_rate, limits[0], limits[1])
     fa_rate = np.clip(fa_rate, limits[0], limits[1])
 
-    try:
-        last_hit_nan = np.where(np.isnan(hit_rate))[0].max()
-    except ValueError:
-        last_hit_nan = 0
-
-    try:
-        last_fa_nan = np.where(np.isnan(fa_rate))[0].max()
-    except ValueError:
-        last_fa_nan = 0
-
-    last_nan = np.max((last_hit_nan, last_fa_nan))
-
     # fill nans with 0.5 to avoid warning about nans
-    d_prime = Z(pd.Series(hit_rate).fillna(0.5)) - Z(pd.Series(fa_rate).fillna(0.5))
-
-    # fill all values up to the last nan with nan
-    d_prime[:last_nan + 1] = np.nan
-
+    d_prime = Z(pd.Series(hit_rate)) - Z(pd.Series(fa_rate))
+    
     if len(d_prime) == 1:
         # if the result is a 1-length vector, return as a scalar
         return d_prime[0]
@@ -299,7 +284,8 @@ class Movie(object):
         self.frame_count = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
+        self.filepath = filepath
+        
         if sync_timestamps is not None:
             self.sync_timestamps = sync_timestamps
         else:
