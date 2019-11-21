@@ -501,6 +501,16 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
         db_conn.close()
 
 
+def get_manifest(server='visual_behavior_data'):
+    '''
+    convenience function to get full manifest
+    '''
+    vb = Database(server)
+    man = vb['ophys_data']['manifest'].find({})
+    vb.close()
+    return pd.DataFrame(list(man))
+
+
 def get_well_known_files(ophys_session_id):
     lims_api = PostgresQueryMixin()
     query = '''
