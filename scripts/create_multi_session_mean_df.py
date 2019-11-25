@@ -192,22 +192,25 @@ if __name__ == '__main__':
                       974994093, 974994095, 974994097, 974994099, 974994101, 974994105, 974994107, 974994109,
                       976300274, 976300276, 976300280, 976300282, 976300284, 976300286, 976300288, 976300290]
 
+    # get_multi_session_mean_df(experiment_ids, cache_dir,
+    #                           conditions=['cell_specimen_id', 'image_name'], flashes=True, get_reliability=False)
+    # get_multi_session_mean_df(experiment_ids, cache_dir,
+    #                           conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
+    # get_multi_session_mean_df(experiment_ids, cache_dir,
+    #                           conditions=['cell_specimen_id'], flashes=True, omitted=True, get_reliability=False)
+    # get_multi_session_mean_df(experiment_ids, cache_dir,
+    #                           conditions=['cell_specimen_id', 'prior_image_name'], flashes=True, omitted=True,
+    #                           get_reliability=False)
     get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'image_name'], flashes=True, get_reliability=False)
-    get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
-    get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id'], flashes=True, omitted=True, get_reliability=False)
-    get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'prior_image_name'], flashes=True, omitted=True,
-                              get_reliability=False)
-    get_multi_session_mean_df(experiment_ids, cache_dir,
-                              conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True,
-                              get_reliability=False)
+                                conditions=['cell_specimen_id', 'engaged'], flashes=True, omitted=True, get_reliability=False)
+
     get_multi_session_mean_df(experiment_ids, cache_dir,
                               conditions=['cell_specimen_id', 'image_name', 'engaged'], flashes=True)
     get_multi_session_mean_df(experiment_ids, cache_dir,
                               conditions=['cell_specimen_id', 'image_name', 'engaged', 'repeat'], flashes=True)
+    get_multi_session_mean_df(experiment_ids, cache_dir,
+                              conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True,
+                              get_reliability=False)
 
     # get_multi_session_mean_df(experiment_ids, cache_dir,
     #                           conditions=['cell_specimen_id', 'image_name'], flashes=True, omitted=True, use_events=True)
