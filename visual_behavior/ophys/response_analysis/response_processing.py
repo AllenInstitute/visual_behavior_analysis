@@ -26,7 +26,8 @@ def get_default_trial_response_params():
     trial_response_params = {
         "window_around_timepoint_seconds": [-4, 8],
         "response_window_duration_seconds": 0.5,
-        "baseline_window_duration_seconds": 0.25
+        "baseline_window_duration_seconds": 0.25,
+        "ophys_frame_rate": 31.
     }
     return trial_response_params
 
@@ -334,6 +335,114 @@ def omission_response_xr(session, response_analysis_params=None):
 
     return result
 
+def omission_running_xr(session, response_analysis_params=None):
+    if response_analysis_params is None:
+        response_analysis_params = get_default_omission_response_params()
+
+    running_array = session.running_speed.speed.values
+
+    # get omissions only
+    stimuli = session.stimulus_presentations
+    omission_presentations = stimuli[stimuli.image_name == 'omitted']
+    event_times = omission_presentations['start_time'].values[:-1] #last omission can get truncated
+    event_indices = index_of_nearest_value(session.stimulus_timestamps, event_times)
+
+    event_indices, start_ind_offset, end_ind_offset, trace_timebase = slice_inds_and_offsets(
+        ophys_times=session.stimulus_timestamps,
+        event_times=event_times,
+        window_around_timepoint_seconds=response_analysis_params['window_around_timepoint_seconds']
+    )
+    sliced_dataout = eventlocked_traces(running_array, event_indices, start_ind_offset, end_ind_offset)
+    # sliced_times = eventlocked_traces(session.stimulus_timestamps, event_indices, start_ind_offset, end_ind_offset)
+
+    eventlocked_traces_xr = xr.DataArray(
+        data=sliced_dataout,
+        dims=("eventlocked_timestamps", "stimulus_presentations_id"),
+        coords={
+            "eventlocked_timestamps": trace_timebase,
+            "stimulus_presentations_id": omission_presentations.index.values[:-1],
+        }
+    )
+
+    # use 0.25 here to start instead of 0 to make mean response window go from 250ms-750ms after omission
+    # average over 500ms before the next image flash
+    response_range = [0.25, response_analysis_params['response_window_duration_seconds']]
+    baseline_range = [-1 * response_analysis_params['baseline_window_duration_seconds']]
+
+    mean_responses = eventlocked_traces_xr.loc[
+        {'eventlocked_timestamps': slice(*response_range)}
+    ].mean(['eventlocked_timestamps'])
+
+    mean_baseline = eventlocked_traces_xr.loc[
+        {'eventlocked_timestamps': slice(*baseline_range)}
+    ].mean(['eventlocked_timestamps'])
+
+    result = xr.Dataset({
+        'eventlocked_traces': eventlocked_traces_xr,
+        'mean_response': mean_responses,
+        'mean_baseline': mean_baseline,
+    })
+
+    return result
+
+
+def get_lick_array(session):
+    licks = session.licks.timestamps.values
+    lick_inds = index_of_nearest_value(session.stimulus_timestamps, licks)
+    lick_array = np.zeros(session.stimulus_timestamps.shape)
+    lick_array[lick_inds] = 1
+    return lick_array
+
+
+def omission_licks_xr(session, response_analysis_params=None):
+    if response_analysis_params is None:
+        response_analysis_params = get_default_omission_response_params()
+
+    trace_array = get_lick_array(session)
+
+    # get omissions only
+    stimuli = session.stimulus_presentations
+    omission_presentations = stimuli[stimuli.image_name == 'omitted']
+    event_times = omission_presentations['start_time'].values[:-1] #last omission can get truncated
+    event_indices = index_of_nearest_value(session.stimulus_timestamps, event_times)
+
+    event_indices, start_ind_offset, end_ind_offset, trace_timebase = slice_inds_and_offsets(
+        ophys_times=session.stimulus_timestamps,
+        event_times=event_times,
+        window_around_timepoint_seconds=response_analysis_params['window_around_timepoint_seconds']
+    )
+    sliced_dataout = eventlocked_traces(trace_array, event_indices, start_ind_offset, end_ind_offset)
+    # sliced_times = eventlocked_traces(session.stimulus_timestamps, event_indices, start_ind_offset, end_ind_offset)
+
+    eventlocked_traces_xr = xr.DataArray(
+        data=sliced_dataout,
+        dims=("eventlocked_timestamps", "stimulus_presentations_id"),
+        coords={
+            "eventlocked_timestamps": trace_timebase,
+            "stimulus_presentations_id": omission_presentations.index.values[:-1],
+        }
+    )
+
+    # use 0.25 here to start instead of 0 to make mean response window go from 250ms-750ms after omission
+    # average over 500ms before the next image flash
+    response_range = [0.25, response_analysis_params['response_window_duration_seconds']]
+    baseline_range = [-1 * response_analysis_params['baseline_window_duration_seconds']]
+
+    mean_responses = eventlocked_traces_xr.loc[
+        {'eventlocked_timestamps': slice(*response_range)}
+    ].mean(['eventlocked_timestamps'])
+
+    mean_baseline = eventlocked_traces_xr.loc[
+        {'eventlocked_timestamps': slice(*baseline_range)}
+    ].mean(['eventlocked_timestamps'])
+
+    result = xr.Dataset({
+        'eventlocked_traces': eventlocked_traces_xr,
+        'mean_response': mean_responses,
+        'mean_baseline': mean_baseline,
+    })
+
+    return result
 
 def trial_response_df(trial_response_xr):
     '''
@@ -414,9 +523,10 @@ def omission_response_df(omission_response_xr):
     stacked_pval = p_vals.stack(multi_index=('stimulus_presentations_id', 'cell_specimen_id')).transpose()
 
     num_repeats = len(stacked_traces)
-    trace_timestamps = np.repeat(
-        stacked_traces.coords['eventlocked_timestamps'].data[np.newaxis, :],
-        repeats=num_repeats, axis=0)
+    # trace_timestamps = np.repeat(
+    #     stacked_traces.coords['eventlocked_timestamps'].data[np.newaxis, :],
+    #     repeats=num_repeats, axis=0)
+    trace_timestamps = stacked_traces.coords['eventlocked_timestamps']
 
     df = pd.DataFrame({
         'stimulus_presentations_id': stacked_traces.coords['stimulus_presentations_id'],
@@ -426,6 +536,58 @@ def omission_response_df(omission_response_xr):
         'mean_response': stacked_response.data,
         'baseline_response': stacked_baseline.data,
         'p_value': stacked_pval,
+    })
+    return df
+
+def omission_running_df(omission_running_xr):
+    '''
+    Smash things into df format if you want.
+    '''
+    traces = omission_running_xr['eventlocked_traces']
+    mean_response = omission_running_xr['mean_response']
+    mean_baseline = omission_running_xr['mean_baseline']
+
+    stacked_traces = traces.transpose()
+    stacked_response = mean_response.transpose()
+    stacked_baseline = mean_baseline.transpose()
+
+    num_repeats = len(stacked_traces)
+    trace_timestamps = np.repeat(
+        stacked_traces.coords['eventlocked_timestamps'].data[np.newaxis, :],
+        repeats=num_repeats, axis=0)
+
+    df = pd.DataFrame({
+        'stimulus_presentations_id': stacked_traces.coords['stimulus_presentations_id'],
+        'running_trace': list(stacked_traces.data),
+        'running_trace_timestamps': list(trace_timestamps),
+        'mean_response': stacked_response.data,
+        'baseline_response': stacked_baseline.data,
+    })
+    return df
+
+def omission_licks_df(omission_licks_xr):
+    '''
+    Smash things into df format if you want.
+    '''
+    traces = omission_licks_xr['eventlocked_traces']
+    mean_response = omission_licks_xr['mean_response']
+    mean_baseline = omission_licks_xr['mean_baseline']
+
+    stacked_traces = traces.transpose()
+    stacked_response = mean_response.transpose()
+    stacked_baseline = mean_baseline.transpose()
+
+    num_repeats = len(stacked_traces)
+    trace_timestamps = np.repeat(
+        stacked_traces.coords['eventlocked_timestamps'].data[np.newaxis, :],
+        repeats=num_repeats, axis=0)
+
+    df = pd.DataFrame({
+        'stimulus_presentations_id': stacked_traces.coords['stimulus_presentations_id'],
+        'lick_trace': list(stacked_traces.data),
+        'lick_trace_timestamps': list(trace_timestamps),
+        'mean_response': stacked_response.data,
+        'baseline_response': stacked_baseline.data,
     })
     return df
 
@@ -628,10 +790,21 @@ def get_p_value_from_shuffled_flashes(mean_responses,
     return result
 
 
+def get_omission_running_df(session):
+    fdf = omission_running_df(omission_running_xr(session, response_analysis_params=None))
+    return fdf
+
+def get_omission_licks_df(session):
+    fdf = omission_licks_df(omission_licks_xr(session, response_analysis_params=None))
+    return fdf
 
 def get_flash_response_df():
-    fdf = rp.stimulus_response_df(
-        rp.stimulus_response_xr(session, response_analysis_params=rp.get_default_flash_response_params()))
+    fdf = stimulus_response_df(
+        stimulus_response_xr(session, response_analysis_params=get_default_flash_response_params()))
+
+
+
+
 
 
 if __name__ == "__main__":
