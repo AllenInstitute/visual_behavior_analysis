@@ -260,12 +260,7 @@ class ResponseAnalysis(object):
         else:
             if os.path.exists(self.get_flash_response_df_path()):
                 print('loading flash response dataframe')
-                self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df')
-                fdf = self.flash_response_df
-                fdf.cell = [int(cell) for cell in fdf.cell.values]
-                fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
-                fdf.flash_number = [int(flash_number) for flash_number in fdf.flash_number.values]
-                self.flash_response_df = fdf
+                self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
             else:
                 self.flash_response_df = self.generate_flash_response_df()
                 self.save_flash_response_df(self.flash_response_df)
@@ -443,11 +438,11 @@ class ResponseAnalysis(object):
         pairwise_correlations_df.to_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
 
     def get_pairwise_correlations_df(self):
-        # if os.path.exists(self.get_pairwise_correlations_path()):
-        #     print('loading pairwise correlations dataframe')
-        #     self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
-        # else:
-        print('generating pairwise correlations dataframe')
-        self.pairwise_correlations_df = self.compute_pairwise_correlations()
-        self.save_pairwise_correlations_df(self.pairwise_correlations_df)
+        if os.path.exists(self.get_pairwise_correlations_path()):
+            print('loading pairwise correlations dataframe')
+            self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
+        else:
+            print('generating pairwise correlations dataframe')
+            self.pairwise_correlations_df = self.compute_pairwise_correlations()
+            self.save_pairwise_correlations_df(self.pairwise_correlations_df)
         return self.pairwise_correlations_df

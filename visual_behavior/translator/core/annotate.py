@@ -8,12 +8,56 @@ from dateutil import parser
 from ...utilities import inplace
 
 
+def _infer_last_trial_frame(trials, visual_stimuli):
+    """attempts to infer the last frame index of the trials
+
+    Parameters
+    ----------
+    trials : `pd.Dataframe`
+        core trials dataframe
+    visual_stimuli : `pd.Dataframe`
+        core visual stimuli dataframe
+
+    Returns
+    -------
+    int or None
+        last frame index of the last trial
+
+    Notes
+    -----
+    - this is meant to address issue #482 with `make_trials_contiguous` which
+    assumed that the last experiment frame would be a trial frame but breaks for
+    experiments where the last frame is a movie frame or grayscreen
+    """
+    last_trial_end_frame = (trials.iloc[-1]).endframe
+    filtered_vs = visual_stimuli[visual_stimuli.frame >= last_trial_end_frame]
+
+    if len(filtered_vs.index) > 0:
+        return (filtered_vs.iloc[0]).frame
+
+
 @inplace
-def make_trials_contiguous(trials, time):
-    trials['endframe'] = trials['startframe'].shift(-1).fillna(len(time) - 1).astype(int)
-    trials['endtime'] = trials['starttime'].shift(-1).fillna(time.max())
+def make_trials_contiguous(trials, time, visual_stimuli=None):
+    if visual_stimuli is not None:
+        trial_end_frame = _infer_last_trial_frame(trials, visual_stimuli, )
+    else:
+        trial_end_frame = None
+
+    if trial_end_frame is None:
+        trial_end_frame = len(time) - 1
+
+    trial_end_frame = min(trial_end_frame, len(time) - 1)  # ensure that trial end frame doesn't exceed length of time vector
+
+    trial_end_time = time[trial_end_frame]
+
+    trials['endframe'] = trials['startframe'] \
+        .shift(-1) \
+        .fillna(trial_end_frame) \
+        .astype(int)
+    trials['endtime'] = trials['starttime'] \
+        .shift(-1) \
+        .fillna(trial_end_time)
     trials['trial_length'] = trials['endtime'] - trials['starttime']
-    pass
 
 
 @inplace
@@ -497,14 +541,12 @@ def calculate_latency(trials):
 @inplace
 def calculate_reward_rate(
         df,
-        window=1.0,
         trial_window=25,
         remove_aborted=False
 ):
     # written by Dan Denman (stolen from http://stash.corp.alleninstitute.org/users/danield/repos/djd/browse/calculate_reward_rate.py)
     # add a column called reward_rate to the input dataframe
     # the reward_rate column contains a rolling average of rewards/min
-    # window sets the window in which a response is considered correct, so a window of 1.0 means licks before 1.0 second are considered correct
     # remove_aborted flag needs work, don't use it for now
     reward_rate = np.zeros(np.shape(df.change_time))
     c = 0
@@ -524,8 +566,7 @@ def calculate_reward_rate(
                 min_index = np.max((0, trial - trial_window))
                 max_index = np.min((trial + trial_window, len(df_temp)))
                 df_roll = df_temp.iloc[min_index:max_index]
-
-                correct = len(df_roll[df_roll.response_latency < window])  # get a rolling number of correct trials
+                correct = len(df_roll[df_roll.response_type == 'HIT'])
                 time_elapsed = df_roll.starttime.iloc[-1] - df_roll.starttime.iloc[0]  # get the time elapsed over the trials
                 reward_rate_on_this_lap = correct / time_elapsed  # calculate the reward rate
 
@@ -565,9 +606,11 @@ def check_responses(trials, reward_window=None):
     return did_respond
 
 
-def trial_translator(trial_type, response_type):
+def trial_translator(trial_type, response_type, auto_rewarded=False):
     if trial_type == 'aborted':
         return 'aborted'
+    elif auto_rewarded == True:
+        return 'auto_rewarded'
     elif trial_type == 'autorewarded':
         return 'auto_rewarded'
     elif trial_type == 'go':
@@ -580,6 +623,36 @@ def trial_translator(trial_type, response_type):
             return 'false_alarm'
         else:
             return 'correct_reject'
+
+
+def is_hit(trial):
+    '''returns:
+        True if trial is a hit
+        False if trial is a miss
+        NaN otherwise
+    '''
+    trial_description = assign_trial_description(trial)
+    if trial_description == 'hit':
+        return True
+    elif trial_description == 'miss':
+        return False
+    else:
+        return np.nan
+
+
+def is_catch(trial):
+    '''returns:
+        True if trial is a false alarm
+        False if trial is a correct rejection
+        NaN otherwise
+    '''
+    trial_description = assign_trial_description(trial)
+    if trial_description == 'false_alarm':
+        return True
+    elif trial_description == 'correct_reject':
+        return False
+    else:
+        return np.nan
 
 
 def colormap(trial_type, palette='trial_types'):
@@ -602,6 +675,10 @@ def colormap(trial_type, palette='trial_types'):
             'correct_reject': 'yellow',
         }
     return colors.get(trial_type, 'white')
+
+
+def assign_trial_description(trial, palette='trial_types'):
+    return trial_translator(trial['trial_type'], trial['response'], trial['auto_rewarded'])
 
 
 def assign_color(trial, palette='trial_types'):

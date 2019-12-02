@@ -18,12 +18,15 @@ setuptools.setup(
         "deepdish>=0.3.6",
         "numpy>=1.9.0",  # for science some packages need to be pinned
         "python-dateutil",
-        "marshmallow==3.0.0b11",
+        "marshmallow==3.0.0b20",
         "psycopg2-binary",
         "seaborn",
         'zipfile2; python_version < "3.5"',
         'zipfile36; python_version >= "3.5"',
         'opencv-python',
+        'pymongo',
+        'pyyaml',
+        'h5py>=2.7.1',
     ],
     tests_require=[
         "flake8",

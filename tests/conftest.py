@@ -3,6 +3,7 @@ import py
 import os
 import tempfile
 import datetime
+from dateutil.tz import tzutc
 import numpy as np
 import pandas as pd
 import pytz
@@ -24,9 +25,9 @@ TEST_SESSION_FNAME = "180122094711-task=DoC_NaturalImages_CAMMatched_n=8_stage=n
 
 
 if PY3:
-    load_pickle = lambda pstream: pickle.load(pstream, encoding="latin1")
+    def load_pickle(pstream): return pickle.load(pstream, encoding="latin1")
 else:
-    load_pickle = lambda pstream: pickle.load(pstream)
+    def load_pickle(pstream): return pickle.load(pstream)
 
 
 @pytest.fixture(scope='session')
@@ -183,7 +184,7 @@ def exemplar_extended_trials_fixture():
         'endtime', 'reward_licks', 'reward_lick_count', 'reward_lick_latency',
         'reward_rate', 'response', 'trial_length', 'color'
     ])
-    trials['startdatetime'] = trials['startdatetime'].dt.tz_localize('America/Los_Angeles')
+    trials['startdatetime'] = [pd.Timestamp(d).tz_localize('America/Los_Angeles').astimezone(tzutc()) for d in trials['startdatetime']]
     trials['behavior_session_uuid'] = uuid.UUID('66750c6b-0a0e-43bd-9cb3-fc511c34dc0e')
     return trials
 
@@ -210,9 +211,9 @@ def mock_trials_fixture():
     trials['auto_rewarded'] = False
     trials['lick_frames'] = [[] for row in trials.iterrows()]
     trials['trial_length'] = 8.5
-    trials['reward_times'] = trials.apply(lambda r: [r['change_time']+0.2] if r['change']*r['detect'] else [],axis=1)
+    trials['reward_times'] = trials.apply(lambda r: [r['change_time'] + 0.2] if r['change'] * r['detect'] else [], axis=1)
     trials['reward_volume'] = 0.005 * trials['reward_times'].map(len)
-    trials['response_latency'] = trials.apply(lambda r: 0.2 if r['detect'] else np.inf,axis=1)
+    trials['response_latency'] = trials.apply(lambda r: 0.2 if r['detect'] else np.inf, axis=1)
     trials['blank_duration_range'] = [[0.5, 0.5] for row in trials.iterrows()]
 
     metadata = {}
@@ -245,6 +246,17 @@ def session_summary():
     summary['startdatetime'] = datetime.datetime(2017, 7, 19, 10, 35, 8, 369000, tzinfo=pytz.utc)
     summary['startdatetime'] = pd.to_datetime(summary['startdatetime'])
     summary['behavior_session_uuid'] = summary['behavior_session_uuid'].map(uuid.UUID)
+    summary['fraction_time_hit'] = 0.176
+    summary['fraction_time_miss'] = 0.036
+    summary['fraction_time_correct_reject'] = 0.638
+    summary['fraction_time_false_alarm'] = 0.150
+    summary['fraction_time_auto_rewarded'] = 0.0
+    summary['number_of_hits'] = np.nan
+    summary['number_of_misses'] = np.nan
+    summary['number_of_false_alarms'] = np.nan
+    summary['number_of_correct_rejects'] = np.nan
+    summary['rig_id'] = 'unknown'
+    summary.drop('d_prime',axis=1,inplace=True) # note: metric removed in PR #580
     return summary
 
 
@@ -257,7 +269,9 @@ def epoch_summary():
     summary['startdatetime'] = datetime.datetime(2017, 7, 19, 10, 35, 8, 369000, tzinfo=pytz.utc)
     summary['startdatetime'] = pd.to_datetime(summary['startdatetime'])
     summary['behavior_session_uuid'] = summary['behavior_session_uuid'].map(uuid.UUID)
+    summary.drop('d_prime',axis=1,inplace=True) # note: metric removed in PR #580
     return summary
+
 
 @pytest.fixture(scope="module")
 def trials_df_fixture():
@@ -406,4 +420,6 @@ def foraging2_data_stage_0_2018_05_16():
     return pd.read_pickle(
         os.path.join(TESTING_RES_DIR, "doc_images_db22310_LateDoCMouse.pkl")
     )
+
+
 foraging2_data_stage4_2018_05_10

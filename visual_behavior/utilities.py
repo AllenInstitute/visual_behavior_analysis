@@ -1,10 +1,11 @@
 from __future__ import print_function
-from dateutil import tz
+from dateutil import parser, tz
 from functools import wraps
 import logging
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
+import datetime
 import os
 import h5py
 import cv2
@@ -26,58 +27,56 @@ def flatten_list(in_list):
     return out_list
 
 
-def get_response_rates(df_in2, sliding_window=100, reward_window=None):
+def get_response_rates(df_in, sliding_window=100, apply_trial_number_limit=False):
+    """
+    calculates the rolling hit rate, false alarm rate, and dprime value
+    Note that the pandas rolling metric deals with NaN values by propogating the previous non-NaN value
 
-    df_in = df_in2.copy()
-    try:
-        df_in.reset_index(inplace=True)
-    except ValueError:
-        del df_in['level_0']
-        df_in.reset_index(inplace=True)
+    Parameters
+    ----------
+    sliding_window : int
+        Number of trials over which to calculate metrics
 
-    go_responses = pd.Series([np.nan] * len(df_in))
-    go_responses[
-        df_in[
-            (df_in.trial_type == 'go')
-            & (df_in.response == 1)
-            & (df_in.auto_rewarded != True)
-        ].index
-    ] = 1
-    go_responses[
-        df_in[
-            (df_in.trial_type == 'go')
-            & ((df_in.response == 0) | np.isnan(df_in.response))
-            & (df_in.auto_rewarded != True)
-        ].index
-    ] = 0
+    Returns
+    -------
+    tuple containing hit rate, false alarm rate, d_prime
+
+    """
+
+    from visual_behavior.translator.core.annotate import is_catch, is_hit
+
+    go_responses = df_in.apply(is_hit, axis=1)
 
     hit_rate = go_responses.rolling(
         window=sliding_window,
         min_periods=0,
-    ).mean()
+    ).mean().values
 
-    catch_responses = pd.Series([np.nan] * len(df_in))
-    catch_responses[
-        df_in[
-            (df_in.trial_type == 'catch')
-            & (df_in.response == 1)
-        ].index
-    ] = 1
-    catch_responses[
-        df_in[
-            (df_in.trial_type == 'catch')
-            & ((df_in.response == 0) | np.isnan(df_in.response))
-        ].index
-    ] = 0
+    catch_responses = df_in.apply(is_catch, axis=1)
 
     catch_rate = catch_responses.rolling(
         window=sliding_window,
         min_periods=0,
-    ).mean()
+    ).mean().values
+
+    if apply_trial_number_limit:
+        # avoid values close to 0 and 1
+        go_count = go_responses.rolling(
+            window=sliding_window,
+            min_periods=0,
+        ).count()
+
+        catch_count = catch_responses.rolling(
+            window=sliding_window,
+            min_periods=0,
+        ).count()
+
+        hit_rate = np.vectorize(trial_number_limit)(hit_rate, go_count)
+        catch_rate = np.vectorize(trial_number_limit)(catch_rate, catch_count)
 
     d_prime = dprime(hit_rate, catch_rate)
 
-    return hit_rate.values, catch_rate.values, d_prime
+    return hit_rate, catch_rate, d_prime
 
 
 class RisingEdge():
@@ -110,6 +109,15 @@ class RisingEdge():
 
 
 # -> metrics
+def trial_number_limit(p, N):
+    if N == 0:
+        return np.nan
+    if not pd.isnull(p):
+        p = np.max((p, 1. / (2 * N)))
+        p = np.min((p, 1 - 1. / (2 * N)))
+    return p
+
+
 def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
     """ calculates the d-prime for a given hit rate and false alarm rate
 
@@ -137,7 +145,29 @@ def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
     hit_rate = np.clip(hit_rate, limits[0], limits[1])
     fa_rate = np.clip(fa_rate, limits[0], limits[1])
 
-    return Z(hit_rate) - Z(fa_rate)
+    try:
+        last_hit_nan = np.where(np.isnan(hit_rate))[0].max()
+    except ValueError:
+        last_hit_nan = 0
+
+    try:
+        last_fa_nan = np.where(np.isnan(fa_rate))[0].max()
+    except ValueError:
+        last_fa_nan = 0
+
+    last_nan = np.max((last_hit_nan, last_fa_nan))
+
+    # fill nans with 0.5 to avoid warning about nans
+    d_prime = Z(pd.Series(hit_rate).fillna(0.5)) - Z(pd.Series(fa_rate).fillna(0.5))
+
+    # fill all values up to the last nan with nan
+    d_prime[:last_nan + 1] = np.nan
+
+    if len(d_prime) == 1:
+        # if the result is a 1-length vector, return as a scalar
+        return d_prime[0]
+    else:
+        return d_prime
 
 
 def calc_deriv(x, time):
@@ -167,10 +197,14 @@ def deg_to_dist(speed_deg_per_s):
 
 
 def local_time(iso_timestamp, timezone=None):
-    datetime = pd.to_datetime(iso_timestamp)
-    if not datetime.tzinfo:
-        datetime = datetime.replace(tzinfo=tz.gettz('America/Los_Angeles'))
-    return datetime.isoformat()
+    if isinstance(iso_timestamp, datetime.datetime):
+        dt = iso_timestamp
+    else:
+        dt = parser.parse(iso_timestamp)
+
+    if not dt.tzinfo:
+        dt = dt.replace(tzinfo=tz.gettz('America/Los_Angeles'))
+    return dt.isoformat()
 
 
 class ListHandler(logging.Handler):

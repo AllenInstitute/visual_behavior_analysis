@@ -744,15 +744,6 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         plt.close()
 
 
-def get_colors_for_response_types(values):
-    c = sns.color_palette()
-    colors_dict = {'HIT': c[2], 'MISS': c[8], 'CR': c[0], 'FA': c[3]}
-    colors = []
-    for val in values:
-        colors.append(colors_dict[val])
-    return colors
-
-
 def plot_transition_type_heatmap(analysis, cell_list, cmap='jet', vmax=None, save=False, ax=None, colorbar=True):
     response_types = ['HIT', 'MISS', 'FA', 'CR']
     df = analysis.trial_response_df.copy()

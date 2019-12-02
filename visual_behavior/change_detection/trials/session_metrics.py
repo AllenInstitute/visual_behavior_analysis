@@ -6,6 +6,7 @@ import pandas as pd
 from ..trials import masks
 from ...utilities import get_response_rates, flatten_list
 from ...metrics import d_prime
+from ...translator.core.annotate import assign_trial_description
 
 
 def discrim(
@@ -57,6 +58,7 @@ def lick_latency(session_trials, percentile=50, trial_types=('go', )):
     """
     mask = masks.trial_types(session_trials, trial_types)
     quantile = session_trials[mask]['response_latency']\
+        .replace([np.inf, -np.inf], np.nan) \
         .dropna() \
         .quantile(percentile / 100.0)
 
@@ -83,27 +85,37 @@ def earned_water(session_trials):
     return total_water(session_trials, ('go', ))
 
 
-def peak_dprime(session_trials):
+def peak_dprime(session_trials, first_valid_trial=50, sliding_window=100, apply_trial_number_limit=False):
     mask = (session_trials['trial_type'] != 'aborted')
-    _, _, dp = get_response_rates(session_trials[mask], sliding_window=100)
+    _, _, dp = get_response_rates(
+        session_trials[mask],
+        sliding_window=sliding_window,
+        apply_trial_number_limit=apply_trial_number_limit
+    )
+    if np.all(np.isnan(dp)):
+        return np.nan
     try:
-        return np.nanmax(dp[50:])
-    except ValueError:
+        return np.nanmax(dp[first_valid_trial:])
+    except (IndexError, ValueError):
         return np.nan
 
 
 def peak_hit_rate(session_trials):
     mask = (session_trials['trial_type'] != 'aborted')
     hr, _, _ = get_response_rates(session_trials[mask], sliding_window=100)
+    if all(np.isnan(hr)):
+        return np.nan
     try:
         return np.nanmax(hr[50:])
-    except ValueError:
+    except (IndexError, ValueError):
         return np.nan
 
 
 def peak_false_alarm_rate(session_trials):
     mask = (session_trials['trial_type'] != 'aborted')
     _, far, _ = get_response_rates(session_trials[mask], sliding_window=100)
+    if all(np.isnan(far)):
+        return np.nan
     try:
         return np.nanmax(far[50:])
     except ValueError:
@@ -111,9 +123,19 @@ def peak_false_alarm_rate(session_trials):
 
 
 def fraction_time_by_trial_type(session_trials, trial_type='aborted'):
-    trial_fractions = session_trials.groupby('trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
+    session_trials['full_trial_type'] = session_trials.apply(assign_trial_description, axis=1)
+    trial_fractions = session_trials.groupby('full_trial_type')['trial_length'].sum() / session_trials['trial_length'].sum()
     try:
         return trial_fractions[trial_type]
+    except KeyError:
+        return 0.0
+
+
+def trial_count_by_trial_type(session_trials, trial_type='hit'):
+    session_trials['full_trial_type'] = session_trials.apply(assign_trial_description, axis=1)
+    trial_count = session_trials.groupby('full_trial_type')['trial_length'].count()
+    try:
+        return trial_count[trial_type]
     except KeyError:
         return 0.0
 
@@ -183,6 +205,14 @@ def trial_duration(session_trials):
 
 def user_id(session_trials):
     return session_trials.iloc[0].user_id
+
+
+def rig_id(session_trials):
+    try:
+        rig_id = session_trials['rig_id'].iloc[0]
+    except KeyError:
+        rig_id = 'unknown'
+    return rig_id
 
 
 def filename(session_trials):

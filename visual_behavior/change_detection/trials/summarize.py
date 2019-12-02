@@ -53,7 +53,6 @@ DEFAULT_SUMMARY_METRICS = dict(
     # behavior_session_uuid=session_metrics.session_id,
     session_duration=session_metrics.session_duration,
     d_prime_peak=session_metrics.peak_dprime,
-    d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime),
     discrim_p=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.discrim_p),
     response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
     earned_water=session_metrics.earned_water,
@@ -61,6 +60,15 @@ DEFAULT_SUMMARY_METRICS = dict(
     num_contingent_trials=session_metrics.num_contingent_trials,
     lick_latency_median=session_metrics.lick_latency,
     fraction_time_aborted=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'aborted'),
+    fraction_time_hit=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'hit'),
+    fraction_time_miss=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'miss'),
+    fraction_time_correct_reject=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'correct_reject'),
+    fraction_time_false_alarm=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'false_alarm'),
+    fraction_time_auto_rewarded=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'auto_rewarded'),
+    number_of_hit_trials=lambda grp: session_metrics.trial_count_by_trial_type(grp, 'hit'),
+    number_of_miss_trials=lambda grp: session_metrics.trial_count_by_trial_type(grp, 'miss'),
+    number_of_false_alarm_trials=lambda grp: session_metrics.trial_count_by_trial_type(grp, 'false_alarm'),
+    number_of_correct_reject_trials=lambda grp: session_metrics.trial_count_by_trial_type(grp, 'correct_reject'),
     hit_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.hit_rate),
     false_alarm_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.false_alarm_rate),
     hit_rate_peak=session_metrics.peak_hit_rate,
@@ -71,6 +79,7 @@ DEFAULT_SUMMARY_METRICS = dict(
     change_time_distribution=session_metrics.change_time_distribution,
     # trial_duration=session_metrics.trial_duration,
     user_id=session_metrics.user_id,
+    rig_id=session_metrics.rig_id,
     # filename=session_metrics.filename,
     stimulus=session_metrics.stimulus,
     stage=session_metrics.training_stage,
@@ -87,6 +96,10 @@ def session_level_summary(trials, groupby=('mouse_id', 'behavior_session_uuid', 
 
     trials = annotate_change_detect(trials)
 
+    # print('calling label_auto_rewards')
+    # trials = label_auto_rewards(trials)
+    # print(trials.trial_type.unique())
+
     session_summary = (
         trials
         .groupby(list(groupby))
@@ -102,7 +115,6 @@ def epoch_level_summary(trials, epoch_length=10.0, **kwargs):
 
     summarizer = create_summarizer(
         num_contingent_trials=session_metrics.num_contingent_trials,
-        d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime),
         response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
         earned_water=session_metrics.earned_water,
         lick_latency_median=session_metrics.lick_latency,
