@@ -120,11 +120,59 @@ def motion_correction():
         'y_corr': [0.9, 0.4, 1.0]
     })
     
+
+@pytest.fixture
+def roi_metrics():
+    return pd.DataFrame({'index': {3: 4, 6: 7, 8: 9},
+         ' traceindex': {3: 2, 6: 5, 8: 7},
+         ' tempIndex': {3: 17, 6: 12, 8: 2},
+         ' cx': {3: 127, 6: 234, 8: 299},
+         ' cy': {3: 36, 6: 152, 8: 171},
+         ' mask2Frame': {3: 0, 6: 0, 8: 0},
+         ' frame': {3: 345, 6: 21, 8: 332},
+         ' object': {3: 2, 6: 2, 8: 2},
+         ' minx': {3: 118, 6: 225, 8: 290},
+         ' miny': {3: 29, 6: 141, 8: 160},
+         ' maxx': {3: 134, 6: 246, 8: 308},
+         ' maxy': {3: 43, 6: 162, 8: 183},
+         ' area': {3: 139, 6: 298, 8: 302},
+         ' shape0': {3: 0.326, 6: 0.484, 8: 0.435},
+         ' shape1': {3: 15, 6: 12, 8: 12},
+         ' eXcluded': {3: 0, 6: 0, 8: 0},
+         ' meanInt0': {3: 33, 6: 34, 8: 37},
+         ' maxInt0': {3: 52, 6: 56, 8: 64},
+         ' meanInt1': {3: 15, 6: 15, 8: 17},
+         ' maxInt1': {3: 30, 6: 33, 8: 40},
+         ' maxMeanRatio': {3: 1.0, 6: 1.2, 8: 1.3529},
+         ' snpoffsetmean': {3: 12.225381, 6: 7.040238, 8: 9.801933},
+         ' snpoffsetstdv': {3: 14.154276000000001, 6: 9.789852999999999, 8: 9.318489},
+         ' act2': {3: 5282, 6: 12630, 8: 6275},
+         ' act3': {3: 1055, 6: 9851, 8: 3166},
+         ' OvlpCount': {3: 0, 6: 0, 8: 0},
+         ' OvlpAreaPer': {3: 0, 6: 0, 8: 0},
+         ' OvlpObj0': {3: 0, 6: 0, 8: 0},
+         ' corcoef0': {3: 0.0, 6: 0.0, 8: 0.0},
+         ' OvlpObj1': {3: 0, 6: 0, 8: 0},
+         ' corcoef1': {3: 0.0, 6: 0.0, 8: 0.0},
+         'roi_id': {3: 798485141, 6: 798485135, 8: 798485144},
+         'id': {3: 815268274, 6: 815266942, 8: 815267016},
+            'x': {3: 118, 6: 225, 8: 290},
+            'y': {3: 29, 6: 141, 8: 160},
+            'width': {3: 17, 6: 22, 8: 19},
+            'height': {3: 15, 6: 22, 8: 24},
+            'valid': {3: True, 6: True, 8: True},
+            'mask': {3: [[True, False], [True, False]],
+                     6: [[True, False], [True, False]],
+                     8: [[True, False], [True, False]]},
+            'unfiltered_cell_index': {3: 20, 6: 17, 8: 21},
+            'cell_index': {3: 5, 6: 4, 8: 6},
+            'cell_specimen_id': {3: 815268274, 6: 815266942, 8: 815267016}}
+    )
     
 @pytest.fixture
 def ophys_data_dir(tmpdir_factory, 
     ophys_metadata, ophys_timestamps, ophys_stimulus_table, stimulus_template, stimulus_metadata, running_speed,
-    licks, rewards, task_parameters, max_projection, motion_correction
+    licks, rewards, task_parameters, max_projection, motion_correction, roi_metrics
 ):
     warnings.simplefilter("ignore") # pandas yells about hdf object columns - it IS a problem for cross-version compatibility
     
@@ -181,6 +229,10 @@ def ophys_data_dir(tmpdir_factory,
     # motion correction
     motion_correction_path = os.path.join(analysis_folder_path, 'motion_correction.h5')
     motion_correction.to_hdf(motion_correction_path, key='df', format='fixed')
+
+    # roi metrics
+    roi_metrics_path = os.path.join(analysis_folder_path, 'roi_metrics.h5')
+    roi_metrics.to_hdf(roi_metrics_path, key='df', format='fixed')
     
     return tmp_dir
 
@@ -257,7 +309,10 @@ def test_get_timestamps_ophys(fn, ophys_dataset, ophys_timestamps):
 def test_get_stimulus_table(fn, ophys_dataset, ophys_stimulus_table):
     
     obtained = fn(ophys_dataset)
-    ophys_stimulus_table = ophys_stimulus_table.loc[:, ('contrast', 'flash_number', 'start_time', 'end_time', 'image_name')]
+    ophys_stimulus_table = ophys_stimulus_table.loc[:, ('contrast', 'flash_number',
+                                                        'start_time', 'end_time',
+                                                        'image_name', 'orientation',
+                                                        'image_category', 'duration')]
     pd.testing.assert_frame_equal(obtained, ophys_stimulus_table, check_like=True)
         
     

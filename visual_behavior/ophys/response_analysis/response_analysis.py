@@ -39,12 +39,13 @@ class ResponseAnalysis(object):
         self.dataset = dataset
         self.use_events = use_events
         self.overwrite_analysis_files = overwrite_analysis_files
-        self.trial_window = [-4, 4]  # time, in seconds, around change time to extract portion of cell trace
+        self.trial_window = [-4, 8]  # time, in seconds, around change time to extract portion of cell trace
         self.flash_window = [-0.5,
                              0.75]  # time, in seconds, around stimulus flash onset time to extract portion of cell trace
+        self.omitted_flash_window = [-3, 3]
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
         self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
-                                0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
+            0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         self.baseline_window = np.asarray(
             self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
         self.stimulus_duration = 0.25  # self.dataset.task_parameters['stimulus_duration'].values[0]
@@ -54,6 +55,7 @@ class ResponseAnalysis(object):
 
         self.get_trial_response_df()
         self.get_flash_response_df()
+        self.get_omitted_flash_response_df()
 
     def get_trial_response_df_path(self):
         if self.use_events:
@@ -72,6 +74,7 @@ class ResponseAnalysis(object):
             else:
                 cell_trace = self.dataset.dff_traces[cell_index, :].copy()
             for trial in self.dataset.trials.trial.values[:-1]:  # ignore last trial to avoid truncated traces
+                cell_matching_has_been_run = self.dataset.cell_matching
                 cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
                 change_time = self.dataset.trials[self.dataset.trials.trial == trial].change_time.values[0]
                 # get dF/F trace & metrics
@@ -95,13 +98,16 @@ class ResponseAnalysis(object):
                 mean_running_speed = ut.get_mean_in_window(running_speed_trace, self.response_window,
                                                            self.stimulus_frame_rate)
                 df_list.append(
-                    [trial, cell_index, cell_specimen_id, trace, timestamps, mean_response, baseline_response, n_events,
-                     p_value, sd_over_baseline, running_speed_trace, running_speed_timestamps,
-                     mean_running_speed, self.dataset.experiment_id])
+                    [trial, int(cell_index), int(cell_specimen_id), trace, timestamps, mean_response, baseline_response,
+                     n_events,
+                     p_value, sd_over_baseline, mean_running_speed, cell_matching_has_been_run,
+                     self.dataset.experiment_id])
+                # running_speed_trace, running_speed_timestamps,
 
         columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
-                   'n_events', 'p_value', 'sd_over_baseline', 'running_speed_trace', 'running_speed_timestamps',
-                   'mean_running_speed', 'experiment_id']
+                   'n_events', 'p_value', 'sd_over_baseline', 'mean_running_speed', 'cell_matching_has_been_run',
+                   'experiment_id']
+        # 'running_speed_trace', 'running_speed_timestamps',
         trial_response_df = pd.DataFrame(df_list, columns=columns)
         trial_metadata = self.dataset.trials
         trial_metadata = trial_metadata.rename(columns={'response': 'behavioral_response'})
@@ -119,12 +125,19 @@ class ResponseAnalysis(object):
     def get_trial_response_df(self):
         if self.overwrite_analysis_files:
             print('overwriting analysis files')
+            file_path = self.get_trial_response_df_path()
+            if os.path.exists(file_path):
+                os.remove(file_path)
             self.trial_response_df = self.generate_trial_response_df()
             self.save_trial_response_df(self.trial_response_df)
         else:
             if os.path.exists(self.get_trial_response_df_path()):
                 print('loading trial response dataframe')
-                self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df', )
+                self.trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df')
+                tdf = self.trial_response_df
+                tdf.cell = [int(cell) for cell in tdf.cell.values]
+                tdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in tdf.cell_specimen_id.values]
+                self.trial_response_df = tdf
             else:
                 self.trial_response_df = self.generate_trial_response_df()
                 self.save_trial_response_df(self.trial_response_df)
@@ -138,11 +151,14 @@ class ResponseAnalysis(object):
         return path
 
     def generate_flash_response_df(self):
+        print('generating flash response df')
         stimulus_table = ut.annotate_flashes_with_reward_rate(self.dataset)
+        running_speed = self.dataset.running_speed.running_speed.values
         row = []
         for cell in self.dataset.cell_indices:
             cell = int(cell)
             cell_specimen_id = int(self.dataset.get_cell_specimen_id_for_cell_index(cell))
+            cell_matching_has_been_run = self.dataset.cell_matching
             if self.use_events:
                 cell_trace = self.dataset.events[cell, :].copy()
             else:
@@ -150,50 +166,82 @@ class ResponseAnalysis(object):
             for flash in stimulus_table.flash_number:
                 flash = int(flash)
                 flash_data = stimulus_table[stimulus_table.flash_number == flash]
+                if 'omitted' in flash_data.keys():
+                    omitted = flash_data.omitted.values[0]
+                else:
+                    omitted = False
                 flash_time = flash_data.start_time.values[0]
                 image_name = flash_data.image_name.values[0]
-                # flash_window = [-self.response_window_duration, self.response_window_duration]
+                image_category = flash_data.image_category.values[0]
                 flash_window = self.flash_window
                 trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
                                                                   self.dataset.timestamps_ophys,
                                                                   flash_window, self.ophys_frame_rate)
-                # response_window = [self.response_window_duration, self.response_window_duration * 2]
                 response_window = [np.abs(flash_window[0]), np.abs(flash_window[
                     0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
                 baseline_window = [np.abs(flash_window[0]) - self.response_window_duration, (np.abs(flash_window[0]))]
-                # baseline_window = [np.abs(flash_window[0]), np.abs(flash_window[0]) - self.response_window_duration]
-                p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
+                p_value_baseline = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
                 sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
                                                            baseline_window, self.ophys_frame_rate)
                 mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate, self.use_events)
                 baseline_response = ut.get_mean_in_window(trace, baseline_window,
                                                           self.ophys_frame_rate, self.use_events)
                 n_events = ut.get_n_nonzero_in_window(trace, response_window, self.ophys_frame_rate)
+                running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(flash_time,
+                                                                                              running_speed,
+                                                                                              self.dataset.timestamps_stimulus,
+                                                                                              flash_window,
+                                                                                              self.stimulus_frame_rate)
+                mean_running_speed = ut.get_mean_in_window(running_speed_trace, response_window,
+                                                           self.stimulus_frame_rate)
                 reward_rate = flash_data.reward_rate.values[0]
 
-                row.append([cell, cell_specimen_id, flash, flash_time, image_name, trace, timestamps, mean_response,
-                            baseline_response, n_events, p_value, sd_over_baseline, reward_rate,
-                            self.dataset.experiment_id])
+                row.append(
+                    [int(cell), int(cell_specimen_id), int(flash), omitted, flash_time, image_name, image_category,
+                     trace, timestamps, mean_response, baseline_response, n_events, p_value_baseline, sd_over_baseline,
+                     reward_rate, mean_running_speed, cell_matching_has_been_run, int(self.dataset.experiment_id)])
 
         flash_response_df = pd.DataFrame(data=row,
-                                         columns=['cell', 'cell_specimen_id', 'flash_number', 'start_time',
-                                                  'image_name', 'trace', 'timestamps', 'mean_response',
-                                                  'baseline_response', 'n_events', 'p_value', 'sd_over_baseline',
-                                                  'reward_rate', 'experiment_id'])
+                                         columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
+                                                  'image_name', 'image_category', 'trace', 'timestamps',
+                                                  'mean_response',
+                                                  'baseline_response', 'n_events', 'p_value_baseline',
+                                                  'sd_over_baseline',
+                                                  'reward_rate', 'mean_running_speed', 'cell_matching_has_been_run',
+                                                  'experiment_id'])
         flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
         flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
         flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
 
-        flash_response_df['change_time'] = flash_response_df.start_time.values
-        flash_response_df = pd.merge(flash_response_df, self.dataset.all_trials[['change_time', 'trial_type']],
-                                     on='change_time', how='outer')
-
+        # flash_response_df['change_time'] = flash_response_df.start_time.values
+        # flash_response_df = pd.merge(flash_response_df, self.dataset.trials[['change_time', 'trial_type']],
+        #                              on='change_time', how='outer')
         # tmp = self.trial_response_df[self.trial_response_df.cell == 0]
         # flash_response_df = pd.merge(flash_response_df, tmp[['change_time',
         #                             'lick_times', 'reward_times']], on='change_time', how='outer')
-        flash_response_df = flash_response_df[
-            (flash_response_df.flash_number > 10) & (flash_response_df.trial_type != 'autorewarded')]
+        # flash_response_df = flash_response_df[
+        #     (flash_response_df.flash_number > 10) & (flash_response_df.trial_type != 'autorewarded')]
         flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
+        if 'index' in flash_response_df.keys():
+            flash_response_df = flash_response_df.drop(columns=['index']).reset_index()
+        print('computing p-values from shuffled spontaneous activity')
+        p_values_from_shuffle = ut.get_p_values_from_shuffle_spontaneous(self.dataset, flash_response_df,
+                                                                         self.response_window_duration)
+        p_values = []
+        for flash_number in flash_response_df.flash_number.unique():
+            p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
+        flash_response_df['p_value'] = p_values
+        if 'omitted' in stimulus_table.image_name.unique():
+            print('computing p-values from shuffled omitted flash responses')
+            p_values_from_shuffle = ut.get_p_values_from_shuffle_omitted(self.dataset, stimulus_table,
+                                                                         flash_response_df,
+                                                                         self.response_window_duration)
+            p_values = []
+            for flash_number in flash_response_df.flash_number.unique():
+                p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
+            flash_response_df['p_value_omitted'] = p_values
+        else:
+            flash_response_df['p_value_omitted'] = np.nan
 
         return flash_response_df
 
@@ -203,80 +251,179 @@ class ResponseAnalysis(object):
 
     def get_flash_response_df(self):
         if self.overwrite_analysis_files:
+            # delete old file or else it will keep growing in size
+            file_path = self.get_flash_response_df_path()
+            if os.path.exists(file_path):
+                os.remove(file_path)
             self.flash_response_df = self.generate_flash_response_df()
             self.save_flash_response_df(self.flash_response_df)
         else:
             if os.path.exists(self.get_flash_response_df_path()):
                 print('loading flash response dataframe')
-                self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', )
+                self.flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df', format='fixed')
             else:
                 self.flash_response_df = self.generate_flash_response_df()
                 self.save_flash_response_df(self.flash_response_df)
         return self.flash_response_df
 
+    def get_omitted_flash_response_df_path(self):
+        if self.use_events:
+            path = os.path.join(self.dataset.analysis_dir, 'omitted_flash_response_df_events.h5')
+        else:
+            path = os.path.join(self.dataset.analysis_dir, 'omitted_flash_response_df.h5')
+        return path
+
+    def generate_omitted_flash_response_df(self):
+        print('generating omitted flash response df')
+        stimulus_table = ut.annotate_flashes_with_reward_rate(self.dataset)
+        stimulus_table = stimulus_table[stimulus_table.omitted == True]
+        row = []
+        for cell in self.dataset.cell_indices:
+            cell = int(cell)
+            cell_specimen_id = int(self.dataset.get_cell_specimen_id_for_cell_index(cell))
+            cell_matching_has_been_run = self.dataset.cell_matching
+            if self.use_events:
+                cell_trace = self.dataset.events[cell, :].copy()
+            else:
+                cell_trace = self.dataset.dff_traces[cell, :].copy()
+            for flash in stimulus_table.flash_number:
+                flash = int(flash)
+                flash_data = stimulus_table[stimulus_table.flash_number == flash]
+                if 'omitted' in flash_data.keys():
+                    omitted = flash_data.omitted.values[0]
+                else:
+                    omitted = False
+                flash_time = flash_data.start_time.values[0]
+                image_name = flash_data.image_category.values[0]
+                image_category = flash_data.image_category.values[0]
+                flash_window = self.omitted_flash_window
+                trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
+                                                                  self.dataset.timestamps_ophys,
+                                                                  flash_window, self.ophys_frame_rate)
+                response_window = [np.abs(flash_window[0]), np.abs(flash_window[
+                    0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
+                baseline_window = [np.abs(flash_window[0]) - self.response_window_duration, (np.abs(flash_window[0]))]
+                p_value = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
+                p_value_baseline = p_value
+                sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
+                                                           baseline_window, self.ophys_frame_rate)
+                mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate, self.use_events)
+                baseline_response = ut.get_mean_in_window(trace, baseline_window,
+                                                          self.ophys_frame_rate, self.use_events)
+                n_events = ut.get_n_nonzero_in_window(trace, response_window, self.ophys_frame_rate)
+                reward_rate = flash_data.reward_rate.values[0]
+
+                row.append(
+                    [int(cell), int(cell_specimen_id), int(flash), omitted, flash_time, image_name, image_category,
+                     trace, timestamps, mean_response, baseline_response, n_events, p_value, p_value_baseline, sd_over_baseline,
+                     reward_rate, cell_matching_has_been_run, int(self.dataset.experiment_id)])
+
+        flash_response_df = pd.DataFrame(data=row,
+                                         columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
+                                                  'image_name', 'image_category', 'trace', 'timestamps',
+                                                  'mean_response', 'baseline_response', 'n_events',
+                                                  'p_value', 'p_value_baseline', 'sd_over_baseline',
+                                                  'reward_rate', 'cell_matching_has_been_run', 'experiment_id'])
+        # flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
+        flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
+        omitted_flash_response_df = flash_response_df
+        return omitted_flash_response_df
+
+    def save_omitted_flash_response_df(self, omitted_flash_response_df):
+        print('saving omitted flash response dataframe')
+        omitted_flash_response_df.to_hdf(self.get_omitted_flash_response_df_path(), key='df', format='fixed')
+
+    def get_omitted_flash_response_df(self):
+        if self.overwrite_analysis_files:
+            # delete old file or else it will keep growing in size
+            file_path = self.get_omitted_flash_response_df_path()
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            self.omitted_flash_response_df = self.generate_omitted_flash_response_df()
+            self.save_omitted_flash_response_df(self.omitted_flash_response_df)
+        else:
+            if os.path.exists(self.get_omitted_flash_response_df_path()):
+                print('loading omitted flash response dataframe')
+                self.omitted_flash_response_df = pd.read_hdf(self.get_omitted_flash_response_df_path(), key='df')
+                fdf = self.omitted_flash_response_df
+                fdf.cell = [int(cell) for cell in fdf.cell.values]
+                fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
+                self.omitted_flash_response_df = fdf
+            else:
+                self.omitted_flash_response_df = self.generate_omitted_flash_response_df()
+                self.save_omitted_flash_response_df(self.omitted_flash_response_df)
+        return self.omitted_flash_response_df
+
     def compute_pairwise_correlations(self):
         fdf = self.flash_response_df.copy()
+        if 'omitted' in fdf.keys():
+            fdf = fdf[fdf.omitted == False].copy()
         # compute correlations independently for each repeat of a given image after a change
         # repeat = 1 is the first flash after change, repeat = 5 is the 5th flash after a change
+        fdf['engaged'] = [True if reward_rate > 2 else False for reward_rate in fdf.reward_rate.values]
         s_corr_data = []
         n_corr_data = []
-        for repeat in [1, 5, 10]:
-            tmp_fdf = fdf[fdf.repeat == repeat]
-            # create a df with the trial averaged response for each image across flash repeat number
-            mfdf = ut.get_mean_df(tmp_fdf, conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
+        for repeat in [1, 5, 10, 15]:
+            for engaged in fdf.engaged.unique():
+                # print('repeat', repeat, 'engaged', engaged)
+                tmp_fdf = fdf[(fdf.repeat == repeat) & (fdf.engaged == engaged)]
+                # create a df with the trial averaged response for each image across flash repeat number
+                mfdf = ut.get_mean_df(tmp_fdf, conditions=['cell_specimen_id', 'image_name', 'repeat', 'engaged'],
+                                      flashes=True)
 
-            # signal correlations
-            # create table with the trial averaged response of each cell to each image
-            signal_responses = mfdf.pivot_table(
-                index=['cell_specimen_id', 'repeat'],
-                columns='image_name',
-                values='mean_response')
-            # loop through pairs to compute signal correlations
-            for cell1_data, cell2_data in itertools.combinations(signal_responses.iterrows(), 2):
-                (cell_specimen_id_1, repeat_number_1), image_responses_1 = cell1_data
-                (cell_specimen_id_2, repeat_number_2), image_responses_2 = cell2_data
-                try:
-                    # correlation between 2 cells tuning curves
-                    scorr = sp.stats.pearsonr(image_responses_1[~np.isnan(image_responses_1)],
-                                              image_responses_2[~np.isnan(image_responses_2)])[0]
-                except ValueError:
-                    scorr = np.nan
-                s_corr_data.append(
-                    dict(repeat=repeat_number_1, cell1=cell_specimen_id_1,
-                         cell2=cell_specimen_id_2, signal_correlation=scorr))
-
-            # noise correlations
-            # get trial average response for each cell to subtract from each trial's response
-            mfdf['trial_average'] = mfdf.mean_response.values
-            mfdf2 = mfdf[['cell_specimen_id', 'image_name', 'repeat', 'trial_average']]
-            # add trial average column to flash response df
-            ndf = mfdf2.merge(tmp_fdf, on=['cell_specimen_id', 'image_name', 'repeat'])
-            # subtract the trial average from the mean response on each individual flash
-            ndf['noise_response'] = ndf.mean_response - ndf.trial_average
-            # create table with trial average subtracted response for each flash
-            noise_responses = ndf.pivot_table(
-                index=['cell_specimen_id', 'repeat'],
-                columns='flash_number',
-                values='noise_response')
-            # compute noise correlations
-            for cell1_data, cell2_data in itertools.combinations(noise_responses.iterrows(), 2):
-                (cell_specimen_id_1, repeat_number_1), trial_responses_1 = cell1_data
-                (cell_specimen_id_2, repeat_number_2), trial_responses_2 = cell2_data
-                try:
-                    ncorr = sp.stats.pearsonr(trial_responses_1[~np.isnan(trial_responses_1)],
-                                              trial_responses_2[~np.isnan(trial_responses_2)])[0]
-                except ValueError:
-                    ncorr = np.nan
-                n_corr_data.append(
-                    dict(repeat=repeat_number_1, cell1=cell_specimen_id_1,
-                         cell2=cell_specimen_id_2, noise_correlation=ncorr))
+                # signal correlations
+                # create table with the trial averaged response of each cell to each image
+                # print('getting signal correlations')
+                signal_responses = mfdf.pivot_table(
+                    index=['cell_specimen_id', 'repeat', 'engaged'],
+                    columns='image_name',
+                    values='mean_response')
+                # loop through pairs to compute signal correlations
+                for cell1_data, cell2_data in itertools.combinations(signal_responses.iterrows(), 2):
+                    #     print cell1_data, cell2_data
+                    (cell_specimen_id_1, repeat_number_1, engaged_1), image_responses_1 = cell1_data
+                    (cell_specimen_id_2, repeat_number_2, engaged_2), image_responses_2 = cell2_data
+                    try:
+                        # correlation between 2 cells tuning curves
+                        scorr = sp.stats.pearsonr(image_responses_1[~np.isnan(image_responses_1)],
+                                                  image_responses_2[~np.isnan(image_responses_2)])[0]
+                    except ValueError:
+                        scorr = np.nan
+                    s_corr_data.append(
+                        dict(repeat=repeat_number_1, engaged=engaged_1, cell1=cell_specimen_id_1,
+                             cell2=cell_specimen_id_2, signal_correlation=scorr))
+                # noise correlations
+                # get trial average response for each cell to subtract from each trial's response
+                # print('getting noise correlations')
+                mfdf['trial_average'] = mfdf.mean_response.values
+                mfdf2 = mfdf[['cell_specimen_id', 'image_name', 'repeat', 'engaged', 'trial_average']]
+                # add trial average column to flash response df
+                ndf = mfdf2.merge(tmp_fdf, on=['cell_specimen_id', 'image_name', 'repeat', 'engaged'])
+                # subtract the trial average from the mean response on each individual flash
+                ndf['noise_response'] = ndf.mean_response - ndf.trial_average
+                # create table with trial average subtracted response for each flash
+                noise_responses = ndf.pivot_table(
+                    index=['cell_specimen_id', 'repeat', 'engaged'],
+                    columns='flash_number',
+                    values='noise_response')
+                # compute noise correlations
+                for cell1_data, cell2_data in itertools.combinations(noise_responses.iterrows(), 2):
+                    (cell_specimen_id_1, repeat_number_1, engaged_1), trial_responses_1 = cell1_data
+                    (cell_specimen_id_2, repeat_number_2, engaged_2), trial_responses_2 = cell2_data
+                    try:
+                        ncorr = sp.stats.pearsonr(trial_responses_1[~np.isnan(trial_responses_1)],
+                                                  trial_responses_2[~np.isnan(trial_responses_2)])[0]
+                    except ValueError:
+                        ncorr = np.nan
+                    n_corr_data.append(
+                        dict(repeat=repeat_number_1, engaged=engaged_1, cell1=cell_specimen_id_1,
+                             cell2=cell_specimen_id_2, noise_correlation=ncorr))
 
         # create dataframes from signal and noise correlation dictionaries and merge
         cdf1 = pd.DataFrame(s_corr_data)
         cdf2 = pd.DataFrame(n_corr_data)
-        pairwise_correlations_df = cdf1.merge(cdf2, on=['cell1', 'cell2', 'repeat'])
+        pairwise_correlations_df = cdf1.merge(cdf2, on=['cell1', 'cell2', 'repeat', 'engaged'])
         pairwise_correlations_df['experiment_id'] = int(self.dataset.experiment_id)
-
         return pairwise_correlations_df
 
     def get_pairwise_correlations_path(self):
@@ -293,7 +440,7 @@ class ResponseAnalysis(object):
     def get_pairwise_correlations_df(self):
         if os.path.exists(self.get_pairwise_correlations_path()):
             print('loading pairwise correlations dataframe')
-            self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df', )
+            self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df', format='fixed')
         else:
             print('generating pairwise correlations dataframe')
             self.pairwise_correlations_df = self.compute_pairwise_correlations()
