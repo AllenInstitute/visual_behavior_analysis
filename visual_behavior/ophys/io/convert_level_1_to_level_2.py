@@ -550,7 +550,7 @@ def save_trials(trials, lims_data):
 def get_visual_stimulus_data(pkl):
     try:
         images = foraging2.data_to_images(pkl)
-    except ValueError:
+    except (ValueError, KeyError):
         images = foraging.load_images(pkl)
     stimulus_template = images['images']
     stimulus_metadata = pd.DataFrame(images['image_attributes'])
