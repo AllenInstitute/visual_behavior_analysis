@@ -12,9 +12,23 @@ from visual_coding_2p_analysis.l0_analysis import L0_analysis
 
 def event_detection(lims_id, cache_dir, events_dir, plot=True):
     dataset = VisualBehaviorOphysDataset(lims_id, cache_dir=cache_dir)
-    dataset.metadata['genotype'] = 'Ai93'
+    if 'Slc17a7' in dataset.metadata.cre_line.values[0]:
+        print('Slc17a7, using Ai93 halflife')
+        genotype = 'Ai93'
+        dataset.metadata['genotype'] = genotype
+        halflife = 314
+    elif 'Sst' in dataset.metadata.cre_line.values[0]:
+        print('Sst, using Ai93 halflife')
+        genotype = 'Ai93'
+        dataset.metadata['genotype'] = genotype
+        halflife = 314
+    elif 'Vip' in dataset.metadata.cre_line.values[0]:
+        print('Vip, using Ai93 halflife')
+        genotype = 'Ai93'
+        dataset.metadata['genotype'] = genotype
+        halflife = 314
 
-    l0 = L0_analysis(dataset, cache_directory=events_dir, genotype='Ai93', halflife_ms=315)
+    l0 = L0_analysis(dataset, cache_directory=events_dir, genotype=genotype, halflife_ms=halflife)
 
     print('getting events')
     events = l0.get_events()
@@ -30,8 +44,10 @@ def event_detection(lims_id, cache_dir, events_dir, plot=True):
 
 if __name__ == '__main__':
     import sys
+    import os
 
     lims_id = sys.argv[1]
 
     cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
+    events_dir = os.path.join(cache_dir, 'events')
     event_detection(lims_id,cache_dir=cache_dir,events_dir=events_dir)
