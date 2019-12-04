@@ -162,12 +162,14 @@ def get_p_values_from_shuffle_spontaneous(dataset, flash_response_df, response_w
     included_flashes = fdf.flash_number.unique()
     st = st[st.flash_number.isin(included_flashes)]
 
-    spontaneous_frames = get_spontaneous_frames(dataset)
-
     #  params
     ophys_frame_rate = 31
     n_mean_response_window_frames = int(
         np.round(response_window_duration * ophys_frame_rate, 0))  # stimulus window = 0.25ms*31Hz = 7.75 frames
+
+    spontaneous_frames = np.array(get_spontaneous_frames(dataset))
+    spontaneous_frames = spontaneous_frames[spontaneous_frames<max(spontaneous_frames)-n_mean_response_window_frames] #avoid overruning the end of the vector
+
     cell_indices = dataset.get_cell_indices()
     n_cells = len(cell_indices)
     # get shuffled values from spontaneous periods
