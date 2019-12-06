@@ -230,6 +230,19 @@ def get_visual_stimuli_df(data, time):
         df = pd.concat((visual_stimuli_df, omitted_df), sort=False).sort_values('frame').reset_index()
     else:
         df = visual_stimuli_df
+
+    # Was the flash a change flash?
+    if 'omitted' in df['image_name'].unique():
+        omitted_index = df.groupby("image_name").apply(
+            lambda group: group["image_index"].unique()[0]
+        )["omitted"]
+    else:
+        omitted_index = None
+    changes = find_change(df["image_index"], omitted_index)
+    omitted = df["image_index"] == omitted_index
+
+    df["change"] = changes
+    df["omitted"] = omitted
     return df
 
 
