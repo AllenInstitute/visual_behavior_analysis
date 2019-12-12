@@ -626,8 +626,8 @@ def plot_behavior_events(dataset, ax, behavior_only=False, linewidth=2):
     reward_times = dataset.rewards.time.values
     if behavior_only:
         lick_y = 0
-        reward_y = 0.25
-        ax.set_ylim([-0.5, 1])
+        reward_y = -0.2
+        ax.set_ylim([-0.5, 0.5])
     else:
         ymin, ymax = ax.get_ylim()
         lick_y = ymin + (ymax * 0.05)
@@ -638,12 +638,14 @@ def plot_behavior_events(dataset, ax, behavior_only=False, linewidth=2):
     reward_y_array = np.empty(len(reward_times))
     reward_y_array[:] = reward_y
     ax.plot(lick_times, lick_y_array, '|', color='g', markeredgewidth=linewidth, label='licks')
-    ax.plot(reward_times, reward_y_array, 'o', markerfacecolor='purple', markeredgecolor='purple', markeredgewidth=linewidth/10.,
+    reward_color = 'purple'
+    ax.plot(reward_times, reward_y_array, '^', markerfacecolor=reward_color, markeredgecolor=reward_color,
+            markeredgewidth=0.3,
             label='rewards')
     return ax
 
 
-def plot_behavior(dataset, cache_dir):
+def plot_behavior_for_session(dataset, cache_dir):
     flashes = dataset.stimulus_table.copy()
     flashes = ut.annotate_flashes_with_reward_rate(dataset)
     figsize = (15,4)

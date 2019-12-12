@@ -534,7 +534,7 @@ def get_p_value_from_shuffled_omissions(mean_responses,
         ophys_timestamps (np.array): Timestamps of each ophys frame
         dff_traces_arr (np.array): Dff values, shape (nSamples, nCells)
         response_window_duration (int): Number of frames averaged to produce mean response values
-        number_of_shuffles (int): Number of shuffles of spontaneous activity used to produce the p-value
+        number_of_shuffles (int): Number of shuffles of omission activity used to produce the p-value
     Returns:
         p_values (xarray.DataArray): p-value for each response mean, shape (nConditions, nCells)
     '''
@@ -588,7 +588,7 @@ def get_p_value_from_shuffled_flashes(mean_responses,
         ophys_timestamps (np.array): Timestamps of each ophys frame
         dff_traces_arr (np.array): Dff values, shape (nSamples, nCells)
         response_window_duration (int): Number of frames averaged to produce mean response values
-        number_of_shuffles (int): Number of shuffles of spontaneous activity used to produce the p-value
+        number_of_shuffles (int): Number of shuffles of flash responses used to produce the p-value
     Returns:
         p_values (xarray.DataArray): p-value for each response mean, shape (nConditions, nCells)
     '''
@@ -603,7 +603,7 @@ def get_p_value_from_shuffled_flashes(mean_responses,
                                        stimulus_flashes.start_time.values]
     stimulus_flash_start_frames = stimulus_flashes.start_frame.values
     stimulus_flash_start_frames = stimulus_flash_start_frames[:-1]  # exclude last one
-    # shuffle omitted flash frames
+    # shuffle flash frames
     shuffled_stimulus_flash_start_frames = np.random.choice(stimulus_flash_start_frames, number_of_shuffles)
 
     if ophys_frame_rate is None:
