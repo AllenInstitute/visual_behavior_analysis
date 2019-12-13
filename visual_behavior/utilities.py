@@ -4,12 +4,14 @@ from functools import wraps
 import logging
 import numpy as np
 import pandas as pd
-from scipy.stats import norm
+from scipy.stats import norm, zscore
+from scipy import ndimage
 import datetime
 import os
 import h5py
 import cv2
 import warnings
+
 
 from sync import Dataset
 
@@ -306,7 +308,7 @@ class Movie(object):
                 warnings.warn('NONMATCHING timestamp counts\nThere are {} timestamps in sync and {} timestamps in the associated camera file\nthese should match'.format(
                     len(self.sync_timestamps), len(self.timestamps_from_file)))
         else:
-            warnings.warn('Movies often have a companion h5 file with a corresponding name. None found for this movie. Expected {}'.format(h5_filename))
+            # warnings.warn('Movies often have a companion h5 file with a corresponding name. None found for this movie. Expected {}'.format(h5_filename))
             self.timestamps_from_file = None
 
         self._lazy_load = lazy_load
@@ -369,7 +371,8 @@ def get_sync_data(sync_path):
 
 
 class EyeTrackingData(object):
-    def __init__(self, ophys_session_id, data_source='mongodb', pupil_color=[0, 0, 255], eye_color=[255, 0, 0], cr_color=[0, 255, 0]):
+    def __init__(self, ophys_session_id, data_source='mongodb', filter_outliers=True, filter_blinks=True,
+                 pupil_color=[0, 0, 255], eye_color=[255, 0, 0], cr_color=[0, 255, 0]):
         well_known_files = db.get_well_known_files(ophys_session_id)
 
         # colors of ellipses:
@@ -388,20 +391,22 @@ class EyeTrackingData(object):
 
         self.sync_data = get_sync_data(self.sync_path)
 
-        # open behavior and eye movies
-        self.eye_movie = Movie(self.eye_movie_path)
-        self.behavior_movie = Movie(self.behavior_movie_path)
-
         # assign timestamps from sync
-        for movie in [self.eye_movie, self.behavior_movie]:
-            movie.sync_timestamps = self.sync_data[self.get_matching_sync_line(movie, self.sync_data)]
+        self.sync_timestamps = {}
+        for movie_label, movie_path in zip(['eye', 'behavior'], [self.eye_movie_path, self.behavior_movie_path]):
+            movie = Movie(movie_path)
+            sync_line = self.get_matching_sync_line(movie, self.sync_data)
+            if sync_line is not None:
+                self.sync_timestamps[movie_label] = self.sync_data[sync_line]
+            else:
+                self.sync_timestamps[movie_label] = None
+                warnings.warn('no matching sync line for {}'.format(movie_label))
 
         self.ellipse_fits = {}
         if data_source == 'filesystem':
             # get ellipse fits from h5 files
             for dataset in ['pupil', 'eye', 'cr']:
-                self.ellipse_fits[dataset] = self.get_eye_data_from_file(self.ellipse_fit_path, dataset=dataset, timestamps=self.eye_movie.sync_timestamps)
-
+                self.ellipse_fits[dataset] = self.get_eye_data_from_file(self.ellipse_fit_path, dataset=dataset, timestamps=self.sync_timestamps['eye'])
             # replace the 'cr' key with 'corneal_reflection for clarity
             self.ellipse_fits['corneal_reflection'] = self.ellipse_fits.pop('cr')
 
@@ -414,6 +419,23 @@ class EyeTrackingData(object):
 
             mongo_db.close()
 
+        if filter_outliers:
+            self.filter_outliers()
+
+        if filter_blinks:
+            self.filter_blinks()
+
+    def filter_outliers(self, outlier_threshold=3):
+        '''
+        zscore columns: 'center_x', 'center_y', 'width', 'height'
+        flag any rows with a value that exceeds the threshold
+        '''
+        cols_to_check = ['center_x', 'center_y', 'width', 'height']
+        for dataset in self.ellipse_fits.keys():
+            df = self.ellipse_fits[dataset]
+            df_outliers = pd.DataFrame({parameter: abs(zscore(df[parameter].fillna(df[parameter].mean()))) > outlier_threshold for parameter in cols_to_check})
+            df['likely_outlier'] = df_outliers.any(axis=1)
+
     def get_matching_sync_line(self, movie, sync_data):
         '''determine which sync line matches the frame count of a given movie'''
         nframes = movie.frame_count
@@ -421,6 +443,32 @@ class EyeTrackingData(object):
             if candidate_line in sync_data.keys() and nframes == len(sync_data[candidate_line]):
                 return candidate_line
         return None
+
+    def filter_blinks(self, interpolate_over_blinks=True, dilation_frames=2):
+        '''
+        identify and remove fits near blinks
+        '''
+        merged = self.ellipse_fits['pupil'].merge(self.ellipse_fits['eye'].rename(columns={'area': 'eye_area'})['eye_area'], left_index=True, right_index=True)
+        # detect blinks as frames with either a missing eye fit or a missing pupil fit
+        # dilate by 2 frames, which will also label the frames before/after a blink as likely blinks. This should avoid the borderline cases where the eye is just shutting and the fit is bad
+        merged['likely_blinks'] = ndimage.binary_dilation(pd.isnull(merged['area']) | pd.isnull(merged['eye_area']) | merged['likely_outlier'] == True, iterations=dilation_frames)
+        for fit_data in self.ellipse_fits.keys():
+            self.ellipse_fits[fit_data]['likely_blinks'] = merged['likely_blinks']
+
+        fit_parameters = [c for c in self.ellipse_fits['pupil'] if c not in ['frame', 'time', 'likely_blinks']]
+        for fit_parameter in fit_parameters:
+            # make a new 'blink_corrected' column
+            self.ellipse_fits['pupil']['blink_corrected_{}'.format(fit_parameter)] = self.ellipse_fits['pupil'][fit_parameter]
+
+            # fill likely blinks with nans
+            self.ellipse_fits['pupil'].loc[self.ellipse_fits['pupil'].query('likely_blinks == True').index, 'blink_corrected_{}'.format(fit_parameter)] = np.nan
+
+            if interpolate_over_blinks:
+                # make a 'blink corrected' column that interpolates over the blinks
+                data = self.ellipse_fits['pupil']['blink_corrected_{}'.format(fit_parameter)].interpolate()
+                zs = pd.Series(zscore(data.fillna(data.mean())))
+                data.loc[zs[zs > 5].index] = np.nan
+                self.ellipse_fits['pupil']['blink_corrected_{}'.format(fit_parameter)] = data
 
     def get_eye_data_from_file(self, eye_tracking_path, dataset='pupil', timestamps=None):
         '''open ellipse fit. try to match sync data if possible'''
@@ -435,7 +483,7 @@ class EyeTrackingData(object):
         df['area'] = df[['height', 'width']].apply(area, axis=1)
 
         if timestamps is not None:
-            df['t'] = timestamps
+            df['time'] = timestamps
 
         df['frame'] = np.arange(len(df)).astype(int)
 
@@ -446,7 +494,7 @@ class EyeTrackingData(object):
 
         return df
 
-    def add_ellipse(self, image, ellipse_fit_row, color=[1, 1, 1]):
+    def add_ellipse(self, image, ellipse_fit_row, color=[1, 1, 1], linewidth=3):
         '''adds an ellipse fit to an eye tracking video frame'''
         if pd.notnull(ellipse_fit_row['center_x'].item()):
             center_coordinates = (
@@ -464,7 +512,7 @@ class EyeTrackingData(object):
             endAngle = 360
 
             # Line thickness of 5 px
-            thickness = 3
+            thickness = linewidth
 
             # Using cv2.ellipse() method
             # Draw a ellipse with red line borders of thickness of 5 px
@@ -473,7 +521,7 @@ class EyeTrackingData(object):
 
         return image
 
-    def get_annotated_frame(self, frame=None, time=None, pupil=True, eye=True, corneal_reflection=False):
+    def get_annotated_frame(self, frame=None, time=None, pupil=True, eye=True, corneal_reflection=False, linewidth=3):
         '''get a particular eye video frame with ellipses drawn'''
         if time is None and frame is None:
             warnings.warn('must specify either a frame or time')
@@ -482,10 +530,13 @@ class EyeTrackingData(object):
             warnings.warn('cannot specify both frame and time')
             return None
 
-        if time is not None:
-            frame = np.argmin(np.abs(time - self.eye_movie.sync_timestamps))
+        eye_movie = Movie(self.eye_movie_path)
+        eye_movie.sync_timestamps = self.sync_timestamps['eye']
 
-        image = self.eye_movie.get_frame(frame=frame)
+        if time is not None:
+            frame = np.argmin(np.abs(time - eye_movie.sync_timestamps))
+
+        image = eye_movie.get_frame(frame=frame)
 
         if pupil:
             image = self.add_ellipse(image, self.ellipse_fits['pupil'].query('frame == @frame'), color=self.pupil_color)
