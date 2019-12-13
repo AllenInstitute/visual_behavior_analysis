@@ -321,3 +321,27 @@ def getThreshold(p, x=np.linspace(0, 1, 1001), criterion=0.5, fittype='Weibull')
     yval = criterion * (1 - p[2] - p[3]) + p[3]
     xval = np.interp(yval, y, x)
     return xval, yval
+
+
+def save_figure(
+        fig,
+        fname,
+        formats=['.png'],
+        transparent=False,
+        dpi=300,
+        **kwargs
+    ):
+    
+    import matplotlib as mpl
+    mpl.rcParams['pdf.fonttype'] = 42
+    if 'size' in kwargs.keys():
+        fig.set_size_inches(kwargs['size'])
+    else:
+        fig.set_size_inches(11, 8.5)
+    for f in formats:
+        fig.savefig(
+            fname + f,
+            transparent=transparent,
+            orientation='landscape',
+            dpi=dpi
+        )
