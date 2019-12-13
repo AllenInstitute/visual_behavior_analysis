@@ -223,7 +223,7 @@ class VisualBehaviorOphysDataset(object):
 
     corrected_fluorescence_traces = LazyLoadable('_corrected_fluorescence_traces', get_corrected_fluorescence_traces)
 
-    def get_events(self):
+    def get_events_array(self):
         events_folder = os.path.join(self.cache_dir, 'events')
         if os.path.exists(events_folder):
             events_file = [file for file in os.listdir(events_folder) if
@@ -245,10 +245,10 @@ class VisualBehaviorOphysDataset(object):
             logger.info('no events for this experiment')
             events = None
 
-        self._events = events
-        return self._events
+        self._events_array = events
+        return self._events_array
 
-    events = LazyLoadable('_events', get_events)
+    events_array = LazyLoadable('_events', get_events_array)
 
     def get_roi_metrics(self):
         self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df')
@@ -323,6 +323,12 @@ class VisualBehaviorOphysDataset(object):
 
     dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
 
+    def get_events(self):
+        self._events = pd.DataFrame({'events': [x for x in self.events_array]}, index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        return self._events
+
+    events = LazyLoadable('_events', get_events)
+
 
     def get_stimulus_presentations(self):
         stimulus_presentations_df = self.stimulus_table.copy()
@@ -388,7 +394,7 @@ class VisualBehaviorOphysDataset(object):
         obj.get_trials()
         obj.get_dff_traces_array()
         obj.get_corrected_fluorescence_traces()
-        obj.get_events()
+        obj.get_events_array()
         obj.get_roi_metrics()
         obj.get_roi_mask_dict()
         obj.get_roi_mask_array()
@@ -398,6 +404,7 @@ class VisualBehaviorOphysDataset(object):
         obj.get_average_image()
         obj.get_motion_correction()
         obj.get_dff_traces()
+        obj.get_events()
         obj.get_stimulus_presentations()
         # obj.get_extended_stimulus_presentations()
 

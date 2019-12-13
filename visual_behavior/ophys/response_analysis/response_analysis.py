@@ -60,27 +60,20 @@ class ResponseAnalysis(object):
         self.dataset = dataset
         self.use_events = use_events
         self.overwrite_analysis_files = overwrite_analysis_files
-        self.trial_window = [-4, 8]  # time, in seconds, around change time to extract portion of cell trace
-        self.flash_window = [-0.5,
-                             0.75]  # time, in seconds, around stimulus flash onset time to extract portion of cell trace
-        self.omitted_flash_window = [-3,3]
+        self.trial_window = rp.get_default_trial_response_params()['window_around_timepoint_seconds']
+        self.flash_window = rp.get_default_stimulus_response_params()['window_around_timepoint_seconds']
+        self.omitted_flash_window = rp.get_default_omission_response_params()['window_around_timepoint_seconds']
         self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
-        self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
-                                0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
-        self.baseline_window = np.asarray(
-            self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
+        # self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
+        #                         0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
+        # self.baseline_window = np.asarray(
+        #     self.response_window) - self.response_window_duration  # time, in seconds, relative to change time to take baseline mean response
         self.omission_response_window_duration = 0.75 # compute omission mean response and baseline response over 750ms
         self.stimulus_duration = 0.25  # self.dataset.task_parameters['stimulus_duration'].values[0]
         self.blank_duration = self.dataset.task_parameters['blank_duration'].values[0]
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate'].values[0]
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
 
-        # self.get_trial_response_df()
-        # self.get_flash_response_df()
-        # if 'omitted' in self.dataset.stimulus_presentations.image_name.unique():
-        #     self.get_omitted_flash_response_df()
-        # else:
-        #     print('no omitted flashes in this experiment')
 
     def get_trial_response_df_path(self):
         if self.use_events:
@@ -88,59 +81,6 @@ class ResponseAnalysis(object):
         else:
             path = os.path.join(self.dataset.analysis_dir, 'trial_response_df.h5')
         return path
-
-    # def generate_trial_response_df(self):
-    #     logger.info('generating trial response dataframe')
-    #     running_speed = self.dataset.running_speed.running_speed.values
-    #     df_list = []
-    #     for cell_index in self.dataset.cell_indices:
-    #         if self.use_events:
-    #             cell_trace = self.dataset.events[cell_index, :].copy()
-    #         else:
-    #             cell_trace = self.dataset.dff_traces[cell_index, :].copy()
-    #         for trial in self.dataset.trials.trial.values[:-1]:  # ignore last trial to avoid truncated traces
-    #             cell_specimen_id = self.dataset.get_cell_specimen_id_for_cell_index(cell_index)
-    #             change_time = self.dataset.trials[self.dataset.trials.trial == trial].change_time.values[0]
-    #             # get dF/F trace & metrics
-    #             trace, timestamps = ut.get_trace_around_timepoint(change_time, cell_trace,
-    #                                                               self.dataset.ophys_timestamps,
-    #                                                               self.trial_window, self.ophys_frame_rate)
-    #             mean_response = ut.get_mean_in_window(trace, self.response_window, self.ophys_frame_rate,
-    #                                                   self.use_events)
-    #             baseline_response = ut.get_mean_in_window(trace, self.baseline_window, self.ophys_frame_rate,
-    #                                                       self.use_events)
-    #             p_value_baseline = ut.get_p_val(trace, self.response_window, self.ophys_frame_rate)
-    #             sd_over_baseline = ut.get_sd_over_baseline(trace, self.response_window, self.baseline_window,
-    #                                                        self.ophys_frame_rate)
-    #             n_events = ut.get_n_nonzero_in_window(trace, self.response_window, self.ophys_frame_rate)
-    #             # this is redundant because its the same for every cell. do we want to keep this?
-    #             running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(change_time,
-    #                                                                                           running_speed,
-    #                                                                                           self.dataset.stimulus_timestamps,
-    #                                                                                           self.trial_window,
-    #                                                                                           self.stimulus_frame_rate)
-    #             mean_running_speed = ut.get_mean_in_window(running_speed_trace, self.response_window,
-    #                                                        self.stimulus_frame_rate)
-    #             df_list.append(
-    #                 [trial, int(cell_index), int(cell_specimen_id), trace, timestamps, mean_response, baseline_response, n_events,
-    #                  p_value_baseline, sd_over_baseline, mean_running_speed, self.dataset.experiment_id])
-    #                  #running_speed_trace, running_speed_timestamps,
-    #
-    #
-    #     columns = ['trial', 'cell', 'cell_specimen_id', 'trace', 'timestamps', 'mean_response', 'baseline_response',
-    #                'n_events', 'p_value_baseline', 'sd_over_baseline', 'mean_running_speed', 'experiment_id']
-    #                 #'running_speed_trace', 'running_speed_timestamps',
-    #     trial_response_df = pd.DataFrame(df_list, columns=columns)
-    #
-    #
-    #     trial_metadata = self.dataset.trials
-    #     trial_metadata = trial_metadata.rename(columns={'response': 'behavioral_response'})
-    #     trial_metadata = trial_metadata.rename(columns={'response_type': 'behavioral_response_type'})
-    #     trial_metadata = trial_metadata.rename(columns={'response_time': 'behavioral_response_time'})
-    #     trial_metadata = trial_metadata.rename(columns={'response_latency': 'behavioral_response_latency'})
-    #     trial_response_df = trial_response_df.merge(trial_metadata, on='trial')
-    #     trial_response_df = ut.annotate_trial_response_df_with_pref_stim(trial_response_df)
-    #     return trial_response_df
 
     def save_trial_response_df(self, trial_response_df):
         print('saving trial response dataframe')
@@ -153,16 +93,16 @@ class ResponseAnalysis(object):
             file_path = self.get_trial_response_df_path()
             if os.path.exists(file_path):
                 os.remove(file_path)
-            # self.trial_response_df = self.generate_trial_response_df()
-            trial_response_df = rp.trial_response_df(rp.trial_response_xr(self.dataset))
+            # trial_response_df = rp.trial_response_df(rp.trial_response_xr(self.dataset))
+            trial_response_df = rp.get_trial_response_df(self.dataset)
             self.save_trial_response_df(trial_response_df)
         else:
             if os.path.exists(self.get_trial_response_df_path()):
                 print('loading trial response dataframe')
                 trial_response_df = pd.read_hdf(self.get_trial_response_df_path(), key='df')
             else:
-                # self.trial_response_df = self.generate_trial_response_df()
-                trial_response_df = rp.trial_response_df(rp.trial_response_xr(self.dataset))
+                # trial_response_df = rp.trial_response_df(rp.trial_response_xr(self.dataset))
+                trial_response_df = rp.get_trial_response_df(self.dataset)
                 self.save_trial_response_df(trial_response_df)
         trials = self.dataset.trials
         trials = trials.rename(columns={'response': 'behavioral_response', 'response_type': 'behavioral_response_type',
@@ -186,86 +126,11 @@ class ResponseAnalysis(object):
             path = os.path.join(self.dataset.analysis_dir, 'flash_response_df.h5')
         return path
 
-    # def generate_flash_response_df(self):
-    #     print('generating flash response df')
-    #     stimulus_table = ut.annotate_flashes_with_reward_rate(self.dataset)
-    #     running_speed = self.dataset.running_speed.running_speed.values
-    #     row = []
-    #     for cell in self.dataset.cell_indices:
-    #         cell = int(cell)
-    #         cell_specimen_id = int(self.dataset.get_cell_specimen_id_for_cell_index(cell))
-    #         if self.use_events:
-    #             cell_trace = self.dataset.events[cell, :].copy()
-    #         else:
-    #             cell_trace = self.dataset.dff_traces[cell, :].copy()
-    #         for flash in stimulus_table.flash_number:
-    #             flash = int(flash)
-    #             flash_data = stimulus_table[stimulus_table.flash_number == flash]
-    #             if 'omitted' in flash_data.keys():
-    #                 omitted = flash_data.omitted.values[0]
-    #             else:
-    #                 omitted = False
-    #             flash_time = flash_data.start_time.values[0]
-    #             image_name = flash_data.image_name.values[0]
-    #             image_category = flash_data.image_category.values[0]
-    #             flash_window = self.flash_window
-    #             trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
-    #                                                               self.dataset.ophys_timestamps,
-    #                                                               flash_window, self.ophys_frame_rate)
-    #             response_window = [np.abs(flash_window[0]), np.abs(flash_window[
-    #                 0]) + self.response_window_duration]  # time, in seconds, around flash time to take the mean response
-    #             baseline_window = [np.abs(flash_window[0]) - self.response_window_duration, (np.abs(flash_window[0]))]
-    #             p_value_baseline = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
-    #             sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
-    #                                                        baseline_window, self.ophys_frame_rate)
-    #             mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate, self.use_events)
-    #             baseline_response = ut.get_mean_in_window(trace, baseline_window,
-    #                                                       self.ophys_frame_rate, self.use_events)
-    #             n_events = ut.get_n_nonzero_in_window(trace, response_window, self.ophys_frame_rate)
-    #             running_speed_trace, running_speed_timestamps = ut.get_trace_around_timepoint(flash_time,
-    #                                                                                           running_speed,
-    #                                                                                           self.dataset.stimulus_timestamps,
-    #                                                                                           flash_window,
-    #                                                                                           self.stimulus_frame_rate)
-    #             mean_running_speed = ut.get_mean_in_window(running_speed_trace, response_window,
-    #                                                        self.stimulus_frame_rate)
-    #             reward_rate = flash_data.reward_rate.values[0]
-    #
-    #             row.append([int(cell), int(cell_specimen_id), int(flash), omitted, flash_time, image_name, image_category,
-    #                         trace, timestamps, mean_response, baseline_response, n_events, p_value_baseline, sd_over_baseline,
-    #                         reward_rate, mean_running_speed, int(self.dataset.experiment_id)])
-    #
-    #     print('flash response df created')
-    #     flash_response_df = pd.DataFrame(data=row,
-    #                                      columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
-    #                                               'image_name', 'image_category', 'trace', 'timestamps', 'mean_response',
-    #                                               'baseline_response', 'n_events', 'p_value_baseline', 'sd_over_baseline',
-    #                                               'reward_rate', 'mean_running_speed', 'experiment_id'])
-    #     flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
-    #     flash_response_df = ut.add_repeat_number_to_flash_response_df(flash_response_df, stimulus_table)
-    #     flash_response_df = ut.add_image_block_to_flash_response_df(flash_response_df, stimulus_table)
-    #     flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
-    #     if 'index' in flash_response_df.keys():
-    #         flash_response_df = flash_response_df.drop(columns=['index']).reset_index()
-    #     if 'omitted' in stimulus_table.image_name.unique():
-    #         print('computing p-values from shuffled omitted flash responses')
-    #         p_values_from_shuffle = ut.get_p_values_from_shuffle(self, flash_response_df)
-    #         p_values_from_shuffle_synth = ut.get_p_values_from_shuffle_synthetic(self, stimulus_table, flash_response_df)
-    #         p_values = []
-    #         p_values_synth = []
-    #         for flash_number in flash_response_df.flash_number.unique():
-    #             p_values = p_values + list(p_values_from_shuffle.loc[flash_number, :].values)
-    #             p_values_synth = p_values_synth + list(p_values_from_shuffle_synth.loc[flash_number, :].values)
-    #         flash_response_df['p_value'] = p_values
-    #         flash_response_df['p_value_synthetic'] = p_values_synth
-    #     else:
-    #         flash_response_df['p_value'] = np.nan
-    #         flash_response_df['p_value_synthetic'] = np.nan
-    #     return flash_response_df
 
     def save_flash_response_df(self, flash_response_df):
         print('saving flash response dataframe')
         flash_response_df.to_hdf(self.get_flash_response_df_path(), key='df')
+
 
     def get_flash_response_df(self):
         if self.overwrite_analysis_files:
@@ -274,21 +139,16 @@ class ResponseAnalysis(object):
             file_path = self.get_flash_response_df_path()
             if os.path.exists(file_path):
                 os.remove(file_path)
-            # self.flash_response_df = self.generate_flash_response_df()
-            flash_response_df = rp.stimulus_response_df(rp.stimulus_response_xr(self.dataset))
+            # flash_response_df = rp.stimulus_response_df(rp.stimulus_response_xr(self.dataset))
+            flash_response_df = rp.get_stimulus_response_df(self.dataset)
             self.save_flash_response_df(flash_response_df)
         else:
             if os.path.exists(self.get_flash_response_df_path()):
                 print('loading flash response dataframe')
                 flash_response_df = pd.read_hdf(self.get_flash_response_df_path(), key='df')
-                # fdf = self.flash_response_df
-                # fdf.cell = [int(cell) for cell in fdf.cell.values]
-                # fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
-                # fdf.flash_number = [int(flash_number) for flash_number in fdf.flash_number.values]
-                # self.flash_response_df = fdf
             else:
-                # self.flash_response_df = self.generate_flash_response_df()
-                flash_response_df = rp.stimulus_response_df(rp.stimulus_response_xr(self.dataset))
+                # flash_response_df = rp.stimulus_response_df(rp.stimulus_response_xr(self.dataset))
+                flash_response_df = rp.get_stimulus_response_df(self.dataset)
                 self.save_flash_response_df(flash_response_df)
         flash_response_df = flash_response_df.merge(self.dataset.extended_stimulus_presentations.reset_index(),
                                      right_on='stimulus_presentations_id',
@@ -301,74 +161,12 @@ class ResponseAnalysis(object):
 
     flash_response_df = LazyLoadable('_flash_response_df', get_flash_response_df)
 
-
     def get_omitted_flash_response_df_path(self):
         if self.use_events:
             path = os.path.join(self.dataset.analysis_dir, 'omitted_flash_response_df_events.h5')
         else:
             path = os.path.join(self.dataset.analysis_dir, 'omitted_flash_response_df.h5')
         return path
-
-    # def generate_omitted_flash_response_df(self):
-    #     print('generating omitted flash response df')
-    #     stimulus_table = ut.annotate_flashes_with_reward_rate(self.dataset)
-    #     stimulus_table = stimulus_table[stimulus_table.omitted==True]
-    #     row = []
-    #     for cell in self.dataset.cell_indices:
-    #         cell = int(cell)
-    #         cell_specimen_id = int(self.dataset.get_cell_specimen_id_for_cell_index(cell))
-    #         if self.use_events:
-    #             cell_trace = self.dataset.events[cell, :].copy()
-    #         else:
-    #             cell_trace = self.dataset.dff_traces[cell, :].copy()
-    #         for flash in stimulus_table.flash_number:
-    #             flash = int(flash)
-    #             flash_data = stimulus_table[stimulus_table.flash_number == flash]
-    #             if 'omitted' in flash_data.keys():
-    #                 omitted = flash_data.omitted.values[0]
-    #             else:
-    #                 omitted = False
-    #             flash_time = flash_data.start_time.values[0]
-    #             image_name = flash_data.image_category.values[0]
-    #             image_category = flash_data.image_category.values[0]
-    #             flash_window = self.omitted_flash_window
-    #             trace, timestamps = ut.get_trace_around_timepoint(flash_time, cell_trace,
-    #                                                               self.dataset.ophys_timestamps,
-    #                                                               flash_window, self.ophys_frame_rate)
-    #             response_window = [np.abs(flash_window[0]), np.abs(flash_window[
-    #                 0]) + self.omission_response_window_duration]  # time, in seconds, around flash time to take the mean response
-    #             baseline_window = [np.abs(flash_window[0]) - self.omission_response_window_duration, (np.abs(flash_window[0]))]
-    #             p_value_baseline = ut.get_p_val(trace, response_window, self.ophys_frame_rate)
-    #             sd_over_baseline = ut.get_sd_over_baseline(cell_trace, flash_window,
-    #                                                        baseline_window, self.ophys_frame_rate)
-    #             mean_response = ut.get_mean_in_window(trace, response_window, self.ophys_frame_rate, self.use_events)
-    #             baseline_response = ut.get_mean_in_window(trace, baseline_window,
-    #                                                       self.ophys_frame_rate, self.use_events)
-    #             n_events = ut.get_n_nonzero_in_window(trace, response_window, self.ophys_frame_rate)
-    #             reward_rate = flash_data.reward_rate.values[0]
-    #
-    #             row.append([int(cell), int(cell_specimen_id), int(flash), omitted, flash_time, image_name, image_category,
-    #                         trace, timestamps, mean_response, baseline_response, n_events, p_value_baseline, sd_over_baseline,
-    #                         reward_rate, int(self.dataset.experiment_id)])
-    #
-    #     flash_response_df = pd.DataFrame(data=row,
-    #                                      columns=['cell', 'cell_specimen_id', 'flash_number', 'omitted', 'start_time',
-    #                                               'image_name', 'image_category', 'trace', 'timestamps', 'mean_response',
-    #                                               'baseline_response', 'n_events', 'p_value_baseline', 'sd_over_baseline',
-    #                                               'reward_rate', 'experiment_id'])
-    #     # flash_response_df = ut.annotate_flash_response_df_with_pref_stim(flash_response_df)
-    #     flash_response_df['engaged'] = [True if rw > 2 else False for rw in flash_response_df.reward_rate.values]
-    #     omitted_flash_response_df = flash_response_df
-    #     if len(omitted_flash_response_df) > 2:
-    #         print('computing p-values for omitted from shuffled stimulus responses')
-    #         omitted_flash_p_values = ut.get_p_values_from_shuffle_omitted(self, stimulus_table, omitted_flash_response_df)
-    #         p_values = []
-    #         for flash_number in omitted_flash_response_df.flash_number.unique():
-    #             p_values = p_values + list(omitted_flash_p_values.loc[flash_number, :].values)
-    #         omitted_flash_response_df['p_value'] = p_values
-    #     else:
-    #         omitted_flash_response_df['p_value'] = np.nan
-    #     return omitted_flash_response_df
 
     def save_omitted_flash_response_df(self, omitted_flash_response_df):
         print('saving omitted flash response dataframe')
@@ -381,20 +179,17 @@ class ResponseAnalysis(object):
             file_path = self.get_omitted_flash_response_df_path()
             if os.path.exists(file_path):
                 os.remove(file_path)
-            # self.omitted_flash_response_df = self.generate_omitted_flash_response_df()
-            omitted_flash_response_df = rp.omission_response_df(rp.omission_response_xr(self.dataset))
+            # omitted_flash_response_df = rp.omission_response_df(rp.omission_response_xr(self.dataset))
+            omitted_flash_response_df = rp.get_omission_flash_response_df(self.dataset)
             self.save_omitted_flash_response_df(omitted_flash_response_df)
         else:
             if os.path.exists(self.get_omitted_flash_response_df_path()):
                 print('loading omitted flash response dataframe')
                 omitted_flash_response_df = pd.read_hdf(self.get_omitted_flash_response_df_path(), key='df')
-                # fdf = self.omitted_flash_response_df
-                # fdf.cell = [int(cell) for cell in fdf.cell.values]
-                # fdf.cell_specimen_id = [int(cell_specimen_id) for cell_specimen_id in fdf.cell_specimen_id.values]
-                # self.omitted_flash_response_df = fdf
+
             else:
-                # self.omitted_flash_response_df = self.generate_omitted_flash_response_df()
-                omitted_flash_response_df = rp.omission_response_df(rp.omission_response_xr(self.dataset))
+                # omitted_flash_response_df = rp.omission_response_df(rp.omission_response_xr(self.dataset))
+                omitted_flash_response_df = rp.get_omission_flash_response_df(self.dataset)
                 self.save_omitted_flash_response_df(omitted_flash_response_df)
         omitted_flash_response_df = omitted_flash_response_df.merge(
             self.dataset.extended_stimulus_presentations[self.dataset.extended_stimulus_presentations.omitted == True],
@@ -407,6 +202,140 @@ class ResponseAnalysis(object):
         return self._omitted_flash_response_df
 
     omitted_flash_response_df = LazyLoadable('_omitted_flash_response_df', get_omitted_flash_response_df)
+
+
+    def get_response_df_path(self, df_name):
+        if self.use_events:
+            path = os.path.join(self.dataset.analysis_dir, df_name + '_events.h5')
+        else:
+            path = os.path.join(self.dataset.analysis_dir, df_name+'.h5')
+        return path
+
+    def save_response_df(self, df, df_name):
+        print('saving', df_name)
+        df.to_hdf(self.get_response_df_path(df_name), key='df')
+
+    def get_df_for_df_name(self, df_name):
+        if df_name == 'trials_response_df':
+            df = rp.get_trial_response_df(self.dataset, self.use_events)
+        elif df_name == 'stimulus_response_df':
+            df = rp.get_stimulus_response_df(self.dataset, self.use_events)
+        elif df_name == 'omission_response_df':
+            df = rp.get_omission_response_df(self.dataset, self.use_events)
+        elif df_name == 'trial_running_response_df':
+            df = rp.get_trial_running_response_df(self.dataset)
+        elif df_name == 'stimulus_running_response_df':
+            df = rp.get_stimulus_running_response_df(self.dataset)
+        elif df_name == 'omission_running_response_df':
+            df = rp.get_omission_running_response_df(self.dataset)
+        return df
+
+    def get_response_df(self, df_name='omission_running_response_df'):
+        if self.overwrite_analysis_files:
+            # delete old file or else it will keep growing in size
+            import h5py
+            file_path = self.get_response_df_path(df_name)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                df = self.get_df_for_df_name(df_name)
+            self.save_response_df(df, df_name)
+        else:
+            if os.path.exists(self.get_response_df_path(df_name)):
+                print('loading', df_name)
+                df = pd.read_hdf(self.get_response_df_path(df_name), key='df')
+            else:
+                df = self.get_df_for_df_name(df_name)
+                self.save_response_df(df, df_name)
+        if 'trials' in df_name:
+            trials = self.dataset.trials
+            trials = trials.rename(
+                columns={'response': 'behavioral_response', 'response_type': 'behavioral_response_type',
+                         'response_time': 'behavioral_response_time',
+                         'response_latency': 'behavioral_response_latency'})
+            df = df.merge(trials, right_on='trials_id', left_on='trials_id')
+        elif ('stimulus' in df_name) or ('omission' in df_name):
+            df = df.merge(self.dataset.extended_stimulus_presentations,
+                          right_on='stimulus_presentations_id', left_on='stimulus_presentations_id')
+        if 'running' not in df_name:
+            df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id) for
+                         cell_specimen_id in df.cell_specimen_id.values]
+
+        # if df_name in ['trials_response_df']:
+        #     df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id) for
+        #                   cell_specimen_id in df.cell_specimen_id.values]
+        # if df_name in ['stimulus_response_df']:
+        #     df = df.merge(self.dataset.extended_stimulus_presentations,
+        #                   right_on='stimulus_presentations_id', left_on='stimulus_presentations_id')
+        #     df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id) for
+        #                                  cell_specimen_id in df.cell_specimen_id.values]
+        # if df_name in ['stimulus_running_response_df','omission_running_response_df']:
+        #     df = df.merge(self.dataset.extended_stimulus_presentations,
+        #         right_on='stimulus_presentations_id', left_on='stimulus_presentations_id')
+        # elif df_name in ['trial_running_response_df']:
+        #     trials = self.dataset.trials
+        #     trials = trials.rename(columns={'response': 'behavioral_response', 'response_type': 'behavioral_response_type',
+        #                  'response_time': 'behavioral_response_time',
+        #                  'response_latency': 'behavioral_response_latency'})
+        #     df = df.merge(trials, right_on='trials_id', left_on='trials_id')
+        return df
+
+
+    def get_trials_response_df(self):
+        df_name = 'trials_response_df'
+        df = self.get_response_df(df_name)
+        self._trials_response_df = df
+        return self._trials_response_df
+
+        trials_response_df = LazyLoadable('_trials_response_df', get_trials_response_df)
+
+    def get_stimulus_response_df(self):
+        df_name = 'stimulus_response_df'
+        df = self.get_response_df(df_name)
+        self._stimulus_response_df = df
+        return self._stimulus_response_df
+
+        stimulus_response_df = LazyLoadable('_stimulus_response_df', get_stimulus_response_df)
+
+    def get_omission_response_df(self):
+        df_name = 'omission_response_df'
+        df = self.get_response_df(df_name)
+        self._omission_response_df = df
+        return self._omission_response_df
+
+        omission_response_df = LazyLoadable('_omission_response_df', get_omission_response_df)
+
+    def get_trial_running_response_df(self):
+        df_name = 'trial_running_response_df'
+        df = self.get_response_df(df_name)
+        self._trial_running_response_df = df
+        return self._trial_running_response_df
+
+    trial_running_response_df = LazyLoadable('_trial_running_response_df', get_trial_running_response_df)
+
+    def get_stimulus_running_response_df(self):
+        df_name = 'stimulus_running_response_df'
+        df = self.get_response_df(df_name)
+        self._stimulus_running_response_df = df
+        return self._stimulus_running_response_df
+
+    stimulus_running_response_df = LazyLoadable('_stimulus_running_response_df', get_stimulus_running_response_df)
+
+    def get_omission_running_response_df(self):
+        df_name = 'omission_running_response_df'
+        df = self.get_response_df(df_name)
+        self._omission_running_response_df = df
+        return self._omission_running_response_df
+
+    omission_running_response_df = LazyLoadable('_omission_running_response_df', get_omission_running_response_df)
+
+
+
+
+
+
+
+
+
 
 
     # def compute_pairwise_correlations(self):
