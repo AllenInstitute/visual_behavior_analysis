@@ -23,6 +23,26 @@ get_lims_data = convert.get_lims_data
 
 
 def get_lims_experiment_info(experiment_id):
+    """uses an sqlite query to retrieve data from the lims2 database
+    
+    Arguments:
+        experiment_id {[type]} -- [description]
+    
+    Returns:
+        table -- table with the following columns:
+                    "experiment_id":
+                    "workflow_state":
+                    "container_id":
+                    "date_of_acquisition":
+                    "stage_name":
+                    "foraging_id":
+                    "mouse_info":
+                    "mouse_donor_id":
+                    "targeted_structure":
+                    "depth":
+                    "rig":
+
+    """
     experiment_id = int(experiment_id)
     mixin = PostgresQueryMixin()
     #build query
@@ -63,6 +83,25 @@ def get_lims_experiment_info(experiment_id):
 
 
 def get_lims_container_info(container_id):
+    """"uses an sqlite query to retrieve data from the lims2 database
+    
+    Arguments:
+        container_id {[type]} -- [description]
+    
+    Returns:
+       table -- table with the following columns:
+                    "container_id":
+                    "ophys_experiment_id":
+                    "stage_name":
+                    "foraging_id":
+                    "workflow_state":
+                    "mouse_info":
+                    "mouse_donor_id":
+                    "targeted_structure":
+                    "depth":
+                    "rig":
+                    "date_of_acquisition":
+    """
     container_id = int(container_id)
 
     mixin = PostgresQueryMixin()
