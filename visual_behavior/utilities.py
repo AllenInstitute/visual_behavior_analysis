@@ -372,7 +372,8 @@ def get_sync_data(sync_path):
 
 class EyeTrackingData(object):
     def __init__(self, ophys_session_id, data_source='mongodb', filter_outliers=True, filter_blinks=True,
-                 pupil_color=[0, 0, 255], eye_color=[255, 0, 0], cr_color=[0, 255, 0]):
+                 pupil_color=[0, 0, 255], eye_color=[255, 0, 0], cr_color=[0, 255, 0],
+                 ellipse_fit_path = None):
         well_known_files = db.get_well_known_files(ophys_session_id)
 
         # colors of ellipses:
@@ -384,7 +385,10 @@ class EyeTrackingData(object):
         self.eye_movie_path = ''.join(well_known_files.query('name=="RawEyeTrackingVideo"')[['storage_directory', 'filename']].iloc[0].tolist())
         self.behavior_movie_path = ''.join(well_known_files.query('name=="RawBehaviorTrackingVideo"')[['storage_directory', 'filename']].iloc[0].tolist())
         self.sync_path = ''.join(well_known_files.query('name=="OphysRigSync"')[['storage_directory', 'filename']].iloc[0].tolist())
-        self.ellipse_fit_path = ''.join(well_known_files.query('name=="EyeTracking Ellipses"')[['storage_directory', 'filename']].iloc[0].tolist())
+        if ellipse_fit_path is None:
+            self.ellipse_fit_path = ''.join(well_known_files.query('name=="EyeTracking Ellipses"')[['storage_directory', 'filename']].iloc[0].tolist())
+        else:
+            self.ellipse_fit_path = ellipse_fit_path
 
         self.ophys_session_id = ophys_session_id
         self.foraging_id = db.get_value_from_table('id', ophys_session_id, 'ophys_sessions', 'foraging_id')
