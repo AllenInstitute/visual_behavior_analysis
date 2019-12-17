@@ -474,6 +474,10 @@ class EyeTrackingData(object):
                 data.loc[zs[zs > 5].index] = np.nan
                 self.ellipse_fits['pupil']['blink_corrected_{}'.format(fit_parameter)] = data
 
+        # add a column with area normalized relative to 99th percentile area
+        area_99_percentile = np.percentile(self.ellipse_fits['pupil']['blink_corrected_area'].fillna(self.ellipse_fits['pupil']['blink_corrected_area'].median()), 99)
+        self.ellipse_fits['pupil']['normalized_blink_corrected_area'] = self.ellipse_fits['pupil']['blink_corrected_area'] / area_99_percentile
+
     def get_eye_data_from_file(self, eye_tracking_path, dataset='pupil', timestamps=None):
         '''open ellipse fit. try to match sync data if possible'''
 
