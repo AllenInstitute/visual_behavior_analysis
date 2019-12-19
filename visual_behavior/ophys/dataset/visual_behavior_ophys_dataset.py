@@ -197,6 +197,8 @@ class VisualBehaviorOphysDataset(object):
              'start_date_time']]
         trials['trials_id'] = trials.trial.values
         trials.set_index('trials_id', inplace=True)
+        import visual_behavior.ophys.dataset.stimulus_processing as sp
+        trials = sp.add_run_speed_to_trials(self.running_speed, trials)
         self._trials = trials
         return self._trials
 

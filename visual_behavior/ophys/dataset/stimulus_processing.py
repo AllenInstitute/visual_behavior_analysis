@@ -27,6 +27,15 @@ def convert_filepath_caseinsensitive(filename_in):
 def load_pickle(pstream):
     return pickle.load(pstream, encoding="bytes")
 
+def add_run_speed_to_trials(running_speed_df, trials):
+    trial_running_speed = trials.apply(lambda row: trace_average(
+        running_speed_df['running_speed'].values,
+        running_speed_df['time'].values,
+        row["change_time"],
+        row["change_time"] + 0.25, ), axis=1, )
+    trials["mean_running_speed"] = trial_running_speed
+    return trials
+
 
 def get_stimulus_presentations(data, stimulus_timestamps):
     stimulus_table = get_visual_stimuli_df(data, stimulus_timestamps)
