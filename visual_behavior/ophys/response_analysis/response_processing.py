@@ -158,49 +158,49 @@ def get_spontaneous_frames(stimulus_presentations_df, ophys_timestamps):
     return spontaneous_frames
 
 
-def get_p_value_from_shuffled_spontaneous(mean_responses,
-                                          stimulus_presentations_df,
-                                          ophys_timestamps,
-                                          dff_traces_arr,
-                                          response_window_duration,
-                                          ophys_frame_rate=None,
-                                          number_of_shuffles=10000):
-    '''
-    Args:
-        mean_responses (xarray.DataArray): Mean response values, shape (nConditions, nCells)
-        stimulus_presentations_df (pandas.DataFrame): Table of stimulus presentations, including start_time and stop_time
-        ophys_timestamps (np.array): Timestamps of each ophys frame
-        dff_traces_arr (np.array): Dff values, shape (nSamples, nCells)
-        response_window_duration (int): Number of frames averaged to produce mean response values
-        number_of_shuffles (int): Number of shuffles of spontaneous activity used to produce the p-value
-    Returns:
-        p_values (xarray.DataArray): p-value for each response mean, shape (nConditions, nCells)
-    '''
-
-    spontaneous_frames = get_spontaneous_frames(stimulus_presentations_df, ophys_timestamps)
-    shuffled_spont_inds = np.random.choice(spontaneous_frames, number_of_shuffles)
-
-    if ophys_frame_rate is None:
-        ophys_frame_rate = 1 / np.diff(ophys_timestamps).mean()
-
-    trace_len = np.round(response_window_duration * ophys_frame_rate).astype(int)
-    start_ind_offset = 0
-    end_ind_offset = trace_len
-    spont_traces = eventlocked_traces(dff_traces_arr, shuffled_spont_inds, start_ind_offset, end_ind_offset)
-    spont_mean = spont_traces.mean(axis=0)  # Returns (nShuffles, nCells)
-
-    # Goal is to figure out how each response compares to the shuffled distribution, which is just
-    # a searchsorted call if we first sort the shuffled.
-    spont_mean_sorted = np.sort(spont_mean, axis=0)
-    response_insertion_ind = np.empty(mean_responses.data.shape)
-    for ind_cell in range(mean_responses.data.shape[1]):
-        response_insertion_ind[:, ind_cell] = np.searchsorted(spont_mean_sorted[:, ind_cell],
-                                                              mean_responses.data[:, ind_cell])
-
-    proportion_spont_larger_than_sample = 1 - (response_insertion_ind / number_of_shuffles)
-    result = xr.DataArray(data=proportion_spont_larger_than_sample,
-                          coords=mean_responses.coords)
-    return result
+# def get_p_value_from_shuffled_spontaneous(mean_responses,
+#                                           stimulus_presentations_df,
+#                                           ophys_timestamps,
+#                                           dff_traces_arr,
+#                                           response_window_duration,
+#                                           ophys_frame_rate=None,
+#                                           number_of_shuffles=10000):
+#     '''
+#     Args:
+#         mean_responses (xarray.DataArray): Mean response values, shape (nConditions, nCells)
+#         stimulus_presentations_df (pandas.DataFrame): Table of stimulus presentations, including start_time and stop_time
+#         ophys_timestamps (np.array): Timestamps of each ophys frame
+#         dff_traces_arr (np.array): Dff values, shape (nSamples, nCells)
+#         response_window_duration (int): Number of frames averaged to produce mean response values
+#         number_of_shuffles (int): Number of shuffles of spontaneous activity used to produce the p-value
+#     Returns:
+#         p_values (xarray.DataArray): p-value for each response mean, shape (nConditions, nCells)
+#     '''
+#
+#     spontaneous_frames = get_spontaneous_frames(stimulus_presentations_df, ophys_timestamps)
+#     shuffled_spont_inds = np.random.choice(spontaneous_frames, number_of_shuffles)
+#
+#     if ophys_frame_rate is None:
+#         ophys_frame_rate = 1 / np.diff(ophys_timestamps).mean()
+#
+#     trace_len = np.round(response_window_duration * ophys_frame_rate).astype(int)
+#     start_ind_offset = 0
+#     end_ind_offset = trace_len
+#     spont_traces = eventlocked_traces(dff_traces_arr, shuffled_spont_inds, start_ind_offset, end_ind_offset)
+#     spont_mean = spont_traces.mean(axis=0)  # Returns (nShuffles, nCells)
+#
+#     # Goal is to figure out how each response compares to the shuffled distribution, which is just
+#     # a searchsorted call if we first sort the shuffled.
+#     spont_mean_sorted = np.sort(spont_mean, axis=0)
+#     response_insertion_ind = np.empty(mean_responses.data.shape)
+#     for ind_cell in range(mean_responses.data.shape[1]):
+#         response_insertion_ind[:, ind_cell] = np.searchsorted(spont_mean_sorted[:, ind_cell],
+#                                                               mean_responses.data[:, ind_cell])
+#
+#     proportion_spont_larger_than_sample = 1 - (response_insertion_ind / number_of_shuffles)
+#     result = xr.DataArray(data=proportion_spont_larger_than_sample,
+#                           coords=mean_responses.coords)
+#     return result
 
 def get_p_value_from_shuffled_omissions(mean_responses,
                                           stimulus_presentations_df,
@@ -465,9 +465,9 @@ def get_omission_response_df(dataset, use_events=False):
     return df
 
 
-def get_trial_running_response_df(dataset):
+def get_trial_run_speed_df(dataset):
     traces = np.vstack((dataset.running_speed.running_speed.values, dataset.running_speed.running_speed.values))
-    trace_ids = [0, 1]
+    trace_ids = np.asarray([0, 1])
     timestamps = dataset.stimulus_timestamps
     change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])][:-1]  # last trial can get cut off
     event_times = change_trials['change_time'].values
@@ -482,7 +482,7 @@ def get_trial_running_response_df(dataset):
     return df
 
 
-def get_stimulus_running_response_df(dataset):
+def get_stimulus_run_speed_df(dataset):
     traces = np.vstack((dataset.running_speed.running_speed.values, dataset.running_speed.running_speed.values))
     trace_ids = [0, 1]
     timestamps = dataset.stimulus_timestamps
@@ -499,7 +499,7 @@ def get_stimulus_running_response_df(dataset):
     return df
 
 
-def get_omission_running_response_df(dataset):
+def get_omission_run_speed_df(dataset):
     traces = np.vstack((dataset.running_speed.running_speed.values, dataset.running_speed.running_speed.values))
     trace_ids = [0, 1]
     timestamps = dataset.stimulus_timestamps

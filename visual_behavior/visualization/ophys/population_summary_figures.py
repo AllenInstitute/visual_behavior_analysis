@@ -580,7 +580,7 @@ def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, win
     interval = int((blank_duration + stim_duration)*frame_rate)
     if omitted:
         array = np.arange((change_frame + interval), end_frame, interval)
-        array = array[1:]
+        # array = array[1:]
     else:
         array = np.arange(change_frame, end_frame, interval)
     for i, vals in enumerate(array):

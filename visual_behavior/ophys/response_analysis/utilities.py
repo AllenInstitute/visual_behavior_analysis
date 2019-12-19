@@ -308,8 +308,9 @@ def get_window(analysis=None, flashes=False, omitted=False):
         window = [-4, 8]
     return window
 
+
 def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
-                get_reliability=False):
+                get_reliability=False, get_pref_stim=True):
 
     window = get_window(analysis, flashes, omitted)
 
@@ -318,13 +319,17 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
     mdf = mdf.reset_index()
-    if len(conditions) > 1:
-        mdf = annotate_mean_df_with_pref_stim(mdf)
+    if get_pref_stim:
+        if (conditions[-1] == 'image_name') or (conditions[-1] =='change_image_name') or (conditions[-1] =='prior_image_name'):
+            mdf = annotate_mean_df_with_pref_stim(mdf)
     if analysis is not None:
         mdf = annotate_mean_df_with_p_value(analysis, mdf, window)
         # mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
-        mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
-        mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
+        try:
+            mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
+            mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
+        except:
+            pass
 
     # if flashes or omitted:
     fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
@@ -354,7 +359,8 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         reliability = reliability.reset_index()
         mdf['reliability'] = reliability.reliability
         print('done computing reliability')
-
+    if 'index' in mdf.keys():
+        mdf = mdf.drop(columns=['index'])
     return mdf
 
 

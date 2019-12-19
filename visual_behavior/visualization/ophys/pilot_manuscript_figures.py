@@ -1153,7 +1153,7 @@ def generate_figures_for_session_metric_areas(session_summary_df, metric, range=
 
 
 def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, folder=None, use_events=False,
-                              colorbar=True, horizontal_legend=False):
+                              colorbar=True, horizontal_legend=False, include_omitted=False):
     image_set = df.image_set.unique()[0]
     cre_line = df.cre_line.unique()[0]
     # trial_type = df.trial_type.unique()[0]
@@ -1164,7 +1164,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     if 'image_name' in df.keys():
         image_name = 'image_name'
         suffix = '_flashes'
-        if 'omitted' in df.image_name.unique():
+        if ('omitted' in df.image_name.unique()) and (include_omitted):
             df = df[df.image_name != 'omitted']
     else:
         image_name = 'change_image_name'

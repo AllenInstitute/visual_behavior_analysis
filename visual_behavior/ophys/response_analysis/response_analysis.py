@@ -222,15 +222,15 @@ class ResponseAnalysis(object):
             df = rp.get_stimulus_response_df(self.dataset, self.use_events)
         elif df_name == 'omission_response_df':
             df = rp.get_omission_response_df(self.dataset, self.use_events)
-        elif df_name == 'trial_running_response_df':
-            df = rp.get_trial_running_response_df(self.dataset)
-        elif df_name == 'stimulus_running_response_df':
-            df = rp.get_stimulus_running_response_df(self.dataset)
-        elif df_name == 'omission_running_response_df':
-            df = rp.get_omission_running_response_df(self.dataset)
+        elif df_name == 'trial_run_speed_df':
+            df = rp.get_trial_run_speed_df(self.dataset)
+        elif df_name == 'stimulus_run_speed_df':
+            df = rp.get_stimulus_run_speed_df(self.dataset)
+        elif df_name == 'omission_run_speed_df':
+            df = rp.get_omission_run_speed_df(self.dataset)
         return df
 
-    def get_response_df(self, df_name='omission_running_response_df'):
+    def get_response_df(self, df_name='trials_response_df'):
         if self.overwrite_analysis_files:
             # delete old file or else it will keep growing in size
             import h5py
@@ -256,27 +256,9 @@ class ResponseAnalysis(object):
         elif ('stimulus' in df_name) or ('omission' in df_name):
             df = df.merge(self.dataset.extended_stimulus_presentations,
                           right_on='stimulus_presentations_id', left_on='stimulus_presentations_id')
-        if 'running' not in df_name:
+        if 'run_speed' not in df_name:
             df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id) for
                          cell_specimen_id in df.cell_specimen_id.values]
-
-        # if df_name in ['trials_response_df']:
-        #     df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id) for
-        #                   cell_specimen_id in df.cell_specimen_id.values]
-        # if df_name in ['stimulus_response_df']:
-        #     df = df.merge(self.dataset.extended_stimulus_presentations,
-        #                   right_on='stimulus_presentations_id', left_on='stimulus_presentations_id')
-        #     df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id) for
-        #                                  cell_specimen_id in df.cell_specimen_id.values]
-        # if df_name in ['stimulus_running_response_df','omission_running_response_df']:
-        #     df = df.merge(self.dataset.extended_stimulus_presentations,
-        #         right_on='stimulus_presentations_id', left_on='stimulus_presentations_id')
-        # elif df_name in ['trial_running_response_df']:
-        #     trials = self.dataset.trials
-        #     trials = trials.rename(columns={'response': 'behavioral_response', 'response_type': 'behavioral_response_type',
-        #                  'response_time': 'behavioral_response_time',
-        #                  'response_latency': 'behavioral_response_latency'})
-        #     df = df.merge(trials, right_on='trials_id', left_on='trials_id')
         return df
 
 
@@ -286,7 +268,7 @@ class ResponseAnalysis(object):
         self._trials_response_df = df
         return self._trials_response_df
 
-        trials_response_df = LazyLoadable('_trials_response_df', get_trials_response_df)
+    trials_response_df = LazyLoadable('_trials_response_df', get_trials_response_df)
 
     def get_stimulus_response_df(self):
         df_name = 'stimulus_response_df'
@@ -294,7 +276,7 @@ class ResponseAnalysis(object):
         self._stimulus_response_df = df
         return self._stimulus_response_df
 
-        stimulus_response_df = LazyLoadable('_stimulus_response_df', get_stimulus_response_df)
+    stimulus_response_df = LazyLoadable('_stimulus_response_df', get_stimulus_response_df)
 
     def get_omission_response_df(self):
         df_name = 'omission_response_df'
@@ -302,31 +284,31 @@ class ResponseAnalysis(object):
         self._omission_response_df = df
         return self._omission_response_df
 
-        omission_response_df = LazyLoadable('_omission_response_df', get_omission_response_df)
+    omission_response_df = LazyLoadable('_omission_response_df', get_omission_response_df)
 
-    def get_trial_running_response_df(self):
-        df_name = 'trial_running_response_df'
+    def get_trial_run_speed_df(self):
+        df_name = 'trial_run_speed_df'
         df = self.get_response_df(df_name)
-        self._trial_running_response_df = df
-        return self._trial_running_response_df
+        self._trial_run_speed_df = df
+        return self._trial_run_speed_df
 
-    trial_running_response_df = LazyLoadable('_trial_running_response_df', get_trial_running_response_df)
+    trial_run_speed_df = LazyLoadable('_trial_run_speed_df', get_trial_run_speed_df)
 
-    def get_stimulus_running_response_df(self):
-        df_name = 'stimulus_running_response_df'
+    def get_stimulus_run_speed_df(self):
+        df_name = 'stimulus_run_speed_df'
         df = self.get_response_df(df_name)
-        self._stimulus_running_response_df = df
-        return self._stimulus_running_response_df
+        self._stimulus_run_speed_df = df
+        return self._stimulus_run_speed_df
 
-    stimulus_running_response_df = LazyLoadable('_stimulus_running_response_df', get_stimulus_running_response_df)
+    stimulus_run_speed_df = LazyLoadable('_stimulus_run_speed_df', get_stimulus_run_speed_df)
 
-    def get_omission_running_response_df(self):
-        df_name = 'omission_running_response_df'
+    def get_omission_run_speed_df(self):
+        df_name = 'omission_run_speed_df'
         df = self.get_response_df(df_name)
-        self._omission_running_response_df = df
-        return self._omission_running_response_df
+        self._omission_run_speed_df = df
+        return self._omission_run_speed_df
 
-    omission_running_response_df = LazyLoadable('_omission_running_response_df', get_omission_running_response_df)
+    omission_run_speed_df = LazyLoadable('_omission_run_speed_df', get_omission_run_speed_df)
 
 
 

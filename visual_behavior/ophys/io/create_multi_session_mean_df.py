@@ -70,7 +70,7 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 
 def get_multi_session_mean_df(experiment_ids, cache_dir, df_name,
                               conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'],
-                              flashes=False, use_events=False, omitted=False, get_reliability=False):
+                              flashes=False, use_events=False, omitted=False, get_reliability=False, get_pref_stim=True):
     mega_mdf = pd.DataFrame()
     for experiment_id in experiment_ids:
         print(experiment_id)
@@ -83,8 +83,9 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, df_name,
                 df['engaged'] = [True if reward_rate > 2 else False for reward_rate in df.reward_rate.values]
             if 'running' in conditions:
                 df['running'] = [True if mean_running_speed > 5 else False for mean_running_speed in df.mean_running_speed.values]
-            mdf = ut.get_mean_df(df, analysis, conditions=conditions,
+            mdf = ut.get_mean_df(df, analysis, conditions=conditions, get_pref_stim=get_pref_stim,
                                  flashes=flashes, omitted=omitted, get_reliability=get_reliability)
+            mdf['experiment_id'] = dataset.experiment_id
             mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
             mega_mdf = pd.concat([mega_mdf, mdf])
         except Exception as e:  # flake8: noqa: E722
@@ -104,13 +105,13 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, df_name,
         os.makedirs(mega_mdf_write_dir)
 
     if len(conditions) == 4:
-        filename = 'mean' + df_name + conditions[1] +'_'+ conditions[2] +'_'+ conditions[3] + suffix + '.h5'
+        filename = 'mean_' + df_name +'_'+ conditions[1] +'_'+ conditions[2] +'_'+ conditions[3] + suffix + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean' + df_name + conditions[1] +'_'+ conditions[2] + suffix + '.h5'
+        filename = 'mean_' + df_name +'_'+ conditions[1] +'_'+ conditions[2] + suffix + '.h5'
     elif len(conditions) == 2:
-        filename = 'mean' + df_name + conditions[1] + suffix + '.h5'
+        filename = 'mean_' + df_name +'_'+ conditions[1] + suffix + '.h5'
     elif len(conditions) == 1:
-        filename = 'mean' + df_name + conditions[0] + suffix + '.h5'
+        filename = 'mean_' + df_name +'_'+ conditions[0] + suffix + '.h5'
 
     print('saving multi session mean df to ',filename)
     mega_mdf.to_hdf(
