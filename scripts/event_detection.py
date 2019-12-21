@@ -12,16 +12,10 @@ from visual_coding_2p_analysis.l0_analysis import L0_analysis
 
 def event_detection(lims_id, cache_dir, events_dir, plot=True):
     dataset = VisualBehaviorOphysDataset(lims_id, cache_dir=cache_dir)
-    if 'Slc17a7' in dataset.metadata.cre_line.values[0]:
-        print('Slc17a7, using Ai93 halflife')
-        genotype = 'Ai93'
-        dataset.metadata['genotype'] = genotype
-        halflife = 314
-    elif 'Vip' in dataset.metadata.cre_line.values[0]:
-        print('Vip, using Ai93 halflife')
-        genotype = 'Ai94'
-        dataset.metadata['genotype'] = genotype
-        halflife = 649
+    print('using Ai93 halflife')
+    genotype = 'Ai93'
+    dataset.metadata['genotype'] = genotype
+    halflife = 314
 
     l0 = L0_analysis(dataset, cache_directory=events_dir, genotype=genotype, halflife_ms=halflife)
 
