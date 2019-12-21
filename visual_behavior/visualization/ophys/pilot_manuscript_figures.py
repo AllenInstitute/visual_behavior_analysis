@@ -1164,7 +1164,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     if 'image_name' in df.keys():
         image_name = 'image_name'
         suffix = '_flashes'
-        if ('omitted' in df.image_name.unique()) and (include_omitted):
+        if ('omitted' in df.image_name.unique()) and (include_omitted == False):
             df = df[df.image_name != 'omitted']
     else:
         image_name = 'change_image_name'
@@ -1205,12 +1205,8 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     ax.set_title(cre_line, va='bottom', ha='center')
     ax.set_xticklabels(images, rotation=90, fontsize=12)
     ax.set_ylabel('cells')
-    if response_matrix.shape[0] > 1000:
-        interval = 500
-    else:
-        interval = 50
-    ax.set_yticks(np.arange(0, response_matrix.shape[0], interval))
-    ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval), fontsize=12)
+    ax.set_yticks((0, response_matrix.shape[0]))
+    ax.set_yticklabels((0, response_matrix.shape[0]), fontsize=12)
     if save_dir:
         plt.suptitle('image set ' + image_set, x=0.46, y=0.99, fontsize=18)
         fig.tight_layout()

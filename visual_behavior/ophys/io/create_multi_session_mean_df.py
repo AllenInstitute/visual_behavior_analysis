@@ -70,7 +70,8 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 
 def get_multi_session_mean_df(experiment_ids, cache_dir, df_name,
                               conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'],
-                              flashes=False, use_events=False, omitted=False, get_reliability=False, get_pref_stim=True):
+                              flashes=False, use_events=False, omitted=False, get_reliability=False, get_pref_stim=True,
+                              exclude_omitted_from_pref_stim=True):
     mega_mdf = pd.DataFrame()
     for experiment_id in experiment_ids:
         print(experiment_id)
@@ -84,7 +85,8 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, df_name,
             if 'running' in conditions:
                 df['running'] = [True if mean_running_speed > 5 else False for mean_running_speed in df.mean_running_speed.values]
             mdf = ut.get_mean_df(df, analysis, conditions=conditions, get_pref_stim=get_pref_stim,
-                                 flashes=flashes, omitted=omitted, get_reliability=get_reliability)
+                                 flashes=flashes, omitted=omitted, get_reliability=get_reliability,
+                                 exclude_omitted_from_pref_stim=exclude_omitted_from_pref_stim)
             mdf['experiment_id'] = dataset.experiment_id
             mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
             mega_mdf = pd.concat([mega_mdf, mdf])

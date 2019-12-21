@@ -457,12 +457,8 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     ax.set_title(cre_line, va='bottom', ha='center')
     ax.set_xticklabels(images, rotation=90)
     ax.set_ylabel('cells')
-    if response_matrix.shape[0] > 1000:
-        interval = 500
-    else:
-        interval = 50
-    ax.set_yticks(np.arange(0, response_matrix.shape[0], interval))
-    ax.set_yticklabels(np.arange(0, response_matrix.shape[0], interval), fontsize=14)
+    ax.set_yticks((0, response_matrix.shape[0]))
+    ax.set_yticklabels((0, response_matrix.shape[0]), fontsize=14)
     if save_dir:
         plt.suptitle('image set ' + image_set, x=0.46, y=0.99, fontsize=18)
         fig.tight_layout()
@@ -622,14 +618,14 @@ def plot_stim_on_trace(ax, window=[-0.5, 0.75], alpha=0.3, facecolor='gray'):
 
 
 def plot_mean_trace_from_mean_df(cell_data, frame_rate=31., ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4],
-                    ax=None, plot_sem=True):
+                    ax=None, plot_sem=True, width=3):
     xlim = [0, xlims[1] + np.abs(xlims[0])]
     if ax is None:
         fig, ax = plt.subplots()
     trace = cell_data.mean_trace.values[0]
     times = np.arange(0, len(trace), 1)
     sem = cell_data.sem_trace.values[0]
-    ax.plot(trace, label=legend_label, linewidth=3, color=color)
+    ax.plot(trace, label=legend_label, linewidth=width, color=color)
     if plot_sem:
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
 

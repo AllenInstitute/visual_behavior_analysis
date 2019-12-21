@@ -250,7 +250,7 @@ class VisualBehaviorOphysDataset(object):
         self._events_array = events
         return self._events_array
 
-    events_array = LazyLoadable('_events', get_events_array)
+    events_array = LazyLoadable('_events_array', get_events_array)
 
     def get_roi_metrics(self):
         self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df')

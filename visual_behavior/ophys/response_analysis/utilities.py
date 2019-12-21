@@ -310,7 +310,7 @@ def get_window(analysis=None, flashes=False, omitted=False):
 
 
 def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
-                get_reliability=False, get_pref_stim=True):
+                get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True):
 
     window = get_window(analysis, flashes, omitted)
 
@@ -321,7 +321,7 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     mdf = mdf.reset_index()
     if get_pref_stim:
         if (conditions[-1] == 'image_name') or (conditions[-1] =='change_image_name') or (conditions[-1] =='prior_image_name'):
-            mdf = annotate_mean_df_with_pref_stim(mdf)
+            mdf = annotate_mean_df_with_pref_stim(mdf, exclude_omitted_from_pref_stim)
     if analysis is not None:
         mdf = annotate_mean_df_with_p_value(analysis, mdf, window)
         # mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
@@ -541,7 +541,7 @@ def annotate_mean_df_with_sd_over_baseline(analysis, mean_df, window=[-4,8]):
     return mean_df
 
 
-def annotate_mean_df_with_pref_stim(mean_df):
+def annotate_mean_df_with_pref_stim(mean_df, exclude_omitted_from_pref_stim=True):
     if 'prior_image_name' in mean_df.keys():
         image_name = 'prior_image_name'
     elif 'image_name' in mean_df.keys():
@@ -556,8 +556,9 @@ def annotate_mean_df_with_pref_stim(mean_df):
         cell_key = 'cell'
     for cell in mdf[cell_key].unique():
         mc = mdf[(mdf[cell_key] == cell)]
-        if 'omitted' in mdf[image_name].unique():
-            mc = mc[mc[image_name]!='omitted']
+        if exclude_omitted_from_pref_stim:
+            if 'omitted' in mdf[image_name].unique():
+                mc = mc[mc[image_name]!='omitted']
         pref_image = mc[(mc.mean_response == np.max(mc.mean_response.values))][image_name].values[0]
         row = mdf[(mdf[cell_key] == cell) & (mdf[image_name] == pref_image)].index
         mdf.loc[row, 'pref_stim'] = True
