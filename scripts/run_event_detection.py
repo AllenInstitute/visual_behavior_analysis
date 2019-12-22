@@ -38,7 +38,6 @@ job_settings = {'queue': 'braintv',
                 }
 
 for experiment_id in experiment_ids:
-    print experiment_id
     PythonJob(
         python_file,
         python_executable='/home/marinag/anaconda2/envs/visual_behavior_sdk/bin/python',
