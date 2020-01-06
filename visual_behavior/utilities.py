@@ -371,63 +371,83 @@ def get_sync_data(sync_path):
 
 
 class EyeTrackingData(object):
-    def __init__(self, ophys_session_id, data_source='mongodb', filter_outliers=True, filter_blinks=True,
+    def __init__(self, ophys_session_id, data_source='filesystem', filter_outliers=True, filter_blinks=True,
                  pupil_color=[0, 0, 255], eye_color=[255, 0, 0], cr_color=[0, 255, 0],
-                 ellipse_fit_path = None):
-        well_known_files = db.get_well_known_files(ophys_session_id)
+                 filepaths={}, ellipse_fit_path=None):
 
         # colors of ellipses:
         self.pupil_color = pupil_color
         self.eye_color = eye_color
         self.cr_color = cr_color
 
-        # get paths of well known files
-        self.eye_movie_path = ''.join(well_known_files.query('name=="RawEyeTrackingVideo"')[['storage_directory', 'filename']].iloc[0].tolist())
-        self.behavior_movie_path = ''.join(well_known_files.query('name=="RawBehaviorTrackingVideo"')[['storage_directory', 'filename']].iloc[0].tolist())
-        self.sync_path = ''.join(well_known_files.query('name=="OphysRigSync"')[['storage_directory', 'filename']].iloc[0].tolist())
-        if ellipse_fit_path is None:
-            self.ellipse_fit_path = ''.join(well_known_files.query('name=="EyeTracking Ellipses"')[['storage_directory', 'filename']].iloc[0].tolist())
-        else:
-            self.ellipse_fit_path = ellipse_fit_path
-
         self.ophys_session_id = ophys_session_id
+        self.ophys_experiment_id = db.convert_id({'ophys_session_id': ophys_session_id}, 'ophys_experiment_id')
         self.foraging_id = db.get_value_from_table('id', ophys_session_id, 'ophys_sessions', 'foraging_id')
 
-        self.sync_data = get_sync_data(self.sync_path)
-
-        # assign timestamps from sync
-        self.sync_timestamps = {}
-        for movie_label, movie_path in zip(['eye', 'behavior'], [self.eye_movie_path, self.behavior_movie_path]):
-            movie = Movie(movie_path)
-            sync_line = self.get_matching_sync_line(movie, self.sync_data)
-            if sync_line is not None:
-                self.sync_timestamps[movie_label] = self.sync_data[sync_line]
+        # get paths of well known files
+        well_known_files = db.get_well_known_files(ophys_session_id).set_index('name')
+        self.filepaths = {}
+        wkf_to_variable_map = {
+            "RawEyeTrackingVideo": 'eye_movie',
+            "RawBehaviorTrackingVideo": 'behavior_movie',
+            "OphysRigSync": 'sync',
+            "EyeTracking Ellipses": 'ellipse_fits',
+            "EyeDlcOutputFile": 'raw_tracking_points',
+        }
+        for name in wkf_to_variable_map.keys():
+            if name in filepaths:
+                self.filepaths[wkf_to_variable_map[name]] = filepaths[name]
+            elif wkf_to_variable_map[name] in filepaths:
+                self.filepaths[wkf_to_variable_map[name]] = filepaths[wkf_to_variable_map[name]]
+            elif name in well_known_files.index:
+                self.filepaths[wkf_to_variable_map[name]] = ''.join(well_known_files.loc[name][['storage_directory', 'filename']].tolist())
             else:
-                self.sync_timestamps[movie_label] = None
-                warnings.warn('no matching sync line for {}'.format(movie_label))
+                self.filepaths[wkf_to_variable_map[name]] = None
 
-        self.ellipse_fits = {}
-        if data_source == 'filesystem':
-            # get ellipse fits from h5 files
-            for dataset in ['pupil', 'eye', 'cr']:
-                self.ellipse_fits[dataset] = self.get_eye_data_from_file(self.ellipse_fit_path, dataset=dataset, timestamps=self.sync_timestamps['eye'])
-            # replace the 'cr' key with 'corneal_reflection for clarity
-            self.ellipse_fits['corneal_reflection'] = self.ellipse_fits.pop('cr')
+        # allow the ellipse fit path to be overwritten (useful for troubleshooting)
+        if ellipse_fit_path is not None:
+            self.filepaths['ellipse_fits'] = ellipse_fit_path
 
-        elif data_source == 'mongodb':
-            mongo_db = db.Database('visual_behavior_data')
+        # open and process sync data if sync path exists
+        if self.filepaths['sync']:
+            self.sync_data = get_sync_data(self.filepaths['sync'])
 
-            for dataset in ['pupil', 'eye', 'corneal_reflection']:
-                res = list(mongo_db['eyetracking'][dataset].find({'ophys_session_id': self.ophys_session_id}))
-                self.ellipse_fits[dataset] = pd.concat([pd.DataFrame(r['data']) for r in res]).reset_index()
+            # assign timestamps from sync
+            self.sync_timestamps = {}
+            for movie_label, movie_path in zip(['eye', 'behavior'], [self.filepaths['eye_movie'], self.filepaths['behavior_movie']]):
+                movie = Movie(movie_path)
+                sync_line = self.get_matching_sync_line(movie, self.sync_data)
 
-            mongo_db.close()
+                if sync_line is not None:
+                    self.sync_timestamps[movie_label] = self.sync_data[sync_line]
+                else:
+                    self.sync_timestamps[movie_label] = None
+                    warnings.warn('no matching sync line for {}'.format(movie_label))
 
-        if filter_outliers:
-            self.filter_outliers()
+        # get ellipse fits if path exists
+        if self.filepaths['ellipse_fits']:
+            self.ellipse_fits = {}
+            if data_source == 'filesystem':
+                # get ellipse fits from h5 files
+                for dataset in ['pupil', 'eye', 'cr']:
+                    self.ellipse_fits[dataset] = self.get_eye_data_from_file(self.filepaths['ellipse_fits'], dataset=dataset, timestamps=self.sync_timestamps['eye'])
+                # replace the 'cr' key with 'corneal_reflection for clarity
+                self.ellipse_fits['corneal_reflection'] = self.ellipse_fits.pop('cr')
 
-        if filter_blinks:
-            self.filter_blinks()
+            elif data_source == 'mongodb':
+                mongo_db = db.Database('visual_behavior_data')
+
+                for dataset in ['pupil', 'eye', 'corneal_reflection']:
+                    res = list(mongo_db['eyetracking'][dataset].find({'ophys_session_id': self.ophys_session_id}))
+                    self.ellipse_fits[dataset] = pd.concat([pd.DataFrame(r['data']) for r in res]).reset_index()
+
+                mongo_db.close()
+
+            if filter_outliers:
+                self.filter_outliers()
+
+            if filter_blinks:
+                self.filter_blinks()
 
     def filter_outliers(self, outlier_threshold=3):
         '''
@@ -538,7 +558,7 @@ class EyeTrackingData(object):
             warnings.warn('cannot specify both frame and time')
             return None
 
-        eye_movie = Movie(self.eye_movie_path)
+        eye_movie = Movie(self.filepaths['eye_movie'])
         eye_movie.sync_timestamps = self.sync_timestamps['eye']
 
         if time is not None:
