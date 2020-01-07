@@ -1,7 +1,7 @@
 import os
 import pytest
 import pandas as pd
-data_dir = '/home/nick.ponvert/nco_home/data/sdk_master_migration'
+data_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/'
 
 @pytest.fixture(scope="session")
 def sfn_sdk_extended_stimulus_presentations():
