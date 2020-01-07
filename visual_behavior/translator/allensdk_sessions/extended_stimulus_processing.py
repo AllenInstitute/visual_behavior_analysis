@@ -48,6 +48,101 @@ def find_change(image_index, omitted_index):
                                                
     return change
 
+def add_mean_running_speed(stimulus_presentations_df, running_speed_df,
+                           range_relative_to_stimulus_start=[0, 0.25]):
+    '''
+    Append a column to stimulus_presentations which contains the mean running speed between
+
+    Args:
+        stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
+            Must contain: 'start_time'
+        running_speed_df (pd.DataFrame): dataframe of running speed. 
+            Must contain: 'speed', 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed. 
+    Returns:
+        stimulus_presentations_df (pd.DataFrame): Same as the input, but with 'mean_running_speed'
+    '''
+    flash_running_speed = stimulus_presentations_df.apply(
+        lambda row: trace_average(
+            running_speed_df['speed'].values,
+            running_speed_df['timestamps'].values,
+            row["start_time"]+range_relative_to_stimulus_start[0],
+            row["start_time"]+range_relative_to_stimulus_start[1],
+        ),
+        axis=1,
+    )
+    stimulus_presentations_df["mean_running_speed"] = flash_running_speed
+    return stimulus_presentations_df
+
+
+#TODO: Should this take the licks dataframe instead for consistency?
+def add_licks_each_flash(stimulus_presentations_df, licks_df,
+                         range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the timestamps of licks that occur
+    in a range relative to the onset of the stimulus.
+
+    Args:
+        stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
+            Must contain: 'start_time'
+        licks_df (pd.DataFrame): lick dataframe. Must contain 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed. 
+    Returns:
+        stimulus_presentations_df (pd.DataFrame): Same as the input, but with 'licks' column added
+    '''
+
+    lick_times = licks_df['timestamps'].values
+    licks_each_flash = stimulus_presentations_df.apply(
+        lambda row: lick_times[
+            ((
+                lick_times > row["start_time"]+range_relative_to_stimulus_start[0]
+            ) & (
+                lick_times < row["start_time"]+range_relative_to_stimulus_start[1]
+            ))
+        ],
+        axis=1,
+    )
+    stimulus_presentations_df["licks"] = licks_each_flash
+    return stimulus_presentations_df
+
+def add_rewards_each_flash(stimulus_presentations_df, rewards_df,
+                           range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the timestamps of rewards that occur
+    in a range relative to the onset of the stimulus.
+
+    Args:
+        stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
+            Must contain: 'start_time'
+        rewards_df (pd.DataFrame): rewards dataframe. Must contain 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed. 
+    Returns:
+        stimulus_presentations_df (pd.DataFrame): Same as the input, but with 'rewards' column added
+    '''
+
+    reward_times = rewards_df['timestamps'].values
+    rewards_each_flash = stimulus_presentations_df.apply(
+        lambda row: reward_times[
+            ((
+                reward_times > row["start_time"]+range_relative_to_stimulus_start[0]
+            ) & (
+                reward_times < row["start_time"]+range_relative_to_stimulus_start[1]
+            ))
+        ],
+        axis=1,
+    )
+    stimulus_presentations_df["rewards"] = rewards_each_flash
+    return stimulus_presentations_df
+
+
+
+
+
+
+
 def add_response_latency(stimulus_presentations):
     st = stimulus_presentations.copy()
     st['response_latency'] = st['licks']-st['start_time']
@@ -214,18 +309,19 @@ def add_prior_image_to_stimulus_presentations(stimulus_presentations):
     return stimulus_presentations
 
 def get_extended_stimulus_presentations(stimulus_presentations_df,
-                                        licks,
-                                        rewards,
+                                        licks_df,
+                                        rewards_df,
                                         running_speed_df):
 
     stimulus_presentations_df = stimulus_presentations_df.copy()
     #  stimulus_presentations_df = add_prior_image_to_stimulus_presentations(stimulus_presentations_df)
 
     flash_times = stimulus_presentations_df["start_time"].values
-    lick_times = licks['timestamps'].values
-    reward_times = rewards['timestamps'].values
     # Time from last other for each flash
 
+    # TODO: Move this into the logic of the individual funcs
+    lick_times = licks_df['timestamps'].values
+    reward_times = rewards_df['timestamps'].values
     if len(lick_times) < 5: #Passive sessions
         time_from_last_lick = np.full(len(flash_times), np.nan)
     else:
@@ -297,39 +393,12 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
     stimulus_presentations_df["index_within_block"] = repeat_number
 
     # Lists of licks/rewards on each flash
-    licks_each_flash = stimulus_presentations_df.apply(
-        lambda row: lick_times[
-            ((lick_times > row["start_time"]) & (lick_times < row["start_time"] + 0.75))
-        ],
-        axis=1,
-    )
-    rewards_each_flash = stimulus_presentations_df.apply(
-        lambda row: reward_times[
-            (
-                (reward_times > row["start_time"])
-                & (reward_times < row["start_time"] + 0.75)
-            )
-        ],
-        axis=1,
-    )
+    stimulus_presentations_df = add_licks_each_flash(stimulus_presentations_df, licks_df)
+    stimulus_presentations_df = add_rewards_each_flash(stimulus_presentations_df, rewards_df)
 
-    stimulus_presentations_df["licks"] = licks_each_flash
-    stimulus_presentations_df["rewards"] = rewards_each_flash
+    stimulus_presentations_df = add_mean_running_speed(stimulus_presentations_df, running_speed_df)
 
-    # Average running speed on each flash
-    flash_running_speed = stimulus_presentations_df.apply(
-        lambda row: trace_average(
-            running_speed_df['speed'].values,
-            running_speed_df['timestamps'].values,
-            row["start_time"],
-            row["start_time"]+0.25,
-        ),
-        axis=1,
-    )
-
-    stimulus_presentations_df["mean_running_speed"] = flash_running_speed
-
-    # add flass after omitted
+    # add flash after omitted
     stimulus_presentations_df['flash_after_omitted'] = np.hstack((False, stimulus_presentations_df.omitted.values[:-1]))
     stimulus_presentations_df['flash_after_change'] = np.hstack((False, stimulus_presentations_df.change.values[:-1]))
     # add licking responses
@@ -337,7 +406,7 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
     stimulus_presentations_df = add_inter_flash_lick_diff_to_stimulus_presentations(stimulus_presentations_df)
     stimulus_presentations_df = add_first_lick_in_bout_to_stimulus_presentations(stimulus_presentations_df)
     stimulus_presentations_df = get_consumption_licks(stimulus_presentations_df)
-    stimulus_presentations_df = get_metrics(stimulus_presentations_df, licks, rewards)
+    stimulus_presentations_df = get_metrics(stimulus_presentations_df, licks_df, rewards_df)
     # reward rate, lick rate, bout rate
     stimulus_presentations_df = annotate_flash_rolling_metrics(stimulus_presentations_df, win_dur=320, win_type='triang')
 
