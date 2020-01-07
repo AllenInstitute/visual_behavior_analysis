@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import pytest
-from visual_behavior.translator.allensdk import extended_stimulus_processing as esp
+from visual_behavior.translator.allensdk_sessions import extended_stimulus_processing as esp
 
 CIRCLECI = os.environ.get('PYTHONPATH', '').startswith('/home/circleci')
 
