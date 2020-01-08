@@ -15,7 +15,7 @@ source activate ${bamboo_build_working_directory}/.conda/conda_test_env
 cd ${bamboo_build_working_directory}
 pip install -r requirements.txt
 pip install -r requirements_dev.txt
-pip install pip install git+https://github.com/AllenInstitute/allensdk.git@master
+pip install git+https://github.com/AllenInstitute/allensdk.git@master
 pip install .
 
 source deactivate
