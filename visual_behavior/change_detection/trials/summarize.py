@@ -55,6 +55,7 @@ DEFAULT_SUMMARY_METRICS = dict(
     d_prime_peak=session_metrics.peak_dprime,
     discrim_p=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.discrim_p),
     response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
+    flashwise_lick_probability = session_metrics.flashwise_lick_probability, 
     earned_water=session_metrics.earned_water,
     total_water=session_metrics.total_water,
     num_contingent_trials=session_metrics.num_contingent_trials,
@@ -126,6 +127,7 @@ def epoch_level_summary(trials, epoch_length=10.0, apply_trial_number_limit = Fa
     summarizer = create_summarizer(
         num_contingent_trials=session_metrics.num_contingent_trials,
         response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
+        flashwise_lick_probability = session_metrics.flashwise_lick_probability, 
         earned_water=session_metrics.earned_water,
         lick_latency_median=session_metrics.lick_latency,
         fraction_time_aborted=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'aborted'),
