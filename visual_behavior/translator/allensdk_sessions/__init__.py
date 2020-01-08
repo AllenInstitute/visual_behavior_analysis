@@ -1,4 +1,6 @@
 
+
+
 # TODO: update this for allensdk sessions
 def data_to_change_detection_core(data, time=None):
     """Core data structure to be used across all analysis code?
