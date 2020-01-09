@@ -8,9 +8,9 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True,})
 sns.set_palette('deep')
 
-# import visual_behavior.visualization.ophys.population_summary_figures as psf
-# import visual_behavior.visualization.ophys.experiment_summary_figures as esf
-# import visual_behavior.visualization.ophys.summary_figures as sf
+import visual_behavior.visualization.ophys.population_summary_figures as psf
+import visual_behavior.visualization.ophys.experiment_summary_figures as esf
+import visual_behavior.visualization.ophys.summary_figures as sf
 
 import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.visualization.utils import save_figure
@@ -248,7 +248,7 @@ def plot_boxplot_for_condition(df, metric, condition='image_set', condition_valu
 
 def plot_boxplot_and_swarm_for_condition(df, metric, condition='cre_line', condition_values=['A', 'B'],
                                          colors=sns.color_palette(), hue='image_set', hue_order=None, ylabel=None,
-                                         xlabel=None, title=None,
+                                         xlabel=None, title=None, use_events=False,
                                          plot_swarm=True, show_stats=True, range=(0, 1), ax=None, save_figures=False,
                                          save_dir=None, folder=None, suffix=''):
     df[metric] = pd.to_numeric(df[metric])
@@ -289,7 +289,10 @@ def plot_boxplot_and_swarm_for_condition(df, metric, condition='cre_line', condi
         ax.set_title(metric)
     else:
         ax.set_title(title)
-    ax.set_ylim(range[0] - 0.05, range[1] + .05)
+    if use_events:
+        ax.set_ylim(range[0] - 0.0005, range[1] + 0.0005)
+    else:
+        ax.set_ylim(range[0] - 0.05, range[1] + 0.05)
     ax.get_legend().remove()
     sns.despine(offset=10, trim=True)
 
@@ -301,14 +304,11 @@ def plot_boxplot_and_swarm_for_condition(df, metric, condition='cre_line', condi
         label_df = get_label_df(ax, stats_df, condition, condition_values, hue, hue_names)
         ax = label_ax_with_stats(ax, label_df, stats_df, sig_y_val, condition, condition_values, hue, hue_names)
 
-    ax.set_ylim(range[0] - 0.05, range[1] + .05)
     plt.gcf().subplots_adjust(top=0.85)
     plt.gcf().subplots_adjust(left=0.25)
     plt.gcf().subplots_adjust(right=0.85)
     plt.gcf().subplots_adjust(bottom=0.25)
     if save_figures:
-        #         l = ax.legend(title=condition, fontsize='small')
-        #         plt.setp(l.get_title(),fontsize='small')
         if show_stats:
             suffix = suffix + '_stats'
         save_figure(fig, figsize, save_dir, folder, metric + '_by_' + condition + '_box' + suffix)
@@ -319,7 +319,7 @@ def plot_boxplot_and_swarm_for_condition(df, metric, condition='cre_line', condi
 
 def plot_pointplot_for_condition(df, metric, condition='cre_line', condition_values=['A', 'B'],
                                  colors=sns.color_palette(), hue='image_set', hue_order=None, ylabel=None, xlabel=None,
-                                 title=None,
+                                 title=None, use_events=False,
                                  plot_swarm=True, show_stats=True, range=(0, 1), ax=None, save_figures=False,
                                  save_dir=None, folder=None, suffix=''):
     df[metric] = pd.to_numeric(df[metric])
@@ -356,7 +356,10 @@ def plot_pointplot_for_condition(df, metric, condition='cre_line', condition_val
         ax.set_title(metric)
     else:
         ax.set_title(title)
-    ax.set_ylim(range[0] - 0.05, range[1] + .05)
+    if use_events:
+        ax.set_ylim(range[0] - 0.05, range[1] + .05)
+    else:
+        ax.set_ylim(range[0] - 0.0005, range[1] + .00005)
     ax.get_legend().remove()
     sns.despine(offset=10, trim=True)
 
@@ -368,7 +371,6 @@ def plot_pointplot_for_condition(df, metric, condition='cre_line', condition_val
         label_df = get_label_df(ax, stats_df, condition, condition_values, hue, hue_names)
         ax = label_ax_with_stats(ax, label_df, stats_df, sig_y_val, condition, condition_values, hue, hue_names)
 
-    ax.set_ylim(range[0] - 0.05, range[1] + .05)
     plt.gcf().subplots_adjust(top=0.85)
     plt.gcf().subplots_adjust(left=0.25)
     plt.gcf().subplots_adjust(right=0.85)
@@ -385,7 +387,7 @@ def plot_pointplot_for_condition(df, metric, condition='cre_line', condition_val
 
 def plot_points_for_image_sets_cre_lines(df, metric, points_range=(0, 1), xlabel=None, show_stats=False,
                                          label_kde=False, show_legend=False, bins=30, offset=False, ylabel='',
-                                         save_figures=False, save_dir=None, folder=None):
+                                         save_figures=False, save_dir=None, folder=None, use_events=False):
     condition = 'image_set'
     condition_values = ut.get_image_sets(df)
     hue = 'image_set'
@@ -404,7 +406,7 @@ def plot_points_for_image_sets_cre_lines(df, metric, points_range=(0, 1), xlabel
 
         ax[i] = plot_pointplot_for_condition(tmp, metric, condition, condition_values, colors, hue, hue_order=hue_order,
                                              ylabel=ylabel, xlabel='image set', title=title, range=points_range,
-                                             ax=ax[i],
+                                             ax=ax[i], use_events=use_events,
                                              plot_swarm=False, show_stats=False, save_figures=False, save_dir=save_dir,
                                              folder=folder)
 
@@ -536,7 +538,7 @@ def plot_hist_for_image_sets_cre_lines(df, metric, hist_ranges=[(-1, 1), (-1, 1)
         ax[i].set_ylabel('')
         ax[i].set_title(cre_line)
     ax[0].set_ylabel('fraction of cells')
-    plt.gcf().subplots_adjust(wspace=.38)
+    plt.gcf().subplots_adjust(wspace=.3)
     plt.gcf().subplots_adjust(bottom=.25)
     if save_figures:
         if show_stats:
@@ -662,6 +664,7 @@ def plot_cdf_for_image_sets(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None
     cre_lines = ut.get_cre_lines(df)
 
     figsize = (10, 5)
+    # figsize = (8, 3.5)
     fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=False, sharey=True)
     for i, cre_line in enumerate(cre_lines):
         tmp = df[df.cre_line == cre_line].copy()
@@ -679,7 +682,7 @@ def plot_cdf_for_image_sets(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None
     plt.setp(l.get_title(), fontsize='x-small')
     if (show_legend == False) or (show_stats == True):
         ax[i].legend_.remove()
-    plt.gcf().subplots_adjust(wspace=.2)
+    plt.gcf().subplots_adjust(wspace=.3)
     plt.gcf().subplots_adjust(top=0.85)
     plt.gcf().subplots_adjust(left=0.25)
     plt.gcf().subplots_adjust(right=0.85)
@@ -989,55 +992,55 @@ def plot_percent_cells_over_threshold_stacked(cell_df, metric, threshold, condit
     if save_figures:
         save_figure(fig, figsize, save_dir, folder, metric + '_' + condition + '_percent_stacked' + suffix)
 
-    def plot_mean_value_barplot(cell_df, metric, condition='image_set', condition_values=['A', 'B', 'C', 'D'],
-                                ylabel='metric',
-                                colors=sns.color_palette(), title=None, sharey=True, ymax=None,
-                                save_figures=False, save_dir=None, folder=None, suffix=''):
-        from scipy.stats import sem as compute_sem
-        df = cell_df.copy()
-        cre_lines = ut.get_cre_lines(df)
-        figsize = (5.75, 2.75)
-        fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=sharey, sharex=True)
-        ax = ax.ravel()
-        for i, cre_line in enumerate(cre_lines):
-            for c, condition_value in enumerate(condition_values):
-                t = df[(df.cre_line == cre_line) & (df[condition] == condition_value)]
-                if c == 0:
-                    x = 0
-                else:
-                    x = x + 0.2
-                values = t[metric].values
-                mean = np.nanmean(values)
-                values = values[np.isnan(values) == False]
-                sem = compute_sem(values)
-                ax[i].bar(x, mean, width=0.1, color=colors[c])
-                ax[i].errorbar(x, mean, yerr=sem, color='k')
-            ax[i].set_title(cre_line)
-            ax[i].set_xticks(np.arange(0, len(condition_values) * 0.2, 0.2))
-            ax[i].set_xticklabels(condition_values)
-            ax[i].set_xlabel('image set')
-            if ymax:
-                ax[i].set_ylim(0, ymax)
-        ax[0].set_ylabel('mean ' + ylabel)
-        if title:
-            plt.suptitle(title, x=0.52, y=1.0,
-                         horizontalalignment='center', fontsize=16)
-        plt.gcf().subplots_adjust(left=0.15)
-        #     plt.gcf().subplots_adjust(right=0.9)
-        plt.gcf().subplots_adjust(top=0.8)
-        plt.gcf().subplots_adjust(bottom=0.25)
-        if sharey:
-            plt.gcf().subplots_adjust(wspace=.2)
-        else:
-            plt.gcf().subplots_adjust(wspace=.3)
-        if save_figures:
-            save_figure(fig, figsize, save_dir, folder, metric + '_' + condition + '_mean_bar_plot' + suffix)
+def plot_mean_value_barplot(cell_df, metric, condition='image_set', condition_values=['A', 'B', 'C', 'D'],
+                            ylabel='metric',
+                            colors=sns.color_palette(), title=None, sharey=True, ymax=None,
+                            save_figures=False, save_dir=None, folder=None, suffix=''):
+    from scipy.stats import sem as compute_sem
+    df = cell_df.copy()
+    cre_lines = ut.get_cre_lines(df)
+    figsize = (5.75, 2.75)
+    fig, ax = plt.subplots(1, 2, figsize=figsize, sharey=sharey, sharex=True)
+    ax = ax.ravel()
+    for i, cre_line in enumerate(cre_lines):
+        for c, condition_value in enumerate(condition_values):
+            t = df[(df.cre_line == cre_line) & (df[condition] == condition_value)]
+            if c == 0:
+                x = 0
+            else:
+                x = x + 0.2
+            values = t[metric].values
+            mean = np.nanmean(values)
+            values = values[np.isnan(values) == False]
+            sem = compute_sem(values)
+            ax[i].bar(x, mean, width=0.1, color=colors[c])
+            ax[i].errorbar(x, mean, yerr=sem, color='k')
+        ax[i].set_title(cre_line)
+        ax[i].set_xticks(np.arange(0, len(condition_values) * 0.2, 0.2))
+        ax[i].set_xticklabels(condition_values)
+        ax[i].set_xlabel('image set')
+        if ymax:
+            ax[i].set_ylim(0, ymax)
+    ax[0].set_ylabel('mean ' + ylabel)
+    if title:
+        plt.suptitle(title, x=0.52, y=1.0,
+                     horizontalalignment='center', fontsize=16)
+    plt.gcf().subplots_adjust(left=0.15)
+    #     plt.gcf().subplots_adjust(right=0.9)
+    plt.gcf().subplots_adjust(top=0.8)
+    plt.gcf().subplots_adjust(bottom=0.25)
+    if sharey:
+        plt.gcf().subplots_adjust(wspace=.2)
+    else:
+        plt.gcf().subplots_adjust(wspace=.3)
+    if save_figures:
+        save_figure(fig, figsize, save_dir, folder, metric + '_' + condition + '_mean_bar_plot' + suffix)
 
 
 ### summary figures by image set and area
 
 def generate_figures_for_session_metric_image_sets(session_summary_df, metric, range=(0, 1), points_range=(0, 1),
-                                                   ylabel='fraction of cells', xlabel=None,
+                                                   ylabel='fraction of cells', xlabel=None, use_events=False,
                                                    title=None, plot_swarm=False, show_stats=True, save_figures=False,
                                                    save_dir=None, folder=None):
     hue = 'image_set'
@@ -1053,12 +1056,12 @@ def generate_figures_for_session_metric_image_sets(session_summary_df, metric, r
 
     plot_boxplot_and_swarm_for_condition(df, metric, condition, condition_values, colors, hue, hue_order=hue_order,
                                          plot_swarm=plot_swarm, ylabel=ylabel, xlabel=xlabel, title=title, range=range,
-                                         ax=None,
+                                         ax=None, use_events=use_events,
                                          save_figures=save_figures, save_dir=save_dir, folder=folder,
                                          show_stats=show_stats)
 
     plot_pointplot_for_condition(df, metric, condition, condition_values, colors, hue, hue_order=hue_order,
-                                 ylabel=ylabel, xlabel=xlabel, title=title, range=points_range, ax=None,
+                                 ylabel=ylabel, xlabel=xlabel, title=title, range=points_range, ax=None, use_events=use_events,
                                  plot_swarm=True, show_stats=False, save_figures=save_figures, save_dir=save_dir,
                                  folder=folder)
 
@@ -1215,8 +1218,66 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     return ax
 
 
+def plot_response_across_conditions_population(df, condition='image_set', conditions=['A', 'B', 'C', 'D'],
+                                               plot_flashes=True,
+                                               window=[-0.5, 0.75], save_figures=False, colors=None, autoscale=False,
+                                               save_dir=None, folder=None, ax=None, pref_stim=True, omitted=False,
+                                               frame_rate=30., show_variability=False):
+    image_set = df.image_set.unique()[0]
+    cre_line = df.cre_line.unique()[0]
+    colors = colors[::-1]
+    if pref_stim:
+        df = df[df.pref_stim == True].copy()
+    if ax is None:
+        figsize = (5, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    if np.abs(window[0]) >= 1:
+        interval_sec = 1
+    else:
+        interval_sec = 0.5
+    for c, condition_value in enumerate(conditions[::-1]):
+        tmp = df[df[condition] == condition_value]
+        if colors is None:
+            image_lookup = get_image_color_lookup(mdf)
+            image_names = df[df.image_set == image_set].image_name.unique()
+            colors = get_colors_for_image_names(image_names, image_lookup)
+        traces = tmp.mean_trace.values
+        traces = np.asarray([trace for trace in traces if len(trace) == len(traces[0])])
+        #         traces = np.asarray([trace for trace in traces if len(np.where(np.isnan(trace)==True)[0]<25)])
+        trace = np.nanmean(traces, axis=0)
 
+        if show_variability:
+            ax = sf.plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=condition_value,
+                                                     color=colors[c], interval_sec=interval_sec,
+                                                     xlims=window, ax=ax, flashes=False)
+        else:
+            ax = sf.plot_mean_trace(traces, frame_rate, legend_label=condition_value, color=colors[c],
+                                    interval_sec=interval_sec,
+                                    xlims=window, ax=ax)
 
+    if plot_flashes:
+        ax = psf.plot_flashes_on_trace(ax, flashes=True, alpha=0.3, window=window, omitted=omitted, frame_rate=frame_rate)
+    xticks, xticklabels = sf.get_xticks_xticklabels(trace, frame_rate, interval_sec=interval_sec, window=window)
+    ax.set_xticks(xticks)
+    if interval_sec >= 1:
+        ax.set_xticklabels([int(x) for x in xticklabels])
+    else:
+        ax.set_xticklabels(xticklabels)
+    ax.set_xlim(0, (np.abs(window[0]) + window[1]) * frame_rate)
+    ax.legend(bbox_to_anchor=(1.1, 1), title=condition)
+    if not autoscale:
+        ymin, ymax = ax.get_ylim()
+        if ymin > 0:
+            ax.set_ylim(0, ymax * 1.2)
+        else:
+            ax.set_ylim(ymin * 1.2, ymax * 1.2)
+    ax.set_title(image_set)
+    if save_figures:
+        fig.tight_layout()
+        psf.save_figure(fig, figsize, save_dir, folder,
+                        str(int(cdf.experiment_id.unique()[0])) + '_' + str(int(cell_specimen_id)))
+        plt.close()
+    return ax
 
 
 
