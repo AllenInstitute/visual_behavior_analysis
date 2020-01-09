@@ -114,6 +114,12 @@ class VisualBehaviorOphysDataset(object):
 
     ophys_timestamps = LazyLoadable('_ophys_timestamps', get_ophys_timestamps)
 
+    def get_eye_tracking_timestamps(self):
+        self._eye_tracking_timestamps = self.timestamps['behavior_monitoring']['timestamps'] #line labels swapped
+        return self._eye_tracking_timestamps
+
+    eye_tracking_timestamps = LazyLoadable('_eye_tracking_timestamps', get_eye_tracking_timestamps)
+
     def get_stimulus_table(self):
         self._stimulus_table = pd.read_hdf(
             os.path.join(self.analysis_dir, 'stimulus_table.h5'), key='df')
@@ -331,6 +337,28 @@ class VisualBehaviorOphysDataset(object):
 
     events = LazyLoadable('_events', get_events)
 
+    def get_pupil_area(self):
+        session_id = self.metadata.session_id.values[0]
+        data_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\ophys_pilot_eyetracking'
+        filename = [file for file in os.listdir(data_dir) if str(session_id) in file]
+        if len(filename) > 0:
+            df = pd.read_csv(os.path.join(data_dir, filename[0]))
+            area = df.blink_corrected_area.values
+            # compare with timestamps
+            timestamps = self.timestamps.behavior_monitoring.values[0]
+            diff = len(area) - len(timestamps)
+            print('pupil data and timestamps off by', diff)
+            if diff <= 5:
+                self._pupil_area = area
+            else:
+                print('discrepancy too high, returning None')
+                self._pupil_area = None
+        else:
+            print('no pupil data for', session_id)
+            self._pupil_area = None
+        return self._pupil_area
+
+    pupil_area = LazyLoadable('_pupil_area', get_pupil_area)
 
     def get_stimulus_presentations(self):
         stimulus_presentations_df = self.stimulus_table.copy()
@@ -386,6 +414,7 @@ class VisualBehaviorOphysDataset(object):
         obj.get_timestamps()
         obj.get_ophys_timestamps()
         obj.get_stimulus_timestamps()
+        obj.get_eye_tracking_timestamps()
         obj.get_stimulus_table()
         obj.get_stimulus_template()
         obj.get_stimulus_metadata()
@@ -407,6 +436,7 @@ class VisualBehaviorOphysDataset(object):
         obj.get_motion_correction()
         obj.get_dff_traces()
         obj.get_events()
+        obj.get_pupil_area()
         obj.get_stimulus_presentations()
         # obj.get_extended_stimulus_presentations()
 
