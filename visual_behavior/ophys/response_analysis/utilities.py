@@ -200,11 +200,14 @@ def get_p_values_from_shuffle_omitted(analysis, stimulus_table, omitted_flash_re
 
 def get_mean_sem_trace(group):
     mean_response = np.mean(group['mean_response'])
+    mean_baseline = np.mean(group['baseline_response'])
     mean_responses = group['mean_response'].values
     sem_response = np.std(group['mean_response'].values) / np.sqrt(len(group['mean_response'].values))
-    mean_trace = np.mean(group['trace'])
+    sem_baseline = np.std(group['baseline_response'].values) / np.sqrt(len(group['baseline_response'].values))
+    mean_trace = np.mean(group['trace'], axis=0)
     sem_trace = np.std(group['trace'].values) / np.sqrt(len(group['trace'].values))
     return pd.Series({'mean_response': mean_response, 'sem_response': sem_response,
+                      'mean_baseline': mean_baseline, 'sem_baseline': sem_baseline,
                       'mean_trace': mean_trace, 'sem_trace': sem_trace,
                       'mean_responses': mean_responses})
 
@@ -220,18 +223,13 @@ def get_fraction_significant_trials(group):
     return pd.Series({'fraction_significant_trials': fraction_significant_trials})
 
 
-def get_fraction_significant_trials_synthetic(group):
-    fraction_significant_trials = len(group[group.p_value_synthetic < 0.05]) / float(len(group))
-    return pd.Series({'fraction_significant_trials_synthetic': fraction_significant_trials})
-
-
 def get_fraction_active_trials(group):
     fraction_active_trials = len(group[group.mean_response > 0.05]) / float(len(group))
     return pd.Series({'fraction_active_trials': fraction_active_trials})
 
 
 def get_fraction_responsive_trials(group):
-    fraction_responsive_trials = len(group[(group.p_value_baseline < 0.05)&(group.mean_response>group.baseline_response)]) / float(len(group))
+    fraction_responsive_trials = len(group[(group.p_value_baseline < 0.05)]) / float(len(group))
     return pd.Series({'fraction_responsive_trials': fraction_responsive_trials})
 
 
@@ -317,14 +315,14 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     rdf = response_df.copy()
 
     mdf = rdf.groupby(conditions).apply(get_mean_sem_trace)
-    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses']]
+    mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses', 'mean_baseline', 'sem_baseline']]
     mdf = mdf.reset_index()
     if get_pref_stim:
         if (conditions[-1] == 'image_name') or (conditions[-1] =='change_image_name') or (conditions[-1] =='prior_image_name'):
             mdf = annotate_mean_df_with_pref_stim(mdf, exclude_omitted_from_pref_stim)
     if analysis is not None:
         mdf = annotate_mean_df_with_p_value(analysis, mdf, window)
-        # mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
+        mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
         try:
             mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
             mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
@@ -341,9 +339,9 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     #     fraction_significant_trials_synthetic = fraction_significant_trials_synthetic.reset_index()
     #     mdf['fraction_significant_trials_synthetic'] = fraction_significant_trials_synthetic.fraction_significant_trials_synthetic
 
-    # fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
-    # fraction_responsive_trials = fraction_responsive_trials.reset_index()
-    # mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
+    fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
+    fraction_responsive_trials = fraction_responsive_trials.reset_index()
+    mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
     #
     # fraction_active_trials = rdf.groupby(conditions).apply(get_fraction_active_trials)
     # fraction_active_trials = fraction_active_trials.reset_index()
@@ -479,7 +477,7 @@ def add_metadata_to_mean_df(mdf, metadata):
 
 
 def get_time_to_peak(analysis, trace, window=[-4,8]):
-    response_window_duration = analysis.response_window_duration
+    response_window_duration = 0.75
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_window_duration]
     frame_rate = analysis.ophys_frame_rate
     response_window_trace = trace[int(response_window[0] * frame_rate):(int(response_window[1] * frame_rate))]

@@ -63,7 +63,7 @@ class ResponseAnalysis(object):
         self.trial_window = rp.get_default_trial_response_params()['window_around_timepoint_seconds']
         self.flash_window = rp.get_default_stimulus_response_params()['window_around_timepoint_seconds']
         self.omitted_flash_window = rp.get_default_omission_response_params()['window_around_timepoint_seconds']
-        self.response_window_duration = 0.5  # window, in seconds, over which to take the mean for a given trial or flash
+        self.response_window_duration = 0.25  # window, in seconds, over which to take the mean for a given trial or flash
         # self.response_window = [np.abs(self.trial_window[0]), np.abs(self.trial_window[
         #                         0]) + self.response_window_duration]  # time, in seconds, around change time to take the mean response
         # self.baseline_window = np.asarray(
@@ -226,8 +226,14 @@ class ResponseAnalysis(object):
             df = rp.get_trial_run_speed_df(self.dataset)
         elif df_name == 'stimulus_run_speed_df':
             df = rp.get_stimulus_run_speed_df(self.dataset)
+        elif df_name == 'stimulus_pupil_area_df':
+            df = rp.get_stimulus_pupil_area_df(self.dataset)
         elif df_name == 'omission_run_speed_df':
             df = rp.get_omission_run_speed_df(self.dataset)
+        elif df_name == 'omission_pupil_area_df':
+            df = rp.get_omission_pupil_area_df(self.dataset)
+        elif df_name == 'omission_licks_df':
+            df = rp.get_omission_licks_df(self.dataset)
         return df
 
     def get_response_df(self, df_name='trials_response_df'):
@@ -237,7 +243,7 @@ class ResponseAnalysis(object):
             file_path = self.get_response_df_path(df_name)
             if os.path.exists(file_path):
                 os.remove(file_path)
-                df = self.get_df_for_df_name(df_name)
+            df = self.get_df_for_df_name(df_name)
             self.save_response_df(df, df_name)
         else:
             if os.path.exists(self.get_response_df_path(df_name)):
@@ -256,7 +262,7 @@ class ResponseAnalysis(object):
         elif ('stimulus' in df_name) or ('omission' in df_name):
             df = df.merge(self.dataset.extended_stimulus_presentations,
                           right_on='stimulus_presentations_id', left_on='stimulus_presentations_id')
-        if 'run_speed' not in df_name:
+        if ('response' in df_name):
             df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id) for
                          cell_specimen_id in df.cell_specimen_id.values]
         return df
@@ -309,6 +315,32 @@ class ResponseAnalysis(object):
         return self._omission_run_speed_df
 
     omission_run_speed_df = LazyLoadable('_omission_run_speed_df', get_omission_run_speed_df)
+
+    def get_omission_pupil_area_df(self):
+        df_name = 'omission_pupil_area_df'
+        df = self.get_response_df(df_name)
+        self._omission_pupil_area_df = df
+        return self._omission_pupil_area_df
+
+    omission_pupil_area_df = LazyLoadable('_omission_pupil_area_df', get_omission_pupil_area_df)
+
+    def get_stimulus_run_speed_df(self):
+        df_name = 'stimulus_run_speed_df'
+        df = self.get_response_df(df_name)
+        self._stimulus_run_speed_df = df
+        return self._stimulus_run_speed_df
+
+    stimulus_run_speed_df = LazyLoadable('_stimulus_run_speed_df', get_stimulus_run_speed_df)
+
+    def get_stimulus_pupil_area_df(self):
+        df_name = 'stimulus_pupil_area_df'
+        df = self.get_response_df(df_name)
+        self._stimulus_pupil_area_df = df
+        return self._stimulus_pupil_area_df
+
+    stimulus_pupil_area_df = LazyLoadable('_stimulus_pupil_area_df', get_stimulus_pupil_area_df)
+
+
 
 
 

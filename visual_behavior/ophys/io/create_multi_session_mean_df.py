@@ -77,13 +77,13 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, df_name,
         print(experiment_id)
         try:
             dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
-            analysis = ResponseAnalysis(dataset, use_events=use_events)
+            analysis = ResponseAnalysis(dataset, use_events=use_events, overwrite_analysis_files=False)
             df = analysis.get_response_df(df_name)
             df['experiment_id'] = dataset.experiment_id
             if 'engaged' in conditions:
                 df['engaged'] = [True if reward_rate > 2 else False for reward_rate in df.reward_rate.values]
             if 'running' in conditions:
-                df['running'] = [True if mean_running_speed > 5 else False for mean_running_speed in df.mean_running_speed.values]
+                df['running'] = [True if mean_running_speed > 2 else False for mean_running_speed in df.mean_running_speed.values]
             mdf = ut.get_mean_df(df, analysis, conditions=conditions, get_pref_stim=get_pref_stim,
                                  flashes=flashes, omitted=omitted, get_reliability=get_reliability,
                                  exclude_omitted_from_pref_stim=exclude_omitted_from_pref_stim)
