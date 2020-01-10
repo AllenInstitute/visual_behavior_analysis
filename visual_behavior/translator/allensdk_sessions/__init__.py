@@ -1,3 +1,17 @@
+import numpy as np
+from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
+from visual_behavior.translator.allensdk_sessions import attribute_formatting as af
+
+def VisualBehaviorSession():
+    def __init__(self):
+        #  super().__init__(api)
+
+
+    def get_licks(self):
+        #  licks_original = api.get_licks()
+        return np.arange(5)
+
+
 
 
 

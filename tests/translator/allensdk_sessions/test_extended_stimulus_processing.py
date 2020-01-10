@@ -119,6 +119,18 @@ def _test_add_rewards_each_flash(stimulus_onsets_df,
             np.testing.assert_array_equal(left, right)
 
 
+
+@pytest.fixture
+def stimulus_names_df():
+    '''
+    A small mock stim df with just the names (and block index?)
+    '''
+    pass
+
+
+def test_repeat_within_block(
+
+
 # NOTE: Find_changes will mark the first 5 auto-rewarded trials as changes
 @pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
 def test_find_change_sfn_fixtures(sfn_sdk_stimulus_presentations, sfn_sdk_trials):
