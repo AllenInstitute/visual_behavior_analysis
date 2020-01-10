@@ -17,7 +17,7 @@ def event_detection(lims_id, cache_dir, events_dir, plot=True):
     dataset.metadata['genotype'] = genotype
     halflife = 314
 
-    l0 = L0_analysis(dataset, cache_directory=events_dir, genotype=genotype, halflife_ms=halflife)
+    l0 = L0_analysis(dataset, cache_directory=events_dir, genotype=genotype, halflife_ms=halflife, use_cache=True)
 
     print('getting events')
     events = l0.get_events()
