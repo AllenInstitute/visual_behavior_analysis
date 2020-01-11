@@ -240,6 +240,7 @@ class VisualBehaviorOphysDataset(object):
                 logger.info('getting L0 events')
                 f = np.load(os.path.join(events_folder, events_file[0]))
                 events = np.asarray(f['ev'])
+                ## put smoothing here? ##
                 f.close()
                 if events.shape[1] > self.ophys_timestamps.shape[0]:
                     difference = self.ophys_timestamps.shape[0] - events.shape[1]
