@@ -513,7 +513,7 @@ def plot_hist_for_condition(df, metric, condition='image_set', condition_values=
 
 
 def plot_hist_for_image_sets_cre_lines(df, metric, hist_ranges=[(-1, 1), (-1, 1)], xlabel=None, show_kde=True,
-                                       show_stats=True,
+                                       show_stats=True, title=None,
                                        label_kde=False, show_legend=False, bins=30, offset=False,
                                        save_figures=False, save_dir=None, folder=None):
     condition = 'image_set'
@@ -1273,7 +1273,10 @@ def plot_response_across_conditions_population(df, condition='image_set', condit
             ax.set_ylim(ymin * 1.2, ymax * 1.2)
     ax.set_title(image_set)
     if save_figures:
-        fig.tight_layout()
+        plt.gcf().subplots_adjust(top=0.9)
+        plt.gcf().subplots_adjust(left=0.25)
+        plt.gcf().subplots_adjust(bottom=0.2)
+        # plt.gcf().subplots_adjust(wspace=0.4)
         psf.save_figure(fig, figsize, save_dir, folder,
                         str(int(cdf.experiment_id.unique()[0])) + '_' + str(int(cell_specimen_id)))
         plt.close()
