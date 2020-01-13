@@ -77,7 +77,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, df_name,
         print(experiment_id)
         try:
             dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
-            analysis = ResponseAnalysis(dataset, use_events=use_events, overwrite_analysis_files=False)
+            analysis = ResponseAnalysis(dataset, use_events=use_events, overwrite_analysis_files=True)
             df = analysis.get_response_df(df_name)
             df['experiment_id'] = dataset.experiment_id
             if 'engaged' in conditions:

@@ -427,7 +427,7 @@ def plot_image_change_response(analysis, cell_index, cell_order, legend=False, s
 
 def plot_event_detection(dff_traces_array, events, analysis_dir):
     figsize = (20, 15)
-    xlims_list = [[0, dff_traces_array[0].shape[0]], [2000, 10000], [60000, 62000]]
+    xlims_list = [[0, dff_traces_array[0].shape[0]], [10000, 12000], [60000, 62000]]
     for cell in range(len(dff_traces_array)):
         fig, ax = plt.subplots(3, 1, figsize=figsize)
         ax = ax.ravel()
