@@ -18,7 +18,7 @@ def N_catch_trials(y_true, y_pred):
     return len(y_pred[~y_true])
 
 
-def hit_rate(y_true, y_pred, apply_trial_number_limit=False, clip_vals=[0,1]):
+def hit_rate(y_true, y_pred, apply_trial_number_limit=False, clip_vals=[0, 1]):
     go_responses = y_pred[y_true]
     response_probability = go_responses.mean()
     if apply_trial_number_limit:
@@ -28,7 +28,7 @@ def hit_rate(y_true, y_pred, apply_trial_number_limit=False, clip_vals=[0,1]):
         return np.clip(response_probability, clip_vals[0], clip_vals[1])
 
 
-def false_alarm_rate(y_true, y_pred, apply_trial_number_limit=False, clip_vals=[0,1]):
+def false_alarm_rate(y_true, y_pred, apply_trial_number_limit=False, clip_vals=[0, 1]):
     catch_responses = y_pred[~y_true]
     response_probability = catch_responses.mean()
     if apply_trial_number_limit:
@@ -38,7 +38,7 @@ def false_alarm_rate(y_true, y_pred, apply_trial_number_limit=False, clip_vals=[
         return np.clip(response_probability, clip_vals[0], clip_vals[1])
 
 
-def d_prime(y_true, y_pred, apply_trial_number_limit=False, clip_vals=[0,1]):
+def d_prime(y_true, y_pred, apply_trial_number_limit=False, clip_vals=[0, 1]):
     if len(y_true) > 0:
 
         HR = hit_rate(y_true, y_pred, apply_trial_number_limit=apply_trial_number_limit, clip_vals=clip_vals)

@@ -55,7 +55,7 @@ DEFAULT_SUMMARY_METRICS = dict(
     d_prime_peak=session_metrics.peak_dprime,
     discrim_p=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.discrim_p),
     response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
-    flashwise_lick_probability = session_metrics.flashwise_lick_probability, 
+    flashwise_lick_probability=session_metrics.flashwise_lick_probability,
     earned_water=session_metrics.earned_water,
     total_water=session_metrics.total_water,
     num_contingent_trials=session_metrics.num_contingent_trials,
@@ -117,7 +117,7 @@ def session_level_summary(trials, groupby=('mouse_id', 'behavior_session_uuid', 
     return session_summary
 
 
-def epoch_level_summary(trials, epoch_length=10.0, apply_trial_number_limit = False, clip_vals=[0,1], **kwargs):
+def epoch_level_summary(trials, epoch_length=10.0, apply_trial_number_limit=False, clip_vals=[0, 1], **kwargs):
     '''
     clip_vals ensures that hit and false alarm rates cannot exceed set limits (defaults to [0,1], which will have no effect)
     '''
@@ -128,15 +128,15 @@ def epoch_level_summary(trials, epoch_length=10.0, apply_trial_number_limit = Fa
         num_contingent_trials=session_metrics.num_contingent_trials,
         response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
         discrim_p=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.discrim_p),
-        flashwise_lick_probability = session_metrics.flashwise_lick_probability, 
+        flashwise_lick_probability=session_metrics.flashwise_lick_probability,
         earned_water=session_metrics.earned_water,
         lick_latency_median=session_metrics.lick_latency,
         fraction_time_aborted=lambda grp: session_metrics.fraction_time_by_trial_type(grp, 'aborted'),
         number_of_go_trials=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.N_go_trials),
         number_of_catch_trials=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.N_catch_trials),
-        hit_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.hit_rate, metric_kws={'apply_trial_number_limit': apply_trial_number_limit, 'clip_vals':clip_vals}),
-        false_alarm_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.false_alarm_rate, metric_kws={'apply_trial_number_limit': apply_trial_number_limit, 'clip_vals':clip_vals}),
-        d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime, metric_kws={'apply_trial_number_limit': apply_trial_number_limit, 'clip_vals':clip_vals}),
+        hit_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.hit_rate, metric_kws={'apply_trial_number_limit': apply_trial_number_limit, 'clip_vals': clip_vals}),
+        false_alarm_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.false_alarm_rate, metric_kws={'apply_trial_number_limit': apply_trial_number_limit, 'clip_vals': clip_vals}),
+        d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime, metric_kws={'apply_trial_number_limit': apply_trial_number_limit, 'clip_vals': clip_vals}),
         reward_lick_count=session_metrics.reward_lick_count,
         reward_lick_latency=session_metrics.reward_lick_latency,
         **kwargs

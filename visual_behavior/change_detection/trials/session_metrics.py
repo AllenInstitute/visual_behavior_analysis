@@ -48,7 +48,8 @@ def flashwise_lick_probability(session_trials, flash_blank_duration=0.75):
         flash_blank_duration (default = 0.75): the sum of the flash display duration and the intervening gray screen (this is the same as the inter-flash-interval)
     IMPORTANT: This algorithm infers the number of flashes per unit time; it has no way of accounting for omitted flashes or exceptionally long frame intervals
     '''
-    trials = session_trials.copy() # operate on a copy because we will add some columns to the trials. If this were a slice, we run into trouble
+    trials = session_trials.copy()  # operate on a copy because we will add some columns to the trials. If this were a slice, we run into trouble
+
     def get_first_lick_time(lick_times):
         if len(lick_times) > 0:
             return lick_times[0]
@@ -59,10 +60,10 @@ def flashwise_lick_probability(session_trials, flash_blank_duration=0.75):
         first_lick = row['first_lick']
         trial_length = row['trial_length']
         if pd.notnull(first_lick):
-            return np.floor(first_lick/flash_blank_duration)
+            return np.floor(first_lick / flash_blank_duration)
         else:
-            return np.floor(trial_length/flash_blank_duration)
-        
+            return np.floor(trial_length / flash_blank_duration)
+
     def get_flashes_with_licks(row):
         trial_type = row['trial_type']
         first_lick = row['first_lick']
@@ -79,11 +80,11 @@ def flashwise_lick_probability(session_trials, flash_blank_duration=0.75):
     # reference first lick to trial start
     trials['first_lick'] = trials['first_lick'] - trials['starttime']
     # count pre-lick flashes
-    trials['flashes_without_licks'] = trials[['first_lick','trial_length']].apply(get_pre_lick_flashes, axis=1)
+    trials['flashes_without_licks'] = trials[['first_lick', 'trial_length']].apply(get_pre_lick_flashes, axis=1)
     # count first post-lick flash (0 if autorewarded or if there was not lick, 1 otherwise)
-    trials['flashes_with_licks'] = trials[['first_lick','trial_type']].apply(get_flashes_with_licks, axis=1)
+    trials['flashes_with_licks'] = trials[['first_lick', 'trial_type']].apply(get_flashes_with_licks, axis=1)
 
-    return trials['flashes_with_licks'].sum()/(trials['flashes_with_licks'].sum() + trials['flashes_without_licks'].sum())
+    return trials['flashes_with_licks'].sum() / (trials['flashes_with_licks'].sum() + trials['flashes_without_licks'].sum())
 
 
 def num_trials(session_trials):
