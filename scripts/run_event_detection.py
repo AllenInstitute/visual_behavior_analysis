@@ -29,7 +29,7 @@ python_file = r"/home/marinag/visual_behavior_analysis/scripts/event_detection.p
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
 job_settings = {'queue': 'braintv',
-                'mem': '80g',
+                'mem': '100g',
                 'walltime': '24:00:00',
                 'ppn': 1,
                 'jobdir': jobdir,

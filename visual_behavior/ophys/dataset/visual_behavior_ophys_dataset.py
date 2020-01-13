@@ -237,21 +237,21 @@ class VisualBehaviorOphysDataset(object):
             events_file = [file for file in os.listdir(events_folder) if
                            str(self.experiment_id) + '_events.npz' in file]
             if len(events_file) > 0:
-                logger.info('getting L0 events')
+                print('getting L0 events')
                 f = np.load(os.path.join(events_folder, events_file[0]))
                 events = np.asarray(f['ev'])
                 ## put smoothing here? ##
                 f.close()
                 if events.shape[1] > self.ophys_timestamps.shape[0]:
                     difference = self.ophys_timestamps.shape[0] - events.shape[1]
-                    logger.info('length of ophys timestamps <  length of events by', str(difference),
+                    print('length of ophys timestamps <  length of events by', str(difference),
                                 'frames , truncating events')
                     events = events[:, :self.ophys_timestamps.shape[0]]
             else:
-                logger.info('no events for this experiment')
+                print('no events for this experiment')
                 events = None
         else:
-            logger.info('no events for this experiment')
+            print('no events for this experiment')
             events = None
 
         self._events_array = events
