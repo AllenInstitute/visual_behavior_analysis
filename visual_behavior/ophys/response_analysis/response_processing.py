@@ -409,9 +409,21 @@ def response_df(response_xr):
     return df
 
 
+def filter_events_array(trace_arr, scale=2):
+    from scipy import stats
+    filt = stats.halfnorm(loc=0, scale=scale).pdf(np.arange(20))
+    filtered_arr = np.empty(trace_arr.shape)
+    for ind_cell in range(trace_arr.shape[0]):
+        this_trace = trace_arr[ind_cell, :]
+        this_trace_filtered = np.convolve(this_trace, filt)[:len(this_trace)]
+        filtered_arr[ind_cell, :] = this_trace_filtered
+    return filtered_arr
+
+
 def get_trial_response_df(dataset, use_events=False, frame_rate=None):
     if use_events:
         traces = np.stack(dataset.events['events'].values)
+        traces = filter_events_array(traces, scale=2)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
     trace_ids = dataset.dff_traces.index.values
@@ -428,10 +440,12 @@ def get_trial_response_df(dataset, use_events=False, frame_rate=None):
     return df
 
 
+
 def get_stimulus_response_df(dataset, use_events=False, frame_rate=None):
     from visual_behavior.ophys.response_analysis import utilities as ut
     if use_events:
         traces = np.stack(dataset.events['events'].values)
+        traces = filter_events_array(traces, scale=2)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
     trace_ids = dataset.dff_traces.index.values
@@ -457,6 +471,7 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None):
 def get_omission_response_df(dataset, use_events=False, frame_rate=None):
     if use_events:
         traces = np.stack(dataset.events['events'].values)
+        traces = filter_events_array(traces, scale=2)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
     trace_ids = dataset.dff_traces.index.values
