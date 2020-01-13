@@ -127,6 +127,7 @@ def epoch_level_summary(trials, epoch_length=10.0, apply_trial_number_limit = Fa
     summarizer = create_summarizer(
         num_contingent_trials=session_metrics.num_contingent_trials,
         response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
+        discrim_p=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.discrim_p),
         flashwise_lick_probability = session_metrics.flashwise_lick_probability, 
         earned_water=session_metrics.earned_water,
         lick_latency_median=session_metrics.lick_latency,
