@@ -345,6 +345,10 @@ class VisualBehaviorOphysDataset(object):
         if len(filename) > 0:
             df = pd.read_csv(os.path.join(data_dir, filename[0]))
             area = df.blink_corrected_area.values
+            # remove potential blinks
+            blinks = df.likely_blinks.values
+            inds = np.where(blinks == True)[0]
+            area[inds] = np.nan
             # compare with timestamps
             timestamps = self.timestamps.behavior_monitoring.values[0]
             diff = len(area) - len(timestamps)
