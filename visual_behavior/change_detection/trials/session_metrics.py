@@ -116,6 +116,9 @@ def lick_latency(session_trials, percentile=50, trial_types=('go', )):
 
 
 def reward_lick_count(session_trials):
+    '''
+    returns the mean number of licks on rewarded go trials
+    '''
     return session_trials.query('trial_type == "go" and number_of_rewards > 0')['reward_lick_count'].mean()
 
 
