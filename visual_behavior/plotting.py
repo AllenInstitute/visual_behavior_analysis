@@ -199,7 +199,7 @@ def plot_psychometric(
         l = None  # NOQA: E741
     try:
         # Plot error bars
-        if 'yerr' is not None and show_points is True:
+        if 'yerr' != None and show_points is True:
             # Plot error on data points
             if logscale is False:
                 (l_err, caps, _) = ax.errorbar(
@@ -279,7 +279,7 @@ def plot_psychometric(
             try:
                 (c50_xval, c50) = getThreshold(
                     p, x, criterion=0.5, fittype='Weibull')
-            except:
+            except TypeError:
                 print('cannot calculate thresholds, returning nans')
                 (c50_xval, c50) = (np.nan, np.nan)
         else:

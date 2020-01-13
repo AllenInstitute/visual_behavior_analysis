@@ -514,9 +514,9 @@ def get_manifest(server='visual_behavior_data'):
 def get_well_known_files(ophys_session_id):
     lims_api = PostgresQueryMixin()
     query = '''
-    select * from well_known_files wkf 
-    join well_known_file_types wkft 
-    on wkft.id = wkf.well_known_file_type_id 
+    select * from well_known_files wkf
+    join well_known_file_types wkft
+    on wkft.id = wkf.well_known_file_type_id
     where wkf.attachable_type = 'OphysSession'
     and wkf.attachable_id in ({});
     '''.format(ophys_session_id)
