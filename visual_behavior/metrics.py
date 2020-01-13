@@ -67,6 +67,6 @@ def discrim_p(y_true, y_pred):
 def criterion(hit_rate, false_alarm_rate):
     '''see chapter 2 of Macmillan Creelman Detection Theory'''
     Z = norm.ppf
-    c = -0.5*(Z(hit_rate) + Z(false_alarm_rate))
+    c = -0.5 * (Z(hit_rate) + Z(false_alarm_rate))
 
     return c

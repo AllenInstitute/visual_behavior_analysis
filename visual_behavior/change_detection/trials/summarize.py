@@ -84,7 +84,7 @@ DEFAULT_SUMMARY_METRICS = dict(
 )
 
 
-def session_level_summary(trials, groupby=('mouse_id', 'behavior_session_uuid', 'startdatetime'), apply_trial_number_limit = False, **kwargs):
+def session_level_summary(trials, groupby=('mouse_id', 'behavior_session_uuid', 'startdatetime'), apply_trial_number_limit=False, **kwargs):
     """ computes session-level summary table
     """
 
@@ -116,7 +116,7 @@ def session_level_summary(trials, groupby=('mouse_id', 'behavior_session_uuid', 
     return session_summary
 
 
-def epoch_level_summary(trials, epoch_length=10.0, apply_trial_number_limit = False, **kwargs):
+def epoch_level_summary(trials, epoch_length=10.0, apply_trial_number_limit=False, **kwargs):
     trials = annotate_change_detect(trials)
     trials = annotate_epochs(trials, epoch_length)
 

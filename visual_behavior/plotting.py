@@ -80,6 +80,7 @@ def placeAxesOnGrid(
     inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
     return inner_ax
 
+
 def plot_psychometric(
         x,
         y,
@@ -324,14 +325,14 @@ def getThreshold(p, x=np.linspace(0, 1, 1001), criterion=0.5, fittype='Weibull')
 
 
 def save_figure(
-        fig,
-        fname,
-        formats=['.png'],
-        transparent=False,
-        dpi=300,
-        **kwargs
-    ):
-    
+    fig,
+    fname,
+    formats=['.png'],
+    transparent=False,
+    dpi=300,
+    **kwargs
+):
+
     import matplotlib as mpl
     mpl.rcParams['pdf.fonttype'] = 42
     if 'size' in kwargs.keys():
