@@ -12,9 +12,6 @@ import h5py
 import cv2
 import warnings
 
-
-from sync import Dataset
-
 from . import database as db
 
 
@@ -356,6 +353,7 @@ class Movie(object):
 
 
 def get_sync_data(sync_path):
+    from sync import Dataset
     sync_data = Dataset(sync_path)
 
     sample_freq = sync_data.meta_data['ni_daq']['counter_output_freq']
