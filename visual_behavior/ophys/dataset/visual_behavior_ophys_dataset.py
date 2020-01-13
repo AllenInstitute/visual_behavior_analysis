@@ -56,6 +56,11 @@ class VisualBehaviorOphysDataset(object):
         self.experiment_id = experiment_id
         self.cache_dir = cache_dir
         self.cache_dir = self.get_cache_dir()
+        self.roi_metrics = self.get_roi_metrics()
+        if self.roi_metrics.cell_specimen_id.values[0] is None:
+            self.cell_matching = False
+        else:
+            self.cell_matching = True
 
     def get_cache_dir(self):
         if self.cache_dir is None:
@@ -120,9 +125,13 @@ class VisualBehaviorOphysDataset(object):
             key='df'
         )
         self._stimulus_table = self._stimulus_table.reset_index()
+        # self._stimulus_table = self._stimulus_table.drop(
+        #     columns=['orientation', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
+        # )
         self._stimulus_table = self._stimulus_table.drop(
-            columns=['orientation', 'image_category', 'start_frame', 'end_frame', 'duration', 'index']
-        )
+            columns=['start_frame', 'end_frame', 'index'])
+        if 'level_0' in self._stimulus_table.keys():
+            self._stimulus_table = self._stimulus_table.drop(columns=['level_0'])
         return self._stimulus_table
 
     stimulus_table = LazyLoadable('_stimulus_table', get_stimulus_table)
@@ -197,10 +206,11 @@ class VisualBehaviorOphysDataset(object):
     trials = LazyLoadable('_trials', get_trials)
 
     def get_dff_traces(self):
+        cell_specimen_ids = self.get_cell_specimen_ids()
         with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
             dff_traces = []
-            for key in dff_traces_file.keys():
-                dff_traces.append(np.asarray(dff_traces_file[key]))
+            for key in cell_specimen_ids:
+                dff_traces.append(np.asarray(dff_traces_file[str(key)]))
         self._dff_traces = np.asarray(dff_traces)
         return self._dff_traces
 
@@ -296,7 +306,9 @@ class VisualBehaviorOphysDataset(object):
     motion_correction = LazyLoadable('_motion_correction', get_motion_correction)
 
     def get_cell_specimen_ids(self):
-        self._cell_specimen_ids = np.sort(self.roi_metrics.cell_specimen_id.values)
+        roi_metrics = self.roi_metrics
+        self._cell_specimen_ids = np.asarray([roi_metrics[roi_metrics.roi_id == roi_id].id.values[0]
+                                              for roi_id in np.sort(self.roi_metrics.roi_id.values)])
         return self._cell_specimen_ids
 
     cell_specimen_ids = LazyLoadable('_cell_specimen_ids', get_cell_specimen_ids)
@@ -308,10 +320,14 @@ class VisualBehaviorOphysDataset(object):
     cell_indices = LazyLoadable('_cell_indices', get_cell_indices)
 
     def get_cell_specimen_id_for_cell_index(self, cell_index):
-        return self.cell_specimen_ids[cell_index]
+        roi_metrics = self.roi_metrics
+        cell_specimen_id = roi_metrics[roi_metrics.cell_index == cell_index].id.values[0]
+        return cell_specimen_id
 
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
-        return np.where(self.cell_specimen_ids == cell_specimen_id)[0][0]
+        roi_metrics = self.roi_metrics
+        cell_index = roi_metrics[roi_metrics.id == cell_specimen_id].cell_index.values[0]
+        return cell_index
 
     @classmethod
     def construct_and_load(cls, experiment_id, cache_dir=None, **kwargs):

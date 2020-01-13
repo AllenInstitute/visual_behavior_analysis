@@ -143,8 +143,6 @@ def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
     d_prime
 
     """
-    assert limits[0] > 0.0, 'limits[0] must be greater than 0.0'
-    assert limits[1] < 1.0, 'limits[1] must be less than 1.0'
     Z = norm.ppf
 
     # Limit values in order to avoid d' infinity
