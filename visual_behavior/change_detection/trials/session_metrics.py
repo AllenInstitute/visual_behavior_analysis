@@ -119,7 +119,11 @@ def reward_lick_count(session_trials):
     '''
     returns the mean number of licks on rewarded go trials
     '''
-    return session_trials.query('trial_type == "go" and number_of_rewards > 0')['reward_lick_count'].mean()
+    go_trials_with_rewards = session_trials.query('trial_type == "go" and number_of_rewards > 0')
+    if len(go_trials_with_rewards) > 0:
+        return go_trials_with_rewards['reward_lick_count'].mean()
+    else:
+        return 0
 
 
 def reward_lick_latency(session_trials):

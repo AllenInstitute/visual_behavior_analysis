@@ -9,6 +9,7 @@ def test_session_level_summary(mock_trials_fixture, session_summary):
         session_summary,
         check_names=False,
         check_like=True,
+        check_dtype=False
     )
 
 
@@ -19,4 +20,7 @@ def test_epoch_level_summary(mock_trials_fixture, epoch_summary):
         epoch_summary,
         check_names=False,
         check_like=True,
+        check_dtype=False,
+        check_exact=False,
+        check_less_precise=2,
     )

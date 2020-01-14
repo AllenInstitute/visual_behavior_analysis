@@ -94,6 +94,7 @@ def session_level_summary(trials, groupby=('mouse_id', 'behavior_session_uuid', 
     trial_number_dependent_metrics = dict(
         hit_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.hit_rate, metric_kws={'apply_trial_number_limit': apply_trial_number_limit}),
         false_alarm_rate=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.false_alarm_rate, metric_kws={'apply_trial_number_limit': apply_trial_number_limit}),
+        d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime, metric_kws={'apply_trial_number_limit': apply_trial_number_limit}),
     )
 
     summary_metrics.update(trial_number_dependent_metrics)

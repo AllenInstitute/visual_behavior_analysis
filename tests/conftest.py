@@ -209,7 +209,10 @@ def mock_trials_fixture():
     trials['reward_lick_latency'] = 0.1
     trials['reward_lick_count'] = 10
     trials['auto_rewarded'] = False
+    trials['lick_times'] = [[] for row in trials.iterrows()]
     trials['lick_frames'] = [[] for row in trials.iterrows()]
+    trials['starttime'] = 0
+    trials['number_of_rewards'] = 0
     trials['trial_length'] = 8.5
     trials['reward_times'] = trials.apply(lambda r: [r['change_time'] + 0.2] if r['change'] * r['detect'] else [], axis=1)
     trials['reward_volume'] = 0.005 * trials['reward_times'].map(len)
@@ -251,12 +254,12 @@ def session_summary():
     summary['fraction_time_correct_reject'] = 0.638
     summary['fraction_time_false_alarm'] = 0.150
     summary['fraction_time_auto_rewarded'] = 0.0
-    summary['number_of_hits'] = np.nan
-    summary['number_of_misses'] = np.nan
-    summary['number_of_false_alarms'] = np.nan
-    summary['number_of_correct_rejects'] = np.nan
+    summary['number_of_hit_trials'] = 88
+    summary['number_of_miss_trials'] = 18
+    summary['number_of_false_alarm_trials'] = 75
+    summary['number_of_correct_reject_trials'] = 319
     summary['rig_id'] = 'unknown'
-    summary.drop('d_prime',axis=1,inplace=True) # note: metric removed in PR #580
+    summary['flashwise_lick_probability'] = 0.0
     return summary
 
 
@@ -269,7 +272,6 @@ def epoch_summary():
     summary['startdatetime'] = datetime.datetime(2017, 7, 19, 10, 35, 8, 369000, tzinfo=pytz.utc)
     summary['startdatetime'] = pd.to_datetime(summary['startdatetime'])
     summary['behavior_session_uuid'] = summary['behavior_session_uuid'].map(uuid.UUID)
-    summary.drop('d_prime',axis=1,inplace=True) # note: metric removed in PR #580
     return summary
 
 

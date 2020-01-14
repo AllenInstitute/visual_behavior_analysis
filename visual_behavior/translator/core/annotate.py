@@ -312,7 +312,7 @@ def explode_response_window(trials):
 
 
 @inplace
-def annotate_epochs(trials, epoch_length=5.0):
+def annotate_epochs(trials, epoch_length=5.0, adjust_first_trial=True):
     """ annotates the dataframe with an additional column which designates
     the "epoch" from session start
 
@@ -322,6 +322,10 @@ def annotate_epochs(trials, epoch_length=5.0):
         dataframe of trials
     epoch_length : float
         length of epochs in seconds
+    adjust_first_trial : boolean
+        subtracts first trial time from every trial to account for delay in first trial time
+        (for example, if session is preceded by 5 minutes of gray time, there would be no trials in the first 5 minute epoch.
+        this adjustment would shift the first trial from 5 minutes to 0 minutes)
     inplace : bool, optional
         modify `trials` in place. if False, returns a copy. default: True
 
@@ -330,8 +334,13 @@ def annotate_epochs(trials, epoch_length=5.0):
     io.load_trials
     """
 
+    if adjust_first_trial:
+        trials['change_time_epoch_adjusted'] = trials['change_time'] - trials['starttime'].min()
+    else:
+        trials['change_time_epoch_adjusted'] = trials['change_time']
+
     epoch = (
-        trials['change_time']
+        trials['change_time_epoch_adjusted']
         .map(lambda x: x / (60.0 * epoch_length))
         .map(np.floor)
         .map(lambda x: x * epoch_length)
