@@ -78,3 +78,27 @@ def placeAxesOnGrid(
 
     inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
     return inner_ax
+
+
+def save_figure(
+    fig,
+    fname,
+    formats=['.png'],
+    transparent=False,
+    dpi=300,
+    **kwargs
+):
+
+    import matplotlib as mpl
+    mpl.rcParams['pdf.fonttype'] = 42
+    if 'size' in kwargs.keys():
+        fig.set_size_inches(kwargs['size'])
+    else:
+        fig.set_size_inches(11, 8.5)
+    for f in formats:
+        fig.savefig(
+            fname + f,
+            transparent=transparent,
+            orientation='landscape',
+            dpi=dpi
+        )
