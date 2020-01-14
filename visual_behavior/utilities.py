@@ -146,8 +146,18 @@ def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
     hit_rate = np.clip(hit_rate, limits[0], limits[1])
     fa_rate = np.clip(fa_rate, limits[0], limits[1])
 
-    # fill nans with 0.5 to avoid warning about nans
-    d_prime = Z(pd.Series(hit_rate)) - Z(pd.Series(fa_rate))
+    # keep track of nan locations
+    hit_rate = pd.Series(hit_rate)
+    fa_rate = pd.Series(fa_rate)
+    hit_rate_nan_locs = list(hit_rate[pd.isnull(hit_rate)].index)
+    fa_rate_nan_locs = list(fa_rate[pd.isnull(fa_rate)].index)
+
+    # fill nans with 0.0 to avoid warning about nans
+    d_prime = Z(hit_rate.fillna(0)) - Z(fa_rate.fillna(0))
+
+    # for every location in hit_rate and fa_rate with a nan, fill d_prime with a nan
+    for nan_locs in [hit_rate_nan_locs, fa_rate_nan_locs]:
+        d_prime[nan_locs] = np.nan
 
     if len(d_prime) == 1:
         # if the result is a 1-length vector, return as a scalar
