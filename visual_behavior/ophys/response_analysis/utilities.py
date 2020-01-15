@@ -339,9 +339,10 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     #     fraction_significant_trials_synthetic = fraction_significant_trials_synthetic.reset_index()
     #     mdf['fraction_significant_trials_synthetic'] = fraction_significant_trials_synthetic.fraction_significant_trials_synthetic
 
-    fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
-    fraction_responsive_trials = fraction_responsive_trials.reset_index()
-    mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
+    if 'p_value_baseine' in rdf.keys():
+        fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
+        fraction_responsive_trials = fraction_responsive_trials.reset_index()
+        mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
     #
     # fraction_active_trials = rdf.groupby(conditions).apply(get_fraction_active_trials)
     # fraction_active_trials = fraction_active_trials.reset_index()

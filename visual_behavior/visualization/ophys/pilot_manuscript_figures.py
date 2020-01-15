@@ -1219,7 +1219,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
 
 
 def plot_response_across_conditions_population(df, condition='image_set', conditions=['A', 'B', 'C', 'D'],
-                                               plot_flashes=True,
+                                               plot_flashes=True, flashes=False,
                                                window=[-0.5, 0.75], save_figures=False, colors=None, autoscale=False,
                                                save_dir=None, folder=None, ax=None, pref_stim=True, omitted=False,
                                                frame_rate=30., show_variability=False):
@@ -1249,7 +1249,7 @@ def plot_response_across_conditions_population(df, condition='image_set', condit
         if show_variability:
             ax = sf.plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=condition_value,
                                                      color=colors[c], interval_sec=interval_sec,
-                                                     xlims=window, ax=ax, flashes=False)
+                                                     xlims=window, ax=ax, flashes=flashes)
         else:
             ax = sf.plot_mean_trace(traces, frame_rate, legend_label=condition_value, color=colors[c],
                                     interval_sec=interval_sec,
