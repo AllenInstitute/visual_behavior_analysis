@@ -345,16 +345,19 @@ class VisualBehaviorOphysDataset(object):
         if len(filename) > 0:
             df = pd.read_csv(os.path.join(data_dir, filename[0]))
             area = df.blink_corrected_area.values
-            # remove potential blinks
-            blinks = df.likely_blinks.values
-            inds = np.where(blinks == True)[0]
-            area[inds] = np.nan
+            # # remove potential blinks
+            # blinks = df.likely_blinks.values
+            # inds = np.where(blinks == True)[0]
+            # area[inds] = np.nan
             # compare with timestamps
-            timestamps = self.timestamps.behavior_monitoring.values[0]
+            timestamps = self.timestamps.behavior_monitoring.values[0] #line labels are switched of course
             diff = len(area) - len(timestamps)
             print('pupil data and timestamps off by', diff)
             if diff <= 5:
-                self._pupil_area = area
+                df = pd.DataFrame()
+                df['pupil_area'] = area[:len(timestamps)]
+                df['time'] = timestamps[:len(area)]
+                self._pupil_area = df
             else:
                 print('discrepancy too high, returning None')
                 self._pupil_area = None
@@ -391,7 +394,8 @@ class VisualBehaviorOphysDataset(object):
             licks=self.licks,
             rewards=self.rewards,
             change_times=change_times,
-            running_speed_df=self.running_speed
+            running_speed_df=self.running_speed,
+            pupil_area=self.pupil_area
         )
         return extended_stimulus_presentations
 

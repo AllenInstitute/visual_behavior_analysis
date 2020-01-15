@@ -84,6 +84,12 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, df_name,
                 df['engaged'] = [True if reward_rate > 2 else False for reward_rate in df.reward_rate.values]
             if 'running' in conditions:
                 df['running'] = [True if mean_running_speed > 2 else False for mean_running_speed in df.mean_running_speed.values]
+            if 'large_pupil' in conditions:
+                if 'mean_pupil_area' in df.keys():
+                    df = df[df.mean_pupil_area.isnull() == False]
+                    if len(df) > 100:
+                        median_pupil_area = df.mean_pupil_area.median()
+                        df['large_pupil'] = [True if mean_pupil_area > median_pupil_area else False for mean_pupil_area in df.mean_pupil_area.values]
             mdf = ut.get_mean_df(df, analysis, conditions=conditions, get_pref_stim=get_pref_stim,
                                  flashes=flashes, omitted=omitted, get_reliability=get_reliability,
                                  exclude_omitted_from_pref_stim=exclude_omitted_from_pref_stim)

@@ -464,7 +464,8 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
                                         licks,
                                         rewards,
                                         change_times,
-                                        running_speed_df):
+                                        running_speed_df,
+                                        pupil_area):
     stimulus_presentations_df = stimulus_presentations_df.copy()
     stimulus_presentations_df = add_prior_image_to_stimulus_presentations(stimulus_presentations_df)
 
@@ -578,6 +579,26 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
             row["start_time"] - 0.25,
             row["start_time"],),axis=1,)
     stimulus_presentations_df["pre_flash_running_speed"] = pre_flash_running_speed
+
+    if pupil_area is not None:
+        # Average running speed on each flash
+        flash_pupil_area = stimulus_presentations_df.apply(
+            lambda row: trace_average(
+                pupil_area['pupil_area'].values,
+                pupil_area['time'].values,
+                row["start_time"],
+                row["start_time"] + 0.25, ), axis=1, )
+        stimulus_presentations_df["mean_pupil_area"] = flash_pupil_area
+
+        # Average running speed before each flash
+        pre_flash_pupil_area = stimulus_presentations_df.apply(
+            lambda row: trace_average(
+                pupil_area['pupil_area'].values,
+                pupil_area['time'].values,
+                row["start_time"] - 0.25,
+                row["start_time"], ), axis=1, )
+        stimulus_presentations_df["pre_flash_pupil_area"] = pre_flash_pupil_area
+
 
     # add flass after omitted
     stimulus_presentations_df['flash_after_omitted'] = np.hstack((False, stimulus_presentations_df.omitted.values[:-1]))

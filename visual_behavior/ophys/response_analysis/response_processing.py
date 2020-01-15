@@ -440,7 +440,6 @@ def get_trial_response_df(dataset, use_events=False, frame_rate=None):
     return df
 
 
-
 def get_stimulus_response_df(dataset, use_events=False, frame_rate=None):
     from visual_behavior.ophys.response_analysis import utilities as ut
     if use_events:
@@ -530,27 +529,6 @@ def get_stimulus_run_speed_df(dataset, frame_rate=None):
     df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
     return df
 
-def get_stimulus_pupil_area_df(dataset, frame_rate=None):
-    traces = np.vstack((dataset.pupil_area, dataset.pupil_area))
-    trace_ids = [0, 1]
-    timestamps = dataset.timestamps.behavior_monitoring.values[0] #line labels are switched of course
-    event_times = dataset.stimulus_presentations['start_time'].values[:-1]  # last one can get truncated
-    event_ids = dataset.stimulus_presentations.index.values[:-1]
-    response_analysis_params = get_default_stimulus_response_params()
-
-    response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
-                                 response_analysis_params, frame_rate)
-    df = response_df(response_xr)
-    df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
-    df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
-
-    window = response_analysis_params['window_around_timepoint_seconds']
-    response_window = [np.abs(window[0]),
-                       np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
-    if frame_rate is None:
-        frame_rate = 1 / np.diff(timestamps).mean()
-    df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
-    return df
 
 def get_omission_run_speed_df(dataset, frame_rate=None):
     traces = np.vstack((dataset.running_speed.running_speed.values, dataset.running_speed.running_speed.values))
@@ -570,10 +548,40 @@ def get_omission_run_speed_df(dataset, frame_rate=None):
     df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
     return df
 
-def get_omission_pupil_area_df(dataset, frame_rate=30):
-    traces = np.vstack((dataset.pupil_area, dataset.pupil_area))
+
+def get_stimulus_pupil_area_df(dataset, frame_rate=None):
+    pupil_area = dataset.pupil_area.pupil_area.values
+    traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
-    timestamps = dataset.timestamps.behavior_monitoring.values[0] #line labels are switched of course
+    timestamps = dataset.pupil_area.time.values
+    event_times = dataset.stimulus_presentations['start_time'].values[:-1]  # last one can get truncated
+    event_ids = dataset.stimulus_presentations.index.values[:-1]
+    response_analysis_params = get_default_stimulus_response_params()
+
+    response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
+                                 response_analysis_params, frame_rate)
+    df = response_df(response_xr)
+    df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
+    df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
+
+    window = response_analysis_params['window_around_timepoint_seconds']
+    response_window = [np.abs(window[0]),
+                       np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
+    if frame_rate is None:
+        frame_rate = 1 / np.diff(timestamps).mean()
+    df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
+    # remove trials with nan values
+    ind = np.where(np.asarray([np.isnan(trace).any() for trace in df.trace.values]) == True)[0]
+    df = df.drop(index=ind)
+    df = df.drop(columns='index')
+    return df
+
+
+def get_omission_pupil_area_df(dataset, frame_rate=30):
+    pupil_area = dataset.pupil_area.pupil_area.values
+    traces = np.vstack((pupil_area, pupil_area))
+    trace_ids = [0, 1]
+    timestamps = dataset.pupil_area.time.values
     stimuli = dataset.stimulus_presentations
     omission_presentations = stimuli[stimuli.image_name == 'omitted']
     event_times = omission_presentations['start_time'].values[:-1]  # last omission can get truncated
@@ -586,6 +594,10 @@ def get_omission_pupil_area_df(dataset, frame_rate=30):
     df = response_df(response_xr)
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
     df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
+    # remove trials with nan values
+    ind = np.where(np.asarray([np.isnan(trace).any() for trace in df.trace.values]) == True)[0]
+    df = df.drop(index=ind)
+    df = df.drop(columns='index')
     return df
 
 
