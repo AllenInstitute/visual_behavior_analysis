@@ -24,15 +24,15 @@ experiment_ids = [644942849, 645035903, 645086795, 645362806, 646922970, 6471087
                    762214438, 768225217, 774379465, 775011398, 775429615, 776042634,
                    648647430, 649118720, 649318212, 673139359, 673460976]
 
-experiment_ids = [769514560, 663771245]
+experiment_ids = [769514560]
 
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/event_detection.py"
 
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
 job_settings = {'queue': 'braintv',
-                'mem': '120g',
-                'walltime': '35:00:00',
+                'mem': '200g',
+                'walltime': '40:00:00',
                 'ppn': 1,
                 'jobdir': jobdir,
                 }
