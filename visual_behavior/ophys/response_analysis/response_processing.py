@@ -360,20 +360,27 @@ def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_i
     if True not in session.stimulus_presentations.omitted.unique():
         nan_values = np.zeros((len(mean_response), len(trace_ids)))
         nan_values[:] = np.nan
-        p_values = xr.DataArray(data=nan_values,
+        p_values_omission = xr.DataArray(data=nan_values,
                      coords=mean_response.coords)
     else:
-        p_values = get_p_value_from_shuffled_omissions(mean_response,
+        p_values_omission = get_p_value_from_shuffled_omissions(mean_response,
                                                    session.stimulus_presentations,
                                                    timestamps,
                                                    traces,
                                                    response_analysis_params['response_window_duration_seconds'],
                                                    frame_rate)
+    p_values_stimulus = get_p_value_from_shuffled_flashes(mean_response,
+                                               session.stimulus_presentations,
+                                               timestamps,
+                                               traces,
+                                               response_analysis_params['response_window_duration_seconds'],
+                                               frame_rate)
     result = xr.Dataset({
         'eventlocked_traces': eventlocked_traces_xr,
         'mean_response': mean_response,
         'mean_baseline': mean_baseline,
-        'p_value': p_values
+        'p_value_omission': p_values_omission,
+        'p_value_stimulus': p_values_stimulus
     })
 
     return result
@@ -386,11 +393,13 @@ def response_df(response_xr):
     traces = response_xr['eventlocked_traces']
     mean_response = response_xr['mean_response']
     mean_baseline = response_xr['mean_baseline']
-    p_vals = response_xr['p_value']
+    p_vals_omission = response_xr['p_value_omission']
+    p_vals_stimulus = response_xr['p_value_stimulus']
     stacked_traces = traces.stack(multi_index=('trial_id', 'trace_id')).transpose()
     stacked_response = mean_response.stack(multi_index=('trial_id', 'trace_id')).transpose()
     stacked_baseline = mean_baseline.stack(multi_index=('trial_id', 'trace_id')).transpose()
-    stacked_pval = p_vals.stack(multi_index=('trial_id', 'trace_id')).transpose()
+    stacked_pval_omission = p_vals_omission.stack(multi_index=('trial_id', 'trace_id')).transpose()
+    stacked_pval_stimulus = p_vals_stimulus.stack(multi_index=('trial_id', 'trace_id')).transpose()
 
     num_repeats = len(stacked_traces)
     trace_timestamps = np.repeat(
@@ -404,7 +413,8 @@ def response_df(response_xr):
         'trace_timestamps': list(trace_timestamps),
         'mean_response': stacked_response.data,
         'baseline_response': stacked_baseline.data,
-        'p_value': stacked_pval
+        'p_value_omission': stacked_pval_omission,
+        'p_value_stimulus':stacked_pval_stimulus
     })
     return df
 
