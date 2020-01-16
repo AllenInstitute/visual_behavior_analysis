@@ -107,6 +107,35 @@ def add_licks_each_flash(stimulus_presentations_df, licks_df,
     stimulus_presentations_df["licks"] = licks_each_flash
     return stimulus_presentations_df
 
+def add_licks_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the timestamps of licks that occur
+    in a range relative to the onset of the stimulus.
+
+    Args:
+        session object with:
+            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
+                Must contain: 'start_time'
+            licks_df (pd.DataFrame): lick dataframe. Must contain 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed. 
+    Returns:
+        nothing, modifies session in place. Same as the input, but with 'licks' column added
+    '''
+
+    lick_times = session.licks['timestamps'].values
+    licks_each_flash = session.stimulus_presentations.apply(
+        lambda row: lick_times[
+            ((
+                lick_times > row["start_time"]+range_relative_to_stimulus_start[0]
+            ) & (
+                lick_times < row["start_time"]+range_relative_to_stimulus_start[1]
+            ))
+        ],
+        axis=1,
+    )
+    session.stimulus_presentations["licks"] = licks_each_flash
+
 def add_rewards_each_flash(stimulus_presentations_df, rewards_df,
                            range_relative_to_stimulus_start=[0, 0.75]):
     '''
@@ -137,9 +166,34 @@ def add_rewards_each_flash(stimulus_presentations_df, rewards_df,
     stimulus_presentations_df["rewards"] = rewards_each_flash
     return stimulus_presentations_df
 
+def add_rewards_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the timestamps of rewards that occur
+    in a range relative to the onset of the stimulus.
 
+    Args:
+        session object, with attributes:
+            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
+                Must contain: 'start_time'
+            rewards_df (pd.DataFrame): rewards dataframe. Must contain 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed. 
+    Returns:
+        nothing. session.stimulus_presentations is modified in place with 'rewards' column added
+    '''
 
-
+    reward_times = session.rewards['timestamps'].values
+    rewards_each_flash = session.stimulus_presentations.apply(
+        lambda row: reward_times[
+            ((
+                reward_times > row["start_time"]+range_relative_to_stimulus_start[0]
+            ) & (
+                reward_times < row["start_time"]+range_relative_to_stimulus_start[1]
+            ))
+        ],
+        axis=1,
+    )
+    session.stimulus_presentations["rewards"] = rewards_each_flash
 
 
 
