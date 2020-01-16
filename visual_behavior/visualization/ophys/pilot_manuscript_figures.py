@@ -663,12 +663,11 @@ def plot_cdf_for_image_sets(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None
     colors = ut.get_colors_for_image_sets()
     cre_lines = ut.get_cre_lines(df)
 
-    figsize = (10, 5)
-    # figsize = (8, 3.5)
+    figsize = (8, 3.5)
     fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=False, sharey=True)
     for i, cre_line in enumerate(cre_lines):
         tmp = df[df.cre_line == cre_line].copy()
-        ax[i] = plot_cdf_for_condition(tmp, metric, condition, condition_values, colors=colors, cre_line=cre_line,
+        ax[i] = pf.plot_cdf_for_condition(tmp, metric, condition, condition_values, colors=colors, cre_line=cre_line,
                                        show_stats=show_stats,
                                        cdf_range=cdf_ranges[i], ax=ax[i], save_figures=False, save_dir=save_dir,
                                        folder=folder)
@@ -682,7 +681,7 @@ def plot_cdf_for_image_sets(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None
     plt.setp(l.get_title(), fontsize='x-small')
     if (show_legend == False) or (show_stats == True):
         ax[i].legend_.remove()
-    plt.gcf().subplots_adjust(wspace=.3)
+    plt.gcf().subplots_adjust(wspace=.4)
     plt.gcf().subplots_adjust(top=0.85)
     plt.gcf().subplots_adjust(left=0.25)
     plt.gcf().subplots_adjust(right=0.85)
@@ -692,7 +691,7 @@ def plot_cdf_for_image_sets(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None
             suffix = '_stats'
         else:
             suffix = ''
-        save_figure(fig, figsize, save_dir, folder, metric + '_by_' + condition + '_cdf' + suffix)
+        sf.save_figure(fig, figsize, save_dir, folder, metric + '_by_' + condition + '_cdf' + suffix)
 
 
 def plot_cdf_for_image_sets_stacked(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None, show_legend=True,
@@ -1159,11 +1158,6 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
                               colorbar=True, horizontal_legend=False, include_omitted=False):
     image_set = df.image_set.unique()[0]
     cre_line = df.cre_line.unique()[0]
-    # trial_type = df.trial_type.unique()[0]
-    #     detectability = get_detectability()
-    #     d = detectability[detectability.image_set==image_set]
-    #     order = np.argsort(d.detectability.values)
-    #     images = d.image_name.values[order]
     if 'image_name' in df.keys():
         image_name = 'image_name'
         suffix = '_flashes'

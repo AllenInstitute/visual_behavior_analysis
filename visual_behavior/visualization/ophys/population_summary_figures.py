@@ -568,31 +568,61 @@ def plot_mean_response_by_repeat_heatmap(df, cre_line, title=None, ax=None, use_
         save_figure(fig, figsize, save_dir, folder, 'repeat_response_heatmap_'+cre_line+'_'+image_set+suffix)
     return ax
 
-def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4,4], alpha=0.15, facecolor='gray', frame_rate=31.):
+
+
+def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4, 4], alpha=0.15,
+                          facecolor='gray', frame_rate=31.):
     stim_duration = .25
     blank_duration = .5
-    change_frame = int(np.abs(window[0]) * frame_rate)
-    end_frame = int((np.abs(window[0]) + window[1]) * frame_rate)
-    interval = int((blank_duration + stim_duration)*frame_rate)
+    change_frame = np.abs(window[0]) * frame_rate
+    end_frame = (np.abs(window[0]) + window[1]) * frame_rate
+    interval = blank_duration + stim_duration
     if omitted:
-        array = np.arange((change_frame + interval), end_frame, interval)
-        # array = array[1:]
+        array = np.arange((change_frame + interval), end_frame, interval * frame_rate)
+        array = array[1:]
     else:
-        array = np.arange(change_frame, end_frame, interval)
+        array = np.arange(change_frame, end_frame, interval * frame_rate)
     for i, vals in enumerate(array):
         amin = array[i]
-        amax = array[i] + int(stim_duration * frame_rate)
+        amax = array[i] + (stim_duration * frame_rate)
         ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     if trial_type == 'go':
         alpha = alpha * 3
     else:
         alpha
-    array = np.arange(change_frame - ((blank_duration) * frame_rate), 0, -interval)
+    array = np.arange(change_frame - ((blank_duration) * frame_rate), 0, -interval * frame_rate)
     for i, vals in enumerate(array):
         amin = array[i]
-        amax = array[i] - int(stim_duration * frame_rate)
+        amax = array[i] - (stim_duration * frame_rate)
         ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     return ax
+
+
+# def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4,4], alpha=0.15, facecolor='gray', frame_rate=31.):
+#     stim_duration = .25
+#     blank_duration = .5
+#     change_frame = int(np.abs(window[0]) * frame_rate)
+#     end_frame = int((np.abs(window[0]) + window[1]) * frame_rate)
+#     interval = int((blank_duration + stim_duration)*frame_rate)
+#     if omitted:
+#         array = np.arange((change_frame + interval), end_frame, interval)
+#         # array = array[1:]
+#     else:
+#         array = np.arange(change_frame, end_frame, interval)
+#     for i, vals in enumerate(array):
+#         amin = array[i]
+#         amax = array[i] + int(stim_duration * frame_rate)
+#         ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+#     if trial_type == 'go':
+#         alpha = alpha * 3
+#     else:
+#         alpha
+#     array = np.arange(change_frame - ((blank_duration) * frame_rate), 0, -interval)
+#     for i, vals in enumerate(array):
+#         amin = array[i]
+#         amax = array[i] - int(stim_duration * frame_rate)
+#         ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+#     return ax
 
 
 def plot_pre_stim_on_trace(ax, window=[-0.5, 0.75], alpha=0.3, facecolor='gray'):
