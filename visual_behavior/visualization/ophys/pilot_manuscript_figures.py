@@ -40,13 +40,13 @@ def get_stats_for_conditions(df, metric, group, group_names, condition, conditio
             group_f_stat, group_p_value = stats.f_oneway(condition_values[0], condition_values[1])
         elif len(condition_names) == 4:
             group_f_stat, group_p_value = stats.f_oneway(condition_values[0], condition_values[1], condition_values[2], condition_values[3])
-        # paired t-test for all combinations within a group
+        # Welch's t-test for all combinations within a group (does not assume equal variance or sample size)
         pairs = itertools.combinations(condition_names, 2)
         n_pairs = sum(1 for p in itertools.combinations(condition_names, 2))
         for pair in pairs:
             cond1_values = data[(data[condition]==pair[0])&(data[metric].isnull()==False)][metric].values
             cond2_values = data[(data[condition]==pair[1])&(data[metric].isnull()==False)][metric].values
-            t_stat, p_value = stats.ttest_ind(cond1_values, cond2_values)
+            t_stat, p_value = stats.ttest_ind(cond1_values, cond2_values, equal_var=True)
             # Bonferroni correction for multiple comparisons
             corrected_p_value = p_value*(n_pairs)
             rounded_p_value = np.round(corrected_p_value, 6)
@@ -1167,8 +1167,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
         image_name = 'change_image_name'
         suffix = '_trials'
     if use_events:
-        vmax = 0.03
-        label = 'mean event magnitude'
+        label = 'mean response'
         suffix = suffix + '_events'
     else:
         label = 'mean dF/F'
