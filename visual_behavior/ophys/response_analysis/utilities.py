@@ -223,6 +223,16 @@ def get_fraction_significant_trials(group):
     return pd.Series({'fraction_significant_trials': fraction_significant_trials})
 
 
+def get_fraction_significant_p_value_omission(group):
+    fraction_significant_p_value_omission = len(group[group.p_value_omission < 0.05]) / float(len(group))
+    return pd.Series({'fraction_significant_p_value_omission': fraction_significant_p_value_omission})
+
+
+def get_fraction_significant_p_value_stimulus(group):
+    fraction_significant_p_value_stimulus = len(group[group.p_value_stimulus < 0.05]) / float(len(group))
+    return pd.Series({'fraction_significant_p_value_stimulus': fraction_significant_p_value_stimulus})
+
+
 def get_fraction_active_trials(group):
     fraction_active_trials = len(group[group.mean_response > 0.05]) / float(len(group))
     return pd.Series({'fraction_active_trials': fraction_active_trials})
@@ -321,36 +331,31 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         if (conditions[-1] == 'image_name') or (conditions[-1] =='change_image_name') or (conditions[-1] =='prior_image_name'):
             mdf = annotate_mean_df_with_pref_stim(mdf, exclude_omitted_from_pref_stim)
     if analysis is not None:
-        mdf = annotate_mean_df_with_p_value(analysis, mdf, window)
-        mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
+        # mdf = annotate_mean_df_with_p_value(analysis, mdf, window=window)
+        # mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
         try:
             mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
             mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
         except:
             pass
 
-    # if flashes or omitted:
-    fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
-    fraction_significant_trials = fraction_significant_trials.reset_index()
-    mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
+    # # if flashes or omitted:
+    # fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
+    # fraction_significant_trials = fraction_significant_trials.reset_index()
+    # mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
 
-    # if flashes and not omitted:
-    #     fraction_significant_trials_synthetic = rdf.groupby(conditions).apply(get_fraction_significant_trials_synthetic)
-    #     fraction_significant_trials_synthetic = fraction_significant_trials_synthetic.reset_index()
-    #     mdf['fraction_significant_trials_synthetic'] = fraction_significant_trials_synthetic.fraction_significant_trials_synthetic
+    fraction_significant_p_value_omission = rdf.groupby(conditions).apply(get_fraction_significant_p_value_omission)
+    fraction_significant_p_value_omission = fraction_significant_p_value_omission.reset_index()
+    mdf['fraction_significant_p_value_omission'] = fraction_significant_p_value_omission.fraction_significant_p_value_omission
+
+    fraction_significant_p_value_stimulus = rdf.groupby(conditions).apply(get_fraction_significant_p_value_stimulus)
+    fraction_significant_p_value_stimulus = fraction_significant_p_value_stimulus.reset_index()
+    mdf['fraction_significant_p_value_stimulus'] = fraction_significant_p_value_stimulus.fraction_significant_p_value_stimulus
 
     if 'p_value_baseine' in rdf.keys():
         fraction_responsive_trials = rdf.groupby(conditions).apply(get_fraction_responsive_trials)
         fraction_responsive_trials = fraction_responsive_trials.reset_index()
         mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
-    #
-    # fraction_active_trials = rdf.groupby(conditions).apply(get_fraction_active_trials)
-    # fraction_active_trials = fraction_active_trials.reset_index()
-    # mdf['fraction_active_trials'] = fraction_active_trials.fraction_active_trials
-
-    # fraction_nonzero_trials = rdf.groupby(conditions).apply(get_fraction_nonzero_trials)
-    # fraction_nonzero_trials = fraction_nonzero_trials.reset_index()
-    # mdf['fraction_nonzero_trials'] = fraction_nonzero_trials.fraction_nonzero_trials
 
     if get_reliability:
         print('computing reliability')
