@@ -131,6 +131,9 @@ def get_donor_id_from_specimen_id(s_id):
 def add_stimulus_presentations_analysis(session):
     '''
         Adds a series of columns to the stimulus_presentations table
+        WARNING, this function was meant as a temporary holdover while waiting for SDK support. 
+            If these columns are already implemented in the SDK, then using this function will 
+            overwrite them. Check before using. 
     '''
     esp.add_licks_each_flash_inplace(session)
     esp.add_rewards_each_flash_inplace(session)
