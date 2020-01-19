@@ -6,12 +6,13 @@ Created on Sunday July 15 2018
 
 from visual_behavior.ophys.response_analysis import utilities as ut
 import visual_behavior.ophys.response_analysis.response_processing as rp
+import visual_behavior.ophys.dataset.stimulus_processing as sp
+
 
 import os
 import numpy as np
 import pandas as pd
 import itertools
-import scipy as sp
 
 
 
@@ -277,8 +278,11 @@ class ResponseAnalysis(object):
                          'response_latency': 'behavioral_response_latency'})
             df = df.merge(trials, right_on='trials_id', left_on='trials_id')
         elif ('stimulus' in df_name) or ('omission' in df_name):
-            df = df.merge(self.dataset.extended_stimulus_presentations,
-                          right_on='stimulus_presentations_id', left_on='stimulus_presentations_id')
+            stimulus_presentations = self.dataset.extended_stimulus_presentations
+            running_speed = self.dataset.running_speed
+            response_params = rp.get_default_omission_response_params()
+            stimulus_presentations = sp.add_window_running_speed(running_speed, stimulus_presentations, response_params)
+            df = df.merge(stimulus_presentations, right_on = 'stimulus_presentations_id', left_on = 'stimulus_presentations_id')
         if ('response' in df_name):
             df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id) for
                          cell_specimen_id in df.cell_specimen_id.values]

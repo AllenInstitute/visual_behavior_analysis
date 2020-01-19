@@ -613,3 +613,13 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
     stimulus_presentations_df = annotate_flash_rolling_metrics(stimulus_presentations_df)
 
     return stimulus_presentations_df
+
+
+def add_window_running_speed(running_speed, stimulus_presentations, response_params):
+    window_running_speed = stimulus_presentations.apply(lambda row: trace_average(
+        running_speed['running_speed'].values,
+        running_speed['time'].values,
+        row["start_time"] + response_params['window_around_timepoint_seconds'][0],
+        row["start_time"] + response_params['window_around_timepoint_seconds'][1], ), axis=1, )
+    stimulus_presentations["window_running_speed"] = window_running_speed
+    return stimulus_presentations
