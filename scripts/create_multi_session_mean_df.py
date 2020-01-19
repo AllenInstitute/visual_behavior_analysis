@@ -36,9 +36,9 @@ if __name__ == '__main__':
                               flashes=False, use_events=True, omitted=True,
                               get_pref_stim=False, exclude_omitted_from_pref_stim=False)
 
-    df_name = 'omission_response_df'
-    conditions = ['cell_specimen_id']
-
-    get_multi_session_mean_df(experiment_ids, cache_dir, df_name, conditions,
-                              flashes=False, use_events=True, omitted=True,
-                              get_pref_stim=False, exclude_omitted_from_pref_stim=False)
+    # df_name = 'omission_response_df'
+    # conditions = ['cell_specimen_id']
+    #
+    # get_multi_session_mean_df(experiment_ids, cache_dir, df_name, conditions,
+    #                           flashes=False, use_events=True, omitted=True,
+    #                           get_pref_stim=False, exclude_omitted_from_pref_stim=False)

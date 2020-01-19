@@ -21,7 +21,7 @@ def get_multi_session_mean_df(experiment_ids, cache_dir, df_name,
             if 'engaged' in conditions:
                 df['engaged'] = [True if reward_rate > 2 else False for reward_rate in df.reward_rate.values]
             if 'running' in conditions:
-                df['running'] = [True if window_running_speed > 2 else False for window_running_speed in df.window_running_speed.values]
+                df['running'] = [True if window_running_speed > 5 else False for window_running_speed in df.window_running_speed.values]
             if 'large_pupil' in conditions:
                 if 'mean_pupil_area' in df.keys():
                     df = df[df.mean_pupil_area.isnull() == False]
