@@ -47,6 +47,7 @@ def get_stats_for_conditions(df, metric, group, group_names, condition, conditio
             cond1_values = data[(data[condition]==pair[0])&(data[metric].isnull()==False)][metric].values
             cond2_values = data[(data[condition]==pair[1])&(data[metric].isnull()==False)][metric].values
             t_stat, p_value = stats.ttest_ind(cond1_values, cond2_values, equal_var=True)
+            # consider scipy.stats.mannwhitneyu as non-parametric test
             # Bonferroni correction for multiple comparisons
             corrected_p_value = p_value*(n_pairs)
             rounded_p_value = np.round(corrected_p_value, 6)
@@ -667,7 +668,7 @@ def plot_cdf_for_image_sets(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None
     fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=False, sharey=True)
     for i, cre_line in enumerate(cre_lines):
         tmp = df[df.cre_line == cre_line].copy()
-        ax[i] = pf.plot_cdf_for_condition(tmp, metric, condition, condition_values, colors=colors, cre_line=cre_line,
+        ax[i] = plot_cdf_for_condition(tmp, metric, condition, condition_values, colors=colors, cre_line=cre_line,
                                        show_stats=show_stats,
                                        cdf_range=cdf_ranges[i], ax=ax[i], save_figures=False, save_dir=save_dir,
                                        folder=folder)
