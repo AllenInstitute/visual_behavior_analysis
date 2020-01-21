@@ -48,7 +48,20 @@ def find_change(image_index, omitted_index):
                                                
     return change
 
-def add_mean_running_speed(stimulus_presentations_df, running_speed_df,
+def get_omitted_index(stimulus_presentations_df):
+    if 'omitted' in stimulus_presentations_df['image_name'].unique():
+        omitted_index = stimulus_presentations_df.groupby("image_name").apply(
+            lambda group: group["image_index"].unique()[0]
+        )["omitted"]
+    else:
+        omitted_index=None
+    return omitted_index
+
+def add_change_inplace(session):
+    changes = find_change(session.stimulus_presentations['image_index'], get_omitted_index(session.stimulus_presentations))
+    session.stimulus_presentations['change'] = changes
+
+def mean_running_speed(stimulus_presentations_df, running_speed_df,
                            range_relative_to_stimulus_start=[0, 0.25]):
     '''
     Append a column to stimulus_presentations which contains the mean running speed between
@@ -72,12 +85,30 @@ def add_mean_running_speed(stimulus_presentations_df, running_speed_df,
         ),
         axis=1,
     )
-    stimulus_presentations_df["mean_running_speed"] = flash_running_speed
-    return stimulus_presentations_df
+    return flash_running_speed
+
+def add_mean_running_speed_inplace(session,range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the mean running speed between
+
+    Args:
+        session object with:
+            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
+                Must contain: 'start_time'
+        running_speed_df (pd.DataFrame): dataframe of running speed. 
+            Must contain: 'speed', 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed. 
+    Returns:
+        nothing, modifies session in place. Same as the input, but with 'mean_running_speed' column added
+    '''
+    mean_running_speed = mean_running_speed(session.stimulus_presentations,
+                                            session.running_speed,
+                                            range_relative_to_stimulus_start)
+    session.stimulus_presentations["mean_running_speed"] = mean_running_speed
 
 
-#TODO: Should this take the licks dataframe instead for consistency?
-def add_licks_each_flash(stimulus_presentations_df, licks_df,
+def licks_each_flash(stimulus_presentations_df, licks_df,
                          range_relative_to_stimulus_start=[0, 0.75]):
     '''
     Append a column to stimulus_presentations which contains the timestamps of licks that occur
@@ -104,8 +135,7 @@ def add_licks_each_flash(stimulus_presentations_df, licks_df,
         ],
         axis=1,
     )
-    stimulus_presentations_df["licks"] = licks_each_flash
-    return stimulus_presentations_df
+    return licks_each_flash
 
 def add_licks_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 0.75]):
     '''
@@ -123,20 +153,12 @@ def add_licks_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 0.
         nothing, modifies session in place. Same as the input, but with 'licks' column added
     '''
 
-    lick_times = session.licks['timestamps'].values
-    licks_each_flash = session.stimulus_presentations.apply(
-        lambda row: lick_times[
-            ((
-                lick_times > row["start_time"]+range_relative_to_stimulus_start[0]
-            ) & (
-                lick_times < row["start_time"]+range_relative_to_stimulus_start[1]
-            ))
-        ],
-        axis=1,
-    )
+    licks_each_flash = licks_each_flash(session.stimulus_presentations,
+                                            session.licks,
+                                            range_relative_to_stimulus_start)
     session.stimulus_presentations["licks"] = licks_each_flash
 
-def add_rewards_each_flash(stimulus_presentations_df, rewards_df,
+def rewards_each_flash(stimulus_presentations_df, rewards_df,
                            range_relative_to_stimulus_start=[0, 0.75]):
     '''
     Append a column to stimulus_presentations which contains the timestamps of rewards that occur
@@ -182,20 +204,67 @@ def add_rewards_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 
         nothing. session.stimulus_presentations is modified in place with 'rewards' column added
     '''
 
-    reward_times = session.rewards['timestamps'].values
-    rewards_each_flash = session.stimulus_presentations.apply(
-        lambda row: reward_times[
-            ((
-                reward_times > row["start_time"]+range_relative_to_stimulus_start[0]
-            ) & (
-                reward_times < row["start_time"]+range_relative_to_stimulus_start[1]
-            ))
-        ],
-        axis=1,
-    )
+    rewards_each_flash = rewards_each_flash_(session.stimulus_presentations,
+                                                 session.rewards,
+                                                 range_relative_to_stimulus_start)
     session.stimulus_presentations["rewards"] = rewards_each_flash
 
 
+
+def get_block_index(image_index, omitted_index):
+    changes = find_change(image_index, omitted_index)
+
+    #Include the first presentation as a 'change'
+    changes[0] = 1
+    change_indices = np.flatnonzero(changes)
+
+    flash_inds = np.arange(len(image_index))
+    block_inds = np.searchsorted(a=change_indices, v=flash_inds, side="right") - 1
+    return block_inds
+
+#############################################################################################################
+
+
+# TODO: Confusing me right now
+#  def get_block_repetition_number(image_index, omitted_index):
+#  
+#      blocks_this_image = {}
+#      for ind_enum, ind_image in enumerate(image_index[1:]):
+#          last_image = image_index[ind_enum - 1]
+#  
+#  
+#  
+#      changes = find_change(image_index, omitted_index)
+#      post_change_image = image_index[changes]
+#      for image in post_change_image:
+#          if image not in blocks_per_image:
+#              blocks_per_image[image] = 0
+#          else:
+#              blocks_per_image[image] += 1
+#  
+
+
+
+
+def get_repeat_within_block(stimulus_presentations_df):
+    repeat_number = np.full(len(stimulus_presentations_df), np.nan)
+    assert (
+        stimulus_presentations_df.iloc[0].name == 0
+    )  # Assuming that the row index starts at zero
+    for ind_group, group in stimulus_presentations_df.groupby("block_index"):
+        repeat = 0
+        for ind_row, row in group.iterrows():
+            if row["image_name"] != "omitted":
+                repeat_number[ind_row] = repeat
+                repeat += 1
+
+    stimulus_presentations_df["index_within_block"] = repeat_number
+    return stimulus_presentations_df
+
+
+
+
+#############################################################################################################
 
 def add_response_latency(stimulus_presentations):
     st = stimulus_presentations.copy()
@@ -362,76 +431,19 @@ def add_prior_image_to_stimulus_presentations(stimulus_presentations):
     stimulus_presentations['prior_image_name'] = prior_image_name
     return stimulus_presentations
 
-# TODO: These next 3 functions could probably be collected into an 'annotate blocks' func.
-def get_block_index(stimulus_presentations_df):
-    # TODO: Need changes for this to work
-    # TODO: What exactly does this do?
-    # Index of each image block
-    changes_including_first = np.copy(changes)
-    changes_including_first[0] = True
-    change_indices = np.flatnonzero(changes_including_first)
-    flash_inds = np.arange(len(stimulus_presentations_df))
-    block_inds = np.searchsorted(a=change_indices, v=flash_inds, side="right") - 1
-
-    stimulus_presentations_df["block_index"] = block_inds
-    return stimulus_presentations_df
-
-def get_block_repetition_number():
-    # Block repetition number
-    blocks_per_image = stimulus_presentations_df.groupby("image_name").apply(
-        lambda group: np.unique(group["block_index"])
-    )
-    block_repetition_number = np.copy(block_inds)
-
-    for image_name, image_blocks in blocks_per_image.iteritems():
-        if image_name != "omitted":
-            for ind_block, block_number in enumerate(image_blocks):
-                # block_rep_number starts as a copy of block_inds, so we can go write over the index number with the rep number
-                block_repetition_number[
-                    block_repetition_number == block_number
-                ] = ind_block
-
-    stimulus_presentations_df["image_block_repetition"] = block_repetition_number
-
-def get_repeat_within_block(stimulus_presentations_df):
-    repeat_number = np.full(len(stimulus_presentations_df), np.nan)
-    assert (
-        stimulus_presentations_df.iloc[0].name == 0
-    )  # Assuming that the row index starts at zero
-    for ind_group, group in stimulus_presentations_df.groupby("block_index"):
-        repeat = 0
-        for ind_row, row in group.iterrows():
-            if row["image_name"] != "omitted":
-                repeat_number[ind_row] = repeat
-                repeat += 1
-
-    stimulus_presentations_df["index_within_block"] = repeat_number
-    return stimulus_presentations_df
 
 
-def get_omitted_index(stimulus_presentations_df):
-    if 'omitted' in stimulus_presentations_df['image_name'].unique():
-        omitted_index = stimulus_presentations_df.groupby("image_name").apply(
-            lambda group: group["image_index"].unique()[0]
-        )["omitted"]
-    else:
-        omitted_index=None
-    return omitted_index
 
-# TODO: These next two funcs seem pretty useless - remove? they might be useful if we need to do inplace ops.
-def get_omitted(stimulus_presentations_df, omitted_index):
-    omitted = stimulus_presentations_df["image_index"] == omitted_index
-    stimulus_presentations_df["omitted"] = omitted
-    return stimulus_presentations_df
+#  def get_omitted(stimulus_presentations_df, omitted_index):
+#      omitted = stimulus_presentations_df["image_index"] == omitted_index
+#      stimulus_presentations_df["omitted"] = omitted
+#      return stimulus_presentations_df
 
-def get_changes(stimulus_presentations_df, omitted):
-    changes = find_change(stimulus_presentations_df["image_index"], omitted_index)
-    stimulus_presentations_df["change"] = changes
-    return stimulus_presentations_df
+#  def get_changes(stimulus_presentations_df, omitted):
+#      changes = find_change(stimulus_presentations_df["image_index"], omitted_index)
+#      stimulus_presentations_df["change"] = changes
+#      return stimulus_presentations_df
 
-def add_change_each_flash_inplace(session):
-    changes = find_change(session.stimulus_presentations['image_index'], get_omitted_index(session.stimulus_presentations))
-    session.stimulus_presentations['change'] = changes
 
 def add_time_from_last_lick_inplace(session):
     '''
