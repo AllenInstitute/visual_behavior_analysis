@@ -3,7 +3,7 @@ from visual_behavior.translator.allensdk_sessions import session_attributes as s
 
 
 # SDK utilities 
-# Created by Alex Piet, 01/17/2019
+# Created by Alex Piet & Nick Ponvert, 01/17/2019
 # Currently works on SDK v.1.3.2
 
 
@@ -98,7 +98,6 @@ def get_osid_from_oeid(oeid,cache):
     return ophys_experiments.loc[oeid].ophys_session_id
 
 
-
 def get_specimen_id_from_donor_id(d_id):
     '''
         Gets the specimen_id associated with a donor_id
@@ -131,7 +130,8 @@ def get_donor_id_from_specimen_id(s_id):
 
 def add_stimulus_presentations_analysis(session):
     '''
-        Adds a series of columns to the stimulus_presentations table
+        Adds a series of columns to the stimulus_presentations table  
+        
         WARNING, this function was meant as a temporary holdover while waiting for SDK support. 
             If these columns are already implemented in the SDK, then using this function will 
             overwrite them. Check before using. 

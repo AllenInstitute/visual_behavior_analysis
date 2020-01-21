@@ -9,6 +9,10 @@ def convert_licks(licks_df):
     '''
     licks has a column called 'time', inconsistent with the rest of the sdk.
     should be 'timestamps'
+    
+    ARGS: licks_df, from the SDK
+    RETURNS: licks_df
+    MODIFIES: licks_df, renaming column 'time' to 'timestamps'
     '''
     assert 'time' in licks_df.columns
     return licks_df.rename(columns={'time':'timestamps'})
@@ -17,6 +21,10 @@ def convert_rewards(rewards_df):
     '''
     rewards has timestamps as the index, inconsistent with the rest of the sdk.
     should have a column called 'timestamps' instead.
+
+    ARGS: rewards_df, from the SDK
+    RETURNS: rewards_df
+    MODIFIES: rewards_df, moving 'timestamps' to a column, not index
     '''
     assert rewards_df.index.name == 'timestamps'
     return rewards_df.reset_index()
@@ -25,6 +33,10 @@ def convert_licks_inplace(licks_df):
     '''
     licks has a column called 'time', inconsistent with the rest of the sdk.
     should be 'timestamps'
+
+    ARGS: licks_df, from the SDK
+    RETURNS: nothing
+    MODIFIES: licks_df, renaming column 'time' to 'timestamps'
     '''
     assert 'time' in licks_df.columns
     licks_df.rename(columns={'time':'timestamps'}, inplace=True)
@@ -33,6 +45,10 @@ def convert_rewards_inplace(rewards_df):
     '''
     rewards has timestamps as the index, inconsistent with the rest of the sdk.
     should have a column called 'timestamps' instead.
+
+    ARGS: rewards_df, from the SDK
+    RETURNS: nothing
+    MODIFIES: rewards_df, moving 'timestamps' to a column, not index
     '''
     assert rewards_df.index.name == 'timestamps'
     rewards_df.reset_index(inplace=True)
@@ -41,6 +57,9 @@ def convert_running_speed(running_speed_obj):
     '''
     running speed is returned as a custom object, inconsistent with other attrs.
     should be a dataframe with cols for timestamps and speed.
+
+    ARGS: running_speed object
+    RETURNS: dataframe with columns timestamps and speed
     '''
     return pd.DataFrame({
         'timestamps':running_speed_obj.timestamps,
@@ -48,6 +67,13 @@ def convert_running_speed(running_speed_obj):
     })
 
 def add_change_each_flash_inplace(session):
+    '''
+        Adds a column to session.stimulus_presentations, ['change'], which is True if the stimulus was a change image, and False otherwise
+        
+        ARGS: SDK session object
+        RETURNS: nothing
+        MODIFIES: session.stimulus_presentations dataframe
+    '''
     changes = esp.find_change(session.stimulus_presentations['image_index'], esp.get_omitted_index(session.stimulus_presentations))
     session.stimulus_presentations['change'] = changes
 
@@ -117,7 +143,12 @@ def add_rewards_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 
 
 def add_time_from_last_lick_inplace(session):
     '''
-        Adds a column in place to session.stimulus_presentations['time_from_last_lick']
+        Adds a column in place to session.stimulus_presentations['time_from_last_lick'], which is the time, in seconds
+        since the last lick
+        
+        ARGS: SDK session object
+        MODIFIES: session.stimulus_presentations
+        RETURNS: nothing
     '''
     lick_times = session.licks['timestamps'].values
     reward_times = session.rewards['timestamps'].values
@@ -130,7 +161,12 @@ def add_time_from_last_lick_inplace(session):
 
 def add_time_from_last_reward_inplace(session):
     '''
-        Adds a column in place to session.stimulus_presentations['time_from_last_reward']
+        Adds a column in place to session.stimulus_presentations['time_from_last_reward'], which is the time, in seconds
+        since the last reward
+
+        ARGS: SDK session object
+        MODIFIES: session.stimulus_presentations
+        RETURNS: nothing
     '''
     lick_times = session.licks['timestamps'].values
     reward_times = session.rewards['timestamps'].values
@@ -143,7 +179,21 @@ def add_time_from_last_reward_inplace(session):
     session.stimulus_presentations["time_from_last_reward"] = time_from_last_reward
 
 def add_time_from_last_change_inplace(session):
+    '''
+        Adds a column to session.stimulus_presentations, 'time_from_last_change', which is the time, in seconds
+        since the last image change
+
+        ARGS: SDK session object
+        MODIFIES: session.stimulus_presentations
+        RETURNS: nothing
+    '''
     flash_times = session.stimulus_presentations["start_time"].values
     change_times = session.stimulus_presentations.query('change')['start_time'].values
     time_from_last_change = esp.time_from_last(flash_times, change_times)
     session.stimulus_presentations["time_from_last_change"] = time_from_last_change
+
+
+
+
+
+
