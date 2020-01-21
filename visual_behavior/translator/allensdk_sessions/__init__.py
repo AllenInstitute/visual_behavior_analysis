@@ -1,6 +1,6 @@
-import numpy as np
-from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
-from visual_behavior.translator.allensdk_sessions import attribute_formatting as af
+#  import numpy as np
+#  from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
+#  from visual_behavior.translator.allensdk_sessions import attribute_formatting as af
 
 def VisualBehaviorSession():
     def __init__(self):
