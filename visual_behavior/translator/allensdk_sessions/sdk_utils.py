@@ -47,7 +47,7 @@ def get_oeid_from_bsid(bsid,cache,exp_num=0):
                     For scientifica sessions, there is only one experiment per behavior_session, so exp_num = 0
                     For mesoscope, there are 8 experiments, so exp_num = (0,7)
     '''
-    osid = get_osid_from_bsid(bsid)
+    osid = get_osid_from_bsid(bsid,cache)
     return get_oeid_from_osid(osid,exp_num=exp_num)
 
 def get_oeid_from_osid(osid,cache,exp_num = 0):
