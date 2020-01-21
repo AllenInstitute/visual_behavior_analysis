@@ -57,10 +57,6 @@ def get_omitted_index(stimulus_presentations_df):
         omitted_index=None
     return omitted_index
 
-def add_change_each_flash_inplace(session):
-    changes = find_change(session.stimulus_presentations['image_index'], get_omitted_index(session.stimulus_presentations))
-    session.stimulus_presentations['change'] = changes
-
 def mean_running_speed(stimulus_presentations_df, running_speed_df,
                            range_relative_to_stimulus_start=[0, 0.25]):
     '''
@@ -86,27 +82,6 @@ def mean_running_speed(stimulus_presentations_df, running_speed_df,
         axis=1,
     )
     return flash_running_speed
-
-def add_mean_running_speed_inplace(session,range_relative_to_stimulus_start=[0, 0.75]):
-    '''
-    Append a column to stimulus_presentations which contains the mean running speed between
-
-    Args:
-        session object with:
-            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
-                Must contain: 'start_time'
-        running_speed_df (pd.DataFrame): dataframe of running speed. 
-            Must contain: 'speed', 'timestamps'
-        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
-            relative to the start of each stimulus to average the running speed. 
-    Returns:
-        nothing, modifies session in place. Same as the input, but with 'mean_running_speed' column added
-    '''
-    mean_running_speed_df = mean_running_speed(session.stimulus_presentations,
-                                            session.running_speed,
-                                            range_relative_to_stimulus_start)
-    session.stimulus_presentations["mean_running_speed"] = mean_running_speed_df
-
 
 def licks_each_flash(stimulus_presentations_df, licks_df,
                          range_relative_to_stimulus_start=[0, 0.75]):
@@ -137,27 +112,6 @@ def licks_each_flash(stimulus_presentations_df, licks_df,
     )
     return licks_each_flash
 
-def add_licks_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 0.75]):
-    '''
-    Append a column to stimulus_presentations which contains the timestamps of licks that occur
-    in a range relative to the onset of the stimulus.
-
-    Args:
-        session object with:
-            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
-                Must contain: 'start_time'
-            licks_df (pd.DataFrame): lick dataframe. Must contain 'timestamps'
-        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
-            relative to the start of each stimulus to average the running speed. 
-    Returns:
-        nothing, modifies session in place. Same as the input, but with 'licks' column added
-    '''
-
-    licks_each_flash_df = licks_each_flash(session.stimulus_presentations,
-                                            session.licks,
-                                            range_relative_to_stimulus_start)
-    session.stimulus_presentations["licks"] = licks_each_flash_df
-
 def rewards_each_flash(stimulus_presentations_df, rewards_df,
                            range_relative_to_stimulus_start=[0, 0.75]):
     '''
@@ -187,29 +141,6 @@ def rewards_each_flash(stimulus_presentations_df, rewards_df,
     )
     stimulus_presentations_df["rewards"] = rewards_each_flash
     return stimulus_presentations_df
-
-def add_rewards_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 0.75]):
-    '''
-    Append a column to stimulus_presentations which contains the timestamps of rewards that occur
-    in a range relative to the onset of the stimulus.
-
-    Args:
-        session object, with attributes:
-            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
-                Must contain: 'start_time'
-            rewards_df (pd.DataFrame): rewards dataframe. Must contain 'timestamps'
-        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
-            relative to the start of each stimulus to average the running speed. 
-    Returns:
-        nothing. session.stimulus_presentations is modified in place with 'rewards' column added
-    '''
-
-    rewards_each_flash_df = rewards_each_flash(session.stimulus_presentations,
-                                                 session.rewards,
-                                                 range_relative_to_stimulus_start)
-    session.stimulus_presentations["rewards"] = rewards_each_flash_df
-
-
 
 def get_block_index(image_index, omitted_index):
     changes = find_change(image_index, omitted_index)
