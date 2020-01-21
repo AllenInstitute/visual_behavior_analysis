@@ -102,10 +102,10 @@ def add_mean_running_speed_inplace(session,range_relative_to_stimulus_start=[0, 
     Returns:
         nothing, modifies session in place. Same as the input, but with 'mean_running_speed' column added
     '''
-    mean_running_speed = mean_running_speed(session.stimulus_presentations,
+    mean_running_speed_df = mean_running_speed(session.stimulus_presentations,
                                             session.running_speed,
                                             range_relative_to_stimulus_start)
-    session.stimulus_presentations["mean_running_speed"] = mean_running_speed
+    session.stimulus_presentations["mean_running_speed"] = mean_running_speed_df
 
 
 def licks_each_flash(stimulus_presentations_df, licks_df,
@@ -153,10 +153,10 @@ def add_licks_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 0.
         nothing, modifies session in place. Same as the input, but with 'licks' column added
     '''
 
-    licks_each_flash = licks_each_flash(session.stimulus_presentations,
+    licks_each_flash_df = licks_each_flash(session.stimulus_presentations,
                                             session.licks,
                                             range_relative_to_stimulus_start)
-    session.stimulus_presentations["licks"] = licks_each_flash
+    session.stimulus_presentations["licks"] = licks_each_flash_df
 
 def rewards_each_flash(stimulus_presentations_df, rewards_df,
                            range_relative_to_stimulus_start=[0, 0.75]):
@@ -204,10 +204,10 @@ def add_rewards_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 
         nothing. session.stimulus_presentations is modified in place with 'rewards' column added
     '''
 
-    rewards_each_flash = rewards_each_flash_(session.stimulus_presentations,
+    rewards_each_flash_df = rewards_each_flash(session.stimulus_presentations,
                                                  session.rewards,
                                                  range_relative_to_stimulus_start)
-    session.stimulus_presentations["rewards"] = rewards_each_flash
+    session.stimulus_presentations["rewards"] = rewards_each_flash_df
 
 
 
