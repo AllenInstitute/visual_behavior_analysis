@@ -57,7 +57,7 @@ def get_omitted_index(stimulus_presentations_df):
         omitted_index=None
     return omitted_index
 
-def add_change_inplace(session):
+def add_change_each_flash_inplace(session):
     changes = find_change(session.stimulus_presentations['image_index'], get_omitted_index(session.stimulus_presentations))
     session.stimulus_presentations['change'] = changes
 
