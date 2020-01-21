@@ -114,3 +114,36 @@ def add_rewards_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 
                                                  session.rewards,
                                                  range_relative_to_stimulus_start)
     session.stimulus_presentations["rewards"] = rewards_each_flash_df
+
+def add_time_from_last_lick_inplace(session):
+    '''
+        Adds a column in place to session.stimulus_presentations['time_from_last_lick']
+    '''
+    lick_times = session.licks['timestamps'].values
+    reward_times = session.rewards['timestamps'].values
+    flash_times = session.stimulus_presentations["start_time"].values
+    if len(lick_times) < 5: #Passive sessions
+        time_from_last_lick = np.full(len(flash_times), np.nan)
+    else:
+        time_from_last_lick = esp.time_from_last(flash_times, lick_times)
+    session.stimulus_presentations["time_from_last_lick"] = time_from_last_lick   
+
+def add_time_from_last_reward_inplace(session):
+    '''
+        Adds a column in place to session.stimulus_presentations['time_from_last_reward']
+    '''
+    lick_times = session.licks['timestamps'].values
+    reward_times = session.rewards['timestamps'].values
+    flash_times = session.stimulus_presentations["start_time"].values
+
+    if len(reward_times) < 1: # Sometimes mice are bad
+        time_from_last_reward = np.full(len(flash_times), np.nan)
+    else:
+        time_from_last_reward = esp.time_from_last(flash_times, reward_times)
+    session.stimulus_presentations["time_from_last_reward"] = time_from_last_reward
+
+def add_time_from_last_change_inplace(session):
+    flash_times = session.stimulus_presentations["start_time"].values
+    change_times = session.stimulus_presentations.query('change')['start_time'].values
+    time_from_last_change = esp.time_from_last(flash_times, change_times)
+    session.stimulus_presentations["time_from_last_change"] = time_from_last_change
