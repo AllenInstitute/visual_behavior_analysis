@@ -1,4 +1,5 @@
 import numpy as np
+from visual_behavior.translator.allensdk_sessions import session_attributes as sa
 
 
 # SDK utilities 
@@ -135,11 +136,13 @@ def add_stimulus_presentations_analysis(session):
             If these columns are already implemented in the SDK, then using this function will 
             overwrite them. Check before using. 
     '''
-    esp.add_licks_each_flash_inplace(session)
-    esp.add_rewards_each_flash_inplace(session)
-    esp.add_change_each_flash_inplace(session)
-    esp.add_time_from_last_lick_inplace(session)
-    esp.add_time_from_last_reward_inplace(session)
-    esp.add_time_from_last_change_inplace(session)
+    sa.convert_licks_inplace(session.licks)
+    sa.convert_rewards_inplace(session.rewards)
+    sa.add_licks_each_flash_inplace(session)
+    sa.add_rewards_each_flash_inplace(session)
+    sa.add_change_each_flash_inplace(session)
+    sa.add_time_from_last_lick_inplace(session)
+    sa.add_time_from_last_reward_inplace(session)
+    sa.add_time_from_last_change_inplace(session)
 
 
