@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import pytest
 from visual_behavior.ophys.dataset import extended_stimulus_processing as esp
-from visual_behavior.translator.allensdk_sessions import attribute_formatting as af
 
 CIRCLECI = os.environ.get('PYTHONPATH', '').startswith('/home/circleci')
 

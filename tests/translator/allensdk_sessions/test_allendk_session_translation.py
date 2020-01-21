@@ -1,4 +1,9 @@
-from visual_behavior.translator.allensdk_sessions import session_attributes as af
+import pytest
+import os
+import numpy as np
+from visual_behavior.translator.allensdk_sessions import session_attributes as sa
+
+CIRCLECI = os.environ.get('PYTHONPATH', '').startswith('/home/circleci')
 
 # NOTE: Find_changes will mark the first 5 auto-rewarded trials as changes
 @pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
