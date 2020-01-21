@@ -70,7 +70,8 @@ def stimulus_block_df():
     image_block_repetition = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
 
     # Which unique flash within the block is this presentation?
-    repeat_within_block =    [0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2]
+    N = np.nan
+    repeat_within_block =    [0, 1, 2, 0, 1, 2, 0, N, 1, 0, 1, 2, 0, 1, 2, 0, 1, 2]
 
     return pd.DataFrame({'image_index':image_index,
                          'image_block':image_block,
@@ -78,8 +79,13 @@ def stimulus_block_df():
                          'repeat_within_block':repeat_within_block})
 
 def test_get_block_index(stimulus_block_df):
-    assert np.all(esp.get_block_index(stimulus_block_df['image_index'], 8) == stimulus_block_df['image_block'])
+    np.testing.assert_allclose(esp.get_block_index(stimulus_block_df['image_index'], 8),
+                               stimulus_block_df['image_block'].values)
 
 def test_get_image_block_repetition(stimulus_block_df):
-    pass
-    #  assert np.all(esp.get_image_block_repetitions(stimulus_block_df['image_index'], 8) == stimulus_block_df['image_block'])
+    np.testing.assert_allclose(esp.get_block_repetition_number(stimulus_block_df['image_index'], 8),
+                               stimulus_block_df['image_block_repetition'].values)
+
+def test_get_repeat_within_block(stimulus_block_df):
+    np.testing.assert_allclose(esp.get_repeat_within_block(stimulus_block_df['image_index'], 8),
+                               stimulus_block_df['repeat_within_block'].values)

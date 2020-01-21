@@ -143,6 +143,17 @@ def rewards_each_flash(stimulus_presentations_df, rewards_df,
     return stimulus_presentations_df
 
 def get_block_index(image_index, omitted_index):
+    '''
+    A block is defined as a continuous epoch of presentation of the same stimulus. 
+    This func gets the block index for each stimulus presentation. 
+
+    Args:
+        image_index (np.array): Index of image for each stimulus presentation
+        omitted_index (int): Index of omitted stimuli
+
+    Returns:
+        block_inds (np.array): Index of the current block for each stimulus
+    '''
     changes = find_change(image_index, omitted_index)
 
     #Include the first presentation as a 'change'
@@ -153,49 +164,60 @@ def get_block_index(image_index, omitted_index):
     block_inds = np.searchsorted(a=change_indices, v=flash_inds, side="right") - 1
     return block_inds
 
-#############################################################################################################
+def get_block_repetition_number(image_index, omitted_index):
+    '''
+    For each image block, is this the first time the image has been presented? second? etc. 
+    This function gets the repetition number (0 for first block of an image, 1 for second block..)
+    for each stimulus presentation. 
 
+    Args:
+        image_index (np.array): Index of image for each stimulus presentation
+        omitted_index (int): Index of omitted stimuli
 
-# TODO: Confusing me right now
-#  def get_block_repetition_number(image_index, omitted_index):
-#  
-#      blocks_this_image = {}
-#      for ind_enum, ind_image in enumerate(image_index[1:]):
-#          last_image = image_index[ind_enum - 1]
-#  
-#  
-#  
-#      changes = find_change(image_index, omitted_index)
-#      post_change_image = image_index[changes]
-#      for image in post_change_image:
-#          if image not in blocks_per_image:
-#              blocks_per_image[image] = 0
-#          else:
-#              blocks_per_image[image] += 1
-#  
+    Returns:
+        block_repetition_number (np.array): Repetition number for the current block
+    '''
+    block_inds = get_block_index(image_index, omitted_index)
+    temp_df = pd.DataFrame({'image_index':image_index, 'block_index':block_inds})
 
+    # For each image, what are the block inds where it was presented?
+    blocks_per_image = temp_df.groupby("image_index").apply(
+        lambda group: np.unique(group["block_index"])
+    )
 
+    # Go through each image, then enum the blocks where it was presented and return the rep
+    block_repetition_number = np.empty(block_inds.shape)
+    for image_index, image_blocks in blocks_per_image.iteritems():
+        if image_index != omitted_index:
+            for block_rep, block_ind in enumerate(image_blocks):
+                block_repetition_number[np.where(block_inds == block_ind)] = block_rep
 
+    return block_repetition_number
 
-def get_repeat_within_block(stimulus_presentations_df):
-    repeat_number = np.full(len(stimulus_presentations_df), np.nan)
-    assert (
-        stimulus_presentations_df.iloc[0].name == 0
-    )  # Assuming that the row index starts at zero
-    for ind_group, group in stimulus_presentations_df.groupby("block_index"):
+def get_repeat_within_block(image_index, omitted_index):
+    '''
+    Within each block, what repetition of the stimulus is this (0 = change flash)
+    Returns NaN for omitted flashes
+
+    Args:
+        image_index (np.array): Index of image for each stimulus presentation
+        omitted_index (int): Index of omitted stimuli
+
+    Returns:
+        repeat_within_block (np.array): Repetition number within the block for this image
+    '''
+    block_inds = get_block_index(image_index, omitted_index)
+    temp_df = pd.DataFrame({'image_index':image_index, 'block_index':block_inds})
+    repeat_number = np.full(len(image_index), np.nan)
+    for ind_group, group in temp_df.groupby("block_index"):
         repeat = 0
         for ind_row, row in group.iterrows():
-            if row["image_name"] != "omitted":
+            if row["image_index"] != omitted_index:
                 repeat_number[ind_row] = repeat
                 repeat += 1
+    return repeat_number
 
-    stimulus_presentations_df["index_within_block"] = repeat_number
-    return stimulus_presentations_df
-
-
-
-
-#############################################################################################################
+##########################   Untested Legacy Funcs  #########################################
 
 def add_response_latency(stimulus_presentations):
     st = stimulus_presentations.copy()
@@ -361,70 +383,3 @@ def add_prior_image_to_stimulus_presentations(stimulus_presentations):
     prior_image_name = prior_image_name + list(stimulus_presentations.image_name.values[:-1])
     stimulus_presentations['prior_image_name'] = prior_image_name
     return stimulus_presentations
-
-
-
-
-#  def get_omitted(stimulus_presentations_df, omitted_index):
-#      omitted = stimulus_presentations_df["image_index"] == omitted_index
-#      stimulus_presentations_df["omitted"] = omitted
-#      return stimulus_presentations_df
-
-#  def get_changes(stimulus_presentations_df, omitted):
-#      changes = find_change(stimulus_presentations_df["image_index"], omitted_index)
-#      stimulus_presentations_df["change"] = changes
-#      return stimulus_presentations_df
-
-def get_extended_stimulus_presentations(stimulus_presentations_df,
-                                        licks_df,
-                                        rewards_df,
-                                        running_speed_df):
-
-    stimulus_presentations_df = stimulus_presentations_df.copy()
-    #  stimulus_presentations_df = add_prior_image_to_stimulus_presentations(stimulus_presentations_df)
-
-    flash_times = stimulus_presentations_df["start_time"].values
-    # Time from last other for each flash
-
-    # TODO: Move this into the logic of the individual funcs
-    lick_times = licks_df['timestamps'].values
-    reward_times = rewards_df['timestamps'].values
-    if len(lick_times) < 5: #Passive sessions
-        time_from_last_lick = np.full(len(flash_times), np.nan)
-    else:
-        time_from_last_lick = time_from_last(flash_times, lick_times)
-
-    if len(reward_times) < 1: # Sometimes mice are bad
-        time_from_last_reward = np.full(len(flash_times), np.nan)
-    else:
-        time_from_last_reward = time_from_last(flash_times, reward_times)
-
-    stimulus_presentations_df["time_from_last_lick"] = time_from_last_lick
-    stimulus_presentations_df["time_from_last_reward"] = time_from_last_reward
-
-
-
-    change_times = stimulus_presentations_df.query('change')['start_time'].values
-    time_from_last_change = time_from_last(flash_times, change_times)
-    stimulus_presentations_df["time_from_last_change"] = time_from_last_change
-
-
-    # Lists of licks/rewards on each flash
-    stimulus_presentations_df = add_licks_each_flash(stimulus_presentations_df, licks_df)
-    stimulus_presentations_df = add_rewards_each_flash(stimulus_presentations_df, rewards_df)
-
-    stimulus_presentations_df = add_mean_running_speed(stimulus_presentations_df, running_speed_df)
-
-    # add flash after omitted
-    stimulus_presentations_df['flash_after_omitted'] = np.hstack((False, stimulus_presentations_df.omitted.values[:-1]))
-    stimulus_presentations_df['flash_after_change'] = np.hstack((False, stimulus_presentations_df.change.values[:-1]))
-    # add licking responses
-    stimulus_presentations_df = add_response_latency(stimulus_presentations_df)
-    stimulus_presentations_df = add_inter_flash_lick_diff_to_stimulus_presentations(stimulus_presentations_df)
-    stimulus_presentations_df = add_first_lick_in_bout_to_stimulus_presentations(stimulus_presentations_df)
-    stimulus_presentations_df = get_consumption_licks(stimulus_presentations_df)
-    stimulus_presentations_df = get_metrics(stimulus_presentations_df, licks_df, rewards_df)
-    # reward rate, lick rate, bout rate
-    stimulus_presentations_df = annotate_flash_rolling_metrics(stimulus_presentations_df, win_dur=320, win_type='triang')
-
-    return stimulus_presentations_df
