@@ -48,7 +48,7 @@ def convert_running_speed(running_speed_obj):
     })
 
 def add_change_each_flash_inplace(session):
-    changes = esp.find_change(session.stimulus_presentations['image_index'], get_omitted_index(session.stimulus_presentations))
+    changes = esp.find_change(session.stimulus_presentations['image_index'], esp.get_omitted_index(session.stimulus_presentations))
     session.stimulus_presentations['change'] = changes
 
 def add_mean_running_speed_inplace(session,range_relative_to_stimulus_start=[0, 0.75]):
