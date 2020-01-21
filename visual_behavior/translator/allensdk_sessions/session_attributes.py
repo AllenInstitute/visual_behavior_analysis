@@ -13,6 +13,10 @@ def convert_licks(licks_df):
     ARGS: licks_df, from the SDK
     RETURNS: licks_df
     MODIFIES: licks_df, renaming column 'time' to 'timestamps'
+    
+    WARNING. session.trials will not load after this function is called. Therefore, before this 
+        function is called, you need to run session.trials and then it will be cached and will work.
+        This is done for you in sdk_utils.add_stimulus_presentations_analysis. 
     '''
     assert 'time' in licks_df.columns
     return licks_df.rename(columns={'time':'timestamps'})
@@ -25,6 +29,10 @@ def convert_rewards(rewards_df):
     ARGS: rewards_df, from the SDK
     RETURNS: rewards_df
     MODIFIES: rewards_df, moving 'timestamps' to a column, not index
+
+    WARNING. session.trials will not load after this function is called. Therefore, before this 
+        function is called, you need to run session.trials and then it will be cached and will work.
+        This is done for you in sdk_utils.add_stimulus_presentations_analysis. 
     '''
     assert rewards_df.index.name == 'timestamps'
     return rewards_df.reset_index()
