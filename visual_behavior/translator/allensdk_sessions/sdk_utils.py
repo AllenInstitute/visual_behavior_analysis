@@ -136,6 +136,12 @@ def add_stimulus_presentations_analysis(session):
             If these columns are already implemented in the SDK, then using this function will 
             overwrite them. Check before using. 
     '''
+    trials = session.trials # NEED TO QUERY THIS FIRST BECAUSE OF CONVERT_LICKS() 
+    # allensdk/brain_observatory/behavior/trials_processing.get_trials() has an assertion
+    # that session.rewards has timestamps as an index. And the code requres that session.licks 
+    # has 'time' as a column. Therefore, before modifying those attributes, we load the trials 
+    # table once, and this uses the memoize attribute to calculate this dataframe first. We realize
+    # this is a terrible hack, but its the easiest way forward until the naming conventions are fixed
     sa.convert_licks_inplace(session.licks)
     sa.convert_rewards_inplace(session.rewards)
     sa.add_licks_each_flash_inplace(session)
