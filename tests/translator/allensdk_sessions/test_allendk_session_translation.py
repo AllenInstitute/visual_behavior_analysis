@@ -1,7 +1,9 @@
 import pytest
+import pandas as pd
 import os
 import numpy as np
 from visual_behavior.translator.allensdk_sessions import session_attributes as sa
+from visual_behavior.ophys.dataset import extended_stimulus_processing as esp
 
 CIRCLECI = os.environ.get('PYTHONPATH', '').startswith('/home/circleci')
 
@@ -104,3 +106,66 @@ def test_extended_stimulus_presentations_sfn_session(
         af.convert_running_speed(sdk_session.running_speed),
         sfn_sdk_extended_stimulus_presentations
     )
+
+@pytest.fixture
+def stimulus_onsets_df():
+    onset_times = np.array([1, 2, 3, 4, 5], dtype=float)
+    return pd.DataFrame({'start_time':onset_times})
+
+@pytest.fixture
+def mock_licks_df():
+    lick_times = np.array([1.1, 2.2, 3.9, 4.75])
+    return pd.DataFrame({'timestamps':lick_times})
+
+@pytest.fixture
+def mock_rewards_df():
+    reward_times = np.array([1.1, 2.2, 3.9, 4.75])
+    return pd.DataFrame({'timestamps':reward_times})
+
+@pytest.fixture
+def expected_stimulus_df_with_licks_and_rewards(stimulus_onsets_df):
+    time_lists = [[1.1], [2.2], [], [], []]
+    stimulus_onsets_df['licks'] = time_lists
+    stimulus_onsets_df['rewards'] = time_lists
+    return stimulus_onsets_df
+
+def _test_add_licks_each_flash(stimulus_presentations,
+                              licks_df, 
+                              expected):
+    licks_each_flash = esp.licks_each_flash(stimulus_presentations, licks_df)
+
+    for ind_row in range(len(stimulus_presentations)):
+        left = licks_each_flash.iloc[ind_row]
+        right = expected.iloc[ind_row]['licks']
+        assert len(left) == len(right)
+        if len(left)>0:
+            np.testing.assert_array_equal(left, right)
+
+def test_add_licks_each_flash_mock(stimulus_onsets_df,
+                                   mock_licks_df, 
+                                   expected_stimulus_df_with_licks_and_rewards):
+    _test_add_licks_each_flash(stimulus_onsets_df, mock_licks_df,
+                               expected_stimulus_df_with_licks_and_rewards)
+
+@pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
+def test_add_licks_each_flash_sfn(sfn_sdk_stimulus_presentations,
+                                  sfn_sdk_licks,
+                                  sfn_sdk_extended_stimulus_presentations):
+    _test_add_licks_each_flash(sfn_sdk_stimulus_presentations,
+                               sfn_sdk_licks,
+                               sfn_sdk_extended_stimulus_presentations)
+
+def _test_add_rewards_each_flash(stimulus_onsets_df,
+                              rewards_df, 
+                              expected_stimulus_df_with_rewards_and_rewards):
+    stimulus_onsets_df = esp.add_rewards_each_flash(stimulus_onsets_df, rewards_df)
+
+    for ind_row in range(len(stimulus_onsets_df)):
+        left = stimulus_onsets_df.iloc[ind_row]['rewards']
+        right = expected_stimulus_df_with_rewards_and_rewards.iloc[ind_row]['rewards']
+        assert len(left) == len(right)
+        if len(left)>0:
+            np.testing.assert_array_equal(left, right)
+
+
+
