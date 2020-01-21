@@ -110,7 +110,7 @@ def add_rewards_each_flash_inplace(session,range_relative_to_stimulus_start=[0, 
         nothing. session.stimulus_presentations is modified in place with 'rewards' column added
     '''
 
-    rewards_each_flash_df = rewards_each_flash(session.stimulus_presentations,
+    rewards_each_flash_df = esp.rewards_each_flash(session.stimulus_presentations,
                                                  session.rewards,
                                                  range_relative_to_stimulus_start)
     session.stimulus_presentations["rewards"] = rewards_each_flash_df
