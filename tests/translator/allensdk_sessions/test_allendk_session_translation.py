@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import os
 import numpy as np
-from visual_behavior.translator.allensdk_sessions import session_attributes as sa
+from visual_behavior.translator.allensdk_sessions import sdk_utils
 from visual_behavior.ophys.dataset import extended_stimulus_processing as esp
 
 CIRCLECI = os.environ.get('PYTHONPATH', '').startswith('/home/circleci')
@@ -92,20 +92,24 @@ def sdk_session():
     os.remove('manifest.json')
     return session
 
-@pytest.mark.skipif(True, reason='need to debug this one more deeply')
-@pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
-def test_extended_stimulus_presentations_sfn_session(
-    sdk_session,
-    sfn_sdk_extended_stimulus_presentations,
-):
+def test_add_stimulus_presentations_analysis(sdk_session):
+    sdk_utils.add_stimulus_presentations_analysis(sdk_session)
+    assert 'time_from_last_reward' in sdk_session.stimulus_presentations.columns
 
-    _test_extended_stimulus_presentations(
-        sdk_session.stimulus_presentations,
-        af.convert_licks(sdk_session.licks),
-        af.convert_rewards(sdk_session.rewards),
-        af.convert_running_speed(sdk_session.running_speed),
-        sfn_sdk_extended_stimulus_presentations
-    )
+#  @pytest.mark.skipif(True, reason='need to debug this one more deeply')
+#  @pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
+#  def test_extended_stimulus_presentations_sfn_session(
+#      sdk_session,
+#      sfn_sdk_extended_stimulus_presentations,
+#  ):
+#  
+#      _test_extended_stimulus_presentations(
+#          sdk_session.stimulus_presentations,
+#          af.convert_licks(sdk_session.licks),
+#          af.convert_rewards(sdk_session.rewards),
+#          af.convert_running_speed(sdk_session.running_speed),
+#          sfn_sdk_extended_stimulus_presentations
+#      )
 
 @pytest.fixture
 def stimulus_onsets_df():
