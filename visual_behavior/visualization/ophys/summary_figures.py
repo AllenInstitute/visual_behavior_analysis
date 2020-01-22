@@ -178,7 +178,7 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1, window=None):
     interval_frames = int(interval_sec * frame_rate)
     n_frames = len(trace)
     n_sec = n_frames / frame_rate
-    xticks = np.arange(0, n_frames + 1, interval_frames)
+    xticks = np.arange(0, n_frames + 5, interval_frames)
     xticklabels = np.arange(0, n_sec + 0.1, interval_sec)
     if not window:
         xticklabels = xticklabels - n_sec / 2
