@@ -101,15 +101,17 @@ def get_osid_from_oeid(oeid, cache):
     return ophys_experiments.loc[oeid].ophys_session_id
 
 
-def get_specimen_id_from_donor_id(d_id):
+def get_specimen_id_from_donor_id(d_id,cache):
     '''
         Gets the specimen_id associated with a donor_id
+        ARGS
+            d_id    donor_id
+            cache   cache from BehaviorProjectCache
 
         WARNING, this will not work if the donor_id does not have an associated specimen_id.
 
         WARNING, this function was meant as a temporary holdover while waiting for SDK support
     '''
-    cache = get_cache()
     ophys_sessions = cache.get_session_table()
     behavior_sessions = cache.get_behavior_session_table()
     x = behavior_sessions.query('donor_id == @d_id')['ophys_session_id']
@@ -118,13 +120,15 @@ def get_specimen_id_from_donor_id(d_id):
     return specimen_id
 
 
-def get_donor_id_from_specimen_id(s_id):
+def get_donor_id_from_specimen_id(s_id,cache):
     '''
         Gets the donor_id associated with a specimen_id
+        ARGS
+            s_id    specimen_id
+            cache   cache from BehaviorProjectCache
 
         WARNING, this function was meant as a temporary holdover while waiting for SDK support
     '''
-    cache = get_cache()
     ophys_sessions = cache.get_session_table()
     behavior_sessions = cache.get_behavior_session_table()
     osid = ophys_sessions.query('specimen_id == @s_id').iloc[0].name
