@@ -1,5 +1,5 @@
 from visual_behavior.translator.allensdk_sessions import session_attributes as sa
-
+import numpy as np
 
 # SDK utilities
 # Created by Alex Piet & Nick Ponvert, 01/17/2019
