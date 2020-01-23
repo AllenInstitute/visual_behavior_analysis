@@ -237,9 +237,7 @@ def get_filtered_sessions_table(cache, require_cell_matching=False,require_full_
     if require_cell_matching:
         if not (np.mod(len(filtered) ,6) == 0):
             print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
-
-
-    if require_full_container and require_exp_pass:
+    elif require_full_container and require_exp_pass:
         if not (np.mod(len(filtered) ,6) == 0):
             print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
 

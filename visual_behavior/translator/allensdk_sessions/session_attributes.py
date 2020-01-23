@@ -1,5 +1,6 @@
 import pandas as pd
 import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
+import numpy as np
 
 # This file contains functions to reformat sdk session attributes to conform with our
 # design decisions. If we can get some of these changes backported into the SDK, then they
