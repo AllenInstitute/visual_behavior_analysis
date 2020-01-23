@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
