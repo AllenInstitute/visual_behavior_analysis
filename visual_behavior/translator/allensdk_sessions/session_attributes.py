@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
-import numpy as np
 
 # This file contains functions to reformat sdk session attributes to conform with our
 # design decisions. If we can get some of these changes backported into the SDK, then they
@@ -109,7 +108,7 @@ def add_mean_running_speed_inplace(session, range_relative_to_stimulus_start=[0,
     Returns:
         nothing, modifies session in place. Same as the input, but with 'mean_running_speed' column added
     '''
-    if type(pd.DataFrame()) == type(session.running_speed): 
+    if isinstance(session.running_speed, pd.DataFrame):
         mean_running_speed_df = esp.mean_running_speed(session.stimulus_presentations,
                                                        session.running_speed,
                                                        range_relative_to_stimulus_start)
@@ -164,6 +163,7 @@ def add_rewards_each_flash_inplace(session, range_relative_to_stimulus_start=[0,
                                                    range_relative_to_stimulus_start)
     session.stimulus_presentations['rewards'] = rewards_each_flash_df['rewards']
 
+
 def add_time_from_last_lick_inplace(session):
     '''
         Adds a column in place to session.stimulus_presentations['time_from_last_lick'], which is the time, in seconds
@@ -174,7 +174,6 @@ def add_time_from_last_lick_inplace(session):
         RETURNS: nothing
     '''
     lick_times = session.licks['timestamps'].values
-    reward_times = session.rewards['timestamps'].values
     flash_times = session.stimulus_presentations["start_time"].values
     if len(lick_times) < 5:  # Passive sessions
         time_from_last_lick = np.full(len(flash_times), np.nan)
@@ -192,7 +191,6 @@ def add_time_from_last_reward_inplace(session):
         MODIFIES: session.stimulus_presentations
         RETURNS: nothing
     '''
-    lick_times = session.licks['timestamps'].values
     reward_times = session.rewards['timestamps'].values
     flash_times = session.stimulus_presentations["start_time"].values
 
