@@ -95,6 +95,7 @@ def sdk_session():
     os.remove('manifest.json')
     return session
 
+@pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
 def test_add_stimulus_presentations_analysis(sdk_session):
     sdk_utils.add_stimulus_presentations_analysis(sdk_session)
     assert 'time_from_last_reward' in sdk_session.stimulus_presentations.columns
