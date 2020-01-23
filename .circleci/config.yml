@@ -57,6 +57,25 @@ jobs:
             . venv/bin/activate
             tox -e py37
 
+  test-allensdk_head:
+    docker:
+      - image: circleci/python:3.6.1
+    steps:
+      - checkout
+      - run:
+          name: setup virtualenv
+          command: python3 -m venv venv
+      - run:
+          name: install dependencies
+          command: |
+            . venv/bin/activate
+            pip install -U pip tox
+      - run:
+          name: tox it up
+          command: |
+            . venv/bin/activate
+            tox -e allensdk_head
+
 workflows:
   version: 2
   basic:
@@ -64,3 +83,4 @@ workflows:
       - lint
       - test-36
       - test-37
+      - test-allensdk_head
