@@ -115,7 +115,7 @@ def get_specimen_id_from_donor_id(d_id, cache):
     ophys_sessions = cache.get_session_table()
     behavior_sessions = cache.get_behavior_session_table()
     x = behavior_sessions.query('donor_id == @d_id')['ophys_session_id']
-    osid = x[~x.isnull()].values[0].astype(int)
+    osid = x[~x.isnull()].values[0].astype(int)  # noqa: F841
     specimen_id = ophys_sessions.query('ophys_session_id ==@osid')['specimen_id'].values[0]
     return specimen_id
 
@@ -131,7 +131,7 @@ def get_donor_id_from_specimen_id(s_id, cache):
     '''
     ophys_sessions = cache.get_session_table()
     behavior_sessions = cache.get_behavior_session_table()
-    osid = ophys_sessions.query('specimen_id == @s_id').iloc[0].name
+    osid = ophys_sessions.query('specimen_id == @s_id').iloc[0].name  # noqa: F841
     donor_id = behavior_sessions.query('ophys_session_id ==@osid')['donor_id'].values[0]
     return donor_id
 
@@ -144,7 +144,8 @@ def add_stimulus_presentations_analysis(session):
             If these columns are already implemented in the SDK, then using this function will
             overwrite them. Check before using.
     '''
-    trials = session.trials  # NEED TO QUERY THIS FIRST BECAUSE OF CONVERT_LICKS()
+    trials = session.trials  # noqa: F841
+    # NEED TO QUERY THIS FIRST BECAUSE OF CONVERT_LICKS()
     # allensdk/brain_observatory/behavior/trials_processing.get_trials() has an assertion
     # that session.rewards has timestamps as an index. And the code requres that session.licks
     # has 'time' as a column. Therefore, before modifying those attributes, we load the trials
@@ -159,13 +160,14 @@ def add_stimulus_presentations_analysis(session):
     sa.add_time_from_last_reward_inplace(session)
     sa.add_time_from_last_change_inplace(session)
 
-def get_filtered_sessions_table(cache, require_cell_matching=False,require_full_container=True,require_exp_pass=True):
+
+def get_filtered_sessions_table(cache, require_cell_matching=False, require_full_container=True, require_exp_pass=True):
     '''
         Applies some filters to the ophys_sessions_table. It will always filter out all sessions that do not have
         project codes of 'VisualBehavior' or 'VisualBehaviorTask1B'. This currently removes all Mesoscope sessions.
         It will filter out all sessions that are not found in the behavior_sessions_table, or in the ophys_experiment_table.
-        Optionally, you can require experiments that currently pass QC workflow. Or only sessions from containers that pass 
-        QC workflow. Or only sessions from containers that have cell matching completed. 
+        Optionally, you can require experiments that currently pass QC workflow. Or only sessions from containers that pass
+        QC workflow. Or only sessions from containers that have cell matching completed.
 
         WARNING! This function is meant as a hold over until SDK support
 
@@ -177,13 +179,13 @@ def get_filtered_sessions_table(cache, require_cell_matching=False,require_full_
             require_full_container      If True, returns sessions from containers with container_workflow_state of "container_qc" or "completed"
                                         Unless require_exp_pass is True, it will return failed sessions within that container
             require_exp_pass            if True, returns sessions with experiment_workflow_state = passed
- 
+
         RETURNS
-            The ophys_sessions_table filtered by the constraints above. 
+            The ophys_sessions_table filtered by the constraints above.
     '''
     # Only get cell matching for full containers, on passed experiments
     if require_cell_matching:
-        require_full_container=True
+        require_full_container = True
         require_exp_pass = True
 
     ophys_sessions = cache.get_session_table()
@@ -196,17 +198,17 @@ def get_filtered_sessions_table(cache, require_cell_matching=False,require_full_
     session_in_bsession_table = [any(behavior_sessions['ophys_session_id'] == x) for x in session_ids]
     ophys_sessions['in_experiment_table'] = session_in_experiment_table
     ophys_sessions['in_bsession_table'] = session_in_bsession_table
-    
+
     # Check Project Code
-    good_code = ophys_sessions['project_code'].isin(['VisualBehavior','VisualBehaviorTask1B'])
+    good_code = ophys_sessions['project_code'].isin(['VisualBehavior', 'VisualBehaviorTask1B'])
     ophys_sessions['good_project_code'] = good_code
-    
+
     # Check Session Type
     good_session = ophys_sessions['session_type'].isin(['OPHYS_1_images_A', 'OPHYS_3_images_A', 'OPHYS_4_images_B',
-       'OPHYS_5_images_B_passive', 'OPHYS_6_images_B', 'OPHYS_2_images_A_passive', 'OPHYS_1_images_B',
-       'OPHYS_2_images_B_passive', 'OPHYS_3_images_B', 'OPHYS_4_images_A', 'OPHYS_5_images_A_passive', 'OPHYS_6_images_A'])
+                                                        'OPHYS_5_images_B_passive', 'OPHYS_6_images_B', 'OPHYS_2_images_A_passive', 'OPHYS_1_images_B',
+                                                        'OPHYS_2_images_B_passive', 'OPHYS_3_images_B', 'OPHYS_4_images_A', 'OPHYS_5_images_A_passive', 'OPHYS_6_images_A'])
     ophys_sessions['good_session'] = good_session
- 
+
     # Check Experiment Workflow state
     ophys_experiments['good_exp_workflow'] = ophys_experiments['experiment_workflow_state'] == "passed"
 
@@ -214,16 +216,16 @@ def get_filtered_sessions_table(cache, require_cell_matching=False,require_full_
     if require_cell_matching:
         ophys_experiments['good_container_workflow'] = ophys_experiments['container_workflow_state'] == "container_qc"
     else:
-        ophys_experiments['good_container_workflow'] = ophys_experiments['container_workflow_state'].isin(['container_qc','completed'])
+        ophys_experiments['good_container_workflow'] = ophys_experiments['container_workflow_state'].isin(['container_qc', 'completed'])
 
-    # Compile workflow state info into ophys_sessions 
+    # Compile workflow state info into ophys_sessions
     ophys_experiments_good_workflow = ophys_experiments.query('good_exp_workflow')
     ophys_experiments_good_container = ophys_experiments.query('good_container_workflow')
-    session_good_workflow   = [any(ophys_experiments_good_workflow['ophys_session_id'] == x) for x in session_ids]
+    session_good_workflow = [any(ophys_experiments_good_workflow['ophys_session_id'] == x) for x in session_ids]
     container_good_workflow = [any(ophys_experiments_good_container['ophys_session_id'] == x) for x in session_ids]
-    ophys_sessions['good_exp_workflow']         = session_good_workflow
-    ophys_sessions['good_container_workflow']   = container_good_workflow
- 
+    ophys_sessions['good_exp_workflow'] = session_good_workflow
+    ophys_sessions['good_container_workflow'] = container_good_workflow
+
     # do final filtering
     if require_full_container and require_exp_pass:
         filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table & good_container_workflow & good_exp_workflow')
@@ -233,15 +235,12 @@ def get_filtered_sessions_table(cache, require_cell_matching=False,require_full_
         filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table & good_exp_workflow')
     else:
         filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table')
-  
+
     if require_cell_matching:
-        if not (np.mod(len(filtered) ,6) == 0):
+        if not (np.mod(len(filtered), 6) == 0):
             print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
     elif require_full_container and require_exp_pass:
-        if not (np.mod(len(filtered) ,6) == 0):
+        if not (np.mod(len(filtered), 6) == 0):
             print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
 
     return filtered
-
-
-
