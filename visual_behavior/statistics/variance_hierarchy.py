@@ -81,6 +81,15 @@ def gen_level_mean_df(level_df,
 
 def get_previous_level(hierarchy_columns_list, 
                         level):
+    """retrieves the column name of the preceding level
+    
+    Arguments:
+        hierarchy_columns_list {[type]} -- [description]
+        level {[type]} -- [description]
+    
+    Returns:
+        [type] -- [description]
+    """
 
     current_level_index = hierarchy_columns_list.index(level)
     previous_level = hierarchy_columns_list[(current_level_index -1)]
@@ -124,6 +133,7 @@ def add_total_variance_to_variance_df(variance_df):
     total_variance = compute_total_variance(variance_df)
     total_var_df = pd.DataFrame({"level":"total_variance", "variance_mean": total_variance}, index = [0])
     variance_df = variance_df.append(total_var_df, sort = True)
+    
     return variance_df
     
 
