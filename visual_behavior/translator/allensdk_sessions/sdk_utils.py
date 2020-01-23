@@ -201,6 +201,12 @@ def get_filtered_sessions_table(cache, require_cell_matching=False,require_full_
     good_code = ophys_sessions['project_code'].isin(['VisualBehavior','VisualBehaviorTask1B'])
     ophys_sessions['good_project_code'] = good_code
     
+    # Check Session Type
+    good_session = ophys_sessions['session_type'].isin(['OPHYS_1_images_A', 'OPHYS_3_images_A', 'OPHYS_4_images_B',
+       'OPHYS_5_images_B_passive', 'OPHYS_6_images_B', 'OPHYS_2_images_A_passive', 'OPHYS_1_images_B',
+       'OPHYS_2_images_B_passive', 'OPHYS_3_images_B', 'OPHYS_4_images_A', 'OPHYS_5_images_A_passive', 'OPHYS_6_images_A'])
+    ophys_sessions['good_session'] = good_session
+ 
     # Check Experiment Workflow state
     ophys_experiments['good_exp_workflow'] = ophys_experiments['experiment_workflow_state'] == "passed"
 
@@ -220,13 +226,13 @@ def get_filtered_sessions_table(cache, require_cell_matching=False,require_full_
  
     # do final filtering
     if require_full_container and require_exp_pass:
-        filtered = ophys_sessions.query('good_project_code & in_bsession_table & in_experiment_table & good_container_workflow & good_exp_workflow')
+        filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table & good_container_workflow & good_exp_workflow')
     elif require_full_container:
-        filtered = ophys_sessions.query('good_project_code & in_bsession_table & in_experiment_table & good_container_workflow')
+        filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table & good_container_workflow')
     elif require_exp_pass:
-        filtered = ophys_sessions.query('good_project_code & in_bsession_table & in_experiment_table & good_exp_workflow')
+        filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table & good_exp_workflow')
     else:
-        filtered = ophys_sessions.query('good_project_code & in_bsession_table & in_experiment_table')
+        filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table')
   
     if require_cell_matching:
         assert np.mod(len(filtered) ,6) == 0
