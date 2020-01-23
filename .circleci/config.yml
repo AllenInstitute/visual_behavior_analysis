@@ -38,9 +38,29 @@ jobs:
             . venv/bin/activate
             tox -e py36
 
+  test-37:
+    docker:
+      - image: circleci/python:3.7.3
+    steps:
+      - checkout
+      - run:
+          name: setup virtualenv
+          command: python3 -m venv venv
+      - run:
+          name: install dependencies
+          command: |
+            . venv/bin/activate
+            pip install -U pip tox
+      - run:
+          name: tox it up
+          command: |
+            . venv/bin/activate
+            tox -e py37
+
 workflows:
   version: 2
   basic:
     jobs:
       - lint
       - test-36
+      - test-37
