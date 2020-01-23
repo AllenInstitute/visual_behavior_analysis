@@ -101,7 +101,7 @@ def get_osid_from_oeid(oeid, cache):
     return ophys_experiments.loc[oeid].ophys_session_id
 
 
-def get_specimen_id_from_donor_id(d_id,cache):
+def get_specimen_id_from_donor_id(d_id, cache):
     '''
         Gets the specimen_id associated with a donor_id
         ARGS
@@ -120,7 +120,7 @@ def get_specimen_id_from_donor_id(d_id,cache):
     return specimen_id
 
 
-def get_donor_id_from_specimen_id(s_id,cache):
+def get_donor_id_from_specimen_id(s_id, cache):
     '''
         Gets the donor_id associated with a specimen_id
         ARGS

@@ -16,9 +16,9 @@ def convert_licks(licks_df):
     RETURNS: licks_df
     MODIFIES: licks_df, renaming column 'time' to 'timestamps'
 
-    WARNING. session.trials will not load after this function is called. Therefore, before this 
+    WARNING. session.trials will not load after this function is called. Therefore, before this
         function is called, you need to run session.trials and then it will be cached and will work.
-        This is done for you in sdk_utils.add_stimulus_presentations_analysis. 
+        This is done for you in sdk_utils.add_stimulus_presentations_analysis.
     '''
     assert 'time' in licks_df.columns
     return licks_df.rename(columns={'time': 'timestamps'})
@@ -33,9 +33,9 @@ def convert_rewards(rewards_df):
     RETURNS: rewards_df
     MODIFIES: rewards_df, moving 'timestamps' to a column, not index
 
-    WARNING. session.trials will not load after this function is called. Therefore, before this 
+    WARNING. session.trials will not load after this function is called. Therefore, before this
         function is called, you need to run session.trials and then it will be cached and will work.
-        This is done for you in sdk_utils.add_stimulus_presentations_analysis. 
+        This is done for you in sdk_utils.add_stimulus_presentations_analysis.
     '''
     assert rewards_df.index.name == 'timestamps'
     return rewards_df.reset_index()
@@ -99,12 +99,12 @@ def add_mean_running_speed_inplace(session, range_relative_to_stimulus_start=[0,
 
     Args:
         session object with:
-            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
+            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations.
                 Must contain: 'start_time'
-        running_speed_df (pd.DataFrame): dataframe of running speed. 
+        running_speed_df (pd.DataFrame): dataframe of running speed.
             Must contain: 'speed', 'timestamps'
         range_relative_to_stimulus_start (list with 2 elements): start and end of the range
-            relative to the start of each stimulus to average the running speed. 
+            relative to the start of each stimulus to average the running speed.
     Returns:
         nothing, modifies session in place. Same as the input, but with 'mean_running_speed' column added
     '''
@@ -121,11 +121,11 @@ def add_licks_each_flash_inplace(session, range_relative_to_stimulus_start=[0, 0
 
     Args:
         session object with:
-            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
+            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations.
                 Must contain: 'start_time'
             licks_df (pd.DataFrame): lick dataframe. Must contain 'timestamps'
         range_relative_to_stimulus_start (list with 2 elements): start and end of the range
-            relative to the start of each stimulus to average the running speed. 
+            relative to the start of each stimulus to average the running speed.
     Returns:
         nothing, modifies session in place. Same as the input, but with 'licks' column added
     '''
@@ -143,11 +143,11 @@ def add_rewards_each_flash_inplace(session, range_relative_to_stimulus_start=[0,
 
     Args:
         session object, with attributes:
-            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations. 
+            stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations.
                 Must contain: 'start_time'
             rewards_df (pd.DataFrame): rewards dataframe. Must contain 'timestamps'
         range_relative_to_stimulus_start (list with 2 elements): start and end of the range
-            relative to the start of each stimulus to average the running speed. 
+            relative to the start of each stimulus to average the running speed.
     Returns:
         nothing. session.stimulus_presentations is modified in place with 'rewards' column added
     '''
