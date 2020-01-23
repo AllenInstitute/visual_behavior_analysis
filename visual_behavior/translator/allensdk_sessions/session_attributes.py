@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
+import numpy as np
 
 # This file contains functions to reformat sdk session attributes to conform with our
 # design decisions. If we can get some of these changes backported into the SDK, then they
@@ -108,9 +109,15 @@ def add_mean_running_speed_inplace(session, range_relative_to_stimulus_start=[0,
     Returns:
         nothing, modifies session in place. Same as the input, but with 'mean_running_speed' column added
     '''
-    mean_running_speed_df = esp.mean_running_speed(session.stimulus_presentations,
-                                                   session.running_speed,
-                                                   range_relative_to_stimulus_start)
+    if type(pd.DataFrame()) == type(session.running_speed): 
+        mean_running_speed_df = esp.mean_running_speed(session.stimulus_presentations,
+                                                       session.running_speed,
+                                                       range_relative_to_stimulus_start)
+    else:
+        mean_running_speed_df = esp.mean_running_speed(session.stimulus_presentations,
+                                                       convert_running_speed(session.running_speed),
+                                                       range_relative_to_stimulus_start)
+
     session.stimulus_presentations["mean_running_speed"] = mean_running_speed_df
 
 
@@ -133,7 +140,7 @@ def add_licks_each_flash_inplace(session, range_relative_to_stimulus_start=[0, 0
     licks_each_flash_df = esp.licks_each_flash(session.stimulus_presentations,
                                                session.licks,
                                                range_relative_to_stimulus_start)
-    session.stimulus_presentations["licks"] = licks_each_flash_df
+    session.stimulus_presentations['licks'] = licks_each_flash_df
 
 
 def add_rewards_each_flash_inplace(session, range_relative_to_stimulus_start=[0, 0.75]):
@@ -155,8 +162,7 @@ def add_rewards_each_flash_inplace(session, range_relative_to_stimulus_start=[0,
     rewards_each_flash_df = esp.rewards_each_flash(session.stimulus_presentations,
                                                    session.rewards,
                                                    range_relative_to_stimulus_start)
-    session.stimulus_presentations["rewards"] = rewards_each_flash_df
-
+    session.stimulus_presentations['rewards'] = rewards_each_flash_df['rewards']
 
 def add_time_from_last_lick_inplace(session):
     '''
