@@ -28,7 +28,7 @@ def time_from_last(timestamps, event_times):
 
 def apply_to_window(values, timestamps, start_time, stop_time, func):
     '''
-    Apply a function to an array of values that fall within a time window. 
+    Apply a function to an array of values that fall within a time window.
 
     '''
     if len(values) != len(timestamps):
@@ -81,7 +81,7 @@ def get_omitted_index(stimulus_presentations_df):
     '''
     if 'omitted' in stimulus_presentations_df['image_name'].unique():
         omitted_indices = np.unique(stimulus_presentations_df.query('image_name == "omitted"')['image_index'].values)
-        assert len(omitted_indices)==1
+        assert len(omitted_indices) == 1
         omitted_index = omitted_indices[0]
     else:
         omitted_index = None
@@ -91,8 +91,8 @@ def get_omitted_index(stimulus_presentations_df):
 def mean_running_speed(stimulus_presentations_df, running_speed_df,
                        range_relative_to_stimulus_start=[0, 0.25]):
     '''
-    Append a column to stimulus_presentations which contains the mean running speed in a range relative to 
-    the stimulus start time. 
+    Append a column to stimulus_presentations which contains the mean running speed in a range relative to
+    the stimulus start time.
 
     Args:
         stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations.

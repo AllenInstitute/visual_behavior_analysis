@@ -137,8 +137,8 @@ def add_licks_each_flash_inplace(session, range_relative_to_stimulus_start=[0, 0
     '''
 
     licks_each_flash = esp.licks_each_flash(session.stimulus_presentations,
-                                               session.licks,
-                                               range_relative_to_stimulus_start)
+                                            session.licks,
+                                            range_relative_to_stimulus_start)
     session.stimulus_presentations['licks'] = licks_each_flash
 
 
@@ -159,8 +159,8 @@ def add_rewards_each_flash_inplace(session, range_relative_to_stimulus_start=[0,
     '''
 
     rewards_each_flash = esp.rewards_each_flash(session.stimulus_presentations,
-                                                   session.rewards,
-                                                   range_relative_to_stimulus_start)
+                                                session.rewards,
+                                                range_relative_to_stimulus_start)
     session.stimulus_presentations['rewards'] = rewards_each_flash
 
 
