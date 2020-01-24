@@ -80,7 +80,7 @@ def get_omitted_index(stimulus_presentations_df):
         omitted_index (int): index corresponding to stimulus with name 'omitted'
     '''
     if 'omitted' in stimulus_presentations_df['image_name'].unique():
-        omitted_indices = stimulus_presentations_df.query('image_name == "omitted"')['image_index'].values
+        omitted_indices = np.unique(stimulus_presentations_df.query('image_name == "omitted"')['image_index'].values)
         assert len(omitted_indices)==1
         omitted_index = omitted_indices[0]
     else:

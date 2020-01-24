@@ -136,10 +136,10 @@ def add_licks_each_flash_inplace(session, range_relative_to_stimulus_start=[0, 0
         nothing, modifies session in place. Same as the input, but with 'licks' column added
     '''
 
-    licks_each_flash_df = esp.licks_each_flash(session.stimulus_presentations,
+    licks_each_flash = esp.licks_each_flash(session.stimulus_presentations,
                                                session.licks,
                                                range_relative_to_stimulus_start)
-    session.stimulus_presentations['licks'] = licks_each_flash_df
+    session.stimulus_presentations['licks'] = licks_each_flash
 
 
 def add_rewards_each_flash_inplace(session, range_relative_to_stimulus_start=[0, 0.75]):
@@ -158,10 +158,10 @@ def add_rewards_each_flash_inplace(session, range_relative_to_stimulus_start=[0,
         nothing. session.stimulus_presentations is modified in place with 'rewards' column added
     '''
 
-    rewards_each_flash_df = esp.rewards_each_flash(session.stimulus_presentations,
+    rewards_each_flash = esp.rewards_each_flash(session.stimulus_presentations,
                                                    session.rewards,
                                                    range_relative_to_stimulus_start)
-    session.stimulus_presentations['rewards'] = rewards_each_flash_df['rewards']
+    session.stimulus_presentations['rewards'] = rewards_each_flash
 
 
 def add_time_from_last_lick_inplace(session):

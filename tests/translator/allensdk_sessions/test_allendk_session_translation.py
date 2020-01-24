@@ -83,12 +83,12 @@ def test_add_licks_each_flash_sfn(sfn_sdk_stimulus_presentations,
 
 def _test_add_rewards_each_flash(stimulus_onsets_df,
                               rewards_df, 
-                              expected_stimulus_df_with_rewards_and_rewards):
-    stimulus_onsets_df = esp.add_rewards_each_flash(stimulus_onsets_df, rewards_df)
+                              expected_stimulus_df_with_licks_and_rewards):
+    rewards_each_flash = esp.rewards_each_flash(stimulus_onsets_df, rewards_df)
 
     for ind_row in range(len(stimulus_onsets_df)):
-        left = stimulus_onsets_df.iloc[ind_row]['rewards']
-        right = expected_stimulus_df_with_rewards_and_rewards.iloc[ind_row]['rewards']
+        left = rewards_each_flash.iloc[ind_row]
+        right = expected_stimulus_df_with_licks_and_rewards.iloc[ind_row]['rewards']
         assert len(left) == len(right)
         if len(left)>0:
             np.testing.assert_array_equal(left, right)
@@ -96,12 +96,12 @@ def _test_add_rewards_each_flash(stimulus_onsets_df,
 
 def test_add_rewards_each_flash_mock(stimulus_onsets_df,
                                    mock_rewards_df, 
-                                   expected_stimulus_df_with_rewards_and_rewards):
+                                   expected_stimulus_df_with_licks_and_rewards):
     '''
     Tests that adding rewards each flash works with small mock dataframes
     '''
     _test_add_rewards_each_flash(stimulus_onsets_df, mock_rewards_df,
-                               expected_stimulus_df_with_rewards_and_rewards)
+                               expected_stimulus_df_with_licks_and_rewards)
 
 @pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
 def test_add_rewards_each_flash_sfn(sfn_sdk_stimulus_presentations,
