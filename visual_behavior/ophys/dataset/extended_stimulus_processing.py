@@ -1,23 +1,36 @@
 import numpy as np
 import pandas as pd
 import logging
+from functools import partial
 
 logger = logging.getLogger(__name__)
 
 
-def time_from_last(flash_times, other_times):
+def time_from_last(timestamps, event_times):
+    '''
+    For each timestamp, returns the time from the most recent other time (in event_times)
 
-    last_other_index = np.searchsorted(a=other_times, v=flash_times, side='right') - 1
-    time_from_last_other = flash_times - other_times[last_other_index]
+    Args:
+        timestamps (np.array): array of timestamps for which the 'time from last event' will be returned
+        event_times (np.array): event timestamps
+    Returns
+        time_from_last_event (np.array): the time from the last event for each timestamp
+
+    '''
+    last_event_index = np.searchsorted(a=event_times, v=timestamps, side='right') - 1
+    time_from_last_event = timestamps - event_times[last_event_index]
 
     # flashes that happened before the other thing happened should return nan
-    time_from_last_other[last_other_index == -1] = np.nan
+    time_from_last_event[last_event_index == -1] = np.nan
 
-    return time_from_last_other
+    return time_from_last_event
 
 
-def trace_average(values, timestamps, start_time, stop_time):
+def apply_to_window(values, timestamps, start_time, stop_time, func):
+    '''
+    Apply a function to an array of values that fall within a time window. 
 
+    '''
     if len(values) != len(timestamps):
         raise ValueError('values and timestamps must be the same length')
     if np.any(np.diff(timestamps) <= 0):
@@ -28,38 +41,48 @@ def trace_average(values, timestamps, start_time, stop_time):
         raise ValueError('stop time must be within range of timestamps')
 
     values_this_range = values[((timestamps >= start_time) & (timestamps < stop_time))]
-    return values_this_range.mean()
+    return func(values_this_range)
 
 
-def find_change(image_index, omitted_index):
+# Applying np.mean to values in the window is what we usually want to do.
+trace_average = partial(apply_to_window, func=np.mean)
+
+
+def find_change(image_index, omitted_index=None):
     '''
+    Get a boolean indicating whether each flash was a change flash.
     Args:
         image_index (pd.Series): The index of the presented image for each flash
         omitted_index (int): The index value for omitted stimuli
     Returns:
         change (np.array of bool): Whether each flash was a change flash
     '''
-
     change = np.diff(image_index) != 0
     change = np.concatenate([np.array([False]), change])  # First flash not a change
-    omitted = image_index == omitted_index
-    omitted_inds = np.flatnonzero(omitted)
-    change[omitted_inds] = False
-
-    if image_index.iloc[-1] == omitted_index:
-        # If the last flash is omitted we can't set the +1 for that omitted idx
-        change[omitted_inds[:-1] + 1] = False
-    else:
-        change[omitted_inds + 1] = False
-
+    if omitted_index is not None:
+        omitted = image_index == omitted_index
+        omitted_inds = np.flatnonzero(omitted)
+        change[omitted_inds] = False
+        if image_index.iloc[-1] == omitted_index:
+            # If the last flash is omitted we can't set the +1 for that omitted idx
+            change[omitted_inds[:-1] + 1] = False
+        else:
+            change[omitted_inds + 1] = False
     return change
 
 
 def get_omitted_index(stimulus_presentations_df):
+    '''
+    Get the image index for omitted stimuli
+    Args:
+        stimulus_presentations_df (pd.DataFrame): dataframe containting 'image_name' and 'image_index' columns
+    Returns:
+        omitted_index (int): index corresponding to stimulus with name 'omitted'
+    '''
     if 'omitted' in stimulus_presentations_df['image_name'].unique():
-        omitted_index = stimulus_presentations_df.groupby("image_name").apply(
-            lambda group: group["image_index"].unique()[0]
-        )["omitted"]
+        omitted_indices = stimulus_presentations_df.query('image_name == "omitted"')['image_index'].values
+        assert len(omitted_indices)==1
+        omitted_index = omitted_indices[0]
     else:
         omitted_index = None
     return omitted_index
@@ -68,7 +91,8 @@ def get_omitted_index(stimulus_presentations_df):
 def mean_running_speed(stimulus_presentations_df, running_speed_df,
                        range_relative_to_stimulus_start=[0, 0.25]):
     '''
-    Append a column to stimulus_presentations which contains the mean running speed between
+    Append a column to stimulus_presentations which contains the mean running speed in a range relative to 
+    the stimulus start time. 
 
     Args:
         stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations.
@@ -78,7 +102,7 @@ def mean_running_speed(stimulus_presentations_df, running_speed_df,
         range_relative_to_stimulus_start (list with 2 elements): start and end of the range
             relative to the start of each stimulus to average the running speed.
     Returns:
-        stimulus_presentations_df (pd.DataFrame): Same as the input, but with 'mean_running_speed'
+        flash_running_speed (pd.Series): mean running speed for each stimulus presentation.
     '''
     flash_running_speed = stimulus_presentations_df.apply(
         lambda row: trace_average(
@@ -105,7 +129,7 @@ def licks_each_flash(stimulus_presentations_df, licks_df,
         range_relative_to_stimulus_start (list with 2 elements): start and end of the range
             relative to the start of each stimulus to average the running speed.
     Returns:
-        stimulus_presentations_df (pd.DataFrame): Same as the input, but with 'licks' column added
+        licks_each_flash (pd.Series): lick times that fell within the window relative to each stim time
     '''
 
     lick_times = licks_df['timestamps'].values
@@ -135,7 +159,7 @@ def rewards_each_flash(stimulus_presentations_df, rewards_df,
         range_relative_to_stimulus_start (list with 2 elements): start and end of the range
             relative to the start of each stimulus to average the running speed.
     Returns:
-        stimulus_presentations_df (pd.DataFrame): Same as the input, but with 'rewards' column added
+        rewards_each_flash (pd.Series): reward times that fell within the window relative to each stim time
     '''
 
     reward_times = rewards_df['timestamps'].values
@@ -149,8 +173,7 @@ def rewards_each_flash(stimulus_presentations_df, rewards_df,
         ],
         axis=1,
     )
-    stimulus_presentations_df["rewards"] = rewards_each_flash
-    return stimulus_presentations_df
+    return rewards_each_flash
 
 
 def get_block_index(image_index, omitted_index):
