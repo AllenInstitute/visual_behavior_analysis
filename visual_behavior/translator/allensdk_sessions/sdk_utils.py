@@ -159,6 +159,7 @@ def add_stimulus_presentations_analysis(session):
     sa.add_time_from_last_lick_inplace(session)
     sa.add_time_from_last_reward_inplace(session)
     sa.add_time_from_last_change_inplace(session)
+    sa.add_mean_running_speed_inplace(session)
 
 
 def get_filtered_sessions_table(cache, require_cell_matching=False, require_full_container=True, require_exp_pass=True):
