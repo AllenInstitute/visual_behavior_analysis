@@ -9,13 +9,12 @@ CIRCLECI = os.environ.get('PYTHONPATH', '').startswith('/home/circleci')
 
 @pytest.fixture
 @pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
-def sdk_session():
+def sdk_session(tmp_path):
     # Get sdk session from cache
     from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache
     oeid = 880961028
-    cache = BehaviorProjectCache.from_lims(manifest='manifest.json')
+    cache = BehaviorProjectCache.from_lims(manifest=os.path.join(tmp_path, 'manifest.json'))
     session = cache.get_session_data(oeid)
-    os.remove('manifest.json')
     return session
 
 @pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
