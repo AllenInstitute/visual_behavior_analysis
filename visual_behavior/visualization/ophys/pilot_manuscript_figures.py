@@ -20,45 +20,6 @@ from visual_behavior.visualization.utils import save_figure
 
 ### statistics for figures
 
-# def get_stats_for_conditions(df, metric, group, group_names, condition, condition_names):
-#     import scipy.stats as stats
-#     import itertools
-#     df[metric] = pd.to_numeric(df[metric])
-#     df_list = []
-#     for group_name in group_names:
-#         data = df[(df[group]==group_name)]
-#         data = data[data[condition].isnull()==False]
-#         cre_line = data.cre_line.unique()[0].split('-')[0]
-#         # get rid of NaNs
-#         condition_values = []
-#         for condition_name in condition_names:
-#             t = data[(data[condition]==condition_name)][metric].values
-#             t = [val for val in t if np.isnan(val)==False]
-#             condition_values.append(t)
-#         # ANOVA to test for overall effect
-#         if len(condition_names) == 2:
-#             group_f_stat, group_p_value = stats.f_oneway(condition_values[0], condition_values[1])
-#         elif len(condition_names) == 4:
-#             group_f_stat, group_p_value = stats.f_oneway(condition_values[0], condition_values[1], condition_values[2], condition_values[3])
-#         # Welch's t-test for all combinations within a group (does not assume equal variance or sample size)
-#         pairs = itertools.combinations(condition_names, 2)
-#         n_pairs = sum(1 for p in itertools.combinations(condition_names, 2))
-#         for pair in pairs:
-#             cond1_values = data[(data[condition]==pair[0])&(data[metric].isnull()==False)][metric].values
-#             cond2_values = data[(data[condition]==pair[1])&(data[metric].isnull()==False)][metric].values
-#             t_stat, p_value = stats.ttest_ind(cond1_values, cond2_values, equal_var=False)
-#             # consider scipy.stats.mannwhitneyu as non-parametric test
-#             # Bonferroni correction for multiple comparisons
-#             corrected_p_value = p_value*(n_pairs)
-#             rounded_p_value = np.round(corrected_p_value, 6)
-#             significant = [True if corrected_p_value <= 0.05 else False]
-#             df_list.append([cre_line, metric, group_name, group_f_stat, group_p_value, condition, pair[0], pair[1],
-#                             t_stat, p_value, corrected_p_value, rounded_p_value, significant[0]])
-#     columns = ['cre_line' ,'metric', 'group', 'group_f_stat', 'group_p_value', 'condition' ,'condition1', 'condition2',
-#                't_stat', 'p_value', 'corrected_p_value', 'rounded_p_value', 'significant']
-#     stats_df = pd.DataFrame(data=df_list, columns=columns)
-#     return stats_df
-
 def get_stats_for_conditions(df, metric, sample_type, group, group_names, condition, condition_names):
     import scipy.stats as stats
     import itertools
@@ -632,7 +593,7 @@ def plot_hist_for_areas(df, metric, hist_ranges=[(-1, 1), (-1, 1)], xlabel=None,
 ### cumulative distributions
 
 def plot_cdf_for_condition(df, metric, condition='image_set', condition_values=['A', 'B', 'C', 'D'],
-                           colors=sns.color_palette(), show_stats=True,
+                           colors=sns.color_palette(), show_stats=True, ylabel='fraction of cells',
                            cre_line=None, cdf_range=(0, 1), show_legend=True, ax=None, save_figures=False,
                            save_dir=None, folder=None):
     if ax is None:
@@ -640,7 +601,7 @@ def plot_cdf_for_condition(df, metric, condition='image_set', condition_values=[
         fig, ax = plt.subplots(figsize=figsize)
     ax.set_title(cre_line)
     ax.set_xlabel(metric)
-    ax.set_ylabel('fraction of cells')
+    ax.set_ylabel(ylabel)
     ax.set_xlim(cdf_range)
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
@@ -702,8 +663,8 @@ def plot_cdf_for_condition(df, metric, condition='image_set', condition_values=[
     return ax
 
 
-def plot_cdf_for_image_sets(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None, show_legend=True, show_stats=True,
-                            save_figures=False, save_dir=None, folder=None):
+def plot_cdf_for_image_sets(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None, ylabel='fraction of cells',
+                            show_legend=True, show_stats=True, save_figures=False, save_dir=None, folder=None):
     condition = 'image_set'
     condition_values = ut.get_image_sets(df)
     colors = ut.get_colors_for_image_sets()
@@ -714,7 +675,7 @@ def plot_cdf_for_image_sets(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=None
     for i, cre_line in enumerate(cre_lines):
         tmp = df[df.cre_line == cre_line].copy()
         ax[i] = plot_cdf_for_condition(tmp, metric, condition, condition_values, colors=colors, cre_line=cre_line,
-                                       show_stats=show_stats,
+                                       show_stats=show_stats, ylabel=ylabel,
                                        cdf_range=cdf_ranges[i], ax=ax[i], save_figures=False, save_dir=save_dir,
                                        folder=folder)
 
@@ -1199,7 +1160,6 @@ def generate_figures_for_session_metric_areas(session_summary_df, metric, range=
 
 ### heatmaps
 
-
 def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, folder=None, use_events=False,
                               colorbar=True, horizontal_legend=False, include_omitted=False):
     image_set = df.image_set.unique()[0]
@@ -1207,7 +1167,7 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
     if 'image_name' in df.keys():
         image_name = 'image_name'
         suffix = '_flashes'
-        if ('omitted' in df.image_name.unique()) and (include_omitted == False):
+        if ('omitted' in df.image_name.unique()) and (include_omitted is False):
             df = df[df.image_name != 'omitted']
     else:
         image_name = 'change_image_name'
@@ -1295,7 +1255,7 @@ def plot_response_across_conditions_population(df, condition='image_set', condit
 
     if plot_flashes:
         ax = psf.plot_flashes_on_trace(ax, flashes=True, alpha=0.3, window=window, omitted=omitted, frame_rate=frame_rate)
-    xticks, xticklabels = sf.get_xticks_xticklabels(trace, frame_rate, interval_sec=interval_sec, window=window)
+        xticks, xticklabels = sf.get_xticks_xticklabels(trace, frame_rate, interval_sec=interval_sec, window=window)
     ax.set_xticks(xticks)
     if interval_sec >= 1:
         ax.set_xticklabels([int(x) for x in xticklabels])
