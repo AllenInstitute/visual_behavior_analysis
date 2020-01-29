@@ -214,3 +214,20 @@ def add_time_from_last_change_inplace(session):
     change_times = session.stimulus_presentations.query('change')['start_time'].values
     time_from_last_change = esp.time_from_last(flash_times, change_times)
     session.stimulus_presentations["time_from_last_change"] = time_from_last_change
+
+
+def filter_invalid_rois_inplace(session):
+    '''
+    Remove invalid ROIs from the cell specimen table, dff_traces, and corrected_fluorescence_traces.
+
+    Args:
+        session (allensdk.brain_observatory.behavior_ophys_session.BehaviorOphysSession): The session to filter.
+
+    Returns nothing, modifies the session object inplace.
+    '''
+    invalid_cell_specimen_ids = session.cell_specimen_table.query('valid_roi == False').index.values
+
+    # Drop stuff
+    session.dff_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
+    session.corrected_fluorescence_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
+    session.cell_specimen_table.drop(index=invalid_cell_specimen_ids, inplace=True)
