@@ -181,6 +181,10 @@ def get_block_index(image_index, omitted_index):
     A block is defined as a continuous epoch of presentation of the same stimulus.
     This func gets the block index for each stimulus presentation.
 
+    e.g.:
+    block_index:  |     0     |        1      |        2      |    3  ... 
+    stim ID:      |1| |1| |1| |2| |2| |2| |2| |3| |3| |3| |3| |1| |1| ...
+
     Args:
         image_index (np.array): Index of image for each stimulus presentation
         omitted_index (int): Index of omitted stimuli
@@ -204,6 +208,10 @@ def get_block_repetition_number(image_index, omitted_index):
     For each image block, is this the first time the image has been presented? second? etc.
     This function gets the repetition number (0 for first block of an image, 1 for second block..)
     for each stimulus presentation.
+
+    e.g.:
+    block_repetition_number:  |     0     |        0      |        0      |    1      |    1  ...
+    stim ID:                  |1| |1| |1| |2| |2| |2| |2| |3| |3| |3| |3| |1| |1| |1| |3| |3| ...
 
     Args:
         image_index (np.array): Index of image for each stimulus presentation
@@ -234,6 +242,10 @@ def get_repeat_within_block(image_index, omitted_index):
     '''
     Within each block, what repetition of the stimulus is this (0 = change flash)
     Returns NaN for omitted flashes
+
+        e.g.:
+    repeat_within_block:   0   1   2   0   1  NaN  2   0   1   2   3   0   1
+    stim ID:              |1| |1| |1| |2| |2|     |2| |3| |3| |3| |3| |1| |1| ...
 
     Args:
         image_index (np.array): Index of image for each stimulus presentation
