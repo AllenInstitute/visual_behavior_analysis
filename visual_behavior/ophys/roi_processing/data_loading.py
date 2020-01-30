@@ -22,12 +22,12 @@ get_lims_data = convert.get_lims_data
 ######### EXPERIMENT & CONTAINER BASICS
 
 
-def get_lims_experiment_info(experiment_id):
+def get_lims_experiment_info(experiment_id):   
     """uses an sqlite query to retrieve data from the lims2 database
     
     Arguments:
         experiment_id {[type]} -- [description]
-    
+
     Returns:
         table -- table with the following columns:
                     "experiment_id":
@@ -172,7 +172,7 @@ def get_lims_cell_segmentation_run_info(experiment_id):
             updated_at{timestamp}:
     """
     mixin = PostgresQueryMixin()
-    query ='''
+    query = '''
     select *
     FROM ophys_cell_segmentation_runs
     WHERE ophys_experiment_id = {} '''.format(experiment_id)
