@@ -334,24 +334,25 @@ def annotate_epochs(trials, epoch_length=5.0, adjust_first_trial=True):
     io.load_trials
     """
 
-    if adjust_first_trial:
-        trials['change_time_epoch_adjusted'] = trials['change_time'] - trials['starttime'].min()
-    else:
-        trials['change_time_epoch_adjusted'] = trials['change_time']
+    assert trials.index.is_unique, "input dataframe must have unique indices"
 
-    epoch = (
-        trials['change_time_epoch_adjusted']
-        .map(lambda x: x / (60.0 * epoch_length))
-        .map(np.floor)
-        .map(lambda x: x * epoch_length)
-        # .map(lambda x: "{:0.1f} min".format(x))
-    )
-    epoch = (
-        epoch
-        .fillna(method='ffill')
-        .fillna(method='bfill')
-    )
-    trials['epoch'] = epoch
+    for uuid in trials.behavior_session_uuid.unique():
+        df_slice = trials.query('behavior_session_uuid == @uuid')
+        indices = df_slice.index
+
+        if adjust_first_trial:
+            trials.loc[indices,'start_time_epoch_adjusted'] = df_slice['starttime'] - df_slice['starttime'].min()
+        else:
+            trials[indices,'start_time_epoch_adjusted'] = df_slice['starttime']
+
+        epoch = (
+            trials.loc[indices,'start_time_epoch_adjusted']
+            .map(lambda x: x / (60.0 * epoch_length))
+            .map(np.floor)
+            .map(lambda x: x * epoch_length)
+            # .map(lambda x: "{:0.1f} min".format(x))
+        )
+        trials.loc[indices,'epoch'] = epoch
 
 
 @inplace
