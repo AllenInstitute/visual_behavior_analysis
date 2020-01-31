@@ -76,7 +76,10 @@ def get_lims_experiment_info(experiment_id):
     return lims_experiment_info
 
 
+
+
 ####### CONTAINER ####### # NOQA: E402
+
 
 def get_lims_container_info(container_id):
     """"uses an sqlite query to retrieve data from the lims2 database
@@ -132,6 +135,8 @@ def get_lims_container_info(container_id):
     return lims_container_info
 
 
+
+
 ####### SEGMENTATION ####### # NOQA: E402
 
 
@@ -170,6 +175,8 @@ def get_lims_cell_segmentation_run_info(experiment_id):
     FROM ophys_cell_segmentation_runs
     WHERE ophys_experiment_id = {} '''.format(experiment_id)
     return mixin.select(query)
+
+
 
 
 ####### ROI INFORMATION ####### # NOQA: E402
@@ -313,6 +320,8 @@ def gen_roi_exclusion_labels_lists(experiment_id):
     return exclusion_list_per_invalid_roi
 
 
+
+
 ################  FROM LIMS WELL KNOWN FILES  ################ # NOQA: E402
 
 
@@ -439,6 +448,8 @@ def clean_objectlist_col_labels(objectlist_dataframe):
     return objectlist_dataframe
 
 
+
+
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
 
 
@@ -458,6 +469,8 @@ def get_stage_name_from_mtrain_sqldb(df_with_foraging_id):
     df_with_foraging_id = df_with_foraging_id.merge(mtrain_response, on='foraging_id', how='left')
     df_with_foraging_id = df_with_foraging_id.rename(columns={"stage_name_x": "stage_name_lims", "stage_name_y": "stage_name_mtrain"})
     return df_with_foraging_id
+
+
 
 
 ################  FROM SDK  ################ # NOQA: E402

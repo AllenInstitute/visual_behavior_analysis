@@ -5,7 +5,7 @@ import numpy as np
 import itertools
 
 
-# USING A MANIFEST
+
 
 
 def get_number_exps_rois_matched(dataframe, length_check=False):
@@ -39,7 +39,7 @@ def get_number_exps_rois_matched(dataframe, length_check=False):
 
 
 def get_number_total_matches(dataframe, length_check=False):
-    input_length = len(dataframe)
+    # input_length = len(dataframe)
     total_matches = dataframe["cell_specimen_id"].value_counts().to_frame().reset_index()
     total_matches = total_matches.rename(columns={"index": "cell_specimen_id", "cell_specimen_id": "total_matches"})
     dataframe = pd.merge(dataframe, total_matches, how="left", on="cell_specimen_id")
@@ -62,7 +62,7 @@ def remove_unmatched_rois(dataframe, total_or_valid="valid"):
     if total_or_valid == "valid":
         matched_dataframe = dataframe.loc[dataframe["valid_matches"] > 1]
     elif total_or_valid == "total":
-        matched_dataframe = dataframe.loc[total_matches["valid_matches"] > 1]
+        matched_dataframe = dataframe.loc[dataframe["valid_matches"] > 1]
     else:
         print("please enter 'total' or 'valid' for total_or_valid")
     return matched_dataframe
@@ -261,7 +261,7 @@ def gen_experiment_pair_morph_metrics(container_id, include_failed_rois=False):
 
     experiment_pairs = get_matched_cells_experiment_pairs_df(matched_roi_morphology_metrics_df)
     exp_pair_morph_metrics = get_cell_matched_exp_pairs_morph_metrics(matched_roi_morphology_metrics_df, experiment_pairs)
-    morph_metrics_pairs = get_cell_matched_exp_pairs_morph_metrics(matched_roi_morphology_metrics_df, experiment_pairs)
+    # morph_metrics_pairs = get_cell_matched_exp_pairs_morph_metrics(matched_roi_morphology_metrics_df, experiment_pairs)
     exp_pair_morph_metrics.loc[:, "container_id"] = container_id
     return exp_pair_morph_metrics
 

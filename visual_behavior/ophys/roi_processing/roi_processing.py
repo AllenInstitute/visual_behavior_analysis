@@ -4,7 +4,7 @@ import visual_behavior.ophys.roi_processing.data_loading as load
 import pandas as pd
 import numpy as np
 
-######################## EXPERIMENT LEVEL INFORMATION ##############
+####### EXPERIMENT ####### # NOQA: E402
 
 
 def experiment_info_df(experiment_id):
@@ -121,7 +121,9 @@ def roi_metrics_for_experiment_list(experiment_list, include_failed_rois=True):
     return master_df
 
 
-######################## CONTAINER LEVEL INFORMATION ##############
+
+
+####### CONTAINER ####### # NOQA: E402
 
 
 def gen_container_manifest(container_id,
@@ -222,7 +224,10 @@ def for_manifest_get_container_roi_metrics(manifest, container_id):
     return container_roi_metrics_df
 
 
-######################## ROI LEVEL INFORMATION ##############
+
+
+####### ROI INFORMATION ####### # NOQA: E402
+
 
 def get_transparent_roi_FOV_mask(experiment_id, roi_id, id_type=False):
     if id_type == False:
@@ -354,7 +359,11 @@ def multi_roi_mask_from_df(roi_metrics_df, roi_id_list, mask_type="binary"):
         print("please specify 'bool' or 'binary' for mask_type")
 
 
-######################## UTILITIES FUNCTIONS ##############
+
+
+####### UTILS ####### # NOQA: E402
+
+
 def get_6digit_mouse_id(lims_container_info_df):
     mouse_id = lims_container_info_df["mouse_info"][0][-6:]
     mouse_id = int(mouse_id)
@@ -369,7 +378,6 @@ def full_geno(lims_container_info_df):
 
 
 def calc_retake_number(lims_container_info_df, stage_name_source="mtrain"):
-
     # using the stage name from LIMS database or mtrain? LIMS DB needs updating to be accurate 9/24/19
     if stage_name_source == "mtrain":
         stage_name_column = "stage_name_mtrain"
