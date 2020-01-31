@@ -224,9 +224,10 @@ def get_block_repetition_number(image_index, omitted_index):
     temp_df = pd.DataFrame({'image_index': image_index, 'block_index': block_inds})
 
     # For each image, what are the block inds where it was presented?
-    blocks_per_image = temp_df.groupby("image_index").apply(
-        lambda group: np.unique(group["block_index"])
-    )
+    blocks_per_image = []
+    for idx,row in temp_df.iterrows():
+        blocks_per_image.append(temp_df.query('image_index == {}'.format(row['image_index']))['block_index'].unique())
+    blocks_per_image = pd.Series(blocks_per_image)
 
     # Go through each image, then enum the blocks where it was presented and return the rep
     block_repetition_number = np.empty(block_inds.shape)
