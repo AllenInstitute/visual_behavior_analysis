@@ -238,8 +238,8 @@ def mock_trials_fixture():
     for k, v in metadata.items():
         trials[k] = v
 
-    trials.loc[0,'starttime'] = 0
-    
+    trials.loc[0, 'starttime'] = 0
+
     return trials
 
 
