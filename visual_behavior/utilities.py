@@ -365,7 +365,7 @@ class Movie(object):
 
 
 def get_sync_data(sync_path):
-    
+
     sync_data = Dataset(sync_path)
 
     sample_freq = sync_data.meta_data['ni_daq']['counter_output_freq']
