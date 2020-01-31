@@ -211,7 +211,7 @@ def mock_trials_fixture():
     trials['auto_rewarded'] = False
     trials['lick_times'] = [[] for row in trials.iterrows()]
     trials['lick_frames'] = [[] for row in trials.iterrows()]
-    trials['starttime'] = 0
+    trials['starttime'] = trials['change_time']
     trials['number_of_rewards'] = 0
     trials['trial_length'] = 8.5
     trials['reward_times'] = trials.apply(lambda r: [r['change_time'] + 0.2] if r['change'] * r['detect'] else [], axis=1)
@@ -237,6 +237,9 @@ def mock_trials_fixture():
 
     for k, v in metadata.items():
         trials[k] = v
+
+    trials.loc[0,'starttime'] = 0
+    
     return trials
 
 
