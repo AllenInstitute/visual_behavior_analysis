@@ -14,7 +14,7 @@ def plot_running_speed(oeid, width=11, height=2, ax=None):
     Keyword Arguments:
         width {int} -- figure width if creating new (default: {11})
         height {int} -- figure height if creating new (default: {2})
-        ax {[type]} -- axis to plot on. Will create new if none is passed (default: {None})
+        ax {matplotlib figure axis} -- axis to plot on. Will create new if none is passed (default: {None})
 
     Returns:
         matplotlib figure axis -- ax
