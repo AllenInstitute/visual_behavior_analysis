@@ -8,7 +8,7 @@ import os
 
 
 get_psql_dict_cursor = convert.get_psql_dict_cursor #to load well-known files
-
+config = configp.ConfigParser()
 
 
 
@@ -165,7 +165,7 @@ def get_timeseries_ini_wkf_info(lims_session_id):
         lims_session_id {int} -- 9 digit lims_session_id
 
     Returns:
-        list -- nested list with 
+        list -- nested list with
     """
 
     QUERY = '''
@@ -189,19 +189,27 @@ def get_timeseries_ini_wkf_info(lims_session_id):
 
 def get_timeseries_ini_location(lims_session_id):
     """use SQL and the LIMS well known file system to get info for the timeseries_XYT.ini file
-        for a given ophys session, and then parses that information to get the filepath 
-    
+        for a given ophys session, and then parses that information to get the filepath
+
     Arguments:
         llims_session_id {int} -- 9 digit lims_session_id
-    
+
     Returns:
         filepath -- [description]
     """
     timeseries_ini_wkf_info = get_timeseries_ini_wkf_info(lims_session_id)
-    timeseries_ini_path = timeseries_ini_loc[0]['?column?'] #idk why it's ?column? but it is :(
+    timeseries_ini_path = timeseries_ini_wkf_info[0]['?column?'] #idk why it's ?column? but it is :(
     timeseries_ini_path = timeseries_ini_path.replace('/allen', '//allen')  # works with windows and linux filepaths
     return timeseries_ini_path
 
 
-# def load_timeseries_ini_file(lims_session_id):
-#     timeseries_ini_path = get_timeseries_ini_location(lims_session_id)
+def pmt_gain_from_timeseries_ini(timeseries_ini_path):
+    config.read(timeseries_ini_path)
+    pmt_gain = int(float(config['_']['PMT.2']))
+    return pmt_gain
+
+
+def get_pmt_gain_for_session(lims_session_id):
+    timeseries_ini_path = get_timeseries_ini_location(lims_session_id)
+    pmt_gain = pmt_gain_from_timeseries_ini(timeseries_ini_path)
+    return pmt_gain
