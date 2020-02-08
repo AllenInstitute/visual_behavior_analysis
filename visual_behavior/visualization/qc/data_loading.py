@@ -213,3 +213,6 @@ def get_pmt_gain_for_session(lims_session_id):
     timeseries_ini_path = get_timeseries_ini_location(lims_session_id)
     pmt_gain = pmt_gain_from_timeseries_ini(timeseries_ini_path)
     return pmt_gain
+
+# def get_pmt_gain_for_container(container_id):
+
