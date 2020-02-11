@@ -27,6 +27,7 @@ def get_lims_experiment_info(experiment_id):
         table -- table with the following columns:
                     "experiment_id":
                     "workflow_state":
+                    "ophys_session_id":
                     "container_id":
                     "date_of_acquisition":
                     "stage_name":
@@ -46,6 +47,7 @@ def get_lims_experiment_info(experiment_id):
 
     oe.id as experiment_id,
     oe.workflow_state,
+    oe.ophys_session_id,
 
     container.visual_behavior_experiment_container_id as container_id,
 
@@ -91,6 +93,7 @@ def get_lims_container_info(container_id):
        table -- table with the following columns:
                     "container_id":
                     "ophys_experiment_id":
+                    "ophys_session_id":
                     "stage_name":
                     "foraging_id":
                     "workflow_state":
@@ -109,6 +112,7 @@ def get_lims_container_info(container_id):
     SELECT
     container.visual_behavior_experiment_container_id as container_id,
     oe.id as ophys_experiment_id,
+    oe.ophys_session_id,
     os.stimulus_name as stage_name,
     os.foraging_id,
     oe.workflow_state,
