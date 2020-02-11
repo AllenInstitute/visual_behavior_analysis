@@ -162,7 +162,7 @@ def add_stimulus_presentations_analysis(session):
     sa.add_mean_running_speed_inplace(session)
 
 
-def get_filtered_sessions_table(cache, require_cell_matching=False, require_full_container=True, require_exp_pass=True):
+def get_filtered_sessions_table(cache, require_cell_matching=False, require_full_container=True, require_exp_pass=True, include_multiscope=False):
     '''
         Applies some filters to the ophys_sessions_table. It will always filter out all sessions that do not have
         project codes of 'VisualBehavior' or 'VisualBehaviorTask1B'. This currently removes all Mesoscope sessions.
@@ -180,6 +180,8 @@ def get_filtered_sessions_table(cache, require_cell_matching=False, require_full
             require_full_container      If True, returns sessions from containers with container_workflow_state of "container_qc" or "completed"
                                         Unless require_exp_pass is True, it will return failed sessions within that container
             require_exp_pass            if True, returns sessions with experiment_workflow_state = passed
+            include_multiscope          if True, returns sessions under project codes VisualBehaviorMultiScope and
+                                        VisualBehaviorMultiscope4areasx2d in addition to VisualBehavior and VisualBehaviorTask1b
 
         RETURNS
             The ophys_sessions_table filtered by the constraints above.
@@ -201,7 +203,11 @@ def get_filtered_sessions_table(cache, require_cell_matching=False, require_full
     ophys_sessions['in_bsession_table'] = session_in_bsession_table
 
     # Check Project Code
-    good_code = ophys_sessions['project_code'].isin(['VisualBehavior', 'VisualBehaviorTask1B'])
+    if include_multiscope:
+        good_code = ophys_sessions['project_code'].isin(['VisualBehavior', 'VisualBehaviorTask1B',
+                                                         'VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d'])
+    else:
+        good_code = ophys_sessions['project_code'].isin(['VisualBehavior', 'VisualBehaviorTask1B'])
     ophys_sessions['good_project_code'] = good_code
 
     # Check Session Type
