@@ -26,6 +26,7 @@ def get_lims_experiment_info(experiment_id):
     Returns:
         table -- table with the following columns:
                     "experiment_id":
+                    "session_id":
                     "workflow_state":
                     "container_id":
                     "date_of_acquisition":
@@ -46,6 +47,7 @@ def get_lims_experiment_info(experiment_id):
 
     oe.id as experiment_id,
     oe.workflow_state,
+    oe.ophys_session_id as session_id,
 
     container.visual_behavior_experiment_container_id as container_id,
 
@@ -75,6 +77,43 @@ def get_lims_experiment_info(experiment_id):
 
     return lims_experiment_info
 
+
+
+
+####### SESSION ####### # NOQA: E402
+# def get_lims_session_info(session_id):
+#     session_id = int(session_id)
+
+#     mixin = PostgresQueryMixin()
+#     # build query
+#     query = '''
+#     SELECT
+#     container.visual_behavior_experiment_container_id as container_id,
+#     oe.id as ophys_experiment_id,
+#     os.stimulus_name as stage_name,
+#     os.foraging_id,
+#     oe.workflow_state,
+#     specimens.name as mouse_info,
+#     specimens.donor_id as mouse_donor_id,
+#     structures.acronym as targeted_structure,
+#     imaging_depths.depth,
+#     equipment.name as rig,
+#     os.date_of_acquisition
+
+#     FROM
+#     ophys_experiments_visual_behavior_experiment_containers container
+#     join ophys_experiments oe on oe.id = container.ophys_experiment_id
+#     join ophys_sessions os on os.id = oe.ophys_session_id
+#     join structures on structures.id = oe.targeted_structure_id
+#     join imaging_depths on imaging_depths.id = oe.imaging_depth_id
+#     join specimens on specimens.id = os.specimen_id
+#     join equipment on equipment.id = os.equipment_id
+
+#     where
+#     container.visual_behavior_experiment_container_id ={}'''.format(session_id)
+
+#     lims_session_info = mixin.select(query)
+#     return lims_session_info
 
 
 
@@ -452,10 +491,12 @@ def clean_objectlist_col_labels(objectlist_dataframe):
 
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
 
+# def get_mtrain_stagename_for_session():
+
 
 def get_stage_name_from_mtrain_sqldb(df_with_foraging_id):
     foraging_ids = df_with_foraging_id['foraging_id'][~pd.isnull(df_with_foraging_id['foraging_id'])]
-    mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="mtrainro", port=5432)
+    mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="r0mTr@!n", port=5432)
     query = """
             SELECT
             stages.name as stage_name,
@@ -486,7 +527,7 @@ def get_session_from_sdk(experiment_id):
         session object -- session object from SDK
     """
     api = BehaviorOphysLimsApi(experiment_id)
-    session = BehaviorOphysSession(api, filter_invalid_rois=False)
+    session = BehaviorOphysSession(api)
     return session
 
 

@@ -5,9 +5,6 @@ import numpy as np
 import itertools
 
 
-
-
-
 def get_number_exps_rois_matched(dataframe, length_check=False):
     """Input dataframe must have columns: "cell_specimen_id" and "valid_roi". Outputs columns for total number of matches found
     and total valid matches found (number of matches where the cell_specimen_id is valid)

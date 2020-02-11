@@ -11,7 +11,6 @@ exclusion_labels_list = ["apical_dendrite", "bad_shape", "boundary", "demix_erro
 roi_id_types_list = ["cell_specimen_id", "cell_roi_id"]
 
 
-
 ####### EXPERIMENT ####### # NOQA: E402
 
 
@@ -223,8 +222,6 @@ def gen_label_masks_df(experiment_id, print_lab=False):
         df = pd.DataFrame({"label": [lab], "multi_roi_mask": [label_mask]})
         mask_df = mask_df.append(df)
     return mask_df
-
-
 
 
 ####### CONTAINER ####### # NOQA: E402
