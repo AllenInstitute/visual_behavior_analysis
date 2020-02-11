@@ -1,4 +1,5 @@
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
+from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 
@@ -6,7 +7,7 @@ from allensdk.internal.api import PostgresQueryMixin
 
 import configparser as configp  # for parsing scientifica ini files
 import os
-
+import pandas as pd
 
 get_psql_dict_cursor = convert.get_psql_dict_cursor #to load well-known files
 config = configp.ConfigParser()
@@ -373,8 +374,33 @@ def get_pmt_gain_for_session(ophys_session_id):
 # def get_pmt_gain_for_container(container_id):
 
 
-
-
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
 
 mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="mtrainro", port=5432)
+
+def build_container_df():
+    '''
+    build dataframe with one row per container
+    '''
+    manifest_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest.json"
+    cache = bpc.from_lims(manifest=manifest_path)
+
+    table = cache.get_experiment_table().sort_values(by='date_of_acquisition',ascending=False).reset_index()
+
+    table = cache.get_experiment_table().sort_values(by='date_of_acquisition',ascending=False).reset_index()
+    container_ids = table['container_id'].unique()
+    list_of_dicts = []
+    for container_id in container_ids:
+        subset = table.query('container_id == @container_id').sort_values(by='date_of_acquisition',ascending=True).drop_duplicates('ophys_session_id').reset_index()
+        temp_dict = {
+            'container_id':container_id,
+            'container_workflow_state':table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
+            'first_acquistion_date':subset['date_of_acquisition'].min().split(' ')[0],
+        }
+        for idx,row in subset.iterrows():
+            temp_dict .update({'session_{}'.format(idx):row['session_name']})
+            
+
+        list_of_dicts.append(temp_dict)
+
+    return pd.DataFrame(list_of_dicts).sort_values(by='first_acquistion_date',ascending=False)
