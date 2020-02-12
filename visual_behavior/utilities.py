@@ -378,7 +378,7 @@ def get_sync_data(sync_path):
 
 class EyeTrackingData(object):
     def __init__(self, ophys_session_id, data_source='filesystem', filter_outliers=True, filter_blinks=True,
-                 pupil_color=[0, 0, 255], eye_color=[255, 0, 0], cr_color=[0, 255, 0],
+                 pupil_color=[0, 255, 247], eye_color=[255, 107, 66], cr_color=[0, 255, 0],
                  filepaths={}, ellipse_fit_path=None):
 
         # colors of ellipses:
@@ -528,7 +528,7 @@ class EyeTrackingData(object):
 
         return df
 
-    def add_ellipse(self, image, ellipse_fit_row, color=[1, 1, 1], linewidth=3):
+    def add_ellipse(self, image, ellipse_fit_row, color=[1, 1, 1], linewidth=4):
         '''adds an ellipse fit to an eye tracking video frame'''
         if pd.notnull(ellipse_fit_row['center_x'].item()):
             center_coordinates = (
