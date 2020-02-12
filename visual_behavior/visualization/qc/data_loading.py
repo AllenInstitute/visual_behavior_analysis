@@ -188,7 +188,7 @@ def get_sdk_segmentation_mask_image(ophys_experiment_id):
                 visualized via plt.imshow(seg_mask_image)
     """
     session = get_sdk_session_obj(ophys_experiment_id)
-    seg_mask_image = session.segmentation_mask_image
+    seg_mask_image = session.segmentation_mask_image.data
     return seg_mask_image
 
 
