@@ -5,21 +5,15 @@ from visual_behavior.visualization.qc import experiment_plots as ep
 from visual_behavior.visualization.qc import session_plots as sp
 
 
+################  OPHYS  ################ # NOQA: E402
 
 def plot_max_projection_images_for_container(ophys_container_id, save_figure=True):
-    ## function for getting experiment_ids belonging to container
-    ## create figure with sub-axes for each experiment
-    ## loop through experiments
-    ##### load max projection using data_loading.py function
-    ## plot each on axis
-    ## return fig? or save fig?
     ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1,6, figsize=figsize)
     for i,ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
-        ax[i].axis('off')
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id)+'\n'+session_type)
 
@@ -28,8 +22,97 @@ def plot_max_projection_images_for_container(ophys_container_id, save_figure=Tru
                        'container_'+str(ophys_container_id))
 
 
+def plot_average_images_for_container(ophys_container_id, save_figure=True):
+    ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+
+    figsize = (25, 5)
+    fig, ax = plt.subplots(1,6, figsize=figsize)
+    for i,ophys_experiment_id in enumerate(ophys_experiment_ids):
+        ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
+        session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        ax[i].set_title(str(ophys_experiment_id)+'\n'+session_type)
+
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_images',
+                       'container_'+str(ophys_container_id))
+
+def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
+    ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+
+    figsize = (25, 5)
+    fig, ax = plt.subplots(1,6, figsize=figsize)
+    for i,ophys_experiment_id in enumerate(ophys_experiment_ids):
+        ax[i] = ep.plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=ax[i])
+        session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        ax[i].set_title(str(ophys_experiment_id)+'\n'+session_type)
+
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'segmentation_masks',
+                       'container_'+str(ophys_container_id))
 
 
+def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figure=True):
+    ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+
+    figsize = (25, 5)
+    fig, ax = plt.subplots(1,6, figsize=figsize)
+    for i,ophys_experiment_id in enumerate(ophys_experiment_ids):
+        ax[i] = ep.plot_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i])
+        session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        ax[i].set_title(str(ophys_experiment_id)+'\n'+session_type)
+
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'segmentation_mask_overlays',
+                       'container_'+str(ophys_container_id))
+
+def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True):
+    from mpl_toolkits.axes_grid1 import make_axes_locatable
+    ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+
+    figsize = (25, 20)
+    fig, ax = plt.subplots(6,1, figsize=figsize)
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        ax[i] = ep.plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=ax[i])
+        session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        ax[i].set_title(str(ophys_experiment_id) + ' - ' + session_type)
+
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'dff_traces_heatmaps',
+                       'container_' + str(ophys_container_id))
+
+################  BEHAVIOR  ################ # NOQA: E402
+
+def plot_running_speed_for_container(ophys_container_id, save_figure=True):
+    ophys_session_ids = dl.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
+
+    figsize = (25, 15)
+    fig, ax = plt.subplots(6,1, figsize=figsize)
+    for i,ophys_session_id in enumerate(ophys_session_ids):
+        ax[i] = sp.plot_running_speed(ophys_session_id, ax=ax[i])
+        session_type = dl.get_session_type_for_ophys_session_id(ophys_session_id)
+        ax[i].set_title(str(ophys_session_id)+'\n'+session_type)
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'running_speed',
+                       'container_'+str(ophys_container_id))
+
+
+def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
+    ophys_session_ids = dl.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
+
+    figsize = (25, 7)
+    fig, ax = plt.subplots(1,6, figsize=figsize)
+    for i, ophys_session_id in enumerate(ophys_session_ids):
+        ax[i] = sp.plot_lick_raster(ophys_session_id, ax=ax[i])
+        ax[i].invert_yaxis()
+        session_type = dl.get_session_type_for_ophys_session_id(ophys_session_id)
+        ax[i].set_title(str(ophys_session_id)+'\n'+session_type)
+    # plt.gca().invert_yaxis()
+
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'lick_rasters',
+                       'container_'+str(ophys_container_id))
 
 
 
