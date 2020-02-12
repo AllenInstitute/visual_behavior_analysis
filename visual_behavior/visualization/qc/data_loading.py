@@ -4,6 +4,7 @@ from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from visual_behavior.translator.allensdk_sessions import sdk_utils
 import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 
+
 from allensdk.internal.api import PostgresQueryMixin
 import configparser as configp  # for parsing scientifica ini files
 
@@ -129,6 +130,10 @@ def get_session_type_for_ophys_session_id(ophys_session_id):
     session_type = sessions[sessions.ophys_session_id==ophys_session_id].session_type.values[0]
     return session_type
 
+def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id):
+    experiments = get_filtered_ophys_experiment_table()
+    ophys_experiment_id = experiments[(experiments.ophys_session_id == ophys_session_id)].ophys_experiment_id.values[0]
+    return ophys_experiment_id
 
 ################  FROM SDK  ################ # NOQA: E402
 
@@ -208,6 +213,21 @@ def get_sdk_roi_masks(ophys_experiment_id):
     roi_masks = session.get_roi_masks
     return roi_masks
 
+def get_sdk_dff_traces_array(ophys_experiment_id):
+    session = get_sdk_session_obj(ophys_experiment_id)
+    dff_traces = session.dff_traces
+    dff_traces_array = np.vstack(dff_traces.dff.values)
+    return dff_traces_array
+
+def get_sdk_running_speed(ophys_session_id):
+    session = get_sdk_session_obj(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
+    running_speed = session.running_data_df['speed']
+    return running_speed
+
+def get_sdk_trials(ophys_session_id):
+    session = get_sdk_session_obj(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
+    trials = session.trials.reset_index()
+    return trials
 
 
 ################  FROM LIMS DATABASE  ################ # NOQA: E402
