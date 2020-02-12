@@ -243,11 +243,11 @@ def get_filtered_sessions_table(cache, require_cell_matching=False, require_full
     else:
         filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table')
 
-    if require_cell_matching:
-        if not (np.mod(len(filtered), 6) == 0):
-            print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
-    elif require_full_container and require_exp_pass:
-        if not (np.mod(len(filtered), 6) == 0):
-            print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
+    # if require_cell_matching:
+    #     if not (np.mod(len(filtered), 6) == 0):
+    #         print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
+    # elif require_full_container and require_exp_pass:
+    #     if not (np.mod(len(filtered), 6) == 0):
+    #         print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
 
     return filtered
