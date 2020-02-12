@@ -50,8 +50,6 @@ def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
     fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
 
     return fig, axes
-                       'container_'+str(ophys_container_id))
-
 
 def plot_average_images_for_container(ophys_container_id, save_figure=True):
     ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
