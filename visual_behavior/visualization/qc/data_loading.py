@@ -1,13 +1,15 @@
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
+from visual_behavior.translator.allensdk_sessions import sdk_utils
 import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 
 from allensdk.internal.api import PostgresQueryMixin
-
 import configparser as configp  # for parsing scientifica ini files
+
 import os
 import pandas as pd
+import numpy as np
 
 get_psql_dict_cursor = convert.get_psql_dict_cursor #to load well-known files
 config = configp.ConfigParser()
@@ -17,6 +19,115 @@ config = configp.ConfigParser()
 # ophys_session_id
 # behavior_session_id
 # ophys_container_id
+
+
+################  GENERAL STUFF  ################ # NOQA: E402
+
+def get_container_plots_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
+
+def get_session_plots_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
+
+def get_experiment_plots_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+
+
+################  FROM MANIFEST  ################ # NOQA: E402
+
+def get_qc_manifest_path():
+    """Get path to default manifest file for QC"""
+    manifest_path = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest.json"
+    return manifest_path
+
+def get_qc_cache():
+    """Get cache using default QC manifest path"""
+    from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+    cache = bpc.from_lims(manifest=get_qc_manifest_path())
+    return cache
+
+def get_filtered_ophys_sessions_table():
+    """Get ophys sessions that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
+    must be 'complete' or 'container_qc', and experiments associated with the session are passing. In addition,
+    add container_id and container_workflow_state to table.
+
+        Arguments:
+            None
+
+        Returns:
+            filtered_sessions -- filtered version of ophys_session_table from QC cache
+        """
+    cache = get_qc_cache()
+    sessions = sdk_utils.get_filtered_sessions_table(cache)
+    sessions = sessions.reset_index()
+    experiments = cache.get_experiment_table()
+    experiments = experiments.reset_index()
+    filtered_sessions = sessions.merge(experiments[['ophys_session_id', 'container_id', 'container_workflow_state']],
+                              right_on='ophys_session_id', left_on='ophys_session_id')
+    return filtered_sessions
+
+def get_filtered_ophys_experiment_table():
+    """Get ophys experiments that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
+        must be 'complete' or 'container_qc', and experiments are passing
+
+            Arguments:
+                None
+
+            Returns:
+                filtered_experiments -- filtered version of ophys_experiment_table from QC cache
+            """
+    cache = get_qc_cache()
+    experiments = cache.get_experiment_table()
+    experiments = experiments.reset_index()
+    sessions = sdk_utils.get_filtered_sessions_table(cache)
+    filtered_experiment_ids = [expt_id[0] for expt_id in sessions.ophys_experiment_id.values]
+    filtered_experiments = experiments[experiments.ophys_experiment_id.isin(filtered_experiment_ids)]
+    return filtered_experiments
+
+def get_filtered_ophys_container_ids():
+    """Get container_ids that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
+    must be 'complete' or 'container_qc', and experiments associated with the container are passing. """
+    sessions = get_filtered_ophys_sessions_table()
+    filtered_container_ids = np.sort(sessions.container_id.unique())
+    return filtered_container_ids
+
+def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
+    """Get ophys_session_ids belonging to a given ophys_container_id. ophys container must meet the criteria in
+    sdk_utils.get_filtered_sessions_table()
+
+            Arguments:
+                ophys_container_id -- must be in get_filtered_ophys_container_ids()
+
+            Returns:
+                ophys_session_ids -- list of ophys_session_ids that meet filtering criteria
+            """
+    sessions = get_filtered_ophys_sessions_table()
+    ophys_session_ids = np.sort(sessions[(sessions.container_id == ophys_container_id)].ophys_session_id.values)
+    return ophys_session_ids
+
+def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
+    """Get ophys_experiment_ids belonging to a given ophys_container_id. ophys container must meet the criteria in
+        sdk_utils.get_filtered_sessions_table()
+
+                Arguments:
+                    ophys_container_id -- must be in get_filtered_ophys_container_ids()
+
+                Returns:
+                    ophys_experiment_ids -- list of ophys_experiment_ids that meet filtering criteria
+                """
+    experiments = get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_experiment_id.values)
+    return ophys_experiment_ids
+
+def get_session_type_for_ophys_experiment_id(ophys_experiment_id):
+    experiments = get_filtered_ophys_experiment_table()
+    session_type = experiments[experiments.ophys_experiment_id==ophys_experiment_id].session_type.values[0]
+    return session_type
+
+def get_session_type_for_ophys_session_id(ophys_session_id):
+    sessions = get_filtered_ophys_sessions_table()
+    session_type = sessions[sessions.ophys_session_id==ophys_session_id].session_type.values[0]
+    return session_type
 
 
 ################  FROM SDK  ################ # NOQA: E402
