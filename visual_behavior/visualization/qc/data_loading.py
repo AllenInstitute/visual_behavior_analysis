@@ -4,6 +4,7 @@ from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from visual_behavior.translator.allensdk_sessions import sdk_utils
 import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 
+
 from allensdk.internal.api import PostgresQueryMixin
 import configparser as configp  # for parsing scientifica ini files
 
