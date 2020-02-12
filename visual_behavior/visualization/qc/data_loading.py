@@ -119,15 +119,18 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
     ophys_experiment_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_experiment_id.values)
     return ophys_experiment_ids
 
+
 def get_session_type_for_ophys_experiment_id(ophys_experiment_id):
     experiments = get_filtered_ophys_experiment_table()
     session_type = experiments[experiments.ophys_experiment_id==ophys_experiment_id].session_type.values[0]
     return session_type
 
+
 def get_session_type_for_ophys_session_id(ophys_session_id):
     sessions = get_filtered_ophys_sessions_table()
     session_type = sessions[sessions.ophys_session_id==ophys_session_id].session_type.values[0]
     return session_type
+
 
 def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id):
     experiments = get_filtered_ophys_experiment_table()
@@ -238,7 +241,8 @@ def get_sdk_trials(ophys_session_id):
 
 
 def get_lims_experiment_info(ophys_experiment_id):
-    """uses an sqlite query to retrieve data from the lims2 database
+    """uses an sqlite query to retrieve ophys experiment information
+        from the lims2 database
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
@@ -250,7 +254,7 @@ def get_lims_experiment_info(ophys_experiment_id):
                     "ophys_session_id":
                     "container_id":
                     "date_of_acquisition":
-                    "stage_name":
+                    "stage_name_lims":
                     "foraging_id":
                     "mouse_info":
                     "mouse_donor_id":
@@ -272,7 +276,7 @@ def get_lims_experiment_info(ophys_experiment_id):
     container.visual_behavior_experiment_container_id as container_id,
 
     os.date_of_acquisition,
-    os.stimulus_name as stage_name,
+    os.stimulus_name as stage_name_lims,
     os.foraging_id,
     oe.workflow_state,
 
@@ -347,11 +351,16 @@ def get_lims_cell_rois_table(ophys_experiment_id):
 
     Returns:
         dataframe -- returns dataframe with the following columns:
-            id:
-            cell_specimen_id:
+            id: a temporary id assigned before cell matching has occured. Same as cell_roi_id in
+                the objectlist.txt file
+
+            cell_specimen_id: a permanent id that is assigned after cell matching has occured.
+                            this id can be found in multiple experiments in a container if a
+                            cell is matched across experiments.
+                            experiments that fail qc are not assigned cell_specimen_id s
             ophys_experiment_id:
-            x:
-            y:
+            x: roi bounding box min x or "bbox_min_x" in objectlist.txt file
+            y: roi bounding box min y or "bbox_min_y" in objectlist.txt file
             width:
             height:
             valid_roi: boolean(true/false), whether the roi passes or fails roi filtering
@@ -384,7 +393,8 @@ def get_lims_cell_rois_table(ophys_experiment_id):
 
 
 def get_lims_container_info(ophys_container_id):
-    """"uses an sqlite query to retrieve data from the lims2 database
+    """"uses an sqlite query to retrieve container level information
+        from the lims2 database. Each row is an experiment within the container.
 
     Arguments:
         container_id {[type]} -- [description]
@@ -394,7 +404,7 @@ def get_lims_container_info(ophys_container_id):
                     "container_id":
                     "ophys_experiment_id":
                     "ophys_session_id":
-                    "stage_name":
+                    "stage_name_lims":
                     "foraging_id":
                     "workflow_state":
                     "mouse_info":
@@ -413,7 +423,7 @@ def get_lims_container_info(ophys_container_id):
     container.visual_behavior_experiment_container_id as container_id,
     oe.id as ophys_experiment_id,
     oe.ophys_session_id,
-    os.stimulus_name as stage_name,
+    os.stimulus_name as stage_name_lims,
     os.foraging_id,
     oe.workflow_state,
     specimens.name as mouse_info,
@@ -441,7 +451,7 @@ def get_lims_container_info(ophys_container_id):
 
 
 
-################  FROM WELL KNOWN FILE  ################ # NOQA: E402
+################  FROM LIMS WELL KNOWN FILES  ################ # NOQA: E402
 
 
 def get_timeseries_ini_wkf_info(ophys_session_id):
@@ -491,22 +501,66 @@ def get_timeseries_ini_location(ophys_session_id):
 
 
 def pmt_gain_from_timeseries_ini(timeseries_ini_path):
+    """parses the timeseries ini file and extracts the pmt gain setting
+
+    Arguments:
+        timeseries_ini_path {[type]} -- [description]
+
+    Returns:
+        int -- int of the pmt gain
+    """
     config.read(timeseries_ini_path)
     pmt_gain = int(float(config['_']['PMT.2']))
     return pmt_gain
 
 
 def get_pmt_gain_for_session(ophys_session_id):
+    """finds the timeseries ini file for a given ophys session
+        on a Scientifica rig, parses the file and returns the
+        pmt gain setting for that session
+
+    Arguments:
+        ophys_session_id {int} -- [description]
+
+    Returns:
+        int -- pmt gain setting
+    """
     timeseries_ini_path = get_timeseries_ini_location(ophys_session_id)
     pmt_gain = pmt_gain_from_timeseries_ini(timeseries_ini_path)
     return pmt_gain
 
 
-# def get_pmt_gain_for_container(ophys_container_id):
-
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
 
-mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="mtrainro", port=5432)
+mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="r0mTr@!n", port=5432)
+
+def get_mtrain_stage_name(dataframe):
+
+    foraging_ids = dataframe['foraging_id'][~pd.isnull(dataframe['foraging_id'])]
+    query = """
+            SELECT
+            stages.name as stage_name,
+            bs.id as foraging_id
+            FROM behavior_sessions bs
+            LEFT JOIN states ON states.id = bs.state_id
+            LEFT JOIN stages ON stages.id = states.stage_id
+            WHERE bs.id IN ({})
+        """.format(",".join(["'{}'".format(x) for x in foraging_ids]))
+    mtrain_response = pd.read_sql(query, mtrain_api.get_connection())
+    dataframe = dataframe.merge(mtrain_response, on='foraging_id', how='left')
+    dataframe = dataframe.rename(columns={"stage_name": "stage_name_mtrain"})
+    return dataframe
+
+
+
+
+
+
+
+
+
+
+
 
 def build_container_df():
     '''
@@ -527,7 +581,7 @@ def build_container_df():
         }
         for idx,row in subset.iterrows():
             temp_dict.update({'session_{}'.format(idx):row['session_type']})
-            
+
 
         list_of_dicts.append(temp_dict)
 
