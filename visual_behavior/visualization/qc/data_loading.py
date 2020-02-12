@@ -5,6 +5,7 @@ import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api import PostgresQueryMixin
 
 import configparser as configp  # for parsing scientifica ini files
+import pandas as pd
 import os
 
 
@@ -370,7 +371,9 @@ def get_pmt_gain_for_session(ophys_session_id):
     pmt_gain = pmt_gain_from_timeseries_ini(timeseries_ini_path)
     return pmt_gain
 
-# def get_pmt_gain_for_container(container_id):
+
+# def get_pmt_gain_for_container(ophys_container_id):
+
 
 
 
@@ -378,3 +381,34 @@ def get_pmt_gain_for_session(ophys_session_id):
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
 
 mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="mtrainro", port=5432)
+
+def get_mtrain_stage_name(dataframe):
+    """uses the mtrain api from the SDK and a dataframe with the column "foraging_id"
+        to get the stage_name for a ophys session from the mtrain database
+
+    Arguments:
+        dataframe -- a dataframe with the the column "foraging_id"
+
+    Returns:
+        dataframe -- the orgininal dataframe plus the following columns added:
+                    "stage_name_mtrain"
+    """
+    
+    
+    foraging_ids =dataframe['foraging_id'][~pd.isnull(dataframe['foraging_id'])]
+    query = """
+            SELECT
+            stages.name as stage_name,
+            bs.id as foraging_id
+            FROM behavior_sessions bs
+            LEFT JOIN states ON states.id = bs.state_id
+            LEFT JOIN stages ON stages.id = states.stage_id
+            WHERE bs.id IN ({})
+        """.format(",".join(["'{}'".format(x) for x in foraging_ids]))
+    mtrain_response = pd.read_sql(query, mtrain_api.get_connection())
+    dataframe = dataframe.merge(mtrain_response, on='foraging_id', how='left')
+    dataframe = dataframe.rename(columns={"stage_name_x": "stage_name_lims", "stage_name_y": "stage_name_mtrain"})
+    return dataframe
+
+
+
