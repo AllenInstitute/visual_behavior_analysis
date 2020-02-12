@@ -515,9 +515,7 @@ def build_container_df():
     manifest_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest.json"
     cache = bpc.from_lims(manifest=manifest_path)
 
-    table = cache.get_experiment_table().sort_values(by='date_of_acquisition',ascending=False).reset_index()
-
-    table = cache.get_experiment_table().sort_values(by='date_of_acquisition',ascending=False).reset_index()
+    table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition',ascending=False).reset_index()
     container_ids = table['container_id'].unique()
     list_of_dicts = []
     for container_id in container_ids:
@@ -528,7 +526,7 @@ def build_container_df():
             'first_acquistion_date':subset['date_of_acquisition'].min().split(' ')[0],
         }
         for idx,row in subset.iterrows():
-            temp_dict .update({'session_{}'.format(idx):row['session_name']})
+            temp_dict.update({'session_{}'.format(idx):row['session_type']})
             
 
         list_of_dicts.append(temp_dict)
