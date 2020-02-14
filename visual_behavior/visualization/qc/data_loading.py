@@ -213,9 +213,27 @@ def get_sdk_roi_masks(ophys_experiment_id):
     roi_masks = session.get_roi_masks
     return roi_masks
 
+
+def get_valid_segmentation_mask(ophys_experiment_id):
+    session = get_sdk_session_obj(ophys_experiment_id)
+    ct = session.cell_specimen_table
+    valid_cell_specimen_ids = ct[ct.valid_roi==True].index.values
+    roi_masks = session.get_roi_masks()
+    valid_roi_masks = roi_masks[roi_masks.cell_specimen_id.isin(valid_cell_specimen_ids)].data
+    valid_segmentation_mask = np.sum(valid_roi_masks, axis=0)
+    valid_segmentation_mask[valid_segmentation_mask>0] = 1
+    return valid_segmentation_mask
+
+
 def get_sdk_dff_traces_array(ophys_experiment_id):
     session = get_sdk_session_obj(ophys_experiment_id)
     dff_traces = session.dff_traces
+    # remove NaN traces - temporary fix, need to change API to return only valid cells
+    bad_cell_specimen_ids = []
+    for i, trace in enumerate(dff_traces.dff.values):
+        if np.isnan(trace).any():
+            bad_cell_specimen_ids.append(dff_traces.index[i])
+    dff_traces = dff_traces[dff_traces.index.isin(bad_cell_specimen_ids) == False]
     dff_traces_array = np.vstack(dff_traces.dff.values)
     return dff_traces_array
 

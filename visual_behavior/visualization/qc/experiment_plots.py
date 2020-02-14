@@ -24,7 +24,8 @@ def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
 def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    segmentation_mask = dl.get_sdk_segmentation_mask_image(ophys_experiment_id)
+    # segmentation_mask = dl.get_sdk_segmentation_mask_image(ophys_experiment_id)
+    segmentation_mask = dl.get_valid_segmentation_mask(ophys_experiment_id)
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
     return ax
@@ -33,7 +34,8 @@ def plot_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    segmentation_mask = dl.get_sdk_segmentation_mask_image(ophys_experiment_id)
+    # segmentation_mask = dl.get_sdk_segmentation_mask_image(ophys_experiment_id)
+    segmentation_mask = dl.get_valid_segmentation_mask(ophys_experiment_id)
     mask = np.zeros(segmentation_mask.shape)
     mask[:] = np.nan
     mask[segmentation_mask==1] = 1
@@ -43,15 +45,10 @@ def plot_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
 
 def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
     dff_traces = dl.get_sdk_dff_traces_array(ophys_experiment_id)
-    vmax = np.percentile(dff_traces, 99)
     if ax is None:
         figsize = (14, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    cax = ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=vmax)
+    cax = ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=0.5)
     ax.set_ylabel('cells')
     ax.set_xlabel('2P frames')
-
-    # cb = plt.colorbar(ax=ax, cax=cax, pad=0.015)
-    # cb.set_label('dF/F', labelpad=3)
     return ax
-
