@@ -543,11 +543,19 @@ def build_container_df():
             'container_id':container_id,
             'container_workflow_state':table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
             'first_acquistion_date':subset['date_of_acquisition'].min().split(' ')[0],
+            'project_code':subset['project_code'].unique()[0],
+            'driver_line':subset['driver_line'][0],
+            'targeted_structure':subset['targeted_structure'].unique()[0],
+            'imaging_depth':subset['imaging_depth'].unique()[0],
+            'equipment_name':subset['equipment_name'].unique(),
+            'specimen_id':subset['specimen_id'].unique()[0],
+            'sex':subset['sex'].unique()[0],
+            'age_in_days':subset['age_in_days'].min(),
         }
         for idx,row in subset.iterrows():
-            temp_dict.update({'session_{}'.format(idx):row['session_type']})
+            temp_dict.update({'session_{}'.format(idx):'{} {}'.format(row['session_type'],row['ophys_experiment_id'])})
             
 
         list_of_dicts.append(temp_dict)
 
-    return pd.DataFrame(list_of_dicts).sort_values(by='first_acquistion_date',ascending=False)
+    return pd.DataFrame(list_of_dicts).sort_values(by='container_id',ascending=False)
