@@ -34,7 +34,8 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     sf.plot_average_flash_response_example_cells(analysis, example_cells, include_changes=False,
                                                  save_figures=True, save_dir=dataset.analysis_dir,
                                                  folder='experiment_summary_figures')
-    sf.plot_max_projection_image(dataset, save_dir=save_dir)
+    sf.plot_max_projection_image(dataset, save_dir=dataset.cache_dir)
+    sf.plot_max_projection_image(dataset, save_dir=dataset.analysis_dir)
     esf.plot_experiment_summary_figure(analysis, save_dir=dataset.cache_dir)
     esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
 
