@@ -240,12 +240,10 @@ class VisualBehaviorOphysDataset(object):
                 print('getting L0 events')
                 f = np.load(os.path.join(events_folder, events_file[0]))
                 events = np.asarray(f['ev'])
-                ## put smoothing here? ##
                 f.close()
+                # account for excess ophys frame times at end of recording due to Scientifica software error
                 if events.shape[1] > self.ophys_timestamps.shape[0]:
                     difference = self.ophys_timestamps.shape[0] - events.shape[1]
-                    print('length of ophys timestamps <  length of events by', str(difference),
-                                'frames , truncating events')
                     events = events[:, :self.ophys_timestamps.shape[0]]
             else:
                 print('no events for this experiment')
@@ -253,7 +251,6 @@ class VisualBehaviorOphysDataset(object):
         else:
             print('no events for this experiment')
             events = None
-
         self._events_array = events
         return self._events_array
 
@@ -346,16 +343,14 @@ class VisualBehaviorOphysDataset(object):
             df = pd.read_csv(os.path.join(data_dir, filename[0]))
             area = df.blink_corrected_area.values
             # compare with timestamps
-            timestamps = self.timestamps.behavior_monitoring.values[0] #line labels are switched of course
+            timestamps = self.timestamps.behavior_monitoring.values[0]
             diff = len(area) - len(timestamps)
-            print('pupil data and timestamps off by', diff)
             if diff <= 5:
                 df = pd.DataFrame()
                 df['pupil_area'] = area[:len(timestamps)]
                 df['time'] = timestamps[:len(area)]
                 self._pupil_area = df
             else:
-                print('discrepancy too high, returning None')
                 self._pupil_area = None
         else:
             print('no pupil data for', session_id)

@@ -466,7 +466,7 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
                                         change_times,
                                         running_speed_df,
                                         pupil_area):
-    stimulus_presentations_df = stimulus_presentations_df.copy()
+    # stimulus_presentations_df = stimulus_presentations_df.copy()
     stimulus_presentations_df = add_prior_image_to_stimulus_presentations(stimulus_presentations_df)
 
     flash_times = stimulus_presentations_df["start_time"].values

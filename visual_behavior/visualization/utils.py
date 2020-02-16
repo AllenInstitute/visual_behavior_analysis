@@ -10,4 +10,4 @@ def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png','.pdf
     fig.set_size_inches(figsize)
     filename = os.path.join(fig_dir, fig_title)
     for f in formats:
-        fig.savefig(filename + f, transparent=True, orientation='landscape', bbox_inches='tight')
+        fig.savefig(filename + f, transparent=True, orientation='landscape', bbox_inches='tight', dpi=600)
