@@ -18,54 +18,27 @@ from visual_behavior.visualization.ophys import summary_figures as sf
 
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
-    # logger.info(experiment_id)
+    experiment_ids = np.sort(manifest.experiment_id.unique())
+    use_events = True
     print(experiment_id)
-    print('saving ', str(experiment_id), 'to', cache_dir)
-    dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir)
+    dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
+    analysis = ResponseAnalysis(dataset, use_events=use_events, overwrite_analysis_files=True)
+    tmp = analysis.trials_run_speed_df
+    tmp = analysis.trials_response_df
+    tmp = analysis.omission_response_df
 
-    use_events = False
-
-    analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
-    # pairwise_correlations_df = analysis.get_pairwise_correlations_df()  # flake8: noqa: F841
-
-    sf.plot_behavior(dataset, cache_dir)
-    # print('plotting example traces')
-    # active_cell_indices = ut.get_active_cell_indices(dataset.dff_traces)
-    # length_mins = 1
-    # for xmin_seconds in np.arange(0, 5000, length_mins * 60):
-    #     sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
-    #                                         cell_label=False, include_running=True, use_events=use_events)
-
-    print('plotting experiment summary figure')
     esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
-    esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
-    esf.plot_roi_masks(dataset, save=True)
-    #
-    print('plotting cell responses')
-    for cell in dataset.get_cell_indices():
-        # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
-        sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
 
-    # if dataset.events is not None:
-    #     use_events = True
-    #     analysis = ResponseAnalysis(dataset, overwrite_analysis_files, use_events=use_events)
-    #     pairwise_correlations_df = analysis.get_pairwise_correlations_df()
-    #     #
-    #     print('plotting experiment summary figure')
-    #     esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
-    #     esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
-        #
-        # print('plotting example traces')
-        # for xmin_seconds in np.arange(0, 3000, length_mins * 60):
-        #     sf.plot_example_traces_and_behavior(dataset, active_cell_indices, xmin_seconds, length_mins, save=True,
-        #                                         cell_label=False, include_running=True, use_events=use_events)
-        #
-        # print('plotting cell responses')
-    #     for cell in dataset.get_cell_indices():
-    #         # sf.plot_image_response_for_trial_types(analysis, cell, save=True)
-    #         sf.plot_cell_summary_figure(analysis, cell, save=True, show=False, cache_dir=cache_dir)
-    # else:
-    #     print('no events for', experiment_id)
+    example_cells = ut.get_active_cell_indices(dataset.dff_traces_array)
+    sf.plot_example_traces_and_behavior(dataset, example_cells, xmin_seconds=600, length_mins=1.5, dff_max=4,
+                                        include_running=False, cell_label=False, use_events=use_events,
+                                        save_figures=True, save_dir=dataset.analysis_dir,
+                                        folder='experiment_summary_figures')
+    sf.plot_average_flash_response_example_cells(analysis, example_cells, include_changes=False,
+                                                 save_figures=True, save_dir=dataset.analysis_dir,
+                                                 folder='experiment_summary_figures')
+
+    sf.plot_max_projection_image(dataset, save_dir=save_dir)
 
 
 if __name__ == '__main__':
