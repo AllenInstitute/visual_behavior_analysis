@@ -70,6 +70,15 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     return inner_ax
 
 
+def plot_max_projection_image(dataset, save_dir=None):
+    figsize = (5,5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.imshow(dataset.max_projection, cmap='gray', vmax=dataset.max_projection.max()/2.)
+    ax.axis('off')
+    if save_dir:
+        save_figure(fig, figsize, save_dir, 'max_projection', str(dataset.experiment_id)+'.png')
+
+
 def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
     if type(list(roi_mask_dict.keys())[0]) == int:
         m = roi_mask_dict[int(cell_specimen_id)]
@@ -330,7 +339,7 @@ def plot_image_response_for_trial_types(analysis, cell_index, legend=True, save=
         suffix = '_events'
     else:
         suffix = ''
-    df = analysis.trial_response_df.copy()
+    df = analysis.trials_response_df.copy()
     images = np.sort(df.change_image_name.unique())
     trials = analysis.dataset.trials.copy()
     if ax is None:
@@ -386,7 +395,7 @@ def plot_image_change_response(analysis, cell_index, cell_order, legend=False, s
     else:
         suffix = ''
         ylabel = 'mean dF/F'
-    df = analysis.trial_response_df.copy()
+    df = analysis.trials_response_df.copy()
     df = df[df.trial_type == 'go']
     images = np.sort(df.change_image_name.unique())
     images = images[images != 'omitted']
@@ -511,7 +520,7 @@ def plot_trial_trace_heatmap(trial_response_df, cell, cmap='viridis', vmax=0.5, 
 
 
 def plot_mean_response_by_repeat(analysis, cell, save_dir=None, ax=None):
-    flash_response_df = analysis.flash_response_df.copy()
+    flash_response_df = analysis.stimulus_response_df.copy()
     flash_response_df = flash_response_df[flash_response_df.omitted == False].copy()
     n_repeats = 15
     palette = sns.color_palette("RdBu", n_colors=n_repeats)
@@ -539,7 +548,7 @@ def plot_mean_response_by_repeat(analysis, cell, save_dir=None, ax=None):
 
 
 def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
-    flash_response_df = analysis.flash_response_df.copy()
+    flash_response_df = analysis.stimulus_response_df.copy()
     flash_response_df = flash_response_df[flash_response_df.omitted == False].copy()
     n_blocks = len(flash_response_df.image_block.unique())
     palette = sns.color_palette("RdBu", n_colors=n_blocks)
@@ -566,10 +575,10 @@ def plot_mean_response_by_image_block(analysis, cell, save_dir=None, ax=None):
 
 
 def plot_trace(timestamps, trace, ax=None, xlabel='time (seconds)', ylabel='fluorescence', title='roi',
-               color=sns.color_palette()[0]):
+               color=sns.color_palette()[0], width=1.75):
     if ax is None:
         fig, ax = plt.subplots(figsize=(15, 5))
-    ax.plot(timestamps, trace, color=color, linewidth=2)
+    ax.plot(timestamps, trace, color=color, linewidth=width)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
@@ -717,6 +726,71 @@ def restrict_axes(xmin, xmax, interval, ax):
     return ax
 
 
+def plot_licks_and_rewards(dataset, ax, behavior_only=False):
+    lick_times = dataset.licks.time.values
+    reward_times = dataset.rewards.time.values
+    if behavior_only:
+        lick_y = 0
+        reward_y = -0.2
+        ax.set_ylim([-0.5, 0.5])
+    else:
+        ymin, ymax = ax.get_ylim()
+        lick_y = ymin + (ymax * 0.05)
+        reward_y = ymin - (ymax * 0.1)
+    lick_y_array = np.empty(len(lick_times))
+    lick_y_array[:] = lick_y
+    reward_y_array = np.empty(len(reward_times))
+    reward_y_array[:] = reward_y
+    ax.plot(lick_times, lick_y_array, '|', color='g', markeredgewidth=1, label='licks')
+    reward_color = sns.color_palette()[0]
+    reward_color = 'purple'
+    ax.plot(reward_times, reward_y_array, '^', markerfacecolor=reward_color, markeredgecolor=reward_color, markeredgewidth=0.3,
+            label='rewards')
+    return ax
+
+def plot_behavior_for_epoch(dataset, start_time, duration, exclude_running=False, legend=False,
+                              save_figures=False, save_dir=None, ax=None):
+    xlim = (start_time,start_time+duration+1)
+    running_speed = dataset.running_speed.running_speed.values
+    running_times = dataset.running_speed.time.values
+    if ax is None:
+        figsize = (15,2)
+        fig, ax = plt.subplots(figsize=figsize)
+    if exclude_running:
+        folder = 'behavior_epoch_licks'
+        ax.set_ylim(0,1)
+        ax = plot_licks_and_rewards(dataset, ax)
+        ax.set_ylim(-0.4, 0.5)
+        ax.set_ylabel('')
+        ax.set_yticklabels([])
+        ax.tick_params(axis='x', left='off')
+        ax.tick_params(axis='y', left='off')
+        sns.despine(ax=ax, top=False, right=False)
+    else:
+        folder = 'behavior_epoch_running_licks'
+        ax.plot(running_times, running_speed, color=sns.color_palette()[0], label='run_speed')
+        ax.set_ylabel('run speed\n(cm/s)')
+        ax = plot_licks_and_rewards(dataset, ax, behavior_only=False)
+        ymin, ymax = ax.get_ylim()
+        ax.set_ylim(ymin*1.1, ymax)
+    if legend:
+        ax.legend(bbox_to_anchor=(1, .46), ncol=3)
+    ax = add_stim_color_span(dataset, ax, xlim=xlim)
+    ax.set_xlim(xlim)
+    ax.set_xlabel('time (seconds)')
+    ax.set_xticks(np.arange(xlim[0], xlim[1], 10))
+    xticklabels = np.arange(xlim[0], xlim[1], 10) - xlim[0]
+    ax.set_xticklabels([int(x) for x in xticklabels])
+    ax.set_title(dataset.analysis_folder+' - '+str(start_time), fontsize=14)
+    plt.gcf().subplots_adjust(bottom=0.3)
+    if save_figures:
+        if save_dir:
+            save_figure(fig, figsize, save_dir, folder, dataset.analysis_folder+'_'+str(start_time))
+        save_figure(fig, figsize, dataset.analysis_dir, folder, str(start_time))
+        plt.close()
+    return ax
+
+
 def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, save=False, use_events=False):
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     xmax = xmin + 60 * length
@@ -744,14 +818,83 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
     return ax
 
 
-def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length_mins, save_figures=False,
-                                     include_running=False, cell_label=False, use_events=False, save_dir=None):
+# only plots events or traces
+def plot_average_flash_response_example_cells(analysis, active_cell_indices, include_changes=False,
+                                              save_figures=False, save_dir=None, folder=None, ax=None):
+    import visual_behavior.visualization.ophys.population_summary_figures as psf
+    dataset = analysis.dataset
+    fdf = analysis.get_response_df(df_name='stimulus_response_df')
+    last_flash = fdf.stimulus_presentations_id.unique()[-1]  # sometimes last flash is truncated
+    fdf = fdf[fdf.stimulus_presentations_id != last_flash]
+
+    conditions = ['cell_specimen_id', 'image_name']
+    mdf = ut.get_mean_df(fdf, analysis, conditions=conditions, flashes=True)
+
+    if include_changes:
+        rdf = ut.get_mean_df(fdf[fdf.change == True], analysis, conditions=conditions, flashes=True)
+
+    cell_specimen_ids = [dataset.get_cell_specimen_id_for_cell_index(cell_index) for cell_index in active_cell_indices]
+    image_names = np.sort(mdf.image_name.unique())
+
+    if ax is None:
+        if len(active_cell_indices) < 5:
+            figsize = (12, 4)
+        elif len(active_cell_indices) < 10:
+            figsize = (12, 7.8)
+        else:
+            figsize = (12, 10)
+        fig, ax = plt.subplots(len(cell_specimen_ids), len(image_names), figsize=figsize, sharex=True)
+        ax = ax.ravel()
+
+    i = 0
+    for c, cell_specimen_id in enumerate(cell_specimen_ids):
+        cell_data = mdf[(mdf.cell_specimen_id == cell_specimen_id)]
+        if include_changes:
+            cell_data_go = rdf[(rdf.cell_specimen_id == cell_specimen_id)]
+            combined_traces = np.hstack([cell_data.mean_trace.values, cell_data_go.mean_trace.values])
+            maxs = [np.amax(trace) for trace in combined_traces]
+            ymax = np.amax(maxs) * 1.2
+        else:
+            ymax = np.amax(np.hstack(cell_data.mean_trace.values)) * 1.2
+
+        for m, image_name in enumerate(image_names):
+            color = ut.get_color_for_image_name(image_names, image_name)
+
+            cdf = cell_data[(cell_data.image_name == image_name)]
+            ax[i] = plot_mean_trace_from_mean_df(cdf, analysis.ophys_frame_rate, color=[.4, .4, .4],
+                                                     interval_sec=0.5,
+                                                     xlims=analysis.flash_window, ax=ax[i], plot_sem=False)
+            if include_changes:
+                if image_name != 'omitted':  # changes cant be omitted
+                    rcdf = cell_data_go[(cell_data_go.image_name == image_name)]
+                    ax[i] = plot_mean_trace_from_mean_df(rcdf, analysis.ophys_frame_rate, color=[.6, .6, .6],
+                                                             interval_sec=0.5,
+                                                             xlims=analysis.flash_window, ax=ax[i], plot_sem=False)
+
+            ax[i] = psf.plot_flashes_on_trace(ax[i], window=analysis.flash_window, flashes=True, facecolor=color,
+                                              alpha=0.3)
+            ax[i].axis('off')
+            ax[i].set_ylim(-0.05, ymax)
+            if m == 0:
+                ax[i].set_ylabel('x')
+            if c == 0:
+                ax[i].set_title(image_name)
+            if c == len(cell_specimen_ids):
+                ax[i].set_xlabel('time (s)')
+            i += 1
+    for x in range(len(cell_specimen_ids)):
+        ax[x * len(image_names)].vlines(x=0, ymin=0, ymax=.05, linewidth=3)
+
+    if save_figures:
+        if save_dir:
+            save_figure(fig, figsize, save_dir, folder, str(dataset.experiment_id)+'_example_cell_responses')
+
+
+def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length_mins, save_figures=False, dff_max=3,
+                                     include_running=False, cell_label=False, use_events=False, save_dir=None, folder='example_traces'):
     if use_events:
-        traces = dataset.events
-        cell_label = True
         suffix = '_events'
     else:
-        traces = dataset.dff_traces_array
         suffix = ''
     if include_running:
         n = 2
@@ -761,132 +904,82 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     xmax_seconds = xmin_seconds + (length_mins * 60) + 1
     xlim = [xmin_seconds, xmax_seconds]
 
-    if len(cell_indices) < 10:
-        figsize = (12, 8.3)
-    else:
-        figsize = (12, 10)
+    figsize = (16, 5)
     fig, ax = plt.subplots(len(cell_indices) + n, 1, figsize=figsize, sharex=True)
     ax = ax.ravel()
+    if dff_max > 3:
+        scale = 2.
+    else:
+        scale = 1.
 
     ymins = []
     ymaxs = []
     for i, cell_index in enumerate(cell_indices):
-        ax[i] = plot_trace(dataset.ophys_timestamps, traces[cell_index, :], ax=ax[i],
-                           title='', ylabel=str(cell_index), color=[.5, .5, .5])
+        ax[i] = plot_trace(dataset.ophys_timestamps, dataset.dff_traces_array[cell_index, :], ax=ax[i],
+                              title='', ylabel=str(cell_index), color=[.6, .6, .6])
         ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
         ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
-        ax[i].set_xticks(np.arange(xmin_seconds, xmax_seconds, interval_seconds))
-        xticklabels = np.arange(xmin_seconds, xmax_seconds, interval_seconds) - xmin_seconds
-        ax[i].set_xticklabels([int(x) for x in xticklabels])
-        ax[i].set_xlabel('')
+        ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                          labeltop=False, labelright=False, labelleft=False, labelbottom=False)
+        ax[i].vlines(x=xmin_seconds, ymin=0, ymax=dff_max / 2., linewidth=4)
+        ax[i].set_ylim(ymin=-1, ymax=dff_max)
+        if use_events:
+            ax2 = ax[i].twinx()
+            ax2 = plot_trace(dataset.ophys_timestamps, dataset.events_array[cell_index, :], ax=ax2,
+                                title='', ylabel=None, color=sns.color_palette()[0], width=1.5)  # color=[.4,.4,.4])
+            sns.despine(ax=ax2, left=True, bottom=True)
+            ax2.tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                            labeltop=False, labelright=False, labelleft=False, labelbottom=False)
+            ax2 = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax2)
+            ax2.set_ylim(ymin=0, ymax=dff_max / scale)
+
         ymin, ymax = ax[i].get_ylim()
         ymins.append(ymin)
         ymaxs.append(ymax)
-        ax[i].set_ylabel('')
-        ax[i].set_yticklabels('')
-        sns.despine(ax=ax[i], left=True, bottom=False)
-        #         ymin, ymax = ax[i].get_ylim()
-        if 'Vip' in dataset.metadata.cre_line.values[0]:
-            ax[i].vlines(x=xmin_seconds - 0.05, ymin=0, ymax=2, linewidth=4)
-            ax[i].set_ylim(ymin=-0.5, ymax=5)
-        elif 'Slc' in dataset.metadata.cre_line.values[0]:
-            ax[i].vlines(x=xmin_seconds - 0.05, ymin=0, ymax=1, linewidth=4)
-            ax[i].set_ylim(ymin=-0.5, ymax=3)
+        if cell_label:
+            ax[i].set_ylabel('cell ' + str(i), fontsize=12)
+        else:
+            ax[i].set_ylabel('')
+        ax[i].set_xlabel('')
 
-            #     for i, cell_index in enumerate(cell_indices):
-            #         ax[i].set_ylim([np.amin(ymins), np.amax(ymaxs)])
+        sns.despine(ax=ax[i], left=True, bottom=True)
+        ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=False,
+                          labeltop=False, labelright=False, labelleft=False, labelbottom=False)
 
     i += 1
-    ax[i] = plot_behavior_events(dataset, ax=ax[i], behavior_only=True)
-    ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
+    ax[i] = plot_behavior_for_epoch(dataset, xmin_seconds, length_mins * 60, exclude_running=True, ax=ax[i])
     ax[i].set_xlim(xlim)
-    ax[i].set_ylabel('')
-    ax[i].axes.get_yaxis().set_visible(False)
-    # ax[i].legend(loc='upper left', fontsize=14)
-    sns.despine(ax=ax[i], left=True)
-    l = ax[i].legend(fontsize='small', loc='upper left')
-    plt.setp(l.get_title(), fontsize='small')
+    ax[i].set_title('')
+    #     ax[i].legend(bbox_to_anchor=(-1,-1), fontsize=14)
+    l = ax[i].legend(bbox_to_anchor=(0.125, -0.2), fontsize='x-small')
+    plt.setp(l.get_title(), fontsize='x-small')
+    sns.despine(ax=ax[i], left=True, bottom=True)
+    ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
+                      labeltop=False, labelright=False, labelleft=False, labelbottom=True)
 
     if include_running:
         i += 1
-        ax[i].plot(dataset.stimulus_timestamps, dataset.running_speed.running_speed.values)
-        ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
+        ax[i] = plot_behavior_for_epoch(dataset, xmin_seconds, length_mins * 60, exclude_running=False, ax=ax[i])
         ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
-        #         ax[i].set_ylabel('run speed\n(cm/s)')
-        #         ax[i].axes.get_yaxis().set_visible(False)
-        ax[i].set_ylabel('')
-        ax[i].set_yticklabels('')
-        sns.despine(ax=ax[i], left=True)
-        ax[i].vlines(x=-0.5, ymin=0, ymax=30, linewidth=4)
+        ax[i].set_ylabel('run speed\n(cm/s)', fontsize=12)
+        ax[i].set_title('')
+        ax[i].vlines(x=xmin_seconds, ymin=0, ymax=30, linewidth=4)
+        sns.despine(ax=ax[i], left=True, bottom=True)
+        ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
+                          labelbottom=True, labeltop=False, labelright=False, labelleft=False)
 
+    xticks = np.arange(xmin_seconds, xmax_seconds, interval_seconds)
+    xticklabels = np.arange(0, xmax_seconds-xmin_seconds, interval_seconds)
+    ax[i].set_xticks(xticks)
+    ax[i].set_xticklabels([int(xticklabel) for xticklabel in xticklabels])
     ax[i].set_xlabel('time (seconds)')
     ax[0].set_title(dataset.analysis_folder)
-    # fig.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
-    if save_figures:
-        save_figure(fig, figsize, dataset.analysis_dir, 'example_traces',
-                       str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
-        save_figure(fig, figsize, dataset.cache_dir, 'example_traces',
-                       str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
-        if save_dir:
-            save_figure(fig, figsize, save_dir, 'example_traces',
-                           str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
-        plt.close()
+    plt.subplots_adjust(bottom=0.2)
 
-
-def plot_average_flash_response_example_cells(analysis, active_cell_indices, save_figures=False, save_dir=None, folder=None, ax=None):
-    dataset = analysis.dataset
-    fdf = analysis.flash_response_df.copy()
-    last_flash = fdf.flash_number.unique()[-1] #sometimes last flash is truncated
-    fdf = fdf[fdf.flash_number!=last_flash]
-
-    conditions=['cell_specimen_id', 'image_name']
-    mdf = ut.get_mean_df(fdf, analysis, conditions=conditions, flashes=True)
-
-    cell_specimen_ids = [dataset.get_cell_specimen_id_for_cell_index(cell_index) for cell_index in active_cell_indices]
-
-    image_names = np.sort(mdf.image_name.unique())
-
-    if ax is None:
-        if len(active_cell_indices)<10:
-            figsize = (12, 8.3)
-        else:
-            figsize = (12, 10)
-        fig, ax = plt.subplots(len(cell_specimen_ids), len(image_names), figsize=figsize, sharex=True)
-        ax = ax.ravel()
-
-    i = 0
-    for c, cell_specimen_id in enumerate(cell_specimen_ids):
-        cell_data = mdf[(mdf.cell_specimen_id==cell_specimen_id)]
-        maxs = [np.amax(trace) for trace in cell_data.mean_trace.values]
-        ymax = np.amax(maxs)*1.2
-        for m, image_name in enumerate(image_names):
-            cdf = cell_data[(cell_data.image_name==image_name)]
-            color = ut.get_color_for_image_name(image_names, image_name)
-            ax[i] = plot_mean_trace_from_mean_df(cdf, color=[.5,.5,.5], interval_sec=0.5,
-                                                     xlims=analysis.flash_window, ax=ax[i])
-            ax[i] = plot_flashes_on_trace(ax[i], analysis, flashes=True, facecolor=color, alpha=0.3)
-            if 'Vip' in dataset.metadata.cre_line.values[0]:
-                ax[i].vlines(x=0, ymin=0, ymax=.25, linewidth=4)
-            elif 'Slc' in dataset.metadata.cre_line.values[0]:
-                ax[i].vlines(x=0, ymin=0, ymax=.25, linewidth=4)
-    #         sns.despine(ax=ax[i])
-            ax[i].axis('off')
-            ax[i].set_ylim(-0.05, ymax)
-            if m == 0:
-                ax[i].set_ylabel('x')
-            if c == 0:
-                ax[i].set_title(image_name)
-            if c == len(cell_specimen_ids):
-                ax[i].set_xlabel('time (s)')
-            i+=1
-
-    # fig.tight_layout()
     if save_figures:
         if save_dir:
-            save_figure(fig ,figsize, save_dir, folder, dataset.analysis_folder)
-        save_figure(fig ,figsize, analysis.dataset.analysis_dir, 'example_traces_all_flashes', dataset.analysis_folder)
-        plt.close()
+            save_figure(fig, figsize, save_dir, folder, str(dataset.experiment_id) + '_' + str(xlim[0]) + suffix)
 
 
 def plot_reliability_trials(analysis, tdf, mean_tdf, cell, xlims=[-4,8], save_figures=False, save_dir=None, folder=None):
@@ -934,7 +1027,7 @@ def get_colors_for_response_types(values):
 
 def plot_transition_type_heatmap(analysis, cell_list, cmap='jet', vmax=None, save=False, ax=None, colorbar=True):
     response_types = ['HIT', 'MISS', 'FA', 'CR']
-    df = analysis.trial_response_df.copy()
+    df = analysis.trials_response_df.copy()
     images = np.sort(df.change_image_name.unique())
     rows = 1
     cols = int(len(images) / float(rows))
@@ -997,7 +1090,7 @@ def plot_mean_cell_response_heatmap(analysis, cell, values='mean_response', inde
                                     save=False, ax=None, use_events=False):
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
-    df = analysis.trial_response_df.copy()
+    df = analysis.trials_response_df.copy()
     resp_df = df[df.cell == cell]
     resp_df = resp_df[[index, columns, values]]
     if ax is None:
@@ -1032,7 +1125,7 @@ def plot_ranked_image_tuning_curve_trial_types(analysis, cell, ax=None, save=Fal
     colors = [c[3], c[0], c[2]]
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
-    tdf = ut.get_mean_df(analysis.trial_response_df, analysis,
+    tdf = ut.get_mean_df(analysis.trials_response_df, analysis,
                          conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     if ax is None:
         figsize = (6, 4)
@@ -1071,7 +1164,7 @@ def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=Non
     colors = [c[3], c[0], c[2]]
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
-    fdf = analysis.flash_response_df.copy()
+    fdf = analysis.stimulus_response_df.copy()
     fdf = fdf[fdf.omitted == False].copy()
     fmdf = ut.get_mean_df(fdf, analysis, conditions=['cell_specimen_id', 'image_name'], flashes=True)
     if ax is None:
@@ -1107,7 +1200,7 @@ def plot_ranked_image_tuning_curve_flashes(analysis, cell, repeats=[1, 5, 10], a
     colors = [c[3], c[0], c[2]]
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
-    fdf = analysis.flash_response_df.copy()
+    fdf = analysis.stimulus_response_df.copy()
     fdf = fdf[fdf.repeat.isin(repeats)]
     fdf = fdf[fdf.omitted == False]
     fmdf = ut.get_mean_df(fdf, analysis, conditions=['cell_specimen_id', 'image_name', 'repeat'], flashes=True)
@@ -1145,24 +1238,29 @@ def plot_ranked_image_tuning_curve_flashes(analysis, cell, repeats=[1, 5, 10], a
     return ax
 
 
-def plot_mean_trace_from_mean_df(mean_df, ophys_frame_rate, label=None, color='k', interval_sec=1, xlims=(2, 6),
-                                 ax=None, use_events=False):
-    ylabel, suffix = get_ylabel_and_suffix(use_events)
+def plot_mean_trace_from_mean_df(cell_data, frame_rate=31., ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4],
+                    ax=None, plot_sem=True, width=3):
+    xlim = [0, xlims[1] + np.abs(xlims[0])]
     if ax is None:
         fig, ax = plt.subplots()
-    mean_trace = mean_df.mean_trace.values[0]
-    sem = mean_df.sem_trace.values[0]
-    times = np.arange(0, len(mean_trace), 1)
-    ax.plot(mean_trace, label=label, linewidth=3, color=color)
-    ax.fill_between(times, mean_trace + sem, mean_trace - sem, alpha=0.5, color=color)
-    xticks, xticklabels = get_xticks_xticklabels(mean_trace, ophys_frame_rate, interval_sec=interval_sec, window=xlims)
-    ax.set_xticks(xticks);
-    ax.set_xticklabels(xticklabels);
-    ax.set_xlim([xlims[0] * ophys_frame_rate, (np.abs(xlims[0])+xlims[1]) * ophys_frame_rate])
-    ax.set_xlabel('time (sec)')
+    trace = cell_data.mean_trace.values[0]
+    times = np.arange(0, len(trace), 1)
+    sem = cell_data.sem_trace.values[0]
+    ax.plot(trace, label=legend_label, linewidth=width, color=color)
+    if plot_sem:
+        ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
+    xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec, window=xlims)
+    ax.set_xticks(xticks)
+    if interval_sec >=1:
+        ax.set_xticklabels([int(x) for x in xticklabels])
+    else:
+        ax.set_xticklabels(xticklabels)
+    ax.set_xlim(xlim[0] * int(frame_rate), xlim[1] * int(frame_rate))
+    ax.set_xlabel('time (s)')
     ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
+
 
 
 def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=None, color='k', interval_sec=1,
@@ -1190,11 +1288,11 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
 def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use_events=False):
     import visual_behavior.ophys.response_analysis.utilities as ut
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
-    tdf = analysis.trial_response_df
+    tdf = analysis.trials_response_df
     tdf = tdf[tdf.cell_specimen_id == cell_specimen_id]
-    fdf = analysis.flash_response_df
+    fdf = analysis.stimulus_response_df
     fdf = fdf[fdf.cell_specimen_id == cell_specimen_id]
-    mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
+    mdf = ut.get_mean_df(analysis.trials_response_df, analysis,
                          conditions=['cell_specimen_id', 'change_image_name', 'trial_type'])
     mdf = mdf[mdf.cell_specimen_id == cell_specimen_id]
     trial_window = analysis.trial_window
@@ -1301,9 +1399,9 @@ def plot_images(dataset, orientation='row', rows=1, color_box=True, save=False, 
 def plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=None, save_dir=None, window=[-3,3], legend=False):
     if window is None:
         window = analysis.omitted_flash_window
-    fdf = analysis.flash_response_df
+    fdf = analysis.stimulus_response_df
     image_names = np.sort(fdf.image_name.unique())[:-1]
-    odf = analysis.omitted_flash_response_df.copy()
+    odf = analysis.omission_response_df.copy()
     # image_names = np.sort(odf.image_name.unique())
     # colors = get_colors_for_stim_codes(np.arange(0,len(image_names),1))
     if ax is None:
@@ -1490,8 +1588,8 @@ def plot_omission_over_time(dataset, omitted_flash_response_df, cell_specimen_id
 def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache_dir=None):
     use_events = analysis.use_events
     dataset = analysis.dataset
-    rdf = analysis.trial_response_df
-    fdf = analysis.flash_response_df
+    rdf = analysis.trials_response_df
+    fdf = analysis.stimulus_response_df
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index)
 
@@ -1529,7 +1627,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     # ax = plot_image_response_for_trial_types(analysis, cell_index, legend=False, save=False, ax=ax)
     ax = plot_image_change_response(analysis, cell_index, cell_index, legend=False, save=False, ax=ax)
 
-    if 'omitted' in analysis.flash_response_df.image_name.unique():
+    if 'omitted' in analysis.stimulus_response_df.image_name.unique():
         # try:
         ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.25, .5), yspan=(.55, .75))
         ax = plot_omitted_flash_response_all_stim(analysis, cell_specimen_id, ax=ax)

@@ -658,7 +658,6 @@ def plot_mean_trace_from_mean_df(cell_data, frame_rate=31., ylabel='dF/F', legen
     ax.plot(trace, label=legend_label, linewidth=width, color=color)
     if plot_sem:
         ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
-
     xticks, xticklabels = sf.get_xticks_xticklabels(trace, frame_rate, interval_sec, window=xlims)
     ax.set_xticks(xticks)
     if interval_sec >=1:
@@ -1242,7 +1241,7 @@ def plot_change_omitted_responses(tdf, odf, cell_specimen_id, save_figures=False
 
 def plot_average_flash_response_example_cells(analysis, active_cell_indices, save_figures=False, save_dir=None, folder=None, ax=None):
     dataset = analysis.dataset
-    fdf = analysis.flash_response_df.copy()
+    fdf = analysis.stimulus_response_df.copy()
     last_flash = fdf.flash_number.unique()[-1] #sometimes last flash is truncated
     fdf = fdf[fdf.flash_number!=last_flash]
 

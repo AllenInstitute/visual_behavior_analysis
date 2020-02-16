@@ -353,7 +353,7 @@ class VisualBehaviorOphysDataset(object):
             else:
                 self._pupil_area = None
         else:
-            print('no pupil data for', session_id)
+            print('no pupil data for', self.experiment_id)
             self._pupil_area = None
         return self._pupil_area
 

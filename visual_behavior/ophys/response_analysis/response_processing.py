@@ -313,12 +313,6 @@ def get_p_value_from_shuffled_flashes(mean_responses,
 
 
 def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_ids, response_analysis_params, frame_rate=None):
-    # if response_analysis_params is None:
-    #     response_analysis_params = get_default_trial_response_params()
-    #
-    # dff_traces_arr = np.stack(session.dff_traces['dff'].values)
-    # change_trials = session.trials[~pd.isnull(session.trials['change_time'])][:-1] #last trial can get cut off
-    # event_times = change_trials['change_time'].values
 
     event_indices, start_ind_offset, end_ind_offset, trace_timebase = slice_inds_and_offsets(
         ophys_times=timestamps,
@@ -349,13 +343,6 @@ def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_i
         {'eventlocked_timestamps': slice(*baseline_range)}
     ].mean(['eventlocked_timestamps'])
 
-    # dff_traces_arr = np.stack(session.dff_traces['dff'].values)
-
-    # p_values = get_p_value_from_shuffled_spontaneous(mean_response,
-    #                                                  session.stimulus_presentations,
-    #                                                  session.ophys_timestamps,
-    #                                                  dff_traces_arr,
-    #                                                  response_analysis_params['response_window_duration_seconds'])
 
     if True not in session.stimulus_presentations.omitted.unique():
         nan_values = np.zeros((len(mean_response), len(trace_ids)))
@@ -430,7 +417,7 @@ def filter_events_array(trace_arr, scale=2):
     return filtered_arr
 
 
-def get_trial_response_df(dataset, use_events=False, frame_rate=None):
+def get_trials_response_df(dataset, use_events=False, frame_rate=None):
     if use_events:
         traces = np.stack(dataset.events['events'].values)
         traces = filter_events_array(traces, scale=2)
@@ -500,7 +487,7 @@ def get_omission_response_df(dataset, use_events=False, frame_rate=None):
     return df
 
 
-def get_trial_run_speed_df(dataset, frame_rate=None):
+def get_trials_run_speed_df(dataset, frame_rate=None):
     traces = np.vstack((dataset.running_speed.running_speed.values, dataset.running_speed.running_speed.values))
     trace_ids = np.asarray([0, 1])
     timestamps = dataset.stimulus_timestamps

@@ -114,7 +114,7 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
         save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
 
 def reorder_traces(original_traces, analysis):
-    tdf = analysis.trial_response_df.copy()
+    tdf = analysis.trials_response_df
     df = ut.get_mean_df(tdf, analysis, conditions=['cell','change_image_name'])
 
     images = np.sort(df.change_image_name.unique())
@@ -133,10 +133,12 @@ def reorder_traces(original_traces, analysis):
 
 
 def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_events=False):
+    import visual_behavior.ophys.response_analysis.response_processing as rp
     if use_events:
-        traces = dataset.events
+        traces = dataset.events_array.copy()
+        traces = rp.filter_events_array(traces, scale=2)
         traces = reorder_traces(traces, analysis)
-        vmax = 0.03
+        vmax = 0.01
         # vmax = np.percentile(traces, 99)
         label = 'event magnitude'
         suffix = '_events'
@@ -172,7 +174,7 @@ def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_event
 
 def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
     if use_events:
-        traces = dataset.events
+        traces = dataset.events_array.copy()
         vmax = 0.03
         # vmax = np.percentile(traces, 99)
         label = 'event magnitude'
@@ -258,7 +260,7 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
                             use_events=False, window=[-4,4]):
     data = mean_df[mean_df.pref_stim == True].copy()
     if use_events:
-        vmax = 0.03
+        vmax = 0.05
         suffix = '_events'
     else:
         vmax = 0.5
@@ -273,11 +275,11 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
         if len(im_df) != 0:
             if i == 0:
                 order = np.argsort(im_df.mean_response.values)[::-1]
-                cells = im_df.cell.unique()[order]
+                cells = im_df.cell_specimen_id.unique()[order]
             len_trace = len(im_df.mean_trace.values[0])
             response_array = np.empty((len(cells), len_trace))
             for x, cell in enumerate(cells):
-                tmp = im_df[im_df.cell == cell]
+                tmp = im_df[im_df.cell_specimen_id == cell]
                 if len(tmp) >= 1:
                     trace = tmp.mean_trace.values[0]
                 else:
@@ -393,7 +395,7 @@ def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, 
 
 
 def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=None):
-    fdf = analysis.flash_response_df.copy()
+    fdf = analysis.stimulus_response_df
     fdf.image_block = [int(image_block) for image_block in fdf.image_block.values]
     data = fdf[(fdf.repeat == 1) & (fdf.pref_stim == True)]
     mean_response = data.groupby(['cell_specimen_id']).apply(ut.get_mean_sem)
@@ -468,7 +470,7 @@ def plot_roi_masks(dataset, save=False):
 
 def plot_average_flash_response_example_cells(analysis, save_figures=False, save_dir=None, folder=None, ax=None):
     import visual_behavior.ophys.response_analysis.utilities as ut
-    fdf = analysis.flash_response_df.copy()
+    fdf = analysis.stimulus_response_df
     last_flash = fdf.flash_number.unique()[-1] #sometimes last flash is truncated
     fdf = fdf[fdf.flash_number!=last_flash]
 
@@ -525,7 +527,7 @@ def plot_average_flash_response_example_cells(analysis, save_figures=False, save
 def plot_experiment_summary_figure(analysis, save_dir=None):
     use_events = analysis.use_events
     if use_events:
-        traces = analysis.dataset.events.copy()
+        traces = analysis.dataset.events_array.copy()
         suffix = '_events'
     else:
         traces = analysis.dataset.dff_traces_array.copy()
@@ -584,8 +586,8 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
 
     ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35)
     try:
-        mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
-                             conditions=['cell', 'change_image_name', 'behavioral_response_type'])
+        mdf = ut.get_mean_df(analysis.trials_response_df, analysis,
+                             conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'])
         ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
                                      condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None,
                                     use_events=use_events, window=analysis.trial_window)
@@ -593,11 +595,12 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
         pass
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
-    mdf = ut.get_mean_df(analysis.trial_response_df, analysis, conditions=['cell_specimen_id', 'change_image_name'])
+    mdf = ut.get_mean_df(analysis.trials_response_df, analysis, conditions=['cell_specimen_id', 'change_image_name'])
     ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None, use_events=use_events)
 
+    # fig.canvas.draw()
     fig.tight_layout()
 
     if save_dir:
-        fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder + suffix)
+        save_figure(fig, figsize, save_dir, 'experiment_summary_figures',
+                    str(analysis.dataset.experiment_id)+'_experiment_summary'+suffix)

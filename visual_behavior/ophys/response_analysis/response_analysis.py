@@ -72,27 +72,30 @@ class ResponseAnalysis(object):
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
 
 
-    def get_trial_response_df(self):
-        self._trial_response_df = rp.get_trials_response_df(self.dataset, self.use_events)
-        return self._trial_response_df
-
-    trial_response_df = LazyLoadable('_trial_response_df', get_trial_response_df)
-
+    # def get_trial_response_df(self):
+    #     self._trial_response_df = rp.get_trials_response_df(self.dataset, self.use_events)
+    #     return self._trial_response_df
+    #
+    # trial_response_df = LazyLoadable('_trial_response_df', get_trial_response_df)
+    #
     # def get_flash_response_df(self):
     #     self._flash_response_df = rp.get_stimulus_response_df(self.dataset, self.use_events)
     #     return self._flash_response_df
     #
     # flash_response_df = LazyLoadable('_flash_response_df', get_flash_response_df)
-
-    def get_omitted_flash_response_df(self):
-        self._omitted_flash_response_df = rp.get_omission_response_df(self.dataset, self.use_events)
-        return self._omitted_flash_response_df
-
-    omitted_flash_response_df = LazyLoadable('_omitted_flash_response_df', get_omitted_flash_response_df)
+    #
+    # def get_omitted_flash_response_df(self):
+    #     self._omitted_flash_response_df = rp.get_omission_response_df(self.dataset, self.use_events)
+    #     return self._omitted_flash_response_df
+    #
+    # omitted_flash_response_df = LazyLoadable('_omitted_flash_response_df', get_omitted_flash_response_df)
 
     def get_response_df_path(self, df_name):
         if self.use_events:
-            path = os.path.join(self.dataset.analysis_dir, df_name + '_events.h5')
+            if 'response' in df_name:
+                path = os.path.join(self.dataset.analysis_dir, df_name+'_events.h5')
+            else:
+                path = os.path.join(self.dataset.analysis_dir, df_name+'.h5')
         else:
             path = os.path.join(self.dataset.analysis_dir, df_name+'.h5')
         return path
@@ -103,13 +106,13 @@ class ResponseAnalysis(object):
 
     def get_df_for_df_name(self, df_name):
         if df_name == 'trials_response_df':
-            df = rp.get_trial_response_df(self.dataset, self.use_events)
+            df = rp.get_trials_response_df(self.dataset, self.use_events)
         elif df_name == 'stimulus_response_df':
             df = rp.get_stimulus_response_df(self.dataset, self.use_events)
         elif df_name == 'omission_response_df':
             df = rp.get_omission_response_df(self.dataset, self.use_events)
-        elif df_name == 'trial_run_speed_df':
-            df = rp.get_trial_run_speed_df(self.dataset)
+        elif df_name == 'trials_run_speed_df':
+            df = rp.get_trials_run_speed_df(self.dataset)
         elif df_name == 'stimulus_run_speed_df':
             df = rp.get_stimulus_run_speed_df(self.dataset)
         elif df_name == 'stimulus_pupil_area_df':
@@ -181,13 +184,13 @@ class ResponseAnalysis(object):
 
     omission_response_df = LazyLoadable('_omission_response_df', get_omission_response_df)
 
-    def get_trial_run_speed_df(self):
-        df_name = 'trial_run_speed_df'
+    def get_trials_run_speed_df(self):
+        df_name = 'trials_run_speed_df'
         df = self.get_response_df(df_name)
-        self._trial_run_speed_df = df
-        return self._trial_run_speed_df
+        self._trials_run_speed_df = df
+        return self._trials_run_speed_df
 
-    trial_run_speed_df = LazyLoadable('_trial_run_speed_df', get_trial_run_speed_df)
+    trials_run_speed_df = LazyLoadable('_trials_run_speed_df', get_trials_run_speed_df)
 
     def get_stimulus_run_speed_df(self):
         df_name = 'stimulus_run_speed_df'
@@ -234,102 +237,3 @@ class ResponseAnalysis(object):
 
 
 
-
-
-
-
-
-
-
-    # def compute_pairwise_correlations(self):
-    #     fdf = self.flash_response_df.copy()
-    #     if 'omitted' in fdf.keys():
-    #         fdf = fdf[fdf.omitted == False].copy()
-    #     # compute correlations independently for each repeat of a given image after a change
-    #     # repeat = 1 is the first flash after change, repeat = 5 is the 5th flash after a change
-    #     fdf['engaged'] = [True if reward_rate > 2 else False for reward_rate in fdf.reward_rate.values]
-    #     s_corr_data = []
-    #     n_corr_data = []
-    #     for repeat in [1, 5, 10, 15]:
-    #         for engaged in fdf.engaged.unique():
-    #             # print('repeat', repeat, 'engaged', engaged)
-    #             tmp_fdf = fdf[(fdf.repeat == repeat) & (fdf.engaged == engaged)]
-    #             # create a df with the trial averaged response for each image across flash repeat number
-    #             mfdf = ut.get_mean_df(tmp_fdf, conditions=['cell_specimen_id', 'image_name', 'repeat', 'engaged'],
-    #                                   flashes=True)
-    #
-    #             # signal correlations
-    #             # create table with the trial averaged response of each cell to each image
-    #             # print('getting signal correlations')
-    #             signal_responses = mfdf.pivot_table(
-    #                 index=['cell_specimen_id', 'repeat', 'engaged'],
-    #                 columns='image_name',
-    #                 values='mean_response')
-    #             # loop through pairs to compute signal correlations
-    #             for cell1_data, cell2_data in itertools.combinations(signal_responses.iterrows(), 2):
-    #                 #     print cell1_data, cell2_data
-    #                 (cell_specimen_id_1, repeat_number_1, engaged_1), image_responses_1 = cell1_data
-    #                 (cell_specimen_id_2, repeat_number_2, engaged_2), image_responses_2 = cell2_data
-    #                 try:
-    #                     # correlation between 2 cells tuning curves
-    #                     scorr = sp.stats.pearsonr(image_responses_1[~np.isnan(image_responses_1)],
-    #                                               image_responses_2[~np.isnan(image_responses_2)])[0]
-    #                 except ValueError:
-    #                     scorr = np.nan
-    #                 s_corr_data.append(
-    #                     dict(repeat=repeat_number_1, engaged=engaged_1, cell1=cell_specimen_id_1,
-    #                          cell2=cell_specimen_id_2, signal_correlation=scorr))
-    #             # noise correlations
-    #             # get trial average response for each cell to subtract from each trial's response
-    #             # print('getting noise correlations')
-    #             mfdf['trial_average'] = mfdf.mean_response.values
-    #             mfdf2 = mfdf[['cell_specimen_id', 'image_name', 'repeat', 'engaged', 'trial_average']]
-    #             # add trial average column to flash response df
-    #             ndf = mfdf2.merge(tmp_fdf, on=['cell_specimen_id', 'image_name', 'repeat', 'engaged'])
-    #             # subtract the trial average from the mean response on each individual flash
-    #             ndf['noise_response'] = ndf.mean_response - ndf.trial_average
-    #             # create table with trial average subtracted response for each flash
-    #             noise_responses = ndf.pivot_table(
-    #                 index=['cell_specimen_id', 'repeat', 'engaged'],
-    #                 columns='flash_number',
-    #                 values='noise_response')
-    #             # compute noise correlations
-    #             for cell1_data, cell2_data in itertools.combinations(noise_responses.iterrows(), 2):
-    #                 (cell_specimen_id_1, repeat_number_1, engaged_1), trial_responses_1 = cell1_data
-    #                 (cell_specimen_id_2, repeat_number_2, engaged_2), trial_responses_2 = cell2_data
-    #                 try:
-    #                     ncorr = sp.stats.pearsonr(trial_responses_1[~np.isnan(trial_responses_1)],
-    #                                               trial_responses_2[~np.isnan(trial_responses_2)])[0]
-    #                 except ValueError:
-    #                     ncorr = np.nan
-    #                 n_corr_data.append(
-    #                     dict(repeat=repeat_number_1, engaged=engaged_1, cell1=cell_specimen_id_1,
-    #                          cell2=cell_specimen_id_2, noise_correlation=ncorr))
-    #
-    #     # create dataframes from signal and noise correlation dictionaries and merge
-    #     cdf1 = pd.DataFrame(s_corr_data)
-    #     cdf2 = pd.DataFrame(n_corr_data)
-    #     pairwise_correlations_df = cdf1.merge(cdf2, on=['cell1', 'cell2', 'repeat', 'engaged'])
-    #     pairwise_correlations_df['experiment_id'] = int(self.dataset.experiment_id)
-    #     return pairwise_correlations_df
-    #
-    # def get_pairwise_correlations_path(self):
-    #     if self.use_events:
-    #         path = os.path.join(self.dataset.analysis_dir, 'pairwise_correlations_events.h5')
-    #     else:
-    #         path = os.path.join(self.dataset.analysis_dir, 'pairwise_correlations.h5')
-    #     return path
-    #
-    # def save_pairwise_correlations_df(self, pairwise_correlations_df):
-    #     print('saving pairwise correlations dataframe')
-    #     pairwise_correlations_df.to_hdf(self.get_pairwise_correlations_path(), key='df')
-    #
-    # def get_pairwise_correlations_df(self):
-    #     # if os.path.exists(self.get_pairwise_correlations_path()):
-    #     #     print('loading pairwise correlations dataframe')
-    #     #     self.pairwise_correlations_df = pd.read_hdf(self.get_pairwise_correlations_path(), key='df')
-    #     # else:
-    #     print('generating pairwise correlations dataframe')
-    #     self.pairwise_correlations_df = self.compute_pairwise_correlations()
-    #     self.save_pairwise_correlations_df(self.pairwise_correlations_df)
-    #     return self.pairwise_correlations_df

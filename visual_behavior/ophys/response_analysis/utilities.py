@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -328,7 +329,7 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     mdf = mdf[['mean_response', 'sem_response', 'mean_trace', 'sem_trace', 'mean_responses', 'mean_baseline', 'sem_baseline']]
     mdf = mdf.reset_index()
     if get_pref_stim:
-        if (conditions[-1] == 'image_name') or (conditions[-1] =='change_image_name') or (conditions[-1] =='prior_image_name'):
+        if ('image_name' in conditions) or ('change_image_name' in conditions) or ('prior_image_name' in conditions):
             mdf = annotate_mean_df_with_pref_stim(mdf, exclude_omitted_from_pref_stim)
     if analysis is not None:
         # mdf = annotate_mean_df_with_p_value(analysis, mdf, window=window)
@@ -824,10 +825,28 @@ def get_active_cell_indices(dff_traces):
         snr = mean / std
         snr_values.append(snr)
     active_cell_indices = np.argsort(snr_values)[-10:]
-    random_order = np.arange(0, len(active_cell_indices), 1)
-    np.random.shuffle(random_order)
-    active_cell_indices = active_cell_indices[random_order]
     return active_cell_indices
+
+
+def save_active_cell_indices(dataset, active_cell_indices, save_dir):
+    experiment_id = dataset.experiment_id
+    cell_specimen_ids = [dataset.get_cell_specimen_id_for_cell_index(cell) for cell in active_cell_indices]
+    cells = pd.DataFrame(active_cell_indices, columns=['cell'])
+    cells['cell_specimen_id'] = cell_specimen_ids
+    cells.to_csv(os.path.join(save_dir,str(experiment_id)+'_active_cell_indices.csv'))
+
+
+def get_saved_active_cell_indices(experiment_id, data_dir):
+    data_file = [file for file in os.listdir(data_dir) if str(experiment_id)+'_active_cell_indices' in file]
+    if len(data_file) > 0:
+        df = pd.read_csv(os.path.join(data_dir, data_file[0]))
+        active_cell_indices = df['cell'].values
+        active_cell_specimen_ids = df['cell_specimen_id'].values
+    else:
+        print('cant find active cell indices')
+        active_cell_indices = None
+        active_cell_specimen_ids = None
+    return active_cell_indices, active_cell_specimen_ids
 
 
 def get_unrewarded_first_lick_times(dataset):
