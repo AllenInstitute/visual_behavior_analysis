@@ -18,16 +18,13 @@ from visual_behavior.visualization.ophys import summary_figures as sf
 
 
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
-    experiment_ids = np.sort(manifest.experiment_id.unique())
     use_events = True
     print(experiment_id)
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
-    analysis = ResponseAnalysis(dataset, use_events=use_events, overwrite_analysis_files=True)
+    analysis = ResponseAnalysis(dataset, use_events=use_events, overwrite_analysis_files=overwrite_analysis_files)
     tmp = analysis.trials_run_speed_df
     tmp = analysis.trials_response_df
     tmp = analysis.omission_response_df
-
-    esf.plot_experiment_summary_figure(analysis, save_dir=cache_dir)
 
     example_cells = ut.get_active_cell_indices(dataset.dff_traces_array)
     sf.plot_example_traces_and_behavior(dataset, example_cells, xmin_seconds=600, length_mins=1.5, dff_max=4,
@@ -37,8 +34,10 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     sf.plot_average_flash_response_example_cells(analysis, example_cells, include_changes=False,
                                                  save_figures=True, save_dir=dataset.analysis_dir,
                                                  folder='experiment_summary_figures')
-
     sf.plot_max_projection_image(dataset, save_dir=save_dir)
+    esf.plot_experiment_summary_figure(analysis, save_dir=dataset.cache_dir)
+    esf.plot_experiment_summary_figure(analysis, save_dir=dataset.analysis_dir)
+
 
 
 if __name__ == '__main__':
