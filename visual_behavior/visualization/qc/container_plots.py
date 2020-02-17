@@ -95,7 +95,6 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
                        'container_'+str(ophys_container_id))
 
 def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True):
-    from mpl_toolkits.axes_grid1 import make_axes_locatable
     ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 20)
@@ -109,6 +108,7 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'dff_traces_heatmaps',
                        'container_' + str(ophys_container_id))
+
 
 ################  BEHAVIOR  ################ # NOQA: E402
 
