@@ -569,8 +569,7 @@ def plot_mean_response_by_repeat_heatmap(df, cre_line, title=None, ax=None, use_
     return ax
 
 
-
-def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4, 4], alpha=0.15,
+def plot_flashes_on_trace(ax, trial_type=None, omitted=False, window=[-4, 4], alpha=0.15,
                           facecolor='gray', frame_rate=31.):
     stim_duration = .25
     blank_duration = .5
@@ -598,31 +597,32 @@ def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, win
     return ax
 
 
-# def plot_flashes_on_trace(ax, trial_type=None, omitted=False, flashes=False, window=[-4,4], alpha=0.15, facecolor='gray', frame_rate=31.):
-#     stim_duration = .25
-#     blank_duration = .5
-#     change_frame = int(np.abs(window[0]) * frame_rate)
-#     end_frame = int((np.abs(window[0]) + window[1]) * frame_rate)
-#     interval = int((blank_duration + stim_duration)*frame_rate)
-#     if omitted:
-#         array = np.arange((change_frame + interval), end_frame, interval)
-#         # array = array[1:]
-#     else:
-#         array = np.arange(change_frame, end_frame, interval)
-#     for i, vals in enumerate(array):
-#         amin = array[i]
-#         amax = array[i] + int(stim_duration * frame_rate)
-#         ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
-#     if trial_type == 'go':
-#         alpha = alpha * 3
-#     else:
-#         alpha
-#     array = np.arange(change_frame - ((blank_duration) * frame_rate), 0, -interval)
-#     for i, vals in enumerate(array):
-#         amin = array[i]
-#         amax = array[i] - int(stim_duration * frame_rate)
-#         ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
-#     return ax
+def plot_flashes_on_trace_time(ax, trial_type=None, omitted=False, flashes=False, window=[-3, 3], alpha=0.15,
+                          facecolor='gray', frame_rate=31.):
+    stim_duration = .25
+    blank_duration = .5
+    change_time = 0
+    end_time = window[1]
+    interval = blank_duration + stim_duration
+    ax.set_xlim(window)
+    if omitted:
+        array = np.arange((change_time + interval), end_time+0.1, interval)
+    else:
+        array = np.arange(change_time, end_time+0.1, interval)
+    for i, vals in enumerate(array):
+        amin = array[i]
+        amax = array[i] + (stim_duration)
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    if trial_type == 'go':
+        alpha = alpha * 3
+    else:
+        alpha
+    array = np.arange(change_time - ((blank_duration)), window[0], -interval)
+    for i, vals in enumerate(array):
+        amin = array[i]
+        amax = array[i] - (stim_duration)
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    return ax
 
 
 def plot_pre_stim_on_trace(ax, window=[-0.5, 0.75], alpha=0.3, facecolor='gray'):
@@ -1270,7 +1270,7 @@ def plot_average_flash_response_example_cells(analysis, active_cell_indices, sav
             color = ut.get_color_for_image_name(image_names, image_name)
             ax[i] = plot_mean_trace_from_mean_df(cdf, 31., color=[.5,.5,.5], interval_sec=0.5,
                                                      xlims=analysis.flash_window, ax=ax[i])
-            ax[i] = plot_flashes_on_trace(ax[i], window=analysis.flash_window, flashes=True, facecolor=color, alpha=0.3)
+            ax[i] = plot_flashes_on_trace(ax[i], window=analysis.flash_window, facecolor=color, alpha=0.3)
             if 'Vip' in dataset.metadata.cre_line.values[0]:
                 ax[i].vlines(x=0, ymin=0, ymax=.25, linewidth=3)
             elif 'Slc' in dataset.metadata.cre_line.values[0]:
@@ -1386,7 +1386,7 @@ def plot_fraction_cells_over_threshold_stacked(cell_df, metric, threshold, condi
     plt.gcf().subplots_adjust(bottom=0.2)
     plt.gcf().subplots_adjust(hspace=.3)
     if save_figures:
-        psf.save_figure(fig ,figsize, save_dir, folder, metric+'_'+condition+'_fraction_stacked'+suffix)
+        save_figure(fig ,figsize, save_dir, folder, metric+'_'+condition+'_fraction_stacked'+suffix)
 
 
 def plot_fraction_cells_over_threshold_areas(cell_df, metric, threshold, less_than=False, save_figures=False, save_dir=None, folder=None):

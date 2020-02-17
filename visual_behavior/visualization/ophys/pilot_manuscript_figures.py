@@ -14,6 +14,8 @@ import visual_behavior.visualization.ophys.summary_figures as sf
 
 import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.visualization.utils import save_figure
+import visual_behavior.utilities as vbut
+
 
 ### functions to support figure generation for pilot study manuscript ###
 
@@ -195,6 +197,478 @@ def get_stats_for_cell_summary_areas(cell_summary_df, metric):
         stats_df = pd.concat([stats_df, tmp])
 
     return stats_df
+
+
+## behavior - figure 1
+
+
+def plot_behavior_metrics(rdf, x='trial_type', y='response_rate', ylabel='response rate', hue=None, show_stats=True,
+                         colors=None, gray_sessions=False, legend=False, title=None, save_dir=None, suffix=''):
+    figsize=(3.5,3.5)
+    fig, ax = plt.subplots(figsize=figsize)
+    if colors:
+        if not legend:
+            if gray_sessions:
+                ax = sns.swarmplot(data=rdf, x=x, y=y,  color='gray', ax=ax, size=3, zorder=1)
+            else:
+                ax = sns.swarmplot(data=rdf, x=x, y=y,  hue=hue, palette=colors, ax=ax, size=3, zorder=1)
+        ax = sns.pointplot(data=rdf, x=x, y=y, hue=hue, palette=colors, ax=ax, zorder=100)
+    else:
+        if not legend:
+            ax = sns.swarmplot(data=rdf, x=x, y=y, color='gray', ax=ax, size=3, zorder=1)
+        ax = sns.pointplot(data=rdf, x=x, y=y, color='gray', ax=ax, zorder=100)
+    ax.set_xlim(-0.2, len(rdf[x].unique())-1+0.2)
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel('')
+    if legend:
+        suffix = suffix+'_legend'
+        l = ax.legend(fontsize='large', title='image set')
+        plt.setp(l.get_title(),fontsize='large')
+    else:
+        suffix = suffix+''
+        if colors:
+            ax.get_legend().remove()
+        else:
+            hue = 'none'
+    ax.set_ylim(ymin=0)
+    ax.set_xlabel(x.split('_')[0]+' '+x.split('_')[1])
+    if x is 'image_name':
+        ax.set_xticklabels(rdf.image_name.unique(), rotation=90)
+    if title:
+        ax.set_title(title)
+
+    hue_order = rdf[hue].unique()
+    if show_stats:
+        sample_type = 'behavior_sessions'
+        condition = x
+        hue_names = hue_order
+        sig_y_val = rdf[y].max()
+        metric = y
+        condition_values = rdf[condition].unique()
+        stats_df = get_stats_for_conditions(rdf, metric, sample_type, condition, condition_values, hue, hue_names)
+        label_df = get_label_df(ax, stats_df, condition, condition_values, hue, hue_names)
+        ax = label_ax_with_stats(ax, label_df, stats_df, sig_y_val, condition, condition_values, hue, hue_names)
+
+    fig.tight_layout()
+    if save_dir:
+        sf.save_figure(fig, figsize, save_dir, 'behavior', y+'_'+x+'_'+hue+suffix)
+
+
+def plot_behavior_metrics_lines(rdf, x='trial_type', y='response_rate', ylabel='response rate', hue=None,
+                                show_stats=True,
+                                colors=None, legend=False, save_dir=None, suffix=''):
+    figsize = (3.5, 3.5)
+    fig, ax = plt.subplots(figsize=figsize)
+    for experiment_id in rdf.experiment_id.unique():
+        t = rdf[rdf.experiment_id == experiment_id]
+        y_vals = []
+        for x_val in t[x].unique():
+            y_vals.append(np.nanmean(t[t[x] == x_val][y].values))
+        y_vals = np.asarray(y_vals)
+        x_vals = np.arange(0, len(y_vals))
+        ax.plot(x_vals, y_vals, '.-', color='gray', linewidth=1, alpha=0.3)
+    if colors:
+        ax = sns.pointplot(data=rdf, x=x, y=y, hue=hue, palette=colors, ax=ax)
+    else:
+        ax = sns.pointplot(data=rdf, x=x, y=y, color='gray', ax=ax)
+    ax.set_xlim(-0.2, len(rdf[x].unique()) - 1 + 0.2)
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel('')
+    if legend:
+        suffix = suffix + '_legend'
+        l = ax.legend(fontsize='large', title='image set')
+        plt.setp(l.get_title(), fontsize='large')
+    else:
+        suffix = suffix + ''
+        if colors:
+            ax.get_legend().remove()
+        else:
+            hue = 'none'
+    ax.set_ylim(ymin=0)
+    ax.set_xlabel(x.split('_')[0] + ' ' + x.split('_')[1])
+    if x is 'image_name':
+        ax.set_xticklabels(rdf.image_name.unique(), rotation=90)
+
+    hue_order = rdf[hue].unique()
+    if show_stats:
+        sample_type = 'behavior_sessions'
+        hue_names = hue_order
+        sig_y_val = rdf[y].max()
+        metric = y
+        condition = x
+        condition_values = rdf[x].unique()
+        stats_df = get_stats_for_conditions(rdf, metric, sample_type, condition, condition_values, hue, hue_names)
+        label_df = get_label_df(ax, stats_df, condition, condition_values, hue, hue_names)
+        ax = label_ax_with_stats(ax, label_df, stats_df, sig_y_val, condition, condition_values, hue, hue_names)
+    fig.tight_layout()
+    if save_dir:
+        sf.save_figure(fig, figsize, save_dir, 'behavior', y + '_' + x + '_' + hue + suffix + '_lines')
+
+def generate_image_count_summary(mouse_list):
+    from visual_behavior.translator import foraging2, foraging  # NOQA: E402
+    df_list = []
+    for mouse_id in mouse_list:
+        folder = os.path.join(r"\\allen\programs\braintv\workgroups\neuralcoding\Behavior\Data", "M{}".format(mouse_id), "output")
+        files = np.sort(os.listdir(folder))
+        for file in files:
+            if ('NaturalImages' in file) & ('Ophys' not in file):
+                pkl_path = os.path.join(folder, file)
+                pkl = pd.read_pickle(pkl_path)
+                core_data = foraging.data_to_change_detection_core(pkl)
+                st = core_data['visual_stimuli']
+                tmp = [mouse_id, file]
+                for image_name in np.sort(st.image_name.unique()):
+                    n = len(st[st.image_name==image_name])
+                    tmp = tmp + [n]
+                df_list.append(tmp)
+
+    df = pd.DataFrame(data=df_list, columns=['mouse_id','filename']+list(np.sort(st.image_name.unique())))
+    df.at[df[df.mouse_id=='m329071'].index, 'mouse_id'] = 'M329071'
+    df.to_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs', 'image_count.h5'), key='df')
+
+def generate_behavior_session_summary(mouse_list):
+    df_list = []
+    for m in mouse_list:
+        mouse_id = "M{}".format(m)
+        folder = os.path.join(r"\\allen\programs\braintv\workgroups\neuralcoding\Behavior\Data", mouse_id, "output")
+        pkl_path = os.path.join(folder, 'extended_trials_df.pkl')
+        mouse_df = pd.read_pickle(pkl_path)
+        mouse_df = mouse_df[mouse_df.auto_rewarded != True]
+        mouse_df = mouse_df[mouse_df.reward_rate > 2]
+        mouse_df['strdate'] = mouse_df.startdatetime.values
+        mouse_df['stage_number'] = [stage_name_to_numbers[stage] for stage in mouse_df.stage.values]
+
+        for date in mouse_df.date.unique():
+            tmp = mouse_df[mouse_df.date == date]
+            manifest_data = manifest[(manifest.date == date) & (manifest.donor_id == m)]
+            cre_line = manifest[(manifest.donor_id == m)].cre_line.values[0]
+            if len(manifest_data) > 0:
+                expt_id = manifest_data.experiment_id.values[0]
+            else:
+                expt_id = np.nan
+            if mouse_id == 'm329071':
+                print('changing mouse_id')
+                mouse_id = 'M329071'
+                print(mouse_id)
+            else:
+                mouse_id = mouse_id
+            stage_number = tmp.stage_number.unique()[0]
+            stage_name = tmp.stage.unique()[0]
+            if stage_number == 4:  # include image set A exposures prior to ophys stage
+                exposure_number = len(
+                    mouse_df[(mouse_df.date < date) & (mouse_df.stage_number.isin([3, 4]))].date.unique())
+            else:
+                exposure_number = len(
+                    mouse_df[(mouse_df.date < date) & (mouse_df.stage_number == stage_number)].date.unique())
+            color = colors[tmp.stage.unique()[0]]
+            hit_rate, catch_rate, d_prime = vbut.get_response_rates(tmp, sliding_window=100)
+            mean_d_prime = np.nanmean(d_prime)
+            df_list.append(
+                [mouse_id, cre_line, date, expt_id, stage_number, stage_name, exposure_number, color, mean_d_prime])
+
+    columns = ['mouse_id', 'cre_line', 'date', 'experiment_id', 'stage_number', 'stage_name', 'exposure_number',
+               'color', 'mean_d_prime']
+    session_summary = pd.DataFrame(df_list, columns=columns)
+    session_summary.to_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs', 'behavior_session_summary.h5'),
+                           key='df')
+
+
+def add_inter_trial_lick_diff_to_trials_df(trials):
+    inter_trial_lick_diff = []
+    for row in range(len(trials)):
+        current_trial = trials.iloc[row]
+        previous_trial = trials.iloc[row-1]
+        if len(current_trial.lick_times) > 0 and len(previous_trial.lick_times) > 0:
+            inter_trial_lick_diff.append(current_trial.lick_times[0]-previous_trial.lick_times[-1])
+        else:
+            inter_trial_lick_diff.append(np.nan)
+    trials['inter_trial_lick_diff'] = inter_trial_lick_diff
+    return trials
+
+def annotate_trials(trials, dataset, window=[-2,3]):
+    running_trace = dataset.running_speed.running_speed.values
+    post_change_lick_times = []
+    first_lick_time = []
+    running_speed = []
+    for row in range(len(trials)):
+        times = list(trials.iloc[row].lick_times - trials.iloc[row].change_time)
+        if len(times) > 0:
+            first_lick_time.append(times[0])
+        else:
+            first_lick_time.append([])
+        post_change_lick_times.append(times)
+        trial_run_speed, times = ut.get_trace_around_timepoint(trials.iloc[row].change_time, running_trace,
+                                                 dataset.timestamps_stimulus, frame_rate=60., window=window)
+        running_speed.append(trial_run_speed)
+    trials['experiment_id'] = dataset.experiment_id
+    trials['post_change_lick_times'] = post_change_lick_times
+    trials['first_lick_time'] = first_lick_time
+    trials['running_speed'] = running_speed
+    trials['trial_duration'] = trials.endtime-trials.starttime
+    trials = add_inter_trial_lick_diff_to_trials_df(trials)
+    return trials
+
+def annotate_all_trials(all_trials, dataset, window=[-2,3]):
+    post_start_lick_times = []
+    post_change_lick_times = []
+    first_lick_time_after_start = []
+    first_lick_time_after_change = []
+    for row in range(len(all_trials)):
+        times = list(all_trials.iloc[row].lick_times - all_trials.iloc[row].starttime)
+        if len(times) > 0:
+            first_lick_time_after_start.append(times[0])
+        else:
+            first_lick_time_after_start.append([])
+        post_start_lick_times.append(times)
+        if all_trials.iloc[row].trial_type is 'go' or 'catch':
+            times = list(all_trials.iloc[row].lick_times - all_trials.iloc[row].change_time)
+            if len(times) > 0:
+                first_lick_time_after_change.append(times[0])
+            else:
+                first_lick_time_after_change.append([])
+            post_change_lick_times.append(times)
+        else:
+            post_change_lick_times.append(np.nan)
+    all_trials['post_start_lick_times'] = post_start_lick_times
+    all_trials['post_change_lick_times'] = post_change_lick_times
+    all_trials['first_lick_time_after_start'] = first_lick_time_after_start
+    all_trials['first_lick_time_after_change'] = first_lick_time_after_change
+    all_trials['experiment_id'] = dataset.experiment_id
+    return all_trials
+
+def generate_multi_session_all_trials_df(experiment_ids):
+    from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+    multi_session_all_trials = pd.DataFrame()
+    for experiment_id in experiment_ids:
+        dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
+        all_trials = dataset.all_trials.copy()
+        all_trials = annotate_all_trials(all_trials, dataset, window=[-2,6])
+        all_trials = ut.add_metadata_to_mean_df(all_trials, dataset.metadata)
+        multi_session_all_trials = pd.concat([multi_session_all_trials, all_trials])
+
+    save_path = os.path.join(cache_dir, 'multi_session_summary_dfs', 'multi_session_all_trials.h5')
+    multi_session_all_trials.to_hdf(save_path, key='df')
+
+def generate_multi_session_trials_df(experiment_ids):
+    from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+    multi_session_trials = pd.DataFrame()
+    for experiment_id in experiment_ids:
+        dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
+        trials = dataset.trials.copy()
+        trials = annotate_trials(trials, dataset, window=[-2, 6])
+        trials = ut.add_metadata_to_mean_df(trials, dataset.metadata)
+        multi_session_trials = pd.concat([multi_session_trials, trials])
+    save_path = os.path.join(cache_dir, 'multi_session_summary_dfs', 'multi_session_trials_df.h5')
+    multi_session_trials.to_hdf(save_path, key='df')
+
+
+def add_trial_types_to_flashes(flashes, trials):
+    flashes['change_time'] = flashes.start_time.values
+    flashes = pd.merge(flashes, trials[['change_time', 'trial_type']], on='change_time', how='outer')
+    return flashes
+
+
+def add_lick_times_to_flashes(flashes, licks):
+    flash_licks = []
+    for row in range(len(flashes))[:-1]:
+        start = flashes.iloc[row].start_time
+        end = flashes.iloc[row + 1].start_time
+        lick_times = licks[(licks.time > start) & (licks.time < end)].time.values
+        if len(lick_times) > 0:
+            flash_licks.append(lick_times)
+        else:
+            flash_licks.append([])
+    flash_licks.append([])
+    flashes['lick_times'] = flash_licks
+    flashes['n_licks'] = [len(licks) for licks in flashes.lick_times.values]
+    return flashes
+
+
+def add_inter_flash_lick_diff_to_flashes(flashes):
+    inter_flash_lick_diff = []
+    inter_flash_lick_diff.append(np.nan)
+    for row in range(len(flashes))[1:]:
+        current_trial = flashes.iloc[row]
+        previous_trial = flashes.iloc[row - 1]
+        if (len(current_trial.lick_times) > 0) and (len(previous_trial.lick_times) > 0):
+            inter_flash_lick_diff.append(current_trial.lick_times[0] - previous_trial.lick_times[-1])
+        else:
+            inter_flash_lick_diff.append(np.nan)
+    flashes['inter_flash_lick_diff'] = inter_flash_lick_diff
+    return flashes
+
+
+def add_first_lick_in_bout_to_flashes(flashes):
+    lick_times = flashes[flashes.lick_times.isnull() == False].lick_times.values
+    median_inter_lick_interval = np.median(np.diff(np.hstack(list(lick_times))))
+
+    first_lick_in_bout = []
+    first_lick_in_bout_time = []
+    for row in range(len(flashes)):
+        flash_data = flashes.iloc[row]
+        if len(flash_data.lick_times) > 0:  # if there is a lick
+            if flash_data.inter_flash_lick_diff < median_inter_lick_interval * 3:  # if that lick is within 3x the median inter lick interval
+                first_lick_in_bout.append(False)
+                first_lick_in_bout_time.append(np.nan)
+            else:  # if there is a lick and it is not within ~500ms of last lick, it is the first in a bout
+                first_lick_in_bout.append(True)
+                first_lick_in_bout_time.append(flash_data.lick_times[0])
+        else:
+            first_lick_in_bout.append(False)
+            first_lick_in_bout_time.append(np.nan)
+    flashes['first_lick_in_bout'] = first_lick_in_bout
+    flashes['first_lick_in_bout_time'] = first_lick_in_bout_time
+    flashes['post_flash_response_latency'] = flashes.first_lick_in_bout_time - flashes.start_time
+    return flashes
+
+
+def get_consumption_licks(flashes):
+    lick_times = flashes[flashes.lick_times.isnull() == False].lick_times.values
+    median_inter_lick_interval = np.median(np.diff(np.hstack(list(lick_times))))
+
+    flashes['consumption_licks'] = False
+    for row in range(len(flashes)):
+        row_data = flashes.iloc[row]
+        if (row_data.trial_type == 'go') and (row_data.first_lick_in_bout == True):
+            flashes.loc[row, 'consumption_licks'] = True
+        if (flashes.iloc[row - 1].consumption_licks == True) & (
+            flashes.iloc[row].inter_flash_lick_diff < median_inter_lick_interval * 3):
+            flashes.loc[row, 'consumption_licks'] = True
+    return flashes
+
+
+def annotate_flashes_with_reward_rate(flashes, trials):
+    last_time = 0
+    reward_rate_by_frame = []
+    trials = trials[trials.trial_type != 'aborted']
+    for change_time in trials.change_time.values:
+        reward_rate = trials[trials.change_time == change_time].reward_rate.values[0]
+        for start_time in flashes.start_time:
+            if (start_time < change_time) and (start_time > last_time):
+                reward_rate_by_frame.append(reward_rate)
+                last_time = start_time
+    # fill the last flashes with last value
+    for i in range(len(flashes) - len(reward_rate_by_frame)):
+        reward_rate_by_frame.append(reward_rate_by_frame[-1])
+    flashes['reward_rate'] = reward_rate_by_frame
+    return flashes
+
+
+def annotate_flashes(flashes, trials):
+    #     flashes = ut.add_repeat_to_stimulus_table(flashes)
+    flashes['repeat'] = flashes.index_within_block.values
+    flashes['flash_reward_rate'] = flashes.reward_rate.values
+    flashes = annotate_flashes_with_reward_rate(flashes, trials)
+    #     flashes = add_lick_times_to_flashes(flashes, licks)
+    flashes['lick_times'] = [list(licks) for licks in flashes.licks.values]
+    flashes['n_licks'] = [len(licks) for licks in flashes.lick_times.values]
+    flashes = add_trial_types_to_flashes(flashes, trials)
+    flashes = flashes[:-5]  # get rid of last flashes, can have weirdness
+    flashes = add_inter_flash_lick_diff_to_flashes(flashes)
+    flashes = add_first_lick_in_bout_to_flashes(flashes)
+    flashes = get_consumption_licks(flashes)
+
+    #     flashes = add_flash_after_omitted(flashes)
+    return flashes
+
+
+def get_response_rates(flashes):
+    trial_flashes = flashes[flashes.trial_type == 'go']
+    hit_rate = len(trial_flashes[trial_flashes.n_licks > 0]) / float(len(trial_flashes))
+
+    catch_flashes = flashes[flashes.trial_type == 'catch']
+    catch_fa_rate = len(catch_flashes[catch_flashes.n_licks > 0]) / float(len(catch_flashes))
+
+    non_trial_flashes = flashes[
+        (flashes.trial_type.isin(['go', 'catch']) == False) & (flashes.consumption_licks == False)]
+    abort_responses = non_trial_flashes[(non_trial_flashes.first_lick_in_bout == True)]
+    abort_fa_rate = len(abort_responses) / float(len(non_trial_flashes))
+
+    non_trial_flashes = flashes[
+        (flashes.trial_type.isin(['go', 'catch']) == False) & (flashes.consumption_licks == False)]
+    flashes_with_licks = non_trial_flashes[(non_trial_flashes.n_licks > 0)]
+    fraction_flashes_with_licks = len(flashes_with_licks) / float(len(non_trial_flashes))
+
+    if True in flashes.omitted.unique():
+        omitted_flashes = flashes[(flashes.omitted == True) & (flashes.consumption_licks == False)]
+        omitted_flash_rate = len(omitted_flashes[omitted_flashes.n_licks > 0]) / float(len(omitted_flashes))
+
+        post_omitted_flashes = flashes[(flashes.flash_after_omitted == True) & (flashes.consumption_licks == False)]
+        post_omitted_flash_rate = len(post_omitted_flashes[post_omitted_flashes.n_licks > 0]) / float(
+            len(post_omitted_flashes))
+    else:
+        omitted_flash_rate = np.nan
+        post_omitted_flash_rate = np.nan
+
+    return hit_rate, catch_fa_rate, abort_fa_rate, fraction_flashes_with_licks, omitted_flash_rate, post_omitted_flash_rate
+
+
+def get_response_latencies(flashes):
+    hit_response_times = flashes[(flashes.trial_type == 'go') &
+                                 (flashes.n_licks > 0)].post_flash_response_latency.values
+
+    catch_fa_response_times = flashes[(flashes.trial_type == 'catch') &
+                                      (flashes.n_licks > 0)].post_flash_response_latency.values
+
+    abort_fa_response_times = flashes[(flashes.trial_type.isin(['go', 'catch']) == False) &
+                                      (flashes.first_lick_in_bout == True) & (
+                                      flashes.n_licks > 0)].post_flash_response_latency.values
+
+    return hit_response_times, catch_fa_response_times, abort_fa_response_times
+
+
+def generate_response_rate_summary_df(experiment_ids):
+    from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+    df_list = []
+    for experiment_id in experiment_ids:
+        print(experiment_id)
+        dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
+
+        trials = dataset.all_trials.copy()
+        trials['trial_duration'] = trials.endtime - trials.starttime
+        n_aborted_trials = len(trials[trials.trial_type == 'aborted'])
+        total_trials = len(trials)
+        n_change_trials = len(trials[(trials.trial_type == 'go')])
+        fraction_aborted_trials = n_aborted_trials / float(total_trials)
+        fraction_time_aborted = trials[
+                                    trials.trial_type == 'aborted'].trial_duration.sum() / trials.trial_duration.sum()
+        fraction_time_engaged = trials[trials.reward_rate > 2].trial_duration.sum() / trials.trial_duration.sum()
+
+        flashes = dataset.extended_stimulus_presentations.copy()
+        trials = dataset.trials.copy()
+        flashes = annotate_flashes(flashes, trials)
+        flashes = flashes[flashes.reward_rate > 2]
+        hit_rate, catch_fa_rate, abort_fa_rate, fraction_flashes_with_licks, omitted_flash_rate, post_omitted_flash_rate = get_response_rates(
+            flashes)
+        print(dataset.analysis_folder)
+
+        hit_response_times, catch_fa_response_times, abort_fa_response_times = get_response_latencies(flashes)
+
+        df_list.append([experiment_id, hit_rate, catch_fa_rate, abort_fa_rate, fraction_flashes_with_licks,
+                        omitted_flash_rate, post_omitted_flash_rate,
+                        hit_response_times, catch_fa_response_times, abort_fa_response_times,
+                        n_aborted_trials, n_change_trials, total_trials,
+                        fraction_aborted_trials, fraction_time_aborted, fraction_time_engaged])
+        columns = ['experiment_id', 'hit_rate', 'catch_fa_rate', 'abort_fa_rate', 'fraction_flashes_with_licks',
+                   'omitted_flash_response_rate', 'post_omitted_flash_response_rate',
+                   'hit_response_times', 'catch_fa_response_times', 'abort_fa_response_times',
+                   'n_aborted_trials', 'n_change_trials', 'total_trials', 'fraction_aborted_trials',
+                   'fraction_time_aborted', 'fraction_time_engaged']
+        response_rate_summary_df = pd.DataFrame(data=df_list, columns=columns)
+
+    rdf = response_rate_summary_df.copy()
+    annotated_rdf = pd.DataFrame()
+    for experiment_id in experiment_ids:
+        dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
+        df = rdf[rdf.experiment_id == experiment_id]
+        df = ut.add_metadata_to_mean_df(df, dataset.metadata)
+        annotated_rdf = pd.concat([annotated_rdf, df])
+    response_rate_summary_df = annotated_rdf.copy()
+
+    save_path = os.path.join(cache_dir, 'multi_session_summary_dfs', 'response_rate_summary_df_engaged.h5')
+    response_rate_summary_df.to_hdf(save_path, key='df')
+
+
 
 
 ## boxplots
@@ -1254,7 +1728,7 @@ def plot_response_across_conditions_population(df, condition='image_set', condit
                                     xlims=window, ax=ax)
 
     if plot_flashes:
-        ax = psf.plot_flashes_on_trace(ax, flashes=True, alpha=0.3, window=window, omitted=omitted, frame_rate=frame_rate)
+        ax = psf.plot_flashes_on_trace(ax, alpha=0.3, window=window, omitted=omitted, frame_rate=frame_rate)
         xticks, xticklabels = sf.get_xticks_xticklabels(trace, frame_rate, interval_sec=interval_sec, window=window)
     ax.set_xticks(xticks)
     if interval_sec >= 1:

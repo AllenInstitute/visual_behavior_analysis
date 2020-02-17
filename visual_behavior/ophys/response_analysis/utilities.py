@@ -869,3 +869,59 @@ def get_unrewarded_first_lick_times(dataset):
             first_licks.append(lick)
     first_lick_times = np.asarray(first_licks)
     return first_lick_times
+
+def get_experiments_with_omissions(df):
+    omitted = []
+    for experiment_id in df.experiment_id.unique():
+        if 'omitted' in df[df.experiment_id==experiment_id].image_name.unique():
+            omitted.append(experiment_id)
+    return omitted
+
+def get_experiments_without_omissions(df):
+    omission_expts = get_experiments_with_omissions(df)
+    expts_without_omissions = [expt_id for expt_id in df.experiment_id.unique() if expt_id not in omission_expts]
+    return expts_without_omissions
+
+def filter_omission_experiments(df):
+    df = df[df.experiment_id.isin(get_experiments_with_omissions(df))]
+    return df
+
+
+def get_ramp_index(mean_trace, ophys_frame_rate=31.):
+    fr = ophys_frame_rate
+    flash_window = [-0.5, 0.75]
+    onset = int(fr * np.abs(flash_window[0]))
+
+    # pre stim window is 12 frames prior to stim onset ~400ms
+    early = np.nanmean(mean_trace[onset - 12:onset - 8])
+    late = np.nanmean(mean_trace[onset - 4:onset])
+    pre_stim_ramp_index = np.log2(late / early)
+
+    # stim window is 4 frames after stim onset ~125ms
+    early = np.nanmean(mean_trace[onset:onset + 2])
+    late = np.nanmean(mean_trace[onset + 2:onset + 4])
+    stim_ramp_index = np.log2(late / early)
+
+    # post stim window is 4 frames after stim offset
+    early = np.nanmean(mean_trace[onset + 8:onset + 10])
+    late = np.nanmean(mean_trace[onset + 10:onset + 12])
+    post_stim_ramp_index = np.log2(late / early)
+
+    return pre_stim_ramp_index, stim_ramp_index, post_stim_ramp_index
+
+
+def get_omission_ramp_index(mean_trace, ophys_frame_rate=31., window=[-3, 3]):
+    fr = ophys_frame_rate
+    onset = int(fr * np.abs(window[0]))
+
+    # omission window is -4 from omission onset to 22 frames after omission onset ~700ms
+    early = np.nanmean(mean_trace[onset - 4:onset])
+    late = np.nanmean(mean_trace[onset + 19:onset + 23])
+    omission_ramp_index = np.log2(late / early)
+
+    return omission_ramp_index
+
+def remove_inf(df, col_name):
+    df = df.replace([np.inf, -np.inf], np.nan)
+    df = df[df[col_name].isnull()==False]
+    return df

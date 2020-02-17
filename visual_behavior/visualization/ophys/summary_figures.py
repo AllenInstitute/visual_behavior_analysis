@@ -70,13 +70,13 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     return inner_ax
 
 
-def plot_max_projection_image(dataset, save_dir=None):
+def plot_max_projection_image(dataset, save_dir=None, folder='max_projection'):
     figsize = (5,5)
     fig, ax = plt.subplots(figsize=figsize)
     ax.imshow(dataset.max_projection, cmap='gray', vmax=dataset.max_projection.max()/2.)
     ax.axis('off')
     if save_dir:
-        save_figure(fig, figsize, save_dir, 'max_projection', str(dataset.experiment_id)+'.png')
+        save_figure(fig, figsize, save_dir, folder, str(dataset.experiment_id))
 
 
 def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
@@ -236,7 +236,7 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
     return ax
 
 
-def plot_flashes_on_trace(ax, analysis, window=[-4,8], trial_type=None, omitted=False, flashes=False, alpha=0.15, facecolor='gray'):
+def plot_flashes_on_trace(ax, analysis, window=[-4,8], trial_type=None, omitted=False, alpha=0.15, facecolor='gray'):
     """
     Function to create transparent gray bars spanning the duration of visual stimulus presentations to overlay on existing figure
 
@@ -260,26 +260,26 @@ def plot_flashes_on_trace(ax, analysis, window=[-4,8], trial_type=None, omitted=
         window = analysis.omitted_flash_window
     else:
         window = analysis.trial_window
-    change_frame = np.abs(window[0]) * frame_rate
-    end_frame = (window[1] + np.abs(window[0])) * frame_rate
-    interval = blank_duration + stim_duration
+    change_frame = int(np.abs(window[0]) * frame_rate)
+    end_frame = int((np.abs(window[0]) + window[1]) * frame_rate)
+    interval = int((blank_duration + stim_duration) * frame_rate)
     if omitted:
-        array = np.arange((change_frame + interval), end_frame, interval * frame_rate)
+        array = np.arange((change_frame + interval), end_frame, interval)
         array = array[1:]
     else:
-        array = np.arange(change_frame, end_frame, interval * frame_rate)
+        array = np.arange(change_frame, end_frame, interval)
     for i, vals in enumerate(array):
         amin = array[i]
-        amax = array[i] + (stim_duration * frame_rate)
+        amax = array[i] + int(stim_duration * frame_rate)
         ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     if trial_type == 'go':
         alpha = alpha * 3
     else:
         alpha
-    array = np.arange(change_frame - ((blank_duration) * frame_rate), 0, -interval * frame_rate)
+    array = np.arange(change_frame - (blank_duration * frame_rate), 0, -interval)
     for i, vals in enumerate(array):
         amin = array[i]
-        amax = array[i] - (stim_duration * frame_rate)
+        amax = array[i] - int(stim_duration * frame_rate)
         ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
     return ax
 
@@ -790,6 +790,71 @@ def plot_behavior_for_epoch(dataset, start_time, duration, exclude_running=False
         plt.close()
     return ax
 
+def plot_behavior_block(dataset, initial_time, duration=60, save_figures=False, save_dir=None):
+    rows = 4
+    figsize = (15,6)
+    fig, ax = plt.subplots(rows, 1, figsize=figsize)
+    for i,start_time in enumerate(np.arange(initial_time,initial_time+(duration*rows),duration)):
+        ax[i] = plot_behavior_for_epoch(dataset, start_time, duration, exclude_running=True, ax=ax[i], save_figures=False, save_dir=None)
+        ax[i].set_title('')
+        ax[i].tick_params(axis='x', bottom=False)
+        ax[i].set_xlabel('')
+        ax[i].set_xticklabels([])
+        ax[i].set_ylabel('epoch '+str(i+1), fontsize=14)
+    ax[i].tick_params(axis='x', bottom=True)
+    ax[0].set_title(dataset.analysis_folder+' - '+str(initial_time), fontsize=14)
+    xlim = (start_time,start_time+duration+1)
+    ax[i].set_xticks(np.arange(xlim[0], xlim[1], 10));
+    xticklabels = np.arange(xlim[0], xlim[1], 10) - xlim[0]
+    ax[i].set_xticklabels([int(x) for x in xticklabels]);
+    ax[i].set_xlabel('time (seconds)')
+    if save_figures:
+        folder = 'behavior_blocks'
+        if save_dir:
+            save_figure(fig, figsize, save_dir, folder, dataset.analysis_folder+'_'+str(start_time))
+        save_figure(fig, figsize, dataset.analysis_dir, folder, str(start_time))
+
+def plot_lick_raster(dataset, ax=None, save_figures=False, save_dir=None):
+    trials = dataset.trials
+    image_set = dataset.metadata.session_type.values[0][-1]
+    mouse_id = str(dataset.metadata.donor_id.values[0])
+    if ax is None:
+        figsize = (4, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+    for trial in trials.trial.values:
+        trial_data = trials.iloc[trial]
+        trial_start = trial_data.start_time - trial_data.change_time
+        lick_times = [(t - trial_data.change_time) for t in trial_data.lick_times]
+        reward_time = [(t - trial_data.change_time) for t in trial_data.reward_times]
+        color = trial_data.trial_type_color
+        color = 'white'
+        if trial_data.trial_type == 'go':
+            color = 'green' #sns.color_palette()[0]
+            linewidth = 1
+        else:
+            color = 'red' #sns.color_palette()[1]
+            linewidth = 3
+        ax.axhspan(trial, trial + 1, -200, 200, color='white', alpha=.1)
+        if len(reward_time) > 0:
+            ax.plot(reward_time[0], trial + 0.5, '^', color='purple', label='reward', markersize=3)
+        ax.vlines(trial_start, trial, trial + 1, color='k', linewidth=1, alpha=0.8)
+        ax.vlines(lick_times, trial, trial + 1, color=color, linewidth=linewidth)
+        ax.vlines(0, trial, trial + 1, color=[.5, .5, .5], linewidth=1)
+    ax.axvspan(trial_data.response_window[0], trial_data.response_window[1], facecolor='gray', alpha=.4,
+               edgecolor='none')
+    ax.grid(False)
+    ax.set_ylim(0, len(trials))
+    ax.set_xlim([-1, 5])
+    ax.set_ylabel('trial #')
+    ax.set_xlabel('time after change (seconds)')
+    ax.set_title('M'+mouse_id+' image set '+image_set, fontsize=14)
+    plt.gca().invert_yaxis()
+    plt.subplots_adjust(left=0.3)
+    if save_figures:
+        save_figure(fig, figsize, dataset.analysis_dir, 'behavior', 'lick_raster')
+        if save_dir:
+            save_figure(fig, figsize, save_dir, 'lick_rasters', dataset.analysis_folder)
+    return ax
 
 def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, save=False, use_events=False):
     ylabel, suffix = get_ylabel_and_suffix(use_events)
@@ -816,7 +881,6 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
             plt.close()
             ax = None
     return ax
-
 
 # only plots events or traces
 def plot_average_flash_response_example_cells(analysis, active_cell_indices, include_changes=False,
@@ -871,8 +935,7 @@ def plot_average_flash_response_example_cells(analysis, active_cell_indices, inc
                                                              interval_sec=0.5,
                                                              xlims=analysis.flash_window, ax=ax[i], plot_sem=False)
 
-            ax[i] = psf.plot_flashes_on_trace(ax[i], window=analysis.flash_window, flashes=True, facecolor=color,
-                                              alpha=0.3)
+            ax[i] = plot_flashes_on_trace(ax[i], analysis, window=analysis.flash_window, facecolor=color, alpha=0.3)
             ax[i].axis('off')
             ax[i].set_ylim(-0.05, ymax)
             if m == 0:
@@ -1354,10 +1417,12 @@ def get_color_for_image_name(dataset, image_name):
 
 
 def plot_images(dataset, orientation='row', rows=1, color_box=True, save=False, ax=None):
-    orientation = 'row'
+    meta = dataset.stimulus_metadata
+    meta = meta[meta.image_name != 'omitted']
+    n_images = len(meta)
     if orientation == 'row':
         figsize = (20, 5)
-        cols = len(dataset.stimulus_metadata)
+        cols = n_images
         rows = 1
     if rows == 2:
         cols = cols / 2
@@ -1365,10 +1430,9 @@ def plot_images(dataset, orientation='row', rows=1, color_box=True, save=False, 
     elif orientation == 'column':
         figsize = (5, 20)
         cols = 1
-        rows = len(dataset.stim_codes.stim_code.unique())
+        rows = n_images
     if ax is None:
-        fig, ax = plt.subplots(rows, cols, figsize=figsize)
-        ax = ax.ravel();
+        fig, ax = plt.subplots(rows, cols, figsize=figsize);
 
     stimuli = dataset.stimulus_metadata
     image_names = np.sort(dataset.stimulus_table.image_name.unique())
@@ -1378,8 +1442,8 @@ def plot_images(dataset, orientation='row', rows=1, color_box=True, save=False, 
         image_index = stimuli[stimuli.image_name == image_name].image_index.values[0]
         image = dataset.stimulus_template[image_index]
         ax[i].imshow(image, cmap='gray', vmin=0, vmax=np.amax(image));
-        ax[i].grid('off')
-        ax[i].axis('off')
+        ax[i].grid('off');
+        ax[i].axis('off');
         ax[i].set_title(image_name, color='k');
         if color_box:
             linewidth = 6
@@ -1392,7 +1456,7 @@ def plot_images(dataset, orientation='row', rows=1, color_box=True, save=False, 
         title = 'images_' + str(rows)
         if color_box:
             title = title + '_c'
-        save_figure(fig, figsize, dataset.analysis_dir, 'images', title, formats=['.png'])
+        save_figure(fig, figsize, dataset.analysis_dir, 'images', title)
     return ax
 
 
