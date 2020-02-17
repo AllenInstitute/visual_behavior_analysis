@@ -228,6 +228,12 @@ def get_valid_segmentation_mask(ophys_experiment_id):
     return valid_segmentation_mask
 
 
+def get_sdk_cell_specimen_table(ophys_experiment_id):
+    session = get_sdk_session_obj(ophys_experiment_id)
+    cell_specimen_table = session.cell_specimen_table
+    return cell_specimen_table
+
+
 def get_sdk_dff_traces_array(ophys_experiment_id):
     session = get_sdk_session_obj(ophys_experiment_id)
     dff_traces = session.dff_traces
@@ -363,7 +369,8 @@ def get_lims_cell_segmentation_run_info(ophys_experiment_id):
 
 
 def get_lims_cell_rois_table(ophys_experiment_id):
-    """Queries LIMS via AllenSDK PostgresQuery function to retrieve everything in the cell_rois table for a given experiment
+    """Queries LIMS via AllenSDK PostgresQuery function to retrieve
+        everything in the cell_rois table for a given experiment
 
     Arguments:
         experiment_id {int} -- 9 digit unique identifier for an ophys experiment
@@ -383,7 +390,7 @@ def get_lims_cell_rois_table(ophys_experiment_id):
             width:
             height:
             valid_roi: boolean(true/false), whether the roi passes or fails roi filtering
-            mask_matrix: boolean mask of roi
+            mask_matrix: boolean mask of just roi
             max_correction_up:
             max_correction_down:
             max_correction_right:
@@ -608,7 +615,7 @@ def build_container_df():
         }
         for idx,row in subset.iterrows():
             temp_dict.update({'session_{}'.format(idx):'{} {}'.format(row['session_type'],row['ophys_experiment_id'])})
-            
+      
 
 
         list_of_dicts.append(temp_dict)

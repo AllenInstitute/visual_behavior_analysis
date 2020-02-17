@@ -36,12 +36,6 @@ def ophys_experiment_info_df(ophys_experiment_id):
     return experiment_info_df
 
 
-def gen_roi_validity_masks(ophys_experiment_id):
-
-    cell_table = load.get_lims_cell_rois_table(ophys_experiment_id)
-    cell_table = shift_image_masks(cell_table)
-
-
 def ophys_experiment_segmentation_summary_df(ophys_experiment_id):
     """for a given experiment, uses the cell_rois_table from lims
         to get the total number segmented rois, as well as number
@@ -80,13 +74,108 @@ def ophys_experiment_segmentation_summary_df(ophys_experiment_id):
 
 
 def ophys_container_info_df(ophys_container_id):
+    """ queries LIMS and Mtrain databases and compiles container information
+
+    Arguments:
+        ophys_container_id {int} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+
+    """
     container_info_df = load.get_lims_container_info(ophys_container_id)
     container_info_df = split_mouse_info_column(container_info_df)
     container_info_df = load.get_mtrain_stage_name(container_info_df)
     container_info_df = container_info_df.drop(["mouse_info", "foraging_id"], axis=1)
+    return container_info_df
 
 
-# def ophys_container_segmentation_summary_df(ophys_container_id):
+def ophys_container_segmentation_summary_df(ophys_container_id,
+                                            rmv_unpassed_experiments=True):
+    """[summary]
+
+    Arguments:
+        ophys_container_id {int} -- [description]
+
+    Keyword Arguments:
+        rmv_unpassed_experiments {bool} -- [description] (default: {True})
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                        "ophys_experiment_id",
+                        "total_rois",
+                        "valid_count",
+                        "invalid_count",
+                        "valid_percent",
+                        "invalid_percent"
+
+    """
+
+    container_info_df = ophys_container_info_df(ophys_container_id)
+
+    if rmv_unpassed_experiments == True:
+        container_info_df = remove_unpassed_experiments(container_info_df)
+    elif rmv_unpassed_experiments == False:
+        pass
+
+    container_seg_summary = pd.DataFrame()
+    for exp_id in container_info_df["ophys_experiment_id"].unique():
+        exp_seg_summary = ophys_experiment_segmentation_summary_df(exp_id)
+        container_seg_summary = container_seg_summary.append(exp_seg_summary)
+
+    container_seg_summary = container_seg_summary.reset_index(drop=True)
+    return container_seg_summary
+
+
+def melted_container_segmentation_summary_df(container_seg_summary_df):
+    """takes the segmentation summary df and manipulates/reorders it so
+        it can be used for bar plots with a column for hue
+
+
+    Arguments:
+        container_seg_summary_df {dataframe} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                        "ophys_experiment_id": 9 digit ophys experiment id
+
+                        "total_rois": total number of segmented rois
+
+                        "valid_invalid": "valid" or "invalid" to indicate
+                                            the rois were valid or invalid
+
+                        "roi_count": number of rois
+
+                        "roi_percent": percentage of the total number of
+                                        segmented rois
+    """
+
+    count_df = container_seg_summary_df[["ophys_experiment_id",
+                                         "total_rois",
+                                         "valid_count",
+                                         "invalid_count"]].copy()
+
+    perc_df = container_seg_summary_df[["ophys_experiment_id",
+                                        "valid_percent",
+                                        "invalid_percent"]].copy()
+
+    melted_count = pd.melt(count_df, id_vars=["ophys_experiment_id", "total_rois"],
+                                    var_name="valid_invalid",
+                                    value_name="roi_count")
+
+    melted_percent = pd.melt(perc_df, id_vars=["ophys_experiment_id"],
+                                        var_name="valid_invalid",
+                                        value_name="roi_count")
+
+    melted_count['valid_invalid'] = melted_count['valid_invalid'].map({'valid_count': "valid",
+                                                                       'invalid_count': "invalid"})
+
+    melted_percent['valid_invalid'] = melted_percent['valid_invalid'].map({'valid_percent': "valid",
+                                                                           'invalid_percent': "invalid"})
+
+    merged_melted_df = pd.merge(melted_count, melted_percent, how="left", on=["ophys_experiment_id", "valid_invalid"])
+    merged_melted_df = merged_melted_df.sort_values("ophys_experiment_id")
+    return merged_melted_df
 
 
 def calc_retake_number(container_dataframe, stage_name_column="stage_name_mtrain"):
@@ -131,36 +220,6 @@ def get_stage_num(dataframe):
     return dataframe
 
 
-def shift_image_masks(dataframe):
-    """takes a dataframe with cell specimen or roi information, and specifically
-        the columns "image_mask", "x"(bbox_min_x), "y"(bbox_min_y) and shifts the
-        image masks so they reflect where the ROI/Cell is within the imaging
-        FOV
-
-    Arguments:
-        dataframe {[type]} -- [description]
-
-    Returns:
-        [type] -- [description]
-    """
-    dataframe["shifted_image_mask"] = dataframe.apply(shift_mask_by_row, axis=1)
-    return dataframe
-
-
-def shift_mask_by_row(row):
-    """acts on a datframe row- for use in specifically in roi_metrics_dataframe
-        applies the np.roll to move an image mask, on to every row in a dataframe,
-        row by row
-
-    Arguments:
-        row {[type]} -- row of the dataframe
-
-    Returns:
-        [type] -- [description]
-    """
-    return np.roll(row["image_mask"], (row["x"], row["y"]), axis=(1, 0))
-
-
 def remove_invalid_rois(dataframe):
     """takes a cell/roi level dataframe with column "valid_roi"
         and removes invalid rois
@@ -189,3 +248,137 @@ def remove_unpassed_experiments(dataframe):
     dataframe = dataframe.loc[dataframe["workflow_state"] == "passed"]
     dataframe = dataframe.reset_index(drop=True)
     return dataframe
+
+
+####### ROI MASKS ####### # NOQA: E402
+
+
+def shift_image_masks(dataframe):
+    """takes a dataframe with cell specimen or roi information, and specifically
+        the columns "image_mask", "x"(bbox_min_x), "y"(bbox_min_y) and shifts the
+        image masks so they reflect where the ROI/Cell is within the imaging
+        FOV
+
+    Arguments:
+        dataframe {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+    dataframe["shifted_image_mask"] = dataframe.apply(shift_mask_by_row, axis=1)
+    return dataframe
+
+
+def shift_mask_by_row(row, col="image_mask"):
+    """acts on a datframe row and applies the np.roll to
+        move an image mask, on to every row in a dataframe,
+        row by row
+
+    Arguments:
+        row {[type]} -- [description]
+
+    Keyword Arguments:
+        col {str} -- the column to apply the roll to
+                    if using LIMS cell table use "mask_matrix"
+                    if using SDK session object cell_specimen_table use "image_mask"
+                    (default: {"image_mask"})
+
+    Returns:
+        [type] -- [description]
+    """
+    if col == "mask_matrix":
+        pass
+    elif col == "image_mask":
+        pass
+    else:
+        print("please enter a valid col, either 'mask_matrix' or 'image_mask'")
+    return np.roll(row[col], (row["x"], row["y"]), axis=(1, 0))
+
+
+def gen_multi_mask_bool(shifted_image_masks_array):
+    """takes a 3d array with the shifted image masks (z,x,y) and sums them
+        over z such that the 2d array it produces has all the rois
+
+    Arguments:
+        shifted_image_masks_array {array} -- [description]
+
+    Returns:
+        array -- [description]
+    """
+
+    multi_mask_bool = np.sum(shifted_image_masks_array, 0)
+    return multi_mask_bool
+
+
+def change_mask_from_bool_to_binary(mask):
+    """change a mask from bool to binary so the backgroun is 0s and transparent,
+        which allows it to be plotted over another image such as a max intensity
+        projection or an average projection
+
+    Arguments:
+        mask {array} -- array of True & False
+
+    Returns:
+        array -- array/matrix of 1's & 0s
+    """
+    # change the background from true/false to nan & 1, so area not masked will be transparent for plotting over ave proj
+    # make a new mask (0,1) by copying the shifted mask
+    new_mask = mask.copy()
+    new_mask = new_mask.astype(int)
+    # create an all 0s(binary) mask of the same shape
+    binary_mask = np.zeros(new_mask.shape)
+    # turn all 0s to nans
+    binary_mask[:] = np.nan
+    # where new mask is one, change binary mask to 1, so now all nans and 1s where roi is
+    binary_mask[new_mask == 1] = 1
+    return binary_mask
+
+
+def gen_transparent_multi_roi_mask(shifted_image_masks_array):
+    """takes and array with shifted image masks the size of the imaging FOV
+        and summs them to create a bool mask, then changes the bool mask
+        to a binary mask so it's transparent everywhere there isn't an ROI
+
+    Arguments:
+        shifted_image_masks_array {array} -- 3d array of all the shifted image masks
+                                            that are the same size as the FOV
+
+    Returns:
+        2d array -- 2d array the size of the imaging FOV for a single
+                    ophys experiment FOV
+    """
+    multi_mask_bool = gen_multi_mask_bool(shifted_image_masks_array)
+    multi_mask_binary = change_mask_from_bool_to_binary(multi_mask_bool)
+    return multi_mask_binary
+
+
+def gen_transparent_validity_masks(ophys_experiment_id):
+    """uses the sdk cell_specimen_table and returns a dataframe with
+        a single transparent mask for the all the valid cells
+        and another single mask for all the the invalid cells
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- a dataframe with the following columns:
+                    "ophys_experiment_id",
+                    "valid_rois",
+                    "transparent_mask"
+    """
+    sdk_cell_table = load.get_sdk_cell_specimen_table(ophys_experiment_id)
+    sdk_cell_table = shift_image_masks(sdk_cell_table)
+
+    validity_masks_df = pd.DataFrame()
+    for TF in sdk_cell_table["valid_roi"].unique():
+        shifted_image_masks_array = sdk_cell_table.loc[sdk_cell_table["valid_roi"] == TF, "shifted_image_mask"].values
+        transparent_mask = gen_transparent_multi_roi_mask(shifted_image_masks_array)
+
+        temp_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                                "valid_rois": TF,
+                                "transparent_mask": [transparent_mask]},
+                               index=[0])
+        validity_masks_df = validity_masks_df.append(temp_df)
+    validity_masks_df = validity_masks_df.reset_index(drop=True)
+
+    return validity_masks_df
