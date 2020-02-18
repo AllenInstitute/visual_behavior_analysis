@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import itertools
 
-#csid = cell_specimen_id
+# csid = cell_specimen_id
 
 
 ####### EXPERIMENT LEVEL ####### # NOQA: E402
@@ -352,7 +352,7 @@ def container_experiment_pairs_valid_cell_matching(ophys_container_id):
                                 "perc_matched": the percentage of the valid cells that were matched (matched count /total valid count)
                                 "total_valid_count": total number of valid cells for the experiment pair
     """
-    #csid = cell_specimen_id
+    # csid = cell_specimen_id
     valid_container_csid_df = get_valid_container_cell_roi_table(ophys_container_id)
 
     experiments_list = valid_container_csid_df["ophys_experiment_id"].unique().tolist()
@@ -418,10 +418,9 @@ def container_cell_matching_percent_heatmap_df(ophys_container_id):
 
 
 def container_cell_matching_count_heatmap_df(ophys_container_id):
-      """takes the container_experiment_pairs_cell_matching dataframe and
+    """takes the container_experiment_pairs_cell_matching dataframe and
         pivots it so it can be used to easily plot a heatmap of the # of valid
         cell_specimen_id s matched between experiment pairs
-
 
     Arguments:
         ophys_container_id {[type]} -- [description]
