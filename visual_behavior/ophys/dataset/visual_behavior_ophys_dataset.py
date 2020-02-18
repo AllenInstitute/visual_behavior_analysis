@@ -337,7 +337,7 @@ class VisualBehaviorOphysDataset(object):
 
     def get_pupil_area(self):
         session_id = self.metadata.session_id.values[0]
-        data_dir = os.path.join(self.cache_dir, 'ophys_pilot_eyetracking')
+        data_dir = os.path.join(self.cache_dir, 'pupil_data')
         filename = [file for file in os.listdir(data_dir) if str(session_id) in file]
         if len(filename) > 0:
             df = pd.read_csv(os.path.join(data_dir, filename[0]))

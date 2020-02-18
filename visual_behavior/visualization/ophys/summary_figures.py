@@ -802,12 +802,15 @@ def plot_behavior_block(dataset, initial_time, duration=60, save_figures=False, 
         ax[i].set_xticklabels([])
         ax[i].set_ylabel('epoch '+str(i+1), fontsize=14)
     ax[i].tick_params(axis='x', bottom=True)
-    ax[0].set_title(dataset.analysis_folder+' - '+str(initial_time), fontsize=14)
+    # ax[0].set_title(dataset.analysis_folder+' - '+str(initial_time), fontsize=14)
+    ax[0].set_title('example task flow and behavior performance', fontsize=18)
     xlim = (start_time,start_time+duration+1)
     ax[i].set_xticks(np.arange(xlim[0], xlim[1], 10));
     xticklabels = np.arange(xlim[0], xlim[1], 10) - xlim[0]
     ax[i].set_xticklabels([int(x) for x in xticklabels]);
     ax[i].set_xlabel('time (seconds)')
+    l = ax[i].legend(bbox_to_anchor=(0.125, -0.2), fontsize='x-small')
+    plt.setp(l.get_title(), fontsize='x-small')
     if save_figures:
         folder = 'behavior_blocks'
         if save_dir:
@@ -846,8 +849,9 @@ def plot_lick_raster(dataset, ax=None, save_figures=False, save_dir=None):
     ax.set_ylim(0, len(trials))
     ax.set_xlim([-1, 5])
     ax.set_ylabel('trial #')
-    ax.set_xlabel('time after change (seconds)')
-    ax.set_title('M'+mouse_id+' image set '+image_set, fontsize=14)
+    ax.set_xlabel('time after change (sec)')
+    # ax.set_title('M'+mouse_id+' image set '+image_set, fontsize=14)
+    ax.set_title('change aligned lick raster', fontsize=16)
     plt.gca().invert_yaxis()
     plt.subplots_adjust(left=0.3)
     if save_figures:
@@ -1014,8 +1018,8 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     ax[i].set_xlim(xlim)
     ax[i].set_title('')
     #     ax[i].legend(bbox_to_anchor=(-1,-1), fontsize=14)
-    l = ax[i].legend(bbox_to_anchor=(0.125, -0.2), fontsize='x-small')
-    plt.setp(l.get_title(), fontsize='x-small')
+    l = ax[i].legend(bbox_to_anchor=(0.15, -0.2), fontsize='small')
+    plt.setp(l.get_title(), fontsize='small')
     sns.despine(ax=ax[i], left=True, bottom=True)
     ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
                       labeltop=False, labelright=False, labelleft=False, labelbottom=True)
@@ -1416,7 +1420,7 @@ def get_color_for_image_name(dataset, image_name):
     return color
 
 
-def plot_images(dataset, orientation='row', rows=1, color_box=True, save=False, ax=None):
+def plot_images(dataset, orientation='row', rows=1, color_box=True, save_dir=None, ax=None):
     meta = dataset.stimulus_metadata
     meta = meta[meta.image_name != 'omitted']
     n_images = len(meta)
@@ -1452,11 +1456,11 @@ def plot_images(dataset, orientation='row', rows=1, color_box=True, save=False, 
             ax[i].axvline(x=-30, ymin=0.05, ymax=0.95, linewidth=linewidth, color=colors[i]);
             ax[i].axvline(x=image.shape[1], ymin=0, ymax=0.95, linewidth=linewidth, color=colors[i]);
             # ax[i].set_title(str(stim_code), color=colors[i])
-    if save:
-        title = 'images_' + str(rows)
+    if save_dir:
+        title = 'images_' + dataset.metadata.session_type[0]    
         if color_box:
             title = title + '_c'
-        save_figure(fig, figsize, dataset.analysis_dir, 'images', title)
+        save_figure(fig, figsize, save_dir, 'images', title)
     return ax
 
 
