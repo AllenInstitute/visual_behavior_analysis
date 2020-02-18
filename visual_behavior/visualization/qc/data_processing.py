@@ -2,6 +2,9 @@ import visual_behavior.visualization.qc.data_loading as load
 
 import pandas as pd
 import numpy as np
+import itertools
+
+#csid = cell_specimen_id
 
 
 ####### EXPERIMENT LEVEL ####### # NOQA: E402
@@ -17,7 +20,7 @@ def ophys_experiment_info_df(ophys_experiment_id):
                                                 "ophys_experiment_id",
                                                 "ophys_session_id"
                                                 "container_id",
-                                                "workflow_state",
+                                                "experiment_workflow_state",
                                                 "stage_name_lims",
                                                 "full_genotype",
                                                 "targeted_structure",
@@ -70,7 +73,7 @@ def ophys_experiment_segmentation_summary_df(ophys_experiment_id):
     return seg_summary_df
 
 
-####### CONTAINER LEVEL ####### # NOQA: E402
+# CONTAINER LEVEL #######     NOQA: E402
 
 
 def ophys_container_info_df(ophys_container_id):
@@ -81,6 +84,11 @@ def ophys_container_info_df(ophys_container_id):
 
     Returns:
         dataframe -- dataframe with the following columns:
+                    "container_id":
+                    "ophys_experiment_id":
+                    "ophys_session_id":
+                    "stage_name_lims":
+                    "
 
     """
     container_info_df = load.get_lims_container_info(ophys_container_id)
@@ -88,6 +96,46 @@ def ophys_container_info_df(ophys_container_id):
     container_info_df = load.get_mtrain_stage_name(container_info_df)
     container_info_df = container_info_df.drop(["mouse_info", "foraging_id"], axis=1)
     return container_info_df
+
+
+def calc_retake_number(container_dataframe, stage_name_column="stage_name_mtrain"):
+    """calculates the retake number for each stage name
+
+    Arguments:
+        container_dataframe {dataframe} -- dataframe with info about the container
+                                            that includes a column with stage name
+                                            either from lims or mtrain
+
+    Keyword Arguments:
+        stage_name_column {str} -- the column that has the stage name
+                                     (default: {"stage_name_mtrain"})
+
+    Returns:
+        dataframe -- the original dataframe plus the column "retake_number" with an
+                        integer as the retake number for that stage name
+    """
+    stage_gb = container_dataframe.groupby(stage_name_column)
+    unique_stages = container_dataframe[stage_name_column][~pd.isnull(container_dataframe[stage_name_column])].unique()
+    for stage_name in unique_stages:
+        # Iterate through the sessions sorted by date and save the index to the row
+        sessions_this_stage = stage_gb.get_group(stage_name).sort_values('date_of_acquisition')
+        for ind_enum, (ind_row, row) in enumerate(sessions_this_stage.iterrows()):
+            container_dataframe.at[ind_row, 'retake_number'] = ind_enum
+    return container_dataframe
+
+
+def sort_dataframe_by_stage_name(dataframe, stage_name_column="stage_name_lims"):
+    dataframe = dataframe.sort_values(stage_name_column)
+    return dataframe
+
+
+def stage_name_ordered_list(dataframe, stage_name_column="stage_name_lims"):
+    sorted_df = sort_dataframe_by_stage_name(dataframe, stage_name_column=stage_name_column)
+    stage_name_list = sorted_df[stage_name_column].unique()
+    return stage_name_list
+
+
+# SEGMENTATION ####   NOQA: E402
 
 
 def ophys_container_segmentation_summary_df(ophys_container_id,
@@ -127,7 +175,8 @@ def ophys_container_segmentation_summary_df(ophys_container_id,
     return container_seg_summary
 
 
-def melted_container_segmentation_summary_df(container_seg_summary_df):
+def melted_container_segmentation_summary_df(ophys_container_id,
+                                             rmv_unpassed_experiments=True):
     """takes the segmentation summary df and manipulates/reorders it so
         it can be used for bar plots with a column for hue
 
@@ -149,23 +198,25 @@ def melted_container_segmentation_summary_df(container_seg_summary_df):
                         "roi_percent": percentage of the total number of
                                         segmented rois
     """
+    container_seg_summary = ophys_container_segmentation_summary_df(ophys_container_id,
+                                                                    rmv_unpassed_experiments=rmv_unpassed_experiments)
 
-    count_df = container_seg_summary_df[["ophys_experiment_id",
-                                         "total_rois",
-                                         "valid_count",
-                                         "invalid_count"]].copy()
+    count_df = container_seg_summary[["ophys_experiment_id",
+                                      "total_rois",
+                                      "valid_count",
+                                      "invalid_count"]].copy()
 
-    perc_df = container_seg_summary_df[["ophys_experiment_id",
-                                        "valid_percent",
-                                        "invalid_percent"]].copy()
+    perc_df = container_seg_summary[["ophys_experiment_id",
+                                     "valid_percent",
+                                     "invalid_percent"]].copy()
 
     melted_count = pd.melt(count_df, id_vars=["ophys_experiment_id", "total_rois"],
-                                    var_name="valid_invalid",
-                                    value_name="roi_count")
+                           var_name="valid_invalid",
+                           value_name="roi_count")
 
     melted_percent = pd.melt(perc_df, id_vars=["ophys_experiment_id"],
-                                        var_name="valid_invalid",
-                                        value_name="roi_count")
+                             var_name="valid_invalid",
+                             value_name="roi_percent")
 
     melted_count['valid_invalid'] = melted_count['valid_invalid'].map({'valid_count': "valid",
                                                                        'invalid_count': "invalid"})
@@ -178,16 +229,215 @@ def melted_container_segmentation_summary_df(container_seg_summary_df):
     return merged_melted_df
 
 
-def calc_retake_number(container_dataframe, stage_name_column="stage_name_mtrain"):
-    stage_gb = container_dataframe.groupby(stage_name_column)
-    unique_stages = container_dataframe[stage_name_column][~pd.isnull(container_dataframe[stage_name_column])].unique()
-    for stage_name in unique_stages:
-        # Iterate through the sessions sorted by date and save the index to the row
-        sessions_this_stage = stage_gb.get_group(stage_name).sort_values('date_of_acquisition')
-        for ind_enum, (ind_row, row) in enumerate(sessions_this_stage.iterrows()):
-            container_dataframe.at[ind_row, 'retake_number'] = ind_enum
-    return container_dataframe
+def container_segmentation_plots_df(ophys_container_id, stage_name_column="stage_name_lims"):
+    """[summary]
 
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Keyword Arguments:
+        stage_name_column {str} -- [description] (default: {"stage_name_lims"})
+
+    Returns:
+        [type] -- [description]
+    """
+    container_info_df = ophys_container_info_df(ophys_container_id)
+    stage_name_df = container_info_df[["container_id", "ophys_experiment_id", stage_name_column]].copy()
+
+    melted_cont_seg_sum = melted_container_segmentation_summary_df(ophys_container_id,
+                                                                   rmv_unpassed_experiments=True)
+
+    seg_sum_with_stage = pd.merge(stage_name_df, melted_cont_seg_sum, how="right", on="ophys_experiment_id")
+
+    seg_sum_with_stage = sort_dataframe_by_stage_name(seg_sum_with_stage,
+                                                      stage_name_column=stage_name_column)
+    return seg_sum_with_stage
+
+
+### CELL MATCHING ###
+
+def get_lims_cell_roi_tables_for_container(ophys_container_id):
+    """returns all the cell_specimen_ids and valid/invalid status for rois
+        for all PASSED ophys_experiment_id's in a container
+
+    Arguments:
+        ophys_container_id {int} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                        "ophys_experiment_id"
+                        "stage_name_lims"
+                        "cell_specimen_id"
+                        "valid_roi"
+                        "container_id"
+    """
+    container_info_df = ophys_container_info_df(ophys_container_id)
+    passed_container = remove_unpassed_experiments(container_info_df)
+
+    stage_name_df = passed_container[["ophys_experiment_id", "stage_name_lims"]].copy()
+
+    container_cell_table = pd.DataFrame()
+
+    for ophys_experiment_id in passed_container["ophys_experiment_id"].unique():
+        exp_cell_table = load.get_lims_cell_rois_table(ophys_experiment_id)
+
+        exp_cell_table = exp_cell_table[["ophys_experiment_id",
+                                         "cell_specimen_id",
+                                         "valid_roi"]]
+        container_cell_table = container_cell_table.append(exp_cell_table)
+    container_cell_table.loc[:, "container_id"] = ophys_container_id
+    container_cell_table = container_cell_table.reset_index(drop=True)
+    container_cell_table = pd.merge(container_cell_table, stage_name_df, how="left", on="ophys_experiment_id")
+    return container_cell_table
+
+
+def get_valid_container_cell_roi_table(ophys_container_id):
+    """uses the LIMS cell_roi_table and returns all the valid
+        cell_specimen_ids and for all PASSED ophys_experiment_id's
+        in a container
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                        "ophys_experiment_id"
+                        "stage_name_lims"
+                        "cell_specimen_id"
+                        "valid_roi"
+                        "container_id"
+    """
+    container_csid_table = get_lims_cell_roi_tables_for_container(ophys_container_id)
+    valid_container_csid_df = remove_invalid_rois(container_csid_table)
+    valid_container_csid_df = valid_container_csid_df.dropna(subset=['cell_specimen_id'])
+    return valid_container_csid_df
+
+
+def cell_specimen_id_matches_in_dataframe(dataframe):
+    """takes a dataframe that contains the column "cell_specimen_id"
+        and returns the number of times that cell_specimen_id appears
+        in that dataframe
+
+    Arguments:
+        dataframe {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+    matches = dataframe["cell_specimen_id"].value_counts().to_frame().reset_index()
+    matches = matches.rename(columns={"index": "cell_specimen_id", "cell_specimen_id": "match_count"})
+    dataframe = pd.merge(dataframe, matches, how="left", on="cell_specimen_id")
+    return dataframe
+
+
+def container_experiment_pairs_valid_cell_matching(ophys_container_id):
+    """takes a container and for the PASSED experiments, gets the VALID
+        cell_specimen_ids. Then uses itertools to list all combinations
+        of experiments in the container and for each experiment pair:
+                -number of valid cell_specimen_ids
+                -number of matched cell_specimen_ids
+                -percent of match cell_specimen_ids
+
+    Arguments:
+        ophys_container_id {int} -- [description]
+
+    Returns:
+        pandas dataframe -- produces a dataframe with the following columns:
+                                "exp1": experiment id for first experiment in experiment pair
+                                "exp1_stage_num": the stage number of the stage name for experiment 1
+                                                of the experiment pair
+                                "exp2": experiment id for the second experiment in the experiment pair
+                                "exp2_stage_name": the stage number of the stage name for experiment 2 of the experiment pair
+                                "matched_count": the number of valid cells matched between the experiment pair
+                                "perc_matched": the percentage of the valid cells that were matched (matched count /total valid count)
+                                "total_valid_count": total number of valid cells for the experiment pair
+    """
+    #csid = cell_specimen_id
+    valid_container_csid_df = get_valid_container_cell_roi_table(ophys_container_id)
+
+    experiments_list = valid_container_csid_df["ophys_experiment_id"].unique().tolist()
+    exp_combos = list(itertools.combinations(experiments_list, 2))
+
+    container_df = pd.DataFrame()
+    for combo in exp_combos:
+        combo = np.asarray(combo)
+        # subset valid_container_csid_df to get just just the data for the experiments in the experiment pair
+        exp_pair_df = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"].isin(combo)].copy()
+
+        exp1 = combo[0]
+        exp2 = combo[1]
+
+        exp1_stage_name = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"] == exp1, "stage_name_lims"].unique()[0]
+        exp2_stage_name = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"] == exp2, "stage_name_lims"].unique()[0]
+
+        csids_in_exp_pair = len(exp_pair_df["cell_specimen_id"].unique())  # all the csids across both experiments
+        exp_pair_df = cell_specimen_id_matches_in_dataframe(exp_pair_df)  # get number of times a csid appears & add to exp_pair_df
+        matches_btw_pair = len(exp_pair_df.loc[exp_pair_df["match_count"] == 2, "cell_specimen_id"].unique())
+
+        if csids_in_exp_pair == 0:
+            perc_cells_matched = np.nan
+        else:
+            perc_cells_matched = np.round(matches_btw_pair / csids_in_exp_pair, 2)
+
+        combo_df = pd.DataFrame({"exp1": exp1,
+                                 "exp1_stage_name": exp1_stage_name,
+                                 "exp2": exp2,
+                                 "exp2_stage_name": exp2_stage_name,
+                                 "total_valid_count": csids_in_exp_pair,
+                                 "matched_count": matches_btw_pair,
+                                 "perc_matched": perc_cells_matched}, index=[0])
+
+        container_df = container_df.append(combo_df, sort=True)
+    container_df.loc[:, "container_id"] = int(ophys_container_id)
+    container_df = container_df.reset_index(drop=True)
+    return container_df
+
+
+def container_cell_matching_percent_heatmap_df(ophys_container_id):
+    """takes the container_experiment_pairs_cell_matching dataframe and
+        pivots it so it can be used to easily plot a heatmap of the % of valid
+        cell_specimen_id s matched between experiment pairs
+
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe where both rows are exp1_stage_name and columns are
+                    exp2_stage_name and the values are the % of valid cell_specimen_id s
+                    that were matched between the experiment pairs
+    """
+
+    container_exp_pair_matching_df = container_experiment_pairs_valid_cell_matching(ophys_container_id)
+    valid_container_csid_df = get_valid_container_cell_roi_table(ophys_container_id)
+    stage_order = stage_name_ordered_list(valid_container_csid_df, stage_name_column="stage_name_lims")
+    pivot_perc = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="perc_matched")
+    pivot_perc = pivot_perc.reindex(stage_order, axis=1)
+    pivot_perc = pivot_perc.reindex(stage_order)
+    return pivot_perc
+
+
+def container_cell_matching_count_heatmap_df(ophys_container_id):
+      """takes the container_experiment_pairs_cell_matching dataframe and
+        pivots it so it can be used to easily plot a heatmap of the # of valid
+        cell_specimen_id s matched between experiment pairs
+
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe where both rows are exp1_stage_name and columns are
+                    exp2_stage_name and the values are the # of valid cell_specimen_id s
+                    that were matched between the experiment pairs
+    """
+    container_exp_pair_matching_df = container_experiment_pairs_valid_cell_matching(ophys_container_id)
+    valid_container_csid_df = get_valid_container_cell_roi_table(ophys_container_id)
+    stage_order = stage_name_ordered_list(valid_container_csid_df, stage_name_column="stage_name_lims")
+    pivot_count = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="matched_count")
+    pivot_count = pivot_count.reindex(stage_order, axis=1)
+    pivot_count = pivot_count.reindex(stage_order)
+    return pivot_count
 
 ####### UTILITIES ####### # NOQA: E402
 
@@ -245,7 +495,7 @@ def remove_unpassed_experiments(dataframe):
     Returns:
         dataframe -- dataframe with unpassed experiments removed and index reset
     """
-    dataframe = dataframe.loc[dataframe["workflow_state"] == "passed"]
+    dataframe = dataframe.loc[dataframe["experiment_workflow_state"] == "passed"]
     dataframe = dataframe.reset_index(drop=True)
     return dataframe
 

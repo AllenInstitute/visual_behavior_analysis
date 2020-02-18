@@ -4,7 +4,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 
-def get_colors_for_session_numbers():
+def gen_colors_for_session_numbers():
     reds = sns.color_palette('Reds_r', 6)[:5][::2]
     blues = sns.color_palette('Blues_r', 6)[:5][::2]
     return reds+blues

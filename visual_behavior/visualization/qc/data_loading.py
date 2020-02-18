@@ -275,7 +275,7 @@ def get_lims_experiment_info(ophys_experiment_id):
     Returns:
         table -- table with the following columns:
                     "experiment_id":
-                    "workflow_state":
+                    "experiment_workflow_state":
                     "ophys_session_id":
                     "container_id":
                     "date_of_acquisition":
@@ -303,7 +303,7 @@ def get_lims_experiment_info(ophys_experiment_id):
     os.date_of_acquisition,
     os.stimulus_name as stage_name_lims,
     os.foraging_id,
-    oe.workflow_state,
+    oe.workflow_state as experiment_workflow_state,
 
     specimens.name as mouse_info,
     specimens.donor_id as mouse_donor_id,
@@ -428,11 +428,12 @@ def get_lims_container_info(ophys_container_id):
     Returns:
        table -- table with the following columns:
                     "container_id":
+                    "container_workflow_state":
                     "ophys_experiment_id":
                     "ophys_session_id":
                     "stage_name_lims":
                     "foraging_id":
-                    "workflow_state":
+                    "experiment_workflow_state":
                     "mouse_info":
                     "mouse_donor_id":
                     "targeted_structure":
@@ -447,11 +448,12 @@ def get_lims_container_info(ophys_container_id):
     query = '''
     SELECT
     container.visual_behavior_experiment_container_id as container_id,
+    vbec.workflow_state as container_workflow_state,
     oe.id as ophys_experiment_id,
     oe.ophys_session_id,
     os.stimulus_name as stage_name_lims,
     os.foraging_id,
-    oe.workflow_state,
+    oe.workflow_state as experiment_workflow_state,
     specimens.name as mouse_info,
     specimens.donor_id as mouse_donor_id,
     structures.acronym as targeted_structure,
@@ -461,6 +463,7 @@ def get_lims_container_info(ophys_container_id):
 
     FROM
     ophys_experiments_visual_behavior_experiment_containers container
+    join visual_behavior_experiment_containers vbec on vbec.id = container.visual_behavior_experiment_container_id
     join ophys_experiments oe on oe.id = container.ophys_experiment_id
     join ophys_sessions os on os.id = oe.ophys_session_id
     join structures on structures.id = oe.targeted_structure_id
@@ -595,26 +598,26 @@ def build_container_df():
     manifest_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest.json"
     cache = bpc.from_lims(manifest=manifest_path)
 
-    table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition',ascending=False).reset_index()
+    table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition', ascending=False).reset_index()
     container_ids = table['container_id'].unique()
     list_of_dicts = []
     for container_id in container_ids:
-        subset = table.query('container_id == @container_id').sort_values(by='date_of_acquisition',ascending=True).drop_duplicates('ophys_session_id').reset_index()
+        subset = table.query('container_id == @container_id').sort_values(by='date_of_acquisition', ascending=True).drop_duplicates('ophys_session_id').reset_index()
         temp_dict = {
-            'container_id':container_id,
-            'container_workflow_state':table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
-            'first_acquistion_date':subset['date_of_acquisition'].min().split(' ')[0],
-            'project_code':subset['project_code'].unique()[0],
-            'driver_line':subset['driver_line'][0],
-            'targeted_structure':subset['targeted_structure'].unique()[0],
-            'imaging_depth':subset['imaging_depth'].unique()[0],
-            'equipment_name':subset['equipment_name'].unique(),
-            'specimen_id':subset['specimen_id'].unique()[0],
-            'sex':subset['sex'].unique()[0],
-            'age_in_days':subset['age_in_days'].min(),
+            'container_id': container_id,
+            'container_workflow_state': table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
+            'first_acquistion_date': subset['date_of_acquisition'].min().split(' ')[0],
+            'project_code': subset['project_code'].unique()[0],
+            'driver_line': subset['driver_line'][0],
+            'targeted_structure': subset['targeted_structure'].unique()[0],
+            'imaging_depth': subset['imaging_depth'].unique()[0],
+            'equipment_name': subset['equipment_name'].unique(),
+            'specimen_id': subset['specimen_id'].unique()[0],
+            'sex': subset['sex'].unique()[0],
+            'age_in_days': subset['age_in_days'].min(),
         }
         for idx,row in subset.iterrows():
-            temp_dict.update({'session_{}'.format(idx):'{} {}'.format(row['session_type'],row['ophys_experiment_id'])})
+            temp_dict.update({'session_{}'.format(idx): '{} {}'.format(row['session_type'], row['ophys_experiment_id'])})
       
 
 
