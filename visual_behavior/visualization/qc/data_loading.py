@@ -491,7 +491,7 @@ def get_timeseries_ini_wkf_info(ophys_session_id):
         ophys_session_id {int} -- 9 digit ophys session id
 
     Returns:
-        list -- nested list with
+        
     """
 
     QUERY = '''
@@ -558,6 +558,48 @@ def get_pmt_gain_for_session(ophys_session_id):
     pmt_gain = pmt_gain_from_timeseries_ini(timeseries_ini_path)
     return pmt_gain
 
+def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to get the
+        "motion_corrected_movie.h5" information for a given 
+        ophys_experiment_id
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 886523092 AND
+     attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    motion_corrected_movie_h5_wkf_info = (lims_cursor.fetchall())
+    return motion_corrected_movie_h5_wkf_info
+
+
+def get_motion_corrected_movie_h5_location(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to get info for the
+        "motion_corrected_movie.h5" file for a ophys_experiment_id,
+        and then parses that information to get the filepath
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        filepath -- [description]
+    """
+    motion_corrected_movie_h5_wkf_info = get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id)
+    motion_corrected_movie_h5_path = motion_corrected_movie_h5_wkf_info[0]['?column?'] #idk why it's ?column? but it is :(
+    motion_corrected_movie_h5_path = motion_corrected_movie_h5_path.replace('/allen', '//allen')  # works with windows and linux filepaths
+    return motion_corrected_movie_h5_path
 
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
 
