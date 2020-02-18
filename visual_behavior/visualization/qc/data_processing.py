@@ -156,7 +156,6 @@ def ophys_container_segmentation_summary_df(ophys_container_id,
                         "invalid_count",
                         "valid_percent",
                         "invalid_percent"
-
     """
 
     container_info_df = ophys_container_info_df(ophys_container_id)
@@ -187,14 +186,10 @@ def melted_container_segmentation_summary_df(ophys_container_id,
     Returns:
         dataframe -- dataframe with the following columns:
                         "ophys_experiment_id": 9 digit ophys experiment id
-
                         "total_rois": total number of segmented rois
-
                         "valid_invalid": "valid" or "invalid" to indicate
                                             the rois were valid or invalid
-
                         "roi_count": number of rois
-
                         "roi_percent": percentage of the total number of
                                         segmented rois
     """
@@ -210,16 +205,17 @@ def melted_container_segmentation_summary_df(ophys_container_id,
                                      "valid_percent",
                                      "invalid_percent"]].copy()
 
-    melted_count = pd.melt(count_df, id_vars=["ophys_experiment_id", "total_rois"],
-                           var_name="valid_invalid",
+    melted_count = pd.melt(count_df, id_vars=["ophys_experiment_id"],
+                           var_name="roi_category",
                            value_name="roi_count")
 
     melted_percent = pd.melt(perc_df, id_vars=["ophys_experiment_id"],
                              var_name="valid_invalid",
                              value_name="roi_percent")
 
-    melted_count['valid_invalid'] = melted_count['valid_invalid'].map({'valid_count': "valid",
-                                                                       'invalid_count': "invalid"})
+    melted_count['valid_invalid'] = melted_count['valid_invalid'].map({'valid_count': "valid_rois",
+                                                                       'invalid_count': "invalid_rois",
+                                                                       'total_rois': 'total_rois'})
 
     melted_percent['valid_invalid'] = melted_percent['valid_invalid'].map({'valid_percent': "valid",
                                                                            'invalid_percent': "invalid"})
@@ -229,8 +225,8 @@ def melted_container_segmentation_summary_df(ophys_container_id,
     return merged_melted_df
 
 
-def container_segmentation_plots_df(ophys_container_id, stage_name_column="stage_name_lims"):
-    """[summary]
+def container_segmentation_barplots_df(ophys_container_id, stage_name_column="stage_name_lims"):
+    """
 
     Arguments:
         ophys_container_id {[type]} -- [description]
@@ -239,7 +235,14 @@ def container_segmentation_plots_df(ophys_container_id, stage_name_column="stage
         stage_name_column {str} -- [description] (default: {"stage_name_lims"})
 
     Returns:
-        [type] -- [description]
+        dataframe -- dataframe with the following columns:
+                    "container_id"
+                    "ophys_experiment_id"
+                    "stage_name_lims"
+                    "total_rois"
+                    valid_invalid"
+                    "roi_count"
+                    "roi_percent"
     """
     container_info_df = ophys_container_info_df(ophys_container_id)
     stage_name_df = container_info_df[["container_id", "ophys_experiment_id", stage_name_column]].copy()
@@ -322,12 +325,58 @@ def cell_specimen_id_matches_in_dataframe(dataframe):
         dataframe {[type]} -- [description]
 
     Returns:
-        [type] -- [description]
+        dataframe -- returns original  dataframe plus the column "match_count"
     """
     matches = dataframe["cell_specimen_id"].value_counts().to_frame().reset_index()
     matches = matches.rename(columns={"index": "cell_specimen_id", "cell_specimen_id": "match_count"})
     dataframe = pd.merge(dataframe, matches, how="left", on="cell_specimen_id")
     return dataframe
+
+def container_valid_csid_count_by_number_exps_matched_to(ophys_container_id):
+    """compiles all the valid cell_specimen_ids for a container and then computes
+        how many unique cell_specimen_id s were matched across the 7 experiments
+        in an experiment container
+    
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+    
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "num_exp_matched"
+                    "csid_count"
+                    "csid_percent"
+    """
+    valid_container_csid_df = get_valid_container_cell_roi_table(ophys_container_id)
+    valid_container_csid_df = cell_specimen_id_matches_in_dataframe(valid_container_csid_df)
+    total_valid_csids_in_container = len(valid_container_csid_df["cell_specimen_id"].unique())
+    num_exps_matched_to_df = get_csid_count_by_number_exps_matched_to(valid_container_csid_df)
+    num_exps_matched_to_df["csid_percent"] = num_exps_matched_to_df["csid_count"] / total_valid_csids_in_container
+    return num_exps_matched_to_df
+
+
+def get_csid_count_by_number_exps_matched_to(dataframe):
+    """takes in a dataframe with at least the columns: "cell_specimen_id" and
+        "match_count" and returns the number of cell_specimen_id's that match
+        1-7 experiments.
+
+    Arguments:
+        dataframe {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the folling columns:
+                    "num_exp_matched": how many experiments were matched to (1-7 for how many experiments are in a container)
+                    "csid_count": number of unique cell specimen ids
+    """
+    num_matched_df = pd.DataFrame()
+    num_exps_matched_list = [1, 2, 3, 4, 5, 6, 7]
+    for num_matched in num_exps_matched_list:
+        #number of unique cell specimen ids that matched a given number of experiments
+        csid_count = len(dataframe.loc[dataframe["match_count"]==num_matched, "cell_specimen_id"].unique())
+        temp_df = pd.DataFrame({"num_exp_matched": num_matched, "csid_count": csid_count}, index=[0])
+        num_matched_df = num_matched_df.append(temp_df)
+    num_matched_df = num_matched_df.reset_index(drop=True)
+    return num_matched_df
+
 
 
 def container_experiment_pairs_valid_cell_matching(ophys_container_id):
