@@ -491,7 +491,7 @@ def get_timeseries_ini_wkf_info(ophys_session_id):
         ophys_session_id {int} -- 9 digit ophys session id
 
     Returns:
-        
+
     """
 
     QUERY = '''
@@ -740,7 +740,7 @@ def build_container_df():
         }
         for idx,row in subset.iterrows():
             temp_dict.update({'session_{}'.format(idx): '{} {}'.format(row['session_type'], row['ophys_experiment_id'])})
-      
+
 
 
         list_of_dicts.append(temp_dict)
