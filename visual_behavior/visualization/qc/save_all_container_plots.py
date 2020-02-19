@@ -16,6 +16,10 @@ def main():
     container_plots.plot_dff_traces_heatmaps_for_container(args.container_id)
     container_plots.plot_running_speed_for_container(args.container_id)
     container_plots.plot_lick_rasters_for_container(args.container_id)
+    container_plots.plot_average_intensity_timeseries_for_container(args.container_id)
+    container_plots.plot_number_matched_cells_for_container(args.container_id)
+    container_plots.plot_fraction_matched_cells_for_container(args.container_id)
+    container_plots.plot_motion_correction_xy_shift_for_container(ophys_container_id)
 
 if __name__=="__main__":
     main()

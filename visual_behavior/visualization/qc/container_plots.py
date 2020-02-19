@@ -5,6 +5,7 @@ import visual_behavior.plotting as vbp
 import visual_behavior.database as db
 from visual_behavior.visualization import utils as ut
 from visual_behavior.visualization.qc import data_loading as dl
+from visual_behavior.visualization.qc import data_processing as dp
 from visual_behavior.visualization.qc import experiment_plots as ep
 from visual_behavior.visualization.qc import session_plots as sp
 
@@ -115,6 +116,63 @@ def plot_average_intensity_timeseries_for_container(ophys_container_id, save_fig
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_intensity_timeseries',
                        'container_' + str(ophys_container_id))
+
+def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True):
+    df = dp.container_cell_matching_count_heatmap_df(ophys_container_id)
+
+    matrix = df.values
+    labels = df.index
+
+    figsize = (10, 10)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.heatmap(matrix, square=True, cmap='magma', ax=ax, cbar_kws={'shrink': 0.7, 'label': '# matched cells'},
+                     annot=True, fmt='.3g')
+    bottom, top = ax.get_ylim()
+    ax.set_ylim(bottom + 0.5, top - 0.5)
+    ax.set_xticklabels(labels, rotation=90);
+    ax.set_yticklabels(labels, rotation=0);
+    ax.set_title('number of matched cells across sessions')
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'number_matched_cells',
+                       'container_' + str(ophys_container_id))
+
+def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=True):
+    df = dp.container_cell_matching_percent_heatmap_df(ophys_container_id)
+
+    matrix = df.values
+    labels = df.index
+
+    figsize = (10, 10)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.heatmap(matrix, square=True, cmap='magma', ax=ax, cbar_kws={'shrink': 0.7, 'label': '% matched cells'},
+                     annot=True, fmt='.3g')
+    bottom, top = ax.get_ylim()
+    ax.set_ylim(bottom + 0.5, top - 0.5)
+    ax.set_xticklabels(labels, rotation=90);
+    ax.set_yticklabels(labels, rotation=0);
+    ax.set_title('fraction matched cells across sessions')
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'fraction_matched_cells',
+                       'container_' + str(ophys_container_id))
+
+def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figure=True):
+    ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+
+    figsize = (25, 20)
+    fig, ax = plt.subplots(6, 1, figsize=figsize)
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        ax[i] = ep.plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=ax[i])
+
+        session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'motion_correction_xy_shift',
+                       'container_' + str(ophys_container_id))
+
+
 
 
 ################  BEHAVIOR  ################ # NOQA: E402

@@ -67,6 +67,17 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
     ax.set_xlabel('frame #')
     return ax
 
+def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None):
+    df = dl.load_rigid_motion_transform_csv(ophys_experiment_id)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(20,4))
+    ax.plot(df.framenumber.values, df.x.values, color='red', label='x_shift')
+    ax.plot(df.framenumber.values, df.y.values, color='blue', label='y_shift')
+    ax.set_xlim(df.frame_number.values[0], df.frame_number.values[-1])
+    ax.legend(fontsize='small', loc='upper right')
+    ax.set_xlabel('2P frames')
+    ax.set_ylabel('pixels')
+    return ax
 
 ### BEHAVIOR ###
 
