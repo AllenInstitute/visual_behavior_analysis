@@ -1,19 +1,12 @@
+import os
+import seaborn as sns
 import matplotlib.pyplot as plt
-from visual_behavior.visualization import utils as ut
 import visual_behavior.plotting as vbp
 import visual_behavior.database as db
+from visual_behavior.visualization import utils as ut
 from visual_behavior.visualization.qc import data_loading as dl
 from visual_behavior.visualization.qc import experiment_plots as ep
 from visual_behavior.visualization.qc import session_plots as sp
-import os
-
-def plot_max_projection_images_for_container(ophys_container_id, save_figure=True):
-    # function for getting experiment_ids belonging to container
-    # create figure with sub-axes for each experiment
-    # loop through experiments
-    # load max projection using data_loading.py function
-    # plot each on axis
-    # return fig? or save fig?
 
 
 ################  OPHYS  ################ # NOQA: E402
@@ -107,6 +100,20 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'dff_traces_heatmaps',
+                       'container_' + str(ophys_container_id))
+
+def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
+    ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    colors = sns.color_palette()
+    figsize = (7,5)
+    fig, ax = plt.subplots(figsize=figsize)
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        ax = ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=ax, color=colors[i])
+    ax.legend(fontsize='xx-small', title='experiment_id', title_fontsize='xx-small', loc='upper left')
+    ax.set_title('full field average fluorescence intensity over time')
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_intensity_timeseries',
                        'container_' + str(ophys_container_id))
 
 

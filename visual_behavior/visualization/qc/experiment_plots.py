@@ -57,6 +57,19 @@ def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
     ax.set_xlabel('2P frames')
     return ax
 
+def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=None, color='gray'):
+    movie_path = dl.get_motion_corrected_movie_h5_location(ophys_experiment_id)
+    average_intensity, frame_numbers = dl.get_average_intensity(movie_path)
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.plot(frame_numbers, average_intensity, color=color, label=ophys_experiment_id)
+    ax.set_ylabel('fluorescence value')
+    ax.set_xlabel('frame #')
+    return ax
+
+
+### BEHAVIOR ###
+
 def make_eye_matrix_plot(ophys_experiment_id, ax):
     ax = np.array(ax)
     try:
@@ -80,3 +93,6 @@ def make_eye_matrix_plot(ophys_experiment_id, ax):
             error_text = 'could not generate pupil plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
             ax[0][0].set_title(error_text,ha='left')
     return ax
+
+
+

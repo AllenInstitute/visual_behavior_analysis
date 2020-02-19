@@ -602,6 +602,21 @@ def get_motion_corrected_movie_h5_location(ophys_experiment_id):
     return motion_corrected_movie_h5_path
 
 
+def get_average_intensity(motion_corrected_movie_h5_path):
+    import h5py
+    f = h5py.File(motion_corrected_movie_h5_path, 'r')
+    movie_array = f['data']
+
+    subset = movie_array[::500, 100:400, 50:400]
+    average_intensity = np.mean(subset, axis=(1, 2))
+
+    frame_numbers = np.arange(0, movie_array.shape[0])
+    frame_numbers = frame_numbers[::500]
+
+    return average_intensity, frame_numbers
+
+
+
 def get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id):
     """use SQL and the LIMS well known file system to get the
         "rigid_motion_transform.csv" information for a given
