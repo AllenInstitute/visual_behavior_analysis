@@ -639,10 +639,32 @@ def get_rigid_motion_transform_csv_location(ophys_experiment_id):
     Returns:
         filepath -- [description]
     """
-    rigid_motion_transform_csv_wkf_info = get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id)
+    rigid_motion_transform_csv_wkf_info = get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id)
     rigid_motion_transform_csv_path = rigid_motion_transform_csv_wkf_info[0]['?column?'] #idk why it's ?column? but it is :(
     rigid_motion_transform_csv_path = rigid_motion_transform_csv_path.replace('/allen', '//allen')  # works with windows and linux filepaths
     return rigid_motion_transform_csv_path
+
+def load_rigid_motion_transform_csv(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to locate
+        and load the rigid_motion_transform.csv file for
+        a given ophys_experiment_id
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                        "framenumber":
+                                  "x":
+                                  "y":
+                        "correlation":
+                           "kalman_x":
+                           "kalman_y":
+    """
+    rigid_motion_transform_csv_path = get_rigid_motion_transform_csv_location(ophys_experiment_id)
+    rigid_motion_transform_df = pd.read_csv(rigid_motion_transform_csv_path)
+    return rigid_motion_transform_df
+
 
 
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
@@ -650,7 +672,6 @@ def get_rigid_motion_transform_csv_location(ophys_experiment_id):
 mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="r0mTr@!n", port=5432)
 
 def get_mtrain_stage_name(dataframe):
-
     foraging_ids = dataframe['foraging_id'][~pd.isnull(dataframe['foraging_id'])]
     query = """
             SELECT
