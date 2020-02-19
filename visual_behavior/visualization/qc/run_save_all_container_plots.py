@@ -12,7 +12,7 @@ job_settings = {'queue': 'braintv',
                 }
 
 from visual_behavior.visualization.qc import data_loading
-container_ids = data_loading.get_filtered_container_ids()
+container_ids = data_loading.get_filtered_ophys_container_ids()
 
 if __name__=="__main__":
     for container_id in container_ids:
