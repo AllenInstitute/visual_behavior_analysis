@@ -558,9 +558,10 @@ def get_pmt_gain_for_session(ophys_session_id):
     pmt_gain = pmt_gain_from_timeseries_ini(timeseries_ini_path)
     return pmt_gain
 
+
 def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
     """use SQL and the LIMS well known file system to get the
-        "motion_corrected_movie.h5" information for a given 
+        "motion_corrected_movie.h5" information for a given
         ophys_experiment_id
 
     Arguments:
@@ -584,7 +585,6 @@ def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
     motion_corrected_movie_h5_wkf_info = (lims_cursor.fetchall())
     return motion_corrected_movie_h5_wkf_info
 
-
 def get_motion_corrected_movie_h5_location(ophys_experiment_id):
     """use SQL and the LIMS well known file system to get info for the
         "motion_corrected_movie.h5" file for a ophys_experiment_id,
@@ -600,6 +600,50 @@ def get_motion_corrected_movie_h5_location(ophys_experiment_id):
     motion_corrected_movie_h5_path = motion_corrected_movie_h5_wkf_info[0]['?column?'] #idk why it's ?column? but it is :(
     motion_corrected_movie_h5_path = motion_corrected_movie_h5_path.replace('/allen', '//allen')  # works with windows and linux filepaths
     return motion_corrected_movie_h5_path
+
+
+def get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to get the
+        "rigid_motion_transform.csv" information for a given
+        ophys_experiment_id
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 514167000 AND
+     attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    rigid_motion_transform_csv_wkf_info = (lims_cursor.fetchall())
+    return rigid_motion_transform_csv_wkf_info
+
+
+def get_rigid_motion_transform_csv_location(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to get info for the
+        rigid_motion_transform.csv" file for a ophys_experiment_id,
+        and then parses that information to get the filepath
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        filepath -- [description]
+    """
+    rigid_motion_transform_csv_wkf_info = get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id)
+    rigid_motion_transform_csv_path = rigid_motion_transform_csv_wkf_info[0]['?column?'] #idk why it's ?column? but it is :(
+    rigid_motion_transform_csv_path = rigid_motion_transform_csv_path.replace('/allen', '//allen')  # works with windows and linux filepaths
+    return rigid_motion_transform_csv_path
+
 
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
 

@@ -336,10 +336,10 @@ def container_valid_csid_count_by_number_exps_matched_to(ophys_container_id):
     """compiles all the valid cell_specimen_ids for a container and then computes
         how many unique cell_specimen_id s were matched across the 7 experiments
         in an experiment container
-    
+
     Arguments:
         ophys_container_id {[type]} -- [description]
-    
+
     Returns:
         dataframe -- dataframe with the following columns:
                     "num_exp_matched"
