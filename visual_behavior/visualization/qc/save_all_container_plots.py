@@ -1,5 +1,5 @@
 from visual_behavior.visualization.qc import data_loading
-from visua_behavior.visualization.qc import container_plots
+from visual_behavior.visualization.qc import container_plots
 import argparse
 
 parser = argparse.ArgumentParser()
