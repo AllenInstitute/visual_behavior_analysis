@@ -41,18 +41,22 @@ container_table = load_data()
 dropdown = dcc.Dropdown(
     id='dropdown',
     options=[
-        {'label': 'Max Intensity Projection', 'value': 'max_intensity_projection'},
-        {'label': 'Segmentation Mask Overlays', 'value': 'segmentation_mask_overlays'},
-        {'label': 'Segmentation Masks', 'value': 'segmentation_masks'},
         {'label': 'Average Images', 'value': 'average_images'},
+        {'label': 'Average Intensity Timeseries', 'value': 'average_intensity_timeseries'},
         {'label': 'Dff Traces Heatmaps', 'value': 'dff_traces_heatmaps'},
         {'label': 'Eyetracking Sample Frames', 'value': 'eyetracking_sample_frames'},
+        {'label': 'Fraction Matched Cells', 'value': 'fraction_matched_cells'},
         {'label': 'Lick Rasters', 'value': 'lick_rasters'},
+        {'label': 'Max Intensity Projection', 'value': 'max_intensity_projection'},
+        {'label': 'Motion Correction XY Shift', 'value': 'motion_correction_xy_shift'},
+        {'label': 'Number Matched Cells', 'value': 'number_matched_cells'},
+        {'label': 'Ophys Session Sequence', 'value': 'ophys_session_sequence'},
+        {'label': 'PMT Gain', 'value': 'PMT_gain'},
         {'label': 'Running Speed', 'value': 'running_speed'},
-        {'label': 'Dummy Plot 1', 'value': 'dummy_plot_1'},
-        {'label': 'Dummy Plot 2', 'value': 'dummy_plot_2'},
+        {'label': 'Segmentation Mask Overlays', 'value': 'segmentation_mask_overlays'},
+        {'label': 'Segmentation Masks', 'value': 'segmentation_masks'},
     ],
-    value=['max_intensity_projection', 'segmentation_masks'],
+    value=['ophys_session_sequence'],
     multi=True
 )
 
