@@ -172,7 +172,22 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'motion_correction_xy_shift',
                        'container_' + str(ophys_container_id))
 
-
+def plot_PMT_gain_for_container(ophys_container_id, save_figure=True):
+    import numpy as np
+    ophys_session_ids = dl.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
+    figsize = (6, 5)
+    fig, ax = plt.subplots(figsize=figsize)
+    for i, ophys_session_id in enumerate(ophys_session_ids):
+        pmt_value = dl.get_pmt_gain_for_session(ophys_session_id)
+        ax.plot(i, pmt_value, 'o', color=sns.color_palette()[0])
+    ax.set_xticks(np.arange(0, len(ophys_session_ids)))
+    ax.set_xticklabels(ophys_session_ids, rotation=90)
+    ax.set_ylabel('PMT setting')
+    ax.set_xlabel('ophys_session_id')
+    ax.set_title('PMT gain setting across sessions')
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'PMT_gain',
+                       'container_'+str(ophys_container_id))
 
 
 ################  BEHAVIOR  ################ # NOQA: E402
