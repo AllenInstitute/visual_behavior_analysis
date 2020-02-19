@@ -85,10 +85,19 @@ def ophys_container_info_df(ophys_container_id):
     Returns:
         dataframe -- dataframe with the following columns:
                     "container_id":
+                    "container_workflow_state"
                     "ophys_experiment_id":
                     "ophys_session_id":
                     "stage_name_lims":
-                    "
+                    "experiment_workflow_state"
+                    "mouse_donor_id"
+                    "targeted_structure"
+                    "depth"
+                    "rig"
+                    "date_of_acquisition"
+                    "mouse_id"
+                    "full_geno"
+                    "stage_name_mtrain"
 
     """
     container_info_df = load.get_lims_container_info(ophys_container_id)
@@ -96,6 +105,35 @@ def ophys_container_info_df(ophys_container_id):
     container_info_df = load.get_mtrain_stage_name(container_info_df)
     container_info_df = container_info_df.drop(["mouse_info", "foraging_id"], axis=1)
     return container_info_df
+
+
+def ophys_container_passed_experiments(ophys_container_id):
+    """returns "manifest style" container information but
+    filters out all unpassed ophys_experiments
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "container_id":
+                    "container_workflow_state"
+                    "ophys_experiment_id":
+                    "ophys_session_id":
+                    "stage_name_lims":
+                    "experiment_workflow_state"
+                    "mouse_donor_id"
+                    "targeted_structure"
+                    "depth"
+                    "rig"
+                    "date_of_acquisition"
+                    "mouse_id"
+                    "full_geno"
+                    "stage_name_mtrain"
+    """
+    container_info_df = ophys_container_info_df(ophys_container_id)
+    passed_exp_container = remove_unpassed_experiments(container_info_df)
+    return passed_exp_container
 
 
 def calc_retake_number(container_dataframe, stage_name_column="stage_name_mtrain"):
@@ -274,8 +312,7 @@ def get_lims_cell_roi_tables_for_container(ophys_container_id):
                         "valid_roi"
                         "container_id"
     """
-    container_info_df = ophys_container_info_df(ophys_container_id)
-    passed_container = remove_unpassed_experiments(container_info_df)
+    passed_container = ophys_container_passed_experiments(ophys_container_id)
 
     stage_name_df = passed_container[["ophys_experiment_id", "stage_name_lims"]].copy()
 
@@ -289,12 +326,13 @@ def get_lims_cell_roi_tables_for_container(ophys_container_id):
                                          "valid_roi"]]
         container_cell_table = container_cell_table.append(exp_cell_table)
     container_cell_table.loc[:, "container_id"] = ophys_container_id
+    container_cell_table = container_cell_table.drop_duplicates()
     container_cell_table = container_cell_table.reset_index(drop=True)
     container_cell_table = pd.merge(container_cell_table, stage_name_df, how="left", on="ophys_experiment_id")
     return container_cell_table
 
 
-def get_valid_container_cell_roi_table(ophys_container_id):
+def get_valid_csids_from_lims_for_container(ophys_container_id):
     """uses the LIMS cell_roi_table and returns all the valid
         cell_specimen_ids and for all PASSED ophys_experiment_id's
         in a container
@@ -332,6 +370,7 @@ def cell_specimen_id_matches_in_dataframe(dataframe):
     dataframe = pd.merge(dataframe, matches, how="left", on="cell_specimen_id")
     return dataframe
 
+
 def container_valid_csid_count_by_number_exps_matched_to(ophys_container_id):
     """compiles all the valid cell_specimen_ids for a container and then computes
         how many unique cell_specimen_id s were matched across the 7 experiments
@@ -346,7 +385,7 @@ def container_valid_csid_count_by_number_exps_matched_to(ophys_container_id):
                     "csid_count"
                     "csid_percent"
     """
-    valid_container_csid_df = get_valid_container_cell_roi_table(ophys_container_id)
+    valid_container_csid_df = get_valid_csids_from_lims_for_container(ophys_container_id)
     valid_container_csid_df = cell_specimen_id_matches_in_dataframe(valid_container_csid_df)
     total_valid_csids_in_container = len(valid_container_csid_df["cell_specimen_id"].unique())
     num_exps_matched_to_df = get_csid_count_by_number_exps_matched_to(valid_container_csid_df)
@@ -370,13 +409,12 @@ def get_csid_count_by_number_exps_matched_to(dataframe):
     num_matched_df = pd.DataFrame()
     num_exps_matched_list = [1, 2, 3, 4, 5, 6, 7]
     for num_matched in num_exps_matched_list:
-        #number of unique cell specimen ids that matched a given number of experiments
-        csid_count = len(dataframe.loc[dataframe["match_count"]==num_matched, "cell_specimen_id"].unique())
+        # number of unique cell specimen ids that matched a given number of experiments
+        csid_count = len(dataframe.loc[dataframe["match_count"] == num_matched, "cell_specimen_id"].unique())
         temp_df = pd.DataFrame({"num_exp_matched": num_matched, "csid_count": csid_count}, index=[0])
         num_matched_df = num_matched_df.append(temp_df)
     num_matched_df = num_matched_df.reset_index(drop=True)
     return num_matched_df
-
 
 
 def container_experiment_pairs_valid_cell_matching(ophys_container_id):
@@ -402,10 +440,10 @@ def container_experiment_pairs_valid_cell_matching(ophys_container_id):
                                 "total_valid_count": total number of valid cells for the experiment pair
     """
     # csid = cell_specimen_id
-    valid_container_csid_df = get_valid_container_cell_roi_table(ophys_container_id)
+    valid_container_csid_df = get_valid_csids_from_lims_for_container(ophys_container_id)
 
     experiments_list = valid_container_csid_df["ophys_experiment_id"].unique().tolist()
-    exp_combos = list(itertools.combinations(experiments_list, 2))
+    exp_combos = list(itertools.product(experiments_list, repeat=2))
 
     container_df = pd.DataFrame()
     for combo in exp_combos:
@@ -416,12 +454,14 @@ def container_experiment_pairs_valid_cell_matching(ophys_container_id):
         exp1 = combo[0]
         exp2 = combo[1]
 
+        unique_exps_in_combo = len(np.unique(combo))
+
         exp1_stage_name = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"] == exp1, "stage_name_lims"].unique()[0]
         exp2_stage_name = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"] == exp2, "stage_name_lims"].unique()[0]
 
         csids_in_exp_pair = len(exp_pair_df["cell_specimen_id"].unique())  # all the csids across both experiments
         exp_pair_df = cell_specimen_id_matches_in_dataframe(exp_pair_df)  # get number of times a csid appears & add to exp_pair_df
-        matches_btw_pair = len(exp_pair_df.loc[exp_pair_df["match_count"] == 2, "cell_specimen_id"].unique())
+        matches_btw_pair = len(exp_pair_df.loc[exp_pair_df["match_count"] == unique_exps_in_combo, "cell_specimen_id"].unique())
 
         if csids_in_exp_pair == 0:
             perc_cells_matched = np.nan
@@ -458,7 +498,7 @@ def container_cell_matching_percent_heatmap_df(ophys_container_id):
     """
 
     container_exp_pair_matching_df = container_experiment_pairs_valid_cell_matching(ophys_container_id)
-    valid_container_csid_df = get_valid_container_cell_roi_table(ophys_container_id)
+    valid_container_csid_df = get_valid_csids_from_lims_for_container(ophys_container_id)
     stage_order = stage_name_ordered_list(valid_container_csid_df, stage_name_column="stage_name_lims")
     pivot_perc = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="perc_matched")
     pivot_perc = pivot_perc.reindex(stage_order, axis=1)
@@ -480,7 +520,7 @@ def container_cell_matching_count_heatmap_df(ophys_container_id):
                     that were matched between the experiment pairs
     """
     container_exp_pair_matching_df = container_experiment_pairs_valid_cell_matching(ophys_container_id)
-    valid_container_csid_df = get_valid_container_cell_roi_table(ophys_container_id)
+    valid_container_csid_df = get_valid_csids_from_lims_for_container(ophys_container_id)
     stage_order = stage_name_ordered_list(valid_container_csid_df, stage_name_column="stage_name_lims")
     pivot_count = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="matched_count")
     pivot_count = pivot_count.reindex(stage_order, axis=1)
