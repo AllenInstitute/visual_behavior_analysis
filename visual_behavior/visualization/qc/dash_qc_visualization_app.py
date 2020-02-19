@@ -35,7 +35,7 @@ def load_data():
     return container_df.query('container_id in @filtered_container_list')
 
 
-container_table = load_data()
+container_table = load_data().sort_values('first_acquistion_date')
 
 # COMPONENTS
 dropdown = dcc.Dropdown(
