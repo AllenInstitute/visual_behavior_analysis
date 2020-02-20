@@ -58,8 +58,7 @@ def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
     return ax
 
 def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=None, color='gray'):
-    movie_path = dl.get_motion_corrected_movie_h5_location(ophys_experiment_id)
-    average_intensity, frame_numbers = dl.get_average_intensity(movie_path)
+    average_intensity, frame_numbers = dl.get_average_intensity(ophys_experiment_id)
     if ax is None:
         fig, ax = plt.subplots()
     ax.plot(frame_numbers, average_intensity, color=color, label=ophys_experiment_id)
@@ -93,9 +92,9 @@ def make_eye_matrix_plot(ophys_experiment_id, ax):
             axis.imshow(ed.get_annotated_frame(frame))
             axis.axis('off')
             axis.text(5,5,'frame {}'.format(frame),ha='left',va='top',color='yellow',fontsize=8)
-            
+
         ax[0][0].set_title('ophys_experiment_id = {}, {} evenly spaced sample eye tracking frames'.format(ophys_experiment_id, len(frames)),ha='left')
-    
+
     except Exception as e:
         for ii in range(len(ax.flatten())):
             axis = ax.flatten()[ii]
@@ -104,6 +103,4 @@ def make_eye_matrix_plot(ophys_experiment_id, ax):
             error_text = 'could not generate pupil plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
             ax[0][0].set_title(error_text,ha='left')
     return ax
-
-
 
