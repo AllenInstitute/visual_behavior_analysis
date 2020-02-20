@@ -9,13 +9,14 @@ from allensdk.internal.api import PostgresQueryMixin
 import configparser as configp  # for parsing scientifica ini files
 
 import os
+import h5py  # for loading motion corrected movie
 import pandas as pd
 import numpy as np
 
-get_psql_dict_cursor = convert.get_psql_dict_cursor #to load well-known files
+get_psql_dict_cursor = convert.get_psql_dict_cursor  # to load well-known files
 config = configp.ConfigParser()
 
-####function inputs
+# function inputs
 # ophys_experiment_id
 # ophys_session_id
 # behavior_session_id
@@ -27,8 +28,10 @@ config = configp.ConfigParser()
 def get_container_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
 
+
 def get_session_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
+
 
 def get_experiment_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
@@ -41,11 +44,13 @@ def get_qc_manifest_path():
     manifest_path = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest.json"
     return manifest_path
 
+
 def get_qc_cache():
     """Get cache using default QC manifest path"""
     from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
     cache = bpc.from_lims(manifest=get_qc_manifest_path())
     return cache
+
 
 def get_filtered_ophys_sessions_table():
     """Get ophys sessions that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
@@ -64,8 +69,9 @@ def get_filtered_ophys_sessions_table():
     experiments = cache.get_experiment_table()
     experiments = experiments.reset_index()
     filtered_sessions = sessions.merge(experiments[['ophys_session_id', 'container_id', 'container_workflow_state']],
-                              right_on='ophys_session_id', left_on='ophys_session_id')
+                                       right_on='ophys_session_id', left_on='ophys_session_id')
     return filtered_sessions
+
 
 def get_filtered_ophys_experiment_table():
     """Get ophys experiments that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
@@ -85,12 +91,14 @@ def get_filtered_ophys_experiment_table():
     filtered_experiments = experiments[experiments.ophys_experiment_id.isin(filtered_experiment_ids)]
     return filtered_experiments
 
+
 def get_filtered_ophys_container_ids():
     """Get container_ids that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
     must be 'complete' or 'container_qc', and experiments associated with the container are passing. """
     sessions = get_filtered_ophys_sessions_table()
     filtered_container_ids = np.sort(sessions.container_id.unique())
     return filtered_container_ids
+
 
 def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
     """Get ophys_session_ids belonging to a given ophys_container_id. ophys container must meet the criteria in
@@ -105,6 +113,7 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
     sessions = get_filtered_ophys_sessions_table()
     ophys_session_ids = np.sort(sessions[(sessions.container_id == ophys_container_id)].ophys_session_id.values)
     return ophys_session_ids
+
 
 def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
     """Get ophys_experiment_ids belonging to a given ophys_container_id. ophys container must meet the criteria in
@@ -123,13 +132,13 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
 
 def get_session_type_for_ophys_experiment_id(ophys_experiment_id):
     experiments = get_filtered_ophys_experiment_table()
-    session_type = experiments[experiments.ophys_experiment_id==ophys_experiment_id].session_type.values[0]
+    session_type = experiments[experiments.ophys_experiment_id == ophys_experiment_id].session_type.values[0]
     return session_type
 
 
 def get_session_type_for_ophys_session_id(ophys_session_id):
     sessions = get_filtered_ophys_sessions_table()
-    session_type = sessions[sessions.ophys_session_id==ophys_session_id].session_type.values[0]
+    session_type = sessions[sessions.ophys_session_id == ophys_session_id].session_type.values[0]
     return session_type
 
 
@@ -145,7 +154,7 @@ def get_sdk_session_obj(ophys_experiment_id):
     """Use LIMS API from SDK to return session object
 
     Arguments:
-        experiment_id {int} -- 9 digit ophys experiment ID
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
 
     Returns:
         session object -- session object from SDK
@@ -201,15 +210,20 @@ def get_sdk_segmentation_mask_image(ophys_experiment_id):
 
 
 def get_sdk_roi_masks(ophys_experiment_id):
-    """uses sdk to return a dictionary with individual ROI masks for each cell specimen ID.
+    """uses sdk to return a dictionary with individual ROI
+        masks for each cell specimen ID.
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
 
     Returns:
         dictonary -- keys are cell specimen ids(ints)
-                    values are 2d numpy arrays(binary array the size of the motion corrected 2photon FOV where 1's are the ROI/Cell mask).
-                    specific cell masks can be visualized via plt.imshow(roi_masks[cell_specimen_id])
+                    values are 2d numpy arrays(binary array
+                    the size of the motion corrected 2photon
+                    FOV where 1's are the ROI/Cell mask).
+                    
+                    specific cell masks can be visualized via
+                    plt.imshow(roi_masks[cell_specimen_id])
     """
 
     session = get_sdk_session_obj(ophys_experiment_id)
@@ -220,11 +234,11 @@ def get_sdk_roi_masks(ophys_experiment_id):
 def get_valid_segmentation_mask(ophys_experiment_id):
     session = get_sdk_session_obj(ophys_experiment_id)
     ct = session.cell_specimen_table
-    valid_cell_specimen_ids = ct[ct.valid_roi==True].index.values
+    valid_cell_specimen_ids = ct[ct.valid_roi == True].index.values
     roi_masks = session.get_roi_masks()
     valid_roi_masks = roi_masks[roi_masks.cell_specimen_id.isin(valid_cell_specimen_ids)].data
     valid_segmentation_mask = np.sum(valid_roi_masks, axis=0)
-    valid_segmentation_mask[valid_segmentation_mask>0] = 1
+    valid_segmentation_mask[valid_segmentation_mask > 0] = 1
     return valid_segmentation_mask
 
 
@@ -246,10 +260,12 @@ def get_sdk_dff_traces_array(ophys_experiment_id):
     dff_traces_array = np.vstack(dff_traces.dff.values)
     return dff_traces_array
 
+
 def get_sdk_running_speed(ophys_session_id):
     session = get_sdk_session_obj(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
     running_speed = session.running_data_df['speed']
     return running_speed
+
 
 def get_sdk_trials(ophys_session_id):
     session = get_sdk_session_obj(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
@@ -258,8 +274,6 @@ def get_sdk_trials(ophys_session_id):
 
 
 ################  FROM LIMS DATABASE  ################ # NOQA: E402
-
-
 
 
 ####### EXPERIMENT LEVEL ####### # NOQA: E402
@@ -355,7 +369,9 @@ def get_lims_cell_segmentation_run_info(ophys_experiment_id):
                         id {int}:  9 digit segmentation run id
                         run_number {int}: segmentation run number
                         ophys_experiment_id{int}: 9 digit ophys experiment id
-                        current{boolean}: True/False True: most current segmentation run; False: not the most current segmentation run
+                        current{boolean}: True/False
+                                    True: most current segmentation run
+                                    False: not the most current segmentation run
                         created_at{timestamp}:
                         updated_at{timestamp}:
     """
@@ -412,7 +428,6 @@ def get_lims_cell_rois_table(ophys_experiment_id):
     where oe.id = {}'''.format(ophys_experiment_id)
     lims_cell_rois_table = mixin.select(query)
     return lims_cell_rois_table
-
 
 
 ####### CONTAINER  LEVEL ####### # NOQA: E402
@@ -478,8 +493,6 @@ def get_lims_container_info(ophys_container_id):
     return lims_container_info
 
 
-
-
 ################  FROM LIMS WELL KNOWN FILES  ################ # NOQA: E402
 
 
@@ -524,7 +537,7 @@ def get_timeseries_ini_location(ophys_session_id):
         filepath -- [description]
     """
     timeseries_ini_wkf_info = get_timeseries_ini_wkf_info(ophys_session_id)
-    timeseries_ini_path = timeseries_ini_wkf_info[0]['?column?'] #idk why it's ?column? but it is :(
+    timeseries_ini_path = timeseries_ini_wkf_info[0]['?column?']  # idk why it's ?column? but it is :(
     timeseries_ini_path = timeseries_ini_path.replace('/allen', '//allen')  # works with windows and linux filepaths
     return timeseries_ini_path
 
@@ -565,7 +578,7 @@ def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
         ophys_experiment_id
 
     Arguments:
-        ophys_experiment_id {[type]} -- [description]
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
 
     Returns:
         [type] -- [description]
@@ -585,36 +598,76 @@ def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
     motion_corrected_movie_h5_wkf_info = (lims_cursor.fetchall())
     return motion_corrected_movie_h5_wkf_info
 
+
 def get_motion_corrected_movie_h5_location(ophys_experiment_id):
     """use SQL and the LIMS well known file system to get info for the
         "motion_corrected_movie.h5" file for a ophys_experiment_id,
         and then parses that information to get the filepath
 
     Arguments:
-        ophys_experiment_id {[type]} -- [description]
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
 
     Returns:
         filepath -- [description]
     """
     motion_corrected_movie_h5_wkf_info = get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id)
-    motion_corrected_movie_h5_path = motion_corrected_movie_h5_wkf_info[0]['?column?'] #idk why it's ?column? but it is :(
+    motion_corrected_movie_h5_path = motion_corrected_movie_h5_wkf_info[0]['?column?']  # idk why it's ?column? but it is :(
     motion_corrected_movie_h5_path = motion_corrected_movie_h5_path.replace('/allen', '//allen')  # works with windows and linux filepaths
     return motion_corrected_movie_h5_path
 
 
-def get_average_intensity(motion_corrected_movie_h5_path):
-    import h5py
-    f = h5py.File(motion_corrected_movie_h5_path, 'r')
-    movie_array = f['data']
+def load_motion_corrected_movie(ophys_experiment_id):
+    """uses well known file system to get motion_corrected_movie.h5
+        filepath and then loads the h5 file with h5py function.
+        Gets the motion corrected movie array in the h5 from the only
+        datastream/key 'data' and returns it. 
 
-    subset = movie_array[::500, 100:400, 50:400]
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+    Returns:
+        HDF5 dataset -- 3d array-like  (z, y, x) dimensions. 
+                        z:timeseries 
+                        y: single frame y axis, 
+                        x: single frame x axis
+    """
+    motion_corrected_movie_h5_path = get_motion_corrected_movie_h5_location(ophys_experiment_id)
+    motion_corrected_movie_h5 = h5py.File(motion_corrected_movie_h5_path, 'r')
+    motion_corrected_movie = motion_corrected_movie_h5['data']
+
+    return motion_corrected_movie
+
+
+def get_average_intensity(ophys_experiment_id):
+    """uses the LIMS wkf system to get the filepath for the 
+        motion_corrected_movie.h5 file Then loads the file
+        using h5py package.
+
+        subsets the motion corrected movie by taking every
+        500th frame, then taking just the inner portion of that frame
+        so as not to have any border motion artifacts
+        and then averaging that frame in x&y to get
+        a single average intensity number for that frame
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+    Returns:
+        average_intensity -- array of average frame intensities
+        frame_numbers -- array of frame numbers the frame intensitites
+                            were calculated for
+    """
+    motion_corrected_movie_array = load_motion_corrected_movie(ophys_experiment_id)
+
+    subset = motion_corrected_movie_array[::500, 100:400, 50:400]
+
+    # takes the mean across both x & y to get a single number for the frame
     average_intensity = np.mean(subset, axis=(1, 2))
 
-    frame_numbers = np.arange(0, movie_array.shape[0])
+    frame_numbers = np.arange(0, motion_corrected_movie_array.shape[0])
     frame_numbers = frame_numbers[::500]
 
     return average_intensity, frame_numbers
-
 
 
 def get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id):
@@ -623,7 +676,7 @@ def get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id):
         ophys_experiment_id
 
     Arguments:
-        ophys_experiment_id {[type]} -- [description]
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
 
     Returns:
         [type] -- [description]
@@ -649,15 +702,16 @@ def get_rigid_motion_transform_csv_location(ophys_experiment_id):
         and then parses that information to get the filepath
 
     Arguments:
-        ophys_experiment_id {[type]} -- [description]
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
 
     Returns:
         filepath -- [description]
     """
     rigid_motion_transform_csv_wkf_info = get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id)
-    rigid_motion_transform_csv_path = rigid_motion_transform_csv_wkf_info[0]['?column?'] #idk why it's ?column? but it is :(
+    rigid_motion_transform_csv_path = rigid_motion_transform_csv_wkf_info[0]['?column?']  # idk why it's ?column? but it is :(
     rigid_motion_transform_csv_path = rigid_motion_transform_csv_path.replace('/allen', '//allen')  # works with windows and linux filepaths
     return rigid_motion_transform_csv_path
+
 
 def load_rigid_motion_transform_csv(ophys_experiment_id):
     """use SQL and the LIMS well known file system to locate
@@ -665,7 +719,7 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
         a given ophys_experiment_id
 
     Arguments:
-        ophys_experiment_id {[type]} -- [description]
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
 
     Returns:
         dataframe -- dataframe with the following columns:
@@ -681,10 +735,9 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
     return rigid_motion_transform_df
 
 
-
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
-
 mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="r0mTr@!n", port=5432)
+
 
 def get_mtrain_stage_name(dataframe):
     foraging_ids = dataframe['foraging_id'][~pd.isnull(dataframe['foraging_id'])]
@@ -701,16 +754,6 @@ def get_mtrain_stage_name(dataframe):
     dataframe = dataframe.merge(mtrain_response, on='foraging_id', how='left')
     dataframe = dataframe.rename(columns={"stage_name": "stage_name_mtrain"})
     return dataframe
-
-
-
-
-
-
-
-
-
-
 
 
 def build_container_df():
@@ -738,11 +781,9 @@ def build_container_df():
             'sex': subset['sex'].unique()[0],
             'age_in_days': subset['age_in_days'].min(),
         }
-        for idx,row in subset.iterrows():
+        for idx, row in subset.iterrows():
             temp_dict.update({'session_{}'.format(idx): '{} {}'.format(row['session_type'], row['ophys_experiment_id'])})
-
-
 
         list_of_dicts.append(temp_dict)
 
-    return pd.DataFrame(list_of_dicts).sort_values(by='container_id',ascending=False)
+    return pd.DataFrame(list_of_dicts).sort_values(by='container_id', ascending=False)
