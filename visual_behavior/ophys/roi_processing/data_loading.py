@@ -456,10 +456,11 @@ def clean_objectlist_col_labels(objectlist_dataframe):
 
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
 
+mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="r0mTr@!n", port=5432)
 
 def get_stage_name_from_mtrain_sqldb(df_with_foraging_id):
     foraging_ids = df_with_foraging_id['foraging_id'][~pd.isnull(df_with_foraging_id['foraging_id'])]
-    mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="mtrainro", port=5432)
+
     query = """
             SELECT
             stages.name as stage_name,
