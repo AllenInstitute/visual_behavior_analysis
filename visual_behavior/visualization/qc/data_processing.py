@@ -430,14 +430,26 @@ def container_experiment_pairs_valid_cell_matching(ophys_container_id):
 
     Returns:
         pandas dataframe -- produces a dataframe with the following columns:
-                                "exp1": experiment id for first experiment in experiment pair
-                                "exp1_stage_num": the stage number of the stage name for experiment 1
-                                                of the experiment pair
-                                "exp2": experiment id for the second experiment in the experiment pair
-                                "exp2_stage_name": the stage number of the stage name for experiment 2 of the experiment pair
-                                "matched_count": the number of valid cells matched between the experiment pair
-                                "perc_matched": the percentage of the valid cells that were matched (matched count /total valid count)
-                                "total_valid_count": total number of valid cells for the experiment pair
+                                "exp1": experiment id for first experiment in
+                                        experiment pair
+
+                                "exp1_stage_num": the stage number of the stage name
+                                                for experiment 1 of the experiment pair
+
+                                "exp2": experiment id for the second experiment
+                                        in the experiment pair
+
+                                "exp2_stage_name": the stage number of the stage name
+                                                    for experiment 2 of the experiment pair
+
+                                "matched_count": the number of valid cells matched
+                                                between the experiment pair
+
+                                "perc_matched": the percentage of the valid cells that were
+                                                matched (matched count /total valid count)
+
+                                "total_valid_count": total number of valid cells for
+                                                    the experiment pair
     """
     # csid = cell_specimen_id
     valid_container_csid_df = get_valid_csids_from_lims_for_container(ophys_container_id)
@@ -456,12 +468,17 @@ def container_experiment_pairs_valid_cell_matching(ophys_container_id):
 
         unique_exps_in_combo = len(np.unique(combo))
 
-        exp1_stage_name = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"] == exp1, "stage_name_lims"].unique()[0]
-        exp2_stage_name = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"] == exp2, "stage_name_lims"].unique()[0]
+        exp1_stage_name = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"] == exp1,
+                                                                                "stage_name_lims"].unique()[0]
+
+        exp2_stage_name = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"] == exp2,
+                                                                                "stage_name_lims"].unique()[0]
 
         csids_in_exp_pair = len(exp_pair_df["cell_specimen_id"].unique())  # all the csids across both experiments
         exp_pair_df = cell_specimen_id_matches_in_dataframe(exp_pair_df)  # get number of times a csid appears & add to exp_pair_df
-        matches_btw_pair = len(exp_pair_df.loc[exp_pair_df["match_count"] == unique_exps_in_combo, "cell_specimen_id"].unique())
+
+        matches_btw_pair = len(exp_pair_df.loc[exp_pair_df["match_count"] == unique_exps_in_combo,
+                                                                        "cell_specimen_id"].unique())
 
         if csids_in_exp_pair == 0:
             perc_cells_matched = np.nan
@@ -720,3 +737,56 @@ def gen_transparent_validity_masks(ophys_experiment_id):
     validity_masks_df = validity_masks_df.reset_index(drop=True)
 
     return validity_masks_df
+
+
+
+####### PHYSIO ####### # NOQA: E402
+
+
+def get_experiment_average_intensity_timeseries(ophys_experiment_id):
+    """uses the LIMS wkf system to get the filepath for the 
+        motion_corrected_movie.h5 file Then loads the file
+        using h5py package.
+
+        subsets the motion corrected movie by taking every
+        500th frame, then taking just the inner portion of that frame
+        so as not to have any border motion artifacts
+        and then averaging that frame in x&y to get
+        a single average intensity number for that frame
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+    Returns:
+        average_intensity -- array of average frame intensities
+        frame_numbers -- array of frame numbers the frame intensitites
+                            were calculated for
+    """
+    motion_corrected_movie_array = load.load_motion_corrected_movie(ophys_experiment_id)
+
+    subset = motion_corrected_movie_array[::500, 100:400, 50:400]
+
+    # takes the mean across both x & y to get a single number for the frame
+    average_intensity = np.mean(subset, axis=(1, 2))
+
+    frame_numbers = np.arange(0, motion_corrected_movie_array.shape[0])
+    frame_numbers = frame_numbers[::500]
+
+    return average_intensity, frame_numbers
+
+def median_of_experiment_average_intensity_timeseries(experiment_average_intensity_timeseries):
+    median_intensity = np.median(experiment_average_intensity_timeseries)
+    return median_intensity
+
+def standard_dev_of_experiment_average_intensity_timeseries(experiment_average_intensity_timeseries):
+    intensity_std = np.std(experiment_average_intensity_timeseries)
+    return intensity_std
+
+def experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experiment_id):
+    ave_intensity_ts = get_experiment_average_intensity_timeseries(ophys_experiment_id)[0]
+    median_intensity = median_of_experiment_average_intensity_timeseries(ave_intensity_ts)
+    intensity_std = standard_dev_of_experiment_average_intensity_timeseries(ave_intensity_ts)
+    intensity_stats_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                                        "intensity_med": median_intensity,
+                                        "intensity_std": intensity_std}, index=[0])
+    return intensity_stats_df
