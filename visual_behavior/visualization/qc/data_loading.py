@@ -5,6 +5,7 @@ from visual_behavior.translator.allensdk_sessions import sdk_utils
 import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 
 
+
 from allensdk.internal.api import PostgresQueryMixin
 import configparser as configp  # for parsing scientifica ini files
 
@@ -707,7 +708,7 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
 
 
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
-mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="r0mTr@!n", port=5432)
+
 
 
 def get_mtrain_stage_name(dataframe):
