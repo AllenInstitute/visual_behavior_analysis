@@ -7,12 +7,13 @@ import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 
 
 from allensdk.internal.api import PostgresQueryMixin
-import configparser as configp  # for parsing scientifica ini files
+
 
 import os
 import h5py  # for loading motion corrected movie
-import pandas as pd
 import numpy as np
+import pandas as pd
+import configparser as configp  # for parsing scientifica ini files
 
 get_psql_dict_cursor = convert.get_psql_dict_cursor  # to load well-known files
 config = configp.ConfigParser()
