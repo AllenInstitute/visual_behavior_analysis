@@ -620,15 +620,15 @@ def load_motion_corrected_movie(ophys_experiment_id):
     """uses well known file system to get motion_corrected_movie.h5
         filepath and then loads the h5 file with h5py function.
         Gets the motion corrected movie array in the h5 from the only
-        datastream/key 'data' and returns it. 
+        datastream/key 'data' and returns it.
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
 
     Returns:
-        HDF5 dataset -- 3d array-like  (z, y, x) dimensions. 
-                        z:timeseries 
-                        y: single frame y axis, 
+        HDF5 dataset -- 3d array-like  (z, y, x) dimensions
+                        z: timeseries/frame number
+                        y: single frame y axis
                         x: single frame x axis
     """
     motion_corrected_movie_h5_path = get_motion_corrected_movie_h5_location(ophys_experiment_id)
@@ -638,36 +638,7 @@ def load_motion_corrected_movie(ophys_experiment_id):
     return motion_corrected_movie
 
 
-def get_average_intensity(ophys_experiment_id):
-    """uses the LIMS wkf system to get the filepath for the 
-        motion_corrected_movie.h5 file Then loads the file
-        using h5py package.
 
-        subsets the motion corrected movie by taking every
-        500th frame, then taking just the inner portion of that frame
-        so as not to have any border motion artifacts
-        and then averaging that frame in x&y to get
-        a single average intensity number for that frame
-
-    Arguments:
-        ophys_experiment_id {int} -- 9 digit ophys experiment ID
-
-    Returns:
-        average_intensity -- array of average frame intensities
-        frame_numbers -- array of frame numbers the frame intensitites
-                            were calculated for
-    """
-    motion_corrected_movie_array = load_motion_corrected_movie(ophys_experiment_id)
-
-    subset = motion_corrected_movie_array[::500, 100:400, 50:400]
-
-    # takes the mean across both x & y to get a single number for the frame
-    average_intensity = np.mean(subset, axis=(1, 2))
-
-    frame_numbers = np.arange(0, motion_corrected_movie_array.shape[0])
-    frame_numbers = frame_numbers[::500]
-
-    return average_intensity, frame_numbers
 
 
 def get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id):
