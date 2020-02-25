@@ -1,19 +1,40 @@
-from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
-from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
-from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
+from allensdk.internal.api import PostgresQueryMixin
 from visual_behavior.translator.allensdk_sessions import sdk_utils
 import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
-
-
-
-from allensdk.internal.api import PostgresQueryMixin
-
+from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
+from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
+from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 
 import os
 import h5py  # for loading motion corrected movie
 import numpy as np
 import pandas as pd
 import configparser as configp  # for parsing scientifica ini files
+
+
+lims_dbname = os.environ["LIMS_DBNAME"]
+lims_user = os.environ["LIMS_USER"]
+lims_host = os.environ["LIMS_HOST"]
+lims_password = os.environ["LIMS_PASSWORD"]
+lims_port = os.environ["LIMS_PORT"]
+
+mtrain_dbname = os.environ["MTRAIN_DBNAME"]
+mtrain_user = os.environ["MTRAIN_USER"]
+mtrain_host = os.environ["MTRAIN_HOST"]
+mtrain_password = os.environ["MTRAIN_PASSWORD"]
+mtrain_port = os.environ["MTRAIN_PORT"]
+
+lims_engine = PostgresQueryMixin(dbname=lims_dbname,
+                                user=lims_user,
+                                host=lims_host,
+                                password=lims_password,
+                                port=lims_port)
+
+mtrain_engine = PostgresQueryMixin(dbname=mtrain_dbname,
+                                user=mtrain_user,
+                                host=mtrain_host,
+                                password=mtrain_password,
+                                port=mtrain_port)
 
 get_psql_dict_cursor = convert.get_psql_dict_cursor  # to load well-known files
 config = configp.ConfigParser()
@@ -305,7 +326,7 @@ def get_lims_experiment_info(ophys_experiment_id):
 
     """
     ophys_experiment_id = int(ophys_experiment_id)
-    mixin = PostgresQueryMixin()
+    mixin =lims_engine
     # build query
     query = '''
     select
@@ -378,7 +399,7 @@ def get_lims_cell_segmentation_run_info(ophys_experiment_id):
                         updated_at{timestamp}:
     """
 
-    mixin = PostgresQueryMixin()
+    mixin = lims_engine
     query = '''
     select *
     FROM ophys_cell_segmentation_runs
@@ -419,7 +440,7 @@ def get_lims_cell_rois_table(ophys_experiment_id):
     """
     # query from AllenSDK
 
-    mixin = PostgresQueryMixin()
+    mixin = lims_engine
     query = '''select cell_rois.*
 
     from
@@ -460,7 +481,7 @@ def get_lims_container_info(ophys_container_id):
     """
     ophys_container_id = int(ophys_container_id)
 
-    mixin = PostgresQueryMixin()
+    mixin = lims_engine
     # build query
     query = '''
     SELECT
@@ -723,7 +744,7 @@ def get_mtrain_stage_name(dataframe):
             LEFT JOIN stages ON stages.id = states.stage_id
             WHERE bs.id IN ({})
         """.format(",".join(["'{}'".format(x) for x in foraging_ids]))
-    mtrain_response = pd.read_sql(query, mtrain_api.get_connection())
+    mtrain_response = pd.read_sql(query, mtrain_engine.get_connection())
     dataframe = dataframe.merge(mtrain_response, on='foraging_id', how='left')
     dataframe = dataframe.rename(columns={"stage_name": "stage_name_mtrain"})
     return dataframe
