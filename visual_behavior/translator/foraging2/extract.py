@@ -637,6 +637,15 @@ def get_licks(exp_data, time=None):
 
     time = time or get_time(exp_data)  # that coverage syntax tho...
 
+    # there's an occasional bug where the number of logged frames is one greater
+    # than the number of vsync intervals. If the animal licked on this last frame
+    # it will cause an error here. This fixes the problem.
+    # see: https://github.com/AllenInstitute/visual_behavior_analysis/issues/572
+    #    & https://github.com/AllenInstitute/visual_behavior_analysis/issues/379
+    if lick_frames[-1] == len(time):
+        lick_frames = lick_frames[:-1]
+        logger.error('removed last lick - it fell outside of intervalsms range')
+
     lick_times = [time[frame] for frame in lick_frames]
 
     return pd.DataFrame(data={"frame": lick_frames, "time": lick_times, })
