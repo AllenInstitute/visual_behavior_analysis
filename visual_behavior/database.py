@@ -12,6 +12,7 @@ from allensdk.internal.api import PostgresQueryMixin
 from allensdk.core.authentication import DbCredentials, credential_injector
 from allensdk.core.auth_config import LIMS_DB_CREDENTIAL_MAP
 
+
 class Database(object):
     '''
     utilities for connecting to MongoDB databases (mouseseeks or visual_behavior_data)
@@ -188,7 +189,7 @@ def get_value_from_table(search_key, search_value, target_table, target_key):
     a general function for getting a value from a LIMS table
     '''
     api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)
-               (PostgresQueryMixin)())
+           (PostgresQueryMixin)())
     query = f'''
     select {target_key}
     from {target_table}
@@ -515,7 +516,7 @@ def get_manifest(server='visual_behavior_data'):
 
 def get_well_known_files(ophys_session_id):
     lims_api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)
-               (PostgresQueryMixin)())
+                (PostgresQueryMixin)())
     query = '''
     select * from well_known_files wkf
     join well_known_file_types wkft
