@@ -177,3 +177,53 @@ def event_triggered_raster(df, x_value, event_times, fig=None, ax_index=0, var_n
 
         ax.set_xlabel(var_name)
         ax.set_ylabel(value_name)
+
+
+def event_triggered_response_plot(df, x_value, y_values, fig=None, ax_index=0, var_name='', value_name='', plot_type='matplotlib', cmap='viridis'):
+    if plot_type == 'plotly':
+        return plotly_event_triggered_response_plot(df, x_value, y_values, var_name=var_name, value_name=value_name)
+    elif plot_type == 'matplotlib':
+        cmap = cm.get_cmap(cmap)
+        fig, ax = get_fig_ax(fig, ax_index)
+
+        for ii, col in enumerate(y_values):
+            ax.plot(df[x_value], df[col], alpha=0.25,
+                    color=cmap(ii/(len(y_values)-1)))
+        ax.plot(df[x_value], df[y_values].mean(
+            axis=1), color='black', linewidth=3)
+
+        ax.set_xlabel(var_name)
+        ax.set_ylabel(value_name)
+
+        return fig
+
+
+def plotly_event_triggered_response_plot(df, x_value, y_values, var_name='line', value_name='value'):
+
+    df_melted = pd.melt(
+        df,
+        id_vars=[x_value],
+        value_vars=y_values,
+        var_name=var_name,
+        value_name=value_name
+    )
+
+    fig = px.line(
+        df_melted,
+        x=x_value,
+        y=value_name,
+        color=var_name,
+        hover_name=var_name,
+        render_mode="svg"
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=df[x_value],
+            y=df[y_values].mean(axis=1),
+            line=dict(color='black', width=3),
+            name='grand average'
+        )
+    )
+
+    return fig
