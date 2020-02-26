@@ -311,7 +311,7 @@ def get_lims_experiment_info(ophys_experiment_id):
 
     Returns:
         table -- table with the following columns:
-                    "experiment_id":
+                    "ophys_experiment_id":
                     "experiment_workflow_state":
                     "ophys_session_id":
                     "container_id":
@@ -331,7 +331,7 @@ def get_lims_experiment_info(ophys_experiment_id):
     query = '''
     select
 
-    oe.id as experiment_id,
+    oe.id as ophys_experiment_id,
     oe.workflow_state,
     oe.ophys_session_id,
 
