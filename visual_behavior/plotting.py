@@ -155,3 +155,25 @@ def get_fig_ax(fig, ax_index):
         ax = fig.get_axes()[ax_index]
 
     return fig, ax
+
+
+def event_triggered_raster(df, x_value, event_times, fig=None, ax_index=0, var_name='', value_name='', t_before=10, t_after=10, plot_type='matplotlib', marker='|', color='black'):
+    if plot_type == 'plotly':
+        assert False, 'not yet implemented'
+    elif plot_type == 'matplotlib':
+        fig, ax = get_fig_ax(fig, ax_index)
+
+        for ii, event_time in enumerate(event_times):
+            query_string = "{0} > (@event_time - @t_before) and {0} < (@event_time + @t_after)".format(
+                x_value)
+            events = df.query(query_string).values - event_time
+            ax.plot(
+                events,
+                ii*np.ones_like(events),
+                marker=marker,
+                color=color,
+                linestyle='none'
+            )
+
+        ax.set_xlabel(var_name)
+        ax.set_ylabel(value_name)
