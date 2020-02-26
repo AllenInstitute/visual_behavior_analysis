@@ -125,3 +125,33 @@ def initialize_legend(ax, colors, linewidth=1, linestyle='-', marker=None, marke
     for color in colors:
         ax.plot(np.nan, np.nan, color=color, linewidth=linewidth,
                 linestyle=linestyle, marker=marker, markersize=markersize, alpha=alpha)
+
+
+def get_fig_ax(fig, ax_index):
+    '''
+    a flexible method for getting figure and axis handles
+
+    inputs:
+        fig: matplotlib figure object
+        ax_index: index of desired axis
+
+    if fig is None
+        will create a new figure and axis
+        returns fig, ax
+
+    if fig exists, but no axes exist:
+        will create a single subplot axis
+        returns fig, ax
+
+    if fig exists and has associated axes:
+        returns fig, ax[ax_index]
+    '''
+    if fig is None:
+        fig, ax = plt.subplots()
+
+    if fig and len(fig.get_axes()) == 0:
+        ax = fig.add_subplot(111)
+    else:
+        ax = fig.get_axes()[ax_index]
+
+    return fig, ax
