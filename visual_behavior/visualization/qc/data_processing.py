@@ -39,6 +39,11 @@ def ophys_experiment_info_df(ophys_experiment_id):
     return experiment_info_df
 
 
+def single_ophys_experiment_id_and_stage_name_dict(ophys_experiment_id):
+    experiment_info_df = ophys_experiment_info_df(ophys_experiment_id)
+    exp_stage_name_dict = pd.Series(df.Letter.values, index=df.Position).to_dict()
+
+
 def ophys_experiment_segmentation_summary_df(ophys_experiment_id):
     """for a given experiment, uses the cell_rois_table from lims
         to get the total number segmented rois, as well as number
@@ -469,16 +474,16 @@ def container_experiment_pairs_valid_cell_matching(ophys_container_id):
         unique_exps_in_combo = len(np.unique(combo))
 
         exp1_stage_name = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"] == exp1,
-                                                                                "stage_name_lims"].unique()[0]
+                                                      "stage_name_lims"].unique()[0]
 
         exp2_stage_name = valid_container_csid_df.loc[valid_container_csid_df["ophys_experiment_id"] == exp2,
-                                                                                "stage_name_lims"].unique()[0]
+                                                      "stage_name_lims"].unique()[0]
 
         csids_in_exp_pair = len(exp_pair_df["cell_specimen_id"].unique())  # all the csids across both experiments
         exp_pair_df = cell_specimen_id_matches_in_dataframe(exp_pair_df)  # get number of times a csid appears & add to exp_pair_df
 
         matches_btw_pair = len(exp_pair_df.loc[exp_pair_df["match_count"] == unique_exps_in_combo,
-                                                                        "cell_specimen_id"].unique())
+                                               "cell_specimen_id"].unique())
 
         if csids_in_exp_pair == 0:
             perc_cells_matched = np.nan
@@ -603,6 +608,23 @@ def remove_unpassed_experiments(dataframe):
     dataframe = dataframe.loc[dataframe["experiment_workflow_state"] == "passed"]
     dataframe = dataframe.reset_index(drop=True)
     return dataframe
+
+
+def ophys_experiment_id_stage_name_dict(dataframe):
+    """takes a dataframe with the columns "ophys_experiment_id" and "stage_name_lims"
+        and returns a dictionary with ophys_experiment_ids as keys and lims stage names
+        as values
+
+    Arguments:
+        dataframe {[type]} -- [description]
+
+    Returns:
+        dictionary -- keys: lims stage names (string)
+                        values: ophys_experiment_id (9 digit int)
+    """
+
+    exp_stage_name_dict = pd.Series(dataframe.ophys_experiment_id.values, index=dataframe.stage_name_lims).to_dict()
+    return exp_stage_name_dict
 
 
 ####### ROI MASKS ####### # NOQA: E402
@@ -739,7 +761,6 @@ def gen_transparent_validity_masks(ophys_experiment_id):
     return validity_masks_df
 
 
-
 ####### PHYSIO ####### # NOQA: E402
 
 
@@ -774,19 +795,24 @@ def get_experiment_average_intensity_timeseries(ophys_experiment_id):
 
     return average_intensity, frame_numbers
 
+
 def median_of_experiment_average_intensity_timeseries(experiment_average_intensity_timeseries):
     median_intensity = np.median(experiment_average_intensity_timeseries)
     return median_intensity
 
+
 def standard_dev_of_experiment_average_intensity_timeseries(experiment_average_intensity_timeseries):
     intensity_std = np.std(experiment_average_intensity_timeseries)
     return intensity_std
+
 
 def experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experiment_id):
     ave_intensity_ts = get_experiment_average_intensity_timeseries(ophys_experiment_id)[0]
     median_intensity = median_of_experiment_average_intensity_timeseries(ave_intensity_ts)
     intensity_std = standard_dev_of_experiment_average_intensity_timeseries(ave_intensity_ts)
     intensity_stats_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
-                                        "intensity_med": median_intensity,
-                                        "intensity_std": intensity_std}, index=[0])
+                                       "intensity_med": median_intensity,
+                                       "intensity_std": intensity_std}, index=[0])
     return intensity_stats_df
+
+# def container_average_intensity_timeseries_descriptive_stats_df(ophys_container_id):
