@@ -9,7 +9,7 @@ import traceback
 import datetime
 
 from allensdk.internal.api import PostgresQueryMixin
-from allensdk.core.authentication import DbCredentials, credential_injector
+from allensdk.core.authentication import credential_injector
 from allensdk.core.auth_config import LIMS_DB_CREDENTIAL_MAP
 
 
