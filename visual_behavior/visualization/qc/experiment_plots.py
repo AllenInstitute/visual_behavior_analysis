@@ -1,11 +1,15 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
+
+
 from visual_behavior.visualization.qc import data_loading as dl
 from visual_behavior.visualization.qc import data_processing as dp
-import visual_behavior.plotting as vbp
+
 import visual_behavior.database as db
+import visual_behavior.plotting as vbp
 from visual_behavior.utilities import EyeTrackingData
-import os
+
 
 
 ################  OPHYS  ################ # NOQA: E402
@@ -59,7 +63,7 @@ def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
     return ax
 
 def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=None, color='gray'):
-    average_intensity, frame_numbers = dp.get_average_intensity(ophys_experiment_id)
+    average_intensity, frame_numbers = dp.get_experiment_average_intensity_timeseries(ophys_experiment_id)
     if ax is None:
         fig, ax = plt.subplots()
     ax.plot(frame_numbers, average_intensity, color=color, label=ophys_experiment_id)
