@@ -1,5 +1,4 @@
 import visual_behavior.visualization.qc.data_loading as load
-import scipy.stats as stats
 import pandas as pd
 import numpy as np
 import itertools
@@ -739,7 +738,7 @@ def gen_transparent_validity_masks(ophys_experiment_id):
 
 
 def get_experiment_average_intensity_timeseries(ophys_experiment_id):
-    """uses the LIMS wkf system to get the filepath for the 
+    """uses the LIMS wkf system to get the filepath for the
         motion_corrected_movie.h5 file Then loads the file
         using h5py package.
 
@@ -768,7 +767,6 @@ def get_experiment_average_intensity_timeseries(ophys_experiment_id):
     frame_numbers = frame_numbers[::500]
 
     return average_intensity, frame_numbers
-
 
 
 def experiment_average_intensity_timeseries_mean(experiment_average_intensity_timeseries):
@@ -807,6 +805,7 @@ def experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experimen
     intensity_stats_df["FOV_intensity_snr"] = intensity_stats_df["FOV_intensity_mean"] / intensity_stats_df["FOV_intensity_std"]
     return intensity_stats_df
 
+
 def container_average_intensity_timeseries_descriptive_stats_df(ophys_container_id):
     container_passed_exps = ophys_container_passed_experiments(ophys_container_id)
     container_intensity_df = pd.DataFrame()
@@ -814,7 +813,7 @@ def container_average_intensity_timeseries_descriptive_stats_df(ophys_container_
         exp_intensity_df = experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experiment_id)
         container_intensity_df = container_intensity_df.append(exp_intensity_df)
     container_intensity_df = container_intensity_df.reset_index(drop=True)
-    container_intensity_df.loc[:,"ophys_container_id"] = ophys_container_id
+    container_intensity_df.loc[:, "ophys_container_id"] = ophys_container_id
     return container_intensity_df
 
 
@@ -823,6 +822,7 @@ def experiment_FOV_information(ophys_experiment_id):
     exp_FOV_intensity_info["pmt_gain"] = load.get_pmt_gain_for_experiment(ophys_experiment_id)
     return exp_FOV_intensity_info
 
+
 def container_FOV_information(ophys_container_id):
     container_passed_exps = ophys_container_passed_experiments(ophys_container_id)
     container_FOV_df = pd.DataFrame()
@@ -830,8 +830,21 @@ def container_FOV_information(ophys_container_id):
         exp_FOV_info_df = experiment_FOV_information(ophys_experiment_id)
         container_FOV_df = container_FOV_df.append(exp_FOV_info_df)
     container_FOV_df = container_FOV_df.reset_index(drop=True)
-    container_FOV_df.loc[:,"ophys_container_id"] = ophys_container_id
+    container_FOV_df.loc[:, "ophys_container_id"] = ophys_container_id
     return container_FOV_df
 
 
-# def container_average_intensity_timeseries_descriptive_stats_df(ophys_container_id):
+def experiment_average_intensity_image_from_motion_corrected_timeseries(ophys_experiment_id):
+    """takes every 500th frame of the motion corrected movie and averages it
+        in time to create a
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        numpy.ndarray -- [description]
+    """
+    motion_corrected_movie_array = load.load_motion_corrected_movie(ophys_experiment_id)
+    subset = motion_corrected_movie_array[::500, :, :]
+    motion_correction_average_intensity_image = np.mean(subset, axis=0)
+    return motion_correction_average_intensity_image

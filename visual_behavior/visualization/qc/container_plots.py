@@ -122,15 +122,14 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
 #                        'container_' + str(ophys_container_id))
 
 
-
 def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
     container_df = (dp.ophys_container_passed_experiments(ophys_container_id)).sort_values('stage_name_lims').reset_index(drop=True)
     figsize = (9, 5)
     fig, ax = plt.subplots(figsize=figsize)
     for i, ophys_experiment_id in enumerate(container_df["ophys_experiment_id"].unique()):
         ax = ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=ax)
-    ax.legend(fontsize='xx-small', title='stage_name', title_fontsize='xx-small',
-                bbox_to_anchor = (1.01,1), loc = 2)
+    ax.legend(fontsize='xx-small', title='stage name', title_fontsize='xx-small',
+              bbox_to_anchor=(1.01, 1), loc=2)
     ax.set_title('full field average fluorescence intensity over time')
     fig.tight_layout()
     if save_figure:

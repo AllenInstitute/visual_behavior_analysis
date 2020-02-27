@@ -33,6 +33,7 @@ def gen_ophys_stage_name_colors_dict():
                               'full_field_test': stage_color_palette[7]}
     return stage_name_colors_dict
 
+
 def ophys_experiment_id_stage_name_dict(dataframe):
     """takes a dataframe with the columns "ophys_experiment_id" and "stage_name_lims"
         and returns a dictionary with ophys_experiment_ids as keys and lims stage names
@@ -56,10 +57,12 @@ def map_stage_name_colors_to_ophys_experiment_ids(dataframe):
     experiment_id_color_dict = dict((ophys_experiment_stage_name_dict.get(key), value) for (key, value) in stage_name_colors.items())
     return experiment_id_color_dict
 
+
 def experiment_id_stage_color_dict_for_experiment(ophys_experiment_id):
     experiment_df = dp.ophys_experiment_info_df(ophys_experiment_id)
     exp_color_dict = map_stage_name_colors_to_ophys_experiment_ids(experiment_df)
     return exp_color_dict
+
 
 def experiment_id_stage_color_dict_for_container(ophys_container_id):
     container_df = dp.ophys_container_info_df(ophys_container_id)
@@ -68,8 +71,7 @@ def experiment_id_stage_color_dict_for_container(ophys_container_id):
 
 # def get_stage_name_for_experiment_id(ophys_experiment_id):
 #     experiment_df = dp.ophys_experiment_info_df(ophys_experiment_id)
-#     experiment_stage_name = 
-
+#     experiment_stage_name =
 
 
 def boxoff(ax, keep='left', yaxis=True):
