@@ -1,8 +1,9 @@
 import os
 import seaborn as sns
 import matplotlib.pyplot as plt
-import visual_behavior.plotting as vbp
 import visual_behavior.database as db
+import visual_behavior.plotting as vbp
+
 from visual_behavior.visualization import utils as ut
 from visual_behavior.visualization.qc import data_loading as dl
 from visual_behavior.visualization.qc import data_processing as dp
@@ -106,15 +107,30 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'dff_traces_heatmaps',
                        'container_' + str(ophys_container_id))
 
+# def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
+#     container_df = (dp.ophys_container_passed_experiments(ophys_container_id)).sort_values('stage_name_lims').reset_index(drop=True)
+#     colors = sns.color_palette()
+#     figsize = (7, 5)
+#     fig, ax = plt.subplots(figsize=figsize)
+#     for i, ophys_experiment_id in enumerate(container_df["ophys_experiment_id"].unique()):
+#         ax = ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=ax, color=colors[i])
+#     ax.legend(fontsize='xx-small', title='experiment_id', title_fontsize='xx-small', loc='upper left')
+#     ax.set_title('full field average fluorescence intensity over time')
+#     fig.tight_layout()
+#     if save_figure:
+#         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_intensity_timeseries',
+#                        'container_' + str(ophys_container_id))
+
+
 
 def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
-    colors = sns.color_palette()
-    figsize = (7, 5)
+    container_df = (dp.ophys_container_passed_experiments(ophys_container_id)).sort_values('stage_name_lims').reset_index(drop=True)
+    figsize = (9, 5)
     fig, ax = plt.subplots(figsize=figsize)
-    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        ax = ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=ax, color=colors[i])
-    ax.legend(fontsize='xx-small', title='experiment_id', title_fontsize='xx-small', loc='upper left')
+    for i, ophys_experiment_id in enumerate(container_df["ophys_experiment_id"].unique()):
+        ax = ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=ax)
+    ax.legend(fontsize='xx-small', title='stage_name', title_fontsize='xx-small',
+                bbox_to_anchor = (1.01,1), loc = 2)
     ax.set_title('full field average fluorescence intensity over time')
     fig.tight_layout()
     if save_figure:
