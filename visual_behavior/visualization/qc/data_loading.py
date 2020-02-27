@@ -170,6 +170,12 @@ def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id):
     ophys_experiment_id = experiments[(experiments.ophys_session_id == ophys_session_id)].ophys_experiment_id.values[0]
     return ophys_experiment_id
 
+
+def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
+    lims_experiment_info = get_lims_experiment_info(ophys_experiment_id)
+    ophys_session_id = lims_experiment_info["ophys_session_id"][0]
+    return ophys_session_id
+
 ################  FROM SDK  ################ # NOQA: E402
 
 
@@ -594,6 +600,21 @@ def get_pmt_gain_for_session(ophys_session_id):
     pmt_gain = pmt_gain_from_timeseries_ini(timeseries_ini_path)
     return pmt_gain
 
+def get_pmt_gain_for_experiment(ophys_experiment_id):
+    """finds the timeseries ini file for  the ophys_session_id
+        associated with an ophys_experiment_id  from a Scientifica
+        rig, parses the file and returns the
+        pmt gain setting for that session
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        int -- pmt gain setting
+    """
+    ophys_session_id = get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
+    pmt_gain = get_pmt_gain_for_session(ophys_session_id)
+    return pmt_gain
 
 def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
     """use SQL and the LIMS well known file system to get the
