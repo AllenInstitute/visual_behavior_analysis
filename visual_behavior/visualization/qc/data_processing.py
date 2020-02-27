@@ -1,5 +1,5 @@
 import visual_behavior.visualization.qc.data_loading as load
-
+import scipy.stats as stats
 import pandas as pd
 import numpy as np
 import itertools
@@ -7,7 +7,9 @@ import itertools
 # csid = cell_specimen_id
 
 
-####### EXPERIMENT LEVEL ####### # NOQA: E402
+####### BASIC INFO/DATAFRAMES (EXP, SESSION & CONTAINER) ####### # NOQA: E402
+
+
 def ophys_experiment_info_df(ophys_experiment_id):
     """manifest style information about a specific
         ophys experiment
@@ -37,48 +39,6 @@ def ophys_experiment_info_df(ophys_experiment_id):
     experiment_info_df = load.get_mtrain_stage_name(experiment_info_df)
     experiment_info_df = experiment_info_df.drop(["mouse_info", "foraging_id"], axis=1)
     return experiment_info_df
-
-
-def single_ophys_experiment_id_and_stage_name_dict(ophys_experiment_id):
-    experiment_info_df = ophys_experiment_info_df(ophys_experiment_id)
-    exp_stage_name_dict = pd.Series(df.Letter.values, index=df.Position).to_dict()
-
-
-def ophys_experiment_segmentation_summary_df(ophys_experiment_id):
-    """for a given experiment, uses the cell_rois_table from lims
-        to get the total number segmented rois, as well as number
-        valid and invalid rois
-
-    Arguments:
-        ophys_experiment_id {[type]} -- [description]
-
-    Returns:
-        dataframe -- dataframe with the following columns:
-                            "ophys_experiment_id",
-                            "total_rois",
-                            "valid_count",
-                            "invalid_count",
-                            "valid_percent",
-                            "invalid_percent"
-    """
-
-    cell_table = load.get_lims_cell_rois_table(ophys_experiment_id)
-
-    total_rois = len(cell_table)
-    number_valid = len(cell_table.loc[cell_table["valid_roi"] == True])
-    number_invalid = len(cell_table.loc[cell_table["valid_roi"] == False])
-
-    seg_summary_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
-                                   "total_rois": total_rois,
-                                   "valid_count": number_valid,
-                                   "invalid_count": number_invalid},
-                                  index=[0])
-    seg_summary_df["valid_percent"] = seg_summary_df["valid_count"] / seg_summary_df["total_rois"]
-    seg_summary_df["invalid_percent"] = seg_summary_df["invalid_count"] / seg_summary_df["total_rois"]
-    return seg_summary_df
-
-
-# CONTAINER LEVEL #######     NOQA: E402
 
 
 def ophys_container_info_df(ophys_container_id):
@@ -178,7 +138,98 @@ def stage_name_ordered_list(dataframe, stage_name_column="stage_name_lims"):
     return stage_name_list
 
 
-# SEGMENTATION ####   NOQA: E402
+def split_mouse_info_column(dataframe):
+    """takes a lims info dataframe with the column "mouse_info" and splits it
+        to separate the mouse_id and the full genotype
+
+    Arguments:
+        dataframe {[type]} -- dataframe (experiment, session or container level)
+                                with the column "mouse_info"
+
+    Returns:
+        dataframe -- returns same dataframe but with these columns added:
+                        "mouse_id": 6 digit mouse id
+                        "full_geno": full genotype of the mouse
+    """
+
+    dataframe["mouse_id"] = int(dataframe["mouse_info"][0][-6:])
+    dataframe["full_geno"] = dataframe["mouse_info"][0][:-7]
+    return dataframe
+
+
+def stage_num(row):
+    return row["stage_name"][6]
+
+
+def get_stage_num(dataframe):
+    dataframe.loc[:, "stage_num"] = dataframe.apply(stage_num, axis=1)
+    return dataframe
+
+
+def remove_invalid_rois(dataframe):
+    """takes a cell/roi level dataframe with column "valid_roi"
+        and removes invalid rois
+
+    Arguments:
+        dataframe {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with invalid rois removed and index reset
+    """
+    dataframe = dataframe.loc[dataframe["valid_roi"] == True]
+    dataframe = dataframe.reset_index(drop=True)
+    return dataframe
+
+
+def remove_unpassed_experiments(dataframe):
+    """takes a container level dataframe with experiments as rows
+        and removes all unpassed experiments.
+
+    Arguments:
+        dataframe {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with unpassed experiments removed and index reset
+    """
+    dataframe = dataframe.loc[dataframe["experiment_workflow_state"] == "passed"]
+    dataframe = dataframe.reset_index(drop=True)
+    return dataframe
+
+
+####### SEGMENTATION (EXP & CONTAINER) ####### # NOQA: E402
+
+def ophys_experiment_segmentation_summary_df(ophys_experiment_id):
+    """for a given experiment, uses the cell_rois_table from lims
+        to get the total number segmented rois, as well as number
+        valid and invalid rois
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                            "ophys_experiment_id",
+                            "total_rois",
+                            "valid_count",
+                            "invalid_count",
+                            "valid_percent",
+                            "invalid_percent"
+    """
+
+    cell_table = load.get_lims_cell_rois_table(ophys_experiment_id)
+
+    total_rois = len(cell_table)
+    number_valid = len(cell_table.loc[cell_table["valid_roi"] == True])
+    number_invalid = len(cell_table.loc[cell_table["valid_roi"] == False])
+
+    seg_summary_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                                   "total_rois": total_rois,
+                                   "valid_count": number_valid,
+                                   "invalid_count": number_invalid},
+                                  index=[0])
+    seg_summary_df["valid_percent"] = seg_summary_df["valid_count"] / seg_summary_df["total_rois"]
+    seg_summary_df["invalid_percent"] = seg_summary_df["invalid_count"] / seg_summary_df["total_rois"]
+    return seg_summary_df
 
 
 def ophys_container_segmentation_summary_df(ophys_container_id,
@@ -300,7 +351,7 @@ def container_segmentation_barplots_df(ophys_container_id, stage_name_column="st
     return seg_sum_with_stage
 
 
-### CELL MATCHING ###
+####### CELL MATCHING (CONTAINER) ####### # NOQA: E402
 
 def get_lims_cell_roi_tables_for_container(ophys_container_id):
     """returns all the cell_specimen_ids and valid/invalid status for rois
@@ -549,85 +600,8 @@ def container_cell_matching_count_heatmap_df(ophys_container_id):
     pivot_count = pivot_count.reindex(stage_order)
     return pivot_count
 
-####### UTILITIES ####### # NOQA: E402
 
-
-def split_mouse_info_column(dataframe):
-    """takes a lims info dataframe with the column "mouse_info" and splits it
-        to separate the mouse_id and the full genotype
-
-    Arguments:
-        dataframe {[type]} -- dataframe (experiment, session or container level)
-                                with the column "mouse_info"
-
-    Returns:
-        dataframe -- returns same dataframe but with these columns added:
-                        "mouse_id": 6 digit mouse id
-                        "full_geno": full genotype of the mouse
-    """
-
-    dataframe["mouse_id"] = int(dataframe["mouse_info"][0][-6:])
-    dataframe["full_geno"] = dataframe["mouse_info"][0][:-7]
-    return dataframe
-
-
-def stage_num(row):
-    return row["stage_name"][6]
-
-
-def get_stage_num(dataframe):
-    dataframe.loc[:, "stage_num"] = dataframe.apply(stage_num, axis=1)
-    return dataframe
-
-
-def remove_invalid_rois(dataframe):
-    """takes a cell/roi level dataframe with column "valid_roi"
-        and removes invalid rois
-
-    Arguments:
-        dataframe {[type]} -- [description]
-
-    Returns:
-        dataframe -- dataframe with invalid rois removed and index reset
-    """
-    dataframe = dataframe.loc[dataframe["valid_roi"] == True]
-    dataframe = dataframe.reset_index(drop=True)
-    return dataframe
-
-
-def remove_unpassed_experiments(dataframe):
-    """takes a container level dataframe with experiments as rows
-        and removes all unpassed experiments.
-
-    Arguments:
-        dataframe {[type]} -- [description]
-
-    Returns:
-        dataframe -- dataframe with unpassed experiments removed and index reset
-    """
-    dataframe = dataframe.loc[dataframe["experiment_workflow_state"] == "passed"]
-    dataframe = dataframe.reset_index(drop=True)
-    return dataframe
-
-
-def ophys_experiment_id_stage_name_dict(dataframe):
-    """takes a dataframe with the columns "ophys_experiment_id" and "stage_name_lims"
-        and returns a dictionary with ophys_experiment_ids as keys and lims stage names
-        as values
-
-    Arguments:
-        dataframe {[type]} -- [description]
-
-    Returns:
-        dictionary -- keys: lims stage names (string)
-                        values: ophys_experiment_id (9 digit int)
-    """
-
-    exp_stage_name_dict = pd.Series(dataframe.ophys_experiment_id.values, index=dataframe.stage_name_lims).to_dict()
-    return exp_stage_name_dict
-
-
-####### ROI MASKS ####### # NOQA: E402
+####### ROI MASKS (EXP AND CONTAINER, SEG & CELL MATCHING) ####### # NOQA: E402
 
 
 def shift_image_masks(dataframe):
@@ -761,7 +735,7 @@ def gen_transparent_validity_masks(ophys_experiment_id):
     return validity_masks_df
 
 
-####### PHYSIO ####### # NOQA: E402
+####### PHYSIO FOV AND INTENSITY (EXP AND CONTAINER) ####### # NOQA: E402
 
 
 def get_experiment_average_intensity_timeseries(ophys_experiment_id):
@@ -796,23 +770,68 @@ def get_experiment_average_intensity_timeseries(ophys_experiment_id):
     return average_intensity, frame_numbers
 
 
-def median_of_experiment_average_intensity_timeseries(experiment_average_intensity_timeseries):
-    median_intensity = np.median(experiment_average_intensity_timeseries)
-    return median_intensity
+
+def experiment_average_intensity_timeseries_mean(experiment_average_intensity_timeseries):
+    mean_intensity = np.mean(experiment_average_intensity_timeseries)
+    return mean_intensity
 
 
-def standard_dev_of_experiment_average_intensity_timeseries(experiment_average_intensity_timeseries):
+def experiment_average_intensity_timeseries_std_dev(experiment_average_intensity_timeseries):
     intensity_std = np.std(experiment_average_intensity_timeseries)
     return intensity_std
 
 
+def experiment_average_intensity_timeseries_signal_noise_ratio(experiment_average_intensity_timeseries):
+    """calculates the signal to noise ratio by taking the mean divided by
+        the standard deviation
+
+    Arguments:
+        experiment_average_intensity_timeseries {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+    average_intensity_mean = experiment_average_intensity_timeseries_mean(experiment_average_intensity_timeseries)
+    average_intensity_std = experiment_average_intensity_timeseries_std_dev(experiment_average_intensity_timeseries)
+    average_intensity_snr = average_intensity_mean / average_intensity_std
+    return average_intensity_snr
+
+
 def experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experiment_id):
     ave_intensity_ts = get_experiment_average_intensity_timeseries(ophys_experiment_id)[0]
-    median_intensity = median_of_experiment_average_intensity_timeseries(ave_intensity_ts)
-    intensity_std = standard_dev_of_experiment_average_intensity_timeseries(ave_intensity_ts)
+    intensity_mean = experiment_average_intensity_timeseries_mean(ave_intensity_ts)
+    intensity_std = experiment_average_intensity_timeseries_std_dev(ave_intensity_ts)
     intensity_stats_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
-                                       "intensity_med": median_intensity,
-                                       "intensity_std": intensity_std}, index=[0])
+                                       "FOV_intensity_mean": intensity_mean,
+                                       "FOV_intensity_std": intensity_std}, index=[0])
+    intensity_stats_df["FOV_intensity_snr"] = intensity_stats_df["FOV_intensity_mean"] / intensity_stats_df["FOV_intensity_std"]
     return intensity_stats_df
+
+def container_average_intensity_timeseries_descriptive_stats_df(ophys_container_id):
+    container_passed_exps = ophys_container_passed_experiments(ophys_container_id)
+    container_intensity_df = pd.DataFrame()
+    for ophys_experiment_id in container_passed_exps["ophys_experiment_id"].unique():
+        exp_intensity_df = experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experiment_id)
+        container_intensity_df = container_intensity_df.append(exp_intensity_df)
+    container_intensity_df = container_intensity_df.reset_index(drop=True)
+    container_intensity_df.loc[:,"ophys_container_id"] = ophys_container_id
+    return container_intensity_df
+
+
+def experiment_FOV_information(ophys_experiment_id):
+    exp_FOV_intensity_info = experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experiment_id)
+    exp_FOV_intensity_info["pmt_gain"] = load.get_pmt_gain_for_experiment(ophys_experiment_id)
+    return exp_FOV_intensity_info
+
+def container_FOV_information(ophys_container_id):
+    container_passed_exps = ophys_container_passed_experiments(ophys_container_id)
+    container_FOV_df = pd.DataFrame()
+    for ophys_experiment_id in container_passed_exps["ophys_experiment_id"].unique():
+        exp_FOV_info_df = experiment_FOV_information(ophys_experiment_id)
+        container_FOV_df = container_FOV_df.append(exp_FOV_info_df)
+    container_FOV_df = container_FOV_df.reset_index(drop=True)
+    container_FOV_df.loc[:,"ophys_container_id"] = ophys_container_id
+    return container_FOV_df
+
 
 # def container_average_intensity_timeseries_descriptive_stats_df(ophys_container_id):
