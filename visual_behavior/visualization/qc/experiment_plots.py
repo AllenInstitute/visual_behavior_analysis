@@ -2,7 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-
+import visual_behavior.visualization.qc.plotting_utils as pu
 from visual_behavior.visualization.qc import data_loading as dl
 from visual_behavior.visualization.qc import data_processing as dp
 
@@ -63,10 +63,14 @@ def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
     return ax
 
 def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=None, color='gray'):
+    experiment_df = dp.ophys_experiment_info_df(ophys_experiment_id)
+    exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(experiment_df)
     average_intensity, frame_numbers = dp.get_experiment_average_intensity_timeseries(ophys_experiment_id)
     if ax is None:
         fig, ax = plt.subplots()
-    ax.plot(frame_numbers, average_intensity, color=color, label=ophys_experiment_id)
+    ax.plot(frame_numbers, average_intensity,
+            color=exp_stage_color_dict[ophys_experiment_id], 
+            label=experiment_df["stage_name_lims"][0])
     ax.set_ylabel('fluorescence value')
     ax.set_xlabel('frame #')
     return ax
