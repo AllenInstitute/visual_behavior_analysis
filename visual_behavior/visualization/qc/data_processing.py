@@ -1,5 +1,4 @@
 import visual_behavior.visualization.qc.data_loading as load
-import scipy.stats as stats
 import pandas as pd
 import numpy as np
 import itertools
@@ -166,21 +165,6 @@ def get_stage_num(dataframe):
     return dataframe
 
 
-def remove_invalid_rois(dataframe):
-    """takes a cell/roi level dataframe with column "valid_roi"
-        and removes invalid rois
-
-    Arguments:
-        dataframe {[type]} -- [description]
-
-    Returns:
-        dataframe -- dataframe with invalid rois removed and index reset
-    """
-    dataframe = dataframe.loc[dataframe["valid_roi"] == True]
-    dataframe = dataframe.reset_index(drop=True)
-    return dataframe
-
-
 def remove_unpassed_experiments(dataframe):
     """takes a container level dataframe with experiments as rows
         and removes all unpassed experiments.
@@ -266,6 +250,21 @@ def ophys_container_segmentation_summary_df(ophys_container_id,
 
     container_seg_summary = container_seg_summary.reset_index(drop=True)
     return container_seg_summary
+
+
+def remove_invalid_rois(dataframe):
+    """takes a cell/roi level dataframe with column "valid_roi"
+        and removes invalid rois
+
+    Arguments:
+        dataframe {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with invalid rois removed and index reset
+    """
+    dataframe = dataframe.loc[dataframe["valid_roi"] == True]
+    dataframe = dataframe.reset_index(drop=True)
+    return dataframe
 
 
 def melted_container_segmentation_summary_df(ophys_container_id,
@@ -601,7 +600,7 @@ def container_cell_matching_count_heatmap_df(ophys_container_id):
     return pivot_count
 
 
-####### ROI MASKS (EXP AND CONTAINER, SEG & CELL MATCHING) ####### # NOQA: E402
+####### ROI PROCESSING (EXP AND CONTAINER, SEG & CELL MATCHING, DFF) ####### # NOQA: E402
 
 
 def shift_image_masks(dataframe):
@@ -731,15 +730,109 @@ def gen_transparent_validity_masks(ophys_experiment_id):
                                index=[0])
         validity_masks_df = validity_masks_df.append(temp_df)
     validity_masks_df = validity_masks_df.reset_index(drop=True)
-
     return validity_masks_df
+
+
+def valid_sdk_dff_traces(ophys_experiment_id):
+    """gets the dff traces from the sdk  session object
+        and then filters out the invalid rois  from the
+        sdk cell_specimen_table and returns only valid 
+        cell_specimen_ids and dff traces
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "cell_specimen_id"
+                    "dff"
+    """
+    dff_traces = load.get_sdk_dff_traces(ophys_experiment_id)
+    cell_specimen_table = load.get_sdk_cell_specimen_table(ophys_experiment_id)
+    merged_dfs = dff_traces.merge(cell_specimen_table, left_index=True, right_index=True)
+    merged_dfs["cell_specimen_id"] = merged_dfs.index
+    merged_dfs = remove_invalid_rois(merged_dfs)
+    merged_dfs = merged_dfs[["cell_specimen_id", "dff"]].copy()
+    return merged_dfs
+
+
+def dff_robust_noise(dff_trace):
+    """Robust estimate of std of noise in df/f
+
+    Arguments:
+        dff_trace {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+
+    sigma_MAD_conversion_factor = 1.4826
+
+    # first pass removing big pos peaks
+    dff_trace = dff_trace[dff_trace < 1.5 * np.abs(dff_trace.min())]
+    MAD = np.median(np.abs(dff_trace - np.median(dff_trace)))  # MAD = median absolute deviation
+    robust_standard_deviation = sigma_MAD_conversion_factor * MAD
+
+    # second pass removing remaining pos and neg peaks
+    dff_trace = dff_trace[np.abs(dff_trace - np.median(dff_trace)) < 2.5 * robust_standard_deviation]
+    MAD = np.median(np.abs(dff_trace - np.median(dff_trace)))
+    robust_standard_deviation = sigma_MAD_conversion_factor * MAD
+    return robust_standard_deviation
+
+
+def dff_robust_signal(dff_trace, robust_standard_deviation):
+    """ median deviation
+
+    Arguments:
+        dff_trace {[type]} -- [description]
+        robust_standard_deviation {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+    median_deviation = np.median(dff_trace[(dff_trace - np.median(dff_trace)) > robust_standard_deviation])
+    return median_deviation
+
+
+def dff_robust_noise_column(dataframe):
+    dataframe["robust_noise"] = dataframe["dff"].apply(lambda x: dff_robust_noise(x))
+    return dataframe
+
+
+def dff_robust_signal_column(dataframe):
+    """takes a dataframe with the columns "dff" for the
+
+    Arguments:
+        dataframe  -- dataframe with at least the following columns:
+                        "dff" : an array of the dff trace for the roi/cell_specimen_id
+                        "robust_noise": the robust estimate of std of noise in dff
+
+
+    Returns:
+        dataframe -- input dataframe with the following column added:
+                    "robust_signal"
+    """
+    dataframe["robust_signal"] = dataframe.apply(lambda x: dff_robust_signal(x["dff"], x["robust_noise"]), axis=1 )
+    return dataframe
+
+
+def experiment_cell_specimen_id_SNR_table(ophys_experiment_id):
+    exp_dff_traces = valid_sdk_dff_traces(ophys_experiment_id)
+    exp_dff_traces["robust_noise"] = exp_dff_traces["dff"].apply(lambda x: dff_robust_noise(x))
+    exp_dff_traces["robust_signal"] = exp_dff_traces.apply(lambda x: dff_robust_signal(x["dff"], x["robust_noise"]), axis=1 )
+    exp_dff_traces["robust_snr"] = exp_dff_traces["robust_signal"] / exp_dff_traces["robust_noise"]
+
+    exp_dff_traces["dff_mean"] = exp_dff_traces["dff"].apply(lambda x: np.mean(x))
+    exp_dff_traces["dff_std"] = exp_dff_traces["dff"].apply(lambda x: np.std(x))
+    exp_dff_traces["simple_snr"] = exp_dff_traces["dff_mean"] / exp_dff_traces["dff_std"]
+    return exp_dff_traces
 
 
 ####### PHYSIO FOV AND INTENSITY (EXP AND CONTAINER) ####### # NOQA: E402
 
 
 def get_experiment_average_intensity_timeseries(ophys_experiment_id):
-    """uses the LIMS wkf system to get the filepath for the 
+    """uses the LIMS wkf system to get the filepath for the
         motion_corrected_movie.h5 file Then loads the file
         using h5py package.
 
@@ -768,7 +861,6 @@ def get_experiment_average_intensity_timeseries(ophys_experiment_id):
     frame_numbers = frame_numbers[::500]
 
     return average_intensity, frame_numbers
-
 
 
 def experiment_average_intensity_timeseries_mean(experiment_average_intensity_timeseries):
@@ -807,6 +899,7 @@ def experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experimen
     intensity_stats_df["FOV_intensity_snr"] = intensity_stats_df["FOV_intensity_mean"] / intensity_stats_df["FOV_intensity_std"]
     return intensity_stats_df
 
+
 def container_average_intensity_timeseries_descriptive_stats_df(ophys_container_id):
     container_passed_exps = ophys_container_passed_experiments(ophys_container_id)
     container_intensity_df = pd.DataFrame()
@@ -814,7 +907,7 @@ def container_average_intensity_timeseries_descriptive_stats_df(ophys_container_
         exp_intensity_df = experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experiment_id)
         container_intensity_df = container_intensity_df.append(exp_intensity_df)
     container_intensity_df = container_intensity_df.reset_index(drop=True)
-    container_intensity_df.loc[:,"ophys_container_id"] = ophys_container_id
+    container_intensity_df.loc[:, "ophys_container_id"] = ophys_container_id
     return container_intensity_df
 
 
@@ -823,6 +916,7 @@ def experiment_FOV_information(ophys_experiment_id):
     exp_FOV_intensity_info["pmt_gain"] = load.get_pmt_gain_for_experiment(ophys_experiment_id)
     return exp_FOV_intensity_info
 
+
 def container_FOV_information(ophys_container_id):
     container_passed_exps = ophys_container_passed_experiments(ophys_container_id)
     container_FOV_df = pd.DataFrame()
@@ -830,8 +924,21 @@ def container_FOV_information(ophys_container_id):
         exp_FOV_info_df = experiment_FOV_information(ophys_experiment_id)
         container_FOV_df = container_FOV_df.append(exp_FOV_info_df)
     container_FOV_df = container_FOV_df.reset_index(drop=True)
-    container_FOV_df.loc[:,"ophys_container_id"] = ophys_container_id
+    container_FOV_df.loc[:, "ophys_container_id"] = ophys_container_id
     return container_FOV_df
 
 
-# def container_average_intensity_timeseries_descriptive_stats_df(ophys_container_id):
+def experiment_average_intensity_image_from_motion_corrected_timeseries(ophys_experiment_id):
+    """takes every 500th frame of the motion corrected movie and averages it
+        in time to create a
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        numpy.ndarray -- [description]
+    """
+    motion_corrected_movie_array = load.load_motion_corrected_movie(ophys_experiment_id)
+    subset = motion_corrected_movie_array[::500, :, :]
+    motion_correction_average_intensity_image = np.mean(subset, axis=0)
+    return motion_correction_average_intensity_image
