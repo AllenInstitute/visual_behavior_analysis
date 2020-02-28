@@ -341,18 +341,18 @@ def annotate_epochs(trials, epoch_length=5.0, adjust_first_trial=True):
         indices = df_slice.index
 
         if adjust_first_trial:
-            trials.loc[indices,'start_time_epoch_adjusted'] = df_slice['starttime'] - df_slice['starttime'].min()
+            trials.loc[indices, 'start_time_epoch_adjusted'] = df_slice['starttime'] - df_slice['starttime'].min()
         else:
-            trials[indices,'start_time_epoch_adjusted'] = df_slice['starttime']
+            trials[indices, 'start_time_epoch_adjusted'] = df_slice['starttime']
 
         epoch = (
-            trials.loc[indices,'start_time_epoch_adjusted']
+            trials.loc[indices, 'start_time_epoch_adjusted']
             .map(lambda x: x / (60.0 * epoch_length))
             .map(np.floor)
             .map(lambda x: x * epoch_length)
             # .map(lambda x: "{:0.1f} min".format(x))
         )
-        trials.loc[indices,'epoch'] = epoch
+        trials.loc[indices, 'epoch'] = epoch
 
 
 @inplace
