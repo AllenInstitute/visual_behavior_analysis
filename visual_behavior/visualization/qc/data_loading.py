@@ -250,7 +250,7 @@ def get_sdk_roi_masks(ophys_experiment_id):
                     values are 2d numpy arrays(binary array
                     the size of the motion corrected 2photon
                     FOV where 1's are the ROI/Cell mask).
-                    
+                  
                     specific cell masks can be visualized via
                     plt.imshow(roi_masks[cell_specimen_id])
     """
@@ -272,10 +272,35 @@ def get_valid_segmentation_mask(ophys_experiment_id):
 
 
 def get_sdk_cell_specimen_table(ophys_experiment_id):
+    """[summary]
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        Dataframe -- dataframe with the following columns:
+                    "cell_specimen_id": index
+                    "cell_roi_id"
+                    "height"
+                    "image_mask"
+                    "mask_image_plane"
+                    "max_correction_down"
+                    "max_correction_left"
+                    "max_correction_right"
+                    "max_correction_up"
+                    "valid_roi"
+                    "width"
+                    "x"
+                    "y"
+    """
     session = get_sdk_session_obj(ophys_experiment_id)
     cell_specimen_table = session.cell_specimen_table
     return cell_specimen_table
 
+def get_sdk_dff_traces(ophys_experiment_id):
+    session = get_sdk_session_obj(ophys_experiment_id)
+    dff_traces = session.dff_traces
+    return dff_traces
 
 def get_sdk_dff_traces_array(ophys_experiment_id):
     session = get_sdk_session_obj(ophys_experiment_id)
