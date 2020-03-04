@@ -1,7 +1,9 @@
 import visual_behavior.visualization.qc.data_loading as load
-import pandas as pd
-import numpy as np
+
 import itertools
+import numpy as np
+import pandas as pd
+from functools import reduce
 
 # csid = cell_specimen_id
 
@@ -59,19 +61,21 @@ def ophys_container_info_df(ophys_container_id):
                     "depth"
                     "rig"
                     "date_of_acquisition"
+                    "retake_number"
                     "mouse_id"
                     "full_geno"
                     "stage_name_mtrain"
 
     """
     container_info_df = load.get_lims_container_info(ophys_container_id)
+    container_info_df = calc_retake_number(container_info_df, stage_name_column="stage_name_lims")
     container_info_df = split_mouse_info_column(container_info_df)
     container_info_df = load.get_mtrain_stage_name(container_info_df)
     container_info_df = container_info_df.drop(["mouse_info", "foraging_id"], axis=1)
     return container_info_df
 
 
-def ophys_container_passed_experiments(ophys_container_id):
+def passed_experiment_info_for_container(ophys_container_id):
     """returns "manifest style" container information but
     filters out all unpassed ophys_experiments
 
@@ -91,6 +95,7 @@ def ophys_container_passed_experiments(ophys_container_id):
                     "depth"
                     "rig"
                     "date_of_acquisition"
+                    "retake_number"
                     "mouse_id"
                     "full_geno"
                     "stage_name_mtrain"
@@ -367,7 +372,7 @@ def get_lims_cell_roi_tables_for_container(ophys_container_id):
                         "valid_roi"
                         "container_id"
     """
-    passed_container = ophys_container_passed_experiments(ophys_container_id)
+    passed_container =passed_experiment_info_for_container(ophys_container_id)
 
     stage_name_df = passed_container[["ophys_experiment_id", "stage_name_lims"]].copy()
 
@@ -733,10 +738,10 @@ def gen_transparent_validity_masks(ophys_experiment_id):
     return validity_masks_df
 
 
-def valid_sdk_dff_traces(ophys_experiment_id):
+def valid_sdk_dff_traces_experiment(ophys_experiment_id):
     """gets the dff traces from the sdk  session object
         and then filters out the invalid rois  from the
-        sdk cell_specimen_table and returns only valid 
+        sdk cell_specimen_table and returns only valid
         cell_specimen_ids and dff traces
 
     Arguments:
@@ -746,6 +751,7 @@ def valid_sdk_dff_traces(ophys_experiment_id):
         dataframe -- dataframe with the following columns:
                     "cell_specimen_id"
                     "dff"
+                    "ophys_experiment_id
     """
     dff_traces = load.get_sdk_dff_traces(ophys_experiment_id)
     cell_specimen_table = load.get_sdk_cell_specimen_table(ophys_experiment_id)
@@ -753,7 +759,32 @@ def valid_sdk_dff_traces(ophys_experiment_id):
     merged_dfs["cell_specimen_id"] = merged_dfs.index
     merged_dfs = remove_invalid_rois(merged_dfs)
     merged_dfs = merged_dfs[["cell_specimen_id", "dff"]].copy()
+    merged_dfs.loc[:, "ophys_experiment_id"] = ophys_experiment_id
     return merged_dfs
+
+
+def valid_sdk_dff_traces_container(ophys_container_id):
+    """uses the sdk to get all the valid cell specimen ids
+        for each experiment in a container and their dff traces
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "cell_specimen_id"
+                    "dff"
+                    "ophys_experiment_id"
+                    "ophys_container_id"
+    """
+    container_passed_exps = passed_experiment_info_for_container(ophys_container_id).sort_values('stage_name_lims').reset_index(drop=True)
+    container_valid_dff_traces = pd.DataFrame()
+    for ophys_experiment_id in container_passed_exps["ophys_experiment_id"].unique():
+        experiment_dff_traces = valid_sdk_dff_traces_experiment(ophys_experiment_id)
+        container_valid_dff_traces = container_valid_dff_traces.append(experiment_dff_traces)
+    container_valid_dff_traces.loc[:, "ophys_container_id"] = ophys_container_id
+    container_valid_dff_traces = container_valid_dff_traces.reset_index(drop=True)
+    return container_valid_dff_traces
 
 
 def dff_robust_noise(dff_trace):
@@ -794,39 +825,101 @@ def dff_robust_signal(dff_trace, robust_standard_deviation):
     return median_deviation
 
 
-def dff_robust_noise_column(dataframe):
-    dataframe["robust_noise"] = dataframe["dff"].apply(lambda x: dff_robust_noise(x))
-    return dataframe
-
-
-def dff_robust_signal_column(dataframe):
-    """takes a dataframe with the columns "dff" for the
+def compute_robust_snr_on_dataframe(dataframe):
+    """takes a dataframe with a "dff" column that has the dff trace array
+        for a cell_specimen_id and for noise uses Robust estimate of std for signal
+        uses median deviation, and for robust snr the robust signal / robust noise
 
     Arguments:
-        dataframe  -- dataframe with at least the following columns:
-                        "dff" : an array of the dff trace for the roi/cell_specimen_id
-                        "robust_noise": the robust estimate of std of noise in dff
-
+        dataframe {[type]} -- [description]
 
     Returns:
-        dataframe -- input dataframe with the following column added:
-                    "robust_signal"
+        dataframe -- input dataframe but with the following columns added:
+                        "robust_noise"
+                        "robust_signal"
+                        "robust_snr"
     """
+    dataframe["robust_noise"] = dataframe["dff"].apply(lambda x: dff_robust_noise(x))
     dataframe["robust_signal"] = dataframe.apply(lambda x: dff_robust_signal(x["dff"], x["robust_noise"]), axis=1 )
+    dataframe["robust_snr"] = dataframe["robust_signal"] / dataframe["robust_noise"]
     return dataframe
 
 
-def experiment_cell_specimen_id_SNR_table(ophys_experiment_id):
-    exp_dff_traces = valid_sdk_dff_traces(ophys_experiment_id)
-    exp_dff_traces["robust_noise"] = exp_dff_traces["dff"].apply(lambda x: dff_robust_noise(x))
-    exp_dff_traces["robust_signal"] = exp_dff_traces.apply(lambda x: dff_robust_signal(x["dff"], x["robust_noise"]), axis=1 )
-    exp_dff_traces["robust_snr"] = exp_dff_traces["robust_signal"] / exp_dff_traces["robust_noise"]
+def experiment_cell_specimen_id_snr_table(ophys_experiment_id):
+    """gets the valid cell_specimen_id dff traces from the sdk dff_traces
+        object and computes a robust estimate of noise(robust std), signal(median deviation)
+        and snr(robust signal/robust noise)  for all cell_specimen_ids
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
 
-    exp_dff_traces["dff_mean"] = exp_dff_traces["dff"].apply(lambda x: np.mean(x))
-    exp_dff_traces["dff_std"] = exp_dff_traces["dff"].apply(lambda x: np.std(x))
-    exp_dff_traces["simple_snr"] = exp_dff_traces["dff_mean"] / exp_dff_traces["dff_std"]
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "cell_specimen_id":
+                    "ophys_experiment_id":
+                    "dff":
+                    "robust_noise":
+                    "robust_signal":
+                    "robust_snr":
+    """
+    exp_dff_traces = valid_sdk_dff_traces_experiment(ophys_experiment_id)
+    exp_dff_traces["ophys_experiment_id"] = ophys_experiment_id
+    exp_dff_traces = compute_robust_snr_on_dataframe(exp_dff_traces)
     return exp_dff_traces
 
+
+def experiment_mean_robust_snr_for_all_csids(ophys_experiment_id):
+    exp_csid_snr_table = experiment_cell_specimen_id_snr_table(ophys_experiment_id)
+    mean_rsnr_all_csids = np.mean(exp_csid_snr_table["robust_snr"])
+    return mean_rsnr_all_csids
+
+
+def container_csid_snr_table(ophys_container_id):
+    """gets the valid cell_specimen_id dff traces for each experiment
+        in a container from the sdk dff_traces object and computes a
+        robust estimate of noise(robust std), signal(median deviation)
+        and snr(robust signal/robust noise)  for all cell_specimen_ids
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "cell_specimen_id":
+                    "ophys_experiment_id":
+                    "dff":
+                    "robust_noise":
+                    "robust_signal":
+                    "robust_snr":
+    """
+    container_dff_traces = valid_sdk_dff_traces_container(ophys_container_id)
+    container_dff_traces = compute_robust_snr_on_dataframe(container_dff_traces)
+    container_dff_traces.loc[:,"ophys_container_id"] = ophys_container_id
+    return container_dff_traces
+
+
+def container_snr_summary_table(ophys_container_id):
+    """[summary]
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "ophys_experiment_id"
+                    "mean_robust_snr_all_csids"
+                    "ophys_container_id"
+
+    """
+    container_csid_snr = container_csid_snr_table(ophys_container_id)
+    container_summary_df = pd.DataFrame()
+    for ophys_experiment_id in container_csid_snr["ophys_experiment_id"].unique():
+        exp_mean_csid_snr = np.mean(container_csid_snr.loc[container_csid_snr["ophys_experiment_id"] == ophys_experiment_id, "robust_snr"].values)
+        exp_mean_csid_snr_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                                             "mean_robust_snr_all_csids": exp_mean_csid_snr}, index=[0])
+        container_summary_df = container_summary_df.append(exp_mean_csid_snr_df)
+    container_summary_df = container_summary_df.reset_index(drop=True)
+    container_summary_df.loc[:, "ophys_container_id"] = ophys_container_id
+    return container_summary_df
 
 ####### PHYSIO FOV AND INTENSITY (EXP AND CONTAINER) ####### # NOQA: E402
 
@@ -863,82 +956,123 @@ def get_experiment_average_intensity_timeseries(ophys_experiment_id):
     return average_intensity, frame_numbers
 
 
-def experiment_average_intensity_timeseries_mean(experiment_average_intensity_timeseries):
-    mean_intensity = np.mean(experiment_average_intensity_timeseries)
-    return mean_intensity
-
-
-def experiment_average_intensity_timeseries_std_dev(experiment_average_intensity_timeseries):
-    intensity_std = np.std(experiment_average_intensity_timeseries)
-    return intensity_std
-
-
-def experiment_average_intensity_timeseries_signal_noise_ratio(experiment_average_intensity_timeseries):
-    """calculates the signal to noise ratio by taking the mean divided by
-        the standard deviation
-
+def experiment_intensity_mean_and_std(ophys_experiment_id):
+    """Takes the average intensity timeseries from the motion corrected movie
+        (already downsampled to be every 500th frame) and gets
+        the mean and standard deviation of that time series
     Arguments:
         experiment_average_intensity_timeseries {[type]} -- [description]
 
     Returns:
-        [type] -- [description]
+        dataframe -- dataframe with the following columns:
+                    "ophys_experiment_id"
+                    "intensity_mean"
+                    "intensity_std"
     """
-    average_intensity_mean = experiment_average_intensity_timeseries_mean(experiment_average_intensity_timeseries)
-    average_intensity_std = experiment_average_intensity_timeseries_std_dev(experiment_average_intensity_timeseries)
-    average_intensity_snr = average_intensity_mean / average_intensity_std
-    return average_intensity_snr
+    experiment_average_intensity_timeseries = get_experiment_average_intensity_timeseries(ophys_experiment_id)[0]
+    intensity_mean = np.mean(experiment_average_intensity_timeseries)
+    intensity_std = np.std(experiment_average_intensity_timeseries)
+    df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                       "intensity_mean": intensity_mean,
+                       "intensity_std": intensity_std},
+                      index=[0])
+
+    return df
 
 
-def experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experiment_id):
-    ave_intensity_ts = get_experiment_average_intensity_timeseries(ophys_experiment_id)[0]
-    intensity_mean = experiment_average_intensity_timeseries_mean(ave_intensity_ts)
-    intensity_std = experiment_average_intensity_timeseries_std_dev(ave_intensity_ts)
-    intensity_stats_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
-                                       "FOV_intensity_mean": intensity_mean,
-                                       "FOV_intensity_std": intensity_std}, index=[0])
-    intensity_stats_df["FOV_intensity_snr"] = intensity_stats_df["FOV_intensity_mean"] / intensity_stats_df["FOV_intensity_std"]
-    return intensity_stats_df
+def container_intensity_mean_and_std(ophys_container_id):
+    """Takes the average intensity timeseries from the motion corrected movie
+        (already downsampled to be every 500th frame) and gets
+        the mean and standard deviation of that time series
 
+    Arguments:
+        ophys_container_id {[type]} -- [description]
 
-def container_average_intensity_timeseries_descriptive_stats_df(ophys_container_id):
-    container_passed_exps = ophys_container_passed_experiments(ophys_container_id)
-    container_intensity_df = pd.DataFrame()
-    for ophys_experiment_id in container_passed_exps["ophys_experiment_id"].unique():
-        exp_intensity_df = experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experiment_id)
-        container_intensity_df = container_intensity_df.append(exp_intensity_df)
-    container_intensity_df = container_intensity_df.reset_index(drop=True)
-    container_intensity_df.loc[:, "ophys_container_id"] = ophys_container_id
-    return container_intensity_df
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "ophys_experiment_id"
+                    "intensity_mean"
+                    "intensity_std"
+                    "ophys_container_id"
+    """
+
+    container_df = passed_experiment_info_for_container(ophys_container_id).sort_values('stage_name_lims').reset_index(drop=True)
+    container_ave_intensity = pd.DataFrame()
+    for ophys_experiment_id in container_df["ophys_experiment_id"].unique():
+        exp_df = experiment_intensity_mean_and_std(ophys_experiment_id)
+        container_ave_intensity = container_ave_intensity.append(exp_df)
+    container_ave_intensity.loc[:, "ophys_container_id"] = ophys_container_id
+    container_ave_intensity = container_ave_intensity.reset_index(drop=True)
+    return container_ave_intensity
 
 
 def experiment_FOV_information(ophys_experiment_id):
-    exp_FOV_intensity_info = experiment_average_intensity_timeseries_descriptive_stats_df(ophys_experiment_id)
-    exp_FOV_intensity_info["pmt_gain"] = load.get_pmt_gain_for_experiment(ophys_experiment_id)
-    return exp_FOV_intensity_info
-
-
-def container_FOV_information(ophys_container_id):
-    container_passed_exps = ophys_container_passed_experiments(ophys_container_id)
-    container_FOV_df = pd.DataFrame()
-    for ophys_experiment_id in container_passed_exps["ophys_experiment_id"].unique():
-        exp_FOV_info_df = experiment_FOV_information(ophys_experiment_id)
-        container_FOV_df = container_FOV_df.append(exp_FOV_info_df)
-    container_FOV_df = container_FOV_df.reset_index(drop=True)
-    container_FOV_df.loc[:, "ophys_container_id"] = ophys_container_id
-    return container_FOV_df
-
-
-def experiment_average_intensity_image_from_motion_corrected_timeseries(ophys_experiment_id):
-    """takes every 500th frame of the motion corrected movie and averages it
-        in time to create a
+    """[summary]
 
     Arguments:
         ophys_experiment_id {[type]} -- [description]
 
     Returns:
-        numpy.ndarray -- [description]
+        dataframe -- dataframe with the following columns:
+                    "ophys_experiment_id",
+                    "FOV_intensity_mean",
+                    "FOV_intensity_std",
+                    "FOV_mean_div_std",
+                    "pmt_gain",
+                    "mean_rsnr_all_csids"
     """
-    motion_corrected_movie_array = load.load_motion_corrected_movie(ophys_experiment_id)
-    subset = motion_corrected_movie_array[::500, :, :]
-    motion_correction_average_intensity_image = np.mean(subset, axis=0)
-    return motion_correction_average_intensity_image
+    intensity_df = experiment_intensity_mean_and_std(ophys_experiment_id)
+    intensity_df["mean_rsnr_all_csids"] = experiment_mean_robust_snr_for_all_csids(ophys_experiment_id)
+    intensity_df["pmt_gain"] = load.get_pmt_gain_for_experiment(ophys_experiment_id)
+
+    return intensity_df
+
+
+def container_pmt_settings(ophys_container_id):
+    """[summary]
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "ophys_experiment_id"
+                    "pmt_gain"
+                    "ophys_container_id"
+    """
+    container_df = passed_experiment_info_for_container(ophys_container_id).sort_values('stage_name_lims').reset_index(drop=True)
+    container_pmt_df = pd.DataFrame()
+    for ophys_experiment_id in container_df["ophys_experiment_id"].unique():
+        exp_pmt = load.get_pmt_gain_for_experiment(ophys_experiment_id)
+        exp_pmt_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                                   "pmt_gain": exp_pmt}, index=[0])
+        container_pmt_df = container_pmt_df.append(exp_pmt_df)
+    container_pmt_df.loc[:,"ophys_container_id"]= ophys_container_id
+    container_pmt_df = container_pmt_df.reset_index(drop=True)
+    return container_pmt_df
+
+
+def container_FOV_information(ophys_container_id):
+    """[summary]
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "ophys_experiment_id"
+                    "pmt_gain"
+                    "ophys_conatiner_id"
+                    "intensity_mean"
+                    "intensity_std"
+                    "mean_rsnr_all_csids"
+    """
+    pmt_settings = container_pmt_settings(ophys_container_id)
+    intensity_info = container_intensity_mean_and_std(ophys_container_id)
+    snr_summary = container_snr_summary_table(ophys_container_id)
+    dfs = [pmt_settings, intensity_info, snr_summary]
+    merged_df = reduce(lambda left,right:pd.merge(left,right, on=["ophys_experiment_id", "ophys_container_id"]), dfs)
+    return merged_df
+
+
+
