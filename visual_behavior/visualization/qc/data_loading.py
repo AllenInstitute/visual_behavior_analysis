@@ -250,7 +250,6 @@ def get_sdk_roi_masks(ophys_experiment_id):
                     values are 2d numpy arrays(binary array
                     the size of the motion corrected 2photon
                     FOV where 1's are the ROI/Cell mask).
-                  
                     specific cell masks can be visualized via
                     plt.imshow(roi_masks[cell_specimen_id])
     """
