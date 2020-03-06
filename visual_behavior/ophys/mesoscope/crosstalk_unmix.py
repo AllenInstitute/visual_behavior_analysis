@@ -23,9 +23,8 @@ IMAGEH, IMAGEW = 512, 512
 
 #CELL_EXTRACT_JSON_FORMAT = f'OPHYS_EXTRACT_TRACES_QUEUE_{movie_id}_input.json'
 
-
 def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
-    OPHYS_EXTRACT_TRACES_QUEUE_1005739190_input.json
+
     jin_movie_path = os.path.join(movie_exp_dir, f"OPHYS_EXTRACT_TRACES_QUEUE_{movie_exp_id}_input.json")
 
     jin_mask_path = os.path.join(mask_exp_dir, f"OPHYS_EXTRACT_TRACES_QUEUE_{mask_exp_id}_input.json")
