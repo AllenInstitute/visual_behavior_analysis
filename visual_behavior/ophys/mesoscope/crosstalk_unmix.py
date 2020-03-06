@@ -51,7 +51,7 @@ def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
     roi_mask_list = create_roi_masks(rois, w, h, motion_border)
     roi_names = [roi.label for roi in roi_mask_list]
 
-    traces, neuropil_traces = roi_masks.calculate_roi_and_neuropil_traces(movie_h5, roi_mask_list, motion_border)
+    traces, neuropil_traces, excl = roi_masks.calculate_roi_and_neuropil_traces(movie_h5, roi_mask_list, motion_border)
     return traces, neuropil_traces, roi_names
 
 
