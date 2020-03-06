@@ -3,6 +3,7 @@ import visual_behavior.visualization.qc.data_loading as load
 import itertools
 import numpy as np
 import pandas as pd
+import scipy.stats as stats
 from functools import reduce
 
 # csid = cell_specimen_id
@@ -22,7 +23,7 @@ def ophys_experiment_info_df(ophys_experiment_id):
         dataframe -- dataframe with the following columns:
                                                 "ophys_experiment_id",
                                                 "ophys_session_id"
-                                                "container_id",
+                                                "ophys_container_id",
                                                 "experiment_workflow_state",
                                                 "stage_name_lims",
                                                 "full_genotype",
@@ -50,7 +51,7 @@ def ophys_container_info_df(ophys_container_id):
 
     Returns:
         dataframe -- dataframe with the following columns:
-                    "container_id":
+                    "ophys_container_id":
                     "container_workflow_state"
                     "ophys_experiment_id":
                     "ophys_session_id":
@@ -84,7 +85,7 @@ def passed_experiment_info_for_container(ophys_container_id):
 
     Returns:
         dataframe -- dataframe with the following columns:
-                    "container_id":
+                    "ophys_container_id":
                     "container_workflow_state"
                     "ophys_experiment_id":
                     "ophys_session_id":
@@ -334,7 +335,7 @@ def container_segmentation_barplots_df(ophys_container_id, stage_name_column="st
 
     Returns:
         dataframe -- dataframe with the following columns:
-                    "container_id"
+                    "ophys_container_id"
                     "ophys_experiment_id"
                     "stage_name_lims"
                     "total_rois"
@@ -343,7 +344,7 @@ def container_segmentation_barplots_df(ophys_container_id, stage_name_column="st
                     "roi_percent"
     """
     container_info_df = ophys_container_info_df(ophys_container_id)
-    stage_name_df = container_info_df[["container_id", "ophys_experiment_id", stage_name_column]].copy()
+    stage_name_df = container_info_df[["ophys_container_id", "ophys_experiment_id", stage_name_column]].copy()
 
     melted_cont_seg_sum = melted_container_segmentation_summary_df(ophys_container_id,
                                                                    rmv_unpassed_experiments=True)
@@ -370,7 +371,7 @@ def get_lims_cell_roi_tables_for_container(ophys_container_id):
                         "stage_name_lims"
                         "cell_specimen_id"
                         "valid_roi"
-                        "container_id"
+                        "ophys_container_id"
     """
     passed_container =passed_experiment_info_for_container(ophys_container_id)
 
@@ -385,7 +386,7 @@ def get_lims_cell_roi_tables_for_container(ophys_container_id):
                                          "cell_specimen_id",
                                          "valid_roi"]]
         container_cell_table = container_cell_table.append(exp_cell_table)
-    container_cell_table.loc[:, "container_id"] = ophys_container_id
+    container_cell_table.loc[:, "ophys_container_id"] = ophys_container_id
     container_cell_table = container_cell_table.drop_duplicates()
     container_cell_table = container_cell_table.reset_index(drop=True)
     container_cell_table = pd.merge(container_cell_table, stage_name_df, how="left", on="ophys_experiment_id")
@@ -860,10 +861,12 @@ def experiment_cell_specimen_id_snr_table(ophys_experiment_id):
                     "robust_noise":
                     "robust_signal":
                     "robust_snr":
+                    "snr_zscore":
     """
     exp_dff_traces = valid_sdk_dff_traces_experiment(ophys_experiment_id)
     exp_dff_traces["ophys_experiment_id"] = ophys_experiment_id
     exp_dff_traces = compute_robust_snr_on_dataframe(exp_dff_traces)
+    exp_dff_traces["snr_zscore"] = np.abs(stats.zscore(exp_dff_traces["robust_snr"]))
     return exp_dff_traces
 
 
@@ -890,9 +893,11 @@ def container_csid_snr_table(ophys_container_id):
                     "robust_noise":
                     "robust_signal":
                     "robust_snr":
+                    "snr_zscore":
     """
     container_dff_traces = valid_sdk_dff_traces_container(ophys_container_id)
     container_dff_traces = compute_robust_snr_on_dataframe(container_dff_traces)
+    container_dff_traces["snr_zscore"] = np.abs(stats.zscore(container_dff_traces["robust_snr"]))
     container_dff_traces.loc[:,"ophys_container_id"] = ophys_container_id
     return container_dff_traces
 
@@ -906,7 +911,7 @@ def container_snr_summary_table(ophys_container_id):
     Returns:
         dataframe -- dataframe with the following columns:
                     "ophys_experiment_id"
-                    "mean_robust_snr_all_csids"
+                    "mean_rsnr_all_csids"
                     "ophys_container_id"
 
     """
@@ -915,7 +920,7 @@ def container_snr_summary_table(ophys_container_id):
     for ophys_experiment_id in container_csid_snr["ophys_experiment_id"].unique():
         exp_mean_csid_snr = np.mean(container_csid_snr.loc[container_csid_snr["ophys_experiment_id"] == ophys_experiment_id, "robust_snr"].values)
         exp_mean_csid_snr_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
-                                             "mean_robust_snr_all_csids": exp_mean_csid_snr}, index=[0])
+                                             "mean_rsnr_all_csids": exp_mean_csid_snr}, index=[0])
         container_summary_df = container_summary_df.append(exp_mean_csid_snr_df)
     container_summary_df = container_summary_df.reset_index(drop=True)
     container_summary_df.loc[:, "ophys_container_id"] = ophys_container_id
@@ -1047,7 +1052,9 @@ def container_pmt_settings(ophys_container_id):
         exp_pmt_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
                                    "pmt_gain": exp_pmt}, index=[0])
         container_pmt_df = container_pmt_df.append(exp_pmt_df)
-    container_pmt_df.loc[:,"ophys_container_id"]= ophys_container_id
+    container_pmt_df = container_pmt_df.dropna()
+    container_pmt_df.pmt_gain = container_pmt_df.pmt_gain.astype(int)
+    container_pmt_df.loc[:,"ophys_container_id"] = ophys_container_id
     container_pmt_df = container_pmt_df.reset_index(drop=True)
     return container_pmt_df
 
