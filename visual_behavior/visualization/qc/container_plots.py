@@ -1,14 +1,17 @@
 import os
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import visual_behavior.database as db
 import visual_behavior.plotting as vbp
 
 from visual_behavior.visualization import utils as ut
+import visual_behavior.visualization.qc.plotting_utils as pu
 from visual_behavior.visualization.qc import data_loading as dl
+from visual_behavior.visualization.qc import session_plots as sp
 from visual_behavior.visualization.qc import data_processing as dp
 from visual_behavior.visualization.qc import experiment_plots as ep
-from visual_behavior.visualization.qc import session_plots as sp
+
 
 
 ################  OPHYS  ################ # NOQA: E402
@@ -108,7 +111,7 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
                        'container_' + str(ophys_container_id))
 
 # def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
-#     container_df = (dp.ophys_container_passed_experiments(ophys_container_id)).sort_values('stage_name_lims').reset_index(drop=True)
+#     container_df = (dp.passed_experiment_info_for_container(ophys_container_id)).sort_values('stage_name_lims').reset_index(drop=True)
 #     colors = sns.color_palette()
 #     figsize = (7, 5)
 #     fig, ax = plt.subplots(figsize=figsize)
@@ -123,7 +126,7 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
 
 
 def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
-    container_df = (dp.ophys_container_passed_experiments(ophys_container_id)).sort_values('stage_name_lims').reset_index(drop=True)
+    container_df = (dp.passed_experiment_info_for_container(ophys_container_id)).sort_values('stage_name_lims').reset_index(drop=True)
     figsize = (9, 5)
     fig, ax = plt.subplots(figsize=figsize)
     for i, ophys_experiment_id in enumerate(container_df["ophys_experiment_id"].unique()):
@@ -196,18 +199,19 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
 
 
 def plot_PMT_gain_for_container(ophys_container_id, save_figure=True):
-    import numpy as np
-    ophys_session_ids = dl.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
+    container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
+    exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(container_pmt_settings)
+    ophys_experiment_ids = container_df["ophys_experiment_id"].unique()
     figsize = (6, 5)
     fig, ax = plt.subplots(figsize=figsize)
-    for i, ophys_session_id in enumerate(ophys_session_ids):
-        pmt_value = dl.get_pmt_gain_for_session(ophys_session_id)
-        ax.plot(i, pmt_value, 'o', color=sns.color_palette()[0])
-    ax.set_xticks(np.arange(0, len(ophys_session_ids)))
-    ax.set_xticklabels(ophys_session_ids, rotation=90)
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        pmt_value = dl.get_pmt_gain_for_experiment(ophys_experiment_id)
+        ax.plot(i, pmt_value, 'o', color=exp_stage_color_dict[ophys_experiment_id])
+    ax.set_xticks(np.arange(0, len(ophys_experiment_ids)))
+    ax.set_xticklabels(ophys_experiment_id, rotation=90)
     ax.set_ylabel('PMT setting')
-    ax.set_xlabel('ophys_session_id')
-    ax.set_title('PMT gain setting across sessions')
+    ax.set_xlabel('ophys_experiment_id')
+    ax.set_title('PMT gain setting across experiments')
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'PMT_gain',
                        'container_' + str(ophys_container_id))
