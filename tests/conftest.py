@@ -199,19 +199,22 @@ def mock_trials_fixture():
     detect = change.copy()
     detect[incorrect] = ~detect[incorrect]
 
+    change_times = np.sort(np.random.rand(n_tr)) * 3600
+    start_times = change_times 
+
     trials = pd.DataFrame({
         'change': change,
         'detect': detect,
     },)
     trials['trial_type'] = trials['change'].map(lambda x: ['catch', 'go'][x])
     trials['response'] = trials['detect']
-    trials['change_time'] = np.sort(np.random.rand(n_tr)) * 3600
+    trials['change_time'] = change_times
     trials['reward_lick_latency'] = 0.1
     trials['reward_lick_count'] = 10
     trials['auto_rewarded'] = False
     trials['lick_times'] = [[] for row in trials.iterrows()]
     trials['lick_frames'] = [[] for row in trials.iterrows()]
-    trials['starttime'] = 0
+    trials['starttime'] = start_times
     trials['number_of_rewards'] = 0
     trials['trial_length'] = 8.5
     trials['reward_times'] = trials.apply(lambda r: [r['change_time'] + 0.2] if r['change'] * r['detect'] else [], axis=1)
