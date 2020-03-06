@@ -16,16 +16,19 @@ import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as ju
 import scipy.stats
 
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 IMAGEH, IMAGEW = 512, 512
 
-def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
-    jin_movie_path = os.path.join(movie_exp_dir, f"processed/{movie_exp_id}_input_extract_traces.json")
+#CELL_EXTRACT_JSON_FORMAT = f'OPHYS_EXTRACT_TRACES_QUEUE_{movie_id}_input.json'
 
-    jin_mask_path = os.path.join(mask_exp_dir, f"processed/{mask_exp_id}_input_extract_traces.json")
+
+def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
+    OPHYS_EXTRACT_TRACES_QUEUE_1005739190_input.json
+    jin_movie_path = os.path.join(movie_exp_dir, f"OPHYS_EXTRACT_TRACES_QUEUE_{movie_exp_id}_input.json")
+
+    jin_mask_path = os.path.join(mask_exp_dir, f"OPHYS_EXTRACT_TRACES_QUEUE_{mask_exp_id}_input.json")
 
     with open(jin_movie_path, "r") as f:
         jin_movie = json.load(f)
@@ -47,7 +50,7 @@ def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
     rois = jin_mask["rois"]
 
     roi_mask_list = create_roi_masks(rois, w, h, motion_border)
-    roi_names = [ roi.label for roi in roi_mask_list ]
+    roi_names = [roi.label for roi in roi_mask_list]
 
     traces, neuropil_traces = roi_masks.calculate_roi_and_neuropil_traces(movie_h5, roi_mask_list, motion_border)
     return traces, neuropil_traces, roi_names
@@ -176,14 +179,16 @@ class MesoscopeICA(object):
         return
 
     def set_neuropil_ica_dir(self, pair):
-            session_dir = self.set_analysis_session_dir()
-            self.ica_neuropil_dir = os.path.join(session_dir, f'ica_neuropil_{pair[0]}_{pair[1]}/')
+        session_dir = self.set_analysis_session_dir()
+        self.ica_neuropil_dir = os.path.join(session_dir, f'ica_neuropil_{pair[0]}_{pair[1]}/')
 
-            self.plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_output_{pair[0]}.h5')
-            self.plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_output_{pair[1]}.h5')
-            self.ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_mixing.h5')
+        self.plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
+                                                               f'neuropil_ica_output_{pair[0]}.h5')
+        self.plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
+                                                               f'neuropil_ica_output_{pair[1]}.h5')
+        self.ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_mixing.h5')
 
-            return
+        return
 
     def get_ica_traces(self, pair):
 
@@ -277,14 +282,14 @@ class MesoscopeICA(object):
 
             # extract signal and crosstalk traces for plane 1
             plane1_sig_traces, plane1_sig_neuropil, plane1_roi_names = get_traces(plane1_folder, plane1_exp_id,
-                                                                                      plane1_folder, plane1_exp_id)
+                                                                                  plane1_folder, plane1_exp_id)
             plane1_ct_traces, plane1_ct_neuropil, _ = get_traces(plane2_folder, plane2_exp_id, plane1_folder,
-                                                                     plane1_exp_id)
+                                                                 plane1_exp_id)
             # extract signal and crosstalk traces for plane 2
             plane2_sig_traces, plane2_sig_neuropil, plane2_roi_names = get_traces(plane2_folder, plane2_exp_id,
-                                                                                      plane2_folder, plane2_exp_id)
+                                                                                  plane2_folder, plane2_exp_id)
             plane2_ct_traces, plane2_ct_neuropil, _ = get_traces(plane1_folder, plane1_exp_id, plane2_folder,
-                                                                     plane2_exp_id)
+                                                                 plane2_exp_id)
 
             # setting traces valid flag: if none is None
             if (not plane1_sig_traces.any() is None) and (not plane1_ct_traces.any() is None):
@@ -376,7 +381,7 @@ class MesoscopeICA(object):
             self.plane2_neuropil_traces_valid_pointer = None
 
         if (not self.plane1_roi_traces_valid_pointer) and (not self.plane2_roi_traces_valid_pointer) and (
-        not self.plane1_neuropil_traces_valid_pointer) and (not self.plane2_neuropil_traces_valid_pointer):
+                not self.plane1_neuropil_traces_valid_pointer) and (not self.plane2_neuropil_traces_valid_pointer):
 
             # traces need validation:
             if self.found_original_traces[0] and self.found_original_traces[1] and self.found_original_neuropil[0] and \
@@ -624,7 +629,7 @@ class MesoscopeICA(object):
                     plane2_sig_offset = f['sig_offset'][()]
                     plane2_ct_offset = f['ct_offset'][()]
 
-                self.found_ica_input = [True, True]                
+                self.found_ica_input = [True, True]
                 self.plane1_ica_input = plane1_ica_input
                 self.plane2_ica_input = plane2_ica_input
                 self.plane1_ica_input_pointer = plane1_ica_input_pointer
@@ -641,8 +646,10 @@ class MesoscopeICA(object):
         self.plane1_ica_neuropil_input_pointer = None
         self.plane2_ica_neuropil_input_pointer = None
 
-        plane1_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_input_{self.plane1_exp_id}.h5')
-        plane2_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_input_{self.plane2_exp_id}.h5')
+        plane1_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
+                                                         f'neuropil_ica_input_{self.plane1_exp_id}.h5')
+        plane2_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
+                                                         f'neuropil_ica_input_{self.plane2_exp_id}.h5')
 
         if os.path.isfile(plane1_ica_neuropil_input_pointer) and os.path.isfile(plane2_ica_neuropil_input_pointer):
             # file already exists, skip debiasing
@@ -729,8 +736,10 @@ class MesoscopeICA(object):
                     self.found_ica_neuropil_offset[1] = True
 
                 if self.found_ica_neuropil_input and self.found_ica_neuropil_offset:
-                    self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_offset, 'plane1_ct_neuropil_offset': plane1_ct_offset}
-                    self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_offset, 'plane2_ct_neuropil_offset': plane2_ct_offset}
+                    self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_offset,
+                                                   'plane1_ct_neuropil_offset': plane1_ct_offset}
+                    self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_offset,
+                                                   'plane2_ct_neuropil_offset': plane2_ct_offset}
                     neuropil_sig_p1 = plane1_sig_m0.flatten()
                     neuropil_ct_p1 = plane1_ct_m0.flatten()
                     neuropil_sig_p2 = plane2_sig_m0.flatten()
@@ -770,8 +779,10 @@ class MesoscopeICA(object):
                     plane2_ct_neuropil_offset = f['ct_offset'][()]
                 self.plane1_ica_neuropil_input = plane1_ica_neuropil_input
                 self.plane2_ica_neuropil_input = plane2_ica_neuropil_input
-                self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_neuropil_offset, 'plane1_ct_neuropil_offset': plane1_ct_neuropil_offset}
-                self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_neuropil_offset, 'plane2_ct_neuropil_offset': plane2_ct_neuropil_offset, }
+                self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_neuropil_offset,
+                                               'plane1_ct_neuropil_offset': plane1_ct_neuropil_offset}
+                self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_neuropil_offset,
+                                               'plane2_ct_neuropil_offset': plane2_ct_neuropil_offset, }
                 self.found_ica_neuropil_offset = [True, True]
         else:
             logger.error('Extract neuropil traces first')
@@ -1148,4 +1159,4 @@ class MesoscopeICA(object):
     @staticmethod
     def estimate_crosstalk_roi(trace_sig, trace_ct):
         slope, offset, r_value, p_value, std_err = scipy.stats.linregress(trace_sig, trace_ct)
-        return slope, offset, r_value**2, p_value, std_err
+        return slope, offset, r_value ** 2, p_value, std_err
