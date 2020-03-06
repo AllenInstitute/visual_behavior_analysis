@@ -25,16 +25,16 @@ mtrain_password = os.environ["MTRAIN_PASSWORD"]
 mtrain_port = os.environ["MTRAIN_PORT"]
 
 lims_engine = PostgresQueryMixin(dbname=lims_dbname,
-                                user=lims_user,
-                                host=lims_host,
-                                password=lims_password,
-                                port=lims_port)
+                                 user=lims_user,
+                                 host=lims_host,
+                                 password=lims_password,
+                                 port=lims_port)
 
 mtrain_engine = PostgresQueryMixin(dbname=mtrain_dbname,
-                                user=mtrain_user,
-                                host=mtrain_host,
-                                password=mtrain_password,
-                                port=mtrain_port)
+                                   user=mtrain_user,
+                                   host=mtrain_host,
+                                   password=mtrain_password,
+                                   port=mtrain_port)
 
 get_psql_dict_cursor = convert.get_psql_dict_cursor  # to load well-known files
 config = configp.ConfigParser()
@@ -296,10 +296,12 @@ def get_sdk_cell_specimen_table(ophys_experiment_id):
     cell_specimen_table = session.cell_specimen_table
     return cell_specimen_table
 
+
 def get_sdk_dff_traces(ophys_experiment_id):
     session = get_sdk_session_obj(ophys_experiment_id)
     dff_traces = session.dff_traces
     return dff_traces
+
 
 def get_sdk_dff_traces_array(ophys_experiment_id):
     session = get_sdk_session_obj(ophys_experiment_id)
@@ -344,7 +346,7 @@ def get_lims_experiment_info(ophys_experiment_id):
                     "ophys_experiment_id":
                     "experiment_workflow_state":
                     "ophys_session_id":
-                    "container_id":
+                    "ophys_container_id":
                     "date_of_acquisition":
                     "stage_name_lims":
                     "foraging_id":
@@ -356,7 +358,7 @@ def get_lims_experiment_info(ophys_experiment_id):
 
     """
     ophys_experiment_id = int(ophys_experiment_id)
-    mixin =lims_engine
+    mixin = lims_engine
     # build query
     query = '''
     select
@@ -365,7 +367,7 @@ def get_lims_experiment_info(ophys_experiment_id):
     oe.workflow_state,
     oe.ophys_session_id,
 
-    container.visual_behavior_experiment_container_id as container_id,
+    container.visual_behavior_experiment_container_id as ophys_container_id,
 
     os.date_of_acquisition,
     os.stimulus_name as stage_name_lims,
@@ -491,11 +493,11 @@ def get_lims_container_info(ophys_container_id):
         from the lims2 database. Each row is an experiment within the container.
 
     Arguments:
-        container_id {[type]} -- [description]
+        ophys_container_id {[type]} -- [description]
 
     Returns:
        table -- table with the following columns:
-                    "container_id":
+                    "ophys_container_id":
                     "container_workflow_state":
                     "ophys_experiment_id":
                     "ophys_session_id":
@@ -515,7 +517,7 @@ def get_lims_container_info(ophys_container_id):
     # build query
     query = '''
     SELECT
-    container.visual_behavior_experiment_container_id as container_id,
+    container.visual_behavior_experiment_container_id as ophys_container_id,
     vbec.workflow_state as container_workflow_state,
     oe.id as ophys_experiment_id,
     oe.ophys_session_id,
@@ -620,9 +622,15 @@ def get_pmt_gain_for_session(ophys_session_id):
     Returns:
         int -- pmt gain setting
     """
-    timeseries_ini_path = get_timeseries_ini_location(ophys_session_id)
-    pmt_gain = pmt_gain_from_timeseries_ini(timeseries_ini_path)
+    try:
+        timeseries_ini_path = get_timeseries_ini_location(ophys_session_id)
+        pmt_gain = pmt_gain_from_timeseries_ini(timeseries_ini_path)
+    except IndexError:
+        ophys_experiment_id = get_ophys_experiment_id_for_ophys_session_id(ophys_session_id)
+        print("lims query did not return timeseries_XYT.ini location for session_id: " + str(ophys_session_id) + ", experiment_id: " + str(ophys_experiment_id))
+        pmt_gain = np.nan
     return pmt_gain
+
 
 def get_pmt_gain_for_experiment(ophys_experiment_id):
     """finds the timeseries ini file for  the ophys_session_id
@@ -639,6 +647,7 @@ def get_pmt_gain_for_experiment(ophys_experiment_id):
     ophys_session_id = get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
     pmt_gain = get_pmt_gain_for_session(ophys_session_id)
     return pmt_gain
+
 
 def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
     """use SQL and the LIMS well known file system to get the
@@ -704,9 +713,6 @@ def load_motion_corrected_movie(ophys_experiment_id):
     motion_corrected_movie = motion_corrected_movie_h5['data']
 
     return motion_corrected_movie
-
-
-
 
 
 def get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id):
@@ -775,7 +781,6 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
 
 
 ################  FROM MTRAIN DATABASE  ################ # NOQA: E402
-
 
 
 def get_mtrain_stage_name(dataframe):
