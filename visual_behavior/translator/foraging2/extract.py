@@ -642,7 +642,7 @@ def get_licks(exp_data, time=None):
     # it will cause an error here. This fixes the problem.
     # see: https://github.com/AllenInstitute/visual_behavior_analysis/issues/572
     #    & https://github.com/AllenInstitute/visual_behavior_analysis/issues/379
-    if lick_frames[-1] == len(time):
+    if len(lick_frames) > 0 and lick_frames[-1] == len(time):
         lick_frames = lick_frames[:-1]
         logger.error('removed last lick - it fell outside of intervalsms range')
 
