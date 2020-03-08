@@ -110,8 +110,7 @@ class MesoscopeDataset(object):
                     "join projects p on p.id = os.project_id "
                     "join imaging_depths on imaging_depths.id = oe.imaging_depth_id "
                     "join structures st on st.id = oe.targeted_structure_id "
-                    "where (p.code = 'MesoscopeDevelopment' or p.code = 'VisualBehaviorMultiscope') and (oe.workflow_state = 'processing' or oe.workflow_state "
-                    "= 'qc') and os.workflow_state ='uploaded' "
+                    "where (p.code = 'MesoscopeDevelopment' or p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d' ) and os.workflow_state ='uploaded' "
                     " and os.id='{}'  ",
                 ))
 
@@ -149,8 +148,7 @@ class MesoscopeDataset(object):
                 "join projects p on p.id = os.project_id "
                 "join imaging_depths on imaging_depths.id = oe.imaging_depth_id "
                 "join structures st on st.id = oe.targeted_structure_id "
-                "where (p.code = 'MesoscopeDevelopment' or p.code = 'VisualBehaviorMultiscope') and (oe.workflow_state = 'processing' or oe.workflow_state "
-                "= 'qc') and os.workflow_state ='uploaded' "
+                "where (p.code = 'MesoscopeDevelopment' or p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d' ) and os.workflow_state ='uploaded' "
                 " and oe.id='{}'  ",
             ))
             lims_data = self.psycopg2_select(query.format(experiment_id))
