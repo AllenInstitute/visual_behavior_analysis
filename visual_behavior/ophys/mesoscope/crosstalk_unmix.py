@@ -80,7 +80,7 @@ class MesoscopeICA(object):
 
         self.session_id = session_id
         self.dataset = ms.MesoscopeDataset(session_id)
-        self.session_cache_dir = None
+        self.session_cache_dir = cache
 
         # self.plane1_exp_id = None
         # self.plane2_exp_id = None
@@ -1135,9 +1135,9 @@ class MesoscopeICA(object):
             plane1_roi_names = self.plane1_roi_names
             plane1_roi_valid = self.plane1_roi_traces_valid['signal']
 
-            logging.info(f'plotting original traces for experiment {pair[0]}')
+            logging.info(f'plotting raw traces for experiment {pair[0]}')
 
-            plot_dir = os.path.join(self.session_cache_dir, f'raw_traces_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[0]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'ica_traces_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[0]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
@@ -1173,7 +1173,7 @@ class MesoscopeICA(object):
             plane2_roi_names = self.plane2_roi_names
             plane2_roi_valid = self.plane2_roi_traces_valid['signal']
             logging.info(f'creating figures for experiment {pair[1]}')
-            plot_dir = os.path.join(self.session_cache_dir, f'raw_traces_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'ica_traces_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
             cell_valid = 0
