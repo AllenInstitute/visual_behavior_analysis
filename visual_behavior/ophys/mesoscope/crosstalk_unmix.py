@@ -1066,10 +1066,12 @@ class MesoscopeICA(object):
                             plt.plot(ica_plane1_ct, 'g-', label='cross-talk plane')
                             plt.title(f'post-ica traces, cell # {plane1_roi_names[cell_valid]}')
                             plt.legend(loc='upper left')
-                            if not figsave:
+                            if figsave:
                                 pdf.savefig(f)
-                        if not figshow:
-                            pdf.close()
+                            if not figshow:
+                                plt.close()
+                        pdf.close()
+
                         cell_valid = cell_valid + 1
                 else:
                     logging.info(f'Cell {plane1_roi_names[cell_orig]} is invalid, skipping plotting')
@@ -1113,10 +1115,10 @@ class MesoscopeICA(object):
                             plt.plot(ica_plane2_ct, 'g-', label='cross-talk plane')
                             plt.title(f'post-ica traces, cell # {plane2_roi_names[cell_valid]}')
                             plt.legend(loc='upper left')
-                            if not figsave:
+                            if figsave:
                                 pdf.savefig(f)
-                        if not figshow:
-                            pdf.close()
+                            if not figshow:
+                                plt.close()
                         pdf.close()
                     cell_valid = cell_valid + 1
 
@@ -1164,10 +1166,11 @@ class MesoscopeICA(object):
                             plt.plot(orig_plane1_ct, 'g-', label='cross-talk plane')
                             plt.title(f'original traces for cell {plane1_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
-                            if not figsave:
+                            if figsave:
                                 pdf.savefig(f)
-                        if not figshow:
-                            pdf.close()
+                            if not figshow:
+                                plt.close()
+                        pdf.close()
                         cell_valid = cell_valid + 1
                 else:
                     logging.info(f'Cell {plane1_roi_names[cell_orig]} is invalid, skipping plotting')
@@ -1201,10 +1204,10 @@ class MesoscopeICA(object):
                             plt.plot(orig_plane2_ct, 'g-', label='cross-talk plane')
                             plt.title(f'original traces for cell # {plane2_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
-                            if not figsave:
+                            if figsave:
                                 pdf.savefig(f)
-                        if not figshow:
-                            pdf.close()
+                            if not figshow:
+                                plt.close()
                         pdf.close()
                     cell_valid = cell_valid + 1
 
