@@ -76,7 +76,7 @@ def get_ica_sessions():
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
         for pair in pairs:
-            ica_obj = ica.MesoscopeICA(session, cache='/media/NCRAID/MesoscopeAnalysis')
+            ica_obj = ica.MesoscopeICA(session, cache = CACHE)
             ica_obj.set_ica_traces_dir(pair)
             ica_obj.set_neuropil_ica_dir(pair)
 
@@ -105,7 +105,7 @@ def get_ica_roi_sessions():
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
         for pair in pairs:
-            ica_obj = ica.MesoscopeICA(session, cache='/media/NCRAID/MesoscopeAnalysis')
+            ica_obj = ica.MesoscopeICA(session, cache=CACHE)
             ica_obj.set_ica_traces_dir(pair)
             ica_obj.set_neuropil_ica_dir(pair)
 
