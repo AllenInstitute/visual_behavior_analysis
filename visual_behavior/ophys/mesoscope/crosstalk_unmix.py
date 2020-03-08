@@ -1021,7 +1021,7 @@ class MesoscopeICA(object):
 
         return
 
-    def plot_ica_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
+    def plot_ica_traces(self, pair, samples_per_plot=10000, figshow=False, figsave=False):
         #    if figures don't exist!
         if self.plane1_ica_output_pointer and self.plane2_ica_output_pointer:
 
