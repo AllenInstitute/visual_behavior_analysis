@@ -261,7 +261,7 @@ class MesoscopeICA(object):
             # some traces are missing, run extraction:
             logger.info('Traces dont exist in cache, extracting')
 
-            # if traces don't exist, do we need to re-set unmixed and debiased traces flaggs to none?
+            # if traces don't exist, do we need to reset unmixed and debiased traces flaggs to none?
             # yes, as we want unmixed traces be output on ICA using original traces
             self.plane1_ica_input_pointer = None
             self.plane2_ica_input_pointer = None
@@ -484,7 +484,7 @@ class MesoscopeICA(object):
             else:
                 logger.info('ROI traces dont exist in cache, run get_ica_traces first')
         else:
-            # traces has been validated
+            # traces have been validated
 
             # read the jsons for ROIs
             plane1_roi_traces_valid = ju.read(plane1_roi_traces_valid_pointer)
@@ -501,7 +501,6 @@ class MesoscopeICA(object):
         return
 
     def combine_debias_traces(self):
-
         self.plane1_ica_input_pointer = None
         self.plane2_ica_input_pointer = None
 

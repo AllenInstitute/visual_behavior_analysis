@@ -11,6 +11,7 @@ import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import visual_behavior.ophys.mesoscope.mesoscope as ms
 
 import shutil
+CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
@@ -41,7 +42,7 @@ def get_path(obj, key, check_exists):
 
 
 def run_ica_on_session(session,  iter_ica, iter_neuropil):
-    ica_obj = ica.MesoscopeICA(session_id=session, cache='/media/NCRAID/MesoscopeAnalysis/')
+    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE)
     pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
         ica_obj.get_ica_traces(pair)
@@ -54,7 +55,7 @@ def run_ica_on_session(session,  iter_ica, iter_neuropil):
     return
 
 def run_ica_on_pair(session, pair, iter_ica, iter_neuropil):
-    ica_obj = ica.MesoscopeICA(session_id=session, cache='/media/NCRAID/MesoscopeAnalysis/')
+    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE)
     ica_obj.get_ica_traces(pair)
     ica_obj.validate_traces()
     ica_obj.combine_debias_traces()
@@ -198,7 +199,7 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
 
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
-def run_demixing_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
+def run_demixing_on_ica(session, an_dir=CACHE):
     mds, _, _ = get_ica_roi_sessions()
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
@@ -317,7 +318,7 @@ def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=
     plt.savefig(file_name)
     plt.close()
 
-def run_neuropil_correction_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
+def run_neuropil_correction_on_ica(session, an_dir=CACHE):
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
     for pair in pairs:
@@ -481,7 +482,7 @@ def run_neuropil_correction_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnaly
     return
 
 
-def run_dff_on_ica(session, an_dir='/media/NCRAID/MesoscopeAnalysis/'):
+def run_dff_on_ica(session, an_dir=CACHE):
 
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
