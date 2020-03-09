@@ -528,6 +528,7 @@ def get_well_known_files(ophys_session_id):
     result = pd.read_sql(query, lims_api.get_connection())
     return result
 
+
 def simplify_type(x):
     if is_int(x):
         return int(x)
@@ -536,6 +537,7 @@ def simplify_type(x):
     else:
         return x
 
+
 def simplify_entry(entry):
     '''
     entry is one document
@@ -543,11 +545,13 @@ def simplify_entry(entry):
     entry = {k: simplify_type(v) for k, v in entry.items()}
     return entry
 
+
 def clean_and_timestamp(entry):
     '''make sure float and int types are basic python types (e.g., not np.float)'''
     entry = simplify_entry(entry)
     entry.update({'entry_time_utc': str(datetime.datetime.utcnow())})
     return entry
+
 
 def update_or_create(collection, document, keys_to_check, force_write=False):
     '''
@@ -558,7 +562,7 @@ def update_or_create(collection, document, keys_to_check, force_write=False):
     if force_write:
         collection.insert_one(simplify_entry(document))
     else:
-        query = {key:simplify_type(document[key]) for key in keys_to_check}
+        query = {key: simplify_type(document[key]) for key in keys_to_check}
         if collection.find_one(query) is None:
             # insert a document if this experiment/cell doesn't already exist
             collection.insert_one(simplify_entry(document))
