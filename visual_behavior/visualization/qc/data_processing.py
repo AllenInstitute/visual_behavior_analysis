@@ -373,7 +373,7 @@ def get_lims_cell_roi_tables_for_container(ophys_container_id):
                         "valid_roi"
                         "ophys_container_id"
     """
-    passed_container =passed_experiment_info_for_container(ophys_container_id)
+    passed_container = passed_experiment_info_for_container(ophys_container_id)
 
     stage_name_df = passed_container[["ophys_experiment_id", "stage_name_lims"]].copy()
 
@@ -778,7 +778,7 @@ def valid_sdk_dff_traces_container(ophys_container_id):
                     "ophys_experiment_id"
                     "ophys_container_id"
     """
-    container_passed_exps = passed_experiment_info_for_container(ophys_container_id).sort_values('stage_name_lims').reset_index(drop=True)
+    container_passed_exps = passed_experiment_info_for_container(ophys_container_id).sort_values('date_of_acquisition').reset_index(drop=True)
     container_valid_dff_traces = pd.DataFrame()
     for ophys_experiment_id in container_passed_exps["ophys_experiment_id"].unique():
         experiment_dff_traces = valid_sdk_dff_traces_experiment(ophys_experiment_id)
@@ -845,7 +845,6 @@ def compute_robust_snr_on_dataframe(dataframe):
     dataframe["robust_snr"] = dataframe["robust_signal"] / dataframe["robust_noise"]
     return dataframe
 
-
 def experiment_cell_specimen_id_snr_table(ophys_experiment_id):
     """gets the valid cell_specimen_id dff traces from the sdk dff_traces
         object and computes a robust estimate of noise(robust std), signal(median deviation)
@@ -870,10 +869,47 @@ def experiment_cell_specimen_id_snr_table(ophys_experiment_id):
     return exp_dff_traces
 
 
-def experiment_mean_robust_snr_for_all_csids(ophys_experiment_id):
+def experiment_mean_robust_snr_for_all_csids(ophys_experiment_id, rmv_outliers=False):
+    """takes the mean 
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Keyword Arguments:
+        rmv_outliers {bool} -- [description] (default: {True})
+
+    Returns:
+        float -- [description]
+    """
     exp_csid_snr_table = experiment_cell_specimen_id_snr_table(ophys_experiment_id)
-    mean_rsnr_all_csids = np.mean(exp_csid_snr_table["robust_snr"])
-    return mean_rsnr_all_csids
+    if rmv_outliers == True:
+        exp_csid_snr_table = remove_outliers(exp_csid_snr_table, "snr_zscore")
+    mean_rsnr_csids = np.mean(exp_csid_snr_table["robust_snr"])
+    return mean_rsnr_csids
+
+
+def experiment_median_robust_snr_all_csids(ophys_experiment_id, rmv_outliers=False):
+    """[summary]
+    
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+    
+    Keyword Arguments:
+        rmv_outliers {bool} -- [description] (default: {False})
+    
+    Returns:
+        [type] -- [description]
+    """
+    exp_csid_snr_table = experiment_cell_specimen_id_snr_table(ophys_experiment_id)
+    if rmv_outliers == True:
+        exp_csid_snr_table = remove_outliers(exp_csid_snr_table, "snr_zscore")
+    median_rsnr_csids = np.median(exp_csid_snr_table["robust_snr"])
+    return median_rsnr_csids
+
+
+def remove_outliers(dataframe, zscore_column):
+    dataframe = dataframe.loc[dataframe[zscore_column] < 3].copy().reset_index(drop=True)
+    return dataframe
 
 
 def container_csid_snr_table(ophys_container_id):
@@ -897,8 +933,8 @@ def container_csid_snr_table(ophys_container_id):
     """
     container_dff_traces = valid_sdk_dff_traces_container(ophys_container_id)
     container_dff_traces = compute_robust_snr_on_dataframe(container_dff_traces)
-    container_dff_traces["snr_zscore"] = np.abs(stats.zscore(container_dff_traces["robust_snr"]))
-    container_dff_traces.loc[:,"ophys_container_id"] = ophys_container_id
+    # container_dff_traces["snr_zscore"] = np.abs(stats.zscore(container_dff_traces["robust_snr"])) #dont use because computes zscore on all csids in a container and not just in an experiment
+    container_dff_traces.loc[:, "ophys_container_id"] = ophys_container_id
     return container_dff_traces
 
 
@@ -911,20 +947,20 @@ def container_snr_summary_table(ophys_container_id):
     Returns:
         dataframe -- dataframe with the following columns:
                     "ophys_experiment_id"
-                    "mean_rsnr_all_csids"
+                    "median_rsnr_all_csids"
                     "ophys_container_id"
-
     """
-    container_csid_snr = container_csid_snr_table(ophys_container_id)
+    container_passed_exps = passed_experiment_info_for_container(ophys_container_id).sort_values('date_of_acquisition').reset_index(drop=True)
     container_summary_df = pd.DataFrame()
-    for ophys_experiment_id in container_csid_snr["ophys_experiment_id"].unique():
-        exp_mean_csid_snr = np.mean(container_csid_snr.loc[container_csid_snr["ophys_experiment_id"] == ophys_experiment_id, "robust_snr"].values)
-        exp_mean_csid_snr_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
-                                             "mean_rsnr_all_csids": exp_mean_csid_snr}, index=[0])
-        container_summary_df = container_summary_df.append(exp_mean_csid_snr_df)
+    for ophys_experiment_id in container_passed_exps["ophys_experiment_id"].unique():
+        exp_median_csid_snr = experiment_median_robust_snr_all_csids(ophys_experiment_id, rmv_outliers=False)
+        exp_median_csid_snr_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                                               "median_rsnr_all_csids": exp_median_csid_snr}, index=[0])
+        container_summary_df = container_summary_df.append(exp_median_csid_snr_df)
     container_summary_df = container_summary_df.reset_index(drop=True)
     container_summary_df.loc[:, "ophys_container_id"] = ophys_container_id
     return container_summary_df
+
 
 ####### PHYSIO FOV AND INTENSITY (EXP AND CONTAINER) ####### # NOQA: E402
 
@@ -1024,10 +1060,10 @@ def experiment_FOV_information(ophys_experiment_id):
                     "FOV_intensity_std",
                     "FOV_mean_div_std",
                     "pmt_gain",
-                    "mean_rsnr_all_csids"
+                    "median_rsnr_all_csids"
     """
     intensity_df = experiment_intensity_mean_and_std(ophys_experiment_id)
-    intensity_df["mean_rsnr_all_csids"] = experiment_mean_robust_snr_for_all_csids(ophys_experiment_id)
+    intensity_df["median_rsnr_all_csids"] = experiment_median_robust_snr_all_csids(ophys_experiment_id)
     intensity_df["pmt_gain"] = load.get_pmt_gain_for_experiment(ophys_experiment_id)
 
     return intensity_df
@@ -1054,7 +1090,7 @@ def container_pmt_settings(ophys_container_id):
         container_pmt_df = container_pmt_df.append(exp_pmt_df)
     container_pmt_df = container_pmt_df.dropna()
     container_pmt_df.pmt_gain = container_pmt_df.pmt_gain.astype(int)
-    container_pmt_df.loc[:,"ophys_container_id"] = ophys_container_id
+    container_pmt_df.loc[:, "ophys_container_id"] = ophys_container_id
     container_pmt_df = container_pmt_df.reset_index(drop=True)
     return container_pmt_df
 
@@ -1072,14 +1108,11 @@ def container_FOV_information(ophys_container_id):
                     "ophys_conatiner_id"
                     "intensity_mean"
                     "intensity_std"
-                    "mean_rsnr_all_csids"
+                    "median_rsnr_all_csids"
     """
     pmt_settings = container_pmt_settings(ophys_container_id)
     intensity_info = container_intensity_mean_and_std(ophys_container_id)
     snr_summary = container_snr_summary_table(ophys_container_id)
     dfs = [pmt_settings, intensity_info, snr_summary]
-    merged_df = reduce(lambda left,right:pd.merge(left,right, on=["ophys_experiment_id", "ophys_container_id"]), dfs)
+    merged_df = reduce(lambda left, right: pd.merge(left, right, on=["ophys_experiment_id", "ophys_container_id"]), dfs)
     return merged_df
-
-
-
