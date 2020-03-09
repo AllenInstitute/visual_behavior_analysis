@@ -13,7 +13,6 @@ from visual_behavior.visualization.qc import data_processing as dp
 from visual_behavior.visualization.qc import experiment_plots as ep
 
 
-
 ################  OPHYS  ################ # NOQA: E402
 
 def plot_max_projection_images_for_container(ophys_container_id, save_figure=True):
@@ -158,6 +157,24 @@ def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'number_matched_cells',
+                       'container_' + str(ophys_container_id))
+
+
+def plot_snr_by_pmt_gain_for_container(ophys_container_id, save_figure=True):
+    df = dp.container_FOV_information(ophys_container_id)
+    figsize = (7, 5.5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = plt.scatter(df["pmt_gain"], df["median_rsnr_all_csids"],
+                     c=df["intensity_mean"], s=75,
+                     cmap="cool", edgecolors='k')
+    cbar = plt.colorbar(ax)
+    cbar.set_label('fov mean intensity', rotation=270, labelpad=25)
+    plt.xlabel('pmt gain')
+    plt.ylabel('median rsnr all csids')
+    plt.suptitle("median robust snr all cells by pmt gain")
+    plt.title("container: " + str(ophys_container_id))
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'snr_by_pmt_and_intensity',
                        'container_' + str(ophys_container_id))
 
 
