@@ -121,8 +121,6 @@ def roi_metrics_for_experiment_list(experiment_list, include_failed_rois=True):
     return master_df
 
 
-
-
 ####### CONTAINER ####### # NOQA: E402
 
 
@@ -222,8 +220,6 @@ def for_manifest_get_container_roi_metrics(manifest, container_id):
         container_roi_metrics_df = container_roi_metrics_df.append(experiment_roi_metrics_df, sort=True)
         container_roi_metrics_df = container_roi_metrics_df.reset_index(drop=True)
     return container_roi_metrics_df
-
-
 
 
 ####### ROI INFORMATION ####### # NOQA: E402
@@ -357,8 +353,6 @@ def multi_roi_mask_from_df(roi_metrics_df, roi_id_list, mask_type="binary"):
         return bool_multi_roi_mask
     else:
         print("please specify 'bool' or 'binary' for mask_type")
-
-
 
 
 ####### UTILS ####### # NOQA: E402

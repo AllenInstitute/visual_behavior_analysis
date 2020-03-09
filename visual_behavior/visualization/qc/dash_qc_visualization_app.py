@@ -29,6 +29,8 @@ app.title = 'Visual Behavior Data QC'
 app.config['suppress_callback_exceptions'] = True
 
 # FUNCTIONS
+
+
 def load_data():
     container_df = dl.build_container_df()
     filtered_container_list = dl.get_filtered_ophys_container_ids()
@@ -86,52 +88,52 @@ app.layout = html.Div([
     ),
     html.H4('Select plots to generate from the dropdown (max 10)'),
     dropdown,
-    html.H4(id='plot_title_0',children=''),
+    html.H4(id='plot_title_0', children=''),
     html.Img(
         id='image_frame_0',
         style={'width': '1500px'}
     ),
-    html.H4(id='plot_title_1',children=''),
+    html.H4(id='plot_title_1', children=''),
     html.Img(
         id='image_frame_1',
         style={'width': '1500px'}
     ),
-    html.H4(id='plot_title_2',children=''),
+    html.H4(id='plot_title_2', children=''),
     html.Img(
         id='image_frame_2',
         style={'width': '1500px'}
     ),
-    html.H4(id='plot_title_3',children=''),
+    html.H4(id='plot_title_3', children=''),
     html.Img(
         id='image_frame_3',
         style={'width': '1500px'}
     ),
-    html.H4(id='plot_title_4',children=''),
+    html.H4(id='plot_title_4', children=''),
     html.Img(
         id='image_frame_4',
         style={'width': '1500px'}
     ),
-    html.H4(id='plot_title_5',children=''),
+    html.H4(id='plot_title_5', children=''),
     html.Img(
         id='image_frame_5',
         style={'width': '1500px'}
     ),
-    html.H4(id='plot_title_6',children=''),
+    html.H4(id='plot_title_6', children=''),
     html.Img(
         id='image_frame_6',
         style={'width': '1500px'}
     ),
-    html.H4(id='plot_title_7',children=''),
+    html.H4(id='plot_title_7', children=''),
     html.Img(
         id='image_frame_7',
         style={'width': '1500px'}
     ),
-    html.H4(id='plot_title_8',children=''),
+    html.H4(id='plot_title_8', children=''),
     html.Img(
         id='image_frame_8',
         style={'width': '1500px'}
     ),
-    html.H4(id='plot_title_9',children=''),
+    html.H4(id='plot_title_9', children=''),
     html.Img(
         id='image_frame_9',
         style={'width': '1500px'}
@@ -162,12 +164,14 @@ def get_container_plot(container_id, plot_type):
     return encoded_image
 
 # highlight row in data table
+
+
 @app.callback(Output('data_table', 'style_data_conditional'),
               [Input('data_table', 'selected_rows'),
                Input('data_table', 'page_current'),
                Input('data_table', 'derived_viewport_indices')
                ])
-def highlight_row(row_index, page_current,derived_viewport_indices):
+def highlight_row(row_index, page_current, derived_viewport_indices):
     # row index is None on the very first call. This avoids an error:
     if row_index is None or derived_viewport_indices is None:
         index_to_highlight = 0
@@ -186,71 +190,82 @@ def highlight_row(row_index, page_current,derived_viewport_indices):
     return style_data_conditional
 
 # set plot titles
+
+
 @app.callback(Output('plot_title_0', 'children'),
-               [Input('dropdown', 'value'),
+              [Input('dropdown', 'value'),
                ])
 def update_frame(plot_types):
     if len(plot_types) >= 1:
         return plot_types[0]
 
+
 @app.callback(Output('plot_title_1', 'children'),
-               [Input('dropdown', 'value'),
+              [Input('dropdown', 'value'),
                ])
 def update_frame(plot_types):
     if len(plot_types) >= 2:
         return plot_types[1]
 
+
 @app.callback(Output('plot_title_2', 'children'),
-               [Input('dropdown', 'value'),
+              [Input('dropdown', 'value'),
                ])
 def update_frame(plot_types):
     if len(plot_types) >= 3:
         return plot_types[2]
 
+
 @app.callback(Output('plot_title_3', 'children'),
-               [Input('dropdown', 'value'),
+              [Input('dropdown', 'value'),
                ])
 def update_frame(plot_types):
     if len(plot_types) >= 4:
         return plot_types[3]
 
+
 @app.callback(Output('plot_title_4', 'children'),
-               [Input('dropdown', 'value'),
+              [Input('dropdown', 'value'),
                ])
 def update_frame(plot_types):
     if len(plot_types) >= 5:
         return plot_types[4]
 
+
 @app.callback(Output('plot_title_5', 'children'),
-               [Input('dropdown', 'value'),
+              [Input('dropdown', 'value'),
                ])
 def update_frame(plot_types):
     if len(plot_types) >= 6:
         return plot_types[5]
 
+
 @app.callback(Output('plot_title_6', 'children'),
-               [Input('dropdown', 'value'),
+              [Input('dropdown', 'value'),
                ])
 def update_frame(plot_types):
     if len(plot_types) >= 7:
         return plot_types[6]
 
+
 @app.callback(Output('plot_title_7', 'children'),
-               [Input('dropdown', 'value'),
+              [Input('dropdown', 'value'),
                ])
 def update_frame(plot_types):
     if len(plot_types) >= 8:
         return plot_types[7]
 
+
 @app.callback(Output('plot_title_8', 'children'),
-               [Input('dropdown', 'value'),
+              [Input('dropdown', 'value'),
                ])
 def update_frame(plot_types):
     if len(plot_types) >= 9:
         return plot_types[8]
 
+
 @app.callback(Output('plot_title_9', 'children'),
-               [Input('dropdown', 'value'),
+              [Input('dropdown', 'value'),
                ])
 def update_frame(plot_types):
     if len(plot_types) >= 10:
@@ -258,6 +273,8 @@ def update_frame(plot_types):
 
 # image frames callbacks
 # (I can't figure out how to make these in a loop!)
+
+
 @app.callback(Output('image_frame_0', 'src'),
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),

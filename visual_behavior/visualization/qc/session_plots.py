@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 from visual_behavior.visualization.qc import data_loading as dl
 
 
-
 ################  BEHAVIOR  ################ # NOQA: E402
 
 def plot_running_speed(ophys_session_id, ax=None):
@@ -21,7 +20,7 @@ def plot_running_speed(ophys_session_id, ax=None):
     """
     running_speed = dl.get_sdk_running_speed(ophys_session_id)
     if ax is None:
-        fig, ax = plt.subplots(figsize=(15,3))
+        fig, ax = plt.subplots(figsize=(15, 3))
     ax.plot(running_speed)
     ax.set_xlabel('time (s)')
     ax.set_ylabel('running speed\n(cm/s)')

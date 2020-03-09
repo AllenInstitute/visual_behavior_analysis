@@ -845,6 +845,7 @@ def compute_robust_snr_on_dataframe(dataframe):
     dataframe["robust_snr"] = dataframe["robust_signal"] / dataframe["robust_noise"]
     return dataframe
 
+
 def experiment_cell_specimen_id_snr_table(ophys_experiment_id):
     """gets the valid cell_specimen_id dff traces from the sdk dff_traces
         object and computes a robust estimate of noise(robust std), signal(median deviation)
@@ -890,13 +891,13 @@ def experiment_mean_robust_snr_for_all_csids(ophys_experiment_id, rmv_outliers=F
 
 def experiment_median_robust_snr_all_csids(ophys_experiment_id, rmv_outliers=False):
     """[summary]
-    
+
     Arguments:
         ophys_experiment_id {[type]} -- [description]
-    
+
     Keyword Arguments:
         rmv_outliers {bool} -- [description] (default: {False})
-    
+
     Returns:
         [type] -- [description]
     """
