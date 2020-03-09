@@ -11,7 +11,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=['data', 'figures', 'notebooks', 'scripts']),
     install_requires=[
         "matplotlib",
-        "pandas",
+        "pandas==0.25.3",
         "six",
         "scikit-learn>=0.19.2",
         "scipy>=1.0.0",
