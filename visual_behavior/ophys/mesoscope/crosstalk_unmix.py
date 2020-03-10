@@ -1013,7 +1013,7 @@ class MesoscopeICA(object):
 
         return
 
-    def unmix_neuropil_mod(self, max_iter=10):
+    def unmix_neuropil_mod(self, max_iter=50):
 
         plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
                                                           f'neuropil_ica_output_{self.plane1_exp_id}.h5')
@@ -1166,7 +1166,7 @@ class MesoscopeICA(object):
                 traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
                 self.found_solution_neuropil = False
 
-                ica = FastICA(n_components=2)
+                ica = FastICA(n_components=2, max_iter = max_iter)
                 s = ica.fit_transform(traces)  # Reconstruct signals
                 a = ica.mixing_  # Get estimated mixing matrix
 
