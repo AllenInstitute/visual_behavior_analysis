@@ -1257,8 +1257,8 @@ class MesoscopeICA(object):
         #    if figures don't exist!
         if self.plane1_ica_output_pointer and self.plane2_ica_output_pointer:
 
-            orig_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
-            orig_trace_plane1_ct = self.plane1_traces_orig[1, :, :]
+            raw_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
+            raw_trace_plane1_ct = self.plane1_traces_orig[1, :, :]
             plane1_roi_names = self.plane1_roi_names
             plane1_roi_valid = self.plane1_roi_traces_valid['signal']
             ica_trace_plane1_sig = self.plane1_ica_output[0, :, :]
@@ -1271,7 +1271,7 @@ class MesoscopeICA(object):
                 os.mkdir(plot_dir)
 
             cell_valid = 0
-            for cell_orig in range(orig_trace_plane1_sig.shape[0]):
+            for cell_orig in range(raw_trace_plane1_sig.shape[0]):
                 # check in this roi is valid:
                 if plane1_roi_valid[str(plane1_roi_names[cell_orig])]:
                     # Plot cell
@@ -1282,18 +1282,22 @@ class MesoscopeICA(object):
                     else:
                         pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
                         logging.info(f"creating figures for cell {plane1_roi_names[cell_orig]}")
-                        for i in range(int(orig_trace_plane1_sig.shape[1] / samples_per_plot) + 1):
-                            orig_plane1_sig = orig_trace_plane1_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            orig_plane1_ct = orig_trace_plane1_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                        raw_y_min = min(min(raw_trace_plane1_sig[cell_orig, :]), min(raw_trace_plane1_ct[cell_orig, :]))
+                        raw_y_max = max(max(raw_trace_plane1_sig[cell_orig, :]), max(raw_trace_plane1_ct[cell_orig, :]))
+                        for i in range(int(raw_trace_plane1_sig.shape[1] / samples_per_plot) + 1):
+                            orig_plane1_sig = raw_trace_plane1_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            orig_plane1_ct = raw_trace_plane1_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
                             ica_plane1_sig = ica_trace_plane1_sig[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
                             ica_plane1_ct = ica_trace_plane1_ct[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
                             f = plt.figure(figsize=(20, 10))
                             plt.subplot(211)
+                            plt.ylim(raw_y_min, raw_y_max)
                             plt.plot(orig_plane1_sig, 'r-', label='signal plane')
                             plt.plot(orig_plane1_ct, 'g-', label='cross-talk plane')
                             plt.title(f'original traces for cell {plane1_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
                             plt.subplot(212)
+                            plt.ylim(raw_y_min, raw_y_max)
                             plt.plot(ica_plane1_sig, 'r-', label='signal plane')
                             plt.plot(ica_plane1_ct, 'g-', label='cross-talk plane')
                             plt.title(f'post-ica traces, cell # {plane1_roi_names[cell_valid]}')
@@ -1308,8 +1312,8 @@ class MesoscopeICA(object):
                     logging.info(f'Cell {plane1_roi_names[cell_orig]} is invalid, skipping plotting')
                     cell_valid = cell_valid
 
-            orig_trace_plane2_sig = self.plane2_traces_orig[0, :, :]
-            orig_trace_plane2_ct = self.plane2_traces_orig[1, :, :]
+            raw_trace_plane2_sig = self.plane2_traces_orig[0, :, :]
+            raw_trace_plane2_ct = self.plane2_traces_orig[1, :, :]
             plane2_roi_names = self.plane2_roi_names
             plane2_roi_valid = self.plane2_roi_traces_valid['signal']
             ica_trace_plane2_sig = self.plane2_ica_output[0, :, :]
@@ -1319,7 +1323,7 @@ class MesoscopeICA(object):
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
             cell_valid = 0
-            for cell_orig in range(orig_trace_plane2_sig.shape[0]):
+            for cell_orig in range(raw_trace_plane2_sig.shape[0]):
                 # check in this roi is valid:
                 if plane2_roi_valid[str(plane2_roi_names[cell_orig])]:
                     # Plot cell
@@ -1329,19 +1333,23 @@ class MesoscopeICA(object):
                         continue
                     else:
                         logging.info(f'creating figures for cell {plane2_roi_names[cell_orig]}')
+                        raw_y_min = min(min(raw_trace_plane2_sig[cell_orig, :]), min(raw_trace_plane2_ct[cell_orig, :]))
+                        raw_y_max = max(max(raw_trace_plane2_sig[cell_orig, :]), max(raw_trace_plane2_ct[cell_orig, :]))
                         pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
-                        for i in range(int(orig_trace_plane2_sig.shape[1] / samples_per_plot) + 1):
-                            orig_plane2_sig = orig_trace_plane2_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            orig_plane2_ct = orig_trace_plane2_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                        for i in range(int(raw_trace_plane2_sig.shape[1] / samples_per_plot) + 1):
+                            orig_plane2_sig = raw_trace_plane2_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            orig_plane2_ct = raw_trace_plane2_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
                             ica_plane2_sig = ica_trace_plane2_sig[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
                             ica_plane2_ct = ica_trace_plane2_ct[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
                             f = plt.figure(figsize=(20, 10))
                             plt.subplot(211)
+                            plt.ylim(raw_y_min, raw_y_max)
                             plt.plot(orig_plane2_sig, 'r-', label='signal plane')
                             plt.plot(orig_plane2_ct, 'g-', label='cross-talk plane')
                             plt.title(f'original traces for cell # {plane2_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
                             plt.subplot(212)
+                            plt.ylim(raw_y_min, raw_y_max)
                             plt.plot(ica_plane2_sig, 'r-', label='signal plane')
                             plt.plot(ica_plane2_ct, 'g-', label='cross-talk plane')
                             plt.title(f'post-ica traces, cell # {plane2_roi_names[cell_valid]}')
@@ -1366,8 +1374,8 @@ class MesoscopeICA(object):
 
         if self.plane1_traces_orig_pointer and self.plane2_traces_orig_pointer:
 
-            orig_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
-            orig_trace_plane1_ct = self.plane1_traces_orig[1, :, :]
+            raw_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
+            raw_trace_plane1_ct = self.plane1_traces_orig[1, :, :]
             plane1_roi_names = self.plane1_roi_names
             plane1_roi_valid = self.plane1_roi_traces_valid['signal']
 
@@ -1378,7 +1386,7 @@ class MesoscopeICA(object):
                 os.mkdir(plot_dir)
 
             cell_valid = 0
-            for cell_orig in range(orig_trace_plane1_sig.shape[0]):
+            for cell_orig in range(raw_trace_plane1_sig.shape[0]):
                 # check in this roi is valid:
                 if plane1_roi_valid[str(plane1_roi_names[cell_orig])]:
                     # Plot cell
@@ -1389,9 +1397,9 @@ class MesoscopeICA(object):
                     else:
                         pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
                         logging.info(f"plotting original traces for cell {plane1_roi_names[cell_orig]}")
-                        for i in range(int(orig_trace_plane1_sig.shape[1] / samples_per_plot) + 1):
-                            orig_plane1_sig = orig_trace_plane1_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            orig_plane1_ct = orig_trace_plane1_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                        for i in range(int(raw_trace_plane1_sig.shape[1] / samples_per_plot) + 1):
+                            orig_plane1_sig = raw_trace_plane1_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            orig_plane1_ct = raw_trace_plane1_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
                             f = plt.figure(figsize=(20, 10))
                             plt.plot(orig_plane1_sig, 'r-', label='signal plane')
                             plt.plot(orig_plane1_ct, 'g-', label='cross-talk plane')
@@ -1407,8 +1415,8 @@ class MesoscopeICA(object):
                     logging.info(f'Cell {plane1_roi_names[cell_orig]} is invalid, skipping plotting')
                     cell_valid = cell_valid
 
-            orig_trace_plane2_sig = self.plane2_traces_orig[0, :, :]
-            orig_trace_plane2_ct = self.plane2_traces_orig[1, :, :]
+            raw_trace_plane2_sig = self.plane2_traces_orig[0, :, :]
+            raw_trace_plane2_ct = self.plane2_traces_orig[1, :, :]
             plane2_roi_names = self.plane2_roi_names
             plane2_roi_valid = self.plane2_roi_traces_valid['signal']
             logging.info(f'creating plots for experiment {pair[1]}')
@@ -1416,7 +1424,7 @@ class MesoscopeICA(object):
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
             cell_valid = 0
-            for cell_orig in range(orig_trace_plane2_sig.shape[0]):
+            for cell_orig in range(raw_trace_plane2_sig.shape[0]):
                 # check in this roi is valid:
                 if plane2_roi_valid[str(plane2_roi_names[cell_orig])]:
                     # Plot cell
@@ -1427,9 +1435,9 @@ class MesoscopeICA(object):
                     else:
                         logging.info(f'creating plots for cell {plane2_roi_names[cell_orig]}')
                         pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
-                        for i in range(int(orig_trace_plane2_sig.shape[1] / samples_per_plot) + 1):
-                            orig_plane2_sig = orig_trace_plane2_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            orig_plane2_ct = orig_trace_plane2_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                        for i in range(int(raw_trace_plane2_sig.shape[1] / samples_per_plot) + 1):
+                            orig_plane2_sig = raw_trace_plane2_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            orig_plane2_ct = raw_trace_plane2_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
                             f = plt.figure(figsize=(20, 10))
                             plt.plot(orig_plane2_sig, 'r-', label='signal plane')
                             plt.plot(orig_plane2_ct, 'g-', label='cross-talk plane')
