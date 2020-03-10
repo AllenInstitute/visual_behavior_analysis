@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
 
 def placeAxesOnGrid(
@@ -103,6 +106,7 @@ def save_figure(
             dpi=dpi
         )
 
+
 def initialize_legend(ax, colors, linewidth=1, linestyle='-', marker=None, markersize=8, alpha=1):
     """ initializes a legend on an axis to ensure that first entries match desired line colors
     Parameters
@@ -169,7 +173,7 @@ def event_triggered_raster(df, x_value, event_times, fig=None, ax_index=0, var_n
             events = df.query(query_string).values - event_time
             ax.plot(
                 events,
-                ii*np.ones_like(events),
+                ii * np.ones_like(events),
                 marker=marker,
                 color=color,
                 linestyle='none'
@@ -188,7 +192,7 @@ def event_triggered_response_plot(df, x_value, y_values, fig=None, ax_index=0, v
 
         for ii, col in enumerate(y_values):
             ax.plot(df[x_value], df[col], alpha=0.25,
-                    color=cmap(ii/(len(y_values)-1)))
+                    color=cmap(ii / (len(y_values) - 1)))
         ax.plot(df[x_value], df[y_values].mean(
             axis=1), color='black', linewidth=3)
 
@@ -234,11 +238,11 @@ def designate_flashes(ax, omit=None, pre_color='blue', post_color='blue'):
     lims = ax.get_xlim()
     for flash_start in np.arange(0, lims[1], 0.75):
         if flash_start != omit:
-            ax.axvspan(flash_start, flash_start+0.25,
+            ax.axvspan(flash_start, flash_start + 0.25,
                        color=post_color, alpha=0.25, zorder=-np.inf)
-    for flash_start in np.arange(-0.75, lims[0]-0.001, -0.75):
+    for flash_start in np.arange(-0.75, lims[0] - 0.001, -0.75):
         if flash_start != omit:
-            ax.axvspan(flash_start, flash_start+0.25,
+            ax.axvspan(flash_start, flash_start + 0.25,
                        color=pre_color, alpha=0.25, zorder=-np.inf)
 
 
@@ -246,9 +250,9 @@ def designate_flashes_plotly(fig, omit=None, pre_color='blue', post_color='blue'
     '''add vertical spans to designate stimulus flashes'''
 
     post_flashes = np.arange(0, lims[1], 0.75)
-    post_flash_colors = np.array([post_color]*len(post_flashes))
-    pre_flashes = np.arange(-0.75, lims[0]-0.001, -0.75)
-    pre_flash_colors = np.array([pre_color]*len(pre_flashes))
+    post_flash_colors = np.array([post_color] * len(post_flashes))
+    pre_flashes = np.arange(-0.75, lims[0] - 0.001, -0.75)
+    pre_flash_colors = np.array([pre_color] * len(pre_flashes))
 
     flash_times = np.hstack((pre_flashes, post_flashes))
     flash_colors = np.hstack((pre_flash_colors, post_flash_colors))
@@ -262,7 +266,7 @@ def designate_flashes_plotly(fig, omit=None, pre_color='blue', post_color='blue'
                     go.layout.Shape(
                         type="rect",
                         x0=flash_start,
-                        x1=flash_start+0.25,
+                        x1=flash_start + 0.25,
                         y0=-100,
                         y1=100,
                         fillcolor=flash_color,

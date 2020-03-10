@@ -593,7 +593,7 @@ def convert_to_fraction(df_in):
     for col in cols:
         s = df[col]
         s0 = df[col].mean(axis=0)
-        df[col] = (s - s0)/s0
+        df[col] = (s - s0) / s0
     return df
 
 
@@ -618,7 +618,7 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
         else:
             time_key = 'time'
 
-    _d = {'time': np.arange(-t_before, t_after, 1/sampling_rate)}
+    _d = {'time': np.arange(-t_before, t_after, 1 / sampling_rate)}
     for ii, event_time in enumerate(np.array(event_times)):
 
         if time_key == 'index':
