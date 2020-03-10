@@ -871,7 +871,7 @@ def experiment_cell_specimen_id_snr_table(ophys_experiment_id):
 
 
 def experiment_mean_robust_snr_for_all_csids(ophys_experiment_id, rmv_outliers=False):
-    """takes the mean 
+    """takes the mean
 
     Arguments:
         ophys_experiment_id {[type]} -- [description]

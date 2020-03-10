@@ -214,23 +214,24 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
                        'container_' + str(ophys_container_id))
 
 
-def plot_PMT_gain_for_container(ophys_container_id, save_figure=True):
-    container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
-    exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(container_pmt_settings)
-    ophys_experiment_ids = container_df["ophys_experiment_id"].unique()
-    figsize = (6, 5)
-    fig, ax = plt.subplots(figsize=figsize)
-    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        pmt_value = dl.get_pmt_gain_for_experiment(ophys_experiment_id)
-        ax.plot(i, pmt_value, 'o', color=exp_stage_color_dict[ophys_experiment_id])
-    ax.set_xticks(np.arange(0, len(ophys_experiment_ids)))
-    ax.set_xticklabels(ophys_experiment_id, rotation=90)
-    ax.set_ylabel('PMT setting')
-    ax.set_xlabel('ophys_experiment_id')
-    ax.set_title('PMT gain setting across experiments')
-    if save_figure:
-        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'PMT_gain',
-                       'container_' + str(ophys_container_id))
+# def plot_PMT_gain_for_container(ophys_container_id, save_figure=True):
+#     container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
+#     exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(container_pmt_settings)
+#     # @KateR: the variable `container_df` is not defined, which is throwing off the linter
+#     ophys_experiment_ids = container_df["ophys_experiment_id"].unique()
+#     figsize = (6, 5)
+#     fig, ax = plt.subplots(figsize=figsize)
+#     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+#         pmt_value = dl.get_pmt_gain_for_experiment(ophys_experiment_id)
+#         ax.plot(i, pmt_value, 'o', color=exp_stage_color_dict[ophys_experiment_id])
+#     ax.set_xticks(np.arange(0, len(ophys_experiment_ids)))
+#     ax.set_xticklabels(ophys_experiment_id, rotation=90)
+#     ax.set_ylabel('PMT setting')
+#     ax.set_xlabel('ophys_experiment_id')
+#     ax.set_title('PMT gain setting across experiments')
+#     if save_figure:
+#         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'PMT_gain',
+#                        'container_' + str(ophys_container_id))
 
 
 # BEHAVIOR
