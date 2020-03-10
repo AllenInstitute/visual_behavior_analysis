@@ -9,7 +9,7 @@ import traceback
 import datetime
 
 from allensdk.internal.api import PostgresQueryMixin
-from allensdk.core.authentication import DbCredentials, credential_injector
+from allensdk.core.authentication import credential_injector
 from allensdk.core.auth_config import LIMS_DB_CREDENTIAL_MAP
 
 
@@ -527,3 +527,45 @@ def get_well_known_files(ophys_session_id):
 
     result = pd.read_sql(query, lims_api.get_connection())
     return result
+
+
+def simplify_type(x):
+    if is_int(x):
+        return int(x)
+    elif is_float(x):
+        return float(x)
+    else:
+        return x
+
+
+def simplify_entry(entry):
+    '''
+    entry is one document
+    '''
+    entry = {k: simplify_type(v) for k, v in entry.items()}
+    return entry
+
+
+def clean_and_timestamp(entry):
+    '''make sure float and int types are basic python types (e.g., not np.float)'''
+    entry = simplify_entry(entry)
+    entry.update({'entry_time_utc': str(datetime.datetime.utcnow())})
+    return entry
+
+
+def update_or_create(collection, document, keys_to_check, force_write=False):
+    '''
+    updates a collection of the document exists
+    inserts if it does not exist
+    uses keys in `keys_to_check` to determine if document exists. Other keys will be written, but not used for checking uniqueness
+    '''
+    if force_write:
+        collection.insert_one(simplify_entry(document))
+    else:
+        query = {key: simplify_type(document[key]) for key in keys_to_check}
+        if collection.find_one(query) is None:
+            # insert a document if this experiment/cell doesn't already exist
+            collection.insert_one(simplify_entry(document))
+        else:
+            # update a document if it does exist
+            collection.update_one(query, {"$set": simplify_entry(document)})
