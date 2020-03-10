@@ -25,7 +25,7 @@ app.config['suppress_callback_exceptions'] = True
 
 def load_data():
     container_df = dl.build_container_df()
-    filtered_container_list = dl.get_filtered_ophys_container_ids() #NOQA F841
+    filtered_container_list = dl.get_filtered_ophys_container_ids()  # NOQA F841
     return container_df.query('container_id in @filtered_container_list')
 
 

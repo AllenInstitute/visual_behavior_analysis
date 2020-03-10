@@ -12,7 +12,7 @@ from visual_behavior.visualization.qc import data_processing as dp
 from visual_behavior.visualization.qc import experiment_plots as ep
 
 
-################  OPHYS  ################ # NOQA: E402
+# OPHYS
 
 def plot_max_projection_images_for_container(ophys_container_id, save_figure=True):
     ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
@@ -217,7 +217,7 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
 def plot_PMT_gain_for_container(ophys_container_id, save_figure=True):
     container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
     exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(container_pmt_settings)
-    # ophys_experiment_ids = container_df["ophys_experiment_id"].unique()
+    ophys_experiment_ids = container_df["ophys_experiment_id"].unique()
     figsize = (6, 5)
     fig, ax = plt.subplots(figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):

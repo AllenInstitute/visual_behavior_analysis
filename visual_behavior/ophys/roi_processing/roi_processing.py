@@ -222,7 +222,7 @@ def for_manifest_get_container_roi_metrics(manifest, container_id):
     return container_roi_metrics_df
 
 
-####### ROI INFORMATION ####### # NOQA: E402
+# ROI INFORMATION
 
 
 def get_transparent_roi_FOV_mask(experiment_id, roi_id, id_type=False):

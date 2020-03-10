@@ -186,7 +186,7 @@ def remove_unpassed_experiments(dataframe):
     return dataframe
 
 
-####### SEGMENTATION (EXP & CONTAINER) ####### # NOQA: E402
+# SEGMENTATION (EXP & CONTAINER)
 
 def ophys_experiment_segmentation_summary_df(ophys_experiment_id):
     """for a given experiment, uses the cell_rois_table from lims
@@ -356,7 +356,7 @@ def container_segmentation_barplots_df(ophys_container_id, stage_name_column="st
     return seg_sum_with_stage
 
 
-####### CELL MATCHING (CONTAINER) ####### # NOQA: E402
+# CELL MATCHING (CONTAINER)
 
 def get_lims_cell_roi_tables_for_container(ophys_container_id):
     """returns all the cell_specimen_ids and valid/invalid status for rois
@@ -606,7 +606,7 @@ def container_cell_matching_count_heatmap_df(ophys_container_id):
     return pivot_count
 
 
-####### ROI PROCESSING (EXP AND CONTAINER, SEG & CELL MATCHING, DFF) ####### # NOQA: E402
+# ROI PROCESSING (EXP AND CONTAINER, SEG & CELL MATCHING, DFF)
 
 
 def shift_image_masks(dataframe):
@@ -963,7 +963,7 @@ def container_snr_summary_table(ophys_container_id):
     return container_summary_df
 
 
-####### PHYSIO FOV AND INTENSITY (EXP AND CONTAINER) ####### # NOQA: E402
+# PHYSIO FOV AND INTENSITY (EXP AND CONTAINER)
 
 
 def get_experiment_average_intensity_timeseries(ophys_experiment_id):

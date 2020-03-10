@@ -70,7 +70,6 @@ def get_qc_manifest_path():
 
 def get_qc_cache():
     """Get cache using default QC manifest path"""
-    from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
     cache = bpc.from_lims(manifest=get_qc_manifest_path())
     return cache
 
