@@ -804,8 +804,6 @@ def build_container_df():
     '''
     build dataframe with one row per container
     '''
-    manifest_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest.json"
-    cache = bpc.from_lims(manifest=manifest_path)
 
     table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition', ascending=False).reset_index()
     container_ids = table['container_id'].unique()

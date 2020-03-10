@@ -9,7 +9,7 @@ from functools import reduce
 # csid = cell_specimen_id
 
 
-####### BASIC INFO/DATAFRAMES (EXP, SESSION & CONTAINER) ####### # NOQA: E402
+# BASIC INFO/DATAFRAMES (EXP, SESSION & CONTAINER)
 
 
 def ophys_experiment_info_df(ophys_experiment_id):

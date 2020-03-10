@@ -5,13 +5,9 @@ from dash.dependencies import Input, Output
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
-import datetime
-import platform
-import datetime
 import base64
 import os
 
-from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 import visual_behavior.visualization.qc.data_loading as dl
 
 
@@ -29,7 +25,7 @@ app.config['suppress_callback_exceptions'] = True
 
 def load_data():
     container_df = dl.build_container_df()
-    filtered_container_list = dl.get_filtered_ophys_container_ids()
+    filtered_container_list = dl.get_filtered_ophys_container_ids() #NOQA F841
     return container_df.query('container_id in @filtered_container_list')
 
 

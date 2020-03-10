@@ -11,7 +11,7 @@ exclusion_labels_list = ["apical_dendrite", "bad_shape", "boundary", "demix_erro
 roi_id_types_list = ["cell_specimen_id", "cell_roi_id"]
 
 
-####### EXPERIMENT ####### # NOQA: E402
+# EXPERIMENT
 
 
 def experiment_segmentation_dataframe(experiment_id, generate_masks=False):
@@ -224,7 +224,7 @@ def gen_label_masks_df(experiment_id, print_lab=False):
     return mask_df
 
 
-####### CONTAINER ####### # NOQA: E402
+# CONTAINER
 
 
 def container_segmentation_dataframe(container_id,

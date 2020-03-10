@@ -2,7 +2,6 @@ import os
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-import visual_behavior.database as db
 import visual_behavior.plotting as vbp
 
 from visual_behavior.visualization import utils as ut
@@ -218,7 +217,7 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
 def plot_PMT_gain_for_container(ophys_container_id, save_figure=True):
     container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
     exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(container_pmt_settings)
-    ophys_experiment_ids = container_df["ophys_experiment_id"].unique()
+    # ophys_experiment_ids = container_df["ophys_experiment_id"].unique()
     figsize = (6, 5)
     fig, ax = plt.subplots(figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
@@ -234,7 +233,7 @@ def plot_PMT_gain_for_container(ophys_container_id, save_figure=True):
                        'container_' + str(ophys_container_id))
 
 
-################  BEHAVIOR  ################ # NOQA: E402
+# BEHAVIOR
 
 def plot_running_speed_for_container(ophys_container_id, save_figure=True):
     ophys_session_ids = dl.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)

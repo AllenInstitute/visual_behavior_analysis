@@ -4,7 +4,7 @@ import visual_behavior.ophys.roi_processing.data_loading as load
 import pandas as pd
 import numpy as np
 
-####### EXPERIMENT ####### # NOQA: E402
+# EXPERIMENT
 
 
 def experiment_info_df(experiment_id):
@@ -121,7 +121,7 @@ def roi_metrics_for_experiment_list(experiment_list, include_failed_rois=True):
     return master_df
 
 
-####### CONTAINER ####### # NOQA: E402
+# CONTAINER
 
 
 def gen_container_manifest(container_id,
@@ -355,7 +355,7 @@ def multi_roi_mask_from_df(roi_metrics_df, roi_id_list, mask_type="binary"):
         print("please specify 'bool' or 'binary' for mask_type")
 
 
-####### UTILS ####### # NOQA: E402
+# UTILS
 
 
 def get_6digit_mouse_id(lims_container_info_df):

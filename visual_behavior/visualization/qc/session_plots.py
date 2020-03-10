@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from visual_behavior.visualization.qc import data_loading as dl
 
 
-################  BEHAVIOR  ################ # NOQA: E402
+# BEHAVIOR
 
 def plot_running_speed(ophys_session_id, ax=None):
     """
