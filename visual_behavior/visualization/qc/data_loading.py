@@ -46,7 +46,7 @@ config = configp.ConfigParser()
 # ophys_container_id
 
 
-################  GENERAL STUFF  ################ # NOQA: E402
+#  GENERAL STUFF
 
 def get_container_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
@@ -60,7 +60,7 @@ def get_experiment_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 
-################  FROM MANIFEST  ################ # NOQA: E402
+#  FROM MANIFEST
 
 def get_qc_manifest_path():
     """Get path to default manifest file for QC"""
@@ -70,7 +70,6 @@ def get_qc_manifest_path():
 
 def get_qc_cache():
     """Get cache using default QC manifest path"""
-    from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
     cache = bpc.from_lims(manifest=get_qc_manifest_path())
     return cache
 
@@ -176,7 +175,7 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     ophys_session_id = lims_experiment_info["ophys_session_id"][0]
     return ophys_session_id
 
-################  FROM SDK  ################ # NOQA: E402
+#  FROM SDK
 
 
 def get_sdk_session_obj(ophys_experiment_id):
@@ -328,10 +327,10 @@ def get_sdk_trials(ophys_session_id):
     return trials
 
 
-################  FROM LIMS DATABASE  ################ # NOQA: E402
+#  FROM LIMS DATABASE
 
 
-####### EXPERIMENT LEVEL ####### # NOQA: E402
+# EXPERIMENT LEVEL
 
 
 def get_lims_experiment_info(ophys_experiment_id):
@@ -485,7 +484,7 @@ def get_lims_cell_rois_table(ophys_experiment_id):
     return lims_cell_rois_table
 
 
-####### CONTAINER  LEVEL ####### # NOQA: E402
+# CONTAINER  LEVEL
 
 
 def get_lims_container_info(ophys_container_id):
@@ -548,7 +547,7 @@ def get_lims_container_info(ophys_container_id):
     return lims_container_info
 
 
-################  FROM LIMS WELL KNOWN FILES  ################ # NOQA: E402
+# FROM LIMS WELL KNOWN FILES
 
 
 def get_timeseries_ini_wkf_info(ophys_session_id):
@@ -780,7 +779,7 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
     return rigid_motion_transform_df
 
 
-################  FROM MTRAIN DATABASE  ################ # NOQA: E402
+# FROM MTRAIN DATABASE
 
 
 def get_mtrain_stage_name(dataframe):
@@ -804,8 +803,6 @@ def build_container_df():
     '''
     build dataframe with one row per container
     '''
-    manifest_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest.json"
-    cache = bpc.from_lims(manifest=manifest_path)
 
     table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition', ascending=False).reset_index()
     container_ids = table['container_id'].unique()

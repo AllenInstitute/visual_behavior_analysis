@@ -10,11 +10,11 @@ get_psql_dict_cursor = convert.get_psql_dict_cursor
 get_lims_data = convert.get_lims_data
 
 
-######################## DATA LOADING ######################## # NOQA: E402
+# DATA LOADING
 
-################  FROM LIMS DATABASE  ################ # NOQA: E402
+# FROM LIMS DATABASE
 
-####### EXPERIMENT ####### # NOQA: E402
+# EXPERIMENT
 
 
 def get_lims_experiment_info(experiment_id):
@@ -78,9 +78,7 @@ def get_lims_experiment_info(experiment_id):
     return lims_experiment_info
 
 
-
-
-####### CONTAINER ####### # NOQA: E402
+# CONTAINER
 
 
 def get_lims_container_info(container_id):
@@ -139,9 +137,7 @@ def get_lims_container_info(container_id):
     return lims_container_info
 
 
-
-
-####### SEGMENTATION ####### # NOQA: E402
+# SEGMENTATION
 
 
 def get_current_segmentation_run_id(experiment_id):
@@ -181,9 +177,7 @@ def get_lims_cell_segmentation_run_info(experiment_id):
     return mixin.select(query)
 
 
-
-
-####### ROI INFORMATION ####### # NOQA: E402
+# ROI INFORMATION
 
 
 def get_lims_cell_rois_table(experiment_id):
@@ -324,9 +318,7 @@ def gen_roi_exclusion_labels_lists(experiment_id):
     return exclusion_list_per_invalid_roi
 
 
-
-
-################  FROM LIMS WELL KNOWN FILES  ################ # NOQA: E402
+# FROM LIMS WELL KNOWN FILES
 
 
 def get_objectlisttxt_location(segmentation_run_id):
@@ -452,11 +444,11 @@ def clean_objectlist_col_labels(objectlist_dataframe):
     return objectlist_dataframe
 
 
+# FROM MTRAIN DATABASE
 
-
-################  FROM MTRAIN DATABASE  ################ # NOQA: E402
 
 mtrain_api = PostgresQueryMixin(dbname="mtrain", user="mtrainreader", host="prodmtrain1", password="r0mTr@!n", port=5432)
+
 
 def get_stage_name_from_mtrain_sqldb(df_with_foraging_id):
     foraging_ids = df_with_foraging_id['foraging_id'][~pd.isnull(df_with_foraging_id['foraging_id'])]
@@ -476,9 +468,7 @@ def get_stage_name_from_mtrain_sqldb(df_with_foraging_id):
     return df_with_foraging_id
 
 
-
-
-################  FROM SDK  ################ # NOQA: E402
+# FROM SDK
 
 
 def get_session_from_sdk(experiment_id):
