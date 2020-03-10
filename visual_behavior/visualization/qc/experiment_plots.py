@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -7,11 +6,10 @@ from visual_behavior.visualization.qc import data_loading as dl
 from visual_behavior.visualization.qc import data_processing as dp
 
 import visual_behavior.database as db
-import visual_behavior.plotting as vbp
 from visual_behavior.utilities import EyeTrackingData
 
 
-################  OPHYS  ################ # NOQA: E402
+# OPHYS
 
 def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
@@ -92,7 +90,7 @@ def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None)
     ax.set_ylabel('pixels')
     return ax
 
-### BEHAVIOR ###
+# BEHAVIOR
 
 
 def make_eye_matrix_plot(ophys_experiment_id, ax):

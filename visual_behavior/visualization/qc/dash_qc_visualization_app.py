@@ -5,12 +5,8 @@ from dash.dependencies import Input, Output
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
-import pandas as pd
-import numpy as np
 import datetime
-import pytz
 import platform
-from flask import send_file
 import datetime
 import base64
 import os
@@ -195,7 +191,7 @@ def highlight_row(row_index, page_current, derived_viewport_indices):
 @app.callback(Output('plot_title_0', 'children'),
               [Input('dropdown', 'value'),
                ])
-def update_frame(plot_types):
+def update_frame_0(plot_types):
     if len(plot_types) >= 1:
         return plot_types[0]
 
@@ -203,7 +199,7 @@ def update_frame(plot_types):
 @app.callback(Output('plot_title_1', 'children'),
               [Input('dropdown', 'value'),
                ])
-def update_frame(plot_types):
+def update_frame_1(plot_types):
     if len(plot_types) >= 2:
         return plot_types[1]
 
@@ -211,7 +207,7 @@ def update_frame(plot_types):
 @app.callback(Output('plot_title_2', 'children'),
               [Input('dropdown', 'value'),
                ])
-def update_frame(plot_types):
+def update_frame_2(plot_types):
     if len(plot_types) >= 3:
         return plot_types[2]
 
@@ -219,7 +215,7 @@ def update_frame(plot_types):
 @app.callback(Output('plot_title_3', 'children'),
               [Input('dropdown', 'value'),
                ])
-def update_frame(plot_types):
+def update_frame_3(plot_types):
     if len(plot_types) >= 4:
         return plot_types[3]
 
@@ -227,7 +223,7 @@ def update_frame(plot_types):
 @app.callback(Output('plot_title_4', 'children'),
               [Input('dropdown', 'value'),
                ])
-def update_frame(plot_types):
+def update_frame_4(plot_types):
     if len(plot_types) >= 5:
         return plot_types[4]
 
@@ -235,7 +231,7 @@ def update_frame(plot_types):
 @app.callback(Output('plot_title_5', 'children'),
               [Input('dropdown', 'value'),
                ])
-def update_frame(plot_types):
+def update_frame_5(plot_types):
     if len(plot_types) >= 6:
         return plot_types[5]
 
@@ -243,7 +239,7 @@ def update_frame(plot_types):
 @app.callback(Output('plot_title_6', 'children'),
               [Input('dropdown', 'value'),
                ])
-def update_frame(plot_types):
+def update_frame_6(plot_types):
     if len(plot_types) >= 7:
         return plot_types[6]
 
@@ -251,7 +247,7 @@ def update_frame(plot_types):
 @app.callback(Output('plot_title_7', 'children'),
               [Input('dropdown', 'value'),
                ])
-def update_frame(plot_types):
+def update_frame_7(plot_types):
     if len(plot_types) >= 8:
         return plot_types[7]
 
@@ -259,7 +255,7 @@ def update_frame(plot_types):
 @app.callback(Output('plot_title_8', 'children'),
               [Input('dropdown', 'value'),
                ])
-def update_frame(plot_types):
+def update_frame_8(plot_types):
     if len(plot_types) >= 9:
         return plot_types[8]
 
@@ -267,7 +263,7 @@ def update_frame(plot_types):
 @app.callback(Output('plot_title_9', 'children'),
               [Input('dropdown', 'value'),
                ])
-def update_frame(plot_types):
+def update_frame_9(plot_types):
     if len(plot_types) >= 10:
         return plot_types[9]
 
@@ -279,7 +275,7 @@ def update_frame(plot_types):
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),
                ])
-def update_frame(row_index, plot_types):
+def update_frame_10(row_index, plot_types):
     if len(plot_types) >= 1:
         plot_type = plot_types[0]
         container_id = container_table.iloc[row_index[0]]['container_id']
@@ -291,7 +287,7 @@ def update_frame(row_index, plot_types):
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),
                ])
-def update_frame(row_index, plot_types):
+def update_frame_11(row_index, plot_types):
     if len(plot_types) >= 2:
         plot_type = plot_types[1]
         container_id = container_table.iloc[row_index[0]]['container_id']
@@ -303,7 +299,7 @@ def update_frame(row_index, plot_types):
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),
                ])
-def update_frame(row_index, plot_types):
+def update_frame_12(row_index, plot_types):
     if len(plot_types) >= 3:
         plot_type = plot_types[2]
         container_id = container_table.iloc[row_index[0]]['container_id']
@@ -315,7 +311,7 @@ def update_frame(row_index, plot_types):
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),
                ])
-def update_frame(row_index, plot_types):
+def update_frame_13(row_index, plot_types):
     if len(plot_types) >= 4:
         plot_type = plot_types[3]
         container_id = container_table.iloc[row_index[0]]['container_id']
@@ -327,7 +323,7 @@ def update_frame(row_index, plot_types):
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),
                ])
-def update_frame(row_index, plot_types):
+def update_frame_14(row_index, plot_types):
     if len(plot_types) >= 5:
         plot_type = plot_types[4]
         container_id = container_table.iloc[row_index[0]]['container_id']
@@ -339,7 +335,7 @@ def update_frame(row_index, plot_types):
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),
                ])
-def update_frame(row_index, plot_types):
+def update_frame_15(row_index, plot_types):
     if len(plot_types) >= 6:
         plot_type = plot_types[5]
         container_id = container_table.iloc[row_index[0]]['container_id']
@@ -351,7 +347,7 @@ def update_frame(row_index, plot_types):
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),
                ])
-def update_frame(row_index, plot_types):
+def update_frame_16(row_index, plot_types):
     if len(plot_types) >= 7:
         plot_type = plot_types[6]
         container_id = container_table.iloc[row_index[0]]['container_id']
@@ -363,7 +359,7 @@ def update_frame(row_index, plot_types):
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),
                ])
-def update_frame(row_index, plot_types):
+def update_frame_17(row_index, plot_types):
     if len(plot_types) >= 8:
         plot_type = plot_types[7]
         container_id = container_table.iloc[row_index[0]]['container_id']
@@ -375,7 +371,7 @@ def update_frame(row_index, plot_types):
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),
                ])
-def update_frame(row_index, plot_types):
+def update_frame_18(row_index, plot_types):
     if len(plot_types) >= 9:
         plot_type = plot_types[8]
         container_id = container_table.iloc[row_index[0]]['container_id']
@@ -387,7 +383,7 @@ def update_frame(row_index, plot_types):
               [Input('data_table', 'selected_rows'),
                Input('dropdown', 'value'),
                ])
-def update_frame(row_index, plot_types):
+def update_frame_19(row_index, plot_types):
     if len(plot_types) >= 10:
         plot_type = plot_types[9]
         container_id = container_table.iloc[row_index[0]]['container_id']

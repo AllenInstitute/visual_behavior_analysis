@@ -1,6 +1,8 @@
 import sys
-sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/nick.ponvert/src/')
 from pbstools import pbstools
+from visual_behavior.visualization.qc import data_loading
+
+sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/nick.ponvert/src/')
 python_executable = r"/home/marinag/anaconda2/envs/visual_behavior_sdk/bin/python"
 python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/visualization/qc/save_all_container_plots.py"
 job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/nick.ponvert/cluster_jobs/vba_qc_plots"
@@ -11,7 +13,7 @@ job_settings = {'queue': 'braintv',
                 'ppn': 1,
                 }
 
-from visual_behavior.visualization.qc import data_loading
+
 container_ids = data_loading.get_filtered_ophys_container_ids()
 
 if __name__ == "__main__":

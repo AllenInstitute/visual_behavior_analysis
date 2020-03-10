@@ -46,7 +46,7 @@ config = configp.ConfigParser()
 # ophys_container_id
 
 
-################  GENERAL STUFF  ################ # NOQA: E402
+#  GENERAL STUFF
 
 def get_container_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
@@ -60,7 +60,7 @@ def get_experiment_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 
-################  FROM MANIFEST  ################ # NOQA: E402
+#  FROM MANIFEST
 
 def get_qc_manifest_path():
     """Get path to default manifest file for QC"""
@@ -176,7 +176,7 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     ophys_session_id = lims_experiment_info["ophys_session_id"][0]
     return ophys_session_id
 
-################  FROM SDK  ################ # NOQA: E402
+#  FROM SDK
 
 
 def get_sdk_session_obj(ophys_experiment_id):
@@ -328,10 +328,10 @@ def get_sdk_trials(ophys_session_id):
     return trials
 
 
-################  FROM LIMS DATABASE  ################ # NOQA: E402
+#  FROM LIMS DATABASE
 
 
-####### EXPERIMENT LEVEL ####### # NOQA: E402
+# EXPERIMENT LEVEL
 
 
 def get_lims_experiment_info(ophys_experiment_id):
@@ -485,7 +485,7 @@ def get_lims_cell_rois_table(ophys_experiment_id):
     return lims_cell_rois_table
 
 
-####### CONTAINER  LEVEL ####### # NOQA: E402
+# CONTAINER  LEVEL
 
 
 def get_lims_container_info(ophys_container_id):
@@ -548,7 +548,7 @@ def get_lims_container_info(ophys_container_id):
     return lims_container_info
 
 
-################  FROM LIMS WELL KNOWN FILES  ################ # NOQA: E402
+# FROM LIMS WELL KNOWN FILES
 
 
 def get_timeseries_ini_wkf_info(ophys_session_id):
@@ -780,7 +780,7 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
     return rigid_motion_transform_df
 
 
-################  FROM MTRAIN DATABASE  ################ # NOQA: E402
+# FROM MTRAIN DATABASE
 
 
 def get_mtrain_stage_name(dataframe):
