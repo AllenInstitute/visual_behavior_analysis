@@ -1,11 +1,11 @@
 import os
-import numpy as np
+# import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import visual_behavior.plotting as vbp
 
 from visual_behavior.visualization import utils as ut
-import visual_behavior.visualization.qc.plotting_utils as pu
+# import visual_behavior.visualization.qc.plotting_utils as pu
 from visual_behavior.visualization.qc import data_loading as dl
 from visual_behavior.visualization.qc import session_plots as sp
 from visual_behavior.visualization.qc import data_processing as dp
@@ -218,6 +218,7 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
 #     container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
 #     exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(container_pmt_settings)
 #     # @KateR: the variable `container_df` is not defined, which is throwing off the linter
+#     # Note that I also commented out the numpy and pu imports above
 #     ophys_experiment_ids = container_df["ophys_experiment_id"].unique()
 #     figsize = (6, 5)
 #     fig, ax = plt.subplots(figsize=figsize)
