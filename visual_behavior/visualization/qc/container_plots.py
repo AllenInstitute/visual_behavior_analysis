@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import visual_behavior.database as db
@@ -109,20 +110,6 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'dff_traces_heatmaps',
                        'container_' + str(ophys_container_id))
 
-# def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
-#     container_df = (dp.passed_experiment_info_for_container(ophys_container_id)).sort_values('stage_name_lims').reset_index(drop=True)
-#     colors = sns.color_palette()
-#     figsize = (7, 5)
-#     fig, ax = plt.subplots(figsize=figsize)
-#     for i, ophys_experiment_id in enumerate(container_df["ophys_experiment_id"].unique()):
-#         ax = ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=ax, color=colors[i])
-#     ax.legend(fontsize='xx-small', title='experiment_id', title_fontsize='xx-small', loc='upper left')
-#     ax.set_title('full field average fluorescence intensity over time')
-#     fig.tight_layout()
-#     if save_figure:
-#         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_intensity_timeseries',
-#                        'container_' + str(ophys_container_id))
-
 
 def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
     container_df = (dp.passed_experiment_info_for_container(ophys_container_id)).sort_values('stage_name_lims').reset_index(drop=True)
@@ -136,6 +123,45 @@ def plot_average_intensity_timeseries_for_container(ophys_container_id, save_fig
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_intensity_timeseries',
+                       'container_' + str(ophys_container_id))
+
+
+def plot_snr_by_pmt_gain_and_intensity_for_container(ophys_container_id, save_figure=True):
+    df = dp.container_FOV_information(ophys_container_id)
+    figsize = (7, 5.5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = plt.scatter(df["pmt_gain"], df["median_rsnr_all_csids"],
+                     c=df["intensity_mean"], s=75,
+                     cmap="cool", edgecolors='k')
+    cbar = plt.colorbar(ax)
+    cbar.set_label('fov mean intensity', rotation=270, labelpad=25)
+    plt.xlabel('pmt gain')
+    plt.ylabel('median rsnr all csids')
+    plt.suptitle("median robust snr all cells by pmt gain")
+    plt.title("container: " + str(ophys_container_id))
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'snr_by_pmt_and_intensity',
+                       'container_' + str(ophys_container_id))
+
+
+def plot_csid_snr_for_container(ophys_container_id, save_figure=True):
+    order_and_stage_name = dp.passed_experiment_info_for_container(ophys_container_id).sort_values('date_of_acquisition').reset_index(drop=True)[["ophys_experiment_id", "stage_name_lims"]].copy()
+    container_snr_table = dp.container_csid_snr_table(ophys_container_id)
+    container_snr_table = pd.merge(container_snr_table, order_and_stage_name, how="left", on="ophys_experiment_id")
+    stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
+    figsize = (6, 8)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.violinplot(x="stage_name_lims", y="robust_snr",
+                        data=container_snr_table.loc[container_snr_table["snr_zscore"] < 3],
+                        palette=stage_color_dict,
+                        order=order_and_stage_name["stage_name_lims"])
+    plt.xticks(rotation=90)
+    plt.xlabel("stage name")
+    plt.ylabel('robust snr for csids')
+    plt.title("robust snr of csids by experiment", pad=5 )
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'csid_snr_by_experiment',
                        'container_' + str(ophys_container_id))
 
 
@@ -157,24 +183,6 @@ def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'number_matched_cells',
-                       'container_' + str(ophys_container_id))
-
-
-def plot_snr_by_pmt_gain_for_container(ophys_container_id, save_figure=True):
-    df = dp.container_FOV_information(ophys_container_id)
-    figsize = (7, 5.5)
-    fig, ax = plt.subplots(figsize=figsize)
-    ax = plt.scatter(df["pmt_gain"], df["median_rsnr_all_csids"],
-                     c=df["intensity_mean"], s=75,
-                     cmap="cool", edgecolors='k')
-    cbar = plt.colorbar(ax)
-    cbar.set_label('fov mean intensity', rotation=270, labelpad=25)
-    plt.xlabel('pmt gain')
-    plt.ylabel('median rsnr all csids')
-    plt.suptitle("median robust snr all cells by pmt gain")
-    plt.title("container: " + str(ophys_container_id))
-    if save_figure:
-        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'snr_by_pmt_and_intensity',
                        'container_' + str(ophys_container_id))
 
 
