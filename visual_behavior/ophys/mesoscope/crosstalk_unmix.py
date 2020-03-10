@@ -1145,6 +1145,7 @@ class MesoscopeICA(object):
         # file already exists, skip unmixing
         if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(
                 plane2_ica_neuropil_output_pointer) and os.path.isfile(ica_mixing_matrix_neuropil_pointer):
+
             self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
             self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
             self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
@@ -1300,7 +1301,7 @@ class MesoscopeICA(object):
                             plt.ylim(raw_y_min, raw_y_max)
                             plt.plot(ica_plane1_sig, 'r-', label='signal plane')
                             plt.plot(ica_plane1_ct, 'g-', label='cross-talk plane')
-                            plt.title(f'post-ica traces, cell # {plane1_roi_names[cell_valid]}')
+                            plt.title(f'post-ica traces, cell # {plane1_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
                             if figsave:
                                 pdf.savefig(f)
@@ -1352,7 +1353,7 @@ class MesoscopeICA(object):
                             plt.ylim(raw_y_min, raw_y_max)
                             plt.plot(ica_plane2_sig, 'r-', label='signal plane')
                             plt.plot(ica_plane2_ct, 'g-', label='cross-talk plane')
-                            plt.title(f'post-ica traces, cell # {plane2_roi_names[cell_valid]}')
+                            plt.title(f'post-ica traces, cell # {plane2_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
                             if figsave:
                                 pdf.savefig(f)
