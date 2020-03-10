@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
 
 import visual_behavior.visualization.qc.plotting_utils as pu
@@ -63,6 +64,20 @@ def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
     ax = ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=0.5)
     ax.set_ylabel('cells')
     ax.set_xlabel('2P frames')
+    return ax
+
+
+def plot_csid_snr_for_experiment(ophys_experiment_id, ax=None):
+    experiment_df = dp.ophys_experiment_info_df(ophys_experiment_id)
+    exp_snr = dp.experiment_cell_specimen_id_snr_table(ophys_experiment_id)
+    exp_snr["stage_name_lims"] = experiment_df["stage_name_lims"][0]
+    exp_stage_color_dict = pu.experiment_id_stage_color_dict_for_experiment(ophys_experiment_id)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(6, 4))
+    ax = sns.violinplot(x="stage_name_lims", y="robust_snr", data=exp_snr.loc[exp_snr["snr_zscore"] < 3],
+                        color=exp_stage_color_dict[ophys_experiment_id])
+    ax.set_ylabel("robust snr")
+    ax.set_xlabel("stage name")
     return ax
 
 
