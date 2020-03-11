@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import visual_behavior.plotting as vbp
 
 from visual_behavior.visualization import utils as ut
-# import visual_behavior.visualization.qc.plotting_utils as pu
 from visual_behavior.visualization.qc import data_loading as dl
 from visual_behavior.visualization.qc import session_plots as sp
+from visual_behavior.visualization.qc import plotting_utils as pu
 from visual_behavior.visualization.qc import data_processing as dp
 from visual_behavior.visualization.qc import experiment_plots as ep
 
@@ -111,12 +111,24 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
 
 
 def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
-    container_df = (dp.passed_experiment_info_for_container(ophys_container_id)).sort_values('stage_name_lims').reset_index(drop=True)
+    """a seaborn timeseries where all passed experiments in a container are plotted.
+        x= is frame number, y = average intensity of the fov and eachc line is an experiment
+        the timeseries lines are colored by the experiment stage name in lims and the 
+        stage name legend is displayed in order of experiment acquisition date
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    container_df = (dp.passed_experiment_info_for_container(ophys_container_id)).sort_values('date_of_acquisition').reset_index(drop=True)
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
     figsize = (9, 5)
     fig, ax = plt.subplots(figsize=figsize)
     for i, ophys_experiment_id in enumerate(container_df["ophys_experiment_id"].unique()):
         ax = ep.plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=ax)
-    ax.legend(fontsize='xx-small', title='stage name', title_fontsize='xx-small',
+    ax.legend(exp_order_and_stage["stage_name_lims"], fontsize='xx-small', title='stage name', title_fontsize='xx-small',
               bbox_to_anchor=(1.01, 1), loc=2)
     ax.set_title('full field average fluorescence intensity over time')
     fig.tight_layout()
@@ -144,24 +156,36 @@ def plot_snr_by_pmt_gain_and_intensity_for_container(ophys_container_id, save_fi
 
 
 def plot_csid_snr_for_container(ophys_container_id, save_figure=True):
-    order_and_stage_name = dp.passed_experiment_info_for_container(ophys_container_id).sort_values('date_of_acquisition').reset_index(drop=True)[["ophys_experiment_id", "stage_name_lims"]].copy()
+    """a seaborn violin plot where x = experiment stage name ordered
+        by experiment acquisition date
+        y= robust snr for all the cell specimen ids in an experiment
+        with the outliers removed
+        the violins are colored by stage name from lims
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container
     container_snr_table = dp.container_csid_snr_table(ophys_container_id)
-    container_snr_table = pd.merge(container_snr_table, order_and_stage_name, how="left", on="ophys_experiment_id")
+    container_snr_table = pd.merge(container_snr_table, exp_order_and_stage, how="left", on="ophys_experiment_id")
     stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
     figsize = (6, 8)
     fig, ax = plt.subplots(figsize=figsize)
     ax = sns.violinplot(x="stage_name_lims", y="robust_snr",
                         data=container_snr_table.loc[container_snr_table["snr_zscore"] < 3],
                         palette=stage_color_dict,
-                        order=order_and_stage_name["stage_name_lims"])
+                        order=exp_order_and_stage["stage_name_lims"])
     plt.xticks(rotation=90)
     plt.xlabel("stage name")
     plt.ylabel('robust snr for csids')
     plt.title("robust snr of csids by experiment", pad=5 )
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'csid_snr_by_experiment',
-                       'container_' + str(ophys_container_id))
+            ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'csid_snr_by_experiment',
+                           'container_' + str(ophys_container_id))
 
 
 def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True):
@@ -222,25 +246,38 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
                        'container_' + str(ophys_container_id))
 
 
-# def plot_PMT_gain_for_container(ophys_container_id, save_figure=True):
-#     container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
-#     exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(container_pmt_settings)
-#     # @KateR: the variable `container_df` is not defined, which is throwing off the linter
-#     # Note that I also commented out the numpy and pu imports above
-#     ophys_experiment_ids = container_df["ophys_experiment_id"].unique()
-#     figsize = (6, 5)
-#     fig, ax = plt.subplots(figsize=figsize)
-#     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-#         pmt_value = dl.get_pmt_gain_for_experiment(ophys_experiment_id)
-#         ax.plot(i, pmt_value, 'o', color=exp_stage_color_dict[ophys_experiment_id])
-#     ax.set_xticks(np.arange(0, len(ophys_experiment_ids)))
-#     ax.set_xticklabels(ophys_experiment_id, rotation=90)
-#     ax.set_ylabel('PMT setting')
-#     ax.set_xlabel('ophys_experiment_id')
-#     ax.set_title('PMT gain setting across experiments')
-#     if save_figure:
-#         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'PMT_gain',
-#                        'container_' + str(ophys_container_id))
+def plot_average_intensity_by_pmt_for_experiments(ophys_container_id, save_figure=True):
+    """seaborn scatter plot where x = pmt gain, y= fov intensity mean
+        and each point is a passed experiment in the container. 
+        The points are colored by their stage name and the legend is stage names
+        displayed in order of acquisition date. 
+    
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+    
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
+    container_intensity_info = dp.container_intensity_mean_and_std(ophys_container_id)
+    df = pd.merge(container_pmt_settings, container_intensity_info, how="left", on=["ophys_experiment_id", "ophys_container_id"])
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    df = pd.merge(df, exp_order_and_stage, how="left", on="ophys_experiment_id")
+    stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
+
+    figsize = (9, 5.5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.scatterplot(x="pmt_gain", y="intensity_mean", data=df,
+                         hue="stage_name_lims", palette=stage_color_dict)
+    ax.legend(exp_order_and_stage["stage_name_lims"], fontsize='xx-small', title='stage name', title_fontsize='xx-small',
+              bbox_to_anchor=(1.01, 1), loc=2)
+    plt.xlabel('pmt gain')
+    plt.ylabel('FOV intensity mean')
+    plt.title("fov intensity mean by pmt gain")
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'fov_ave_intensity_by_pmt',
+                       'container_' + str(ophys_container_id))
 
 
 # BEHAVIOR
