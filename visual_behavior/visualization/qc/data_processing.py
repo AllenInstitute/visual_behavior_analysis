@@ -105,6 +105,7 @@ def passed_experiment_info_for_container(ophys_container_id):
     passed_exp_container = remove_unpassed_experiments(container_info_df)
     return passed_exp_container
 
+
 def experiment_order_and_stage_for_container(ophys_container_id):
     """gets all passed experiments for a container and then sorts them by the
         acquisition date and returns a datafram ewith experiment id and stage name(from lims)
@@ -120,6 +121,7 @@ def experiment_order_and_stage_for_container(ophys_container_id):
     """
     container_exp_order_and_stage = passed_experiment_info_for_container(ophys_container_id).sort_values('date_of_acquisition').reset_index(drop=True)[["ophys_experiment_id", "stage_name_lims"]].copy()
     return container_exp_order_and_stage
+
 
 def calc_retake_number(container_dataframe, stage_name_column="stage_name_mtrain"):
     """calculates the retake number for each stage name
