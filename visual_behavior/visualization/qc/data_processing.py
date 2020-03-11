@@ -105,6 +105,21 @@ def passed_experiment_info_for_container(ophys_container_id):
     passed_exp_container = remove_unpassed_experiments(container_info_df)
     return passed_exp_container
 
+def experiment_order_and_stage_for_container(ophys_container_id):
+    """gets all passed experiments for a container and then sorts them by the
+        acquisition date and returns a datafram ewith experiment id and stage name(from lims)
+        in acquisition date order
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                    "ophys_experiment_id"
+                    "stage_name_lims"
+    """
+    container_exp_order_and_stage = passed_experiment_info_for_container(ophys_container_id).sort_values('date_of_acquisition').reset_index(drop=True)[["ophys_experiment_id", "stage_name_lims"]].copy()
+    return container_exp_order_and_stage
 
 def calc_retake_number(container_dataframe, stage_name_column="stage_name_mtrain"):
     """calculates the retake number for each stage name
@@ -912,31 +927,6 @@ def remove_outliers(dataframe, zscore_column):
     dataframe = dataframe.loc[dataframe[zscore_column] < 3].copy().reset_index(drop=True)
     return dataframe
 
-
-# def container_csid_snr_table(ophys_container_id):
-#     """gets the valid cell_specimen_id dff traces for each experiment
-#         in a container from the sdk dff_traces object and computes a
-#         robust estimate of noise(robust std), signal(median deviation)
-#         and snr(robust signal/robust noise)  for all cell_specimen_ids
-
-#     Arguments:
-#         ophys_experiment_id {[type]} -- [description]
-
-#     Returns:
-#         dataframe -- dataframe with the following columns:
-#                     "cell_specimen_id":
-#                     "ophys_experiment_id":
-#                     "dff":
-#                     "robust_noise":
-#                     "robust_signal":
-#                     "robust_snr":
-#                     "snr_zscore":
-#     """
-#     container_dff_traces = valid_sdk_dff_traces_container(ophys_container_id)
-#     container_dff_traces = compute_robust_snr_on_dataframe(container_dff_traces)
-#     # container_dff_traces["snr_zscore"] = np.abs(stats.zscore(container_dff_traces["robust_snr"])) #dont use because computes zscore on all csids in a container and not just in an experiment
-#     container_dff_traces.loc[:, "ophys_container_id"] = ophys_container_id
-#     return container_dff_traces
 
 def container_csid_snr_table(ophys_container_id):
     """gets all the passed ophys_experiment_ids for a container
