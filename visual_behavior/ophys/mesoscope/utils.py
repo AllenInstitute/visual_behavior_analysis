@@ -518,3 +518,81 @@ def run_dff_on_ica(session, an_dir=CACHE):
     return
 
 
+def clean_up_cache(sessions, cache):
+    for session in sessions:
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=cache)
+        ses_dir = os.path.join(ica_obj.session_cache_dir, f'session_{session}')
+        if os.path.isdir(ses_dir):
+            pairs = ica_obj.dataset.get_paired_planes()
+            for pair in pairs:
+                # cleaning up neuropil directory
+                np = 'ica_neuropil'
+                exp_np_dir = os.path.join(ses_dir, f'{np}_{pair[0]}_{pair[1]}')
+                if os.path.isdir(exp_np_dir):
+                    ica_np_output_p1 = os.path.join(exp_np_dir, f'neuropil_ica_output_{pair[0]}.h5')
+                    ica_np_output_p2 = os.path.join(exp_np_dir, f'neuropil_ica_output_{pair[1]}.h5')
+                    valid_p1 = os.path.join(exp_np_dir, f'valid_{pair[0]}.json')
+                    valid_p2 = os.path.join(exp_np_dir, f'valid_{pair[1]}.json')
+                    mixing = os.path.join(exp_np_dir, f'neuropil_ica_mixing.h5')
+                    if os.path.isfile(ica_np_output_p1):
+                        os.remove(ica_np_output_p1)
+                    if os.path.isfile(ica_np_output_p2):
+                        os.remove(ica_np_output_p2)
+                    if os.path.isfile(valid_p1):
+                        os.remove(valid_p1)
+                    if os.path.isfile(valid_p2):
+                        os.remove(valid_p2)
+                    if os.path.isfile(mixing):
+                        os.remove(mixing)
+                # cleaning up roi traces directory:
+                roi = 'ica_traces'
+                exp_roi_dir = os.path.join(ses_dir, f'{roi}_{pair[0]}_{pair[1]}')
+                if os.path.isdir(exp_roi_dir):
+                    ica_roi_output_p1 = os.path.join(exp_roi_dir, f'{roi}_output_{pair[0]}.h5')
+                    ica_roi_output_p2 = os.path.join(exp_roi_dir, f'{roi}_output_{pair[1]}.h5')
+                    valid_p1 = os.path.join(exp_roi_dir, f'valid_{pair[0]}.json')
+                    valid_p2 = os.path.join(exp_roi_dir, f'valid_{pair[1]}.json')
+                    mixing = os.path.join(exp_roi_dir, f'{roi}_mixing.h5')
+                    if os.path.isfile(ica_roi_output_p1):
+                        os.remove(ica_roi_output_p1)
+                    if os.path.isfile(ica_roi_output_p2):
+                        os.remove(ica_roi_output_p2)
+                    if os.path.isfile(valid_p1):
+                        os.remove(valid_p1)
+                    if os.path.isfile(valid_p2):
+                        os.remove(valid_p2)
+                    if os.path.isfile(mixing):
+                        os.remove(mixing)
+                    ica_plots_p1 = os.path.join(exp_roi_dir, f'ica_plots_{pair[0]}')
+                    ica_plots_p2 = os.path.join(exp_roi_dir, f'ica_plots_{pair[1]}')
+                    if os.path.isdir(ica_plots_p1):
+                        shutil.rmtree(ica_plots_p1, ignore_errors=True)
+                    if os.path.isdir(ica_plots_p2):
+                        shutil.rmtree(ica_plots_p2, ignore_errors=True)
+                # removing LIMS processing outputs:
+                dem_out_p1 = os.path.join(ses_dir, f'demixing_{pair[0]}')
+                dem_out_p2 = os.path.join(ses_dir, f'demixing_{pair[1]}')
+                np_out_p1 = os.path.join(ses_dir, f'neuropil_corrected_{pair[0]}')
+                np_out_p2 = os.path.join(ses_dir, f'neuropil_corrected_{pair[1]}')
+                dff_p1 = os.path.join(ses_dir, f'{pair[0]}_dff.h5')
+                dff_p2 = os.path.join(ses_dir, f'{pair[1]}_dff.h5')
+                # easy removing dff files
+                if os.path.isfile(dff_p1):
+                    os.remove(dff_p1)
+                if os.path.isfile(dff_p2):
+                    os.remove(dff_p2)
+                # removing directorires for demixing plane 1
+                if os.path.isdir(dem_out_p1):
+                    shutil.rmtree(dem_out_p1, ignore_errors=True)
+                # removing directorires for demixing plane 2
+                if os.path.isdir(dem_out_p2):
+                    shutil.rmtree(dem_out_p2, ignore_errors=True)
+                # removing directorires for neuropil correction plane 1
+                if os.path.isdir(np_out_p1):
+                    shutil.rmtree(np_out_p1, ignore_errors=True)
+                # removing directorires for neuropil correction plane 2
+                if os.path.isdir(np_out_p2):
+                    shutil.rmtree(np_out_p2, ignore_errors=True)
+    return
+
+

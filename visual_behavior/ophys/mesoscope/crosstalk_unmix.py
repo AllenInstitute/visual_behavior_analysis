@@ -169,23 +169,23 @@ class MesoscopeICA(object):
         session_dir = self.set_analysis_session_dir()
         self.ica_traces_dir = os.path.join(session_dir, f'ica_traces_{pair[0]}_{pair[1]}/')
         self.plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                      f'traces_ica_output_{pair[0]}.h5')
+                                                      f'ica_traces_output_{pair[0]}.h5')
         self.plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
 
-                                                      f'traces_ica_output_{pair[1]}.h5')
+                                                      f'ica_traces_output_{pair[1]}.h5')
         self.ica_mixing_matrix_pointer = os.path.join(self.ica_traces_dir,
-                                                      f'traces_ica_mixing.h5')
+                                                      f'ica_traces_mixing.h5')
         return
 
-    def set_neuropil_ica_dir(self, pair):
+    def set_ica_neuropil_dir(self, pair):
         session_dir = self.set_analysis_session_dir()
         self.ica_neuropil_dir = os.path.join(session_dir, f'ica_neuropil_{pair[0]}_{pair[1]}/')
 
         self.plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                               f'neuropil_ica_output_{pair[0]}.h5')
+                                                               f'ica_neuropil_output_{pair[0]}.h5')
         self.plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                               f'neuropil_ica_output_{pair[1]}.h5')
-        self.ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir, f'neuropil_ica_mixing.h5')
+                                                               f'ica_neuropil_output_{pair[1]}.h5')
+        self.ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir, f'ica_neuropil_mixing.h5')
 
         return
 
@@ -504,8 +504,8 @@ class MesoscopeICA(object):
         self.plane1_ica_input_pointer = None
         self.plane2_ica_input_pointer = None
 
-        plane1_ica_input_pointer = os.path.join(self.ica_traces_dir, f'traces_ica_input_{self.plane1_exp_id}.h5')
-        plane2_ica_input_pointer = os.path.join(self.ica_traces_dir, f'traces_ica_input_{self.plane2_exp_id}.h5')
+        plane1_ica_input_pointer = os.path.join(self.ica_traces_dir, f'ica_traces_input_{self.plane1_exp_id}.h5')
+        plane2_ica_input_pointer = os.path.join(self.ica_traces_dir, f'ica_traces_input_{self.plane2_exp_id}.h5')
 
         if os.path.isfile(plane1_ica_input_pointer) and os.path.isfile(plane2_ica_input_pointer):
             # file already exists, skip debiasing
@@ -645,9 +645,9 @@ class MesoscopeICA(object):
         self.plane2_ica_neuropil_input_pointer = None
 
         plane1_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
-                                                         f'neuropil_ica_input_{self.plane1_exp_id}.h5')
+                                                         f'ica_neuropil_input_{self.plane1_exp_id}.h5')
         plane2_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
-                                                         f'neuropil_ica_input_{self.plane2_exp_id}.h5')
+                                                         f'ica_neuropil_input_{self.plane2_exp_id}.h5')
 
         if os.path.isfile(plane1_ica_neuropil_input_pointer) and os.path.isfile(plane2_ica_neuropil_input_pointer):
             # file already exists, skip debiasing
@@ -789,11 +789,11 @@ class MesoscopeICA(object):
     def unmix_traces_mod(self, max_iter=50):
 
         plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'traces_ica_output_{self.plane1_exp_id}.h5')
+                                                 f'ica_traces_output_{self.plane1_exp_id}.h5')
         plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'traces_ica_output_{self.plane2_exp_id}.h5')
+                                                 f'ica_traces_output_{self.plane2_exp_id}.h5')
         ica_mixing_matrix_traces_pointer = os.path.join(self.ica_traces_dir,
-                                                        f'traces_ica_mixing.h5')
+                                                        f'ica_traces_mixing.h5')
         # file already exists, skip unmixing
         if os.path.isfile(plane1_ica_output_pointer) and os.path.isfile(plane2_ica_output_pointer) and os.path.isfile(
                 ica_mixing_matrix_traces_pointer):
@@ -904,11 +904,11 @@ class MesoscopeICA(object):
     def unmix_traces(self, max_iter=50):
 
         plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'traces_ica_output_{self.plane1_exp_id}.h5')
+                                                 f'ica_traces_output_{self.plane1_exp_id}.h5')
         plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'traces_ica_output_{self.plane2_exp_id}.h5')
+                                                 f'ica_traces_output_{self.plane2_exp_id}.h5')
         ica_mixing_matrix_traces_pointer = os.path.join(self.ica_traces_dir,
-                                                        f'traces_ica_mixing.h5')
+                                                        f'ica_traces_mixing.h5')
         # file already exists, skip unmixing
         if os.path.isfile(plane1_ica_output_pointer) and os.path.isfile(plane2_ica_output_pointer) and os.path.isfile(
                 ica_mixing_matrix_traces_pointer):
@@ -1050,11 +1050,11 @@ class MesoscopeICA(object):
     def unmix_neuropil_mod(self, max_iter=50):
 
         plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'neuropil_ica_output_{self.plane1_exp_id}.h5')
+                                                          f'ica_neuropil_output_{self.plane1_exp_id}.h5')
         plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'neuropil_ica_output_{self.plane2_exp_id}.h5')
+                                                          f'ica_neuropil_output_{self.plane2_exp_id}.h5')
         ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'neuropil_ica_mixing.h5')
+                                                          f'ica_neuropil_mixing.h5')
 
         # file already exists, skip unmixing
         if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(
@@ -1170,11 +1170,11 @@ class MesoscopeICA(object):
     def unmix_neuropil(self, max_iter=10):
 
         plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'neuropil_ica_output_{self.plane1_exp_id}.h5')
+                                                          f'ica_neuropil_output_{self.plane1_exp_id}.h5')
         plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'neuropil_ica_output_{self.plane2_exp_id}.h5')
+                                                          f'ica_neuropil_output_{self.plane2_exp_id}.h5')
         ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'neuropil_ica_mixing.h5')
+                                                          f'ica_neuropil_mixing.h5')
 
         # file already exists, skip unmixing
         if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(
@@ -1491,15 +1491,15 @@ class MesoscopeICA(object):
 
 
     @staticmethod
-    def ica_err(scale, traces_ica, trace_orig):
+    def ica_err(scale, ica_traces, trace_orig):
         """
         calculate difference of standard deviation between post- and pre-ICA traces:
         :param scale: scaling factor - used to optimize
-        :param traces_ica: post-ica trace
+        :param ica_traces: post-ica trace
         :param trace_orig: raw trace
         :return:
         """
-        return np.sqrt((traces_ica * scale[0] - trace_orig) ** 2).mean()
+        return np.sqrt((ica_traces * scale[0] - trace_orig) ** 2).mean()
 
     @staticmethod
     def get_valid_seg_run(exp_id):
