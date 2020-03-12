@@ -1,18 +1,6 @@
-import warnings
-
 from . import extended_trials as et
 from . import core as cd
 from ..translator.core import create_extended_dataframe
-
-functions_yet_to_implement = [
-
-]
-warnings.warn('The following are turned off; remove this warning when done {}'.format(
-    '\n' +
-    ' * validate_schema' + '\n' +
-    ' * validate_monotonically_decreasing_number_of_change_times' + '\n' +
-    ' * validate_frame_intervals_exists'
-))
 
 
 def define_validation_functions(core_data):
@@ -20,12 +8,7 @@ def define_validation_functions(core_data):
     creates a dictionary containing all validation functions as keys, input arguments as values
     '''
 
-    trials = create_extended_dataframe(
-        trials=core_data['trials'],
-        metadata=core_data['metadata'],
-        licks=core_data['licks'],
-        time=core_data['time'],
-    )
+    trials = create_extended_dataframe(**core_data)
 
     AUTO_REWARD_VOLUME = core_data['metadata']['auto_reward_vol']
     PRE_CHANGE_TIME = core_data['metadata']['delta_minimum']
@@ -48,6 +31,14 @@ def define_validation_functions(core_data):
 
     PERIODIC_FLASH = core_data['metadata']['periodic_flash']
 
+    # When checking validate_flash_blank_durations, we need to send only the periodic flash stimuli
+    # presented during trials, and not the movie stimuli that can be included at the end of
+    # sessions. We also want to exclude any countdown stimuli from before the first trial starts.
+
+    # Boolean array for selecting stimuli that were presented as part of a trial
+    trial_stimuli = ((core_data['visual_stimuli']['frame'] >= core_data['trials'].iloc[0]['startframe']) &
+                     (core_data['visual_stimuli']['end_frame'] <= core_data['trials'].iloc[-1]['endframe'])).values
+
     validation_functions = {
         # et.validate_schema
         et.validate_autoreward_volume: (trials, AUTO_REWARD_VOLUME,),
@@ -59,10 +50,10 @@ def define_validation_functions(core_data):
         et.validate_intial_and_final_in_non_aborted: (trials,),
         et.validate_min_change_time: (trials, PRE_CHANGE_TIME,),
         et.validate_max_change_time: (trials, PRE_CHANGE_TIME, STIMULUS_WINDOW, DISTRIBUTION),
-        et.validate_reward_when_lick_in_window: (trials,),
+        et.validate_reward_when_lick_in_window: (core_data,),
         et.validate_licks_near_every_reward: (trials, ),
         et.validate_never_more_than_one_reward: (trials,),
-        et.validate_lick_after_scheduled_on_go_catch_trials: (trials, ABORT_ON_EARLY_RESPONSE, DISTRIBUTION),
+        et.validate_lick_after_scheduled_on_go_catch_trials: (core_data, ABORT_ON_EARLY_RESPONSE, DISTRIBUTION),
         et.validate_initial_matches_final: (trials,),
         et.validate_first_lick_after_change_on_nonaborted: (trials, ABORT_ON_EARLY_RESPONSE),
         et.validate_trial_ends_without_licks: (trials, MIN_NO_LICK_TIME,),
@@ -89,7 +80,12 @@ def define_validation_functions(core_data):
         et.validate_change_frame_at_flash_onset: (trials, core_data['visual_stimuli'], PERIODIC_FLASH,),
         et.validate_initial_blank: (trials, core_data['visual_stimuli'], core_data['omitted_stimuli'], INITIAL_BLANK, PERIODIC_FLASH),
         et.validate_new_params_on_nonaborted_trials: (trials, DISTRIBUTION),
-        et.validate_flash_blank_durations: (core_data['visual_stimuli'], core_data['omitted_stimuli'], PERIODIC_FLASH,),  # this one doesn't take trials
+        et.validate_flash_blank_durations: (
+            core_data['visual_stimuli'][trial_stimuli].copy(),
+            core_data['omitted_stimuli'], PERIODIC_FLASH,
+        ),  # this one doesn't take trials
+        et.validate_aborted_change_time: (trials,),
+        cd.validate_reward_follows_first_lick_in_window: (core_data,),
         cd.validate_lick_before_scheduled_on_aborted_trials: (core_data,),
         cd.validate_running_data: (core_data,),  # this one doesn't take trials
         cd.validate_licks: (core_data, LICK_SPOUT_PRESENT),  # this one doesn't take trials
@@ -97,6 +93,7 @@ def define_validation_functions(core_data):
         # f2.validate_frame_intervals_exists:(data), # this one doesn't take trials
         cd.validate_no_read_errors: (core_data,),
         cd.validate_omitted_flashes_are_omitted: (core_data, ),
+        cd.validate_encoder_voltage: (core_data, ),
     }
 
     return validation_functions

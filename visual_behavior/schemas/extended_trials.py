@@ -77,9 +77,11 @@ class ExtendedTrialSchema(TrialSchema):
     )
     reward_lick_latency = fields.Float(
         allow_none=True,
+        allow_nan=True,
     )
     reward_rate = fields.Float(
         allow_none=True,
+        allow_nan=True,
     )
     rig_id = fields.String(
         required=True,

@@ -53,3 +53,6 @@ upload: bdist_wheel
 
 run-interactive:
 	docker run -it $(PKG):latest
+
+tox-lite:
+	tox -- -k "not slow" --durations=0

@@ -4,26 +4,29 @@ import setuptools
 
 setuptools.setup(
     name="visual-behavior",
-    version="0.5.0.a4",
+    version="0.7.0",
     author="Justin Kiggins",
     author_email="justink@alleninstitute.org",
     description="analysis package for visual behavior",
     packages=setuptools.find_packages(exclude=['data', 'figures', 'notebooks', 'scripts']),
     install_requires=[
         "matplotlib",
-        "pandas",
+        "pandas==0.25.3",
         "six",
         "scikit-learn>=0.19.2",
         "scipy>=1.0.0",
         "deepdish>=0.3.6",
-        "numpy>=1.9.0",  # for science some packages need to be pinned
+        "numpy>=1.9.0",
         "python-dateutil",
-        "marshmallow==3.0.0b11",
-        "psycopg2",
+        "marshmallow==3.0.0rc4",
+        "psycopg2-binary",
         "seaborn",
         'zipfile2; python_version < "3.5"',
         'zipfile36; python_version >= "3.5"',
-
+        'opencv-python',
+        'pymongo',
+        'pyyaml',
+        'h5py>=2.7.1',
     ],
     tests_require=[
         "flake8",
