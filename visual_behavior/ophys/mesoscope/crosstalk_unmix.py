@@ -20,14 +20,18 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 IMAGEH, IMAGEW = 512, 512
+CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'processed/%s_input_extract_traces.json']
 
-#CELL_EXTRACT_JSON_FORMAT = f'OPHYS_EXTRACT_TRACES_QUEUE_{movie_id}_input.json'
 
 def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
-
-    jin_movie_path = os.path.join(movie_exp_dir, f"OPHYS_EXTRACT_TRACES_QUEUE_{movie_exp_id}_input.json")
-
-    jin_mask_path = os.path.join(mask_exp_dir, f"OPHYS_EXTRACT_TRACES_QUEUE_{mask_exp_id}_input.json")
+    for filename in CELL_EXTRACT_JSON_FORMAT:
+        jin_movie_path = os.path.join(movie_exp_dir, filename % movie_exp_id)
+        jin_mask_path = os.path.join(mask_exp_dir, filename % mask_exp_id)
+        print(f'checking filenames : {jin_movie_path}, {jin_mask_path}')
+        if os.path.isfile(jin_movie_path) and os.path.isfile(jin_mask_path):
+            break
+    else:
+        logger.error('Cell extract json does not exist')
 
     with open(jin_movie_path, "r") as f:
         jin_movie = json.load(f)
