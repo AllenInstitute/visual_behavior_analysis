@@ -1,4 +1,6 @@
---extra-index-url https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple
+scikit-image
+psutil
+tifffile
 allensdk==1.5.0; python_version >= '3.0'
 six>=1.11.0
 numpy>=1.15.4
