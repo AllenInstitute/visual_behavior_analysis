@@ -21,7 +21,6 @@ def test_dump_load_schema(exemplar_extended_trials_fixture):
         many=True,
     )
 
-    # # print exemplar_extended_trials_records[0]['startdatetime'], deserialized_extended_trials_records[0]['startdatetime']
     assert exemplar_extended_trials_records[0] == deserialized_extended_trials_records[0]
 
     deserialized_extended_trials = pd.DataFrame(deserialized_extended_trials_records)

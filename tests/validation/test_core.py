@@ -74,6 +74,59 @@ def test_validate_running_data():
     assert validate_running_data(BAD_DATA) == False
 
 
+def test_validate_reward_follows_first_lick_in_window():
+    core_data = {}
+    core_data['metadata'] = {}
+    core_data['metadata']['response_window'] = (0.15, 0.75)
+    change_times = np.arange(0, 60, 10)
+    core_data['trials'] = pd.DataFrame({
+        'change_time': np.arange(0, 60, 10),
+        'lick_times': [[ct + 0.2, ct + 0.3] for ct in change_times],
+        'reward_times': [[ct + 0.2005] for ct in change_times],
+        'rewarded': [True for ct in change_times],
+        'auto_rewarded': [False for ct in change_times],
+    })
+    GOOD_DATA = core_data
+    assert validate_reward_follows_first_lick_in_window(core_data) == True
+
+    # delay one reward to turn the data into bad data (there would now be a 200.5 ms delay between lick and reward)
+    core_data['trials'].at[3, 'reward_times'] = [rt + 0.2 for rt in core_data['trials'].at[3, 'reward_times']]
+    BAD_DATA = core_data
+    assert validate_reward_follows_first_lick_in_window(core_data) == False
+
+
+def test_validate_encoder_voltage():
+    # good data: spans range from 0 to 5V
+    GOOD_DATA = {'running': pd.DataFrame({'v_sig': np.arange(0, 5, 0.1)})}
+    assert validate_encoder_voltage(GOOD_DATA) == True
+
+    # bad data: spans a smaller range from 1-3V
+    BAD_DATA = {'running': pd.DataFrame({'v_sig': np.arange(1, 3, 0.1)})}
+    assert validate_encoder_voltage(BAD_DATA) == False
+
+    # good data, monotonically increasing with resets at 5V
+    arr = np.hstack((
+        np.arange(0, 5, 0.1),
+        np.arange(0, 5, 0.1),
+        np.arange(0, 5, 0.1),
+        np.arange(0, 5, 0.1),
+    ))
+    GOOD_DATA = {'running': pd.DataFrame({'v_sig': arr})}
+    assert validate_encoder_voltage(GOOD_DATA) == True
+
+    # bad data: oscillating around the 0/5V transition
+    arr = np.hstack((
+        0.01 * np.ones(10),
+        5 * np.ones(10),
+        0.01 * np.ones(10),
+        5 * np.ones(10),
+        0.01 * np.ones(10),
+        5 * np.ones(10),
+    ))
+    BAD_DATA = {'running': pd.DataFrame({'v_sig': arr})}
+    assert validate_encoder_voltage(BAD_DATA) == False
+
+
 def test_validate_licks():
     GOOD_DATA = {}
     GOOD_DATA['licks'] = pd.DataFrame({

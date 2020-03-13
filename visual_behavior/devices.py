@@ -1,5 +1,9 @@
 from six import iteritems
+import datetime
 
+# These mappings between computer name and rig name broke when computers
+# were updated by MPE, and are only valid before this date.
+VALID_BEFORE_DATE = datetime.datetime(2019, 5, 1)
 
 RIG_NAME = {
     'W7DTMJ19R2F': 'A1',
@@ -34,6 +38,7 @@ RIG_NAME = {
     'W7VS-SYSLOGIC35': 'E5',
     'W7VS-SYSLOGIC36': 'E6',
     'W7DT102905': 'F1',
+    'W10DT102905': 'F1',
     'W7DT102904': 'F2',
     'W7DT102903': 'F3',
     'W7DT102914': 'F4',
@@ -54,7 +59,11 @@ RIG_NAME = {
     'W7DT2P3STiM': '2P3',
     'W7DT2P4STIM': '2P4',
     'W7DT2P5STIM': '2P5',
+    'W10DTSM112721': 'NP0',
+    'W10DTSM118294': 'NP1',
+    'W10DTSM118295': 'NP2',
     'W10DTSM118296': 'NP3',
+    'W10DTSM118293': 'NP4',
     'meso1stim': 'MS1',
     'localhost': 'localhost'
 }
@@ -69,13 +78,21 @@ def get_rig_id(computer_name):
     '''
     This provides a map between the computer name and the rig ID.
 
-    >>> get_rig_id('W7DTMJ19R2F')
-    A1
+    For data files generated before the release of camstim 5.1 , the rig ID
+    is not included and instead must be determined by using the computer name.
+    For data produced after, the rig ID is included in the pkl file and should
+    not be determined by using this function. On 2019-05-01 the names of the
+    computers began to change, and so any attempt to use this function to determine
+    rig names from computer names for data generated after this date will fail.
 
     Parameters
     ----------
-    in_val : str
-        computer name
+    computer_name : str
+        The name of the computer that collected the behavior data
+
+    >>> get_rig_id('W7DTMJ19R2F')
+    A1
+
     '''
 
     return RIG_NAME.get(computer_name.lower(), 'unknown')
