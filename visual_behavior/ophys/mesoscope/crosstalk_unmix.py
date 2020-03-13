@@ -24,10 +24,17 @@ CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'process
 
 
 def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
+    """
+    Functions to read existing traces from LIMS
+    :param movie_exp_dir: str, LIMS directory for the movie to apply ROIS masks to
+    :param movie_exp_id: int,  LIMS experiment ID for the movie
+    :param mask_exp_dir: LIMS directory to read masks file from
+    :param mask_exp_id: LIMS experiment ID for the rois amsk file
+    :return: traces, neuropil traces, roi_names
+    """
     for filename in CELL_EXTRACT_JSON_FORMAT:
         jin_movie_path = os.path.join(movie_exp_dir, filename % movie_exp_id)
         jin_mask_path = os.path.join(mask_exp_dir, filename % mask_exp_id)
-        print(f'checking filenames : {jin_movie_path}, {jin_mask_path}')
         if os.path.isfile(jin_movie_path) and os.path.isfile(jin_mask_path):
             break
     else:
@@ -38,9 +45,7 @@ def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
 
     motion_border = jin_movie.get("motion_border", [])
     motion_border = [motion_border["x0"], motion_border["x1"], motion_border["y0"], motion_border["y1"], ]
-
     movie_h5 = jin_movie["motion_corrected_stack"]
-
     with h5py.File(movie_h5, "r") as f:
         d = f["data"]
         h = d.shape[1]
@@ -60,6 +65,14 @@ def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
 
 
 def create_roi_masks(rois, w, h, motion_border):
+    """
+    create roi masks from roi list, width, height and motion border
+    :param rois:
+    :param w:
+    :param h:
+    :param motion_border:
+    :return:
+    """
     roi_list = []
     for roi in rois:
         mask = np.array(roi["mask"], dtype=bool)
@@ -71,7 +84,6 @@ def create_roi_masks(rois, w, h, motion_border):
                                          pix_list=px[:, [1, 0]],
                                          label=str(roi["id"]),
                                          mask_group=roi.get("mask_page", -1))
-
         roi_list.append(mask)
     # sort by roi id
     roi_list.sort(key=lambda x: x.label)
@@ -86,42 +98,8 @@ class MesoscopeICA(object):
         self.dataset = ms.MesoscopeDataset(session_id)
         self.session_cache_dir = cache
 
-        # self.plane1_exp_id = None
-        # self.plane2_exp_id = None
-        #
-        # self.ica_traces_dir = None
-        # self.ica_neuropil_dir = None
         self.found_original_traces = None  # output of get_traces
         self.found_original_neuropil = None  # output of get_traces
-
-        # self.plane1_traces_orig = None
-        # self.plane1_neuropil_orig = None
-        # self.plane1_traces_orig_pointer = None
-        # self.plane1_neuropil_orig_pointer = None
-        # self.plane1_ica_input = None
-        # self.plane1_ica_neuropil_input = None
-        # self.plane1_ica_input_pointer = None
-        # self.plane1_ica_neuropil_input_pointer = None
-        # self.plane1_ica_output = None
-        # self.plane1_ica_neuropil_output = None
-        # self.plane1_ica_output_pointer = None
-        # self.plane1_ica_neuropil_output_pointer = None
-
-        # self.plane2_traces_orig = None  # output of get_traces
-        # self.plane2_neuropil_orig = None
-        # self.plane2_traces_orig_pointer = None
-        # self.plane2_neuropil_orig_pointer = None
-        # self.plane2_ica_input = None  # output of combine_debiase
-        # self.plane2_ica_neuropil_input = None
-        # self.plane2_ica_input_pointer = None
-        # self.plane2_ica_neuropil_input_pointer = None
-        # self.plane2_ica_output = None  # output of unmix_traces
-        # self.plane2_ica_neuropil_output = None
-        # self.plane2_ica_output_pointer = None
-        # self.plane2_ica_neuropil_output_pointer = None
-
-        # self.ica_mixing_matrix_traces_pointer = None
-        # self.ica_mixing_matrix_neuropil_pointer = None
 
         self.plane1_offset = None
         self.plane2_offset = None
@@ -179,6 +157,7 @@ class MesoscopeICA(object):
                                                       f'ica_traces_output_{pair[1]}.h5')
         self.ica_mixing_matrix_pointer = os.path.join(self.ica_traces_dir,
                                                       f'ica_traces_mixing.h5')
+
         return
 
     def set_ica_neuropil_dir(self, pair):
@@ -790,121 +769,6 @@ class MesoscopeICA(object):
             logger.error('Extract neuropil traces first')
         return
 
-    def unmix_traces_mod(self, max_iter=50):
-
-        plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'ica_traces_output_{self.plane1_exp_id}.h5')
-        plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'ica_traces_output_{self.plane2_exp_id}.h5')
-        ica_mixing_matrix_traces_pointer = os.path.join(self.ica_traces_dir,
-                                                        f'ica_traces_mixing.h5')
-        # file already exists, skip unmixing
-        if os.path.isfile(plane1_ica_output_pointer) and os.path.isfile(plane2_ica_output_pointer) and os.path.isfile(
-                ica_mixing_matrix_traces_pointer):
-            self.plane1_ica_output_pointer = plane1_ica_output_pointer
-            self.plane2_ica_output_pointer = plane2_ica_output_pointer
-            self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
-        else:
-            self.plane1_ica_output_pointer = None
-            self.plane2_ica_output_pointer = None
-            self.ica_mixing_matrix_traces_pointer = None
-
-        if (self.plane1_ica_output_pointer is None) or (self.plane2_ica_output_pointer is None):
-            # if unmixed traces don't exist, run unmixing
-            if np.any(np.isnan(self.plane1_ica_input)) or np.any(np.isinf(self.plane1_ica_input)) or np.any(
-                    np.isnan(self.plane2_ica_input)) or np.any(np.isinf(self.plane2_ica_input)):
-                logger.info("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
-            else:
-                logger.info("unmixed traces do not exist in cache, running ICA")
-                traces = np.array([self.plane1_ica_input, self.plane2_ica_input]).T
-                self.found_solution = False
-                for i in range(max_iter):
-                    ica = FastICA(n_components=2)
-                    s = ica.fit_transform(traces)  # Reconstruct signals
-                    a = ica.mixing_  # Get estimated mixing matrix
-                    if (np.all(a > 0)) & (a[0][0] > a[1][0]):
-                        self.found_solution = True
-                        logger.info("ICA successful")
-                        self.traces_matrix = a
-                        self.traces_unmix = s
-                        break
-                if not self.found_solution:
-                    logger.error("Failed to find solution, try increasing `max_iter`")
-
-            if self.found_solution:
-                # rescaling traces back:
-                self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_traces()
-
-                plane1_ica_output = self.traces_unmix[:, 0] * self.ica_traces_scale_top
-                plane2_ica_output = self.traces_unmix[:, 1] * self.ica_traces_scale_bot
-
-                # reshaping traces
-                plane1_new_shape = [int(plane1_ica_output.shape[0] / self.plane1_traces_orig.shape[2]),
-                                    self.plane1_traces_orig.shape[2]]
-                plane1_ica_output = plane1_ica_output.reshape(plane1_new_shape)
-
-                plane2_new_shape = [int(plane2_ica_output.shape[0] / self.plane2_traces_orig.shape[2]),
-                                    self.plane2_traces_orig.shape[2]]
-                plane2_ica_output = plane2_ica_output.reshape(plane2_new_shape)
-
-                #
-                plane1_valid_shape = np.array(
-                    [self.plane1_roi_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
-                plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
-                plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
-
-                plane2_valid_shape = np.array(
-                    [self.plane2_roi_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
-                plane2_out_ct = plane1_ica_output[
-                                plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-                plane2_out_sig = plane2_ica_output[
-                                 plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-
-                # adding offset
-                plane1_out_sig = plane1_out_sig + self.plane1_offset['plane1_sig_offset']
-                plane1_out_ct = plane1_out_ct + self.plane1_offset['plane1_ct_offset']
-
-                plane2_out_sig = plane2_out_sig + self.plane2_offset['plane2_sig_offset']
-                plane2_out_ct = plane2_out_ct + self.plane2_offset['plane2_ct_offset']
-
-                plane1_ica_output = np.array([plane1_out_sig, plane1_out_ct])
-                plane2_ica_output = np.array([plane2_out_sig, plane2_out_ct])
-
-                self.plane1_ica_output = plane1_ica_output
-                self.plane2_ica_output = plane2_ica_output
-
-                self.plane1_ica_output_pointer = plane1_ica_output_pointer
-                self.plane2_ica_output_pointer = plane2_ica_output_pointer
-                self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
-
-                # writing ica output traces to disk
-                with h5py.File(self.plane1_ica_output_pointer, "w") as f:
-                    f.create_dataset(f"data", data=plane1_ica_output)
-
-                with h5py.File(self.plane2_ica_output_pointer, "w") as f:
-                    f.create_dataset(f"data", data=plane2_ica_output)
-
-                with h5py.File(self.ica_mixing_matrix_traces_pointer, "w") as f:
-                    f.create_dataset(f"data", data=self.traces_matrix)
-        else:
-            logger.info("Unmixed traces exist in cache, reading from h5 file")
-            self.plane1_ica_output_pointer = plane1_ica_output_pointer
-            self.plane2_ica_output_pointer = plane2_ica_output_pointer
-            self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
-            self.found_solution = True
-            with h5py.File(self.plane1_ica_output_pointer, "r") as f:
-                plane1_ica_output = f["data"][()]
-            with h5py.File(self.plane2_ica_output_pointer, "r") as f:
-                plane2_ica_output = f["data"][()]
-            with h5py.File(self.ica_mixing_matrix_traces_pointer, "r") as f:
-                traces_matrix = f["data"][()]
-
-            self.plane1_ica_output = plane1_ica_output
-            self.plane2_ica_output = plane2_ica_output
-            self.traces_matrix = traces_matrix
-
-        return
-
     def unmix_traces(self, max_iter=50):
 
         plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
@@ -1051,126 +915,6 @@ class MesoscopeICA(object):
 
         return
 
-    def unmix_neuropil_mod(self, max_iter=50):
-
-        plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'ica_neuropil_output_{self.plane1_exp_id}.h5')
-        plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'ica_neuropil_output_{self.plane2_exp_id}.h5')
-        ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'ica_neuropil_mixing.h5')
-
-        # file already exists, skip unmixing
-        if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(
-                plane2_ica_neuropil_output_pointer) and os.path.isfile(ica_mixing_matrix_neuropil_pointer):
-            self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-            self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
-            self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
-        else:
-            self.plane1_ica_neuropil_output_pointer = None
-            self.plane2_ica_neuropil_output_pointer = None
-            self.ica_mixing_matrix_neuropil_pointer = None
-
-        if (self.plane1_ica_neuropil_output_pointer is None) or (self.plane2_ica_neuropil_output_pointer is None):
-            # if unmixed traces don't exist, run unmixing
-            logger.info("Unmixed neuropil traces do not exist in cache, running ICA")
-
-            if np.any(np.isnan(self.plane1_ica_neuropil_input)) or np.any(
-                    np.isinf(self.plane1_ica_neuropil_input)) or np.any(
-                np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
-                logger.info("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
-
-            else:
-                traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
-                self.found_solution_neuropil = False
-                for i in range(max_iter):
-                    ica = FastICA(n_components=2)
-                    s = ica.fit_transform(traces)  # Reconstruct signals
-                    a = ica.mixing_  # Get estimated mixing matrix
-                    if (np.all(a > 0)) & (a[0][0] > a[1][0]):
-                        self.found_solution_neuropil = True
-                        logger.info("ICA successful")
-                        self.neuropil_matrix = a
-                        self.neuropil_unmix = s
-                        break
-                if not self.found_solution_neuropil:
-                    logger.error("Failed to find solution, try increasing `max_iter`")
-
-                if self.found_solution_neuropil:
-                    # rescaling traces back:
-                    self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil()
-
-                    plane1_ica_neuropil_output = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
-                    plane2_ica_neuropil_output = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
-
-                    # reshaping traces
-                    plane1_new_shape = [int(plane1_ica_neuropil_output.shape[0] / self.plane1_neuropil_orig.shape[2]),
-                                        self.plane1_neuropil_orig.shape[2]]
-                    plane1_ica_output = plane1_ica_neuropil_output.reshape(plane1_new_shape)
-
-                    plane2_new_shape = [int(plane2_ica_neuropil_output.shape[0] / self.plane2_neuropil_orig.shape[2]),
-                                        self.plane2_neuropil_orig.shape[2]]
-                    plane2_ica_output = plane2_ica_neuropil_output.reshape(plane2_new_shape)
-
-                    #
-                    plane1_valid_shape = np.array(
-                        [self.plane1_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
-                    plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
-                    plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
-
-                    plane2_valid_shape = np.array(
-                        [self.plane2_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
-                    plane2_out_ct = plane1_ica_output[
-                                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-                    plane2_out_sig = plane2_ica_output[
-                                     plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-
-                    # adding offset
-                    plane1_out_sig = plane1_out_sig + self.plane1_neuropil_offset['plane1_sig_neuropil_offset']
-                    plane1_out_ct = plane1_out_ct + self.plane1_neuropil_offset['plane1_ct_neuropil_offset']
-
-                    plane2_out_sig = plane2_out_sig + self.plane2_neuropil_offset['plane2_sig_neuropil_offset']
-                    plane2_out_ct = plane2_out_ct + self.plane2_neuropil_offset['plane2_ct_neuropil_offset']
-
-                    plane1_ica_neuropil_output = np.array([plane1_out_sig, plane1_out_ct])
-                    plane2_ica_neuropil_output = np.array([plane2_out_sig, plane2_out_ct])
-
-                    self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
-                    self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
-                    self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-                    self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
-                    self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
-                    # writing ica output traces to disk
-                    with h5py.File(self.plane1_ica_neuropil_output_pointer, "w") as f:
-                        f.create_dataset(f"data", data=plane1_ica_neuropil_output)
-                    with h5py.File(self.plane2_ica_neuropil_output_pointer, "w") as f:
-                        f.create_dataset(f"data", data=plane2_ica_neuropil_output)
-                    with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "w") as f:
-                        f.create_dataset(f"data", data=self.neuropil_matrix)
-        else:
-            logger.info("Unmixed neuropil traces exist in cache, reading from h5 file")
-
-            self.found_solution_neuropil = True
-
-            self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-            self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
-            self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
-
-            with h5py.File(self.plane1_ica_neuropil_output_pointer, "r") as f:
-                plane1_ica_neuropil_output = f["data"][()]
-
-            with h5py.File(self.plane2_ica_neuropil_output_pointer, "r") as f:
-                plane2_ica_neuropil_output = f["data"][()]
-
-            with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "r") as f:
-                neuropil_matrix = f["data"][()]
-
-            self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
-            self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
-            self.neuropil_matrix = neuropil_matrix
-
-        return
-
     def unmix_neuropil(self, max_iter=10):
 
         plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
@@ -1201,69 +945,110 @@ class MesoscopeICA(object):
                 np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
                 logger.info("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
 
+
             else:
                 traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
-                self.found_solution_neuropil = False
-
-                ica = FastICA(n_components=2, max_iter = max_iter)
+                ica = FastICA(n_components=2, max_iter=max_iter)
                 s = ica.fit_transform(traces)  # Reconstruct signals
                 a = ica.mixing_  # Get estimated mixing matrix
-                logger.info("ICA successful")
+                logger.info("ICA on neuropil traces successful")
                 self.neuropil_matrix = a
                 self.neuropil_unmix = s
+                # rescaling traces back:
+                self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil()
+                plane1_ica_neuropil_output = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
+                plane2_ica_neuropil_output = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
 
+                # reshaping traces
+                # new shape, excluding non valid ROIs
+                plane1_valid_shape = np.array(
+                    [self.plane1_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
+                plane2_valid_shape = np.array(
+                    [self.plane2_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
+                new_shape = [plane1_valid_shape.sum() + plane2_valid_shape.sum(), self.plane1_neuropil_orig.shape[2]]
+                # reshaping
+                plane1_ica_neuropil_output = plane1_ica_neuropil_output.reshape(new_shape)
+                plane2_ica_neuropil_output = plane2_ica_neuropil_output.reshape(new_shape)
 
-                if self.found_solution_neuropil:
-                    # rescaling traces back:
+                # splitting signal and crosstalk to compare variances and evaluate goodness of ICA
+                # ICA output:
+                plane1_out_sig = plane1_ica_neuropil_output[0:plane1_valid_shape.sum(), :]
+                plane1_out_ct = plane2_ica_neuropil_output[0:plane1_valid_shape.sum(), :]
+
+                plane2_out_ct = plane1_ica_neuropil_output[
+                                plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                plane2_out_sig = plane2_ica_neuropil_output[
+                                 plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+
+                # ICA input - only need sig to calculate rms between in and out.
+                plane1_ica_neuropil_input = self.plane1_ica_neuropil_input.reshape(new_shape)
+                plane2_ica_neuropil_input = self.plane2_ica_neuropil_input.reshape(new_shape)
+                plane1_in_sig = plane1_ica_neuropil_input[0:plane1_valid_shape.sum(), :]
+                plane2_in_sig = plane2_ica_neuropil_input[
+                                plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+
+                # rms of the delta (in, out)
+                # this value should be low as this is rms of signal traces before and after ICA:
+                plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
+                # bottom to top is usually less SNR, so higher rms
+                plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
+
+                # need to test and find appropriate threshold to call it reversed source ICA out
+                if plane1_err > 5 or plane2_err > 7:
+                    logger.info("Detected reversed sources in ICA, reassigning")
+                    self.neuropil_unmix = np.array([s[:, 1], s[:, 0]]).T
+
+                    # rescaling
                     self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil()
-
                     plane1_ica_neuropil_output = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
                     plane2_ica_neuropil_output = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
 
                     # reshaping traces
-                    plane1_new_shape = [int(plane1_ica_neuropil_output.shape[0] / self.plane1_neuropil_orig.shape[2]),
-                                        self.plane1_neuropil_orig.shape[2]]
-                    plane1_ica_output = plane1_ica_neuropil_output.reshape(plane1_new_shape)
-
-                    plane2_new_shape = [int(plane2_ica_neuropil_output.shape[0] / self.plane2_neuropil_orig.shape[2]),
-                                        self.plane2_neuropil_orig.shape[2]]
-                    plane2_ica_output = plane2_ica_neuropil_output.reshape(plane2_new_shape)
-
-                    #
+                    # new shape, excluding non valid ROIs
                     plane1_valid_shape = np.array(
                         [self.plane1_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
-                    plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
-                    plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
-
                     plane2_valid_shape = np.array(
                         [self.plane2_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
-                    plane2_out_ct = plane1_ica_output[
+                    new_shape = [plane1_valid_shape.sum() + plane2_valid_shape.sum(),
+                                 self.plane1_neuropil_orig.shape[2]]
+                    # reshaping
+                    plane1_ica_neuropil_output = plane1_ica_neuropil_output.reshape(new_shape)
+                    plane2_ica_neuropil_output = plane2_ica_neuropil_output.reshape(new_shape)
+
+                    plane1_out_sig = plane1_ica_neuropil_output[0:plane1_valid_shape.sum(), :]
+                    plane1_out_ct = plane2_ica_neuropil_output[0:plane1_valid_shape.sum(), :]
+
+                    plane2_out_ct = plane1_ica_neuropil_output[
                                     plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-                    plane2_out_sig = plane2_ica_output[
+                    plane2_out_sig = plane2_ica_neuropil_output[
                                      plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
-                    # adding offset
-                    plane1_out_sig = plane1_out_sig + self.plane1_neuropil_offset['plane1_sig_neuropil_offset']
-                    plane1_out_ct = plane1_out_ct + self.plane1_neuropil_offset['plane1_ct_neuropil_offset']
+                # adding offset
+                plane1_out_sig = plane1_out_sig + self.plane1_neuropil_offset['plane1_sig_neuropil_offset']
+                plane1_out_ct = plane1_out_ct + self.plane1_neuropil_offset['plane1_ct_neuropil_offset']
 
-                    plane2_out_sig = plane2_out_sig + self.plane2_neuropil_offset['plane2_sig_neuropil_offset']
-                    plane2_out_ct = plane2_out_ct + self.plane2_neuropil_offset['plane2_ct_neuropil_offset']
+                plane2_out_sig = plane2_out_sig + self.plane2_neuropil_offset['plane2_sig_neuropil_offset']
+                plane2_out_ct = plane2_out_ct + self.plane2_neuropil_offset['plane2_ct_neuropil_offset']
 
-                    plane1_ica_neuropil_output = np.array([plane1_out_sig, plane1_out_ct])
-                    plane2_ica_neuropil_output = np.array([plane2_out_sig, plane2_out_ct])
+                plane1_ica_neuropil_output = np.array([plane1_out_sig, plane1_out_ct])
+                plane2_ica_neuropil_output = np.array([plane2_out_sig, plane2_out_ct])
 
-                    self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
-                    self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
-                    self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-                    self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
-                    self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
-                    # writing ica output traces to disk
-                    with h5py.File(self.plane1_ica_neuropil_output_pointer, "w") as f:
-                        f.create_dataset(f"data", data=plane1_ica_neuropil_output)
-                    with h5py.File(self.plane2_ica_neuropil_output_pointer, "w") as f:
-                        f.create_dataset(f"data", data=plane2_ica_neuropil_output)
-                    with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "w") as f:
-                        f.create_dataset(f"data", data=self.neuropil_matrix)
+                self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
+                self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
+                self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
+                self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
+                self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
+
+                # writing neuropil ICA output traces to disk
+
+                with h5py.File(self.plane1_ica_neuropil_output_pointer, "w") as f:
+                    f.create_dataset(f"data", data=plane1_ica_neuropil_output)
+
+                with h5py.File(self.plane2_ica_neuropil_output_pointer, "w") as f:
+                    f.create_dataset(f"data", data=plane2_ica_neuropil_output)
+
+                with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "w") as f:
+                    f.create_dataset(f"data", data=self.ica_mixing_matrix_neuropil_pointer)
         else:
             logger.info("Unmixed neuropil traces exist in cache, reading from h5 file")
 
