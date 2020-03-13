@@ -205,7 +205,7 @@ def remove_unpassed_experiments(dataframe):
 
 # SEGMENTATION (EXP & CONTAINER)
 
-def ophys_experiment_segmentation_summary_df(ophys_experiment_id):
+def segmentation_summary_for_experiment(ophys_experiment_id):
     """for a given experiment, uses the cell_rois_table from lims
         to get the total number segmented rois, as well as number
         valid and invalid rois
@@ -239,15 +239,11 @@ def ophys_experiment_segmentation_summary_df(ophys_experiment_id):
     return seg_summary_df
 
 
-def ophys_container_segmentation_summary_df(ophys_container_id,
-                                            rmv_unpassed_experiments=True):
+def segmentation_summary_for_container(ophys_container_id):
     """[summary]
 
     Arguments:
         ophys_container_id {int} -- [description]
-
-    Keyword Arguments:
-        rmv_unpassed_experiments {bool} -- [description] (default: {True})
 
     Returns:
         dataframe -- dataframe with the following columns:
@@ -259,16 +255,10 @@ def ophys_container_segmentation_summary_df(ophys_container_id,
                         "invalid_percent"
     """
 
-    container_info_df = ophys_container_info_df(ophys_container_id)
-
-    if rmv_unpassed_experiments == True:
-        container_info_df = remove_unpassed_experiments(container_info_df)
-    elif rmv_unpassed_experiments == False:
-        pass
-
+    container_info_df = passed_experiment_info_for_container(ophys_container_id)
     container_seg_summary = pd.DataFrame()
-    for exp_id in container_info_df["ophys_experiment_id"].unique():
-        exp_seg_summary = ophys_experiment_segmentation_summary_df(exp_id)
+    for ophys_experiment_id in container_info_df["ophys_experiment_id"].unique():
+        exp_seg_summary = segmentation_summary_for_experiment(ophys_experiment_id)
         container_seg_summary = container_seg_summary.append(exp_seg_summary)
 
     container_seg_summary = container_seg_summary.reset_index(drop=True)
@@ -290,87 +280,105 @@ def remove_invalid_rois(dataframe):
     return dataframe
 
 
-def melted_container_segmentation_summary_df(ophys_container_id,
-                                             rmv_unpassed_experiments=True):
-    """takes the segmentation summary df and manipulates/reorders it so
-        it can be used for bar plots with a column for hue
-
-
-    Arguments:
-        container_seg_summary_df {dataframe} -- [description]
-
-    Returns:
-        dataframe -- dataframe with the following columns:
-                        "ophys_experiment_id": 9 digit ophys experiment id
-                        "total_rois": total number of segmented rois
-                        "valid_invalid": "valid" or "invalid" to indicate
-                                            the rois were valid or invalid
-                        "roi_count": number of rois
-                        "roi_percent": percentage of the total number of
-                                        segmented rois
-    """
-    container_seg_summary = ophys_container_segmentation_summary_df(ophys_container_id,
-                                                                    rmv_unpassed_experiments=rmv_unpassed_experiments)
-
+def segmentation_validity_count_for_container(ophys_container_id):
+    container_seg_summary = segmentation_summary_for_container(ophys_container_id)
     count_df = container_seg_summary[["ophys_experiment_id",
                                       "total_rois",
                                       "valid_count",
                                       "invalid_count"]].copy()
 
-    perc_df = container_seg_summary[["ophys_experiment_id",
-                                     "valid_percent",
-                                     "invalid_percent"]].copy()
-
     melted_count = pd.melt(count_df, id_vars=["ophys_experiment_id"],
                            var_name="roi_category",
                            value_name="roi_count")
 
+    return melted_count
+
+
+def segmentation_validity_percent_for_container(ophys_container_id):
+    container_seg_summary = segmentation_summary_for_container(ophys_container_id)
+    perc_df = container_seg_summary[["ophys_experiment_id",
+                                     "valid_percent",
+                                     "invalid_percent"]].copy()
     melted_percent = pd.melt(perc_df, id_vars=["ophys_experiment_id"],
                              var_name="valid_invalid",
                              value_name="roi_percent")
-
-    melted_count['valid_invalid'] = melted_count['valid_invalid'].map({'valid_count': "valid_rois",
-                                                                       'invalid_count': "invalid_rois",
-                                                                       'total_rois': 'total_rois'})
-
-    melted_percent['valid_invalid'] = melted_percent['valid_invalid'].map({'valid_percent': "valid",
-                                                                           'invalid_percent': "invalid"})
-
-    merged_melted_df = pd.merge(melted_count, melted_percent, how="left", on=["ophys_experiment_id", "valid_invalid"])
-    merged_melted_df = merged_melted_df.sort_values("ophys_experiment_id")
-    return merged_melted_df
+    return melted_percent
 
 
-def container_segmentation_barplots_df(ophys_container_id, stage_name_column="stage_name_lims"):
-    """
+# def melted_container_segmentation_summary_df(ophys_container_id,
+#                                              rmv_unpassed_experiments=True):
+#     """takes the segmentation summary df and manipulates/reorders it so
+#         it can be used for bar plots with a column for hue
 
-    Arguments:
-        ophys_container_id {[type]} -- [description]
 
-    Keyword Arguments:
-        stage_name_column {str} -- [description] (default: {"stage_name_lims"})
+#     Arguments:
+#         container_seg_summary_df {dataframe} -- [description]
 
-    Returns:
-        dataframe -- dataframe with the following columns:
-                    "ophys_container_id"
-                    "ophys_experiment_id"
-                    "stage_name_lims"
-                    "total_rois"
-                    valid_invalid"
-                    "roi_count"
-                    "roi_percent"
-    """
-    container_info_df = ophys_container_info_df(ophys_container_id)
-    stage_name_df = container_info_df[["ophys_container_id", "ophys_experiment_id", stage_name_column]].copy()
+#     Returns:
+#         dataframe -- dataframe with the following columns:
+#                         "ophys_experiment_id": 9 digit ophys experiment id
+#                         "total_rois": total number of segmented rois
+#                         "valid_invalid": "valid" or "invalid" to indicate
+#                                             the rois were valid or invalid
+#                         "roi_count": number of rois
+#                         "roi_percent": percentage of the total number of
+#                                         segmented rois
+#     """
+#     container_seg_summary = segmentation_summary_for_container(ophys_container_id,
+#                                                                rmv_unpassed_experiments=rmv_unpassed_experiments)
+#     count_df = container_seg_summary[["ophys_experiment_id",
+#                                       "total_rois",
+#                                       "valid_count",
+#                                       "invalid_count"]].copy()
+#     perc_df = container_seg_summary[["ophys_experiment_id",
+#                                      "valid_percent",
+#                                      "invalid_percent"]].copy()
+#     melted_count = pd.melt(count_df, id_vars=["ophys_experiment_id"],
+#                            var_name="roi_category",
+#                            value_name="roi_count")
+#     melted_percent = pd.melt(perc_df, id_vars=["ophys_experiment_id"],
+#                              var_name="valid_invalid",
+#                              value_name="roi_percent")
+#     melted_count['valid_invalid'] = melted_count['valid_invalid'].map({'valid_count': "valid_rois",
+#                                                                        'invalid_count': "invalid_rois",
+#                                                                        'total_rois': 'total_rois'})
+#     melted_percent['valid_invalid'] = melted_percent['valid_invalid'].map({'valid_percent': "valid",
+#                                                                            'invalid_percent': "invalid"})
+#     merged_melted_df = pd.merge(melted_count, melted_percent, how="left", on=["ophys_experiment_id", "valid_invalid"])
+#     merged_melted_df = merged_melted_df.sort_values("ophys_experiment_id")
+#     return merged_melted_df
 
-    melted_cont_seg_sum = melted_container_segmentation_summary_df(ophys_container_id,
-                                                                   rmv_unpassed_experiments=True)
 
-    seg_sum_with_stage = pd.merge(stage_name_df, melted_cont_seg_sum, how="right", on="ophys_experiment_id")
+# def container_segmentation_barplots_df(ophys_container_id, stage_name_column="stage_name_lims"):
+#     """
 
-    seg_sum_with_stage = sort_dataframe_by_stage_name(seg_sum_with_stage,
-                                                      stage_name_column=stage_name_column)
-    return seg_sum_with_stage
+#     Arguments:
+#         ophys_container_id {[type]} -- [description]
+
+#     Keyword Arguments:
+#         stage_name_column {str} -- [description] (default: {"stage_name_lims"})
+
+#     Returns:
+#         dataframe -- dataframe with the following columns:
+#                     "ophys_container_id"
+#                     "ophys_experiment_id"
+#                     "stage_name_lims"
+#                     "total_rois"
+#                     "valid_invalid"
+#                     "roi_count"
+#                     "roi_percent"
+#     """
+#     container_info_df = ophys_container_info_df(ophys_container_id)
+#     stage_name_df = container_info_df[["ophys_container_id", "ophys_experiment_id", stage_name_column]].copy()
+
+#     melted_cont_seg_sum = melted_container_segmentation_summary_df(ophys_container_id,
+#                                                                    rmv_unpassed_experiments=True)
+
+#     seg_sum_with_stage = pd.merge(stage_name_df, melted_cont_seg_sum, how="right", on="ophys_experiment_id")
+
+#     seg_sum_with_stage = sort_dataframe_by_stage_name(seg_sum_with_stage,
+#                                                       stage_name_column=stage_name_column)
+#     return seg_sum_with_stage
 
 
 # CELL MATCHING (CONTAINER)
