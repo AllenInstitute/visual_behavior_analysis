@@ -1,3 +1,7 @@
+# Run this code to find the experiments that do not have an analysis folder yet, and then to do convert_level1_level2 on them.
+
+
+#%%
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
@@ -20,8 +24,14 @@ def get_stage_mongo(session_id):
    
     ######### get stage from mongo
     a = list(db_cursor_sess[0]['name'])
-    ai = (np.argwhere([a[i]=='_' for i in range(len(a))]).flatten()[-1]).astype(int)
-    stage_mongo = str(db_cursor_sess[0]['name'][ai+1:])
+    try:
+        ai = (np.argwhere([a[i]=='_' for i in range(len(a))]).flatten()[-1]).astype(int)
+        stage_mongo = str(db_cursor_sess[0]['name'][ai+1:])
+    except Exception as e: # some sessions have unconventional names on mongo; e.g.  990940005 (they dont seem to have QC); assing "test" to their stage name! 
+        stage_mongo = 'test'
+        print(e)        
+        print('Session_id %s: no stage name exists; lets call it "test"!' %str(session_id))
+#        pass
     
     return stage_mongo
 
@@ -29,10 +39,18 @@ def get_stage_mongo(session_id):
 #%%
 # dates2analyze = '20190602'
 def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''): 
-    # dates2analyze='20190602' # means analyze all days recorded on this date and after.
+    # dates2analyze='20190602' # means analyze all days recorded after this date (NOTE: it will NOT include experiments recorded ON this date).
+    
+    #%%
+    ###########################################################################    
+    ###########################################################################
+    ###### Identify the experiments that do not have an analysis folder #######
+    ###########################################################################
+    ###########################################################################
     
     #%%
     cache_dir = r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis"
+    
     
     #%% Get the list of all visBehMult experiments that are in qc or passed
     
@@ -48,6 +66,7 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
     experiment_dates = []       
     session_ids = []
     for indiv_exp in list_of_exp_cursor: # these are experiment_ids , not session_ids
+        # indiv_exp = list_of_exp_cursor[0]
         lims_id = indiv_exp['experiment_obj']['id']
         lims_date = indiv_exp['experiment_obj']['acquisition_date']
         experiment_ids.append(lims_id)  
@@ -72,7 +91,7 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
     #%% Remove ophys7 sessions, because they cannot be analyzed by the convert code!
 
     print('Removing ophys7 sessions, because they cannot be analyzed by the convert code!')
-    stage_mongo_all = [get_stage_mongo(int(session_id)) for session_id in np.unique(session_ids)]
+    stage_mongo_all = [get_stage_mongo(int(session_id)) for session_id in np.unique(session_ids0)]
     ophys7s = np.in1d(stage_mongo_all, ['Ophys7', 'ophys7', '7', '7RF', 'test'])
     print('%d sessions are ophys7 and test' %sum(ophys7s))
     
@@ -85,9 +104,9 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
     
     [u, iu] = np.unique(session_ids, return_index=True)
     print('============================================================== \nAssessing %d sessions, %d experiments\n==============================================================' %(len(u), len(experiment_ids)))
-    print('expriments:\n%s' %experiment_ids)
+    print('%d expriments:\n%s' %(len(experiment_ids), experiment_ids))
     print('expriment dates:\n%s' %experiment_dates[iu])
-    print('sessions:\n%s' %session_ids[iu])
+    print('%d sessions:\n%s' %(len(session_ids[iu]), session_ids[iu]))
     
     
     #%% Find the experiments without an analysis folder
@@ -129,18 +148,28 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
     session_ids_2analyse = np.array(session_ids_2analyse)
             
     [u, iu] = np.unique(session_ids_2analyse, return_index=True)
-    print('============================================================== \nRunning convert code on %d sessions, %d experiments\n==============================================================' %(len(u), len(experiment_ids_2analyse)))
+    print('============================================================== \nWe need to run the convert code on %d sessions, %d experiments because they are missing analysis files!\n==============================================================' %(len(u), len(experiment_ids_2analyse)))
     print('expriments:\n%s' %experiment_ids_2analyse)
     print('expriment dates:\n%s' %experiment_dates_2analyse[iu])
     print('sessions:\n%s' %session_ids_2analyse[iu])
         
     
     
-        
+    #%%
+    ###########################################################################    
+    ###########################################################################
+    ###### Run the convert code for the experiments that do not have an analysis folder #######
+    ###########################################################################
+    ###########################################################################
+    
+    # Note: if you want to run the codes on the cluster, go to "run_convert_level_1_to_level_2_pbs.py", and update the list of experiments
+    # with "experiment_ids_2analyse" you found here, and then call that code on the cluster.
+    
     #%% Run the convert code if the analysis folder does not exist.   
 
     cnt = -1
-    for experiment_id in experiment_ids_2analyse: # experiment_id = experiment_ids[0]
+    for experiment_id in experiment_ids_2analyse: # experiment_id = experiment_ids_2analyse[0]
+        experiment_id = int(experiment_id)
         cnt = cnt+1
         try: 
             print("==============================================================\ndate %s, session %d, experiment %d (#%d out of %d)\n==============================================================" %(experiment_dates_2analyse[cnt], session_ids_2analyse[cnt], experiment_id, cnt, len(experiment_ids_2analyse)))
@@ -153,7 +182,7 @@ def run_convert_level_1_to_level_2_mesoscope_2(dates2analyze=''):
 
 
 #%%
-run_convert_level_1_to_level_2_mesoscope_2(dates2analyze='20190705')
+run_convert_level_1_to_level_2_mesoscope_2(dates2analyze='20190730') # '20190705'
 
 
 #%%
