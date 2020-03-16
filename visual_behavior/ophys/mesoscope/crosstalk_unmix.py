@@ -1,6 +1,6 @@
 import matplotlib
 
-matplotlib.use('Agg')
+
 from allensdk.brain_observatory import roi_masks
 import visual_behavior.ophys.mesoscope.mesoscope as ms
 import allensdk.internal.core.lims_utilities as lu
@@ -1073,8 +1073,13 @@ class MesoscopeICA(object):
 
         return
 
+
     def plot_ica_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
         #    if figures don't exist!
+        if not figshow:
+            print(f'Switching to backend to Agg')
+            plt.switch_backend('Agg')
+            
         if self.plane1_ica_output_pointer and self.plane2_ica_output_pointer:
 
             raw_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
@@ -1191,6 +1196,9 @@ class MesoscopeICA(object):
 
     def plot_raw_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
         #    if figures don't exist!
+        if not figshow:
+            print(f'Switching to backend to Agg')
+            plt.switch_backend('Agg')
 
         if self.plane1_traces_orig_pointer and self.plane2_traces_orig_pointer:
 
