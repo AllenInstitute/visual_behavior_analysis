@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -113,7 +112,7 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
 def plot_average_intensity_timeseries_for_container(ophys_container_id, save_figure=True):
     """a seaborn timeseries where all passed experiments in a container are plotted.
         x= is frame number, y = average intensity of the fov and eachc line is an experiment
-        the timeseries lines are colored by the experiment stage name in lims and the 
+        the timeseries lines are colored by the experiment stage name in lims and the
         stage name legend is displayed in order of experiment acquisition date
 
     Arguments:
@@ -209,10 +208,10 @@ def plot_csid_snr_for_container(ophys_container_id, save_figure=True):
     stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
     figsize = (6, 8)
     fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.violinplot(x="stage_name_lims", y="robust_snr",
-                        data=container_snr_table.loc[container_snr_table["snr_zscore"] < 3],
-                        palette=stage_color_dict,
-                        order=exp_order_and_stage["stage_name_lims"])
+    sns.violinplot(x="stage_name_lims", y="robust_snr",
+                   data=container_snr_table.loc[container_snr_table["snr_zscore"] < 3],
+                   palette=stage_color_dict,
+                   order=exp_order_and_stage["stage_name_lims"])
     plt.xticks(rotation=90)
     plt.xlabel("stage name")
     plt.ylabel('robust snr for csids')
@@ -283,9 +282,9 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
 
 def plot_average_intensity_by_pmt_for_experiments(ophys_container_id, save_figure=True):
     """seaborn scatter plot where x = pmt gain, y= fov intensity mean
-        and each point is a passed experiment in the container. 
+        and each point is a passed experiment in the container.
         The points are colored by their stage name and the legend is stage names
-        displayed in order of acquisition date. 
+        displayed in order of acquisition date.
 
     Arguments:
         ophys_container_id {[type]} -- [description]
