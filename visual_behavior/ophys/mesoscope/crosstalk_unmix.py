@@ -1077,7 +1077,7 @@ class MesoscopeICA(object):
     def plot_ica_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
         #    if figures don't exist!
         if not figshow:
-            print(f'Switching to backend to Agg')
+            print(f'Switching backend to Agg')
             plt.switch_backend('Agg')
             
         if self.plane1_ica_output_pointer and self.plane2_ica_output_pointer:
@@ -1197,7 +1197,7 @@ class MesoscopeICA(object):
     def plot_raw_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
         #    if figures don't exist!
         if not figshow:
-            print(f'Switching to backend to Agg')
+            print(f'Switching backend to Agg')
             plt.switch_backend('Agg')
 
         if self.plane1_traces_orig_pointer and self.plane2_traces_orig_pointer:
