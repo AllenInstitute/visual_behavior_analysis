@@ -931,11 +931,16 @@ class MesoscopeICA(object):
             with h5py.File(self.plane2_ica_output_pointer, "r") as f:
                 plane2_ica_output = f["data"][()]
             with h5py.File(self.ica_mixing_matrix_traces_pointer, "r") as f:
-                traces_matrix = f["data"][()]
+                traces_matrix = f["mixing"][()]
+                plane1_err = f["plane1_err"][()]
+                plane2_err = f["plane2_err"][()]
 
             self.plane1_ica_output = plane1_ica_output
             self.plane2_ica_output = plane2_ica_output
             self.traces_matrix = traces_matrix
+            self.plane1_roi_err = plane1_err
+            self.plane2_roi_err = plane2_err
+
 
         return
 
@@ -1018,7 +1023,7 @@ class MesoscopeICA(object):
                 plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
 
                 # need to test and find appropriate threshold to call it reversed source ICA out
-                if plane1_err > 5 or plane2_err > 7:
+                if plane1_err > 6 or plane2_err > 7:
                     logger.info("Detected reversed sources in ICA, reassigning")
                     self.neuropil_unmix = np.array([s[:, 1], s[:, 0]]).T
 
@@ -1072,7 +1077,9 @@ class MesoscopeICA(object):
                     f.create_dataset(f"data", data=plane2_ica_neuropil_output)
 
                 with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "w") as f:
-                    f.create_dataset(f"data", data=self.ica_mixing_matrix_neuropil_pointer)
+                    f.create_dataset(f"mixing", data=self.neuropil_matrix)
+                    f.create_dataset(f"plane1_err", data=plane1_err)
+                    f.create_dataset(f"plane2_err", data=plane2_err)
         else:
             logger.info("Unmixed neuropil traces exist in cache, reading from h5 file")
 
@@ -1089,11 +1096,17 @@ class MesoscopeICA(object):
                 plane2_ica_neuropil_output = f["data"][()]
 
             with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "r") as f:
-                neuropil_matrix = f["data"][()]
+                neuropil_matrix = f["mixing"][()]
+                plane1_err = f["plane1_err"][()]
+                plane2_err = f["plane2_err"][()]
+
 
             self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
             self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
             self.neuropil_matrix = neuropil_matrix
+            self.plane1_neuropil_err = plane1_err
+            self.plane2_neuropil_err = plane2_err
+
 
         return
 
