@@ -17,7 +17,6 @@ import allensdk.core.json_utilities as ju
 import scipy.stats
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
 IMAGEH, IMAGEW = 512, 512
 CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'processed/%s_input_extract_traces.json']
@@ -38,7 +37,7 @@ def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
         if os.path.isfile(jin_movie_path) and os.path.isfile(jin_mask_path):
             break
     else:
-        logger.error('Cell extract json does not exist')
+        raise ValueError('Cell extract json does not exist')
 
     with open(jin_movie_path, "r") as f:
         jin_movie = json.load(f)
@@ -92,11 +91,12 @@ def create_roi_masks(rois, w, h, motion_border):
 
 class MesoscopeICA(object):
 
-    def __init__(self, session_id, cache):
+    def __init__(self, session_id, cache, debug_mode=False):
 
         self.session_id = session_id
         self.dataset = ms.MesoscopeDataset(session_id)
         self.session_cache_dir = cache
+        self.debug_mode = debug_mode
 
         self.found_original_traces = None  # output of get_traces
         self.found_original_neuropil = None  # output of get_traces
@@ -173,6 +173,11 @@ class MesoscopeICA(object):
         return
 
     def get_ica_traces(self, pair):
+
+        if self.debug_mode :
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+        else:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
         # we will first check if traces exist, if yes - read them, if not - extract them
         self.plane1_roi_names = None
@@ -335,6 +340,11 @@ class MesoscopeICA(object):
 
     def validate_traces(self):
 
+        if self.debug_mode:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+        else:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
         self.plane1_roi_traces_valid_pointer = None
         self.plane2_roi_traces_valid_pointer = None
 
@@ -484,6 +494,12 @@ class MesoscopeICA(object):
         return
 
     def combine_debias_traces(self):
+
+        if self.debug_mode:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+        else:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
         self.plane1_ica_input_pointer = None
         self.plane2_ica_input_pointer = None
 
@@ -619,10 +635,14 @@ class MesoscopeICA(object):
                 self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset}
                 self.found_ica_offset = [True, True]
         else:
-            logger.error('Extract ROI traces first')
+            raise ValueError('Extract ROI traces first')
         return
 
     def combine_debias_neuropil(self):
+
+        if self.debug_mode :
+            logger = logging.getLogger(__name__)
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
 
         self.plane1_ica_neuropil_input_pointer = None
         self.plane2_ica_neuropil_input_pointer = None
@@ -766,10 +786,11 @@ class MesoscopeICA(object):
                                                'plane2_ct_neuropil_offset': plane2_ct_neuropil_offset, }
                 self.found_ica_neuropil_offset = [True, True]
         else:
-            logger.error('Extract neuropil traces first')
+            raise ValueError('Extract neuropil traces first')
         return
 
     def unmix_traces(self, max_iter=50):
+
 
         plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
                                                  f'ica_traces_output_{self.plane1_exp_id}.h5')
@@ -792,7 +813,7 @@ class MesoscopeICA(object):
             # if unmixed traces don't exist, run unmixing
             if np.any(np.isnan(self.plane1_ica_input)) or np.any(np.isinf(self.plane1_ica_input)) or np.any(
                     np.isnan(self.plane2_ica_input)) or np.any(np.isinf(self.plane2_ica_input)):
-                logger.info("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
+                raise ValueError("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
             else:
                 logger.info("unmixed traces do not exist in cache, running ICA")
                 traces = np.array([self.plane1_ica_input, self.plane2_ica_input]).T
@@ -1081,7 +1102,12 @@ class MesoscopeICA(object):
         if not figshow:
             print(f'Switching backend to Agg')
             plt.switch_backend('Agg')
-            
+
+        if self.debug_mode:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+        else:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
         if self.plane1_ica_output_pointer and self.plane2_ica_output_pointer:
 
             raw_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
@@ -1201,6 +1227,11 @@ class MesoscopeICA(object):
         if not figshow:
             print(f'Switching backend to Agg')
             plt.switch_backend('Agg')
+
+        if self.debug_mode:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+        else:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
         if self.plane1_traces_orig_pointer and self.plane2_traces_orig_pointer:
 
