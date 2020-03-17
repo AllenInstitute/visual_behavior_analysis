@@ -816,12 +816,12 @@ class MesoscopeICA(object):
                     np.isnan(self.plane2_ica_input)) or np.any(np.isinf(self.plane2_ica_input)):
                 raise ValueError("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
             else:
-                logger.info("unmixed traces do not exist in cache, running ICA")
+                logger.info("Unmixed traces do not exist in cache, running ICA")
                 traces = np.array([self.plane1_ica_input, self.plane2_ica_input]).T
                 self.found_solution = False
                 ica = FastICA(n_components=2, max_iter=max_iter)
                 s = ica.fit_transform(traces)  # Reconstruct signals
-                a = ica.mixing_  # Get estimated mixing matrix
+                a = ica.mixing_  # Get estimated smixing matrix
                 logger.info("ICA successful")
                 self.traces_matrix = a
                 self.traces_unmix = s
@@ -1100,14 +1100,15 @@ class MesoscopeICA(object):
 
     def plot_ica_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
         #    if figures don't exist!
-        if not figshow:
-            print(f'Switching backend to Agg')
-            plt.switch_backend('Agg')
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
+        if not figshow:
+            print(f'Switching backend to Agg')
+            plt.switch_backend('Agg')
 
         if self.plane1_ica_output_pointer and self.plane2_ica_output_pointer:
 
@@ -1225,14 +1226,15 @@ class MesoscopeICA(object):
 
     def plot_raw_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
         #    if figures don't exist!
-        if not figshow:
-            print(f'Switching backend to Agg')
-            plt.switch_backend('Agg')
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
+        if not figshow:
+            print(f'Switching backend to Agg')
+            plt.switch_backend('Agg')
 
         if self.plane1_traces_orig_pointer and self.plane2_traces_orig_pointer:
 
