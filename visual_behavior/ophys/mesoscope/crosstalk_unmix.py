@@ -640,9 +640,10 @@ class MesoscopeICA(object):
 
     def combine_debias_neuropil(self):
 
-        if self.debug_mode :
-            logger = logging.getLogger(__name__)
+        if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+        else:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
         self.plane1_ica_neuropil_input_pointer = None
         self.plane2_ica_neuropil_input_pointer = None
