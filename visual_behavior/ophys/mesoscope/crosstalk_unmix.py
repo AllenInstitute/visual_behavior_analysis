@@ -840,7 +840,7 @@ class MesoscopeICA(object):
 
                 # need to test and find appropriate threshold to call it reversed source ICA out
 
-                if plane1_err > 5 or plane2_err > 7 :
+                if plane1_err > 6 or plane2_err > 7 :
 
                     logger.info("Detected reversed sources in ICA, reassigning")
                     self.traces_unmix = np.array([s[:, 1], s[:, 0]]).T
@@ -895,7 +895,9 @@ class MesoscopeICA(object):
                     f.create_dataset(f"data", data=plane2_ica_output)
 
                 with h5py.File(self.ica_mixing_matrix_traces_pointer, "w") as f:
-                    f.create_dataset(f"data", data=self.traces_matrix)
+                    f.create_dataset(f"mixing", data=self.traces_matrix)
+                    f.create_dataset(f"plane1_err", data=plane1_err)
+                    f.create_dataset(f"plane2_err", data=plane2_err)
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
             self.plane1_ica_output_pointer = plane1_ica_output_pointer

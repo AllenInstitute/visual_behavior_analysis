@@ -1,7 +1,26 @@
-#%% Define functions 
+"""
+# Define functions to set an "active trace" (referred to as "traces_evs" below), i.e. 
+# a trace made by extracting and concatenating the active parts of the input trace.
+# Farzaneh Najafi
+# March 2020
 
-#%% Set traces_evs (for the y trace), ie traces that are made by extracting the active parts of the input trace
-# the idea is that to help with learning the events, take parts of the trace that have events
+# Example call to the function:
+
+## set the input trace (neurons x frames)
+plane_ind = 0
+traces_y0 = this_sess.iloc[plane_ind]['local_fluo_traces']
+traces_y0.shape # neurons x frames
+
+len_ne = 20 # number of frames before and after each event that are taken to create traces_events.
+th_ag = 10 #8 # threshold to apply on erfc (output of evaluate_components) to find events on the trace; the higher the more strict on what we call an event.
+doPlots = 1 # set to 1 to see an example neuron
+
+## call the function to set traces_evs (for the y trace), ie traces that are made by extracting the active parts of the input trace
+# the idea is that to help with learning the events, take parts of the trace that have events        
+
+[traces_y0_evs, inds_final_all] = set_traces_evs(traces_y0, th_ag, len_ne, doPlots)
+
+"""
 
 def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
     
@@ -9,7 +28,7 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
 #    th_ag = 10 #8 # the higher the more strict on what we call an event.
     
     ###############################################################################
-    ############# Andrea's method of identifying "exceptional" events. ############
+    ############# Andrea Giovannucci's method of identifying "exceptional" events. ############
     ###############################################################################
     [idx_components, fitness, erfc] = evaluate_components(traces_y0, N=5, robust_std=False)
     erfc = -erfc
@@ -454,28 +473,6 @@ def find_event_gaps(evs):
     return gap_evs_all, begs_evs, ends_evs, gap_evs, bgap_evs, egap_evs, begs, ends
 
 
-
-#%% Set active parts of the trace
-##########################################################################################
-##########################################################################################
-##########################################################################################
-
-#%% 
-'''
-plane_ind = 0
-traces_y0 = this_sess.iloc[plane_ind]['local_fluo_traces']
-traces_y0.shape # neurons x frames
-'''
-
-#%%
-len_ne = 20 # number of frames before and after each event that are taken to create traces_events.
-th_ag = 10 #8 # threshold to apply on erfc (output of evaluate_components) to find events on the trace; the higher the more strict on what we call an event.
-# set doPlots to 1 to see an example neuron
-
-## set traces_evs (for the y trace), ie traces that are made by extracting the active parts of the input trace
-# the idea is that to help with learning the events, take parts of the trace that have events        
-
-[traces_y0_evs, inds_final_all] = set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1)
 
 
 
