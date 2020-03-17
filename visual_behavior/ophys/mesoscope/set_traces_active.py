@@ -1,6 +1,6 @@
 """
-# Define functions to set an "active trace" (referred to as "traces_evs" below), i.e. a trace made by extracting the active parts of a trace, and concatenating them into a single trace.
-# to identify "events", I am using Andrea Giovannucci's code (see below).
+# Define functions to set an "active trace" (referred to as "traces_evs" below), i.e. 
+# a trace made by extracting and concatenating the active parts of the input trace.
 # Farzaneh Najafi
 # March 2020
 
