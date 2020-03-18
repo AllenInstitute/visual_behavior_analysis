@@ -78,7 +78,7 @@ def get_ica_sessions():
         for pair in pairs:
             ica_obj = ica.MesoscopeICA(session, cache=CACHE)
             ica_obj.set_ica_traces_dir(pair)
-            ica_obj.set_neuropil_ica_dir(pair)
+            ica_obj.set_ica_neuropil_dir(pair)
 
             if os.path.isfile(ica_obj.plane1_ica_output_pointer) and os.path.isfile(ica_obj.plane1_ica_neuropil_output_pointer):
                 meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
@@ -199,14 +199,26 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
 
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
-def run_demixing_on_ica(session, an_dir=CACHE):
+def run_demixing_on_ica(session, cache=CACHE):
+    """
+    run LIMS demixing on crosstalk corrected traces
+    :param session: LIMS session id
+    :param an_dir: directory containing crosstalk corrected traces
+    :return:
+    """
     mds, _, _ = get_ica_roi_sessions()
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
 
+    # if self.debug_mode:
+    #     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+    # else:
+    #     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
+
     for pair in pairs:
         for exp_id in pair:
-            demix_path = os.path.join(an_dir, f'session_{session}/demixing_{exp_id}')
+            demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
             demix_file = os.path.join(demix_path, f'traces_demixing_output_{exp_id}.h5')
             if os.path.isfile(demix_file):
                 logging.info(f"Demixed traces exist for experiment {exp_id}, skipping demixing")
@@ -238,14 +250,14 @@ def run_demixing_on_ica(session, an_dir=CACHE):
                                          exclusion_labels=[])
                          for roi in rois}
 
-                demix_path = os.path.join(an_dir, f'session_{session}/demixing_{exp_id}')
+                demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
                 ica_dir = f'session_{session}/ica_traces_{pair[0]}_{pair[1]}/'
 
-                traces_valid = os.path.join(an_dir, ica_dir, f'valid_{exp_id}.json')
+                traces_valid = os.path.join(cache, ica_dir, f'valid_{exp_id}.json')
 
                 data = {
                     "movie_h5": os.path.join(exp_dir, "processed", "concat_31Hz_0.h5"),
-                    "traces_h5_ica": os.path.join(an_dir, ica_dir, f'traces_ica_output_{exp_id}.h5'),
+                    "traces_h5_ica": os.path.join(cache, ica_dir, f'traces_ica_output_{exp_id}.h5'),
                     "traces_h5": os.path.join(exp_dir, "processed", "roi_traces.h5"),
                     "roi_masks": nrois.values(),
                     "traces_valid": traces_valid,
@@ -290,8 +302,6 @@ def run_demixing_on_ica(session, an_dir=CACHE):
                               str(trace_ids[valid_idxs][nb_inds]))
                 demixed_traces[nb_inds, :] = np.nan
                 logging.info("Saving output")
-                out_traces = np.zeros(traces.shape, dtype=demix_traces.dtype)
-
                 out_traces = demixed_traces
 
                 with h5py.File(output_h5, 'w') as f:
@@ -299,9 +309,9 @@ def run_demixing_on_ica(session, an_dir=CACHE):
                     f.create_dataset("roi_names", data=[np.string_(rn) for rn in trace_ids])
     return
 
+
 def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=None, err_vals=None):
     fig = plt.figure(figsize=(15, 10))
-
     ax = fig.add_subplot(211)
     ax.plot(roi_trace, 'r', label="raw")
     ax.plot(corrected_trace, 'b', label="fc")
@@ -318,7 +328,14 @@ def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=
     plt.savefig(file_name)
     plt.close()
 
+
 def run_neuropil_correction_on_ica(session, an_dir=CACHE):
+    """
+    run neuropil correction on CIA output files
+    :param session: LIMS session id
+    :param an_dir: directory to find processed ica-demixed outputs
+    :return: None
+    """
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
     for pair in pairs:
@@ -483,7 +500,12 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE):
 
 
 def run_dff_on_ica(session, an_dir=CACHE):
-
+    """
+    run LIMS dff extraction on ICA output files, after demixing and neuripil correction
+    :param session: LIMS session id
+    :param an_dir: directory where the traces are stored
+    :return:
+    """
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
     ses_dir = os.path.join(an_dir, f'session_{session}')
@@ -519,6 +541,21 @@ def run_dff_on_ica(session, an_dir=CACHE):
 
 
 def clean_up_cache(sessions, cache):
+    """
+    deletes ica outputs from cache:
+        neuropil_ica_output_pair{i}.h5
+        neuropil_valid_pair{i}.json
+        neuropil_ica_mixing_pair{i}.h5
+        ica_traces_output_pair{i}.h5
+        ica_valid_pair{i}.json
+        ica_mixing_pair{i}.h5
+        neuropil correctoin files
+        demixing files
+        dff traces files
+    :param sessions: list of LIMS session ids
+    :param cache: cache directory
+    :return: None
+    """
     for session in sessions:
         ica_obj = ica.MesoscopeICA(session_id=session, cache=cache)
         ses_dir = os.path.join(ica_obj.session_cache_dir, f'session_{session}')
@@ -576,7 +613,7 @@ def clean_up_cache(sessions, cache):
                 np_out_p2 = os.path.join(ses_dir, f'neuropil_corrected_{pair[1]}')
                 dff_p1 = os.path.join(ses_dir, f'{pair[0]}_dff.h5')
                 dff_p2 = os.path.join(ses_dir, f'{pair[1]}_dff.h5')
-                # easy removing dff files
+                # removing dff files
                 if os.path.isfile(dff_p1):
                     os.remove(dff_p1)
                 if os.path.isfile(dff_p2):

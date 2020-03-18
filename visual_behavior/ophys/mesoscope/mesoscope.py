@@ -33,6 +33,7 @@ def psycopg2_select(query, database=DEFAULT_DATABASE, host=DEFAULT_HOST, port=DE
         connection.close()
     return response
 
+
 def get_all_mesoscope_data():
     query = ("select os.id as session_id, oe.id as experiment_id, "
              "os.storage_directory as session_folder, oe.storage_directory as experiment_folder, "
@@ -47,6 +48,7 @@ def get_all_mesoscope_data():
              "where (p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d' ) and os.workflow_state ='uploaded' " # and 'MesoscopeDevelopment' or p.code =  (oe.workflow_state = 'processing' or oe.workflow_state = 'qc') and os.workflow_state ='uploaded' "
              "order by session_id")
     return pd.DataFrame(psycopg2_select(query))
+
 
 class MesoscopeDataset(object):
     def __init__(self, session_id, experiment_id=None):
