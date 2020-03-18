@@ -540,7 +540,7 @@ def run_dff_on_ica(session, an_dir=CACHE):
     return
 
 
-def clean_up_cache(sessions, cache, np_name = 'ica_neuropil', roi_name = 'ica_traces'):
+def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces'):
     """
     deletes ica outputs from cache:
         neuropil_ica_output_pair{i}.h5
@@ -552,6 +552,7 @@ def clean_up_cache(sessions, cache, np_name = 'ica_neuropil', roi_name = 'ica_tr
         neuropil correctoin files
         demixing files
         dff traces files
+    :param np_name:
     :param sessions: list of LIMS session ids
     :param cache: cache directory
     :param np: string: name prefix for all files related to neuropil
@@ -565,7 +566,8 @@ def clean_up_cache(sessions, cache, np_name = 'ica_neuropil', roi_name = 'ica_tr
             pairs = ica_obj.dataset.get_paired_planes()
             for pair in pairs:
                 # cleaning up neuropil directory
-                exp_np_dir = os.path.join(ses_dir, f'{np_name}_{pair[0]}_{pair[1]}')
+                ica_obj.set_ica_neuropil_dir(pair, np_name="ica_neuropil")
+                exp_np_dir = ica_obj.ica_neuropil_dir
                 if os.path.isdir(exp_np_dir):
                     ica_np_output_p1 = os.path.join(exp_np_dir, f'{np_name}_output_{pair[0]}.h5')
                     ica_np_output_p2 = os.path.join(exp_np_dir, f'{np_name}_output_{pair[1]}.h5')
@@ -583,7 +585,8 @@ def clean_up_cache(sessions, cache, np_name = 'ica_neuropil', roi_name = 'ica_tr
                     if os.path.isfile(mixing):
                         os.remove(mixing)
                 # cleaning up roi traces directory:
-                exp_roi_dir = os.path.join(ses_dir, f'{roi_name}_{pair[0]}_{pair[1]}')
+                ica_obj.set_ica_traces_dir(pair, roi_name="ica_traces")
+                exp_roi_dir = ica_obj.ica_traces_dir
                 if os.path.isdir(exp_roi_dir):
                     ica_roi_output_p1 = os.path.join(exp_roi_dir, f'{roi_name}_output_{pair[0]}.h5')
                     ica_roi_output_p2 = os.path.join(exp_roi_dir, f'{roi_name}_output_{pair[1]}.h5')
