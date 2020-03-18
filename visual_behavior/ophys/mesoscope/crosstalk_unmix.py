@@ -92,7 +92,7 @@ def create_roi_masks(rois, w, h, motion_border):
 
 class MesoscopeICA(object):
 
-    def __init__(self, session_id, cache, debug_mode=False):
+    def __init__(self, session_id, cache, debug_mode=False, ROI_NAME="roi_ica", NP_NAME="neuropil_ica"):
 
         self.session_id = session_id
         self.dataset = ms.MesoscopeDataset(session_id)
