@@ -152,25 +152,25 @@ class MesoscopeICA(object):
 
     def set_ica_traces_dir(self, pair):
         session_dir = self.set_analysis_session_dir()
-        self.ica_traces_dir = os.path.join(session_dir, f'{ROI_NAME}_{pair[0]}_{pair[1]}/')
+        self.ica_traces_dir = os.path.join(session_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/')
         self.plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                      f'{ROI_NAME}_output_{pair[0]}.h5')
+                                                      f'{self.roi_name}_output_{pair[0]}.h5')
         self.plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
 
-                                                      f'{ROI_NAME}_output_{pair[1]}.h5')
+                                                      f'{self.roi_name}_output_{pair[1]}.h5')
         self.ica_mixing_matrix_pointer = os.path.join(self.ica_traces_dir,
-                                                      f'{ROI_NAME}_mixing.h5')
+                                                      f'{self.roi_name}_mixing.h5')
         return
 
     def set_ica_neuropil_dir(self, pair):
         session_dir = self.set_analysis_session_dir()
-        self.ica_neuropil_dir = os.path.join(session_dir, f'{NP_NAME}_{pair[0]}_{pair[1]}/')
+        self.ica_neuropil_dir = os.path.join(session_dir, f'{self.np_name}_{pair[0]}_{pair[1]}/')
 
         self.plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                               f'{NP_NAME}_output_{pair[0]}.h5')
+                                                               f'{self.np_name}_output_{pair[0]}.h5')
         self.plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                               f'{NP_NAME}_output_{pair[1]}.h5')
-        self.ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir, f'{NP_NAME}_mixing.h5')
+                                                               f'{self.np_name}_output_{pair[1]}.h5')
+        self.ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir, f'{self.np_name}_mixing.h5')
 
         return
 
@@ -199,7 +199,7 @@ class MesoscopeICA(object):
 
         # path to ica traces:
         # for roi
-        ica_traces_dir = os.path.join(session_dir, f'{ROI_NAME}_{plane1_exp_id}_{plane2_exp_id}/')
+        ica_traces_dir = os.path.join(session_dir, f'{self.roi_name}_{plane1_exp_id}_{plane2_exp_id}/')
         self.ica_traces_dir = ica_traces_dir
         path_traces_plane1 = f'{ica_traces_dir}traces_original_{plane1_exp_id}.h5'
         path_traces_plane2 = f'{ica_traces_dir}traces_original_{plane2_exp_id}.h5'
@@ -505,8 +505,8 @@ class MesoscopeICA(object):
         self.plane1_ica_input_pointer = None
         self.plane2_ica_input_pointer = None
 
-        plane1_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{ROI_NAME}_input_{self.plane1_exp_id}.h5')
-        plane2_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{ROI_NAME}_input_{self.plane2_exp_id}.h5')
+        plane1_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{self.roi_name}_input_{self.plane1_exp_id}.h5')
+        plane2_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{self.roi_name}_input_{self.plane2_exp_id}.h5')
 
         if os.path.isfile(plane1_ica_input_pointer) and os.path.isfile(plane2_ica_input_pointer):
             # file already exists, skip debiasing
@@ -796,11 +796,11 @@ class MesoscopeICA(object):
 
 
         plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'{ROI_NAME}_output_{self.plane1_exp_id}.h5')
+                                                 f'{self.roi_name}_output_{self.plane1_exp_id}.h5')
         plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'{ROI_NAME}_output_{self.plane2_exp_id}.h5')
+                                                 f'{self.roi_name}_output_{self.plane2_exp_id}.h5')
         ica_mixing_matrix_traces_pointer = os.path.join(self.ica_traces_dir,
-                                                        f'{ROI_NAME}_mixing.h5')
+                                                        f'{self.roi_name}_mixing.h5')
         # file already exists, skip unmixing
         if os.path.isfile(plane1_ica_output_pointer) and os.path.isfile(plane2_ica_output_pointer) and os.path.isfile(
                 ica_mixing_matrix_traces_pointer):
@@ -1136,7 +1136,7 @@ class MesoscopeICA(object):
 
             logging.info(f'creating figures for experiment {pair[0]}')
 
-            plot_dir = os.path.join(self.session_cache_dir, f'{ROI_NAME}_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
@@ -1189,7 +1189,7 @@ class MesoscopeICA(object):
             ica_trace_plane2_sig = self.plane2_ica_output[0, :, :]
             ica_trace_plane2_ct = self.plane2_ica_output[1, :, :]
             logging.info(f'creating figures for experiment {pair[1]}')
-            plot_dir = os.path.join(self.session_cache_dir, f'{ROI_NAME}_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
             cell_valid = 0
@@ -1260,7 +1260,7 @@ class MesoscopeICA(object):
 
             logging.info(f'plotting raw traces for experiment {pair[0]}')
 
-            plot_dir = os.path.join(self.session_cache_dir, f'{ROI_NAME}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[0]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[0]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
@@ -1299,7 +1299,7 @@ class MesoscopeICA(object):
             plane2_roi_names = self.plane2_roi_names
             plane2_roi_valid = self.plane2_roi_traces_valid['signal']
             logging.info(f'creating plots for experiment {pair[1]}')
-            plot_dir = os.path.join(self.session_cache_dir, f'{ROI_NAME}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
             cell_valid = 0
