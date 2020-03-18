@@ -552,6 +552,7 @@ def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces
         neuropil correctoin files
         demixing files
         dff traces files
+    :param roi_name: 
     :param np_name:
     :param sessions: list of LIMS session ids
     :param cache: cache directory
