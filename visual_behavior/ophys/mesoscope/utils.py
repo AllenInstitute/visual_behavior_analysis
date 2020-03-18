@@ -501,7 +501,7 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE):
 
 def run_dff_on_ica(session, an_dir=CACHE):
     """
-    run LIMS dff extraction on ICA output files, after demixing and neuripil correction
+    run LIMS dff extraction on ICA output files, after demixing and neuropil correction
     :param session: LIMS session id
     :param an_dir: directory where the traces are stored
     :return:
@@ -540,7 +540,7 @@ def run_dff_on_ica(session, an_dir=CACHE):
     return
 
 
-def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces'):
+def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces', delete_inputs=False):
     """
     deletes ica outputs from cache:
         neuropil_ica_output_pair{i}.h5
@@ -549,15 +549,16 @@ def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces
         ica_traces_output_pair{i}.h5
         ica_valid_pair{i}.json
         ica_mixing_pair{i}.h5
-        neuropil correctoin files
+        neuropil correction files
         demixing files
         dff traces files
-    :param roi_name: 
+    :param roi_name:
     :param np_name:
     :param sessions: list of LIMS session ids
     :param cache: cache directory
     :param np: string: name prefix for all files related to neuropil
-    :param: roi: string: name prefix for all files realted to ROIs
+    :param: roi: string: name prefix for all files related to ROIs
+    :param: delete_inputs: bool, defines delete or not the inputs to the ICA
     :return: None
     """
     for session in sessions:
@@ -572,6 +573,7 @@ def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces
                 if os.path.isdir(exp_np_dir):
                     ica_np_output_p1 = os.path.join(exp_np_dir, f'{np_name}_output_{pair[0]}.h5')
                     ica_np_output_p2 = os.path.join(exp_np_dir, f'{np_name}_output_{pair[1]}.h5')
+
                     valid_p1 = os.path.join(exp_np_dir, f'valid_{pair[0]}.json')
                     valid_p2 = os.path.join(exp_np_dir, f'valid_{pair[1]}.json')
                     mixing = os.path.join(exp_np_dir, f'{np_name}_mixing.h5')
@@ -585,6 +587,20 @@ def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces
                         os.remove(valid_p2)
                     if os.path.isfile(mixing):
                         os.remove(mixing)
+                    if delete_inputs:
+                        ica_np_input_p1 = os.path.join(exp_np_dir, f'{np_name}_input_{pair[0]}.h5')
+                        ica_np_input_p2 = os.path.join(exp_np_dir, f'{np_name}_input_{pair[1]}.h5')
+                        ica_np_raw_p1 = os.path.join(exp_np_dir, f'neuropil_raw_{pair[0]}.h5')
+                        ica_np_raw_p2 = os.path.join(exp_np_dir, f'neuropil_raw_{pair[1]}.h5')
+                        if os.path.isfile(ica_np_input_p1):
+                            os.remove(ica_np_input_p1)
+                        if os.path.isfile(ica_np_input_p2):
+                            os.remove(ica_np_input_p2)
+                        if os.path.isfile(ica_np_raw_p1):
+                            os.remove(ica_np_raw_p1)
+                        if os.path.isfile(ica_np_raw_p2):
+                            os.remove(ica_np_raw_p2)
+
                 # cleaning up roi traces directory:
                 ica_obj.set_ica_traces_dir(pair, roi_name="ica_traces")
                 exp_roi_dir = ica_obj.ica_traces_dir
@@ -610,6 +626,21 @@ def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces
                         shutil.rmtree(ica_plots_p1, ignore_errors=True)
                     if os.path.isdir(ica_plots_p2):
                         shutil.rmtree(ica_plots_p2, ignore_errors=True)
+
+                    if delete_inputs:
+                        ica_roi_input_p1 = os.path.join(exp_np_dir, f'{roi_name}_input_{pair[0]}.h5')
+                        ica_roi_input_p2 = os.path.join(exp_np_dir, f'{roi_name}_input_{pair[1]}.h5')
+                        ica_roi_raw_p1 = os.path.join(exp_np_dir, f'traces_original_{pair[0]}.h5')
+                        ica_roi_raw_p2 = os.path.join(exp_np_dir, f'traces_original_{pair[1]}.h5')
+                        if os.path.isfile(ica_roi_input_p1):
+                            os.remove(ica_roi_input_p1)
+                        if os.path.isfile(ica_roi_input_p2):
+                            os.remove(ica_roi_input_p2)
+                        if os.path.isfile(ica_roi_raw_p1):
+                            os.remove(ica_roi_raw_p1)
+                        if os.path.isfile(ica_roi_raw_p2):
+                            os.remove(ica_roi_raw_p2)
+
                 # removing LIMS processing outputs:
                 dem_out_p1 = os.path.join(ses_dir, f'demixing_{pair[0]}')
                 dem_out_p2 = os.path.join(ses_dir, f'demixing_{pair[1]}')

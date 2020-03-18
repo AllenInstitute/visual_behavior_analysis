@@ -182,7 +182,13 @@ class MesoscopeICA(object):
 
         return
 
-    def get_ica_traces(self, pair):
+    def get_ica_traces(self, pair, roi_name=None, np_name =None):
+
+        if not roi_name:
+            roi_name = self.roi_name
+
+        if not np_name:
+            np_name = self.np_name
 
         if self.debug_mode :
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -207,12 +213,12 @@ class MesoscopeICA(object):
 
         # path to ica traces:
         # for roi
-        ica_traces_dir = os.path.join(session_dir, f'{self.roi_name}_{plane1_exp_id}_{plane2_exp_id}/')
+        ica_traces_dir = os.path.join(session_dir, f'{roi_name}_{plane1_exp_id}_{plane2_exp_id}/')
         self.ica_traces_dir = ica_traces_dir
         path_traces_plane1 = f'{ica_traces_dir}traces_original_{plane1_exp_id}.h5'
         path_traces_plane2 = f'{ica_traces_dir}traces_original_{plane2_exp_id}.h5'
         # for neuropil
-        ica_neuropil_dir = os.path.join(session_dir, f'ica_neuropil_{plane1_exp_id}_{plane2_exp_id}/')
+        ica_neuropil_dir = os.path.join(session_dir, f'{np_name}_{plane1_exp_id}_{plane2_exp_id}/')
         self.ica_neuropil_dir = ica_neuropil_dir
         path_neuropil_plane1 = f'{ica_neuropil_dir}neuropil_original_{plane1_exp_id}.h5'
         path_neuropil_plane2 = f'{ica_neuropil_dir}neuropil_original_{plane2_exp_id}.h5'
@@ -503,7 +509,7 @@ class MesoscopeICA(object):
 
         return
 
-    def combine_debias_traces(self):
+    def combine_debias_traces(self, roi_name=None, np_name =None)
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
