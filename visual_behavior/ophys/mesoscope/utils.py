@@ -540,7 +540,7 @@ def run_dff_on_ica(session, an_dir=CACHE):
     return
 
 
-def clean_up_cache(sessions, cache, np = 'ica_neuropil', roi = 'ica_traces'):
+def clean_up_cache(sessions, cache, np_name = 'ica_neuropil', roi_name = 'ica_traces'):
     """
     deletes ica outputs from cache:
         neuropil_ica_output_pair{i}.h5
@@ -565,13 +565,13 @@ def clean_up_cache(sessions, cache, np = 'ica_neuropil', roi = 'ica_traces'):
             pairs = ica_obj.dataset.get_paired_planes()
             for pair in pairs:
                 # cleaning up neuropil directory
-                exp_np_dir = os.path.join(ses_dir, f'{np}_{pair[0]}_{pair[1]}')
+                exp_np_dir = os.path.join(ses_dir, f'{np_name}_{pair[0]}_{pair[1]}')
                 if os.path.isdir(exp_np_dir):
-                    ica_np_output_p1 = os.path.join(exp_np_dir, f'{np}_output_{pair[0]}.h5')
-                    ica_np_output_p2 = os.path.join(exp_np_dir, f'{np}_output_{pair[1]}.h5')
+                    ica_np_output_p1 = os.path.join(exp_np_dir, f'{np_name}_output_{pair[0]}.h5')
+                    ica_np_output_p2 = os.path.join(exp_np_dir, f'{np_name}_output_{pair[1]}.h5')
                     valid_p1 = os.path.join(exp_np_dir, f'valid_{pair[0]}.json')
                     valid_p2 = os.path.join(exp_np_dir, f'valid_{pair[1]}.json')
-                    mixing = os.path.join(exp_np_dir, f'{np}_mixing.h5')
+                    mixing = os.path.join(exp_np_dir, f'{np_name}_mixing.h5')
                     if os.path.isfile(ica_np_output_p1):
                         os.remove(ica_np_output_p1)
                     if os.path.isfile(ica_np_output_p2):
@@ -583,13 +583,13 @@ def clean_up_cache(sessions, cache, np = 'ica_neuropil', roi = 'ica_traces'):
                     if os.path.isfile(mixing):
                         os.remove(mixing)
                 # cleaning up roi traces directory:
-                exp_roi_dir = os.path.join(ses_dir, f'{roi}_{pair[0]}_{pair[1]}')
+                exp_roi_dir = os.path.join(ses_dir, f'{roi_name}_{pair[0]}_{pair[1]}')
                 if os.path.isdir(exp_roi_dir):
-                    ica_roi_output_p1 = os.path.join(exp_roi_dir, f'{roi}_output_{pair[0]}.h5')
-                    ica_roi_output_p2 = os.path.join(exp_roi_dir, f'{roi}_output_{pair[1]}.h5')
+                    ica_roi_output_p1 = os.path.join(exp_roi_dir, f'{roi_name}_output_{pair[0]}.h5')
+                    ica_roi_output_p2 = os.path.join(exp_roi_dir, f'{roi_name}_output_{pair[1]}.h5')
                     valid_p1 = os.path.join(exp_roi_dir, f'valid_{pair[0]}.json')
                     valid_p2 = os.path.join(exp_roi_dir, f'valid_{pair[1]}.json')
-                    mixing = os.path.join(exp_roi_dir, f'{roi}_mixing.h5')
+                    mixing = os.path.join(exp_roi_dir, f'{roi_name}_mixing.h5')
                     if os.path.isfile(ica_roi_output_p1):
                         os.remove(ica_roi_output_p1)
                     if os.path.isfile(ica_roi_output_p2):

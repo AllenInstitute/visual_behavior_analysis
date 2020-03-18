@@ -150,7 +150,7 @@ class MesoscopeICA(object):
         self.session_cache_dir = os.path.join(self.cache, f'session_{self.session_id}')
         return self.session_cache_dir
 
-    def set_ica_traces_dir(self, pair, roi_name = None):
+    def set_ica_traces_dir(self, pair, roi_name=None):
 
         if not roi_name:
             roi_name = self.roi_name
