@@ -509,19 +509,15 @@ class MesoscopeICA(object):
 
         return
 
-    def combine_debias_traces(self, roi_name=None, np_name =None)
-
+    def combine_debias_traces(self, roi_name=None, np_name=None):
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
         self.plane1_ica_input_pointer = None
         self.plane2_ica_input_pointer = None
-
         plane1_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{self.roi_name}_input_{self.plane1_exp_id}.h5')
         plane2_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{self.roi_name}_input_{self.plane2_exp_id}.h5')
-
         if os.path.isfile(plane1_ica_input_pointer) and os.path.isfile(plane2_ica_input_pointer):
             # file already exists, skip debiasing
             self.plane1_ica_input_pointer = plane1_ica_input_pointer
@@ -529,7 +525,6 @@ class MesoscopeICA(object):
         else:
             self.plane1_ica_input_pointer = None
             self.plane2_ica_input_pointer = None
-
         # original traces exist, run debiasing:
         if self.found_original_traces[0] and self.found_original_traces[1]:
             # if debiased traces don't exist, run debiasing - pointers are both None
