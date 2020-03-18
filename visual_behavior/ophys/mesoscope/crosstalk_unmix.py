@@ -150,27 +150,35 @@ class MesoscopeICA(object):
         self.session_cache_dir = os.path.join(self.cache, f'session_{self.session_id}')
         return self.session_cache_dir
 
-    def set_ica_traces_dir(self, pair):
+    def set_ica_traces_dir(self, pair, roi_name = None):
+
+        if not roi_name:
+            roi_name = self.roi_name
+
         session_dir = self.set_analysis_session_dir()
-        self.ica_traces_dir = os.path.join(session_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/')
+        self.ica_traces_dir = os.path.join(session_dir, f'{roi_name}_{pair[0]}_{pair[1]}/')
         self.plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                      f'{self.roi_name}_output_{pair[0]}.h5')
+                                                      f'{roi_name}_output_{pair[0]}.h5')
         self.plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
 
-                                                      f'{self.roi_name}_output_{pair[1]}.h5')
+                                                      f'{roi_name}_output_{pair[1]}.h5')
         self.ica_mixing_matrix_pointer = os.path.join(self.ica_traces_dir,
-                                                      f'{self.roi_name}_mixing.h5')
+                                                      f'{roi_name}_mixing.h5')
         return
 
-    def set_ica_neuropil_dir(self, pair):
+    def set_ica_neuropil_dir(self, pair, np_name=None):
+
+        if not np_name:
+            np_name = self.np_name
+
         session_dir = self.set_analysis_session_dir()
-        self.ica_neuropil_dir = os.path.join(session_dir, f'{self.np_name}_{pair[0]}_{pair[1]}/')
+        self.ica_neuropil_dir = os.path.join(session_dir, f'{np_name}_{pair[0]}_{pair[1]}/')
 
         self.plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                               f'{self.np_name}_output_{pair[0]}.h5')
+                                                               f'{np_name}_output_{pair[0]}.h5')
         self.plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                               f'{self.np_name}_output_{pair[1]}.h5')
-        self.ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir, f'{self.np_name}_mixing.h5')
+                                                               f'{np_name}_output_{pair[1]}.h5')
+        self.ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir, f'{np_name}_mixing.h5')
 
         return
 
