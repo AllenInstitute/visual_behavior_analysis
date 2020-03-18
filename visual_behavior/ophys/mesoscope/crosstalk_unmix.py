@@ -98,6 +98,8 @@ class MesoscopeICA(object):
         self.dataset = ms.MesoscopeDataset(session_id)
         self.session_cache_dir = cache
         self.debug_mode = debug_mode
+        self.roi_name = ROI_NAME
+        self.np_name = NP_NAME
 
         self.found_original_traces = None  # output of get_traces
         self.found_original_neuropil = None  # output of get_traces
@@ -158,7 +160,6 @@ class MesoscopeICA(object):
                                                       f'{ROI_NAME}_output_{pair[1]}.h5')
         self.ica_mixing_matrix_pointer = os.path.join(self.ica_traces_dir,
                                                       f'{ROI_NAME}_mixing.h5')
-
         return
 
     def set_ica_neuropil_dir(self, pair):
