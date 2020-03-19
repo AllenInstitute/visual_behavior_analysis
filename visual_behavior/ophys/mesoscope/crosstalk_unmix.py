@@ -510,14 +510,19 @@ class MesoscopeICA(object):
         return
 
     def combine_debias_traces(self, roi_name=None, np_name=None):
+
+        if not roi_name:
+            roi_name = self.roi_name
+
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
         self.plane1_ica_input_pointer = None
         self.plane2_ica_input_pointer = None
-        plane1_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{self.roi_name}_input_{self.plane1_exp_id}.h5')
-        plane2_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{self.roi_name}_input_{self.plane2_exp_id}.h5')
+        plane1_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{roi_name}_input_{self.plane1_exp_id}.h5')
+        plane2_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{roi_name}_input_{self.plane2_exp_id}.h5')
         if os.path.isfile(plane1_ica_input_pointer) and os.path.isfile(plane2_ica_input_pointer):
             # file already exists, skip debiasing
             self.plane1_ica_input_pointer = plane1_ica_input_pointer
@@ -649,7 +654,10 @@ class MesoscopeICA(object):
             raise ValueError('Extract ROI traces first')
         return
 
-    def combine_debias_neuropil(self):
+    def combine_debias_neuropil(self, np_name = None):
+
+        if not np_name:
+            np_name = self.np_name
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -660,9 +668,9 @@ class MesoscopeICA(object):
         self.plane2_ica_neuropil_input_pointer = None
 
         plane1_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
-                                                         f'ica_neuropil_input_{self.plane1_exp_id}.h5')
+                                                         f'{np_name}_input_{self.plane1_exp_id}.h5')
         plane2_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
-                                                         f'ica_neuropil_input_{self.plane2_exp_id}.h5')
+                                                         f'{np_name}_input_{self.plane2_exp_id}.h5')
 
         if os.path.isfile(plane1_ica_neuropil_input_pointer) and os.path.isfile(plane2_ica_neuropil_input_pointer):
             # file already exists, skip debiasing
@@ -801,15 +809,17 @@ class MesoscopeICA(object):
             raise ValueError('Extract neuropil traces first')
         return
 
-    def unmix_traces(self, max_iter=50):
+    def unmix_traces(self, max_iter=50, roi_name = None):
 
+        if not roi_name:
+            roi_name = self.roi_name
 
         plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'{self.roi_name}_output_{self.plane1_exp_id}.h5')
+                                                 f'{roi_name}_output_{self.plane1_exp_id}.h5')
         plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'{self.roi_name}_output_{self.plane2_exp_id}.h5')
+                                                 f'{roi_name}_output_{self.plane2_exp_id}.h5')
         ica_mixing_matrix_traces_pointer = os.path.join(self.ica_traces_dir,
-                                                        f'{self.roi_name}_mixing.h5')
+                                                        f'{roi_name}_mixing.h5')
         # file already exists, skip unmixing
         if os.path.isfile(plane1_ica_output_pointer) and os.path.isfile(plane2_ica_output_pointer) and os.path.isfile(
                 ica_mixing_matrix_traces_pointer):
@@ -955,14 +965,16 @@ class MesoscopeICA(object):
 
         return
 
-    def unmix_neuropil(self, max_iter=10):
+    def unmix_neuropil(self, max_iter=10, np_name=None):
+        if not np_name:
+            np_name = self.np_name
 
         plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'ica_neuropil_output_{self.plane1_exp_id}.h5')
+                                                          f'{np_name}_output_{self.plane1_exp_id}.h5')
         plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'ica_neuropil_output_{self.plane2_exp_id}.h5')
+                                                          f'{np_name}_output_{self.plane2_exp_id}.h5')
         ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'ica_neuropil_mixing.h5')
+                                                          f'{np_name}_mixing.h5')
 
         # file already exists, skip unmixing
         if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(
