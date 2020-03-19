@@ -545,7 +545,12 @@ class MesoscopeICA(object):
         return
 
     def combine_debias_roi(self, roi_name=None):
-
+        """
+        fn to combine all roi traces for the pair to two num_cells x num_frames_in_timeseries vectors,
+        write them to cache as ica_roi_input
+        :param roi_name: filename prefix to use for this output if different from self.roi_name
+        :return: None
+        """
         if not roi_name:
             roi_name = self.roi_name
 
@@ -690,7 +695,12 @@ class MesoscopeICA(object):
         return
 
     def combine_debias_neuropil(self, np_name = None):
-
+        """
+        fn to combine all neuropil traces for the pair to two num_cells x num_frames_in_timeseries vectors,
+        write them to cache as ica_roi_input
+        :param np_name: filename prefix to use for this output if different from self.np_name
+        :return: None
+        """
         if not np_name:
             np_name = self.np_name
 
@@ -844,7 +854,13 @@ class MesoscopeICA(object):
             raise ValueError('Extract neuropil traces first')
         return
 
-    def unmix_traces(self, max_iter=50, roi_name = None):
+    def unmix_traces(self, max_iter=50, roi_name=None):
+        """
+        fn to apply Fast ICA to combined, debiased traces
+        :param max_iter: int, number of iterations for FastICA
+        :param roi_name: string, filename prefix to use if different from self.roi_name
+        :return: None
+        """
 
         if not roi_name:
             roi_name = self.roi_name
@@ -883,7 +899,7 @@ class MesoscopeICA(object):
                 self.traces_unmix = s
 
                 # rescaling traces back:
-                self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_traces()
+                self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_roi()
 
                 plane1_ica_output = self.traces_unmix[:, 0] * self.ica_traces_scale_top
                 plane2_ica_output = self.traces_unmix[:, 1] * self.ica_traces_scale_bot
@@ -924,7 +940,7 @@ class MesoscopeICA(object):
                     self.traces_unmix = np.array([s[:, 1], s[:, 0]]).T
 
                     #rescaling
-                    self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_traces()
+                    self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_roi()
 
                     plane1_ica_output = self.traces_unmix[:, 0] * self.ica_traces_scale_top
                     plane2_ica_output = self.traces_unmix[:, 1] * self.ica_traces_scale_bot
@@ -996,11 +1012,15 @@ class MesoscopeICA(object):
             self.traces_matrix = traces_matrix
             self.plane1_roi_err = plane1_err
             self.plane2_roi_err = plane2_err
-
-
         return
 
     def unmix_neuropil(self, max_iter=10, np_name=None):
+        """
+        fn to apply Fast ICA to combined, debiased neuropil traces
+        :param max_iter: int, number of iterations for FastICA
+        :param np_name: string, filename prefix to use if different from self.np_name
+        :return: None
+        """
         if not np_name:
             np_name = self.np_name
 
@@ -1170,6 +1190,14 @@ class MesoscopeICA(object):
 
 
     def plot_ica_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
+        """
+        fn to plot demixed traces
+        :param pair: [int, int]: LIMS IDs for the two paired planes
+        :param samples_per_plot: int, samples ot visualize on one plot, decreasing will make plotting very slow
+        :param figshow: bool, controlling whether to show a figure in jupyter/iphython as it's being generated or not
+        :param figsave: bool, controlling whether to save the figure in cache
+        :return: None
+        """
         #    if figures don't exist!
 
         if self.debug_mode:
@@ -1296,8 +1324,14 @@ class MesoscopeICA(object):
         return
 
     def plot_raw_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
-        #    if figures don't exist!
-
+        """
+        fn to plot raw traces
+        :param pair: [int, int]: LIMS IDs for the two paired planes
+        :param samples_per_plot: int, samples ot visualize on one plot, decreasing will make plotting very slow
+        :param figshow: bool, controlling whether to show a figure in jupyter/iphython as it's being generated or not
+        :param figsave: bool, controlling whether to save the figure in cache
+        :return: None
+        """
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
@@ -1407,6 +1441,11 @@ class MesoscopeICA(object):
 
     @staticmethod
     def get_valid_seg_run(exp_id):
+        """
+        queries  LIMS to retrieve an ID of the valid segmentation run for given expeirment
+        :param exp_id: LIMS experiment ID
+        :return: int
+        """
         query = f"""
         select *
         from ophys_cell_segmentation_runs
@@ -1415,7 +1454,12 @@ class MesoscopeICA(object):
         seg_run = lu.query(query)[0]['id']
         return seg_run
 
-    def find_scale_ica_traces(self):
+    def find_scale_ica_roi(self):
+        """
+        find scaling factor that will minimize difference of standard deviations between ICA input and ICA output
+        for ROI traces
+        :return: [int, int]
+        """
         # for traces:
         scale_top = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 0], self.plane1_ica_input))
         scale_bot = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 1], self.plane2_ica_input))
@@ -1423,6 +1467,11 @@ class MesoscopeICA(object):
         return scale_top.x, scale_bot.x
 
     def find_scale_ica_neuropil(self):
+        """
+        returns scaling factor that will minimize difference of standard deviations between ICA input and ICA output
+        for neuropil traces
+        :return: [int, int]
+        """
         scale_top_neuropil = opt.minimize(self.ica_err, [1],
                                           (self.neuropil_unmix[:, 0], self.plane1_ica_neuropil_input))
         scale_bot_neuropil = opt.minimize(self.ica_err, [1],
@@ -1432,5 +1481,11 @@ class MesoscopeICA(object):
 
     @staticmethod
     def estimate_crosstalk_roi(trace_sig, trace_ct):
+        """
+        egneraes linear fit to 2d histogram of signal plane and crosstalk plane
+        :param trace_sig: 1D np.array, traces in signal plane
+        :param trace_ct: 1D np.array, traces in crosstalk plane
+        :return: slope, offset, r_value, std_err
+        """
         slope, offset, r_value, p_value, std_err = scipy.stats.linregress(trace_sig, trace_ct)
         return slope, offset, r_value ** 2, p_value, std_err
