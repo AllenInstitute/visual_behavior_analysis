@@ -77,7 +77,7 @@ def get_ica_sessions():
         pairs = dataset.get_paired_planes()
         for pair in pairs:
             ica_obj = ica.MesoscopeICA(session, cache=CACHE)
-            ica_obj.set_ica_traces_dir(pair)
+            ica_obj.set_ica_roi_dir(pair)
             ica_obj.set_ica_neuropil_dir(pair)
 
             if os.path.isfile(ica_obj.plane1_ica_output_pointer) and os.path.isfile(ica_obj.plane1_ica_neuropil_output_pointer):
@@ -106,7 +106,7 @@ def get_ica_roi_sessions():
         pairs = dataset.get_paired_planes()
         for pair in pairs:
             ica_obj = ica.MesoscopeICA(session, cache=CACHE)
-            ica_obj.set_ica_traces_dir(pair)
+            ica_obj.set_ica_roi_dir(pair)
             ica_obj.set_neuropil_ica_dir(pair)
 
             if os.path.isfile(ica_obj.plane1_ica_output_pointer) :
@@ -602,7 +602,7 @@ def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces
                             os.remove(ica_np_raw_p2)
 
                 # cleaning up roi traces directory:
-                ica_obj.set_ica_traces_dir(pair, roi_name="ica_traces")
+                ica_obj.set_ica_roi_dir(pair, roi_name="ica_traces")
                 exp_roi_dir = ica_obj.ica_traces_dir
                 if os.path.isdir(exp_roi_dir):
                     ica_roi_output_p1 = os.path.join(exp_roi_dir, f'{roi_name}_output_{pair[0]}.h5')

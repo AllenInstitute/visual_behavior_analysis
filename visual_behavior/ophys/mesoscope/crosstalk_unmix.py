@@ -23,13 +23,14 @@ CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'process
 ROI_NAME = "roi_ica"
 NP_NAME = "neuropil_ica"
 
+
 def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
     """
     Functions to read existing traces from LIMS
     :param movie_exp_dir: str, LIMS directory for the movie to apply ROIS masks to
     :param movie_exp_id: int,  LIMS experiment ID for the movie
     :param mask_exp_dir: LIMS directory to read masks file from
-    :param mask_exp_id: LIMS experiment ID for the rois amsk file
+    :param mask_exp_id: LIMS experiment ID for the rois mask file
     :return: traces, neuropil traces, roi_names
     """
     for filename in CELL_EXTRACT_JSON_FORMAT:
@@ -71,7 +72,7 @@ def create_roi_masks(rois, w, h, motion_border):
     :param w:
     :param h:
     :param motion_border:
-    :return:
+    :return: roi list
     """
     roi_list = []
     for roi in rois:
@@ -91,8 +92,18 @@ def create_roi_masks(rois, w, h, motion_border):
 
 
 class MesoscopeICA(object):
+    """
+    Class to perform ica-based demixing on a pair of mesoscope planes
+    """
 
     def __init__(self, session_id, cache, debug_mode=False, roi_name="roi_ica", np_name="neuropil_ica"):
+        """
+        :param session_id: LIMS session ID
+        :param cache: directory to store/find inputs/outputs
+        :param debug_mode: flag that controls whether debug logger messages are output
+        :param roi_name: string, default name for roi-related input/outputs
+        :param np_name: string, default name for neuropil-related inputs/outputs
+        """
 
         self.session_id = session_id
         self.dataset = ms.MesoscopeDataset(session_id)
@@ -147,11 +158,20 @@ class MesoscopeICA(object):
         self.plane2_neuropil_traces_valid = None
 
     def set_analysis_session_dir(self):
+        """
+        crete pointer to the session-level dir
+        :return: string - path to session level dir
+        """
         self.session_cache_dir = os.path.join(self.cache, f'session_{self.session_id}')
         return self.session_cache_dir
 
-    def set_ica_traces_dir(self, pair, roi_name=None):
-
+    def set_ica_roi_dir(self, pair, roi_name=None):
+        """
+        create pointer to ica-related inputs/outputs for the pair
+        :param pair: list[int, int] - pair of LIMS exp IDs
+        :param roi_name: roi_nam if different form self.roi_name to use to locate old inputs/outputs
+        :return: None
+        """
         if not roi_name:
             roi_name = self.roi_name
 
@@ -167,7 +187,12 @@ class MesoscopeICA(object):
         return
 
     def set_ica_neuropil_dir(self, pair, np_name=None):
-
+        """
+        create pointer to neuropil-related inputs/outputs for the pair
+        :param pair: list[int, int] - pair of LIMS exp IDs
+        :param roi_name: roi_nam if different form self.roi_name to use to locate old inputs/outputs
+        :return: None
+        """
         if not np_name:
             np_name = self.np_name
 
