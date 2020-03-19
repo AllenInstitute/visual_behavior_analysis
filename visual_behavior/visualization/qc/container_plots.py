@@ -222,6 +222,51 @@ def plot_csid_snr_for_container(ophys_container_id, save_figure=True):
                        'container_' + str(ophys_container_id))
 
 
+def plot_number_segmented_rois_for_container(ophys_container_id, save_figure=True):
+    """uses seaborn barplot
+        x axis is all passed experiments for a container, listed as their stage name from lims
+        and listed in their acquisition date order.
+        y axis is number of rois
+        the bars are: 
+        total_rois : number of segmented objects
+        valid_count: numner of valid rois (same thing as cell_specimen_ids)
+        invalid_count: number of invalid rois (deemed not a cell, or failed for another reason
+                        like being on the motion border etc.)
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    seg_count_df = dp.segmentation_validity_count_for_container(ophys_container_id)
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    plotting_df = pd.merge(seg_count_df, exp_order_and_stage, how="left", on="ophys_experiment_id")
+    validity_palette = ['steelblue', 'lightgreen', 'tomato']
+
+    figsize = (6.5, 9)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.barplot(x="stage_name_lims", y="roi_count",
+                     data=plotting_df,
+                     hue="roi_category",
+                     palette=validity_palette,
+                     order=exp_order_and_stage["stage_name_lims"])
+
+    ax.legend(fontsize='xx-small',
+              title_fontsize='xx-small',
+              title=None,
+              bbox_to_anchor=(1.01, 1),
+              loc=2)
+    plt.xlabel("stage name")
+    plt.ylabel('roi count')
+    plt.title('number segmented rois by experiment for container', pad=5)
+    plt.xticks(rotation=90)
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'segmented_rois_by_experiment_for_container',
+                       'container_' + str(ophys_container_id))
+
+
 def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True):
     df = dp.container_cell_matching_count_heatmap_df(ophys_container_id)
 
