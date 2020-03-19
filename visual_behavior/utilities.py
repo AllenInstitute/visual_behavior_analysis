@@ -582,3 +582,53 @@ class EyeTrackingData(object):
             image = self.add_ellipse(image, self.ellipse_fits['corneal_reflection'].query('frame == @frame'), color=self.cr_color)
 
         return image
+
+
+def convert_to_fraction(df_in):
+    '''
+    converts all columns of an input dataframe, excluding the columns labeled 't' or 'time' to a fractional change
+    '''
+    df = df_in.copy()
+    cols = [col for col in df.columns if col not in ['t', 'time']]
+    for col in cols:
+        s = df[col]
+        s0 = df[col].mean(axis=0)
+        df[col] = (s - s0) / s0
+    return df
+
+
+def event_triggered_response(df, parameter, event_times, time_key=None, t_before=10, t_after=10, sampling_rate=60):
+    '''
+    build event triggered response around a given set of events
+    required inputs:
+      df: dataframe of input data
+      parameter: column of input dataframe to extract around events
+      event_times: times of events of interest
+    optional inputs:
+      time_key: key to use for time (if None (default), will search for either 't' or 'time'. if 'index', use indices)
+      t_before: time before each of event of interest
+      t_after: time after each event of interest
+      sampling_rate: desired sampling rate of output (input data will be interpolated)
+    output:
+      dataframe with one time column ('t') and one column of data for each event
+    '''
+    if time_key is None:
+        if 't' in df.columns:
+            time_key = 't'
+        else:
+            time_key = 'time'
+
+    _d = {'time': np.arange(-t_before, t_after, 1 / sampling_rate)}
+    for ii, event_time in enumerate(np.array(event_times)):
+
+        if time_key == 'index':
+            df_local = df.loc[(event_time - t_before):(event_time + t_after)]
+            t = df_local.index.values - event_time
+        else:
+            df_local = df.query(
+                "{0} > (@event_time - @t_before) and {0} < (@event_time + @t_after)".format(time_key))
+            t = df_local[time_key] - event_time
+        y = df_local[parameter]
+
+        _d.update({'event_{}_t={}'.format(ii, event_time): np.interp(_d['time'], t, y)})
+    return pd.DataFrame(_d)

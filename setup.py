@@ -11,6 +11,7 @@ setuptools.setup(
     packages=setuptools.find_packages(exclude=['data', 'figures', 'notebooks', 'scripts']),
     install_requires=[
         "matplotlib",
+        "plotly",
         "pandas==0.25.3",
         "six",
         "scikit-learn>=0.19.2",

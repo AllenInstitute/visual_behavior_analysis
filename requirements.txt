@@ -20,3 +20,5 @@ pymongo
 pyyaml
 opencv-python
 dash
+
+plotly
