@@ -1228,11 +1228,12 @@ class MesoscopeICA(object):
         return
 
 
-    def plot_ica_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
+    def plot_ica_traces(self, pair, samples_per_plot=10000, cell_num = None, figshow=True, figsave=True):
         """
         fn to plot demixed traces
         :param pair: [int, int]: LIMS IDs for the two paired planes
         :param samples_per_plot: int, samples ot visualize on one plot, decreasing will make plotting very slow
+        :param cell_num: int, number of rois to plot
         :param figshow: bool, controlling whether to show a figure in jupyter/iphython as it's being generated or not
         :param figsave: bool, controlling whether to save the figure in cache
         :return: None
@@ -1264,7 +1265,13 @@ class MesoscopeICA(object):
                 os.mkdir(plot_dir)
 
             cell_valid = 0
-            for cell_orig in range(raw_trace_plane1_sig.shape[0]):
+
+            if not cell_num:
+                cells_to_plot = range(raw_trace_plane1_sig.shape[0])
+            else:
+                cells_to_plot = range(cell_num)
+
+            for cell_orig in cells_to_plot:
                 # check in this roi is valid:
                 if plane1_roi_valid[str(plane1_roi_names[cell_orig])]:
                     # Plot cell
@@ -1316,7 +1323,13 @@ class MesoscopeICA(object):
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
             cell_valid = 0
-            for cell_orig in range(raw_trace_plane2_sig.shape[0]):
+
+            if not cell_num:
+                cells_to_plot = range(raw_trace_plane2_sig.shape[0])
+            else:
+                cells_to_plot = range(cell_num)
+
+            for cell_orig in cells_to_plot:
                 # check in this roi is valid:
                 if plane2_roi_valid[str(plane2_roi_names[cell_orig])]:
                     # Plot cell
@@ -1362,11 +1375,12 @@ class MesoscopeICA(object):
 
         return
 
-    def plot_raw_traces(self, pair, samples_per_plot=10000, figshow=True, figsave=True):
+    def plot_raw_traces(self, pair, samples_per_plot=10000, cell_num = None, figshow=True, figsave=True):
         """
         fn to plot raw traces
         :param pair: [int, int]: LIMS IDs for the two paired planes
         :param samples_per_plot: int, samples ot visualize on one plot, decreasing will make plotting very slow
+        :param cell_num: int, number of rois to plot
         :param figshow: bool, controlling whether to show a figure in jupyter/iphython as it's being generated or not
         :param figsave: bool, controlling whether to save the figure in cache
         :return: None
@@ -1393,8 +1407,12 @@ class MesoscopeICA(object):
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
-            cell_valid = 0
-            for cell_orig in range(raw_trace_plane1_sig.shape[0]):
+            if not cell_num:
+                cells_to_plot = range(raw_trace_plane1_sig.shape[0])
+            else:
+                cells_to_plot = range(cell_num)
+
+            for cell_orig in cells_to_plot:
                 # check in this roi is valid:
                 if plane1_roi_valid[str(plane1_roi_names[cell_orig])]:
                     # Plot cell
@@ -1432,7 +1450,13 @@ class MesoscopeICA(object):
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
             cell_valid = 0
-            for cell_orig in range(raw_trace_plane2_sig.shape[0]):
+
+            if not cell_num:
+                cells_to_plot = range(raw_trace_plane2_sig.shape[0])
+            else:
+                cells_to_plot = range(cell_num)
+
+            for cell_orig in cells_to_plot:
                 # check in this roi is valid:
                 if plane2_roi_valid[str(plane2_roi_names[cell_orig])]:
                     # Plot cell
