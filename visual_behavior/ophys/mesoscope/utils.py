@@ -41,8 +41,8 @@ def get_path(obj, key, check_exists):
     return path
 
 
-def run_ica_on_session(session,  iter_ica, iter_neuropil):
-    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE)
+def run_ica_on_session(session,  iter_ica, iter_neuropil, roi_name="roi_ica", np_name="neuropil_ica"):
+    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, ROI_NAME=roi_name, NP_NAME=np_name)
     pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
         ica_obj.get_ica_traces(pair)
