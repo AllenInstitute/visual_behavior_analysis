@@ -112,8 +112,36 @@ class MesoscopeICA(object):
         self.roi_name = roi_name
         self.np_name = np_name
 
+        self.plane1_exp_id = None
+        self.plane2_exp_id = None
+
         self.found_original_traces = None  # output of get_traces
         self.found_original_neuropil = None  # output of get_traces
+
+        self.ica_traces_dir = None
+        self.plane1_ica_output_pointer = None
+        self.plane2_ica_output_pointer = None
+        self.ica_mixing_matrix_pointer = None
+
+        self.ica_neuropil_dir = None
+        self.plane1_ica_neuropil_output_pointer = None
+        self.plane2_ica_neuropil_output_pointer = None
+        self.ica_mixing_matrix_neuropil_pointer = None
+
+        self.plane1_ica_input_pointer = None
+        self.plane2_ica_input_pointer = None
+        self.plane1_ica_output_pointer = None
+        self.plane2_ica_output_pointer = None
+
+        self.plane1_ica_neuropil_input_pointer = None
+        self.plane2_ica_neuropil_input_pointer = None
+        self.plane1_ica_neuropil_output_pointer = None
+        self.plane2_ica_neuropil_output_pointer = None
+
+        self.plane1_roi_names = None
+        self.plane2_roi_names = None
+        self.plane1_traces_orig = None
+        self.plane1_traces_orig_pointer = None
 
         self.plane1_offset = None
         self.plane2_offset = None
@@ -157,6 +185,9 @@ class MesoscopeICA(object):
         self.plane1_neuropil_traces_valid = None
         self.plane2_neuropil_traces_valid = None
 
+        self.plane1_err = None
+        self.plane2_err = None
+
     def set_analysis_session_dir(self):
         """
         crete pointer to the session-level dir
@@ -190,7 +221,7 @@ class MesoscopeICA(object):
         """
         create pointer to neuropil-related inputs/outputs for the pair
         :param pair: list[int, int] - pair of LIMS exp IDs
-        :param roi_name: roi_nam if different form self.roi_name to use to locate old inputs/outputs
+        :param np_name: roi_nam if different form self.roi_name to use to locate old inputs/outputs
         :return: None
         """
         if not np_name:
@@ -198,7 +229,6 @@ class MesoscopeICA(object):
 
         session_dir = self.set_analysis_session_dir()
         self.ica_neuropil_dir = os.path.join(session_dir, f'{np_name}_{pair[0]}_{pair[1]}/')
-
         self.plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
                                                                f'{self.np_name}_output_{pair[0]}.h5')
         self.plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
@@ -207,7 +237,7 @@ class MesoscopeICA(object):
 
         return
 
-    def get_ica_traces(self, pair, roi_name=None, np_name =None):
+    def get_ica_traces(self, pair, roi_name=None, np_name=None):
         """
         function to apply roi set to two image planes, first check if the traces have been extracted before,
         can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk planes
@@ -222,7 +252,7 @@ class MesoscopeICA(object):
         if not np_name:
             np_name = self.np_name
 
-        if self.debug_mode :
+        if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
@@ -931,6 +961,8 @@ class MesoscopeICA(object):
                 #rms of the delta (in, out)
                 plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)# this value should be low as this is rms of signal traces before and after ICA:
                 plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)# bottom to top is usually less SNR, so higher rms
+                self.plane1_err = plane1_err
+                self.plane2_err = plane2_err
 
                 # need to test and find appropriate threshold to call it reversed source ICA out
 
@@ -963,6 +995,11 @@ class MesoscopeICA(object):
                     plane2_out_ct = plane1_ica_output[plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
                     plane2_out_sig = plane2_ica_output[plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
+                    #calculate new plane1_err and plane2_err:
+                    plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
+                    plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
+                    self.plane1_err = plane1_err
+                    self.plane2_err = plane2_err
 
                 # adding offset
                 plane1_out_sig = plane1_out_sig + self.plane1_offset['plane1_sig_offset']
@@ -980,6 +1017,8 @@ class MesoscopeICA(object):
                 self.plane1_ica_output_pointer = plane1_ica_output_pointer
                 self.plane2_ica_output_pointer = plane2_ica_output_pointer
                 self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
+
+
 
                 # writing ica output traces to disk
                 with h5py.File(self.plane1_ica_output_pointer, "w") as f:
