@@ -1,5 +1,7 @@
+import numpy as np
 import pandas as pd
 import seaborn as sns
+import matplotlib.pyplot as plt
 
 from visual_behavior.visualization.qc import data_processing as dp
 
@@ -28,7 +30,8 @@ def gen_ophys_stage_name_colors_dict():
                               'OPHYS_3_images_B': stage_color_palette[5],
                               'VisCodingTargetedMovieClips': stage_color_palette[7],
                               'OPHYS_7_receptive_field_mapping': stage_color_palette[7],
-                              'full_field_test': stage_color_palette[7]}
+                              'full_field_test': stage_color_palette[7],
+                              None: stage_color_palette[6]}
     return stage_name_colors_dict
 
 
@@ -63,6 +66,14 @@ def experiment_id_stage_color_dict_for_experiment(ophys_experiment_id):
 
 
 def experiment_id_stage_color_dict_for_container(ophys_container_id):
+    """[summary]
+    
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+    
+    Returns:
+        [type] -- [description]
+    """
     container_df = dp.ophys_container_info_df(ophys_container_id)
     exp_color_dict = map_stage_name_colors_to_ophys_experiment_ids(container_df)
     return exp_color_dict
