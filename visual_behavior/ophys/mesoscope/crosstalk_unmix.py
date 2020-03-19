@@ -185,8 +185,11 @@ class MesoscopeICA(object):
         self.plane1_neuropil_traces_valid = None
         self.plane2_neuropil_traces_valid = None
 
-        self.plane1_err = None
-        self.plane2_err = None
+        self.plane1_roi_err = None
+        self.plane2_roi_err = None
+
+        self.plane1_np_err = None
+        self.plane2_np_err = None
 
     def set_analysis_session_dir(self):
         """
@@ -961,8 +964,8 @@ class MesoscopeICA(object):
                 #rms of the delta (in, out)
                 plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)# this value should be low as this is rms of signal traces before and after ICA:
                 plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)# bottom to top is usually less SNR, so higher rms
-                self.plane1_err = plane1_err
-                self.plane2_err = plane2_err
+                self.plane1_roi_err = plane1_err
+                self.plane2_roi_err = plane2_err
 
                 # need to test and find appropriate threshold to call it reversed source ICA out
 
@@ -998,8 +1001,8 @@ class MesoscopeICA(object):
                     #calculate new plane1_err and plane2_err:
                     plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
                     plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
-                    self.plane1_err = plane1_err
-                    self.plane2_err = plane2_err
+                    self.plane1_roi_err = plane1_err
+                    self.plane2_roi_err = plane2_err
 
                 # adding offset
                 plane1_out_sig = plane1_out_sig + self.plane1_offset['plane1_sig_offset']
@@ -1138,6 +1141,8 @@ class MesoscopeICA(object):
                 plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
                 # bottom to top is usually less SNR, so higher rms
                 plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
+                self.plane1_np_err = plane1_err
+                self.plane2_np_err = plane2_err
 
                 # need to test and find appropriate threshold to call it reversed source ICA out
                 if plane1_err > 6 or plane2_err > 7:
@@ -1168,6 +1173,14 @@ class MesoscopeICA(object):
                                     plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
                     plane2_out_sig = plane2_ica_neuropil_output[
                                      plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+
+                    # rms of the delta (in, out)
+                    # this value should be low as this is rms of signal traces before and after ICA:
+                    plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
+                    # bottom to top is usually less SNR, so higher rms
+                    plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
+                    self.plane1_np_err = plane1_err
+                    self.plane2_np_err = plane2_err
 
                 # adding offset
                 plane1_out_sig = plane1_out_sig + self.plane1_neuropil_offset['plane1_sig_neuropil_offset']
@@ -1221,8 +1234,8 @@ class MesoscopeICA(object):
             self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
             self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
             self.neuropil_matrix = neuropil_matrix
-            self.plane1_neuropil_err = plane1_err
-            self.plane2_neuropil_err = plane2_err
+            self.plane1_np_err = plane1_err
+            self.plane2_np_err = plane2_err
 
 
         return
@@ -1375,7 +1388,7 @@ class MesoscopeICA(object):
 
         return
 
-    def plot_raw_traces(self, pair, samples_per_plot=10000, cell_num = None, figshow=True, figsave=True):
+    def plot_raw_traces(self, pair, samples_per_plot=10000, cell_num=None, figshow=True, figsave=True):
         """
         fn to plot raw traces
         :param pair: [int, int]: LIMS IDs for the two paired planes
