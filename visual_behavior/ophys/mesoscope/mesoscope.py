@@ -45,7 +45,7 @@ def get_all_mesoscope_data():
              "join ophys_sessions os on os.id = oe.ophys_session_id "
              "join specimens sp on sp.id = os.specimen_id "
              "join projects p on p.id = os.project_id "
-             "where (p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d' or p.code='MesoscopeDevelopment') and os.workflow_state ='uploaded' " # and 'MesoscopeDevelopment' or p.code =  (oe.workflow_state = 'processing' or oe.workflow_state = 'qc') and os.workflow_state ='uploaded' "
+             "where (p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d') and os.workflow_state ='uploaded' " # and 'MesoscopeDevelopment' or p.code =  (oe.workflow_state = 'processing' or oe.workflow_state = 'qc') and os.workflow_state ='uploaded' "
              "order by session_id")
     return pd.DataFrame(psycopg2_select(query))
 
