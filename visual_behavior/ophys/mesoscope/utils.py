@@ -47,7 +47,7 @@ def run_ica_on_session(session,  iter_ica, iter_neuropil, roi_name="roi_ica", np
     for pair in pairs:
         ica_obj.get_ica_traces(pair)
         ica_obj.validate_traces()
-        ica_obj.combine_debias_traces()
+        ica_obj.combine_debias_roi()
         ica_obj.combine_debias_neuropil()
         ica_obj.unmix_traces(max_iter=iter_ica)
         ica_obj.unmix_neuropil(max_iter=iter_neuropil)
@@ -58,7 +58,7 @@ def run_ica_on_pair(session, pair, iter_ica, iter_neuropil):
     ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE)
     ica_obj.get_ica_traces(pair)
     ica_obj.validate_traces()
-    ica_obj.combine_debias_traces()
+    ica_obj.combine_debias_roi()
     ica_obj.combine_debias_neuropil()
     ica_obj.unmix_traces(max_iter=iter_ica)
     ica_obj.unmix_neuropil(max_iter=iter_neuropil)

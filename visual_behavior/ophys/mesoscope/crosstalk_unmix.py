@@ -208,7 +208,14 @@ class MesoscopeICA(object):
         return
 
     def get_ica_traces(self, pair, roi_name=None, np_name =None):
-
+        """
+        function to apply roi set to two image planes, first check if the traces have been extracted before,
+        can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk planes
+        :param pair: list[int, int] : LIMS exp IDs for the pair
+        :param roi_name: string, new name for roi-related files to use, different form self.roi_name
+        :param np_name: string, new name for neuropil-related files to use, if need to be different form self.np_name
+        :return: list[bool bool]: flags to see if traces where extracted successfully
+        """
         if not roi_name:
             roi_name = self.roi_name
 
@@ -380,7 +387,10 @@ class MesoscopeICA(object):
         return self.found_original_traces, self.found_original_neuropil
 
     def validate_traces(self):
-
+        """
+        fn to check if the traces don't have Nans, writes {exp_id}_valid.json to cache for each plane in pair
+        :return: None
+        """
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
@@ -534,7 +544,7 @@ class MesoscopeICA(object):
 
         return
 
-    def combine_debias_traces(self, roi_name=None, np_name=None):
+    def combine_debias_roi(self, roi_name=None):
 
         if not roi_name:
             roi_name = self.roi_name
