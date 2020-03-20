@@ -165,7 +165,7 @@ class MesoscopeICA(object):
         self.traces_matrix = None
         self.neuropil_matrix = None
 
-        self.traces_unmix = None
+        self.roi_unmix = None
         self.neuropil_unmix = None
 
         self.cache = cache
@@ -929,13 +929,13 @@ class MesoscopeICA(object):
                 a = ica.mixing_  # Get estimated smixing matrix
                 logger.info("ICA successful")
                 self.traces_matrix = a
-                self.traces_unmix = s
+                self.roi_unmix = s
 
                 # rescaling traces back:
                 self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_roi()
 
-                plane1_ica_output = self.traces_unmix[:, 0] * self.ica_traces_scale_top
-                plane2_ica_output = self.traces_unmix[:, 1] * self.ica_traces_scale_bot
+                plane1_ica_output = self.roi_unmix[:, 0] * self.ica_traces_scale_top
+                plane2_ica_output = self.roi_unmix[:, 1] * self.ica_traces_scale_bot
 
                 # reshaping traces
                 #new shape, excluding non valid ROIs
@@ -964,21 +964,19 @@ class MesoscopeICA(object):
                 #rms of the delta (in, out)
                 plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)# this value should be low as this is rms of signal traces before and after ICA:
                 plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)# bottom to top is usually less SNR, so higher rms
-                self.plane1_roi_err = plane1_err
-                self.plane2_roi_err = plane2_err
 
                 # need to test and find appropriate threshold to call it reversed source ICA out
 
                 if plane1_err > 6 or plane2_err > 7 :
 
                     logger.info("Detected reversed sources in ICA, reassigning")
-                    self.traces_unmix = np.array([s[:, 1], s[:, 0]]).T
+                    self.roi_unmix = np.array([s[:, 1], s[:, 0]]).T
 
                     #rescaling
                     self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_roi()
 
-                    plane1_ica_output = self.traces_unmix[:, 0] * self.ica_traces_scale_top
-                    plane2_ica_output = self.traces_unmix[:, 1] * self.ica_traces_scale_bot
+                    plane1_ica_output = self.roi_unmix[:, 0] * self.ica_traces_scale_top
+                    plane2_ica_output = self.roi_unmix[:, 1] * self.ica_traces_scale_bot
 
                     # reshaping ica output traces
 
@@ -1001,10 +999,55 @@ class MesoscopeICA(object):
                     #calculate new plane1_err and plane2_err:
                     plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
                     plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
-                    self.plane1_roi_err = plane1_err
-                    self.plane2_roi_err = plane2_err
+
+                    #check if errors are down for sign inversion
+                    if plane1_err > 6 or plane2_err > 7 :
+                        logger.info("RMS error is still high, checking for inversion")
+                        # get ica outout, wiht source assignemtn fixed
+                        plane1_ica_output = self.roi_unmix[:, 0]
+                        plane2_ica_output = self.roi_unmix[:, 1]
+
+                        #which signal is inverted?
+                        if abs(min(plane1_ica_output)) > abs(max(plane2_ica_output)) :
+                            logger.info("Plane 1 is inverted, multiplying by -1")
+                            self.roi_unmix[:, 0] *= -1
+
+                        if abs(min(plane2_ica_output)) > abs(max(plane1_ica_output)) :
+                            logger.info("Plane 2 is inverted, multiplying by -1")
+                            self.roi_unmix[:, 1] *= -1
+
+                        # rescaling
+                        self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_roi()
+
+                        plane1_ica_output = self.roi_unmix[:, 0] * self.ica_traces_scale_top
+                        plane2_ica_output = self.roi_unmix[:, 1] * self.ica_traces_scale_bot
+
+                        new_shape = [plane1_valid_shape.sum() + plane2_valid_shape.sum(),
+                                     self.plane1_traces_orig.shape[2]]
+
+                        plane1_ica_output = plane1_ica_output.reshape(new_shape)
+                        plane2_ica_output = plane2_ica_output.reshape(new_shape)
+
+                        plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
+                        plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
+
+                        plane2_out_ct = plane1_ica_output[
+                                        plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                        plane2_out_sig = plane2_ica_output[plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+
+                        # calculate new plane1_err and plane2_err:
+                        plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
+                        plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
+
+                        # check if errors are down for sign inversion
+                        if plane1_err > 6 or plane2_err > 7:
+                            logger.info("Errors are still high, need to investigate further..")
 
                 # adding offset
+
+                self.plane1_roi_err = plane1_err
+                self.plane2_roi_err = plane2_err
+
                 plane1_out_sig = plane1_out_sig + self.plane1_offset['plane1_sig_offset']
                 plane1_out_ct = plane1_out_ct + self.plane1_offset['plane1_ct_offset']
 
@@ -1020,8 +1063,6 @@ class MesoscopeICA(object):
                 self.plane1_ica_output_pointer = plane1_ica_output_pointer
                 self.plane2_ica_output_pointer = plane2_ica_output_pointer
                 self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
-
-
 
                 # writing ica output traces to disk
                 with h5py.File(self.plane1_ica_output_pointer, "w") as f:
@@ -1103,6 +1144,7 @@ class MesoscopeICA(object):
                 logger.info("ICA on neuropil traces successful")
                 self.neuropil_matrix = a
                 self.neuropil_unmix = s
+
                 # rescaling traces back:
                 self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil()
                 plane1_ica_neuropil_output = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
@@ -1181,6 +1223,7 @@ class MesoscopeICA(object):
                     plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
                     self.plane1_np_err = plane1_err
                     self.plane2_np_err = plane2_err
+
 
                 # adding offset
                 plane1_out_sig = plane1_out_sig + self.plane1_neuropil_offset['plane1_sig_neuropil_offset']
@@ -1537,8 +1580,8 @@ class MesoscopeICA(object):
         :return: [int, int]
         """
         # for traces:
-        scale_top = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 0], self.plane1_ica_input))
-        scale_bot = opt.minimize(self.ica_err, [1], (self.traces_unmix[:, 1], self.plane2_ica_input))
+        scale_top = opt.minimize(self.ica_err, [1], (self.roi_unmix[:, 0], self.plane1_ica_input))
+        scale_bot = opt.minimize(self.ica_err, [1], (self.roi_unmix[:, 1], self.plane2_ica_input))
 
         return scale_top.x, scale_bot.x
 
