@@ -7,6 +7,7 @@ import os
 import glob
 import traceback
 import datetime
+import uuid
 
 from allensdk.internal.api import PostgresQueryMixin
 from allensdk.core.authentication import credential_injector
@@ -167,21 +168,11 @@ def get_pkl_path(session_id=None, id_type='behavior_session_uuid'):
     '''
     get the path to a pkl file for a given session
     '''
-    session_id, id_type = _check_name_schema('mouseseeks', session_id, id_type)
+    osid = convert_id({id_type:session_id},'ophys_session_id')
+    rec = get_well_known_files(osid).set_index('name').loc['StimulusPickle']
+    pkl_path = ''.join([rec['storage_directory'],rec['filename']])
+    return pkl_path
 
-    db = Database('mouseseeks')
-    res = db.query('db', 'behavior_session_log', query={id_type: session_id})
-    db.close()
-
-    if res is not None and len(res) > 0:
-        if len(res) == 1:
-            storage_directory = res['storage_directory'].item()
-        elif len(res) > 1:
-            # there are occassionally duplicate entries in mouseseeks. return only the first:
-            storage_directory = res['storage_directory'].iloc[0]
-        pkls = glob.glob(os.path.join(storage_directory, '*.pkl'))
-        if len(pkls) == 1:
-            return pkls[0]
 
 
 def get_value_from_table(search_key, search_value, target_table, target_key):
@@ -344,6 +335,10 @@ def is_float(n):
     return isinstance(n, (float, np.float))
 
 
+def is_uuid(n):
+    return isinstance(n, uuid.UUID)
+
+
 def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=False, db_connection=None, db_name='behavior_data', data_type='foraging2'):
     '''
     for a given behavior_session_uuid:
@@ -382,7 +377,9 @@ def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=Fal
             'data': data_to_insert
         }
         entry.update(get_alternate_ids(behavior_session_uuid))
-        db[table].insert_one(entry)
+        # db[table].insert_one(simplify_entry(entry))
+        keys_to_check = 'behavior_session_uuid'
+        update_or_create(table, entry, keys_to_check, force_write=False)
 
     def insert_summary_row(summary_row):
         if type(summary_row) == pd.DataFrame:
@@ -534,9 +531,11 @@ def simplify_type(x):
         return int(x)
     elif is_float(x):
         return float(x)
+    elif is_uuid(x):
+        return str(x)
     else:
         return x
-
+    
 
 def simplify_entry(entry):
     '''
