@@ -929,6 +929,7 @@ class MesoscopeICA(object):
                 a = ica.mixing_  # Get estimated smixing matrix
                 logger.info("ICA successful")
                 self.traces_matrix = a
+                self.ica_output = s
                 self.roi_unmix = s
 
                 # rescaling traces back:
