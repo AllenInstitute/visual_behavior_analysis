@@ -932,7 +932,7 @@ class MesoscopeICA(object):
                 logger.info("ICA successful")
                 # make sure no negative coeffs: inversion of traces
                 a[a < 0] *= -1
-                # switch rows if needed - source assignment
+                # switch columns if needed - source assignment
                 if a[0, 0] < a[1, 0]:
                     a = np.array([a[:, 1], a[:, 0]])
 
@@ -1090,7 +1090,7 @@ class MesoscopeICA(object):
                 a[a < 0] *= -1
                 # switch rows if needed:
                 if a[0, 0] < a[1, 0]:
-                    a = np.array([a[1, :], a[0, :]])
+                    a = np.array([a[:, 1], a[:, 1]])
                 w = linalg.pinv(a)
                 s = np.dot(w, traces.T).T
                 self.neuropil_ica_output = s

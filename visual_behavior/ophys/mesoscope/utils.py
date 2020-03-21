@@ -540,7 +540,7 @@ def run_dff_on_ica(session, an_dir=CACHE):
     return
 
 
-def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces', delete_inputs=False):
+def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=False):
     """
     deletes ica outputs from cache:
         neuropil_ica_output_pair{i}.h5
@@ -561,6 +561,11 @@ def clean_up_cache(sessions, cache, np_name='ica_neuropil', roi_name='ica_traces
     :param: delete_inputs: bool, defines delete or not the inputs to the ICA
     :return: None
     """
+    if not roi_name:
+        np_name = "ica_traces"
+    if not np_name:
+        np_name = "ica_neuropil"
+        
     for session in sessions:
         ica_obj = ica.MesoscopeICA(session_id=session, cache=cache)
         ses_dir = os.path.join(ica_obj.session_cache_dir, f'session_{session}')
