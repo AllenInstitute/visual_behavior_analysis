@@ -35,9 +35,15 @@ def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
     :return: traces, neuropil traces, roi_names
     """
     for filename in CELL_EXTRACT_JSON_FORMAT:
-        jin_movie_path = os.path.join(movie_exp_dir, filename % movie_exp_id)
         jin_mask_path = os.path.join(mask_exp_dir, filename % mask_exp_id)
-        if os.path.isfile(jin_movie_path) and os.path.isfile(jin_mask_path):
+        if os.path.isfile(jin_mask_path):
+            break
+    else:
+        raise ValueError('Cell extract json does not exist')
+
+    for filename in CELL_EXTRACT_JSON_FORMAT:
+        jin_movie_path = os.path.join(movie_exp_dir, filename % movie_exp_id)
+        if os.path.isfile(jin_movie_path):
             break
     else:
         raise ValueError('Cell extract json does not exist')
