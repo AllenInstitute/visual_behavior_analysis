@@ -206,7 +206,7 @@ def run_demixing_on_ica(session, cache=CACHE):
     :param an_dir: directory containing crosstalk corrected traces
     :return:
     """
-    mds, _, _ = get_ica_roi_sessions()
+    mds = ms.get_all_mesoscope_data()
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
 
