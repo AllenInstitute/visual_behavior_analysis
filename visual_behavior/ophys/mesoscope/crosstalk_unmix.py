@@ -934,7 +934,7 @@ class MesoscopeICA(object):
                 a[a < 0] *= -1
                 # switch rows if needed - source assignment
                 if a[0, 0] < a[1, 0]:
-                    a = np.array([a[1, :], a[0, :]])
+                    a = np.array([a[:, 1], a[:, 0]])
 
                 w = linalg.pinv(a)
                 s = np.dot(w, traces.T).T
