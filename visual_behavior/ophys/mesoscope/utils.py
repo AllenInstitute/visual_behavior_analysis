@@ -562,7 +562,7 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
     :return: None
     """
     if not roi_name:
-        np_name = "ica_traces"
+        roi_name = "ica_traces"
     if not np_name:
         np_name = "ica_neuropil"
 
