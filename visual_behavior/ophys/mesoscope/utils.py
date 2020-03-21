@@ -107,7 +107,7 @@ def get_ica_roi_sessions():
         for pair in pairs:
             ica_obj = ica.MesoscopeICA(session, cache=CACHE)
             ica_obj.set_ica_roi_dir(pair)
-            ica_obj.set_neuropil_ica_dir(pair)
+            ica_obj.set_ica_neuropil_dir(pair)
 
             if os.path.isfile(ica_obj.plane1_ica_output_pointer) :
                 meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
