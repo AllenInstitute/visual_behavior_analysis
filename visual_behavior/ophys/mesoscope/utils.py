@@ -565,7 +565,7 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
         np_name = "ica_traces"
     if not np_name:
         np_name = "ica_neuropil"
-        
+
     for session in sessions:
         ica_obj = ica.MesoscopeICA(session_id=session, cache=cache)
         ses_dir = os.path.join(ica_obj.session_cache_dir, f'session_{session}')
@@ -584,14 +584,27 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
                     mixing = os.path.join(exp_np_dir, f'{np_name}_mixing.h5')
                     if os.path.isfile(ica_np_output_p1):
                         os.remove(ica_np_output_p1)
+                    else:
+                        print (f"ICA np output plane1 does not exist at {ica_np_output_p1}")
                     if os.path.isfile(ica_np_output_p2):
                         os.remove(ica_np_output_p2)
+                    else:
+                        print(f"ICA np output for plane2 does not exist at {ica_np_output_p2}")
                     if os.path.isfile(valid_p1):
                         os.remove(valid_p1)
+                    else:
+                        print(f"ICA np valid json for plane1 does not exist at {valid_p1}")
+
                     if os.path.isfile(valid_p2):
                         os.remove(valid_p2)
+                    else:
+                        print(f"ICA np valid json plane2 does not exist at {valid_p2}")
+
                     if os.path.isfile(mixing):
                         os.remove(mixing)
+                    else:
+                        print(f"ICA NP mixing matrix does not exist at {mixing}")
+
                     if delete_inputs:
                         ica_np_input_p1 = os.path.join(exp_np_dir, f'{np_name}_input_{pair[0]}.h5')
                         ica_np_input_p2 = os.path.join(exp_np_dir, f'{np_name}_input_{pair[1]}.h5')
@@ -605,6 +618,8 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
                             os.remove(ica_np_raw_p1)
                         if os.path.isfile(ica_np_raw_p2):
                             os.remove(ica_np_raw_p2)
+                else:
+                    print(f"ICA NP dir does not exist: {exp_np_dir}")
 
                 # cleaning up roi traces directory:
                 ica_obj.set_ica_roi_dir(pair, roi_name="ica_traces")
@@ -617,20 +632,41 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
                     mixing = os.path.join(exp_roi_dir, f'{roi_name}_mixing.h5')
                     if os.path.isfile(ica_roi_output_p1):
                         os.remove(ica_roi_output_p1)
+                    else:
+                        print(f"ICA roi output plane1 does not exist at {ica_roi_output_p1}")
+
                     if os.path.isfile(ica_roi_output_p2):
                         os.remove(ica_roi_output_p2)
+                    else:
+                        print(f"ICA roi output plane2 does not exist at {ica_roi_output_p2}")
+
                     if os.path.isfile(valid_p1):
                         os.remove(valid_p1)
+                    else:
+                        print(f"ICA roi valid json for plane1 does not exist at {valid_p1}")
+
                     if os.path.isfile(valid_p2):
                         os.remove(valid_p2)
+                    else:
+                        print(f"ICA roi valid json for plane2 does not exist at {valid_p2}")
+
                     if os.path.isfile(mixing):
                         os.remove(mixing)
+                    else:
+                        print(f"ICA roi mixing matrix does not exist at {mixing}")
+
                     ica_plots_p1 = os.path.join(exp_roi_dir, f'ica_plots_{pair[0]}')
                     ica_plots_p2 = os.path.join(exp_roi_dir, f'ica_plots_{pair[1]}')
+
                     if os.path.isdir(ica_plots_p1):
                         shutil.rmtree(ica_plots_p1, ignore_errors=True)
+                    else:
+                        print(f"Roi races plots dir for plane 1 doesn't exist at {ica_plots_p1}")
+
                     if os.path.isdir(ica_plots_p2):
                         shutil.rmtree(ica_plots_p2, ignore_errors=True)
+                    else:
+                        print(f"Roi races plots dir for plane 2 doesn't exist at {ica_plots_p2}")
 
                     if delete_inputs:
                         ica_roi_input_p1 = os.path.join(exp_np_dir, f'{roi_name}_input_{pair[0]}.h5')
@@ -645,6 +681,8 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
                             os.remove(ica_roi_raw_p1)
                         if os.path.isfile(ica_roi_raw_p2):
                             os.remove(ica_roi_raw_p2)
+                else:
+                    print(f"ICA ROI dir does not exist: {exp_roi_dir}")
 
                 # removing LIMS processing outputs:
                 dem_out_p1 = os.path.join(ses_dir, f'demixing_{pair[0]}')
