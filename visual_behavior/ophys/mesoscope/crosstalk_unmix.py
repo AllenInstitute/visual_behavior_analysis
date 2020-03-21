@@ -15,6 +15,7 @@ import matplotlib.backends.backend_pdf
 import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as ju
 import scipy.stats
+from scipy import linalg
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +163,7 @@ class MesoscopeICA(object):
         self.found_ica_neuropil_input = [None, None]
         self.found_ica_neuropil_offset = [None, None]
 
-        self.traces_matrix = None
+        self.roi_matrix = None
         self.neuropil_matrix = None
 
         self.roi_unmix = None
@@ -919,133 +920,77 @@ class MesoscopeICA(object):
             # if unmixed traces don't exist, run unmixing
             if np.any(np.isnan(self.plane1_ica_input)) or np.any(np.isinf(self.plane1_ica_input)) or np.any(
                     np.isnan(self.plane2_ica_input)) or np.any(np.isinf(self.plane2_ica_input)):
-                raise ValueError("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
+                raise ValueError(
+                    "ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
             else:
                 logger.info("Unmixed traces do not exist in cache, running ICA")
                 traces = np.array([self.plane1_ica_input, self.plane2_ica_input]).T
                 self.found_solution = False
                 ica = FastICA(n_components=2, max_iter=max_iter)
-                s = ica.fit_transform(traces)  # Reconstruct signals
-                a = ica.mixing_  # Get estimated smixing matrix
+                ica.fit_transform(traces)  # Reconstruct signals
+                a = ica.mixing_  # Get estimated mixing matrix
                 logger.info("ICA successful")
-                self.traces_matrix = a
-                self.ica_output = s
-                self.roi_unmix = s
+                # make sure no negative coeffs:
+                a[a < 0] *= -1
+                # switch rows if needed:
+                if a[0, 0] < a[1, 0]:
+                    a = np.array([a[1, :], a[0, :]])
 
+                w = linalg.pinv(a)
+                s = np.dot(w, traces.T).T
+                self.roi_ica_output = s
+                self.roi_unmix = s
+                self.roi_matrix = a
+                del a
+                del s
+                del ica
                 # rescaling traces back:
                 self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_roi()
+
+                if self.ica_traces_scale_top < 0:
+                    self.ica_traces_scale_top *= -1
+
+                if self.ica_traces_scale_bot < 0:
+                    self.ica_traces_scale_bot *= -1
 
                 plane1_ica_output = self.roi_unmix[:, 0] * self.ica_traces_scale_top
                 plane2_ica_output = self.roi_unmix[:, 1] * self.ica_traces_scale_bot
 
                 # reshaping traces
-                #new shape, excluding non valid ROIs
-                plane1_valid_shape = np.array([self.plane1_roi_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
-                plane2_valid_shape = np.array([self.plane2_roi_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
+                # new shape, excluding non valid ROIs
+                plane1_valid_shape = np.array(
+                    [self.plane1_roi_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
+                plane2_valid_shape = np.array(
+                    [self.plane2_roi_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
                 new_shape = [plane1_valid_shape.sum() + plane2_valid_shape.sum(), self.plane1_traces_orig.shape[2]]
 
                 # reshaping
                 plane1_ica_output = plane1_ica_output.reshape(new_shape)
                 plane2_ica_output = plane2_ica_output.reshape(new_shape)
 
-                #splitting signal and crosstalk to compare variances and evaluate goodness of ICA
-                #ICA output:
+                # splitting signal and crosstalk to compare variances and evaluate goodness of ICA
+                # ICA output:
                 plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
                 plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
-                plane2_out_ct = plane1_ica_output[plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-                plane2_out_sig = plane2_ica_output[plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                plane2_out_ct = plane1_ica_output[
+                                plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                plane2_out_sig = plane2_ica_output[
+                                 plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
-
-                #ICA input - only need sig to calculate rms between in and out.
+                # ICA input - only need sig to calculate rms between in and out.
                 plane1_ica_input = self.plane1_ica_input.reshape(new_shape)
                 plane2_ica_input = self.plane2_ica_input.reshape(new_shape)
                 plane1_in_sig = plane1_ica_input[0:plane1_valid_shape.sum(), :]
-                plane2_in_sig = plane2_ica_input[plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                plane2_in_sig = plane2_ica_input[
+                                plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
-                #rms of the delta (in, out)
-                plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)# this value should be low as this is rms of signal traces before and after ICA:
-                plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)# bottom to top is usually less SNR, so higher rms
-
-                # need to test and find appropriate threshold to call it reversed source ICA out
-
-                if plane1_err > 6 or plane2_err > 7 :
-
-                    logger.info("Detected reversed sources in ICA, reassigning")
-                    self.roi_unmix = np.array([s[:, 1], s[:, 0]]).T
-
-                    #rescaling
-                    self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_roi()
-
-                    plane1_ica_output = self.roi_unmix[:, 0] * self.ica_traces_scale_top
-                    plane2_ica_output = self.roi_unmix[:, 1] * self.ica_traces_scale_bot
-
-                    # reshaping ica output traces
-
-                    plane1_valid_shape = np.array(
-                        [self.plane1_roi_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
-                    plane2_valid_shape = np.array(
-                        [self.plane2_roi_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
-
-                    new_shape = [plane1_valid_shape.sum() + plane2_valid_shape.sum(), self.plane1_traces_orig.shape[2]]
-
-                    plane1_ica_output = plane1_ica_output.reshape(new_shape)
-                    plane2_ica_output = plane2_ica_output.reshape(new_shape)
-
-                    plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
-                    plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
-
-                    plane2_out_ct = plane1_ica_output[plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-                    plane2_out_sig = plane2_ica_output[plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-
-                    #calculate new plane1_err and plane2_err:
-                    plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
-                    plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
-
-                    #check if errors are down for sign inversion
-                    if plane1_err > 6 or plane2_err > 7 :
-                        logger.info("RMS error is still high, checking for inversion")
-                        # get ica outout, wiht source assignemtn fixed
-                        plane1_ica_output = self.roi_unmix[:, 0]
-                        plane2_ica_output = self.roi_unmix[:, 1]
-
-                        #which signal is inverted?
-                        if abs(min(plane1_ica_output)) > abs(max(plane2_ica_output)) :
-                            logger.info("Plane 1 is inverted, multiplying by -1")
-                            self.roi_unmix[:, 0] *= -1
-
-                        if abs(min(plane2_ica_output)) > abs(max(plane1_ica_output)) :
-                            logger.info("Plane 2 is inverted, multiplying by -1")
-                            self.roi_unmix[:, 1] *= -1
-
-                        # rescaling
-                        self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_roi()
-
-                        plane1_ica_output = self.roi_unmix[:, 0] * self.ica_traces_scale_top
-                        plane2_ica_output = self.roi_unmix[:, 1] * self.ica_traces_scale_bot
-
-                        new_shape = [plane1_valid_shape.sum() + plane2_valid_shape.sum(),
-                                     self.plane1_traces_orig.shape[2]]
-
-                        plane1_ica_output = plane1_ica_output.reshape(new_shape)
-                        plane2_ica_output = plane2_ica_output.reshape(new_shape)
-
-                        plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
-                        plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
-
-                        plane2_out_ct = plane1_ica_output[
-                                        plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-                        plane2_out_sig = plane2_ica_output[plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-
-                        # calculate new plane1_err and plane2_err:
-                        plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
-                        plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
-
-                        # check if errors are down for sign inversion
-                        if plane1_err > 6 or plane2_err > 7:
-                            logger.info("Errors are still high, need to investigate further..")
+                # rms of the delta (in, out)
+                plane1_err = self.ica_err([1], plane1_in_sig,
+                                          plane1_out_sig)  # this value should be low as this is rms of signal traces before and after ICA:
+                plane2_err = self.ica_err([1], plane2_in_sig,
+                                          plane2_out_sig)  # bottom to top is usually less SNR, so higher rms
 
                 # adding offset
-
                 self.plane1_roi_err = plane1_err
                 self.plane2_roi_err = plane2_err
 
@@ -1073,7 +1018,7 @@ class MesoscopeICA(object):
                     f.create_dataset(f"data", data=plane2_ica_output)
 
                 with h5py.File(self.ica_mixing_matrix_traces_pointer, "w") as f:
-                    f.create_dataset(f"mixing", data=self.traces_matrix)
+                    f.create_dataset(f"mixing", data=self.roi_matrix)
                     f.create_dataset(f"plane1_err", data=plane1_err)
                     f.create_dataset(f"plane2_err", data=plane2_err)
         else:
@@ -1093,7 +1038,7 @@ class MesoscopeICA(object):
 
             self.plane1_ica_output = plane1_ica_output
             self.plane2_ica_output = plane2_ica_output
-            self.traces_matrix = traces_matrix
+            self.roi_matrix = traces_matrix
             self.plane1_roi_err = plane1_err
             self.plane2_roi_err = plane2_err
         return
@@ -1135,16 +1080,25 @@ class MesoscopeICA(object):
                     np.isinf(self.plane1_ica_neuropil_input)) or np.any(
                 np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
                 logger.info("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
-
-
             else:
                 traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
                 ica = FastICA(n_components=2, max_iter=max_iter)
-                s = ica.fit_transform(traces)  # Reconstruct signals
+                ica.fit_transform(traces)  # Reconstruct signals
                 a = ica.mixing_  # Get estimated mixing matrix
-                logger.info("ICA on neuropil traces successful")
-                self.neuropil_matrix = a
+                logger.info("ICA successful")
+                # make sure no negative coeffs:
+                a[a < 0] *= -1
+                # switch rows if needed:
+                if a[0, 0] < a[1, 0]:
+                    a = np.array([a[1, :], a[0, :]])
+                w = linalg.pinv(a)
+                s = np.dot(w, traces.T).T
+                self.neuropil_ica_output = s
                 self.neuropil_unmix = s
+                self.neuropil_matrix = a
+                del a
+                del s
+                del ica
 
                 # rescaling traces back:
                 self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil()
@@ -1186,45 +1140,6 @@ class MesoscopeICA(object):
                 plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
                 self.plane1_np_err = plane1_err
                 self.plane2_np_err = plane2_err
-
-                # need to test and find appropriate threshold to call it reversed source ICA out
-                if plane1_err > 6 or plane2_err > 7:
-                    logger.info("Detected reversed sources in ICA, reassigning")
-                    self.neuropil_unmix = np.array([s[:, 1], s[:, 0]]).T
-
-                    # rescaling
-                    self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil()
-                    plane1_ica_neuropil_output = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
-                    plane2_ica_neuropil_output = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
-
-                    # reshaping traces
-                    # new shape, excluding non valid ROIs
-                    plane1_valid_shape = np.array(
-                        [self.plane1_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
-                    plane2_valid_shape = np.array(
-                        [self.plane2_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
-                    new_shape = [plane1_valid_shape.sum() + plane2_valid_shape.sum(),
-                                 self.plane1_neuropil_orig.shape[2]]
-                    # reshaping
-                    plane1_ica_neuropil_output = plane1_ica_neuropil_output.reshape(new_shape)
-                    plane2_ica_neuropil_output = plane2_ica_neuropil_output.reshape(new_shape)
-
-                    plane1_out_sig = plane1_ica_neuropil_output[0:plane1_valid_shape.sum(), :]
-                    plane1_out_ct = plane2_ica_neuropil_output[0:plane1_valid_shape.sum(), :]
-
-                    plane2_out_ct = plane1_ica_neuropil_output[
-                                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-                    plane2_out_sig = plane2_ica_neuropil_output[
-                                     plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-
-                    # rms of the delta (in, out)
-                    # this value should be low as this is rms of signal traces before and after ICA:
-                    plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
-                    # bottom to top is usually less SNR, so higher rms
-                    plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
-                    self.plane1_np_err = plane1_err
-                    self.plane2_np_err = plane2_err
-
 
                 # adding offset
                 plane1_out_sig = plane1_out_sig + self.plane1_neuropil_offset['plane1_sig_neuropil_offset']
