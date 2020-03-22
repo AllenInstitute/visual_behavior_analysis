@@ -329,7 +329,7 @@ def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=
     plt.close()
 
 
-def run_neuropil_correction_on_ica(session, an_dir=CACHE):
+def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name = "ica_neuropil"):
     """
     run neuropil correction on CIA output files
     :param session: LIMS session id
@@ -354,8 +354,8 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE):
 
                 demix_dir = os.path.join(ses_dir, f'demixing_{exp_id}')
                 trace_file = os.path.join(demix_dir, f'traces_demixing_output_{exp_id}.h5')
-                neuropil_ica_dir = os.path.join(ses_dir, f'ica_neuropil_{pair[0]}_{pair[1]}')
-                neuropil_trace_file = os.path.join(neuropil_ica_dir,  f'neuropil_ica_output_{exp_id}.h5')
+                neuropil_ica_dir = os.path.join(ses_dir, f'{np_name}_{pair[0]}_{pair[1]}')
+                neuropil_trace_file = os.path.join(neuropil_ica_dir,  f'{np_name}_output_{exp_id}.h5')
                 storage_dir = os.path.join(ses_dir, f'neuropil_corrected_{exp_id}')
                 if not os.path.isdir(storage_dir):
                     os.mkdir(storage_dir)
