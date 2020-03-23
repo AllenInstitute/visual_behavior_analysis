@@ -14,7 +14,7 @@ import scipy.optimize as opt
 import matplotlib.backends.backend_pdf
 import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as ju
-import scipy.stats
+import scipy.stats as st
 from scipy import linalg
 
 logger = logging.getLogger(__name__)
@@ -1521,12 +1521,45 @@ class MesoscopeICA(object):
         return scale_top_neuropil.x, scale_bot_neuropil.x
 
     @staticmethod
-    def estimate_crosstalk_roi(trace_sig, trace_ct):
+    def get_crosstalk_before_and_after(valid, traces_in, traces_out, path_out, plot=False):
+        # to add:
+        # r value, p_value, figure plot
         """
-        egneraes linear fit to 2d histogram of signal plane and crosstalk plane
-        :param trace_sig: 1D np.array, traces in signal plane
-        :param trace_ct: 1D np.array, traces in crosstalk plane
-        :return: slope, offset, r_value, std_err
         """
-        slope, offset, r_value, p_value, std_err = scipy.stats.linregress(trace_sig, trace_ct)
-        return slope, offset, r_value ** 2, p_value, std_err
+        i = 0
+        roi_names = list(valid['signal'].keys())
+        num_traces = len(roi_names)
+        valid_mask = np.array([valid['signal'][str(tid)] for tid in roi_names])
+        traces_in_valid = traces_in[:, valid_mask, :]
+        crosstalk_in = dict.fromkeys(roi_names, {})
+        crosstalk_out = dict.fromkeys(roi_names, {})
+        r_values_in = dict.fromkeys(roi_names, {})
+        r_values_out = dict.fromkeys(roi_names, {})
+        for n in range(num_traces):
+            roi_name = roi_names[n]
+            if valid['signal'][roi_name] == True:
+                print(f'roi {roi_name} is valid, calculating crosstalk')
+                sig_trace_in = traces_in_valid[0][i]
+                ct_trace_in = traces_in_valid[1][i]
+                sig_trace_out = traces_out[0][i]
+                ct_trace_out = traces_out[1][i]
+                slope_in, _, r_value_in, _, _ = st.linregress(sig_trace_in, ct_trace_in)
+                slope_out, _, r_value_out, _, _ = st.linregress(sig_trace_out, ct_trace_out)
+                crosstalk_in[roi_name] = slope_in
+                crosstalk_out[roi_name] = slope_out
+                r_values_in[roi_name] = r_value_in
+                r_values_out[roi_name] = r_value_out
+                i += 1
+            else:
+                print(f'roi {roi_name} is invalid, skipping')
+                print(crosstalk_in[roi_name])
+                crosstalk_in[roi_name] = np.nan
+                crosstalk_out[roi_name] = np.nan
+                r_values_in[roi_name] = np.nan
+                r_values_out[roi_name] = np.nan
+                print(crosstalk_in[roi_name])
+
+        roi_crosstalk = {"crosstalk_raw": crosstalk_in, "crosstalk_demixed": crosstalk_out, "r_values_raw": r_values_in,
+                         "r_values_out": r_values_out}
+        ju.write(path_out, roi_crosstalk)
+        return roi_crosstalk
