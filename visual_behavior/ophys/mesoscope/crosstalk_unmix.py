@@ -13,8 +13,13 @@ import matplotlib.backends.backend_pdf
 import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as ju
 from scipy import linalg
+from scipy.stats import linregress
+from matplotlib.colors import LogNorm
 
 logger = logging.getLogger(__name__)
+
+mpl_logger = logging.getLogger("matplotlib")
+mpl_logger.setLevel(logging.WARNING) 
 
 IMAGEH, IMAGEW = 512, 512
 CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'processed/%s_input_extract_traces.json']
