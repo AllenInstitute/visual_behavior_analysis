@@ -1,6 +1,4 @@
 import matplotlib
-
-
 from allensdk.brain_observatory import roi_masks
 import visual_behavior.ophys.mesoscope.mesoscope as ms
 import allensdk.internal.core.lims_utilities as lu
@@ -14,7 +12,7 @@ import scipy.optimize as opt
 import matplotlib.backends.backend_pdf
 import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as ju
-import scipy.stats as st
+from visual_behavior.ophys.mesoscope.utils import plot_pixel_hist2d
 from scipy import linalg
 
 logger = logging.getLogger(__name__)
@@ -1521,43 +1519,69 @@ class MesoscopeICA(object):
         return scale_top_neuropil.x, scale_bot_neuropil.x
 
     @staticmethod
-    def get_crosstalk_before_and_after(valid, traces_in, traces_out, path_out, plot=False):
-        # to add:
-        # r value, p_value, figure plot
+    def get_crosstalk_before_and_after(valid, traces_in, traces_out, path_out, fig_save=False):
         """
+        estimate crosstalk before and after ica demixing
+        :param valid: valid roi json
+        :param traces_in: numpy array containing ICA input traces in [nxmxt] where n = 2, m = number of cells, t = number of timestamps
+        :param traces_out: numpy array containing ICA output traces in [nxmxt] where n = 2, m = number of cells, t = number of timestamps
+        :param path_out: str, name of the json file to save the data
+        :param fig_save: bool, flag to save the figures or not in the same folder as path_out
+        :return:
         """
+
         i = 0
         roi_names = list(valid['signal'].keys())
         num_traces = len(roi_names)
         valid_mask = np.array([valid['signal'][str(tid)] for tid in roi_names])
         traces_in_valid = traces_in[:, valid_mask, :]
-        crosstalk_in = dict.fromkeys(roi_names, {})
-        crosstalk_out = dict.fromkeys(roi_names, {})
-        r_values_in = dict.fromkeys(roi_names, {})
-        r_values_out = dict.fromkeys(roi_names, {})
+        crosstalk_in = dict.fromkeys(roi_names)
+        crosstalk_out = dict.fromkeys(roi_names)
+        r_values_in = dict.fromkeys(roi_names)
+        r_values_out = dict.fromkeys(roi_names)
+        if fig_save:
+            ct_plot_dir = os.path.join(os.path.split(path_out)[0],
+                                       f'{os.path.splitext(os.path.split(path_out)[1])[0]}_plots')
+            if not os.path.isdir(ct_plot_dir):
+                os.mkdir(ct_plot_dir)
         for n in range(num_traces):
             roi_name = roi_names[n]
-            if valid['signal'][roi_name] == True:
-                print(f'roi {roi_name} is valid, calculating crosstalk')
+            if fig_save:
+                pdf_name = os.path.join(ct_plot_dir, f"{roi_name}_crosstalk.pdf")
+                pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+            if valid['signal'][roi_name] :
                 sig_trace_in = traces_in_valid[0][i]
                 ct_trace_in = traces_in_valid[1][i]
                 sig_trace_out = traces_out[0][i]
                 ct_trace_out = traces_out[1][i]
-                slope_in, _, r_value_in, _, _ = st.linregress(sig_trace_in, ct_trace_in)
-                slope_out, _, r_value_out, _, _ = st.linregress(sig_trace_out, ct_trace_out)
+
+                # estimate crosstalk and plot pixes histograms
+                fig_in, slope_in, _, r_value_in = plot_pixel_hist2d(sig_trace_in, ct_trace_in,
+                                                                    title=f'raw, cell {roi_name}', save_fig=False,
+                                                                    save_path=None, fig_show=False, colorbar=True)
+                fig_out, slope_out, _, r_value_out = plot_pixel_hist2d(sig_trace_out, ct_trace_out,
+                                                                       title=f'clean, cell {roi_name}', save_fig=False,
+                                                                       save_path=None, fig_show=False, colorbar=True)
+
+                if fig_save:
+                    pdf.savefig(fig_in)
+                    pdf.savefig(fig_out)
+                else:
+                    del fig_in
+                    del fig_out
+
                 crosstalk_in[roi_name] = slope_in
                 crosstalk_out[roi_name] = slope_out
                 r_values_in[roi_name] = r_value_in
                 r_values_out[roi_name] = r_value_out
                 i += 1
             else:
-                print(f'roi {roi_name} is invalid, skipping')
-                print(crosstalk_in[roi_name])
                 crosstalk_in[roi_name] = np.nan
                 crosstalk_out[roi_name] = np.nan
                 r_values_in[roi_name] = np.nan
                 r_values_out[roi_name] = np.nan
-                print(crosstalk_in[roi_name])
+            if fig_save:
+                pdf.close()
 
         roi_crosstalk = {"crosstalk_raw": crosstalk_in, "crosstalk_demixed": crosstalk_out, "r_values_raw": r_values_in,
                          "r_values_out": r_values_out}
