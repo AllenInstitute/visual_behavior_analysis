@@ -12,7 +12,6 @@ import scipy.optimize as opt
 import matplotlib.backends.backend_pdf
 import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as ju
-from visual_behavior.ophys.mesoscope.utils import plot_pixel_hist2d
 from scipy import linalg
 
 logger = logging.getLogger(__name__)
@@ -1587,3 +1586,39 @@ class MesoscopeICA(object):
                          "r_values_out": r_values_out}
         ju.write(path_out, roi_crosstalk)
         return roi_crosstalk
+
+
+def plot_pixel_hist2d(x, y, xlabel='signal', ylabel='crosstalk', title=None, save_fig=False, save_path=None,
+                      fig_show=True, colorbar=False):
+    fig = plt.figure(figsize=(3, 3))
+    H, xedges, yedges = np.histogram2d(x, y, bins=(30, 30))
+    H = H.T
+    plt.rcParams.update({'font.size': 14})
+    plt.imshow(H, interpolation='nearest', origin='low',
+               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], aspect='auto', norm=LogNorm())
+
+    if colorbar:
+        cbar = plt.colorbar()
+        cbar.set_label('# of counts', rotation=270, fontsize=14, labelpad=20)
+        cbar.ax.tick_params(labelsize=14)
+
+    slope, offset, r_value, p_value, std_err = linregress(x, y)
+    fit_fn = np.poly1d([slope, offset])
+
+    plt.plot(x, fit_fn(x), '--k')
+
+    plt.xlabel(xlabel, fontsize=12)
+    plt.ylabel(ylabel, fontsize=12)
+
+    if not title:
+        title = '%s    R2=%.2f' % (fit_fn, r_value ** 2)
+
+    plt.title(title, fontsize=12)
+
+    if save_fig:
+        plt.savefig(save_path, bbox_inches='tight', dpi=600)
+
+    if not fig_show:
+        plt.close()
+
+    return fig, slope, offset, r_value
