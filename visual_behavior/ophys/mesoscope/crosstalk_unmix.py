@@ -1,6 +1,4 @@
 import matplotlib
-
-
 from allensdk.brain_observatory import roi_masks
 import visual_behavior.ophys.mesoscope.mesoscope as ms
 import allensdk.internal.core.lims_utilities as lu
@@ -14,10 +12,14 @@ import scipy.optimize as opt
 import matplotlib.backends.backend_pdf
 import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as ju
-import scipy.stats
 from scipy import linalg
+from scipy.stats import linregress
+from matplotlib.colors import LogNorm
 
 logger = logging.getLogger(__name__)
+
+mpl_logger = logging.getLogger("matplotlib")
+mpl_logger.setLevel(logging.WARNING)
 
 IMAGEH, IMAGEW = 512, 512
 CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'processed/%s_input_extract_traces.json']
@@ -1521,12 +1523,109 @@ class MesoscopeICA(object):
         return scale_top_neuropil.x, scale_bot_neuropil.x
 
     @staticmethod
-    def estimate_crosstalk_roi(trace_sig, trace_ct):
+    def get_crosstalk_before_and_after(valid, traces_in, traces_out, path_out, fig_save=False):
         """
-        egneraes linear fit to 2d histogram of signal plane and crosstalk plane
-        :param trace_sig: 1D np.array, traces in signal plane
-        :param trace_ct: 1D np.array, traces in crosstalk plane
-        :return: slope, offset, r_value, std_err
+        estimate crosstalk before and after ica demixing
+        :param valid: valid roi json
+        :param traces_in: numpy array containing ICA input traces in [nxmxt] where n = 2, m = number of cells, t = number of timestamps
+        :param traces_out: numpy array containing ICA output traces in [nxmxt] where n = 2, m = number of cells, t = number of timestamps
+        :param path_out: str, name of the json file to save the data
+        :param fig_save: bool, flag to save the figures or not in the same folder as path_out
+        :return:
         """
-        slope, offset, r_value, p_value, std_err = scipy.stats.linregress(trace_sig, trace_ct)
-        return slope, offset, r_value ** 2, p_value, std_err
+
+        i = 0
+        roi_names = list(valid['signal'].keys())
+        num_traces = len(roi_names)
+        valid_mask = np.array([valid['signal'][str(tid)] for tid in roi_names])
+        traces_in_valid = traces_in[:, valid_mask, :]
+        crosstalk_in = dict.fromkeys(roi_names)
+        crosstalk_out = dict.fromkeys(roi_names)
+        r_values_in = dict.fromkeys(roi_names)
+        r_values_out = dict.fromkeys(roi_names)
+        if fig_save:
+            ct_plot_dir = os.path.join(os.path.split(path_out)[0],
+                                       f'{os.path.splitext(os.path.split(path_out)[1])[0]}_plots')
+            if not os.path.isdir(ct_plot_dir):
+                os.mkdir(ct_plot_dir)
+            else:
+                fig_save = False
+        for n in range(num_traces):
+            roi_name = roi_names[n]
+            if fig_save:
+                pdf_name = os.path.join(ct_plot_dir, f"{roi_name}_crosstalk.pdf")
+                pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+            if valid['signal'][roi_name] :
+                sig_trace_in = traces_in_valid[0][i]
+                ct_trace_in = traces_in_valid[1][i]
+                sig_trace_out = traces_out[0][i]
+                ct_trace_out = traces_out[1][i]
+
+                # estimate crosstalk and plot pixes histograms
+                fig_in, slope_in, _, r_value_in = plot_pixel_hist2d(sig_trace_in, ct_trace_in,
+                                                                    title=f'raw, cell {roi_name}', save_fig=False,
+                                                                    save_path=None, fig_show=False, colorbar=True)
+                fig_out, slope_out, _, r_value_out = plot_pixel_hist2d(sig_trace_out, ct_trace_out,
+                                                                       title=f'clean, cell {roi_name}', save_fig=False,
+                                                                       save_path=None, fig_show=False, colorbar=True)
+
+                if fig_save:
+                    pdf.savefig(fig_in)
+                    pdf.savefig(fig_out)
+                else:
+                    del fig_in
+                    del fig_out
+
+                crosstalk_in[roi_name] = slope_in
+                crosstalk_out[roi_name] = slope_out
+                r_values_in[roi_name] = r_value_in
+                r_values_out[roi_name] = r_value_out
+                i += 1
+            else:
+                crosstalk_in[roi_name] = np.nan
+                crosstalk_out[roi_name] = np.nan
+                r_values_in[roi_name] = np.nan
+                r_values_out[roi_name] = np.nan
+            if fig_save:
+                pdf.close()
+
+        roi_crosstalk = {"crosstalk_raw": crosstalk_in, "crosstalk_demixed": crosstalk_out, "r_values_raw": r_values_in,
+                         "r_values_out": r_values_out}
+        ju.write(path_out, roi_crosstalk)
+        return roi_crosstalk
+
+
+def plot_pixel_hist2d(x, y, xlabel='signal', ylabel='crosstalk', title=None, save_fig=False, save_path=None,
+                      fig_show=True, colorbar=False):
+    fig = plt.figure(figsize=(3, 3))
+    H, xedges, yedges = np.histogram2d(x, y, bins=(30, 30))
+    H = H.T
+    plt.rcParams.update({'font.size': 14})
+    plt.imshow(H, interpolation='nearest', origin='low',
+               extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], aspect='auto', norm=LogNorm())
+
+    if colorbar:
+        cbar = plt.colorbar()
+        cbar.set_label('# of counts', rotation=270, fontsize=14, labelpad=20)
+        cbar.ax.tick_params(labelsize=14)
+
+    slope, offset, r_value, p_value, std_err = linregress(x, y)
+    fit_fn = np.poly1d([slope, offset])
+
+    plt.plot(x, fit_fn(x), '--k')
+
+    plt.xlabel(xlabel, fontsize=12)
+    plt.ylabel(ylabel, fontsize=12)
+
+    if not title:
+        title = '%s    R2=%.2f' % (fit_fn, r_value ** 2)
+
+    plt.title(title, fontsize=12)
+
+    if save_fig:
+        plt.savefig(save_path, bbox_inches='tight', dpi=600)
+
+    if not fig_show:
+        plt.close()
+
+    return fig, slope, offset, r_value
