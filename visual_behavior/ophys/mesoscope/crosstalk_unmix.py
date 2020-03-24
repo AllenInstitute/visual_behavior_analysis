@@ -19,7 +19,7 @@ from matplotlib.colors import LogNorm
 logger = logging.getLogger(__name__)
 
 mpl_logger = logging.getLogger("matplotlib")
-mpl_logger.setLevel(logging.WARNING) 
+mpl_logger.setLevel(logging.WARNING)
 
 IMAGEH, IMAGEW = 512, 512
 CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'processed/%s_input_extract_traces.json']
@@ -1548,6 +1548,8 @@ class MesoscopeICA(object):
                                        f'{os.path.splitext(os.path.split(path_out)[1])[0]}_plots')
             if not os.path.isdir(ct_plot_dir):
                 os.mkdir(ct_plot_dir)
+            else:
+                fig_save = False
         for n in range(num_traces):
             roi_name = roi_names[n]
             if fig_save:
