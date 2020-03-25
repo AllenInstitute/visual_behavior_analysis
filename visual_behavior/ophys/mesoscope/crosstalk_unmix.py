@@ -116,7 +116,7 @@ class MesoscopeICA(object):
 
         self.session_id = session_id
         self.dataset = ms.MesoscopeDataset(session_id)
-        self.session_cache_dir = cache
+        self.session_cache_dir = None
         self.debug_mode = debug_mode
         self.roi_name = roi_name
         self.np_name = np_name

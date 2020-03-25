@@ -81,10 +81,39 @@ def run_ica_on_pair(session, pair, iter_ica, iter_neuropil, roi_name=None, np_na
     ica_obj.plot_ica_traces(pair)
     return
 
+def get_lims_done_sessions():
+    """
+    function to find all pst-ica sessions that also ran through LIMS modules
+    :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : lims_roi_success, lims_roi_fail, ica_success
+    """
+    ica_success, _, _ = get_ica_roi_sessions()
+    ica_success['LIMS_done_exp'] = 0
+    ica_success['LIMS_done_session'] = 0
+    sessions = ica_success['session_id']
+    sessions = sessions.drop_duplicates()
+    for session in sessions:
+        dataset = ms.MesoscopeDataset(session)
+        pairs = dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+            ica_obj.set_analysis_session_dir()
+            if os.path.isfile(os.path.join(ica_obj.session_cache_dir, f"{pair[0]}_dff.h5")):
+                ica_success['LIMS_done_exp'].loc[ica_success['experiment_id'] == pair[0]] = 1
+            if os.path.isfile(os.path.join(ica_obj.session_cache_dir, f"{pair[1]}_dff.h5")):
+                ica_success['LIMS_done_exp'].loc[ica_success['experiment_id'] == pair[1]] = 1
+            session_data = ica_success.loc[ica_success['session_id'] == session]
+            if all(session_data.LIMS_done_exp == 1):
+                for exp in session_data.experiment_id:
+                    ica_success['LIMS_done_session'].loc[ica_success.experiment_id == exp] = 1
+            lims_roi_success = ica_success.loc[ica_success['LIMS_done_session'] == 1]
+            lims_roi_fail = ica_success.loc[ica_success['LIMS_done_session'] == 0]
+
+    return lims_roi_success, lims_roi_fail, ica_success
+
 
 def get_ica_roi_sessions():
     """
-    helper function to scan all LIMS sessions nad return lists of ones that have been run through crosstalk demixing successfully, and that have not.
+    function to scan all LIMS sessions nad return lists of ones that have been run through crosstalk demixing successfully, and that have not.
     as well as all mesoscope data found in lime
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame]
     """
