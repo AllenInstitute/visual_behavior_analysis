@@ -1,4 +1,3 @@
-import matplotlib
 import logging
 import os
 import allensdk.internal.brain_observatory.demixer as demixer
@@ -11,19 +10,16 @@ import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import visual_behavior.ophys.mesoscope.mesoscope as ms
 
 import shutil
-CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
-matplotlib.use('agg')
 import matplotlib.pyplot as plt
 from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
 
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-meso_data = ms.get_all_mesoscope_data()
-meso_data['ICA_demix_exp'] = 0
-meso_data['ICA_demix_session'] = 0
+
+CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 
 def assert_exists(file_name):
@@ -41,8 +37,17 @@ def get_path(obj, key, check_exists):
     return path
 
 
-def run_ica_on_session(session,  iter_ica, iter_neuropil, roi_name="roi_ica", np_name="neuropil_ica"):
-    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, ROI_NAME=roi_name, NP_NAME=np_name)
+def run_ica_on_session(session,  iter_ica, iter_neuropil, roi_name=None, np_name=None):
+    """
+    helper function to run all crosstalk-demixing functions on a given session
+    :param session: LIMS session ID
+    :param iter_ica: number of iterations for FastICA on Rois
+    :param iter_neuropil: number of iterations for FastICa on neuropil
+    :param roi_name: filename prefix to use for roi-related data, if different form default "roi_ica"
+    :param np_name: filename prefix to use for neuropil-related data, if different from default "neuropil_ica"
+    :return: None
+    """
+    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name=roi_name, np_name=np_name)
     pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
         ica_obj.get_ica_traces(pair)
@@ -54,8 +59,19 @@ def run_ica_on_session(session,  iter_ica, iter_neuropil, roi_name="roi_ica", np
         ica_obj.plot_ica_traces(pair)
     return
 
-def run_ica_on_pair(session, pair, iter_ica, iter_neuropil):
-    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE)
+
+def run_ica_on_pair(session, pair, iter_ica, iter_neuropil, roi_name=None, np_name=None):
+    """
+    helper function to run all crosstalk-demixing functions on a given pair of planes
+    :param pair: [int, int]: list size 2 of two LIMS experiment IDs for two planes
+    :param session: int, LIMS session ID
+    :param iter_ica: int, number of iterations for FastICA on Rois
+    :param iter_neuropil: int, number of iterations for FastICa on neuropil
+    :param roi_name: str, filename prefix to use for roi-related data, if different form default "roi_ica"
+    :param np_name: str, filename prefix to use for neuropil-related data, if different from default "neuropil_ica"
+    :return: None
+    """
+    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name=roi_name, np_name=np_name)
     ica_obj.get_ica_traces(pair)
     ica_obj.validate_traces()
     ica_obj.combine_debias_roi()
@@ -65,36 +81,13 @@ def run_ica_on_pair(session, pair, iter_ica, iter_neuropil):
     ica_obj.plot_ica_traces(pair)
     return
 
-def get_ica_sessions():
-    meso_data = ms.get_all_mesoscope_data()
-    meso_data['ICA_demix_roi_exp'] = 0
-    meso_data['ICA_demix_roi_session'] = 0
-    sessions = meso_data['session_id']
-    sessions = sessions.drop_duplicates()
-
-    for session in sessions:
-        dataset = ms.MesoscopeDataset(session)
-        pairs = dataset.get_paired_planes()
-        for pair in pairs:
-            ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name = "ica_traces", np_name = "ica_neuropil")
-            ica_obj.set_ica_roi_dir(pair, roi_name="ica_traces")
-            ica_obj.set_ica_neuropil_dir(pair, np_name="ica_neuropil")
-
-            if os.path.isfile(ica_obj.plane1_ica_output_pointer) :
-                meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
-            if os.path.isfile(ica_obj.plane2_ica_output_pointer) :
-                meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[1]] = 1
-            session_data = meso_data.loc[meso_data['session_id'] == session]
-            if all(session_data.ICA_demix_roi_exp == 1):
-                for exp in session_data.experiment_id:
-                    meso_data['ICA_demix_roi_session'].loc[meso_data.experiment_id == exp] = 1
-
-    ica_roi_success = meso_data.loc[meso_data['ICA_demix_roi_session'] == 1]
-    ica_roi_fail = meso_data.loc[meso_data['ICA_demix_roi_session'] == 0]
-    return ica_roi_success, ica_roi_fail, meso_data
-
 
 def get_ica_roi_sessions():
+    """
+    helper function to scan all LIMS sessions nad return lists of ones that have been run through crosstalk demixing successfully, and that have not.
+    as well as all mesoscope data found in lime
+    :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame]
+    """
     meso_data = ms.get_all_mesoscope_data()
     meso_data['ICA_demix_roi_exp'] = 0
     meso_data['ICA_demix_roi_session'] = 0
@@ -122,8 +115,15 @@ def get_ica_roi_sessions():
     ica_roi_fail = meso_data.loc[meso_data['ICA_demix_roi_session'] == 0]
     return ica_roi_success, ica_roi_fail, meso_data
 
-def get_ica_exp_by_cre_line(cre_line, md):
 
+def get_ica_exp_by_cre_line(cre_line, md):
+    """
+    helper function to get ica experiments by cre line
+    :param cre_line: str, cre line name form LIMS
+    :param md: pandas.Dataframe - all mesoscope data - returned by mesoscope.get_all_mesoscope_data()
+    :return: [pandas.DataFrame, pandas.DataFrame] : data frames with information on cre-line specific
+    experiments that failed or succeed crosstalk correction
+    """
     md_success = md.loc[md['ICA_demix_session'] == 1]
     md_fail = md.loc[md['ICA_demix_session'] == 0]
 
@@ -136,7 +136,13 @@ def get_ica_exp_by_cre_line(cre_line, md):
     return cre_exp_success, cre_exp_fail
 
 def get_ica_ses_by_cre_line(cre_line, md):
-
+    """
+    helper function to get ica sessions by cre line
+    :param cre_line: str, cre line name form LIMS
+    :param md: pandas.Dataframe - all mesoscope data - returned by mesoscope.get_all_mesoscope_data()
+    :return: [pandas.DataFrame, pandas.DataFrame] : data frames with information on cre-line specific
+    sessions that failed or succeed crosstalk correction
+    """
     md_success = md.loc[md['ICA_demix_session'] == 1]
     md_fail = md.loc[md['ICA_demix_session'] == 0]
 
@@ -310,7 +316,12 @@ def run_demixing_on_ica(session, cache=CACHE, roi_name = "ica_traces"):
     return
 
 
-def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=None, err_vals=None):
+def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=None, err_vals=None, figshow = False):
+
+    if not figshow:
+        print(f'Switching backend to Agg')
+        plt.switch_backend('Agg')
+
     fig = plt.figure(figsize=(15, 10))
     ax = fig.add_subplot(211)
     ax.plot(roi_trace, 'r', label="raw")
