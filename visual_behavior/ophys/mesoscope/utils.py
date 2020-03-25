@@ -67,8 +67,8 @@ def run_ica_on_pair(session, pair, iter_ica, iter_neuropil):
 
 def get_ica_sessions():
     meso_data = ms.get_all_mesoscope_data()
-    meso_data['ICA_demix_exp'] = 0
-    meso_data['ICA_demix_session'] = 0
+    meso_data['ICA_demix_roi_exp'] = 0
+    meso_data['ICA_demix_roi_session'] = 0
     sessions = meso_data['session_id']
     sessions = sessions.drop_duplicates()
 
@@ -76,22 +76,22 @@ def get_ica_sessions():
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
         for pair in pairs:
-            ica_obj = ica.MesoscopeICA(session, cache=CACHE)
-            ica_obj.set_ica_roi_dir(pair)
-            ica_obj.set_ica_neuropil_dir(pair)
+            ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name = "ica_traces", np_name = "ica_neuropil")
+            ica_obj.set_ica_roi_dir(pair, roi_name="ica_traces")
+            ica_obj.set_ica_neuropil_dir(pair, np_name="ica_neuropil")
 
-            if os.path.isfile(ica_obj.plane1_ica_output_pointer) and os.path.isfile(ica_obj.plane1_ica_neuropil_output_pointer):
-                meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
-            if os.path.isfile(ica_obj.plane2_ica_output_pointer) and os.path.isfile(ica_obj.plane2_ica_neuropil_output_pointer):
-                meso_data['ICA_demix_exp'].loc[meso_data['experiment_id'] == pair[1]] = 1
+            if os.path.isfile(ica_obj.plane1_ica_output_pointer) :
+                meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
+            if os.path.isfile(ica_obj.plane2_ica_output_pointer) :
+                meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[1]] = 1
             session_data = meso_data.loc[meso_data['session_id'] == session]
-            if all(session_data.ICA_demix_exp == 1):
+            if all(session_data.ICA_demix_roi_exp == 1):
                 for exp in session_data.experiment_id:
-                    meso_data['ICA_demix_session'].loc[meso_data.experiment_id == exp] = 1
+                    meso_data['ICA_demix_roi_session'].loc[meso_data.experiment_id == exp] = 1
 
-    ica_success = meso_data.loc[meso_data['ICA_demix_session'] == 1]
-    ica_fail = meso_data.loc[meso_data['ICA_demix_session'] == 0]
-    return ica_success, ica_fail, meso_data
+    ica_roi_success = meso_data.loc[meso_data['ICA_demix_roi_session'] == 1]
+    ica_roi_fail = meso_data.loc[meso_data['ICA_demix_roi_session'] == 0]
+    return ica_roi_success, ica_roi_fail, meso_data
 
 
 def get_ica_roi_sessions():
