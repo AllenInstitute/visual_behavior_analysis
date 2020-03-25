@@ -80,6 +80,20 @@ def plot_csid_snr_for_experiment(ophys_experiment_id, ax=None):
 
 
 def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=None, color='gray'):
+    """plots the average intensity of a subset of the motion corrected movie
+        subset: inner portion of every 500th frame
+        the color of the plot is based onthe stage name of the experiment
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Keyword Arguments:
+        ax {[type]} -- [description] (default: {None})
+        color {str} -- [description] (default: {'gray'})
+
+    Returns:
+        plot -- x: frame number, y: fluroescence value
+    """
     experiment_df = dp.ophys_experiment_info_df(ophys_experiment_id)
     exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(experiment_df)
     average_intensity, frame_numbers = dp.get_experiment_average_intensity_timeseries(ophys_experiment_id)
