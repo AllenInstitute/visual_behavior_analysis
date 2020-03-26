@@ -443,7 +443,7 @@ def get_pkl(lims_data):
         #        print(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
         try:
             shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
-        except ValueError:
+        except Exception as e: #ValueError:
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
 
