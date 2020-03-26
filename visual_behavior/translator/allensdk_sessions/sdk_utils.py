@@ -36,7 +36,7 @@ def get_ophys_session_id_from_bsid(bsid, cache):
     return behavior_sessions.loc[bsid].ophys_session_id.astype(int)
 
 
-def get_oeid_from_bsid(bsid, cache, exp_num=0):
+def get_ophys_experiment_id_from_bsid(bsid, cache, exp_num=0):
     '''
         Finds the ophys_experiment_id associated with an behavior_session_id
         ARGS
@@ -44,15 +44,15 @@ def get_oeid_from_bsid(bsid, cache, exp_num=0):
             cache   cache from BehaviorProjectCache
             exp_num index for which experiment to grab the id for
         Returns
-            oeid    ophys_experiment_id for that behavior_session
+            ophys_experiment_id    ophys_experiment_id for that behavior_session
                     For scientifica sessions, there is only one experiment per behavior_session, so exp_num = 0
                     For mesoscope, there are 8 experiments, so exp_num = (0,7)
     '''
     ophys_session_id = get_ophys_session_id_from_bsid(bsid, cache)
-    return get_oeid_from_ophys_session_id(ophys_session_id, cache, exp_num=exp_num)
+    return get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_num=exp_num)
 
 
-def get_oeid_from_ophys_session_id(ophys_session_id, cache, exp_num=0):
+def get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_num=0):
     '''
         Finds the behavior_session_id associated with an ophys_session_id
         ARGS
@@ -60,7 +60,7 @@ def get_oeid_from_ophys_session_id(ophys_session_id, cache, exp_num=0):
             cache   cache from BehaviorProjectCache
             exp_num index for which experiment to grab the id for
         Returns
-            oeid    ophys_experiment_id for that ophys_session
+            ophys_experiment_id    ophys_experiment_id for that ophys_session
                     For scientifica sessions, there is only one experiment per ophys_session, so exp_num = 0
                     For mesoscope, there are 8 experiments, so exp_num = (0,7)
     '''
@@ -71,34 +71,34 @@ def get_oeid_from_ophys_session_id(ophys_session_id, cache, exp_num=0):
     return experiments[0]
 
 
-def get_bsid_from_oeid(oeid, cache):
+def get_bsid_from_ophys_experiment_id(ophys_experiment_id, cache):
     '''
         Finds the behavior_session_id associated with an ophys_experiment_id
         ARGS
-            oeid    ophys_experiment_id
+            ophys_experiment_id    ophys_experiment_id
             cache   cache from BehaviorProjectCache
         Returns
             bsid    behavior_session_id for that ophys_experiment
     '''
     ophys_experiments = cache.get_experiment_table()
-    if oeid not in ophys_experiments.index:
+    if ophys_experiment_id not in ophys_experiments.index:
         raise Exception('ophys_experiment_id not in experiment table')
-    return ophys_experiments.loc[oeid].behavior_session_id
+    return ophys_experiments.loc[ophys_experiment_id].behavior_session_id
 
 
-def get_ophys_session_id_from_oeid(oeid, cache):
+def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
     '''
         Finds the ophys_session_id associated with an ophys_experiment_id
         ARGS
-            oeid    ophys_experiment_id
+            ophys_experiment_id    ophys_experiment_id
             cache   cache from BehaviorProjectCache
         Returns
             ophys_session_id    ophys_session_id for that ophys_experiment
     '''
     ophys_experiments = cache.get_experiment_table()
-    if oeid not in ophys_experiments.index:
+    if ophys_experiment_id not in ophys_experiments.index:
         raise Exception('ophys_experiment_id not in experiment table')
-    return ophys_experiments.loc[oeid].ophys_session_id
+    return ophys_experiments.loc[ophys_experiment_id].ophys_session_id
 
 
 def get_specimen_id_from_donor_id(d_id, cache):
