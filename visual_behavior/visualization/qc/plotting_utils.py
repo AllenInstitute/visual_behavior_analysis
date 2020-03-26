@@ -1,7 +1,5 @@
-import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
 
 from visual_behavior.visualization.qc import data_processing as dp
 
@@ -67,10 +65,10 @@ def experiment_id_stage_color_dict_for_experiment(ophys_experiment_id):
 
 def experiment_id_stage_color_dict_for_container(ophys_container_id):
     """[summary]
-    
+
     Arguments:
         ophys_container_id {[type]} -- [description]
-    
+
     Returns:
         [type] -- [description]
     """

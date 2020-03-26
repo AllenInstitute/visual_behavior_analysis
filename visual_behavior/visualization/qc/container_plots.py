@@ -227,7 +227,7 @@ def plot_number_segmented_rois_for_container(ophys_container_id, save_figure=Tru
         x axis is all passed experiments for a container, listed as their stage name from lims
         and listed in their acquisition date order.
         y axis is number of rois
-        the bars are: 
+        the bars are:
         total_rois : number of segmented objects
         valid_count: numner of valid rois (same thing as cell_specimen_ids)
         invalid_count: number of invalid rois (deemed not a cell, or failed for another reason
