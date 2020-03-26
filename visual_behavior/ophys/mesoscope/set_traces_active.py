@@ -1,31 +1,69 @@
-#%% Define functions 
+"""
+# Define functions to set an "active trace" (referred to as "traces_evs" below), i.e. 
+# a trace made by extracting and concatenating the active parts of the input trace.
 
-#%% Set traces_evs (for the y trace), ie traces that are made by extracting the active parts of the input trace
-# the idea is that to help with learning the events, take parts of the trace that have events
+# Inputs:
+len_ne # scalar; number of frames before and after each event that are taken to create traces_events.
+th_ag # scalar; threshold to apply on erfc (output of evaluate_components) to find events on the trace; the higher the more strict on what we call an event.
+doPlots # set to 1 to see how the code works for an example neuron
+
+# Outputs: 
+traces_y0_evs # size number_of_neurons; each neuron has size n, which is the size of the "active trace" for that neuron
+inds_final_all # size number_of_neurons; indeces to apply on traces_y0 to get traces_y0_evs: 
+# traces_y0_evs[neuron_y] = traces_y0[neuron_y][inds_final_all[neuron_y]]
+
+# Farzaneh Najafi
+# March 2020
+
+----------------------------------------------------------------------------------------
+
+# Example call to the function:
+
+## set the input trace (neurons x frames)
+plane_ind = 0
+traces_y0 = this_sess.iloc[plane_ind]['local_fluo_traces']
+traces_y0.shape # neurons x frames
+
+len_ne = 20 # number of frames before and after each event that are taken to create traces_events.
+th_ag = 10 #8 # threshold to apply on erfc (output of evaluate_components) to find events on the trace; the higher the more strict on what we call an event.
+doPlots = 1 # set to 1 to see an example neuron
+
+## call the function to set traces_evs (for the y trace), ie traces that are made by extracting the active parts of the input trace
+
+[traces_y0_evs, inds_final_all] = set_traces_evs(traces_y0, th_ag, len_ne, doPlots)
+
+"""
+
+import numpy as np
+import scipy.stats as st
+import matplotlib.pyplot as plt
+import numpy.random as rnd
+
+#%%
 
 def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
-    
+
 #    len_ne = len_win #20 # number of frames before and after each event that are taken to create traces_events.    
 #    th_ag = 10 #8 # the higher the more strict on what we call an event.
     
-    ###############################################################################
-    ############# Andrea's method of identifying "exceptional" events. ############
-    ###############################################################################
+    ###########################################################################################
+    ############# Andrea Giovannucci's method of identifying "exceptional" events. ############
+    ###########################################################################################
     [idx_components, fitness, erfc] = evaluate_components(traces_y0, N=5, robust_std=False)
     erfc = -erfc
     
     #erfc.shape
     
     '''
-    p1 = traces_y0
-    p2 = -erfc
+    p1 = traces_y0.T
+    p2 = -erfc.T
 
 #    p1 = supimpose(traces_y0)
 #    p2 = supimpose(-erfc)
 
     plt.figure()
-    plt.plot(p1,'b')
-    plt.plot(p2,'r')
+    plt.plot(p1,'b');
+    plt.plot(p2,'r');
     '''
     
     # seems like I can apply a threshold of ~10 on erfc to find "events"
@@ -60,17 +98,6 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
 #    bgap_evs # number of frames before the first event
 #    egap_evs # number of frames after the last event    
     
-    '''
-    # old stuff
-    # if the gap between two "events" is < 1 sec, extend the events in traces_y0_evs 
-    # this is to take care of the rise of the ca events bc erfc during rise is low, and it is only high after the rise  
-    
-    # find the index of event offset that preceded the gaps shorter than 10 frames on the trace
-    # Note: begs_evs does not include the first event; so index i in gap_evs corresponds to index i in begs_evs and ends_evs.
-    # the following two are the same:
-    ends_evs[neuron_y][gap_evs[neuron_y] <= 10] + gap_evs[neuron_y][gap_evs[neuron_y] <= 10]
-    begs_evs[neuron_y][gap_evs[neuron_y] <= 10]
-    '''
         
     #############################################################################################################
     ############ set traces_evs, ie a trace that contains mostly the active parts of the input trace ############
@@ -79,88 +106,94 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
     inds_final_all = []
     
     for iu in range(traces_y0.shape[0]):
-    
-        # loop through each event, and take 20 frames before until 20 frames after the event ... we want to have a good sample of non-events too for training the model.
-        #bnow = begs[1, begs[0]==iu]
-        #enow = ends[1, ends[0]==iu]
-        enow = ends_evs[iu]
-        bnow = begs_evs[iu]
-        e_aft = []
-        b_bef = []
-        for ig in range(len(bnow)):
-        #    ev_sur.append(np.arange(bnow[ig]-len_ne, enow[ig]+len_ne+1))
-            e_aft.append(np.arange(enow[ig], min(evs.shape[1], enow[ig]+len_ne)))
-            b_bef.append(np.arange(bnow[ig]+1-len_ne, min(evs.shape[1], bnow[ig]+2))) # +2 because bnow[ig] is actually the frame preceding the event onset, so +1 here, and another +1 because range doesn't include the last element. # anyway the details dont matter bc we will do unique later.
         
-        e_aft = np.array(e_aft) # n_gap x len_ne
-        b_bef = np.array(b_bef)
-        
-        if len(e_aft)>1:
-            e_aft_u = np.hstack(e_aft)
-        else:
-            e_aft_u = []
-            
-        if len(b_bef)>1:            
-            b_bef_u = np.hstack(b_bef)
-        else:
-            b_bef_u = []
-        #e_aft.shape, b_bef_u.shape
-        
-        # below sets frames that cover the duration of all events, but excludes the first and last event
-        ev_dur = []
-        for ig in range(len(bnow)-1):
-            ev_dur.append(np.arange(bnow[ig], enow[ig+1]))
-        
-        ev_dur = np.array(ev_dur)
-        
-        if len(ev_dur)>1:            
-            ev_dur_u = np.hstack(ev_dur)
-        else:
-            ev_dur_u = []
-        #ev_dur_u.shape
-        
-        
-        evs_inds = np.argwhere(evs[iu]).flatten() # includes ALL events.   
-        # now take care of the 1st and the last event
-        #bgap = [begs_this_n[0] + 1] # after how many frames the first event happened
-        #egap = [evs.shape[1] - ends_this_n[-1] - 1] # how many frames with no event exist after the last event
-        if len(bgap_evs[iu])>0:
-            # get len_ne frames before the 1st event
-            ind1 = np.arange(np.array(bgap_evs[iu])-len_ne, bgap_evs[iu])
-            # if the 1st event is immediately followed by more events, add those to ind1, because they dont appear in any of the other vars that we are concatenating below.
-            if len(ends_evs[iu])>1:
-                ii = np.argwhere(np.in1d(evs_inds, ends_evs[iu][0])).squeeze()
-                ind1 = np.concatenate((ind1, evs_inds[:ii]))            
-        else: # first event was already going when the recording started; add these events to ind1
-            jj = np.argwhere(np.in1d(evs_inds, ends_evs[iu][0])).squeeze()
-#            jj = ends_evs[iu][0]
-            ind1 = evs_inds[:jj+1]
-            
-            
-        if len(egap_evs[iu])>0:
-            # get len_ne frames after the last event
-            indl = np.arange(evs.shape[1]-np.array(egap_evs[iu])-1, min(evs.shape[1], evs.shape[1]-np.array(egap_evs[iu])+len_ne))
-            # if the last event is immediately preceded by more events, add those to indl, because they dont appear in any of the other vars that we are concatenating below.
-            if len(begs_evs[iu])>1:
-                ii = np.argwhere(np.in1d(evs_inds, 1+begs_evs[iu][-1])).squeeze() # find the fist event of the last event bout
-                indl = np.concatenate((evs_inds[ii:], indl))
-        else: # last event was already going when the recording ended; add these events to ind1
-            jj = np.argwhere(np.in1d(evs_inds, begs_evs[iu][-1]+1)).squeeze()
-            indl = evs_inds[jj:]
-        
-        #ind1, indl
-        
-        inds_final = np.unique(np.concatenate((e_aft_u, b_bef_u, ev_dur_u, ind1, indl))).astype(int)
-        
-        if np.in1d(evs_inds, inds_final).all()==False: # all evs_inds must exist in inds_final, otherwise something is wrong!
-            if np.array([len(e_aft)>1, len(b_bef)>1, len(ev_dur)>1]).all()==False: # there was only one event bout in the trace
-                inds_final = np.unique(np.concatenate((inds_final, evs_inds))).astype(int)
-            else:
-                print(np.in1d(evs_inds, inds_final))
-                sys.exit('error in neuron %d! some of the events dont exist in inds_final! all events must exist in inds_final!' %iu)
-    #    inds_final.shape
+        if sum(evs[iu])>0:
+            # loop through each event, and take 20 frames before until 20 frames after the event ... we want to have a good sample of non-events too for training the model.
+            #bnow = begs[1, begs[0]==iu]
+            #enow = ends[1, ends[0]==iu]
+            enow = ends_evs[iu]
+            bnow = begs_evs[iu]
+            e_aft = []
+            b_bef = []
+            for ig in range(len(bnow)):
+            #    ev_sur.append(np.arange(bnow[ig]-len_ne, enow[ig]+len_ne+1))
+                e_aft.append(np.arange(enow[ig], min(evs.shape[1], enow[ig]+len_ne)))
+                b_bef.append(np.arange(bnow[ig]+1-len_ne, min(evs.shape[1], bnow[ig]+2))) # +2 because bnow[ig] is actually the frame preceding the event onset, so +1 here, and another +1 because range doesn't include the last element. # anyway the details dont matter bc we will do unique later.
 
-        traces_y0_evs_now = traces_y0[iu][inds_final]
+            e_aft = np.array(e_aft) # n_gap x len_ne
+            b_bef = np.array(b_bef)
+
+            if len(e_aft)>1:
+                e_aft_u = np.hstack(e_aft)
+            else:
+                e_aft_u = []
+
+            if len(b_bef)>1:            
+                b_bef_u = np.hstack(b_bef)
+            else:
+                b_bef_u = []
+            #e_aft.shape, b_bef_u.shape
+
+            # below sets frames that cover the duration of all events, but excludes the first and last event
+            ev_dur = []
+            for ig in range(len(bnow)-1):
+                ev_dur.append(np.arange(bnow[ig], enow[ig+1]))
+
+            ev_dur = np.array(ev_dur)
+
+            if len(ev_dur)>1:            
+                ev_dur_u = np.hstack(ev_dur)
+            else:
+                ev_dur_u = []
+            #ev_dur_u.shape
+
+
+            evs_inds = np.argwhere(evs[iu]).flatten() # includes ALL events.   
+            # now take care of the 1st and the last event
+            #bgap = [begs_this_n[0] + 1] # after how many frames the first event happened
+            #egap = [evs.shape[1] - ends_this_n[-1] - 1] # how many frames with no event exist after the last event
+            if len(bgap_evs[iu])>0:
+                # get len_ne frames before the 1st event
+                ind1 = np.arange(np.array(bgap_evs[iu])-len_ne, bgap_evs[iu])
+                # if the 1st event is immediately followed by more events, add those to ind1, because they dont appear in any of the other vars that we are concatenating below.
+                if len(ends_evs[iu])>1:
+                    ii = np.argwhere(np.in1d(evs_inds, ends_evs[iu][0])).squeeze()
+                    ind1 = np.concatenate((ind1, evs_inds[:ii]))            
+            else: # first event was already going when the recording started; add these events to ind1
+                jj = np.argwhere(np.in1d(evs_inds, ends_evs[iu][0])).squeeze()
+    #            jj = ends_evs[iu][0]
+                ind1 = evs_inds[:jj+1]
+
+
+            if len(egap_evs[iu])>0:
+                # get len_ne frames after the last event
+                indl = np.arange(evs.shape[1]-np.array(egap_evs[iu])-1, min(evs.shape[1], evs.shape[1]-np.array(egap_evs[iu])+len_ne))
+                # if the last event is immediately preceded by more events, add those to indl, because they dont appear in any of the other vars that we are concatenating below.
+                if len(begs_evs[iu])>1:
+                    ii = np.argwhere(np.in1d(evs_inds, 1+begs_evs[iu][-1])).squeeze() # find the fist event of the last event bout
+                    indl = np.concatenate((evs_inds[ii:], indl))
+            else: # last event was already going when the recording ended; add these events to ind1
+                jj = np.argwhere(np.in1d(evs_inds, begs_evs[iu][-1]+1)).squeeze()
+                indl = evs_inds[jj:]
+
+            #ind1, indl
+
+            inds_final = np.unique(np.concatenate((e_aft_u, b_bef_u, ev_dur_u, ind1, indl))).astype(int)
+
+            if np.in1d(evs_inds, inds_final).all()==False: # all evs_inds must exist in inds_final, otherwise something is wrong!
+                if np.array([len(e_aft)>1, len(b_bef)>1, len(ev_dur)>1]).all()==False: # there was only one event bout in the trace
+                    inds_final = np.unique(np.concatenate((inds_final, evs_inds))).astype(int)
+                else:
+                    print(np.in1d(evs_inds, inds_final))
+                    sys.exit('error in neuron %d! some of the events dont exist in inds_final! all events must exist in inds_final!' %iu)
+        #    inds_final.shape
+
+            traces_y0_evs_now = traces_y0[iu][inds_final]
+        
+        
+        else: # there are no events in the neuron; assign a nan vector of length 10 to the following vars
+            inds_final = np.full((10,), np.nan)
+            traces_y0_evs_now = np.full((10,), np.nan)        
         
         #plt.figure(); plt.plot(inds_final)
         inds_final_all.append(inds_final)
@@ -178,6 +211,14 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
     if doPlots:
         get_ipython().magic(u'matplotlib inline')
         neuron_y = rnd.permutation(traces_y0.shape[0])[0] # 10 # 4
+        if sum(evs[neuron_y])==0:
+            neuron_y = rnd.permutation(traces_y0.shape[0])[0]
+
+        doscl=1 # set to 1 if not dealing with df/f , so you can better see the plots 
+        if doscl:
+            traces_y0c = traces_y0 / np.max(traces_y0, axis=0)
+            traces_y0_evsc = [traces_y0_evs[iu] / np.max(traces_y0_evs[iu]) for iu in range(len(traces_y0_evs))]
+
 #        print(neuron_y)
         evs_inds = np.argwhere(evs[neuron_y]).flatten()
 
@@ -186,33 +227,33 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
         plt.figure(); plt.suptitle('Y Neuron, %d' %neuron_y)
         plt.subplot(211)
         plt.plot(traces_y0[neuron_y],'b', label='df/f'); 
-        plt.plot(evs_inds, np.full(evs_inds.shape, 1),'g.', label='events'); # max(traces_y0[neuron_y]) 
-        plt.plot(inds_final_all[neuron_y], np.ones(inds_final_all[neuron_y].shape)*.9, 'r.', label='extracted frames')
+        plt.plot(evs_inds, np.full(evs_inds.shape, max(traces_y0[neuron_y])),'g.', label='events'); # max(traces_y0[neuron_y]) 
+        plt.plot(inds_final_all[neuron_y], np.ones(inds_final_all[neuron_y].shape)*(max(traces_y0[neuron_y])*.9), 'r.', label='extracted frames')
         plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False, fontsize=12)
         makeNicePlots(plt.gca())
         
         plt.subplot(212)
         plt.plot(erfc[neuron_y],'r', label='-erfc'); 
         plt.plot(evs[neuron_y].astype(int)*10,'g', label='events'); 
-        plt.plot(traces_y0[neuron_y],'b', label='df/f'); 
+        plt.plot(traces_y0c[neuron_y],'b', label='df/f'); 
         plt.hlines(th_ag, 0, erfc.shape[1])
         plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False, fontsize=12)
         makeNicePlots(plt.gca())
         
-        # now plot the extracted chuch of trace which includes events!!
+        # now plot the extracted chunk of trace which includes events!!
         #iu = 10
         evs_inds_evs = np.argwhere(evs[neuron_y][inds_final_all[neuron_y]])
         plt.figure(); plt.suptitle('Y Neuron, %d' %neuron_y)
         plt.subplot(211)
-        plt.plot(traces_y0_evs[neuron_y],'b', label='df/f'); 
+        plt.plot(traces_y0_evsc[neuron_y],'b', label='df/f'); 
         plt.plot(evs_inds_evs, np.full(evs_inds_evs.shape, 1),'g.', label='events'); # max(traces_y0[neuron_y]) 
         makeNicePlots(plt.gca())
         
         plt.subplot(212)
-        plt.plot(traces_y0_evs[neuron_y],'b', label='df/f'); 
+        plt.plot(traces_y0_evsc[neuron_y],'b', label='df/f'); 
         plt.plot(erfc[neuron_y][inds_final_all[neuron_y]],'r', label='-erfc'); 
         plt.plot(evs[neuron_y][inds_final_all[neuron_y]].astype(int)*10,'g', label='events'); 
-        plt.hlines(th_ag, 0, traces_y0_evs[neuron_y].shape)
+        plt.hlines(th_ag, 0, traces_y0_evsc[neuron_y].shape)
         plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False, fontsize=12)
         makeNicePlots(plt.gca())
     
@@ -389,53 +430,64 @@ def find_event_gaps(evs):
     egap_evs = [] # number of frames after the last event
 
     for iu in range(evs.shape[0]): 
-#        print(iu)
+#         print(iu)
         # sum(begs[0]==0)
-        begs_this_n = begs[1,begs[0]==iu] # indeces belong to "d" (the difference trace)
-        ends_this_n = ends[1,ends[0]==iu]
-
-        # gap between event onsets will be begs(next event) - ends(current event)
-        
-        if evs[iu, 0]==False and evs[iu, -1]==False: # normal case
-            #len(begs_this_n) == len(ends_this_n): 
-            b = begs_this_n[1:]
-            e = ends_this_n[:-1]
-            
-            bgap = [begs_this_n[0] + 1] # after how many frames the first event happened
-            egap = [evs.shape[1] - ends_this_n[-1] - 1] # how many frames with no event exist after the last event
-            
-        elif evs[iu, 0]==True and evs[iu, -1]==False: # first event was already going when the recording started.
-            #len(begs_this_n)+1 == len(ends_this_n): 
-            b = begs_this_n
-            e = ends_this_n[:-1]
-            
-            bgap = []
-            egap = [evs.shape[1] - ends_this_n[-1] - 1]
-        
-        elif evs[iu, 0]==False and evs[iu, -1]==True: # last event was still going on when the recording ended.
-            #len(begs_this_n) == len(ends_this_n)+1:
-            b = begs_this_n[1:]
-            e = ends_this_n
-            
-            bgap = [begs_this_n[0] + 1]
-            egap = []
-            
-        elif evs[iu, 0]==True and evs[iu, -1]==True: # first event and last event were happening when the recording started and ended.
-#            print('cool :)')
-            b = begs_this_n
-            e = ends_this_n
-            
-            bgap = []
-            egap = []
     
-        else:
-            sys.exit('doesnt make sense! plot d to debug')
+        if sum(evs[iu]) > 0: # make sure there are events in the trace of unit iu
+            begs_this_n = begs[1,begs[0]==iu] # indeces belong to "d" (the difference trace)
+            ends_this_n = ends[1,ends[0]==iu]
+
+            # gap between event onsets will be begs(next event) - ends(current event)
+
+            if evs[iu, 0]==False and evs[iu, -1]==False: # normal case
+                #len(begs_this_n) == len(ends_this_n): 
+                b = begs_this_n[1:]
+                e = ends_this_n[:-1]
+
+                bgap = [begs_this_n[0] + 1] # after how many frames the first event happened
+                egap = [evs.shape[1] - ends_this_n[-1] - 1] # how many frames with no event exist after the last event
+
+            elif evs[iu, 0]==True and evs[iu, -1]==False: # first event was already going when the recording started.
+                #len(begs_this_n)+1 == len(ends_this_n): 
+                b = begs_this_n
+                e = ends_this_n[:-1]
+
+                bgap = []
+                egap = [evs.shape[1] - ends_this_n[-1] - 1]
+
+            elif evs[iu, 0]==False and evs[iu, -1]==True: # last event was still going on when the recording ended.
+                #len(begs_this_n) == len(ends_this_n)+1:
+                b = begs_this_n[1:]
+                e = ends_this_n
+
+                bgap = [begs_this_n[0] + 1]
+                egap = []
+
+            elif evs[iu, 0]==True and evs[iu, -1]==True: # first event and last event were happening when the recording started and ended.
+    #            print('cool :)')
+                b = begs_this_n
+                e = ends_this_n
+
+                bgap = []
+                egap = []
+
+            else:
+                sys.exit('doesnt make sense! plot d to debug')
+
+
+            gap_this_n = b - e
+            gap_this = np.concatenate((bgap, gap_this_n, egap)).astype(int) # includes all gaps, before the 1st event, between events, and after the last event.
         
         
-        gap_this_n = b - e
-        gap_this = np.concatenate((bgap, gap_this_n, egap)).astype(int) # includes all gaps, before the 1st event, between events, and after the last event.
-        
-        
+        else: # there are no events in this neuron; set everything to nan
+            gap_this = np.nan
+            gap_this_n = np.nan
+            b = np.nan
+            e = np.nan
+            bgap = np.nan
+            egap = np.nan
+
+            
         gap_evs_all.append(gap_this) # includes the gap before the 1st event and the gap before the last event too.        
         gap_evs.append(gap_this_n) # only includes gaps between events: b - e      
         begs_evs.append(b)
@@ -455,27 +507,43 @@ def find_event_gaps(evs):
 
 
 
-#%% Set active parts of the trace
-##########################################################################################
-##########################################################################################
-##########################################################################################
 
-#%% 
-'''
-plane_ind = 0
-traces_y0 = this_sess.iloc[plane_ind]['local_fluo_traces']
-traces_y0.shape # neurons x frames
-'''
+#%% Function to only show left and bottom axes of plots, make tick directions outward, remove every other tick label if requested.
 
-#%%
-len_ne = 20 # number of frames before and after each event that are taken to create traces_events.
-th_ag = 10 #8 # threshold to apply on erfc (output of evaluate_components) to find events on the trace; the higher the more strict on what we call an event.
-# set doPlots to 1 to see an example neuron
+def makeNicePlots(ax, rmv2ndXtickLabel=0, rmv2ndYtickLabel=0):
+    # Hide the right and top spines
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    # Only show ticks on the left and bottom spines
+    ax.yaxis.set_ticks_position('left')
+    ax.xaxis.set_ticks_position('bottom')
+    
+    # Make tick directions outward    
+    ax.tick_params(direction='out')    
+    # Tweak spacing between subplots to prevent labels from overlapping
+    #plt.subplots_adjust(hspace=0.5)
+#    ymin, ymax = ax.get_ylim()
 
-## set traces_evs (for the y trace), ie traces that are made by extracting the active parts of the input trace
-# the idea is that to help with learning the events, take parts of the trace that have events        
+    # Remove every other tick label
+    if rmv2ndXtickLabel:
+        [label.set_visible(False) for label in ax.xaxis.get_ticklabels()[::2]]
+        
+    if rmv2ndYtickLabel:
+        [label.set_visible(False) for label in ax.yaxis.get_ticklabels()[::2]]
+#        a = np.array(ax.yaxis.get_ticklabels())[np.arange(0,len(ax.yaxis.get_ticklabels()),2).astype(int).flatten()]
+#        [label.set_visible(False) for label in a]
+    
+    plt.grid(False)
+        
+    ax.tick_params(labelsize=12)
 
-[traces_y0_evs, inds_final_all] = set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1)
+    # gap between tick labeles and axis
+#    ax.tick_params(axis='x', pad=30)
+
+#    plt.xticks(x, labels, rotation='vertical')
+    #ax.xaxis.label.set_color('red')    
+#    plt.gca().spines['left'].set_color('white')
+    #plt.gca().yaxis.set_visible(False)
 
 
 
