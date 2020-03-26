@@ -81,6 +81,7 @@ def run_ica_on_pair(session, pair, iter_ica, iter_neuropil, roi_name=None, np_na
     ica_obj.plot_ica_traces(pair)
     return
 
+
 def get_lims_done_sessions():
     """
     function to find all pst-ica sessions that also ran through LIMS modules
@@ -105,8 +106,9 @@ def get_lims_done_sessions():
             if all(session_data.LIMS_done_exp == 1):
                 for exp in session_data.experiment_id:
                     ica_success['LIMS_done_session'].loc[ica_success.experiment_id == exp] = 1
-            lims_roi_success = ica_success.loc[ica_success['LIMS_done_session'] == 1]
-            lims_roi_fail = ica_success.loc[ica_success['LIMS_done_session'] == 0]
+
+    lims_roi_success = ica_success.loc[ica_success['LIMS_done_session'] == 1]
+    lims_roi_fail = ica_success.loc[ica_success['LIMS_done_session'] == 0]
 
     return lims_roi_success, lims_roi_fail, ica_success
 

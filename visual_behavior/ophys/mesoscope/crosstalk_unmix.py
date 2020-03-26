@@ -166,6 +166,9 @@ class MesoscopeICA(object):
         self.found_solution = None  # output of unmix_traces
         self.found_solution_neuropil = None
 
+        self.plane1_ica_input = None
+        self.plane2_ica_input = None
+
         self.found_ica_input = [None, None]
         self.found_ica_offset = [None, None]
         self.found_ica_neuropil_input = [None, None]
@@ -199,6 +202,17 @@ class MesoscopeICA(object):
 
         self.plane1_np_err = None
         self.plane2_np_err = None
+
+        self.neuropil_ica_output = None
+
+        self.plane1_ica_neuropil_input = None
+        self.plane2_ica_neuropil_input = None
+
+        self.ica_mixing_matrix_traces_pointer = None
+
+        self.plane1_ica_neuropil_output = None
+        self.plane2_ica_neuropil_output = None
+
 
     def set_analysis_session_dir(self):
         """
@@ -736,7 +750,7 @@ class MesoscopeICA(object):
             raise ValueError('Extract ROI traces first')
         return
 
-    def combine_debias_neuropil(self, np_name = None):
+    def combine_debias_neuropil(self, np_name=None):
         """
         fn to combine all neuropil traces for the pair to two num_cells x num_frames_in_timeseries vectors,
         write them to cache as ica_roi_input
@@ -1469,7 +1483,6 @@ class MesoscopeICA(object):
             logging.info(f'raw traces for pair {pair[0]}/{pair[1]} don''t exist, nothing to plot.')
 
         return
-
 
     @staticmethod
     def ica_err(scale, ica_traces, trace_orig):
