@@ -17,8 +17,6 @@ from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
-
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 
@@ -106,7 +104,6 @@ def get_lims_done_sessions():
             if all(session_data.LIMS_done_exp == 1):
                 for exp in session_data.experiment_id:
                     ica_success['LIMS_done_session'].loc[ica_success.experiment_id == exp] = 1
-
     lims_roi_success = ica_success.loc[ica_success['LIMS_done_session'] == 1]
     lims_roi_fail = ica_success.loc[ica_success['LIMS_done_session'] == 0]
 
@@ -129,13 +126,13 @@ def get_ica_roi_sessions():
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
         for pair in pairs:
-            ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name = "ica_traces", np_name = "ica_neuropil")
+            ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
             ica_obj.set_ica_roi_dir(pair, roi_name="ica_traces")
             ica_obj.set_ica_neuropil_dir(pair, np_name="ica_neuropil")
 
-            if os.path.isfile(ica_obj.plane1_ica_output_pointer) :
+            if os.path.isfile(ica_obj.plane1_ica_output_pointer):
                 meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
-            if os.path.isfile(ica_obj.plane2_ica_output_pointer) :
+            if os.path.isfile(ica_obj.plane2_ica_output_pointer):
                 meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[1]] = 1
             session_data = meso_data.loc[meso_data['session_id'] == session]
             if all(session_data.ICA_demix_roi_exp == 1):
@@ -157,14 +154,12 @@ def get_ica_exp_by_cre_line(cre_line, md):
     """
     md_success = md.loc[md['ICA_demix_session'] == 1]
     md_fail = md.loc[md['ICA_demix_session'] == 0]
-
     cre_md_success = md_success.loc[md_success['specimen'].str.contains(cre_line)]
-    cre_md_fail =  md_fail.loc[md_fail['specimen'].str.contains(cre_line)]
-
+    cre_md_fail = md_fail.loc[md_fail['specimen'].str.contains(cre_line)]
     cre_exp_success = cre_md_success['experiment_id']
     cre_exp_fail = cre_md_fail['experiment_id']
-
     return cre_exp_success, cre_exp_fail
+
 
 def get_ica_ses_by_cre_line(cre_line, md):
     """
@@ -176,13 +171,10 @@ def get_ica_ses_by_cre_line(cre_line, md):
     """
     md_success = md.loc[md['ICA_demix_session'] == 1]
     md_fail = md.loc[md['ICA_demix_session'] == 0]
-
     cre_md_success = md_success.loc[md_success['specimen'].str.contains(cre_line)]
     cre_md_fail = md_fail.loc[md_fail['specimen'].str.contains(cre_line)]
-
     cre_ses_success = cre_md_success.drop_duplicates('session_id')['session_id']
     cre_ses_fail = cre_md_fail.drop_duplicates('session_id')['session_id']
-
     return cre_ses_success, cre_ses_fail
 
 
@@ -214,7 +206,7 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
     exclude_labels = set(exclude_labels)
 
     for roi in rois:
-        if exp_traces_valid[str(roi["id"])] :
+        if exp_traces_valid[str(roi["id"])]:
             mask = np.zeros(movie_shape, dtype=bool)
             mask_matrix = np.array(roi["mask"], dtype=bool)
             mask[roi["y"]:roi["y"] + roi["height"], roi["x"]:roi["x"] + roi["width"]] = mask_matrix
@@ -227,20 +219,20 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
             try:
                 ridx = trace_ids.index(rid)
             except ValueError as e:
-                raise ValueError("Could not find cell roi id %d in roi traces file" % rid)
-
+                raise ValueError(f"Could not find cell roi id %d in roi traces file: {e}" % rid)
             masks[ridx, :, :] = mask
-
             current_exclusion_labels = set(roi.get("exclusion_labels", []))
             valid[ridx] = len(exclude_labels & current_exclusion_labels) == 0
 
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
-def run_demixing_on_ica(session, cache=CACHE, roi_name = "ica_traces"):
+
+def run_demixing_on_ica(session, cache=CACHE, roi_name="ica_traces"):
     """
     run LIMS demixing on crosstalk corrected traces
     :param session: LIMS session id
-    :param an_dir: directory containing crosstalk corrected traces
+    :param cache: directory containing crosstalk corrected traces
+    :param roi_name: filename prefix used to find roi trace files if different form default "ica_traces"
     :return:
     """
     mds = ms.get_all_mesoscope_data()
@@ -251,7 +243,6 @@ def run_demixing_on_ica(session, cache=CACHE, roi_name = "ica_traces"):
     #     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
     # else:
     #     logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
 
     for pair in pairs:
         for exp_id in pair:
@@ -276,7 +267,6 @@ def run_demixing_on_ica(session, cache=CACHE, roi_name = "ica_traces"):
                 where ophys_cell_segmentation_run_id = {seg_run}
                 """
                 rois = lu.query(query)
-
                 nrois = {roi['id']: dict(width=roi['width'],
                                          height=roi['height'],
                                          x=roi['x'],
@@ -286,12 +276,9 @@ def run_demixing_on_ica(session, cache=CACHE, roi_name = "ica_traces"):
                                          mask=roi['mask_matrix'],
                                          exclusion_labels=[])
                          for roi in rois}
-
                 demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
                 ica_dir = f'session_{session}/ica_traces_{pair[0]}_{pair[1]}/'
-
                 traces_valid = os.path.join(cache, ica_dir, f'valid_{exp_id}.json')
-
                 data = {
                     "movie_h5": os.path.join(exp_dir, "processed", "concat_31Hz_0.h5"),
                     "traces_h5_ica": os.path.join(cache, ica_dir, f'{roi_name}_output_{exp_id}.h5'),
@@ -340,14 +327,13 @@ def run_demixing_on_ica(session, cache=CACHE, roi_name = "ica_traces"):
                 demixed_traces[nb_inds, :] = np.nan
                 logging.info("Saving output")
                 out_traces = demixed_traces
-
                 with h5py.File(output_h5, 'w') as f:
                     f.create_dataset("data", data=out_traces, compression="gzip")
                     f.create_dataset("roi_names", data=[np.string_(rn) for rn in trace_ids])
     return
 
 
-def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=None, err_vals=None, figshow = False):
+def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=None, err_vals=None, figshow=False):
 
     if not figshow:
         print(f'Switching backend to Agg')
@@ -360,7 +346,7 @@ def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=
     ax.plot(neuropil_trace, 'g', label="neuropil")
     ax.set_xlim(0, roi_trace.size)
     ax.set_title('raw(%.02f, %.02f) fc(%.02f, %.02f) r(%f)' % (
-    roi_trace.min(), roi_trace.max(), corrected_trace.min(), corrected_trace.max(), r))
+        roi_trace.min(), roi_trace.max(), corrected_trace.min(), corrected_trace.max(), r))
     ax.legend()
 
     if r_vals is not None:
@@ -371,18 +357,18 @@ def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=
     plt.close()
 
 
-def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name = "ica_neuropil"):
+def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name="ica_neuropil"):
     """
     run neuropil correction on CIA output files
     :param session: LIMS session id
     :param an_dir: directory to find processed ica-demixed outputs
+    :param np_name: str, filename prefix to for neuropil-related files if different from default
     :return: None
     """
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
     for pair in pairs:
         for exp_id in pair:
-            #######################################################################
             # prelude -- get processing metadata
             ses_dir = os.path.join(an_dir, f'session_{session}')
 
@@ -409,35 +395,35 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name = "ica_neuropi
 
                 try:
                     os.makedirs(plot_dir)
-                except:
+                except Exception as e:
+                    logging.error(f"Error: {e}")
                     pass
 
                 logging.info(f"Running neuropil correction on {exp_id}")
-                logging.info("Neuropil correcting '%s'", trace_file)
+                logging.info(f"Neuropil correcting {trace_file}")
 
-                ########################################################################
                 # process data
 
                 try:
                     roi_traces = h5py.File(trace_file, "r")
-                except:
-                    logging.error("Error: unable to open ROI trace file '%s'", trace_file)
+                except Exception as e:
+                    logging.error(f"Error: {e}, most likely unable to open ROI trace file {trace_file}")
                     raise
 
                 try:
                     neuropil_traces = h5py.File(neuropil_trace_file, "r")
-                except:
-                    logging.error("Error: unable to open neuropil trace file '%s'", neuropil_trace_file)
+                except Exception as e:
+                    logging.error(f"Error: {e} most likely unable to open neuropil trace file {neuropil_trace_file}")
                     raise
 
                 '''
                 get number of traces, length, etc.
                 '''
-                num_traces, T = roi_traces['data'].shape
-                T_orig = T
-                T_cross_val = int(T / 2)
-                if (T - T_cross_val > T_cross_val):
-                    T = T - 1
+                num_traces, t = roi_traces['data'].shape
+                t_orig = t
+                t_cross_val = int(t / 2)
+                if t - t_cross_val > t_cross_val:
+                    t = t - 1
 
                 # make sure that ROI and neuropil trace files are organized the same
                 n_id = roi_traces["roi_names"]
@@ -451,9 +437,9 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name = "ica_neuropi
                 initialize storage variables and analysis routine
                 '''
                 r_list = [None] * num_traces
-                RMSE_list = [-1] * num_traces
+                rmse_list = [-1] * num_traces
                 roi_names = n_id
-                corrected = np.zeros((num_traces, T_orig))
+                corrected = np.zeros((num_traces, t_orig))
                 r_vals = [None] * num_traces
 
                 for n in range(num_traces):
@@ -468,7 +454,7 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name = "ica_neuropi
                         logging.warning("roi trace for roi %d contains NaNs, skipping", n)
                         continue
 
-                    r = None
+                    # r = None
 
                     logging.info("Correcting trace %d (roi %s)", n, str(n_id[n]))
                     results = estimate_contamination_ratios(roi, neuropil)
@@ -476,7 +462,7 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name = "ica_neuropi
 
                     r = results["r"]
                     fc = roi - r * neuropil
-                    RMSE_list[n] = results["err"]
+                    rmse_list[n] = results["err"]
                     r_vals[n] = results["r_vals"]
 
                     debug_plot(os.path.join(plot_dir, "initial_%04d.png" % n),
@@ -514,14 +500,13 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name = "ica_neuropi
                     if r_list[n] < 0.0:
                         raise Exception("Trace %d ended with negative r" % n)
 
-                ########################################################################
                 # write out processed data
 
                 try:
                     savefile = os.path.join(storage_dir, "neuropil_correction.h5")
                     hf = h5py.File(savefile, 'w')
                     hf.create_dataset("r", data=r_list)
-                    hf.create_dataset("RMSE", data=RMSE_list)
+                    hf.create_dataset("RMSE", data=rmse_list)
                     hf.create_dataset("FC", data=corrected, compression="gzip")
                     hf.create_dataset("roi_names", data=roi_names)
 
@@ -530,8 +515,8 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name = "ica_neuropi
                         if r is not None:
                             hf.create_dataset("r_vals/%d" % n, data=r)
                     hf.close()
-                except:
-                    logging.error("Error creating output h5 file")
+                except Exception as e:
+                    logging.error(f"Error creating output h5 file: {e}")
                     raise
 
                 roi_traces.close()
@@ -558,7 +543,7 @@ def run_dff_on_ica(session, an_dir=CACHE):
             input_file = os.path.join(ses_dir, f'neuropil_corrected_{exp_id}/neuropil_correction.h5')
             output_file = os.path.join(ses_dir, f'{exp_id}_dff.h5')
 
-            if os.path.exists(output_file) :
+            if os.path.exists(output_file):
                 logging.info(f"df/f traces exist for experiment {exp_id} in {output_file}")
                 continue
             else:
@@ -598,9 +583,9 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
     :param np_name:
     :param sessions: list of LIMS session ids
     :param cache: cache directory
-    :param np: string: name prefix for all files related to neuropil
-    :param: roi: string: name prefix for all files related to ROIs
-    :param: delete_inputs: bool, defines delete or not the inputs to the ICA
+    :param np_name: string: name prefix for all files related to neuropil
+    :param roi_name: string: name prefix for all files related to ROIs
+    :param delete_inputs: bool, defines delete or not the inputs to the ICA
     :return: None
     """
     if not roi_name:
@@ -627,7 +612,7 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
                     if os.path.isfile(ica_np_output_p1):
                         os.remove(ica_np_output_p1)
                     else:
-                        print (f"ICA np output plane1 does not exist at {ica_np_output_p1}")
+                        print(f"ICA np output plane1 does not exist at {ica_np_output_p1}")
                     if os.path.isfile(ica_np_output_p2):
                         os.remove(ica_np_output_p2)
                     else:
@@ -738,17 +723,16 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
                     os.remove(dff_p1)
                 if os.path.isfile(dff_p2):
                     os.remove(dff_p2)
-                # removing directorires for demixing plane 1
+                # removing directories for demixing plane 1
                 if os.path.isdir(dem_out_p1):
                     shutil.rmtree(dem_out_p1, ignore_errors=True)
-                # removing directorires for demixing plane 2
+                # removing directories for demixing plane 2
                 if os.path.isdir(dem_out_p2):
                     shutil.rmtree(dem_out_p2, ignore_errors=True)
-                # removing directorires for neuropil correction plane 1
+                # removing directories for neuropil correction plane 1
                 if os.path.isdir(np_out_p1):
                     shutil.rmtree(np_out_p1, ignore_errors=True)
-                # removing directorires for neuropil correction plane 2
+                # removing directories for neuropil correction plane 2
                 if os.path.isdir(np_out_p2):
                     shutil.rmtree(np_out_p2, ignore_errors=True)
     return
-
