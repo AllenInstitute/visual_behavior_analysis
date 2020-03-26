@@ -7,6 +7,7 @@ import dash_html_components as html
 import dash_table
 import base64
 import os
+import argparse
 
 import visual_behavior.visualization.qc.data_loading as dl
 
@@ -388,4 +389,20 @@ def update_frame_19(row_index, plot_types):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=5678, host='0.0.0.0')
+
+    parser = argparse.ArgumentParser(description='Run dash visualization app for VB production data')
+    parser.add_argument(
+        '--port',
+        type=int,
+        default='3389',
+        metavar='port on which to host. 3389 (Remote desktop port) by default, since it is open over VPN)'
+    )
+    parser.add_argument(
+        '--debug',
+        help='boolean, not followed by an argument. Enables debug mode. False by default.',
+        action='store_true'
+    )
+    args = parser.parse_args()
+    print("PORT = {}".format(args.port))
+    print("DEBUG MODE = {}".format(args.debug))
+    app.run_server(debug=False, port=args.port, host='0.0.0.0')
