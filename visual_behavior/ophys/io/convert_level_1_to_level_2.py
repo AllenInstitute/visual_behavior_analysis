@@ -187,8 +187,7 @@ def get_processed_dir(lims_data):
 
 def get_segmentation_dir(lims_data):
     processed_dir = get_processed_dir(lims_data)
-    segmentation_folder = [file for file in os.listdir(processed_dir) if 'segmentation' in file]
-    segmentation_folder.sort()
+    segmentation_folder = sorted([file for file in os.listdir(processed_dir) if 'segmentation' in file])
     segmentation_dir = os.path.join(processed_dir, segmentation_folder[-1])
     return segmentation_dir
 
@@ -443,7 +442,7 @@ def get_pkl(lims_data):
         #        print(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
         try:
             shutil.copy2(stimulus_pkl_path, os.path.join(analysis_dir, pkl_file))
-        except Exception as e: #ValueError:
+        except Exception as e:  # ValueError:
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
 
