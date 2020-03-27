@@ -478,6 +478,7 @@ def get_pkl(lims_data):
             shutil.copy2(stimulus_pkl_path, os.path.join(
                 analysis_dir, pkl_file))
         except Exception as e:  # ValueError:
+            print(e)
             print(
                 'shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
@@ -907,7 +908,7 @@ def get_roi_masks(roi_metrics, lims_data):
         m = roi_metrics[roi_metrics.id == id].iloc[0]
         mask = np.asarray(m['mask'])
         binary_mask = np.zeros((h, w), dtype=np.uint8)
-        binary_mask[int(m.y):int(m.y) + int(m.height), int(m.x)                    :int(m.x) + int(m.width)] = mask
+        binary_mask[int(m.y):int(m.y) + int(m.height), int(m.x):int(m.x) + int(m.width)] = mask
         roi_masks[int(id)] = binary_mask
     return roi_masks
 
