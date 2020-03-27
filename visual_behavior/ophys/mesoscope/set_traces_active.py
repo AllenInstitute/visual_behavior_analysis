@@ -38,6 +38,7 @@ import numpy as np
 import scipy.stats as st
 import matplotlib.pyplot as plt
 import numpy.random as rnd
+import sys
 
 # %%
 
@@ -48,7 +49,7 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
     #    th_ag = 10 #8 # the higher the more strict on what we call an event.
 
     ###########################################################################################
-    ############# Andrea Giovannucci's method of identifying "exceptional" events. ############
+    # Andrea Giovannucci's method of identifying "exceptional" events #
     ###########################################################################################
     [idx_components, fitness, erfc] = evaluate_components(
         traces_y0, N=5, robust_std=False)
@@ -70,16 +71,16 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
 
     # seems like I can apply a threshold of ~10 on erfc to find "events"
     evs = (erfc >= th_ag)  # neurons x frames
-    #traces_y0_evs = np.full(evs.shape, np.nan)
-    #traces_y0_evs[evs] = traces_y0[evs]
+    # traces_y 0_evs = np.full(evs.shape, np.nan)
+    # traces_y0_evs[evs] = traces_y0[evs]
 
     # take a look at the fraction of time points that have calcium events.
     # number of time points with high df/f values for each neuron
-    evs_num = np.sum(evs, axis=1)
+#     evs_num = np.sum(evs, axis=1)
     evs_fract = np.mean(evs, axis=1)
 
     if doPlots:
-        get_ipython().magic(u'matplotlib inline')
+#         get_ipython().magic(u'matplotlib inline')
 
         plt.figure(figsize=(4, 3))
         plt.plot(evs_fract)
@@ -88,7 +89,7 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
         makeNicePlots(plt.gca())
 
     ##################################################################
-    ############ find gaps between events for each neuron ############
+    # find gaps between events for each neuron #
     ##################################################################
     [gap_evs_all, begs_evs, ends_evs, gap_evs, bgap_evs,
         egap_evs, begs, ends] = find_event_gaps(evs)
@@ -105,7 +106,7 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
 #    egap_evs # number of frames after the last event
 
     #############################################################################################################
-    ############ set traces_evs, ie a trace that contains mostly the active parts of the input trace ############
+    # set traces_evs, ie a trace that contains mostly the active parts of the input trace #
     #############################################################################################################
     traces_y0_evs = []
     inds_final_all = []
@@ -114,8 +115,8 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
 
         if sum(evs[iu]) > 0:
             # loop through each event, and take 20 frames before until 20 frames after the event ... we want to have a good sample of non-events too for training the model.
-            #bnow = begs[1, begs[0]==iu]
-            #enow = ends[1, ends[0]==iu]
+            # bnow = begs[1, begs[0]==iu]
+            # enow = ends[1, ends[0]==iu]
             enow = ends_evs[iu]
             bnow = begs_evs[iu]
             e_aft = []
@@ -140,7 +141,7 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
                 b_bef_u = np.hstack(b_bef)
             else:
                 b_bef_u = []
-            #e_aft.shape, b_bef_u.shape
+            # e_aft.shape, b_bef_u.shape
 
             # below sets frames that cover the duration of all events, but excludes the first and last event
             ev_dur = []
@@ -187,7 +188,7 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
                     np.in1d(evs_inds, begs_evs[iu][-1] + 1)).squeeze()
                 indl = evs_inds[jj:]
 
-            #ind1, indl
+            # ind1, indl
 
             inds_final = np.unique(np.concatenate(
                 (e_aft_u, b_bef_u, ev_dur_u, ind1, indl))).astype(int)
@@ -210,7 +211,7 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
             inds_final = np.full((10,), np.nan)
             traces_y0_evs_now = np.full((10,), np.nan)
 
-        #plt.figure(); plt.plot(inds_final)
+        # plt.figure(); plt.plot(inds_final)
         inds_final_all.append(inds_final)
         traces_y0_evs.append(traces_y0_evs_now)  # neurons
 
@@ -218,10 +219,10 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
     traces_y0_evs = np.array(traces_y0_evs)  # neurons
 
     #################################################################################################
-    ##################### make plots of traces_events for a random y_neuron #########################
+    # make plots of traces_events for a random y_neuron #
     #################################################################################################
     if doPlots:
-        get_ipython().magic(u'matplotlib inline')
+#         get_ipython().magic(u'matplotlib inline')
         neuron_y = rnd.permutation(traces_y0.shape[0])[0]  # 10 # 4
         if sum(evs[neuron_y]) == 0:
             neuron_y = rnd.permutation(traces_y0.shape[0])[0]
@@ -258,7 +259,7 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
         makeNicePlots(plt.gca())
 
         # now plot the extracted chunk of trace which includes events!!
-        #iu = 10
+        # iu = 10
         evs_inds_evs = np.argwhere(evs[neuron_y][inds_final_all[neuron_y]])
         plt.figure()
         plt.suptitle('Y Neuron, %d' % neuron_y)
@@ -321,8 +322,8 @@ def evaluate_components(traces, N=5, robust_std=False):
 #    import scipy.stats as st
 
     T = np.shape(traces)[-1]
-   # import pdb
-   # pdb.set_trace()
+    # import pdb
+    # pdb.set_trace()
     md = mode_robust(traces, axis=1)
     ff1 = traces - md[:, None]
     # only consider values under the mode to determine the noise standard deviation
@@ -377,7 +378,8 @@ def mode_robust(inputData, axis=None, dtype=None):
     .. versionadded: 1.0.3
     """
     if axis is not None:
-        def fnc(x): return mode_robust(x, dtype=dtype)
+        def fnc(x): 
+            return mode_robust(x, dtype=dtype)
         dataMode = np.apply_along_axis(fnc, axis, inputData)
     else:
         # Create the function that we can use for the half-sample mode
