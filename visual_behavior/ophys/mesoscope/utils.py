@@ -85,7 +85,7 @@ def get_lims_done_sessions():
     function to find all pst-ica sessions that also ran through LIMS modules
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : lims_roi_success, lims_roi_fail, ica_success
     """
-    ica_success, _, _ = get_ica_roi_sessions()
+    ica_success, _, _ = get_ica_done_sessions()
     ica_success['LIMS_done_exp'] = 0
     ica_success['LIMS_done_session'] = 0
     sessions = ica_success['session_id']
@@ -595,8 +595,7 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
 
     for session in sessions:
         ica_obj = ica.MesoscopeICA(session_id=session, cache=cache)
-        ica_obj.set_analysis_session_dir()
-        ses_dir = os.path.join(ica_obj.session_cache_dir, f'session_{session}')
+        ses_dir = ica_obj.set_analysis_session_dir()
         if os.path.isdir(ses_dir):
             pairs = ica_obj.dataset.get_paired_planes()
             for pair in pairs:
