@@ -33,6 +33,7 @@ def load_data():
 
 container_table = load_data().sort_values('first_acquistion_date')
 
+
 def load_yaml(yaml_path):
     with open(yaml_path, 'r') as stream:
         yaml_contents = yaml.safe_load(stream)
@@ -237,6 +238,8 @@ def get_container_plot(container_id, plot_type):
     return encoded_image
 
 # highlight row in data table
+
+
 @app.callback(Output('data_table', 'style_data_conditional'),
               [Input('data_table', 'selected_rows'),
                Input('data_table', 'page_current'),
