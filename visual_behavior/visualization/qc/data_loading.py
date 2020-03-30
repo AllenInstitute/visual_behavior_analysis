@@ -238,7 +238,7 @@ def reformat_experiments_table(experiments):
 def get_filtered_ophys_container_ids():
     """Get container_ids that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
     must be 'complete' or 'container_qc', and experiments associated with the container are passing. """
-    experiments = get_filtered_ophys_experiments_table()
+    experiments = get_filtered_ophys_experiment_table()
     filtered_container_ids = np.sort(experiments.container_id.unique())
     return filtered_container_ids
 
