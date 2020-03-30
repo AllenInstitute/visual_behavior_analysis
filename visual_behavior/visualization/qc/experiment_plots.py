@@ -17,7 +17,7 @@ def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     max_projection = dl.get_sdk_max_projection(ophys_experiment_id)
-    ax.imshow(max_projection, cmap='gray', vmax=np.amax(max_projection) / 4.)
+    ax.imshow(max_projection, cmap='gray', vmax=np.amax(max_projection) / 2.)
     ax.axis('off')
     return ax
 
@@ -26,7 +26,7 @@ def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     average_image = dl.get_sdk_ave_projection(ophys_experiment_id)
-    ax.imshow(average_image, cmap='gray', vmax=np.amax(average_image) / 2.)
+    ax.imshow(average_image, cmap='gray', vmax=np.amax(average_image))
     ax.axis('off')
     return ax
 
@@ -78,7 +78,7 @@ def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         figsize = (14, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=0.5)
+    ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=0.5)
     ax.set_ylabel('cells')
     ax.set_xlabel('2P frames')
     return ax

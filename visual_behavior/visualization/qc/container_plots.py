@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -12,13 +13,64 @@ from visual_behavior.visualization.qc import data_processing as dp
 from visual_behavior.visualization.qc import experiment_plots as ep
 
 
+
+# Container sequence
+
+def plot_container_session_sequence(experiments_table, ophys_container_id, save_figure=True):
+    expts = experiments_table[experiments_table.container_id==ophys_container_id].copy()
+    super_container_id = expts.super_container_id.unique()[0]
+    experiment_ids = expts.ophys_experiment_id.unique()
+    session_type_color_map = ut.get_session_type_color_map()
+
+    n_expts = len(expts)
+    img = np.empty((n_expts, 1, 3))
+    fail_x = []
+    fail_tags = []
+    for expt_ind, expt_id in enumerate(experiment_ids):
+        this_expt = expts[expts.ophys_experiment_id==expt_id]
+        img[expt_ind, 0, :] = session_type_color_map[this_expt['session_type'].values[0]]
+        if this_expt['experiment_workflow_state'].values[0] == 'failed':
+            fail_x.append(expt_ind)
+            fail_tags.append(this_expt['failure_tags'].values[0])
+
+    # create plot with expt colors image
+    figsize = (20,n_expts)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.imshow(img.astype(int))
+    ax.axis('off');
+
+    # plot text for acquisition date and session type
+    for i, expt_id in enumerate(experiment_ids):
+        this_expt = expts[expts.ophys_experiment_id==expt_id]
+        ax.text(x=0.75, y=i, s=str(this_expt['date_of_acquisition'].values[0]).split(' ')[0],
+                 ha='left', va='center', fontsize=20)
+        ax.text(x=3, y=i, s=this_expt['session_type'].values[0], ha='left', va='center', fontsize=20)
+        ax.text(x=20, y=i, s=' ')
+
+    # add X for fails and list fail tags
+    for ind_fail, x in enumerate(fail_x):
+        ax.text(x=0, y=x, s='X', ha='center', va='center', fontsize=60)
+        fail_string = 'Failure: '+str(fail_tags[ind_fail])
+        ax.text(x=8.5, y=x, s=fail_string, ha='left', va='center', fontsize=20)
+
+    plt.suptitle('super_container_id: {}'.format(super_container_id)+', container_id: {}'.format(ophys_container_id),
+                 fontsize=25, ha='left',x=0.06, y=.97)
+    fig.subplots_adjust(left=0.05)
+    fig.subplots_adjust(right=0.1)
+    fig.subplots_adjust(top=0.9)
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'ophys_session_sequence',
+                       'container_' + str(ophys_container_id))
+
+
+
 # OPHYS
 
 def plot_max_projection_images_for_container(ophys_container_id, save_figure=True):
     ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
-    fig, ax = plt.subplots(1, 6, figsize=figsize)
+    fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
@@ -52,7 +104,7 @@ def plot_average_images_for_container(ophys_container_id, save_figure=True):
     ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
-    fig, ax = plt.subplots(1, 6, figsize=figsize)
+    fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
@@ -67,7 +119,7 @@ def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
     ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
-    fig, ax = plt.subplots(1, 6, figsize=figsize)
+    fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
@@ -82,7 +134,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
     ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
-    fig, ax = plt.subplots(1, 6, figsize=figsize)
+    fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
@@ -97,7 +149,7 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
     ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 20)
-    fig, ax = plt.subplots(6, 1, figsize=figsize)
+    fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
