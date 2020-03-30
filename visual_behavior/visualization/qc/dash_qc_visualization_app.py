@@ -107,6 +107,7 @@ app.layout = html.Div([
         selected_rows=[0],
         page_size=ENTRIES_PER_PAGE,
         filter_action='native',
+        sort_action='native',
         style_header={
             'backgroundColor': 'white',
             'fontWeight': 'bold',
