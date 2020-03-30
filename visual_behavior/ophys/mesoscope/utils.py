@@ -110,7 +110,7 @@ def get_lims_done_sessions():
     return lims_roi_success, lims_roi_fail, ica_success
 
 
-def get_ica_roi_sessions():
+def get_ica_done_sessions():
     """
     function to scan all LIMS sessions nad return lists of ones that have been run through crosstalk demixing successfully, and that have not.
     as well as all mesoscope data found in lime
@@ -595,6 +595,7 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
 
     for session in sessions:
         ica_obj = ica.MesoscopeICA(session_id=session, cache=cache)
+        ica_obj.set_analysis_session_dir()
         ses_dir = os.path.join(ica_obj.session_cache_dir, f'session_{session}')
         if os.path.isdir(ses_dir):
             pairs = ica_obj.dataset.get_paired_planes()
