@@ -14,6 +14,8 @@ import warnings
 
 from . import database as db
 
+from visual_behavior.ophys.sync.sync_dataset import Dataset
+
 
 def flatten_list(in_list):
     out_list = []
@@ -363,7 +365,6 @@ class Movie(object):
 
 
 def get_sync_data(sync_path):
-    from sync import Dataset
     sync_data = Dataset(sync_path)
 
     sample_freq = sync_data.meta_data['ni_daq']['counter_output_freq']

@@ -3,8 +3,6 @@ import yaml
 import pandas as pd
 import numpy as np
 import json
-import os
-import glob
 import traceback
 import datetime
 import uuid
@@ -168,11 +166,10 @@ def get_pkl_path(session_id=None, id_type='behavior_session_uuid'):
     '''
     get the path to a pkl file for a given session
     '''
-    osid = convert_id({id_type:session_id},'ophys_session_id')
+    osid = convert_id({id_type: session_id}, 'ophys_session_id')
     rec = get_well_known_files(osid).set_index('name').loc['StimulusPickle']
-    pkl_path = ''.join([rec['storage_directory'],rec['filename']])
+    pkl_path = ''.join([rec['storage_directory'], rec['filename']])
     return pkl_path
-
 
 
 def get_value_from_table(search_key, search_value, target_table, target_key):
@@ -535,7 +532,7 @@ def simplify_type(x):
         return str(x)
     else:
         return x
-    
+
 
 def simplify_entry(entry):
     '''
