@@ -136,6 +136,41 @@ def plot_average_intensity_timeseries_for_container(ophys_container_id, save_fig
                        'container_' + str(ophys_container_id))
 
 
+def plot_average_intensity_by_pmt_for_container(ophys_container_id, save_figure=True):
+    """a seaborn scatter plot where x = pmt gain setting
+        y= mean intensity for the FOV
+        the points are the passed experiments in the container,
+        colored by stage name from lims.
+        The legend is in order of experiment acquisition date
+
+    Arguments:
+        ophys_container_id {int} -- 9 digit unique container id
+
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    pmt_settings = dp.container_pmt_settings(ophys_container_id)
+    FOV_intensities = dp.container_intensity_mean_and_std(ophys_container_id)
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    df = pd.merge(pmt_settings, FOV_intensities, how="left", on=["ophys_experiment_id", "ophys_container_id"])
+    df = pd.merge(df, exp_order_and_stage, how="left", on="ophys_experiment_id")
+
+    stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
+    figsize = (9, 5.5)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.scatterplot(x="pmt_gain", y="intensity_mean", data=df,
+                         hue="stage_name_lims", palette=stage_color_dict)
+    ax.legend(exp_order_and_stage["stage_name_lims"], fontsize='xx-small', title='stage name', title_fontsize='xx-small',
+              bbox_to_anchor=(1.01, 1), loc=2)
+    plt.xlabel('pmt gain')
+    plt.ylabel('mean intensity')
+    plt.title("FOV mean intensity for experiments by pmt gain")
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_intensity_by_pmt',
+                       'container_' + str(ophys_container_id))
+
+
 def plot_snr_by_pmt_gain_and_intensity_for_container(ophys_container_id, save_figure=True):
     df = dp.container_FOV_information(ophys_container_id)
     figsize = (7, 5.5)
@@ -227,7 +262,7 @@ def plot_number_segmented_rois_for_container(ophys_container_id, save_figure=Tru
         x axis is all passed experiments for a container, listed as their stage name from lims
         and listed in their acquisition date order.
         y axis is number of rois
-        the bars are: 
+        the bars are:
         total_rois : number of segmented objects
         valid_count: numner of valid rois (same thing as cell_specimen_ids)
         invalid_count: number of invalid rois (deemed not a cell, or failed for another reason

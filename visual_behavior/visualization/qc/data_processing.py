@@ -949,6 +949,38 @@ def get_experiment_average_intensity_timeseries(ophys_experiment_id):
     return average_intensity, frame_numbers
 
 
+def experiment_average_FOV_from_motion_corrected_movie(ophys_experiment_id):
+    """takes every 500th frame o fthe motion corrected movie and averages
+        it together to create an average FOV for the experiment
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:s
+        2d array   -- 2d array thats the average of the motion corrected FOV
+    """
+    motion_corrected_movie_array = load.load_motion_corrected_movie(ophys_experiment_id)
+    subset = motion_corrected_movie_array[::500, :, :]
+    average_FOV = np.mean(subset, axis=0)
+    return average_FOV
+
+
+def experiment_max_FOV_from_motion_corrected_movie(ophys_experiment_id):
+    """takes every 500th frame o fthe motion corrected movie and takes
+        the max to create an maximum intensity FOV for the experiment
+
+    Arguments:
+        ophys_experiment_id {[type]} -- [description]
+
+    Returns:
+        2d array   -- 2d array thats the average of the motion corrected FOV
+    """
+    motion_corrected_movie_array = load.load_motion_corrected_movie(ophys_experiment_id)
+    subset = motion_corrected_movie_array[::500, :, :]
+    max_FOV = np.amax(subset, axis=0)
+    return max_FOV
+
+
 def experiment_intensity_mean_and_std(ophys_experiment_id):
     """Takes the average intensity timeseries from the motion corrected movie
         (already downsampled to be every 500th frame) and gets
