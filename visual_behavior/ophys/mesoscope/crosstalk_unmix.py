@@ -15,6 +15,7 @@ import allensdk.core.json_utilities as ju
 from scipy import linalg
 from scipy.stats import linregress
 from matplotlib.colors import LogNorm
+import visual_behavior.ophys.mesoscope.set_traces_active as sta
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +213,6 @@ class MesoscopeICA(object):
 
         self.plane1_ica_neuropil_output = None
         self.plane2_ica_neuropil_output = None
-
 
     def set_analysis_session_dir(self):
         """
@@ -1563,18 +1563,28 @@ class MesoscopeICA(object):
                 os.mkdir(ct_plot_dir)
             else:
                 fig_save = False
+
+        #get active traces:
+        len_ne = 20
+        th_ag = 10
+        doPlots = 0
+
+        # extract events for input, signal
+        traces_evs, evs_ind = sta.set_traces_evs(traces_in_valid[0], th_ag, len_ne, doPlots)
+
         for n in range(num_traces):
             roi_name = roi_names[n]
             if fig_save:
                 pdf_name = os.path.join(ct_plot_dir, f"{roi_name}_crosstalk.pdf")
                 pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
             if valid['signal'][roi_name] :
-                sig_trace_in = traces_in_valid[0][i]
-                ct_trace_in = traces_in_valid[1][i]
-                sig_trace_out = traces_out[0][i]
-                ct_trace_out = traces_out[1][i]
 
-                # estimate crosstalk and plot pixes histograms
+                sig_trace_in = traces_evs[i]
+                ct_trace_in = traces_in_valid[1][i][evs_ind[i]]
+                sig_trace_out = traces_out[0][i][evs_ind[i]]
+                ct_trace_out = traces_out[1][i][evs_ind[i]]
+
+                # estimate crosstalk and plot pixel histograms
                 fig_in, slope_in, _, r_value_in = plot_pixel_hist2d(sig_trace_in, ct_trace_in,
                                                                     title=f'raw, cell {roi_name}', save_fig=False,
                                                                     save_path=None, fig_show=False, colorbar=True)
