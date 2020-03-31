@@ -277,20 +277,20 @@ class MesoscopeICA(object):
 
         return
 
-    def get_ica_traces(self, pair, roi_name=None, np_name=None):
+    def get_ica_traces(self, pair, roi_dir_name=None, np_dir_name=None):
         """
         function to apply roi set to two image planes, first check if the traces have been extracted before,
         can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk planes
         :param pair: list[int, int] : LIMS exp IDs for the pair
-        :param roi_name: string, new name for roi-related files to use, different form self.roi_name
-        :param np_name: string, new name for neuropil-related files to use, if need to be different form self.np_name
+        :param roi_dir_name: string, new name for roi-related files to use, different form self.roi_name
+        :param np_dir_name: string, new name for neuropil-related files to use, if need to be different form self.np_name
         :return: list[bool bool]: flags to see if traces where extracted successfully
         """
-        if not roi_name:
-            roi_name = self.roi_name
+        if not roi_dir_name:
+            roi_dir_name = self.roi_name
 
-        if not np_name:
-            np_name = self.np_name
+        if not np_dir_name:
+            np_dir_name = self.np_name
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -315,12 +315,12 @@ class MesoscopeICA(object):
 
         # path to ica traces:
         # for roi
-        ica_traces_dir = os.path.join(session_dir, f'{roi_name}_{plane1_exp_id}_{plane2_exp_id}/')
+        ica_traces_dir = os.path.join(session_dir, f'{roi_dir_name}_{plane1_exp_id}_{plane2_exp_id}/')
         self.ica_traces_dir = ica_traces_dir
         path_traces_plane1 = f'{ica_traces_dir}traces_original_{plane1_exp_id}.h5'
         path_traces_plane2 = f'{ica_traces_dir}traces_original_{plane2_exp_id}.h5'
         # for neuropil
-        ica_neuropil_dir = os.path.join(session_dir, f'{np_name}_{plane1_exp_id}_{plane2_exp_id}/')
+        ica_neuropil_dir = os.path.join(session_dir, f'{np_dir_name}_{plane1_exp_id}_{plane2_exp_id}/')
         self.ica_neuropil_dir = ica_neuropil_dir
         path_neuropil_plane1 = f'{ica_neuropil_dir}neuropil_original_{plane1_exp_id}.h5'
         path_neuropil_plane2 = f'{ica_neuropil_dir}neuropil_original_{plane2_exp_id}.h5'
@@ -1372,7 +1372,7 @@ class MesoscopeICA(object):
 
         return
 
-    def plot_raw_traces(self, pair, samples_per_plot=10000, roi_name=None, cell_num=None, figshow=True, figsave=True):
+    def plot_raw_traces(self, pair, samples_per_plot=10000, dir_name=None, cell_num=None, figshow=True, figsave=True):
         """
         fn to plot raw traces
         :param pair: [int, int]: LIMS IDs for the two paired planes
@@ -1382,8 +1382,8 @@ class MesoscopeICA(object):
         :param figsave: bool, controlling whether to save the figure in cache
         :return: None
         """
-        if not roi_name:
-            roi_name = self.roi_name
+        if not dir_name:
+            dir_name = self.roi_name
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -1403,7 +1403,7 @@ class MesoscopeICA(object):
 
             logging.info(f'plotting raw traces for experiment {pair[0]}')
 
-            plot_dir = os.path.join(self.session_cache_dir, f'{roi_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[0]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{dir_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[0]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
@@ -1444,7 +1444,7 @@ class MesoscopeICA(object):
             plane2_roi_names = self.plane2_roi_names
             plane2_roi_valid = self.plane2_roi_traces_valid['signal']
             logging.info(f'creating plots for experiment {pair[1]}')
-            plot_dir = os.path.join(self.session_cache_dir, f'{roi_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{dir_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
