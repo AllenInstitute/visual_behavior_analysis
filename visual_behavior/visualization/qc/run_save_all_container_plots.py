@@ -5,7 +5,7 @@ from visual_behavior.visualization.qc import data_loading
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/nick.ponvert/src/')
 python_executable = r"/home/marinag/anaconda2/envs/visual_behavior_sdk/bin/python"
 python_file = r"/home/marinag/visual_behavior_analysis/visual_behavior/visualization/qc/save_all_container_plots.py"
-job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/nick.ponvert/cluster_jobs/vba_qc_plots"
+job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords"
 
 job_settings = {'queue': 'braintv',
                 'mem': '30g',

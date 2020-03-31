@@ -16,7 +16,8 @@ from visual_behavior.visualization.qc import experiment_plots as ep
 
 # Container sequence
 
-def plot_container_session_sequence(experiments_table, ophys_container_id, save_figure=True):
+def plot_container_session_sequence(ophys_container_id, save_figure=True):
+    experiments = dl.get_filtered_ophys_experiment_table(include_failed_data=True)
     expts = experiments_table[experiments_table.container_id==ophys_container_id].copy()
     super_container_id = expts.super_container_id.unique()[0]
     experiment_ids = expts.ophys_experiment_id.unique()
@@ -400,7 +401,7 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
     ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 20)
-    fig, ax = plt.subplots(6, 1, figsize=figsize)
+    fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=ax[i])
 
@@ -452,9 +453,12 @@ def plot_running_speed_for_container(ophys_container_id, save_figure=True):
     ophys_session_ids = dl.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 15)
-    fig, ax = plt.subplots(6, 1, figsize=figsize)
+    fig, ax = plt.subplots(len(ophys_session_ids), 1, figsize=figsize)
     for i, ophys_session_id in enumerate(ophys_session_ids):
-        ax[i] = sp.plot_running_speed(ophys_session_id, ax=ax[i])
+        try:
+            ax[i] = sp.plot_running_speed(ophys_session_id, ax=ax[i])
+        except:
+            pass
         session_type = dl.get_session_type_for_ophys_session_id(ophys_session_id)
         ax[i].set_title(str(ophys_session_id) + '\n' + session_type)
     fig.tight_layout()
@@ -467,7 +471,7 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
     ophys_session_ids = dl.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 7)
-    fig, ax = plt.subplots(1, 6, figsize=figsize)
+    fig, ax = plt.subplots(1, len(ophys_session_ids), figsize=figsize)
     for i, ophys_session_id in enumerate(ophys_session_ids):
         ax[i] = sp.plot_lick_raster(ophys_session_id, ax=ax[i])
         ax[i].invert_yaxis()
