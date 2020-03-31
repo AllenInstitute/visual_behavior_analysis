@@ -15,7 +15,7 @@ import allensdk.core.json_utilities as ju
 from scipy import linalg
 from scipy.stats import linregress
 from matplotlib.colors import LogNorm
-import visual_behavior.ophys.mesoscope.set_traces_active as sta
+import visual_behavior.ophys.mesoscope.active_traces as sta
 
 logger = logging.getLogger(__name__)
 
@@ -1575,7 +1575,7 @@ class MesoscopeICA(object):
         doPlots = 0
 
         # extract events for input, signal
-        traces_evs, evs_ind = sta.set_traces_evs(traces_in_valid[0], th_ag, len_ne, doPlots)
+        traces_evs, evs_ind = sta.get_traces_evs(traces_in_valid[0], th_ag, len_ne, doPlots)
 
         for n in range(num_traces):
             roi_name = roi_names[n]
