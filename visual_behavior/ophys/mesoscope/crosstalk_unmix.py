@@ -1539,9 +1539,10 @@ class MesoscopeICA(object):
     def get_crosstalk_before_and_after(valid, traces_in, traces_out, path_out, fig_save=False, fig_overwrite=False):
         """
         estimate crosstalk before and after ica demixing
+        :param fig_overwrite: flag to control whether cross talk plots should be re-plotted
         :param valid: valid roi json
-        :param traces_in: numpy array containing ICA input traces in [nxmxt] where n = 2, m = number of cells, t = number of timestamps
-        :param traces_out: numpy array containing ICA output traces in [nxmxt] where n = 2, m = number of cells, t = number of timestamps
+        :param traces_in: numpy array containing ICA input traces in [NxMxT] where N = 2, M = number of cells, T = number of timestamps
+        :param traces_out: numpy array containing ICA output traces in [NxMxT] where N = 2, M = number of cells, T = number of timestamps
         :param path_out: str, name of the json file to save the data
         :param fig_save: bool, flag to save the figures or not in the same folder as path_out
         :return:
