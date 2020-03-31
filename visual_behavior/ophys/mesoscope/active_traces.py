@@ -32,7 +32,7 @@ def get_traces_evs(traces_y0, th_ag, len_ne, do_plots=1):
     """
 
     #  Andrea Giovannucci's method of identifying "exceptional" events
-    [_, _, erfc] = evaluate_components(traces_y0, N=5, robust_std=False)
+    [_, _, erfc] = evaluate_components(traces_y0, n=5, robust_std=False)
     erfc = -erfc
 
     # applying threshold
