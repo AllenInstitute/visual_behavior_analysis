@@ -1577,32 +1577,35 @@ class MesoscopeICA(object):
             if fig_save:
                 pdf_name = os.path.join(ct_plot_dir, f"{roi_name}_crosstalk.pdf")
                 pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
-            if valid['signal'][roi_name] :
-
-                sig_trace_in = traces_evs[i]
-                ct_trace_in = traces_in_valid[1][i][evs_ind[i]]
-                sig_trace_out = traces_out[0][i][evs_ind[i]]
-                ct_trace_out = traces_out[1][i][evs_ind[i]]
-
-                # estimate crosstalk and plot pixel histograms
-                fig_in, slope_in, _, r_value_in = plot_pixel_hist2d(sig_trace_in, ct_trace_in,
-                                                                    title=f'raw, cell {roi_name}', save_fig=False,
-                                                                    save_path=None, fig_show=False, colorbar=True)
-                fig_out, slope_out, _, r_value_out = plot_pixel_hist2d(sig_trace_out, ct_trace_out,
-                                                                       title=f'clean, cell {roi_name}', save_fig=False,
-                                                                       save_path=None, fig_show=False, colorbar=True)
-
-                if fig_save:
-                    pdf.savefig(fig_in)
-                    pdf.savefig(fig_out)
+            if valid['signal'][roi_name]:
+                if not np.any(np.isnan(evs_ind[i])):
+                    sig_trace_in = traces_evs[i]
+                    ct_trace_in = traces_in_valid[1][i][evs_ind[i]]
+                    sig_trace_out = traces_out[0][i][evs_ind[i]]
+                    ct_trace_out = traces_out[1][i][evs_ind[i]]
+                    # estimate crosstalk and plot pixel histograms
+                    fig_in, slope_in, _, r_value_in = plot_pixel_hist2d(sig_trace_in, ct_trace_in,
+                                                                        title=f'raw, cell {roi_name}', save_fig=False,
+                                                                        save_path=None, fig_show=False, colorbar=True)
+                    fig_out, slope_out, _, r_value_out = plot_pixel_hist2d(sig_trace_out, ct_trace_out,
+                                                                           title=f'clean, cell {roi_name}', save_fig=False,
+                                                                           save_path=None, fig_show=False, colorbar=True)
+                    if fig_save:
+                        pdf.savefig(fig_in)
+                        pdf.savefig(fig_out)
+                    else:
+                        del fig_in
+                        del fig_out
+                    crosstalk_in[roi_name] = slope_in
+                    crosstalk_out[roi_name] = slope_out
+                    r_values_in[roi_name] = r_value_in
+                    r_values_out[roi_name] = r_value_out
                 else:
-                    del fig_in
-                    del fig_out
-
-                crosstalk_in[roi_name] = slope_in
-                crosstalk_out[roi_name] = slope_out
-                r_values_in[roi_name] = r_value_in
-                r_values_out[roi_name] = r_value_out
+                    logging.info(f"Neuron {roi_name} has no events, skipping calculating crosstalk")
+                    crosstalk_in[roi_name] = np.nan
+                    crosstalk_out[roi_name] = np.nan
+                    r_values_in[roi_name] = np.nan
+                    r_values_out[roi_name] = np.nan
                 i += 1
             else:
                 crosstalk_in[roi_name] = np.nan
