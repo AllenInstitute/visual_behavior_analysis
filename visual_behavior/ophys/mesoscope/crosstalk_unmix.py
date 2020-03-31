@@ -214,6 +214,20 @@ class MesoscopeICA(object):
         self.plane1_ica_neuropil_output = None
         self.plane2_ica_neuropil_output = None
 
+        self.plane2_traces_orig = None
+        self.plane2_traces_orig_pointer = None
+
+        self.plane1_neuropil_orig = None
+        self.plane1_neuropil_orig_pointer = None
+
+        self.plane2_neuropil_orig = None
+        self.plane2_neuropil_orig_pointer = None
+
+        self.roi_ica_output = None
+
+        self.plane1_ica_output = None
+        self.plane2_ica_output = None
+
     def set_analysis_session_dir(self):
         """
         crete pointer to the session-level dir
@@ -467,8 +481,8 @@ class MesoscopeICA(object):
         # validation json already exists, skip validating
         if os.path.isfile(plane1_roi_traces_valid_pointer) and os.path.isfile(
                 plane2_roi_traces_valid_pointer) and os.path.isfile(
-            plane1_neuropil_traces_valid_pointer) and os.path.isfile(
-            plane2_neuropil_traces_valid_pointer):
+                plane1_neuropil_traces_valid_pointer) and os.path.isfile(
+                plane2_neuropil_traces_valid_pointer):
             self.plane1_roi_traces_valid_pointer = plane1_roi_traces_valid_pointer
             self.plane2_roi_traces_valid_pointer = plane2_roi_traces_valid_pointer
             self.plane1_neuropil_traces_valid_pointer = plane1_neuropil_traces_valid_pointer
@@ -1100,8 +1114,8 @@ class MesoscopeICA(object):
 
             if np.any(np.isnan(self.plane1_ica_neuropil_input)) or np.any(
                     np.isinf(self.plane1_ica_neuropil_input)) or np.any(
-                np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
-                logger.info("ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
+                    np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
+                logger.info("ValueError: ICA input contains NaN, infinity or a value too large for data type('float64')")
             else:
                 traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
                 ica = FastICA(n_components=2, max_iter=max_iter)
@@ -1193,36 +1207,26 @@ class MesoscopeICA(object):
                     f.create_dataset(f"plane2_err", data=plane2_err)
         else:
             logger.info("Unmixed neuropil traces exist in cache, reading from h5 file")
-
             self.found_solution_neuropil = True
-
             self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
             self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
             self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
-
             with h5py.File(self.plane1_ica_neuropil_output_pointer, "r") as f:
                 plane1_ica_neuropil_output = f["data"][()]
-
             with h5py.File(self.plane2_ica_neuropil_output_pointer, "r") as f:
                 plane2_ica_neuropil_output = f["data"][()]
-
             with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "r") as f:
                 neuropil_matrix = f["mixing"][()]
                 plane1_err = f["plane1_err"][()]
                 plane2_err = f["plane2_err"][()]
-
-
             self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
             self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
             self.neuropil_matrix = neuropil_matrix
             self.plane1_np_err = plane1_err
             self.plane2_np_err = plane2_err
-
-
         return
 
-
-    def plot_ica_traces(self, pair, samples_per_plot=10000, cell_num = None, figshow=True, figsave=True):
+    def plot_ica_traces(self, pair, samples_per_plot=10000, cell_num=None, figshow=True, figsave=True):
         """
         fn to plot demixed traces
         :param pair: [int, int]: LIMS IDs for the two paired planes
@@ -1572,10 +1576,10 @@ class MesoscopeICA(object):
         # get active traces:
         len_ne = 20
         th_ag = 10
-        doPlots = 0
+        do_plots = 0
 
         # extract events for input, signal
-        traces_evs, evs_ind = sta.get_traces_evs(traces_in_valid[0], th_ag, len_ne, doPlots)
+        traces_evs, evs_ind = sta.get_traces_evs(traces_in_valid[0], th_ag, len_ne, do_plots)
 
         for n in range(num_traces):
             roi_name = roi_names[n]
@@ -1629,10 +1633,10 @@ class MesoscopeICA(object):
 def plot_pixel_hist2d(x, y, xlabel='signal', ylabel='crosstalk', title=None, save_fig=False, save_path=None,
                       fig_show=True, colorbar=False):
     fig = plt.figure(figsize=(3, 3))
-    H, xedges, yedges = np.histogram2d(x, y, bins=(30, 30))
-    H = H.T
+    h, xedges, yedges = np.histogram2d(x, y, bins=(30, 30))
+    h = h.T
     plt.rcParams.update({'font.size': 14})
-    plt.imshow(H, interpolation='nearest', origin='low',
+    plt.imshow(h, interpolation='nearest', origin='low',
                extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]], aspect='auto', norm=LogNorm())
 
     if colorbar:

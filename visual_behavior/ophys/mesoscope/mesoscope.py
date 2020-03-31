@@ -40,12 +40,12 @@ def get_all_mesoscope_data():
              "sp.name as specimen, "
              "os.date_of_acquisition as date, "
              "oe.workflow_state as exp_workflow_state, "
-             "os.workflow_state as session_workflow_state " 
+             "os.workflow_state as session_workflow_state "
              "from ophys_experiments oe "
              "join ophys_sessions os on os.id = oe.ophys_session_id "
              "join specimens sp on sp.id = os.specimen_id "
              "join projects p on p.id = os.project_id "
-             "where (p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d') and os.workflow_state ='uploaded' " # and 'MesoscopeDevelopment' or p.code =  (oe.workflow_state = 'processing' or oe.workflow_state = 'qc') and os.workflow_state ='uploaded' "
+             "where (p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d') and os.workflow_state ='uploaded' "
              "order by session_id")
     return pd.DataFrame(psycopg2_select(query))
 
@@ -252,7 +252,7 @@ class MesoscopeDataset(object):
             ff_stitch_summ_name = os.path.dirname(ff_path) + '/' + ff_image_name.split('.')[0] + '_stitched_sum.tif'
             for j in range(slices):
                 for i in range(roi_num):
-                    image_stitched[j, :, i * image_npixels:(i + 1) * image_npixels] = image[j,i * (pixel_res_y + y_gap):(i + 1) * pixel_res_y + i * y_gap, :]
+                    image_stitched[j, :, i * image_npixels:(i + 1) * image_npixels] = image[j, i * (pixel_res_y + y_gap):(i + 1) * pixel_res_y + i * y_gap, :]
             if summ:
                 image_sum = np.int16(image_stitched.mean(axis=0))
                 tifffile.imsave(ff_stitch_summ_name, image_sum)
@@ -261,13 +261,14 @@ class MesoscopeDataset(object):
             logger.error("Full field tiff is absent in session folder, provide offline path")
         return image_stitched, image_sum, meta
 
-    def register_rois_to_FullFOV(self):
+    def register_rois_to_full_fov(self):
 
         ses = self.get_mesoscope_session_data()
 
         # get full field image -> stitch full field image
+
         # !!!not tested!!! - test on a dataset with valid full field
-        json_output = os.path.join(self.get_session_folder(), 'MESOSCOPE_FILE_SPLITTING_QUEUE_', self.session_id, '_output.json')
+        # json_output = os.path.join(self.get_session_folder(), 'MESOSCOPE_FILE_SPLITTING_QUEUE_', self.session_id, '_output.json')
 
         _ = self.get_full_field_tiff()
         _, ff_image, ff_meta = self.stitch_full_field()
@@ -305,7 +306,7 @@ class MesoscopeDataset(object):
         roi_data.loc['FF_deg']['sizeY'] = ff_rois[1]['scanfields']['sizeXY'][1]
 
         roi_data.loc['FF_deg']['centerX'] = ff_rois[0]['scanfields']['centerXY'][0] + (
-                ff_rois[len(ff_rois) - 1]['scanfields']['centerXY'][0] - ff_rois[0]['scanfields']['centerXY'][0]) / 2
+            ff_rois[len(ff_rois) - 1]['scanfields']['centerXY'][0] - ff_rois[0]['scanfields']['centerXY'][0]) / 2
         roi_data.loc['FF_deg']['centerY'] = ff_rois[0]['scanfields']['centerXY'][1]
 
         roi_data.loc['FF_pix']['sizeX'] = ff_rois[1]['scanfields']['pixelResolutionXY'][0] * len(ff_rois)
@@ -338,9 +339,9 @@ class MesoscopeDataset(object):
             roi_data.loc['roi{}_pix'.format(k)]['sizeY'] = roi['scanfields']['pixelResolutionXY'][1]
 
             roi_data.loc['roi{}_deg'.format(k)]['resX'] = roi_data.loc['roi{}_pix'.format(k)]['sizeX'] / \
-                                                          roi_data.loc['roi{}_deg'.format(k)]['sizeX']
+                roi_data.loc['roi{}_deg'.format(k)]['sizeX']
             roi_data.loc['roi{}_deg'.format(k)]['resY'] = roi_data.loc['roi{}_pix'.format(k)]['sizeY'] / \
-                                                          roi_data.loc['roi{}_deg'.format(k)]['sizeY']
+                roi_data.loc['roi{}_deg'.format(k)]['sizeY']
 
             roi_data.loc['roi{}_um'.format(k)]['sizeX'] = roi_data.loc['roi{}_deg'.format(k)]['sizeX'] * mpg
             roi_data.loc['roi{}_um'.format(k)]['sizeY'] = roi_data.loc['roi{}_deg'.format(k)]['sizeY'] * mpg
@@ -348,16 +349,17 @@ class MesoscopeDataset(object):
             roi_data.loc['roi{}_um'.format(k)]['centerY'] = roi_data.loc['roi{}_deg'.format(k)]['centerY'] * mpg
 
             roi_data.loc['roi{}_um'.format(k)]['resX'] = roi_data.loc['roi{}_um'.format(k)]['sizeX'] / \
-                                                         roi_data.loc['roi{}_pix'.format(k)]['sizeX']
+                roi_data.loc['roi{}_pix'.format(k)]['sizeX']
             roi_data.loc['roi{}_um'.format(k)]['resY'] = roi_data.loc['roi{}_um'.format(k)]['sizeY'] / \
-                                                         roi_data.loc['roi{}_pix'.format(k)]['sizeY']
+                roi_data.loc['roi{}_pix'.format(k)]['sizeY']
 
             roi_data.loc['roi{}_pix'.format(k)]['centerX'] = roi_data.loc['FF_pix']['centerX'] + (
-                    roi_data.loc['roi{}_deg'.format(k)]['centerX'] - roi_data.loc['FF_deg']['centerX']) * \
-                                                             roi_data.loc['FF_deg']['resX']
+                roi_data.loc['roi{}_deg'.format(k)]['centerX'] - roi_data.loc['FF_deg']['centerX']) * \
+                roi_data.loc['FF_deg']['resX']
             roi_data.loc['roi{}_pix'.format(k)]['centerY'] = roi_data.loc['FF_pix']['centerY'] + (
-                    roi_data.loc['roi{}_deg'.format(k)]['centerY'] - roi_data.loc['FF_deg']['centerY']) * \
-                                                             roi_data.loc['FF_deg']['resY']
+                roi_data.loc['roi{}_deg'.format(k)]['centerY'] - roi_data.loc['FF_deg']['centerY']) * \
+                roi_data.loc['FF_deg']['resY']
+
         # finding and reading surface tiffs
         structures = ses.drop_duplicates('structure')
         exp_folder_unique_structure = {}

@@ -36,7 +36,7 @@ def get_path(obj, key, check_exists):
     return path
 
 
-def run_ica_on_session(session,  iter_ica, iter_neuropil, roi_name=None, np_name=None):
+def run_ica_on_session(session, iter_ica, iter_neuropil, roi_name=None, np_name=None):
     """
     helper function to run all crosstalk-demixing functions on a given session
     :param session: LIMS session ID
@@ -181,7 +181,7 @@ def get_ica_ses_by_cre_line(cre_line, md):
 
 def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
 
-    exclude_labels=["union", "duplicate", "motion_border"]
+    exclude_labels = ["union", "duplicate", "motion_border"]
     movie_h5 = get_path(data, "movie_h5", True)
     traces_h5 = get_path(data, "traces_h5", True)
     traces_h5_ica = get_path(data, "traces_h5_ica", True)
@@ -384,7 +384,7 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name="ica_neuropil"
                 demix_dir = os.path.join(ses_dir, f'demixing_{exp_id}')
                 trace_file = os.path.join(demix_dir, f'traces_demixing_output_{exp_id}.h5')
                 neuropil_ica_dir = os.path.join(ses_dir, f'{np_name}_{pair[0]}_{pair[1]}')
-                neuropil_trace_file = os.path.join(neuropil_ica_dir,  f'{np_name}_output_{exp_id}.h5')
+                neuropil_trace_file = os.path.join(neuropil_ica_dir, f'{np_name}_output_{exp_id}.h5')
                 storage_dir = os.path.join(ses_dir, f'neuropil_corrected_{exp_id}')
                 if not os.path.isdir(storage_dir):
                     os.mkdir(storage_dir)
@@ -417,14 +417,9 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name="ica_neuropil"
                     logging.error(f"Error: {e} most likely unable to open neuropil trace file {neuropil_trace_file}")
                     raise
 
-                '''
-                get number of traces, length, etc.
-                '''
+                # get number of traces, length, etc.
                 num_traces, t = roi_traces['data'].shape
                 t_orig = t
-                t_cross_val = int(t / 2)
-                if t - t_cross_val > t_cross_val:
-                    t = t - 1
 
                 # make sure that ROI and neuropil trace files are organized the same
                 n_id = roi_traces["roi_names"]
@@ -434,9 +429,8 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name="ica_neuropil"
                 assert len(n_id) == len(r_id), "Input trace files are not aligned (ROI count)"
                 for i in range(len(n_id)):
                     assert n_id[i] == r_id[i], "Input trace files are not aligned (ROI IDs)"
-                '''
-                initialize storage variables and analysis routine
-                '''
+
+                # initialize storage variables and analysis routine
                 r_list = [None] * num_traces
                 rmse_list = [-1] * num_traces
                 roi_names = n_id
@@ -475,9 +469,6 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name="ica_neuropil"
                         corrected[n, :] = fc
                     else:
                         logging.warning("fc has negative baseline, skipping this r value")
-
-                # compute mean valid r value
-                r_mean = np.array([r for r in r_list if r is not None]).mean()
 
                 # fill in empty r values
                 for n in range(num_traces):
@@ -576,10 +567,10 @@ def before_date(file_date, thr_date="01/01/2020"):
     ft = time.strptime(file_time, "%a %b %d %H:%M:%S %Y")
     # compare
     if time.mktime(ft) < time.mktime(thr):
-        before_date = True
+        flag = True
     else:
-        before_date = False
-    return before_date
+        flag = False
+    return flag
 
 
 def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=False, remove_by_date="01/01/2020"):
