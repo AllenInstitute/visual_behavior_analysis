@@ -19,7 +19,7 @@ from visual_behavior.visualization.qc import experiment_plots as ep
 def plot_container_session_sequence(ophys_container_id, save_figure=True):
     experiments_table = dl.get_filtered_ophys_experiment_table(include_failed_data=True)
     expts = experiments_table[experiments_table.container_id==ophys_container_id].copy()
-    super_container_id = expts.super_container_id.unique()[0]
+    specimen_id = expts.specimen_id.unique()[0]
     experiment_ids = expts.ophys_experiment_id.unique()
     session_type_color_map = ut.get_session_type_color_map()
 
@@ -54,7 +54,7 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
         fail_string = 'Failure: '+str(fail_tags[ind_fail])
         ax.text(x=8.5, y=x, s=fail_string, ha='left', va='center', fontsize=20)
 
-    plt.suptitle('super_container_id: {}'.format(super_container_id)+', container_id: {}'.format(ophys_container_id),
+    plt.suptitle('specimen_id: {}'.format(specimen_id)+', container_id: {}'.format(ophys_container_id),
                  fontsize=25, ha='left',x=0.06, y=.97)
     fig.subplots_adjust(left=0.05)
     fig.subplots_adjust(right=0.1)
