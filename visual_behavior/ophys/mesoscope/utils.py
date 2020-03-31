@@ -784,4 +784,3 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
                     if before_date(np_out_p2, remove_by_date):
                         shutil.rmtree(np_out_p2, ignore_errors=True)
     return
-

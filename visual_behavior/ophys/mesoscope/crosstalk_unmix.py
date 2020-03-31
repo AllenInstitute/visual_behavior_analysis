@@ -1009,22 +1009,22 @@ class MesoscopeICA(object):
                 plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
                 plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
                 plane2_out_ct = plane1_ica_output[
-                                plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
                 plane2_out_sig = plane2_ica_output[
-                                 plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
                 # ICA input - only need sig to calculate rms between in and out.
                 plane1_ica_input = self.plane1_ica_input.reshape(new_shape)
                 plane2_ica_input = self.plane2_ica_input.reshape(new_shape)
                 plane1_in_sig = plane1_ica_input[0:plane1_valid_shape.sum(), :]
                 plane2_in_sig = plane2_ica_input[
-                                plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
                 # rms of the delta (in, out)
                 plane1_err = self.ica_err([1], plane1_in_sig,
-                                          plane1_out_sig)  # this value should be low as this is rms of signal traces before and after ICA:
+                    plane1_out_sig)  # this value should be low as this is rms of signal traces before and after ICA:
                 plane2_err = self.ica_err([1], plane2_in_sig,
-                                          plane2_out_sig)  # bottom to top is usually less SNR, so higher rms
+                    plane2_out_sig)  # bottom to top is usually less SNR, so higher rms
 
                 # adding offset
                 self.plane1_roi_err = plane1_err
@@ -1090,15 +1090,15 @@ class MesoscopeICA(object):
             np_name = self.np_name
 
         plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'{np_name}_output_{self.plane1_exp_id}.h5')
+            f'{np_name}_output_{self.plane1_exp_id}.h5')
         plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'{np_name}_output_{self.plane2_exp_id}.h5')
+            f'{np_name}_output_{self.plane2_exp_id}.h5')
         ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'{np_name}_mixing.h5')
+            f'{np_name}_mixing.h5')
 
         # file already exists, skip unmixing
         if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(
-                plane2_ica_neuropil_output_pointer) and os.path.isfile(ica_mixing_matrix_neuropil_pointer):
+            plane2_ica_neuropil_output_pointer) and os.path.isfile(ica_mixing_matrix_neuropil_pointer):
 
             self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
             self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
@@ -1113,8 +1113,8 @@ class MesoscopeICA(object):
             logger.info("Unmixed neuropil traces do not exist in cache, running ICA")
 
             if np.any(np.isnan(self.plane1_ica_neuropil_input)) or np.any(
-                    np.isinf(self.plane1_ica_neuropil_input)) or np.any(
-                    np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
+                np.isinf(self.plane1_ica_neuropil_input)) or np.any(
+                np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
                 logger.info("ValueError: ICA input contains NaN, infinity or a value too large for data type('float64')")
             else:
                 traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
@@ -1158,16 +1158,16 @@ class MesoscopeICA(object):
                 plane1_out_ct = plane2_ica_neuropil_output[0:plane1_valid_shape.sum(), :]
 
                 plane2_out_ct = plane1_ica_neuropil_output[
-                                plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
                 plane2_out_sig = plane2_ica_neuropil_output[
-                                 plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
                 # ICA input - only need sig to calculate rms between in and out.
                 plane1_ica_neuropil_input = self.plane1_ica_neuropil_input.reshape(new_shape)
                 plane2_ica_neuropil_input = self.plane2_ica_neuropil_input.reshape(new_shape)
                 plane1_in_sig = plane1_ica_neuropil_input[0:plane1_valid_shape.sum(), :]
                 plane2_in_sig = plane2_ica_neuropil_input[
-                                plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
                 # rms of the delta (in, out)
                 # this value should be low as this is rms of signal traces before and after ICA:
@@ -1434,10 +1434,8 @@ class MesoscopeICA(object):
                             if not figshow:
                                 plt.close()
                         pdf.close()
-                        cell_valid = cell_valid + 1
                 else:
                     logging.info(f'Cell {plane1_roi_names[cell_orig]} is invalid, skipping plotting')
-                    cell_valid = cell_valid
 
             raw_trace_plane2_sig = self.plane2_traces_orig[0, :, :]
             raw_trace_plane2_ct = self.plane2_traces_orig[1, :, :]
@@ -1447,7 +1445,6 @@ class MesoscopeICA(object):
             plot_dir = os.path.join(self.session_cache_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
-            cell_valid = 0
 
             if not cell_num:
                 cells_to_plot = range(raw_trace_plane2_sig.shape[0])
@@ -1478,11 +1475,9 @@ class MesoscopeICA(object):
                             if not figshow:
                                 plt.close()
                         pdf.close()
-                    cell_valid = cell_valid + 1
 
                 else:
                     logging.info(f'Cell {plane2_roi_names[cell_orig]} is invalid, skipping plotting')
-                    cell_valid = cell_valid
         else:
             logging.info(f'raw traces for pair {pair[0]}/{pair[1]} don''t exist, nothing to plot.')
 
