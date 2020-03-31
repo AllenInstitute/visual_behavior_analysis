@@ -125,6 +125,7 @@ def plot_sorted_datacube_summary(project_experiments_table, experiment_ids_to_hi
             ax[i] = plot_expts_for_container(super_container_expts, container_id, experiment_ids_to_highlight, max_n_expts=max_n_expts, ax=ax[i])
             i+=1
     plt.suptitle('project code: '+project_code+' - '+what_is_highlighted_string, x=0.3, y=0.9, fontsize=20, horizontalalignment='center')
+    fig.subplots_adjust(left=0.2)
     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots'
     if save_dir:
         ut.save_figure(fig, figsize, save_dir, 'overview_plots', project_code+'_containers_sorted_'+what_is_highlighted_string)

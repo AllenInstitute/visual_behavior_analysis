@@ -113,15 +113,16 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
     cache = get_qc_cache()
     experiments = cache.get_experiment_table()
     experiments = experiments.reset_index()
-    experiments['super_container_id'] = experiments['container_id'].values
+    experiments['super_container_id'] = experiments['specimen_id'].values
 
     experiments = reformat_experiments_table(experiments)
     if include_failed_data:
         filtered_experiments = experiments[experiments.experiment_workflow_state.isin(['passed','failed'])]
     else:
-        sessions = sdk_utils.get_filtered_sessions_table(cache, include_multiscope=True, require_full_container=False, require_exp_pass=False)
-        sessions = sessions.reset_index()
-        filtered_experiments = experiments[experiments.ophys_session_id.isin(sessions.ophys_session_id.unique())]
+        # sessions = sdk_utils.get_filtered_sessions_table(cache, include_multiscope=True, require_full_container=False, require_exp_pass=False)
+        # sessions = sessions.reset_index()
+        # filtered_experiments = experiments[experiments.ophys_session_id.isin(sessions.ophys_session_id.unique())]
+        filtered_experiments = experiments.copy()
         filtered_experiments = filtered_experiments[filtered_experiments.experiment_workflow_state == 'passed']
         filtered_experiments = filtered_experiments[filtered_experiments.container_workflow_state != 'failed']  # include containers in holding
 
@@ -210,7 +211,7 @@ def get_exposure_number_for_group(group):
 
 
 def add_exposure_number_to_experiments_table(experiments):
-    experiments = experiments.groupby(['super_container_id', 'session_type']).apply(get_exposure_number_for_group)
+    experiments = experiments.groupby(['super_container_id','container_id','session_type']).apply(get_exposure_number_for_group)
     return experiments
 
 
@@ -222,10 +223,10 @@ def reformat_experiments_table(experiments):
     experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']  # why is this here?
     # replace session types that are NaN with string None
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
-    experiments = add_container_index_to_experiments_table(experiments)
-    experiments = revise_container_id_for_multiscope(experiments)
+    # experiments = add_container_index_to_experiments_table(experiments)
+    # experiments = revise_container_id_for_multiscope(experiments)
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
-    experiments = reformat_fail_tags_for_multiscope(experiments)
+    # experiments = reformat_fail_tags_for_multiscope(experiments)
     experiments = add_exposure_number_to_experiments_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
@@ -299,17 +300,22 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
 #  FROM SDK
 
 
-def get_sdk_session_obj(ophys_experiment_id):
+def get_sdk_session_obj(ophys_experiment_id, include_invalid_rois=False):
     """Use LIMS API from SDK to return session object
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
+        include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
 
     Returns:
         session object -- session object from SDK
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
     session = BehaviorOphysSession(api)
+    if include_invalid_rois == False:
+        dff_traces = session.dff_traces
+        valid_cells = session.cell_specimen_table[session.cell_specimen_table.valid_roi == True].cell_roi_id.values
+        session.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
     return session
 
 
@@ -424,15 +430,7 @@ def get_sdk_dff_traces(ophys_experiment_id):
 
 
 def get_sdk_dff_traces_array(ophys_experiment_id):
-    session = get_sdk_session_obj(ophys_experiment_id)
-    dff_traces = session.dff_traces
-    if session.metadata['rig_name']!='MESO.1': #mesoscope doesnt have cell matching yet
-        # remove NaN traces - temporary fix, need to change API to return only valid cells
-        bad_cell_specimen_ids = []
-        for i, trace in enumerate(dff_traces.dff.values):
-            if np.isnan(trace).any():
-                bad_cell_specimen_ids.append(dff_traces.index[i])
-        dff_traces = dff_traces[dff_traces.index.isin(bad_cell_specimen_ids) == False]
+    dff_traces = get_sdk_dff_traces(ophys_experiment_id)
     dff_traces_array = np.vstack(dff_traces.dff.values)
     return dff_traces_array
 
