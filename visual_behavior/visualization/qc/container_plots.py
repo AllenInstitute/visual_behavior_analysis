@@ -68,17 +68,106 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
 # OPHYS
 
 def plot_max_projection_images_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    """for every passed experiment in an experiment container, gets plots
+        the max intensity projections from the sdk (normalized) next to one another
+        in order of acquisition date
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
-        ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
+        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
+        ax[i].set_title(str(ophys_experiment_id) + '\n' + exp_stage_name)
 
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'max_intensity_projection',
+                       'container_' + str(ophys_container_id))
+
+
+def plot_unnormalized_max_projection_images_for_container(ophys_container_id, save_figure=True):
+    """for every passed experiment in an experiment container, gets plots
+        the max intensity of the motion corrected movie (unnormalized) next to one another
+        in order of acquisition date
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
+
+    figsize = (25, 5)
+    fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        ax[i] = ep.plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=ax[i])
+        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
+        ax[i].set_title(str(ophys_experiment_id) + '\n' + exp_stage_name)
+
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'max_intensity_projection',
+                       'container_' + str(ophys_container_id))
+
+
+def plot_average_images_for_container(ophys_container_id, save_figure=True):
+    """for every passed experiment in an experiment container, gets plots
+        the average intensity projections from the sdk (normalized) next to one another
+        in order of acquisition date
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
+
+    figsize = (25, 5)
+    fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
+        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
+        ax[i].set_title(str(ophys_experiment_id) + '\n' + exp_stage_name)
+
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_images',
+                       'container_' + str(ophys_container_id))
+
+
+def plot_unnormalized_average_images_for_container(ophys_container_id, save_figure=True):
+    """for every passed experiment in an experiment container, gets plots
+        the average intensity of the motion corrected movie (unnormalized) next to one another
+        in order of acquisition date
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
+
+    figsize = (25, 5)
+    fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        ax[i] = ep.plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
+        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
+        ax[i].set_title(str(ophys_experiment_id) + '\n' + exp_stage_name)
+
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'unnormalized_average_images',
                        'container_' + str(ophys_container_id))
 
 
@@ -99,21 +188,6 @@ def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
     fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
 
     return fig, axes
-
-
-def plot_average_images_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = dl.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
-
-    figsize = (25, 5)
-    fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
-    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
-        ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
-
-    if save_figure:
-        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_images',
-                       'container_' + str(ophys_container_id))
 
 
 def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
