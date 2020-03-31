@@ -13,6 +13,7 @@ from visual_behavior.utilities import EyeTrackingData
 # OPHYS
 bitdepth_16 = 65536
 
+
 def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
@@ -35,7 +36,7 @@ def plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=
     if ax is None:
         fig, ax = plt.subplots()
     average_image = dp.experiment_average_FOV_from_motion_corrected_movie(ophys_experiment_id)
-    ax.imshow(average_image, cmap='gray', vmin = 0, vmax = bitdepth_16)
+    ax.imshow(average_image, cmap='gray', vmin=0, vmax=bitdepth_16 * .4)
     ax.axis('off')
     return ax
 
@@ -44,7 +45,7 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
     if ax is None:
         fig, ax = plt.subplots()
     max_image = dp.experiment_max_FOV_from_motion_corrected_movie(ophys_experiment_id)
-    ax.imshow(max_image, cmap='gray', vmin = 0, vmax = bitdepth_16)
+    ax.imshow(max_image, cmap='gray', vmin=0, vmax=bitdepth_16 * .6)
     ax.axis('off')
     return ax
 
