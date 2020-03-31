@@ -1223,26 +1223,27 @@ class MesoscopeICA(object):
             self.plane2_np_err = plane2_err
         return
 
-    def plot_ica_traces(self, pair, samples_per_plot=10000, roi_name=None, cell_num=None, figshow=True, figsave=True):
+    def plot_ica_traces(self, pair, samples_per_plot=10000, dir_name=None, cell_num=None, fig_show=True, fig_save=True):
         """
-        fn to plot demixed traces
+        function to plot demixed traces
+        :param dir_name: directory name prefix for where to save plotted traces
         :param pair: [int, int]: LIMS IDs for the two paired planes
         :param samples_per_plot: int, samples ot visualize on one plot, decreasing will make plotting very slow
         :param cell_num: int, number of rois to plot
-        :param figshow: bool, controlling whether to show a figure in jupyter/iphython as it's being generated or not
-        :param figsave: bool, controlling whether to save the figure in cache
+        :param fig_show: bool, controlling whether to show a figure in jupyter/iphython as it's being generated or not
+        :param fig_save: bool, controlling whether to save the figure in cache
         :return: None
         """
 
-        if not roi_name:
-            roi_name = self.roi_name
+        if not dir_name:
+            dir_name = self.roi_name
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-        if not figshow:
+        if not fig_show:
             print(f'Switching backend to Agg')
             plt.switch_backend('Agg')
 
@@ -1257,7 +1258,7 @@ class MesoscopeICA(object):
 
             logging.info(f'creating figures for experiment {pair[0]}')
 
-            plot_dir = os.path.join(self.session_cache_dir, f'{roi_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{dir_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
@@ -1299,9 +1300,9 @@ class MesoscopeICA(object):
                             plt.plot(ica_plane1_ct, 'g-', label='cross-talk plane')
                             plt.title(f'post-ica traces, cell # {plane1_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
-                            if figsave:
+                            if fig_save:
                                 pdf.savefig(f)
-                            if not figshow:
+                            if not fig_show:
                                 plt.close()
                         pdf.close()
                         cell_valid = cell_valid + 1
@@ -1316,7 +1317,7 @@ class MesoscopeICA(object):
             ica_trace_plane2_sig = self.plane2_ica_output[0, :, :]
             ica_trace_plane2_ct = self.plane2_ica_output[1, :, :]
             logging.info(f'creating figures for experiment {pair[1]}')
-            plot_dir = os.path.join(self.session_cache_dir, f'{roi_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{dir_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
             cell_valid = 0
@@ -1357,9 +1358,9 @@ class MesoscopeICA(object):
                             plt.plot(ica_plane2_ct, 'g-', label='cross-talk plane')
                             plt.title(f'post-ica traces, cell # {plane2_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
-                            if figsave:
+                            if fig_save:
                                 pdf.savefig(f)
-                            if not figshow:
+                            if not fig_show:
                                 plt.close()
                         pdf.close()
                     cell_valid = cell_valid + 1
@@ -1375,6 +1376,7 @@ class MesoscopeICA(object):
     def plot_raw_traces(self, pair, samples_per_plot=10000, dir_name=None, cell_num=None, figshow=True, figsave=True):
         """
         fn to plot raw traces
+        :param dir_name: directory name prefix for where to save plotted traces
         :param pair: [int, int]: LIMS IDs for the two paired planes
         :param samples_per_plot: int, samples ot visualize on one plot, decreasing will make plotting very slow
         :param cell_num: int, number of rois to plot
