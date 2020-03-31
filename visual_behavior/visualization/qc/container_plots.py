@@ -136,6 +136,35 @@ def plot_average_intensity_timeseries_for_container(ophys_container_id, save_fig
                        'container_' + str(ophys_container_id))
 
 
+def plot_pmt_for_container(ophys_container_id, save_figure=True):
+    """seaborn scatter plot where x= session stage name
+        y= pmt setting for that session
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    pmt_settings = dp.container_pmt_settings(ophys_container_id)
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    df = pd.merge(pmt_settings, exp_order_and_stage, how="left", on="ophys_experiment_id")
+
+    stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
+    figsize = (6, 9)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.scatterplot(x="stage_name_lims", y="pmt_gain", data=df,
+                         hue="stage_name_lims", palette=stage_color_dict,
+                         legend=False)
+    ax.set_ylim(df["pmt_gain"].min() - 1, df["pmt_gain"].max() + 1)
+    plt.xticks(rotation=90)
+    plt.ylabel('pmt gain')
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'pmt_settings',
+                       'container_' + str(ophys_container_id))
+
+
 def plot_average_intensity_by_pmt_for_container(ophys_container_id, save_figure=True):
     """a seaborn scatter plot where x = pmt gain setting
         y= mean intensity for the FOV
@@ -264,7 +293,7 @@ def plot_number_segmented_rois_for_container(ophys_container_id, save_figure=Tru
         y axis is number of rois
         the bars are:
         total_rois : number of segmented objects
-        valid_count: numner of valid rois (same thing as cell_specimen_ids)
+        valid_count: nsumner of valid rois (same thing as cell_specimen_ids)
         invalid_count: number of invalid rois (deemed not a cell, or failed for another reason
                         like being on the motion border etc.)
 
@@ -360,38 +389,38 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
                        'container_' + str(ophys_container_id))
 
 
-def plot_average_intensity_by_pmt_for_experiments(ophys_container_id, save_figure=True):
-    """seaborn scatter plot where x = pmt gain, y= fov intensity mean
-        and each point is a passed experiment in the container.
-        The points are colored by their stage name and the legend is stage names
-        displayed in order of acquisition date.
+# def plot_average_intensity_by_pmt_for_experiments(ophys_container_id, save_figure=True):
+#     """seaborn scatter plot where x = pmt gain, y= fov intensity mean
+#         and each point is a passed experiment in the container.
+#         The points are colored by their stage name and the legend is stage names
+#         displayed in order of acquisition date.
 
-    Arguments:
-        ophys_container_id {[type]} -- [description]
+#     Arguments:
+#         ophys_container_id {[type]} -- [description]
 
-    Keyword Arguments:
-        save_figure {bool} -- [description] (default: {True})
-    """
-    container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
-    container_intensity_info = dp.container_intensity_mean_and_std(ophys_container_id)
-    df = pd.merge(container_pmt_settings, container_intensity_info, how="left", on=["ophys_experiment_id", "ophys_container_id"])
-    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
-    df = pd.merge(df, exp_order_and_stage, how="left", on="ophys_experiment_id")
-    stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
+#     Keyword Arguments:
+#         save_figure {bool} -- [description] (default: {True})
+#     """
+#     container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
+#     container_intensity_info = dp.container_intensity_mean_and_std(ophys_container_id)
+#     df = pd.merge(container_pmt_settings, container_intensity_info, how="left", on=["ophys_experiment_id", "ophys_container_id"])
+#     exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+#     df = pd.merge(df, exp_order_and_stage, how="left", on="ophys_experiment_id")
+#     stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
 
-    figsize = (9, 5.5)
-    fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.scatterplot(x="pmt_gain", y="intensity_mean", data=df,
-                         hue="stage_name_lims", palette=stage_color_dict)
-    ax.legend(exp_order_and_stage["stage_name_lims"], fontsize='xx-small', title='stage name', title_fontsize='xx-small',
-              bbox_to_anchor=(1.01, 1), loc=2)
-    plt.xlabel('pmt gain')
-    plt.ylabel('FOV intensity mean')
-    plt.title("fov intensity mean by pmt gain")
-    fig.tight_layout()
-    if save_figure:
-        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'fov_ave_intensity_by_pmt',
-                       'container_' + str(ophys_container_id))
+#     figsize = (9, 5.5)
+#     fig, ax = plt.subplots(figsize=figsize)
+#     ax = sns.scatterplot(x="pmt_gain", y="intensity_mean", data=df,
+#                          hue="stage_name_lims", palette=stage_color_dict)
+#     ax.legend(exp_order_and_stage["stage_name_lims"], fontsize='xx-small', title='stage name', title_fontsize='xx-small',
+#               bbox_to_anchor=(1.01, 1), loc=2)
+#     plt.xlabel('pmt gain')
+#     plt.ylabel('FOV intensity mean')
+#     plt.title("fov intensity mean by pmt gain")
+#     fig.tight_layout()
+#     if save_figure:
+#         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'fov_ave_intensity_by_pmt',
+#                        'container_' + str(ophys_container_id))
 
 
 # BEHAVIOR
