@@ -1223,7 +1223,7 @@ class MesoscopeICA(object):
             self.plane2_np_err = plane2_err
         return
 
-    def plot_ica_traces(self, pair, samples_per_plot=10000, cell_num=None, figshow=True, figsave=True):
+    def plot_ica_traces(self, pair, samples_per_plot=10000, roi_name=None, cell_num=None, figshow=True, figsave=True):
         """
         fn to plot demixed traces
         :param pair: [int, int]: LIMS IDs for the two paired planes
@@ -1233,7 +1233,9 @@ class MesoscopeICA(object):
         :param figsave: bool, controlling whether to save the figure in cache
         :return: None
         """
-        #    if figures don't exist!
+
+        if not roi_name:
+            roi_name = self.roi_name
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -1255,7 +1257,7 @@ class MesoscopeICA(object):
 
             logging.info(f'creating figures for experiment {pair[0]}')
 
-            plot_dir = os.path.join(self.session_cache_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{roi_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
@@ -1314,7 +1316,7 @@ class MesoscopeICA(object):
             ica_trace_plane2_sig = self.plane2_ica_output[0, :, :]
             ica_trace_plane2_ct = self.plane2_ica_output[1, :, :]
             logging.info(f'creating figures for experiment {pair[1]}')
-            plot_dir = os.path.join(self.session_cache_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{roi_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
             cell_valid = 0
@@ -1370,7 +1372,7 @@ class MesoscopeICA(object):
 
         return
 
-    def plot_raw_traces(self, pair, samples_per_plot=10000, cell_num=None, figshow=True, figsave=True):
+    def plot_raw_traces(self, pair, samples_per_plot=10000, roi_name=None, cell_num=None, figshow=True, figsave=True):
         """
         fn to plot raw traces
         :param pair: [int, int]: LIMS IDs for the two paired planes
@@ -1380,6 +1382,9 @@ class MesoscopeICA(object):
         :param figsave: bool, controlling whether to save the figure in cache
         :return: None
         """
+        if not roi_name:
+            roi_name = self.roi_name
+
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
@@ -1398,7 +1403,7 @@ class MesoscopeICA(object):
 
             logging.info(f'plotting raw traces for experiment {pair[0]}')
 
-            plot_dir = os.path.join(self.session_cache_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[0]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{roi_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[0]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
@@ -1439,7 +1444,7 @@ class MesoscopeICA(object):
             plane2_roi_names = self.plane2_roi_names
             plane2_roi_valid = self.plane2_roi_traces_valid['signal']
             logging.info(f'creating plots for experiment {pair[1]}')
-            plot_dir = os.path.join(self.session_cache_dir, f'{self.roi_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
+            plot_dir = os.path.join(self.session_cache_dir, f'{roi_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
