@@ -1021,10 +1021,8 @@ class MesoscopeICA(object):
                     plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
 
                 # rms of the delta (in, out)
-                plane1_err = self.ica_err([1], plane1_in_sig,
-                    plane1_out_sig)  # this value should be low as this is rms of signal traces before and after ICA:
-                plane2_err = self.ica_err([1], plane2_in_sig,
-                    plane2_out_sig)  # bottom to top is usually less SNR, so higher rms
+                plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
+                plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
 
                 # adding offset
                 self.plane1_roi_err = plane1_err
@@ -1090,16 +1088,15 @@ class MesoscopeICA(object):
             np_name = self.np_name
 
         plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-            f'{np_name}_output_{self.plane1_exp_id}.h5')
+                                                          f'{np_name}_output_{self.plane1_exp_id}.h5')
         plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-            f'{np_name}_output_{self.plane2_exp_id}.h5')
+                                                          f'{np_name}_output_{self.plane2_exp_id}.h5')
         ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir,
-            f'{np_name}_mixing.h5')
+                                                          f'{np_name}_mixing.h5')
 
         # file already exists, skip unmixing
         if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(
-            plane2_ica_neuropil_output_pointer) and os.path.isfile(ica_mixing_matrix_neuropil_pointer):
-
+                plane2_ica_neuropil_output_pointer) and os.path.isfile(ica_mixing_matrix_neuropil_pointer):
             self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
             self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
             self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
@@ -1114,7 +1111,7 @@ class MesoscopeICA(object):
 
             if np.any(np.isnan(self.plane1_ica_neuropil_input)) or np.any(
                 np.isinf(self.plane1_ica_neuropil_input)) or np.any(
-                np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
+                    np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
                 logger.info("ValueError: ICA input contains NaN, infinity or a value too large for data type('float64')")
             else:
                 traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
