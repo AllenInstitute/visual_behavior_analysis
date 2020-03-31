@@ -4,7 +4,7 @@ import argparse
 
 def main():
     possible_plots = {
-        "ophys_session_sequence":cp.plot_container_session_sequence,
+        "ophys_session_sequence": cp.plot_container_session_sequence,
         "max_projection_images": cp.plot_max_projection_images_for_container,
         "average_images": cp.plot_average_images_for_container,
         "segmentation_masks": cp.plot_segmentation_masks_for_container,
