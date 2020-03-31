@@ -1536,7 +1536,7 @@ class MesoscopeICA(object):
         return scale_top_neuropil.x, scale_bot_neuropil.x
 
     @staticmethod
-    def get_crosstalk_before_and_after(valid, traces_in, traces_out, path_out, fig_save=False):
+    def get_crosstalk_before_and_after(valid, traces_in, traces_out, path_out, fig_save=False, fig_overwrite=False):
         """
         estimate crosstalk before and after ica demixing
         :param valid: valid roi json
@@ -1562,9 +1562,13 @@ class MesoscopeICA(object):
             if not os.path.isdir(ct_plot_dir):
                 os.mkdir(ct_plot_dir)
             else:
-                fig_save = False
+                if not fig_overwrite:
+                    logging.info(f"Crosstalk plots exist at {ct_plot_dir}, set fig_overwrite to True to overwrite")
+                    fig_save = False
+                else:
+                    logging.info(f"Crosstalk plots exist at {ct_plot_dir}, overwriting")
 
-        #get active traces:
+        # get active traces:
         len_ne = 20
         th_ag = 10
         doPlots = 0
