@@ -17,7 +17,7 @@ def main():
         "eye_tracking_sample_frames": cp.plot_eye_tracking_sample_frames,
         "number_matched_cells": cp.plot_number_matched_cells_for_container,
         "fraction_matched_cells": cp.plot_fraction_matched_cells_for_container,
-        "segmented_rois_by_experiment" = cp.plot_number_segmented_rois_for_container,
+        "segmented_rois_by_experiment": cp.plot_number_segmented_rois_for_container,
     }
 
     parser = argparse.ArgumentParser()
