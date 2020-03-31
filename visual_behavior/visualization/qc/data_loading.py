@@ -48,6 +48,10 @@ config = configp.ConfigParser()
 
 #  GENERAL STUFF
 
+def get_super_container_plots_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
+
+
 def get_container_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
 
@@ -86,21 +90,22 @@ def get_filtered_ophys_sessions_table():
             filtered_sessions -- filtered version of ophys_session_table from QC cache
         """
     cache = get_qc_cache()
-    sessions = sdk_utils.get_filtered_sessions_table(cache)
+    sessions = sdk_utils.get_filtered_sessions_table(cache, include_multiscope=True, require_full_container=False,
+                                                     require_exp_pass=False)
     sessions = sessions.reset_index()
-    experiments = cache.get_experiment_table()
-    experiments = experiments.reset_index()
+    experiments = get_filtered_ophys_experiment_table()
     filtered_sessions = sessions.merge(experiments[['ophys_session_id', 'container_id', 'container_workflow_state']],
                                        right_on='ophys_session_id', left_on='ophys_session_id')
     return filtered_sessions
 
 
-def get_filtered_ophys_experiment_table():
+def get_filtered_ophys_experiment_table(include_failed_data=False):
     """Get ophys experiments that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
-        must be 'complete' or 'container_qc', and experiments are passing
+        must be 'complete' or 'container_qc', and experiments are passing. Includes MultiScope data.
 
             Arguments:
-                None
+                include_failed_data: Boolean, if False, only include passing behavior experiments from containers that were not failed.
+                                If True, return all experiments including those from failed containers and receptive field mapping experiments.
 
             Returns:
                 filtered_experiments -- filtered version of ophys_experiment_table from QC cache
@@ -108,17 +113,133 @@ def get_filtered_ophys_experiment_table():
     cache = get_qc_cache()
     experiments = cache.get_experiment_table()
     experiments = experiments.reset_index()
-    sessions = sdk_utils.get_filtered_sessions_table(cache)
-    filtered_experiment_ids = [expt_id[0] for expt_id in sessions.ophys_experiment_id.values]
-    filtered_experiments = experiments[experiments.ophys_experiment_id.isin(filtered_experiment_ids)]
+    experiments['super_container_id'] = experiments['container_id'].values
+
+    experiments = reformat_experiments_table(experiments)
+    if include_failed_data:
+        filtered_experiments = experiments[experiments.experiment_workflow_state.isin(['passed','failed'])]
+    else:
+        sessions = sdk_utils.get_filtered_sessions_table(cache, include_multiscope=True, require_full_container=False, require_exp_pass=False)
+        sessions = sessions.reset_index()
+        filtered_experiments = experiments[experiments.ophys_session_id.isin(sessions.ophys_session_id.unique())]
+        filtered_experiments = filtered_experiments[filtered_experiments.experiment_workflow_state == 'passed']
+        filtered_experiments = filtered_experiments[filtered_experiments.container_workflow_state != 'failed']  # include containers in holding
+
     return filtered_experiments
+
+
+def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
+    mouse_seeks_report_file_base = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
+    report_file = 'ophys_session_log_031820.xlsx'
+    vb_report_path = os.path.join(mouse_seeks_report_file_base, report_file)
+    vb_report_df = pd.read_excel(vb_report_path)
+
+    def clean_columns(columns):
+        return [c.lower().replace(' ', '_') for c in columns]
+
+    vb_report_df.columns = clean_columns(vb_report_df.columns)
+    vb_report_df = vb_report_df.rename(columns={'session_id': 'ophys_session_id'})
+    # merge fail tags into all_experiments manifest
+    experiments = experiments.merge(vb_report_df[['ophys_session_id', 'session_tags', 'failure_tags']],
+                                    right_on='ophys_session_id', left_on='ophys_session_id')
+    return experiments
+
+
+def reformat_fail_tags_for_multiscope(experiments):
+    experiments['fail_tags'] = experiments['failure_tags']
+    meso_expts = experiments[
+        experiments.project_code.isin(['VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d'])]
+    experiments.at[meso_expts.index.values, 'fail_tags'] = None
+
+    for session_id in meso_expts.ophys_session_id.unique():
+        experiment_ids = meso_expts[meso_expts.ophys_session_id == session_id].ophys_experiment_id.values
+        for i, experiment_id in enumerate(experiment_ids):
+            expt_data = experiments[experiments.ophys_experiment_id == experiment_id]
+            index = expt_data.index.values[0]
+            if type(expt_data.failure_tags.values[0]) == str:
+                fail_tags = expt_data.failure_tags.values[0].split(',')
+                tags_this_expt = []
+                for fail_tag in fail_tags:
+                    if (fail_tag[-1].isdigit()) and (fail_tag[-1] == str(int(expt_data.container_index.values[0]))):
+                        tags_this_expt.append(fail_tag)
+                    elif (fail_tag[-1].isdigit() == False):
+                        tags_this_expt.append(fail_tag)
+                        experiments.at[index, 'fail_tags'] = tags_this_expt
+    return experiments
+
+
+def add_container_index_to_experiments_table(experiments):
+    experiments = experiments.sort_values(['super_container_id', 'ophys_session_id', 'ophys_experiment_id'])
+    experiments = experiments.reset_index().drop(columns='index')
+    experiments['container_index'] = np.nan
+
+    ophys_session_ids = experiments.ophys_session_id.unique()
+    for ophys_session_id in ophys_session_ids:
+        experiment_ids = experiments[experiments.ophys_session_id == ophys_session_id].ophys_experiment_id.values
+        for i, experiment_id in enumerate(experiment_ids):
+            index = experiments[experiments.ophys_experiment_id == experiment_id].index.values
+            experiments.at[index, 'container_index'] = i
+    return experiments
+
+
+def revise_container_id_for_multiscope(experiments):
+    if 'index' in experiments.keys():
+        experiments = experiments.drop(columns=['index'])
+    experiments['super_container_id'] = experiments['container_id'].values
+    meso_expts = experiments[
+        experiments.project_code.isin(['VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d'])]
+    new_container_id = 900000000
+    for super_container_id in meso_expts.super_container_id.unique():
+        for i, container_index in enumerate(meso_expts[meso_expts.super_container_id == super_container_id].container_index.unique()):
+            index = experiments[(experiments.super_container_id == super_container_id) & (
+            experiments.container_index == container_index)].index.values
+            experiments.at[index, 'container_id'] = new_container_id
+            new_container_id += 1
+    return experiments
+
+
+def add_location_to_expts(expts):
+    expts['location'] = [expts.loc[x]['cre_line'].split('-')[0]+'_'+expts.loc[x]['targeted_structure']+'_'+str(int(expts.loc[x]['imaging_depth'])) for x in expts.index.values]
+    return expts
+
+
+def get_exposure_number_for_group(group):
+    order = np.argsort(group['date_of_acquisition'].values)
+    group['exposure_number'] = order
+    return group
+
+
+def add_exposure_number_to_experiments_table(experiments):
+    experiments = experiments.groupby(['super_container_id', 'session_type']).apply(get_exposure_number_for_group)
+    return experiments
+
+
+def reformat_experiments_table(experiments):
+    experiments = experiments.reset_index()
+    # clean up cre_line naming
+    experiments['cre_line'] = [driver_line[1] if driver_line[0] == 'Camk2a-tTA' else driver_line[0] for driver_line in
+                               experiments.driver_line.values]
+    experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']  # why is this here?
+    # replace session types that are NaN with string None
+    experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
+    experiments = add_container_index_to_experiments_table(experiments)
+    experiments = revise_container_id_for_multiscope(experiments)
+    experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
+    experiments = reformat_fail_tags_for_multiscope(experiments)
+    experiments = add_exposure_number_to_experiments_table(experiments)
+    if 'level_0' in experiments.columns:
+        experiments = experiments.drop(columns='level_0')
+    if 'index' in experiments.columns:
+        experiments = experiments.drop(columns='index')
+    experiments = add_location_to_expts(experiments)
+    return experiments
 
 
 def get_filtered_ophys_container_ids():
     """Get container_ids that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
     must be 'complete' or 'container_qc', and experiments associated with the container are passing. """
-    sessions = get_filtered_ophys_sessions_table()
-    filtered_container_ids = np.sort(sessions.container_id.unique())
+    experiments = get_filtered_ophys_experiment_table()
+    filtered_container_ids = np.sort(experiments.container_id.unique())
     return filtered_container_ids
 
 
@@ -305,12 +426,13 @@ def get_sdk_dff_traces(ophys_experiment_id):
 def get_sdk_dff_traces_array(ophys_experiment_id):
     session = get_sdk_session_obj(ophys_experiment_id)
     dff_traces = session.dff_traces
-    # remove NaN traces - temporary fix, need to change API to return only valid cells
-    bad_cell_specimen_ids = []
-    for i, trace in enumerate(dff_traces.dff.values):
-        if np.isnan(trace).any():
-            bad_cell_specimen_ids.append(dff_traces.index[i])
-    dff_traces = dff_traces[dff_traces.index.isin(bad_cell_specimen_ids) == False]
+    if session.metadata['rig_name']!='MESO.1': #mesoscope doesnt have cell matching yet
+        # remove NaN traces - temporary fix, need to change API to return only valid cells
+        bad_cell_specimen_ids = []
+        for i, trace in enumerate(dff_traces.dff.values):
+            if np.isnan(trace).any():
+                bad_cell_specimen_ids.append(dff_traces.index[i])
+        dff_traces = dff_traces[dff_traces.index.isin(bad_cell_specimen_ids) == False]
     dff_traces_array = np.vstack(dff_traces.dff.values)
     return dff_traces_array
 

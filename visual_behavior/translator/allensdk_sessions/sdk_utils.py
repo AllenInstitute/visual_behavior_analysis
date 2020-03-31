@@ -212,8 +212,15 @@ def get_filtered_sessions_table(cache, require_cell_matching=False, require_full
 
     # Check Session Type
     good_session = ophys_sessions['session_type'].isin(['OPHYS_1_images_A', 'OPHYS_3_images_A', 'OPHYS_4_images_B',
-                                                        'OPHYS_5_images_B_passive', 'OPHYS_6_images_B', 'OPHYS_2_images_A_passive', 'OPHYS_1_images_B',
-                                                        'OPHYS_2_images_B_passive', 'OPHYS_3_images_B', 'OPHYS_4_images_A', 'OPHYS_5_images_A_passive', 'OPHYS_6_images_A'])
+                                                        'OPHYS_5_images_B_passive', 'OPHYS_6_images_B',
+                                                        'OPHYS_2_images_A_passive', 'OPHYS_1_images_B',
+                                                        'OPHYS_2_images_B_passive', 'OPHYS_3_images_B', 'OPHYS_4_images_A',
+                                                        'OPHYS_5_images_A_passive', 'OPHYS_6_images_A',
+                                                        'OPHYS_1_images_G', 'OPHYS_3_images_G',
+                                                        'OPHYS_2_images_G_passive',
+                                                        'OPHYS_4_images_H', 'OPHYS_5_images_H_passive',
+                                                        'OPHYS_6_images_H',
+                                                        ])
     ophys_sessions['good_session'] = good_session
 
     # Check Experiment Workflow state
