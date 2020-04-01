@@ -726,7 +726,9 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
 
     for ii, oeid in enumerate(ophys_experiment_ids):
         uuid = oeid_to_uuid(oeid)
-        y_labels.append('expt_id = {}\n{}'.format(oeid, get_value(uuid, 'stage')))
+        session_type = table.query('container_id == {} and ophys_experiment_id == {}'.format(
+            ophys_container_id,oeid))['session_type'].iloc[0]
+        y_labels.append('expt_id = {}\n{}'.format(oeid, session_type))
         for key in vals_to_plot.keys():
             vals_to_plot[key].append(get_value(uuid, key))
 
