@@ -20,6 +20,8 @@ def main():
         "segmentation_mask_overlays": cp.plot_segmentation_mask_overlays_for_container,
         "max_projection_images_movies": cp.plot_movie_max_projection_images_for_container,
         "average_images_movies": cp.plot_movie_average_images_for_container,
+        "pupil_area": cp.plot_pupil_area,
+        "pupil_position": cp.plot_pupil_position,
     }
 
     parser = argparse.ArgumentParser()
@@ -37,8 +39,11 @@ def main():
             except KeyError:
                 raise RuntimeError(f"'{plot_name}'' is not a valid plot option!")
     else:
-        for _, plot_callable in possible_plots.items():
-            plot_callable(args.container_id)
+        for plot_name, plot_callable in possible_plots.items():
+            try:
+                plot_callable(args.container_id)
+            except Exception as e:
+                print('{} failed for container {}, error:  {}'.format(plot_name, args.container_id, e))
 
 
 if __name__ == "__main__":

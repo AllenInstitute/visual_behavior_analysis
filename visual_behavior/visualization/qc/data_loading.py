@@ -72,8 +72,10 @@ def get_qc_manifest_path():
     return manifest_path
 
 
-def get_qc_cache():
+def get_qc_cache(manifest_path=None):
     """Get cache using default QC manifest path"""
+    if manifest_path is None:
+        manifest_path = get_qc_manifest_path()
     cache = bpc.from_lims(manifest=get_qc_manifest_path())
     return cache
 

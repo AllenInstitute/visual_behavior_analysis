@@ -1,14 +1,15 @@
-from pbstools import pbstools
-import sys
+import os
 from visual_behavior.visualization.qc import data_loading
 import argparse
-import os
-
+import sys
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')
+from pbstools import pbstools
+
 
 parser = argparse.ArgumentParser(description='run container qc plot generation functions on the cluster')
 parser.add_argument('--env', type=str, default='', metavar='name of conda environment to use')
 parser.add_argument('--scriptname', type=str, default='save_all_container_plots.py', metavar='name of script to run (must be in same folder)')
+parser.add_argument("--plots", type=str, default=None, metavar='plot name to generate')
 
 job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/vba_qc_plots"
 
@@ -26,13 +27,17 @@ if __name__ == "__main__":
     python_executable = "{}/.conda/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
     python_file = os.path.join(os.getcwd(), args.scriptname)
 
-    for container_id in container_ids:
-
+    for ii, container_id in enumerate(container_ids):
+        if args.plots is None:
+            args_to_pass = '--container-id {}'.format(container_id)
+        else:
+            args_to_pass = '--container-id {} --plots {}'.format(container_id, args.plots)
+        print('container ID = {}, number {} of {}'.format(container_id, ii + 1, len(container_ids)))
         job_title = 'container_{}'.format(container_id)
         pbstools.PythonJob(
             python_file,
             python_executable,
-            python_args='--container-id {}'.format(container_id),
+            python_args=args_to_pass,
             jobname=job_title,
             jobdir=job_dir,
             **job_settings
