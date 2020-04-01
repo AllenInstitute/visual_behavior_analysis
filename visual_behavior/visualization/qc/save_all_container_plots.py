@@ -24,9 +24,10 @@ def main():
         "pupil_area": cp.plot_pupil_area,
         "pupil_position": cp.plot_pupil_position,
         "FOV_average_intensity": cp.plot_average_intensity_for_container,
-        "pmt_settings": plot_pmt_for_container,
-        "snr_by_pmt": plot_snr_by_pmt_for_container,
-        "snr_by_pmt_and_intensity": plot_snr_by_pmt_gain_and_intensity_for_container,
+        "pmt_settings": cp.plot_pmt_for_container,
+        "snr_by_pmt": cp.plot_snr_by_pmt_for_container,
+        "snr_by_pmt_and_intensity": cp.plot_snr_by_pmt_gain_and_intensity_for_container,
+        "behavior_summary":cp.plot_behavior_summary,
     }
 
     parser = argparse.ArgumentParser()
