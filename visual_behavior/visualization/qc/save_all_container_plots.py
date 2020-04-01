@@ -35,8 +35,11 @@ def main():
             except KeyError:
                 raise RuntimeError(f"'{plot_name}'' is not a valid plot option!")
     else:
-        for _, plot_callable in possible_plots.items():
-            plot_callable(args.container_id)
+        for plot_name, plot_callable in possible_plots.items():
+            try:
+                plot_callable(args.container_id)
+            except Exception as e:
+                print('{} failed for container {}, error:  {}'.format(plot_name, args.container_id, e))
 
 
 if __name__ == "__main__":
