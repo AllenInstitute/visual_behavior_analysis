@@ -146,57 +146,27 @@ def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
     return experiments
 
 
-def reformat_fail_tags_for_multiscope(experiments):
-    experiments['fail_tags'] = experiments['failure_tags']
-    meso_expts = experiments[
-        experiments.project_code.isin(['VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d'])]
-    experiments.at[meso_expts.index.values, 'fail_tags'] = None
-
-    for session_id in meso_expts.ophys_session_id.unique():
-        experiment_ids = meso_expts[meso_expts.ophys_session_id == session_id].ophys_experiment_id.values
-        for i, experiment_id in enumerate(experiment_ids):
-            expt_data = experiments[experiments.ophys_experiment_id == experiment_id]
-            index = expt_data.index.values[0]
-            if type(expt_data.failure_tags.values[0]) == str:
-                fail_tags = expt_data.failure_tags.values[0].split(',')
-                tags_this_expt = []
-                for fail_tag in fail_tags:
-                    if (fail_tag[-1].isdigit()) and (fail_tag[-1] == str(int(expt_data.container_index.values[0]))):
-                        tags_this_expt.append(fail_tag)
-                    elif (fail_tag[-1].isdigit() == False):
-                        tags_this_expt.append(fail_tag)
-                        experiments.at[index, 'fail_tags'] = tags_this_expt
-    return experiments
-
-
-def add_container_index_to_experiments_table(experiments):
-    experiments = experiments.sort_values(['super_container_id', 'ophys_session_id', 'ophys_experiment_id'])
-    experiments = experiments.reset_index().drop(columns='index')
-    experiments['container_index'] = np.nan
-
-    ophys_session_ids = experiments.ophys_session_id.unique()
-    for ophys_session_id in ophys_session_ids:
-        experiment_ids = experiments[experiments.ophys_session_id == ophys_session_id].ophys_experiment_id.values
-        for i, experiment_id in enumerate(experiment_ids):
-            index = experiments[experiments.ophys_experiment_id == experiment_id].index.values
-            experiments.at[index, 'container_index'] = i
-    return experiments
-
-
-def revise_container_id_for_multiscope(experiments):
-    if 'index' in experiments.keys():
-        experiments = experiments.drop(columns=['index'])
-    experiments['super_container_id'] = experiments['container_id'].values
-    meso_expts = experiments[
-        experiments.project_code.isin(['VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d'])]
-    new_container_id = 900000000
-    for super_container_id in meso_expts.super_container_id.unique():
-        for i, container_index in enumerate(meso_expts[meso_expts.super_container_id == super_container_id].container_index.unique()):
-            index = experiments[(experiments.super_container_id == super_container_id) & (
-            experiments.container_index == container_index)].index.values
-            experiments.at[index, 'container_id'] = new_container_id
-            new_container_id += 1
-    return experiments
+# def reformat_fail_tags_for_multiscope(experiments):
+#     experiments['fail_tags'] = experiments['failure_tags']
+#     meso_expts = experiments[
+#         experiments.project_code.isin(['VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d'])]
+#     experiments.at[meso_expts.index.values, 'fail_tags'] = None
+#
+#     for session_id in meso_expts.ophys_session_id.unique():
+#         experiment_ids = meso_expts[meso_expts.ophys_session_id == session_id].ophys_experiment_id.values
+#         for i, experiment_id in enumerate(experiment_ids):
+#             expt_data = experiments[experiments.ophys_experiment_id == experiment_id]
+#             index = expt_data.index.values[0]
+#             if type(expt_data.failure_tags.values[0]) == str:
+#                 fail_tags = expt_data.failure_tags.values[0].split(',')
+#                 tags_this_expt = []
+#                 for fail_tag in fail_tags:
+#                     if (fail_tag[-1].isdigit()) and (fail_tag[-1] == str(int(expt_data.container_index.values[0]))):
+#                         tags_this_expt.append(fail_tag)
+#                     elif (fail_tag[-1].isdigit() == False):
+#                         tags_this_expt.append(fail_tag)
+#                         experiments.at[index, 'fail_tags'] = tags_this_expt
+#     return experiments
 
 
 def add_location_to_expts(expts):
@@ -254,8 +224,11 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
             Returns:
                 ophys_session_ids -- list of ophys_session_ids that meet filtering criteria
             """
-    sessions = get_filtered_ophys_sessions_table()
-    ophys_session_ids = np.sort(sessions[(sessions.container_id == ophys_container_id)].ophys_session_id.values)
+    # sessions = get_filtered_ophys_sessions_table()
+    # ophys_session_ids = np.sort(sessions[(sessions.container_id == ophys_container_id)].ophys_session_id.values)
+    ### temporary fix - need to make get_filtered_ophys_sessions_table work properly
+    experiments = get_filtered_ophys_experiment_table()
+    ophys_session_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_session_id.values)
     return ophys_session_ids
 
 
@@ -281,8 +254,11 @@ def get_session_type_for_ophys_experiment_id(ophys_experiment_id):
 
 
 def get_session_type_for_ophys_session_id(ophys_session_id):
-    sessions = get_filtered_ophys_sessions_table()
-    session_type = sessions[sessions.ophys_session_id == ophys_session_id].session_type.values[0]
+    # sessions = get_filtered_ophys_sessions_table()
+    # session_type = sessions[sessions.ophys_session_id == ophys_session_id].session_type.values[0]
+    ### temporary fix!!
+    experiments = get_filtered_ophys_experiment_table()
+    session_type = experiments[experiments.ophys_session_id == ophys_session_id].session_type.values[0]
     return session_type
 
 
