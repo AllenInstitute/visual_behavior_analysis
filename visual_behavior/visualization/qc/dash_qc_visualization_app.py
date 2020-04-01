@@ -183,10 +183,17 @@ def embed_iframe(value):
 
 # update container overview options when container checklist state is changed
 @app.callback(Output('container_overview_dropdown', 'options'), [Input('container_checklist', 'value')])
-def update_container_view_options(checkbox_values):
+def update_container_overview_options(checkbox_values):
     global container_overview_plot_options
     container_overview_plot_options = load_container_overview_plot_options()
     return container_overview_plot_options
+
+# update container plot options when container checklist state is changed
+@app.callback(Output('container_plot_dropdown', 'options'), [Input('container_checklist', 'value')])
+def update_container_plot_options(checkbox_values):
+    global container_plot_options
+    container_plot_options = load_container_plot_options()
+    return container_plot_options
 
 # show/hide container view frame based on 'container_checklist'
 @app.callback(Output('container_view', 'hidden'), [Input('container_checklist', 'value')])
