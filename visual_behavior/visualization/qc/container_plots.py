@@ -688,8 +688,11 @@ def get_session_stats(behavior_session_uuid):
     return stats
 
 def get_value(behavior_session_uuid, value):
-    session_stats = get_session_stats(behavior_session_uuid)
-    return session_stats[value]
+    try:
+        session_stats = get_session_stats(behavior_session_uuid)
+        return session_stats[value]
+    except KeyError:
+        return None
 
 def oeid_to_uuid(oeid):
     return db.convert_id({'ophys_experiment_id':oeid},'behavior_session_uuid')
