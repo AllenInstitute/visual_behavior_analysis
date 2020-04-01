@@ -18,9 +18,9 @@ from visual_behavior.visualization.qc import experiment_plots as ep
 
 def plot_container_session_sequence(ophys_container_id, save_figure=True):
     experiments_table = dl.get_filtered_ophys_experiment_table(include_failed_data=True)
-    expts = experiments_table[experiments_table.container_id == ophys_container_id].copy()
+    expts = experiments_table[experiments_table.container_id == ophys_container_id].sort_values('date_of_acquisition')
     specimen_id = expts.specimen_id.unique()[0]
-    experiment_ids = expts.ophys_experiment_id.unique()
+    experiment_ids = expts.ophys_experiment_id.values
     session_type_color_map = ut.get_session_type_color_map()
 
     n_expts = len(expts)
