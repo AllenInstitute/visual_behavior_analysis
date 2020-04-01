@@ -1,10 +1,10 @@
-from pbstools import pbstools
 import sys
 from visual_behavior.visualization.qc import data_loading
 import argparse
 import os
 
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')
+from pbstools import pbstools
 
 parser = argparse.ArgumentParser(description='run container qc plot generation functions on the cluster')
 parser.add_argument('--env', type=str, default='', metavar='name of conda environment to use')
@@ -26,8 +26,8 @@ if __name__ == "__main__":
     python_executable = "{}/.conda/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
     python_file = os.path.join(os.getcwd(), args.scriptname)
 
-    for container_id in container_ids:
-
+    for ii,container_id in enumerate(container_ids):
+        print('container ID = {}, number {} of {}'.format(container_id,ii+1,len(container_ids)))
         job_title = 'container_{}'.format(container_id)
         pbstools.PythonJob(
             python_file,
