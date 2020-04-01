@@ -181,13 +181,6 @@ app.layout = html.Div([
 def embed_iframe(value):
     return app.get_asset_url('qc_plots/overview_plots/{}'.format(value))
 
-# # update container plot options when container checklist state is changed
-# @app.callback(Output('container_plot_dropdown', 'options'), [Input('container_checklist', 'value')])
-# def update_container_view_options(checkbox_values):
-#     global container_plot_options
-#     container_plot_options = load_container_plot_options()
-#     return container_plot_options
-
 # update container overview options when container checklist state is changed
 @app.callback(Output('container_overview_dropdown', 'options'), [Input('container_checklist', 'value')])
 def update_container_view_options(checkbox_values):
@@ -266,6 +259,7 @@ def highlight_row(row_index, page_current, derived_viewport_indices):
     return style_data_conditional
 
 # set plot titles
+# this is just text above the actual plot frame
 
 
 @app.callback(Output('plot_title_0', 'children'),
