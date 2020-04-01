@@ -89,7 +89,7 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
-        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'max_intensity_projection_sdk',
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'max_intensity_projection',
                        'container_' + str(ophys_container_id))
 
 
@@ -145,7 +145,7 @@ def plot_sdk_average_images_for_container(ophys_container_id, save_figure=True):
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
-        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_images_sdk',
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'average_images',
                        'container_' + str(ophys_container_id))
 
 
@@ -372,8 +372,8 @@ def plot_snr_by_pmt_gain_and_intensity_for_container(ophys_container_id, save_fi
     cbar = plt.colorbar(ax)
     cbar.set_label('fov mean intensity', rotation=270, labelpad=25)
     plt.xlabel('pmt gain')
-    plt.ylabel('median rsnr all csids')
-    plt.suptitle("median robust snr all cells by pmt gain")
+    plt.ylabel('median snr across cells')
+    plt.suptitle("median robust snr across cells by pmt gain")
     plt.title("container: " + str(ophys_container_id))
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'snr_by_pmt_and_intensity',
@@ -407,7 +407,7 @@ def plot_snr_by_pmt_for_container(ophys_container_id, save_figure=True):
     ax.legend(exp_order_and_stage["stage_name_lims"], fontsize='xx-small', title='stage name', title_fontsize='xx-small',
               bbox_to_anchor=(1.01, 1), loc=2)
     plt.xlabel('pmt gain')
-    plt.ylabel('median robust snr')
+    plt.ylabel('median snr across cells')
     plt.title("robust snr for experiments by pmt gain")
     fig.tight_layout()
     if save_figure:
@@ -415,7 +415,7 @@ def plot_snr_by_pmt_for_container(ophys_container_id, save_figure=True):
                        'container_' + str(ophys_container_id))
 
 
-def plot_csid_snr_for_container(ophys_container_id, save_figure=True):
+def plot_cell_snr_for_container(ophys_container_id, save_figure=True):
     """a seaborn violin plot where x = experiment stage name ordered
         by experiment acquisition date
         y= robust snr for all the cell specimen ids in an experiment
@@ -440,11 +440,11 @@ def plot_csid_snr_for_container(ophys_container_id, save_figure=True):
                    order=exp_order_and_stage["stage_name_lims"])
     plt.xticks(rotation=90)
     plt.xlabel("stage name")
-    plt.ylabel('robust snr for csids')
-    plt.title("robust snr of csids by experiment", pad=5 )
+    plt.ylabel('robust SNR')
+    plt.title("distribution of cell signal to noise ratio", pad=5 )
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'csid_snr_by_experiment',
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'cell_snr_by_experiment',
                        'container_' + str(ophys_container_id))
 
 
@@ -489,7 +489,7 @@ def plot_number_segmented_rois_for_container(ophys_container_id, save_figure=Tru
     plt.xticks(rotation=90)
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'segmented_rois_by_experiment_for_container',
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'segmented_rois_by_experiment',
                        'container_' + str(ophys_container_id))
 
 

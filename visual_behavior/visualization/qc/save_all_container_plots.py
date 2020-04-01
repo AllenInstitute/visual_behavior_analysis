@@ -5,8 +5,8 @@ import argparse
 def main():
     possible_plots = {
         "ophys_session_sequence": cp.plot_container_session_sequence,
-        "max_projection_images_sdk": cp.plot_sdk_max_projection_images_for_container,
-        "average_images_sdk": cp.plot_sdk_average_images_for_container,
+        "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
+        "average_images": cp.plot_sdk_average_images_for_container,
         "dff_traces_heatmaps": cp.plot_dff_traces_heatmaps_for_container,
         "running_speed": cp.plot_running_speed_for_container,
         "lick_rasters": cp.plot_lick_rasters_for_container,
@@ -20,8 +20,13 @@ def main():
         "segmentation_mask_overlays": cp.plot_segmentation_mask_overlays_for_container,
         "max_projection_images_movies": cp.plot_movie_max_projection_images_for_container,
         "average_images_movies": cp.plot_movie_average_images_for_container,
+        "cell_snr_by_experiment": cp.plot_cell_snr_for_container,
         "pupil_area": cp.plot_pupil_area,
         "pupil_position": cp.plot_pupil_position,
+        "FOV_average_intensity": cp.plot_average_intensity_for_container,
+        "pmt_settings": plot_pmt_for_container,
+        "snr_by_pmt": plot_snr_by_pmt_for_container,
+        "snr_by_pmt_and_intensity": plot_snr_by_pmt_gain_and_intensity_for_container,
     }
 
     parser = argparse.ArgumentParser()
