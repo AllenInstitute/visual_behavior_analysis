@@ -18,6 +18,8 @@ def main():
         "number_matched_cells": cp.plot_number_matched_cells_for_container,
         "fraction_matched_cells": cp.plot_fraction_matched_cells_for_container,
         "segmented_rois_by_experiment": cp.plot_number_segmented_rois_for_container,
+        "pupil_area": cp.plot_pupil_area,
+        "pupil_position": cp.plot_pupil_position,
     }
 
     parser = argparse.ArgumentParser()
