@@ -13,12 +13,11 @@ from visual_behavior.visualization.qc import data_processing as dp
 from visual_behavior.visualization.qc import experiment_plots as ep
 
 
-
 # Container sequence
 
 def plot_container_session_sequence(ophys_container_id, save_figure=True):
     experiments_table = dl.get_filtered_ophys_experiment_table(include_failed_data=True)
-    expts = experiments_table[experiments_table.container_id==ophys_container_id].copy()
+    expts = experiments_table[experiments_table.container_id == ophys_container_id].copy()
     specimen_id = expts.specimen_id.unique()[0]
     experiment_ids = expts.ophys_experiment_id.unique()
     session_type_color_map = ut.get_session_type_color_map()
@@ -28,41 +27,40 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
     fail_x = []
     fail_tags = []
     for expt_ind, expt_id in enumerate(experiment_ids):
-        this_expt = expts[expts.ophys_experiment_id==expt_id]
+        this_expt = expts[expts.ophys_experiment_id == expt_id]
         img[expt_ind, 0, :] = session_type_color_map[this_expt['session_type'].values[0]]
         if this_expt['experiment_workflow_state'].values[0] == 'failed':
             fail_x.append(expt_ind)
             fail_tags.append(this_expt['failure_tags'].values[0])
 
     # create plot with expt colors image
-    figsize = (20,n_expts)
+    figsize = (20, n_expts)
     fig, ax = plt.subplots(figsize=figsize)
     ax.imshow(img.astype(int))
-    ax.axis('off');
+    ax.axis('off')
 
     # plot text for acquisition date and session type
     for i, expt_id in enumerate(experiment_ids):
-        this_expt = expts[expts.ophys_experiment_id==expt_id]
+        this_expt = expts[expts.ophys_experiment_id == expt_id]
         ax.text(x=0.75, y=i, s=str(this_expt['date_of_acquisition'].values[0]).split(' ')[0],
-                 ha='left', va='center', fontsize=20)
+                ha='left', va='center', fontsize=20)
         ax.text(x=3, y=i, s=this_expt['session_type'].values[0], ha='left', va='center', fontsize=20)
         ax.text(x=20, y=i, s=' ')
 
     # add X for fails and list fail tags
     for ind_fail, x in enumerate(fail_x):
         ax.text(x=0, y=x, s='X', ha='center', va='center', fontsize=60)
-        fail_string = 'Failure: '+str(fail_tags[ind_fail])
+        fail_string = 'Failure: ' + str(fail_tags[ind_fail])
         ax.text(x=8.5, y=x, s=fail_string, ha='left', va='center', fontsize=20)
 
-    plt.suptitle('specimen_id: {}'.format(specimen_id)+', container_id: {}'.format(ophys_container_id),
-                 fontsize=25, ha='left',x=0.06, y=.97)
+    plt.suptitle('specimen_id: {}'.format(specimen_id) + ', container_id: {}'.format(ophys_container_id),
+                 fontsize=25, ha='left', x=0.06, y=.97)
     fig.subplots_adjust(left=0.05)
     fig.subplots_adjust(right=0.1)
     fig.subplots_adjust(top=0.9)
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'ophys_session_sequence',
                        'container_' + str(ophys_container_id))
-
 
 
 # OPHYS
@@ -85,7 +83,7 @@ def plot_max_projection_images_for_container(ophys_container_id, save_figure=Tru
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
-        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
+        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"] == ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + exp_stage_name)
 
     if save_figure:
@@ -111,7 +109,7 @@ def plot_unnormalized_max_projection_images_for_container(ophys_container_id, sa
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=ax[i])
-        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
+        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"] == ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + exp_stage_name)
 
     if save_figure:
@@ -137,7 +135,7 @@ def plot_average_images_for_container(ophys_container_id, save_figure=True):
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
-        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
+        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"] == ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + exp_stage_name)
 
     if save_figure:
@@ -163,7 +161,7 @@ def plot_unnormalized_average_images_for_container(ophys_container_id, save_figu
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
-        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
+        exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"] == ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + exp_stage_name)
 
     if save_figure:
@@ -289,6 +287,35 @@ def plot_pmt_for_container(ophys_container_id, save_figure=True):
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'pmt_settings',
+                       'container_' + str(ophys_container_id))
+
+
+def plot_average_intensity_for_container(ophys_container_id, save_figure=True):
+    """seaborn scatter plot where x= session stage name
+        y= average intensity of the FOV for the entire session
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Keyword Arguments:
+        save_figure {bool} -- [description] (default: {True})
+    """
+    FOV_intensities = dp.container_intensity_mean_and_std(ophys_container_id)
+    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    df = pd.merge(FOV_intensities, exp_order_and_stage, how="left", on="ophys_experiment_id")
+
+    stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
+    figsize = (6, 9)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.scatterplot(x="stage_name_lims", y="intensity_mean", data=df,
+                         hue="stage_name_lims", palette=stage_color_dict,
+                         legend=False)
+    plt.xticks(rotation=90)
+    plt.ylabel('FOV average intensity')
+    plt.title("FOV mean intensity for container")
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'FOV_average_intensity',
                        'container_' + str(ophys_container_id))
 
 
