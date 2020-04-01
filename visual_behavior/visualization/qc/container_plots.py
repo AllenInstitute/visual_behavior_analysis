@@ -4,6 +4,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import visual_behavior.plotting as vbp
+import visual_behavior.database as db
 
 from visual_behavior.visualization import utils as ut
 from visual_behavior.visualization.qc import data_loading as dl
@@ -679,3 +680,99 @@ def plot_pupil_position(ophys_container_id, save_figure=True):
         fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
 
     return fig, axes
+
+def get_session_stats(behavior_session_uuid):
+    vb = db.Database('visual_behavior_data')
+    stats = vb.behavior_data['summary'].find_one({'behavior_session_uuid':behavior_session_uuid})
+    vb.close()
+    return stats
+
+def get_value(behavior_session_uuid, value):
+    session_stats = get_session_stats(behavior_session_uuid)
+    return session_stats[value]
+
+def oeid_to_uuid(oeid):
+    return db.convert_id({'ophys_experiment_id':oeid},'behavior_session_uuid')
+
+def plot_behavior_summary(ophys_container_id, save_figure=True):
+    '''
+    plots a handful of behavior session metrics for every experiment in the container
+    '''
+    table = dl.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+
+    vals_to_plot = {
+        'd_prime_peak':[],
+        'hit_rate_peak':[],
+        'hit_rate':[],
+        'false_alarm_rate_peak':[],
+        'false_alarm_rate':[],
+        'fraction_time_aborted':[],
+        'earned_water':[],
+        'total_water':[],
+        'number_of_licks':[],
+        'num_contingent_trials':[],
+    }
+
+    fig,ax=plt.subplots(1,7,figsize=(16,5),sharey=True)
+    y_labels = []
+
+    for ii,oeid in enumerate(ophys_experiment_ids):
+        uuid = oeid_to_uuid(oeid)
+        y_labels.append('expt_id = {}\n{}'.format(oeid,get_value(uuid, 'stage')))
+        for key in vals_to_plot.keys():
+            vals_to_plot[key].append(get_value(uuid, key))
+
+
+    ax[0].set_ylim(-0.5,len(ophys_experiment_ids)-0.5)
+    ax[0].invert_yaxis()
+    ax[0].plot(vals_to_plot['d_prime_peak'],range(len(ophys_experiment_ids)),color='black',marker='o')
+    ax[0].set_yticks(range(len(ophys_experiment_ids)))
+    ax[0].set_yticklabels(y_labels);
+    ax[0].set_xlabel("d' peak")
+    ax[0].set_title("d' peak")
+
+    ax[1].plot(vals_to_plot['hit_rate_peak'],range(len(ophys_experiment_ids)),color='darkgreen',marker='o')
+    ax[1].plot(vals_to_plot['hit_rate'],range(len(ophys_experiment_ids)),color='lightgreen',marker='o')
+    ax[1].set_title("Hit rate\nPeak (dark)\nAvg (light)")
+    ax[1].set_xlabel('resp. prob.')
+    ax[1].set_xlim(0,1.05)
+
+    ax[2].plot(vals_to_plot['false_alarm_rate_peak'],range(len(ophys_experiment_ids)),color='darkorange',marker='o')
+    ax[2].plot(vals_to_plot['false_alarm_rate'],range(len(ophys_experiment_ids)),color='yellow',marker='o')
+    ax[2].set_title("FA rate\nPeak (dark)\nAvg (light)")
+    ax[2].set_xlabel('resp. prob.')
+    ax[2].set_xlim(0,1.05)
+
+    ax[3].plot(vals_to_plot['fraction_time_aborted'],range(len(ophys_experiment_ids)),color='darkred',marker='o')
+    ax[3].set_title("Fraction\ntime\naborted")
+    ax[3].set_xlabel('fraction time')
+    ax[3].set_xlim(0,1.05)
+
+    ax[4].plot(vals_to_plot['earned_water'],range(len(ophys_experiment_ids)),color='darkblue',marker='o')
+    ax[4].plot(vals_to_plot['total_water'],range(len(ophys_experiment_ids)),color='dodgerblue',marker='o')
+    ax[4].set_title("Earned $H_2$$O$ (dark)\nTotal $H_2$$O$ (light)")
+    ax[4].set_xlabel('$H_2$$O$ (mL)')
+
+    ax[5].plot(vals_to_plot['number_of_licks'],range(len(ophys_experiment_ids)),color='teal',marker='o')
+    ax[5].set_title("Number\nof Licks")
+    ax[5].set_xlabel('count')
+
+    ax[6].plot(vals_to_plot['num_contingent_trials'],range(len(ophys_experiment_ids)),color='Maroon',marker='o')
+    ax[6].set_title("Number\nof Trials")
+    ax[6].set_xlabel('count')
+    ax[6].set_xlim(0,450)
+
+    colors = ['DarkSlateGray','lightgray']
+    for row in range(len(ophys_experiment_ids)):
+        color = colors[row%2]
+        for col in range(len(ax)):
+            ax[col].axhspan(row-0.5,row+0.5,color=color,alpha=0.5)
+
+    if save_figure:
+        print('saving')
+        save_folder = os.path.join(dl.get_container_plots_dir(), 'behavior_metric_summary')
+        if os.path.exists(save_folder) == False:
+            os.mkdir(save_folder)
+        savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
+        fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
