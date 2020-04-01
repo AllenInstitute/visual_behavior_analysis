@@ -371,7 +371,7 @@ def plot_snr_by_pmt_gain_and_intensity_for_container(ophys_container_id, save_fi
     ax = plt.scatter(df["pmt_gain"], df["median_rsnr_all_csids"],
                      c=df["intensity_mean"], s=75,
                      cmap="cool", edgecolors='k')
-    ax.set_xlim(df["pmt_gain"].min() - 1, df["pmt_gain"].max() + 1)
+    plt.xlim(df["pmt_gain"].min() - 1, df["pmt_gain"].max() + 1)
     cbar = plt.colorbar(ax)
     cbar.set_label('fov mean intensity', rotation=270, labelpad=25)
     plt.xlabel('pmt gain')
