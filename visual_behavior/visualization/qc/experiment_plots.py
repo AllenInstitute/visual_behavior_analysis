@@ -165,3 +165,56 @@ def make_eye_matrix_plot(ophys_experiment_id, ax):
             error_text = 'could not generate pupil plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
             ax[0][0].set_title(error_text, ha='left')
     return ax
+
+
+def make_pupil_area_plot(ophys_experiment_id, ax, label_x=True):
+    '''plot pupil area vs time'''
+    try:
+        ophys_session_id = db.convert_id({'ophys_experiment_id': ophys_experiment_id}, 'ophys_session_id')
+        ed = EyeTrackingData(ophys_session_id)
+
+        time = ed.ellipse_fits['pupil']['time'] / 60.
+        area = ed.ellipse_fits['pupil']['blink_corrected_area']
+        ax.plot(time, area)
+        if label_x:
+            ax.set_xlabel('time (minutes)')
+        ax.set_ylabel('pupil diameter\n(pixels$^2$)')
+        ax.set_xlim(min(time), max(time))
+
+        ax.set_title('ophys_experiment_id = {}, pupil area vs. time'.format(ophys_experiment_id), ha='center')
+
+    except Exception as e:
+        ax.axis('off')
+
+        error_text = 'could not generate pupil area plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
+        ax.set_title(error_text, ha='left')
+    return ax
+
+
+def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
+    '''plot pupil position vs time'''
+    try:
+        ophys_session_id = db.convert_id({'ophys_experiment_id': ophys_experiment_id}, 'ophys_session_id')
+        ed = EyeTrackingData(ophys_session_id)
+
+        time = ed.ellipse_fits['pupil']['time'] / 60.
+        x = ed.ellipse_fits['pupil']['blink_corrected_center_x']
+        y = ed.ellipse_fits['pupil']['blink_corrected_center_y']
+
+        ax.plot(time, x, color='darkorange')
+        ax.plot(time, y, color='olive')
+
+        if label_x:
+            ax.set_xlabel('time (minutes)')
+        ax.set_ylabel('pupil position (pixel)')
+        ax.legend(['x position', 'y position'])
+        ax.set_xlim(min(time), max(time))
+
+        ax.set_title('ophys_experiment_id = {}, pupil center position vs. time'.format(ophys_experiment_id), ha='center')
+
+    except Exception as e:
+        ax.axis('off')
+
+        error_text = 'could not generate pupil position plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
+        ax.set_title(error_text, ha='left')
+    return ax

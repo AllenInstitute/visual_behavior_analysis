@@ -612,3 +612,59 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'lick_rasters',
                        'container_' + str(ophys_container_id))
+
+
+def plot_pupil_area(ophys_container_id, save_figure=True):
+    table = dl.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+
+    fig = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
+    axes = []
+    nplots = len(ophys_experiment_ids)
+    buffer = 0.075
+    for ii, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        print('on ophys_experiment_id {}, #{} of {}'.format(ophys_experiment_id, ii + 1, nplots))
+        axes.append(vbp.placeAxesOnGrid(fig, xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
+        if ii + 1 == len(ophys_experiment_ids):
+            label_x = True
+        else:
+            label_x = False
+        axes[-1] = ep.make_pupil_area_plot(ophys_experiment_id, axes[-1], label_x=label_x)
+
+    if save_figure:
+        print('saving')
+        save_folder = os.path.join(dl.get_container_plots_dir(), 'pupil_area_vs_time')
+        if os.path.exists(save_folder) == False:
+            os.mkdir(save_folder)
+        savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
+        fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
+
+    return fig, axes
+
+
+def plot_pupil_position(ophys_container_id, save_figure=True):
+    table = dl.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+
+    fig = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
+    axes = []
+    nplots = len(ophys_experiment_ids)
+    buffer = 0.075
+    for ii, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        print('on ophys_experiment_id {}, #{} of {}'.format(ophys_experiment_id, ii + 1, nplots))
+        axes.append(vbp.placeAxesOnGrid(fig, xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
+        if ii + 1 == len(ophys_experiment_ids):
+            label_x = True
+        else:
+            label_x = False
+        axes[-1] = ep.make_pupil_position_plot(ophys_experiment_id, axes[-1], label_x=label_x)
+
+    if save_figure:
+        print('saving')
+        save_folder = os.path.join(dl.get_container_plots_dir(), 'pupil_position_vs_time')
+        if os.path.exists(save_folder) == False:
+            os.mkdir(save_folder)
+        savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
+        fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
+
+    return fig, axes
