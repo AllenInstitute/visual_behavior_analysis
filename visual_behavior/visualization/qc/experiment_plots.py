@@ -120,7 +120,7 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
     if ax is None:
         fig, ax = plt.subplots()
     ax.plot(frame_numbers, average_intensity,
-            # color=exp_stage_color_dict[ophys_experiment_id],
+            color=exp_stage_color_dict[ophys_experiment_id],
             label=experiment_df["stage_name_lims"][0])
     ax.set_ylabel('fluorescence value')
     ax.set_xlabel('frame #')
