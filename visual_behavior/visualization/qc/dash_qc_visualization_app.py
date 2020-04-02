@@ -9,12 +9,13 @@ import base64
 import os
 import argparse
 import yaml
+import pandas as pd
 
 import visual_behavior.visualization.qc.data_loading as dl
 
 
 # GLOBAL CONSTANTS:
-ENTRIES_PER_PAGE = 5
+ENTRIES_PER_PAGE = 15
 
 # APP SETUP
 app = dash.Dash(__name__,)
@@ -28,7 +29,9 @@ app.config['suppress_callback_exceptions'] = True
 def load_data():
     container_df = dl.build_container_df()
     filtered_container_list = dl.get_filtered_ophys_container_ids()  # NOQA F841
-    return container_df.query('container_id in @filtered_container_list')
+    container_subsets = pd.read_csv('/home/dougo/spreadsheet_map.csv')
+    res = container_df.query('container_id in @filtered_container_list')
+    return res.merge(container_subsets,left_on='container_id',right_on='container_id')
 
 
 container_table = load_data().sort_values('first_acquistion_date')
@@ -97,7 +100,13 @@ app.layout = html.Div([
         hidden=True,
         src=app.get_asset_url('qc_plots/overview_plots/d_prime_container_overview.html')
     ),
-    html.H4('Container Summaries:'),
+    html.H4('Container Summary Data Table:'),
+    html.I('Adjust number of rows to display in the data table:'),
+    dcc.Input(
+        id='entries_per_page_input',
+        type='number',
+        value=5,
+    ),
     # data table
     dash_table.DataTable(
         id='data_table',
@@ -176,6 +185,10 @@ app.layout = html.Div([
     ),
 ], className='container')
 
+
+@app.callback(Output('data_table', 'page_size'), [Input('entries_per_page_input', 'value')])
+def change_entries_per_page(entries_per_page):
+    return entries_per_page
 
 @app.callback(Output('container_view', 'src'), [Input('container_overview_dropdown', 'value')])
 def embed_iframe(value):
@@ -491,3 +504,4 @@ if __name__ == '__main__':
     print("PORT = {}".format(args.port))
     print("DEBUG MODE = {}".format(args.debug))
     app.run_server(debug=args.debug, port=args.port, host='0.0.0.0')
+
