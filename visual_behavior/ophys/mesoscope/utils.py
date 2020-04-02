@@ -7,7 +7,7 @@ from allensdk.brain_observatory.dff import calculate_dff
 import h5py
 import numpy as np
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
-import visual_behavior.ophys.mesoscope.mesoscope as ms
+import visual_behavior.ophys.mesoscope.dataset as ms
 
 import shutil
 import time
@@ -39,11 +39,11 @@ def get_path(obj, key, check_exists):
 def run_ica_on_session(session, iter_ica, iter_neuropil, roi_name=None, np_name=None):
     """
     helper function to run all crosstalk-demixing functions on a given session
-    :param session: LIMS session ID
-    :param iter_ica: number of iterations for FastICA on Rois
-    :param iter_neuropil: number of iterations for FastICa on neuropil
-    :param roi_name: filename prefix to use for roi-related data, if different form default "roi_ica"
-    :param np_name: filename prefix to use for neuropil-related data, if different from default "neuropil_ica"
+    :param session: int, LIMS session ID
+    :param iter_ica: int, number of iterations for FastICA on Rois
+    :param iter_neuropil: int, number of iterations for FastICa on neuropil
+    :param roi_name: str, filename prefix to use for roi-related data, if different form default "roi_ica"
+    :param np_name: str, filename prefix to use for neuropil-related data, if different from default "neuropil_ica"
     :return: None
     """
     ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name=roi_name, np_name=np_name)
@@ -83,7 +83,7 @@ def run_ica_on_pair(session, pair, iter_ica, iter_neuropil, roi_name=None, np_na
 
 def get_lims_done_sessions():
     """
-    function to find all pst-ica sessions that also ran through LIMS modules
+    function to find all post-ica sessions that also ran through LIMS modules
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : lims_roi_success, lims_roi_fail, ica_success
     """
     ica_success, _, _ = get_ica_done_sessions()

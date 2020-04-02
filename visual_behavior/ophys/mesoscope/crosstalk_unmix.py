@@ -1,6 +1,6 @@
 import matplotlib
 from allensdk.brain_observatory import roi_masks
-import visual_behavior.ophys.mesoscope.mesoscope as ms
+import visual_behavior.ophys.mesoscope.dataset as ms
 import allensdk.internal.core.lims_utilities as lu
 import os
 import h5py
