@@ -8,7 +8,9 @@ def gen_stage_name_color_palettes():
     reds = sns.color_palette('Reds_r', 6)[:5][::2]
     blues = sns.color_palette('Blues_r', 6)[:5][::2]
     greys = sns.color_palette('Greys_r', 6)[:5][::2]
-    return reds + blues + greys
+    purples = sns.color_palette('RdPu_r', 6)[:5][::2]
+    greens = sns.color_palette('Greens_r', 6)[:5][::2]
+    return reds + blues + greys + purples + greens
 
 
 def gen_ophys_stage_name_colors_dict():
