@@ -14,6 +14,14 @@ from visual_behavior.visualization.qc import data_processing as dp
 from visual_behavior.visualization.qc import experiment_plots as ep
 
 
+def ax_to_array(ax):
+    '''
+    convert any axis elements that aren't already an array into an array
+    '''
+    if not isinstance(ax, np.ndarray):
+        ax = np.array([ax])
+    return ax
+
 # Container sequence
 
 def plot_container_session_sequence(ophys_container_id, save_figure=True):
@@ -83,6 +91,7 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
+    ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
@@ -111,6 +120,7 @@ def plot_movie_max_projection_images_for_container(ophys_container_id, save_figu
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
+    ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
@@ -139,6 +149,7 @@ def plot_sdk_average_images_for_container(ophys_container_id, save_figure=True):
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
+    ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
@@ -167,6 +178,7 @@ def plot_movie_average_images_for_container(ophys_container_id, save_figure=True
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
+    ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
@@ -202,6 +214,7 @@ def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
+    ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
@@ -217,6 +230,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
+    ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
