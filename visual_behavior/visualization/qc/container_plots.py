@@ -730,7 +730,10 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
             ophys_container_id,oeid))['session_type'].iloc[0]
         y_labels.append('expt_id = {}\n{}'.format(oeid, session_type))
         for key in vals_to_plot.keys():
-            vals_to_plot[key].append(get_value(uuid, key))
+            try:
+                vals_to_plot[key].append(get_value(uuid, key))
+            except TypeError:
+                vals_to_plot[key].append(np.nan)
 
     ax[0].set_ylim(-0.5, len(ophys_experiment_ids) - 0.5)
     ax[0].invert_yaxis()
