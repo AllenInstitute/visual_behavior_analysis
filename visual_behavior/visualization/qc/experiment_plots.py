@@ -36,7 +36,7 @@ def plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=
     if ax is None:
         fig, ax = plt.subplots()
     average_image = dp.experiment_average_FOV_from_motion_corrected_movie(ophys_experiment_id)
-    ax.imshow(average_image, cmap='gray', vmin=0, vmax=4000)
+    ax.imshow(average_image, cmap='gray', vmin=0, vmax=8000)
     ax.axis('off')
     return ax
 
@@ -45,7 +45,7 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
     if ax is None:
         fig, ax = plt.subplots()
     max_image = dp.experiment_max_FOV_from_motion_corrected_movie(ophys_experiment_id)
-    ax.imshow(max_image, cmap='gray', vmin=0, vmax=4000)
+    ax.imshow(max_image, cmap='gray', vmin=0, vmax=8000)
     ax.axis('off')
     return ax
 
@@ -120,7 +120,7 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
     if ax is None:
         fig, ax = plt.subplots()
     ax.plot(frame_numbers, average_intensity,
-            color=exp_stage_color_dict[ophys_experiment_id],
+            # color=exp_stage_color_dict[ophys_experiment_id],
             label=experiment_df["stage_name_lims"][0])
     ax.set_ylabel('fluorescence value')
     ax.set_xlabel('frame #')
