@@ -31,7 +31,13 @@ def gen_ophys_stage_name_colors_dict():
                               'VisCodingTargetedMovieClips': stage_color_palette[7],
                               'OPHYS_7_receptive_field_mapping': stage_color_palette[7],
                               'full_field_test': stage_color_palette[7],
-                              None: stage_color_palette[6]}
+                              None: stage_color_palette[6],
+                              'OPHYS_1_images_G': stage_color_palette[9],
+                              'OPHYS_2_images_G_passive': stage_color_palette[10],
+                              'OPHYS_3_images_G': stage_color_palette[11],
+                              'OPHYS_4_images_H': stage_color_palette[12],
+                              'OPHYS_5_images_H_passive': stage_color_palette[13],
+                              'OPHYS_6_images_H': stage_color_palette[14]}
     return stage_name_colors_dict
 
 
@@ -77,10 +83,6 @@ def experiment_id_stage_color_dict_for_container(ophys_container_id):
     container_df = dp.ophys_container_info_df(ophys_container_id)
     exp_color_dict = map_stage_name_colors_to_ophys_experiment_ids(container_df)
     return exp_color_dict
-
-# def get_stage_name_for_experiment_id(ophys_experiment_id):
-#     experiment_df = dp.ophys_experiment_info_df(ophys_experiment_id)
-#     experiment_stage_name =
 
 
 def boxoff(ax, keep='left', yaxis=True):
