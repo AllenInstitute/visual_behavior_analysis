@@ -2,187 +2,86 @@
 
 import dash
 from dash.dependencies import Input, Output
-import dash_core_components as dcc
 import dash_html_components as html
-import dash_table
-import base64
-import os
 import argparse
-import yaml
-import pandas as pd
 
-import visual_behavior.visualization.qc.data_loading as dl
-
-
-# GLOBAL CONSTANTS:
-ENTRIES_PER_PAGE = 15
+from functions import *
+from components import *
 
 # APP SETUP
 app = dash.Dash(__name__,)
 app.title = 'Visual Behavior Data QC'
-
 app.config['suppress_callback_exceptions'] = True
 
-# FUNCTIONS
-
-
-def load_data():
-    container_df = dl.build_container_df()
-    filtered_container_list = dl.get_filtered_ophys_container_ids()  # NOQA F841
-    container_subsets = pd.read_csv('/home/dougo/spreadsheet_map.csv')
-    res = container_df.query('container_id in @filtered_container_list')
-    return res.merge(container_subsets,left_on='container_id',right_on='container_id')
-
-
+# FUNCTION CALLS
 container_table = load_data().sort_values('first_acquistion_date')
-
-
-def load_yaml(yaml_path):
-    with open(yaml_path, 'r') as stream:
-        yaml_contents = yaml.safe_load(stream)
-
-    options = []
-    for k, v in yaml_contents.items():
-        options.append({'label': k, 'value': v})
-    return options
-
-
-def load_container_plot_options():
-    print('loading new container plot definitions')
-    plot_definition_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots/plot_definitions.yml"
-    container_options = load_yaml(plot_definition_path)
-    return container_options
-
-
 container_plot_options = load_container_plot_options()
-
-
-def load_container_overview_plot_options():
-    print('loading new container overview plot definitions')
-    plot_definition_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/overview_plots/plot_definitions.yml"
-    container_overview_options = load_yaml(plot_definition_path)
-    print('container_overview_options = {}'.format(container_overview_options))
-    return container_overview_options
-
-
 container_overview_plot_options = load_container_overview_plot_options()
 
-# COMPONENTS
-dropdown = dcc.Dropdown(
-    id='container_plot_dropdown',
-    options=container_plot_options,
-    value=['ophys_session_sequence'],
-    multi=True
-)
+# COMPONENT SETUP
+plot_selection_dropdown.options = container_plot_options
+container_overview_dropdown.options = container_overview_plot_options
+container_overview_iframe.src = app.get_asset_url('qc_plots/overview_plots/d_prime_container_overview.html')
+container_data_table.columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
+container_data_table.data = container_table.to_dict('records')
 
-
+# APP LAYOUT
 app.layout = html.Div([
     html.H3('Visual Behavior Data'),
     # checklist for components to show
-    dcc.Checklist(
-        id='container_checklist',
-        options=[
-            {'label': 'Show Container Level Summary Plots', 'value': 'show_container_plots'},
-        ],
-        value=[]
-    ),
+    show_overview_checklist,
     # container level dropdown
-    dcc.Dropdown(
-        id='container_overview_dropdown',
-        style={'display': 'none'},
-        options=container_overview_plot_options,
-        value='VisualBehavior_containers_chronological.png'
-    ),
+    container_overview_dropdown,
     # frame with container level plots
-    html.Iframe(
-        id='container_view',
-        style={'height': '1000px', 'width': '1500px'},
-        hidden=True,
-        src=app.get_asset_url('qc_plots/overview_plots/d_prime_container_overview.html')
-    ),
+    container_overview_iframe,
     html.H4('Container Summary Data Table:'),
     html.I('Adjust number of rows to display in the data table:'),
-    dcc.Input(
-        id='entries_per_page_input',
-        type='number',
-        value=5,
-    ),
+    table_row_selection,
     # data table
-    dash_table.DataTable(
-        id='data_table',
-        columns=[{"name": i.replace('_', ' '), "id": i} for i in container_table.columns],
-        data=container_table.to_dict('records'),
-        row_selectable="single",
-        selected_rows=[0],
-        page_size=ENTRIES_PER_PAGE,
-        filter_action='native',
-        sort_action='native',
-        style_header={
-            'backgroundColor': 'white',
-            'fontWeight': 'bold',
-            'textAlign': 'center',
-            'whiteSpace': 'normal',
-        },
-        style_data={
-            'whiteSpace': 'normal',
-            'textAlign': 'center',
-            'height': 'auto'
-        },
-        style_table={'overflowX': 'scroll'},
-    ),
+    container_data_table,
     # dropdown for plot selection
     html.H4('Select plots to generate from the dropdown (max 10)'),
-    dropdown,
-    html.H4(id='plot_title_0', children=''),
-    html.Img(
-        id='image_frame_0',
-        style={'width': '1500px'}
-    ),
-    html.H4(id='plot_title_1', children=''),
-    html.Img(
-        id='image_frame_1',
-        style={'width': '1500px'}
-    ),
-    html.H4(id='plot_title_2', children=''),
-    html.Img(
-        id='image_frame_2',
-        style={'width': '1500px'}
-    ),
-    html.H4(id='plot_title_3', children=''),
-    html.Img(
-        id='image_frame_3',
-        style={'width': '1500px'}
-    ),
-    html.H4(id='plot_title_4', children=''),
-    html.Img(
-        id='image_frame_4',
-        style={'width': '1500px'}
-    ),
-    html.H4(id='plot_title_5', children=''),
-    html.Img(
-        id='image_frame_5',
-        style={'width': '1500px'}
-    ),
-    html.H4(id='plot_title_6', children=''),
-    html.Img(
-        id='image_frame_6',
-        style={'width': '1500px'}
-    ),
-    html.H4(id='plot_title_7', children=''),
-    html.Img(
-        id='image_frame_7',
-        style={'width': '1500px'}
-    ),
-    html.H4(id='plot_title_8', children=''),
-    html.Img(
-        id='image_frame_8',
-        style={'width': '1500px'}
-    ),
-    html.H4(id='plot_title_9', children=''),
-    html.Img(
-        id='image_frame_9',
-        style={'width': '1500px'}
-    ),
+    plot_selection_dropdown,
+    plot_titles[0],
+    plot_frames[0],
+    plot_titles[1],
+    plot_frames[1],
+    plot_titles[2],
+    plot_frames[2],
+    plot_titles[3],
+    plot_frames[3],
+    plot_titles[4],
+    plot_frames[4],
+    plot_titles[5],
+    plot_frames[5],
+    plot_titles[6],
+    plot_frames[6],
+    plot_titles[7],
+    plot_frames[7],
+    plot_titles[8],
+    plot_frames[8],
+    plot_titles[9],
+    plot_frames[9],
+    plot_titles[10],
+    plot_frames[10],
+    plot_titles[11],
+    plot_frames[11],
+    plot_titles[12],
+    plot_frames[12],
+    plot_titles[13],
+    plot_frames[13],
+    plot_titles[14],
+    plot_frames[14],
+    plot_titles[15],
+    plot_frames[15],
+    plot_titles[16],
+    plot_frames[16],
+    plot_titles[17],
+    plot_frames[17],
+    plot_titles[18],
+    plot_frames[18],
+    plot_titles[19],
+    plot_frames[19],
 ], className='container')
 
 
@@ -190,7 +89,8 @@ app.layout = html.Div([
 def change_entries_per_page(entries_per_page):
     return entries_per_page
 
-@app.callback(Output('container_view', 'src'), [Input('container_overview_dropdown', 'value')])
+
+@app.callback(Output('container_overview_iframe', 'src'), [Input('container_overview_dropdown', 'value')])
 def embed_iframe(value):
     return app.get_asset_url('qc_plots/overview_plots/{}'.format(value))
 
@@ -209,7 +109,7 @@ def update_container_plot_options(checkbox_values):
     return container_plot_options
 
 # show/hide container view frame based on 'container_checklist'
-@app.callback(Output('container_view', 'hidden'), [Input('container_checklist', 'value')])
+@app.callback(Output('container_overview_iframe', 'hidden'), [Input('container_checklist', 'value')])
 def show_container_view(checkbox_values):
     if 'show_container_plots' in checkbox_values:
         # retun hidden = False
@@ -229,28 +129,6 @@ def show_container_view(checkbox_values):
         return {'display': 'none'}
 
 
-def get_container_plot(container_id, plot_type):
-    qc_plot_folder = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
-    container_plot_folder = os.path.join(qc_plot_folder, 'container_plots')
-
-    plot_image_path = os.path.join(
-        container_plot_folder,
-        plot_type, 'container_{}.png'.format(container_id)
-    )
-    print('frame path = {}'.format(plot_image_path))
-    try:
-        encoded_image = base64.b64encode(open(plot_image_path, 'rb').read())
-    except FileNotFoundError:
-        print('not found')
-        plot_not_found_path = os.path.join(
-            container_plot_folder,
-            'no_cached_plot_small.png'
-        )
-        encoded_image = base64.b64encode(
-            open(plot_not_found_path, 'rb').read())
-
-    return encoded_image
-
 # highlight row in data table
 
 
@@ -269,8 +147,6 @@ def highlight_row(row_index, page_current, derived_viewport_indices):
     else:
         index_to_highlight = 1e6
 
-    print('row_index = {}, page_current = {}, index_to_highlight = {}'.format(row_index, page_current, index_to_highlight))
-    print('derived_viewport_indices: {}'.format(derived_viewport_indices))
     style_data_conditional = [{
         "if": {"row_index": index_to_highlight},
         "backgroundColor": "#3D9970",
@@ -504,4 +380,3 @@ if __name__ == '__main__':
     print("PORT = {}".format(args.port))
     print("DEBUG MODE = {}".format(args.debug))
     app.run_server(debug=args.debug, port=args.port, host='0.0.0.0')
-
