@@ -36,11 +36,11 @@ def get_path(obj, key, check_exists):
     return path
 
 
-def run_ica_on_session(session, iter_ica, iter_neuropil, roi_name=None, np_name=None):
+def run_ica_on_session(session, iter_roi, iter_neuropil, roi_name=None, np_name=None):
     """
     helper function to run all crosstalk-demixing functions on a given session
     :param session: int, LIMS session ID
-    :param iter_ica: int, number of iterations for FastICA on Rois
+    :param iter_roi: int, number of iterations for FastICA on Rois
     :param iter_neuropil: int, number of iterations for FastICa on neuropil
     :param roi_name: str, filename prefix to use for roi-related data, if different form default "roi_ica"
     :param np_name: str, filename prefix to use for neuropil-related data, if different from default "neuropil_ica"
@@ -53,10 +53,10 @@ def run_ica_on_session(session, iter_ica, iter_neuropil, roi_name=None, np_name=
         ica_obj.validate_traces()
         ica_obj.combine_debias_roi()
         ica_obj.combine_debias_neuropil()
-        ica_obj.unmix_traces(max_iter=iter_ica)
+        ica_obj.unmix_traces(max_iter=iter_roi)
         ica_obj.unmix_neuropil(max_iter=iter_neuropil)
         ica_obj.plot_ica_traces(pair)
-    return
+    return ica_obj
 
 
 def run_ica_on_pair(session, pair, iter_ica, iter_neuropil, roi_name=None, np_name=None):
