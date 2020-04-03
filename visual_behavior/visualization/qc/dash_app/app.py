@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 
 import dash
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import dash_html_components as html
+import dash_core_components as dcc
 import argparse
+import numpy as np
+import plotly.graph_objs as go
+import time
+
 
 from functions import *
 from components import *
@@ -11,17 +16,20 @@ from components import *
 # APP SETUP
 app = dash.Dash(__name__,)
 app.title = 'Visual Behavior Data QC'
-app.config['suppress_callback_exceptions'] = True
+# app.config['suppress_callback_exceptions'] = True
 
 # FUNCTION CALLS
 container_table = load_data().sort_values('first_acquistion_date')
 container_plot_options = load_container_plot_options()
 container_overview_plot_options = load_container_overview_plot_options()
+plot_inventory = generate_plot_inventory()
+plot_inventory_fig = make_plot_inventory_heatmap(plot_inventory)
 
 # COMPONENT SETUP
 plot_selection_dropdown.options = container_plot_options
 container_overview_dropdown.options = container_overview_plot_options
 container_overview_iframe.src = app.get_asset_url('qc_plots/overview_plots/d_prime_container_overview.html')
+plot_inventory_iframe.src = 'https://dougollerenshaw.github.io/figures_to_share/container_plot_inventory.html'  # app.get_asset_url('qc_plots/container_plot_inventory.html')
 container_data_table.columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
 container_data_table.data = container_table.to_dict('records')
 
@@ -30,10 +38,13 @@ app.layout = html.Div([
     html.H3('Visual Behavior Data'),
     # checklist for components to show
     show_overview_checklist,
+    plot_inventory_graph_div,
     # container level dropdown
     container_overview_dropdown,
     # frame with container level plots
     container_overview_iframe,
+    plot_inventory_iframe,
+    # dcc.Graph(figure=plot_inventory_fig),
     html.H4('Container Summary Data Table:'),
     html.I('Adjust number of rows to display in the data table:'),
     table_row_selection,
@@ -84,7 +95,6 @@ app.layout = html.Div([
     plot_frames[19],
 ], className='container')
 
-
 @app.callback(Output('data_table', 'page_size'), [Input('entries_per_page_input', 'value')])
 def change_entries_per_page(entries_per_page):
     return entries_per_page
@@ -118,12 +128,41 @@ def show_container_view(checkbox_values):
         # return hidden = True
         return True
 
+# repopulate plot inventory frame based on 'container_checklist'
+@app.callback(Output('plot_inventory_graph', 'figure'), [Input('container_checklist', 'value')])
+def regenerate_plot_inventory(checkbox_values):
+    if 'show_plot_inventory' in checkbox_values:
+        
+        t0=time.time()
+        print('generating new plot inventory!!')
+        plot_inventory = generate_plot_inventory()
+        print('inventory done, making new figure')
+        plot_inventory_fig = make_plot_inventory_heatmap(plot_inventory)
+        print('done, that took {} seconds!'.format(time.time()-t0))
+        temp_fig=go.Figure(data=[go.Scatter(x=[1, 2, 3], y=[1, 8*np.random.rand(), 2])])
+        return plot_inventory_fig
+    else:
+        # return hidden = True
+        temp_fig=go.Figure(data=[go.Scatter(x=[1, 2, 3], y=[0,0,0])])
+        return temp_fig
+
+# show/hide plot inventory frame based on 'container_checklist'
+@app.callback(Output('plot_inventory_container', 'style'), [Input('container_checklist', 'value')])
+def show_container_view(checkbox_values):
+    if 'show_plot_inventory' in checkbox_values:
+        # retun hidden = False
+        print('making plot visible!!')
+        return {'display':'block'}
+    else:
+        # return hidden = True
+        return {'display':'none'}
+
 # show/hide container dropdown based on 'container_checklist'
 @app.callback(Output('container_overview_dropdown', 'style'), [Input('container_checklist', 'value')])
 def show_container_view(checkbox_values):
     if 'show_container_plots' in checkbox_values:
         # return hidden = False
-        return {}
+        return {'display': 'block'}
     else:
         # return hidden = True
         return {'display': 'none'}
