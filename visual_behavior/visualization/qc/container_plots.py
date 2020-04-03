@@ -246,6 +246,7 @@ def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True)
 
     figsize = (25, 20)
     fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
+    ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = dl.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
@@ -558,6 +559,7 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
 
     figsize = (25, 20)
     fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
+    ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=ax[i])
 
@@ -610,6 +612,7 @@ def plot_running_speed_for_container(ophys_container_id, save_figure=True):
 
     figsize = (25, 15)
     fig, ax = plt.subplots(len(ophys_session_ids), 1, figsize=figsize)
+    ax = ax_to_array(ax)
     for i, ophys_session_id in enumerate(ophys_session_ids):
         try:
             ax[i] = sp.plot_running_speed(ophys_session_id, ax=ax[i])
@@ -628,6 +631,7 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
 
     figsize = (25, 7)
     fig, ax = plt.subplots(1, len(ophys_session_ids), figsize=figsize)
+    ax = ax_to_array(ax)
     for i, ophys_session_id in enumerate(ophys_session_ids):
         ax[i] = sp.plot_lick_raster(ophys_session_id, ax=ax[i])
         ax[i].invert_yaxis()
