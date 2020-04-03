@@ -8,13 +8,15 @@ import argparse
 import numpy as np
 import plotly.graph_objs as go
 import time
+import dash_bootstrap_components as dbc
 
 
 from functions import *
 from components import *
 
 # APP SETUP
-app = dash.Dash(__name__,)
+# app = dash.Dash(__name__,)
+app = dash.Dash(external_stylesheets=[dbc.themes.SPACELAB])
 app.title = 'Visual Behavior Data QC'
 # app.config['suppress_callback_exceptions'] = True
 
@@ -33,67 +35,91 @@ plot_inventory_iframe.src = 'https://dougollerenshaw.github.io/figures_to_share/
 container_data_table.columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
 container_data_table.data = container_table.to_dict('records')
 
+
+
 # APP LAYOUT
-app.layout = html.Div([
-    html.H3('Visual Behavior Data'),
-    # checklist for components to show
-    show_overview_checklist,
-    plot_inventory_graph_div,
-    # container level dropdown
-    container_overview_dropdown,
-    # frame with container level plots
-    container_overview_iframe,
-    plot_inventory_iframe,
-    # dcc.Graph(figure=plot_inventory_fig),
-    html.H4('Container Summary Data Table:'),
-    html.I('Adjust number of rows to display in the data table:'),
-    table_row_selection,
-    # data table
-    container_data_table,
-    # dropdown for plot selection
-    html.H4('Select plots to generate from the dropdown (max 10)'),
-    plot_selection_dropdown,
-    plot_titles[0],
-    plot_frames[0],
-    plot_titles[1],
-    plot_frames[1],
-    plot_titles[2],
-    plot_frames[2],
-    plot_titles[3],
-    plot_frames[3],
-    plot_titles[4],
-    plot_frames[4],
-    plot_titles[5],
-    plot_frames[5],
-    plot_titles[6],
-    plot_frames[6],
-    plot_titles[7],
-    plot_frames[7],
-    plot_titles[8],
-    plot_frames[8],
-    plot_titles[9],
-    plot_frames[9],
-    plot_titles[10],
-    plot_frames[10],
-    plot_titles[11],
-    plot_frames[11],
-    plot_titles[12],
-    plot_frames[12],
-    plot_titles[13],
-    plot_frames[13],
-    plot_titles[14],
-    plot_frames[14],
-    plot_titles[15],
-    plot_frames[15],
-    plot_titles[16],
-    plot_frames[16],
-    plot_titles[17],
-    plot_frames[17],
-    plot_titles[18],
-    plot_frames[18],
-    plot_titles[19],
-    plot_frames[19],
-], className='container')
+app.layout = html.Div(
+    [
+        html.H3('Visual Behavior Data'),
+        # checklist for components to show
+        show_overview_checklist,
+        plot_inventory_graph_div,
+        # container level dropdown
+        container_overview_dropdown,
+        # frame with container level plots
+        container_overview_iframe,
+        plot_inventory_iframe,
+        # dcc.Graph(figure=plot_inventory_fig),
+        html.H4('Container Summary Data Table:'),
+        html.I('Adjust number of rows to display in the data table:'),
+        table_row_selection,
+        # data table
+        container_data_table,
+        # dropdown for plot selection
+        html.H4(''),
+        html.H4('Select plots to generate from the dropdown (max 10)'),
+        plot_selection_dropdown,
+        feeback_button,
+        plot_titles[0],
+        plot_frames[0],
+        plot_titles[1],
+        plot_frames[1],
+        plot_titles[2],
+        plot_frames[2],
+        plot_titles[3],
+        plot_frames[3],
+        plot_titles[4],
+        plot_frames[4],
+        plot_titles[5],
+        plot_frames[5],
+        plot_titles[6],
+        plot_frames[6],
+        plot_titles[7],
+        plot_frames[7],
+        plot_titles[8],
+        plot_frames[8],
+        plot_titles[9],
+        plot_frames[9],
+        plot_titles[10],
+        plot_frames[10],
+        plot_titles[11],
+        plot_frames[11],
+        plot_titles[12],
+        plot_frames[12],
+        plot_titles[13],
+        plot_frames[13],
+        plot_titles[14],
+        plot_frames[14],
+        plot_titles[15],
+        plot_frames[15],
+        plot_titles[16],
+        plot_frames[16],
+        plot_titles[17],
+        plot_frames[17],
+        plot_titles[18],
+        plot_frames[18],
+        plot_titles[19],
+        plot_frames[19],
+    ], 
+    className='container',
+    style={
+        # 'padding': '10px',
+        'margin-left':'10px',
+        'margin-right':'10px',
+        'margin-top':'10px',
+        'margin-bottom':'10px',
+    },
+)
+
+@app.callback(
+    Output("plot_qc_popup", "is_open"),
+    [Input("open", "n_clicks"), Input("close", "n_clicks")],
+    [State("plot_qc_popup", "is_open")],
+)
+def toggle_modal(n1, n2, is_open):
+    if n1 or n2:
+        return not is_open
+    return is_open
 
 @app.callback(Output('data_table', 'page_size'), [Input('entries_per_page_input', 'value')])
 def change_entries_per_page(entries_per_page):

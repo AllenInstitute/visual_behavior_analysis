@@ -22,8 +22,8 @@ plot_selection_dropdown = dcc.Dropdown(
 show_overview_checklist = dcc.Checklist(
     id='container_checklist',
     options=[
-        {'label': 'Show Container Level Summary Plots  ', 'value': 'show_container_plots'},
-        {'label': 'Show Plot Inventory  ', 'value': 'show_plot_inventory'},
+        {'label': 'Show Container Level Summary Plots   |', 'value': 'show_container_plots'},
+        {'label': 'Show Plot Inventory   ', 'value': 'show_plot_inventory'},
     ],
     value=[]
 )
@@ -80,6 +80,8 @@ container_data_table = dash_table.DataTable(
         'height': 'auto'
     },
     style_table={'overflowX': 'scroll'},
+    style_cell={'padding': '2px'},
+    css=[{'selector': '.row', 'rule': 'margin: 0'}]
 )
 
 plot_titles = [html.H4(id='plot_title_{}'.format(N), children='') for N in range(30)]
@@ -100,18 +102,18 @@ plot_inventory_graph_div = html.Div(
     ]
 )
 
-modal = html.Div(
+feeback_button = html.Div(
     [
-        dbc.Button("Open modal", id="open"),
+        dbc.Button("Provide Feedback", id="open"),
         dbc.Modal(
             [
-                dbc.ModalHeader("Header"),
-                dbc.ModalBody("This is the content of the modal"),
+                dbc.ModalHeader("Plot Feedback"),
+                dbc.ModalBody("This is a prototype popup for plot QC"),
                 dbc.ModalFooter(
                     dbc.Button("Close", id="close", className="ml-auto")
                 ),
             ],
-            id="modal",
+            id="plot_qc_popup",
         ),
     ]
 )
