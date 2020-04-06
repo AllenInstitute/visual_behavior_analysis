@@ -972,11 +972,11 @@ class MesoscopeICA(object):
                 if a[0, 0] < a[1, 0]:
                     a = np.array([a[:, 1], a[:, 0]])
 
-                w = linalg.pinv(a)
-                s = np.dot(w, traces.T).T
-                self.roi_ica_output = s
-                self.roi_unmix = s
-                self.roi_matrix = a
+                w = linalg.pinv(a)  # inverting mixing matrix to get nunmixing matrix
+                s = np.dot(w, traces.T).T  # recontructing signals: dot product of unmixing matrix and input traces
+                self.roi_ica_output = s  # ica outoput to be written to disk, or used for debugging
+                self.roi_unmix = s  # inca utput to be rescaled and reshaped to the original form
+                self.roi_matrix = a  # unmixing matrix to be wirtten to disc
                 del a
                 del s
                 del ica
@@ -1119,11 +1119,13 @@ class MesoscopeICA(object):
                 ica.fit_transform(traces)  # Reconstruct signals
                 a = ica.mixing_  # Get estimated mixing matrix
                 logger.info("ICA successful")
-                # make sure no negative coeffs:
+
+                # check for negative coeffs:
                 a[a < 0] *= -1
                 # switch rows if needed:
                 if a[0, 0] < a[1, 0]:
                     a = np.array([a[:, 1], a[:, 1]])
+
                 w = linalg.pinv(a)
                 s = np.dot(w, traces.T).T
                 self.neuropil_ica_output = s

@@ -40,7 +40,7 @@ def test_get_ica_done_sessions():
     assert len(ica_done) != 0, 'did not find any ica_done sessions'
     assert len(ica_not_done) != 0, 'did not find any ica_done sessions'
     assert len(ica_done)+len(ica_not_done) == len(meso_data), 'numbers of ica_done and ica_not_done sessions do not add up'
-    
+
     return ica_done, ica_not_done, meso_data
 
 
