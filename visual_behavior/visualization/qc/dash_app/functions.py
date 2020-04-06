@@ -50,6 +50,7 @@ def get_container_plot_path(container_id, plot_type):
     )
     return plot_image_path
 
+
 def get_container_plot(container_id, plot_type):
     plot_image_path = get_container_plot_path(container_id, plot_type)
     try:
@@ -65,7 +66,9 @@ def get_container_plot(container_id, plot_type):
 
     return encoded_image
 
+
 CONTAINER_TABLE = load_data().sort_values('first_acquistion_date')
+
 
 def generate_plot_inventory():
     global CONTAINER_TABLE
@@ -96,7 +99,7 @@ def make_plot_inventory_heatmap(plot_inventory):
     )
 
     timestamp = datetime.datetime.now()
-    timestamp_string = 'last updated on {} @ {}'.format(timestamp.strftime('%D'),timestamp.strftime('%H:%M:%S'))
+    timestamp_string = 'last updated on {} @ {}'.format(timestamp.strftime('%D'), timestamp.strftime('%H:%M:%S'))
 
     fig.update_layout(
         autosize=False,

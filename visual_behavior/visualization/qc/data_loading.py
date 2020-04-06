@@ -68,7 +68,7 @@ def get_experiment_plots_dir():
 
 def get_qc_manifest_path():
     """Get path to default manifest file for QC"""
-    manifest_path = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest.json"
+    manifest_path = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest_2020.04.06.json"
     return manifest_path
 
 
@@ -119,7 +119,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
 
     experiments = reformat_experiments_table(experiments)
     if include_failed_data:
-        filtered_experiments = experiments[experiments.experiment_workflow_state.isin(['passed','failed'])]
+        filtered_experiments = experiments[experiments.experiment_workflow_state.isin(['passed', 'failed'])]
     else:
         # sessions = sdk_utils.get_filtered_sessions_table(cache, include_multiscope=True, require_full_container=False, require_exp_pass=False)
         # sessions = sessions.reset_index()
@@ -172,7 +172,7 @@ def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
 
 
 def add_location_to_expts(expts):
-    expts['location'] = [expts.loc[x]['cre_line'].split('-')[0]+'_'+expts.loc[x]['targeted_structure']+'_'+str(int(expts.loc[x]['imaging_depth'])) for x in expts.index.values]
+    expts['location'] = [expts.loc[x]['cre_line'].split('-')[0] + '_' + expts.loc[x]['targeted_structure'] + '_' + str(int(expts.loc[x]['imaging_depth'])) for x in expts.index.values]
     return expts
 
 
@@ -183,7 +183,7 @@ def get_exposure_number_for_group(group):
 
 
 def add_exposure_number_to_experiments_table(experiments):
-    experiments = experiments.groupby(['super_container_id','container_id','session_type']).apply(get_exposure_number_for_group)
+    experiments = experiments.groupby(['super_container_id', 'container_id', 'session_type']).apply(get_exposure_number_for_group)
     return experiments
 
 
@@ -228,7 +228,7 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
             """
     # sessions = get_filtered_ophys_sessions_table()
     # ophys_session_ids = np.sort(sessions[(sessions.container_id == ophys_container_id)].ophys_session_id.values)
-    ### temporary fix - need to make get_filtered_ophys_sessions_table work properly
+    # temporary fix - need to make get_filtered_ophys_sessions_table work properly
     experiments = get_filtered_ophys_experiment_table()
     ophys_session_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_session_id.values)
     return ophys_session_ids
@@ -258,7 +258,7 @@ def get_session_type_for_ophys_experiment_id(ophys_experiment_id):
 def get_session_type_for_ophys_session_id(ophys_session_id):
     # sessions = get_filtered_ophys_sessions_table()
     # session_type = sessions[sessions.ophys_session_id == ophys_session_id].session_type.values[0]
-    ### temporary fix!!
+    # temporary fix!!
     experiments = get_filtered_ophys_experiment_table()
     session_type = experiments[experiments.ophys_session_id == ophys_session_id].session_type.values[0]
     return session_type

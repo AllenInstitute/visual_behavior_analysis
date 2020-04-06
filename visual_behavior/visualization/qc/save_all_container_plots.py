@@ -27,7 +27,7 @@ def main():
         "pmt_settings": cp.plot_pmt_for_container,
         "snr_by_pmt": cp.plot_snr_by_pmt_for_container,
         "snr_by_pmt_and_intensity": cp.plot_snr_by_pmt_gain_and_intensity_for_container,
-        "behavior_summary":cp.plot_behavior_summary,
+        "behavior_summary": cp.plot_behavior_summary,
     }
 
     parser = argparse.ArgumentParser()

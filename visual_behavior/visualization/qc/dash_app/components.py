@@ -4,7 +4,6 @@ import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
 import plotly.graph_objs as go
-import time
 import dash_bootstrap_components as dbc
 
 from functions import generate_plot_inventory, make_plot_inventory_heatmap
@@ -90,14 +89,14 @@ plot_inventory = generate_plot_inventory()
 plot_inventory_fig = make_plot_inventory_heatmap(plot_inventory)
 
 plot_inventory_graph = dcc.Graph(
-        id='plot_inventory_graph',
-        style={'height': 3000},
-        figure=plot_inventory_fig
-    )
+    id='plot_inventory_graph',
+    style={'height': 3000},
+    figure=plot_inventory_fig
+)
 plot_inventory_graph_div = html.Div(
-    id="plot_inventory_container", 
-    style={'display':'block'},
-    children= [
+    id="plot_inventory_container",
+    style={'display': 'block'},
+    children=[
         plot_inventory_graph,
     ]
 )
@@ -117,3 +116,39 @@ feeback_button = html.Div(
         ),
     ]
 )
+
+
+class FeebackButton(object):
+    def __init__(plot_number, plot_name, body_text=None):
+        self.plot_number = plot_number
+        self.plot_name = plot_name
+        if body_text is not None:
+            self.body_text = body_text
+        else:
+            self.body_text = 'this is the popup body'
+
+        self.popup = self.make_popup()
+
+    def make_popup():
+        feeback_button = html.Div(
+            [
+                dbc.Button(
+                    "{} - Provide Feedback".format(plot_title),
+                    id="open_feedback_{}".format(self.plot_number)
+                ),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader("Provide feedback for {}".form(plot_title)),
+                        dbc.ModalBody(self.body_text),
+                        dbc.ModalFooter(
+                            dbc.Button("Close", id="close", className="ml-auto")
+                        ),
+                    ],
+                    id="plot_qc_popup_{}".format(self.plot_number),
+                ),
+            ]
+        )
+        return feedback_button
+
+    def update_info(plot_number, plot_name):
+        self.popup

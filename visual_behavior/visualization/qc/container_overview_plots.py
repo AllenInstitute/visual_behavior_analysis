@@ -1,8 +1,4 @@
-from visual_behavior.visualization.qc import session_plots as sp
-from visual_behavior.visualization.qc import container_plots as cp
 from visual_behavior.visualization.qc import data_loading as dl
-import visual_behavior.utilities as vbu
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
@@ -65,12 +61,15 @@ def rewrite_record(uuid):
     trials = create_extended_dataframe(**core_data).drop(columns=['date', 'LDT_mode'])
     summary = summarize.session_level_summary(trials).iloc[0].to_dict()
     summary.update({'error_on_load': 0})
+
+    vb = db.Database('visual_behavior_data')
     db.update_or_create(
         vb['behavior_data']['summary'],
         db.simplify_entry(summary),
         ['behavior_session_uuid'],
         force_write=False
     )
+    vb.close()
 
 
 def load_data():
@@ -79,26 +78,26 @@ def load_data():
     return container_df.query('container_id in @filtered_container_list')
 
 
-def populate_xarray(values = ['d_prime_peak','number_of_licks','num_contingent_trials']):
+def populate_xarray(values=['d_prime_peak', 'number_of_licks', 'num_contingent_trials']):
     print('populating xarray...')
     container_df = load_data()
-    container_df['line'] = container_df['driver_line'].map(lambda s:';'.join(s))
+    container_df['line'] = container_df['driver_line'].map(lambda s: ';'.join(s))
     session_summary = db.get_behavior_session_summary()
 
-    container_df = container_df.sort_values(by=['line','targeted_structure','first_acquistion_date'])
+    container_df = container_df.sort_values(by=['line', 'targeted_structure', 'first_acquistion_date'])
     container_ids = container_df.container_id.values
     sessions = ['session_{}'.format(i) for i in range(6)]
 
     session_prefixes = []
     for container_id in container_ids:
-        session_prefixes += [s.split(' ')[0][:7] for s in container_df[container_df['container_id']==container_id][sessions].values[0] if pd.notnull(s)]
+        session_prefixes += [s.split(' ')[0][:7] for s in container_df[container_df['container_id'] == container_id][sessions].values[0] if pd.notnull(s)]
     session_prefixes = np.sort(np.unique(np.array(session_prefixes)))
 
     val_array = xr.DataArray(
-        np.zeros((len(container_ids), len(sessions),len(values))), 
-        dims=('container_id', 'session_prefix','value'), 
-        coords={'container_id':container_ids, 'session_prefix':session_prefixes,'value':values}
-    )*np.nan
+        np.zeros((len(container_ids), len(sessions), len(values))),
+        dims=('container_id', 'session_prefix', 'value'),
+        coords={'container_id': container_ids, 'session_prefix': session_prefixes, 'value': values}
+    ) * np.nan
 
     for container_id in container_ids:
         for session_number in range(6):
@@ -108,25 +107,26 @@ def populate_xarray(values = ['d_prime_peak','number_of_licks','num_contingent_t
                 if 'error_on_load' in session_stats.keys() and session_stats['error_on_load'] == 1:
                     rewrite_record(bs_uuid)
                 session_prefix = get_value(container_df, container_id, session_number, 'session_prefix')
-                
+
                 for value in values:
                     v = get_value(container_df, container_id, session_number, value)
-                    val_array.loc[{'container_id':container_id, 'session_prefix':session_prefix,'value':value}] = v
+                    val_array.loc[{'container_id': container_id, 'session_prefix': session_prefix, 'value': value}] = v
 
     return val_array
 
-def make_container_overview_plots(values = ['d_prime_peak','number_of_licks','num_contingent_trials']):
+
+def make_container_overview_plots(values=['d_prime_peak', 'number_of_licks', 'num_contingent_trials']):
     val_array = populate_xarray(values)
     for value in values:
         print('making plot for {}'.format(value))
         fig = go.Figure(
             data=go.Heatmap(
-                z=val_array.loc[{'container_id':container_ids,'value':value}].values,
+                z=val_array.loc[{'container_id': container_ids, 'value': value}].values,
                 x=session_prefixes,
-        #         y = [str(i) for i in range(len(container_ids))],
+                #         y = [str(i) for i in range(len(container_ids))],
                 y=container_ids,
-                hoverongaps = True,
-                colorbar={'title':value},
+                hoverongaps=True,
+                colorbar={'title': value},
                 colorscale='viridis',
             )
         )
@@ -134,7 +134,7 @@ def make_container_overview_plots(values = ['d_prime_peak','number_of_licks','nu
         fig.update_layout(
             autosize=False,
             width=700,
-            height=20*len(container_ids),
+            height=20 * len(container_ids),
             margin=dict(
                 l=0,
                 r=0,
@@ -146,9 +146,10 @@ def make_container_overview_plots(values = ['d_prime_peak','number_of_licks','nu
             yaxis_title='container ID',
             title='{} by container ID and ophys session'.format(value)
         )
-        fig.update_yaxes(autorange="reversed",type='category',dtick=1)
+        fig.update_yaxes(autorange="reversed", type='category', dtick=1)
         fig.update_xaxes(dtick=1)
         fig.write_html("/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/overview_plots/{}_container_overview.html".format(value))
+
 
 if __name__ == '__main__':
     make_container_overview_plots()

@@ -30,7 +30,6 @@ def lighter(color, percent):
 def get_session_type_color_map():
     colors = np.floor(np.array([list(x) for x in get_colors_for_session_numbers()]) * 255).astype(np.uint8)
     black = np.array([0, 0, 0]).astype(np.uint8)
-    bright_red = np.array([256, 0, 0]).astype(np.uint8)
 
     session_type_color_map = {
         'OPHYS_0_images_A_habituation': lighter(colors[0, :], 0.8),
@@ -107,4 +106,3 @@ def get_location_color(location, project_code):
 def make_color_transparent(rgb_color, background_rgb=[255, 255, 255], alpha=0.5):
     return [alpha * c1 + (1 - alpha) * c2
             for (c1, c2) in zip(rgb_color, background_rgb)]
-

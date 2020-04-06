@@ -1,7 +1,5 @@
 import os
 import numpy as np
-import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
 
 from visual_behavior.visualization import utils as ut
@@ -10,9 +8,6 @@ from visual_behavior.visualization.qc import data_loading as dl
 # from visual_behavior.visualization.qc import plotting_utils as pu
 # from visual_behavior.visualization.qc import data_processing as dp
 # from visual_behavior.visualization.qc import experiment_plots as ep
-
-
-
 
 
 def plot_expts_for_container(experiments_table, container_id, experiment_ids_to_highlight=None, max_n_expts=None,
@@ -55,7 +50,7 @@ def plot_expts_for_container(experiments_table, container_id, experiment_ids_to_
 
     # plot session colors and fails
     ax.imshow(img.astype(int))
-    ax.axis('off');
+    ax.axis('off')
     for x in fail_x:
         ax.text(x=x, y=0, s='X', ha='center', va='center', fontsize=20)
 
@@ -73,63 +68,56 @@ def plot_container_overview(experiments_table, project_code):
         ax[i] = plot_expts_for_container(container_id, project_expts, max_n_expts=max_n_expts, ax=ax[i])
     plt.suptitle('project code: ' + project_code, x=0.5, y=0.89, fontsize=20, horizontalalignment='center')
 
-    savepath = os.path.join(dl.get_container_plots_dir(), 'eyetracking_sample_frames',
-                            'container_{}.png'.format(ophys_container_id))
-    fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
-
-
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
     ut.save_figure(fig, figsize, save_dir, 'overview_plots', project_code + '_containers_chronological')
-
 
 
 def plot_chronological_datacube_summary(project_experiments_table, experiment_ids_to_highlight, what_is_highlighted_string, save_dir=None):
     expts = project_experiments_table.copy()
     project_code = expts.project_code.unique()[0]
-    max_n_expts = expts.groupby(['super_container_id','container_id']).count().ophys_session_id.max()
+    max_n_expts = expts.groupby(['super_container_id', 'container_id']).count().ophys_session_id.max()
     super_container_ids = np.sort(expts.super_container_id.unique())
     n_container_ids = len(expts.container_id.unique())
 
-    figsize=(15, n_container_ids)
-    fig, ax = plt.subplots(n_container_ids, 1, figsize=figsize, gridspec_kw = {'wspace':0, 'hspace':0})
+    figsize = (15, n_container_ids)
+    fig, ax = plt.subplots(n_container_ids, 1, figsize=figsize, gridspec_kw={'wspace': 0, 'hspace': 0})
     i = 0
     for x, super_container_id in enumerate(super_container_ids):
-        super_container_expts = expts[expts.super_container_id==super_container_id]
+        super_container_expts = expts[expts.super_container_id == super_container_id]
         container_ids = super_container_expts.container_id.unique()
         for y, container_id in enumerate(container_ids):
-            container_expts = expts[expts.container_id==container_id]
+            container_expts = expts[expts.container_id == container_id]
             ax[i] = plot_expts_for_container(super_container_expts, container_id, experiment_ids_to_highlight, max_n_expts=max_n_expts, ax=ax[i])
-            i+=1
-    plt.suptitle('project code: '+project_code+' - '+what_is_highlighted_string, x=0.3, y=0.9, fontsize=20, horizontalalignment='center')
+            i += 1
+    plt.suptitle('project code: ' + project_code + ' - ' + what_is_highlighted_string, x=0.3, y=0.9, fontsize=20, horizontalalignment='center')
     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots'
     if save_dir:
-        ut.save_figure(fig, figsize, save_dir, 'overview_plots', project_code+'_containers_chronological_'+what_is_highlighted_string)
+        ut.save_figure(fig, figsize, save_dir, 'overview_plots', project_code + '_containers_chronological_' + what_is_highlighted_string)
 
 
 def plot_sorted_datacube_summary(project_experiments_table, experiment_ids_to_highlight, what_is_highlighted_string, save_dir=None):
     expts = project_experiments_table.copy()
     project_code = expts.project_code.unique()[0]
-    max_n_expts = expts.groupby(['super_container_id','container_id']).count().ophys_session_id.max()
-    sorted_super_container_ids = expts.groupby(['cre_line','targeted_structure','date_of_acquisition','super_container_id']).count().reset_index().super_container_id.unique()
+    max_n_expts = expts.groupby(['super_container_id', 'container_id']).count().ophys_session_id.max()
+    sorted_super_container_ids = expts.groupby(['cre_line', 'targeted_structure', 'date_of_acquisition', 'super_container_id']).count().reset_index().super_container_id.unique()
     super_container_ids = sorted_super_container_ids
     n_container_ids = len(expts.container_id.unique())
 
-    figsize=(15, n_container_ids)
-    fig, ax = plt.subplots(n_container_ids, 1, figsize=figsize, gridspec_kw = {'wspace':0, 'hspace':0})
+    figsize = (15, n_container_ids)
+    fig, ax = plt.subplots(n_container_ids, 1, figsize=figsize, gridspec_kw={'wspace': 0, 'hspace': 0})
     i = 0
     for x, super_container_id in enumerate(super_container_ids):
-        super_container_expts = expts[expts.super_container_id==super_container_id]
+        super_container_expts = expts[expts.super_container_id == super_container_id]
         container_ids = super_container_expts.container_id.unique()
         for y, container_id in enumerate(container_ids):
-            container_expts = expts[expts.container_id==container_id]
+            container_expts = expts[expts.container_id == container_id]
             ax[i] = plot_expts_for_container(super_container_expts, container_id, experiment_ids_to_highlight, max_n_expts=max_n_expts, ax=ax[i])
-            i+=1
-    plt.suptitle('project code: '+project_code+' - '+what_is_highlighted_string, x=0.3, y=0.9, fontsize=20, horizontalalignment='center')
+            i += 1
+    plt.suptitle('project code: ' + project_code + ' - ' + what_is_highlighted_string, x=0.3, y=0.9, fontsize=20, horizontalalignment='center')
     fig.subplots_adjust(left=0.2)
     save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots'
     if save_dir:
-        ut.save_figure(fig, figsize, save_dir, 'overview_plots', project_code+'_containers_sorted_'+what_is_highlighted_string)
-
+        ut.save_figure(fig, figsize, save_dir, 'overview_plots', project_code + '_containers_sorted_' + what_is_highlighted_string)
 
 
 if __name__ == "__main__":
@@ -148,7 +136,6 @@ if __name__ == "__main__":
                        'first_novel_image_exposure_including_failures',
                        'first_omission_exposure_passing',
                        'first_omission_exposure_including_failures']
-
 
     for what_is_highlighted_string in list_of_filters:
 

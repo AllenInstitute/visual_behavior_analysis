@@ -331,7 +331,7 @@ def plot_average_intensity_for_container(ophys_container_id, save_figure=True):
     stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
     figsize = (6, 9)
     fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.scatterplot(x="stage_name_lims", y="intensity_mean", data=df,
+    sns.scatterplot(x="stage_name_lims", y="intensity_mean", data=df,
                          hue="stage_name_lims", palette=stage_color_dict,
                          legend=False)
     plt.xticks(rotation=90)
