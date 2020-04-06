@@ -119,7 +119,7 @@ feeback_button = html.Div(
 
 
 class FeebackButton(object):
-    def __init__(plot_number, plot_name, body_text=None):
+    def __init__(self, plot_number, plot_name, body_text=None):
         self.plot_number = plot_number
         self.plot_name = plot_name
         if body_text is not None:
@@ -129,16 +129,16 @@ class FeebackButton(object):
 
         self.popup = self.make_popup()
 
-    def make_popup():
-        feeback_button = html.Div(
+    def make_popup(self):
+        feedback_button = html.Div(
             [
                 dbc.Button(
-                    "{} - Provide Feedback".format(plot_title),
+                    "{} - Provide Feedback".format(self.plot_name),
                     id="open_feedback_{}".format(self.plot_number)
                 ),
                 dbc.Modal(
                     [
-                        dbc.ModalHeader("Provide feedback for {}".form(plot_title)),
+                        dbc.ModalHeader("Provide feedback for {}".format(self.plot_name)),
                         dbc.ModalBody(self.body_text),
                         dbc.ModalFooter(
                             dbc.Button("Close", id="close", className="ml-auto")
@@ -150,5 +150,5 @@ class FeebackButton(object):
         )
         return feedback_button
 
-    def update_info(plot_number, plot_name):
+    def update_info(self, plot_number, plot_name):
         self.popup

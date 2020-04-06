@@ -24,6 +24,7 @@ def ax_to_array(ax):
 
 # Container sequence
 
+
 def plot_container_session_sequence(ophys_container_id, save_figure=True):
     experiments_table = dl.get_filtered_ophys_experiment_table(include_failed_data=True)
     expts = experiments_table[experiments_table.container_id == ophys_container_id].sort_values('date_of_acquisition')
@@ -331,9 +332,14 @@ def plot_average_intensity_for_container(ophys_container_id, save_figure=True):
     stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
     figsize = (6, 9)
     fig, ax = plt.subplots(figsize=figsize)
-    sns.scatterplot(x="stage_name_lims", y="intensity_mean", data=df,
-                         hue="stage_name_lims", palette=stage_color_dict,
-                         legend=False)
+    sns.scatterplot(
+        x="stage_name_lims",
+        y="intensity_mean",
+        data=df,
+        hue="stage_name_lims",
+        palette=stage_color_dict,
+        legend=False
+    )
     plt.xticks(rotation=90)
     plt.ylabel('FOV average intensity')
     plt.title("FOV mean intensity for container")
@@ -613,13 +619,10 @@ def plot_running_speed_for_container(ophys_container_id, save_figure=True):
     figsize = (25, 15)
     fig, ax = plt.subplots(len(ophys_session_ids), 1, figsize=figsize)
     ax = ax_to_array(ax)
-    for i, ophys_session_id in enumerate(ophys_session_ids):
-        try:
-            ax[i] = sp.plot_running_speed(ophys_session_id, ax=ax[i])
-        except:
-            pass
-        session_type = dl.get_session_type_for_ophys_session_id(ophys_session_id)
-        ax[i].set_title(str(ophys_session_id) + '\n' + session_type)
+    for i, ophys_session_id in enumerate(ophys_session_ids)
+    ax[i] = sp.plot_running_speed(ophys_session_id, ax=ax[i])
+    session_type = dl.get_session_type_for_ophys_session_id(ophys_session_id)
+    ax[i].set_title(str(ophys_session_id) + '\n' + session_type)
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'running_speed',
@@ -745,7 +748,7 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
     for ii, oeid in enumerate(ophys_experiment_ids):
         uuid = oeid_to_uuid(oeid)
         session_type = table.query('container_id == {} and ophys_experiment_id == {}'.format(
-            ophys_container_id,oeid))['session_type'].iloc[0]
+            ophys_container_id, oeid))['session_type'].iloc[0]
         y_labels.append('expt_id = {}\n{}'.format(oeid, session_type))
         for key in vals_to_plot.keys():
             try:

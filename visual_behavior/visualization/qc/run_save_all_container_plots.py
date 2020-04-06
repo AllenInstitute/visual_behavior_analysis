@@ -3,7 +3,7 @@ from visual_behavior.visualization.qc import data_loading
 import argparse
 import sys
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')
-from pbstools import pbstools
+from pbstools import pbstools # NOQA E402
 
 
 parser = argparse.ArgumentParser(description='run container qc plot generation functions on the cluster')

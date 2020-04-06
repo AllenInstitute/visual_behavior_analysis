@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -86,7 +85,6 @@ def plot_chronological_datacube_summary(project_experiments_table, experiment_id
         super_container_expts = expts[expts.super_container_id == super_container_id]
         container_ids = super_container_expts.container_id.unique()
         for y, container_id in enumerate(container_ids):
-            container_expts = expts[expts.container_id == container_id]
             ax[i] = plot_expts_for_container(super_container_expts, container_id, experiment_ids_to_highlight, max_n_expts=max_n_expts, ax=ax[i])
             i += 1
     plt.suptitle('project code: ' + project_code + ' - ' + what_is_highlighted_string, x=0.3, y=0.9, fontsize=20, horizontalalignment='center')
@@ -110,7 +108,6 @@ def plot_sorted_datacube_summary(project_experiments_table, experiment_ids_to_hi
         super_container_expts = expts[expts.super_container_id == super_container_id]
         container_ids = super_container_expts.container_id.unique()
         for y, container_id in enumerate(container_ids):
-            container_expts = expts[expts.container_id == container_id]
             ax[i] = plot_expts_for_container(super_container_expts, container_id, experiment_ids_to_highlight, max_n_expts=max_n_expts, ax=ax[i])
             i += 1
     plt.suptitle('project code: ' + project_code + ' - ' + what_is_highlighted_string, x=0.3, y=0.9, fontsize=20, horizontalalignment='center')

@@ -117,14 +117,15 @@ def populate_xarray(values=['d_prime_peak', 'number_of_licks', 'num_contingent_t
 
 def make_container_overview_plots(values=['d_prime_peak', 'number_of_licks', 'num_contingent_trials']):
     val_array = populate_xarray(values)
+
     for value in values:
         print('making plot for {}'.format(value))
         fig = go.Figure(
             data=go.Heatmap(
-                z=val_array.loc[{'container_id': container_ids, 'value': value}].values,
-                x=session_prefixes,
+                z=val_array.loc[{'value': value}].values,
+                # x=session_prefixes,
                 #         y = [str(i) for i in range(len(container_ids))],
-                y=container_ids,
+                # y=container_ids,
                 hoverongaps=True,
                 colorbar={'title': value},
                 colorscale='viridis',
@@ -136,7 +137,7 @@ def make_container_overview_plots(values=['d_prime_peak', 'number_of_licks', 'nu
             width=700,
             height=20 * len(container_ids),
             margin=dict(
-                l=0,
+                l=0, # NOQA E741
                 r=0,
                 b=0,
                 t=50,

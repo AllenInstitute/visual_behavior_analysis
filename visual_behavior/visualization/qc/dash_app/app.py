@@ -28,7 +28,7 @@ plot_inventory_fig = functions.make_plot_inventory_heatmap(plot_inventory)
 # COMPONENT SETUP
 components.plot_selection_dropdown.options = container_plot_options
 components.components.container_overview_dropdown.options = container_overview_plot_options
-container_overview_iframe.src = app.get_asset_url('qc_plots/overview_plots/d_prime_container_overview.html')
+components.container_overview_iframe.src = app.get_asset_url('qc_plots/overview_plots/d_prime_container_overview.html')
 components.plot_inventory_iframe.src = 'https://dougollerenshaw.github.io/figures_to_share/container_plot_inventory.html'  # app.get_asset_url('qc_plots/container_plot_inventory.html')
 components.container_data_table.columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
 components.container_data_table.data = container_table.to_dict('records')
@@ -157,12 +157,8 @@ def show_container_view(checkbox_values):
 def regenerate_plot_inventory(checkbox_values):
     if 'show_plot_inventory' in checkbox_values:
 
-        t0 = time.time()
-        print('generating new plot inventory!!')
         plot_inventory = generate_plot_inventory()
-        print('inventory done, making new figure')
         plot_inventory_fig = make_plot_inventory_heatmap(plot_inventory)
-        print('done, that took {} seconds!'.format(time.time() - t0))
         temp_fig = go.Figure(data=[go.Scatter(x=[1, 2, 3], y=[1, 8 * np.random.rand(), 2])])
         return plot_inventory_fig
     else:
@@ -172,7 +168,7 @@ def regenerate_plot_inventory(checkbox_values):
 
 # show/hide plot inventory frame based on 'container_checklist'
 @app.callback(Output('plot_inventory_container', 'style'), [Input('container_checklist', 'value')])
-def show_container_view(checkbox_values):
+def show_plot_inventory(checkbox_values):
     if 'show_plot_inventory' in checkbox_values:
         # retun hidden = False
         print('making plot visible!!')
@@ -183,7 +179,7 @@ def show_container_view(checkbox_values):
 
 # show/hide container dropdown based on 'container_checklist'
 @app.callback(Output('container_overview_dropdown', 'style'), [Input('container_checklist', 'value')])
-def show_container_view(checkbox_values):
+def show_container_dropdown(checkbox_values):
     if 'show_container_plots' in checkbox_values:
         # return hidden = False
         return {'display': 'block'}
@@ -313,7 +309,7 @@ def update_frame_10(row_index, plot_types):
     if len(plot_types) >= 1:
         plot_type = plot_types[0]
         container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = get_container_plot(container_id, plot_type=plot_type)
+        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
 
 
@@ -325,7 +321,7 @@ def update_frame_11(row_index, plot_types):
     if len(plot_types) >= 2:
         plot_type = plot_types[1]
         container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = get_container_plot(container_id, plot_type=plot_type)
+        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
 
 
@@ -337,7 +333,7 @@ def update_frame_12(row_index, plot_types):
     if len(plot_types) >= 3:
         plot_type = plot_types[2]
         container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = get_container_plot(container_id, plot_type=plot_type)
+        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
 
 
@@ -349,7 +345,7 @@ def update_frame_13(row_index, plot_types):
     if len(plot_types) >= 4:
         plot_type = plot_types[3]
         container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = get_container_plot(container_id, plot_type=plot_type)
+        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
 
 
@@ -361,7 +357,7 @@ def update_frame_14(row_index, plot_types):
     if len(plot_types) >= 5:
         plot_type = plot_types[4]
         container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = get_container_plot(container_id, plot_type=plot_type)
+        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
 
 
@@ -373,7 +369,7 @@ def update_frame_15(row_index, plot_types):
     if len(plot_types) >= 6:
         plot_type = plot_types[5]
         container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = get_container_plot(container_id, plot_type=plot_type)
+        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
 
 
@@ -385,7 +381,7 @@ def update_frame_16(row_index, plot_types):
     if len(plot_types) >= 7:
         plot_type = plot_types[6]
         container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = get_container_plot(container_id, plot_type=plot_type)
+        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
 
 
@@ -397,7 +393,7 @@ def update_frame_17(row_index, plot_types):
     if len(plot_types) >= 8:
         plot_type = plot_types[7]
         container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = get_container_plot(container_id, plot_type=plot_type)
+        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
 
 
@@ -409,7 +405,7 @@ def update_frame_18(row_index, plot_types):
     if len(plot_types) >= 9:
         plot_type = plot_types[8]
         container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = get_container_plot(container_id, plot_type=plot_type)
+        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
 
 
@@ -421,7 +417,7 @@ def update_frame_19(row_index, plot_types):
     if len(plot_types) >= 10:
         plot_type = plot_types[9]
         container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = get_container_plot(container_id, plot_type=plot_type)
+        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
 
 
