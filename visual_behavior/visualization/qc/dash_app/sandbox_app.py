@@ -94,7 +94,7 @@ def toggle_modal(n1, n2, is_open):
     Output("open_feedback_0", "children"),
     [Input("close", "n_clicks")],
 )
-def toggle_modal(n1):
+def toggle_modal_2(n1):
     global fb1
     return fb1.popup.children[0].children
 

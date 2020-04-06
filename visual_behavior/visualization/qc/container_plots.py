@@ -619,10 +619,10 @@ def plot_running_speed_for_container(ophys_container_id, save_figure=True):
     figsize = (25, 15)
     fig, ax = plt.subplots(len(ophys_session_ids), 1, figsize=figsize)
     ax = ax_to_array(ax)
-    for i, ophys_session_id in enumerate(ophys_session_ids)
-    ax[i] = sp.plot_running_speed(ophys_session_id, ax=ax[i])
-    session_type = dl.get_session_type_for_ophys_session_id(ophys_session_id)
-    ax[i].set_title(str(ophys_session_id) + '\n' + session_type)
+    for i, ophys_session_id in enumerate(ophys_session_ids):
+        ax[i] = sp.plot_running_speed(ophys_session_id, ax=ax[i])
+        session_type = dl.get_session_type_for_ophys_session_id(ophys_session_id)
+        ax[i].set_title(str(ophys_session_id) + '\n' + session_type)
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, dl.get_container_plots_dir(), 'running_speed',

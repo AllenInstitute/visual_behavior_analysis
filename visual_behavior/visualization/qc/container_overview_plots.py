@@ -82,7 +82,6 @@ def populate_xarray(values=['d_prime_peak', 'number_of_licks', 'num_contingent_t
     print('populating xarray...')
     container_df = load_data()
     container_df['line'] = container_df['driver_line'].map(lambda s: ';'.join(s))
-    session_summary = db.get_behavior_session_summary()
 
     container_df = container_df.sort_values(by=['line', 'targeted_structure', 'first_acquistion_date'])
     container_ids = container_df.container_id.values
@@ -117,7 +116,7 @@ def populate_xarray(values=['d_prime_peak', 'number_of_licks', 'num_contingent_t
 
 def make_container_overview_plots(values=['d_prime_peak', 'number_of_licks', 'num_contingent_trials']):
     val_array = populate_xarray(values)
-
+    container_ids = None
     for value in values:
         print('making plot for {}'.format(value))
         fig = go.Figure(

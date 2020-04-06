@@ -157,8 +157,8 @@ def show_container_view(checkbox_values):
 def regenerate_plot_inventory(checkbox_values):
     if 'show_plot_inventory' in checkbox_values:
 
-        plot_inventory = generate_plot_inventory()
-        plot_inventory_fig = make_plot_inventory_heatmap(plot_inventory)
+        plot_inventory = functions.generate_plot_inventory()
+        plot_inventory_fig = functions.make_plot_inventory_heatmap(plot_inventory)
         temp_fig = go.Figure(data=[go.Scatter(x=[1, 2, 3], y=[1, 8 * np.random.rand(), 2])])
         return plot_inventory_fig
     else:

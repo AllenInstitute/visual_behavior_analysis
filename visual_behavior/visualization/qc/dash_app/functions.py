@@ -57,6 +57,8 @@ def get_container_plot(container_id, plot_type):
         encoded_image = base64.b64encode(open(plot_image_path, 'rb').read())
     except FileNotFoundError:
         print('not found, container_id = {}, plot_type = {}'.format(container_id, plot_type))
+        container_plot_folder = os.path.join(qc_plot_folder, 'container_plots')
+
         plot_not_found_path = os.path.join(
             container_plot_folder,
             'no_cached_plot_small.png'
@@ -106,7 +108,7 @@ def make_plot_inventory_heatmap(plot_inventory):
         width=1000,
         height=3000,
         margin=dict(
-            l=0,
+            l=0, # NOQA E741
             r=0,
             b=0,
             t=50,

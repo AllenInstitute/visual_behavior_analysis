@@ -3,7 +3,6 @@
 import dash_core_components as dcc
 import dash_html_components as html
 import dash_table
-import plotly.graph_objs as go
 import dash_bootstrap_components as dbc
 
 from functions import generate_plot_inventory, make_plot_inventory_heatmap
