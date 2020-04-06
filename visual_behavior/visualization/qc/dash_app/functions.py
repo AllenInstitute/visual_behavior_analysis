@@ -57,6 +57,7 @@ def get_container_plot(container_id, plot_type):
         encoded_image = base64.b64encode(open(plot_image_path, 'rb').read())
     except FileNotFoundError:
         print('not found, container_id = {}, plot_type = {}'.format(container_id, plot_type))
+        qc_plot_folder = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
         container_plot_folder = os.path.join(qc_plot_folder, 'container_plots')
 
         plot_not_found_path = os.path.join(
