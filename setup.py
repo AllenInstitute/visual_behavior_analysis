@@ -28,6 +28,7 @@ setuptools.setup(
         'pymongo',
         'pyyaml',
         'h5py>=2.7.1',
+        'dash',
     ],
     tests_require=[
         "flake8",

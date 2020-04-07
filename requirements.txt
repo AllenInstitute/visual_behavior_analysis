@@ -19,4 +19,6 @@ zipfile36; python_version >= '3.5'
 pymongo
 pyyaml
 opencv-python
+dash
+
 plotly
