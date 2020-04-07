@@ -582,14 +582,14 @@ class MesoscopeICA(object):
 
                 # validating agains VBA rois set:
                 if return_vba:
-                    plane1_roi_traces_valid = self.validate_against_vba(self.plane1_roi_traces_valid,
+                    plane1_roi_traces_valid = self.validate_against_vba(plane1_roi_traces_valid,
                                                                         self.plane1_exp_id, VBA_CACHE)
-                    plane2_roi_traces_valid = self.validate_against_vba(self.plane2_roi_traces_valid,
+                    plane2_roi_traces_valid = self.validate_against_vba(plane2_roi_traces_valid,
                                                                         self.plane2_exp_id, VBA_CACHE)
 
-                    plane1_neuropil_traces_valid = self.validate_against_vba(self.plane1_neuropil_traces_valid,
+                    plane1_neuropil_traces_valid = self.validate_against_vba(plane1_neuropil_traces_valid,
                                                                              self.plane1_exp_id, VBA_CACHE)
-                    plane2_neuropil_traces_valid = self.validate_against_vba(self.plane2_neuropil_traces_valid,
+                    plane2_neuropil_traces_valid = self.validate_against_vba(plane2_neuropil_traces_valid,
                                                                              self.plane2_exp_id, VBA_CACHE)
                 # saving to json:
 
@@ -627,7 +627,6 @@ class MesoscopeICA(object):
             self.plane2_neuropil_traces_valid = plane2_neuropil_traces_valid
 
         return
-
 
     def combine_debias_roi(self, roi_name=None):
         """
@@ -991,7 +990,7 @@ class MesoscopeICA(object):
                 s = np.dot(w, traces.T).T  # recontructing signals: dot product of unmixing matrix and input traces
                 self.roi_ica_output = s  # ica outoput to be written to disk, or used for debugging
                 self.roi_unmix = s  # inca utput to be rescaled and reshaped to the original form
-                self.roi_matrix = a  # unmixing matrix to be wirtten to disc
+                self.roi_matrix = a  # unmixing matrix to be written to disc
                 del a
                 del s
                 del ica
