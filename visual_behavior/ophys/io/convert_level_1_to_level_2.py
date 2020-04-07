@@ -20,14 +20,9 @@ import matplotlib.image as mpimg  # NOQA: E402
 
 import logging
 
-logger = logging.getLogger(__name__)
-
-#
-# from ...translator import foraging2, foraging
-# from ...translator.core import create_extended_dataframe
-# from ..sync.process_sync import get_sync_data
-# from ..plotting.summary_figures import save_figure, plot_roi_validation
-# from .lims_database import LimsDatabase
+from allensdk.internal.api import PostgresQueryMixin
+from allensdk.core.authentication import credential_injector
+from allensdk.core.auth_config import LIMS_DB_CREDENTIAL_MAP
 
 # relative import doesnt work on cluster
 from visual_behavior.ophys.io.lims_database import LimsDatabase  # NOQA: E402
@@ -39,10 +34,7 @@ from visual_behavior.visualization.ophys.summary_figures import plot_roi_validat
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 from psycopg2 import extras  # NOQA: E402
 
-from allensdk.internal.api import PostgresQueryMixin
-from allensdk.core.authentication import credential_injector
-from allensdk.core.auth_config import LIMS_DB_CREDENTIAL_MAP
-
+logger = logging.getLogger(__name__)
 
 def get_psql_dict_cursor():
     """Set up a connection to a psql db server with a dict cursor"""
