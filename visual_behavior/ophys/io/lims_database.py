@@ -7,7 +7,6 @@ modified by @marinag for incorporation in visual_behavior_ophys
 """
 import os
 import json
-import psycopg2
 import pandas as pd
 from pytz import timezone
 

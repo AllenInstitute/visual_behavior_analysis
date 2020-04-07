@@ -37,7 +37,11 @@ from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NO
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
-from psycopg2 import connect, extras  # NOQA: E402
+from psycopg2 import extras  # NOQA: E402
+
+from allensdk.internal.api import PostgresQueryMixin
+from allensdk.core.authentication import credential_injector
+from allensdk.core.auth_config import LIMS_DB_CREDENTIAL_MAP
 
 
 def get_psql_dict_cursor():
@@ -712,7 +716,6 @@ def get_roi_ids(roi_metrics):
 
 
 def sql_lims_query(query):
-    import psycopg2
     '''
     Performs SQL query to lims using any properly formated SQL query.
 
