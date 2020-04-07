@@ -984,7 +984,7 @@ class MesoscopeICA(object):
                 a[a < 0] *= -1
                 # switch columns if needed - source assignment
                 if a[0, 0] < a[1, 0]:
-                    a = np.array([a[:, 1], a[:, 0]])
+                    a = np.array([a[:, 1], a[:, 0]]).T
 
                 w = linalg.pinv(a)  # inverting mixing matrix to get nunmixing matrix
                 s = np.dot(w, traces.T).T  # recontructing signals: dot product of unmixing matrix and input traces
