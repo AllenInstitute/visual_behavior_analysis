@@ -40,13 +40,10 @@ from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 from psycopg2 import connect, extras  # NOQA: E402
 
 
-def get_psql_dict_cursor(dbname='lims2', user='limsreader', host='limsdb2', password='limsro', port=5432):
+def get_psql_dict_cursor():
     """Set up a connection to a psql db server with a dict cursor"""
-    con = connect(dbname=dbname,
-                  user=user,
-                  host=host,
-                  password=password,
-                  port=port)
+    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+    con = api.get_connection()
     con.set_session(readonly=True, autocommit=True)
     return con.cursor(cursor_factory=extras.RealDictCursor)
 
@@ -723,7 +720,8 @@ def sql_lims_query(query):
 
     '''
     # connect to LIMS using read only
-    conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+    conn = api.get_connection()
     cur = conn.cursor()
 
     # execute query
