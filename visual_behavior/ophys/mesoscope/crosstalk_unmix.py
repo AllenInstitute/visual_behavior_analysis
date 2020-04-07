@@ -457,9 +457,10 @@ class MesoscopeICA(object):
 
         return self.found_original_traces, self.found_original_neuropil
 
-    def validate_traces(self):
+    def validate_traces(self, return_vba=True):
         """
         fn to check if the traces don't have Nans, writes {exp_id}_valid.json to cache for each plane in pair
+        return_vba: bool, flag to control whether to validate against vba roi set or return ica roi set
         :return: None
         """
         if self.debug_mode:
@@ -578,6 +579,18 @@ class MesoscopeICA(object):
                                                 "crosstalk": plane1_ct_neuropil_valid}
                 plane2_neuropil_traces_valid = {"signal": plane2_sig_neuropil_valid,
                                                 "crosstalk": plane2_ct_neuropil_valid}
+
+                # validating agains VBA rois set:
+                if return_vba:
+                    plane1_roi_traces_valid = self.validate_against_vba(self.plane1_roi_traces_valid,
+                                                                        self.plane1_exp_id, VBA_CACHE)
+                    plane2_roi_traces_valid = self.validate_against_vba(self.plane2_roi_traces_valid,
+                                                                        self.plane2_exp_id, VBA_CACHE)
+
+                    plane1_neuropil_traces_valid = self.validate_against_vba(self.plane1_neuropil_traces_valid,
+                                                                             self.plane1_exp_id, VBA_CACHE)
+                    plane2_neuropil_traces_valid = self.validate_against_vba(self.plane2_neuropil_traces_valid,
+                                                                             self.plane2_exp_id, VBA_CACHE)
                 # saving to json:
 
                 self.plane1_roi_traces_valid_pointer = plane1_roi_traces_valid_pointer
