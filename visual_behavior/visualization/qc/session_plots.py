@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from visual_behavior.visualization.qc import data_loading as dl
+from visual_behavior.data import loading as data_loading
 
 
 # BEHAVIOR
@@ -18,7 +18,7 @@ def plot_running_speed(ophys_session_id, ax=None):
     Returns:
         matplotlib figure axis -- ax
     """
-    running_speed = dl.get_sdk_running_speed(ophys_session_id)
+    running_speed = data_loading.get_sdk_running_speed(ophys_session_id)
     if ax is None:
         fig, ax = plt.subplots(figsize=(15, 3))
     ax.plot(running_speed)
@@ -30,7 +30,7 @@ def plot_running_speed(ophys_session_id, ax=None):
 
 
 def plot_lick_raster(ophys_session_id, ax=None, response_window=[0.15, 0.75]):
-    trials = dl.get_sdk_trials(ophys_session_id)
+    trials = data_loading.get_sdk_trials(ophys_session_id)
     if ax is None:
         figsize = (5, 10)
         fig, ax = plt.subplots(figsize=figsize)

@@ -3,8 +3,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 import visual_behavior.visualization.qc.plotting_utils as pu
-from visual_behavior.visualization.qc import data_loading as dl
-from visual_behavior.visualization.qc import data_processing as dp
+from visual_behavior.data import loading as data_loading
+from visual_behavior.data import processing as data_processing
 
 import visual_behavior.database as db
 from visual_behavior.utilities import EyeTrackingData
@@ -17,7 +17,7 @@ bitdepth_16 = 65536
 def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    max_projection = dl.get_sdk_max_projection(ophys_experiment_id)
+    max_projection = data_loading.get_sdk_max_projection(ophys_experiment_id)
     ax.imshow(max_projection, cmap='gray', vmax=np.percentile(max_projection, 99))
     ax.axis('off')
     return ax
@@ -26,7 +26,7 @@ def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
 def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    average_image = dl.get_sdk_ave_projection(ophys_experiment_id)
+    average_image = data_loading.get_sdk_ave_projection(ophys_experiment_id)
     ax.imshow(average_image, cmap='gray', vmax=np.amax(average_image))
     ax.axis('off')
     return ax
@@ -35,7 +35,7 @@ def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
 def plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    average_image = dp.experiment_average_FOV_from_motion_corrected_movie(ophys_experiment_id)
+    average_image = data_processing.experiment_average_FOV_from_motion_corrected_movie(ophys_experiment_id)
     ax.imshow(average_image, cmap='gray', vmin=0, vmax=8000)
     ax.axis('off')
     return ax
@@ -44,7 +44,7 @@ def plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=
 def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    max_image = dp.experiment_max_FOV_from_motion_corrected_movie(ophys_experiment_id)
+    max_image = data_processing.experiment_max_FOV_from_motion_corrected_movie(ophys_experiment_id)
     ax.imshow(max_image, cmap='gray', vmin=0, vmax=8000)
     ax.axis('off')
     return ax
@@ -53,8 +53,8 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
 def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    # segmentation_mask = dl.get_sdk_segmentation_mask_image(ophys_experiment_id)
-    segmentation_mask = dl.get_valid_segmentation_mask(ophys_experiment_id)
+    # segmentation_mask = data_loading.get_sdk_segmentation_mask_image(ophys_experiment_id)
+    segmentation_mask = data_loading.get_valid_segmentation_mask(ophys_experiment_id)
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
     return ax
@@ -64,8 +64,8 @@ def plot_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    # segmentation_mask = dl.get_sdk_segmentation_mask_image(ophys_experiment_id)
-    segmentation_mask = dl.get_valid_segmentation_mask(ophys_experiment_id)
+    # segmentation_mask = data_loading.get_sdk_segmentation_mask_image(ophys_experiment_id)
+    segmentation_mask = data_loading.get_valid_segmentation_mask(ophys_experiment_id)
     mask = np.zeros(segmentation_mask.shape)
     mask[:] = np.nan
     mask[segmentation_mask == 1] = 1
@@ -75,7 +75,7 @@ def plot_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
 
 
 def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
-    dff_traces = dl.get_sdk_dff_traces_array(ophys_experiment_id)
+    dff_traces = data_loading.get_sdk_dff_traces_array(ophys_experiment_id)
     if ax is None:
         figsize = (14, 5)
         fig, ax = plt.subplots(figsize=figsize)
@@ -86,8 +86,8 @@ def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
 
 
 def plot_csid_snr_for_experiment(ophys_experiment_id, ax=None):
-    experiment_df = dp.ophys_experiment_info_df(ophys_experiment_id)
-    exp_snr = dp.experiment_cell_specimen_id_snr_table(ophys_experiment_id)
+    experiment_df = data_processing.ophys_experiment_info_df(ophys_experiment_id)
+    exp_snr = data_processing.experiment_cell_specimen_id_snr_table(ophys_experiment_id)
     exp_snr["stage_name_lims"] = experiment_df["stage_name_lims"][0]
     exp_stage_color_dict = pu.experiment_id_stage_color_dict_for_experiment(ophys_experiment_id)
     if ax is None:
@@ -114,9 +114,9 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
     Returns:
         plot -- x: frame number, y: fluroescence value
     """
-    experiment_df = dp.ophys_experiment_info_df(ophys_experiment_id)
+    experiment_df = data_processing.ophys_experiment_info_df(ophys_experiment_id)
     exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(experiment_df)
-    average_intensity, frame_numbers = dp.get_experiment_average_intensity_timeseries(ophys_experiment_id)
+    average_intensity, frame_numbers = data_processing.get_experiment_average_intensity_timeseries(ophys_experiment_id)
     if ax is None:
         fig, ax = plt.subplots()
     ax.plot(frame_numbers, average_intensity,
@@ -128,7 +128,7 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
 
 
 def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None):
-    df = dl.load_rigid_motion_transform_csv(ophys_experiment_id)
+    df = data_loading.load_rigid_motion_transform_csv(ophys_experiment_id)
     if ax is None:
         fig, ax = plt.subplots(figsize=(20, 4))
     ax.plot(df.framenumber.values, df.x.values, color='red', label='x_shift')
