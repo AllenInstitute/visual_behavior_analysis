@@ -15,7 +15,8 @@ import allensdk.core.json_utilities as ju
 from scipy import linalg
 from scipy.stats import linregress
 from matplotlib.colors import LogNorm
-import visual_behavior.ophys.mesoscope.active_traces as sta
+import visual_behavior.ophys.mesoscope.active_traces as at
+from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ IMAGEH, IMAGEW = 512, 512
 CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'processed/%s_input_extract_traces.json']
 ROI_NAME = "roi_ica"
 NP_NAME = "neuropil_ica"
-
+VBA_CACHE = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis"
 
 def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
     """
@@ -497,10 +498,10 @@ class MesoscopeICA(object):
                 not self.plane1_neuropil_traces_valid_pointer) and (not self.plane2_neuropil_traces_valid_pointer):
 
             # traces need validation:
+            #traces exist?
             if self.found_original_traces[0] and self.found_original_traces[1] and self.found_original_neuropil[0] and \
                     self.found_original_neuropil[1]:
                 # traces, plane 1:
-
                 plane1_sig_trace_valid = {}
                 plane1_sig_neuropil_valid = {}
                 plane1_ct_trace_valid = {}
@@ -613,6 +614,7 @@ class MesoscopeICA(object):
             self.plane2_neuropil_traces_valid = plane2_neuropil_traces_valid
 
         return
+
 
     def combine_debias_roi(self, roi_name=None):
         """
@@ -1489,6 +1491,25 @@ class MesoscopeICA(object):
 
         return
 
+
+    @staticmethod
+    def validate_against_vba(rois_valid, exp_id, vba_cache=VBA_CACHE):
+        """
+        :param rois_valid:
+        :param exp_id:
+        :param vba_cache:
+        :return:
+        """
+        dataset = VisualBehaviorOphysDataset(exp_id, cache_dir=vba_cache)
+        roi_names_vba = dataset.cell_specimen_ids
+        # invalid rois in ica validation json
+        rois_valid_vba = rois_valid
+        for roi_name in rois_valid["signal"]:
+            if int(roi_name) not in roi_names_vba:
+                rois_valid_vba['signal'][str(roi_name)] = False
+                rois_valid_vba['crosstalk'][str(roi_name)] = False
+        return rois_valid_vba
+
     @staticmethod
     def ica_err(scale, ica_traces, trace_orig):
         """
@@ -1580,7 +1601,7 @@ class MesoscopeICA(object):
         do_plots = 0
 
         # extract events for input, signal
-        traces_evs, evs_ind = sta.get_traces_evs(traces_in_valid[0], th_ag, len_ne, do_plots)
+        traces_evs, evs_ind = at.get_traces_evs(traces_in_valid[0], th_ag, len_ne, do_plots)
 
         for n in range(num_traces):
             roi_name = roi_names[n]
