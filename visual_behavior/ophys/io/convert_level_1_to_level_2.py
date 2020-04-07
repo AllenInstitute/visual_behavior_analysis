@@ -36,6 +36,7 @@ from psycopg2 import extras  # NOQA: E402
 
 logger = logging.getLogger(__name__)
 
+
 def get_psql_dict_cursor():
     """Set up a connection to a psql db server with a dict cursor"""
     api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
