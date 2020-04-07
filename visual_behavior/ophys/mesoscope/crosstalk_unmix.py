@@ -1491,20 +1491,19 @@ class MesoscopeICA(object):
 
         return
 
-
     @staticmethod
-    def validate_against_vba(rois_valid, exp_id, vba_cache=VBA_CACHE):
+    def validate_against_vba(rois_valid_ica, exp_id, vba_cache=VBA_CACHE):
         """
-        :param rois_valid:
-        :param exp_id:
-        :param vba_cache:
-        :return:
+        :param rois_valid_ica: dict, returned by MesoscopeICA.plane1_roi_traces_valid or MesoscopeICA.plane2_roi_traces_valid
+        :param exp_id: int, LIMS experiment ID, can be retrieved by MesoscopeICA.plane1_exp_id or MesoscopeICA.plane2_exp_id
+        :param vba_cache: str, path to visual behavior analysis package cache directory
+        :return: rois_valid_vba: dict, same structure as rois_valid_ica
         """
         dataset = VisualBehaviorOphysDataset(exp_id, cache_dir=vba_cache)
         roi_names_vba = dataset.cell_specimen_ids
         # invalid rois in ica validation json
-        rois_valid_vba = rois_valid
-        for roi_name in rois_valid["signal"]:
+        rois_valid_vba = rois_valid_ica
+        for roi_name in rois_valid_ica["signal"]:
             if int(roi_name) not in roi_names_vba:
                 rois_valid_vba['signal'][str(roi_name)] = False
                 rois_valid_vba['crosstalk'][str(roi_name)] = False
