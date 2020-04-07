@@ -15,7 +15,8 @@ import allensdk.core.json_utilities as ju
 from scipy import linalg
 from scipy.stats import linregress
 from matplotlib.colors import LogNorm
-import visual_behavior.ophys.mesoscope.active_traces as sta
+import visual_behavior.ophys.mesoscope.active_traces as at
+from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ IMAGEH, IMAGEW = 512, 512
 CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'processed/%s_input_extract_traces.json']
 ROI_NAME = "roi_ica"
 NP_NAME = "neuropil_ica"
-
+VBA_CACHE = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis"
 
 def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
     """
@@ -456,9 +457,10 @@ class MesoscopeICA(object):
 
         return self.found_original_traces, self.found_original_neuropil
 
-    def validate_traces(self):
+    def validate_traces(self, return_vba=True):
         """
         fn to check if the traces don't have Nans, writes {exp_id}_valid.json to cache for each plane in pair
+        return_vba: bool, flag to control whether to validate against vba roi set or return ica roi set
         :return: None
         """
         if self.debug_mode:
@@ -497,10 +499,10 @@ class MesoscopeICA(object):
                 not self.plane1_neuropil_traces_valid_pointer) and (not self.plane2_neuropil_traces_valid_pointer):
 
             # traces need validation:
+            #traces exist?
             if self.found_original_traces[0] and self.found_original_traces[1] and self.found_original_neuropil[0] and \
                     self.found_original_neuropil[1]:
                 # traces, plane 1:
-
                 plane1_sig_trace_valid = {}
                 plane1_sig_neuropil_valid = {}
                 plane1_ct_trace_valid = {}
@@ -577,6 +579,18 @@ class MesoscopeICA(object):
                                                 "crosstalk": plane1_ct_neuropil_valid}
                 plane2_neuropil_traces_valid = {"signal": plane2_sig_neuropil_valid,
                                                 "crosstalk": plane2_ct_neuropil_valid}
+
+                # validating agains VBA rois set:
+                if return_vba:
+                    plane1_roi_traces_valid = self.validate_against_vba(plane1_roi_traces_valid,
+                                                                        self.plane1_exp_id, VBA_CACHE)
+                    plane2_roi_traces_valid = self.validate_against_vba(plane2_roi_traces_valid,
+                                                                        self.plane2_exp_id, VBA_CACHE)
+
+                    plane1_neuropil_traces_valid = self.validate_against_vba(plane1_neuropil_traces_valid,
+                                                                             self.plane1_exp_id, VBA_CACHE)
+                    plane2_neuropil_traces_valid = self.validate_against_vba(plane2_neuropil_traces_valid,
+                                                                             self.plane2_exp_id, VBA_CACHE)
                 # saving to json:
 
                 self.plane1_roi_traces_valid_pointer = plane1_roi_traces_valid_pointer
@@ -970,13 +984,13 @@ class MesoscopeICA(object):
                 a[a < 0] *= -1
                 # switch columns if needed - source assignment
                 if a[0, 0] < a[1, 0]:
-                    a = np.array([a[:, 1], a[:, 0]])
+                    a = np.array([a[:, 1], a[:, 0]]).T
 
                 w = linalg.pinv(a)  # inverting mixing matrix to get nunmixing matrix
                 s = np.dot(w, traces.T).T  # recontructing signals: dot product of unmixing matrix and input traces
                 self.roi_ica_output = s  # ica outoput to be written to disk, or used for debugging
                 self.roi_unmix = s  # inca utput to be rescaled and reshaped to the original form
-                self.roi_matrix = a  # unmixing matrix to be wirtten to disc
+                self.roi_matrix = a  # unmixing matrix to be written to disc
                 del a
                 del s
                 del ica
@@ -1490,6 +1504,24 @@ class MesoscopeICA(object):
         return
 
     @staticmethod
+    def validate_against_vba(rois_valid_ica, exp_id, vba_cache=VBA_CACHE):
+        """
+        :param rois_valid_ica: dict, returned by MesoscopeICA.plane1_roi_traces_valid or MesoscopeICA.plane2_roi_traces_valid
+        :param exp_id: int, LIMS experiment ID, can be retrieved by MesoscopeICA.plane1_exp_id or MesoscopeICA.plane2_exp_id
+        :param vba_cache: str, path to visual behavior analysis package cache directory
+        :return: rois_valid_vba: dict, same structure as rois_valid_ica
+        """
+        dataset = VisualBehaviorOphysDataset(exp_id, cache_dir=vba_cache)
+        roi_names_vba = dataset.cell_specimen_ids
+        # invalid rois in ica validation json
+        rois_valid_vba = rois_valid_ica
+        for roi_name in rois_valid_ica["signal"]:
+            if int(roi_name) not in roi_names_vba:
+                rois_valid_vba['signal'][str(roi_name)] = False
+                rois_valid_vba['crosstalk'][str(roi_name)] = False
+        return rois_valid_vba
+
+    @staticmethod
     def ica_err(scale, ica_traces, trace_orig):
         """
         calculate difference of standard deviation between post- and pre-ICA traces:
@@ -1580,7 +1612,7 @@ class MesoscopeICA(object):
         do_plots = 0
 
         # extract events for input, signal
-        traces_evs, evs_ind = sta.get_traces_evs(traces_in_valid[0], th_ag, len_ne, do_plots)
+        traces_evs, evs_ind = at.get_traces_evs(traces_in_valid[0], th_ag, len_ne, do_plots)
 
         for n in range(num_traces):
             roi_name = roi_names[n]
