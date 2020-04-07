@@ -20,14 +20,9 @@ import matplotlib.image as mpimg  # NOQA: E402
 
 import logging
 
-logger = logging.getLogger(__name__)
-
-#
-# from ...translator import foraging2, foraging
-# from ...translator.core import create_extended_dataframe
-# from ..sync.process_sync import get_sync_data
-# from ..plotting.summary_figures import save_figure, plot_roi_validation
-# from .lims_database import LimsDatabase
+from allensdk.internal.api import PostgresQueryMixin
+from allensdk.core.authentication import credential_injector
+from allensdk.core.auth_config import LIMS_DB_CREDENTIAL_MAP
 
 # relative import doesnt work on cluster
 from visual_behavior.ophys.io.lims_database import LimsDatabase  # NOQA: E402
@@ -37,16 +32,15 @@ from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NO
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
-from psycopg2 import connect, extras  # NOQA: E402
+from psycopg2 import extras  # NOQA: E402
+
+logger = logging.getLogger(__name__)
 
 
-def get_psql_dict_cursor(dbname='lims2', user='limsreader', host='limsdb2', password='limsro', port=5432):
+def get_psql_dict_cursor():
     """Set up a connection to a psql db server with a dict cursor"""
-    con = connect(dbname=dbname,
-                  user=user,
-                  host=host,
-                  password=password,
-                  port=port)
+    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+    con = api.get_connection()
     con.set_session(readonly=True, autocommit=True)
     return con.cursor(cursor_factory=extras.RealDictCursor)
 
@@ -715,7 +709,6 @@ def get_roi_ids(roi_metrics):
 
 
 def sql_lims_query(query):
-    import psycopg2
     '''
     Performs SQL query to lims using any properly formated SQL query.
 
@@ -723,7 +716,8 @@ def sql_lims_query(query):
 
     '''
     # connect to LIMS using read only
-    conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+    conn = api.get_connection()
     cur = conn.cursor()
 
     # execute query

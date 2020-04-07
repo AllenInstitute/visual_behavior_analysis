@@ -7,9 +7,12 @@ modified by @marinag for incorporation in visual_behavior_ophys
 """
 import os
 import json
-import psycopg2
 import pandas as pd
 from pytz import timezone
+
+from allensdk.internal.api import PostgresQueryMixin
+from allensdk.core.authentication import credential_injector
+from allensdk.core.auth_config import LIMS_DB_CREDENTIAL_MAP
 
 import logging
 
@@ -35,7 +38,8 @@ class LimsDatabase:
 
         # We first gather all information from LIMS
         try:
-            conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+            api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+            conn = api.get_connection()
             cur = conn.cursor()
 
             query = ' '.join((
@@ -150,7 +154,8 @@ class LimsDatabase:
     def get_specimen_driver_line(self):
 
         try:
-            conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+            api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+            conn = api.get_connection()
             cur = conn.cursor()
 
             query = ' '.join((
@@ -186,7 +191,8 @@ class LimsDatabase:
     def get_specimen_reporter_line(self):
 
         try:
-            conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+            api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+            conn = api.get_connection()
             cur = conn.cursor()
 
             query = ' '.join((
@@ -274,7 +280,8 @@ class LimsDatabase:
         return json_data
 
     def get_all_ophys_lims_columns_names(self, table_name=u'ophys_experiments'):
-        conn = psycopg2.connect(dbname="lims2", user="limsreader", host="limsdb2", password="limsro", port=5432)
+        api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+        conn = api.get_connection()
         cur = conn.cursor()
 
         query = ' '.join((
