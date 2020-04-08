@@ -582,7 +582,8 @@ def get_labtracks_id_from_specimen_id(specimen_id, show_warnings=True):
     query = "select external_specimen_name from specimens where specimens.id = {}".format(specimen_id)
     res = pd.read_sql(query, conn).squeeze()
     conn.close()
-    if isinstance(res, str):
+    
+    if isinstance(res, (str, int, np.int64)):
         return int(res)
     elif isinstance(res, pd.Series):
         if res.empty:
@@ -613,7 +614,8 @@ def get_specimen_id_from_labtracks_id(labtracks_id, show_warnings=True):
     query = "select id from specimens where specimens.external_specimen_name = '{}'".format(labtracks_id)
     res = pd.read_sql(query, conn).squeeze()
     conn.close()
-    if isinstance(res, str):
+
+    if isinstance(res, (str, int, np.int64)):
         return int(res)
     elif isinstance(res, pd.Series):
         if res.empty:
