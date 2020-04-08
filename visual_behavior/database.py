@@ -6,6 +6,7 @@ import json
 import traceback
 import datetime
 import uuid
+import warnings
 
 from allensdk.internal.api import PostgresQueryMixin
 from allensdk.core.authentication import credential_injector
@@ -567,11 +568,11 @@ def update_or_create(collection, document, keys_to_check, force_write=False):
             collection.update_one(query, {"$set": simplify_entry(document)})
 
 
-def get_labtracks_id_from_specimen_id(specimen_id):
+def get_labtracks_id_from_specimen_id(specimen_id, show_warnings=True):
     '''
     for a given mouse:
         convert
-            9 digit LIMS ID
+            9 or 10 digit specimen_id (from LIMS)
         to
             6 digit labtracks ID
     '''
@@ -581,16 +582,30 @@ def get_labtracks_id_from_specimen_id(specimen_id):
     query = "select external_specimen_name from specimens where specimens.id = {}".format(specimen_id)
     res = pd.read_sql(query, conn).squeeze()
     conn.close()
-    return int(res)
+    if isinstance(res, str):
+        return int(res)
+    elif isinstance(res, pd.Series):
+        if res.empty:
+            # an empty query returns an empty Series. Just return None in this case
+            return None
+        elif len(res) > 1:
+            # if we get multiple results, return only the first, show a warning
+            if show_warnings:
+                warnings.warn('specimen_id {} is associated with {} specimen_ids:\n{}\nreturning only the first'.format(
+                    specimen_id,
+                    len(res),
+                    res,
+                ))
+            return int(res.iloc[0])
 
 
-def get_specimen_id_from_labtracks_id(labtracks_id):
+def get_specimen_id_from_labtracks_id(labtracks_id, show_warnings=True):
     '''
     for a given mouse:
         convert
             6 digit labtracks ID
         to
-            9 digit LIMS ID
+            9 or 10 digit specimen_id (from LIMS)
     '''
     api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
     conn = api.get_connection()
@@ -598,4 +613,18 @@ def get_specimen_id_from_labtracks_id(labtracks_id):
     query = "select id from specimens where specimens.external_specimen_name = '{}'".format(labtracks_id)
     res = pd.read_sql(query, conn).squeeze()
     conn.close()
-    return int(res)
+    if isinstance(res, str):
+        return int(res)
+    elif isinstance(res, pd.Series):
+        if res.empty:
+            # an empty query returns an empty Series. Just return None in this case
+            return None
+        elif len(res) > 1:
+            # if we get multiple results, return only the first, show a warning
+            if show_warnings:
+                warnings.warn('labtracks_id {} is associated with {} specimen_ids:\n{}\nreturning only the first'.format(
+                    labtracks_id,
+                    len(res),
+                    res.values,
+                ))
+            return int(res.iloc[0])
