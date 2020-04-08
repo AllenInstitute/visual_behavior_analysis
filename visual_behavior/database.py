@@ -582,7 +582,7 @@ def get_labtracks_id_from_specimen_id(specimen_id, show_warnings=True):
     query = "select external_specimen_name from specimens where specimens.id = {}".format(specimen_id)
     res = pd.read_sql(query, conn).squeeze()
     conn.close()
-    
+
     if isinstance(res, (str, int, np.int64)):
         return int(res)
     elif isinstance(res, pd.Series):
