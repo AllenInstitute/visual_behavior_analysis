@@ -458,3 +458,141 @@ def make_nice_plots(ax, rmv2nd_xtick_label=0, rmv2nd_ytick_label=0):
     plt.grid(False)
 
     ax.tick_params(labelsize=12)
+
+
+def get_events(trace, threshold, window):
+    """
+    Function to get an "active trace" i.e. a trace made by extracting and concatenating the active parts of the input trace
+
+    example use:
+        window = 20
+        th_ag = 10
+        doPlots = 1
+        [traces_y0_evs, inds_final_all] = get_traces_evs(traces_y0, th_ag, window, doPlots)
+
+        or, if need to re-apply to a different input vector:
+        traces_active[neuron_y] = traces[neuron_y][inds_final_all[neuron_y]]
+
+    Farzaneh Najafi
+    March 2020
+
+    :param trace: numpy.array of size NxM where N : number of neurons (rois), M: number of timestamps
+    :param threshold: scalar : threshold to find events on the trace; the higher the more strict on what we call an event.
+    :param window: scalar; number of frames before and after each event that are taken to create traces_events
+    :param do_plots: bool, flag to control whether to plot
+    :return:
+        traces_y0_evs: ndarray, size N (number of neurons); each neuron has size n, which is the size of the "active trace" for that neuron
+        inds_final_all: ndarray, size number_of_neurons; indeces to apply on traces_y0 to get traces_y0_evs:
+    """
+
+    #  Andrea Giovannucci's method of identifying "exceptional" events
+    [_, _, erfc] = evaluate_components(trace, n=5, robust_std=False)
+    erfc = -erfc
+
+    # applying threshold
+    evs = (erfc >= threshold)  # neurons x frames
+
+
+    # find gaps between events for each neuron
+    [_, begs_evs, ends_evs, _, bgap_evs, egap_evs, _, _] = find_event_gaps(evs)
+
+    # set traces_evs, ie a trace that contains mostly the active parts of the input trace #
+    traces_y0_evs = []
+    inds_final_all = []
+
+    iu = trace
+
+    if sum(evs[iu]) > 0:
+
+        enow = ends_evs[iu]
+        bnow = begs_evs[iu]
+        e_aft = []
+        b_bef = []
+        for ig in range(len(bnow)):
+
+            e_aft.append(np.arange(enow[ig], min(evs.shape[1], enow[ig] + window)))
+            b_bef.append(np.arange(bnow[ig] + 1 - window, min(evs.shape[1], bnow[ig] + 2)))
+
+        e_aft = np.array(e_aft)
+        b_bef = np.array(b_bef)
+
+        if len(e_aft) > 1:
+            e_aft_u = np.hstack(e_aft)
+        else:
+            e_aft_u = []
+
+        if len(b_bef) > 1:
+            b_bef_u = np.hstack(b_bef)
+        else:
+            b_bef_u = []
+
+        # below sets frames that cover the duration of all events, but excludes the first and last event
+        ev_dur = []
+        for ig in range(len(bnow) - 1):
+            ev_dur.append(np.arange(bnow[ig], enow[ig + 1]))
+
+        ev_dur = np.array(ev_dur)
+
+        if len(ev_dur) > 1:
+            ev_dur_u = np.hstack(ev_dur)
+        else:
+            ev_dur_u = []
+        # ev_dur_u.shape
+
+        evs_inds = np.argwhere(evs[iu]).flatten()  # includes ALL events.
+
+        if len(bgap_evs[iu]) > 0:
+            # get window frames before the 1st event
+            ind1 = np.arange(np.array(bgap_evs[iu]) - window, bgap_evs[iu])
+            # if the 1st event is immediately followed by more events, add those to ind1, because they dont appear in any of the other vars that we are concatenating below.
+            if len(ends_evs[iu]) > 1:
+                ii = np.argwhere(
+                    np.in1d(evs_inds, ends_evs[iu][0])).squeeze()
+                ind1 = np.concatenate((ind1, evs_inds[:ii]))
+        else:  # first event was already going when the recording started; add these events to ind1
+            jj = np.argwhere(np.in1d(evs_inds, ends_evs[iu][0])).squeeze()
+#            jj = ends_evs[iu][0]
+            ind1 = evs_inds[:jj + 1]
+
+        if len(egap_evs[iu]) > 0:
+            # get window frames after the last event
+            indl = np.arange(evs.shape[1] - np.array(egap_evs[iu]) - 1, min(
+                evs.shape[1], evs.shape[1] - np.array(egap_evs[iu]) + window))
+            # if the last event is immediately preceded by more events, add those to indl, because they dont appear in any of the other vars that we are concatenating below.
+            if len(begs_evs[iu]) > 1:
+                # find the fist event of the last event bout
+                ii = np.argwhere(
+                    np.in1d(evs_inds, 1 + begs_evs[iu][-1])).squeeze()
+                indl = np.concatenate((evs_inds[ii:], indl))
+        else:  # last event was already going when the recording ended; add these events to ind1
+            jj = np.argwhere(
+                np.in1d(evs_inds, begs_evs[iu][-1] + 1)).squeeze()
+            indl = evs_inds[jj:]
+
+        inds_final = np.unique(np.concatenate(
+            (e_aft_u, b_bef_u, ev_dur_u, ind1, indl))).astype(int)
+
+        # all evs_inds must exist in inds_final, otherwise something is wrong!
+        if not np.in1d(evs_inds, inds_final).all():
+            # there was only one event bout in the trace
+            if not np.array([len(e_aft) > 1, len(b_bef) > 1, len(ev_dur) > 1]).all():
+                inds_final = np.unique(np.concatenate(
+                    (inds_final, evs_inds))).astype(int)
+            else:
+                print(np.in1d(evs_inds, inds_final))
+                sys.exit(
+                    'error in neuron %d! some of the events dont exist in inds_final! all events must exist in inds_final!' % iu)
+
+        trace_evs_now = trace[inds_final]
+
+    else:  # there are no events in the neuron; assign a nan vector of length 10 to the following vars
+        inds_final = np.full((10,), np.nan)
+        trace_evs_now = np.full((10,), np.nan)
+
+    inds_final_all.append(inds_final)
+    traces_y0_evs.append(trace_evs_now)  # neurons
+
+    inds_final_all = np.array(inds_final_all)
+    trace_evs = np.array(traces_y0_evs)  # neurons
+
+    return trace_evs, inds_final_all
