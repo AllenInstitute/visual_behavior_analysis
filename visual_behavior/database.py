@@ -565,3 +565,37 @@ def update_or_create(collection, document, keys_to_check, force_write=False):
         else:
             # update a document if it does exist
             collection.update_one(query, {"$set": simplify_entry(document)})
+
+
+def get_labtracks_id_from_specimen_id(specimen_id):
+    '''
+    for a given mouse:
+        convert
+            9 digit LIMS ID
+        to
+            6 digit labtracks ID
+    '''
+    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+    conn = api.get_connection()
+
+    query = "select external_specimen_name from specimens where specimens.id = {}".format(specimen_id)
+    res = pd.read_sql(query, conn).squeeze()
+    conn.close()
+    return int(res)
+
+
+def get_specimen_id_from_labtracks_id(labtracks_id):
+    '''
+    for a given mouse:
+        convert
+            6 digit labtracks ID
+        to
+            9 digit LIMS ID
+    '''
+    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+    conn = api.get_connection()
+
+    query = "select id from specimens where specimens.external_specimen_name = '{}'".format(labtracks_id)
+    res = pd.read_sql(query, conn).squeeze()
+    conn.close()
+    return int(res)
