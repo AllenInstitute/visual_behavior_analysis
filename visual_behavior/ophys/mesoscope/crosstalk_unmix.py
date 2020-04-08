@@ -1139,36 +1139,15 @@ class MesoscopeICA(object):
                 logger.info("ValueError: ICA input contains NaN, infinity or a value too large for data type('float64')")
             else:
                 traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
-                ica = FastICA(n_components=2, max_iter=max_iter)
-                ica.fit_transform(traces)  # Reconstruct signals
-                mix = ica.mixing_  # Get estimated mixing matrix
-                logger.info("ICA successful")
-
-                # make sure no negative coeffs (inversion of traces)
-                mix[mix < 0] *= -1
-
-                # switch columns if needed (source assignment inverted) - check something is off here!
-                if mix[0, 0] < mix[1, 0]:
-	                a_mix = np.array([mix[:, 1], mix[:, 0]]).T
-                else:
-	                a_mix = mix
-
-                b_mix = a_mix
-                if a_mix[0, 1] > a_mix[1, 1]:
-	                b_mix[0, 1] = a_mix[1, 1]
-	                b_mix[1, 1] = a_mix[0, 1]
-
-                w = linalg.pinv(b_mix)  # inverting mixing matrix to get nunmixing matrix
+                b_mix = self.roi_matrix
+                w = linalg.pinv(b_mix)  # inverting mixing matrix to get unmixing matrix
                 s = np.dot(w, traces.T).T  # recontructing signals: dot product of unmixing matrix and input traces
                 self.roi_ica_output = s  # ica outoput to be written to disk, or used for debugging
                 self.neuropil_unmix = s  # inca utput to be rescaled and reshaped to the original form
                 self.neuropil_matrix = b_mix  # unmixing matrix to be written to disc
-                del a_mix
                 del b_mix
                 del s
-                del ica
-
-
+                
                 # rescaling traces back:
                 self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil()
                 plane1_ica_neuropil_output = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
