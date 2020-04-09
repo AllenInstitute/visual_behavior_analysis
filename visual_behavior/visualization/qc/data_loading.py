@@ -68,7 +68,7 @@ def get_experiment_plots_dir():
 
 def get_qc_manifest_path():
     """Get path to default manifest file for QC"""
-    manifest_path = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest_2020.04.06.json"
+    manifest_path = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache/manifest.json"
     return manifest_path
 
 
