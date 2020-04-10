@@ -35,7 +35,7 @@ def get_sdk_session(behavior_session_id, is_ophys):
 
 
 def log_error_to_mongo(behavior_session_id, failed_attribute, error_class, traceback):
-    conn = db.Database('visual_behavior_data')['sdk_validation']['error_logs']
+    conn = db.Database('visual_behavior_data')
     entry = {
         'timestamp': str(datetime.datetime.now()),
         'sdk_version': allensdk.__version__,
@@ -46,13 +46,14 @@ def log_error_to_mongo(behavior_session_id, failed_attribute, error_class, trace
         'error_class': str(error_class),
         'traceback': traceback
     }
-    conn.insert_one(entry)
+    conn['sdk_validation']['error_logs'].insert_one(entry)
     conn.close()
 
 
 def get_error_logs(behavior_session_id):
-    conn = db.Database('visual_behavior_data')['sdk_validation']['error_logs']
-    res = conn.find({'behavior_session_id': behavior_session_id})
+    conn = db.Database('visual_behavior_data')
+    res = conn['sdk_validation']['error_logs'].find({'behavior_session_id': behavior_session_id})
+    conn.close()
     return pd.DataFrame(list(res))
 
 
