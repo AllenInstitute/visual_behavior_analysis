@@ -10,7 +10,7 @@ from visual_behavior import database as db
 
 
 def get_cache():
-    MANIFEST_PATH = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache_2/manifest.json"
+    MANIFEST_PATH = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache/manifest.json"
     cache = bpc.from_lims(manifest=MANIFEST_PATH)
     return cache
 
