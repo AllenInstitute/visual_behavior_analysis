@@ -4,6 +4,8 @@ import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from visual_behavior.data import filtering
+from visual_behavior.data import reformat
 
 import os
 import h5py  # for loading motion corrected movie
@@ -46,7 +48,7 @@ config = configp.ConfigParser()
 # ophys_container_id
 
 
-#  GENERAL STUFF
+#   RELEVANT DIRECTORIES
 
 def get_super_container_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
@@ -64,179 +66,110 @@ def get_experiment_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 
-#  FROM MANIFEST
+#  FROM SDK MANIFEST
 
-def get_qc_manifest_path():
-    """Get path to default manifest file for QC"""
-    manifest_path = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/qc_cache/manifest_2020.04.06.json"
+
+def get_cache_dir():
+    """Get directory of data cache for analysis"""
+    cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
+    return cache_dir
+
+
+def get_manifest_path():
+    """Get path to default manifest file for analysis"""
+    manifest_path = os.path.join(get_cache_dir(), "manifest.json")
     return manifest_path
 
 
-def get_qc_cache(manifest_path=None):
+def get_visual_behavior_cache(manifest_path=None):
     """Get cache using default QC manifest path"""
     if manifest_path is None:
-        manifest_path = get_qc_manifest_path()
-    cache = bpc.from_lims(manifest=get_qc_manifest_path())
+        manifest_path = get_manifest_path()
+    cache = bpc.from_lims(manifest=get_manifest_path())
     return cache
 
 
-def get_filtered_ophys_sessions_table():
-    """Get ophys sessions that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
-    must be 'complete' or 'container_qc', and experiments associated with the session are passing. In addition,
-    add container_id and container_workflow_state to table.
-
-        Arguments:
-            None
-
-        Returns:
-            filtered_sessions -- filtered version of ophys_session_table from QC cache
-        """
-    cache = get_qc_cache()
-    sessions = sdk_utils.get_filtered_sessions_table(cache, include_multiscope=True, require_full_container=False,
-                                                     require_exp_pass=False)
-    sessions = sessions.reset_index()
-    experiments = get_filtered_ophys_experiment_table()
-    filtered_sessions = sessions.merge(experiments[['ophys_session_id', 'container_id', 'container_workflow_state']],
-                                       right_on='ophys_session_id', left_on='ophys_session_id')
-    return filtered_sessions
-
-
 def get_filtered_ophys_experiment_table(include_failed_data=False):
-    """Get ophys experiments that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
-        must be 'complete' or 'container_qc', and experiments are passing. Includes MultiScope data.
+    """Get ophys experiments table from SDK, add additional useful columns to the table (currently adds exposure_number and mouse-seeks fail tags)
+        and filter out failed experiments and containers (unless include_failed_data=True).
+        Includes MultiScope data. Includes containers with container_workflow_state='holding' (most of Multiscope experiments).
+        Saves a reformatted (pre-filtering) version of the table with additional columns added for future loading speed.
 
             Arguments:
                 include_failed_data: Boolean, if False, only include passing behavior experiments from containers that were not failed.
                                 If True, return all experiments including those from failed containers and receptive field mapping experiments.
 
             Returns:
-                filtered_experiments -- filtered version of ophys_experiment_table from QC cache
+                experiments -- filtered version of ophys_experiment_table from cache
             """
-    cache = get_qc_cache()
-    experiments = cache.get_experiment_table()
-    experiments = experiments.reset_index()
-    experiments['super_container_id'] = experiments['specimen_id'].values
-
-    experiments = reformat_experiments_table(experiments)
-    if include_failed_data:
-        filtered_experiments = experiments[experiments.experiment_workflow_state.isin(['passed', 'failed'])]
+    if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
+        experiments = pd.read_csv(os.path.join(get_cache_dir(),'filtered_ophys_experiment_table.csv'))
     else:
-        # sessions = sdk_utils.get_filtered_sessions_table(cache, include_multiscope=True, require_full_container=False, require_exp_pass=False)
-        # sessions = sessions.reset_index()
-        # filtered_experiments = experiments[experiments.ophys_session_id.isin(sessions.ophys_session_id.unique())]
-        filtered_experiments = experiments.copy()
-        filtered_experiments = filtered_experiments[filtered_experiments.experiment_workflow_state == 'passed']
-        filtered_experiments = filtered_experiments[filtered_experiments.container_workflow_state != 'failed']  # include containers in holding
+        cache = get_visual_behavior_cache()
+        experiments = cache.get_experiment_table()
+        experiments = reformat.reformat_experiments_table(experiments)
+        experiments = filtering.limit_to_production_project_codes(experiments)
+        experiments = experiments.set_index('ophys_experiment_id')
+        experiments.to_csv(os.path.join(get_cache_dir(),'filtered_ophys_experiment_table.csv'))
 
-    return filtered_experiments
-
-
-def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
-    mouse_seeks_report_file_base = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
-    report_file = 'ophys_session_log_031820.xlsx'
-    vb_report_path = os.path.join(mouse_seeks_report_file_base, report_file)
-    vb_report_df = pd.read_excel(vb_report_path)
-
-    def clean_columns(columns):
-        return [c.lower().replace(' ', '_') for c in columns]
-
-    vb_report_df.columns = clean_columns(vb_report_df.columns)
-    vb_report_df = vb_report_df.rename(columns={'session_id': 'ophys_session_id'})
-    # merge fail tags into all_experiments manifest
-    experiments = experiments.merge(vb_report_df[['ophys_session_id', 'session_tags', 'failure_tags']],
-                                    right_on='ophys_session_id', left_on='ophys_session_id')
+    if include_failed_data:
+        experiments = filtering.limit_to_experiments_with_final_qc_state(experiments)
+    else:
+        experiments = filtering.limit_to_passed_experiments(experiments)
+        experiments = filtering.limit_to_valid_ophys_session_types(experiments)
+        experiments = filtering.remove_failed_containers(experiments)
+    experiments = experiments.set_index('ophys_experiment_id')
     return experiments
 
 
-# def reformat_fail_tags_for_multiscope(experiments):
-#     experiments['fail_tags'] = experiments['failure_tags']
-#     meso_expts = experiments[
-#         experiments.project_code.isin(['VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d'])]
-#     experiments.at[meso_expts.index.values, 'fail_tags'] = None
-#
-#     for session_id in meso_expts.ophys_session_id.unique():
-#         experiment_ids = meso_expts[meso_expts.ophys_session_id == session_id].ophys_experiment_id.values
-#         for i, experiment_id in enumerate(experiment_ids):
-#             expt_data = experiments[experiments.ophys_experiment_id == experiment_id]
-#             index = expt_data.index.values[0]
-#             if type(expt_data.failure_tags.values[0]) == str:
-#                 fail_tags = expt_data.failure_tags.values[0].split(',')
-#                 tags_this_expt = []
-#                 for fail_tag in fail_tags:
-#                     if (fail_tag[-1].isdigit()) and (fail_tag[-1] == str(int(expt_data.container_index.values[0]))):
-#                         tags_this_expt.append(fail_tag)
-#                     elif (fail_tag[-1].isdigit() == False):
-#                         tags_this_expt.append(fail_tag)
-#                         experiments.at[index, 'fail_tags'] = tags_this_expt
-#     return experiments
+def get_filtered_ophys_session_table():
+    """Get ophys sessions table from SDK, and add container_id and container_workflow_state to table,
+        add session_workflow_state to table (defined as >1 experiment within session passing),
+        and return only sessions where container and session workflow states are 'passed'.
+        Includes Multiscope data.
+
+        Arguments:
+            None
+
+        Returns:
+            sessions -- filtered version of ophys_session_table from cache
+        """
+    cache = get_visual_behavior_cache()
+    sessions = cache.get_session_table()
+    sessions = filtering.limit_to_production_project_codes(sessions)
+    sessions = filtering.limit_to_valid_ophys_session_types(sessions)
+    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
+    sessions = filtering.limit_to_passed_ophys_sessions(sessions)
+    sessions = filtering.remove_failed_containers(sessions)
+    # sessions = sessions.reset_index()
+
+    return sessions
 
 
-def add_location_to_expts(expts):
-    expts['location'] = [expts.loc[x]['cre_line'].split('-')[0] + '_' + expts.loc[x]['targeted_structure'] + '_' + str(int(expts.loc[x]['imaging_depth'])) for x in expts.index.values]
-    return expts
-
-
-def get_exposure_number_for_group(group):
-    order = np.argsort(group['date_of_acquisition'].values)
-    group['exposure_number'] = order
-    return group
-
-
-def add_exposure_number_to_experiments_table(experiments):
-    experiments = experiments.groupby(['super_container_id', 'container_id', 'session_type']).apply(get_exposure_number_for_group)
-    return experiments
-
-
-def reformat_experiments_table(experiments):
-    experiments = experiments.reset_index()
-    # clean up cre_line naming
-    experiments['cre_line'] = [driver_line[1] if driver_line[0] == 'Camk2a-tTA' else driver_line[0] for driver_line in
-                               experiments.driver_line.values]
-    experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']  # why is this here?
-    # replace session types that are NaN with string None
-    experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
-    # experiments = add_container_index_to_experiments_table(experiments)
-    # experiments = revise_container_id_for_multiscope(experiments)
-    experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
-    # experiments = reformat_fail_tags_for_multiscope(experiments)
-    experiments = add_exposure_number_to_experiments_table(experiments)
-    if 'level_0' in experiments.columns:
-        experiments = experiments.drop(columns='level_0')
-    if 'index' in experiments.columns:
-        experiments = experiments.drop(columns='index')
-    experiments = add_location_to_expts(experiments)
-    return experiments
-
-
-def get_filtered_ophys_container_ids():
-    """Get container_ids that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
-    must be 'complete' or 'container_qc', and experiments associated with the container are passing. """
-    experiments = get_filtered_ophys_experiment_table()
-    filtered_container_ids = np.sort(experiments.container_id.unique())
-    return filtered_container_ids
+def get_ophys_container_ids():
+    """Get container_ids that meet the criteria in get_filtered_ophys_experiment_table(). """
+    experiments = get_experiment_table()
+    container_ids = np.sort(experiments.container_id.unique())
+    return container_ids
 
 
 def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
-    """Get ophys_session_ids belonging to a given ophys_container_id. ophys container must meet the criteria in
-    sdk_utils.get_filtered_sessions_table()
+    """Get ophys_session_ids belonging to a given ophys_container_id. Ophys session must pass QC.
 
             Arguments:
-                ophys_container_id -- must be in get_filtered_ophys_container_ids()
+                ophys_container_id -- must be in get_ophys_container_ids()
 
             Returns:
                 ophys_session_ids -- list of ophys_session_ids that meet filtering criteria
             """
-    # sessions = get_filtered_ophys_sessions_table()
-    # ophys_session_ids = np.sort(sessions[(sessions.container_id == ophys_container_id)].ophys_session_id.values)
-    # temporary fix - need to make get_filtered_ophys_sessions_table work properly
     experiments = get_filtered_ophys_experiment_table()
-    ophys_session_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_session_id.values)
+    ophys_session_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_session_id.unique())
     return ophys_session_ids
 
 
 def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
     """Get ophys_experiment_ids belonging to a given ophys_container_id. ophys container must meet the criteria in
-        sdk_utils.get_filtered_sessions_table()
+        sdk_utils.get_filtered_session_table()
 
                 Arguments:
                     ophys_container_id -- must be in get_filtered_ophys_container_ids()
@@ -245,34 +178,31 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
                     ophys_experiment_ids -- list of ophys_experiment_ids that meet filtering criteria
                 """
     experiments = get_filtered_ophys_experiment_table()
-    ophys_experiment_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_experiment_id.values)
+    ophys_experiment_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].index.values)
     return ophys_experiment_ids
 
 
 def get_session_type_for_ophys_experiment_id(ophys_experiment_id):
     experiments = get_filtered_ophys_experiment_table()
-    session_type = experiments[experiments.ophys_experiment_id == ophys_experiment_id].session_type.values[0]
+    session_type = experiments.loc[ophys_experiment_id].session_type
     return session_type
 
 
 def get_session_type_for_ophys_session_id(ophys_session_id):
-    # sessions = get_filtered_ophys_sessions_table()
-    # session_type = sessions[sessions.ophys_session_id == ophys_session_id].session_type.values[0]
-    # temporary fix!!
-    experiments = get_filtered_ophys_experiment_table()
-    session_type = experiments[experiments.ophys_session_id == ophys_session_id].session_type.values[0]
+    sessions = get_filtered_ophys_session_table()
+    session_type = sessions.loc[ophys_session_id].session_type
     return session_type
 
 
 def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id):
     experiments = get_filtered_ophys_experiment_table()
-    ophys_experiment_id = experiments[(experiments.ophys_session_id == ophys_session_id)].ophys_experiment_id.values[0]
+    ophys_experiment_id = experiments[(experiments.ophys_session_id == ophys_session_id)].index.values[0]
     return ophys_experiment_id
 
 
 def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
-    lims_experiment_info = get_lims_experiment_info(ophys_experiment_id)
-    ophys_session_id = lims_experiment_info["ophys_session_id"][0]
+    experiments = get_filtered_ophys_experiment_table()
+    ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
 
 #  FROM SDK

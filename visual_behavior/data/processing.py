@@ -8,9 +8,10 @@ from functools import reduce
 
 # csid = cell_specimen_id
 
+### FUNCTIONS TO MANIPULATE DATA FOR ANALSYSIS ###
+
 
 # BASIC INFO/DATAFRAMES (EXP, SESSION & CONTAINER)
-
 
 def ophys_experiment_info_df(ophys_experiment_id):
     """manifest style information about a specific
@@ -364,6 +365,7 @@ def get_valid_csids_from_lims_for_container(ophys_container_id):
     return valid_container_csid_df
 
 
+#### does this go in data.validation?
 def cell_specimen_id_matches_in_dataframe(dataframe):
     """takes a dataframe that contains the column "cell_specimen_id"
         and returns the number of times that cell_specimen_id appears
