@@ -985,7 +985,7 @@ class MesoscopeICA(object):
 
         return ica_pl_out, pl_crosstalk, pl_mixing, figs_ct_in, figs_ct_out
 
-    def unmix_pair(self, pair, do_plots=True):
+    def unmix_pair(self, do_plots=True):
         """
         function to unmix a pair of pls:
 
@@ -1669,18 +1669,6 @@ def plot_pixel_hist2d(x, y, xlabel='signal', ylabel='crosstalk', title=None, sav
     return fig, slope, offset, r_value
 
 
-def find_scale_ica_roi(self, ica_in, ica_out):
-    """
-    find scaling factor that will minimize difference of standard deviations between ICA input and ICA out
-    for ROI traces
-    :return: [int, int]
-    """
-    # for traces:
-    scale = opt.minimize(self.ica_err, [1], (ica_out, ica_in))
-
-    return scale.x
-
-
 def ica_err(scale, ica_traces, trace_orig):
     """
     calculate difference of standard deviation between post- and pre-ICA traces:
@@ -1690,6 +1678,18 @@ def ica_err(scale, ica_traces, trace_orig):
     :return:
     """
     return np.sqrt((ica_traces * scale[0] - trace_orig) ** 2).mean()
+
+
+def find_scale_ica_roi(ica_in, ica_out):
+    """
+    find scaling factor that will minimize difference of standard deviations between ICA input and ICA out
+    for ROI traces
+    :return: [int, int]
+    """
+    # for traces:
+    scale = opt.minimize(ica_err, [1], (ica_out, ica_in))
+
+    return scale.x
 
 
 def rescale(trace_in, trace_out):
