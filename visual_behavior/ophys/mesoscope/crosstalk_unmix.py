@@ -225,7 +225,8 @@ class MesoscopeICA(object):
         """
         function to apply roi set to two image pls, first check if the traces have been extracted before,
         can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk pls
-        :param dir_name: string, new name for output files to use if different form self.names
+        :param raw_names: string, new name for output files to use if different from "raw_{exp_id}.h5"
+                set to {'roi' : 'traces_original', "np" : 'neuropil_original'} to detect previously extracted traces
         :return: list[bool bool]: flags to see if traces where extracted successfully
         """
         if self.debug_mode:
