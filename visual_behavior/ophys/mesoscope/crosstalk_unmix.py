@@ -17,7 +17,6 @@ from scipy.stats import linregress
 from matplotlib.colors import LogNorm
 import visual_behavior.ophys.mesoscope.active_traces as at
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
-import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +28,7 @@ CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'process
 ROI_NAME = "roi_ica"
 NP_NAME = "neuropil_ica"
 VBA_CACHE = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis"
+
 
 def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
     """
@@ -105,7 +105,7 @@ def create_roi_masks(rois, w, h, motion_border):
 
 class MesoscopeICA(object):
     """
-    Class to perform ica-based demixing on a pair of mesoscope pls
+    Class to perform ica-based demixing on a pair of mesoscope planes
     """
 
     def __init__(self, session_id, cache, debug_mode=False, roi_name="roi_ica", np_name="neuropil_ica"):
@@ -116,97 +116,80 @@ class MesoscopeICA(object):
         :param roi_name: string, default name for roi-related in/outs
         :param np_name: string, default name for neuropil-related ins/outs
         """
-        # self.tkeys = ['roi', 'np']
-        # self.pkeys = ['pl1', 'pl2']
-
+        self.tkeys = ['roi', 'np']
+        self.pkeys = ['pl1', 'pl2']
         self.session_id = session_id
         self.dataset = ms.MesoscopeDataset(session_id)
         self.session_cache_dir = None
         self.debug_mode = debug_mode
 
-        # self.names = {'roi':roi_name, 'np':np_name}
-        self.roi_name = roi_name  # prefix for files related to roi traces
-        self.np_name = np_name  # prefix for files related to nuropil traces
+        # prefix for files related to roi and neuropil traces
+        self.names = {'roi': roi_name, 'np': np_name}
         self.cache = cache  # analysis directory
 
-        # self.exp_ids = {key:None for key in self.pkeys}
-        self.pl1_exp_id = None  # plane 1 experiment id
-        self.pl2_exp_id = None  # plane 2 experiment id
-
-        self.dirs = {key:None for key in self.tkeys}
-        self.roi_dir = None  # path to subdir containing roi-related files
-        self.np_dir = None  # path to subdir containing neuropil-related files
+        self.exp_ids = {key: None for key in self.pkeys}
+        self.dirs = {key: None for key in self.tkeys}
 
         # pointers and attributes related to raw traces
 
-        # self.raws = {}
-        # self.paths = {}
-        # for pkey in self.pkeys:
-        #     self.raws[pkey] = {}
-        #     for tkey in self.tkeys:
-        #         self.raws[pkey][tkey] = None
-        #
-        # self.raws['pl1']['roi']
+        self.raws = {}
+        self.raw_paths = {}
+        for pkey in self.pkeys:
+            self.raws[pkey] = {}
+            for tkey in self.tkeys:
+                self.raws[pkey][tkey] = None
+                self.raw_paths[pkey][tkey] = None
 
-        self.pl1_roi_raw = None  # raw extracted traces for rois, plane 1
-        self.pl1_roi_raw_path = None  # path to raw extracted traces for rois, plane 1
-
-        self.pl2_roi_raw = None  # raw extracted traces for rois, plane 2
-        self.pl2_roi_raw_path = None  # path to raw extracted traces for rois, plane 2
-
-        self.pl1_np_raw = None  # raw extracted traces for neuropil, plane 1
-        self.pl1_np_raw_path = None  # path to raw extracted traces for neuropil, plane 1
-
-        self.pl2_np_raw = None  # raw extracted traces for rois, plane 2
-        self.pl2_np_raw_path = None  # path to raw extracted traces for neuropil, plane 2
-
-        self.found_raw_roi_traces = None  # flag if raw roi traces exist in self.roi_dir output of get_traces
-        self.found_raw_np_traces = None  # flag if raw neuropil tarces exist in self.np_dir output of get_traces
+        self.found_raw_roi_traces = None  # flag if raw roi traces exist in self.dirs["roi"] output of get_traces
+        self.found_raw_np_traces = None  # flag if raw neuropil tarces exist in self.dirs["np"] output of get_traces
 
         # pointers and attributes for validation jsons
         # only roi because they are the same for neuropil
-        self.pl1_roi_names = None
-        self.pl2_roi_names = None
-        self.pl1_rois_valid = None
-        self.pl2_rois_valid = None
-        self.pl1_rois_valid_path = None
-        self.pl2_rois_valid_path = None
+
+        self.rois_names = {}
+        self.rois_valid = {}
+        self.rois_valid_paths = {}
+        for pkey in self.pkeys:
+            self.rois_names[pkey] = None
+            self.rois_valid[pkey] = None
+            self.rois_valid_paths[pkey] = None
+
 
         # pointers and attributes related to ica input traces
         # for roi
-        self.pl1_roi_in = None  # debiased roi traces, plane 1
-        self.pl2_roi_in = None  # debiased roi traces, plane 2
-        self.pl1_roi_in_path = None  # path to debiased roi traces, plane 1
-        self.pl2_roi_in_path = None  # path to debiased roi traces, plane 2
-        self.pl1_roi_offset = None  # offsets for roi traces, plane 1
-        self.pl2_roi_offset = None  # offsets for roi traces, plane 2
+
+        self.ins = {}
+        self.ins_paths = {}
+        self.offsets = {}
+        for pkey in self.pkeys:
+            self.ins[pkey] = {}
+            self.ins_paths[pkey] = {}
+            self.offsets[pkey] = {}
+            for tkey in self.tkeys:
+                self.ins[pkey][tkey] = None
+                self.ins_paths[pkey][tkey] = None
+                self.offsets[pkey][tkey] = None
+
         self.found_roi_in = [None, None]  # flag for traces exists, roi
         self.found_roi_offset = [None, None]  # flag for offset data exists, roi
         # for neuropil
-        self.pl1_np_in = None  # debiased neuropil traces, plane 1
-        self.pl2_np_in = None  # debiased neuropil traces, plane 2
-        self.pl1_np_in_path = None  # path to debiased neuropil traces, plane 1
-        self.pl2_np_in_path = None  # path to debiased neuropil traces, plane 2
-        self.pl1_np_offset = None  # offsets for neuropil traces, plane 1
-        self.pl2_np_offset = None  # offsets for neuropil traces, plane 2
         self.found_np_in = [None, None]  # flag for traces exists, neuropil
         self.found_np_offset = [None, None]  # flag for offset data exists, neuropil
 
         # pointers and attirbutes for ica output files
         # for roi
-        self.pl1_roi_out = None  # demixed roi traces, plane 1
-        self.pl2_roi_out = None  # demixed roi traces, plane 2
-        self.pl1_roi_out_path = None  # path to demixed roi traces, plane 1
-        self.pl2_roi_out_path = None  # path to demixed roi traces, plane 2
-        self.pl1_roi_crosstalk = None  # crosstalk data for roi traces, plane 1
-        self.pl2_roi_crosstalk = None  # crosstalk data for roi traces, plane 2
-        # for neuropil
-        self.pl1_np_out = None  # demixed neuropil traces, plane 1
-        self.pl2_np_out = None  # demixed neuropil traces, plane 2
-        self.pl1_np_out_path = None  # path to demixed neuropil traces, plane 1
-        self.pl2_np_out_path = None  # path to demixed neuropil traces, plane 2
-        self.pl1_np_crosstalk = None  # crosstalk data for neuropil traces, plane 1
-        self.pl2_np_crosstalk = None  # crosstalk data for neuropil traces, plane 2
+
+        self.outs = {}
+        self.outs_paths = {}
+        self.crosstalk = {}
+        for pkey in self.pkeys:
+            self.outs[pkey] = {}
+            self.outs_paths[pkey] = {}
+            self.crosstalk[pkey] = {}
+            for tkey in self.tkeys:
+                self.outs[pkey][tkey] = None
+                self.outs_paths[pkey][tkey] = None
+                self.crosstalk[pkey][tkey] = None
 
 
         self.found_solution = None  # out of unmix_pls
@@ -233,43 +216,24 @@ class MesoscopeICA(object):
         self.session_cache_dir = os.path.join(self.cache, f'session_{self.session_id}')
         return self.session_cache_dir
 
-    def set_ica_roi_dir(self, pair, roi_name=None):
+    def set_ica_dirs(self, pair, names=None):
         """
         create path to ica-related inputs/outs for the pair
         :param pair: list[int, int] - pair of LIMS exp IDs
-        :param roi_name: roi_nam if different form self.roi_name to use to locate old inputs/outs
+        :param names: roi_nam if different form self.names["roi"] to use to locate old inputs/outs
         :return: None
         """
-        if not roi_name:
-            roi_name = self.roi_name
+        if not names:
+            for tkey in self.tkeys:
+                names[tkey] = self.names[tkey]
 
         session_dir = self.set_analysis_session_dir()
-        self.roi_dir = os.path.join(session_dir, f'{roi_name}_{pair[0]}_{pair[1]}/')
-        self.pl1_roi_out_path = os.path.join(self.roi_dir,
-                                             f'{self.roi_name}_out_{pair[0]}.h5')
-        self.pl2_roi_out_path = os.path.join(self.roi_dir,
-                                             f'{self.roi_name}_out_{pair[1]}.h5')
 
-        return
-
-    def set_ica_neuropil_dir(self, pair, np_name=None):
-        """
-        create path to neuropil-related inputs/outs for the pair
-        :param pair: list[int, int] - pair of LIMS exp IDs
-        :param np_name: roi_nam if different form self.roi_name to use to locate old inputs/outs
-        :return: None
-        """
-        if not np_name:
-            np_name = self.np_name
-
-        session_dir = self.set_analysis_session_dir()
-        self.np_dir = os.path.join(session_dir, f'{np_name}_{pair[0]}_{pair[1]}/')
-        self.pl1_np_out_path = os.path.join(self.np_dir,
-                                            f'{self.np_name}_out_{pair[0]}.h5')
-        self.pl2_np_out_path = os.path.join(self.np_dir,
-                                            f'{self.np_name}_out_{pair[1]}.h5')
-        self.ica_mixing_matrix_neuropil_path = os.path.join(self.np_dir, f'{self.np_name}_mixing.h5')
-
+        for tkey in self.tkeys:
+            self.dirs[tkey] = os.path.join(session_dir, f'{names[tkey]}_{pair[0]}_{pair[1]}/')
+            for pkey in self.pkeys:
+                self.outs_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
+                                                           f'{self.names[tkey]}_out_{pair[0]}.h5')
         return
 
     def get_ica_traces(self, pair, roi_dir_name=None, np_dir_name=None):
@@ -277,12 +241,12 @@ class MesoscopeICA(object):
         function to apply roi set to two image pls, first check if the traces have been extracted before,
         can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk pls
         :param pair: list[int, int] : LIMS exp IDs for the pair
-        :param roi_dir_name: string, new name for roi-related files to use, different form self.roi_name
+        :param roi_dir_name: string, new name for roi-related files to use, different form self.names["roi"]
         :param np_dir_name: string, new name for neuropil-related files to use, if need to be different form self.np_name
         :return: list[bool bool]: flags to see if traces where extracted successfully
         """
         if not roi_dir_name:
-            roi_dir_name = self.roi_name
+            roi_dir_name = self.names["roi"]
 
         if not np_dir_name:
             np_dir_name = self.np_name
@@ -302,8 +266,8 @@ class MesoscopeICA(object):
         pl1_exp_id = pair[0]
         pl2_exp_id = pair[1]
 
-        self.pl1_exp_id = pl1_exp_id
-        self.pl2_exp_id = pl2_exp_id
+        self.exp_ids["pl1"] = pl1_exp_id
+        self.exp_ids["pl2"] = pl2_exp_id
 
         session_dir = os.path.join(self.cache, f'session_{self.session_id}')
         self.session_cache_dir = session_dir
@@ -311,12 +275,12 @@ class MesoscopeICA(object):
         # path to ica traces:
         # for roi
         ica_traces_dir = os.path.join(session_dir, f'{roi_dir_name}_{pl1_exp_id}_{pl2_exp_id}/')
-        self.roi_dir = ica_traces_dir
+        self.dirs["roi"] = ica_traces_dir
         path_traces_pl1 = f'{ica_traces_dir}traces_original_{pl1_exp_id}.h5'
         path_traces_pl2 = f'{ica_traces_dir}traces_original_{pl2_exp_id}.h5'
         # for neuropil
         ica_neuropil_dir = os.path.join(session_dir, f'{np_dir_name}_{pl1_exp_id}_{pl2_exp_id}/')
-        self.np_dir = ica_neuropil_dir
+        self.dirs["np"] = ica_neuropil_dir
         path_neuropil_pl1 = f'{ica_neuropil_dir}neuropil_original_{pl1_exp_id}.h5'
         path_neuropil_pl2 = f'{ica_neuropil_dir}neuropil_original_{pl2_exp_id}.h5'
 
@@ -364,13 +328,13 @@ class MesoscopeICA(object):
 
             # if traces don't exist, do we need to reset unmixed and debiased traces flaggs to none?
             # yes, as we want unmixed traces be out on ICA using original traces
-            self.pl1_roi_in_path = None
-            self.pl2_roi_in_path = None
+            self.ins_paths["pl1"]["roi"] = None
+            self.ins_paths["pl2"]["roi"] = None
             self.pl1_roi_out_path = None
             self.pl2_roi_out_path = None
 
-            self.pl1_np_in_path = None
-            self.pl2_np_in_path = None
+            self.ins_paths["pl1"]["np"] = None
+            self.ins_paths["pl2"]["np"] = None
             self.pl1_np_out_path = None
             self.pl2_np_out_path = None
 
@@ -468,11 +432,11 @@ class MesoscopeICA(object):
         self.pl1_neuropil_traces_valid_path = None
         self.pl2_neuropil_traces_valid_path = None
 
-        pl1_roi_traces_valid_path = os.path.join(self.roi_dir, f'{self.pl1_exp_id}_valid.json')
-        pl2_roi_traces_valid_path = os.path.join(self.roi_dir, f'{self.pl2_exp_id}_valid.json')
+        pl1_roi_traces_valid_path = os.path.join(self.dirs["roi"], f'{self.exp_ids["pl1"]}_valid.json')
+        pl2_roi_traces_valid_path = os.path.join(self.dirs["roi"], f'{self.exp_ids["pl2"]}_valid.json')
 
-        pl1_neuropil_traces_valid_path = os.path.join(self.np_dir, f'{self.pl1_exp_id}_valid.json')
-        pl2_neuropil_traces_valid_path = os.path.join(self.np_dir, f'{self.pl2_exp_id}_valid.json')
+        pl1_neuropil_traces_valid_path = os.path.join(self.dirs["np"], f'{self.exp_ids["pl1"]}_valid.json')
+        pl2_neuropil_traces_valid_path = os.path.join(self.dirs["np"], f'{self.exp_ids["pl2"]}_valid.json')
 
         # validation json already exists, skip validating
         if os.path.isfile(pl1_roi_traces_valid_path) and os.path.isfile(
@@ -581,14 +545,14 @@ class MesoscopeICA(object):
                 # validating agains VBA rois set:
                 if return_vba:
                     pl1_roi_traces_valid = self.validate_against_vba(pl1_roi_traces_valid,
-                                                                     self.pl1_exp_id, VBA_CACHE)
+                                                                     self.exp_ids["pl1"], VBA_CACHE)
                     pl2_roi_traces_valid = self.validate_against_vba(pl2_roi_traces_valid,
-                                                                     self.pl2_exp_id, VBA_CACHE)
+                                                                     self.exp_ids["pl2"], VBA_CACHE)
 
                     pl1_neuropil_traces_valid = self.validate_against_vba(pl1_neuropil_traces_valid,
-                                                                          self.pl1_exp_id, VBA_CACHE)
+                                                                          self.exp_ids["pl1"], VBA_CACHE)
                     pl2_neuropil_traces_valid = self.validate_against_vba(pl2_neuropil_traces_valid,
-                                                                          self.pl2_exp_id, VBA_CACHE)
+                                                                          self.exp_ids["pl2"], VBA_CACHE)
                 # saving to json:
 
                 self.pl1_rois_valid_path = pl1_roi_traces_valid_path
@@ -638,17 +602,17 @@ class MesoscopeICA(object):
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-        self.pl1_roi_in_path = None
-        self.pl2_roi_in_path = None
-        pl1_ica_in_path = os.path.join(self.roi_dir, f'{self.pl1_exp_id}_in.h5')
-        pl2_ica_in_path = os.path.join(self.roi_dir, f'{self.pl2_exp_id}_in.h5')
+        self.ins_paths["pl1"]["roi"] = None
+        self.ins_paths["pl2"]["roi"] = None
+        pl1_ica_in_path = os.path.join(self.dirs["roi"], f'{self.exp_ids["pl1"]}_in.h5')
+        pl2_ica_in_path = os.path.join(self.dirs["roi"], f'{self.exp_ids["pl2"]}_in.h5')
         if os.path.isfile(pl1_ica_in_path) and os.path.isfile(pl2_ica_in_path):
             # file already exists, skip debiasing
-            self.pl1_roi_in_path = pl1_ica_in_path
-            self.pl2_roi_in_path = pl2_ica_in_path
+            self.ins_paths["pl1"]["roi"] = pl1_ica_in_path
+            self.ins_paths["pl2"]["roi"] = pl2_ica_in_path
         else:
-            self.pl1_roi_in_path = None
-            self.pl2_roi_in_path = None
+            self.ins_paths["pl1"]["roi"] = None
+            self.ins_paths["pl2"]["roi"] = None
         # original traces exist, run debiasing:
         if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1]:
             # if debiased traces don't exist, run debiasing - paths are both None
@@ -728,12 +692,12 @@ class MesoscopeICA(object):
                 # if all flags true, combine, flatten, write to disk:
 
                 if self.found_roi_in and self.found_roi_offset:
-                    self.pl1_roi_offset = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
-                    self.pl2_roi_offset = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
-                    self.pl1_roi_in = np.array([pl1_sig_m0, pl1_ct_m0])
-                    self.pl2_roi_in = np.array([pl2_sig_m0, pl2_ct_m0])
-                    self.pl1_roi_in_path = pl1_ica_in_path
-                    self.pl2_roi_in_path = pl2_ica_in_path
+                    self.offsets["pl1"]["roi"] = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
+                    self.offsets["pl2"]["roi"] = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
+                    self.ins["pl1"]["roi"]= np.array([pl1_sig_m0, pl1_ct_m0])
+                    self.ins["pl2"]["roi"]= np.array([pl2_sig_m0, pl2_ct_m0])
+                    self.ins_paths["pl1"]["roi"]= pl1_ica_in_path
+                    self.ins_paths["pl2"]["roi"]= pl2_ica_in_path
                     # write ica input traces to disk
                     with h5py.File(self.pl1_roi_in_path, "w") as f:
                         f.create_dataset("debiased_traces", data=self.pl1_roi_in)
@@ -757,12 +721,12 @@ class MesoscopeICA(object):
                     pl2_ct_offset = f['ct_offset'][()]
 
                 self.found_roi_in = [True, True]
-                self.pl1_roi_in = pl1_ica_in
-                self.pl2_roi_in = pl2_ica_in
-                self.pl1_roi_in_path = pl1_ica_in_path
-                self.pl2_roi_in_path = pl2_ica_in_path
-                self.pl1_roi_offset = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
-                self.pl2_roi_offset = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
+                self.ins["pl1"]["roi"]= pl1_ica_in
+                self.ins["pl2"]["roi"]= pl2_ica_in
+                self.ins_paths["pl1"]["roi"]= pl1_ica_in_path
+                self.ins_paths["pl2"]["roi"]= pl2_ica_in_path
+                self.offsets["pl1"]["roi"] = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
+                self.offsets["pl2"]["roi"] = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
                 self.found_roi_offset = [True, True]
         else:
             raise ValueError('Extract ROI traces first')
@@ -780,17 +744,17 @@ class MesoscopeICA(object):
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-        self.pl1_np_in_path = None
-        self.pl2_np_in_path = None
-        pl1_ica_in_path = os.path.join(self.np_dir, f'{self.pl1_exp_id}_in.h5')
-        pl2_ica_in_path = os.path.join(self.np_dir, f'{self.pl2_exp_id}_in.h5')
+        self.ins_paths["pl1"]["np"]  = None
+        self.ins_paths["pl2"]["np"]  = None
+        pl1_ica_in_path = os.path.join(self.dirs["np"], f'{self.exp_ids["pl1"]}_in.h5')
+        pl2_ica_in_path = os.path.join(self.dirs["np"], f'{self.exp_ids["pl2"]}_in.h5')
         if os.path.isfile(pl1_ica_in_path) and os.path.isfile(pl2_ica_in_path):
             # file already exists, skip debiasing
-            self.pl1_np_in_path = pl1_ica_in_path
-            self.pl2_np_in_path = pl2_ica_in_path
+            self.ins_paths["pl1"]["np"]  = pl1_ica_in_path
+            self.ins_paths["pl2"]["np"]  = pl2_ica_in_path
         else:
-            self.pl1_np_in_path = None
-            self.pl2_np_in_path = None
+            self.ins_paths["pl1"]["np"]  = None
+            self.ins_paths["pl2"]["np"]  = None
         # original traces exist, run debiasing:
         if self.found_raw_np_traces[0] and self.found_raw_np_traces[1]:
             # if debiased traces don't exist, run debiasing - paths are both None
@@ -868,12 +832,12 @@ class MesoscopeICA(object):
                 # if all flags true, combine, flatten, write to disk:
 
                 if self.found_np_in and self.found_np_offset:
-                    self.pl1_np_offset = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
-                    self.pl2_np_offset = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
-                    self.pl1_np_in = np.array([pl1_sig_m0, pl1_ct_m0])
-                    self.pl2_np_in = np.array([pl2_sig_m0, pl2_ct_m0])
-                    self.pl1_np_in_path = pl1_ica_in_path
-                    self.pl2_np_in_path = pl2_ica_in_path
+                    self.offsets["pl1"]["np"] = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
+                    self.offsets["pl2"]["np"] = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
+                    self.ins["pl1"]["np"] = np.array([pl1_sig_m0, pl1_ct_m0])
+                    self.ins["pl2"]["np"] = np.array([pl2_sig_m0, pl2_ct_m0])
+                    self.ins_paths["pl1"]["np"] = pl1_ica_in_path
+                    self.ins_paths["pl2"]["np"] = pl2_ica_in_path
                     # write ica input traces to disk
                     with h5py.File(self.pl1_np_in_path, "w") as f:
                         f.create_dataset("debiased_traces", data=self.pl1_np_in)
@@ -897,12 +861,12 @@ class MesoscopeICA(object):
                     pl2_ct_offset = f['ct_offset'][()]
 
                 self.found_np_in = [True, True]
-                self.pl1_np_in = pl1_ica_in
-                self.pl2_np_in = pl2_ica_in
-                self.pl1_np_in_path = pl1_ica_in_path
-                self.pl2_np_in_path = pl2_ica_in_path
-                self.pl1_np_offset = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
-                self.pl2_np_offset = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
+                self.ins["pl1"]["np"]  = pl1_ica_in
+                self.ins["pl2"]["np"]  = pl2_ica_in
+                self.ins_paths["pl1"]["np"]  = pl1_ica_in_path
+                self.ins_paths["pl2"]["np"]  = pl2_ica_in_path
+                self.offsets["pl1"]["np"]   = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
+                self.offsets["pl2"]["np"]   = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
                 self.found_np_offset = [True, True]
         else:
             raise ValueError('Neuropil traces do not exist - extract them first')
@@ -975,10 +939,10 @@ class MesoscopeICA(object):
         """
         function to unmix a pair of panels:
         """
-        pl1_out_path = os.path.join(self.roi_dir,
-                                    f'{self.pl1_exp_id}_out.h5')
-        pl2_out_path = os.path.join(self.roi_dir,
-                                    f'{self.pl2_exp_id}_out.h5')
+        pl1_out_path = os.path.join(self.dirs["roi"],
+                                    f'{self.exp_ids["pl1"]}_out.h5')
+        pl2_out_path = os.path.join(self.dirs["roi"],
+                                    f'{self.exp_ids["pl2"]}_out.h5')
 
         # file already exists, skip unmixing
         if os.path.isfile(pl1_out_path) and os.path.isfile(pl2_out_path):
@@ -1058,7 +1022,7 @@ class MesoscopeICA(object):
         """
 
         if not dir_name:
-            dir_name = self.roi_name
+            dir_name = self.names["roi"]
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -1207,7 +1171,7 @@ class MesoscopeICA(object):
         :return: None
         """
         if not dir_name:
-            dir_name = self.roi_name
+            dir_name = self.names["roi"]
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
