@@ -289,14 +289,14 @@ class MesoscopeICA(object):
                     ct[pkey][tkey] = {}
 
             # extract signal and crosstalk traces for pl 1
-            sig["roi"]["pl1"], sig["np"]["pl1"], roi_names["pl1"] = get_traces(folders["pl1"], self.exp_ids["pl1"],
+            sig["pl1"]["roi"], sig["pl1"]["np"], roi_names["pl1"] = get_traces(folders["pl1"], self.exp_ids["pl1"],
                                                                                folders["pl1"], self.exp_ids["pl1"])
-            ct["roi"]["pl1"], ct["np"]["pl1"], _ = get_traces(folders["pl2"], self.exp_ids["pl2"], folders["pl1"],
+            ct["pl1"]["roi"], ct["pl1"]["np"], _ = get_traces(folders["pl2"], self.exp_ids["pl2"], folders["pl1"],
                                                               self.exp_ids["pl1"])
             # extract signal and crosstalk traces for pl 2
-            sig["roi"]["pl2"], sig["np"]["pl2"], roi_names["pl2"] = get_traces(folders["pl2"], self.exp_ids["pl2"],
+            sig["pl2"]["roi"], sig["pl2"]["np"], roi_names["pl2"] = get_traces(folders["pl2"], self.exp_ids["pl2"],
                                                                                folders["pl2"], self.exp_ids["pl2"])
-            ct["roi"]["pl2"], ct["np"]["pl2"], _ = get_traces(folders["pl1"], self.exp_ids["pl1"], folders["pl2"],
+            ct["pl2"]["roi"], ct["pl2"]["np"], _ = get_traces(folders["pl1"], self.exp_ids["pl1"], folders["pl2"],
                                                               self.exp_ids["pl2"])
 
             for pkey in self.pkeys:
