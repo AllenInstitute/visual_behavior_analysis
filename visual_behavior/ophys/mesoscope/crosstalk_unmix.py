@@ -221,14 +221,16 @@ class MesoscopeICA(object):
                                                            f'{self.names[tkey]}_out_{self.exp_ids[pkey]}.h5')
         return
 
-    def get_ica_traces(self, raw_names=None):
+    def get_ica_traces(self):
         """
         function to apply roi set to two image pls, first check if the traces have been extracted before,
         can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk pls
-        :param raw_names: string, new name for output files to use if different from "raw_{exp_id}.h5"
-                set to {'roi' : 'traces_original', "np" : 'neuropil_original'} to detect previously extracted traces
         :return: list[bool bool]: flags to see if traces where extracted successfully
         """
+
+        names_prefix = [{"roi": 'traces_original', "np": 'neuropil_original'},
+                        {"roi": 'raw', "np": 'raw'}]
+
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
@@ -240,21 +242,29 @@ class MesoscopeICA(object):
             for tkey in self.tkeys:
                 self.found_raws[pkey][tkey] = False
 
-        if not raw_names:
-            raw_names = {}
+        for i in range(len(names_prefix)):
+            name_prefix = names_prefix[i]
+            name = {}
             for tkey in self.tkeys:
-                raw_names[tkey] = 'raw'
+                name[tkey] = name_prefix[tkey]
+                # define paths to traces
+                path = {}
+                for pkey_1 in self.pkeys:
+                    path[pkey_1] = {}
+                    for tkey_1 in self.tkeys:
+                        path[pkey_1][tkey_1] = f'{self.dirs[tkey_1]}{name[tkey_1]}_{self.exp_ids[pkey_1]}.h5'
 
-        # define paths to traces:
-        path = {}
-        for pkey in self.pkeys:
-            path[pkey] = {}
-            for tkey in self.tkeys:
-                path[pkey][tkey] = f'{self.dirs[tkey]}{raw_names[tkey]}_{self.exp_ids[pkey]}.h5'
+                # let's see if all traces exist already:
+                if os.path.isfile(path["pl1"]["roi"]) and os.path.isfile(path["pl2"]["roi"]) and os.path.isfile(
+                        path["pl1"]["np"]) and os.path.isfile(path["pl2"]["np"]):
 
-        # let's see if all traces exist already:
-        if os.path.isfile(path["pl1"]["roi"]) and os.path.isfile(path["pl2"]["roi"]) and os.path.isfile(
-                path["pl1"]["np"]) and os.path.isfile(path["pl2"]["np"]):
+                    for pkey_2 in self.pkeys:
+                        for tkey_2 in self.tkeys:
+                            self.found_raws[pkey_2][tkey_2] = True
+                    break
+
+        if self.found_raws["pl1"]["roi"] and self.found_raws["pl2"]["roi"] and self.found_raws["pl1"]["np"] and \
+                self.found_raws["pl1"]["roi"]:
 
             # if both traces exist, skip extracting:
             logger.info('Found traces in cache, reading from h5 file')
