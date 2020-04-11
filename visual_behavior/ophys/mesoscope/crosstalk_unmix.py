@@ -120,18 +120,17 @@ class MesoscopeICA(object):
         self.pkeys = ['pl1', 'pl2']
         self.session_id = session_id
         self.dataset = ms.MesoscopeDataset(session_id)
-        self.session_cache_dir = None
+        self.session_dir = None
         self.debug_mode = debug_mode
+        self.session_dir = os.path.join(self.cache, f'session_{self.session_id}')
 
         # prefix for files related to roi and neuropil traces
         self.names = {'roi': roi_name, 'np': np_name}
         self.cache = cache  # analysis directory
-
         self.exp_ids = {key: None for key in self.pkeys}
         self.dirs = {key: None for key in self.tkeys}
 
         # pointers and attributes related to raw traces
-
         self.raws = {}
         self.raw_paths = {}
         for pkey in self.pkeys:
@@ -140,13 +139,11 @@ class MesoscopeICA(object):
             for tkey in self.tkeys:
                 self.raws[pkey][tkey] = None
                 self.raw_paths[pkey][tkey] = None
-
         self.found_raw_roi_traces = None  # flag if raw roi traces exist in self.dirs["roi"] output of get_traces
         self.found_raw_np_traces = None  # flag if raw neuropil tarces exist in self.dirs["np"] output of get_traces
 
         # pointers and attributes for validation jsons
         # only roi because they are the same for neuropil
-
         self.rois_names = {}
         self.rois_valid = {}
         self.rois_valid_paths = {}
@@ -155,10 +152,7 @@ class MesoscopeICA(object):
             self.rois_valid[pkey] = None
             self.rois_valid_paths[pkey] = None
 
-
         # pointers and attributes related to ica input traces
-        # for roi
-
         self.ins = {}
         self.ins_paths = {}
         self.offsets = {}
@@ -170,7 +164,6 @@ class MesoscopeICA(object):
                 self.ins[pkey][tkey] = None
                 self.ins_paths[pkey][tkey] = None
                 self.offsets[pkey][tkey] = None
-
         self.found_roi_in = [None, None]  # flag for traces exists, roi
         self.found_roi_offset = [None, None]  # flag for offset data exists, roi
         # for neuropil
@@ -178,8 +171,6 @@ class MesoscopeICA(object):
         self.found_np_offset = [None, None]  # flag for offset data exists, neuropil
 
         # pointers and attirbutes for ica output files
-        # for roi
-
         self.outs = {}
         self.outs_paths = {}
         self.crosstalk = {}
@@ -209,14 +200,6 @@ class MesoscopeICA(object):
         self.pl1_ica_out = None
         self.pl2_ica_out = None
 
-    def set_analysis_session_dir(self):
-        """
-        crete path to the session-level dir
-        :return: string - path to session level dir
-        """
-        self.session_cache_dir = os.path.join(self.cache, f'session_{self.session_id}')
-        return self.session_cache_dir
-
     def set_exp_ids(self, pair):
         """
         fn to set self.exp_ids
@@ -235,7 +218,7 @@ class MesoscopeICA(object):
         if not names:
             names = self.names
 
-        session_dir = self.set_analysis_session_dir()
+        session_dir = self.session_dir
 
         for tkey in self.tkeys:
             self.dirs[tkey] = os.path.join(session_dir, f'{names[tkey]}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
@@ -244,11 +227,10 @@ class MesoscopeICA(object):
                                                            f'{self.names[tkey]}_out_{self.exp_ids[pkey]}.h5')
         return
 
-    def get_ica_traces(self, pair, roi_dir_name=None, np_dir_name=None):
+    def get_ica_traces(self, roi_dir_name=None, np_dir_name=None):
         """
         function to apply roi set to two image pls, first check if the traces have been extracted before,
         can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk pls
-        :param pair: list[int, int] : LIMS exp IDs for the pair
         :param roi_dir_name: string, new name for roi-related files to use, different form self.names["roi"]
         :param np_dir_name: string, new name for neuropil-related files to use, if need to be different form self.np_name
         :return: list[bool bool]: flags to see if traces where extracted successfully
@@ -257,7 +239,7 @@ class MesoscopeICA(object):
             roi_dir_name = self.names["roi"]
 
         if not np_dir_name:
-            np_dir_name = self.np_name
+            np_dir_name = self.names["np"]
 
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
@@ -265,32 +247,21 @@ class MesoscopeICA(object):
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
         # we will first check if traces exist, if yes - read them, if not - extract them
-        self.pl1_roi_names = None
-        self.pl2_roi_names = None
 
         self.found_raw_roi_traces = [False, False]
         self.found_raw_np_traces = [False, False]
 
-        pl1_exp_id = pair[0]
-        pl2_exp_id = pair[1]
-
-        self.exp_ids["pl1"] = pl1_exp_id
-        self.exp_ids["pl2"] = pl2_exp_id
-
-        session_dir = os.path.join(self.cache, f'session_{self.session_id}')
-        self.session_cache_dir = session_dir
-
         # path to ica traces:
         # for roi
-        ica_traces_dir = os.path.join(session_dir, f'{roi_dir_name}_{pl1_exp_id}_{pl2_exp_id}/')
+        ica_traces_dir = os.path.join(self.session_dir, f'{roi_dir_name}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
         self.dirs["roi"] = ica_traces_dir
-        path_traces_pl1 = f'{ica_traces_dir}traces_original_{pl1_exp_id}.h5'
-        path_traces_pl2 = f'{ica_traces_dir}traces_original_{pl2_exp_id}.h5'
+        path_traces_pl1 = f'{ica_traces_dir}traces_original_{self.exp_ids["pl1"]}.h5'
+        path_traces_pl2 = f'{ica_traces_dir}traces_original_{self.exp_ids["pl2"]}.h5'
         # for neuropil
-        ica_neuropil_dir = os.path.join(session_dir, f'{np_dir_name}_{pl1_exp_id}_{pl2_exp_id}/')
+        ica_neuropil_dir = os.path.join(self.session_dir, f'{np_dir_name}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
         self.dirs["np"] = ica_neuropil_dir
-        path_neuropil_pl1 = f'{ica_neuropil_dir}neuropil_original_{pl1_exp_id}.h5'
-        path_neuropil_pl2 = f'{ica_neuropil_dir}neuropil_original_{pl2_exp_id}.h5'
+        path_neuropil_pl1 = f'{ica_neuropil_dir}neuropil_original_{self.exp_ids["pl1"]}.h5'
+        path_neuropil_pl2 = f'{ica_neuropil_dir}neuropil_original_{self.exp_ids["pl2"]}.h5'
 
         # let's see if all traces exist already:
         if os.path.isfile(path_traces_pl1) and os.path.isfile(path_traces_pl2) and os.path.isfile(
@@ -313,18 +284,18 @@ class MesoscopeICA(object):
             with h5py.File(path_neuropil_pl2, "r") as f:
                 pl2_neuropil_original = f["data"][()]
 
-            self.pl1_roi_raw_path = path_traces_pl1
-            self.pl2_roi_raw_path = path_traces_pl2
-            self.pl1_roi_raw = pl1_traces_original
-            self.pl2_roi_raw = pl2_traces_original
-            self.pl1_roi_names = pl1_roi_names
-            self.pl2_roi_names = pl2_roi_names
+            self.raws_paths["pl1"]["roi"] = path_traces_pl1
+            self.raws_paths["pl2"]["roi"] = path_traces_pl2
+            self.raws["pl1"]["roi"] = pl1_traces_original
+            self.raws["pl2"]["roi"] = pl2_traces_original
+            self.rois_names["pl1"] = pl1_roi_names
+            self.rois_names["pl2"] = pl2_roi_names
 
             #  same for neuropil:
-            self.pl1_np_raw_path = path_neuropil_pl1
-            self.pl2_np_raw_path = path_neuropil_pl2
-            self.pl1_np_raw = pl1_neuropil_original
-            self.pl2_np_raw = pl2_neuropil_original
+            self.raws_paths["pl1"]["np"] = path_neuropil_pl1
+            self.raws_paths["pl2"]["np"] = path_neuropil_pl2
+            self.raws["pl1"]["np"] = pl1_neuropil_original
+            self.raws["pl1"]["np"]= pl2_neuropil_original
             # set found traces flag True
             self.found_raw_roi_traces = [True, True]
             # set found neuropil traces flag True
@@ -346,22 +317,22 @@ class MesoscopeICA(object):
             self.pl1_np_out_path = None
             self.pl2_np_out_path = None
 
-            self.pl1_roi_names = None
-            self.pl2_roi_names = None
+            self.rois_names["pl1"] = None
+            self.rois_names["pl2"] = None
 
-            pl1_folder = self.dataset.get_exp_folder(pl1_exp_id)
-            pl2_folder = self.dataset.get_exp_folder(pl2_exp_id)
+            pl1_folder = self.dataset.get_exp_folder(self.exp_ids["pl1"])
+            pl2_folder = self.dataset.get_exp_folder(self.exp_ids["pl2"])
 
             # extract signal and crosstalk traces for pl 1
-            pl1_sig_traces, pl1_sig_neuropil, pl1_roi_names = get_traces(pl1_folder, pl1_exp_id,
-                                                                         pl1_folder, pl1_exp_id)
-            pl1_ct_traces, pl1_ct_neuropil, _ = get_traces(pl2_folder, pl2_exp_id, pl1_folder,
-                                                           pl1_exp_id)
+            pl1_sig_traces, pl1_sig_neuropil, pl1_roi_names = get_traces(pl1_folder, self.exp_ids["pl1"],
+                                                                         pl1_folder, self.exp_ids["pl1"])
+            pl1_ct_traces, pl1_ct_neuropil, _ = get_traces(pl2_folder, self.exp_ids["pl2"], pl1_folder,
+                                                           self.exp_ids["pl1"])
             # extract signal and crosstalk traces for pl 2
-            pl2_sig_traces, pl2_sig_neuropil, pl2_roi_names = get_traces(pl2_folder, pl2_exp_id,
-                                                                         pl2_folder, pl2_exp_id)
-            pl2_ct_traces, pl2_ct_neuropil, _ = get_traces(pl1_folder, pl1_exp_id, pl2_folder,
-                                                           pl2_exp_id)
+            pl2_sig_traces, pl2_sig_neuropil, pl2_roi_names = get_traces(pl2_folder, self.exp_ids["pl2"],
+                                                                         pl2_folder, self.exp_ids["pl2"])
+            pl2_ct_traces, pl2_ct_neuropil, _ = get_traces(pl1_folder, self.exp_ids["pl1"], pl2_folder,
+                                                           self.exp_ids["pl2"])
 
             # setting traces valid flag: if none is None
             if (not pl1_sig_traces.any() is None) and (not pl1_ct_traces.any() is None):
@@ -374,8 +345,8 @@ class MesoscopeICA(object):
                 self.found_raw_np_traces[1] = True
 
             # DOES ROI traces DIR EXIST?
-            if not os.path.isdir(session_dir):
-                os.mkdir(session_dir)
+            if not os.path.isdir(self.session_dir):
+                os.mkdir(self.session_dir)
             if not os.path.isdir(ica_traces_dir):
                 os.mkdir(ica_traces_dir)
             # if extracted traces valid, save to disk:
@@ -383,24 +354,24 @@ class MesoscopeICA(object):
                 # combining traces, saving to self, writing to disk:
                 pl1_traces_original = np.array([pl1_sig_traces, pl1_ct_traces])
 
-                self.pl1_roi_raw = pl1_traces_original
-                self.pl1_roi_raw_path = path_traces_pl1
-                self.pl1_roi_names = pl1_roi_names
+                self.raws["pl1"]["roi"] = pl1_traces_original
+                self.raws_paths["pl1"]["roi"] = path_traces_pl1
+                self.rois_names["pl1"] = pl1_roi_names
                 with h5py.File(path_traces_pl1, "w") as f:
                     f.create_dataset(f"data", data=pl1_traces_original)
                     f.create_dataset(f"roi_names", data=np.int_(pl1_roi_names))
 
                 # same for pl 2:
                 pl2_traces_original = np.array([pl2_sig_traces, pl2_ct_traces])
-                self.pl2_roi_raw = pl2_traces_original
-                self.pl2_roi_raw_path = path_traces_pl2
-                self.pl2_roi_names = pl2_roi_names
+                self.raws["pl2"]["roi"] = pl2_traces_original
+                self.raws_paths["pl2"]["roi"] = path_traces_pl2
+                self.rois_names["pl2"] = pl2_roi_names
                 with h5py.File(path_traces_pl2, "w") as f:
                     f.create_dataset(f"data", data=pl2_traces_original)
                     f.create_dataset(f"roi_names", data=np.int_(pl2_roi_names))
 
-            if not os.path.isdir(session_dir):
-                os.mkdir(session_dir)
+            if not os.path.isdir(self.session_dir):
+                os.mkdir(self.session_dir)
             if not os.path.isdir(ica_neuropil_dir):
                 os.mkdir(ica_neuropil_dir)
 
@@ -408,15 +379,15 @@ class MesoscopeICA(object):
             if self.found_raw_np_traces[0] and self.found_raw_np_traces[1]:
                 # combining traces, saving to self, writing to disk:
                 pl1_neuropil_original = np.array([pl1_sig_neuropil, pl1_ct_neuropil])
-                self.pl1_np_raw = pl1_neuropil_original
-                self.pl1_np_raw_path = path_neuropil_pl1
+                self.raws["pl1"]["np"] = pl1_neuropil_original
+                self.raws_paths["pl1"]["np"] = path_neuropil_pl1
                 with h5py.File(path_neuropil_pl1, "w") as f:
                     f.create_dataset(f"data", data=pl1_neuropil_original)
                     f.create_dataset(f"roi_names", data=np.int_(pl1_roi_names))
                 # same for pl 2:
                 pl2_neuropil_original = np.array([pl2_sig_neuropil, pl2_ct_neuropil])
-                self.pl2_np_raw = pl2_neuropil_original
-                self.pl2_np_raw_path = path_neuropil_pl2
+                self.raws["pl2"]["np"] = pl2_neuropil_original
+                self.raws_paths["pl2"]["np"] = path_neuropil_pl2
                 with h5py.File(path_neuropil_pl2, "w") as f:
                     f.create_dataset(f"data", data=pl2_neuropil_original)
                     f.create_dataset(f"roi_names", data=np.int_(pl2_roi_names))
@@ -478,32 +449,32 @@ class MesoscopeICA(object):
                 pl1_ct_trace_valid = {}
                 pl1_ct_neuropil_valid = {}
 
-                num_traces_roi_sig, _ = self.pl1_roi_raw[0].shape
-                num_traces_neuropil_sig, _ = self.pl1_np_raw[0].shape
-                num_traces_roi_ct, _ = self.pl1_roi_raw[1].shape
-                num_traces_neuropil_ct, _ = self.pl1_np_raw[1].shape
+                num_traces_roi_sig, _ = self.raws["pl1"]["roi"][0].shape
+                num_traces_neuropil_sig, _ = self.raws["pl1"]["np"][0].shape
+                num_traces_roi_ct, _ = self.raws["pl1"]["roi"][1].shape
+                num_traces_neuropil_ct, _ = self.raws["pl1"]["np"][1].shape
 
                 if not (num_traces_roi_sig == num_traces_neuropil_sig) or not (
                         num_traces_roi_ct == num_traces_neuropil_ct):
                     logger.info('Neuropil and ROI traces are not aligned')
                 else:
                     for n in range(num_traces_roi_sig):
-                        trace_roi_sig = self.pl1_roi_raw[0][n]
-                        trace_neuropil_sig = self.pl1_np_raw[0][n]
-                        trace_roi_ct = self.pl1_roi_raw[1][n]
-                        trace_neuropil_ct = self.pl1_np_raw[1][n]
+                        trace_roi_sig = self.raws["pl1"]["roi"][0][n]
+                        trace_neuropil_sig = self.raws["pl1"]["np"][0][n]
+                        trace_roi_ct = self.raws["pl1"]["roi"][1][n]
+                        trace_neuropil_ct = self.raws["pl1"]["np"][1][n]
 
                         if np.any(np.isnan(trace_roi_sig)) or np.any(np.isnan(trace_neuropil_sig)) or np.any(
                                 np.isnan(trace_roi_ct)) or np.any(np.isnan(trace_neuropil_ct)):
-                            pl1_sig_trace_valid[str(self.pl1_roi_names[n])] = False
-                            pl1_sig_neuropil_valid[str(self.pl1_roi_names[n])] = False
-                            pl1_ct_trace_valid[str(self.pl1_roi_names[n])] = False
-                            pl1_ct_neuropil_valid[str(self.pl1_roi_names[n])] = False
+                            pl1_sig_trace_valid[str(self.rois_names["pl1"][n])] = False
+                            pl1_sig_neuropil_valid[str(self.rois_names["pl1"][n])] = False
+                            pl1_ct_trace_valid[str(self.rois_names["pl1"][n])] = False
+                            pl1_ct_neuropil_valid[str(self.rois_names["pl1"][n])] = False
                         else:
-                            pl1_sig_trace_valid[str(self.pl1_roi_names[n])] = True
-                            pl1_sig_neuropil_valid[str(self.pl1_roi_names[n])] = True
-                            pl1_ct_trace_valid[str(self.pl1_roi_names[n])] = True
-                            pl1_ct_neuropil_valid[str(self.pl1_roi_names[n])] = True
+                            pl1_sig_trace_valid[str(self.rois_names["pl1"][n])] = True
+                            pl1_sig_neuropil_valid[str(self.rois_names["pl1"][n])] = True
+                            pl1_ct_trace_valid[str(self.rois_names["pl1"][n])] = True
+                            pl1_ct_neuropil_valid[str(self.rois_names["pl1"][n])] = True
 
                 # traces, pl 2:
                 # signal:
@@ -512,32 +483,32 @@ class MesoscopeICA(object):
                 pl2_ct_trace_valid = {}
                 pl2_ct_neuropil_valid = {}
 
-                num_traces_roi_sig, _ = self.pl2_roi_raw[0].shape
-                num_traces_neuropil_sig, _ = self.pl2_np_raw[0].shape
-                num_traces_roi_ct, _ = self.pl2_roi_raw[1].shape
-                num_traces_neuropil_ct, _ = self.pl2_np_raw[1].shape
+                num_traces_roi_sig, _ = self.raws["pl2"]["roi"][0].shape
+                num_traces_neuropil_sig, _ = self.raws["pl2"]["np"][0].shape
+                num_traces_roi_ct, _ = self.raws["pl2"]["roi"][1].shape
+                num_traces_neuropil_ct, _ = self.raws["pl2"]["np"][1].shape
 
                 if not (num_traces_roi_sig == num_traces_neuropil_sig) or not (
                         num_traces_roi_ct == num_traces_neuropil_ct):
                     logger.info('Neuropil and ROI traces are not aligned')
                 else:
                     for n in range(num_traces_roi_sig):
-                        trace_roi_sig = self.pl2_roi_raw[0][n]
-                        trace_neuropil_sig = self.pl2_np_raw[0][n]
-                        trace_roi_ct = self.pl2_roi_raw[1][n]
-                        trace_neuropil_ct = self.pl2_np_raw[1][n]
+                        trace_roi_sig = self.raws["pl2"]["roi"][0][n]
+                        trace_neuropil_sig = self.raws["pl2"]["np"][0][n]
+                        trace_roi_ct = self.raws["pl2"]["roi"][1][n]
+                        trace_neuropil_ct = self.raws["pl2"]["np"][1][n]
 
                         if np.any(np.isnan(trace_roi_sig)) or np.any(np.isnan(trace_neuropil_sig)) or np.any(
                                 np.isnan(trace_roi_ct)) or np.any(np.isnan(trace_neuropil_ct)):
-                            pl2_sig_trace_valid[str(self.pl2_roi_names[n])] = False
-                            pl2_sig_neuropil_valid[str(self.pl2_roi_names[n])] = False
-                            pl2_ct_trace_valid[str(self.pl2_roi_names[n])] = False
-                            pl2_ct_neuropil_valid[str(self.pl2_roi_names[n])] = False
+                            pl2_sig_trace_valid[str(self.rois_names["pl2"][n])] = False
+                            pl2_sig_neuropil_valid[str(self.rois_names["pl2"][n])] = False
+                            pl2_ct_trace_valid[str(self.rois_names["pl2"][n])] = False
+                            pl2_ct_neuropil_valid[str(self.rois_names["pl2"][n])] = False
                         else:
-                            pl2_sig_trace_valid[str(self.pl2_roi_names[n])] = True
-                            pl2_sig_neuropil_valid[str(self.pl2_roi_names[n])] = True
-                            pl2_ct_trace_valid[str(self.pl2_roi_names[n])] = True
-                            pl2_ct_neuropil_valid[str(self.pl2_roi_names[n])] = True
+                            pl2_sig_trace_valid[str(self.rois_names["pl2"][n])] = True
+                            pl2_sig_neuropil_valid[str(self.rois_names["pl2"][n])] = True
+                            pl2_ct_trace_valid[str(self.rois_names["pl2"][n])] = True
+                            pl2_ct_neuropil_valid[str(self.rois_names["pl2"][n])] = True
 
                 # combining dictionaries for signal and crosstalk
                 pl1_roi_traces_valid = {"signal": pl1_sig_trace_valid,
@@ -629,15 +600,15 @@ class MesoscopeICA(object):
                 self.found_roi_offset = [False, False]
                 logger.info("Debiased ROI traces do not exist in cache, running offset subtraction")
 
-                pl1_sig = self.pl1_roi_raw[0]
-                pl1_ct = self.pl1_roi_raw[1]
+                pl1_sig = self.raws["pl1"]["roi"][0]
+                pl1_ct = self.raws["pl1"]["roi"][1]
                 pl1_valid = self.pl1_rois_valid
 
                 pl1_valid_sig = pl1_valid['signal']
                 pl1_valid_ct = pl1_valid['crosstalk']
 
-                pl2_sig = self.pl2_roi_raw[0]
-                pl2_ct = self.pl2_roi_raw[1]
+                pl2_sig = self.raws["pl2"]["roi"][0]
+                pl2_ct = self.raws["pl2"]["roi"][1]
 
                 pl2_valid = self.pl2_rois_valid
                 pl2_valid_sig = pl2_valid['signal']
@@ -645,26 +616,26 @@ class MesoscopeICA(object):
 
                 # only include cells that don't have nans  (valid = True)
                 # check if traces aligned:
-                if len(self.pl1_roi_names) == len(pl1_sig):
-                    pl1_sig_valid_idx = np.array([pl1_valid_sig[str(tid)] for tid in self.pl1_roi_names])
+                if len(self.rois_names["pl1"]) == len(pl1_sig):
+                    pl1_sig_valid_idx = np.array([pl1_valid_sig[str(tid)] for tid in self.rois_names["pl1"]])
                     pl1_sig_valid = pl1_sig[pl1_sig_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.pl1_roi_names) == len(pl1_ct):
-                    pl1_ct_valid_idx = np.array([pl1_valid_ct[str(tid)] for tid in self.pl1_roi_names])
+                if len(self.rois_names["pl1"]) == len(pl1_ct):
+                    pl1_ct_valid_idx = np.array([pl1_valid_ct[str(tid)] for tid in self.rois_names["pl1"]])
                     pl1_ct_valid = pl1_ct[pl1_ct_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.pl2_roi_names) == len(pl2_sig):
-                    pl2_sig_valid_idx = np.array([pl2_valid_sig[str(tid)] for tid in self.pl2_roi_names])
+                if len(self.rois_names["pl2"]) == len(pl2_sig):
+                    pl2_sig_valid_idx = np.array([pl2_valid_sig[str(tid)] for tid in self.rois_names["pl2"]])
                     pl2_sig_valid = pl2_sig[pl2_sig_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.pl2_roi_names) == len(pl2_ct):
-                    pl2_ct_valid_idx = np.array([pl2_valid_ct[str(tid)] for tid in self.pl2_roi_names])
+                if len(self.rois_names["pl2"]) == len(pl2_ct):
+                    pl2_ct_valid_idx = np.array([pl2_valid_ct[str(tid)] for tid in self.rois_names["pl2"]])
                     pl2_ct_valid = pl2_ct[pl2_ct_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
@@ -771,40 +742,40 @@ class MesoscopeICA(object):
                 self.found_np_offset = [False, False]
                 logger.info("Debiased neuropil traces do not exist in cache, running offset subtraction")
 
-                pl1_sig = self.pl1_np_raw[0]
-                pl1_ct = self.pl1_np_raw[1]
+                pl1_sig = self.raws["pl2"]["np"][0]
+                pl1_ct = self.raws["pl2"]["np"][1]
                 pl1_valid = self.pl1_rois_valid
                 pl1_valid_sig = pl1_valid['signal']
                 pl1_valid_ct = pl1_valid['crosstalk']
 
-                pl2_sig = self.pl2_np_raw[0]
-                pl2_ct = self.pl2_np_raw[1]
+                pl2_sig = self.raws["pl2"]["np"][0]
+                pl2_ct = self.raws["pl2"]["np"][1]
                 pl2_valid = self.pl2_rois_valid
                 pl2_valid_sig = pl2_valid['signal']
                 pl2_valid_ct = pl2_valid['crosstalk']
 
                 # only include cells that don't have nans  (valid = True)
                 # check if traces aligned:
-                if len(self.pl1_roi_names) == len(pl1_sig):
-                    pl1_sig_valid_idx = np.array([pl1_valid_sig[str(tid)] for tid in self.pl1_roi_names])
+                if len(self.rois_names["pl1"]) == len(pl1_sig):
+                    pl1_sig_valid_idx = np.array([pl1_valid_sig[str(tid)] for tid in self.rois_names["pl1"]])
                     pl1_sig_valid = pl1_sig[pl1_sig_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.pl1_roi_names) == len(pl1_ct):
-                    pl1_ct_valid_idx = np.array([pl1_valid_ct[str(tid)] for tid in self.pl1_roi_names])
+                if len(self.rois_names["pl1"]) == len(pl1_ct):
+                    pl1_ct_valid_idx = np.array([pl1_valid_ct[str(tid)] for tid in self.rois_names["pl1"]])
                     pl1_ct_valid = pl1_ct[pl1_ct_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.pl2_roi_names) == len(pl2_sig):
-                    pl2_sig_valid_idx = np.array([pl2_valid_sig[str(tid)] for tid in self.pl2_roi_names])
+                if len(self.rois_names["pl2"]) == len(pl2_sig):
+                    pl2_sig_valid_idx = np.array([pl2_valid_sig[str(tid)] for tid in self.rois_names["pl2"]])
                     pl2_sig_valid = pl2_sig[pl2_sig_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.pl2_roi_names) == len(pl2_ct):
-                    pl2_ct_valid_idx = np.array([pl2_valid_ct[str(tid)] for tid in self.pl2_roi_names])
+                if len(self.rois_names["pl2"]) == len(pl2_ct):
+                    pl2_ct_valid_idx = np.array([pl2_valid_ct[str(tid)] for tid in self.rois_names["pl2"]])
                     pl2_ct_valid = pl2_ct[pl2_ct_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
@@ -1043,16 +1014,16 @@ class MesoscopeICA(object):
 
         if self.pl1_roi_out_path and self.pl2_roi_out_path:
 
-            raw_trace_pl1_sig = self.pl1_roi_raw[0, :, :]
-            raw_trace_pl1_ct = self.pl1_roi_raw[1, :, :]
-            pl1_roi_names = self.pl1_roi_names
+            raw_trace_pl1_sig = self.raws["pl1"]["roi"][0, :, :]
+            raw_trace_pl1_ct = self.raws["pl1"]["roi"][1, :, :]
+            pl1_roi_names = self.rois_names["pl1"]
             pl1_roi_valid = self.pl1_rois_valid['signal']
             ica_trace_pl1_sig = self.pl1_ica_out[0, :, :]
             ica_trace_pl1_ct = self.pl1_ica_out[1, :, :]
 
             logging.info(f'creating figures for experiment {pair[0]}')
 
-            plot_dir = os.path.join(self.session_cache_dir, f'{dir_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
+            plot_dir = os.path.join(self.session_dir, f'{dir_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[0]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
@@ -1104,14 +1075,14 @@ class MesoscopeICA(object):
                     logging.info(f'Cell {pl1_roi_names[cell_orig]} is invalid, skipping plotting')
                     cell_valid = cell_valid
 
-            raw_trace_pl2_sig = self.pl2_roi_raw[0, :, :]
-            raw_trace_pl2_ct = self.pl2_roi_raw[1, :, :]
-            pl2_roi_names = self.pl2_roi_names
+            raw_trace_pl2_sig = self.raws["pl2"]["roi"][0, :, :]
+            raw_trace_pl2_ct = self.raws["pl2"]["roi"][1, :, :]
+            pl2_roi_names = self.rois_names["pl2"]
             pl2_roi_valid = self.pl2_rois_valid['signal']
             ica_trace_pl2_sig = self.pl2_ica_out[0, :, :]
             ica_trace_pl2_ct = self.pl2_ica_out[1, :, :]
             logging.info(f'creating figures for experiment {pair[1]}')
-            plot_dir = os.path.join(self.session_cache_dir, f'{dir_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
+            plot_dir = os.path.join(self.session_dir, f'{dir_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
             cell_valid = 0
@@ -1190,16 +1161,16 @@ class MesoscopeICA(object):
             print(f'Switching backend to Agg')
             plt.switch_backend('Agg')
 
-        if self.pl1_roi_raw_path and self.pl2_roi_raw_path:
+        if self.raws_paths["pl1"]["roi"] and self.raws_paths["pl2"]["roi"]:
 
-            raw_trace_pl1_sig = self.pl1_roi_raw[0, :, :]
-            raw_trace_pl1_ct = self.pl1_roi_raw[1, :, :]
-            pl1_roi_names = self.pl1_roi_names
+            raw_trace_pl1_sig = self.raws["pl1"]["roi"][0, :, :]
+            raw_trace_pl1_ct = self.raws["pl1"]["roi"][1, :, :]
+            pl1_roi_names = self.rois_names["pl1"]
             pl1_roi_valid = self.pl1_rois_valid['signal']
 
             logging.info(f'plotting raw traces for experiment {pair[0]}')
 
-            plot_dir = os.path.join(self.session_cache_dir, f'{dir_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[0]}')
+            plot_dir = os.path.join(self.session_dir, f'{dir_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[0]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
@@ -1235,12 +1206,12 @@ class MesoscopeICA(object):
                 else:
                     logging.info(f'Cell {pl1_roi_names[cell_orig]} is invalid, skipping plotting')
 
-            raw_trace_pl2_sig = self.pl2_roi_raw[0, :, :]
-            raw_trace_pl2_ct = self.pl2_roi_raw[1, :, :]
-            pl2_roi_names = self.pl2_roi_names
+            raw_trace_pl2_sig = self.raws["pl2"]["roi"][0, :, :]
+            raw_trace_pl2_ct = self.raws["pl2"]["roi"][1, :, :]
+            pl2_roi_names = self.rois_names["pl2"]
             pl2_roi_valid = self.pl2_rois_valid['signal']
             logging.info(f'creating plots for experiment {pair[1]}')
-            plot_dir = os.path.join(self.session_cache_dir, f'{dir_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
+            plot_dir = os.path.join(self.session_dir, f'{dir_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
