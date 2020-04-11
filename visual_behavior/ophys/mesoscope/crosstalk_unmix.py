@@ -258,8 +258,6 @@ class MesoscopeICA(object):
 
             logger.info('Found traces in cache, reading from h5 file')
 
-            for
-
             # read traces form h5 file:
             with h5py.File(path["pl1"]["roi"], "r") as f:
                 pl1_traces_original = f["data"][()]
