@@ -243,26 +243,27 @@ class MesoscopeICA(object):
                 self.found_raws[pkey][tkey] = False
 
         for i in range(len(names_prefix)):
+            # check ith set of names:
             name_prefix = names_prefix[i]
             name = {}
             for tkey in self.tkeys:
                 name[tkey] = name_prefix[tkey]
-                # define paths to traces
 
+            # define paths to traces
             path = {}
             for pkey_1 in self.pkeys:
                 path[pkey_1] = {}
                 for tkey_1 in self.tkeys:
                     path[pkey_1][tkey_1] = f'{self.dirs[tkey_1]}{name[tkey_1]}_{self.exp_ids[pkey_1]}.h5'
 
-            # let's see if all traces exist already:
+            # check if traces exist already:
             if os.path.isfile(path["pl1"]["roi"]) and os.path.isfile(path["pl2"]["roi"]) and os.path.isfile(
                     path["pl1"]["np"]) and os.path.isfile(path["pl2"]["np"]):
 
                 for pkey_2 in self.pkeys:
                     for tkey_2 in self.tkeys:
                         self.found_raws[pkey_2][tkey_2] = True
-            break
+                break
 
         if self.found_raws["pl1"]["roi"] and self.found_raws["pl2"]["roi"] and self.found_raws["pl1"]["np"] and \
                 self.found_raws["pl1"]["roi"]:
