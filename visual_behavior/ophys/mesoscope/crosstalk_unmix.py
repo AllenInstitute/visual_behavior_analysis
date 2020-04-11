@@ -217,7 +217,7 @@ class MesoscopeICA(object):
         self.session_cache_dir = os.path.join(self.cache, f'session_{self.session_id}')
         return self.session_cache_dir
 
-    def set_ica_dirs(self, pair, names=None):
+    def set_ica_dirs(self, pair, names={}):
         """
         create path to ica-related inputs/outs for the pair
         :param pair: list[int, int] - pair of LIMS exp IDs
