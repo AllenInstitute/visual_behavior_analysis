@@ -217,10 +217,18 @@ class MesoscopeICA(object):
         self.session_cache_dir = os.path.join(self.cache, f'session_{self.session_id}')
         return self.session_cache_dir
 
-    def set_ica_dirs(self, pair, names=None):
+    def set_exp_ids(self, pair):
+        """
+        fn to set self.exp_ids
+        :return:
+        """
+        self.exp_ids = {key: exp_id for key in self.pkeys for exp_id in pair}
+
+        return
+
+    def set_ica_dirs(self, names=None):
         """
         create path to ica-related inputs/outs for the pair
-        :param pair: list[int, int] - pair of LIMS exp IDs
         :param names: roi_nam if different form self.names["roi"] to use to locate old inputs/outs
         :return: None
         """
@@ -232,10 +240,10 @@ class MesoscopeICA(object):
         session_dir = self.set_analysis_session_dir()
 
         for tkey in self.tkeys:
-            self.dirs[tkey] = os.path.join(session_dir, f'{names[tkey]}_{pair[0]}_{pair[1]}/')
+            self.dirs[tkey] = os.path.join(session_dir, f'{names[tkey]}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
             for pkey in self.pkeys:
                 self.outs_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
-                                                           f'{self.names[tkey]}_out_{pair[0]}.h5')
+                                                           f'{self.names[tkey]}_out_{self.exp_ids[pkey]}.h5')
         return
 
     def get_ica_traces(self, pair, roi_dir_name=None, np_dir_name=None):
