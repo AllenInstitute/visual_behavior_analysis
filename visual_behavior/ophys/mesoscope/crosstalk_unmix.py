@@ -221,7 +221,7 @@ class MesoscopeICA(object):
                                                            f'{self.names[tkey]}_out_{self.exp_ids[pkey]}.h5')
         return
 
-    def get_ica_traces(self, dir_name={'roi' : 'traces_original', "np" : 'neuropil_original'}):
+    def get_ica_traces(self, raw_names=None):
         """
         function to apply roi set to two image pls, first check if the traces have been extracted before,
         can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk pls
@@ -239,12 +239,17 @@ class MesoscopeICA(object):
             for tkey in self.tkeys:
                 self.found_raws[pkey][tkey] = False
 
+        if not raw_names:
+            raw_names = {}
+            for tkey in self.tkeys:
+                raw_names[tkey] = 'raw'
+
         # define paths to traces:
         path = {}
         for pkey in self.pkeys:
             path[pkey] = {}
             for tkey in self.tkeys:
-                path[pkey][tkey] = f'{self.dirs[tkey]}{dir_name[tkey]}_{self.exp_ids[pkey]}.h5'
+                path[pkey][tkey] = f'{self.dirs[tkey]}{raw_names[tkey]}_{self.exp_ids[pkey]}.h5'
 
         # let's see if all traces exist already:
         if os.path.isfile(path["pl1"]["roi"]) and os.path.isfile(path["pl2"]["roi"]) and os.path.isfile(
