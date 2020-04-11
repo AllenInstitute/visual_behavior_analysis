@@ -223,7 +223,7 @@ class MesoscopeICA(object):
         for tkey in self.tkeys:
             self.dirs[tkey] = os.path.join(session_dir, f'{names[tkey]}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
             for pkey in self.pkeys:
-                self.outs_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
+                self.outs_paths[tkey][pkey] = os.path.join(self.dirs[tkey],
                                                            f'{self.names[tkey]}_out_{self.exp_ids[pkey]}.h5')
         return
 
