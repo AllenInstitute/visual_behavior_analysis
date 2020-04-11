@@ -233,9 +233,7 @@ class MesoscopeICA(object):
         :return: None
         """
         if not names:
-            names = {}
-            for tkey in self.tkeys:
-                names[tkey] = self.names[tkey]
+            names = self.names
 
         session_dir = self.set_analysis_session_dir()
 
