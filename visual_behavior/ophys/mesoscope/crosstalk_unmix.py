@@ -134,55 +134,51 @@ class MesoscopeICA(object):
         # pointers and attributes related to raw traces
         self.raws = {}
         self.raw_paths = {}
-        for tkey in self.tkeys:
-            self.raws[tkey] = {}
-            self.raw_paths[tkey] = {}
-            for pkey in self.pkeys:
-                self.raws[tkey][pkey] = None
-                self.raw_paths[tkey][pkey] = None
-        self.found_raw_roi_traces = None  # flag if raw roi traces exist in self.dirs["roi"] output of get_traces
-        self.found_raw_np_traces = None  # flag if raw neuropil tarces exist in self.dirs["np"] output of get_traces
-
-        # pointers and attributes for validation jsons
-        # only roi because they are the same for neuropil
-        self.rois_names = {}
-        self.rois_valid = {}
-        self.rois_valid_paths = {}
-        for pkey in self.pkeys:
-            self.rois_names[pkey] = None
-            self.rois_valid[pkey] = None
-            self.rois_valid_paths[pkey] = None
-
         # pointers and attributes related to ica input traces
         self.ins = {}
         self.ins_paths = {}
         self.offsets = {}
-        for tkey in self.tkeys:
-            self.ins[tkey] = {}
-            self.ins_paths[tkey] = {}
-            self.offsets[tkey] = {}
-            for pkey in self.pkeys:
-                self.ins[tkey][pkey] = None
-                self.ins_paths[tkey][pkey] = None
-                self.offsets[tkey][pkey] = None
-        self.found_roi_in = [None, None]  # flag for traces exists, roi
-        self.found_roi_offset = [None, None]  # flag for offset data exists, roi
-        # for neuropil
-        self.found_np_in = [None, None]  # flag for traces exists, neuropil
-        self.found_np_offset = [None, None]  # flag for offset data exists, neuropil
-
+        # pointers and attributes for validation jsons
+        self.rois_names = {}
+        self.rois_valid = {}
+        self.rois_valid_paths = {}
         # pointers and attirbutes for ica output files
         self.outs = {}
         self.outs_paths = {}
         self.crosstalk = {}
-        for tkey in self.tkeys:
-            self.outs[tkey] = {}
-            self.outs_paths[tkey] = {}
-            self.crosstalk[tkey] = {}
-            for pkey in self.pkeys:
-                self.outs[tkey][pkey] = None
-                self.outs_paths[tkey][pkey] = None
-                self.crosstalk[tkey][pkey] = None
+        for pkey in self.pkeys:
+            self.raws[pkey] = {}
+            self.raw_paths[pkey] = {}
+            self.ins[pkey] = {}
+            self.ins_paths[pkey] = {}
+            self.offsets[pkey] = {}
+            self.rois_names[pkey] = None
+            self.rois_valid[pkey] = None
+            self.rois_valid_paths[pkey] = None
+            self.outs[pkey] = {}
+            self.outs_paths[pkey] = {}
+            self.crosstalk[pkey] = {}
+            for tkey in self.tkeys:
+                self.raws[pkey][tkey] = None
+                self.raw_paths[pkey][tkey] = None
+                self.ins[pkey][tkey] = None
+                self.ins_paths[pkey][tkey] = None
+                self.offsets[pkey][tkey] = None
+                self.outs[pkey][tkey] = None
+                self.outs_paths[pkey][tkey] = None
+                self.crosstalk[pkey][tkey] = None
+
+        self.found_raws = {}  # flag if raw traces exist in self.dirs; output of get_traces
+        self.found_ins = {}  # flag if ica input traces exists
+        self.found_offsets = {}  # flag if offset data exists
+        for pkey in self.pkeys:
+            self.found_raws[pkey] = {}
+            self.found_ins[pkey] = {}
+            self.found_offsets[pkey] = {}
+            for tkey in self.tkeys:
+                self.found_raws[pkey][tkey] = None
+                self.found_ins[pkey][tkey] = [None, None]
+                self.found_offsets[pkey][tkey] = [None, None]
 
         self.found_solution = None  # out of unmix_pls
         self.found_solution_neuropil = None
@@ -217,17 +213,15 @@ class MesoscopeICA(object):
         """
         if not names:
             names = self.names
-
         session_dir = self.session_dir
-
         for tkey in self.tkeys:
             self.dirs[tkey] = os.path.join(session_dir, f'{names[tkey]}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
             for pkey in self.pkeys:
-                self.outs_paths[tkey][pkey] = os.path.join(self.dirs[tkey],
+                self.outs_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
                                                            f'{self.names[tkey]}_out_{self.exp_ids[pkey]}.h5')
         return
 
-    def get_ica_traces(self, dir_name={'roi': 'traces_original', "np":'neuropil_original'}):
+    def get_ica_traces(self, dir_name={'roi' : 'traces_original', "np" : 'neuropil_original'}):
         """
         function to apply roi set to two image pls, first check if the traces have been extracted before,
         can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk pls
@@ -241,39 +235,33 @@ class MesoscopeICA(object):
 
         # we will first check if traces exist, if yes - read them, if not - extract them
 
-        self.found_raw_roi_traces = [False, False]
-        self.found_raw_np_traces = [False, False]
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                self.found_raws[pkey][tkey] = False
 
         # define paths to traces:
         path = {}
-        for tkey in self.tkeys:
-            path[tkey] = {}
-            for pkey in self.pkeys:
-                path[tkey][pkey] = f'{self.dirs[tkey]}{dir_name[tkey]}_{self.exp_ids[pkey]}.h5'
+        for pkey in self.pkeys:
+            path[pkey] = {}
+            for tkey in self.tkeys:
+                path[pkey][tkey] = f'{self.dirs[tkey]}{dir_name[tkey]}_{self.exp_ids[pkey]}.h5'
 
         # let's see if all traces exist already:
-        if os.path.isfile(path["roi"]["pl1"]) and os.path.isfile(path["roi"]["pl2"]) and os.path.isfile(
-                path["np"]["pl1"]) and os.path.isfile(path["np"]["pl2"]):
-            # if both traces exist, skip extracting:
+        if os.path.isfile(path["pl1"]["roi"]) and os.path.isfile(path["pl2"]["roi"]) and os.path.isfile(
+                path["pl1"]["np"]) and os.path.isfile(path["pl2"]["np"]):
 
+            # if both traces exist, skip extracting:
             logger.info('Found traces in cache, reading from h5 file')
 
-            # read roi names from file
+            # read traces and roi namesfrom file:
             for pkey in self.pkeys:
                 with h5py.File(path["roi"][pkey], "r") as f:
                     self.rois_names[pkey] = f["roi_names"][()]
-
-            # read traces from file:
-            for tkey in self.tkeys:
-                for pkey in self.pkeys:
-                    self.raw_paths[tkey][pkey] = path[tkey][pkey]
-                    with h5py.File(path[tkey][pkey], "r") as f:
-                        self.raws[tkey][pkey] = f["data"][()]
-
-            # set found traces flag True
-            self.found_raw_roi_traces = [True, True]
-            # set found neuropil traces flag True
-            self.found_raw_np_traces = [True, True]
+                for tkey in self.tkeys:
+                    self.found_raws[pkey][tkey] = True  # set found traces flag True
+                    self.raw_paths[pkey][tkey] = path[pkey][tkey]
+                    with h5py.File(path[pkey][tkey], "r") as f:
+                        self.raws[pkey][tkey] = f["data"][()]
 
         else:
             # some traces are missing, run extraction:
@@ -281,85 +269,61 @@ class MesoscopeICA(object):
 
             # if traces don't exist, do we need to reset unmixed and debiased traces flaggs to none?
             # yes, as we want unmixed traces be out on ICA using original traces
-            for tkey in self.tkeys:
-                for pkey in self.pkeys:
-                    self.ins_paths[tkey][pkey] = None
-                    self.outs_paths[tkey][pkey] = None
-
+            folders = {}
             for pkey in self.pkeys:
                 self.rois_names[pkey] = None
+                folders[pkey] = self.dataset.get_exp_folder(self.exp_ids[pkey])
+                for tkey in self.tkeys:
+                    self.ins_paths[pkey][tkey] = None
+                    self.outs_paths[pkey][tkey] = None
 
-            pl1_folder = self.dataset.get_exp_folder(self.exp_ids["pl1"])
-            pl2_folder = self.dataset.get_exp_folder(self.exp_ids["pl2"])
+            sig = {}
+            ct = {}
+            roi_names = {}
+            for pkey in self.pkeys:
+                sig[pkey] = {}
+                ct[pkey] = {}
+                roi_names[pkey] = {}
+                for tkey in self.tkeys:
+                    sig[pkey][tkey] = {}
+                    ct[pkey][tkey] = {}
 
             # extract signal and crosstalk traces for pl 1
-            pl1_sig_traces, pl1_sig_neuropil, pl1_roi_names = get_traces(pl1_folder, self.exp_ids["pl1"],
-                                                                         pl1_folder, self.exp_ids["pl1"])
-            pl1_ct_traces, pl1_ct_neuropil, _ = get_traces(pl2_folder, self.exp_ids["pl2"], pl1_folder,
-                                                           self.exp_ids["pl1"])
+            sig["roi"]["pl1"], sig["np"]["pl1"], roi_names["pl1"] = get_traces(folders["pl1"], self.exp_ids["pl1"],
+                                                                               folders["pl1"], self.exp_ids["pl1"])
+            ct["roi"]["pl1"], ct["np"]["pl1"], _ = get_traces(folders["pl2"], self.exp_ids["pl2"], folders["pl1"],
+                                                              self.exp_ids["pl1"])
             # extract signal and crosstalk traces for pl 2
-            pl2_sig_traces, pl2_sig_neuropil, pl2_roi_names = get_traces(pl2_folder, self.exp_ids["pl2"],
-                                                                         pl2_folder, self.exp_ids["pl2"])
-            pl2_ct_traces, pl2_ct_neuropil, _ = get_traces(pl1_folder, self.exp_ids["pl1"], pl2_folder,
-                                                           self.exp_ids["pl2"])
+            sig["roi"]["pl2"], sig["np"]["pl2"], roi_names["pl2"] = get_traces(folders["pl2"], self.exp_ids["pl2"],
+                                                                               folders["pl2"], self.exp_ids["pl2"])
+            ct["roi"]["pl2"], ct["np"]["pl2"], _ = get_traces(folders["pl1"], self.exp_ids["pl1"], folders["pl2"],
+                                                              self.exp_ids["pl2"])
 
-            # setting traces valid flag: if none is None
-            if (not pl1_sig_traces.any() is None) and (not pl1_ct_traces.any() is None):
-                self.found_raw_roi_traces[0] = True
-            if (not pl2_sig_traces.any() is None) and (not pl2_ct_traces.any() is None):
-                self.found_raw_roi_traces[1] = True
-            if (not pl1_sig_neuropil.any() is None) and (not pl1_ct_neuropil.any() is None):
-                self.found_raw_np_traces[0] = True
-            if (not pl2_sig_neuropil.any() is None) and (not pl2_ct_neuropil.any() is None):
-                self.found_raw_np_traces[1] = True
+            for pkey in self.pkeys:
+                for tkey in self.tkeys:
+                    if (not sig[pkey][tkey].any() is None) and (not ct[pkey][tkey].any() is None):
+                        self.found_raws[pkey][tkey] = True
 
             if not os.path.isdir(self.session_dir):
                 os.mkdir(self.session_dir)
             if not os.path.isdir(self.dirs["roi"]):
                 os.mkdir(self.dirs["roi"])
-            # if extracted traces valid, save to disk:
-            if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1]:
-                # combining traces, saving to self, writing to disk:
-                pl1_traces_original = np.array([pl1_sig_traces, pl1_ct_traces])
-
-                self.raws["pl1"]["roi"] = pl1_traces_original
-                self.raw_paths["pl1"]["roi"] = path["roi"]["pl1"]
-                self.rois_names["pl1"] = pl1_roi_names
-                with h5py.File(path["roi"]["pl1"], "w") as f:
-                    f.create_dataset(f"data", data=pl1_traces_original)
-                    f.create_dataset(f"roi_names", data=np.int_(pl1_roi_names))
-
-                # same for pl 2:
-                pl2_traces_original = np.array([pl2_sig_traces, pl2_ct_traces])
-                self.raws["pl2"]["roi"] = pl2_traces_original
-                self.raw_paths["pl2"]["roi"] = path["roi"]["pl2"]
-                self.rois_names["pl2"] = pl2_roi_names
-                with h5py.File(path["roi"]["pl2"], "w") as f:
-                    f.create_dataset(f"data", data=pl2_traces_original)
-                    f.create_dataset(f"roi_names", data=np.int_(pl2_roi_names))
-
-            if not os.path.isdir(self.session_dir):
-                os.mkdir(self.session_dir)
             if not os.path.isdir(self.dirs["np"]):
                 os.mkdir(self.dirs["np"])
 
-            # if extracted traces not None, save to disk:
-            if self.found_raw_np_traces[0] and self.found_raw_np_traces[1]:
-                # combining traces, saving to self, writing to disk:
-                pl1_neuropil_original = np.array([pl1_sig_neuropil, pl1_ct_neuropil])
-                self.raws["pl1"]["np"] = pl1_neuropil_original
-                self.raw_paths["pl1"]["np"] = path["np"]["pl1"]
-                with h5py.File(path["np"]["pl1"], "w") as f:
-                    f.create_dataset(f"data", data=pl1_neuropil_original)
-                    f.create_dataset(f"roi_names", data=np.int_(pl1_roi_names))
-                # same for pl 2:
-                pl2_neuropil_original = np.array([pl2_sig_neuropil, pl2_ct_neuropil])
-                self.raws["pl2"]["np"] = pl2_neuropil_original
-                self.raw_paths["pl2"]["np"] = path["np"]["pl2"]
-                with h5py.File(path["np"]["pl2"], "w") as f:
-                    f.create_dataset(f"data", data=pl2_neuropil_original)
-                    f.create_dataset(f"roi_names", data=np.int_(pl2_roi_names))
-
+            # if extracted traces valid, save to disk:
+            for pkey in self.pkeys:
+                if self.found_raws[pkey]["roi"] and self.found_raws[pkey]["np"]:
+                    self.rois_names[pkey] = roi_names[pkey]
+                for tkey in self.tkeys:
+                    if self.found_raws[pkey][tkey] and self.found_raws[pkey][tkey]:
+                        # combining traces, saving to self, writing to disk:
+                        traces_raw = np.array([sig[pkey][tkey], ct[pkey][tkey]])
+                        self.raws[pkey][tkey] = traces_raw
+                        self.raw_paths[pkey][tkey] = path[pkey][tkey]
+                        with h5py.File(path[pkey][tkey], "w") as f:
+                            f.create_dataset(f"data", data=traces_raw)
+                            f.create_dataset(f"roi_names", data=np.int_(roi_names[pkey]))
         return
 
     def validate_traces(self, return_vba=True):
