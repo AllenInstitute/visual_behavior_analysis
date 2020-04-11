@@ -482,11 +482,11 @@ class MesoscopeICA(object):
         self.pl1_neuropil_traces_valid_path = None
         self.pl2_neuropil_traces_valid_path = None
 
-        pl1_roi_traces_valid_path = os.path.join(self.roi_dir, f'valid_{self.pl1_exp_id}.json')
-        pl2_roi_traces_valid_path = os.path.join(self.roi_dir, f'valid_{self.pl2_exp_id}.json')
+        pl1_roi_traces_valid_path = os.path.join(self.roi_dir, f'{self.pl1_exp_id}_valid.json')
+        pl2_roi_traces_valid_path = os.path.join(self.roi_dir, f'{self.pl2_exp_id}_valid.json')
 
-        pl1_neuropil_traces_valid_path = os.path.join(self.np_dir, f'valid_{self.pl1_exp_id}.json')
-        pl2_neuropil_traces_valid_path = os.path.join(self.np_dir, f'valid_{self.pl2_exp_id}.json')
+        pl1_neuropil_traces_valid_path = os.path.join(self.np_dir, f'{self.pl1_exp_id}_valid.json')
+        pl2_neuropil_traces_valid_path = os.path.join(self.np_dir, f'{self.pl2_exp_id}_valid.json')
 
         # validation json already exists, skip validating
         if os.path.isfile(pl1_roi_traces_valid_path) and os.path.isfile(
