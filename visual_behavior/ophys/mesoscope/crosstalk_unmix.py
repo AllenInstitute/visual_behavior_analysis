@@ -130,9 +130,21 @@ class MesoscopeICA(object):
         self.roi_dir = None  # path to subdir containing roi-related files
         self.np_dir = None  # path to subdir containing neuropil-related files
 
+        self.pl1_roi_raw = None  # raw extracted traces for rois, plane 1
+        self.pl1_roi_raw_path = None  # path to raw extracted traces for rois, plane 1
+
+        self.pl2_roi_raw = None  # raw extracted traces for rois, plane 2
+        self.pl2_roi_raw_path = None  # path to raw extracted traces for rois, plane 2
+
+        self.pl1_np_raw = None  # raw extracted traces for neuropil, plane 1
+        self.pl1_np_raw_path = None  # path to raw extracted traces for neuropil, plane 1
+
+        self.pl2_np_raw = None  # raw extracted traces for rois, plane 2
+        self.pl2_np_raw_path = None  # path to raw extracted traces for neuropil, plane 2
+
         ###########
 
-        self.found_raw_roi_traces = None  # flag if raw roi tarces exist in self.roi_dir output of get_traces
+        self.found_raw_roi_traces = None  # flag if raw roi traces exist in self.roi_dir output of get_traces
         self.found_raw_np_traces = None  # flag if raw neuropil tarces exist in self.np_dir output of get_traces
 
         self.pl1_out_path = None
@@ -150,7 +162,7 @@ class MesoscopeICA(object):
         self.pl2_np_out_path = None
 
         self.pl1_roi_in_path = None
-        self.pl2_ica_in_path = None
+        self.pl2_roi_in_path = None
         self.pl1_ica_out_path = None
         self.pl2_ica_out_path = None
 
@@ -161,8 +173,6 @@ class MesoscopeICA(object):
 
         self.pl1_roi_names = None
         self.pl2_roi_names = None
-        self.pl1_traces_orig = None
-        self.pl1_traces_orig_path = None
 
         self.pl1_offset = None
         self.pl2_offset = None
@@ -224,15 +234,6 @@ class MesoscopeICA(object):
 
         self.pl1_ica_neuropil_out = None
         self.pl2_ica_neuropil_out = None
-
-        self.pl2_traces_orig = None
-        self.pl2_traces_orig_path = None
-
-        self.pl1_neuropil_orig = None
-        self.pl1_neuropil_orig_path = None
-
-        self.pl2_neuropil_orig = None
-        self.pl2_neuropil_orig_path = None
 
         self.roi_ica_out = None
 
@@ -355,18 +356,18 @@ class MesoscopeICA(object):
             with h5py.File(path_neuropil_pl2, "r") as f:
                 pl2_neuropil_original = f["data"][()]
 
-            self.pl1_traces_orig_path = path_traces_pl1
-            self.pl2_traces_orig_path = path_traces_pl2
-            self.pl1_traces_orig = pl1_traces_original
-            self.pl2_traces_orig = pl2_traces_original
+            self.pl1_roi_raw_path = path_traces_pl1
+            self.pl2_roi_raw_path = path_traces_pl2
+            self.pl1_roi_raw = pl1_traces_original
+            self.pl2_roi_raw = pl2_traces_original
             self.pl1_roi_names = pl1_roi_names
             self.pl2_roi_names = pl2_roi_names
 
             #  same for neuropil:
-            self.pl1_neuropil_orig_path = path_neuropil_pl1
-            self.pl2_neuropil_orig_path = path_neuropil_pl2
-            self.pl1_neuropil_orig = pl1_neuropil_original
-            self.pl2_neuropil_orig = pl2_neuropil_original
+            self.pl1_np_raw_path = path_neuropil_pl1
+            self.pl2_np_raw_path = path_neuropil_pl2
+            self.pl1_np_raw = pl1_neuropil_original
+            self.pl2_np_raw = pl2_neuropil_original
             # set found traces flag True
             self.found_raw_roi_traces = [True, True]
             # set found neuropil traces flag True
@@ -379,7 +380,7 @@ class MesoscopeICA(object):
             # if traces don't exist, do we need to reset unmixed and debiased traces flaggs to none?
             # yes, as we want unmixed traces be out on ICA using original traces
             self.pl1_roi_in_path = None
-            self.pl2_ica_in_path = None
+            self.pl2_roi_in_path = None
             self.pl1_ica_out_path = None
             self.pl2_ica_out_path = None
 
@@ -425,8 +426,8 @@ class MesoscopeICA(object):
                 # combining traces, saving to self, writing to disk:
                 pl1_traces_original = np.array([pl1_sig_traces, pl1_ct_traces])
 
-                self.pl1_traces_orig = pl1_traces_original
-                self.pl1_traces_orig_path = path_traces_pl1
+                self.pl1_roi_raw = pl1_traces_original
+                self.pl1_roi_raw_path = path_traces_pl1
                 self.pl1_roi_names = pl1_roi_names
                 with h5py.File(path_traces_pl1, "w") as f:
                     f.create_dataset(f"data", data=pl1_traces_original)
@@ -434,8 +435,8 @@ class MesoscopeICA(object):
 
                 # same for pl 2:
                 pl2_traces_original = np.array([pl2_sig_traces, pl2_ct_traces])
-                self.pl2_traces_orig = pl2_traces_original
-                self.pl2_traces_orig_path = path_traces_pl2
+                self.pl2_roi_raw = pl2_traces_original
+                self.pl2_roi_raw_path = path_traces_pl2
                 self.pl2_roi_names = pl2_roi_names
                 with h5py.File(path_traces_pl2, "w") as f:
                     f.create_dataset(f"data", data=pl2_traces_original)
@@ -450,15 +451,15 @@ class MesoscopeICA(object):
             if self.found_raw_np_traces[0] and self.found_raw_np_traces[1]:
                 # combining traces, saving to self, writing to disk:
                 pl1_neuropil_original = np.array([pl1_sig_neuropil, pl1_ct_neuropil])
-                self.pl1_neuropil_orig = pl1_neuropil_original
-                self.pl1_neuropil_orig_path = path_neuropil_pl1
+                self.pl1_np_raw = pl1_neuropil_original
+                self.pl1_np_raw_path = path_neuropil_pl1
                 with h5py.File(path_neuropil_pl1, "w") as f:
                     f.create_dataset(f"data", data=pl1_neuropil_original)
                     f.create_dataset(f"roi_names", data=np.int_(pl1_roi_names))
                 # same for pl 2:
                 pl2_neuropil_original = np.array([pl2_sig_neuropil, pl2_ct_neuropil])
-                self.pl2_neuropil_orig = pl2_neuropil_original
-                self.pl2_neuropil_orig_path = path_neuropil_pl2
+                self.pl2_np_raw = pl2_neuropil_original
+                self.pl2_np_raw_path = path_neuropil_pl2
                 with h5py.File(path_neuropil_pl2, "w") as f:
                     f.create_dataset(f"data", data=pl2_neuropil_original)
                     f.create_dataset(f"roi_names", data=np.int_(pl2_roi_names))
@@ -516,20 +517,20 @@ class MesoscopeICA(object):
                 pl1_ct_trace_valid = {}
                 pl1_ct_neuropil_valid = {}
 
-                num_traces_roi_sig, _ = self.pl1_traces_orig[0].shape
-                num_traces_neuropil_sig, _ = self.pl1_neuropil_orig[0].shape
-                num_traces_roi_ct, _ = self.pl1_traces_orig[1].shape
-                num_traces_neuropil_ct, _ = self.pl1_neuropil_orig[1].shape
+                num_traces_roi_sig, _ = self.pl1_roi_raw[0].shape
+                num_traces_neuropil_sig, _ = self.pl1_np_raw[0].shape
+                num_traces_roi_ct, _ = self.pl1_roi_raw[1].shape
+                num_traces_neuropil_ct, _ = self.pl1_np_raw[1].shape
 
                 if not (num_traces_roi_sig == num_traces_neuropil_sig) or not (
                         num_traces_roi_ct == num_traces_neuropil_ct):
                     logger.info('Neuropil and ROI traces are not aligned')
                 else:
                     for n in range(num_traces_roi_sig):
-                        trace_roi_sig = self.pl1_traces_orig[0][n]
-                        trace_neuropil_sig = self.pl1_neuropil_orig[0][n]
-                        trace_roi_ct = self.pl1_traces_orig[1][n]
-                        trace_neuropil_ct = self.pl1_neuropil_orig[1][n]
+                        trace_roi_sig = self.pl1_roi_raw[0][n]
+                        trace_neuropil_sig = self.pl1_np_raw[0][n]
+                        trace_roi_ct = self.pl1_roi_raw[1][n]
+                        trace_neuropil_ct = self.pl1_np_raw[1][n]
 
                         if np.any(np.isnan(trace_roi_sig)) or np.any(np.isnan(trace_neuropil_sig)) or np.any(
                                 np.isnan(trace_roi_ct)) or np.any(np.isnan(trace_neuropil_ct)):
@@ -550,20 +551,20 @@ class MesoscopeICA(object):
                 pl2_ct_trace_valid = {}
                 pl2_ct_neuropil_valid = {}
 
-                num_traces_roi_sig, _ = self.pl2_traces_orig[0].shape
-                num_traces_neuropil_sig, _ = self.pl2_neuropil_orig[0].shape
-                num_traces_roi_ct, _ = self.pl2_traces_orig[1].shape
-                num_traces_neuropil_ct, _ = self.pl2_neuropil_orig[1].shape
+                num_traces_roi_sig, _ = self.pl2_roi_raw[0].shape
+                num_traces_neuropil_sig, _ = self.pl2_np_raw[0].shape
+                num_traces_roi_ct, _ = self.pl2_roi_raw[1].shape
+                num_traces_neuropil_ct, _ = self.pl2_np_raw[1].shape
 
                 if not (num_traces_roi_sig == num_traces_neuropil_sig) or not (
                         num_traces_roi_ct == num_traces_neuropil_ct):
                     logger.info('Neuropil and ROI traces are not aligned')
                 else:
                     for n in range(num_traces_roi_sig):
-                        trace_roi_sig = self.pl2_traces_orig[0][n]
-                        trace_neuropil_sig = self.pl2_neuropil_orig[0][n]
-                        trace_roi_ct = self.pl2_traces_orig[1][n]
-                        trace_neuropil_ct = self.pl2_neuropil_orig[1][n]
+                        trace_roi_sig = self.pl2_roi_raw[0][n]
+                        trace_neuropil_sig = self.pl2_np_raw[0][n]
+                        trace_roi_ct = self.pl2_roi_raw[1][n]
+                        trace_neuropil_ct = self.pl2_np_raw[1][n]
 
                         if np.any(np.isnan(trace_roi_sig)) or np.any(np.isnan(trace_neuropil_sig)) or np.any(
                                 np.isnan(trace_roi_ct)) or np.any(np.isnan(trace_neuropil_ct)):
@@ -652,33 +653,33 @@ class MesoscopeICA(object):
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
         self.pl1_roi_in_path = None
-        self.pl2_ica_in_path = None
+        self.pl2_roi_in_path = None
         pl1_ica_in_path = os.path.join(self.roi_dir, f'{roi_name}_in_{self.pl1_exp_id}.h5')
         pl2_ica_in_path = os.path.join(self.roi_dir, f'{roi_name}_in_{self.pl2_exp_id}.h5')
         if os.path.isfile(pl1_ica_in_path) and os.path.isfile(pl2_ica_in_path):
             # file already exists, skip debiasing
             self.pl1_roi_in_path = pl1_ica_in_path
-            self.pl2_ica_in_path = pl2_ica_in_path
+            self.pl2_roi_in_path = pl2_ica_in_path
         else:
             self.pl1_roi_in_path = None
-            self.pl2_ica_in_path = None
+            self.pl2_roi_in_path = None
         # original traces exist, run debiasing:
         if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1]:
             # if debiased traces don't exist, run debiasing - paths are both None
-            if (not self.pl1_roi_in_path) and (not self.pl2_ica_in_path):
+            if (not self.pl1_roi_in_path) and (not self.pl2_roi_in_path):
                 self.found_ica_in = [False, False]
                 self.found_ica_offset = [False, False]
                 logger.info("Debiased ROI traces do not exist in cache, running offset subtraction")
 
-                pl1_sig = self.pl1_traces_orig[0]
-                pl1_ct = self.pl1_traces_orig[1]
+                pl1_sig = self.pl1_roi_raw[0]
+                pl1_ct = self.pl1_roi_raw[1]
                 pl1_valid = self.pl1_roi_traces_valid
 
                 pl1_valid_sig = pl1_valid['signal']
                 pl1_valid_ct = pl1_valid['crosstalk']
 
-                pl2_sig = self.pl2_traces_orig[0]
-                pl2_ct = self.pl2_traces_orig[1]
+                pl2_sig = self.pl2_roi_raw[0]
+                pl2_ct = self.pl2_roi_raw[1]
 
                 pl2_valid = self.pl2_roi_traces_valid
                 pl2_valid_sig = pl2_valid['signal']
@@ -751,13 +752,13 @@ class MesoscopeICA(object):
                     self.pl1_ica_in = pl1_ica_in
                     self.pl2_ica_in = pl2_ica_in
                     self.pl1_roi_in_path = pl1_ica_in_path
-                    self.pl2_ica_in_path = pl2_ica_in_path
+                    self.pl2_roi_in_path = pl2_ica_in_path
                     # write ica input traces to disk
                     with h5py.File(self.pl1_roi_in_path, "w") as f:
                         f.create_dataset("debiased_traces", data=self.pl1_ica_in)
                         f.create_dataset('sig_offset', data=pl1_sig_offset)
                         f.create_dataset('ct_offset', data=pl1_ct_offset)
-                    with h5py.File(self.pl2_ica_in_path, "w") as f:
+                    with h5py.File(self.pl2_roi_in_path, "w") as f:
                         f.create_dataset("debiased_traces", data=self.pl2_ica_in)
                         f.create_dataset('sig_offset', data=pl2_sig_offset)
                         f.create_dataset('ct_offset', data=pl2_ct_offset)
@@ -769,7 +770,7 @@ class MesoscopeICA(object):
                     pl1_ica_in = f["debiased_traces"][()]
                     pl1_sig_offset = f['sig_offset'][()]
                     pl1_ct_offset = f['ct_offset'][()]
-                with h5py.File(self.pl2_ica_in_path, "r") as f:
+                with h5py.File(self.pl2_roi_in_path, "r") as f:
                     pl2_ica_in = f["debiased_traces"][()]
                     pl2_sig_offset = f['sig_offset'][()]
                     pl2_ct_offset = f['ct_offset'][()]
@@ -778,7 +779,7 @@ class MesoscopeICA(object):
                 self.pl1_ica_in = pl1_ica_in
                 self.pl2_ica_in = pl2_ica_in
                 self.pl1_roi_in_path = pl1_ica_in_path
-                self.pl2_ica_in_path = pl2_ica_in_path
+                self.pl2_roi_in_path = pl2_ica_in_path
                 self.pl1_offset = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
                 self.pl2_offset = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
                 self.found_ica_offset = [True, True]
@@ -799,33 +800,33 @@ class MesoscopeICA(object):
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
         self.pl1_roi_in_path = None
-        self.pl2_ica_in_path = None
+        self.pl2_roi_in_path = None
         pl1_ica_in_path = os.path.join(self.roi_dir, f'{self.pl1_exp_id}_in.h5')
         pl2_ica_in_path = os.path.join(self.roi_dir, f'{self.pl2_exp_id}_in.h5')
         if os.path.isfile(pl1_ica_in_path) and os.path.isfile(pl2_ica_in_path):
             # file already exists, skip debiasing
             self.pl1_roi_in_path = pl1_ica_in_path
-            self.pl2_ica_in_path = pl2_ica_in_path
+            self.pl2_roi_in_path = pl2_ica_in_path
         else:
             self.pl1_roi_in_path = None
-            self.pl2_ica_in_path = None
+            self.pl2_roi_in_path = None
         # original traces exist, run debiasing:
         if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1]:
             # if debiased traces don't exist, run debiasing - paths are both None
-            if (not self.pl1_roi_in_path) and (not self.pl2_ica_in_path):
+            if (not self.pl1_roi_in_path) and (not self.pl2_roi_in_path):
                 self.found_ica_in = [False, False]
                 self.found_ica_offset = [False, False]
                 logger.info("Debiased ROI traces do not exist in cache, running offset subtraction")
 
-                pl1_sig = self.pl1_traces_orig[0]
-                pl1_ct = self.pl1_traces_orig[1]
+                pl1_sig = self.pl1_roi_raw[0]
+                pl1_ct = self.pl1_roi_raw[1]
                 pl1_valid = self.pl1_roi_traces_valid
 
                 pl1_valid_sig = pl1_valid['signal']
                 pl1_valid_ct = pl1_valid['crosstalk']
 
-                pl2_sig = self.pl2_traces_orig[0]
-                pl2_ct = self.pl2_traces_orig[1]
+                pl2_sig = self.pl2_roi_raw[0]
+                pl2_ct = self.pl2_roi_raw[1]
 
                 pl2_valid = self.pl2_roi_traces_valid
                 pl2_valid_sig = pl2_valid['signal']
@@ -893,13 +894,13 @@ class MesoscopeICA(object):
                     self.pl1_ica_in = np.array([pl1_sig_m0, pl1_ct_m0])
                     self.pl2_ica_in = np.array([pl2_sig_m0, pl2_ct_m0])
                     self.pl1_roi_in_path = pl1_ica_in_path
-                    self.pl2_ica_in_path = pl2_ica_in_path
+                    self.pl2_roi_in_path = pl2_ica_in_path
                     # write ica input traces to disk
                     with h5py.File(self.pl1_roi_in_path, "w") as f:
                         f.create_dataset("debiased_traces", data=self.pl1_ica_in)
                         f.create_dataset('sig_offset', data=pl1_sig_offset)
                         f.create_dataset('ct_offset', data=pl1_ct_offset)
-                    with h5py.File(self.pl2_ica_in_path, "w") as f:
+                    with h5py.File(self.pl2_roi_in_path, "w") as f:
                         f.create_dataset("debiased_traces", data=self.pl2_ica_in)
                         f.create_dataset('sig_offset', data=pl2_sig_offset)
                         f.create_dataset('ct_offset', data=pl2_ct_offset)
@@ -911,7 +912,7 @@ class MesoscopeICA(object):
                     pl1_ica_in = f["debiased_traces"][()]
                     pl1_sig_offset = f['sig_offset'][()]
                     pl1_ct_offset = f['ct_offset'][()]
-                with h5py.File(self.pl2_ica_in_path, "r") as f:
+                with h5py.File(self.pl2_roi_in_path, "r") as f:
                     pl2_ica_in = f["debiased_traces"][()]
                     pl2_sig_offset = f['sig_offset'][()]
                     pl2_ct_offset = f['ct_offset'][()]
@@ -920,7 +921,7 @@ class MesoscopeICA(object):
                 self.pl1_ica_in = pl1_ica_in
                 self.pl2_ica_in = pl2_ica_in
                 self.pl1_roi_in_path = pl1_ica_in_path
-                self.pl2_ica_in_path = pl2_ica_in_path
+                self.pl2_roi_in_path = pl2_ica_in_path
                 self.pl1_offset = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
                 self.pl2_offset = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
                 self.found_ica_offset = [True, True]
@@ -966,15 +967,15 @@ class MesoscopeICA(object):
                 self.found_ica_neuropil_in = [False, False]
                 self.found_ica_neuropil_offset = [False, False]
                 logger.info("Debiased neuropil traces do not exist in cache, running offset subtraction")
-                pl1_sig = self.pl1_neuropil_orig[0]
-                pl1_ct = self.pl1_neuropil_orig[1]
+                pl1_sig = self.pl1_np_raw[0]
+                pl1_ct = self.pl1_np_raw[1]
 
                 pl1_valid = self.pl1_neuropil_traces_valid
                 pl1_valid_sig = pl1_valid['signal']
                 pl1_valid_ct = pl1_valid['crosstalk']
 
-                pl2_sig = self.pl2_neuropil_orig[0]
-                pl2_ct = self.pl2_neuropil_orig[1]
+                pl2_sig = self.pl2_np_raw[0]
+                pl2_ct = self.pl2_np_raw[1]
 
                 pl2_valid = self.pl2_neuropil_traces_valid
                 pl2_valid_sig = pl2_valid['signal']
@@ -1295,7 +1296,7 @@ class MesoscopeICA(object):
                     [self.pl1_neuropil_traces_valid['signal'][str(tid)] for tid in self.pl1_roi_names])
                 pl2_valid_shape = np.array(
                     [self.pl2_neuropil_traces_valid['signal'][str(tid)] for tid in self.pl2_roi_names])
-                new_shape = [pl1_valid_shape.sum() + pl2_valid_shape.sum(), self.pl1_neuropil_orig.shape[2]]
+                new_shape = [pl1_valid_shape.sum() + pl2_valid_shape.sum(), self.pl1_np_raw.shape[2]]
                 # reshaping
                 pl1_ica_neuropil_out = pl1_ica_neuropil_out.reshape(new_shape)
                 pl2_ica_neuropil_out = pl2_ica_neuropil_out.reshape(new_shape)
@@ -1400,8 +1401,8 @@ class MesoscopeICA(object):
 
         if self.pl1_ica_out_path and self.pl2_ica_out_path:
 
-            raw_trace_pl1_sig = self.pl1_traces_orig[0, :, :]
-            raw_trace_pl1_ct = self.pl1_traces_orig[1, :, :]
+            raw_trace_pl1_sig = self.pl1_roi_raw[0, :, :]
+            raw_trace_pl1_ct = self.pl1_roi_raw[1, :, :]
             pl1_roi_names = self.pl1_roi_names
             pl1_roi_valid = self.pl1_roi_traces_valid['signal']
             ica_trace_pl1_sig = self.pl1_ica_out[0, :, :]
@@ -1461,8 +1462,8 @@ class MesoscopeICA(object):
                     logging.info(f'Cell {pl1_roi_names[cell_orig]} is invalid, skipping plotting')
                     cell_valid = cell_valid
 
-            raw_trace_pl2_sig = self.pl2_traces_orig[0, :, :]
-            raw_trace_pl2_ct = self.pl2_traces_orig[1, :, :]
+            raw_trace_pl2_sig = self.pl2_roi_raw[0, :, :]
+            raw_trace_pl2_ct = self.pl2_roi_raw[1, :, :]
             pl2_roi_names = self.pl2_roi_names
             pl2_roi_valid = self.pl2_roi_traces_valid['signal']
             ica_trace_pl2_sig = self.pl2_ica_out[0, :, :]
@@ -1547,10 +1548,10 @@ class MesoscopeICA(object):
             print(f'Switching backend to Agg')
             plt.switch_backend('Agg')
 
-        if self.pl1_traces_orig_path and self.pl2_traces_orig_path:
+        if self.pl1_roi_raw_path and self.pl2_roi_raw_path:
 
-            raw_trace_pl1_sig = self.pl1_traces_orig[0, :, :]
-            raw_trace_pl1_ct = self.pl1_traces_orig[1, :, :]
+            raw_trace_pl1_sig = self.pl1_roi_raw[0, :, :]
+            raw_trace_pl1_ct = self.pl1_roi_raw[1, :, :]
             pl1_roi_names = self.pl1_roi_names
             pl1_roi_valid = self.pl1_roi_traces_valid['signal']
 
@@ -1592,8 +1593,8 @@ class MesoscopeICA(object):
                 else:
                     logging.info(f'Cell {pl1_roi_names[cell_orig]} is invalid, skipping plotting')
 
-            raw_trace_pl2_sig = self.pl2_traces_orig[0, :, :]
-            raw_trace_pl2_ct = self.pl2_traces_orig[1, :, :]
+            raw_trace_pl2_sig = self.pl2_roi_raw[0, :, :]
+            raw_trace_pl2_ct = self.pl2_roi_raw[1, :, :]
             pl2_roi_names = self.pl2_roi_names
             pl2_roi_valid = self.pl2_roi_traces_valid['signal']
             logging.info(f'creating plots for experiment {pair[1]}')
