@@ -149,97 +149,64 @@ class MesoscopeICA(object):
         self.found_raw_np_traces = None  # flag if raw neuropil tarces exist in self.np_dir output of get_traces
 
         # pointers and attributes for validation jsons
-
+        # only roi because they are the same for neuropil
         self.pl1_roi_names = None
         self.pl2_roi_names = None
-
         self.pl1_rois_valid = None
         self.pl2_rois_valid = None
-
         self.pl1_rois_valid_path = None
         self.pl2_rois_valid_path = None
 
         # pointers and attributes related to ica input traces
-
+        # for roi
         self.pl1_roi_in = None  # debiased roi traces, plane 1
         self.pl2_roi_in = None  # debiased roi traces, plane 2
-
-        self.pl1_np_in = None  # debiased neuropil traces, plane 1
-        self.pl2_np_in = None  # debiased neuropil traces, plane 2
-
         self.pl1_roi_in_path = None  # path to debiased roi traces, plane 1
         self.pl2_roi_in_path = None  # path to debiased roi traces, plane 2
-
-        self.pl1_np_in_path = None  # path to debiased neuropil traces, plane 1
-        self.pl2_np_in_path = None  # path to debiased neuropil traces, plane 2
-
         self.pl1_roi_offset = None  # offsets for roi traces, plane 1
         self.pl2_roi_offset = None  # offsets for roi traces, plane 2
-
-        self.pl1_np_offset = None # offsets for neuropil traces, plane 1
-        self.pl2_np_offset = None # offsets for neuropil traces, plane 2
-
-        self.found_roi_in = [None, None]  #
-        self.found_roi_offset = [None, None]
-        self.found_np_in = [None, None]
-        self.found_np_offset = [None, None]
+        self.found_roi_in = [None, None]  # flag for traces exists, roi
+        self.found_roi_offset = [None, None]  # flag for offset data exists, roi
+        # for neuropil
+        self.pl1_np_in = None  # debiased neuropil traces, plane 1
+        self.pl2_np_in = None  # debiased neuropil traces, plane 2
+        self.pl1_np_in_path = None  # path to debiased neuropil traces, plane 1
+        self.pl2_np_in_path = None  # path to debiased neuropil traces, plane 2
+        self.pl1_np_offset = None  # offsets for neuropil traces, plane 1
+        self.pl2_np_offset = None  # offsets for neuropil traces, plane 2
+        self.found_np_in = [None, None]  # flag for traces exists, neuropil
+        self.found_np_offset = [None, None]  # flag for offset data exists, neuropil
 
         # pointers and attirbutes for ica output files
+        # for roi
+        self.pl1_roi_out = None  # demixed roi traces, plane 1
+        self.pl2_roi_out = None  # demixed roi traces, plane 2
+        self.pl1_roi_out_path = None  # path to demixed roi traces, plane 1
+        self.pl2_roi_out_path = None  # path to demixed roi traces, plane 2
+        self.pl1_roi_crosstalk = None  # crosstalk data for roi traces, plane 1
+        self.pl2_roi_crosstalk = None  # crosstalk data for roi traces, plane 2
+        # for neuropil
+        self.pl1_np_out = None  # demixed neuropil traces, plane 1
+        self.pl2_np_out = None  # demixed neuropil traces, plane 2
+        self.pl1_np_out_path = None  # path to demixed neuropil traces, plane 1
+        self.pl2_np_out_path = None  # path to demixed neuropil traces, plane 2
+        self.pl1_np_crosstalk = None  # crosstalk data for neuropil traces, plane 1
+        self.pl2_np_crosstalk = None  # crosstalk data for neuropil traces, plane 2
 
-        self.pl1_roi_out = None
-        self.pl2_roi_out = None
-        self.pl1_roi_out_path = None
-        self.pl2_roi_out_path = None
-
-        self.pl1_roi_crosstalk = None
-        self.pl2_roi_crosstalk = None
-        self.pl1_roi_crosstalk_path = None
-        self.pl2_roi_crosstalk_path = None
-
-        self.pl1_np_out_path = None
-        self.pl2_np_out_path = None
-
-        self.pl1_np_crosstalk = None
-        self.pl2_np_crosstalk = None
-        self.pl1_np_crosstalk_path = None
-        self.pl2_np_crosstalk_path = None
-
-        self.ica_roi_scale_top = None
-        self.ica_roi_scale_bot = None
-        self.ica_neuropil_scale_top = None
-        self.ica_neuropil_scale_bot = None
 
         self.found_solution = None  # out of unmix_pls
         self.found_solution_neuropil = None
-
-
-
         self.roi_matrix = None
         self.neuropil_matrix = None
-
         self.roi_unmix = None
         self.neuropil_unmix = None
-
-
-
-
-
-
         self.pl1_roi_err = None
         self.pl2_roi_err = None
-
         self.pl1_np_err = None
         self.pl2_np_err = None
-
         self.neuropil_ica_out = None
-
         self.ica_mixing_matrix_traces_path = None
-
-        self.pl1_ica_neuropil_out = None
-        self.pl2_ica_neuropil_out = None
-
         self.roi_ica_out = None
-
         self.pl1_ica_out = None
         self.pl2_ica_out = None
 
@@ -987,10 +954,8 @@ class MesoscopeICA(object):
 
     def unmix_pair(self, do_plots=True):
         """
-        function to unmix a pair of pls:
-
+        function to unmix a pair of panels:
         """
-
         pl1_out_path = os.path.join(self.roi_dir,
                                     f'{self.pl1_exp_id}_out.h5')
         pl2_out_path = os.path.join(self.roi_dir,
@@ -1006,14 +971,11 @@ class MesoscopeICA(object):
                 and os.path.isfile(pl2_crosstalk_path):
             self.pl1_roi_out_path = pl1_out_path
             self.pl2_roi_out_path = pl2_out_path
-            self.pl1_roi_crosstalk_path = pl1_crosstalk_path
-            self.pl2_roi_crosstalk_path = pl2_crosstalk_path
+
 
         else:
             self.pl1_roi_out_path = None
             self.pl2_roi_out_path = None
-            self.pl1_roi_crosstalk_path = None
-            self.pl2_roi_crosstalk_path = None
 
         if (self.pl1_roi_out_path is None) or (self.pl2_roi_out_path is None) or (self.pl1_roi_crosstalk_path is None) \
                 or (self.pl2_roi_crosstalk_path is None):
@@ -1055,6 +1017,7 @@ class MesoscopeICA(object):
                     f.create_dataset(f"data", data=pl2_out)
                     f.create_dataset(f"crosstalk", data=pl2_crosstalk)
                     f.create_dataset(f"mixing_matrix", data=pl2_mixing)
+
 
             # plotting goes here
 
@@ -1170,8 +1133,8 @@ class MesoscopeICA(object):
                 pl1_ica_neuropil_out = np.array([pl1_out_sig, pl1_out_ct])
                 pl2_ica_neuropil_out = np.array([pl2_out_sig, pl2_out_ct])
 
-                self.pl1_ica_neuropil_out = pl1_ica_neuropil_out
-                self.pl2_ica_neuropil_out = pl2_ica_neuropil_out
+                self.pl1_np_out = pl1_ica_neuropil_out
+                self.pl2_np_out = pl2_ica_neuropil_out
                 self.pl1_np_out_path = pl1_ica_neuropil_out_path
                 self.pl2_np_out_path = pl2_ica_neuropil_out_path
                 self.ica_mixing_matrix_neuropil_path = ica_mixing_matrix_neuropil_path
@@ -1202,8 +1165,8 @@ class MesoscopeICA(object):
                 neuropil_matrix = f["mixing"][()]
                 pl1_err = f["pl1_err"][()]
                 pl2_err = f["pl2_err"][()]
-            self.pl1_ica_neuropil_out = pl1_ica_neuropil_out
-            self.pl2_ica_neuropil_out = pl2_ica_neuropil_out
+            self.pl1_np_out = pl1_ica_neuropil_out
+            self.pl2_np_out = pl2_ica_neuropil_out
             self.neuropil_matrix = neuropil_matrix
             self.pl1_np_err = pl1_err
             self.pl2_np_err = pl2_err
@@ -1680,6 +1643,20 @@ def ica_err(scale, ica_traces, trace_orig):
     return np.sqrt((ica_traces * scale[0] - trace_orig) ** 2).mean()
 
 
+def rescale(trace_in, trace_out):
+    """
+    fn to rescale post-ica traces back to it's originla variances.
+    :param trace_in: numpy.array, trace before crosstalk correction
+    :param trace_out: numpy.array, trace after crosstalk correction
+    :return: rescaled trace: numpy.array, rescaled trace post crosstalk correction
+    """
+    scale = find_scale_ica_roi(trace_in, trace_out)
+    if scale < 0:
+        scale *= -1
+    rescaled_trace = trace_out * scale
+    return rescaled_trace
+
+
 def find_scale_ica_roi(ica_in, ica_out):
     """
     find scaling factor that will minimize difference of standard deviations between ICA input and ICA out
@@ -1688,17 +1665,7 @@ def find_scale_ica_roi(ica_in, ica_out):
     """
     # for traces:
     scale = opt.minimize(ica_err, [1], (ica_out, ica_in))
-
     return scale.x
-
-
-def rescale(trace_in, trace_out):
-    scale = find_scale_ica_roi(trace_in, trace_out)
-    if scale < 0:
-        scale *= -1
-    rescaled_trace = trace_out * scale
-    return rescaled_trace
-
 
 def run_ica(trace1, trace2):
     traces = np.array([trace1, trace2]).T
