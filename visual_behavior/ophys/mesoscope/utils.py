@@ -53,7 +53,7 @@ def run_ica_on_session(session, iter_roi, iter_neuropil, roi_name=None, np_name=
         ica_obj.validate_traces()
         ica_obj.combine_debias_roi()
         ica_obj.combine_debias_neuropil()
-        ica_obj.unmix_traces(max_iter=iter_roi)
+        ica_obj.unmix_planes(max_iter=iter_roi)
         ica_obj.unmix_neuropil(max_iter=iter_neuropil)
         ica_obj.plot_ica_traces(pair)
     return ica_obj
@@ -75,7 +75,7 @@ def run_ica_on_pair(session, pair, iter_ica, iter_neuropil, roi_name=None, np_na
     ica_obj.validate_traces()
     ica_obj.combine_debias_roi()
     ica_obj.combine_debias_neuropil()
-    ica_obj.unmix_traces(max_iter=iter_ica)
+    ica_obj.unmix_planes(max_iter=iter_ica)
     ica_obj.unmix_neuropil(max_iter=iter_neuropil)
     ica_obj.plot_ica_traces(pair)
     return
@@ -608,7 +608,7 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
             for pair in pairs:
                 # cleaning up neuropil directory
                 ica_obj.set_ica_neuropil_dir(pair, np_name="ica_neuropil")
-                exp_np_dir = ica_obj.ica_neuropil_dir
+                exp_np_dir = ica_obj.np_dir
                 if os.path.isdir(exp_np_dir):
                     ica_np_output_p1 = os.path.join(exp_np_dir, f'{np_name}_output_{pair[0]}.h5')
                     ica_np_output_p2 = os.path.join(exp_np_dir, f'{np_name}_output_{pair[1]}.h5')
@@ -671,7 +671,7 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
 
                 # cleaning up roi traces directory:
                 ica_obj.set_ica_roi_dir(pair, roi_name="ica_traces")
-                exp_roi_dir = ica_obj.ica_traces_dir
+                exp_roi_dir = ica_obj.roi_dir
                 if os.path.isdir(exp_roi_dir):
                     ica_roi_output_p1 = os.path.join(exp_roi_dir, f'{roi_name}_output_{pair[0]}.h5')
                     ica_roi_output_p2 = os.path.join(exp_roi_dir, f'{roi_name}_output_{pair[1]}.h5')

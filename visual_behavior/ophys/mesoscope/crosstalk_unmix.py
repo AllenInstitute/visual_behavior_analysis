@@ -17,6 +17,7 @@ from scipy.stats import linregress
 from matplotlib.colors import LogNorm
 import visual_behavior.ophys.mesoscope.active_traces as at
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -104,76 +105,85 @@ def create_roi_masks(rois, w, h, motion_border):
 
 class MesoscopeICA(object):
     """
-    Class to perform ica-based demixing on a pair of mesoscope planes
+    Class to perform ica-based demixing on a pair of mesoscope pls
     """
 
     def __init__(self, session_id, cache, debug_mode=False, roi_name="roi_ica", np_name="neuropil_ica"):
         """
         :param session_id: LIMS session ID
-        :param cache: directory to store/find inputs/outputs
-        :param debug_mode: flag that controls whether debug logger messages are output
-        :param roi_name: string, default name for roi-related input/outputs
-        :param np_name: string, default name for neuropil-related inputs/outputs
+        :param cache: directory to store/find ins/outs
+        :param debug_mode: flag that controls whether debug logger messages are out
+        :param roi_name: string, default name for roi-related in/outs
+        :param np_name: string, default name for neuropil-related ins/outs
         """
 
         self.session_id = session_id
         self.dataset = ms.MesoscopeDataset(session_id)
         self.session_cache_dir = None
         self.debug_mode = debug_mode
-        self.roi_name = roi_name
-        self.np_name = np_name
+        self.roi_name = roi_name  # prefix for files related to roi traces
+        self.np_name = np_name  # prefix for files related to nuropil traces
 
-        self.plane1_exp_id = None
-        self.plane2_exp_id = None
+        self.pl1_exp_id = None  # plane 1 experiment id
+        self.pl2_exp_id = None  # plane 2 experiment id
 
-        self.found_original_traces = None  # output of get_traces
-        self.found_original_neuropil = None  # output of get_traces
+        self.roi_dir = None  # path to subdir containing roi-related files
+        self.np_dir = None  # path to subdir containing neuropil-related files
 
-        self.ica_traces_dir = None
-        self.plane1_ica_output_pointer = None
-        self.plane2_ica_output_pointer = None
-        self.ica_mixing_matrix_pointer = None
+        ###########
 
-        self.ica_neuropil_dir = None
-        self.plane1_ica_neuropil_output_pointer = None
-        self.plane2_ica_neuropil_output_pointer = None
-        self.ica_mixing_matrix_neuropil_pointer = None
+        self.found_raw_roi_traces = None  # flag if raw roi tarces exist in self.roi_dir output of get_traces
+        self.found_raw_np_traces = None  # flag if raw neuropil tarces exist in self.np_dir output of get_traces
 
-        self.plane1_ica_input_pointer = None
-        self.plane2_ica_input_pointer = None
-        self.plane1_ica_output_pointer = None
-        self.plane2_ica_output_pointer = None
+        self.pl1_out_path = None
+        self.pl2_out_path = None
+        self.pl1_crosstalk_path = None
+        self.pl2_crosstalk_path = None
 
-        self.plane1_ica_neuropil_input_pointer = None
-        self.plane2_ica_neuropil_input_pointer = None
-        self.plane1_ica_neuropil_output_pointer = None
-        self.plane2_ica_neuropil_output_pointer = None
+        self.pl1_out = None
+        self.pl2_out = None
+        self.pl1_crosstalk = None
+        self.pl2_crosstalk = None
 
-        self.plane1_roi_names = None
-        self.plane2_roi_names = None
-        self.plane1_traces_orig = None
-        self.plane1_traces_orig_pointer = None
 
-        self.plane1_offset = None
-        self.plane2_offset = None
+        self.pl1_np_out_path = None
+        self.pl2_np_out_path = None
 
-        self.plane1_neuropil_offset = None
-        self.plane2_neuropil_offset = None
+        self.pl1_roi_in_path = None
+        self.pl2_ica_in_path = None
+        self.pl1_ica_out_path = None
+        self.pl2_ica_out_path = None
+
+        self.pl1_ica_neuropil_in_path = None
+        self.pl2_ica_neuropil_in_path = None
+        self.pl1_np_out_path = None
+        self.pl2_np_out_path = None
+
+        self.pl1_roi_names = None
+        self.pl2_roi_names = None
+        self.pl1_traces_orig = None
+        self.pl1_traces_orig_path = None
+
+        self.pl1_offset = None
+        self.pl2_offset = None
+
+        self.pl1_neuropil_offset = None
+        self.pl2_neuropil_offset = None
 
         self.ica_traces_scale_top = None
         self.ica_traces_scale_bot = None
         self.ica_neuropil_scale_top = None
         self.ica_neuropil_scale_bot = None
 
-        self.found_solution = None  # output of unmix_traces
+        self.found_solution = None  # out of unmix_pls
         self.found_solution_neuropil = None
 
-        self.plane1_ica_input = None
-        self.plane2_ica_input = None
+        self.pl1_ica_in = None
+        self.pl2_ica_in = None
 
-        self.found_ica_input = [None, None]
+        self.found_ica_in = [None, None]
         self.found_ica_offset = [None, None]
-        self.found_ica_neuropil_input = [None, None]
+        self.found_ica_neuropil_in = [None, None]
         self.found_ica_neuropil_offset = [None, None]
 
         self.roi_matrix = None
@@ -184,54 +194,54 @@ class MesoscopeICA(object):
 
         self.cache = cache
 
-        self.plane1_roi_names = None
-        self.plane2_roi_names = None
+        self.pl1_roi_names = None
+        self.pl2_roi_names = None
 
-        self.plane1_roi_traces_valid = None
-        self.plane2_roi_traces_valid = None
+        self.pl1_roi_traces_valid = None
+        self.pl2_roi_traces_valid = None
 
-        self.plane1_roi_traces_valid_pointer = None
-        self.plane2_roi_traces_valid_pointer = None
+        self.pl1_roi_traces_valid_path = None
+        self.pl2_roi_traces_valid_path = None
 
-        self.plane1_neuropil_traces_valid_pointer = None
-        self.plane2_neuropil_traces_valid_pointer = None
+        self.pl1_neuropil_traces_valid_path = None
+        self.pl2_neuropil_traces_valid_path = None
 
-        self.plane1_neuropil_traces_valid = None
-        self.plane2_neuropil_traces_valid = None
+        self.pl1_neuropil_traces_valid = None
+        self.pl2_neuropil_traces_valid = None
 
-        self.plane1_roi_err = None
-        self.plane2_roi_err = None
+        self.pl1_roi_err = None
+        self.pl2_roi_err = None
 
-        self.plane1_np_err = None
-        self.plane2_np_err = None
+        self.pl1_np_err = None
+        self.pl2_np_err = None
 
-        self.neuropil_ica_output = None
+        self.neuropil_ica_out = None
 
-        self.plane1_ica_neuropil_input = None
-        self.plane2_ica_neuropil_input = None
+        self.pl1_ica_neuropil_in = None
+        self.pl2_ica_neuropil_in = None
 
-        self.ica_mixing_matrix_traces_pointer = None
+        self.ica_mixing_matrix_traces_path = None
 
-        self.plane1_ica_neuropil_output = None
-        self.plane2_ica_neuropil_output = None
+        self.pl1_ica_neuropil_out = None
+        self.pl2_ica_neuropil_out = None
 
-        self.plane2_traces_orig = None
-        self.plane2_traces_orig_pointer = None
+        self.pl2_traces_orig = None
+        self.pl2_traces_orig_path = None
 
-        self.plane1_neuropil_orig = None
-        self.plane1_neuropil_orig_pointer = None
+        self.pl1_neuropil_orig = None
+        self.pl1_neuropil_orig_path = None
 
-        self.plane2_neuropil_orig = None
-        self.plane2_neuropil_orig_pointer = None
+        self.pl2_neuropil_orig = None
+        self.pl2_neuropil_orig_path = None
 
-        self.roi_ica_output = None
+        self.roi_ica_out = None
 
-        self.plane1_ica_output = None
-        self.plane2_ica_output = None
+        self.pl1_ica_out = None
+        self.pl2_ica_out = None
 
     def set_analysis_session_dir(self):
         """
-        crete pointer to the session-level dir
+        crete path to the session-level dir
         :return: string - path to session level dir
         """
         self.session_cache_dir = os.path.join(self.cache, f'session_{self.session_id}')
@@ -239,49 +249,47 @@ class MesoscopeICA(object):
 
     def set_ica_roi_dir(self, pair, roi_name=None):
         """
-        create pointer to ica-related inputs/outputs for the pair
+        create path to ica-related inputs/outs for the pair
         :param pair: list[int, int] - pair of LIMS exp IDs
-        :param roi_name: roi_nam if different form self.roi_name to use to locate old inputs/outputs
+        :param roi_name: roi_nam if different form self.roi_name to use to locate old inputs/outs
         :return: None
         """
         if not roi_name:
             roi_name = self.roi_name
 
         session_dir = self.set_analysis_session_dir()
-        self.ica_traces_dir = os.path.join(session_dir, f'{roi_name}_{pair[0]}_{pair[1]}/')
-        self.plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                      f'{self.roi_name}_output_{pair[0]}.h5')
-        self.plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
+        self.roi_dir = os.path.join(session_dir, f'{roi_name}_{pair[0]}_{pair[1]}/')
+        self.pl1_ica_out_path = os.path.join(self.roi_dir,
+                                             f'{self.roi_name}_out_{pair[0]}.h5')
+        self.pl2_ica_out_path = os.path.join(self.roi_dir,
+                                             f'{self.roi_name}_out_{pair[1]}.h5')
 
-                                                      f'{self.roi_name}_output_{pair[1]}.h5')
-        self.ica_mixing_matrix_pointer = os.path.join(self.ica_traces_dir,
-                                                      f'{self.roi_name}_mixing.h5')
         return
 
     def set_ica_neuropil_dir(self, pair, np_name=None):
         """
-        create pointer to neuropil-related inputs/outputs for the pair
+        create path to neuropil-related inputs/outs for the pair
         :param pair: list[int, int] - pair of LIMS exp IDs
-        :param np_name: roi_nam if different form self.roi_name to use to locate old inputs/outputs
+        :param np_name: roi_nam if different form self.roi_name to use to locate old inputs/outs
         :return: None
         """
         if not np_name:
             np_name = self.np_name
 
         session_dir = self.set_analysis_session_dir()
-        self.ica_neuropil_dir = os.path.join(session_dir, f'{np_name}_{pair[0]}_{pair[1]}/')
-        self.plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                               f'{self.np_name}_output_{pair[0]}.h5')
-        self.plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                               f'{self.np_name}_output_{pair[1]}.h5')
-        self.ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir, f'{self.np_name}_mixing.h5')
+        self.np_dir = os.path.join(session_dir, f'{np_name}_{pair[0]}_{pair[1]}/')
+        self.pl1_np_out_path = os.path.join(self.np_dir,
+                                            f'{self.np_name}_out_{pair[0]}.h5')
+        self.pl2_np_out_path = os.path.join(self.np_dir,
+                                            f'{self.np_name}_out_{pair[1]}.h5')
+        self.ica_mixing_matrix_neuropil_path = os.path.join(self.np_dir, f'{self.np_name}_mixing.h5')
 
         return
 
     def get_ica_traces(self, pair, roi_dir_name=None, np_dir_name=None):
         """
-        function to apply roi set to two image planes, first check if the traces have been extracted before,
-        can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk planes
+        function to apply roi set to two image pls, first check if the traces have been extracted before,
+        can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk pls
         :param pair: list[int, int] : LIMS exp IDs for the pair
         :param roi_dir_name: string, new name for roi-related files to use, different form self.roi_name
         :param np_dir_name: string, new name for neuropil-related files to use, if need to be different form self.np_name
@@ -299,113 +307,113 @@ class MesoscopeICA(object):
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
         # we will first check if traces exist, if yes - read them, if not - extract them
-        self.plane1_roi_names = None
-        self.plane2_roi_names = None
+        self.pl1_roi_names = None
+        self.pl2_roi_names = None
 
-        self.found_original_traces = [False, False]
-        self.found_original_neuropil = [False, False]
+        self.found_raw_roi_traces = [False, False]
+        self.found_raw_np_traces = [False, False]
 
-        plane1_exp_id = pair[0]
-        plane2_exp_id = pair[1]
+        pl1_exp_id = pair[0]
+        pl2_exp_id = pair[1]
 
-        self.plane1_exp_id = plane1_exp_id
-        self.plane2_exp_id = plane2_exp_id
+        self.pl1_exp_id = pl1_exp_id
+        self.pl2_exp_id = pl2_exp_id
 
         session_dir = os.path.join(self.cache, f'session_{self.session_id}')
         self.session_cache_dir = session_dir
 
         # path to ica traces:
         # for roi
-        ica_traces_dir = os.path.join(session_dir, f'{roi_dir_name}_{plane1_exp_id}_{plane2_exp_id}/')
-        self.ica_traces_dir = ica_traces_dir
-        path_traces_plane1 = f'{ica_traces_dir}traces_original_{plane1_exp_id}.h5'
-        path_traces_plane2 = f'{ica_traces_dir}traces_original_{plane2_exp_id}.h5'
+        ica_traces_dir = os.path.join(session_dir, f'{roi_dir_name}_{pl1_exp_id}_{pl2_exp_id}/')
+        self.roi_dir = ica_traces_dir
+        path_traces_pl1 = f'{ica_traces_dir}traces_original_{pl1_exp_id}.h5'
+        path_traces_pl2 = f'{ica_traces_dir}traces_original_{pl2_exp_id}.h5'
         # for neuropil
-        ica_neuropil_dir = os.path.join(session_dir, f'{np_dir_name}_{plane1_exp_id}_{plane2_exp_id}/')
-        self.ica_neuropil_dir = ica_neuropil_dir
-        path_neuropil_plane1 = f'{ica_neuropil_dir}neuropil_original_{plane1_exp_id}.h5'
-        path_neuropil_plane2 = f'{ica_neuropil_dir}neuropil_original_{plane2_exp_id}.h5'
+        ica_neuropil_dir = os.path.join(session_dir, f'{np_dir_name}_{pl1_exp_id}_{pl2_exp_id}/')
+        self.np_dir = ica_neuropil_dir
+        path_neuropil_pl1 = f'{ica_neuropil_dir}neuropil_original_{pl1_exp_id}.h5'
+        path_neuropil_pl2 = f'{ica_neuropil_dir}neuropil_original_{pl2_exp_id}.h5'
 
         # let's see if all traces exist already:
-        if os.path.isfile(path_traces_plane1) and os.path.isfile(path_traces_plane2) and os.path.isfile(
-                path_neuropil_plane1) and os.path.isfile(path_neuropil_plane2):
+        if os.path.isfile(path_traces_pl1) and os.path.isfile(path_traces_pl2) and os.path.isfile(
+                path_neuropil_pl1) and os.path.isfile(path_neuropil_pl2):
             # if both traces exist, skip extracting:
 
             logger.info('Found traces in cache, reading from h5 file')
             # read traces form h5 file:
-            with h5py.File(path_traces_plane1, "r") as f:
-                plane1_traces_original = f["data"][()]
-                plane1_roi_names = f["roi_names"][()]
-            with h5py.File(path_traces_plane2, "r") as f:
-                plane2_traces_original = f["data"][()]
-                plane2_roi_names = f["roi_names"][()]
+            with h5py.File(path_traces_pl1, "r") as f:
+                pl1_traces_original = f["data"][()]
+                pl1_roi_names = f["roi_names"][()]
+            with h5py.File(path_traces_pl2, "r") as f:
+                pl2_traces_original = f["data"][()]
+                pl2_roi_names = f["roi_names"][()]
 
             # read neuropil traces form h5 file:
-            with h5py.File(path_neuropil_plane1, "r") as f:
-                plane1_neuropil_original = f["data"][()]
+            with h5py.File(path_neuropil_pl1, "r") as f:
+                pl1_neuropil_original = f["data"][()]
 
-            with h5py.File(path_neuropil_plane2, "r") as f:
-                plane2_neuropil_original = f["data"][()]
+            with h5py.File(path_neuropil_pl2, "r") as f:
+                pl2_neuropil_original = f["data"][()]
 
-            self.plane1_traces_orig_pointer = path_traces_plane1
-            self.plane2_traces_orig_pointer = path_traces_plane2
-            self.plane1_traces_orig = plane1_traces_original
-            self.plane2_traces_orig = plane2_traces_original
-            self.plane1_roi_names = plane1_roi_names
-            self.plane2_roi_names = plane2_roi_names
+            self.pl1_traces_orig_path = path_traces_pl1
+            self.pl2_traces_orig_path = path_traces_pl2
+            self.pl1_traces_orig = pl1_traces_original
+            self.pl2_traces_orig = pl2_traces_original
+            self.pl1_roi_names = pl1_roi_names
+            self.pl2_roi_names = pl2_roi_names
 
             #  same for neuropil:
-            self.plane1_neuropil_orig_pointer = path_neuropil_plane1
-            self.plane2_neuropil_orig_pointer = path_neuropil_plane2
-            self.plane1_neuropil_orig = plane1_neuropil_original
-            self.plane2_neuropil_orig = plane2_neuropil_original
+            self.pl1_neuropil_orig_path = path_neuropil_pl1
+            self.pl2_neuropil_orig_path = path_neuropil_pl2
+            self.pl1_neuropil_orig = pl1_neuropil_original
+            self.pl2_neuropil_orig = pl2_neuropil_original
             # set found traces flag True
-            self.found_original_traces = [True, True]
+            self.found_raw_roi_traces = [True, True]
             # set found neuropil traces flag True
-            self.found_original_neuropil = [True, True]
+            self.found_raw_np_traces = [True, True]
 
         else:
             # some traces are missing, run extraction:
             logger.info('Traces dont exist in cache, extracting')
 
             # if traces don't exist, do we need to reset unmixed and debiased traces flaggs to none?
-            # yes, as we want unmixed traces be output on ICA using original traces
-            self.plane1_ica_input_pointer = None
-            self.plane2_ica_input_pointer = None
-            self.plane1_ica_output_pointer = None
-            self.plane2_ica_output_pointer = None
+            # yes, as we want unmixed traces be out on ICA using original traces
+            self.pl1_roi_in_path = None
+            self.pl2_ica_in_path = None
+            self.pl1_ica_out_path = None
+            self.pl2_ica_out_path = None
 
-            self.plane1_ica_neuropil_input_pointer = None
-            self.plane2_ica_neuropil_input_pointer = None
-            self.plane1_ica_neuropil_output_pointer = None
-            self.plane2_ica_neuropil_output_pointer = None
+            self.pl1_ica_neuropil_in_path = None
+            self.pl2_ica_neuropil_in_path = None
+            self.pl1_np_out_path = None
+            self.pl2_np_out_path = None
 
-            self.plane1_roi_names = None
-            self.plane2_roi_names = None
+            self.pl1_roi_names = None
+            self.pl2_roi_names = None
 
-            plane1_folder = self.dataset.get_exp_folder(plane1_exp_id)
-            plane2_folder = self.dataset.get_exp_folder(plane2_exp_id)
+            pl1_folder = self.dataset.get_exp_folder(pl1_exp_id)
+            pl2_folder = self.dataset.get_exp_folder(pl2_exp_id)
 
-            # extract signal and crosstalk traces for plane 1
-            plane1_sig_traces, plane1_sig_neuropil, plane1_roi_names = get_traces(plane1_folder, plane1_exp_id,
-                                                                                  plane1_folder, plane1_exp_id)
-            plane1_ct_traces, plane1_ct_neuropil, _ = get_traces(plane2_folder, plane2_exp_id, plane1_folder,
-                                                                 plane1_exp_id)
-            # extract signal and crosstalk traces for plane 2
-            plane2_sig_traces, plane2_sig_neuropil, plane2_roi_names = get_traces(plane2_folder, plane2_exp_id,
-                                                                                  plane2_folder, plane2_exp_id)
-            plane2_ct_traces, plane2_ct_neuropil, _ = get_traces(plane1_folder, plane1_exp_id, plane2_folder,
-                                                                 plane2_exp_id)
+            # extract signal and crosstalk traces for pl 1
+            pl1_sig_traces, pl1_sig_neuropil, pl1_roi_names = get_traces(pl1_folder, pl1_exp_id,
+                                                                         pl1_folder, pl1_exp_id)
+            pl1_ct_traces, pl1_ct_neuropil, _ = get_traces(pl2_folder, pl2_exp_id, pl1_folder,
+                                                           pl1_exp_id)
+            # extract signal and crosstalk traces for pl 2
+            pl2_sig_traces, pl2_sig_neuropil, pl2_roi_names = get_traces(pl2_folder, pl2_exp_id,
+                                                                         pl2_folder, pl2_exp_id)
+            pl2_ct_traces, pl2_ct_neuropil, _ = get_traces(pl1_folder, pl1_exp_id, pl2_folder,
+                                                           pl2_exp_id)
 
             # setting traces valid flag: if none is None
-            if (not plane1_sig_traces.any() is None) and (not plane1_ct_traces.any() is None):
-                self.found_original_traces[0] = True
-            if (not plane2_sig_traces.any() is None) and (not plane2_ct_traces.any() is None):
-                self.found_original_traces[1] = True
-            if (not plane1_sig_neuropil.any() is None) and (not plane1_ct_neuropil.any() is None):
-                self.found_original_neuropil[0] = True
-            if (not plane2_sig_neuropil.any() is None) and (not plane2_ct_neuropil.any() is None):
-                self.found_original_neuropil[1] = True
+            if (not pl1_sig_traces.any() is None) and (not pl1_ct_traces.any() is None):
+                self.found_raw_roi_traces[0] = True
+            if (not pl2_sig_traces.any() is None) and (not pl2_ct_traces.any() is None):
+                self.found_raw_roi_traces[1] = True
+            if (not pl1_sig_neuropil.any() is None) and (not pl1_ct_neuropil.any() is None):
+                self.found_raw_np_traces[0] = True
+            if (not pl2_sig_neuropil.any() is None) and (not pl2_ct_neuropil.any() is None):
+                self.found_raw_np_traces[1] = True
 
             # DOES ROI traces DIR EXIST?
             if not os.path.isdir(session_dir):
@@ -413,25 +421,25 @@ class MesoscopeICA(object):
             if not os.path.isdir(ica_traces_dir):
                 os.mkdir(ica_traces_dir)
             # if extracted traces valid, save to disk:
-            if self.found_original_traces[0] and self.found_original_traces[1]:
+            if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1]:
                 # combining traces, saving to self, writing to disk:
-                plane1_traces_original = np.array([plane1_sig_traces, plane1_ct_traces])
+                pl1_traces_original = np.array([pl1_sig_traces, pl1_ct_traces])
 
-                self.plane1_traces_orig = plane1_traces_original
-                self.plane1_traces_orig_pointer = path_traces_plane1
-                self.plane1_roi_names = plane1_roi_names
-                with h5py.File(path_traces_plane1, "w") as f:
-                    f.create_dataset(f"data", data=plane1_traces_original)
-                    f.create_dataset(f"roi_names", data=np.int_(plane1_roi_names))
+                self.pl1_traces_orig = pl1_traces_original
+                self.pl1_traces_orig_path = path_traces_pl1
+                self.pl1_roi_names = pl1_roi_names
+                with h5py.File(path_traces_pl1, "w") as f:
+                    f.create_dataset(f"data", data=pl1_traces_original)
+                    f.create_dataset(f"roi_names", data=np.int_(pl1_roi_names))
 
-                # same for plane 2:
-                plane2_traces_original = np.array([plane2_sig_traces, plane2_ct_traces])
-                self.plane2_traces_orig = plane2_traces_original
-                self.plane2_traces_orig_pointer = path_traces_plane2
-                self.plane2_roi_names = plane2_roi_names
-                with h5py.File(path_traces_plane2, "w") as f:
-                    f.create_dataset(f"data", data=plane2_traces_original)
-                    f.create_dataset(f"roi_names", data=np.int_(plane2_roi_names))
+                # same for pl 2:
+                pl2_traces_original = np.array([pl2_sig_traces, pl2_ct_traces])
+                self.pl2_traces_orig = pl2_traces_original
+                self.pl2_traces_orig_path = path_traces_pl2
+                self.pl2_roi_names = pl2_roi_names
+                with h5py.File(path_traces_pl2, "w") as f:
+                    f.create_dataset(f"data", data=pl2_traces_original)
+                    f.create_dataset(f"roi_names", data=np.int_(pl2_roi_names))
 
             if not os.path.isdir(session_dir):
                 os.mkdir(session_dir)
@@ -439,27 +447,27 @@ class MesoscopeICA(object):
                 os.mkdir(ica_neuropil_dir)
 
             # if extracted traces not None, save to disk:
-            if self.found_original_neuropil[0] and self.found_original_neuropil[1]:
+            if self.found_raw_np_traces[0] and self.found_raw_np_traces[1]:
                 # combining traces, saving to self, writing to disk:
-                plane1_neuropil_original = np.array([plane1_sig_neuropil, plane1_ct_neuropil])
-                self.plane1_neuropil_orig = plane1_neuropil_original
-                self.plane1_neuropil_orig_pointer = path_neuropil_plane1
-                with h5py.File(path_neuropil_plane1, "w") as f:
-                    f.create_dataset(f"data", data=plane1_neuropil_original)
-                    f.create_dataset(f"roi_names", data=np.int_(plane1_roi_names))
-                # same for plane 2:
-                plane2_neuropil_original = np.array([plane2_sig_neuropil, plane2_ct_neuropil])
-                self.plane2_neuropil_orig = plane2_neuropil_original
-                self.plane2_neuropil_orig_pointer = path_neuropil_plane2
-                with h5py.File(path_neuropil_plane2, "w") as f:
-                    f.create_dataset(f"data", data=plane2_neuropil_original)
-                    f.create_dataset(f"roi_names", data=np.int_(plane2_roi_names))
+                pl1_neuropil_original = np.array([pl1_sig_neuropil, pl1_ct_neuropil])
+                self.pl1_neuropil_orig = pl1_neuropil_original
+                self.pl1_neuropil_orig_path = path_neuropil_pl1
+                with h5py.File(path_neuropil_pl1, "w") as f:
+                    f.create_dataset(f"data", data=pl1_neuropil_original)
+                    f.create_dataset(f"roi_names", data=np.int_(pl1_roi_names))
+                # same for pl 2:
+                pl2_neuropil_original = np.array([pl2_sig_neuropil, pl2_ct_neuropil])
+                self.pl2_neuropil_orig = pl2_neuropil_original
+                self.pl2_neuropil_orig_path = path_neuropil_pl2
+                with h5py.File(path_neuropil_pl2, "w") as f:
+                    f.create_dataset(f"data", data=pl2_neuropil_original)
+                    f.create_dataset(f"roi_names", data=np.int_(pl2_roi_names))
 
-        return self.found_original_traces, self.found_original_neuropil
+        return self.found_raw_roi_traces, self.found_raw_np_traces
 
     def validate_traces(self, return_vba=True):
         """
-        fn to check if the traces don't have Nans, writes {exp_id}_valid.json to cache for each plane in pair
+        fn to check if the traces don't have Nans, writes {exp_id}_valid.json to cache for each pl in pair
         return_vba: bool, flag to control whether to validate against vba roi set or return ica roi set
         :return: None
         """
@@ -468,146 +476,146 @@ class MesoscopeICA(object):
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-        self.plane1_roi_traces_valid_pointer = None
-        self.plane2_roi_traces_valid_pointer = None
+        self.pl1_roi_traces_valid_path = None
+        self.pl2_roi_traces_valid_path = None
 
-        self.plane1_neuropil_traces_valid_pointer = None
-        self.plane2_neuropil_traces_valid_pointer = None
+        self.pl1_neuropil_traces_valid_path = None
+        self.pl2_neuropil_traces_valid_path = None
 
-        plane1_roi_traces_valid_pointer = os.path.join(self.ica_traces_dir, f'valid_{self.plane1_exp_id}.json')
-        plane2_roi_traces_valid_pointer = os.path.join(self.ica_traces_dir, f'valid_{self.plane2_exp_id}.json')
+        pl1_roi_traces_valid_path = os.path.join(self.roi_dir, f'valid_{self.pl1_exp_id}.json')
+        pl2_roi_traces_valid_path = os.path.join(self.roi_dir, f'valid_{self.pl2_exp_id}.json')
 
-        plane1_neuropil_traces_valid_pointer = os.path.join(self.ica_neuropil_dir, f'valid_{self.plane1_exp_id}.json')
-        plane2_neuropil_traces_valid_pointer = os.path.join(self.ica_neuropil_dir, f'valid_{self.plane2_exp_id}.json')
+        pl1_neuropil_traces_valid_path = os.path.join(self.np_dir, f'valid_{self.pl1_exp_id}.json')
+        pl2_neuropil_traces_valid_path = os.path.join(self.np_dir, f'valid_{self.pl2_exp_id}.json')
 
         # validation json already exists, skip validating
-        if os.path.isfile(plane1_roi_traces_valid_pointer) and os.path.isfile(
-                plane2_roi_traces_valid_pointer) and os.path.isfile(
-                plane1_neuropil_traces_valid_pointer) and os.path.isfile(
-                plane2_neuropil_traces_valid_pointer):
-            self.plane1_roi_traces_valid_pointer = plane1_roi_traces_valid_pointer
-            self.plane2_roi_traces_valid_pointer = plane2_roi_traces_valid_pointer
-            self.plane1_neuropil_traces_valid_pointer = plane1_neuropil_traces_valid_pointer
-            self.plane2_neuropil_traces_valid_pointer = plane2_neuropil_traces_valid_pointer
+        if os.path.isfile(pl1_roi_traces_valid_path) and os.path.isfile(
+                pl2_roi_traces_valid_path) and os.path.isfile(
+                pl1_neuropil_traces_valid_path) and os.path.isfile(
+                pl2_neuropil_traces_valid_path):
+            self.pl1_roi_traces_valid_path = pl1_roi_traces_valid_path
+            self.pl2_roi_traces_valid_path = pl2_roi_traces_valid_path
+            self.pl1_neuropil_traces_valid_path = pl1_neuropil_traces_valid_path
+            self.pl2_neuropil_traces_valid_path = pl2_neuropil_traces_valid_path
         else:
-            self.plane1_roi_traces_valid_pointer = None
-            self.plane2_roi_traces_valid_pointer = None
-            self.plane1_neuropil_traces_valid_pointer = None
-            self.plane2_neuropil_traces_valid_pointer = None
+            self.pl1_roi_traces_valid_path = None
+            self.pl2_roi_traces_valid_path = None
+            self.pl1_neuropil_traces_valid_path = None
+            self.pl2_neuropil_traces_valid_path = None
 
-        if (not self.plane1_roi_traces_valid_pointer) and (not self.plane2_roi_traces_valid_pointer) and (
-                not self.plane1_neuropil_traces_valid_pointer) and (not self.plane2_neuropil_traces_valid_pointer):
+        if (not self.pl1_roi_traces_valid_path) and (not self.pl2_roi_traces_valid_path) and (
+                not self.pl1_neuropil_traces_valid_path) and (not self.pl2_neuropil_traces_valid_path):
 
             # traces need validation:
-            #traces exist?
-            if self.found_original_traces[0] and self.found_original_traces[1] and self.found_original_neuropil[0] and \
-                    self.found_original_neuropil[1]:
-                # traces, plane 1:
-                plane1_sig_trace_valid = {}
-                plane1_sig_neuropil_valid = {}
-                plane1_ct_trace_valid = {}
-                plane1_ct_neuropil_valid = {}
+            # traces exist?
+            if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1] and self.found_raw_np_traces[0] and \
+                    self.found_raw_np_traces[1]:
+                # traces, pl 1:
+                pl1_sig_trace_valid = {}
+                pl1_sig_neuropil_valid = {}
+                pl1_ct_trace_valid = {}
+                pl1_ct_neuropil_valid = {}
 
-                num_traces_roi_sig, _ = self.plane1_traces_orig[0].shape
-                num_traces_neuropil_sig, _ = self.plane1_neuropil_orig[0].shape
-                num_traces_roi_ct, _ = self.plane1_traces_orig[1].shape
-                num_traces_neuropil_ct, _ = self.plane1_neuropil_orig[1].shape
+                num_traces_roi_sig, _ = self.pl1_traces_orig[0].shape
+                num_traces_neuropil_sig, _ = self.pl1_neuropil_orig[0].shape
+                num_traces_roi_ct, _ = self.pl1_traces_orig[1].shape
+                num_traces_neuropil_ct, _ = self.pl1_neuropil_orig[1].shape
 
                 if not (num_traces_roi_sig == num_traces_neuropil_sig) or not (
                         num_traces_roi_ct == num_traces_neuropil_ct):
                     logger.info('Neuropil and ROI traces are not aligned')
                 else:
                     for n in range(num_traces_roi_sig):
-                        trace_roi_sig = self.plane1_traces_orig[0][n]
-                        trace_neuropil_sig = self.plane1_neuropil_orig[0][n]
-                        trace_roi_ct = self.plane1_traces_orig[1][n]
-                        trace_neuropil_ct = self.plane1_neuropil_orig[1][n]
+                        trace_roi_sig = self.pl1_traces_orig[0][n]
+                        trace_neuropil_sig = self.pl1_neuropil_orig[0][n]
+                        trace_roi_ct = self.pl1_traces_orig[1][n]
+                        trace_neuropil_ct = self.pl1_neuropil_orig[1][n]
 
                         if np.any(np.isnan(trace_roi_sig)) or np.any(np.isnan(trace_neuropil_sig)) or np.any(
                                 np.isnan(trace_roi_ct)) or np.any(np.isnan(trace_neuropil_ct)):
-                            plane1_sig_trace_valid[str(self.plane1_roi_names[n])] = False
-                            plane1_sig_neuropil_valid[str(self.plane1_roi_names[n])] = False
-                            plane1_ct_trace_valid[str(self.plane1_roi_names[n])] = False
-                            plane1_ct_neuropil_valid[str(self.plane1_roi_names[n])] = False
+                            pl1_sig_trace_valid[str(self.pl1_roi_names[n])] = False
+                            pl1_sig_neuropil_valid[str(self.pl1_roi_names[n])] = False
+                            pl1_ct_trace_valid[str(self.pl1_roi_names[n])] = False
+                            pl1_ct_neuropil_valid[str(self.pl1_roi_names[n])] = False
                         else:
-                            plane1_sig_trace_valid[str(self.plane1_roi_names[n])] = True
-                            plane1_sig_neuropil_valid[str(self.plane1_roi_names[n])] = True
-                            plane1_ct_trace_valid[str(self.plane1_roi_names[n])] = True
-                            plane1_ct_neuropil_valid[str(self.plane1_roi_names[n])] = True
+                            pl1_sig_trace_valid[str(self.pl1_roi_names[n])] = True
+                            pl1_sig_neuropil_valid[str(self.pl1_roi_names[n])] = True
+                            pl1_ct_trace_valid[str(self.pl1_roi_names[n])] = True
+                            pl1_ct_neuropil_valid[str(self.pl1_roi_names[n])] = True
 
-                # traces, plane 2:
+                # traces, pl 2:
                 # signal:
-                plane2_sig_trace_valid = {}
-                plane2_sig_neuropil_valid = {}
-                plane2_ct_trace_valid = {}
-                plane2_ct_neuropil_valid = {}
+                pl2_sig_trace_valid = {}
+                pl2_sig_neuropil_valid = {}
+                pl2_ct_trace_valid = {}
+                pl2_ct_neuropil_valid = {}
 
-                num_traces_roi_sig, _ = self.plane2_traces_orig[0].shape
-                num_traces_neuropil_sig, _ = self.plane2_neuropil_orig[0].shape
-                num_traces_roi_ct, _ = self.plane2_traces_orig[1].shape
-                num_traces_neuropil_ct, _ = self.plane2_neuropil_orig[1].shape
+                num_traces_roi_sig, _ = self.pl2_traces_orig[0].shape
+                num_traces_neuropil_sig, _ = self.pl2_neuropil_orig[0].shape
+                num_traces_roi_ct, _ = self.pl2_traces_orig[1].shape
+                num_traces_neuropil_ct, _ = self.pl2_neuropil_orig[1].shape
 
                 if not (num_traces_roi_sig == num_traces_neuropil_sig) or not (
                         num_traces_roi_ct == num_traces_neuropil_ct):
                     logger.info('Neuropil and ROI traces are not aligned')
                 else:
                     for n in range(num_traces_roi_sig):
-                        trace_roi_sig = self.plane2_traces_orig[0][n]
-                        trace_neuropil_sig = self.plane2_neuropil_orig[0][n]
-                        trace_roi_ct = self.plane2_traces_orig[1][n]
-                        trace_neuropil_ct = self.plane2_neuropil_orig[1][n]
+                        trace_roi_sig = self.pl2_traces_orig[0][n]
+                        trace_neuropil_sig = self.pl2_neuropil_orig[0][n]
+                        trace_roi_ct = self.pl2_traces_orig[1][n]
+                        trace_neuropil_ct = self.pl2_neuropil_orig[1][n]
 
                         if np.any(np.isnan(trace_roi_sig)) or np.any(np.isnan(trace_neuropil_sig)) or np.any(
                                 np.isnan(trace_roi_ct)) or np.any(np.isnan(trace_neuropil_ct)):
-                            plane2_sig_trace_valid[str(self.plane2_roi_names[n])] = False
-                            plane2_sig_neuropil_valid[str(self.plane2_roi_names[n])] = False
-                            plane2_ct_trace_valid[str(self.plane2_roi_names[n])] = False
-                            plane2_ct_neuropil_valid[str(self.plane2_roi_names[n])] = False
+                            pl2_sig_trace_valid[str(self.pl2_roi_names[n])] = False
+                            pl2_sig_neuropil_valid[str(self.pl2_roi_names[n])] = False
+                            pl2_ct_trace_valid[str(self.pl2_roi_names[n])] = False
+                            pl2_ct_neuropil_valid[str(self.pl2_roi_names[n])] = False
                         else:
-                            plane2_sig_trace_valid[str(self.plane2_roi_names[n])] = True
-                            plane2_sig_neuropil_valid[str(self.plane2_roi_names[n])] = True
-                            plane2_ct_trace_valid[str(self.plane2_roi_names[n])] = True
-                            plane2_ct_neuropil_valid[str(self.plane2_roi_names[n])] = True
+                            pl2_sig_trace_valid[str(self.pl2_roi_names[n])] = True
+                            pl2_sig_neuropil_valid[str(self.pl2_roi_names[n])] = True
+                            pl2_ct_trace_valid[str(self.pl2_roi_names[n])] = True
+                            pl2_ct_neuropil_valid[str(self.pl2_roi_names[n])] = True
 
                 # combining dictionaries for signal and crosstalk
-                plane1_roi_traces_valid = {"signal": plane1_sig_trace_valid,
-                                           "crosstalk": plane1_ct_trace_valid}
-                plane2_roi_traces_valid = {"signal": plane2_sig_trace_valid,
-                                           "crosstalk": plane2_ct_trace_valid}
+                pl1_roi_traces_valid = {"signal": pl1_sig_trace_valid,
+                                        "crosstalk": pl1_ct_trace_valid}
+                pl2_roi_traces_valid = {"signal": pl2_sig_trace_valid,
+                                        "crosstalk": pl2_ct_trace_valid}
 
-                plane1_neuropil_traces_valid = {"signal": plane1_sig_neuropil_valid,
-                                                "crosstalk": plane1_ct_neuropil_valid}
-                plane2_neuropil_traces_valid = {"signal": plane2_sig_neuropil_valid,
-                                                "crosstalk": plane2_ct_neuropil_valid}
+                pl1_neuropil_traces_valid = {"signal": pl1_sig_neuropil_valid,
+                                             "crosstalk": pl1_ct_neuropil_valid}
+                pl2_neuropil_traces_valid = {"signal": pl2_sig_neuropil_valid,
+                                             "crosstalk": pl2_ct_neuropil_valid}
 
                 # validating agains VBA rois set:
                 if return_vba:
-                    plane1_roi_traces_valid = self.validate_against_vba(plane1_roi_traces_valid,
-                                                                        self.plane1_exp_id, VBA_CACHE)
-                    plane2_roi_traces_valid = self.validate_against_vba(plane2_roi_traces_valid,
-                                                                        self.plane2_exp_id, VBA_CACHE)
+                    pl1_roi_traces_valid = self.validate_against_vba(pl1_roi_traces_valid,
+                                                                     self.pl1_exp_id, VBA_CACHE)
+                    pl2_roi_traces_valid = self.validate_against_vba(pl2_roi_traces_valid,
+                                                                     self.pl2_exp_id, VBA_CACHE)
 
-                    plane1_neuropil_traces_valid = self.validate_against_vba(plane1_neuropil_traces_valid,
-                                                                             self.plane1_exp_id, VBA_CACHE)
-                    plane2_neuropil_traces_valid = self.validate_against_vba(plane2_neuropil_traces_valid,
-                                                                             self.plane2_exp_id, VBA_CACHE)
+                    pl1_neuropil_traces_valid = self.validate_against_vba(pl1_neuropil_traces_valid,
+                                                                          self.pl1_exp_id, VBA_CACHE)
+                    pl2_neuropil_traces_valid = self.validate_against_vba(pl2_neuropil_traces_valid,
+                                                                          self.pl2_exp_id, VBA_CACHE)
                 # saving to json:
 
-                self.plane1_roi_traces_valid_pointer = plane1_roi_traces_valid_pointer
-                ju.write(plane1_roi_traces_valid_pointer, plane1_roi_traces_valid)
-                self.plane1_roi_traces_valid = plane1_roi_traces_valid
+                self.pl1_roi_traces_valid_path = pl1_roi_traces_valid_path
+                ju.write(pl1_roi_traces_valid_path, pl1_roi_traces_valid)
+                self.pl1_roi_traces_valid = pl1_roi_traces_valid
 
-                self.plane2_roi_traces_valid_pointer = plane2_roi_traces_valid_pointer
-                ju.write(plane2_roi_traces_valid_pointer, plane2_roi_traces_valid)
-                self.plane2_roi_traces_valid = plane2_roi_traces_valid
+                self.pl2_roi_traces_valid_path = pl2_roi_traces_valid_path
+                ju.write(pl2_roi_traces_valid_path, pl2_roi_traces_valid)
+                self.pl2_roi_traces_valid = pl2_roi_traces_valid
 
-                self.plane1_neuropil_traces_valid_pointer = plane1_neuropil_traces_valid_pointer
-                ju.write(plane1_neuropil_traces_valid_pointer, plane1_neuropil_traces_valid)
-                self.plane1_neuropil_traces_valid = plane1_neuropil_traces_valid
+                self.pl1_neuropil_traces_valid_path = pl1_neuropil_traces_valid_path
+                ju.write(pl1_neuropil_traces_valid_path, pl1_neuropil_traces_valid)
+                self.pl1_neuropil_traces_valid = pl1_neuropil_traces_valid
 
-                self.plane2_neuropil_traces_valid_pointer = plane2_neuropil_traces_valid_pointer
-                ju.write(plane2_neuropil_traces_valid_pointer, plane2_neuropil_traces_valid)
-                self.plane2_neuropil_traces_valid = plane2_neuropil_traces_valid
+                self.pl2_neuropil_traces_valid_path = pl2_neuropil_traces_valid_path
+                ju.write(pl2_neuropil_traces_valid_path, pl2_neuropil_traces_valid)
+                self.pl2_neuropil_traces_valid = pl2_neuropil_traces_valid
 
             else:
                 logger.info('ROI traces dont exist in cache, run get_ica_traces first')
@@ -615,16 +623,16 @@ class MesoscopeICA(object):
             # traces have been validated
 
             # read the jsons for ROIs
-            plane1_roi_traces_valid = ju.read(plane1_roi_traces_valid_pointer)
-            plane2_roi_traces_valid = ju.read(plane2_roi_traces_valid_pointer)
-            self.plane1_roi_traces_valid = plane1_roi_traces_valid
-            self.plane2_roi_traces_valid = plane2_roi_traces_valid
+            pl1_roi_traces_valid = ju.read(pl1_roi_traces_valid_path)
+            pl2_roi_traces_valid = ju.read(pl2_roi_traces_valid_path)
+            self.pl1_roi_traces_valid = pl1_roi_traces_valid
+            self.pl2_roi_traces_valid = pl2_roi_traces_valid
 
             # read the jsons for neuropil
-            plane1_neuropil_traces_valid = ju.read(plane1_neuropil_traces_valid_pointer)
-            plane2_neuropil_traces_valid = ju.read(plane2_neuropil_traces_valid_pointer)
-            self.plane1_neuropil_traces_valid = plane1_neuropil_traces_valid
-            self.plane2_neuropil_traces_valid = plane2_neuropil_traces_valid
+            pl1_neuropil_traces_valid = ju.read(pl1_neuropil_traces_valid_path)
+            pl2_neuropil_traces_valid = ju.read(pl2_neuropil_traces_valid_path)
+            self.pl1_neuropil_traces_valid = pl1_neuropil_traces_valid
+            self.pl2_neuropil_traces_valid = pl2_neuropil_traces_valid
 
         return
 
@@ -632,7 +640,7 @@ class MesoscopeICA(object):
         """
         fn to combine all roi traces for the pair to two num_cells x num_frames_in_timeseries vectors,
         write them to cache as ica_roi_input
-        :param roi_name: filename prefix to use for this output if different from self.roi_name
+        :param roi_name: filename prefix to use for this out if different from self.roi_name
         :return: None
         """
         if not roi_name:
@@ -643,136 +651,278 @@ class MesoscopeICA(object):
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-        self.plane1_ica_input_pointer = None
-        self.plane2_ica_input_pointer = None
-        plane1_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{roi_name}_input_{self.plane1_exp_id}.h5')
-        plane2_ica_input_pointer = os.path.join(self.ica_traces_dir, f'{roi_name}_input_{self.plane2_exp_id}.h5')
-        if os.path.isfile(plane1_ica_input_pointer) and os.path.isfile(plane2_ica_input_pointer):
+        self.pl1_roi_in_path = None
+        self.pl2_ica_in_path = None
+        pl1_ica_in_path = os.path.join(self.roi_dir, f'{roi_name}_in_{self.pl1_exp_id}.h5')
+        pl2_ica_in_path = os.path.join(self.roi_dir, f'{roi_name}_in_{self.pl2_exp_id}.h5')
+        if os.path.isfile(pl1_ica_in_path) and os.path.isfile(pl2_ica_in_path):
             # file already exists, skip debiasing
-            self.plane1_ica_input_pointer = plane1_ica_input_pointer
-            self.plane2_ica_input_pointer = plane2_ica_input_pointer
+            self.pl1_roi_in_path = pl1_ica_in_path
+            self.pl2_ica_in_path = pl2_ica_in_path
         else:
-            self.plane1_ica_input_pointer = None
-            self.plane2_ica_input_pointer = None
+            self.pl1_roi_in_path = None
+            self.pl2_ica_in_path = None
         # original traces exist, run debiasing:
-        if self.found_original_traces[0] and self.found_original_traces[1]:
-            # if debiased traces don't exist, run debiasing - pointers are both None
-            if (not self.plane1_ica_input_pointer) and (not self.plane2_ica_input_pointer):
-                self.found_ica_input = [False, False]
+        if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1]:
+            # if debiased traces don't exist, run debiasing - paths are both None
+            if (not self.pl1_roi_in_path) and (not self.pl2_ica_in_path):
+                self.found_ica_in = [False, False]
                 self.found_ica_offset = [False, False]
                 logger.info("Debiased ROI traces do not exist in cache, running offset subtraction")
 
-                plane1_sig = self.plane1_traces_orig[0]
-                plane1_ct = self.plane1_traces_orig[1]
-                plane1_valid = self.plane1_roi_traces_valid
+                pl1_sig = self.pl1_traces_orig[0]
+                pl1_ct = self.pl1_traces_orig[1]
+                pl1_valid = self.pl1_roi_traces_valid
 
-                plane1_valid_sig = plane1_valid['signal']
-                plane1_valid_ct = plane1_valid['crosstalk']
+                pl1_valid_sig = pl1_valid['signal']
+                pl1_valid_ct = pl1_valid['crosstalk']
 
-                plane2_sig = self.plane2_traces_orig[0]
-                plane2_ct = self.plane2_traces_orig[1]
+                pl2_sig = self.pl2_traces_orig[0]
+                pl2_ct = self.pl2_traces_orig[1]
 
-                plane2_valid = self.plane2_roi_traces_valid
-                plane2_valid_sig = plane2_valid['signal']
-                plane2_valid_ct = plane2_valid['crosstalk']
+                pl2_valid = self.pl2_roi_traces_valid
+                pl2_valid_sig = pl2_valid['signal']
+                pl2_valid_ct = pl2_valid['crosstalk']
 
                 # only include cells that don't have nans  (valid = True)
                 # check if traces aligned:
-                if len(self.plane1_roi_names) == len(plane1_sig):
-                    plane1_sig_valid_idx = np.array([plane1_valid_sig[str(tid)] for tid in self.plane1_roi_names])
-                    plane1_sig_valid = plane1_sig[plane1_sig_valid_idx, :]
+                if len(self.pl1_roi_names) == len(pl1_sig):
+                    pl1_sig_valid_idx = np.array([pl1_valid_sig[str(tid)] for tid in self.pl1_roi_names])
+                    pl1_sig_valid = pl1_sig[pl1_sig_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.plane1_roi_names) == len(plane1_ct):
-                    plane1_ct_valid_idx = np.array([plane1_valid_ct[str(tid)] for tid in self.plane1_roi_names])
-                    plane1_ct_valid = plane1_ct[plane1_ct_valid_idx, :]
+                if len(self.pl1_roi_names) == len(pl1_ct):
+                    pl1_ct_valid_idx = np.array([pl1_valid_ct[str(tid)] for tid in self.pl1_roi_names])
+                    pl1_ct_valid = pl1_ct[pl1_ct_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.plane2_roi_names) == len(plane2_sig):
-                    plane2_sig_valid_idx = np.array([plane2_valid_sig[str(tid)] for tid in self.plane2_roi_names])
-                    plane2_sig_valid = plane2_sig[plane2_sig_valid_idx, :]
+                if len(self.pl2_roi_names) == len(pl2_sig):
+                    pl2_sig_valid_idx = np.array([pl2_valid_sig[str(tid)] for tid in self.pl2_roi_names])
+                    pl2_sig_valid = pl2_sig[pl2_sig_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.plane2_roi_names) == len(plane2_ct):
-                    plane2_ct_valid_idx = np.array([plane2_valid_ct[str(tid)] for tid in self.plane2_roi_names])
-                    plane2_ct_valid = plane2_ct[plane2_ct_valid_idx, :]
+                if len(self.pl2_roi_names) == len(pl2_ct):
+                    pl2_ct_valid_idx = np.array([pl2_valid_ct[str(tid)] for tid in self.pl2_roi_names])
+                    pl2_ct_valid = pl2_ct[pl2_ct_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                plane1_sig = plane1_sig_valid
-                plane1_ct = plane1_ct_valid
-                plane2_sig = plane2_sig_valid
-                plane2_ct = plane2_ct_valid
+                pl1_sig = pl1_sig_valid
+                pl1_ct = pl1_ct_valid
+                pl2_sig = pl2_sig_valid
+                pl2_ct = pl2_ct_valid
 
-                # subtract offset plane 1:
-                nc = plane1_sig.shape[0]
-                plane1_sig_offset = np.mean(plane1_sig, axis=1).reshape(nc, 1)
-                plane1_sig_m0 = plane1_sig - plane1_sig_offset
-                nc = plane1_ct.shape[0]
-                plane1_ct_offset = np.mean(plane1_ct, axis=1).reshape(nc, 1)
-                plane1_ct_m0 = plane1_ct - plane1_ct_offset
-                # subtract offset for plane 2:
-                nc = plane2_sig.shape[0]
-                plane2_sig_offset = np.mean(plane2_sig, axis=1).reshape(nc, 1)
-                plane2_sig_m0 = plane2_sig - plane2_sig_offset
-                nc = plane2_ct.shape[0]
-                plane2_ct_offset = np.mean(plane2_ct, axis=1).reshape(nc, 1)
-                plane2_ct_m0 = plane2_ct - plane2_ct_offset
+                # subtract offset pl 1:
+                nc = pl1_sig.shape[0]
+                pl1_sig_offset = np.mean(pl1_sig, axis=1).reshape(nc, 1)
+                pl1_sig_m0 = pl1_sig - pl1_sig_offset
+                nc = pl1_ct.shape[0]
+                pl1_ct_offset = np.mean(pl1_ct, axis=1).reshape(nc, 1)
+                pl1_ct_m0 = pl1_ct - pl1_ct_offset
+                # subtract offset for pl 2:
+                nc = pl2_sig.shape[0]
+                pl2_sig_offset = np.mean(pl2_sig, axis=1).reshape(nc, 1)
+                pl2_sig_m0 = pl2_sig - pl2_sig_offset
+                nc = pl2_ct.shape[0]
+                pl2_ct_offset = np.mean(pl2_ct, axis=1).reshape(nc, 1)
+                pl2_ct_m0 = pl2_ct - pl2_ct_offset
                 # check if traces aren't none
-                if (not plane1_sig_m0.any() is None) and (not plane1_ct_m0.any() is None):
-                    self.found_ica_input[0] = True
-                if (not plane2_sig_m0.any() is None) and (not plane2_ct_m0.any() is None):
-                    self.found_ica_input[1] = True
-                if (not plane1_sig_offset.any() is None) and (not plane1_ct_offset.any() is None):
+                if (not pl1_sig_m0.any() is None) and (not pl1_ct_m0.any() is None):
+                    self.found_ica_in[0] = True
+                if (not pl2_sig_m0.any() is None) and (not pl2_ct_m0.any() is None):
+                    self.found_ica_in[1] = True
+                if (not pl1_sig_offset.any() is None) and (not pl1_ct_offset.any() is None):
                     self.found_ica_offset[1] = True
-                if (not plane2_sig_offset.any() is None) and (not plane2_ct_offset.any() is None):
+                if (not pl2_sig_offset.any() is None) and (not pl2_ct_offset.any() is None):
                     self.found_ica_offset[1] = True
                 # if all flags true, combine, flatten, write to disk:
-                if self.found_ica_input and self.found_ica_offset:
-                    self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
-                    self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset}
-                    trace_sig_p1 = plane1_sig_m0.flatten()
-                    trace_ct_p1 = plane1_ct_m0.flatten()
-                    trace_sig_p2 = plane2_sig_m0.flatten()
-                    trace_ct_p2 = plane2_ct_m0.flatten()
-                    plane1_ica_input = np.append(trace_sig_p1, trace_ct_p2, axis=0)
-                    plane2_ica_input = np.append(trace_ct_p1, trace_sig_p2, axis=0)
-                    self.plane1_ica_input = plane1_ica_input
-                    self.plane2_ica_input = plane2_ica_input
-                    self.plane1_ica_input_pointer = plane1_ica_input_pointer
-                    self.plane2_ica_input_pointer = plane2_ica_input_pointer
+                if self.found_ica_in and self.found_ica_offset:
+                    self.pl1_offset = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
+                    self.pl2_offset = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
+                    trace_sig_p1 = pl1_sig_m0.flatten()
+                    trace_ct_p1 = pl1_ct_m0.flatten()
+                    trace_sig_p2 = pl2_sig_m0.flatten()
+                    trace_ct_p2 = pl2_ct_m0.flatten()
+                    pl1_ica_in = np.append(trace_sig_p1, trace_ct_p2, axis=0)
+                    pl2_ica_in = np.append(trace_ct_p1, trace_sig_p2, axis=0)
+                    self.pl1_ica_in = pl1_ica_in
+                    self.pl2_ica_in = pl2_ica_in
+                    self.pl1_roi_in_path = pl1_ica_in_path
+                    self.pl2_ica_in_path = pl2_ica_in_path
                     # write ica input traces to disk
-                    with h5py.File(self.plane1_ica_input_pointer, "w") as f:
-                        f.create_dataset("debiased_traces", data=self.plane1_ica_input)
-                        f.create_dataset('sig_offset', data=plane1_sig_offset)
-                        f.create_dataset('ct_offset', data=plane1_ct_offset)
-                    with h5py.File(self.plane2_ica_input_pointer, "w") as f:
-                        f.create_dataset("debiased_traces", data=self.plane2_ica_input)
-                        f.create_dataset('sig_offset', data=plane2_sig_offset)
-                        f.create_dataset('ct_offset', data=plane2_ct_offset)
+                    with h5py.File(self.pl1_roi_in_path, "w") as f:
+                        f.create_dataset("debiased_traces", data=self.pl1_ica_in)
+                        f.create_dataset('sig_offset', data=pl1_sig_offset)
+                        f.create_dataset('ct_offset', data=pl1_ct_offset)
+                    with h5py.File(self.pl2_ica_in_path, "w") as f:
+                        f.create_dataset("debiased_traces", data=self.pl2_ica_in)
+                        f.create_dataset('sig_offset', data=pl2_sig_offset)
+                        f.create_dataset('ct_offset', data=pl2_ct_offset)
                 else:
                     logger.info("ROI traces Debiasing failed")
             else:
                 logger.info("Debiased ROI traces exist in cache, reading from h5 file")
-                with h5py.File(self.plane1_ica_input_pointer, "r") as f:
-                    plane1_ica_input = f["debiased_traces"][()]
-                    plane1_sig_offset = f['sig_offset'][()]
-                    plane1_ct_offset = f['ct_offset'][()]
-                with h5py.File(self.plane2_ica_input_pointer, "r") as f:
-                    plane2_ica_input = f["debiased_traces"][()]
-                    plane2_sig_offset = f['sig_offset'][()]
-                    plane2_ct_offset = f['ct_offset'][()]
+                with h5py.File(self.pl1_roi_in_path, "r") as f:
+                    pl1_ica_in = f["debiased_traces"][()]
+                    pl1_sig_offset = f['sig_offset'][()]
+                    pl1_ct_offset = f['ct_offset'][()]
+                with h5py.File(self.pl2_ica_in_path, "r") as f:
+                    pl2_ica_in = f["debiased_traces"][()]
+                    pl2_sig_offset = f['sig_offset'][()]
+                    pl2_ct_offset = f['ct_offset'][()]
 
-                self.found_ica_input = [True, True]
-                self.plane1_ica_input = plane1_ica_input
-                self.plane2_ica_input = plane2_ica_input
-                self.plane1_ica_input_pointer = plane1_ica_input_pointer
-                self.plane2_ica_input_pointer = plane2_ica_input_pointer
-                self.plane1_offset = {'plane1_sig_offset': plane1_sig_offset, 'plane1_ct_offset': plane1_ct_offset}
-                self.plane2_offset = {'plane2_sig_offset': plane2_sig_offset, 'plane2_ct_offset': plane2_ct_offset}
+                self.found_ica_in = [True, True]
+                self.pl1_ica_in = pl1_ica_in
+                self.pl2_ica_in = pl2_ica_in
+                self.pl1_roi_in_path = pl1_ica_in_path
+                self.pl2_ica_in_path = pl2_ica_in_path
+                self.pl1_offset = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
+                self.pl2_offset = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
+                self.found_ica_offset = [True, True]
+        else:
+            raise ValueError('Extract ROI traces first')
+        return
+
+    def debias_rois(self):
+        """
+        fn to combine all roi traces for the pair to two num_cells x num_frames_in_timeseries vectors,
+        write them to cache as ica_roi_input
+        :return: None
+        """
+
+        if self.debug_mode:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+        else:
+            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
+        self.pl1_roi_in_path = None
+        self.pl2_ica_in_path = None
+        pl1_ica_in_path = os.path.join(self.roi_dir, f'{self.pl1_exp_id}_in.h5')
+        pl2_ica_in_path = os.path.join(self.roi_dir, f'{self.pl2_exp_id}_in.h5')
+        if os.path.isfile(pl1_ica_in_path) and os.path.isfile(pl2_ica_in_path):
+            # file already exists, skip debiasing
+            self.pl1_roi_in_path = pl1_ica_in_path
+            self.pl2_ica_in_path = pl2_ica_in_path
+        else:
+            self.pl1_roi_in_path = None
+            self.pl2_ica_in_path = None
+        # original traces exist, run debiasing:
+        if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1]:
+            # if debiased traces don't exist, run debiasing - paths are both None
+            if (not self.pl1_roi_in_path) and (not self.pl2_ica_in_path):
+                self.found_ica_in = [False, False]
+                self.found_ica_offset = [False, False]
+                logger.info("Debiased ROI traces do not exist in cache, running offset subtraction")
+
+                pl1_sig = self.pl1_traces_orig[0]
+                pl1_ct = self.pl1_traces_orig[1]
+                pl1_valid = self.pl1_roi_traces_valid
+
+                pl1_valid_sig = pl1_valid['signal']
+                pl1_valid_ct = pl1_valid['crosstalk']
+
+                pl2_sig = self.pl2_traces_orig[0]
+                pl2_ct = self.pl2_traces_orig[1]
+
+                pl2_valid = self.pl2_roi_traces_valid
+                pl2_valid_sig = pl2_valid['signal']
+                pl2_valid_ct = pl2_valid['crosstalk']
+
+                # only include cells that don't have nans  (valid = True)
+                # check if traces aligned:
+                if len(self.pl1_roi_names) == len(pl1_sig):
+                    pl1_sig_valid_idx = np.array([pl1_valid_sig[str(tid)] for tid in self.pl1_roi_names])
+                    pl1_sig_valid = pl1_sig[pl1_sig_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                if len(self.pl1_roi_names) == len(pl1_ct):
+                    pl1_ct_valid_idx = np.array([pl1_valid_ct[str(tid)] for tid in self.pl1_roi_names])
+                    pl1_ct_valid = pl1_ct[pl1_ct_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                if len(self.pl2_roi_names) == len(pl2_sig):
+                    pl2_sig_valid_idx = np.array([pl2_valid_sig[str(tid)] for tid in self.pl2_roi_names])
+                    pl2_sig_valid = pl2_sig[pl2_sig_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                if len(self.pl2_roi_names) == len(pl2_ct):
+                    pl2_ct_valid_idx = np.array([pl2_valid_ct[str(tid)] for tid in self.pl2_roi_names])
+                    pl2_ct_valid = pl2_ct[pl2_ct_valid_idx, :]
+                else:
+                    logging.info('Traces are not aligned')
+
+                pl1_sig = pl1_sig_valid
+                pl1_ct = pl1_ct_valid
+                pl2_sig = pl2_sig_valid
+                pl2_ct = pl2_ct_valid
+
+                # subtract offset pl 1:
+                nc = pl1_sig.shape[0]
+                pl1_sig_offset = np.mean(pl1_sig, axis=1).reshape(nc, 1)
+                pl1_sig_m0 = pl1_sig - pl1_sig_offset
+                nc = pl1_ct.shape[0]
+                pl1_ct_offset = np.mean(pl1_ct, axis=1).reshape(nc, 1)
+                pl1_ct_m0 = pl1_ct - pl1_ct_offset
+                # subtract offset for pl 2:
+                nc = pl2_sig.shape[0]
+                pl2_sig_offset = np.mean(pl2_sig, axis=1).reshape(nc, 1)
+                pl2_sig_m0 = pl2_sig - pl2_sig_offset
+                nc = pl2_ct.shape[0]
+                pl2_ct_offset = np.mean(pl2_ct, axis=1).reshape(nc, 1)
+                pl2_ct_m0 = pl2_ct - pl2_ct_offset
+                # check if traces aren't none
+                if (not pl1_sig_m0.any() is None) and (not pl1_ct_m0.any() is None):
+                    self.found_ica_in[0] = True
+                if (not pl2_sig_m0.any() is None) and (not pl2_ct_m0.any() is None):
+                    self.found_ica_in[1] = True
+                if (not pl1_sig_offset.any() is None) and (not pl1_ct_offset.any() is None):
+                    self.found_ica_offset[1] = True
+                if (not pl2_sig_offset.any() is None) and (not pl2_ct_offset.any() is None):
+                    self.found_ica_offset[1] = True
+                # if all flags true, combine, flatten, write to disk:
+
+                if self.found_ica_in and self.found_ica_offset:
+                    self.pl1_offset = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
+                    self.pl2_offset = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
+                    self.pl1_ica_in = np.array([pl1_sig_m0, pl1_ct_m0])
+                    self.pl2_ica_in = np.array([pl2_sig_m0, pl2_ct_m0])
+                    self.pl1_roi_in_path = pl1_ica_in_path
+                    self.pl2_ica_in_path = pl2_ica_in_path
+                    # write ica input traces to disk
+                    with h5py.File(self.pl1_roi_in_path, "w") as f:
+                        f.create_dataset("debiased_traces", data=self.pl1_ica_in)
+                        f.create_dataset('sig_offset', data=pl1_sig_offset)
+                        f.create_dataset('ct_offset', data=pl1_ct_offset)
+                    with h5py.File(self.pl2_ica_in_path, "w") as f:
+                        f.create_dataset("debiased_traces", data=self.pl2_ica_in)
+                        f.create_dataset('sig_offset', data=pl2_sig_offset)
+                        f.create_dataset('ct_offset', data=pl2_ct_offset)
+                else:
+                    logger.info("ROI traces Debiasing failed")
+            else:
+                logger.info("Debiased ROI traces exist in cache, reading from h5 file")
+                with h5py.File(self.pl1_roi_in_path, "r") as f:
+                    pl1_ica_in = f["debiased_traces"][()]
+                    pl1_sig_offset = f['sig_offset'][()]
+                    pl1_ct_offset = f['ct_offset'][()]
+                with h5py.File(self.pl2_ica_in_path, "r") as f:
+                    pl2_ica_in = f["debiased_traces"][()]
+                    pl2_sig_offset = f['sig_offset'][()]
+                    pl2_ct_offset = f['ct_offset'][()]
+
+                self.found_ica_in = [True, True]
+                self.pl1_ica_in = pl1_ica_in
+                self.pl2_ica_in = pl2_ica_in
+                self.pl1_roi_in_path = pl1_ica_in_path
+                self.pl2_ica_in_path = pl2_ica_in_path
+                self.pl1_offset = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
+                self.pl2_offset = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
                 self.found_ica_offset = [True, True]
         else:
             raise ValueError('Extract ROI traces first')
@@ -782,7 +932,7 @@ class MesoscopeICA(object):
         """
         fn to combine all neuropil traces for the pair to two num_cells x num_frames_in_timeseries vectors,
         write them to cache as ica_roi_input
-        :param np_name: filename prefix to use for this output if different from self.np_name
+        :param np_name: filename prefix to use for this out if different from self.np_name
         :return: None
         """
         if not np_name:
@@ -793,312 +943,298 @@ class MesoscopeICA(object):
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-        self.plane1_ica_neuropil_input_pointer = None
-        self.plane2_ica_neuropil_input_pointer = None
+        self.pl1_ica_neuropil_in_path = None
+        self.pl2_ica_neuropil_in_path = None
 
-        plane1_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
-                                                         f'{np_name}_input_{self.plane1_exp_id}.h5')
-        plane2_ica_neuropil_input_pointer = os.path.join(self.ica_neuropil_dir,
-                                                         f'{np_name}_input_{self.plane2_exp_id}.h5')
+        pl1_ica_neuropil_in_path = os.path.join(self.np_dir,
+                                                f'{np_name}_in_{self.pl1_exp_id}.h5')
+        pl2_ica_neuropil_in_path = os.path.join(self.np_dir,
+                                                f'{np_name}_in_{self.pl2_exp_id}.h5')
 
-        if os.path.isfile(plane1_ica_neuropil_input_pointer) and os.path.isfile(plane2_ica_neuropil_input_pointer):
+        if os.path.isfile(pl1_ica_neuropil_in_path) and os.path.isfile(pl2_ica_neuropil_in_path):
             # file already exists, skip debiasing
-            self.plane1_ica_neuropil_input_pointer = plane1_ica_neuropil_input_pointer
-            self.plane2_ica_neuropil_input_pointer = plane2_ica_neuropil_input_pointer
+            self.pl1_ica_neuropil_in_path = pl1_ica_neuropil_in_path
+            self.pl2_ica_neuropil_in_path = pl2_ica_neuropil_in_path
         else:
-            self.plane1_ica_neuropil_input_pointer = None
-            self.plane2_ica_neuropil_input_pointer = None
+            self.pl1_ica_neuropil_in_path = None
+            self.pl2_ica_neuropil_in_path = None
 
         # original traces exist, run debiasing:
-        if self.found_original_neuropil[0] and self.found_original_neuropil[1]:
-            # if debiased traces don't exist, run debiasing - pointers are both None
-            if (self.plane1_ica_neuropil_input_pointer is None) and (self.plane2_ica_neuropil_input_pointer is None):
-                self.found_ica_neuropil_input = [False, False]
+        if self.found_raw_np_traces[0] and self.found_raw_np_traces[1]:
+            # if debiased traces don't exist, run debiasing - paths are both None
+            if (self.pl1_ica_neuropil_in_path is None) and (self.pl2_ica_neuropil_in_path is None):
+                self.found_ica_neuropil_in = [False, False]
                 self.found_ica_neuropil_offset = [False, False]
                 logger.info("Debiased neuropil traces do not exist in cache, running offset subtraction")
-                plane1_sig = self.plane1_neuropil_orig[0]
-                plane1_ct = self.plane1_neuropil_orig[1]
+                pl1_sig = self.pl1_neuropil_orig[0]
+                pl1_ct = self.pl1_neuropil_orig[1]
 
-                plane1_valid = self.plane1_neuropil_traces_valid
-                plane1_valid_sig = plane1_valid['signal']
-                plane1_valid_ct = plane1_valid['crosstalk']
+                pl1_valid = self.pl1_neuropil_traces_valid
+                pl1_valid_sig = pl1_valid['signal']
+                pl1_valid_ct = pl1_valid['crosstalk']
 
-                plane2_sig = self.plane2_neuropil_orig[0]
-                plane2_ct = self.plane2_neuropil_orig[1]
+                pl2_sig = self.pl2_neuropil_orig[0]
+                pl2_ct = self.pl2_neuropil_orig[1]
 
-                plane2_valid = self.plane2_neuropil_traces_valid
-                plane2_valid_sig = plane2_valid['signal']
-                plane2_valid_ct = plane2_valid['crosstalk']
+                pl2_valid = self.pl2_neuropil_traces_valid
+                pl2_valid_sig = pl2_valid['signal']
+                pl2_valid_ct = pl2_valid['crosstalk']
 
                 # only include cells that don't have nans in traces (valid = True)
                 # check if traces aligned:
-                if len(self.plane1_roi_names) == len(plane1_sig):
-                    plane1_sig_valid_idx = np.array([plane1_valid_sig[str(tid)] for tid in self.plane1_roi_names])
-                    plane1_sig_valid = plane1_sig[plane1_sig_valid_idx, :]
+                if len(self.pl1_roi_names) == len(pl1_sig):
+                    pl1_sig_valid_idx = np.array([pl1_valid_sig[str(tid)] for tid in self.pl1_roi_names])
+                    pl1_sig_valid = pl1_sig[pl1_sig_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.plane1_roi_names) == len(plane1_ct):
-                    plane1_ct_valid_idx = np.array([plane1_valid_ct[str(tid)] for tid in self.plane1_roi_names])
-                    plane1_ct_valid = plane1_ct[plane1_ct_valid_idx, :]
+                if len(self.pl1_roi_names) == len(pl1_ct):
+                    pl1_ct_valid_idx = np.array([pl1_valid_ct[str(tid)] for tid in self.pl1_roi_names])
+                    pl1_ct_valid = pl1_ct[pl1_ct_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.plane2_roi_names) == len(plane2_sig):
-                    plane2_sig_valid_idx = np.array([plane2_valid_sig[str(tid)] for tid in self.plane2_roi_names])
-                    plane2_sig_valid = plane2_sig[plane2_sig_valid_idx, :]
+                if len(self.pl2_roi_names) == len(pl2_sig):
+                    pl2_sig_valid_idx = np.array([pl2_valid_sig[str(tid)] for tid in self.pl2_roi_names])
+                    pl2_sig_valid = pl2_sig[pl2_sig_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                if len(self.plane2_roi_names) == len(plane2_ct):
-                    plane2_ct_valid_idx = np.array([plane2_valid_ct[str(tid)] for tid in self.plane2_roi_names])
-                    plane2_ct_valid = plane2_ct[plane2_ct_valid_idx, :]
+                if len(self.pl2_roi_names) == len(pl2_ct):
+                    pl2_ct_valid_idx = np.array([pl2_valid_ct[str(tid)] for tid in self.pl2_roi_names])
+                    pl2_ct_valid = pl2_ct[pl2_ct_valid_idx, :]
                 else:
                     logging.info('Traces are not aligned')
 
-                plane1_sig = plane1_sig_valid
-                plane1_ct = plane1_ct_valid
-                plane2_sig = plane2_sig_valid
-                plane2_ct = plane2_ct_valid
+                pl1_sig = pl1_sig_valid
+                pl1_ct = pl1_ct_valid
+                pl2_sig = pl2_sig_valid
+                pl2_ct = pl2_ct_valid
 
-                # subtract offset plane 1:
-                nc = plane1_sig.shape[0]
-                plane1_sig_offset = np.mean(plane1_sig, axis=1).reshape(nc, 1)
-                plane1_sig_m0 = plane1_sig - plane1_sig_offset
-                nc = plane1_ct.shape[0]
-                plane1_ct_offset = np.mean(plane1_ct, axis=1).reshape(nc, 1)
-                plane1_ct_m0 = plane1_ct - plane1_ct_offset
-                # subtract offset for plane 2:
-                nc = plane2_sig.shape[0]
-                plane2_sig_offset = np.mean(plane2_sig, axis=1).reshape(nc, 1)
-                plane2_sig_m0 = plane2_sig - plane2_sig_offset
-                nc = plane2_ct.shape[0]
-                plane2_ct_offset = np.mean(plane2_ct, axis=1).reshape(nc, 1)
-                plane2_ct_m0 = plane2_ct - plane2_ct_offset
+                # subtract offset pl 1:
+                nc = pl1_sig.shape[0]
+                pl1_sig_offset = np.mean(pl1_sig, axis=1).reshape(nc, 1)
+                pl1_sig_m0 = pl1_sig - pl1_sig_offset
+                nc = pl1_ct.shape[0]
+                pl1_ct_offset = np.mean(pl1_ct, axis=1).reshape(nc, 1)
+                pl1_ct_m0 = pl1_ct - pl1_ct_offset
+                # subtract offset for pl 2:
+                nc = pl2_sig.shape[0]
+                pl2_sig_offset = np.mean(pl2_sig, axis=1).reshape(nc, 1)
+                pl2_sig_m0 = pl2_sig - pl2_sig_offset
+                nc = pl2_ct.shape[0]
+                pl2_ct_offset = np.mean(pl2_ct, axis=1).reshape(nc, 1)
+                pl2_ct_m0 = pl2_ct - pl2_ct_offset
                 # check if traces aren't none
-                if (not plane1_sig_m0.any() is None) and (not plane1_ct_m0.any() is None):
-                    self.found_ica_neuropil_input[0] = True
-                if (not plane2_sig_m0.any() is None) and (not plane2_ct_m0.any() is None):
-                    self.found_ica_neuropil_input[1] = True
-                if (not plane1_sig_offset.any() is None) and (not plane1_ct_offset.any() is None):
+                if (not pl1_sig_m0.any() is None) and (not pl1_ct_m0.any() is None):
+                    self.found_ica_neuropil_in[0] = True
+                if (not pl2_sig_m0.any() is None) and (not pl2_ct_m0.any() is None):
+                    self.found_ica_neuropil_in[1] = True
+                if (not pl1_sig_offset.any() is None) and (not pl1_ct_offset.any() is None):
                     self.found_ica_neuropil_offset[1] = True
-                if (not plane2_sig_offset.any() is None) and (not plane2_ct_offset.any() is None):
+                if (not pl2_sig_offset.any() is None) and (not pl2_ct_offset.any() is None):
                     self.found_ica_neuropil_offset[1] = True
 
-                if self.found_ica_neuropil_input and self.found_ica_neuropil_offset:
-                    self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_offset,
-                                                   'plane1_ct_neuropil_offset': plane1_ct_offset}
-                    self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_offset,
-                                                   'plane2_ct_neuropil_offset': plane2_ct_offset}
-                    neuropil_sig_p1 = plane1_sig_m0.flatten()
-                    neuropil_ct_p1 = plane1_ct_m0.flatten()
-                    neuropil_sig_p2 = plane2_sig_m0.flatten()
-                    neuropil_ct_p2 = plane2_ct_m0.flatten()
-                    plane1_ica_neuropil_input = np.append(neuropil_sig_p1, neuropil_ct_p2, axis=0)
-                    plane2_ica_neuropil_input = np.append(neuropil_ct_p1, neuropil_sig_p2, axis=0)
-                    self.plane1_ica_neuropil_input = plane1_ica_neuropil_input
-                    self.plane2_ica_neuropil_input = plane2_ica_neuropil_input
-                    self.plane1_ica_neuropil_input_pointer = plane1_ica_neuropil_input_pointer
-                    self.plane2_ica_neuropil_input_pointer = plane2_ica_neuropil_input_pointer
+                if self.found_ica_neuropil_in and self.found_ica_neuropil_offset:
+                    self.pl1_neuropil_offset = {'pl1_sig_neuropil_offset': pl1_sig_offset,
+                                                'pl1_ct_neuropil_offset': pl1_ct_offset}
+                    self.pl2_neuropil_offset = {'pl2_sig_neuropil_offset': pl2_sig_offset,
+                                                'pl2_ct_neuropil_offset': pl2_ct_offset}
+                    neuropil_sig_p1 = pl1_sig_m0.flatten()
+                    neuropil_ct_p1 = pl1_ct_m0.flatten()
+                    neuropil_sig_p2 = pl2_sig_m0.flatten()
+                    neuropil_ct_p2 = pl2_ct_m0.flatten()
+                    pl1_ica_neuropil_in = np.append(neuropil_sig_p1, neuropil_ct_p2, axis=0)
+                    pl2_ica_neuropil_in = np.append(neuropil_ct_p1, neuropil_sig_p2, axis=0)
+                    self.pl1_ica_neuropil_in = pl1_ica_neuropil_in
+                    self.pl2_ica_neuropil_in = pl2_ica_neuropil_in
+                    self.pl1_ica_neuropil_in_path = pl1_ica_neuropil_in_path
+                    self.pl2_ica_neuropil_in_path = pl2_ica_neuropil_in_path
                     # write ica neuropil input traces to disk
-                    if not os.path.isfile(self.plane1_ica_neuropil_input_pointer):
-                        with h5py.File(self.plane1_ica_neuropil_input_pointer, "w") as f:
-                            f.create_dataset("debiased_traces", data=self.plane1_ica_neuropil_input)
-                            f.create_dataset('sig_offset', data=plane1_sig_offset)
-                            f.create_dataset('ct_offset', data=plane1_ct_offset)
+                    if not os.path.isfile(self.pl1_ica_neuropil_in_path):
+                        with h5py.File(self.pl1_ica_neuropil_in_path, "w") as f:
+                            f.create_dataset("debiased_traces", data=self.pl1_ica_neuropil_in)
+                            f.create_dataset('sig_offset', data=pl1_sig_offset)
+                            f.create_dataset('ct_offset', data=pl1_ct_offset)
 
-                    if not os.path.isfile(self.plane2_ica_neuropil_input_pointer):
-                        with h5py.File(self.plane2_ica_neuropil_input_pointer, "w") as f:
-                            f.create_dataset("debiased_traces", data=self.plane2_ica_neuropil_input)
-                            f.create_dataset('sig_offset', data=plane2_sig_offset)
-                            f.create_dataset('ct_offset', data=plane2_ct_offset)
+                    if not os.path.isfile(self.pl2_ica_neuropil_in_path):
+                        with h5py.File(self.pl2_ica_neuropil_in_path, "w") as f:
+                            f.create_dataset("debiased_traces", data=self.pl2_ica_neuropil_in)
+                            f.create_dataset('sig_offset', data=pl2_sig_offset)
+                            f.create_dataset('ct_offset', data=pl2_ct_offset)
                 else:
                     logger.info("Neuropil debiasing failed")
             else:
                 logger.info("Debiased neuropil traces exist in cache, reading from h5 file")
-                self.found_ica_neuropil_input = [True, True]
-                self.plane1_ica_neuropil_input_pointer = plane1_ica_neuropil_input_pointer
-                self.plane2_ica_neuropil_input_pointer = plane2_ica_neuropil_input_pointer
-                with h5py.File(self.plane1_ica_neuropil_input_pointer, "r") as f:
-                    plane1_ica_neuropil_input = f["debiased_traces"][()]
-                    plane1_sig_neuropil_offset = f['sig_offset'][()]
-                    plane1_ct_neuropil_offset = f['ct_offset'][()]
-                with h5py.File(self.plane2_ica_neuropil_input_pointer, "r") as f:
-                    plane2_ica_neuropil_input = f["debiased_traces"][()]
-                    plane2_sig_neuropil_offset = f['sig_offset'][()]
-                    plane2_ct_neuropil_offset = f['ct_offset'][()]
-                self.plane1_ica_neuropil_input = plane1_ica_neuropil_input
-                self.plane2_ica_neuropil_input = plane2_ica_neuropil_input
-                self.plane1_neuropil_offset = {'plane1_sig_neuropil_offset': plane1_sig_neuropil_offset,
-                                               'plane1_ct_neuropil_offset': plane1_ct_neuropil_offset}
-                self.plane2_neuropil_offset = {'plane2_sig_neuropil_offset': plane2_sig_neuropil_offset,
-                                               'plane2_ct_neuropil_offset': plane2_ct_neuropil_offset, }
+                self.found_ica_neuropil_in = [True, True]
+                self.pl1_ica_neuropil_in_path = pl1_ica_neuropil_in_path
+                self.pl2_ica_neuropil_in_path = pl2_ica_neuropil_in_path
+                with h5py.File(self.pl1_ica_neuropil_in_path, "r") as f:
+                    pl1_ica_neuropil_in = f["debiased_traces"][()]
+                    pl1_sig_neuropil_offset = f['sig_offset'][()]
+                    pl1_ct_neuropil_offset = f['ct_offset'][()]
+                with h5py.File(self.pl2_ica_neuropil_in_path, "r") as f:
+                    pl2_ica_neuropil_in = f["debiased_traces"][()]
+                    pl2_sig_neuropil_offset = f['sig_offset'][()]
+                    pl2_ct_neuropil_offset = f['ct_offset'][()]
+                self.pl1_ica_neuropil_in = pl1_ica_neuropil_in
+                self.pl2_ica_neuropil_in = pl2_ica_neuropil_in
+                self.pl1_neuropil_offset = {'pl1_sig_neuropil_offset': pl1_sig_neuropil_offset,
+                                            'pl1_ct_neuropil_offset': pl1_ct_neuropil_offset}
+                self.pl2_neuropil_offset = {'pl2_sig_neuropil_offset': pl2_sig_neuropil_offset,
+                                            'pl2_ct_neuropil_offset': pl2_ct_neuropil_offset, }
                 self.found_ica_neuropil_offset = [True, True]
         else:
             raise ValueError('Extract neuropil traces first')
         return
 
-    def unmix_traces(self, max_iter=50, roi_name=None):
+    @staticmethod
+    def unmix_plane(ica_in, ica_roi_valid):
+        roi_names = [roi for roi, valid in ica_roi_valid.items() if valid]
+        traces_sig = ica_in[0, :, :]
+        traces_ct = ica_in[1, :, :]
+        # extract events
+        traces_sig_evs, traces_ct_evs = extract_active(ica_in, len_ne=20, th_ag=10, do_plots=0)
+        pl_crosstalk = np.empty((2, ica_in.shape[1]))
+        pl_mixing = []
+        figs_ct_in = []
+        figs_ct_out = []
+        # run ica on active traces, apply unmixing matrix to entire trace, plot entire trace
+        ica_pl_out = np.empty(ica_in.shape)
+        for i in range(len(roi_names)):
+            # get roi names
+            roi_name = roi_names[i]
+            # get events traces
+            trace_sig_evs = traces_sig_evs[i]
+            trace_ct_evs = traces_ct_evs[i]
+            mix, a_mix, a_unmix, r_sources_evs = run_ica(trace_sig_evs, trace_ct_evs)
+            adjusted_mixing_matrix = a_mix
+
+            trace_sig_evs_out = r_sources_evs[:, 0]
+            trace_ct_evs_out = r_sources_evs[:, 1]
+            rescaled_trace_sig_evs_out = rescale(trace_sig_evs, trace_sig_evs_out)
+            rescaled_trace_ct_evs_out = rescale(trace_ct_evs, trace_ct_evs_out)
+            # calculating crosstalk : on events
+            fig_ct_in, slope_in, _, r_value_in = plot_pixel_hist2d(trace_sig_evs, trace_ct_evs,
+                                                                   title=f'raw, cell {roi_name}',
+                                                                   save_fig=False,
+                                                                   save_path=None,
+                                                                   fig_show=False,
+                                                                   colorbar=True)
+            fig_ct_out, slope_out, _, r_value_out = plot_pixel_hist2d(rescaled_trace_sig_evs_out,
+                                                                      rescaled_trace_ct_evs_out,
+                                                                      title=f'clean, cell {roi_name}',
+                                                                      save_fig=False,
+                                                                      save_path=None,
+                                                                      fig_show=False,
+                                                                      colorbar=True)
+            crosstalk_before_demixing_evs = slope_in * 100
+            crosstalk_after_demixing_evs = slope_out * 100
+            pl_crosstalk[:, i] = [crosstalk_before_demixing_evs, crosstalk_after_demixing_evs]
+            pl_mixing.append(adjusted_mixing_matrix)
+
+            # applying unmixing matrix to the entire trace
+            trace_sig = traces_sig[i]
+            trace_ct = traces_ct[i]
+            # recontructing sources
+            traces = np.array([trace_sig, trace_ct]).T
+            r_sources = np.dot(a_unmix, traces.T).T
+            trace_sig_out = r_sources[:, 0]
+            trace_ct_out = r_sources[:, 1]
+            rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)
+            rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
+            ica_pl_out[0, i, :] = rescaled_trace_sig_out
+            ica_pl_out[1, i, :] = rescaled_trace_ct_out
+            figs_ct_in.append(fig_ct_in)
+            figs_ct_out.append(fig_ct_out)
+
+        return ica_pl_out, pl_crosstalk, pl_mixing, figs_ct_in, figs_ct_out
+
+    def unmix_pair(self, pair, do_plots=True):
         """
-        fn to apply Fast ICA to combined, debiased traces
-        :param max_iter: int, number of iterations for FastICA
-        :param roi_name: string, filename prefix to use if different from self.roi_name
-        :return: None
+        function to unmix a pair of pls:
+
         """
 
-        if not roi_name:
-            roi_name = self.roi_name
+        pl1_out_path = os.path.join(self.roi_dir,
+                                    f'{self.pl1_exp_id}_out.h5')
+        pl2_out_path = os.path.join(self.roi_dir,
+                                    f'{self.pl2_exp_id}_out.h5')
 
-        plane1_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'{roi_name}_output_{self.plane1_exp_id}.h5')
-        plane2_ica_output_pointer = os.path.join(self.ica_traces_dir,
-                                                 f'{roi_name}_output_{self.plane2_exp_id}.h5')
-        ica_mixing_matrix_traces_pointer = os.path.join(self.ica_traces_dir,
-                                                        f'{roi_name}_mixing.h5')
+        pl1_crosstalk_path = os.path.join(self.roi_dir,
+                                          f'{self.pl1_exp_id}_crosstalk.h5')
+        pl2_crosstalk_path = os.path.join(self.roi_dir,
+                                          f'{self.pl2_exp_id}_crosstalk.h5')
+
         # file already exists, skip unmixing
-        if os.path.isfile(plane1_ica_output_pointer) and os.path.isfile(plane2_ica_output_pointer) and os.path.isfile(
-                ica_mixing_matrix_traces_pointer):
-            self.plane1_ica_output_pointer = plane1_ica_output_pointer
-            self.plane2_ica_output_pointer = plane2_ica_output_pointer
-            self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
-        else:
-            self.plane1_ica_output_pointer = None
-            self.plane2_ica_output_pointer = None
-            self.ica_mixing_matrix_traces_pointer = None
+        if os.path.isfile(pl1_out_path) and os.path.isfile(pl2_out_path) and os.path.isfile(pl1_crosstalk_path) \
+                and os.path.isfile(pl2_crosstalk_path):
+            self.pl1_out_path = pl1_out_path
+            self.pl2_out_path = pl2_out_path
+            self.pl1_crosstalk_path = pl1_crosstalk_path
+            self.pl2_crosstalk_path = pl2_crosstalk_path
 
-        if (self.plane1_ica_output_pointer is None) or (self.plane2_ica_output_pointer is None):
+        else:
+            self.pl1_out_path = None
+            self.pl2_out_path = None
+            self.pl1_crosstalk_path = None
+            self.pl2_crosstalk_path = None
+
+        if (self.pl1_out_path is None) or (self.pl2_out_path is None) or (self.pl1_crosstalk_path is None) \
+                or (self.pl2_crosstalk_path is None):
             # if unmixed traces don't exist, run unmixing
-            if np.any(np.isnan(self.plane1_ica_input)) or np.any(np.isinf(self.plane1_ica_input)) or np.any(
-                    np.isnan(self.plane2_ica_input)) or np.any(np.isinf(self.plane2_ica_input)):
+            if np.any(np.isnan(self.pl1_ica_in)) or np.any(np.isinf(self.pl2_ica_in)) or np.any(
+                    np.isnan(self.pl1_ica_in)) or np.any(np.isinf(self.pl2_ica_in)):
                 raise ValueError(
                     "ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
             else:
                 logger.info("Unmixed traces do not exist in cache, running ICA")
-                traces = np.array([self.plane1_ica_input, self.plane2_ica_input]).T
-                self.found_solution = False
-                ica = FastICA(n_components=2, max_iter=max_iter)
-                ica.fit_transform(traces)  # Reconstruct signals
-                mix = ica.mixing_  # Get estimated mixing matrix
-                logger.info("ICA successful")
 
-                # make sure no negative coeffs (inversion of traces)
-                mix[mix < 0] *= -1
+                # unmixing pl 1
+                pl1_roi_valid = self.pl1_roi_traces_valid['signal']
+                pl1_traces_in = self.pl1_ica_in
+                pl1_out, pl1_crosstalk, pl1_mixing, _, _ = self.unmix_plane(pl1_traces_in, pl1_roi_valid)
 
-                # switch columns if needed (source assignment inverted) - check something is off here!
-                if mix[0, 0] < mix[1, 0]:
-	                a_mix = np.array([mix[:, 1], mix[:, 0]]).T
-                else:
-	                a_mix = mix
+                # unmixing pl 2
+                pl2_roi_valid = self.pl2_roi_traces_valid['signal']
+                pl2_traces_in = self.pl2_ica_in
+                pl2_out, pl2_crosstalk, pl2_mixing, _, _ = self.unmix_plane(pl2_traces_in, pl2_roi_valid)
 
-                b_mix = a_mix
-                if a_mix[0, 1] > a_mix[1, 1]:
-	                b_mix[0, 1] = a_mix[1, 1]
-	                b_mix[1, 1] = a_mix[0, 1]
+                # saving to self
+                self.pl1_out = pl1_out
+                self.pl2_out = pl2_out
+                self.pl1_crosstalk = pl1_crosstalk
+                self.pl2_crosstalk = pl2_crosstalk
+                self.pl1_out_path = pl1_out_path
+                self.pl2_out_path = pl2_out_path
+                self.pl1_out_path = pl1_out_path
+                self.pl2_out_path = pl2_out_path
 
-                w = linalg.pinv(b_mix)  # inverting mixing matrix to get nunmixing matrix
-                s = np.dot(w, traces.T).T  # recontructing signals: dot product of unmixing matrix and input traces
-                self.roi_ica_output = s  # ica outoput to be written to disk, or used for debugging
-                self.roi_unmix = s  # inca utput to be rescaled and reshaped to the original form
-                self.roi_matrix = b_mix  # unmixing matrix to be written to disc
-                del a_mix
-                del b_mix
-                del s
-                del ica
-                # rescaling traces back:
-                self.ica_traces_scale_top, self.ica_traces_scale_bot = self.find_scale_ica_roi()
+                # writing ica out traces to disk
+                with h5py.File(self.pl1_out_path, "w") as f:
+                    f.create_dataset(f"data", data=pl1_out)
+                    f.create_dataset(f"crosstalk", data=pl1_crosstalk)
+                    f.create_dataset(f"mixing_matrix", data=pl1_mixing)
 
-                if self.ica_traces_scale_top < 0:
-                    self.ica_traces_scale_top *= -1
+                with h5py.File(self.pl2_out_path, "w") as f:
+                    f.create_dataset(f"data", data=pl2_out)
+                    f.create_dataset(f"crosstalk", data=pl2_crosstalk)
+                    f.create_dataset(f"mixing_matrix", data=pl2_mixing)
 
-                if self.ica_traces_scale_bot < 0:
-                    self.ica_traces_scale_bot *= -1
+            # plotting goes here
 
-                plane1_ica_output = self.roi_unmix[:, 0] * self.ica_traces_scale_top
-                plane2_ica_output = self.roi_unmix[:, 1] * self.ica_traces_scale_bot
-
-                # reshaping traces
-                # new shape, excluding non valid ROIs
-                plane1_valid_shape = np.array(
-                    [self.plane1_roi_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
-                plane2_valid_shape = np.array(
-                    [self.plane2_roi_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
-                new_shape = [plane1_valid_shape.sum() + plane2_valid_shape.sum(), self.plane1_traces_orig.shape[2]]
-
-                # reshaping
-                plane1_ica_output = plane1_ica_output.reshape(new_shape)
-                plane2_ica_output = plane2_ica_output.reshape(new_shape)
-
-                # splitting signal and crosstalk to compare variances and evaluate goodness of ICA
-                # ICA output:
-                plane1_out_sig = plane1_ica_output[0:plane1_valid_shape.sum(), :]
-                plane1_out_ct = plane2_ica_output[0:plane1_valid_shape.sum(), :]
-                plane2_out_ct = plane1_ica_output[
-                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-                plane2_out_sig = plane2_ica_output[
-                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-
-                # ICA input - only need sig to calculate rms between in and out.
-                plane1_ica_input = self.plane1_ica_input.reshape(new_shape)
-                plane2_ica_input = self.plane2_ica_input.reshape(new_shape)
-                plane1_in_sig = plane1_ica_input[0:plane1_valid_shape.sum(), :]
-                plane2_in_sig = plane2_ica_input[
-                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-
-                # rms of the delta (in, out)
-                plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
-                plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
-
-                # adding offset
-                self.plane1_roi_err = plane1_err
-                self.plane2_roi_err = plane2_err
-
-                plane1_out_sig = plane1_out_sig + self.plane1_offset['plane1_sig_offset']
-                plane1_out_ct = plane1_out_ct + self.plane1_offset['plane1_ct_offset']
-
-                plane2_out_sig = plane2_out_sig + self.plane2_offset['plane2_sig_offset']
-                plane2_out_ct = plane2_out_ct + self.plane2_offset['plane2_ct_offset']
-
-                plane1_ica_output = np.array([plane1_out_sig, plane1_out_ct])
-                plane2_ica_output = np.array([plane2_out_sig, plane2_out_ct])
-
-                self.plane1_ica_output = plane1_ica_output
-                self.plane2_ica_output = plane2_ica_output
-
-                self.plane1_ica_output_pointer = plane1_ica_output_pointer
-                self.plane2_ica_output_pointer = plane2_ica_output_pointer
-                self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
-
-                # writing ica output traces to disk
-                with h5py.File(self.plane1_ica_output_pointer, "w") as f:
-                    f.create_dataset(f"data", data=plane1_ica_output)
-
-                with h5py.File(self.plane2_ica_output_pointer, "w") as f:
-                    f.create_dataset(f"data", data=plane2_ica_output)
-
-                with h5py.File(self.ica_mixing_matrix_traces_pointer, "w") as f:
-                    f.create_dataset(f"mixing", data=self.roi_matrix)
-                    f.create_dataset(f"plane1_err", data=plane1_err)
-                    f.create_dataset(f"plane2_err", data=plane2_err)
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
-            self.plane1_ica_output_pointer = plane1_ica_output_pointer
-            self.plane2_ica_output_pointer = plane2_ica_output_pointer
-            self.ica_mixing_matrix_traces_pointer = ica_mixing_matrix_traces_pointer
-            self.found_solution = True
-            with h5py.File(self.plane1_ica_output_pointer, "r") as f:
-                plane1_ica_output = f["data"][()]
-            with h5py.File(self.plane2_ica_output_pointer, "r") as f:
-                plane2_ica_output = f["data"][()]
-            with h5py.File(self.ica_mixing_matrix_traces_pointer, "r") as f:
-                traces_matrix = f["mixing"][()]
-                plane1_err = f["plane1_err"][()]
-                plane2_err = f["plane2_err"][()]
+            self.pl1_out_path = pl1_out_path
+            self.pl2_out_path = pl2_out_path
 
-            self.plane1_ica_output = plane1_ica_output
-            self.plane2_ica_output = plane2_ica_output
-            self.roi_matrix = traces_matrix
-            self.plane1_roi_err = plane1_err
-            self.plane2_roi_err = plane2_err
+            self.found_solution = True
+            with h5py.File(self.pl1_out_path, "r") as f:
+                pl1_out = f["data"][()]
+            with h5py.File(self.pl2_out_path, "r") as f:
+                pl2_out = f["data"][()]
+            self.pl1_ica_out = pl1_out
+            self.pl2_ica_out = pl2_out
         return
 
     def unmix_neuropil(self, max_iter=10, np_name=None):
@@ -1111,38 +1247,38 @@ class MesoscopeICA(object):
         if not np_name:
             np_name = self.np_name
 
-        plane1_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'{np_name}_output_{self.plane1_exp_id}.h5')
-        plane2_ica_neuropil_output_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'{np_name}_output_{self.plane2_exp_id}.h5')
-        ica_mixing_matrix_neuropil_pointer = os.path.join(self.ica_neuropil_dir,
-                                                          f'{np_name}_mixing.h5')
+        pl1_ica_neuropil_out_path = os.path.join(self.np_dir,
+                                                 f'{np_name}_out_{self.pl1_exp_id}.h5')
+        pl2_ica_neuropil_out_path = os.path.join(self.np_dir,
+                                                 f'{np_name}_out_{self.pl2_exp_id}.h5')
+        ica_mixing_matrix_neuropil_path = os.path.join(self.np_dir,
+                                                       f'{np_name}_mixing.h5')
 
         # file already exists, skip unmixing
-        if os.path.isfile(plane1_ica_neuropil_output_pointer) and os.path.isfile(
-                plane2_ica_neuropil_output_pointer) and os.path.isfile(ica_mixing_matrix_neuropil_pointer):
-            self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-            self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
-            self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
+        if os.path.isfile(pl1_ica_neuropil_out_path) and os.path.isfile(
+                pl2_ica_neuropil_out_path) and os.path.isfile(ica_mixing_matrix_neuropil_path):
+            self.pl1_np_out_path = pl1_ica_neuropil_out_path
+            self.pl2_np_out_path = pl2_ica_neuropil_out_path
+            self.ica_mixing_matrix_neuropil_path = ica_mixing_matrix_neuropil_path
         else:
-            self.plane1_ica_neuropil_output_pointer = None
-            self.plane2_ica_neuropil_output_pointer = None
-            self.ica_mixing_matrix_neuropil_pointer = None
+            self.pl1_np_out_path = None
+            self.pl2_np_out_path = None
+            self.ica_mixing_matrix_neuropil_path = None
 
-        if (self.plane1_ica_neuropil_output_pointer is None) or (self.plane2_ica_neuropil_output_pointer is None):
+        if (self.pl1_np_out_path is None) or (self.pl2_np_out_path is None):
             # if unmixed traces don't exist, run unmixing
             logger.info("Unmixed neuropil traces do not exist in cache, running ICA")
 
-            if np.any(np.isnan(self.plane1_ica_neuropil_input)) or np.any(
-                np.isinf(self.plane1_ica_neuropil_input)) or np.any(
-                    np.isnan(self.plane2_ica_neuropil_input)) or np.any(np.isinf(self.plane2_ica_neuropil_input)):
+            if np.any(np.isnan(self.pl1_ica_neuropil_in)) or np.any(
+                np.isinf(self.pl1_ica_neuropil_in)) or np.any(
+                    np.isnan(self.pl2_ica_neuropil_in)) or np.any(np.isinf(self.pl2_ica_neuropil_in)):
                 logger.info("ValueError: ICA input contains NaN, infinity or a value too large for data type('float64')")
             else:
-                traces = np.array([self.plane1_ica_neuropil_input, self.plane2_ica_neuropil_input]).T
+                traces = np.array([self.pl1_ica_neuropil_in, self.pl2_ica_neuropil_in]).T
                 b_mix = self.roi_matrix
                 w = linalg.pinv(b_mix)  # inverting mixing matrix to get unmixing matrix
-                s = np.dot(w, traces.T).T  # recontructing signals: dot product of unmixing matrix and input traces
-                self.roi_ica_output = s  # ica outoput to be written to disk, or used for debugging
+                s = np.dot(w, traces.T).T  # recontructing signals: dot product of unmixing matrix and in traces
+                self.roi_ica_out = s  # ica outoput to be written to disk, or used for debugging
                 self.neuropil_unmix = s  # inca utput to be rescaled and reshaped to the original form
                 self.neuropil_matrix = b_mix  # unmixing matrix to be written to disc
                 del b_mix
@@ -1150,99 +1286,99 @@ class MesoscopeICA(object):
                 
                 # rescaling traces back:
                 self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil()
-                plane1_ica_neuropil_output = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
-                plane2_ica_neuropil_output = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
+                pl1_ica_neuropil_out = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
+                pl2_ica_neuropil_out = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
 
                 # reshaping traces
                 # new shape, excluding non valid ROIs
-                plane1_valid_shape = np.array(
-                    [self.plane1_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane1_roi_names])
-                plane2_valid_shape = np.array(
-                    [self.plane2_neuropil_traces_valid['signal'][str(tid)] for tid in self.plane2_roi_names])
-                new_shape = [plane1_valid_shape.sum() + plane2_valid_shape.sum(), self.plane1_neuropil_orig.shape[2]]
+                pl1_valid_shape = np.array(
+                    [self.pl1_neuropil_traces_valid['signal'][str(tid)] for tid in self.pl1_roi_names])
+                pl2_valid_shape = np.array(
+                    [self.pl2_neuropil_traces_valid['signal'][str(tid)] for tid in self.pl2_roi_names])
+                new_shape = [pl1_valid_shape.sum() + pl2_valid_shape.sum(), self.pl1_neuropil_orig.shape[2]]
                 # reshaping
-                plane1_ica_neuropil_output = plane1_ica_neuropil_output.reshape(new_shape)
-                plane2_ica_neuropil_output = plane2_ica_neuropil_output.reshape(new_shape)
+                pl1_ica_neuropil_out = pl1_ica_neuropil_out.reshape(new_shape)
+                pl2_ica_neuropil_out = pl2_ica_neuropil_out.reshape(new_shape)
 
                 # splitting signal and crosstalk to compare variances and evaluate goodness of ICA
-                # ICA output:
-                plane1_out_sig = plane1_ica_neuropil_output[0:plane1_valid_shape.sum(), :]
-                plane1_out_ct = plane2_ica_neuropil_output[0:plane1_valid_shape.sum(), :]
+                # ICA out:
+                pl1_out_sig = pl1_ica_neuropil_out[0:pl1_valid_shape.sum(), :]
+                pl1_out_ct = pl2_ica_neuropil_out[0:pl1_valid_shape.sum(), :]
 
-                plane2_out_ct = plane1_ica_neuropil_output[
-                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
-                plane2_out_sig = plane2_ica_neuropil_output[
-                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                pl2_out_ct = pl1_ica_neuropil_out[
+                    pl1_valid_shape.sum():pl1_valid_shape.sum() + pl2_valid_shape.sum(), :]
+                pl2_out_sig = pl2_ica_neuropil_out[
+                    pl1_valid_shape.sum():pl1_valid_shape.sum() + pl2_valid_shape.sum(), :]
 
                 # ICA input - only need sig to calculate rms between in and out.
-                plane1_ica_neuropil_input = self.plane1_ica_neuropil_input.reshape(new_shape)
-                plane2_ica_neuropil_input = self.plane2_ica_neuropil_input.reshape(new_shape)
-                plane1_in_sig = plane1_ica_neuropil_input[0:plane1_valid_shape.sum(), :]
-                plane2_in_sig = plane2_ica_neuropil_input[
-                    plane1_valid_shape.sum():plane1_valid_shape.sum() + plane2_valid_shape.sum(), :]
+                pl1_ica_neuropil_input = self.pl1_ica_neuropil_input.reshape(new_shape)
+                pl2_ica_neuropil_input = self.pl2_ica_neuropil_input.reshape(new_shape)
+                pl1_in_sig = pl1_ica_neuropil_input[0:pl1_valid_shape.sum(), :]
+                pl2_in_sig = pl2_ica_neuropil_input[
+                    pl1_valid_shape.sum():pl1_valid_shape.sum() + pl2_valid_shape.sum(), :]
 
                 # rms of the delta (in, out)
                 # this value should be low as this is rms of signal traces before and after ICA:
-                plane1_err = self.ica_err([1], plane1_in_sig, plane1_out_sig)
+                pl1_err = self.ica_err([1], pl1_in_sig, pl1_out_sig)
                 # bottom to top is usually less SNR, so higher rms
-                plane2_err = self.ica_err([1], plane2_in_sig, plane2_out_sig)
-                self.plane1_np_err = plane1_err
-                self.plane2_np_err = plane2_err
+                pl2_err = self.ica_err([1], pl2_in_sig, pl2_out_sig)
+                self.pl1_np_err = pl1_err
+                self.pl2_np_err = pl2_err
 
                 # adding offset
-                plane1_out_sig = plane1_out_sig + self.plane1_neuropil_offset['plane1_sig_neuropil_offset']
-                plane1_out_ct = plane1_out_ct + self.plane1_neuropil_offset['plane1_ct_neuropil_offset']
+                pl1_out_sig = pl1_out_sig + self.pl1_neuropil_offset['pl1_sig_neuropil_offset']
+                pl1_out_ct = pl1_out_ct + self.pl1_neuropil_offset['pl1_ct_neuropil_offset']
 
-                plane2_out_sig = plane2_out_sig + self.plane2_neuropil_offset['plane2_sig_neuropil_offset']
-                plane2_out_ct = plane2_out_ct + self.plane2_neuropil_offset['plane2_ct_neuropil_offset']
+                pl2_out_sig = pl2_out_sig + self.pl2_neuropil_offset['pl2_sig_neuropil_offset']
+                pl2_out_ct = pl2_out_ct + self.pl2_neuropil_offset['pl2_ct_neuropil_offset']
 
-                plane1_ica_neuropil_output = np.array([plane1_out_sig, plane1_out_ct])
-                plane2_ica_neuropil_output = np.array([plane2_out_sig, plane2_out_ct])
+                pl1_ica_neuropil_out = np.array([pl1_out_sig, pl1_out_ct])
+                pl2_ica_neuropil_out = np.array([pl2_out_sig, pl2_out_ct])
 
-                self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
-                self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
-                self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-                self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
-                self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
+                self.pl1_ica_neuropil_out = pl1_ica_neuropil_out
+                self.pl2_ica_neuropil_out = pl2_ica_neuropil_out
+                self.pl1_np_out_path = pl1_ica_neuropil_out_path
+                self.pl2_np_out_path = pl2_ica_neuropil_out_path
+                self.ica_mixing_matrix_neuropil_path = ica_mixing_matrix_neuropil_path
 
-                # writing neuropil ICA output traces to disk
+                # writing neuropil ICA out traces to disk
 
-                with h5py.File(self.plane1_ica_neuropil_output_pointer, "w") as f:
-                    f.create_dataset(f"data", data=plane1_ica_neuropil_output)
+                with h5py.File(self.pl1_np_out_path, "w") as f:
+                    f.create_dataset(f"data", data=pl1_ica_neuropil_out)
 
-                with h5py.File(self.plane2_ica_neuropil_output_pointer, "w") as f:
-                    f.create_dataset(f"data", data=plane2_ica_neuropil_output)
+                with h5py.File(self.pl2_np_out_path, "w") as f:
+                    f.create_dataset(f"data", data=pl2_ica_neuropil_out)
 
-                with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "w") as f:
+                with h5py.File(self.ica_mixing_matrix_neuropil_path, "w") as f:
                     f.create_dataset(f"mixing", data=self.neuropil_matrix)
-                    f.create_dataset(f"plane1_err", data=plane1_err)
-                    f.create_dataset(f"plane2_err", data=plane2_err)
+                    f.create_dataset(f"pl1_err", data=pl1_err)
+                    f.create_dataset(f"pl2_err", data=pl2_err)
         else:
             logger.info("Unmixed neuropil traces exist in cache, reading from h5 file")
             self.found_solution_neuropil = True
-            self.plane1_ica_neuropil_output_pointer = plane1_ica_neuropil_output_pointer
-            self.plane2_ica_neuropil_output_pointer = plane2_ica_neuropil_output_pointer
-            self.ica_mixing_matrix_neuropil_pointer = ica_mixing_matrix_neuropil_pointer
-            with h5py.File(self.plane1_ica_neuropil_output_pointer, "r") as f:
-                plane1_ica_neuropil_output = f["data"][()]
-            with h5py.File(self.plane2_ica_neuropil_output_pointer, "r") as f:
-                plane2_ica_neuropil_output = f["data"][()]
-            with h5py.File(self.ica_mixing_matrix_neuropil_pointer, "r") as f:
+            self.pl1_np_out_path = pl1_ica_neuropil_out_path
+            self.pl2_np_out_path = pl2_ica_neuropil_out_path
+            self.ica_mixing_matrix_neuropil_path = ica_mixing_matrix_neuropil_path
+            with h5py.File(self.pl1_np_out_path, "r") as f:
+                pl1_ica_neuropil_out = f["data"][()]
+            with h5py.File(self.pl2_np_out_path, "r") as f:
+                pl2_ica_neuropil_out = f["data"][()]
+            with h5py.File(self.ica_mixing_matrix_neuropil_path, "r") as f:
                 neuropil_matrix = f["mixing"][()]
-                plane1_err = f["plane1_err"][()]
-                plane2_err = f["plane2_err"][()]
-            self.plane1_ica_neuropil_output = plane1_ica_neuropil_output
-            self.plane2_ica_neuropil_output = plane2_ica_neuropil_output
+                pl1_err = f["pl1_err"][()]
+                pl2_err = f["pl2_err"][()]
+            self.pl1_ica_neuropil_out = pl1_ica_neuropil_out
+            self.pl2_ica_neuropil_out = pl2_ica_neuropil_out
             self.neuropil_matrix = neuropil_matrix
-            self.plane1_np_err = plane1_err
-            self.plane2_np_err = plane2_err
+            self.pl1_np_err = pl1_err
+            self.pl2_np_err = pl2_err
         return
 
     def plot_ica_traces(self, pair, samples_per_plot=10000, dir_name=None, cell_num=None, fig_show=True, fig_save=True):
         """
         function to plot demixed traces
         :param dir_name: directory name prefix for where to save plotted traces
-        :param pair: [int, int]: LIMS IDs for the two paired planes
+        :param pair: [int, int]: LIMS IDs for the two paired pls
         :param samples_per_plot: int, samples ot visualize on one plot, decreasing will make plotting very slow
         :param cell_num: int, number of rois to plot
         :param fig_show: bool, controlling whether to show a figure in jupyter/iphython as it's being generated or not
@@ -1262,14 +1398,14 @@ class MesoscopeICA(object):
             print(f'Switching backend to Agg')
             plt.switch_backend('Agg')
 
-        if self.plane1_ica_output_pointer and self.plane2_ica_output_pointer:
+        if self.pl1_ica_out_path and self.pl2_ica_out_path:
 
-            raw_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
-            raw_trace_plane1_ct = self.plane1_traces_orig[1, :, :]
-            plane1_roi_names = self.plane1_roi_names
-            plane1_roi_valid = self.plane1_roi_traces_valid['signal']
-            ica_trace_plane1_sig = self.plane1_ica_output[0, :, :]
-            ica_trace_plane1_ct = self.plane1_ica_output[1, :, :]
+            raw_trace_pl1_sig = self.pl1_traces_orig[0, :, :]
+            raw_trace_pl1_ct = self.pl1_traces_orig[1, :, :]
+            pl1_roi_names = self.pl1_roi_names
+            pl1_roi_valid = self.pl1_roi_traces_valid['signal']
+            ica_trace_pl1_sig = self.pl1_ica_out[0, :, :]
+            ica_trace_pl1_ct = self.pl1_ica_out[1, :, :]
 
             logging.info(f'creating figures for experiment {pair[0]}')
 
@@ -1280,40 +1416,40 @@ class MesoscopeICA(object):
             cell_valid = 0
 
             if not cell_num:
-                cells_to_plot = range(raw_trace_plane1_sig.shape[0])
+                cells_to_plot = range(raw_trace_pl1_sig.shape[0])
             else:
                 cells_to_plot = range(cell_num)
 
             for cell_orig in cells_to_plot:
                 # check in this roi is valid:
-                if plane1_roi_valid[str(plane1_roi_names[cell_orig])]:
+                if pl1_roi_valid[str(pl1_roi_names[cell_orig])]:
                     # Plot cell
-                    pdf_name = os.path.join(plot_dir, f"ica_plots_{pair[0]}_cell_{plane1_roi_names[cell_orig]}.pdf")
+                    pdf_name = os.path.join(plot_dir, f"ica_plots_{pair[0]}_cell_{pl1_roi_names[cell_orig]}.pdf")
                     if os.path.isfile(pdf_name):
-                        logging.info(f"cell trace figure exist for {pair[0]} cell {plane1_roi_names[cell_orig]}")
+                        logging.info(f"cell trace figure exist for {pair[0]} cell {pl1_roi_names[cell_orig]}")
                         continue
                     else:
                         pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
-                        logging.info(f"creating figures for cell {plane1_roi_names[cell_orig]}")
-                        raw_y_min = min(min(raw_trace_plane1_sig[cell_orig, :]), min(raw_trace_plane1_ct[cell_orig, :]))
-                        raw_y_max = max(max(raw_trace_plane1_sig[cell_orig, :]), max(raw_trace_plane1_ct[cell_orig, :]))
-                        for i in range(int(raw_trace_plane1_sig.shape[1] / samples_per_plot) + 1):
-                            orig_plane1_sig = raw_trace_plane1_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            orig_plane1_ct = raw_trace_plane1_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            ica_plane1_sig = ica_trace_plane1_sig[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            ica_plane1_ct = ica_trace_plane1_ct[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
+                        logging.info(f"creating figures for cell {pl1_roi_names[cell_orig]}")
+                        raw_y_min = min(min(raw_trace_pl1_sig[cell_orig, :]), min(raw_trace_pl1_ct[cell_orig, :]))
+                        raw_y_max = max(max(raw_trace_pl1_sig[cell_orig, :]), max(raw_trace_pl1_ct[cell_orig, :]))
+                        for i in range(int(raw_trace_pl1_sig.shape[1] / samples_per_plot) + 1):
+                            orig_pl1_sig = raw_trace_pl1_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            orig_pl1_ct = raw_trace_pl1_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            ica_pl1_sig = ica_trace_pl1_sig[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            ica_pl1_ct = ica_trace_pl1_ct[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
                             f = plt.figure(figsize=(20, 10))
                             plt.subplot(211)
                             plt.ylim(raw_y_min, raw_y_max)
-                            plt.plot(orig_plane1_sig, 'r-', label='signal plane')
-                            plt.plot(orig_plane1_ct, 'g-', label='cross-talk plane')
-                            plt.title(f'original traces for cell {plane1_roi_names[cell_orig]}')
+                            plt.plot(orig_pl1_sig, 'r-', label='signal pl')
+                            plt.plot(orig_pl1_ct, 'g-', label='cross-talk pl')
+                            plt.title(f'original traces for cell {pl1_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
                             plt.subplot(212)
                             plt.ylim(raw_y_min, raw_y_max)
-                            plt.plot(ica_plane1_sig, 'r-', label='signal plane')
-                            plt.plot(ica_plane1_ct, 'g-', label='cross-talk plane')
-                            plt.title(f'post-ica traces, cell # {plane1_roi_names[cell_orig]}')
+                            plt.plot(ica_pl1_sig, 'r-', label='signal pl')
+                            plt.plot(ica_pl1_ct, 'g-', label='cross-talk pl')
+                            plt.title(f'post-ica traces, cell # {pl1_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
                             if fig_save:
                                 pdf.savefig(f)
@@ -1322,15 +1458,15 @@ class MesoscopeICA(object):
                         pdf.close()
                         cell_valid = cell_valid + 1
                 else:
-                    logging.info(f'Cell {plane1_roi_names[cell_orig]} is invalid, skipping plotting')
+                    logging.info(f'Cell {pl1_roi_names[cell_orig]} is invalid, skipping plotting')
                     cell_valid = cell_valid
 
-            raw_trace_plane2_sig = self.plane2_traces_orig[0, :, :]
-            raw_trace_plane2_ct = self.plane2_traces_orig[1, :, :]
-            plane2_roi_names = self.plane2_roi_names
-            plane2_roi_valid = self.plane2_roi_traces_valid['signal']
-            ica_trace_plane2_sig = self.plane2_ica_output[0, :, :]
-            ica_trace_plane2_ct = self.plane2_ica_output[1, :, :]
+            raw_trace_pl2_sig = self.pl2_traces_orig[0, :, :]
+            raw_trace_pl2_ct = self.pl2_traces_orig[1, :, :]
+            pl2_roi_names = self.pl2_roi_names
+            pl2_roi_valid = self.pl2_roi_traces_valid['signal']
+            ica_trace_pl2_sig = self.pl2_ica_out[0, :, :]
+            ica_trace_pl2_ct = self.pl2_ica_out[1, :, :]
             logging.info(f'creating figures for experiment {pair[1]}')
             plot_dir = os.path.join(self.session_cache_dir, f'{dir_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
@@ -1338,40 +1474,40 @@ class MesoscopeICA(object):
             cell_valid = 0
 
             if not cell_num:
-                cells_to_plot = range(raw_trace_plane2_sig.shape[0])
+                cells_to_plot = range(raw_trace_pl2_sig.shape[0])
             else:
                 cells_to_plot = range(cell_num)
 
             for cell_orig in cells_to_plot:
                 # check in this roi is valid:
-                if plane2_roi_valid[str(plane2_roi_names[cell_orig])]:
+                if pl2_roi_valid[str(pl2_roi_names[cell_orig])]:
                     # Plot cell
-                    pdf_name = os.path.join(plot_dir, f"ica_plots_{pair[1]}_cell_{plane2_roi_names[cell_orig]}.pdf")
+                    pdf_name = os.path.join(plot_dir, f"ica_plots_{pair[1]}_cell_{pl2_roi_names[cell_orig]}.pdf")
                     if os.path.isfile(pdf_name):
-                        logging.info(f"cell trace figure exist for {pair[1]} cell {plane2_roi_names[cell_orig]}")
+                        logging.info(f"cell trace figure exist for {pair[1]} cell {pl2_roi_names[cell_orig]}")
                         continue
                     else:
-                        logging.info(f'creating figures for cell {plane2_roi_names[cell_orig]}')
-                        raw_y_min = min(min(raw_trace_plane2_sig[cell_orig, :]), min(raw_trace_plane2_ct[cell_orig, :]))
-                        raw_y_max = max(max(raw_trace_plane2_sig[cell_orig, :]), max(raw_trace_plane2_ct[cell_orig, :]))
+                        logging.info(f'creating figures for cell {pl2_roi_names[cell_orig]}')
+                        raw_y_min = min(min(raw_trace_pl2_sig[cell_orig, :]), min(raw_trace_pl2_ct[cell_orig, :]))
+                        raw_y_max = max(max(raw_trace_pl2_sig[cell_orig, :]), max(raw_trace_pl2_ct[cell_orig, :]))
                         pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
-                        for i in range(int(raw_trace_plane2_sig.shape[1] / samples_per_plot) + 1):
-                            orig_plane2_sig = raw_trace_plane2_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            orig_plane2_ct = raw_trace_plane2_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            ica_plane2_sig = ica_trace_plane2_sig[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            ica_plane2_ct = ica_trace_plane2_ct[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
+                        for i in range(int(raw_trace_pl2_sig.shape[1] / samples_per_plot) + 1):
+                            orig_pl2_sig = raw_trace_pl2_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            orig_pl2_ct = raw_trace_pl2_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            ica_pl2_sig = ica_trace_pl2_sig[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            ica_pl2_ct = ica_trace_pl2_ct[cell_valid, i * samples_per_plot:(i + 1) * samples_per_plot]
                             f = plt.figure(figsize=(20, 10))
                             plt.subplot(211)
                             plt.ylim(raw_y_min, raw_y_max)
-                            plt.plot(orig_plane2_sig, 'r-', label='signal plane')
-                            plt.plot(orig_plane2_ct, 'g-', label='cross-talk plane')
-                            plt.title(f'original traces for cell # {plane2_roi_names[cell_orig]}')
+                            plt.plot(orig_pl2_sig, 'r-', label='signal pl')
+                            plt.plot(orig_pl2_ct, 'g-', label='cross-talk pl')
+                            plt.title(f'original traces for cell # {pl2_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
                             plt.subplot(212)
                             plt.ylim(raw_y_min, raw_y_max)
-                            plt.plot(ica_plane2_sig, 'r-', label='signal plane')
-                            plt.plot(ica_plane2_ct, 'g-', label='cross-talk plane')
-                            plt.title(f'post-ica traces, cell # {plane2_roi_names[cell_orig]}')
+                            plt.plot(ica_pl2_sig, 'r-', label='signal pl')
+                            plt.plot(ica_pl2_ct, 'g-', label='cross-talk pl')
+                            plt.title(f'post-ica traces, cell # {pl2_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
                             if fig_save:
                                 pdf.savefig(f)
@@ -1381,7 +1517,7 @@ class MesoscopeICA(object):
                     cell_valid = cell_valid + 1
 
                 else:
-                    logging.info(f'Cell {plane2_roi_names[cell_orig]} is invalid, skipping plotting')
+                    logging.info(f'Cell {pl2_roi_names[cell_orig]} is invalid, skipping plotting')
                     cell_valid = cell_valid
         else:
             logging.info(f'ICA traces for pair {pair[0]}/{pair[1]} don''t exist, nothing to plot.')
@@ -1392,7 +1528,7 @@ class MesoscopeICA(object):
         """
         fn to plot raw traces
         :param dir_name: directory name prefix for where to save plotted traces
-        :param pair: [int, int]: LIMS IDs for the two paired planes
+        :param pair: [int, int]: LIMS IDs for the two paired pls
         :param samples_per_plot: int, samples ot visualize on one plot, decreasing will make plotting very slow
         :param cell_num: int, number of rois to plot
         :param figshow: bool, controlling whether to show a figure in jupyter/iphython as it's being generated or not
@@ -1411,12 +1547,12 @@ class MesoscopeICA(object):
             print(f'Switching backend to Agg')
             plt.switch_backend('Agg')
 
-        if self.plane1_traces_orig_pointer and self.plane2_traces_orig_pointer:
+        if self.pl1_traces_orig_path and self.pl2_traces_orig_path:
 
-            raw_trace_plane1_sig = self.plane1_traces_orig[0, :, :]
-            raw_trace_plane1_ct = self.plane1_traces_orig[1, :, :]
-            plane1_roi_names = self.plane1_roi_names
-            plane1_roi_valid = self.plane1_roi_traces_valid['signal']
+            raw_trace_pl1_sig = self.pl1_traces_orig[0, :, :]
+            raw_trace_pl1_ct = self.pl1_traces_orig[1, :, :]
+            pl1_roi_names = self.pl1_roi_names
+            pl1_roi_valid = self.pl1_roi_traces_valid['signal']
 
             logging.info(f'plotting raw traces for experiment {pair[0]}')
 
@@ -1425,28 +1561,28 @@ class MesoscopeICA(object):
                 os.mkdir(plot_dir)
 
             if not cell_num:
-                cells_to_plot = range(raw_trace_plane1_sig.shape[0])
+                cells_to_plot = range(raw_trace_pl1_sig.shape[0])
             else:
                 cells_to_plot = range(cell_num)
 
             for cell_orig in cells_to_plot:
                 # check in this roi is valid:
-                if plane1_roi_valid[str(plane1_roi_names[cell_orig])]:
+                if pl1_roi_valid[str(pl1_roi_names[cell_orig])]:
                     # Plot cell
-                    pdf_name = os.path.join(plot_dir, f"raw_traces_plots_{pair[0]}_cell_{plane1_roi_names[cell_orig]}.pdf")
+                    pdf_name = os.path.join(plot_dir, f"raw_traces_plots_{pair[0]}_cell_{pl1_roi_names[cell_orig]}.pdf")
                     if os.path.isfile(pdf_name):
-                        logging.info(f"raw trace plots exist for {pair[0]} cell {plane1_roi_names[cell_orig]}")
+                        logging.info(f"raw trace plots exist for {pair[0]} cell {pl1_roi_names[cell_orig]}")
                         continue
                     else:
                         pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
-                        logging.info(f"plotting original traces for cell {plane1_roi_names[cell_orig]}")
-                        for i in range(int(raw_trace_plane1_sig.shape[1] / samples_per_plot) + 1):
-                            orig_plane1_sig = raw_trace_plane1_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            orig_plane1_ct = raw_trace_plane1_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                        logging.info(f"plotting original traces for cell {pl1_roi_names[cell_orig]}")
+                        for i in range(int(raw_trace_pl1_sig.shape[1] / samples_per_plot) + 1):
+                            orig_pl1_sig = raw_trace_pl1_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            orig_pl1_ct = raw_trace_pl1_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
                             f = plt.figure(figsize=(20, 10))
-                            plt.plot(orig_plane1_sig, 'r-', label='signal plane')
-                            plt.plot(orig_plane1_ct, 'g-', label='cross-talk plane')
-                            plt.title(f'original traces for cell {plane1_roi_names[cell_orig]}')
+                            plt.plot(orig_pl1_sig, 'r-', label='signal pl')
+                            plt.plot(orig_pl1_ct, 'g-', label='cross-talk pl')
+                            plt.title(f'original traces for cell {pl1_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
                             if figsave:
                                 pdf.savefig(f)
@@ -1454,40 +1590,40 @@ class MesoscopeICA(object):
                                 plt.close()
                         pdf.close()
                 else:
-                    logging.info(f'Cell {plane1_roi_names[cell_orig]} is invalid, skipping plotting')
+                    logging.info(f'Cell {pl1_roi_names[cell_orig]} is invalid, skipping plotting')
 
-            raw_trace_plane2_sig = self.plane2_traces_orig[0, :, :]
-            raw_trace_plane2_ct = self.plane2_traces_orig[1, :, :]
-            plane2_roi_names = self.plane2_roi_names
-            plane2_roi_valid = self.plane2_roi_traces_valid['signal']
+            raw_trace_pl2_sig = self.pl2_traces_orig[0, :, :]
+            raw_trace_pl2_ct = self.pl2_traces_orig[1, :, :]
+            pl2_roi_names = self.pl2_roi_names
+            pl2_roi_valid = self.pl2_roi_traces_valid['signal']
             logging.info(f'creating plots for experiment {pair[1]}')
             plot_dir = os.path.join(self.session_cache_dir, f'{dir_name}_{pair[0]}_{pair[1]}/raw_traces_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
                 os.mkdir(plot_dir)
 
             if not cell_num:
-                cells_to_plot = range(raw_trace_plane2_sig.shape[0])
+                cells_to_plot = range(raw_trace_pl2_sig.shape[0])
             else:
                 cells_to_plot = range(cell_num)
 
             for cell_orig in cells_to_plot:
                 # check in this roi is valid:
-                if plane2_roi_valid[str(plane2_roi_names[cell_orig])]:
+                if pl2_roi_valid[str(pl2_roi_names[cell_orig])]:
                     # Plot cell
-                    pdf_name = os.path.join(plot_dir, f"raw_traces_plots_{pair[1]}_cell_{plane2_roi_names[cell_orig]}.pdf")
+                    pdf_name = os.path.join(plot_dir, f"raw_traces_plots_{pair[1]}_cell_{pl2_roi_names[cell_orig]}.pdf")
                     if os.path.isfile(pdf_name):
-                        logging.info(f"raw trace plots exist for {pair[1]} cell {plane2_roi_names[cell_orig]}")
+                        logging.info(f"raw trace plots exist for {pair[1]} cell {pl2_roi_names[cell_orig]}")
                         continue
                     else:
-                        logging.info(f'creating plots for cell {plane2_roi_names[cell_orig]}')
+                        logging.info(f'creating plots for cell {pl2_roi_names[cell_orig]}')
                         pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
-                        for i in range(int(raw_trace_plane2_sig.shape[1] / samples_per_plot) + 1):
-                            orig_plane2_sig = raw_trace_plane2_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
-                            orig_plane2_ct = raw_trace_plane2_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                        for i in range(int(raw_trace_pl2_sig.shape[1] / samples_per_plot) + 1):
+                            orig_pl2_sig = raw_trace_pl2_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
+                            orig_pl2_ct = raw_trace_pl2_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
                             f = plt.figure(figsize=(20, 10))
-                            plt.plot(orig_plane2_sig, 'r-', label='signal plane')
-                            plt.plot(orig_plane2_ct, 'g-', label='cross-talk plane')
-                            plt.title(f'original traces for cell # {plane2_roi_names[cell_orig]}')
+                            plt.plot(orig_pl2_sig, 'r-', label='signal pl')
+                            plt.plot(orig_pl2_ct, 'g-', label='cross-talk pl')
+                            plt.title(f'original traces for cell # {pl2_roi_names[cell_orig]}')
                             plt.legend(loc='upper left')
                             if figsave:
                                 pdf.savefig(f)
@@ -1496,7 +1632,7 @@ class MesoscopeICA(object):
                         pdf.close()
 
                 else:
-                    logging.info(f'Cell {plane2_roi_names[cell_orig]} is invalid, skipping plotting')
+                    logging.info(f'Cell {pl2_roi_names[cell_orig]} is invalid, skipping plotting')
         else:
             logging.info(f'raw traces for pair {pair[0]}/{pair[1]} don''t exist, nothing to plot.')
 
@@ -1505,8 +1641,8 @@ class MesoscopeICA(object):
     @staticmethod
     def validate_against_vba(rois_valid_ica, exp_id, vba_cache=VBA_CACHE):
         """
-        :param rois_valid_ica: dict, returned by MesoscopeICA.plane1_roi_traces_valid or MesoscopeICA.plane2_roi_traces_valid
-        :param exp_id: int, LIMS experiment ID, can be retrieved by MesoscopeICA.plane1_exp_id or MesoscopeICA.plane2_exp_id
+        :param rois_valid_ica: dict, returned by MesoscopeICA.pl1_roi_traces_valid or MesoscopeICA.pl2_roi_traces_valid
+        :param exp_id: int, LIMS experiment ID, can be retrieved by MesoscopeICA.pl1_exp_id or MesoscopeICA.pl2_exp_id
         :param vba_cache: str, path to visual behavior analysis package cache directory
         :return: rois_valid_vba: dict, same structure as rois_valid_ica
         """
@@ -1548,26 +1684,26 @@ class MesoscopeICA(object):
 
     def find_scale_ica_roi(self):
         """
-        find scaling factor that will minimize difference of standard deviations between ICA input and ICA output
+        find scaling factor that will minimize difference of standard deviations between ICA input and ICA out
         for ROI traces
         :return: [int, int]
         """
         # for traces:
-        scale_top = opt.minimize(self.ica_err, [1], (self.roi_unmix[:, 0], self.plane1_ica_input))
-        scale_bot = opt.minimize(self.ica_err, [1], (self.roi_unmix[:, 1], self.plane2_ica_input))
+        scale_top = opt.minimize(self.ica_err, [1], (self.roi_unmix[:, 0], self.pl1_ica_in))
+        scale_bot = opt.minimize(self.ica_err, [1], (self.roi_unmix[:, 1], self.pl2_ica_in))
 
         return scale_top.x, scale_bot.x
 
     def find_scale_ica_neuropil(self):
         """
-        returns scaling factor that will minimize difference of standard deviations between ICA input and ICA output
+        returns scaling factor that will minimize difference of standard deviations between ICA input and ICA out
         for neuropil traces
         :return: [int, int]
         """
         scale_top_neuropil = opt.minimize(self.ica_err, [1],
-                                          (self.neuropil_unmix[:, 0], self.plane1_ica_neuropil_input))
+                                          (self.neuropil_unmix[:, 0], self.pl1_ica_neuropil_in))
         scale_bot_neuropil = opt.minimize(self.ica_err, [1],
-                                          (self.neuropil_unmix[:, 1], self.plane2_ica_neuropil_input))
+                                          (self.neuropil_unmix[:, 1], self.pl2_ica_neuropil_in))
 
         return scale_top_neuropil.x, scale_bot_neuropil.x
 
@@ -1578,7 +1714,7 @@ class MesoscopeICA(object):
         :param fig_overwrite: flag to control whether cross talk plots should be re-plotted
         :param valid: valid roi json
         :param traces_in: numpy array containing ICA input traces in [NxMxT] where N = 2, M = number of cells, T = number of timestamps
-        :param traces_out: numpy array containing ICA output traces in [NxMxT] where N = 2, M = number of cells, T = number of timestamps
+        :param traces_out: numpy array containing ICA out traces in [NxMxT] where N = 2, M = number of cells, T = number of timestamps
         :param path_out: str, name of the json file to save the data
         :param fig_save: bool, flag to save the figures or not in the same folder as path_out
         :return:
@@ -1696,3 +1832,69 @@ def plot_pixel_hist2d(x, y, xlabel='signal', ylabel='crosstalk', title=None, sav
         plt.close()
 
     return fig, slope, offset, r_value
+
+
+def find_scale_ica_roi(self, ica_in, ica_out):
+    """
+    find scaling factor that will minimize difference of standard deviations between ICA input and ICA out
+    for ROI traces
+    :return: [int, int]
+    """
+    # for traces:
+    scale = opt.minimize(self.ica_err, [1], (ica_out, ica_in))
+
+    return scale.x
+
+
+def ica_err(scale, ica_traces, trace_orig):
+    """
+    calculate difference of standard deviation between post- and pre-ICA traces:
+    :param scale: scaling factor - used to optimize
+    :param ica_traces: post-ica trace
+    :param trace_orig: raw trace
+    :return:
+    """
+    return np.sqrt((ica_traces * scale[0] - trace_orig) ** 2).mean()
+
+
+def rescale(trace_in, trace_out):
+    scale = find_scale_ica_roi(trace_in, trace_out)
+    if scale < 0:
+        scale *= -1
+    rescaled_trace = trace_out * scale
+    return rescaled_trace
+
+
+def run_ica(trace1, trace2):
+    traces = np.array([trace1, trace2]).T
+    f_ica = FastICA(n_components=2, max_iter=50)
+    _ = f_ica.fit_transform(traces)  # Reconstruct signals
+    mix = f_ica.mixing_  # Get estimated mixing matrix
+    # make sure no negative coeffs (inversion of traces)
+    mix[mix < 0] *= -1
+    # switch columns if needed (source assignment inverted) - check something is off here!
+    if mix[0, 0] < mix[1, 0]:
+        a_mix = np.array([mix[1, :], mix[0, :]])
+    else:
+        a_mix = mix
+    if a_mix[0, 1] > a_mix[1, 1]:
+        b_mix = np.array([[a_mix[0, 0], a_mix[1, 1]], [a_mix[1, 0], a_mix[0, 1]]])
+    else:
+        b_mix = a_mix
+    a_unmix = linalg.pinv(b_mix)
+    # recontructing signals: dot product of unmixing matrix and input traces
+    r_source = np.dot(a_unmix, traces.T).T
+    return mix, a_mix, a_unmix, r_source
+
+
+def extract_active(traces, len_ne=20, th_ag=10, do_plots=0):
+    traces_sig = traces[0, :, :]
+    traces_ct = traces[1, :, :]
+    # extract events for input, signal
+    traces_sig_evs, evs_ind = at.get_traces_evs(traces_sig, th_ag, len_ne, do_plots)
+    # apply active indeces to ct trace as well:
+    traces_ct_evs = []
+    for i in range(evs_ind.shape[0]):
+        trace_ct = traces_ct[i, evs_ind[i]]
+        traces_ct_evs.append(trace_ct)
+    return traces_sig_evs, traces_ct_evs
