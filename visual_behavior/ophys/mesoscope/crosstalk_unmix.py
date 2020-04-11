@@ -116,22 +116,37 @@ class MesoscopeICA(object):
         :param roi_name: string, default name for roi-related in/outs
         :param np_name: string, default name for neuropil-related ins/outs
         """
+        # self.tkeys = ['roi', 'np']
+        # self.pkeys = ['pl1', 'pl2']
 
         self.session_id = session_id
         self.dataset = ms.MesoscopeDataset(session_id)
         self.session_cache_dir = None
         self.debug_mode = debug_mode
+
+        # self.names = {'roi':roi_name, 'np':np_name}
         self.roi_name = roi_name  # prefix for files related to roi traces
         self.np_name = np_name  # prefix for files related to nuropil traces
         self.cache = cache  # analysis directory
 
+        # self.exp_ids = {key:None for key in self.pkeys}
         self.pl1_exp_id = None  # plane 1 experiment id
         self.pl2_exp_id = None  # plane 2 experiment id
 
+        self.dirs = {key:None for key in self.tkeys}
         self.roi_dir = None  # path to subdir containing roi-related files
         self.np_dir = None  # path to subdir containing neuropil-related files
 
         # pointers and attributes related to raw traces
+
+        # self.raws = {}
+        # self.paths = {}
+        # for pkey in self.pkeys:
+        #     self.raws[pkey] = {}
+        #     for tkey in self.tkeys:
+        #         self.raws[pkey][tkey] = None
+        #
+        # self.raws['pl1']['roi']
 
         self.pl1_roi_raw = None  # raw extracted traces for rois, plane 1
         self.pl1_roi_raw_path = None  # path to raw extracted traces for rois, plane 1
@@ -469,6 +484,10 @@ class MesoscopeICA(object):
             self.pl1_neuropil_traces_valid_path = pl1_neuropil_traces_valid_path
             self.pl2_neuropil_traces_valid_path = pl2_neuropil_traces_valid_path
         else:
+            for pkey in self.pkeys:
+                for tkey in self.tkeys:
+                    self.valid_path.pkey.tkey = None
+
             self.pl1_rois_valid_path = None
             self.pl2_rois_valid_path = None
             self.pl1_neuropil_traces_valid_path = None
@@ -1700,3 +1719,9 @@ def extract_active(traces, len_ne=20, th_ag=10, do_plots=0):
         trace_ct = traces_ct[i, evs_ind[i]]
         traces_ct_evs.append(trace_ct)
     return traces_sig_evs, traces_ct_evs
+
+
+# for pkey in self.pkeys:
+#     for tkey in self.tkeys:
+#         out_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
+#                                              f'{self.exp_ids[pkey]}_out.h5')
