@@ -134,12 +134,12 @@ class MesoscopeICA(object):
         # pointers and attributes related to raw traces
         self.raws = {}
         self.raw_paths = {}
-        for pkey in self.pkeys:
-            self.raws[pkey] = {}
-            self.raw_paths[pkey] = {}
-            for tkey in self.tkeys:
-                self.raws[pkey][tkey] = None
-                self.raw_paths[pkey][tkey] = None
+        for tkey in self.tkeys:
+            self.raws[tkey] = {}
+            self.raw_paths[tkey] = {}
+            for pkey in self.pkeys:
+                self.raws[tkey][pkey] = None
+                self.raw_paths[tkey][pkey] = None
         self.found_raw_roi_traces = None  # flag if raw roi traces exist in self.dirs["roi"] output of get_traces
         self.found_raw_np_traces = None  # flag if raw neuropil tarces exist in self.dirs["np"] output of get_traces
 
@@ -157,14 +157,14 @@ class MesoscopeICA(object):
         self.ins = {}
         self.ins_paths = {}
         self.offsets = {}
-        for pkey in self.pkeys:
-            self.ins[pkey] = {}
-            self.ins_paths[pkey] = {}
-            self.offsets[pkey] = {}
-            for tkey in self.tkeys:
-                self.ins[pkey][tkey] = None
-                self.ins_paths[pkey][tkey] = None
-                self.offsets[pkey][tkey] = None
+        for tkey in self.tkeys:
+            self.ins[tkey] = {}
+            self.ins_paths[tkey] = {}
+            self.offsets[tkey] = {}
+            for pkey in self.pkeys:
+                self.ins[tkey][pkey] = None
+                self.ins_paths[tkey][pkey] = None
+                self.offsets[tkey][pkey] = None
         self.found_roi_in = [None, None]  # flag for traces exists, roi
         self.found_roi_offset = [None, None]  # flag for offset data exists, roi
         # for neuropil
@@ -175,14 +175,14 @@ class MesoscopeICA(object):
         self.outs = {}
         self.outs_paths = {}
         self.crosstalk = {}
-        for pkey in self.pkeys:
-            self.outs[pkey] = {}
-            self.outs_paths[pkey] = {}
-            self.crosstalk[pkey] = {}
-            for tkey in self.tkeys:
-                self.outs[pkey][tkey] = None
-                self.outs_paths[pkey][tkey] = None
-                self.crosstalk[pkey][tkey] = None
+        for tkey in self.tkeys:
+            self.outs[tkey] = {}
+            self.outs_paths[tkey] = {}
+            self.crosstalk[tkey] = {}
+            for pkey in self.pkeys:
+                self.outs[tkey][pkey] = None
+                self.outs_paths[tkey][pkey] = None
+                self.crosstalk[tkey][pkey] = None
 
         self.found_solution = None  # out of unmix_pls
         self.found_solution_neuropil = None
@@ -244,12 +244,12 @@ class MesoscopeICA(object):
         self.found_raw_roi_traces = [False, False]
         self.found_raw_np_traces = [False, False]
 
-        # paths to traces:
+        # define paths to traces:
         path = {}
-        for pkey in self.pkeys:
-            path[pkey] = {}
-            for tkey in self.tkeys:
-                path[pkey][tkey] = f'{self.dirs[tkey]}{dir_name[tkey]}_{self.exp_ids[pkey]}.h5'
+        for tkey in self.tkeys:
+            path[tkey] = {}
+            for pkey in self.pkeys:
+                path[tkey][pkey] = f'{self.dirs[tkey]}{dir_name[tkey]}_{self.exp_ids[pkey]}.h5'
 
         # let's see if all traces exist already:
         if os.path.isfile(path["pl1"]["roi"]) and os.path.isfile(path["pl2"]["roi"]) and os.path.isfile(
@@ -258,35 +258,18 @@ class MesoscopeICA(object):
 
             logger.info('Found traces in cache, reading from h5 file')
 
-            # read traces form h5 file:
-            with h5py.File(path["pl1"]["roi"], "r") as f:
-                pl1_traces_original = f["data"][()]
-                pl1_roi_names = f["roi_names"][()]
-            with h5py.File(path["pl2"]["roi"], "r") as f:
-                pl2_traces_original = f["data"][()]
-                pl2_roi_names = f["roi_names"][()]
+            # read roi names from file
+            for pkey in self.pkeys:
+                with h5py.File(path["roi"][pkey], "r") as f:
+                    self.rois_names[pkey] = f["roi_names"][()]
 
-            # read neuropil traces form h5 file:
-            with h5py.File(path["pl1"]["np"], "r") as f:
-                pl1_neuropil_original = f["data"][()]
-
-            with h5py.File(path["pl2"]["np"], "r") as f:
-                pl2_neuropil_original = f["data"][()]
-
-####
+            # read traces from file:
             for tkey in self.tkeys:
                 for pkey in self.pkeys:
-                    self.raw_paths[pkey][tkey] = path[pkey][tkey]
+                    self.raw_paths[tkey][pkey] = path[tkey][pkey]
+                    with h5py.File(path[tkey][pkey], "r") as f:
+                        self.raws[tkey][pkey] = f["data"][()]
 
-            self.raws["pl1"]["roi"] = pl1_traces_original
-            self.raws["pl2"]["roi"] = pl2_traces_original
-            self.rois_names["pl1"] = pl1_roi_names
-            self.rois_names["pl2"] = pl2_roi_names
-
-            #  same for neuropil:
-
-            self.raws["pl1"]["np"] = pl1_neuropil_original
-            self.raws["pl1"]["np"]= pl2_neuropil_original
             # set found traces flag True
             self.found_raw_roi_traces = [True, True]
             # set found neuropil traces flag True
@@ -298,13 +281,13 @@ class MesoscopeICA(object):
 
             # if traces don't exist, do we need to reset unmixed and debiased traces flaggs to none?
             # yes, as we want unmixed traces be out on ICA using original traces
-            for pkey in self.pkeys:
-                for tkey in self.tkeys:
-                    self.ins_paths[pkey][tkey] = None
-                    self.outs_paths[pkey][tkey] = None
+            for tkey in self.tkeys:
+                for pkey in self.pkeys:
+                    self.ins_paths[tkey][pkey] = None
+                    self.outs_paths[tkey][pkey] = None
 
-            self.rois_names["pl1"] = None
-            self.rois_names["pl2"] = None
+            for pkey in self.pkeys:
+                self.rois_names[pkey] = None
 
             pl1_folder = self.dataset.get_exp_folder(self.exp_ids["pl1"])
             pl2_folder = self.dataset.get_exp_folder(self.exp_ids["pl2"])
