@@ -134,12 +134,12 @@ class MesoscopeICA(object):
         # pointers and attributes related to raw traces
         self.raws = {}
         self.raw_paths = {}
+        self.rois_names = {}
         # pointers and attributes related to ica input traces
         self.ins = {}
         self.ins_paths = {}
         self.offsets = {}
         # pointers and attributes for validation jsons
-        self.rois_names = {}
         self.rois_valid = {}
         self.rois_valid_paths = {}
         # pointers and attirbutes for ica output files
@@ -147,14 +147,14 @@ class MesoscopeICA(object):
         self.outs_paths = {}
         self.crosstalk = {}
         for pkey in self.pkeys:
-            self.raws[pkey] = {}
-            self.raw_paths[pkey] = {}
-            self.ins[pkey] = {}
-            self.ins_paths[pkey] = {}
-            self.offsets[pkey] = {}
             self.rois_names[pkey] = None
             self.rois_valid[pkey] = None
             self.rois_valid_paths[pkey] = None
+            self.raw_paths[pkey] = {}
+            self.raws[pkey] = {}
+            self.ins[pkey] = {}
+            self.ins_paths[pkey] = {}
+            self.offsets[pkey] = {}
             self.outs[pkey] = {}
             self.outs_paths[pkey] = {}
             self.crosstalk[pkey] = {}
