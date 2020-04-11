@@ -253,15 +253,15 @@ class MesoscopeICA(object):
 
         # path to ica traces:
         # for roi
-        ica_traces_dir = os.path.join(self.session_dir, f'{roi_dir_name}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
-        self.dirs["roi"] = ica_traces_dir
-        path_traces_pl1 = f'{ica_traces_dir}traces_original_{self.exp_ids["pl1"]}.h5'
-        path_traces_pl2 = f'{ica_traces_dir}traces_original_{self.exp_ids["pl2"]}.h5'
+        # ica_traces_dir = os.path.join(self.session_dir, f'{roi_dir_name}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
+        # self.dirs["roi"] = ica_traces_dir
+        path_traces_pl1 = f'{self.dirs["roi"]}traces_original_{self.exp_ids["pl1"]}.h5'
+        path_traces_pl2 = f'{self.dirs["roi"]}traces_original_{self.exp_ids["pl2"]}.h5'
         # for neuropil
-        ica_neuropil_dir = os.path.join(self.session_dir, f'{np_dir_name}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
-        self.dirs["np"] = ica_neuropil_dir
-        path_neuropil_pl1 = f'{ica_neuropil_dir}neuropil_original_{self.exp_ids["pl1"]}.h5'
-        path_neuropil_pl2 = f'{ica_neuropil_dir}neuropil_original_{self.exp_ids["pl2"]}.h5'
+        # ica_neuropil_dir = os.path.join(self.session_dir, f'{np_dir_name}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
+        # self.dirs["np"] = ica_neuropil_dir
+        path_neuropil_pl1 = f'{ self.dirs["np"]}neuropil_original_{self.exp_ids["pl1"]}.h5'
+        path_neuropil_pl2 = f'{ self.dirs["np"]}neuropil_original_{self.exp_ids["pl2"]}.h5'
 
         # let's see if all traces exist already:
         if os.path.isfile(path_traces_pl1) and os.path.isfile(path_traces_pl2) and os.path.isfile(
