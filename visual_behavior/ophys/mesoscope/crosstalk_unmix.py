@@ -148,8 +148,8 @@ class MesoscopeICA(object):
         self.crosstalk = {}
         for pkey in self.pkeys:
             self.rois_names[pkey] = None
-            self.rois_valid[pkey] = None
-            self.rois_valid_paths[pkey] = None
+            self.rois_valid[pkey] = {}
+            self.rois_valid_paths[pkey] = {}
             self.raw_paths[pkey] = {}
             self.raws[pkey] = {}
             self.ins[pkey] = {}
@@ -161,6 +161,8 @@ class MesoscopeICA(object):
             for tkey in self.tkeys:
                 self.raws[pkey][tkey] = None
                 self.raw_paths[pkey][tkey] = None
+                self.rois_valid[pkey][tkey] = None
+                self.rois_valid_paths[pkey][tkey] = None
                 self.ins[pkey][tkey] = None
                 self.ins_paths[pkey][tkey] = None
                 self.offsets[pkey][tkey] = None
@@ -257,17 +259,14 @@ class MesoscopeICA(object):
                     path[pkey_1][tkey_1] = f'{self.dirs[tkey_1]}{name[tkey_1]}_{self.exp_ids[pkey_1]}.h5'
 
             # check if traces exist already:
-            if os.path.isfile(path["pl1"]["roi"]) and os.path.isfile(path["pl2"]["roi"]) and os.path.isfile(
-                    path["pl1"]["np"]) and os.path.isfile(path["pl2"]["np"]):
+            traces_exist = True
+            for pkey in self.pkeys:
+                for tkey in self.tkeys:
+                    if not os.path.isfile(path[pkey][tkey]):
+                        traces_exist = False
+                        self.found_raws[pkey][tkey] = False
 
-                for pkey_2 in self.pkeys:
-                    for tkey_2 in self.tkeys:
-                        self.found_raws[pkey_2][tkey_2] = True
-                break
-
-        if self.found_raws["pl1"]["roi"] and self.found_raws["pl2"]["roi"] and self.found_raws["pl1"]["np"] and \
-                self.found_raws["pl1"]["roi"]:
-
+        if traces_exist:
             # if both traces exist, skip extracting:
             logger.info('Found traces in cache, reading from h5 file')
 
@@ -355,168 +354,134 @@ class MesoscopeICA(object):
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-        self.pl1_rois_valid_path = None
-        self.pl2_rois_valid_path = None
-
-        self.pl1_neuropil_traces_valid_path = None
-        self.pl2_neuropil_traces_valid_path = None
-
-        pl1_roi_traces_valid_path = os.path.join(self.dirs["roi"], f'{self.exp_ids["pl1"]}_valid.json')
-        pl2_roi_traces_valid_path = os.path.join(self.dirs["roi"], f'{self.exp_ids["pl2"]}_valid.json')
-
-        pl1_neuropil_traces_valid_path = os.path.join(self.dirs["np"], f'{self.exp_ids["pl1"]}_valid.json')
-        pl2_neuropil_traces_valid_path = os.path.join(self.dirs["np"], f'{self.exp_ids["pl2"]}_valid.json')
+        rois_valid_paths = {}
+        rois_valid = {}
+        for pkey in self.pkeys:
+            self.rois_valid[pkey] = {}
+            self.rois_valid_paths[pkey] = {}
+            rois_valid_paths[pkey] = {}
+            rois_valid[pkey] = {}
+            for tkey in self.tkeys:
+                rois_valid_paths[pkey][tkey] = os.path.join(self.dirs[tkey], f'{self.exp_ids[pkey]}_valid.json')
+                rois_valid[pkey][tkey] = {}
 
         # validation json already exists, skip validating
-        if os.path.isfile(pl1_roi_traces_valid_path) and os.path.isfile(
-                pl2_roi_traces_valid_path) and os.path.isfile(
-                pl1_neuropil_traces_valid_path) and os.path.isfile(
-                pl2_neuropil_traces_valid_path):
-            self.pl1_rois_valid_path = pl1_roi_traces_valid_path
-            self.pl2_rois_valid_path = pl2_roi_traces_valid_path
-            self.pl1_neuropil_traces_valid_path = pl1_neuropil_traces_valid_path
-            self.pl2_neuropil_traces_valid_path = pl2_neuropil_traces_valid_path
+        paths_valid = True
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                if not os.path.isfile(rois_valid_paths[pkey][tkey]):
+                    paths_valid = False
+
+        if paths_valid:
+            for pkey in self.pkeys:
+                for tkey in self.tkeys:
+                    self.rois_valid_paths[pkey][tkey] = rois_valid_paths[pkey][tkey]
+
         else:
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
-                    self.valid_path.pkey.tkey = None
+                    self.rois_valid_paths[pkey][tkey] = None
 
-            self.pl1_rois_valid_path = None
-            self.pl2_rois_valid_path = None
-            self.pl1_neuropil_traces_valid_path = None
-            self.pl2_neuropil_traces_valid_path = None
+        # do pointers to validated traces exist?
+        paths_exist = True
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                if self.rois_valid_paths[pkey][tkey] is None:
+                    paths_exist = False
 
-        if (not self.pl1_rois_valid_path) and (not self.pl2_rois_valid_path) and (
-                not self.pl1_neuropil_traces_valid_path) and (not self.pl2_neuropil_traces_valid_path):
+        if not paths_exist:  # traces need validation:
 
-            # traces need validation:
-            # traces exist?
-            if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1] and self.found_raw_np_traces[0] and \
-                    self.found_raw_np_traces[1]:
-                # traces, pl 1:
-                pl1_sig_trace_valid = {}
-                pl1_sig_neuropil_valid = {}
-                pl1_ct_trace_valid = {}
-                pl1_ct_neuropil_valid = {}
+            # do extracted traces exist?
+            traces_exist = True
+            for pkey in self.pkeys:
+                for tkey in self.tkeys:
+                    if not self.found_raws[pkey][tkey]:
+                        traces_exist = False
 
-                num_traces_roi_sig, _ = self.raws["pl1"]["roi"][0].shape
-                num_traces_neuropil_sig, _ = self.raws["pl1"]["np"][0].shape
-                num_traces_roi_ct, _ = self.raws["pl1"]["roi"][1].shape
-                num_traces_neuropil_ct, _ = self.raws["pl1"]["np"][1].shape
+            if traces_exist:
+                sig_valid = {}
+                ct_valid = {}
+                rois_valid = {}
+                for pkey in self.pkeys:
+                    sig_valid[pkey] = {}
+                    ct_valid[pkey] = {}
+                    rois_valid[pkey] = {}
+                    for tkey in self.tkeys:
+                        sig_valid[pkey][tkey] = {}
+                        ct_valid[pkey][tkey] = {}
+                        rois_valid[pkey][tkey] = {}
 
-                if not (num_traces_roi_sig == num_traces_neuropil_sig) or not (
-                        num_traces_roi_ct == num_traces_neuropil_ct):
-                    logger.info('Neuropil and ROI traces are not aligned')
-                else:
-                    for n in range(num_traces_roi_sig):
-                        trace_roi_sig = self.raws["pl1"]["roi"][0][n]
-                        trace_neuropil_sig = self.raws["pl1"]["np"][0][n]
-                        trace_roi_ct = self.raws["pl1"]["roi"][1][n]
-                        trace_neuropil_ct = self.raws["pl1"]["np"][1][n]
+                num_traces_sig = {}
+                num_traces_ct = {}
+                for pkey in self.pkeys:
+                    num_traces_sig[pkey] = {}
+                    num_traces_ct[pkey] = {}
+                    for tkey in self.tkeys:
+                        num_traces_sig[pkey][tkey] = self.raws[pkey][tkey][0].shape[0]
+                        num_traces_ct[pkey][tkey] = self.raws[pkey][tkey][1].shape[0]
 
-                        if np.any(np.isnan(trace_roi_sig)) or np.any(np.isnan(trace_neuropil_sig)) or np.any(
-                                np.isnan(trace_roi_ct)) or np.any(np.isnan(trace_neuropil_ct)):
-                            pl1_sig_trace_valid[str(self.rois_names["pl1"][n])] = False
-                            pl1_sig_neuropil_valid[str(self.rois_names["pl1"][n])] = False
-                            pl1_ct_trace_valid[str(self.rois_names["pl1"][n])] = False
-                            pl1_ct_neuropil_valid[str(self.rois_names["pl1"][n])] = False
-                        else:
-                            pl1_sig_trace_valid[str(self.rois_names["pl1"][n])] = True
-                            pl1_sig_neuropil_valid[str(self.rois_names["pl1"][n])] = True
-                            pl1_ct_trace_valid[str(self.rois_names["pl1"][n])] = True
-                            pl1_ct_neuropil_valid[str(self.rois_names["pl1"][n])] = True
+                # check if traces are aligned:
+                traces_aligned = True
+                for pkey in self.pkeys:
+                        if not num_traces_sig[pkey]["roi"] == num_traces_sig[pkey]["np"]:
+                            traces_aligned = False
+                            logger.info('Neuropil and ROI traces are not aligned')
 
-                # traces, pl 2:
-                # signal:
-                pl2_sig_trace_valid = {}
-                pl2_sig_neuropil_valid = {}
-                pl2_ct_trace_valid = {}
-                pl2_ct_neuropil_valid = {}
+                if traces_aligned:
+                    trace_sig = {}
+                    trace_ct = {}
+                    for pkey in self.pkeys:
+                        for n in range(num_traces_sig[pkey]["roi"]):
+                            trace_sig[pkey] = {}
+                            trace_ct[pkey] = {}
+                            for tkey in self.tkeys:
+                                trace_sig[pkey][tkey] = self.raws[pkey][tkey][0][n]
+                                trace_ct[pkey][tkey] = self.raws[pkey][tkey][1][n]
 
-                num_traces_roi_sig, _ = self.raws["pl2"]["roi"][0].shape
-                num_traces_neuropil_sig, _ = self.raws["pl2"]["np"][0].shape
-                num_traces_roi_ct, _ = self.raws["pl2"]["roi"][1].shape
-                num_traces_neuropil_ct, _ = self.raws["pl2"]["np"][1].shape
+                            # check if traces contains np.NaN
+                            traces_valid_flag = True
+                            for tkey in self.tkeys:
+                                if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_sig[pkey][tkey])):
+                                    traces_valid_flag = False
 
-                if not (num_traces_roi_sig == num_traces_neuropil_sig) or not (
-                        num_traces_roi_ct == num_traces_neuropil_ct):
-                    logger.info('Neuropil and ROI traces are not aligned')
-                else:
-                    for n in range(num_traces_roi_sig):
-                        trace_roi_sig = self.raws["pl2"]["roi"][0][n]
-                        trace_neuropil_sig = self.raws["pl2"]["np"][0][n]
-                        trace_roi_ct = self.raws["pl2"]["roi"][1][n]
-                        trace_neuropil_ct = self.raws["pl2"]["np"][1][n]
-
-                        if np.any(np.isnan(trace_roi_sig)) or np.any(np.isnan(trace_neuropil_sig)) or np.any(
-                                np.isnan(trace_roi_ct)) or np.any(np.isnan(trace_neuropil_ct)):
-                            pl2_sig_trace_valid[str(self.rois_names["pl2"][n])] = False
-                            pl2_sig_neuropil_valid[str(self.rois_names["pl2"][n])] = False
-                            pl2_ct_trace_valid[str(self.rois_names["pl2"][n])] = False
-                            pl2_ct_neuropil_valid[str(self.rois_names["pl2"][n])] = False
-                        else:
-                            pl2_sig_trace_valid[str(self.rois_names["pl2"][n])] = True
-                            pl2_sig_neuropil_valid[str(self.rois_names["pl2"][n])] = True
-                            pl2_ct_trace_valid[str(self.rois_names["pl2"][n])] = True
-                            pl2_ct_neuropil_valid[str(self.rois_names["pl2"][n])] = True
+                            if traces_valid_flag:
+                                for tkey in self.tkeys:
+                                    sig_valid[pkey][tkey][str(self.rois_names[pkey][n])] = True
+                                    ct_valid[pkey][tkey][str(self.rois_names[pkey][n])] = True
+                            else:
+                                for tkey in self.tkeys:
+                                    sig_valid[pkey][tkey][str(self.rois_names[pkey][n])] = False
+                                    ct_valid[pkey][tkey][str(self.rois_names[pkey][n])] = False
 
                 # combining dictionaries for signal and crosstalk
-                pl1_roi_traces_valid = {"signal": pl1_sig_trace_valid,
-                                        "crosstalk": pl1_ct_trace_valid}
-                pl2_roi_traces_valid = {"signal": pl2_sig_trace_valid,
-                                        "crosstalk": pl2_ct_trace_valid}
-
-                pl1_neuropil_traces_valid = {"signal": pl1_sig_neuropil_valid,
-                                             "crosstalk": pl1_ct_neuropil_valid}
-                pl2_neuropil_traces_valid = {"signal": pl2_sig_neuropil_valid,
-                                             "crosstalk": pl2_ct_neuropil_valid}
+                for pkey in self.pkeys:
+                    for tkey in self.tkeys:
+                        rois_valid[pkey][tkey] = {"signal": sig_valid[pkey][tkey],
+                                                  "crosstalk": ct_valid[pkey][tkey]}
 
                 # validating agains VBA rois set:
                 if return_vba:
-                    pl1_roi_traces_valid = self.validate_against_vba(pl1_roi_traces_valid,
-                                                                     self.exp_ids["pl1"], VBA_CACHE)
-                    pl2_roi_traces_valid = self.validate_against_vba(pl2_roi_traces_valid,
-                                                                     self.exp_ids["pl2"], VBA_CACHE)
+                    for pkey in self.pkeys:
+                        for tkey in self.tkeys:
+                            rois_valid[pkey][tkey] = self.validate_against_vba(rois_valid[pkey][tkey],
+                                                                               self.exp_ids[pkey], VBA_CACHE)
 
-                    pl1_neuropil_traces_valid = self.validate_against_vba(pl1_neuropil_traces_valid,
-                                                                          self.exp_ids["pl1"], VBA_CACHE)
-                    pl2_neuropil_traces_valid = self.validate_against_vba(pl2_neuropil_traces_valid,
-                                                                          self.exp_ids["pl2"], VBA_CACHE)
                 # saving to json:
-
-                self.pl1_rois_valid_path = pl1_roi_traces_valid_path
-                ju.write(pl1_roi_traces_valid_path, pl1_roi_traces_valid)
-                self.pl1_rois_valid = pl1_roi_traces_valid
-
-                self.pl2_rois_valid_path = pl2_roi_traces_valid_path
-                ju.write(pl2_roi_traces_valid_path, pl2_roi_traces_valid)
-                self.pl2_rois_valid = pl2_roi_traces_valid
-
-                self.pl1_neuropil_traces_valid_path = pl1_neuropil_traces_valid_path
-                ju.write(pl1_neuropil_traces_valid_path, pl1_neuropil_traces_valid)
-                self.pl1_neuropil_traces_valid = pl1_neuropil_traces_valid
-
-                self.pl2_neuropil_traces_valid_path = pl2_neuropil_traces_valid_path
-                ju.write(pl2_neuropil_traces_valid_path, pl2_neuropil_traces_valid)
-                self.pl2_neuropil_traces_valid = pl2_neuropil_traces_valid
+                for pkey in self.pkeys:
+                    for tkey in self.tkeys:
+                        self.rois_valid_paths[pkey][tkey] = rois_valid_paths[pkey][tkey]
+                        ju.write(rois_valid_paths[pkey][tkey], rois_valid[pkey][tkey])
+                        self.rois_valid = rois_valid[pkey][tkey]
 
             else:
                 logger.info('ROI traces dont exist in cache, run get_ica_traces first')
-        else:
-            # traces have been validated
 
+        else:  # traces have been validated
             # read the jsons for ROIs
-            pl1_roi_traces_valid = ju.read(pl1_roi_traces_valid_path)
-            pl2_roi_traces_valid = ju.read(pl2_roi_traces_valid_path)
-            self.pl1_rois_valid = pl1_roi_traces_valid
-            self.pl2_rois_valid = pl2_roi_traces_valid
-
-            # read the jsons for neuropil
-            pl1_neuropil_traces_valid = ju.read(pl1_neuropil_traces_valid_path)
-            pl2_neuropil_traces_valid = ju.read(pl2_neuropil_traces_valid_path)
-            self.pl1_neuropil_traces_valid = pl1_neuropil_traces_valid
-            self.pl2_neuropil_traces_valid = pl2_neuropil_traces_valid
-
+            for pkey in self.pkeys:
+                for tkey in self.tkeys:
+                    rois_valid[pkey][tkey] = ju.read(rois_valid_paths[pkey][tkey])
+                    self.rois_valid[pkey][tkey] = rois_valid[pkey][tkey]
         return
 
     def debias_rois(self):
