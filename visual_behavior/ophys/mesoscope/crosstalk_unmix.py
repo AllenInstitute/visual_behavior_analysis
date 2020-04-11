@@ -136,6 +136,7 @@ class MesoscopeICA(object):
         self.raw_paths = {}
         for pkey in self.pkeys:
             self.raws[pkey] = {}
+            self.raw_paths[pkey] = {}
             for tkey in self.tkeys:
                 self.raws[pkey][tkey] = None
                 self.raw_paths[pkey][tkey] = None
