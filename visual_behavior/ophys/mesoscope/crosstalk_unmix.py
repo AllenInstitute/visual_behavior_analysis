@@ -920,7 +920,7 @@ class MesoscopeICA(object):
         pl_mixing = []
         figs_ct_in = []
         figs_ct_out = []
-        # run ica on active traces, apply unmixing matrix to entire trace, plot entire trace
+        # run ica on active traces, apply unmixing matrix to entire trace
         ica_pl_out = np.empty(ica_in.shape)
         for i in range(len(roi_names)):
             # get roi names
@@ -980,24 +980,15 @@ class MesoscopeICA(object):
         pl2_out_path = os.path.join(self.roi_dir,
                                     f'{self.pl2_exp_id}_out.h5')
 
-        pl1_crosstalk_path = os.path.join(self.roi_dir,
-                                          f'{self.pl1_exp_id}_crosstalk.h5')
-        pl2_crosstalk_path = os.path.join(self.roi_dir,
-                                          f'{self.pl2_exp_id}_crosstalk.h5')
-
         # file already exists, skip unmixing
-        if os.path.isfile(pl1_out_path) and os.path.isfile(pl2_out_path) and os.path.isfile(pl1_crosstalk_path) \
-                and os.path.isfile(pl2_crosstalk_path):
+        if os.path.isfile(pl1_out_path) and os.path.isfile(pl2_out_path):
             self.pl1_roi_out_path = pl1_out_path
             self.pl2_roi_out_path = pl2_out_path
-
-
         else:
             self.pl1_roi_out_path = None
             self.pl2_roi_out_path = None
 
-        if (self.pl1_roi_out_path is None) or (self.pl2_roi_out_path is None) or (self.pl1_roi_crosstalk_path is None) \
-                or (self.pl2_roi_crosstalk_path is None):
+        if (self.pl1_roi_out_path is None) or (self.pl2_roi_out_path is None):
             # if unmixed traces don't exist, run unmixing
             if np.any(np.isnan(self.pl1_roi_in)) or np.any(np.isinf(self.pl2_roi_in)) or np.any(
                     np.isnan(self.pl1_roi_in)) or np.any(np.isinf(self.pl2_roi_in)):
@@ -1052,143 +1043,6 @@ class MesoscopeICA(object):
                 pl2_out = f["data"][()]
             self.pl1_ica_out = pl1_out
             self.pl2_ica_out = pl2_out
-        return
-
-    def unmix_neuropil(self, max_iter=10, np_name=None):
-        """
-        fn to apply Fast ICA to combined, debiased neuropil traces
-        :param max_iter: int, number of iterations for FastICA
-        :param np_name: string, filename prefix to use if different from self.np_name
-        :return: None
-        """
-        if not np_name:
-            np_name = self.np_name
-
-        pl1_ica_neuropil_out_path = os.path.join(self.np_dir,
-                                                 f'{np_name}_out_{self.pl1_exp_id}.h5')
-        pl2_ica_neuropil_out_path = os.path.join(self.np_dir,
-                                                 f'{np_name}_out_{self.pl2_exp_id}.h5')
-        ica_mixing_matrix_neuropil_path = os.path.join(self.np_dir,
-                                                       f'{np_name}_mixing.h5')
-
-        # file already exists, skip unmixing
-        if os.path.isfile(pl1_ica_neuropil_out_path) and os.path.isfile(
-                pl2_ica_neuropil_out_path) and os.path.isfile(ica_mixing_matrix_neuropil_path):
-            self.pl1_np_out_path = pl1_ica_neuropil_out_path
-            self.pl2_np_out_path = pl2_ica_neuropil_out_path
-            self.ica_mixing_matrix_neuropil_path = ica_mixing_matrix_neuropil_path
-        else:
-            self.pl1_np_out_path = None
-            self.pl2_np_out_path = None
-            self.ica_mixing_matrix_neuropil_path = None
-
-        if (self.pl1_np_out_path is None) or (self.pl2_np_out_path is None):
-            # if unmixed traces don't exist, run unmixing
-            logger.info("Unmixed neuropil traces do not exist in cache, running ICA")
-
-            if np.any(np.isnan(self.pl1_np_in)) or np.any(
-                np.isinf(self.pl1_np_in)) or np.any(
-                    np.isnan(self.pl2_np_in)) or np.any(np.isinf(self.pl2_np_in)):
-                logger.info("ValueError: ICA input contains NaN, infinity or a value too large for data type('float64')")
-            else:
-                traces = np.array([self.pl1_np_in, self.pl2_np_in]).T
-                b_mix = self.roi_matrix
-                w = linalg.pinv(b_mix)  # inverting mixing matrix to get unmixing matrix
-                s = np.dot(w, traces.T).T  # recontructing signals: dot product of unmixing matrix and in traces
-                self.roi_ica_out = s  # ica outoput to be written to disk, or used for debugging
-                self.neuropil_unmix = s  # inca utput to be rescaled and reshaped to the original form
-                self.neuropil_matrix = b_mix  # unmixing matrix to be written to disc
-                del b_mix
-                del s
-                
-                # rescaling traces back:
-                self.ica_neuropil_scale_top, self.ica_neuropil_scale_bot = self.find_scale_ica_neuropil()
-                pl1_ica_neuropil_out = self.neuropil_unmix[:, 0] * self.ica_neuropil_scale_top
-                pl2_ica_neuropil_out = self.neuropil_unmix[:, 1] * self.ica_neuropil_scale_bot
-
-                # reshaping traces
-                # new shape, excluding non valid ROIs
-                pl1_valid_shape = np.array(
-                    [self.pl1_neuropil_traces_valid['signal'][str(tid)] for tid in self.pl1_roi_names])
-                pl2_valid_shape = np.array(
-                    [self.pl2_neuropil_traces_valid['signal'][str(tid)] for tid in self.pl2_roi_names])
-                new_shape = [pl1_valid_shape.sum() + pl2_valid_shape.sum(), self.pl1_np_raw.shape[2]]
-                # reshaping
-                pl1_ica_neuropil_out = pl1_ica_neuropil_out.reshape(new_shape)
-                pl2_ica_neuropil_out = pl2_ica_neuropil_out.reshape(new_shape)
-
-                # splitting signal and crosstalk to compare variances and evaluate goodness of ICA
-                # ICA out:
-                pl1_out_sig = pl1_ica_neuropil_out[0:pl1_valid_shape.sum(), :]
-                pl1_out_ct = pl2_ica_neuropil_out[0:pl1_valid_shape.sum(), :]
-
-                pl2_out_ct = pl1_ica_neuropil_out[
-                    pl1_valid_shape.sum():pl1_valid_shape.sum() + pl2_valid_shape.sum(), :]
-                pl2_out_sig = pl2_ica_neuropil_out[
-                    pl1_valid_shape.sum():pl1_valid_shape.sum() + pl2_valid_shape.sum(), :]
-
-                # ICA input - only need sig to calculate rms between in and out.
-                pl1_ica_neuropil_input = self.pl1_ica_neuropil_input.reshape(new_shape)
-                pl2_ica_neuropil_input = self.pl2_ica_neuropil_input.reshape(new_shape)
-                pl1_in_sig = pl1_ica_neuropil_input[0:pl1_valid_shape.sum(), :]
-                pl2_in_sig = pl2_ica_neuropil_input[
-                    pl1_valid_shape.sum():pl1_valid_shape.sum() + pl2_valid_shape.sum(), :]
-
-                # rms of the delta (in, out)
-                # this value should be low as this is rms of signal traces before and after ICA:
-                pl1_err = self.ica_err([1], pl1_in_sig, pl1_out_sig)
-                # bottom to top is usually less SNR, so higher rms
-                pl2_err = self.ica_err([1], pl2_in_sig, pl2_out_sig)
-                self.pl1_np_err = pl1_err
-                self.pl2_np_err = pl2_err
-
-                # adding offset
-                pl1_out_sig = pl1_out_sig + self.pl1_np_offset['pl1_sig_neuropil_offset']
-                pl1_out_ct = pl1_out_ct + self.pl1_np_offset['pl1_ct_neuropil_offset']
-
-                pl2_out_sig = pl2_out_sig + self.pl2_np_offset['pl2_sig_neuropil_offset']
-                pl2_out_ct = pl2_out_ct + self.pl2_np_offset['pl2_ct_neuropil_offset']
-
-                pl1_ica_neuropil_out = np.array([pl1_out_sig, pl1_out_ct])
-                pl2_ica_neuropil_out = np.array([pl2_out_sig, pl2_out_ct])
-
-                self.pl1_np_out = pl1_ica_neuropil_out
-                self.pl2_np_out = pl2_ica_neuropil_out
-                self.pl1_np_out_path = pl1_ica_neuropil_out_path
-                self.pl2_np_out_path = pl2_ica_neuropil_out_path
-                self.ica_mixing_matrix_neuropil_path = ica_mixing_matrix_neuropil_path
-
-                # writing neuropil ICA out traces to disk
-
-                with h5py.File(self.pl1_np_out_path, "w") as f:
-                    f.create_dataset(f"data", data=pl1_ica_neuropil_out)
-
-                with h5py.File(self.pl2_np_out_path, "w") as f:
-                    f.create_dataset(f"data", data=pl2_ica_neuropil_out)
-
-                with h5py.File(self.ica_mixing_matrix_neuropil_path, "w") as f:
-                    f.create_dataset(f"mixing", data=self.neuropil_matrix)
-                    f.create_dataset(f"pl1_err", data=pl1_err)
-                    f.create_dataset(f"pl2_err", data=pl2_err)
-        else:
-            logger.info("Unmixed neuropil traces exist in cache, reading from h5 file")
-            self.found_solution_neuropil = True
-            self.pl1_np_out_path = pl1_ica_neuropil_out_path
-            self.pl2_np_out_path = pl2_ica_neuropil_out_path
-            self.ica_mixing_matrix_neuropil_path = ica_mixing_matrix_neuropil_path
-            with h5py.File(self.pl1_np_out_path, "r") as f:
-                pl1_ica_neuropil_out = f["data"][()]
-            with h5py.File(self.pl2_np_out_path, "r") as f:
-                pl2_ica_neuropil_out = f["data"][()]
-            with h5py.File(self.ica_mixing_matrix_neuropil_path, "r") as f:
-                neuropil_matrix = f["mixing"][()]
-                pl1_err = f["pl1_err"][()]
-                pl2_err = f["pl2_err"][()]
-            self.pl1_np_out = pl1_ica_neuropil_out
-            self.pl2_np_out = pl2_ica_neuropil_out
-            self.neuropil_matrix = neuropil_matrix
-            self.pl1_np_err = pl1_err
-            self.pl2_np_err = pl2_err
         return
 
     def plot_ica_traces(self, pair, samples_per_plot=10000, dir_name=None, cell_num=None, fig_show=True, fig_save=True):
