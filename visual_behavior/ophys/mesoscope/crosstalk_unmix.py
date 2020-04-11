@@ -284,16 +284,16 @@ class MesoscopeICA(object):
             with h5py.File(path_neuropil_pl2, "r") as f:
                 pl2_neuropil_original = f["data"][()]
 
-            self.raws_paths["pl1"]["roi"] = path_traces_pl1
-            self.raws_paths["pl2"]["roi"] = path_traces_pl2
+            self.raw_paths["pl1"]["roi"] = path_traces_pl1
+            self.raw_paths["pl2"]["roi"] = path_traces_pl2
             self.raws["pl1"]["roi"] = pl1_traces_original
             self.raws["pl2"]["roi"] = pl2_traces_original
             self.rois_names["pl1"] = pl1_roi_names
             self.rois_names["pl2"] = pl2_roi_names
 
             #  same for neuropil:
-            self.raws_paths["pl1"]["np"] = path_neuropil_pl1
-            self.raws_paths["pl2"]["np"] = path_neuropil_pl2
+            self.raw_paths["pl1"]["np"] = path_neuropil_pl1
+            self.raw_paths["pl2"]["np"] = path_neuropil_pl2
             self.raws["pl1"]["np"] = pl1_neuropil_original
             self.raws["pl1"]["np"]= pl2_neuropil_original
             # set found traces flag True
@@ -309,13 +309,13 @@ class MesoscopeICA(object):
             # yes, as we want unmixed traces be out on ICA using original traces
             self.ins_paths["pl1"]["roi"] = None
             self.ins_paths["pl2"]["roi"] = None
-            self.pl1_roi_out_path = None
-            self.pl2_roi_out_path = None
+            self.outs_paths["pl1"]["roi"] = None
+            self.outs_paths["pl2"]["roi"] = None
 
             self.ins_paths["pl1"]["np"] = None
             self.ins_paths["pl2"]["np"] = None
-            self.pl1_np_out_path = None
-            self.pl2_np_out_path = None
+            self.outs_paths["pl1"]["np"] = None
+            self.outs_paths["pl2"]["np"] = None
 
             self.rois_names["pl1"] = None
             self.rois_names["pl2"] = None
@@ -347,8 +347,8 @@ class MesoscopeICA(object):
             # DOES ROI traces DIR EXIST?
             if not os.path.isdir(self.session_dir):
                 os.mkdir(self.session_dir)
-            if not os.path.isdir(ica_traces_dir):
-                os.mkdir(ica_traces_dir)
+            if not os.path.isdir(self.dirs["roi"]):
+                os.mkdir(self.dirs["roi"])
             # if extracted traces valid, save to disk:
             if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1]:
                 # combining traces, saving to self, writing to disk:
@@ -364,7 +364,7 @@ class MesoscopeICA(object):
                 # same for pl 2:
                 pl2_traces_original = np.array([pl2_sig_traces, pl2_ct_traces])
                 self.raws["pl2"]["roi"] = pl2_traces_original
-                self.raws_paths["pl2"]["roi"] = path_traces_pl2
+                self.raw_paths["pl2"]["roi"] = path_traces_pl2
                 self.rois_names["pl2"] = pl2_roi_names
                 with h5py.File(path_traces_pl2, "w") as f:
                     f.create_dataset(f"data", data=pl2_traces_original)
@@ -372,22 +372,22 @@ class MesoscopeICA(object):
 
             if not os.path.isdir(self.session_dir):
                 os.mkdir(self.session_dir)
-            if not os.path.isdir(ica_neuropil_dir):
-                os.mkdir(ica_neuropil_dir)
+            if not os.path.isdir(self.dirs["np"]):
+                os.mkdir(self.dirs["np"])
 
             # if extracted traces not None, save to disk:
             if self.found_raw_np_traces[0] and self.found_raw_np_traces[1]:
                 # combining traces, saving to self, writing to disk:
                 pl1_neuropil_original = np.array([pl1_sig_neuropil, pl1_ct_neuropil])
                 self.raws["pl1"]["np"] = pl1_neuropil_original
-                self.raws_paths["pl1"]["np"] = path_neuropil_pl1
+                self.raw_paths["pl1"]["np"] = path_neuropil_pl1
                 with h5py.File(path_neuropil_pl1, "w") as f:
                     f.create_dataset(f"data", data=pl1_neuropil_original)
                     f.create_dataset(f"roi_names", data=np.int_(pl1_roi_names))
                 # same for pl 2:
                 pl2_neuropil_original = np.array([pl2_sig_neuropil, pl2_ct_neuropil])
                 self.raws["pl2"]["np"] = pl2_neuropil_original
-                self.raws_paths["pl2"]["np"] = path_neuropil_pl2
+                self.raw_paths["pl2"]["np"] = path_neuropil_pl2
                 with h5py.File(path_neuropil_pl2, "w") as f:
                     f.create_dataset(f"data", data=pl2_neuropil_original)
                     f.create_dataset(f"roi_names", data=np.int_(pl2_roi_names))
