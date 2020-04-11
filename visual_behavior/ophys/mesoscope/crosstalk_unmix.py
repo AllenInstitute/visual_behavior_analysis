@@ -244,6 +244,7 @@ class MesoscopeICA(object):
             for tkey in self.tkeys:
                 self.found_raws[pkey][tkey] = False
 
+        traces_exist = True
         for i in range(len(names_prefix)):
             # check ith set of names:
             name_prefix = names_prefix[i]
@@ -259,7 +260,6 @@ class MesoscopeICA(object):
                     path[pkey_1][tkey_1] = f'{self.dirs[tkey_1]}{name[tkey_1]}_{self.exp_ids[pkey_1]}.h5'
 
             # check if traces exist already:
-            traces_exist = True
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
                     if not os.path.isfile(path[pkey][tkey]):
@@ -399,6 +399,7 @@ class MesoscopeICA(object):
                         traces_exist = False
 
             if traces_exist:
+                logger.info("Validation jsons don't exist, running validation")
                 sig_valid = {}
                 ct_valid = {}
                 rois_valid = {}
@@ -477,6 +478,7 @@ class MesoscopeICA(object):
                 logger.info('ROI traces dont exist in cache, run get_ica_traces first')
 
         else:  # traces have been validated
+            logger.info("Validation jsons exist, skipping validation")
             # read the jsons for ROIs
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
