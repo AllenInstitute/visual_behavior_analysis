@@ -122,11 +122,12 @@ class MesoscopeICA(object):
         self.dataset = ms.MesoscopeDataset(session_id)
         self.session_dir = None
         self.debug_mode = debug_mode
+        self.cache = cache  # analysis directory
         self.session_dir = os.path.join(self.cache, f'session_{self.session_id}')
 
         # prefix for files related to roi and neuropil traces
         self.names = {'roi': roi_name, 'np': np_name}
-        self.cache = cache  # analysis directory
+
         self.exp_ids = {key: None for key in self.pkeys}
         self.dirs = {key: None for key in self.tkeys}
 
@@ -182,7 +183,6 @@ class MesoscopeICA(object):
                 self.outs[pkey][tkey] = None
                 self.outs_paths[pkey][tkey] = None
                 self.crosstalk[pkey][tkey] = None
-
 
         self.found_solution = None  # out of unmix_pls
         self.found_solution_neuropil = None
