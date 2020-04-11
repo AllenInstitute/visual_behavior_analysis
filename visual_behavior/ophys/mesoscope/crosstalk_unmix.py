@@ -255,7 +255,7 @@ class MesoscopeICA(object):
 
             # read traces and roi namesfrom file:
             for pkey in self.pkeys:
-                with h5py.File(path["roi"][pkey], "r") as f:
+                with h5py.File(path[pkey]["roi"], "r") as f:
                     self.rois_names[pkey] = f["roi_names"][()]
                 for tkey in self.tkeys:
                     self.found_raws[pkey][tkey] = True  # set found traces flag True
