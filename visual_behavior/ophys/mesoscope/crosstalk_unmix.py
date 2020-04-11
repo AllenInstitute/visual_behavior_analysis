@@ -231,13 +231,9 @@ class MesoscopeICA(object):
         """
         function to apply roi set to two image pls, first check if the traces have been extracted before,
         can use a different roi_name, if traces don't exist in cache, read roi set name form LIMS< apply to both signal and crosstalk pls
-        :param roi_dir_name: string, new name for roi-related files to use, different form self.names["roi"]
-        :param np_dir_name: string, new name for neuropil-related files to use, if need to be different form self.np_name
+        :param dir_name: string, new name for output files to use if different form self.names
         :return: list[bool bool]: flags to see if traces where extracted successfully
         """
-        if not dir_name:
-            dir_name = self.names
-
         if self.debug_mode:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
         else:
@@ -250,42 +246,47 @@ class MesoscopeICA(object):
 
         # paths to traces:
         path = {}
-        for tkey in self.tkeys:
-            path[tkey] = {}
-            for pkey in self.pkeys:
-                path[tkey][pkey] = f'{self.dirs[tkey]}{dir_name[tkey]}_{self.exp_ids[pkey]}.h5'
+        for pkey in self.pkeys:
+            path[pkey] = {}
+            for tkey in self.tkeys:
+                path[pkey][tkey] = f'{self.dirs[tkey]}{dir_name[tkey]}_{self.exp_ids[pkey]}.h5'
 
         # let's see if all traces exist already:
-        if os.path.isfile(path["roi"]["pl1"]) and os.path.isfile(path["roi"]["pl2"]) and os.path.isfile(
-                path["np"]["pl1"]) and os.path.isfile(path["np"]["pl2"]):
+        if os.path.isfile(path["pl1"]["roi"]) and os.path.isfile(path["pl2"]["roi"]) and os.path.isfile(
+                path["pl1"]["np"]) and os.path.isfile(path["pl2"]["np"]):
             # if both traces exist, skip extracting:
 
             logger.info('Found traces in cache, reading from h5 file')
+
+            for
+
             # read traces form h5 file:
-            with h5py.File(path["roi"]["pl1"], "r") as f:
+            with h5py.File(path["pl1"]["roi"], "r") as f:
                 pl1_traces_original = f["data"][()]
                 pl1_roi_names = f["roi_names"][()]
-            with h5py.File(path["roi"]["pl2"], "r") as f:
+            with h5py.File(path["pl2"]["roi"], "r") as f:
                 pl2_traces_original = f["data"][()]
                 pl2_roi_names = f["roi_names"][()]
 
             # read neuropil traces form h5 file:
-            with h5py.File(path["np"]["pl1"], "r") as f:
+            with h5py.File(path["pl1"]["np"], "r") as f:
                 pl1_neuropil_original = f["data"][()]
 
-            with h5py.File(path["np"]["pl2"], "r") as f:
+            with h5py.File(path["pl2"]["np"], "r") as f:
                 pl2_neuropil_original = f["data"][()]
 
-            self.raw_paths["pl1"]["roi"] = path["roi"]["pl1"]
-            self.raw_paths["pl2"]["roi"] = path["roi"]["pl2"]
+####
+            for tkey in self.tkeys:
+                for pkey in self.pkeys:
+                    self.raw_paths[pkey][tkey] = path[pkey][tkey]
+
             self.raws["pl1"]["roi"] = pl1_traces_original
             self.raws["pl2"]["roi"] = pl2_traces_original
             self.rois_names["pl1"] = pl1_roi_names
             self.rois_names["pl2"] = pl2_roi_names
 
             #  same for neuropil:
-            self.raw_paths["pl1"]["np"] = path["np"]["pl1"]
-            self.raw_paths["pl2"]["np"] = path["np"]["pl2"]
+
             self.raws["pl1"]["np"] = pl1_neuropil_original
             self.raws["pl1"]["np"]= pl2_neuropil_original
             # set found traces flag True
