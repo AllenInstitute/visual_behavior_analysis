@@ -252,8 +252,8 @@ class MesoscopeICA(object):
                 path[tkey][pkey] = f'{self.dirs[tkey]}{dir_name[tkey]}_{self.exp_ids[pkey]}.h5'
 
         # let's see if all traces exist already:
-        if os.path.isfile(path["pl1"]["roi"]) and os.path.isfile(path["pl2"]["roi"]) and os.path.isfile(
-                path["pl1"]["np"]) and os.path.isfile(path["pl2"]["np"]):
+        if os.path.isfile(path["roi"]["pl1"]) and os.path.isfile(path["roi"]["pl2"]) and os.path.isfile(
+                path["np"]["pl1"]) and os.path.isfile(path["np"]["pl2"]):
             # if both traces exist, skip extracting:
 
             logger.info('Found traces in cache, reading from h5 file')
