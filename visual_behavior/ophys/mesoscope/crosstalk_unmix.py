@@ -205,8 +205,8 @@ class MesoscopeICA(object):
         fn to set self.exp_ids
         :return:
         """
-        self.exp_ids = {key: exp_id for key in self.pkeys for exp_id in pair}
-
+        self.exp_ids["pl1"] = pair[0]
+        self.exp_ids["pl2"] = pair[1]
         return
 
     def set_ica_dirs(self, names=None):
