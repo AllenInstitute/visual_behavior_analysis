@@ -135,6 +135,7 @@ class MesoscopeICA(object):
         self.raws = {}
         self.raw_paths = {}
         self.rois_names = {}
+        self.rois_names_valid = {}
         # pointers and attributes related to ica input traces
         self.ins = {}
         self.ins_paths = {}
@@ -149,6 +150,7 @@ class MesoscopeICA(object):
         self.mixing = {}
         for pkey in self.pkeys:
             self.rois_names[pkey] = None
+            self.rois_names_valid[pkey] = None
             self.rois_valid[pkey] = {}
             self.rois_valid_paths[pkey] = {}
             self.raw_paths[pkey] = {}
@@ -187,22 +189,6 @@ class MesoscopeICA(object):
                 self.found_ins[pkey][tkey] = [None, None]
                 self.found_offsets[pkey][tkey] = [None, None]
                 self.found_solution[pkey][tkey] = False
-
-
-
-        self.roi_matrix = None
-        self.neuropil_matrix = None
-        self.roi_unmix = None
-        self.neuropil_unmix = None
-        self.pl1_roi_err = None
-        self.pl2_roi_err = None
-        self.pl1_np_err = None
-        self.pl2_np_err = None
-        self.neuropil_ica_out = None
-        self.ica_mixing_matrix_traces_path = None
-        self.roi_ica_out = None
-        self.pl1_ica_out = None
-        self.pl2_ica_out = None
 
     def set_exp_ids(self, pair):
         """
@@ -462,6 +448,9 @@ class MesoscopeICA(object):
                                     sig_valid[pkey][tkey][str(self.rois_names[pkey][n])] = False
                                     ct_valid[pkey][tkey][str(self.rois_names[pkey][n])] = False
 
+                        self.rois_names_valid[pkey] = [roi_name for roi_name in self.rois_names[pkey] if
+                                                       self.rois_valid[pkey]["roi"]["signal"][str(roi_name)]]
+
                 # combining dictionaries for signal and crosstalk
                 for pkey in self.pkeys:
                     for tkey in self.tkeys:
@@ -492,6 +481,8 @@ class MesoscopeICA(object):
                 for tkey in self.tkeys:
                     rois_valid[pkey][tkey] = ju.read(rois_valid_paths[pkey][tkey])
                     self.rois_valid[pkey][tkey] = rois_valid[pkey][tkey]
+                self.rois_names_valid[pkey] = [roi_name for roi_name in self.rois_names[pkey] if
+                                               self.rois_valid[pkey]["roi"]["signal"][str(roi_name)]]
         return
 
     def debias_traces(self):
