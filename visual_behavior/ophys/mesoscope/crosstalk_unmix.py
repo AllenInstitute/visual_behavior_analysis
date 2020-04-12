@@ -238,6 +238,8 @@ class MesoscopeICA(object):
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
+        self.set_ica_dirs()
+
         # we will first check if traces exist, if yes - read them, if not - extract them
 
         for pkey in self.pkeys:
@@ -259,10 +261,12 @@ class MesoscopeICA(object):
                 for tkey_1 in self.tkeys:
                     path[pkey_1][tkey_1] = f'{self.dirs[tkey_1]}{name[tkey_1]}_{self.exp_ids[pkey_1]}.h5'
 
+            print(f"paths: {path}")
             # check if traces exist already:
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
                     if not os.path.isfile(path[pkey][tkey]):
+                        print(f"switching traces_exist to False here on file  {path[pkey][tkey]}")
                         traces_exist = False
                         self.found_raws[pkey][tkey] = False
 
