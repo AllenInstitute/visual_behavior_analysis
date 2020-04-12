@@ -439,7 +439,7 @@ class MesoscopeICA(object):
                                 trace_sig[pkey][tkey] = self.raws[pkey][tkey][0][n]
                                 trace_ct[pkey][tkey] = self.raws[pkey][tkey][1][n]
 
-                            # check if traces contains np.NaN
+                            # check if traces contain np.NaN
                             traces_valid_flag = True
                             for tkey in self.tkeys:
                                 if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_sig[pkey][tkey])):
@@ -486,7 +486,7 @@ class MesoscopeICA(object):
                     self.rois_valid[pkey][tkey] = rois_valid[pkey][tkey]
         return
 
-    def debias_rois(self):
+    def debias_traces(self):
         """
         fn to combine all roi traces for the pair to two num_cells x num_frames_in_timeseries vectors,
         write them to cache as ica_roi_input
@@ -498,276 +498,131 @@ class MesoscopeICA(object):
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
-        self.ins_paths["pl1"]["roi"] = None
-        self.ins_paths["pl2"]["roi"] = None
-        pl1_ica_in_path = os.path.join(self.dirs["roi"], f'{self.exp_ids["pl1"]}_in.h5')
-        pl2_ica_in_path = os.path.join(self.dirs["roi"], f'{self.exp_ids["pl2"]}_in.h5')
-        if os.path.isfile(pl1_ica_in_path) and os.path.isfile(pl2_ica_in_path):
-            # file already exists, skip debiasing
-            self.ins_paths["pl1"]["roi"] = pl1_ica_in_path
-            self.ins_paths["pl2"]["roi"] = pl2_ica_in_path
-        else:
-            self.ins_paths["pl1"]["roi"] = None
-            self.ins_paths["pl2"]["roi"] = None
-        # original traces exist, run debiasing:
-        if self.found_raw_roi_traces[0] and self.found_raw_roi_traces[1]:
-            # if debiased traces don't exist, run debiasing - paths are both None
-            if (not self.pl1_roi_in_path) and (not self.pl2_roi_in_path):
-                self.found_roi_in = [False, False]
-                self.found_roi_offset = [False, False]
+        ins_paths = {}
+        for pkey in self.pkeys:
+            ins_paths[pkey] = {}
+            for tkey in self.tkeys:
+                self.ins_paths[pkey][tkey] = None
+                ins_paths[pkey][tkey] = os.path.join(self.dirs[tkey], f'{self.exp_ids[pkey]}_in.h5')
+
+        # check if debiased traces exist:
+        in_traces_exist = True
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                if not os.path.isfile(ins_paths[pkey][tkey]):
+                    in_traces_exist = False
+
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                if in_traces_exist:  # if input traces exist, set self.ins_paths
+                    self.ins_paths[pkey][tkey] = ins_paths[pkey][tkey]
+                else:  # if input traces exist, set self.ins_paths
+                    self.ins_paths[pkey][tkey] = None
+
+        if not in_traces_exist:  # if debiased traces don't exist - run debiasing
+            # check if raw traces exist
+            raw_traces_exist = True
+            for pkey in self.pkeys:
+                for tkey in self.tkeys:
+                    if not self.found_raws[pkey][tkey]:
+                        raw_traces_exist = False
+
+            if raw_traces_exist : # Raw traces exist, run debiasing
                 logger.info("Debiased ROI traces do not exist in cache, running offset subtraction")
-
-                pl1_sig = self.raws["pl1"]["roi"][0]
-                pl1_ct = self.raws["pl1"]["roi"][1]
-                pl1_valid = self.pl1_rois_valid
-
-                pl1_valid_sig = pl1_valid['signal']
-                pl1_valid_ct = pl1_valid['crosstalk']
-
-                pl2_sig = self.raws["pl2"]["roi"][0]
-                pl2_ct = self.raws["pl2"]["roi"][1]
-
-                pl2_valid = self.pl2_rois_valid
-                pl2_valid_sig = pl2_valid['signal']
-                pl2_valid_ct = pl2_valid['crosstalk']
-
-                # only include cells that don't have nans  (valid = True)
-                # check if traces aligned:
-                if len(self.rois_names["pl1"]) == len(pl1_sig):
-                    pl1_sig_valid_idx = np.array([pl1_valid_sig[str(tid)] for tid in self.rois_names["pl1"]])
-                    pl1_sig_valid = pl1_sig[pl1_sig_valid_idx, :]
-                else:
-                    logging.info('Traces are not aligned')
-
-                if len(self.rois_names["pl1"]) == len(pl1_ct):
-                    pl1_ct_valid_idx = np.array([pl1_valid_ct[str(tid)] for tid in self.rois_names["pl1"]])
-                    pl1_ct_valid = pl1_ct[pl1_ct_valid_idx, :]
-                else:
-                    logging.info('Traces are not aligned')
-
-                if len(self.rois_names["pl2"]) == len(pl2_sig):
-                    pl2_sig_valid_idx = np.array([pl2_valid_sig[str(tid)] for tid in self.rois_names["pl2"]])
-                    pl2_sig_valid = pl2_sig[pl2_sig_valid_idx, :]
-                else:
-                    logging.info('Traces are not aligned')
-
-                if len(self.rois_names["pl2"]) == len(pl2_ct):
-                    pl2_ct_valid_idx = np.array([pl2_valid_ct[str(tid)] for tid in self.rois_names["pl2"]])
-                    pl2_ct_valid = pl2_ct[pl2_ct_valid_idx, :]
-                else:
-                    logging.info('Traces are not aligned')
-
-                pl1_sig = pl1_sig_valid
-                pl1_ct = pl1_ct_valid
-                pl2_sig = pl2_sig_valid
-                pl2_ct = pl2_ct_valid
-
-                # subtract offset pl 1:
-                nc = pl1_sig.shape[0]
-                pl1_sig_offset = np.mean(pl1_sig, axis=1).reshape(nc, 1)
-                pl1_sig_m0 = pl1_sig - pl1_sig_offset
-                nc = pl1_ct.shape[0]
-                pl1_ct_offset = np.mean(pl1_ct, axis=1).reshape(nc, 1)
-                pl1_ct_m0 = pl1_ct - pl1_ct_offset
-                # subtract offset for pl 2:
-                nc = pl2_sig.shape[0]
-                pl2_sig_offset = np.mean(pl2_sig, axis=1).reshape(nc, 1)
-                pl2_sig_m0 = pl2_sig - pl2_sig_offset
-                nc = pl2_ct.shape[0]
-                pl2_ct_offset = np.mean(pl2_ct, axis=1).reshape(nc, 1)
-                pl2_ct_m0 = pl2_ct - pl2_ct_offset
-                # check if traces aren't none
-                if (not pl1_sig_m0.any() is None) and (not pl1_ct_m0.any() is None):
-                    self.found_roi_in[0] = True
-                if (not pl2_sig_m0.any() is None) and (not pl2_ct_m0.any() is None):
-                    self.found_roi_in[1] = True
-                if (not pl1_sig_offset.any() is None) and (not pl1_ct_offset.any() is None):
-                    self.found_roi_offset[1] = True
-                if (not pl2_sig_offset.any() is None) and (not pl2_ct_offset.any() is None):
-                    self.found_roi_offset[1] = True
-                # if all flags true, combine, flatten, write to disk:
-
-                if self.found_roi_in and self.found_roi_offset:
-                    self.offsets["pl1"]["roi"] = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
-                    self.offsets["pl2"]["roi"] = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
-                    self.ins["pl1"]["roi"]= np.array([pl1_sig_m0, pl1_ct_m0])
-                    self.ins["pl2"]["roi"]= np.array([pl2_sig_m0, pl2_ct_m0])
-                    self.ins_paths["pl1"]["roi"]= pl1_ica_in_path
-                    self.ins_paths["pl2"]["roi"]= pl2_ica_in_path
-                    # write ica input traces to disk
-                    with h5py.File(self.pl1_roi_in_path, "w") as f:
-                        f.create_dataset("debiased_traces", data=self.pl1_roi_in)
-                        f.create_dataset('sig_offset', data=pl1_sig_offset)
-                        f.create_dataset('ct_offset', data=pl1_ct_offset)
-                    with h5py.File(self.pl2_roi_in_path, "w") as f:
-                        f.create_dataset("debiased_traces", data=self.pl2_roi_in)
-                        f.create_dataset('sig_offset', data=pl2_sig_offset)
-                        f.create_dataset('ct_offset', data=pl2_ct_offset)
-                else:
-                    logger.info("ROI traces Debiasing failed")
-            else:
-                logger.info("Debiased ROI traces exist in cache, reading from h5 file")
-                with h5py.File(self.pl1_roi_in_path, "r") as f:
-                    pl1_ica_in = f["debiased_traces"][()]
-                    pl1_sig_offset = f['sig_offset'][()]
-                    pl1_ct_offset = f['ct_offset'][()]
-                with h5py.File(self.pl2_roi_in_path, "r") as f:
-                    pl2_ica_in = f["debiased_traces"][()]
-                    pl2_sig_offset = f['sig_offset'][()]
-                    pl2_ct_offset = f['ct_offset'][()]
-
-                self.found_roi_in = [True, True]
-                self.ins["pl1"]["roi"]= pl1_ica_in
-                self.ins["pl2"]["roi"]= pl2_ica_in
-                self.ins_paths["pl1"]["roi"]= pl1_ica_in_path
-                self.ins_paths["pl2"]["roi"]= pl2_ica_in_path
-                self.offsets["pl1"]["roi"] = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
-                self.offsets["pl2"]["roi"] = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
-                self.found_roi_offset = [True, True]
-        else:
-            raise ValueError('Extract ROI traces first')
-        return
-
-    def debias_np(self):
-        """
-        fn to combine all roi traces for the pair to two num_cells x num_frames_in_timeseries vectors,
-        write them to cache as ica_roi_input
-        :return: None
-        """
-
-        if self.debug_mode:
-            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-        else:
-            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
-
-        self.ins_paths["pl1"]["np"]  = None
-        self.ins_paths["pl2"]["np"]  = None
-        pl1_ica_in_path = os.path.join(self.dirs["np"], f'{self.exp_ids["pl1"]}_in.h5')
-        pl2_ica_in_path = os.path.join(self.dirs["np"], f'{self.exp_ids["pl2"]}_in.h5')
-        if os.path.isfile(pl1_ica_in_path) and os.path.isfile(pl2_ica_in_path):
-            # file already exists, skip debiasing
-            self.ins_paths["pl1"]["np"]  = pl1_ica_in_path
-            self.ins_paths["pl2"]["np"]  = pl2_ica_in_path
-        else:
-            self.ins_paths["pl1"]["np"]  = None
-            self.ins_paths["pl2"]["np"]  = None
-        # original traces exist, run debiasing:
-        if self.found_raw_np_traces[0] and self.found_raw_np_traces[1]:
-            # if debiased traces don't exist, run debiasing - paths are both None
-            if (not self.pl1_np_in_path) and (not self.pl2_np_in_path):
-                self.found_np_in = [False, False]
-                self.found_np_offset = [False, False]
-                logger.info("Debiased neuropil traces do not exist in cache, running offset subtraction")
-
-                pl1_sig = self.raws["pl2"]["np"][0]
-                pl1_ct = self.raws["pl2"]["np"][1]
-                pl1_valid = self.pl1_rois_valid
-                pl1_valid_sig = pl1_valid['signal']
-                pl1_valid_ct = pl1_valid['crosstalk']
-
-                pl2_sig = self.raws["pl2"]["np"][0]
-                pl2_ct = self.raws["pl2"]["np"][1]
-                pl2_valid = self.pl2_rois_valid
-                pl2_valid_sig = pl2_valid['signal']
-                pl2_valid_ct = pl2_valid['crosstalk']
+                sig = {}
+                ct = {}
+                valid_sig = {}
+                valid_ct = {}
+                for pkey in self.pkeys:
+                    sig[pkey] = {}
+                    ct[pkey] = {}
+                    valid_sig[pkey] = {}
+                    valid_ct[pkey] = {}
+                    for tkey in self.tkeys:
+                        self.found_ins[pkey][tkey] = False
+                        sig[pkey][tkey] = self.raws[pkey][tkey][0]
+                        ct[pkey][tkey] = self.raws[pkey][tkey][1]
+                        valid_sig[pkey][tkey] = self.rois_valid[pkey][tkey]['signal']
+                        valid_ct[pkey][tkey] = self.rois_valid[pkey][tkey]['crosstalk']
 
                 # only include cells that don't have nans  (valid = True)
-                # check if traces aligned:
-                if len(self.rois_names["pl1"]) == len(pl1_sig):
-                    pl1_sig_valid_idx = np.array([pl1_valid_sig[str(tid)] for tid in self.rois_names["pl1"]])
-                    pl1_sig_valid = pl1_sig[pl1_sig_valid_idx, :]
-                else:
-                    logging.info('Traces are not aligned')
 
-                if len(self.rois_names["pl1"]) == len(pl1_ct):
-                    pl1_ct_valid_idx = np.array([pl1_valid_ct[str(tid)] for tid in self.rois_names["pl1"]])
-                    pl1_ct_valid = pl1_ct[pl1_ct_valid_idx, :]
-                else:
-                    logging.info('Traces are not aligned')
+                sig_valid = {}
+                ct_valid = {}
+                sig_offset = {}
+                sig_m0 = {}
+                ct_offset = {}
+                ct_m0 = {}
+                for pkey in self.pkeys:
+                    sig_valid[pkey] = {}
+                    ct_valid[pkey] = {}
+                    sig_offset[pkey] = {}
+                    sig_m0[pkey] = {}
+                    ct_offset[pkey] = {}
+                    ct_m0[pkey] = {}
+                    for tkey in self.tkeys:
+                        # check if traces aligned and separate signal/crosstalk
+                        if len(self.rois_names[pkey]) == len(sig[pkey][tkey]):
+                            valid_idx_mask = np.array([valid_sig[str(tid)] for tid in self.rois_names[pkey]])
+                            sig_valid[pkey][tkey] = sig[pkey][tkey][valid_idx_mask, :]
+                            ct_valid[pkey][tkey] = ct[pkey][tkey][valid_idx_mask, :]
+                        else:
+                            logging.info('Traces are not aligned')
+                            raise ValueError("Traces are not aligned")
 
-                if len(self.rois_names["pl2"]) == len(pl2_sig):
-                    pl2_sig_valid_idx = np.array([pl2_valid_sig[str(tid)] for tid in self.rois_names["pl2"]])
-                    pl2_sig_valid = pl2_sig[pl2_sig_valid_idx, :]
-                else:
-                    logging.info('Traces are not aligned')
+                        sig[pkey][tkey] = sig_valid[pkey][tkey]
+                        ct[pkey][tkey] = ct_valid[pkey][tkey]
 
-                if len(self.rois_names["pl2"]) == len(pl2_ct):
-                    pl2_ct_valid_idx = np.array([pl2_valid_ct[str(tid)] for tid in self.rois_names["pl2"]])
-                    pl2_ct_valid = pl2_ct[pl2_ct_valid_idx, :]
-                else:
-                    logging.info('Traces are not aligned')
+                        # subtract offset
+                        nc = sig[pkey][tkey].shape[0]
+                        sig_offset[pkey][tkey] = np.mean(sig[pkey][tkey], axis=1).reshape(nc, 1)
+                        sig_m0[pkey][tkey] = sig[pkey][tkey] - sig_offset[pkey][tkey]
+                        ct_offset[pkey][tkey] = np.mean(ct[pkey][tkey], axis=1).reshape(nc, 1)
+                        ct_m0[pkey][tkey] = ct[pkey][tkey] - ct_offset[pkey][tkey]
 
-                pl1_sig = pl1_sig_valid
-                pl1_ct = pl1_ct_valid
-                pl2_sig = pl2_sig_valid
-                pl2_ct = pl2_ct_valid
+                        # check if traces don't have None values
+                        if not sig_m0[pkey][tkey].any() is None and not ct_m0[pkey][tkey].any():
+                            self.found_ins[pkey][tkey] = [True, True]
+                            self.found_offsets[pkey][tkey] = [True, True]
 
-                # subtract offset pl 1:
-                nc = pl1_sig.shape[0]
-                pl1_sig_offset = np.mean(pl1_sig, axis=1).reshape(nc, 1)
-                pl1_sig_m0 = pl1_sig - pl1_sig_offset
-                nc = pl1_ct.shape[0]
-                pl1_ct_offset = np.mean(pl1_ct, axis=1).reshape(nc, 1)
-                pl1_ct_m0 = pl1_ct - pl1_ct_offset
-                # subtract offset for pl 2:
-                nc = pl2_sig.shape[0]
-                pl2_sig_offset = np.mean(pl2_sig, axis=1).reshape(nc, 1)
-                pl2_sig_m0 = pl2_sig - pl2_sig_offset
-                nc = pl2_ct.shape[0]
-                pl2_ct_offset = np.mean(pl2_ct, axis=1).reshape(nc, 1)
-                pl2_ct_m0 = pl2_ct - pl2_ct_offset
-                # check if traces aren't none
-                if (not pl1_sig_m0.any() is None) and (not pl1_ct_m0.any() is None):
-                    self.found_np_in[0] = True
-                if (not pl2_sig_m0.any() is None) and (not pl2_ct_m0.any() is None):
-                    self.found_np_in[1] = True
-                if (not pl1_sig_offset.any() is None) and (not pl1_ct_offset.any() is None):
-                    self.found_np_offset[1] = True
-                if (not pl2_sig_offset.any() is None) and (not pl2_ct_offset.any() is None):
-                    self.found_np_offset[1] = True
-                # if all flags true, combine, flatten, write to disk:
+                        # if all flags true - combine sig and ct, write to disk:
+                        if self.found_ins[pkey][tkey] and self.found_offsets[pkey][tkey]:
+                            self.offsets[pkey][tkey] = {'pl1_sig_offset': sig_offset[pkey][tkey],
+                                                        'pl1_ct_offset': ct_offset[pkey][tkey]}
+                            self.ins[pkey][tkey] = np.array([sig_m0[pkey][tkey], ct_m0[pkey][tkey]])
+                            self.ins_paths[pkey][tkey] = ins_paths[pkey][tkey]
 
-                if self.found_np_in and self.found_np_offset:
-                    self.offsets["pl1"]["np"] = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
-                    self.offsets["pl2"]["np"] = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
-                    self.ins["pl1"]["np"] = np.array([pl1_sig_m0, pl1_ct_m0])
-                    self.ins["pl2"]["np"] = np.array([pl2_sig_m0, pl2_ct_m0])
-                    self.ins_paths["pl1"]["np"] = pl1_ica_in_path
-                    self.ins_paths["pl2"]["np"] = pl2_ica_in_path
-                    # write ica input traces to disk
-                    with h5py.File(self.pl1_np_in_path, "w") as f:
-                        f.create_dataset("debiased_traces", data=self.pl1_np_in)
-                        f.create_dataset('sig_offset', data=pl1_sig_offset)
-                        f.create_dataset('ct_offset', data=pl1_ct_offset)
-                    with h5py.File(self.pl2_np_in_path, "w") as f:
-                        f.create_dataset("debiased_traces", data=self.pl2_np_in)
-                        f.create_dataset('sig_offset', data=pl2_sig_offset)
-                        f.create_dataset('ct_offset', data=pl2_ct_offset)
-                else:
-                    logger.info("Neuropil traces Debiasing failed")
+                            # write ica input traces to disk
+                            with h5py.File(self.ins_paths[pkey][tkey], "w") as f:
+                                f.create_dataset("debiased_traces", data=self.ins[pkey][tkey])
+                                f.create_dataset('sig_offset', data=sig_offset[pkey][tkey])
+                                f.create_dataset('ct_offset', data=ct_offset[pkey][tkey])
+                        else:
+                            logger.info("Debiasing failed - output contains Nones, check inputs")
             else:
-                logger.info("Debiased neuropil traces exist in cache, reading from h5 file")
-                with h5py.File(self.pl1_np_in_path, "r") as f:
-                    pl1_ica_in = f["debiased_traces"][()]
-                    pl1_sig_offset = f['sig_offset'][()]
-                    pl1_ct_offset = f['ct_offset'][()]
-                with h5py.File(self.pl2_np_in_path, "r") as f:
-                    pl2_ica_in = f["debiased_traces"][()]
-                    pl2_sig_offset = f['sig_offset'][()]
-                    pl2_ct_offset = f['ct_offset'][()]
+                raise ValueError('Extract traces first')
+        else:  # if debiased traces exist - read them form h5 files
+            logger.info("Debiased ROI traces exist in cache, reading from h5 file")
 
-                self.found_np_in = [True, True]
-                self.ins["pl1"]["np"]  = pl1_ica_in
-                self.ins["pl2"]["np"]  = pl2_ica_in
-                self.ins_paths["pl1"]["np"]  = pl1_ica_in_path
-                self.ins_paths["pl2"]["np"]  = pl2_ica_in_path
-                self.offsets["pl1"]["np"]   = {'pl1_sig_offset': pl1_sig_offset, 'pl1_ct_offset': pl1_ct_offset}
-                self.offsets["pl2"]["np"]   = {'pl2_sig_offset': pl2_sig_offset, 'pl2_ct_offset': pl2_ct_offset}
-                self.found_np_offset = [True, True]
-        else:
-            raise ValueError('Neuropil traces do not exist - extract them first')
+            ins = {}
+            sig_offset = {}
+            ct_offset = {}
+            for pkey in self.pkeys:
+                ins[pkey] = {}
+                sig_offset[pkey] = {}
+                ct_offset[pkey] = {}
+                for tkey in self.tkeys:
+                    self.ins_paths[pkey][tkey] = ins_paths[pkey][tkey]
+                    with h5py.File(self.ins_paths[pkey][tkey], "r") as f:
+                        ins[pkey][tkey] = f["debiased_traces"][()]
+                        sig_offset[pkey][tkey] = f['sig_offset'][()]
+                        ct_offset[pkey][tkey] = f['ct_offset'][()]
+                    self.found_ins[pkey][tkey] = [True, True]
+                    self.ins[pkey][tkey] = ins[pkey][tkey]
+                    self.offsets[pkey][tkey] = {'pl1_sig_offset': sig_offset[pkey][tkey],
+                                                'pl1_ct_offset': ct_offset[pkey][tkey]}
+                    self.found_offsets[pkey][tkey] = [True, True]
         return
-
 
     @staticmethod
     def unmix_plane(ica_in, ica_roi_valid):
