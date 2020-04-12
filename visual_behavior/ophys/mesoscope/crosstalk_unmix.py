@@ -242,7 +242,7 @@ class MesoscopeICA(object):
 
         for pkey in self.pkeys:
             for tkey in self.tkeys:
-                self.found_raws[pkey][tkey] = False
+                self.found_raws[pkey][tkey] = True
 
         traces_exist = True
         for i in range(len(names_prefix)):
