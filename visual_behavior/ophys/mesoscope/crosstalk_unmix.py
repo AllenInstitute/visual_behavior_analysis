@@ -687,18 +687,21 @@ class MesoscopeICA(object):
                     traces_out = {}
                     crosstalk = {}
                     mixing = {}
+                    figs_ct_in = {}
+                    figs_ct_out = {}
                     for pkey in self.pkeys:
                         rois_valid[pkey] = {}
                         traces_in[pkey] = {}
                         traces_out[pkey] = {}
                         crosstalk[pkey] = {}
                         mixing[pkey] = {}
+                        figs_ct_in[pkey] = {}
+                        figs_ct_out[pkey] = {}
                         for tkey in self.tkeys:
                             rois_valid[pkey][tkey] = self.rois_valid[pkey][tkey]['signal']
                             traces_in[pkey][tkey] = self.ins[pkey][tkey]
-                            traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], _, _ = self.unmix_plane(
-                                traces_in[pkey][tkey], rois_valid[pkey][tkey])
-
+                            traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], figs_ct_in[pkey][tkey], \
+                                figs_ct_in[pkey][tkey] = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
                             # saving to self
                             self.outs[pkey][tkey] = traces_out[pkey][tkey]
                             self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
@@ -725,8 +728,25 @@ class MesoscopeICA(object):
                         self.outs[pkey][tkey] = f["data"][()]
                         self.crosstalk[pkey][tkey] = f["crosstalk"][()]
                         self.mixing[pkey][tkey] = f["mixing_matrix"][()]
-        return
+        return figs_ct_in, figs_ct_out
 
+    @staticmethod
+    def plot_plane(traces_before, traces_after, ct_fig_before, ct_fig_after, n_samples, fig_save=True, fig_show=True):
+        """
+        fn to plot traces before and after ICA, crosstalk plot and mixing matrix
+        for a plane
+        :return:
+        """
+
+        if not fig_show:
+            print(f'Switching backend to Agg')
+            plt.switch_backend('Agg')
+        #define pdf file name if fig_save
+
+
+        f = plt.figure(figsize=(20, 10))
+
+        return f
 
     @staticmethod
     def unmix_plane(ica_in, ica_roi_valid):
@@ -787,7 +807,6 @@ class MesoscopeICA(object):
             ica_pl_out[1, i, :] = rescaled_trace_ct_out
             figs_ct_in.append(fig_ct_in)
             figs_ct_out.append(fig_ct_out)
-
         return ica_pl_out, pl_crosstalk, pl_mixing, figs_ct_in, figs_ct_out
 
     def plot_ica_traces(self, pair, samples_per_plot=10000, dir_name=None, cell_num=None, fig_show=True, fig_save=True):
