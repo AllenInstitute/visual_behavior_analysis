@@ -719,7 +719,8 @@ class MesoscopeICA(object):
                         self.outs[pkey][tkey] = f["data"][()]
                         self.crosstalk[pkey][tkey] = f["crosstalk"][()]
                         self.mixing[pkey][tkey] = f["mixing_matrix"][()]
-        return figs_ct_in, figs_ct_out
+        return 
+
 
     @staticmethod
     def plot_plane(traces_before, traces_after, ct_fig_before, ct_fig_after, n_samples, fig_save=True, fig_show=True):
@@ -766,19 +767,11 @@ class MesoscopeICA(object):
             rescaled_trace_sig_evs_out = rescale(trace_sig_evs, trace_sig_evs_out)
             rescaled_trace_ct_evs_out = rescale(trace_ct_evs, trace_ct_evs_out)
             # calculating crosstalk : on events
-            fig_ct_in, slope_in, _, r_value_in = plot_pixel_hist2d(trace_sig_evs, trace_ct_evs,
-                                                                   title=f'raw, cell {roi_name}',
-                                                                   save_fig=False,
-                                                                   save_path=None,
-                                                                   fig_show=False,
-                                                                   colorbar=True)
-            fig_ct_out, slope_out, _, r_value_out = plot_pixel_hist2d(rescaled_trace_sig_evs_out,
-                                                                      rescaled_trace_ct_evs_out,
-                                                                      title=f'clean, cell {roi_name}',
-                                                                      save_fig=False,
-                                                                      save_path=None,
-                                                                      fig_show=False,
-                                                                      colorbar=True)
+
+            slope_in, _, _, _ = get_crosstalk_data(trace_sig_evs, trace_ct_evs, generate_plot_data=False)
+            slope_out, _, _, _ = get_crosstalk_data(rescaled_trace_sig_evs_out, rescaled_trace_ct_evs_out,
+                                                    generate_plot_data=False)
+
             crosstalk_before_demixing_evs = slope_in * 100
             crosstalk_after_demixing_evs = slope_out * 100
             pl_crosstalk[:, i] = [crosstalk_before_demixing_evs, crosstalk_after_demixing_evs]
@@ -796,9 +789,8 @@ class MesoscopeICA(object):
             rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
             ica_pl_out[0, i, :] = rescaled_trace_sig_out
             ica_pl_out[1, i, :] = rescaled_trace_ct_out
-            figs_ct_in.append(fig_ct_in)
-            figs_ct_out.append(fig_ct_out)
-        return ica_pl_out, pl_crosstalk, pl_mixing, figs_ct_in, figs_ct_out
+
+        return ica_pl_out, pl_crosstalk, pl_mixing
 
     def plot_ica_traces(self, pair, samples_per_plot=10000, dir_name=None, cell_num=None, fig_show=True, fig_save=True):
         """
@@ -893,6 +885,8 @@ class MesoscopeICA(object):
             pl2_roi_valid = self.pl2_rois_valid['signal']
             ica_trace_pl2_sig = self.pl2_ica_out[0, :, :]
             ica_trace_pl2_ct = self.pl2_ica_out[1, :, :]
+
+
             logging.info(f'creating figures for experiment {pair[1]}')
             plot_dir = os.path.join(self.session_dir, f'{dir_name}_{pair[0]}_{pair[1]}/ica_plots_{pair[1]}')
             if not os.path.isdir(plot_dir):
@@ -1108,31 +1102,6 @@ class MesoscopeICA(object):
         seg_run = lu.query(query)[0]['id']
         return seg_run
 
-    def find_scale_ica_roi(self):
-        """
-        find scaling factor that will minimize difference of standard deviations between ICA input and ICA out
-        for ROI traces
-        :return: [int, int]
-        """
-        # for traces:
-        scale_top = opt.minimize(self.ica_err, [1], (self.roi_unmix[:, 0], self.pl1_roi_in))
-        scale_bot = opt.minimize(self.ica_err, [1], (self.roi_unmix[:, 1], self.pl2_roi_in))
-
-        return scale_top.x, scale_bot.x
-
-    def find_scale_ica_neuropil(self):
-        """
-        returns scaling factor that will minimize difference of standard deviations between ICA input and ICA out
-        for neuropil traces
-        :return: [int, int]
-        """
-        scale_top_neuropil = opt.minimize(self.ica_err, [1],
-                                          (self.neuropil_unmix[:, 0], self.pl1_np_in))
-        scale_bot_neuropil = opt.minimize(self.ica_err, [1],
-                                          (self.neuropil_unmix[:, 1], self.pl2_np_in))
-
-        return scale_top_neuropil.x, scale_bot_neuropil.x
-
     @staticmethod
     def get_crosstalk_before_and_after(valid, traces_in, traces_out, path_out, fig_save=False, fig_overwrite=False):
         """
@@ -1224,6 +1193,21 @@ class MesoscopeICA(object):
         return roi_crosstalk
 
 
+def get_crosstalk_data(x, y, generate_plot_data=True):
+
+    slope, offset, r_value, p_value, std_err = linregress(x, y)
+
+    if generate_plot_data:
+        h, xedges, yedges = np.histogram2d(x, y, bins=(30, 30))
+        h = h.T
+        fit_fn = np.poly1d([slope, offset])
+        plot_output = [h, xedges, yedges, fit_fn]
+    else:
+        plot_output = None
+
+    return slope, offset, r_value, plot_output
+
+
 def plot_pixel_hist2d(x, y, xlabel='signal', ylabel='crosstalk', title=None, save_fig=False, save_path=None,
                       fig_show=True, colorbar=False):
     fig = plt.figure(figsize=(3, 3))
@@ -1295,6 +1279,7 @@ def find_scale_ica_roi(ica_in, ica_out):
     scale = opt.minimize(ica_err, [1], (ica_out, ica_in))
     return scale.x
 
+
 def run_ica(trace1, trace2):
     traces = np.array([trace1, trace2]).T
     f_ica = FastICA(n_components=2, max_iter=50)
@@ -1302,7 +1287,7 @@ def run_ica(trace1, trace2):
     mix = f_ica.mixing_  # Get estimated mixing matrix
     # make sure no negative coeffs (inversion of traces)
     mix[mix < 0] *= -1
-    # switch columns if needed (source assignment inverted) - check something is off here!
+    # switch columns if needed (source assignment inverted)
     if mix[0, 0] < mix[1, 0]:
         a_mix = np.array([mix[1, :], mix[0, :]])
     else:
@@ -1329,8 +1314,3 @@ def extract_active(traces, len_ne=20, th_ag=10, do_plots=0):
         traces_ct_evs.append(trace_ct)
     return traces_sig_evs, traces_ct_evs
 
-
-# for pkey in self.pkeys:
-#     for tkey in self.tkeys:
-#         out_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
-#                                              f'{self.exp_ids[pkey]}_out.h5')
