@@ -146,6 +146,7 @@ class MesoscopeICA(object):
         self.outs = {}
         self.outs_paths = {}
         self.crosstalk = {}
+        self.mixing = {}
         for pkey in self.pkeys:
             self.rois_names[pkey] = None
             self.rois_valid[pkey] = {}
@@ -158,6 +159,7 @@ class MesoscopeICA(object):
             self.outs[pkey] = {}
             self.outs_paths[pkey] = {}
             self.crosstalk[pkey] = {}
+            self.mixing[pkey] = {}
             for tkey in self.tkeys:
                 self.raws[pkey][tkey] = None
                 self.raw_paths[pkey][tkey] = None
@@ -169,21 +171,25 @@ class MesoscopeICA(object):
                 self.outs[pkey][tkey] = None
                 self.outs_paths[pkey][tkey] = None
                 self.crosstalk[pkey][tkey] = None
+                self.mixing[pkey][tkey] = None
 
         self.found_raws = {}  # flag if raw traces exist in self.dirs; output of get_traces
         self.found_ins = {}  # flag if ica input traces exists
         self.found_offsets = {}  # flag if offset data exists
+        self.found_solution = {}
         for pkey in self.pkeys:
             self.found_raws[pkey] = {}
             self.found_ins[pkey] = {}
             self.found_offsets[pkey] = {}
+            self.found_solution[pkey] = {}
             for tkey in self.tkeys:
                 self.found_raws[pkey][tkey] = None
                 self.found_ins[pkey][tkey] = [None, None]
                 self.found_offsets[pkey][tkey] = [None, None]
+                self.found_solution[pkey][tkey] = False
 
-        self.found_solution = None  # out of unmix_pls
-        self.found_solution_neuropil = None
+
+
         self.roi_matrix = None
         self.neuropil_matrix = None
         self.roi_unmix = None
@@ -500,6 +506,8 @@ class MesoscopeICA(object):
         else:
             logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 
+        # local vars for out paths:
+
         ins_paths = {}
         for pkey in self.pkeys:
             ins_paths[pkey] = {}
@@ -518,7 +526,7 @@ class MesoscopeICA(object):
             for tkey in self.tkeys:
                 if in_traces_exist:  # if input traces exist, set self.ins_paths
                     self.ins_paths[pkey][tkey] = ins_paths[pkey][tkey]
-                else:  # if input traces exist, set self.ins_paths
+                else:
                     self.ins_paths[pkey][tkey] = None
 
         if not in_traces_exist:  # if debiased traces don't exist - run debiasing
@@ -626,6 +634,100 @@ class MesoscopeICA(object):
                     self.found_offsets[pkey][tkey] = [True, True]
         return
 
+    def unmix_pair(self, do_plots=True):
+        """
+        function to unmix a pair of panels:
+        """
+        # lcoal vars for out paths:
+        outs_paths = {}
+        for pkey in self.pkeys:
+            outs_paths[pkey] = {}
+            for tkey in self.tkeys:
+                self.outs_paths[pkey][tkey] = None
+                outs_paths[pkey][tkey] = os.path.join(self.dirs[tkey], f'{self.exp_ids[pkey]}_out.h5')
+
+        # check if unmixed traces exist:
+        out_traces_exist = True
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                if not os.path.isfile(outs_paths[pkey][tkey]):
+                    out_traces_exist = False
+
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                if out_traces_exist:  # if output traces exist, set self.outs_paths
+                    self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
+                else:
+                    self.outs_paths[pkey][tkey] = None
+
+        if not out_traces_exist:  # if ica output traces don't exist - run demixing
+            # check if ica input traces exist
+            in_traces_exist = True
+            for pkey in self.pkeys:
+                for tkey in self.tkeys:
+                    if not self.found_ins[pkey][tkey]:
+                        in_traces_exist = False
+
+            if in_traces_exist: # if ica input traces exist:
+
+                # check if traces dont have nans or infs:
+                in_traces_valid = True
+                for pkey in self.pkeys:
+                    for tkey in self.tkeys:
+                        if np.any(np.isnan(self.ins[pkey][tkey])) or np.any(np.isinf(self.ins[pkey][tkey])):
+                            in_traces_valid = False
+                if not in_traces_valid:
+                    raise ValueError(
+                        "ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
+                else:
+                    logger.info("Unmixed traces do not exist in cache, running ICA")
+
+                    rois_valid = {}
+                    traces_in = {}
+                    traces_out = {}
+                    crosstalk = {}
+                    mixing = {}
+                    for pkey in self.pkeys:
+                        rois_valid[pkey] = {}
+                        traces_in[pkey] = {}
+                        traces_out[pkey] = {}
+                        crosstalk[pkey] = {}
+                        mixing[pkey] = {}
+                        for tkey in self.tkeys:
+                            rois_valid[pkey][tkey] = self.rois_valid[pkey][tkey]['signal']
+                            traces_in[pkey][tkey] = self.ins[pkey][tkey]
+                            traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], _, _ = self.unmix_plane(
+                                traces_in[pkey][tkey], rois_valid[pkey][tkey])
+
+                            # saving to self
+                            self.outs[pkey][tkey] = traces_out[pkey][tkey]
+                            self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
+                            self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
+                            self.mixing[pkey][tkey] = mixing[pkey][tkey]
+                            self.found_solution[pkey][tkey] = True
+
+                            # writing ica out traces to disk
+                            with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
+                                f.create_dataset(f"data", data=traces_out[pkey][tkey])
+                                f.create_dataset(f"crosstalk", data=crosstalk[pkey][tkey])
+                                f.create_dataset(f"mixing_matrix", data=mixing[pkey][tkey])
+
+                            # plotting goes here
+
+        else:
+            logger.info("Unmixed traces exist in cache, reading from h5 file")
+            for pkey in self.pkeys:
+                for tkey in self.tkeys:
+                    self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
+                    self.found_solution[pkey][tkey] = True
+
+                    with h5py.File(self.outs_paths[pkey][tkey], "r") as f:
+                        self.outs[pkey][tkey] = f["data"][()]
+                        self.crosstalk[pkey][tkey] = f["crosstalk"][()]
+                        self.mixing[pkey][tkey] = f["mixing_matrix"][()]
+        return
+
+
     @staticmethod
     def unmix_plane(ica_in, ica_roi_valid):
         roi_names = [roi for roi, valid in ica_roi_valid.items() if valid]
@@ -687,80 +789,6 @@ class MesoscopeICA(object):
             figs_ct_out.append(fig_ct_out)
 
         return ica_pl_out, pl_crosstalk, pl_mixing, figs_ct_in, figs_ct_out
-
-    def unmix_pair(self, do_plots=True):
-        """
-        function to unmix a pair of panels:
-        """
-        pl1_out_path = os.path.join(self.dirs["roi"],
-                                    f'{self.exp_ids["pl1"]}_out.h5')
-        pl2_out_path = os.path.join(self.dirs["roi"],
-                                    f'{self.exp_ids["pl2"]}_out.h5')
-
-        # file already exists, skip unmixing
-        if os.path.isfile(pl1_out_path) and os.path.isfile(pl2_out_path):
-            self.pl1_roi_out_path = pl1_out_path
-            self.pl2_roi_out_path = pl2_out_path
-        else:
-            self.pl1_roi_out_path = None
-            self.pl2_roi_out_path = None
-
-        if (self.pl1_roi_out_path is None) or (self.pl2_roi_out_path is None):
-            # if unmixed traces don't exist, run unmixing
-            if np.any(np.isnan(self.pl1_roi_in)) or np.any(np.isinf(self.pl2_roi_in)) or np.any(
-                    np.isnan(self.pl1_roi_in)) or np.any(np.isinf(self.pl2_roi_in)):
-                raise ValueError(
-                    "ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
-            else:
-                logger.info("Unmixed traces do not exist in cache, running ICA")
-
-                # unmixing pl 1
-                pl1_roi_valid = self.pl1_rois_valid['signal']
-                pl1_traces_in = self.pl1_roi_in
-                pl1_out, pl1_crosstalk, pl1_mixing, _, _ = self.unmix_plane(pl1_traces_in, pl1_roi_valid)
-
-                # unmixing pl 2
-                pl2_roi_valid = self.pl2_rois_valid['signal']
-                pl2_traces_in = self.pl2_roi_in
-                pl2_out, pl2_crosstalk, pl2_mixing, _, _ = self.unmix_plane(pl2_traces_in, pl2_roi_valid)
-
-                # saving to self
-                self.pl1_roi_out = pl1_out
-                self.pl2_roi_out = pl2_out
-                self.pl1_roi_crosstalk = pl1_crosstalk
-                self.pl2_roi_crosstalk = pl2_crosstalk
-                self.pl1_roi_out_path = pl1_out_path
-                self.pl2_roi_out_path = pl2_out_path
-                self.pl1_roi_out_path = pl1_out_path
-                self.pl2_roi_out_path = pl2_out_path
-
-                # writing ica out traces to disk
-                with h5py.File(self.pl1_roi_out_path, "w") as f:
-                    f.create_dataset(f"data", data=pl1_out)
-                    f.create_dataset(f"crosstalk", data=pl1_crosstalk)
-                    f.create_dataset(f"mixing_matrix", data=pl1_mixing)
-
-                with h5py.File(self.pl2_roi_out_path, "w") as f:
-                    f.create_dataset(f"data", data=pl2_out)
-                    f.create_dataset(f"crosstalk", data=pl2_crosstalk)
-                    f.create_dataset(f"mixing_matrix", data=pl2_mixing)
-
-
-            # plotting goes here
-
-        else:
-            logger.info("Unmixed traces exist in cache, reading from h5 file")
-            self.pl1_roi_out_path = pl1_out_path
-            self.pl2_roi_out_path = pl2_out_path
-
-            self.found_solution = True
-            with h5py.File(self.pl1_roi_out_path, "r") as f:
-                pl1_out = f["data"][()]
-            with h5py.File(self.pl2_roi_out_path, "r") as f:
-                pl2_out = f["data"][()]
-            self.pl1_ica_out = pl1_out
-            self.pl2_ica_out = pl2_out
-        return
 
     def plot_ica_traces(self, pair, samples_per_plot=10000, dir_name=None, cell_num=None, fig_show=True, fig_save=True):
         """
