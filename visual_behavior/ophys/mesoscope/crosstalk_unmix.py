@@ -432,18 +432,14 @@ class MesoscopeICA(object):
                             for tkey in self.tkeys:
                                 trace_sig[pkey][tkey] = self.raws[pkey][tkey][0][n]
                                 trace_ct[pkey][tkey] = self.raws[pkey][tkey][1][n]
-
-                            # check if traces contain np.NaN
-                            traces_valid_flag = True
-                            for tkey in self.tkeys:
+                                # check if traces contain np.NaN
+                                traces_valid_flag = True
                                 if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_ct[pkey][tkey])):
                                     traces_valid_flag = False
-                            if traces_valid_flag:
-                                for tkey in self.tkeys:
+                                if traces_valid_flag:
                                     sig_valid[pkey][tkey][str(self.rois_names[pkey][n])] = True
                                     ct_valid[pkey][tkey][str(self.rois_names[pkey][n])] = True
-                            else:
-                                for tkey in self.tkeys:
+                                else:
                                     sig_valid[pkey][tkey][str(self.rois_names[pkey][n])] = False
                                     ct_valid[pkey][tkey][str(self.rois_names[pkey][n])] = False
 
@@ -562,7 +558,7 @@ class MesoscopeICA(object):
                     for tkey in self.tkeys:
                         # check if traces aligned and separate signal/crosstalk
                         if len(self.rois_names[pkey]) == len(sig[pkey][tkey]):
-                            valid_idx_mask = np.array([valid_sig[pkey][tkey][str(tid)] for tid in self.rois_names[pkey]])
+                            valid_idx_mask = np.array([valid_sig[pkey][tkey][str(tid)] for tid in self.rois_names_valid[pkey]])
                             sig_valid[pkey][tkey] = sig[pkey][tkey][valid_idx_mask, :]
                             ct_valid[pkey][tkey] = ct[pkey][tkey][valid_idx_mask, :]
                         else:
