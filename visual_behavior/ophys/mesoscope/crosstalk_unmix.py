@@ -565,7 +565,7 @@ class MesoscopeICA(object):
                     for tkey in self.tkeys:
                         # check if traces aligned and separate signal/crosstalk
                         if len(self.rois_names[pkey]) == len(sig[pkey][tkey]):
-                            valid_idx_mask = np.array([valid_sig[str(tid)] for tid in self.rois_names[pkey]])
+                            valid_idx_mask = np.array([valid_sig[pkey][tkey][str(tid)] for tid in self.rois_names[pkey]])
                             sig_valid[pkey][tkey] = sig[pkey][tkey][valid_idx_mask, :]
                             ct_valid[pkey][tkey] = ct[pkey][tkey][valid_idx_mask, :]
                         else:
