@@ -9,7 +9,7 @@ import logging
 import json
 from sklearn.decomposition import FastICA
 import scipy.optimize as opt
-import matplotlib.backends.backend_pdf
+import matplotlib.backends.backend_pdf as plt_pdf
 import matplotlib.pyplot as plt
 import allensdk.core.json_utilities as ju
 from scipy import linalg
@@ -448,9 +448,6 @@ class MesoscopeICA(object):
                                     sig_valid[pkey][tkey][str(self.rois_names[pkey][n])] = False
                                     ct_valid[pkey][tkey][str(self.rois_names[pkey][n])] = False
 
-                        self.rois_names_valid[pkey] = [roi_name for roi_name in self.rois_names[pkey] if
-                                                       self.rois_valid[pkey]["roi"]["signal"][str(roi_name)]]
-
                 # combining dictionaries for signal and crosstalk
                 for pkey in self.pkeys:
                     for tkey in self.tkeys:
@@ -470,6 +467,9 @@ class MesoscopeICA(object):
                         self.rois_valid_paths[pkey][tkey] = rois_valid_paths[pkey][tkey]
                         ju.write(rois_valid_paths[pkey][tkey], rois_valid[pkey][tkey])
                         self.rois_valid = rois_valid[pkey][tkey]
+
+                self.rois_names_valid[pkey] = [roi_name for roi_name in self.rois_names[pkey] if
+                                               self.rois_valid[pkey]["roi"]["signal"][str(roi_name)]]
 
             else:
                 logger.info('ROI traces dont exist in cache, run get_ica_traces first')
@@ -719,7 +719,7 @@ class MesoscopeICA(object):
                         self.outs[pkey][tkey] = f["data"][()]
                         self.crosstalk[pkey][tkey] = f["crosstalk"][()]
                         self.mixing[pkey][tkey] = f["mixing_matrix"][()]
-        return 
+        return
 
 
     @staticmethod
@@ -739,6 +739,96 @@ class MesoscopeICA(object):
         f = plt.figure(figsize=(20, 10))
 
         return f
+
+    @staticmethod
+    def plot_roi(before_sig, before_ct, after_sig, after_ct, roi_name, plot_dir, samples):
+
+        pdf_name = os.path.join(plot_dir, f"cell_{roi_name}.pdf")
+        if os.path.isfile(pdf_name):
+            logging.info(f"cell trace figure exist for  cell {roi_name}")
+        else:
+            logging.info(f"creating figures for cell {roi_name}")
+
+            # define pdf filename:
+            pdf = plt_pdf.PdfPages(pdf_name)
+
+            # get crosstalk data and plot on first page of the pdf:
+            slope_before, offset_before, r_value_b, [h_b, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(before_sig,
+                                                                                                            before_ct,
+                                                                                                            generate_plot_data=True)
+            slope_after, offset_after, r_value_a, [h_a, xedges_a, yedges_a, fitfn_a] = get_crosstalk_data(after_sig,
+                                                                                                          after_ct,
+                                                                                                          generate_plot_data=True)
+            f = plt.figure(figsize=(20, 10))
+            plt.suptitle(f"Crosstalk plost for cell {roi_name}")
+            xlabel = "signal"
+            ylabel = "crosstalk"
+            # plot crosstalk before demxing
+            plt.subplot(121)
+            plt.rcParams.update({'font.size': 18})
+            plt.imshow(h_b, interpolation='nearest', origin='low',
+                       extent=[xedges_b[0], xedges_b[-1], yedges_b[0], yedges_b[-1]], aspect='auto', norm=LogNorm())
+            cbar = plt.colorbar()
+            cbar.set_label('# of counts', rotation=270, labelpad=20)
+            cbar.ax.tick_params(labelsize=18)
+            plt.plot(h_b, fitfn_b(h_b), '--k')
+            plt.xlim((xedges_b[0], xedges_b[-1]))
+            plt.ylim((yedges_b[0], yedges_b[-1]))
+            plt.xlabel(xlabel)
+            plt.ylabel(ylabel)
+            title = f"Crosstalk before\n{fitfn_b} R2={round(r_value_b, 2)}"
+            plt.title(title, linespacing=0.5)
+
+            # plot crosstalk after demxing
+            plt.subplot(122)
+            plt.rcParams.update({'font.size': 18})
+            plt.imshow(h_a, interpolation='nearest', origin='low',
+                       extent=[xedges_a[0], xedges_a[-1], yedges_a[0], yedges_a[-1]], aspect='auto', norm=LogNorm())
+            cbar = plt.colorbar()
+            cbar.set_label('# of counts', rotation=270, labelpad=20)
+            cbar.ax.tick_params(labelsize=18)
+            plt.plot(h_a, fitfn_a(h_a), '--k')
+            plt.xlim((xedges_a[0], xedges_a[-1]))
+            plt.ylim((yedges_a[0], yedges_a[-1]))
+            plt.xlabel(xlabel)
+            plt.ylabel(ylabel)
+            title = f"Crosstalk after\n{fitfn_a} R2={round(r_value_a, 2)}"
+            plt.title(title, linespacing=0.5)
+
+            # plot max proj image and roi masks on it, plus current roi in different color
+
+            pdf.savefig(f)
+
+            # plot traces of {roi_name} roi : two plots per page: before ica, after ica
+            y_min = min(min(before_sig), min(before_ct), min(after_sig), min(after_ct))
+            y_max = max(max(before_sig), max(before_ct), max(after_sig), max(after_ct))
+
+            for i in range(int(before_sig.shape[0] / samples) + 1):
+                sig_before_i = before_sig[i * samples:(i + 1) * samples]
+                ct_before_i = before_ct[i * samples:(i + 1) * samples]
+                sig_after_i = after_sig[i * samples:(i + 1) * samples]
+                ct_after_i = after_ct[i * samples:(i + 1) * samples]
+
+                f1 = plt.figure(figsize=(20, 10))
+                plt.subplot(211)
+                plt.ylim(y_min, y_max)
+                plt.plot(sig_before_i, 'r-', label='signal pl')
+                plt.plot(ct_before_i, 'g-', label='cross-talk pl')
+                plt.title(f'raw traces for cell {roi_name}')
+                plt.legend(loc='best')
+
+                plt.subplot(212)
+                plt.ylim(y_min, y_max)
+                plt.plot(sig_after_i, 'r-', label='signal pl')
+                plt.plot(ct_after_i, 'g-', label='cross-talk pl')
+                plt.title(f'post-ica traces, cell # {roi_name}')
+                plt.legend(loc='best')
+                pdf.savefig(f1)
+                plt.close()
+            pdf.close()
+        return
+
+
 
     @staticmethod
     def unmix_plane(ica_in, ica_roi_valid):
@@ -847,7 +937,7 @@ class MesoscopeICA(object):
                         logging.info(f"cell trace figure exist for {pair[0]} cell {pl1_roi_names[cell_orig]}")
                         continue
                     else:
-                        pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+                        pdf = plt_pdf.PdfPages(pdf_name)
                         logging.info(f"creating figures for cell {pl1_roi_names[cell_orig]}")
                         raw_y_min = min(min(raw_trace_pl1_sig[cell_orig, :]), min(raw_trace_pl1_ct[cell_orig, :]))
                         raw_y_max = max(max(raw_trace_pl1_sig[cell_orig, :]), max(raw_trace_pl1_ct[cell_orig, :]))
@@ -910,7 +1000,7 @@ class MesoscopeICA(object):
                         logging.info(f'creating figures for cell {pl2_roi_names[cell_orig]}')
                         raw_y_min = min(min(raw_trace_pl2_sig[cell_orig, :]), min(raw_trace_pl2_ct[cell_orig, :]))
                         raw_y_max = max(max(raw_trace_pl2_sig[cell_orig, :]), max(raw_trace_pl2_ct[cell_orig, :]))
-                        pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+                        pdf = plt_pdf.PdfPages(pdf_name)
                         for i in range(int(raw_trace_pl2_sig.shape[1] / samples_per_plot) + 1):
                             orig_pl2_sig = raw_trace_pl2_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
                             orig_pl2_ct = raw_trace_pl2_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
@@ -994,7 +1084,7 @@ class MesoscopeICA(object):
                         logging.info(f"raw trace plots exist for {pair[0]} cell {pl1_roi_names[cell_orig]}")
                         continue
                     else:
-                        pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+                        pdf = plt_pdf.PdfPages(pdf_name)
                         logging.info(f"plotting original traces for cell {pl1_roi_names[cell_orig]}")
                         for i in range(int(raw_trace_pl1_sig.shape[1] / samples_per_plot) + 1):
                             orig_pl1_sig = raw_trace_pl1_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
@@ -1036,7 +1126,7 @@ class MesoscopeICA(object):
                         continue
                     else:
                         logging.info(f'creating plots for cell {pl2_roi_names[cell_orig]}')
-                        pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+                        pdf = plt_pdf.PdfPages(pdf_name)
                         for i in range(int(raw_trace_pl2_sig.shape[1] / samples_per_plot) + 1):
                             orig_pl2_sig = raw_trace_pl2_sig[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
                             orig_pl2_ct = raw_trace_pl2_ct[cell_orig, i * samples_per_plot:(i + 1) * samples_per_plot]
@@ -1148,7 +1238,7 @@ class MesoscopeICA(object):
             roi_name = roi_names[n]
             if fig_save:
                 pdf_name = os.path.join(ct_plot_dir, f"{roi_name}_crosstalk.pdf")
-                pdf = matplotlib.backends.backend_pdf.PdfPages(pdf_name)
+                pdf = plt_pdf.PdfPages(pdf_name)
             if valid['signal'][roi_name]:
                 if not np.any(np.isnan(evs_ind[i])):
                     sig_trace_in = traces_evs[i]
