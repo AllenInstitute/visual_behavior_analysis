@@ -436,9 +436,8 @@ class MesoscopeICA(object):
                             # check if traces contain np.NaN
                             traces_valid_flag = True
                             for tkey in self.tkeys:
-                                if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_sig[pkey][tkey])):
+                                if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_ct[pkey][tkey])):
                                     traces_valid_flag = False
-
                             if traces_valid_flag:
                                 for tkey in self.tkeys:
                                     sig_valid[pkey][tkey][str(self.rois_names[pkey][n])] = True
@@ -658,7 +657,7 @@ class MesoscopeICA(object):
                     if not self.found_ins[pkey][tkey]:
                         in_traces_exist = False
 
-            if in_traces_exist: # if ica input traces exist:
+            if in_traces_exist:  # if ica input traces exist:
 
                 # check if traces dont have nans or infs:
                 in_traces_valid = True
@@ -668,7 +667,7 @@ class MesoscopeICA(object):
                             in_traces_valid = False
                 if not in_traces_valid:
                     raise ValueError(
-                        "ValueError: ICA input contains NaN, infinity or a value too large for dtype('float64')")
+                        "ValueError: ICA input contains NaN, infinity or a value too large for dtype float64")
                 else:
                     logger.info("Unmixed traces do not exist in cache, running ICA")
 
