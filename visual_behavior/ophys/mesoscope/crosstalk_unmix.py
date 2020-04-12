@@ -583,7 +583,7 @@ class MesoscopeICA(object):
                         ct_m0[pkey][tkey] = ct[pkey][tkey] - ct_offset[pkey][tkey]
 
                         # check if traces don't have None values
-                        if not sig_m0[pkey][tkey].any() is None and not ct_m0[pkey][tkey].any():
+                        if (not (sig_m0[pkey][tkey].any() is None)) and (not (ct_m0[pkey][tkey].any() is None)):
                             self.found_ins[pkey][tkey] = [True, True]
                             self.found_offsets[pkey][tkey] = [True, True]
 
