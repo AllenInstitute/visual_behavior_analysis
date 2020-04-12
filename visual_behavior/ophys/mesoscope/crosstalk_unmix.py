@@ -244,9 +244,9 @@ class MesoscopeICA(object):
 
         for pkey in self.pkeys:
             for tkey in self.tkeys:
-                self.found_raws[pkey][tkey] = True
+                self.found_raws[pkey][tkey] = False
 
-        traces_exist = True
+        traces_exist = False
         for i in range(len(names_prefix)):
             # check ith set of names:
             name_prefix = names_prefix[i]
@@ -265,10 +265,13 @@ class MesoscopeICA(object):
             # check if traces exist already:
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
-                    if not os.path.isfile(path[pkey][tkey]):
+                    if os.path.isfile(path[pkey][tkey]):
                         print(f"switching traces_exist to False here on file  {path[pkey][tkey]}")
-                        traces_exist = False
-                        self.found_raws[pkey][tkey] = False
+                        traces_exist = True
+                        self.found_raws[pkey][tkey] = True
+
+            if traces_exist:
+                break
 
         if traces_exist:
             # if both traces exist, skip extracting:
