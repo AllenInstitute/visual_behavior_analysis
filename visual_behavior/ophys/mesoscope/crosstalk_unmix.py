@@ -467,9 +467,8 @@ class MesoscopeICA(object):
                         self.rois_valid_paths[pkey][tkey] = rois_valid_paths[pkey][tkey]
                         ju.write(rois_valid_paths[pkey][tkey], rois_valid[pkey][tkey])
                         self.rois_valid = rois_valid[pkey][tkey]
-
-                self.rois_names_valid[pkey] = [roi_name for roi_name in self.rois_names[pkey] if
-                                               self.rois_valid[pkey]["roi"]["signal"][str(roi_name)]]
+                    self.rois_names_valid[pkey] = [roi_name for roi_name in self.rois_names[pkey] if
+                                                   self.rois_valid[pkey]["roi"]["signal"][str(roi_name)]]
 
             else:
                 logger.info('ROI traces dont exist in cache, run get_ica_traces first')
