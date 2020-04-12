@@ -261,12 +261,10 @@ class MesoscopeICA(object):
                 for tkey_1 in self.tkeys:
                     path[pkey_1][tkey_1] = f'{self.dirs[tkey_1]}{name[tkey_1]}_{self.exp_ids[pkey_1]}.h5'
 
-            print(f"paths: {path}")
             # check if traces exist already:
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
                     if os.path.isfile(path[pkey][tkey]):
-                        print(f"switching traces_exist to False here on file  {path[pkey][tkey]}")
                         traces_exist = True
                         self.found_raws[pkey][tkey] = True
 
