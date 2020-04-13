@@ -759,7 +759,7 @@ class MesoscopeICA(object):
                                                                                                           generate_plot_data=True)
             f = plt.figure(figsize=(30, 10))
             plt.rcParams.update({'font.size': 28})
-            plt.suptitle(f"Crosstalk plost for cell {roi_name}")
+            plt.suptitle(f"Crosstalk plost for cell {roi_name}\n", linespacing=0.5)
             xlabel = "signal"
             ylabel = "crosstalk"
             # plot crosstalk before demxing
@@ -774,7 +774,7 @@ class MesoscopeICA(object):
             plt.ylim((yedges_b[0], yedges_b[-1]))
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
-            title = f"Crosstalk before: {round(crosstalk[0], 2)}\n{fitfn_b} R2={round(r_value_b, 2)}"
+            title = f"Crosstalk before: {round(crosstalk[0], 4)}\n{fitfn_b} R2={round(r_value_b, 2)}"
             plt.title(title, linespacing=0.5, fontsize=18)
 
             # plot crosstalk after demxing
@@ -790,29 +790,23 @@ class MesoscopeICA(object):
             plt.ylim((yedges_a[0], yedges_a[-1]))
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
-            title = f"Crosstalk after: {round(crosstalk[1], 2)}\n{fitfn_a} R2={round(r_value_a, 2)}"
+            title = f"Crosstalk after: {round(crosstalk[1], 4)}\n{fitfn_a} R2={round(r_value_a, 2)}"
             plt.title(title, linespacing=0.5, fontsize=18)
 
             # add mixing matrix info to the plot
             plt.subplot(133)
-            ax = plt.gca()
+            # ax = plt.gca()
             plt.rcParams.update({'font.size': 28})
             a = mixing
-            for key in ['top', 'right', 'bottom', 'left']:
-                ax.spines[key].set_visible(False)
-            ax.set_xticks([])
-            ax.set_yticks([])
+            # for key in ['top', 'right', 'bottom', 'left']:
+            #     ax.spines[key].set_visible(False)
+            # ax.set_xticks([])
+            # ax.set_yticks([])
             plt.text(2, 6,
                      f"Mixing Matrix:\n[{round(a[0, 0])}, [{round(a[0, 1])}\n[{round(a[1, 0])},[{round(a[1, 1])}]]] ",
                      fontsize=35, linespacing=1.5)
-            # ax.spines['right'].set_visible(False)
-            # ax.spines[''].set_visible(False)
-            # ax.spines['right'].set_visible(False)
-            # ax.xaxis.set_ticks_position('bottom')
-            # ax.yaxis.set_ticks_position('left')
-            # ax.tick_params(direction='out', pad=5)
-            # plt.box(False)
-            # plot max proj image and roi masks on it, plus current roi in different color
+            plt.box(False)
+            plt.show()
 
             pdf.savefig(f)
             if not fig_show:
