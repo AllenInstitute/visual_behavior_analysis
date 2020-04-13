@@ -818,6 +818,7 @@ class MesoscopeICA(object):
                 ct_after_i = traces_after[1][i * samples:(i + 1) * samples]
 
                 f1 = plt.figure(figsize=(20, 10))
+                plt.rcParams.update({'font.size': 22})
                 plt.subplot(211)
                 plt.ylim(y_min, y_max)
                 plt.plot(sig_before_i, 'r-', label='signal pl')
