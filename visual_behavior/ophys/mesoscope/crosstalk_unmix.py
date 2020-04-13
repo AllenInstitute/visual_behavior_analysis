@@ -728,9 +728,9 @@ class MesoscopeICA(object):
                     os.mkdir(plot_dir)
                 for i in range(len(self.rois_names_valid[pkey])):
                     roi_name = self.rois_names_valid[pkey][i]
-                    before_sig = self.ins[pkey][tkey][0][i]
+                    before_sig = self.ins[pkey][tkey][0][i] + self.offsets[pkey][tkey]['pl1_sig_offset'][i]
                     after_sig = self.outs[pkey][tkey][0][i]
-                    before_ct = self.ins[pkey][tkey][1][i]
+                    before_ct = self.ins[pkey][tkey][1][i] + self.offsets[pkey][tkey]['pl1_ct_offset'][i]
                     after_ct = self.outs[pkey][tkey][1][i]
                     self.plot_roi(before_sig, before_ct, after_sig, after_ct, roi_name, plot_dir, samples)
         return
