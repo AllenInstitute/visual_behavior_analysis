@@ -796,7 +796,7 @@ class MesoscopeICA(object):
             # add mixing matrix info to the plot
             plt.subplot(133)
             ax = plt.gca()
-            plt.text(0.5, 0.5, f"Mixing matrix:\n{np.round(mixing, 2)}", fontsize=35, linespacing=1.5,
+            plt.text(0.5, 0.5, f"Mixing matrix:\n{np.round(mixing, 2)}", fontsize=35, linespacing=2.0,
                      horizontalalignment='center',
                      verticalalignment='center', )
             ax.set_axis_off()
@@ -823,14 +823,14 @@ class MesoscopeICA(object):
                 plt.ylim(y_min, y_max)
                 plt.plot(sig_before_i, 'r-', label='signal pl')
                 plt.plot(ct_before_i, 'g-', label='cross-talk pl')
-                plt.title(f'raw traces for cell {roi_name}')
+                plt.title(f'raw traces for cell {roi_name}', fontsize = 18)
                 plt.legend(loc='best')
 
                 plt.subplot(212)
                 plt.ylim(y_min, y_max)
                 plt.plot(sig_after_i, 'r-', label='signal pl')
                 plt.plot(ct_after_i, 'g-', label='cross-talk pl')
-                plt.title(f'post-ica traces, cell # {roi_name}')
+                plt.title(f'post-ica traces, cell # {roi_name}', fontsize = 18)
                 plt.legend(loc='best')
                 pdf.savefig(f1)
                 if not fig_show:
