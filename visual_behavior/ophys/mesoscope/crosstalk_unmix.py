@@ -710,27 +710,30 @@ class MesoscopeICA(object):
                         self.mixing[pkey][tkey] = f["mixing_matrix"][()]
         return
 
+    def plot_ica_pair(self, pair, dir_name, samples=5000):
+        if not dir_name:
+            dir_name = self.names["roi"]
+        for pkey in self.pkeys:
+            if pkey == 'pl1':
+                plane = pair[0]
+            else:
+                plane = pair[1]
+            for tkey in self.tkeys:
+                plot_dir = os.path.join(self.session_dir,
+                                        f'{dir_name[tkey]}_{pair[0]}_{pair[1]}/{dir_name[tkey]}_ica_plots_{plane}')
+                if not os.path.isdir(plot_dir):
+                    os.mkdir(plot_dir)
+                for i in range(len(self.rois_names_valid[pkey])):
+                    roi_name = self.rois_names_valid[pkey][i]
+                    before_sig = self.ins[pkey][tkey][0][i]
+                    after_sig = self.outs[pkey][tkey][0][i]
+                    before_ct = self.ins[pkey][tkey][1][i]
+                    after_ct = self.outs[pkey][tkey][1][i]
+                    self.plot_roi(before_sig, before_ct, after_sig, after_ct, roi_name, plot_dir, samples)
+        return
 
     @staticmethod
-    def plot_plane(traces_before, traces_after, ct_fig_before, ct_fig_after, n_samples, fig_save=True, fig_show=True):
-        """
-        fn to plot traces before and after ICA, crosstalk plot and mixing matrix
-        for a plane
-        :return:
-        """
-
-        if not fig_show:
-            print(f'Switching backend to Agg')
-            plt.switch_backend('Agg')
-        #define pdf file name if fig_save
-
-
-        f = plt.figure(figsize=(20, 10))
-
-        return f
-
-    @staticmethod
-    def plot_roi(before_sig, before_ct, after_sig, after_ct, roi_name, plot_dir, samples):
+    def plot_roi(before_sig, before_ct, after_sig, after_ct, roi_name, plot_dir, samples, fig_show=False):
 
         pdf_name = os.path.join(plot_dir, f"cell_{roi_name}.pdf")
         if os.path.isfile(pdf_name):
@@ -787,6 +790,8 @@ class MesoscopeICA(object):
             # plot max proj image and roi masks on it, plus current roi in different color
 
             pdf.savefig(f)
+            if not fig_show:
+                plt.close()
 
             # plot traces of {roi_name} roi : two plots per page: before ica, after ica
             y_min = min(min(before_sig), min(before_ct), min(after_sig), min(after_ct))
@@ -813,10 +818,10 @@ class MesoscopeICA(object):
                 plt.title(f'post-ica traces, cell # {roi_name}')
                 plt.legend(loc='best')
                 pdf.savefig(f1)
-                plt.close()
+                if not fig_show:
+                    plt.close()
             pdf.close()
         return
-
 
 
     @staticmethod
