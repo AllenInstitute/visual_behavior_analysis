@@ -795,18 +795,15 @@ class MesoscopeICA(object):
 
             # add mixing matrix info to the plot
             plt.subplot(133)
-            # ax = plt.gca()
+            ax = plt.gca()
             plt.rcParams.update({'font.size': 28})
             a = mixing
-            # for key in ['top', 'right', 'bottom', 'left']:
-            #     ax.spines[key].set_visible(False)
-            # ax.set_xticks([])
-            # ax.set_yticks([])
             plt.text(2, 6,
-                     f"Mixing Matrix:\n[{round(a[0, 0])}, [{round(a[0, 1])}\n[{round(a[1, 0])},[{round(a[1, 1])}]]] ",
+                     f"Mixing Matrix:\n[{round(a[0, 0])}, {round(a[0, 1])}\n{round(a[1, 0])},{round(a[1, 1])}] ",
                      fontsize=35, linespacing=1.5)
             plt.box(False)
-            plt.show()
+            ax.set_xticks([])
+            ax.set_yticks([])
 
             pdf.savefig(f)
             if not fig_show:
