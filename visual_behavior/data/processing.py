@@ -1,4 +1,4 @@
-from visual_behavior.data import loading as data_loading
+from visual_behavior.data_access import loading as data_loading
 
 import itertools
 import numpy as np

@@ -3,8 +3,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 import visual_behavior.visualization.qc.plotting_utils as pu
-from visual_behavior.data import loading as data_loading
-from visual_behavior.data import processing as data_processing
+from visual_behavior.data_access import loading as data_loading
+from visual_behavior.data_access import processing as data_processing
 
 import visual_behavior.database as db
 from visual_behavior.utilities import EyeTrackingData

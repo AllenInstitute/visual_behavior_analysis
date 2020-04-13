@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import visual_behavior.plotting as vbp
 import visual_behavior.database as db
 
-from visual_behavior.data import loading as data_loading
-from visual_behavior.data import processing as dp
+from visual_behavior.data_access import loading as data_loading
+from visual_behavior.data_access import processing as dp
 from visual_behavior.visualization import utils as ut
 from visual_behavior.visualization.qc import session_plots as sp
 from visual_behavior.visualization.qc import plotting_utils as pu

@@ -1,7 +1,7 @@
 import pandas as pd
 import seaborn as sns
 
-from visual_behavior.data import processing as data_processing
+from visual_behavior.data_access import processing as data_processing
 
 
 def gen_stage_name_color_palettes():

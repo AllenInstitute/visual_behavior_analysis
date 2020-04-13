@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from visual_behavior.visualization import utils as ut
-from visual_behavior.data import loading as data_loading
+from visual_behavior.data_access import loading as data_loading
 # from visual_behavior.visualization.qc import session_plots as sp
 # from visual_behavior.visualization.qc import plotting_utils as pu
 # from visual_behavior.data import processing as data_processing

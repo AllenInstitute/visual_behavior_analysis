@@ -4,8 +4,8 @@ import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
-from visual_behavior.data import filtering
-from visual_behavior.data import reformat
+from visual_behavior.data_access import filtering
+from visual_behavior.data_access import reformat
 
 import os
 import h5py  # for loading motion corrected movie
@@ -48,7 +48,7 @@ config = configp.ConfigParser()
 # ophys_container_id
 
 
-#   RELEVANT DIRECTORIES
+#  RELEVANT DIRECTORIES
 
 def get_super_container_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
@@ -66,11 +66,11 @@ def get_experiment_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 
-#  FROM SDK MANIFEST
+# LOAD MANIFEST FROM CACHE
 
 
 def get_cache_dir():
-    """Get directory of data cache for analysis"""
+    """Get directory of data cache for analysis - this should be the standard cache location"""
     cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
     return cache_dir
 
@@ -90,7 +90,7 @@ def get_visual_behavior_cache(manifest_path=None):
 
 
 def get_filtered_ophys_experiment_table(include_failed_data=False):
-    """Get ophys experiments table from SDK, add additional useful columns to the table (currently adds exposure_number and mouse-seeks fail tags)
+    """Get ophys experiments table from cache, add additional useful columns to the table (currently adds exposure_number and mouse-seeks fail tags)
         and filter out failed experiments and containers (unless include_failed_data=True).
         Includes MultiScope data. Includes containers with container_workflow_state='holding' (most of Multiscope experiments).
         Saves a reformatted (pre-filtering) version of the table with additional columns added for future loading speed.
@@ -205,8 +205,8 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
 
-#  FROM SDK
 
+#  FROM SDK
 
 def get_sdk_session_obj(ophys_experiment_id, include_invalid_rois=False):
     """Use LIMS API from SDK to return session object

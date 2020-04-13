@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from visual_behavior.data import loading as data_loading
+from visual_behavior.data_access import loading as data_loading
 
 
 # BEHAVIOR
