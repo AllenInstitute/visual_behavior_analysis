@@ -681,8 +681,7 @@ class MesoscopeICA(object):
                         for tkey in self.tkeys:
                             rois_valid[pkey][tkey] = self.rois_valid[pkey][tkey]['signal']
                             traces_in[pkey][tkey] = self.ins[pkey][tkey]
-                            traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], figs_ct_in[pkey][tkey], \
-                                figs_ct_in[pkey][tkey] = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
+                            traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey] = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
                             # saving to self
                             self.outs[pkey][tkey] = traces_out[pkey][tkey]
                             self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
@@ -829,13 +828,10 @@ class MesoscopeICA(object):
         traces_sig_evs, traces_ct_evs = extract_active(ica_in, len_ne=20, th_ag=10, do_plots=0)
         pl_crosstalk = np.empty((2, ica_in.shape[1]))
         pl_mixing = []
-        figs_ct_in = []
-        figs_ct_out = []
+
         # run ica on active traces, apply unmixing matrix to entire trace
         ica_pl_out = np.empty(ica_in.shape)
         for i in range(len(roi_names)):
-            # get roi names
-            roi_name = roi_names[i]
             # get events traces
             trace_sig_evs = traces_sig_evs[i]
             trace_ct_evs = traces_ct_evs[i]
