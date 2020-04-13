@@ -799,7 +799,8 @@ class MesoscopeICA(object):
             # plt.text(2, 6,
             #          f"Mixing matrix:\n{round(a[0, 0])}, {round(a[0, 1])}\n{round(a[1, 0])}, {round(a[1, 1])}",
             #          fontsize=35, linespacing=1.5)
-            plt.text(2, 6, f"Mixing matrix:\n{np.round(mixing, 2)}")
+            plt.text(0, 2, f"Mixing matrix:\n{np.round(mixing, 2)}")
+            plt.setp(plt.gca(), frame_on=False, xticks=(), yticks=())
             # plt.box(False)
             # plt.tick_params(left=False, labelleft=False)
 
