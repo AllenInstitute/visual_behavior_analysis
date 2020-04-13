@@ -697,9 +697,6 @@ class MesoscopeICA(object):
                                 f.create_dataset(f"data", data=traces_out[pkey][tkey])
                                 f.create_dataset(f"crosstalk", data=crosstalk[pkey][tkey])
                                 f.create_dataset(f"mixing_matrix", data=mixing[pkey][tkey])
-
-                            # plotting goes here
-
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
             for pkey in self.pkeys:
@@ -713,7 +710,7 @@ class MesoscopeICA(object):
                         self.mixing[pkey][tkey] = f["mixing_matrix"][()]
         return
 
-    def plot_ica_pair(self, pair, dir_name=None, samples=5000):
+    def plot_ica_pair(self, pair, dir_name=None, samples = 5000):
         if not dir_name:
             dir_name = self.names
         for pkey in self.pkeys:
@@ -732,11 +729,17 @@ class MesoscopeICA(object):
                     after_sig = self.outs[pkey][tkey][0][i]
                     before_ct = self.ins[pkey][tkey][1][i] + self.offsets[pkey][tkey]['pl1_ct_offset'][i]
                     after_ct = self.outs[pkey][tkey][1][i]
-                    self.plot_roi(before_sig, before_ct, after_sig, after_ct, roi_name, plot_dir, samples)
+                    traces_before = [before_sig, before_ct]
+                    traces_after = [after_sig, after_ct]
+                    mixing = self.mixing[pkey][tkey][i]
+                    crosstalk_before = self.crosstalk[pkey][tkey][0][i]
+                    crosstalk_after = self.crosstalk[pkey][tkey][1][i]
+                    crosstalk = [crosstalk_before, crosstalk_after]
+                    self.plot_roi(traces_before, traces_after, mixing, crosstalk, roi_name, plot_dir, samples)
         return
 
     @staticmethod
-    def plot_roi(before_sig, before_ct, after_sig, after_ct, roi_name, plot_dir, samples, fig_show=False):
+    def plot_roi(traces_before, traces_after, mixing, crosstalk, roi_name, plot_dir, samples, fig_show=False):
 
         pdf_name = os.path.join(plot_dir, f"cell_{roi_name}.pdf")
         if os.path.isfile(pdf_name):
@@ -748,18 +751,18 @@ class MesoscopeICA(object):
             pdf = plt_pdf.PdfPages(pdf_name)
 
             # get crosstalk data and plot on first page of the pdf:
-            slope_before, offset_before, r_value_b, [h_b, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(before_sig,
-                                                                                                            before_ct,
+            slope_before, offset_before, r_value_b, [h_b, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
+                                                                                                            traces_before[1],
                                                                                                             generate_plot_data=True)
-            slope_after, offset_after, r_value_a, [h_a, xedges_a, yedges_a, fitfn_a] = get_crosstalk_data(after_sig,
-                                                                                                          after_ct,
+            slope_after, offset_after, r_value_a, [h_a, xedges_a, yedges_a, fitfn_a] = get_crosstalk_data(traces_after[0],
+                                                                                                          traces_after[1],
                                                                                                           generate_plot_data=True)
             f = plt.figure(figsize=(20, 10))
             plt.suptitle(f"Crosstalk plost for cell {roi_name}")
             xlabel = "signal"
             ylabel = "crosstalk"
             # plot crosstalk before demxing
-            plt.subplot(121)
+            plt.subplot(131)
             plt.rcParams.update({'font.size': 18})
             plt.imshow(h_b, interpolation='nearest', origin='low',
                        extent=[xedges_b[0], xedges_b[-1], yedges_b[0], yedges_b[-1]], aspect='auto', norm=LogNorm())
@@ -771,11 +774,11 @@ class MesoscopeICA(object):
             plt.ylim((yedges_b[0], yedges_b[-1]))
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
-            title = f"Crosstalk before\n{fitfn_b} R2={round(r_value_b, 2)}"
+            title = f"Crosstalk before: {crosstalk[1]}\n{fitfn_b} R2={round(r_value_b, 2)}"
             plt.title(title, linespacing=0.5)
 
             # plot crosstalk after demxing
-            plt.subplot(122)
+            plt.subplot(132)
             plt.rcParams.update({'font.size': 18})
             plt.imshow(h_a, interpolation='nearest', origin='low',
                        extent=[xedges_a[0], xedges_a[-1], yedges_a[0], yedges_a[-1]], aspect='auto', norm=LogNorm())
@@ -787,9 +790,19 @@ class MesoscopeICA(object):
             plt.ylim((yedges_a[0], yedges_a[-1]))
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
-            title = f"Crosstalk after\n{fitfn_a} R2={round(r_value_a, 2)}"
+            title = f"Crosstalk after: {crosstalk[1]}\n{fitfn_a} R2={round(r_value_a, 2)}"
             plt.title(title, linespacing=0.5)
 
+            # add mixing matrix info to the plot
+            ax = plt.subplot(132)
+            plt.rcParams.update({'font.size': 18})
+            a = mixing
+            plt.text(2, 6, f"Mixing Matrix:\n[{[a[0,0]]}, [{a[0,1]}\n[{a[1,0]},[{a[1,1]}]]] ", fontsize=25, linespacing=0.5)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.xaxis.set_ticks_position('bottom')
+            ax.yaxis.set_ticks_position('left')
+            ax.tick_params(direction='out', pad=5)
             # plot max proj image and roi masks on it, plus current roi in different color
 
             pdf.savefig(f)
@@ -797,14 +810,14 @@ class MesoscopeICA(object):
                 plt.close()
 
             # plot traces of {roi_name} roi : two plots per page: before ica, after ica
-            y_min = min(min(before_sig), min(before_ct), min(after_sig), min(after_ct))
-            y_max = max(max(before_sig), max(before_ct), max(after_sig), max(after_ct))
+            y_min = min(min(traces_before[0]), min(traces_before[1]), min(traces_after[0]), min(traces_after[1]))
+            y_max = max(max(traces_before[0]), max(traces_before[1]), max(traces_after[0]), max(traces_after[1]))
 
-            for i in range(int(before_sig.shape[0] / samples) + 1):
-                sig_before_i = before_sig[i * samples:(i + 1) * samples]
-                ct_before_i = before_ct[i * samples:(i + 1) * samples]
-                sig_after_i = after_sig[i * samples:(i + 1) * samples]
-                ct_after_i = after_ct[i * samples:(i + 1) * samples]
+            for i in range(int(traces_before[0].shape[0] / samples) + 1):
+                sig_before_i = traces_before[0][i * samples:(i + 1) * samples]
+                ct_before_i = traces_before[1][i * samples:(i + 1) * samples]
+                sig_after_i = traces_after[0][i * samples:(i + 1) * samples]
+                ct_after_i = traces_after[1][i * samples:(i + 1) * samples]
 
                 f1 = plt.figure(figsize=(20, 10))
                 plt.subplot(211)
@@ -836,8 +849,9 @@ class MesoscopeICA(object):
         pl_crosstalk = np.empty((2, ica_in.shape[1]))
         pl_mixing = []
 
-        # run ica on active traces, apply unmixing matrix to entire trace
+        # run ica on active traces, apply unmixing matrix to the entire trace
         ica_pl_out = np.empty(ica_in.shape)
+        # perform unmixing separately on eah ROI:
         for i in range(len(roi_names)):
             # get events traces
             trace_sig_evs = traces_sig_evs[i]
