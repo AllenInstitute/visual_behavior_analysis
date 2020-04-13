@@ -774,7 +774,7 @@ class MesoscopeICA(object):
             plt.ylim((yedges_b[0], yedges_b[-1]))
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
-            title = f"Crosstalk before: {round(crosstalk[0], 4)}\n{fitfn_b} R2={round(r_value_b, 2)}"
+            title = f"Crosstalk before: {round(crosstalk[0], 2)}\n{fitfn_b} R2={round(r_value_b, 2)}"
             plt.title(title, linespacing=0.5, fontsize=18)
 
             # plot crosstalk after demxing
@@ -790,20 +790,18 @@ class MesoscopeICA(object):
             plt.ylim((yedges_a[0], yedges_a[-1]))
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
-            title = f"Crosstalk after: {round(crosstalk[1], 4)}\n{fitfn_a} R2={round(r_value_a, 2)}"
+            title = f"Crosstalk after: {round(crosstalk[1], 2)}\n{fitfn_a} R2={round(r_value_a, 2)}"
             plt.title(title, linespacing=0.5, fontsize=18)
 
             # add mixing matrix info to the plot
             plt.subplot(133)
-            ax = plt.gca()
             plt.rcParams.update({'font.size': 28})
             a = mixing
             plt.text(2, 6,
                      f"Mixing Matrix:\n[{round(a[0, 0])}, {round(a[0, 1])}\n{round(a[1, 0])},{round(a[1, 1])}] ",
                      fontsize=35, linespacing=1.5)
             plt.box(False)
-            ax.set_xticks([])
-            ax.set_yticks([])
+            plt.tick_params(left=False, labelleft=False)
 
             pdf.savefig(f)
             if not fig_show:
