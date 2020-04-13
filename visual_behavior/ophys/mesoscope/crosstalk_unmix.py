@@ -757,7 +757,7 @@ class MesoscopeICA(object):
             slope_after, offset_after, r_value_a, [h_a, xedges_a, yedges_a, fitfn_a] = get_crosstalk_data(traces_after[0],
                                                                                                           traces_after[1],
                                                                                                           generate_plot_data=True)
-            f = plt.figure(figsize=(20, 10))
+            f = plt.figure(figsize=(30, 10))
             plt.suptitle(f"Crosstalk plost for cell {roi_name}")
             xlabel = "signal"
             ylabel = "crosstalk"
@@ -794,7 +794,8 @@ class MesoscopeICA(object):
             plt.title(title, linespacing=0.5)
 
             # add mixing matrix info to the plot
-            ax = plt.subplot(132)
+            plt.subplot(132)
+            ax = plt.gca()
             plt.rcParams.update({'font.size': 18})
             a = mixing
             plt.text(2, 6, f"Mixing Matrix:\n[{[a[0,0]]}, [{a[0,1]}\n[{a[1,0]},[{a[1,1]}]]] ", fontsize=25, linespacing=0.5)
