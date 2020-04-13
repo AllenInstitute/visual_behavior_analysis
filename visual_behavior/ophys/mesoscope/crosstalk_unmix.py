@@ -461,7 +461,7 @@ class MesoscopeICA(object):
                     for tkey in self.tkeys:
                         self.rois_valid_paths[pkey][tkey] = rois_valid_paths[pkey][tkey]
                         ju.write(rois_valid_paths[pkey][tkey], rois_valid[pkey][tkey])
-                        self.rois_valid = rois_valid[pkey][tkey]
+                        self.rois_valid[pkey][tkey] = rois_valid[pkey][tkey]
                     self.rois_names_valid[pkey] = [roi_name for roi_name in self.rois_names[pkey] if
                                                    self.rois_valid[pkey]["roi"]["signal"][str(roi_name)]]
 
@@ -526,22 +526,8 @@ class MesoscopeICA(object):
                 logger.info("Debiased ROI traces do not exist in cache, running offset subtraction")
                 sig = {}
                 ct = {}
-                valid_sig = {}
-                valid_ct = {}
-                for pkey in self.pkeys:
-                    sig[pkey] = {}
-                    ct[pkey] = {}
-                    valid_sig[pkey] = {}
-                    valid_ct[pkey] = {}
-                    for tkey in self.tkeys:
-                        self.found_ins[pkey][tkey] = False
-                        sig[pkey][tkey] = self.raws[pkey][tkey][0]
-                        ct[pkey][tkey] = self.raws[pkey][tkey][1]
-                        valid_sig[pkey][tkey] = self.rois_valid[pkey][tkey]['signal']
-                        valid_ct[pkey][tkey] = self.rois_valid[pkey][tkey]['crosstalk']
-
-                # only include cells that don't have nans  (valid = True)
-
+                rois_valid_sig = {}
+                rois_valid_ct = {}
                 sig_valid = {}
                 ct_valid = {}
                 sig_offset = {}
@@ -549,6 +535,10 @@ class MesoscopeICA(object):
                 ct_offset = {}
                 ct_m0 = {}
                 for pkey in self.pkeys:
+                    sig[pkey] = {}
+                    ct[pkey] = {}
+                    rois_valid_sig[pkey] = {}
+                    rois_valid_ct[pkey] = {}
                     sig_valid[pkey] = {}
                     ct_valid[pkey] = {}
                     sig_offset[pkey] = {}
@@ -556,9 +546,15 @@ class MesoscopeICA(object):
                     ct_offset[pkey] = {}
                     ct_m0[pkey] = {}
                     for tkey in self.tkeys:
+                        self.found_ins[pkey][tkey] = False
+                        sig[pkey][tkey] = self.raws[pkey][tkey][0]
+                        ct[pkey][tkey] = self.raws[pkey][tkey][1]
+                        rois_valid_sig[pkey][tkey] = self.rois_valid[pkey][tkey]['signal']
+                        rois_valid_ct[pkey][tkey] = self.rois_valid[pkey][tkey]['crosstalk']
+
                         # check if traces aligned and separate signal/crosstalk
                         if len(self.rois_names[pkey]) == len(sig[pkey][tkey]):
-                            valid_idx_mask = np.array([valid_sig[pkey][tkey][str(tid)] for tid in self.rois_names_valid[pkey]])
+                            valid_idx_mask = np.array([rois_valid_sig[pkey][tkey][str(tid)] for tid in self.rois_names[pkey]])
                             sig_valid[pkey][tkey] = sig[pkey][tkey][valid_idx_mask, :]
                             ct_valid[pkey][tkey] = ct[pkey][tkey][valid_idx_mask, :]
                         else:
