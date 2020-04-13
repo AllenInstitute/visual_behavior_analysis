@@ -683,7 +683,10 @@ class MesoscopeICA(object):
                             traces_in[pkey][tkey] = self.ins[pkey][tkey]
                             traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey] = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
                             # saving to self
-                            self.outs[pkey][tkey] = traces_out[pkey][tkey]
+                            self.outs[pkey][tkey] = np.array(
+                                [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['pl1_sig_offset'],
+                                 traces_out[pkey][tkey][1] + self.offsets[pkey][tkey][
+                                     'pl1_ct_offset']])
                             self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
                             self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
                             self.mixing[pkey][tkey] = mixing[pkey][tkey]
@@ -822,7 +825,6 @@ class MesoscopeICA(object):
                     plt.close()
             pdf.close()
         return
-
 
     @staticmethod
     def unmix_plane(ica_in, ica_roi_valid):
