@@ -1056,6 +1056,12 @@ def run_ica(sig, ct):
             a_mix[[0, 1], :] = a_mix[[1, 0], :]
             # swap columns:
             a_mix[:, [0, 1]] = a_mix[:, [1, 0]]
+    else:
+        if (a_mix[0, 0] + a_mix[1, 0]) < (a_mix[0, 1] + a_mix[1, 1]):
+            # swap rows:
+            a_mix[[0, 1], :] = a_mix[[1, 0], :]
+            # swap columns:
+            a_mix[:, [0, 1]] = a_mix[:, [1, 0]]
     a_unmix = linalg.pinv(a_mix)
     # recontructing signals: dot product of unmixing matrix and input traces
     r_source = np.dot(a_unmix, traces.T).T
