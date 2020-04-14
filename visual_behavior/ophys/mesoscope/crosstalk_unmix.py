@@ -8,6 +8,7 @@ import numpy as np
 import logging
 import json
 from sklearn.decomposition import FastICA
+from scipy import linalg
 import scipy.optimize as opt
 import matplotlib.backends.backend_pdf as plt_pdf
 import matplotlib.pyplot as plt
@@ -1020,20 +1021,26 @@ def find_scale_ica_roi(ica_in, ica_out):
     return scale.x
 
 
-def run_ica(trace1, trace2):
-    traces = np.array([trace1, trace2]).T
+def run_ica(sig, ct):
+    traces = np.array([sig, ct]).T
     f_ica = FastICA(n_components=2, max_iter=50)
     _ = f_ica.fit_transform(traces)  # Reconstruct signals
     mix = f_ica.mixing_  # Get estimated mixing matrix
     # make sure no negative coeffs (inversion of traces)
     a_mix = mix
     a_mix[a_mix < 0] *= -1
-    if a_mix[0, 0] < a_mix[1, 0]:  # swap columns (source assignment inverted)
-        a_mix[:, [0, 1]] = a_mix[:, [1, 0]]
-    if a_mix[0, 1] > mix[1, 1]:  # swap elements in second column
+    var_sig = np.var(sig)
+    var_ct = np.var(ct)
+    if a_mix[0, 0] < a_mix[1, 0]:
+        a_mix[[0, 1], 0] = a_mix[[1, 0], 0]
+    if a_mix[1, 1] < a_mix[0, 1]:
         a_mix[[0, 1], 1] = a_mix[[1, 0], 1]
-    if a_mix[1, 1] > a_mix[0, 0]:  # swap both columns and rows
-        a_mix[[0, 1], [0, 1]] = a_mix[[1, 0], [1, 0]]
+    if var_ct > var_sig:
+        if (a_mix[0, 0] + a_mix[1, 0]) > (a_mix[0, 1] + a_mix[1, 1]):
+            #        swap rows:
+            a_mix[[0, 1], :] = a_mix[[1, 0], :]
+            # swap columns:
+            a_mix[:, [0, 1]] = a_mix[:, [1, 0]]
     a_unmix = linalg.pinv(a_mix)
     # recontructing signals: dot product of unmixing matrix and input traces
     r_source = np.dot(a_unmix, traces.T).T
