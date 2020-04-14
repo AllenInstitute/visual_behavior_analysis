@@ -1049,7 +1049,7 @@ def extract_active(traces, len_ne=20, th_ag=10, do_plots=0):
     traces_ct_evs = []
     valid = []
     for i in range(evs_ind.shape[0]):
-        if not np.any(np.isnan(evs_ind)):
+        if not np.any(np.isnan(evs_ind[i])):
             trace_ct = traces_ct[i, evs_ind[i]]
             traces_ct_evs.append(trace_ct)
             valid[i] = True
