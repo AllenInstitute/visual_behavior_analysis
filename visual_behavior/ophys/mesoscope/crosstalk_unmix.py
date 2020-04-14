@@ -806,10 +806,10 @@ class MesoscopeICA(object):
             # add mixing matrix info to the plot
             plt.subplot(133)
             ax = plt.gca()
-            plt.text(0.5, 0.3, f"raw mixing matrix:\n{np.round(mixing, 2)}", fontsize=35, linespacing=2.0,
+            plt.text(0.5, 0.65, f"Raw mixing matrix:\n{np.round(mixing, 2)}", fontsize=35, linespacing=2.0,
                      horizontalalignment='center',
                      verticalalignment='center', )
-            plt.text(0.5, 0.6, f"adjusted mixing matrix:\n{np.round(a_mixing, 2)}", fontsize=35, linespacing=2.0,
+            plt.text(0.5, 0.25, f"Adjusted mixing matrix:\n{np.round(a_mixing, 2)}", fontsize=35, linespacing=2.0,
                      horizontalalignment='center',
                      verticalalignment='center', )
             ax.set_axis_off()
