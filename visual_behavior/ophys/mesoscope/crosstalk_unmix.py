@@ -1052,12 +1052,12 @@ def extract_active(traces, len_ne=20, th_ag=10, do_plots=0):
         if not np.any(np.isnan(evs_ind[i])):
             trace_ct = traces_ct[i, evs_ind[i]]
             traces_ct_evs.append(trace_ct)
-            valid[i] = True
+            valid.append(True)
         else:
             logger.info(f"No events detected")
             traces_sig_evs[i] = traces_sig[i]
             traces_ct_evs.append(traces_ct[i])
-            valid[i] = False
+            valid.append(False)
     return traces_sig_evs, traces_ct_evs, valid
 
 
