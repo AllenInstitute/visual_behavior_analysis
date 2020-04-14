@@ -844,7 +844,7 @@ class MesoscopeICA(object):
         traces_sig = ica_in[0, :, :]
         traces_ct = ica_in[1, :, :]
         # extract events
-        traces_sig_evs, traces_ct_evs = extract_active(ica_in, len_ne=20, th_ag=10, do_plots=0)
+        traces_sig_evs, traces_ct_evs, valid = extract_active(ica_in, len_ne=20, th_ag=10, do_plots=0)
         pl_crosstalk = np.empty((2, ica_in.shape[1]))
         pl_mixing = []
 
@@ -1047,9 +1047,17 @@ def extract_active(traces, len_ne=20, th_ag=10, do_plots=0):
     traces_sig_evs, evs_ind = at.get_traces_evs(traces_sig, th_ag, len_ne, do_plots)
     # apply active indeces to ct trace as well:
     traces_ct_evs = []
+    valid = []
     for i in range(evs_ind.shape[0]):
-        trace_ct = traces_ct[i, evs_ind[i]]
-        traces_ct_evs.append(trace_ct)
-    return traces_sig_evs, traces_ct_evs
+        if not np.any(np.isnan(evs_ind)):
+            trace_ct = traces_ct[i, evs_ind[i]]
+            traces_ct_evs.append(trace_ct)
+            valid[i] = True
+        else:
+            logger.info(f"No events detected")
+            traces_sig_evs[i] = traces_sig[i]
+            traces_ct_evs.append(traces_ct[i])
+            valid[i] = False
+    return traces_sig_evs, traces_ct_evs, valid
 
 
