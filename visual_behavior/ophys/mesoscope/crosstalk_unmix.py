@@ -1026,17 +1026,15 @@ def run_ica(trace1, trace2):
     _ = f_ica.fit_transform(traces)  # Reconstruct signals
     mix = f_ica.mixing_  # Get estimated mixing matrix
     # make sure no negative coeffs (inversion of traces)
-    mix[mix < 0] *= -1
-    # switch columns if needed (source assignment inverted)
-    if mix[0, 0] < mix[1, 0]:
-        a_mix = np.array([mix[1, :], mix[0, :]])
-    else:
-        a_mix = mix
-    if a_mix[0, 1] > a_mix[1, 1]:
-        b_mix = np.array([[a_mix[0, 0], a_mix[1, 1]], [a_mix[1, 0], a_mix[0, 1]]])
-    else:
-        b_mix = a_mix
-    a_unmix = linalg.pinv(b_mix)
+    a_mix = mix
+    a_mix[a_mix < 0] *= -1
+    if a_mix[0, 0] < a_mix[1, 0]:  # swap columns (source assignment inverted)
+        a_mix[:, [0, 1]] = a_mix[:, [1, 0]]
+    if a_mix[0, 1] > mix[1, 1]:  # swap elements in second column
+        a_mix[[0, 1], 1] = a_mix[[1, 0], 1]
+    if a_mix[1, 1] > a_mix[0, 0]:  # swap both columns and rows
+        a_mix[[0, 1], [0, 1]] = a_mix[[1, 0], [1, 0]]
+    a_unmix = linalg.pinv(a_mix)
     # recontructing signals: dot product of unmixing matrix and input traces
     r_source = np.dot(a_unmix, traces.T).T
     return mix, a_mix, a_unmix, r_source
@@ -1053,4 +1051,5 @@ def extract_active(traces, len_ne=20, th_ag=10, do_plots=0):
         trace_ct = traces_ct[i, evs_ind[i]]
         traces_ct_evs.append(trace_ct)
     return traces_sig_evs, traces_ct_evs
+
 
