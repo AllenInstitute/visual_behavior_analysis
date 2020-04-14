@@ -732,6 +732,10 @@ class MesoscopeICA(object):
                                         f'{dir_name[tkey]}_{pair[0]}_{pair[1]}/{dir_name[tkey]}_ica_plots_{plane}')
                 if not os.path.isdir(plot_dir):
                     os.mkdir(plot_dir)
+
+                # get events
+                
+
                 for i in range(len(self.rois_names_valid[pkey])):
                     roi_name = self.rois_names_valid[pkey][i]
                     before_sig = self.ins[pkey][tkey][0][i] + self.offsets[pkey][tkey]['pl1_sig_offset'][i]
@@ -761,25 +765,22 @@ class MesoscopeICA(object):
             pdf = plt_pdf.PdfPages(pdf_name)
 
             # get crosstalk data and plot on first page of the pdf:
-            slope_before, offset_before, r_value_b, [h_b, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
+            # before demixing
+            slope_before, offset_before, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
                                                                                                             traces_before[1],
                                                                                                             generate_plot_data=True)
-            slope_after, offset_after, r_value_a, [h_a, xedges_a, yedges_a, fitfn_a] = get_crosstalk_data(traces_after[0],
-                                                                                                          traces_after[1],
-                                                                                                          generate_plot_data=True)
-            f = plt.figure(figsize=(30, 10))
             plt.rcParams.update({'font.size': 28})
             plt.suptitle(f"Crosstalk plost for cell {roi_name}\n", linespacing=0.5)
             xlabel = "signal"
             ylabel = "crosstalk"
             # plot crosstalk before demxing
             plt.subplot(131)
-            plt.imshow(h_b, interpolation='nearest', origin='low',
+            plt.imshow(hist_before, interpolation='nearest', origin='low',
                        extent=[xedges_b[0], xedges_b[-1], yedges_b[0], yedges_b[-1]], aspect='auto', norm=LogNorm())
             cbar = plt.colorbar()
             cbar.set_label('# of counts', rotation=270, labelpad=20)
             cbar.ax.tick_params(labelsize=18)
-            plt.plot(h_b, fitfn_b(h_b), '--k')
+            plt.plot(hist_before, fitfn_b(hist_before), '--k')
             plt.xlim((xedges_b[0], xedges_b[-1]))
             plt.ylim((yedges_b[0], yedges_b[-1]))
             plt.xlabel(xlabel)
@@ -787,15 +788,19 @@ class MesoscopeICA(object):
             title = f"Crosstalk before: {round(crosstalk[0], 2)}\n{fitfn_b} R2={round(r_value_b, 2)}"
             plt.title(title, linespacing=0.5, fontsize=18)
 
-            # plot crosstalk after demxing
+            # after demxing
+            slope_after, offset_after, r_value_a, [hist_after, xedges_a, yedges_a, fitfn_a] = get_crosstalk_data(traces_after[0],
+                                                                                                          traces_after[1],
+                                                                                                          generate_plot_data=True)
+            f = plt.figure(figsize=(30, 10))
             plt.subplot(132)
             plt.rcParams.update({'font.size': 28})
-            plt.imshow(h_a, interpolation='nearest', origin='low',
+            plt.imshow(hist_after, interpolation='nearest', origin='low',
                        extent=[xedges_a[0], xedges_a[-1], yedges_a[0], yedges_a[-1]], aspect='auto', norm=LogNorm())
             cbar = plt.colorbar()
             cbar.set_label('# of counts', rotation=270, labelpad=20)
             cbar.ax.tick_params(labelsize=18)
-            plt.plot(h_a, fitfn_a(h_a), '--k')
+            plt.plot(hist_after, fitfn_a(hist_after), '--k')
             plt.xlim((xedges_a[0], xedges_a[-1]))
             plt.ylim((yedges_a[0], yedges_a[-1]))
             plt.xlabel(xlabel)
@@ -877,8 +882,8 @@ class MesoscopeICA(object):
             trace_ct_evs_out = r_sources_evs[:, 1]
             rescaled_trace_sig_evs_out = rescale(trace_sig_evs, trace_sig_evs_out)
             rescaled_trace_ct_evs_out = rescale(trace_ct_evs, trace_ct_evs_out)
-            # calculating crosstalk : on events
 
+            # calculating crosstalk : on events
             slope_in, _, _, _ = get_crosstalk_data(trace_sig_evs, trace_ct_evs, generate_plot_data=False)
             slope_out, _, _, _ = get_crosstalk_data(rescaled_trace_sig_evs_out, rescaled_trace_ct_evs_out,
                                                     generate_plot_data=False)
