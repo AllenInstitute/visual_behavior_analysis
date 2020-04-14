@@ -149,6 +149,7 @@ class MesoscopeICA(object):
         self.outs_paths = {}
         self.crosstalk = {}
         self.mixing = {}
+        self.a_mixing = {}
         for pkey in self.pkeys:
             self.rois_names[pkey] = None
             self.rois_names_valid[pkey] = None
@@ -163,6 +164,7 @@ class MesoscopeICA(object):
             self.outs_paths[pkey] = {}
             self.crosstalk[pkey] = {}
             self.mixing[pkey] = {}
+            self.a_mixing[pkey] = {}
             for tkey in self.tkeys:
                 self.raws[pkey][tkey] = None
                 self.raw_paths[pkey][tkey] = None
@@ -175,6 +177,7 @@ class MesoscopeICA(object):
                 self.outs_paths[pkey][tkey] = None
                 self.crosstalk[pkey][tkey] = None
                 self.mixing[pkey][tkey] = None
+                self.a_mixing[pkey][tkey] = None
 
         self.found_raws = {}  # flag if raw traces exist in self.dirs; output of get_traces
         self.found_ins = {}  # flag if ica input traces exists
@@ -669,6 +672,7 @@ class MesoscopeICA(object):
                     traces_out = {}
                     crosstalk = {}
                     mixing = {}
+                    a_mixing = {}
                     figs_ct_in = {}
                     figs_ct_out = {}
                     for pkey in self.pkeys:
@@ -677,12 +681,13 @@ class MesoscopeICA(object):
                         traces_out[pkey] = {}
                         crosstalk[pkey] = {}
                         mixing[pkey] = {}
+                        a_mixing[pkey] = {}
                         figs_ct_in[pkey] = {}
                         figs_ct_out[pkey] = {}
                         for tkey in self.tkeys:
                             rois_valid[pkey][tkey] = self.rois_valid[pkey][tkey]['signal']
                             traces_in[pkey][tkey] = self.ins[pkey][tkey]
-                            traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey] = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
+                            traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
                             # saving to self
                             self.outs[pkey][tkey] = np.array(
                                 [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['pl1_sig_offset'],
@@ -691,12 +696,14 @@ class MesoscopeICA(object):
                             self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
                             self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
                             self.mixing[pkey][tkey] = mixing[pkey][tkey]
+                            self.a_mixing[pkey][tkey] = a_mixing[pkey][tkey]
                             self.found_solution[pkey][tkey] = True
 
                             # writing ica out traces to disk
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
                                 f.create_dataset(f"data", data=traces_out[pkey][tkey])
                                 f.create_dataset(f"crosstalk", data=crosstalk[pkey][tkey])
+                                f.create_dataset(f"mixing_matrix_adjusted", data=a_mixing[pkey][tkey])
                                 f.create_dataset(f"mixing_matrix", data=mixing[pkey][tkey])
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
@@ -709,6 +716,7 @@ class MesoscopeICA(object):
                         self.outs[pkey][tkey] = f["data"][()]
                         self.crosstalk[pkey][tkey] = f["crosstalk"][()]
                         self.mixing[pkey][tkey] = f["mixing_matrix"][()]
+                        self.a_mixing[pkey][tkey] = f["mixing_matrix_adjusted"][()]
         return
 
     def plot_ica_pair(self, pair, dir_name=None, samples = 5000):
@@ -733,14 +741,15 @@ class MesoscopeICA(object):
                     traces_before = [before_sig, before_ct]
                     traces_after = [after_sig, after_ct]
                     mixing = self.mixing[pkey][tkey][i]
+                    a_mixing = self.a_mixing[pkey][tkey][i]
                     crosstalk_before = self.crosstalk[pkey][tkey][0][i]
                     crosstalk_after = self.crosstalk[pkey][tkey][1][i]
                     crosstalk = [crosstalk_before, crosstalk_after]
-                    self.plot_roi(traces_before, traces_after, mixing, crosstalk, roi_name, plot_dir, samples)
+                    self.plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples)
         return
 
     @staticmethod
-    def plot_roi(traces_before, traces_after, mixing, crosstalk, roi_name, plot_dir, samples, fig_show=False):
+    def plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples, fig_show=False):
 
         pdf_name = os.path.join(plot_dir, f"cell_{roi_name}.pdf")
         if os.path.isfile(pdf_name):
@@ -797,7 +806,10 @@ class MesoscopeICA(object):
             # add mixing matrix info to the plot
             plt.subplot(133)
             ax = plt.gca()
-            plt.text(0.5, 0.5, f"Mixing matrix:\n{np.round(mixing, 2)}", fontsize=35, linespacing=2.0,
+            plt.text(0.5, 0.3, f"raw mixing matrix:\n{np.round(mixing, 2)}", fontsize=35, linespacing=2.0,
+                     horizontalalignment='center',
+                     verticalalignment='center', )
+            plt.text(0.5, 0.6, f"adjusted mixing matrix:\n{np.round(a_mixing, 2)}", fontsize=35, linespacing=2.0,
                      horizontalalignment='center',
                      verticalalignment='center', )
             ax.set_axis_off()
@@ -848,6 +860,7 @@ class MesoscopeICA(object):
         traces_sig_evs, traces_ct_evs, valid = extract_active(ica_in, len_ne=20, th_ag=10, do_plots=0)
         pl_crosstalk = np.empty((2, ica_in.shape[1]))
         pl_mixing = []
+        pl_a_mixing = []
 
         # run ica on active traces, apply unmixing matrix to the entire trace
         ica_pl_out = np.empty(ica_in.shape)
@@ -858,6 +871,7 @@ class MesoscopeICA(object):
             trace_ct_evs = traces_ct_evs[i]
             mix, a_mix, a_unmix, r_sources_evs = run_ica(trace_sig_evs, trace_ct_evs)
             adjusted_mixing_matrix = a_mix
+            mixing_matrix = mix
 
             trace_sig_evs_out = r_sources_evs[:, 0]
             trace_ct_evs_out = r_sources_evs[:, 1]
@@ -872,7 +886,8 @@ class MesoscopeICA(object):
             crosstalk_before_demixing_evs = slope_in * 100
             crosstalk_after_demixing_evs = slope_out * 100
             pl_crosstalk[:, i] = [crosstalk_before_demixing_evs, crosstalk_after_demixing_evs]
-            pl_mixing.append(adjusted_mixing_matrix)
+            pl_a_mixing.append(adjusted_mixing_matrix)
+            pl_mixing.append(mixing_matrix)
 
             # applying unmixing matrix to the entire trace
             trace_sig = traces_sig[i]
@@ -887,7 +902,7 @@ class MesoscopeICA(object):
             ica_pl_out[0, i, :] = rescaled_trace_sig_out
             ica_pl_out[1, i, :] = rescaled_trace_ct_out
 
-        return ica_pl_out, pl_crosstalk, pl_mixing
+        return ica_pl_out, pl_crosstalk, pl_mixing, pl_a_mixing
 
     @staticmethod
     def validate_against_vba(rois_valid_ica, exp_id, vba_cache=VBA_CACHE):
