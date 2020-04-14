@@ -83,7 +83,7 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
     if ax is None:
         figsize = (5, 10)
         fig, ax = plt.subplots(figsize=figsize)
-    for trial in trials.trial.values:
+    for trial in trials.trials_id.values:
         trial_data = trials.iloc[trial]
         # get times relative to change time
         trial_start = trial_data.start_time - trial_data.change_time
