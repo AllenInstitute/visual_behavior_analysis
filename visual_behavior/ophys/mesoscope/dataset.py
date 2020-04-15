@@ -55,10 +55,8 @@ def get_mesoscope_files():
     e.name as rig_name, 
     p.code as project_code, 
     os.id AS ses_id, 
-    os.workflow_state as ses_state,  
     os.date_of_acquisition as date, 
     oe.id AS exp_id, 
-    oe.workflow_state as exp_state, 
     wkft.name AS wkf_type, 
     wkf.storage_directory as directory, 
     wkf.filename as wkf_name
