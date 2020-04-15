@@ -436,19 +436,18 @@ class MesoscopeICA(object):
                         for n in range(num_traces_sig[pkey]["roi"]):
                             trace_sig[pkey] = {}
                             trace_ct[pkey] = {}
+                            sig_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
+                            ct_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
+                            traces_valid_flag = True
                             for tkey in self.tkeys:
                                 trace_sig[pkey][tkey] = self.raws[pkey][tkey][0][n]
                                 trace_ct[pkey][tkey] = self.raws[pkey][tkey][1][n]
                                 # check if traces contain np.NaN
-                                traces_valid_flag = True
                                 if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_ct[pkey][tkey])):
                                     traces_valid_flag = False
-                                if traces_valid_flag:
-                                    sig_valid[pkey][str(self.rois_names[pkey][tkey][n])] = True
-                                    ct_valid[pkey][str(self.rois_names[pkey][tkey][n])] = True
-                                else:
-                                    sig_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
-                                    ct_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
+                            if not traces_valid_flag:
+                                sig_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
+                                ct_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
 
                 # combining dictionaries for signal and crosstalk
                 for pkey in self.pkeys:
