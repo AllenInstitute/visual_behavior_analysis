@@ -436,8 +436,8 @@ class MesoscopeICA(object):
                         for n in range(num_traces_sig[pkey]["roi"]):
                             trace_sig[pkey] = {}
                             trace_ct[pkey] = {}
-                            sig_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
-                            ct_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
+                            sig_valid[pkey][str(self.rois_names[pkey][tkey][n])] = True
+                            ct_valid[pkey][str(self.rois_names[pkey][tkey][n])] = True
                             traces_valid_flag = True
                             for tkey in self.tkeys:
                                 trace_sig[pkey][tkey] = self.raws[pkey][tkey][0][n]
