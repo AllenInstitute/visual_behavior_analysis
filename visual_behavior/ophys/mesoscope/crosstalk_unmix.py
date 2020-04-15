@@ -444,32 +444,30 @@ class MesoscopeICA(object):
                                 if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_ct[pkey][tkey])):
                                     traces_valid_flag = False
                                 if traces_valid_flag:
-                                    sig_valid[pkey][tkey][str(self.rois_names[pkey][tkey][n])] = True
-                                    ct_valid[pkey][tkey][str(self.rois_names[pkey][tkey][n])] = True
+                                    sig_valid[pkey][str(self.rois_names[pkey][tkey][n])] = True
+                                    ct_valid[pkey][str(self.rois_names[pkey][tkey][n])] = True
                                 else:
-                                    sig_valid[pkey][tkey][str(self.rois_names[pkey][tkey][n])] = False
-                                    ct_valid[pkey][tkey][str(self.rois_names[pkey][tkey][n])] = False
+                                    sig_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
+                                    ct_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
 
                 # combining dictionaries for signal and crosstalk
                 for pkey in self.pkeys:
-                    for tkey in self.tkeys:
-                        rois_valid[pkey][tkey] = {"signal": sig_valid[pkey][tkey],
-                                                  "crosstalk": ct_valid[pkey][tkey]}
+                    rois_valid[pkey] = {"signal": sig_valid[pkey],
+                                        "crosstalk": ct_valid[pkey]}
 
                 # validating agains VBA rois set:
                 if return_vba:
                     for pkey in self.pkeys:
-                        for tkey in self.tkeys:
-                            rois_valid[pkey][tkey] = self.validate_against_vba(rois_valid[pkey][tkey],
-                                                                               self.exp_ids[pkey], VBA_CACHE)
+                        rois_valid[pkey] = self.validate_against_vba(rois_valid[pkey],
+                                                                           self.exp_ids[pkey], VBA_CACHE)
 
                 # saving to json:
                 for pkey in self.pkeys:
                     for tkey in self.tkeys:
                         self.rois_valid_paths[pkey][tkey] = rois_valid_paths[pkey][tkey]
-                        ju.write(rois_valid_paths[pkey][tkey], rois_valid[pkey][tkey])
-                        self.rois_valid[pkey][tkey] = rois_valid[pkey][tkey]
-                        self.rois_names_valid[pkey][tkey] = [int(roi_name) for roi_name, valid in self.rois_valid[pkey][tkey]['signal'].items() if valid]
+                        ju.write(rois_valid_paths[pkey][tkey], rois_valid[pkey])
+                        self.rois_valid[pkey][tkey] = rois_valid[pkey]
+                        self.rois_names_valid[pkey][tkey] = [int(roi_name) for roi_name, valid in self.rois_valid[pkey]['signal'].items() if valid]
             else:
                 logger.info('ROI traces dont exist in cache, run get_ica_traces first')
 
@@ -478,8 +476,8 @@ class MesoscopeICA(object):
             # read the jsons for ROIs
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
-                    rois_valid[pkey][tkey] = ju.read(rois_valid_paths[pkey][tkey])
-                    self.rois_valid[pkey][tkey] = rois_valid[pkey][tkey]
+                    rois_valid[pkey] = ju.read(rois_valid_paths[pkey][tkey])
+                    self.rois_valid[pkey][tkey] = rois_valid[pkey]
                     self.rois_names_valid[pkey][tkey] = [int(roi_name) for roi_name, valid in self.rois_valid[pkey][tkey]['signal'].items() if valid]
         return
 
