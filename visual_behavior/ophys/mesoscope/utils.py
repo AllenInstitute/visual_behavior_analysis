@@ -228,7 +228,7 @@ def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
 
-def run_demixing_on_ica(session, cache=CACHE, roi_name="ica_traces"):
+def run_demixing_on_ica(session, cache=CACHE):
     """
     run LIMS demixing on crosstalk corrected traces
     :param session: LIMS session id
@@ -282,7 +282,7 @@ def run_demixing_on_ica(session, cache=CACHE, roi_name="ica_traces"):
                 traces_valid = os.path.join(cache, ica_dir, f'valid_{exp_id}.json')
                 data = {
                     "movie_h5": os.path.join(exp_dir, "processed", "concat_31Hz_0.h5"),
-                    "traces_h5_ica": os.path.join(cache, ica_dir, f'{roi_name}_output_{exp_id}.h5'),
+                    "traces_h5_ica": os.path.join(cache, ica_dir, f'{exp_id}_out.h5'),
                     "traces_h5": os.path.join(exp_dir, "processed", "roi_traces.h5"),
                     "roi_masks": nrois.values(),
                     "traces_valid": traces_valid,
