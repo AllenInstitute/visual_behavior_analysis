@@ -52,16 +52,16 @@ def get_all_mesoscope_data():
 
 def get_mesoscope_files():
     query = (""" SELECT
-    e.name, p.code, 
-    os.id AS os_id, 
-    os.workflow_state, 
-    os.name AS os, 
-    os.date_of_acquisition, 
-    oe.id AS oe_id, 
-    oe.name AS oe, 
-    oe.workflow_state, 
-    wkft.name AS wkft, 
-    wkf.storage_directory, wkf.filename
+    e.name as rig_name, 
+    p.code as project_code, 
+    os.id AS ses_id, 
+    os.workflow_state as ses_state,  
+    os.date_of_acquisition as date, 
+    oe.id AS exp_id, 
+    oe.workflow_state as exp_state, 
+    wkft.name AS wkf_type, 
+    wkf.storage_directory as directory, 
+    wkf.filename as wkf_name
     FROM ophys_sessions os
     JOIN ophys_experiments oe ON os.id = oe.ophys_session_id
     JOIN projects p ON p.id = os.project_id
