@@ -68,9 +68,7 @@ def get_mesoscope_files():
     JOIN equipment e ON e.id = os.equipment_id
     JOIN well_known_files wkf ON wkf.attachable_id = oe.id
     JOIN welL_known_file_types wkft ON wkft.id = wkf.welL_known_file_type_id AND wkft.name = 'MotionCorrectedImageStack'
-    WHERE e.name = 'MESO.1'
-    ORDER BY os.id
-    DESC, oe.name;""")
+    WHERE e.name = 'MESO.1'""")
     return pd.DataFrame(psycopg2_select(query))
 
 
