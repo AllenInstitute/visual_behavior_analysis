@@ -50,6 +50,26 @@ def get_all_mesoscope_data():
     return pd.DataFrame(psycopg2_select(query))
 
 
+def get_mesoscope_files():
+    query = (""" SELECT
+    e.name as rig_name, 
+    p.code as project_code, 
+    os.id AS ses_id, 
+    os.date_of_acquisition as date, 
+    oe.id AS exp_id, 
+    wkft.name AS wkf_type, 
+    wkf.storage_directory as directory, 
+    wkf.filename as wkf_name
+    FROM ophys_sessions os
+    JOIN ophys_experiments oe ON os.id = oe.ophys_session_id
+    JOIN projects p ON p.id = os.project_id
+    JOIN equipment e ON e.id = os.equipment_id
+    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
+    JOIN welL_known_file_types wkft ON wkft.id = wkf.welL_known_file_type_id AND wkft.name = 'MotionCorrectedImageStack'
+    WHERE e.name = 'MESO.1'""")
+    return pd.DataFrame(psycopg2_select(query))
+
+
 class MesoscopeDataset(object):
     def __init__(self, session_id, experiment_id=None):
         self.exp_folder = None
