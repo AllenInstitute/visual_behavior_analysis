@@ -61,7 +61,7 @@ def get_mesoscope_files():
     oe.name AS oe, 
     oe.workflow_state, 
     wkft.name AS wkft, 
-    wkf.storage_directory | | wkf.filename
+    wkf.storage_directory, wkf.filename
     FROM ophys_sessions os
     JOIN ophys_experiments oe ON os.id = oe.ophys_session_id
     JOIN projects p ON p.id = os.project_id
