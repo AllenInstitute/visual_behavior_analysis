@@ -694,7 +694,7 @@ class MesoscopeICA(object):
                             else:
                                 traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
                                     = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
-                                
+
                             # saving to self
                             self.outs[pkey][tkey] = np.array(
                                 [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['pl1_sig_offset'],
@@ -881,8 +881,14 @@ class MesoscopeICA(object):
                 a_unmix = linalg.pinv(mixing_roi)
                 # recontructing sources
                 r_sources = np.dot(a_unmix, traces.T).T
-
+                pl_mixing.append(mixing_roi)
                 pl_a_mixing.append(mixing_roi)
+                trace_sig_out = r_sources[:, 0]
+                trace_ct_out = r_sources[:, 1]
+                rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)
+                rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
+                ica_pl_out[0, i, :] = rescaled_trace_sig_out
+                ica_pl_out[1, i, :] = rescaled_trace_ct_out
 
         else:  # traces are rois, do full unmixing.
             # extract events
@@ -897,7 +903,6 @@ class MesoscopeICA(object):
                 mix, a_mix, a_unmix, r_sources_evs = run_ica(trace_sig_evs, trace_ct_evs)
                 adjusted_mixing_matrix = a_mix
                 mixing_matrix = mix
-
                 trace_sig_evs_out = r_sources_evs[:, 0]
                 trace_ct_evs_out = r_sources_evs[:, 1]
                 rescaled_trace_sig_evs_out = rescale(trace_sig_evs, trace_sig_evs_out)
@@ -919,13 +924,12 @@ class MesoscopeICA(object):
                 r_sources = np.dot(a_unmix, traces.T).T
                 pl_a_mixing.append(adjusted_mixing_matrix)
                 pl_mixing.append(mixing_matrix)
-
-        trace_sig_out = r_sources[:, 0]
-        trace_ct_out = r_sources[:, 1]
-        rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)
-        rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
-        ica_pl_out[0, i, :] = rescaled_trace_sig_out
-        ica_pl_out[1, i, :] = rescaled_trace_ct_out
+                trace_sig_out = r_sources[:, 0]
+                trace_ct_out = r_sources[:, 1]
+                rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)
+                rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
+                ica_pl_out[0, i, :] = rescaled_trace_sig_out
+                ica_pl_out[1, i, :] = rescaled_trace_ct_out
 
         return ica_pl_out, pl_crosstalk, pl_mixing, pl_a_mixing
 
