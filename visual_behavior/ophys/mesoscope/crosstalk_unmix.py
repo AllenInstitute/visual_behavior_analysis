@@ -1,4 +1,3 @@
-import matplotlib
 from allensdk.brain_observatory import roi_masks
 import visual_behavior.ophys.mesoscope.dataset as ms
 import allensdk.internal.core.lims_utilities as lu
@@ -8,7 +7,6 @@ import numpy as np
 import logging
 import json
 from sklearn.decomposition import FastICA
-from scipy import linalg
 import scipy.optimize as opt
 import matplotlib.backends.backend_pdf as plt_pdf
 import matplotlib.pyplot as plt
@@ -687,17 +685,25 @@ class MesoscopeICA(object):
                         for tkey in self.tkeys:
                             rois_valid[pkey][tkey] = self.rois_valid[pkey][tkey]['signal']
                             traces_in[pkey][tkey] = self.ins[pkey][tkey]
-                            traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
-                            # saving to self
-                            self.outs[pkey][tkey] = np.array(
-                                [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['pl1_sig_offset'],
-                                 traces_out[pkey][tkey][1] + self.offsets[pkey][tkey][
-                                     'pl1_ct_offset']])
-                            self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
-                            self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
-                            self.mixing[pkey][tkey] = mixing[pkey][tkey]
-                            self.a_mixing[pkey][tkey] = a_mixing[pkey][tkey]
-                            self.found_solution[pkey][tkey] = True
+
+                            # don't run unmixing if neuropil, instead read roi data and apply unmixing matrix
+                            if tkey == 'np':
+                                mixing[pkey][tkey] = self.a_mixing[pkey]['roi']
+                                traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
+                                    = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey], mixing[pkey][tkey])
+                            else:
+                                traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
+                                    = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
+                                # saving to self
+                                self.outs[pkey][tkey] = np.array(
+                                    [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['pl1_sig_offset'],
+                                     traces_out[pkey][tkey][1] + self.offsets[pkey][tkey][
+                                         'pl1_ct_offset']])
+                                self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
+                                self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
+                                self.mixing[pkey][tkey] = mixing[pkey][tkey]
+                                self.a_mixing[pkey][tkey] = a_mixing[pkey][tkey]
+                                self.found_solution[pkey][tkey] = True
 
                             # writing ica out traces to disk
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
@@ -732,9 +738,6 @@ class MesoscopeICA(object):
                                         f'{dir_name[tkey]}_{pair[0]}_{pair[1]}/{dir_name[tkey]}_ica_plots_{plane}')
                 if not os.path.isdir(plot_dir):
                     os.mkdir(plot_dir)
-
-                # get events
-                
 
                 for i in range(len(self.rois_names_valid[pkey])):
                     roi_name = self.rois_names_valid[pkey][i]
@@ -857,55 +860,71 @@ class MesoscopeICA(object):
         return
 
     @staticmethod
-    def unmix_plane(ica_in, ica_roi_valid):
+    def unmix_plane(ica_in, ica_roi_valid, mixing=None):
         roi_names = [roi for roi, valid in ica_roi_valid.items() if valid]
         traces_sig = ica_in[0, :, :]
         traces_ct = ica_in[1, :, :]
-        # extract events
-        traces_sig_evs, traces_ct_evs, valid = extract_active(ica_in, len_ne=20, th_ag=10, do_plots=0)
-        pl_crosstalk = np.empty((2, ica_in.shape[1]))
         pl_mixing = []
         pl_a_mixing = []
-
-        # run ica on active traces, apply unmixing matrix to the entire trace
+        pl_crosstalk = np.empty((2, ica_in.shape[1]))
         ica_pl_out = np.empty(ica_in.shape)
-        # perform unmixing separately on eah ROI:
-        for i in range(len(roi_names)):
-            # get events traces
-            trace_sig_evs = traces_sig_evs[i]
-            trace_ct_evs = traces_ct_evs[i]
-            mix, a_mix, a_unmix, r_sources_evs = run_ica(trace_sig_evs, trace_ct_evs)
-            adjusted_mixing_matrix = a_mix
-            mixing_matrix = mix
 
-            trace_sig_evs_out = r_sources_evs[:, 0]
-            trace_ct_evs_out = r_sources_evs[:, 1]
-            rescaled_trace_sig_evs_out = rescale(trace_sig_evs, trace_sig_evs_out)
-            rescaled_trace_ct_evs_out = rescale(trace_ct_evs, trace_ct_evs_out)
+        if not mixing is None:  # this is indicative taht traces are form neuropil, use mixing to unmix them
+            #  get unmixing
+            for i in range(len(roi_names)):
+                mixing_roi = mixing[i]
+                trace_sig = traces_sig[i]
+                trace_ct = traces_ct[i]
+                traces = np.array([trace_sig, trace_ct]).T
+                # inverting roi mixing matrix
+                a_unmix = linalg.pinv(mixing_roi)
+                # recontructing sources
+                r_sources = np.dot(a_unmix, traces.T).T
 
-            # calculating crosstalk : on events
-            slope_in, _, _, _ = get_crosstalk_data(trace_sig_evs, trace_ct_evs, generate_plot_data=False)
-            slope_out, _, _, _ = get_crosstalk_data(rescaled_trace_sig_evs_out, rescaled_trace_ct_evs_out,
-                                                    generate_plot_data=False)
+                pl_a_mixing.append(mixing_roi)
 
-            crosstalk_before_demixing_evs = slope_in * 100
-            crosstalk_after_demixing_evs = slope_out * 100
-            pl_crosstalk[:, i] = [crosstalk_before_demixing_evs, crosstalk_after_demixing_evs]
-            pl_a_mixing.append(adjusted_mixing_matrix)
-            pl_mixing.append(mixing_matrix)
+        else:  # traces are rois, do full unmixing.
+            # extract events
+            traces_sig_evs, traces_ct_evs, valid = extract_active(ica_in, len_ne=20, th_ag=10, do_plots=0)
+            # run ica on active traces, apply unmixing matrix to the entire trace
+            ica_pl_out = np.empty(ica_in.shape)
+            # perform unmixing separately on eah ROI:
+            for i in range(len(roi_names)):
+                # get events traces
+                trace_sig_evs = traces_sig_evs[i]
+                trace_ct_evs = traces_ct_evs[i]
+                mix, a_mix, a_unmix, r_sources_evs = run_ica(trace_sig_evs, trace_ct_evs)
+                adjusted_mixing_matrix = a_mix
+                mixing_matrix = mix
 
-            # applying unmixing matrix to the entire trace
-            trace_sig = traces_sig[i]
-            trace_ct = traces_ct[i]
-            # recontructing sources
-            traces = np.array([trace_sig, trace_ct]).T
-            r_sources = np.dot(a_unmix, traces.T).T
-            trace_sig_out = r_sources[:, 0]
-            trace_ct_out = r_sources[:, 1]
-            rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)
-            rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
-            ica_pl_out[0, i, :] = rescaled_trace_sig_out
-            ica_pl_out[1, i, :] = rescaled_trace_ct_out
+                trace_sig_evs_out = r_sources_evs[:, 0]
+                trace_ct_evs_out = r_sources_evs[:, 1]
+                rescaled_trace_sig_evs_out = rescale(trace_sig_evs, trace_sig_evs_out)
+                rescaled_trace_ct_evs_out = rescale(trace_ct_evs, trace_ct_evs_out)
+
+                # calculating crosstalk : on events
+                slope_in, _, _, _ = get_crosstalk_data(trace_sig_evs, trace_ct_evs, generate_plot_data=False)
+                slope_out, _, _, _ = get_crosstalk_data(rescaled_trace_sig_evs_out, rescaled_trace_ct_evs_out,
+                                                        generate_plot_data=False)
+                crosstalk_before_demixing_evs = slope_in * 100
+                crosstalk_after_demixing_evs = slope_out * 100
+                pl_crosstalk[:, i] = [crosstalk_before_demixing_evs, crosstalk_after_demixing_evs]
+
+                # applying unmixing matrix to the entire trace
+                trace_sig = traces_sig[i]
+                trace_ct = traces_ct[i]
+                # recontructing sources
+                traces = np.array([trace_sig, trace_ct]).T
+                r_sources = np.dot(a_unmix, traces.T).T
+                pl_a_mixing.append(adjusted_mixing_matrix)
+                pl_mixing.append(mixing_matrix)
+
+        trace_sig_out = r_sources[:, 0]
+        trace_ct_out = r_sources[:, 1]
+        rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)
+        rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
+        ica_pl_out[0, i, :] = rescaled_trace_sig_out
+        ica_pl_out[1, i, :] = rescaled_trace_ct_out
 
         return ica_pl_out, pl_crosstalk, pl_mixing, pl_a_mixing
 
