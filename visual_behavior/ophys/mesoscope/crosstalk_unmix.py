@@ -767,8 +767,9 @@ class MesoscopeICA(object):
             # get crosstalk data and plot on first page of the pdf:
             # before demixing
             slope_before, offset_before, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
-                                                                                                            traces_before[1],
-                                                                                                            generate_plot_data=True)
+                                                                                                                    traces_before[1],
+                                                                                                                    generate_plot_data=True)
+            f = plt.figure(figsize=(30, 10))
             plt.rcParams.update({'font.size': 28})
             plt.suptitle(f"Crosstalk plost for cell {roi_name}\n", linespacing=0.5)
             xlabel = "signal"
@@ -790,9 +791,8 @@ class MesoscopeICA(object):
 
             # after demxing
             slope_after, offset_after, r_value_a, [hist_after, xedges_a, yedges_a, fitfn_a] = get_crosstalk_data(traces_after[0],
-                                                                                                          traces_after[1],
-                                                                                                          generate_plot_data=True)
-            f = plt.figure(figsize=(30, 10))
+                                                                                                                 traces_after[1],
+                                                                                                                 generate_plot_data=True)
             plt.subplot(132)
             plt.rcParams.update({'font.size': 28})
             plt.imshow(hist_after, interpolation='nearest', origin='low',
