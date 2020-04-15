@@ -686,7 +686,7 @@ class MesoscopeICA(object):
                             rois_valid[pkey][tkey] = self.rois_valid[pkey][tkey]['signal']
                             traces_in[pkey][tkey] = self.ins[pkey][tkey]
 
-                            # don't run unmixing if neuropil, instead read roi data and apply unmixing matrix
+                            # don't run unmixing if neuropil, instead read roi unmixing matrix
                             if tkey == 'np':
                                 mixing[pkey][tkey] = self.a_mixing[pkey]['roi']
                                 traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
@@ -694,18 +694,19 @@ class MesoscopeICA(object):
                             else:
                                 traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
                                     = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
-                                # saving to self
-                                self.outs[pkey][tkey] = np.array(
-                                    [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['pl1_sig_offset'],
-                                     traces_out[pkey][tkey][1] + self.offsets[pkey][tkey][
-                                         'pl1_ct_offset']])
-                                self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
-                                self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
-                                self.mixing[pkey][tkey] = mixing[pkey][tkey]
-                                self.a_mixing[pkey][tkey] = a_mixing[pkey][tkey]
-                                self.found_solution[pkey][tkey] = True
+                                
+                            # saving to self
+                            self.outs[pkey][tkey] = np.array(
+                                [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['pl1_sig_offset'],
+                                 traces_out[pkey][tkey][1] + self.offsets[pkey][tkey][
+                                     'pl1_ct_offset']])
+                            self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
+                            self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
+                            self.mixing[pkey][tkey] = mixing[pkey][tkey]
+                            self.a_mixing[pkey][tkey] = a_mixing[pkey][tkey]
+                            self.found_solution[pkey][tkey] = True
 
-                            # writing ica out traces to disk
+                            # writing ica ou    t traces to disk
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
                                 f.create_dataset(f"data", data=traces_out[pkey][tkey])
                                 f.create_dataset(f"crosstalk", data=crosstalk[pkey][tkey])
