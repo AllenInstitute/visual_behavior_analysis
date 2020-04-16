@@ -233,6 +233,13 @@ class MesoscopeICA(object):
                                                            f'{self.exp_ids[pkey]}_valid.json')
         return
 
+    def set_ica_input_paths(self):
+        for tkey in self.tkeys:
+            for pkey in self.pkeys:
+                self.ins_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
+                                                           f'{self.exp_ids[pkey]}_in.json')
+        return
+
     def get_ica_traces(self):
         """
         function to apply roi set to two image pls, first check if the traces have been extracted before,
