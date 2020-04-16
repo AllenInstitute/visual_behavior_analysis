@@ -216,6 +216,11 @@ class MesoscopeICA(object):
 
         for tkey in self.tkeys:
             self.dirs[tkey] = os.path.join(session_dir, f'{names[tkey]}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
+            
+        return
+
+    def set_out_paths(self):
+        for tkey in self.tkeys:
             for pkey in self.pkeys:
                 self.outs_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
                                                            f'{self.exp_ids[pkey]}_out.h5')
