@@ -243,7 +243,7 @@ class MesoscopeICA(object):
                                                            f'{self.exp_ids[pkey]}_in.h5')
         return
 
-    def set_plot_dirs(self, dir_name):
+    def set_plot_dirs(self, dir_name = None):
         if dir_name is None:
             dir_name = self.names
 
