@@ -215,6 +215,7 @@ class MesoscopeICA(object):
         """
         if not names:
             names = self.names
+
         session_dir = self.session_dir
 
         for tkey in self.tkeys:

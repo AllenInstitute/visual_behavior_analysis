@@ -573,7 +573,7 @@ def before_date(file_date, thr_date="01/01/2020"):
     return flag
 
 
-def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_raws=False, remove_by_date="01/01/2020"):
+def clean_up_cache(sessions, cache, remove_by_date="01/01/2020"):
     """
     deletes ica outputs from cache:
         neuropil_ica_output_pair{i}.h5
@@ -597,7 +597,7 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_raws=Fal
     """
 
     for session in sessions:
-        ica_obj = ica.MesoscopeICA(session_id=session, cache=cache)
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=cache, roi_name="ica_traces", np_name="ica_neuropil")
         ses_dir = ica_obj.session_dir
         if os.path.isdir(ses_dir):
             pairs = ica_obj.dataset.get_paired_planes()
@@ -618,15 +618,19 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_raws=Fal
                                 plot_dir = ica_obj.plot_dirs[pkey][tkey]
                                 if os.path.isfile(out):
                                     if before_date(out, remove_by_date):
+                                        print(f'deteling {out}')
                                         os.remove(out)
                                 if os.path.isfile(valid):
                                     if before_date(valid, remove_by_date):
+                                        print(f'deteling {valid}')
                                         os.remove(valid)
                                 if os.path.isfile(ica_input):
                                     if before_date(ica_input, remove_by_date):
+                                        print(f'deteling {ica_input}')
                                         os.remove(ica_input)
                                 if os.path.isdir(plot_dir):
                                     if before_date(plot_dir, remove_by_date):
+                                        print(f'deteling {plot_dir}')
                                         shutil.rmtree(plot_dir, ignore_errors=True)
                     else:
                         print(f"ICA ROI dir does not exist: {exp_dir}")
@@ -641,28 +645,30 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_raws=Fal
                 if os.path.isfile(dff_p1):
                     if before_date(dff_p1, remove_by_date):
                         os.remove(dff_p1)
-
+                        print(f'deteling {dff_p2}')
                 if os.path.isfile(dff_p2):
                     if before_date(dff_p2, remove_by_date):
                         os.remove(dff_p2)
-
+                        print(f'deteling {dff_p2}')
                 # removing directories for demixing plane 1
                 if os.path.isdir(dem_out_p1):
                     if before_date(dem_out_p1, remove_by_date):
                         shutil.rmtree(dem_out_p1, ignore_errors=True)
-
+                        print(f'deteling {dem_out_p1}')
                 # removing directories for demixing plane 2
                 if os.path.isdir(dem_out_p2):
                     if before_date(dem_out_p2, remove_by_date):
                         shutil.rmtree(dem_out_p2, ignore_errors=True)
-
+                        print(f'deteling {dem_out_p2}')
                 # removing directories for neuropil correction plane 1
                 if os.path.isdir(np_out_p1):
                     if before_date(np_out_p1, remove_by_date):
                         shutil.rmtree(np_out_p1, ignore_errors=True)
-
+                        print(f'deteling {np_out_p1}')
                 # removing directories for neuropil correction plane 2
                 if os.path.isdir(np_out_p2):
                     if before_date(np_out_p2, remove_by_date):
                         shutil.rmtree(np_out_p2, ignore_errors=True)
+                        print(f'deteling {np_out_p2}')
+
     return
