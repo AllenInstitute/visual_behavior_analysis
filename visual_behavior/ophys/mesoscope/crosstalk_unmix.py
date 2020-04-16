@@ -237,7 +237,7 @@ class MesoscopeICA(object):
         for tkey in self.tkeys:
             for pkey in self.pkeys:
                 self.ins_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
-                                                           f'{self.exp_ids[pkey]}_in.json')
+                                                           f'{self.exp_ids[pkey]}_in.h5')
         return
 
     def get_ica_traces(self):
