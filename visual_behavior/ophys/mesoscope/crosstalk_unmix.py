@@ -129,6 +129,7 @@ class MesoscopeICA(object):
 
         self.exp_ids = {key: None for key in self.pkeys}
         self.dirs = {key: None for key in self.tkeys}
+        self.set_ica_dirs()
 
         # pointers and attributes related to raw traces
         self.raws = {}
@@ -212,11 +213,12 @@ class MesoscopeICA(object):
         if not names:
             names = self.names
         session_dir = self.session_dir
+
         for tkey in self.tkeys:
             self.dirs[tkey] = os.path.join(session_dir, f'{names[tkey]}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
             for pkey in self.pkeys:
                 self.outs_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
-                                                           f'{self.names[tkey]}_out_{self.exp_ids[pkey]}.h5')
+                                                           f'{self.exp_ids[pkey]}_out.h5')
         return
 
     def get_ica_traces(self):
