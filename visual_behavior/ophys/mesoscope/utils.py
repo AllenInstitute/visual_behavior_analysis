@@ -586,13 +586,8 @@ def clean_up_cache(sessions, cache, remove_by_date="01/01/2020"):
         demixing files
         dff traces files
     :param remove_by_date: file creating date threshold - don't remove if created after this date
-    :param roi_name:
-    :param np_name:
     :param sessions: list of LIMS session ids
     :param cache: cache directory
-    :param np_name: string: name prefix for all files related to neuropil
-    :param roi_name: string: name prefix for all files related to ROIs
-    :param delete_inputs: bool, defines delete or not the inputs to the ICA
     :return: None
     """
 
@@ -671,4 +666,47 @@ def clean_up_cache(sessions, cache, remove_by_date="01/01/2020"):
                         shutil.rmtree(np_out_p2, ignore_errors=True)
                         print(f'deteling {np_out_p2}')
 
+    return
+
+
+def delete_old_files(sessions, CACHE, names_files= None, remove_by_date='04/01/2020'):
+    if not names_files:
+        names_files = {'roi': ['ica_traces', 'traces_ica', 'roi_traces', 'traces_roi', 'crosstalk', 'mixing'],
+                       'np': ['ica_neuropil', 'neuropil_ica', 'crosstalk', 'mixing']}
+    for session in sessions:
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+        ses_dir = ica_obj.session_dir
+        print(f'scanning sesion : {session}')
+        if os.path.isdir(ses_dir):
+            pairs = ica_obj.dataset.get_paired_planes()
+            for pair in pairs:
+                ica_obj.set_exp_ids(pair)
+                ica_obj.set_ica_dirs()
+                for tkey in ica_obj.tkeys:
+                    exp_dir = ica_obj.dirs[tkey]
+                    if os.path.isdir(exp_dir):
+                        print(f'scanning experiment :{exp_dir}')
+                        items = os.listdir(exp_dir)
+                        for item in items:
+                            item_path = os.path.join(exp_dir, item)
+                            if os.path.isfile(item_path):
+                                delete_file_flag = False
+                                for name in names_files[tkey]:
+                                    if name in item:
+                                        delete_file_flag = True
+                                if delete_file_flag:
+                                    os.remove(item_path)
+                                    print(f'deleting {item_path}')
+                            elif os.path.isdir(item_path):
+                                if before_date(item_path, remove_by_date):
+                                    print(f'deteling {item_path}')
+                                    shutil.rmtree(item_path, ignore_errors=True)
+                            else:
+                                print(f'{item} is not a file or a dir')
+                    else:
+                        print(f"experiment {exp_dir} doesn't exist")
+                        continue
+        else:
+            print(f"sessions {session} doens't exist")
+            continue
     return
