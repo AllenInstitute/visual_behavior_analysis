@@ -786,7 +786,7 @@ class MesoscopeICA(object):
                     crosstalk_before = self.crosstalk[pkey][tkey][0][i]
                     crosstalk_after = self.crosstalk[pkey][tkey][1][i]
                     crosstalk = [crosstalk_before, crosstalk_after]
-                    self.plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples)
+                    self.plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples, fig_show=False)
                 self.plot_dirs[pkey][tkey] = plot_dir
         return
 
@@ -857,11 +857,8 @@ class MesoscopeICA(object):
                      verticalalignment='center', )
             ax.set_axis_off()
             plt.tick_params(left=False, labelleft=False)
-
             pdf.savefig(f)
-
-            if not fig_show:
-                plt.close()
+            plt.close()
 
             # plot traces of {roi_name} roi : two plots per page: before ica, after ica
             y_min = min(min(traces_before[0]), min(traces_before[1]), min(traces_after[0]), min(traces_after[1]))
@@ -889,8 +886,7 @@ class MesoscopeICA(object):
                 plt.title(f'post-ica traces, cell # {roi_name}', fontsize = 18)
                 plt.legend(loc='best')
                 pdf.savefig(f1)
-                if not fig_show:
-                    plt.close()
+                plt.close()
             pdf.close()
         return
 
@@ -1028,7 +1024,7 @@ def get_crosstalk_data(x, y, generate_plot_data=True):
 
 
 def plot_pixel_hist2d(x, y, xlabel='signal', ylabel='crosstalk', title=None, save_fig=False, save_path=None,
-                      fig_show=True, colorbar=False):
+                      fig_show=False, colorbar=False):
     fig = plt.figure(figsize=(3, 3))
     h, xedges, yedges = np.histogram2d(x, y, bins=(30, 30))
     h = h.T
