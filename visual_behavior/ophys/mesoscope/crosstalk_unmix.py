@@ -229,7 +229,7 @@ class MesoscopeICA(object):
     def set_valid_paths(self):
         for tkey in self.tkeys:
             for pkey in self.pkeys:
-                self.outs_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
+                self.rois_valid_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
                                                            f'{self.exp_ids[pkey]}_valid.json')
         return
 
