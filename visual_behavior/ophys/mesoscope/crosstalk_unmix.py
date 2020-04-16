@@ -149,6 +149,7 @@ class MesoscopeICA(object):
         self.crosstalk = {}
         self.mixing = {}
         self.a_mixing = {}
+        self.plot_dirs = {}
         for pkey in self.pkeys:
             self.rois_names[pkey] = {}
             self.rois_names_valid[pkey] = {}
@@ -164,6 +165,7 @@ class MesoscopeICA(object):
             self.crosstalk[pkey] = {}
             self.mixing[pkey] = {}
             self.a_mixing[pkey] = {}
+            self.plot_dirs[pkey] = {}
             for tkey in self.tkeys:
                 self.rois_names[pkey][tkey] = None
                 self.rois_names_valid[pkey][tkey] = None
@@ -179,6 +181,7 @@ class MesoscopeICA(object):
                 self.crosstalk[pkey][tkey] = None
                 self.mixing[pkey][tkey] = None
                 self.a_mixing[pkey][tkey] = None
+                self.plot_dirs[pkey][tkey] = None
 
         self.found_raws = {}  # flag if raw traces exist in self.dirs; output of get_traces
         self.found_ins = {}  # flag if ica input traces exists
@@ -220,24 +223,33 @@ class MesoscopeICA(object):
         return
 
     def set_out_paths(self):
-        for tkey in self.tkeys:
-            for pkey in self.pkeys:
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
                 self.outs_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
                                                            f'{self.exp_ids[pkey]}_out.h5')
         return
 
     def set_valid_paths(self):
-        for tkey in self.tkeys:
-            for pkey in self.pkeys:
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
                 self.rois_valid_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
                                                            f'{self.exp_ids[pkey]}_valid.json')
         return
 
     def set_ica_input_paths(self):
-        for tkey in self.tkeys:
-            for pkey in self.pkeys:
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
                 self.ins_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
                                                            f'{self.exp_ids[pkey]}_in.h5')
+        return
+
+    def set_plot_dirs(self, dir_name):
+        if dir_name is None:
+            dir_name = self.names
+
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                self.plot_dirs[pkey][tkey] = os.path.join(self.dirs[tkey], f"{dir_name[tkey]}_ica_plots_{self.exp_ids[pkey]}")
         return
 
     def get_ica_traces(self):
@@ -774,6 +786,7 @@ class MesoscopeICA(object):
                     crosstalk_after = self.crosstalk[pkey][tkey][1][i]
                     crosstalk = [crosstalk_before, crosstalk_after]
                     self.plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples)
+                self.plot_dirs[pkey][tkey] = plot_dir
         return
 
     @staticmethod
