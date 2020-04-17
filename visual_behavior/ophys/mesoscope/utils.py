@@ -573,7 +573,7 @@ def before_date(file_date, thr_date="01/01/2020"):
     return flag
 
 
-def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=False, remove_by_date="01/01/2020"):
+def clean_up_cache(sessions, cache, remove_by_date="01/01/2020"):
     """
     deletes ica outputs from cache:
         neuropil_ica_output_pair{i}.h5
@@ -586,168 +586,49 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
         demixing files
         dff traces files
     :param remove_by_date: file creating date threshold - don't remove if created after this date
-    :param roi_name:
-    :param np_name:
     :param sessions: list of LIMS session ids
     :param cache: cache directory
-    :param np_name: string: name prefix for all files related to neuropil
-    :param roi_name: string: name prefix for all files related to ROIs
-    :param delete_inputs: bool, defines delete or not the inputs to the ICA
     :return: None
     """
-    if not roi_name:
-        roi_name = "ica_traces"
-    if not np_name:
-        np_name = "ica_neuropil"
 
     for session in sessions:
-        ica_obj = ica.MesoscopeICA(session_id=session, cache=cache)
-        ses_dir = ica_obj.set_session_dir()
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=cache, roi_name="ica_traces", np_name="ica_neuropil")
+        ses_dir = ica_obj.session_dir
         if os.path.isdir(ses_dir):
             pairs = ica_obj.dataset.get_paired_planes()
             for pair in pairs:
-                # cleaning up neuropil directory
-                ica_obj.set_ica_neuropil_dir(pair, np_name="ica_neuropil")
-                exp_np_dir = ica_obj.np_dir
-                if os.path.isdir(exp_np_dir):
-                    ica_np_output_p1 = os.path.join(exp_np_dir, f'{np_name}_output_{pair[0]}.h5')
-                    ica_np_output_p2 = os.path.join(exp_np_dir, f'{np_name}_output_{pair[1]}.h5')
-
-                    valid_p1 = os.path.join(exp_np_dir, f'valid_{pair[0]}.json')
-                    valid_p2 = os.path.join(exp_np_dir, f'valid_{pair[1]}.json')
-                    mixing = os.path.join(exp_np_dir, f'{np_name}_mixing.h5')
-
-                    if os.path.isfile(ica_np_output_p1):
-                        if before_date(ica_np_output_p1, remove_by_date):
-                            os.remove(ica_np_output_p1)
+                ica_obj.set_exp_ids(pair)
+                ica_obj.set_ica_dirs()
+                ica_obj.set_out_paths()
+                ica_obj.set_valid_paths()
+                ica_obj.set_plot_dirs(dir_name=None)
+                ica_obj.set_ica_input_paths()
+                for tkey in ica_obj.tkeys:
+                    exp_dir = ica_obj.dirs[tkey]
+                    if os.path.isdir(exp_dir):
+                        for pkey in ica_obj.pkeys:
+                                out = ica_obj.outs_paths[pkey][tkey]
+                                valid = ica_obj.rois_valid_paths[pkey][tkey]
+                                ica_input = ica_obj.ins_paths[pkey][tkey]
+                                plot_dir = ica_obj.plot_dirs[pkey][tkey]
+                                if os.path.isfile(out):
+                                    if before_date(out, remove_by_date):
+                                        print(f'deteling {out}')
+                                        os.remove(out)
+                                if os.path.isfile(valid):
+                                    if before_date(valid, remove_by_date):
+                                        print(f'deteling {valid}')
+                                        os.remove(valid)
+                                if os.path.isfile(ica_input):
+                                    if before_date(ica_input, remove_by_date):
+                                        print(f'deteling {ica_input}')
+                                        os.remove(ica_input)
+                                if os.path.isdir(plot_dir):
+                                    if before_date(plot_dir, remove_by_date):
+                                        print(f'deteling {plot_dir}')
+                                        shutil.rmtree(plot_dir, ignore_errors=True)
                     else:
-                        print(f"ICA np output plane1 does not exist at {ica_np_output_p1}")
-                    if os.path.isfile(ica_np_output_p2):
-                        if before_date(ica_np_output_p2, remove_by_date):
-                            os.remove(ica_np_output_p2)
-                    else:
-                        print(f"ICA np output for plane2 does not exist at {ica_np_output_p2}")
-                    if os.path.isfile(valid_p1):
-                        if before_date(valid_p1, remove_by_date):
-                            os.remove(valid_p1)
-                    else:
-                        print(f"ICA np valid json for plane1 does not exist at {valid_p1}")
-
-                    if os.path.isfile(valid_p2):
-                        if before_date(valid_p2, remove_by_date):
-                            os.remove(valid_p2)
-                    else:
-                        print(f"ICA np valid json plane2 does not exist at {valid_p2}")
-
-                    if os.path.isfile(mixing):
-                        if before_date(mixing, remove_by_date):
-                            os.remove(mixing)
-                    else:
-                        print(f"ICA NP mixing matrix does not exist at {mixing}")
-
-                    if delete_inputs:
-                        ica_np_input_p1 = os.path.join(exp_np_dir, f'{np_name}_input_{pair[0]}.h5')
-                        ica_np_input_p2 = os.path.join(exp_np_dir, f'{np_name}_input_{pair[1]}.h5')
-                        ica_np_raw_p1 = os.path.join(exp_np_dir, f'neuropil_raw_{pair[0]}.h5')
-                        ica_np_raw_p2 = os.path.join(exp_np_dir, f'neuropil_raw_{pair[1]}.h5')
-
-                        if os.path.isfile(ica_np_input_p1):
-                            if before_date(ica_np_input_p1, remove_by_date):
-                                os.remove(ica_np_input_p1)
-
-                        if os.path.isfile(ica_np_input_p2):
-                            if before_date(ica_np_input_p2, remove_by_date):
-                                os.remove(ica_np_input_p2)
-
-                        if os.path.isfile(ica_np_raw_p1):
-                            if before_date(ica_np_raw_p1, remove_by_date):
-                                os.remove(ica_np_raw_p1)
-
-                        if os.path.isfile(ica_np_raw_p2):
-                            if before_date(ica_np_raw_p2, remove_by_date):
-                                os.remove(ica_np_raw_p2)
-                else:
-                    print(f"ICA NP dir does not exist: {exp_np_dir}")
-
-                # cleaning up roi traces directory:
-                ica_obj.set_ica_roi_dir(pair, roi_name="ica_traces")
-                exp_roi_dir = ica_obj.roi_dir
-                if os.path.isdir(exp_roi_dir):
-                    ica_roi_output_p1 = os.path.join(exp_roi_dir, f'{roi_name}_output_{pair[0]}.h5')
-                    ica_roi_output_p2 = os.path.join(exp_roi_dir, f'{roi_name}_output_{pair[1]}.h5')
-                    valid_p1 = os.path.join(exp_roi_dir, f'valid_{pair[0]}.json')
-                    valid_p2 = os.path.join(exp_roi_dir, f'valid_{pair[1]}.json')
-                    mixing = os.path.join(exp_roi_dir, f'{roi_name}_mixing.h5')
-
-                    if os.path.isfile(ica_roi_output_p1):
-                        if before_date(ica_roi_output_p1, remove_by_date):
-                            os.remove(ica_roi_output_p1)
-                    else:
-                        print(f"ICA roi output plane1 does not exist at {ica_roi_output_p1}")
-
-                    if os.path.isfile(ica_roi_output_p2):
-                        if before_date(ica_roi_output_p2, remove_by_date):
-                            os.remove(ica_roi_output_p2)
-                    else:
-                        print(f"ICA roi output plane2 does not exist at {ica_roi_output_p2}")
-
-                    if os.path.isfile(valid_p1):
-                        if before_date(valid_p1, remove_by_date):
-                            os.remove(valid_p1)
-                    else:
-                        print(f"ICA roi valid json for plane1 does not exist at {valid_p1}")
-
-                    if os.path.isfile(valid_p2):
-                        if before_date(valid_p2, remove_by_date):
-                            os.remove(valid_p2)
-                    else:
-                        print(f"ICA roi valid json for plane2 does not exist at {valid_p2}")
-
-                    if os.path.isfile(mixing):
-                        if before_date(mixing, remove_by_date):
-                            os.remove(mixing)
-                    else:
-                        print(f"ICA roi mixing matrix does not exist at {mixing}")
-
-                    ica_plots_p1 = os.path.join(exp_roi_dir, f'ica_plots_{pair[0]}')
-                    ica_plots_p2 = os.path.join(exp_roi_dir, f'ica_plots_{pair[1]}')
-
-                    if os.path.isdir(ica_plots_p1):
-                        if before_date(ica_plots_p1, remove_by_date):
-                            shutil.rmtree(ica_plots_p1, ignore_errors=True)
-                    else:
-                        print(f"Roi races plots dir for plane 1 doesn't exist at {ica_plots_p1}")
-
-                    if os.path.isdir(ica_plots_p2):
-                        if before_date(ica_plots_p2, remove_by_date):
-                            shutil.rmtree(ica_plots_p2, ignore_errors=True)
-                    else:
-                        print(f"Roi races plots dir for plane 2 doesn't exist at {ica_plots_p2}")
-
-                    if delete_inputs:
-                        ica_roi_input_p1 = os.path.join(exp_np_dir, f'{roi_name}_input_{pair[0]}.h5')
-                        ica_roi_input_p2 = os.path.join(exp_np_dir, f'{roi_name}_input_{pair[1]}.h5')
-                        ica_roi_raw_p1 = os.path.join(exp_np_dir, f'traces_original_{pair[0]}.h5')
-                        ica_roi_raw_p2 = os.path.join(exp_np_dir, f'traces_original_{pair[1]}.h5')
-
-                        if os.path.isfile(ica_roi_input_p1):
-                            if before_date(ica_roi_input_p1, remove_by_date):
-                                os.remove(ica_roi_input_p1)
-
-                        if os.path.isfile(ica_roi_input_p2):
-                            if before_date(ica_roi_input_p2, remove_by_date):
-                                os.remove(ica_roi_input_p2)
-
-                        if os.path.isfile(ica_roi_raw_p1):
-                            if before_date(ica_roi_raw_p1, remove_by_date):
-                                os.remove(ica_roi_raw_p1)
-
-                        if os.path.isfile(ica_roi_raw_p2):
-                            if before_date(ica_roi_raw_p2, remove_by_date):
-                                os.remove(ica_roi_raw_p2)
-                else:
-                    print(f"ICA ROI dir does not exist: {exp_roi_dir}")
-
+                        print(f"ICA ROI dir does not exist: {exp_dir}")
                 # removing LIMS processing outputs:
                 dem_out_p1 = os.path.join(ses_dir, f'demixing_{pair[0]}')
                 dem_out_p2 = os.path.join(ses_dir, f'demixing_{pair[1]}')
@@ -759,28 +640,73 @@ def clean_up_cache(sessions, cache, np_name=None, roi_name=None, delete_inputs=F
                 if os.path.isfile(dff_p1):
                     if before_date(dff_p1, remove_by_date):
                         os.remove(dff_p1)
-
+                        print(f'deteling {dff_p2}')
                 if os.path.isfile(dff_p2):
                     if before_date(dff_p2, remove_by_date):
                         os.remove(dff_p2)
-
+                        print(f'deteling {dff_p2}')
                 # removing directories for demixing plane 1
                 if os.path.isdir(dem_out_p1):
                     if before_date(dem_out_p1, remove_by_date):
                         shutil.rmtree(dem_out_p1, ignore_errors=True)
-
+                        print(f'deteling {dem_out_p1}')
                 # removing directories for demixing plane 2
                 if os.path.isdir(dem_out_p2):
                     if before_date(dem_out_p2, remove_by_date):
                         shutil.rmtree(dem_out_p2, ignore_errors=True)
-
+                        print(f'deteling {dem_out_p2}')
                 # removing directories for neuropil correction plane 1
                 if os.path.isdir(np_out_p1):
                     if before_date(np_out_p1, remove_by_date):
                         shutil.rmtree(np_out_p1, ignore_errors=True)
-
+                        print(f'deteling {np_out_p1}')
                 # removing directories for neuropil correction plane 2
                 if os.path.isdir(np_out_p2):
                     if before_date(np_out_p2, remove_by_date):
                         shutil.rmtree(np_out_p2, ignore_errors=True)
+                        print(f'deteling {np_out_p2}')
+
+    return
+
+
+def delete_old_files(sessions, CACHE, names_files= None, remove_by_date='04/01/2020'):
+    if not names_files:
+        names_files = {'roi': ['ica_traces', 'traces_ica', 'roi_traces', 'traces_roi', 'crosstalk', 'mixing'],
+                       'np': ['ica_neuropil', 'neuropil_ica', 'crosstalk', 'mixing']}
+    for session in sessions:
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+        ses_dir = ica_obj.session_dir
+        print(f'scanning sesion : {session}')
+        if os.path.isdir(ses_dir):
+            pairs = ica_obj.dataset.get_paired_planes()
+            for pair in pairs:
+                ica_obj.set_exp_ids(pair)
+                ica_obj.set_ica_dirs()
+                for tkey in ica_obj.tkeys:
+                    exp_dir = ica_obj.dirs[tkey]
+                    if os.path.isdir(exp_dir):
+                        print(f'scanning experiment :{exp_dir}')
+                        items = os.listdir(exp_dir)
+                        for item in items:
+                            item_path = os.path.join(exp_dir, item)
+                            if os.path.isfile(item_path):
+                                delete_file_flag = False
+                                for name in names_files[tkey]:
+                                    if name in item:
+                                        delete_file_flag = True
+                                if delete_file_flag:
+                                    os.remove(item_path)
+                                    print(f'deleting {item_path}')
+                            elif os.path.isdir(item_path):
+                                if before_date(item_path, remove_by_date):
+                                    print(f'deteling {item_path}')
+                                    shutil.rmtree(item_path, ignore_errors=True)
+                            else:
+                                print(f'{item} is not a file or a dir')
+                    else:
+                        print(f"experiment {exp_dir} doesn't exist")
+                        continue
+        else:
+            print(f"sessions {session} doens't exist")
+            continue
     return

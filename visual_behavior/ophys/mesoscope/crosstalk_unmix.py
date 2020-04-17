@@ -129,6 +129,7 @@ class MesoscopeICA(object):
 
         self.exp_ids = {key: None for key in self.pkeys}
         self.dirs = {key: None for key in self.tkeys}
+        self.set_ica_dirs()
 
         # pointers and attributes related to raw traces
         self.raws = {}
@@ -148,9 +149,10 @@ class MesoscopeICA(object):
         self.crosstalk = {}
         self.mixing = {}
         self.a_mixing = {}
+        self.plot_dirs = {}
         for pkey in self.pkeys:
-            self.rois_names[pkey] = None
-            self.rois_names_valid[pkey] = None
+            self.rois_names[pkey] = {}
+            self.rois_names_valid[pkey] = {}
             self.rois_valid[pkey] = {}
             self.rois_valid_paths[pkey] = {}
             self.raw_paths[pkey] = {}
@@ -163,7 +165,10 @@ class MesoscopeICA(object):
             self.crosstalk[pkey] = {}
             self.mixing[pkey] = {}
             self.a_mixing[pkey] = {}
+            self.plot_dirs[pkey] = {}
             for tkey in self.tkeys:
+                self.rois_names[pkey][tkey] = None
+                self.rois_names_valid[pkey][tkey] = None
                 self.raws[pkey][tkey] = None
                 self.raw_paths[pkey][tkey] = None
                 self.rois_valid[pkey][tkey] = None
@@ -176,6 +181,7 @@ class MesoscopeICA(object):
                 self.crosstalk[pkey][tkey] = None
                 self.mixing[pkey][tkey] = None
                 self.a_mixing[pkey][tkey] = None
+                self.plot_dirs[pkey][tkey] = None
 
         self.found_raws = {}  # flag if raw traces exist in self.dirs; output of get_traces
         self.found_ins = {}  # flag if ica input traces exists
@@ -209,12 +215,42 @@ class MesoscopeICA(object):
         """
         if not names:
             names = self.names
+
         session_dir = self.session_dir
+
         for tkey in self.tkeys:
             self.dirs[tkey] = os.path.join(session_dir, f'{names[tkey]}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
-            for pkey in self.pkeys:
+
+        return
+
+    def set_out_paths(self):
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
                 self.outs_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
-                                                           f'{self.names[tkey]}_out_{self.exp_ids[pkey]}.h5')
+                                                           f'{self.exp_ids[pkey]}_out.h5')
+        return
+
+    def set_valid_paths(self):
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                self.rois_valid_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
+                                                           f'{self.exp_ids[pkey]}_valid.json')
+        return
+
+    def set_ica_input_paths(self):
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                self.ins_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
+                                                           f'{self.exp_ids[pkey]}_in.h5')
+        return
+
+    def set_plot_dirs(self, dir_name = None):
+        if dir_name is None:
+            dir_name = self.names
+
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                self.plot_dirs[pkey][tkey] = os.path.join(self.dirs[tkey], f"{dir_name[tkey]}_ica_plots_{self.exp_ids[pkey]}")
         return
 
     def get_ica_traces(self):
@@ -268,9 +304,9 @@ class MesoscopeICA(object):
 
             # read traces and roi namesfrom file:
             for pkey in self.pkeys:
-                with h5py.File(path[pkey]["roi"], "r") as f:
-                    self.rois_names[pkey] = f["roi_names"][()]
                 for tkey in self.tkeys:
+                    with h5py.File(path[pkey]["roi"], "r") as f:
+                        self.rois_names[pkey][tkey] = f["roi_names"][()]
                     self.found_raws[pkey][tkey] = True  # set found traces flag True
                     self.raw_paths[pkey][tkey] = path[pkey][tkey]
                     with h5py.File(path[pkey][tkey], "r") as f:
@@ -284,9 +320,9 @@ class MesoscopeICA(object):
             # yes, as we want unmixed traces be out on ICA using original traces
             folders = {}
             for pkey in self.pkeys:
-                self.rois_names[pkey] = None
                 folders[pkey] = self.dataset.get_exp_folder(self.exp_ids[pkey])
                 for tkey in self.tkeys:
+                    self.rois_names[pkey][tkey] = None
                     self.ins_paths[pkey][tkey] = None
                     self.outs_paths[pkey][tkey] = None
 
@@ -300,15 +336,18 @@ class MesoscopeICA(object):
                 for tkey in self.tkeys:
                     sig[pkey][tkey] = {}
                     ct[pkey][tkey] = {}
+                    roi_names[pkey][tkey] = {}
 
             # extract signal and crosstalk traces for pl 1
-            sig["pl1"]["roi"], sig["pl1"]["np"], roi_names["pl1"] = get_traces(folders["pl1"], self.exp_ids["pl1"],
+            sig["pl1"]["roi"], sig["pl1"]["np"], roi_names["pl1"]['roi'] = get_traces(folders["pl1"], self.exp_ids["pl1"],
                                                                                folders["pl1"], self.exp_ids["pl1"])
+            roi_names["pl1"]['np'] = roi_names["pl1"]['roi']
             ct["pl1"]["roi"], ct["pl1"]["np"], _ = get_traces(folders["pl2"], self.exp_ids["pl2"], folders["pl1"],
                                                               self.exp_ids["pl1"])
             # extract signal and crosstalk traces for pl 2
-            sig["pl2"]["roi"], sig["pl2"]["np"], roi_names["pl2"] = get_traces(folders["pl2"], self.exp_ids["pl2"],
+            sig["pl2"]["roi"], sig["pl2"]["np"], roi_names["pl2"]['roi'] = get_traces(folders["pl2"], self.exp_ids["pl2"],
                                                                                folders["pl2"], self.exp_ids["pl2"])
+            roi_names["pl2"]['np'] = roi_names["pl2"]['roi']
             ct["pl2"]["roi"], ct["pl2"]["np"], _ = get_traces(folders["pl1"], self.exp_ids["pl1"], folders["pl2"],
                                                               self.exp_ids["pl2"])
 
@@ -326,9 +365,9 @@ class MesoscopeICA(object):
 
             # if extracted traces valid, save to disk:
             for pkey in self.pkeys:
-                if self.found_raws[pkey]["roi"] and self.found_raws[pkey]["np"]:
-                    self.rois_names[pkey] = roi_names[pkey]
                 for tkey in self.tkeys:
+                    if self.found_raws[pkey][tkey]:
+                        self.rois_names[pkey][tkey] = roi_names[pkey][tkey]
                     if self.found_raws[pkey][tkey] and self.found_raws[pkey][tkey]:
                         # combining traces, saving to self, writing to disk:
                         traces_raw = np.array([sig[pkey][tkey], ct[pkey][tkey]])
@@ -431,42 +470,37 @@ class MesoscopeICA(object):
                         for n in range(num_traces_sig[pkey]["roi"]):
                             trace_sig[pkey] = {}
                             trace_ct[pkey] = {}
+                            sig_valid[pkey][str(self.rois_names[pkey][tkey][n])] = True
+                            ct_valid[pkey][str(self.rois_names[pkey][tkey][n])] = True
+                            traces_valid_flag = True
                             for tkey in self.tkeys:
                                 trace_sig[pkey][tkey] = self.raws[pkey][tkey][0][n]
                                 trace_ct[pkey][tkey] = self.raws[pkey][tkey][1][n]
                                 # check if traces contain np.NaN
-                                traces_valid_flag = True
                                 if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_ct[pkey][tkey])):
                                     traces_valid_flag = False
-                                if traces_valid_flag:
-                                    sig_valid[pkey][tkey][str(self.rois_names[pkey][n])] = True
-                                    ct_valid[pkey][tkey][str(self.rois_names[pkey][n])] = True
-                                else:
-                                    sig_valid[pkey][tkey][str(self.rois_names[pkey][n])] = False
-                                    ct_valid[pkey][tkey][str(self.rois_names[pkey][n])] = False
+                            if not traces_valid_flag:
+                                sig_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
+                                ct_valid[pkey][str(self.rois_names[pkey][tkey][n])] = False
 
                 # combining dictionaries for signal and crosstalk
                 for pkey in self.pkeys:
-                    for tkey in self.tkeys:
-                        rois_valid[pkey][tkey] = {"signal": sig_valid[pkey][tkey],
-                                                  "crosstalk": ct_valid[pkey][tkey]}
+                    rois_valid[pkey] = {"signal": sig_valid[pkey],
+                                        "crosstalk": ct_valid[pkey]}
 
                 # validating agains VBA rois set:
                 if return_vba:
                     for pkey in self.pkeys:
-                        for tkey in self.tkeys:
-                            rois_valid[pkey][tkey] = self.validate_against_vba(rois_valid[pkey][tkey],
-                                                                               self.exp_ids[pkey], VBA_CACHE)
+                        rois_valid[pkey] = self.validate_against_vba(rois_valid[pkey],
+                                                                           self.exp_ids[pkey], VBA_CACHE)
 
                 # saving to json:
                 for pkey in self.pkeys:
                     for tkey in self.tkeys:
                         self.rois_valid_paths[pkey][tkey] = rois_valid_paths[pkey][tkey]
-                        ju.write(rois_valid_paths[pkey][tkey], rois_valid[pkey][tkey])
-                        self.rois_valid[pkey][tkey] = rois_valid[pkey][tkey]
-                    self.rois_names_valid[pkey] = [roi_name for roi_name in self.rois_names[pkey] if
-                                                   self.rois_valid[pkey]["roi"]["signal"][str(roi_name)]]
-
+                        ju.write(rois_valid_paths[pkey][tkey], rois_valid[pkey])
+                        self.rois_valid[pkey][tkey] = rois_valid[pkey]
+                        self.rois_names_valid[pkey][tkey] = [int(roi_name) for roi_name, valid in self.rois_valid[pkey][tkey]['signal'].items() if valid]
             else:
                 logger.info('ROI traces dont exist in cache, run get_ica_traces first')
 
@@ -475,10 +509,9 @@ class MesoscopeICA(object):
             # read the jsons for ROIs
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
-                    rois_valid[pkey][tkey] = ju.read(rois_valid_paths[pkey][tkey])
-                    self.rois_valid[pkey][tkey] = rois_valid[pkey][tkey]
-                self.rois_names_valid[pkey] = [roi_name for roi_name in self.rois_names[pkey] if
-                                               self.rois_valid[pkey]["roi"]["signal"][str(roi_name)]]
+                    rois_valid[pkey] = ju.read(rois_valid_paths[pkey][tkey])
+                    self.rois_valid[pkey][tkey] = rois_valid[pkey]
+                    self.rois_names_valid[pkey][tkey] = [int(roi_name) for roi_name, valid in self.rois_valid[pkey][tkey]['signal'].items() if valid]
         return
 
     def debias_traces(self):
@@ -555,8 +588,8 @@ class MesoscopeICA(object):
                         rois_valid_ct[pkey][tkey] = self.rois_valid[pkey][tkey]['crosstalk']
 
                         # check if traces aligned and separate signal/crosstalk
-                        if len(self.rois_names[pkey]) == len(sig[pkey][tkey]):
-                            valid_idx_mask = np.array([rois_valid_sig[pkey][tkey][str(tid)] for tid in self.rois_names[pkey]])
+                        if len(self.rois_names[pkey][tkey]) == len(sig[pkey][tkey]):
+                            valid_idx_mask = np.array([rois_valid_sig[pkey][tkey][str(tid)] for tid in self.rois_names[pkey][tkey]])
                             sig_valid[pkey][tkey] = sig[pkey][tkey][valid_idx_mask, :]
                             ct_valid[pkey][tkey] = ct[pkey][tkey][valid_idx_mask, :]
                         else:
@@ -740,8 +773,8 @@ class MesoscopeICA(object):
                 if not os.path.isdir(plot_dir):
                     os.mkdir(plot_dir)
 
-                for i in range(len(self.rois_names_valid[pkey])):
-                    roi_name = self.rois_names_valid[pkey][i]
+                for i in range(len(self.rois_names_valid[pkey][tkey])):
+                    roi_name = self.rois_names_valid[pkey][tkey][i]
                     before_sig = self.ins[pkey][tkey][0][i] + self.offsets[pkey][tkey]['pl1_sig_offset'][i]
                     after_sig = self.outs[pkey][tkey][0][i]
                     before_ct = self.ins[pkey][tkey][1][i] + self.offsets[pkey][tkey]['pl1_ct_offset'][i]
@@ -753,7 +786,8 @@ class MesoscopeICA(object):
                     crosstalk_before = self.crosstalk[pkey][tkey][0][i]
                     crosstalk_after = self.crosstalk[pkey][tkey][1][i]
                     crosstalk = [crosstalk_before, crosstalk_after]
-                    self.plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples)
+                    self.plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples, fig_show=False)
+                self.plot_dirs[pkey][tkey] = plot_dir
         return
 
     @staticmethod
@@ -823,11 +857,8 @@ class MesoscopeICA(object):
                      verticalalignment='center', )
             ax.set_axis_off()
             plt.tick_params(left=False, labelleft=False)
-
             pdf.savefig(f)
-
-            if not fig_show:
-                plt.close()
+            plt.close()
 
             # plot traces of {roi_name} roi : two plots per page: before ica, after ica
             y_min = min(min(traces_before[0]), min(traces_before[1]), min(traces_after[0]), min(traces_after[1]))
@@ -855,8 +886,7 @@ class MesoscopeICA(object):
                 plt.title(f'post-ica traces, cell # {roi_name}', fontsize = 18)
                 plt.legend(loc='best')
                 pdf.savefig(f1)
-                if not fig_show:
-                    plt.close()
+                plt.close()
             pdf.close()
         return
 
@@ -994,7 +1024,7 @@ def get_crosstalk_data(x, y, generate_plot_data=True):
 
 
 def plot_pixel_hist2d(x, y, xlabel='signal', ylabel='crosstalk', title=None, save_fig=False, save_path=None,
-                      fig_show=True, colorbar=False):
+                      fig_show=False, colorbar=False):
     fig = plt.figure(figsize=(3, 3))
     h, xedges, yedges = np.histogram2d(x, y, bins=(30, 30))
     h = h.T
