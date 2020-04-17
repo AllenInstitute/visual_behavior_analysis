@@ -9,7 +9,6 @@ import numpy as np
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import visual_behavior.ophys.mesoscope.dataset as ms
 import gc
-
 import shutil
 import time
 
@@ -235,7 +234,7 @@ def run_demixing_on_ica(session, cache=CACHE):
     :param roi_name: filename prefix used to find roi trace files if different form default "ica_traces"
     :return:
     """
-    mds = ms.get_all_mesoscope_data()
+
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
 
@@ -246,8 +245,18 @@ def run_demixing_on_ica(session, cache=CACHE):
 
     for pair in pairs:
         for exp_id in pair:
-            demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
-            demix_file = os.path.join(demix_path, f'traces_demixing_output_{exp_id}.h5')
+            exp_files_data = ms.get_mesoscope_exp_files(exp_id)
+            movie_dir = exp_files_data.directory.values[0]
+            movie_file = exp_files_data.wkf_name.values[0]
+            movie_path = os.path.join(movie_dir, movie_file)
+
+            #check if file exist:
+            if not os.path.exists(movie_path):
+                logger.info(f"Movie file does not exist for experiment {exp_id}, skipping")
+                continue
+            else:
+                demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
+                demix_file = os.path.join(demix_path, f'traces_demixing_output_{exp_id}.h5')
             if os.path.isfile(demix_file):
                 logging.info(f"Demixed traces exist for experiment {exp_id}, skipping demixing")
                 continue
