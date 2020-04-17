@@ -593,7 +593,7 @@ def convert_to_fraction(df_in, baseline_conditional=None):
         (e.g. 'time <= 0')
     '''
     df = df_in.copy()
-    cols = [col for col in df.columns if col not in ['t', 'time', 'timestamp']]
+    cols = [col for col in df.columns if col not in ['t', 'time', 'timestamps']]
     for col in cols:
         s = df[col]
         if baseline_conditional is None:
