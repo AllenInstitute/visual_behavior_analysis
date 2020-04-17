@@ -623,6 +623,8 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
     if time_key is None:
         if 't' in df.columns:
             time_key = 't'
+        elif 'timestamps' in df.columns:
+            time_key = 'timestamps'
         else:
             time_key = 'time'
 
