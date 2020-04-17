@@ -128,7 +128,8 @@ def get_lims_done_sessions():
         pairs = dataset.get_paired_planes()
         for pair in pairs:
             ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
-            ica_obj.set_session_dir()
+            ica_obj.set_exp_ids(pair)
+            ica_obj.set_ica_dirs()
             if os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[0]}_dff.h5")):
                 ica_success['LIMS_done_exp'].loc[ica_success['experiment_id'] == pair[0]] = 1
             if os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[1]}_dff.h5")):
