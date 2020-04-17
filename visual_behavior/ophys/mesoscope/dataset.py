@@ -81,8 +81,9 @@ def get_mesoscope_exp_files(exp_id):
     os.id AS ses_id, 
     os.date_of_acquisition as date, 
     oe.id AS exp_id, 
+    oe.storage_directory as exp_dir,
     wkft.name AS wkf_type, 
-    wkf.storage_directory as directory, 
+    wkf.storage_directory as movie, 
     wkf.filename as wkf_name
     FROM ophys_sessions os
     JOIN ophys_experiments oe ON os.id = oe.ophys_session_id
