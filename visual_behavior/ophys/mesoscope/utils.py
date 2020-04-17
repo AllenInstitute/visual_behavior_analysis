@@ -246,8 +246,8 @@ def run_demixing_on_ica(session, cache=CACHE):
     for pair in pairs:
         for exp_id in pair:
             exp_files_data = ms.get_mesoscope_exp_files(exp_id)
-            movie_dir = exp_files_data.directory.values[0]
-            movie_file = exp_files_data.wkf_name.values[0]
+            movie_dir = exp_files_data.movie_dir.values[0]
+            movie_file = exp_files_data.movie_name.values[0]
             movie_path = os.path.join(movie_dir, movie_file)
 
             #check if file exist:

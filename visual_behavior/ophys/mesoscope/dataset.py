@@ -63,7 +63,7 @@ def get_all_mesoscope_files():
     oe.storage_directory as exp_dir,
     wkft.name AS wkf_type, 
     wkf.storage_directory as movie_dir, 
-    wkf.filename as wkf_name
+    wkf.filename as movie_name
     FROM ophys_sessions os
     JOIN ophys_experiments oe ON os.id = oe.ophys_session_id
     JOIN projects p ON p.id = os.project_id
@@ -83,8 +83,8 @@ def get_mesoscope_exp_files(exp_id):
     oe.id AS exp_id, 
     oe.storage_directory as exp_dir,
     wkft.name AS wkf_type, 
-    wkf.storage_directory as movie, 
-    wkf.filename as wkf_name
+    wkf.storage_directory as movie_dir, 
+    wkf.filename as movie_name
     FROM ophys_sessions os
     JOIN ophys_experiments oe ON os.id = oe.ophys_session_id
     JOIN projects p ON p.id = os.project_id
