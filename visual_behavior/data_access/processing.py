@@ -364,6 +364,25 @@ def get_valid_csids_from_lims_for_container(ophys_container_id):
     valid_container_csid_df = valid_container_csid_df.dropna(subset=['cell_specimen_id'])
     return valid_container_csid_df
 
+def get_valid_and_invalid_csids_from_lims_for_container(ophys_container_id):
+    """uses the LIMS cell_roi_table and returns all
+        cell_specimen_ids and for all PASSED ophys_experiment_id's
+        in a container
+
+    Arguments:
+        ophys_container_id {[type]} -- [description]
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                        "ophys_experiment_id"
+                        "stage_name_lims"
+                        "cell_specimen_id"
+                        "valid_roi"
+                        "container_id"
+    """
+    container_csid_table = get_lims_cell_roi_tables_for_container(ophys_container_id)
+    container_csid_table = container_csid_table.dropna(subset=['cell_specimen_id'])
+    return container_csid_table
 
 #### does this go in data.validation?
 def cell_specimen_id_matches_in_dataframe(dataframe):
