@@ -290,7 +290,7 @@ def run_demixing_on_session(session, cache=CACHE):
                              for roi in rois}
                     demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
                     ica_dir = f'session_{session}/ica_traces_{pair[0]}_{pair[1]}/'
-                    traces_valid = os.path.join(cache, ica_dir, f'valid_{exp_id}.json')
+                    traces_valid = os.path.join(cache, ica_dir, f'{exp_id}_valid.json')
                     data = {
                         "movie_h5": os.path.join(exp_dir, "processed", "concat_31Hz_0.h5"),
                         "traces_h5_ica": os.path.join(cache, ica_dir, f'{exp_id}_out.h5'),
