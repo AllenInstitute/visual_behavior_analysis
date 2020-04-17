@@ -58,9 +58,9 @@ def save_dataframe_as_h5(df, name, analysis_dir):
 def get_cache_dir(cache_dir=None):
     if not cache_dir:
         if platform.system() == 'Linux':
-            cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+            cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
         else:
-            cache_dir = r'\\allen\aibs\informatics\swdb2018\visual_behavior'
+            cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
         return cache_dir
     else:
         return cache_dir
