@@ -246,98 +246,102 @@ def run_demixing_on_session(session, cache=CACHE):
     for pair in pairs:
         for exp_id in pair:
             exp_files_data = ms.get_mesoscope_exp_files(exp_id)
-            movie_dir = exp_files_data.movie_dir.values[0]
-            movie_file = exp_files_data.movie_name.values[0]
-            movie_path = os.path.join(movie_dir, movie_file)
-            # check if file exist:
-            if not os.path.exists(movie_path):
+            if len(exp_files_data) == 0:
                 logger.info(f"Movie file does not exist for experiment {exp_id}, skipping")
                 continue
             else:
-                demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
-                demix_file = os.path.join(demix_path, f'traces_demixing_output_{exp_id}.h5')
-            if os.path.isfile(demix_file):
-                logging.info(f"Demixed traces exist for experiment {exp_id}, skipping demixing")
-                continue
-            else:
-                logging.info(f"Demixing {exp_id}")
-                exp_dir = exp_files_data.exp_dir.values[0]
-                query = f"""
-                select *
-                from ophys_cell_segmentation_runs
-                where current = True and ophys_experiment_id = {exp_id}
-                """
-                seg_run = lu.query(query)[0]['id']
+                movie_dir = exp_files_data.movie_dir.values[0]
+                movie_file = exp_files_data.movie_name.values[0]
+                movie_path = os.path.join(movie_dir, movie_file)
+            # check if file exist:
+                if not os.path.exists(movie_path):
+                    logger.info(f"Movie file does not exist for experiment {exp_id}, skipping")
+                    continue
+                else:
+                    demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
+                    demix_file = os.path.join(demix_path, f'traces_demixing_output_{exp_id}.h5')
+                if os.path.isfile(demix_file):
+                    logging.info(f"Demixed traces exist for experiment {exp_id}, skipping demixing")
+                    continue
+                else:
+                    logging.info(f"Demixing {exp_id}")
+                    exp_dir = exp_files_data.exp_dir.values[0]
+                    query = f"""
+                    select *
+                    from ophys_cell_segmentation_runs
+                    where current = True and ophys_experiment_id = {exp_id}
+                    """
+                    seg_run = lu.query(query)[0]['id']
 
-                query = f"""
-                select *
-                from cell_rois
-                where ophys_cell_segmentation_run_id = {seg_run}
-                """
-                rois = lu.query(query)
-                nrois = {roi['id']: dict(width=roi['width'],
-                                         height=roi['height'],
-                                         x=roi['x'],
-                                         y=roi['y'],
-                                         id=roi['id'],
-                                         valid=roi['valid_roi'],
-                                         mask=roi['mask_matrix'],
-                                         exclusion_labels=[])
-                         for roi in rois}
-                demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
-                ica_dir = f'session_{session}/ica_traces_{pair[0]}_{pair[1]}/'
-                traces_valid = os.path.join(cache, ica_dir, f'valid_{exp_id}.json')
-                data = {
-                    "movie_h5": os.path.join(exp_dir, "processed", "concat_31Hz_0.h5"),
-                    "traces_h5_ica": os.path.join(cache, ica_dir, f'{exp_id}_out.h5'),
-                    "traces_h5": os.path.join(exp_dir, "processed", "roi_traces.h5"),
-                    "roi_masks": nrois.values(),
-                    "traces_valid": traces_valid,
-                    "output_file": os.path.join(demix_path, f"traces_demixing_output_{exp_id}.h5")
-                }
+                    query = f"""
+                    select *
+                    from cell_rois
+                    where ophys_cell_segmentation_run_id = {seg_run}
+                    """
+                    rois = lu.query(query)
+                    nrois = {roi['id']: dict(width=roi['width'],
+                                             height=roi['height'],
+                                             x=roi['x'],
+                                             y=roi['y'],
+                                             id=roi['id'],
+                                             valid=roi['valid_roi'],
+                                             mask=roi['mask_matrix'],
+                                             exclusion_labels=[])
+                             for roi in rois}
+                    demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
+                    ica_dir = f'session_{session}/ica_traces_{pair[0]}_{pair[1]}/'
+                    traces_valid = os.path.join(cache, ica_dir, f'valid_{exp_id}.json')
+                    data = {
+                        "movie_h5": os.path.join(exp_dir, "processed", "concat_31Hz_0.h5"),
+                        "traces_h5_ica": os.path.join(cache, ica_dir, f'{exp_id}_out.h5'),
+                        "traces_h5": os.path.join(exp_dir, "processed", "roi_traces.h5"),
+                        "roi_masks": nrois.values(),
+                        "traces_valid": traces_valid,
+                        "output_file": os.path.join(demix_path, f"traces_demixing_output_{exp_id}.h5")
+                    }
 
-                traces, masks, valid, trace_ids, movie_h5, output_h5 = parse_input(data)
+                    traces, masks, valid, trace_ids, movie_h5, output_h5 = parse_input(data)
 
-                # only demix non-union, non-duplicate ROIs
-                valid_idxs = np.where(valid)
-                demix_traces = traces
-                demix_masks = masks[valid_idxs]
+                    # only demix non-union, non-duplicate ROIs
+                    valid_idxs = np.where(valid)
+                    demix_traces = traces
+                    demix_masks = masks[valid_idxs]
 
-                with h5py.File(movie_h5, 'r') as f:
-                    movie = f['data'][()]
+                    with h5py.File(movie_h5, 'r') as f:
+                        movie = f['data'][()]
 
-                demixed_traces, drop_frames = demixer.demix_time_dep_masks(demix_traces, movie, demix_masks)
+                    demixed_traces, drop_frames = demixer.demix_time_dep_masks(demix_traces, movie, demix_masks)
 
-                if not os.path.isdir(demix_path):
-                    os.mkdir(demix_path)
-                plot_dir = os.path.join(demix_path, 'plots')
-                if not os.path.isdir(plot_dir):
-                    os.mkdir(plot_dir)
+                    if not os.path.isdir(demix_path):
+                        os.mkdir(demix_path)
+                    plot_dir = os.path.join(demix_path, 'plots')
+                    if not os.path.isdir(plot_dir):
+                        os.mkdir(plot_dir)
 
-                nt_inds = demixer.plot_negative_transients(demix_traces,
-                                                           demixed_traces,
-                                                           valid[valid_idxs],
-                                                           demix_masks,
-                                                           trace_ids[valid_idxs],
-                                                           plot_dir)
+                    nt_inds = demixer.plot_negative_transients(demix_traces,
+                                                               demixed_traces,
+                                                               valid[valid_idxs],
+                                                               demix_masks,
+                                                               trace_ids[valid_idxs],
+                                                               plot_dir)
 
-                logging.debug("rois with negative transients: %s", str(trace_ids[valid_idxs][nt_inds]))
+                    logging.debug("rois with negative transients: %s", str(trace_ids[valid_idxs][nt_inds]))
 
-                nb_inds = demixer.plot_negative_baselines(demix_traces,
-                                                          demixed_traces,
-                                                          demix_masks,
-                                                          trace_ids[valid_idxs],
-                                                          plot_dir)
+                    nb_inds = demixer.plot_negative_baselines(demix_traces,
+                                                              demixed_traces,
+                                                              demix_masks,
+                                                              trace_ids[valid_idxs],
+                                                              plot_dir)
 
-                # negative baseline rois (and those that overlap with them) become nans
-                logging.debug("rois with negative baselines (or overlap with them): %s",
-                              str(trace_ids[valid_idxs][nb_inds]))
-                demixed_traces[nb_inds, :] = np.nan
-                logging.info("Saving output")
-                out_traces = demixed_traces
-                with h5py.File(output_h5, 'w') as f:
-                    f.create_dataset("data", data=out_traces, compression="gzip")
-                    f.create_dataset("roi_names", data=[np.string_(rn) for rn in trace_ids])
+                    # negative baseline rois (and those that overlap with them) become nans
+                    logging.debug("rois with negative baselines (or overlap with them): %s",
+                                  str(trace_ids[valid_idxs][nb_inds]))
+                    demixed_traces[nb_inds, :] = np.nan
+                    logging.info("Saving output")
+                    out_traces = demixed_traces
+                    with h5py.File(output_h5, 'w') as f:
+                        f.create_dataset("data", data=out_traces, compression="gzip")
+                        f.create_dataset("roi_names", data=[np.string_(rn) for rn in trace_ids])
     return
 
 
