@@ -26,7 +26,7 @@ def get_default_trial_response_params():
             (dict) dict of response window params for computing trial_response_xr
         '''
     trial_response_params = {
-        "window_around_timepoint_seconds": [-4, 8],
+        "window_around_timepoint_seconds": [-5, 5],
         "response_window_duration_seconds": 0.25,
         "baseline_window_duration_seconds": 0.25
     }
@@ -64,7 +64,7 @@ def get_default_omission_response_params():
             (dict) dict of response window params for computing omission_response_xr
         '''
     omission_response_params = {
-        "window_around_timepoint_seconds": [-2, 2],
+        "window_around_timepoint_seconds": [-5, 5],
         "response_window_duration_seconds": 0.75,
         "baseline_window_duration_seconds": 0.75
     }

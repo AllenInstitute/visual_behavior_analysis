@@ -86,12 +86,14 @@ def get_analysis_folder_name(lims_data):
     specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
     if len(specimen_driver_lines) > 1:
         for i in range(len(specimen_driver_lines)):
-            if 'S' in specimen_driver_lines[i]:
+            if 'Cre' in specimen_driver_lines[i]:
                 specimen_driver_line = specimen_driver_lines[i]  # .split('-')[0]
             else:
                 specimen_driver_line = specimen_driver_lines[0]
-    else:
+    elif len(specimen_driver_lines[0]) == 1:
         specimen_driver_line = specimen_driver_lines[0]
+    else:
+        specimen_driver_line = 'cre_line_unknown'
     if specimen_driver_line == '':
         raise Exception('specimen_driver_line is empty! check why! This will result in "multiple analysis folders".')
     if lims_data.depth.values[0] is None:

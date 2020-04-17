@@ -220,11 +220,108 @@ def get_sdk_session_obj(ophys_experiment_id, include_invalid_rois=False):
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
     session = BehaviorOphysSession(api)
+    # filter dff traces
     if include_invalid_rois == False:
         dff_traces = session.dff_traces
         valid_cells = session.cell_specimen_table[session.cell_specimen_table.valid_roi == True].cell_roi_id.values
         session.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
     return session
+
+
+def get_sdk_dataset_obj(ophys_experiment_id, cache_dir, include_invalid_rois=False):
+    """Use LIMS API from SDK to return session object
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+        include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
+
+    Returns:
+        session object -- session object from SDK
+    """
+    api = BehaviorOphysLimsApi(ophys_experiment_id)
+    dataset = BehaviorOphysSession(api)
+    dataset.cache_dir = cache_dir
+    dataset.experiment_id = ophys_experiment_id
+    dataset.analysis_folder = get_analysis_folder(dataset.cache_dir, dataset.experiment_id)
+    dataset.analysis_dir = get_analysis_dir(dataset.cache_dir, dataset.experiment_id)
+    # set pupil area and events to None for now
+    dataset.pupil_area = None
+    dataset.events = None
+    # filter dff traces
+    if include_invalid_rois == False:
+        dff_traces = dataset.dff_traces
+        valid_cells = dataset.cell_specimen_table[dataset.cell_specimen_table.valid_roi == True].cell_roi_id.values
+        dataset.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
+    dataset = get_cell_indices(dataset)
+    # get timestamps for other data streams and resample for mesoscope
+    lims_data = convert.get_lims_data(dataset.experiment_id)
+    dataset.timestamps = convert.get_timestamps(lims_data, dataset.analysis_dir)
+    if dataset.metadata['rig_name'] == 'MESO.1':
+        dataset.ophys_timestamps = dataset.timestamps['ophys_frames']['timestamps']
+    # reformat running speed df
+    df = dataset.running_data_df.reset_index()
+    dataset.running_speed_df = df[['timestamps', 'speed']].rename(columns={'timestamps': 'time', 'speed': 'running_speed'})
+    dataset.running_speed = dataset.running_speed_df # lame hack to avoid resolving elsewhere
+    # reformat rewards
+    dataset.rewards['time'] = dataset.rewards.index
+    dataset.extended_stimulus_presentations = get_extended_stimulus_presentations(dataset)
+    return dataset
+
+
+def get_analysis_folder(cache_dir, experiment_id):
+    candidates = [file for file in os.listdir(cache_dir) if str(experiment_id) in file]
+    if len(candidates) == 1:
+        analysis_folder = candidates[0]
+    elif len(candidates) < 1:
+        raise OSError(
+            'unable to locate analysis folder for experiment {} in {}'.format(experiment_id, cache_dir))
+    elif len(candidates) > 1:
+        raise OSError('{} contains multiple possible analysis folders: {}'.format(cache_dir, candidates))
+    return analysis_folder
+
+def get_analysis_dir(cache_dir, experiment_id):
+    analysis_dir = os.path.join(cache_dir, get_analysis_folder(cache_dir, experiment_id))
+    return analysis_dir
+
+def get_cell_specimen_ids(session):
+    session.cell_specimen_ids = np.sort(session.cell_specimen_table.index.values)
+    return session
+
+def get_cell_indices(session):
+    session = get_cell_specimen_ids(session)
+    session.cell_specimen_table['cell_index'] = [np.where(session.cell_specimen_ids==cell_specimen_id)[0][0] for cell_specimen_id in session.cell_specimen_ids]
+    session.cell_indices = session.cell_specimen_table.cell_index
+    return session
+
+def get_cell_specimen_id_for_cell_index(session, cell_index):
+    session = get_cell_indices(session)
+    roi_metrics = session.cell_specimen_table
+    cell_specimen_id = roi_metrics[roi_metrics.cell_index == cell_index].index.values[0]
+    return cell_specimen_id
+
+def get_cell_index_for_cell_specimen_id(session, cell_specimen_id):
+    session = get_cell_indices(session)
+    roi_metrics = session.cell_specimen_table
+    cell_index = roi_metrics[roi_metrics.index == cell_specimen_id].cell_index.values[0]
+    return cell_index
+
+def get_extended_stimulus_presentations(session):
+    '''
+    Calculates additional information for each stimulus presentation
+    '''
+    import visual_behavior.ophys.dataset.stimulus_processing as sp
+    stimulus_presentations_pre = session.stimulus_presentations
+    change_times = session.trials['change_time'].values
+    change_times = change_times[~np.isnan(change_times)]
+    extended_stimulus_presentations = sp.get_extended_stimulus_presentations(
+        stimulus_presentations_df=stimulus_presentations_pre,
+        licks=session.licks,
+        rewards=session.rewards,
+        change_times=change_times,
+        running_speed_df=session.running_speed_df,
+        pupil_area=session.pupil_area
+    )
+    return extended_stimulus_presentations
 
 
 def get_sdk_max_projection(ophys_experiment_id):

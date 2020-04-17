@@ -7,7 +7,7 @@ Created on Sunday July 15 2018
 from visual_behavior.ophys.response_analysis import utilities as ut
 import visual_behavior.ophys.response_analysis.response_processing as rp
 import visual_behavior.ophys.dataset.stimulus_processing as sp
-
+import visual_behavior.data_access.loading as loading
 
 import os
 import numpy as np
@@ -61,15 +61,18 @@ class ResponseAnalysis(object):
         self.dataset = dataset
         self.use_events = use_events
         self.overwrite_analysis_files = overwrite_analysis_files
+        self.cache_dir = self.dataset.cache_dir
+        self.experiment_id = self.dataset.experiment_id
+        self.dataset.analysis_dir = self.get_analysis_dir()
         self.trial_window = rp.get_default_trial_response_params()['window_around_timepoint_seconds']
         self.flash_window = rp.get_default_stimulus_response_params()['window_around_timepoint_seconds']
         self.omitted_flash_window = rp.get_default_omission_response_params()['window_around_timepoint_seconds']
         self.response_window_duration = 0.25  # window, in seconds, over which to take the mean for a given trial or flash
         self.omission_response_window_duration = 0.75 # compute omission mean response and baseline response over 750ms
         self.stimulus_duration = 0.25  # self.dataset.task_parameters['stimulus_duration'].values[0]
-        self.blank_duration = self.dataset.task_parameters['blank_duration'].values[0]
-        self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate'].values[0]
-        self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate'].values[0]
+        self.blank_duration = self.dataset.task_parameters['blank_duration_sec'][0]
+        self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate']
+        self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate']
 
 
     # def get_trial_response_df(self):
@@ -89,6 +92,26 @@ class ResponseAnalysis(object):
     #     return self._omitted_flash_response_df
     #
     # omitted_flash_response_df = LazyLoadable('_omitted_flash_response_df', get_omitted_flash_response_df)
+
+    def get_analysis_folder(self):
+        candidates = [file for file in os.listdir(self.dataset.cache_dir) if str(self.dataset.experiment_id) in file]
+        if len(candidates) == 1:
+            self._analysis_folder = candidates[0]
+        elif len(candidates) < 1:
+            raise OSError(
+                'unable to locate analysis folder for experiment {} in {}'.format(self.dataset.experiment_id, self.dataset.cache_dir))
+        elif len(candidates) > 1:
+            raise OSError('{} contains multiple possible analysis folders: {}'.format(self.dataset.cache_dir, candidates))
+
+        return self._analysis_folder
+
+    analysis_folder = LazyLoadable('_analysis_folder', get_analysis_folder)
+
+    def get_analysis_dir(self):
+        self._analysis_dir = os.path.join(self.dataset.cache_dir, self.analysis_folder)
+        return self._analysis_dir
+
+    analysis_dir = LazyLoadable('_analysis_dir', get_analysis_dir)
 
     def get_response_df_path(self, df_name):
         if self.use_events:
@@ -150,12 +173,12 @@ class ResponseAnalysis(object):
             df = df.merge(trials, right_on='trials_id', left_on='trials_id')
         elif ('stimulus' in df_name) or ('omission' in df_name):
             stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
-            running_speed = self.dataset.running_speed
+            running_speed = self.dataset.running_speed_df
             response_params = rp.get_default_omission_response_params()
             stimulus_presentations = sp.add_window_running_speed(running_speed, stimulus_presentations, response_params)
             df = df.merge(stimulus_presentations, right_on = 'stimulus_presentations_id', left_on = 'stimulus_presentations_id')
         if ('response' in df_name):
-            df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(cell_specimen_id) for
+            df['cell'] = [loading.get_cell_index_for_cell_specimen_id(self.dataset, cell_specimen_id) for
                          cell_specimen_id in df.cell_specimen_id.values]
         return df
 
