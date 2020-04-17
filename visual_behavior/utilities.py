@@ -585,15 +585,22 @@ class EyeTrackingData(object):
         return image
 
 
-def convert_to_fraction(df_in):
+def convert_to_fraction(df_in, baseline_conditional=None):
     '''
     converts all columns of an input dataframe, excluding the columns labeled 't' or 'time' to a fractional change
+
+    baseline conditional can be a string used to subselect rows for baseline calculation
+        (e.g. 'time <= 0')
     '''
     df = df_in.copy()
-    cols = [col for col in df.columns if col not in ['t', 'time']]
+    cols = [col for col in df.columns if col not in ['t', 'time', 'timestamp']]
     for col in cols:
         s = df[col]
-        s0 = df[col].mean(axis=0)
+        if baseline_conditional is None:
+            # use the entire timeseries as baseline
+            s0 = df[col].mean(axis=0)
+        else:
+            s0 = df.query(baseline_conditional)[col].mean(axis=0)
         df[col] = (s - s0) / s0
     return df
 
