@@ -114,7 +114,7 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
         save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
 
 def reorder_traces(original_traces, analysis):
-    tdf = analysis.trial_response_df.copy()
+    tdf = analysis.trials_response_df
     df = ut.get_mean_df(tdf, analysis, conditions=['cell','change_image_name'])
 
     images = np.sort(df.change_image_name.unique())
@@ -133,15 +133,17 @@ def reorder_traces(original_traces, analysis):
 
 
 def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_events=False):
+    import visual_behavior.ophys.response_analysis.response_processing as rp
     if use_events:
-        traces = dataset.events
+        traces = dataset.events_array.copy()
+        traces = rp.filter_events_array(traces, scale=2)
         traces = reorder_traces(traces, analysis)
-        vmax = 0.03
+        vmax = 0.01
         # vmax = np.percentile(traces, 99)
         label = 'event magnitude'
         suffix = '_events'
     else:
-        traces = dataset.dff_traces
+        traces = dataset.dff_traces_array
         traces = reorder_traces(traces, analysis)
         vmax = np.percentile(traces, 99)
         label = 'dF/F'
@@ -156,7 +158,7 @@ def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_event
 
     interval_seconds = 5 * 60
     ophys_frame_rate = int(dataset.metadata.ophys_frame_rate.values[0])
-    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.timestamps_ophys,
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.ophys_timestamps,
                                                                                ophys_frame_rate)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
@@ -172,13 +174,13 @@ def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_event
 
 def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
     if use_events:
-        traces = dataset.events
+        traces = dataset.events_array.copy()
         vmax = 0.03
         # vmax = np.percentile(traces, 99)
         label = 'event magnitude'
         suffix = '_events'
     else:
-        traces = dataset.dff_traces
+        traces = dataset.dff_traces_array
         vmax = np.percentile(traces, 99)
         label = 'dF/F'
         suffix = ''
@@ -190,7 +192,7 @@ def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
 
     interval_seconds = 5 * 60
     ophys_frame_rate = int(dataset.metadata.ophys_frame_rate.values[0])
-    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.timestamps_ophys,
+    upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.ophys_timestamps,
                                                                                ophys_frame_rate)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
@@ -258,7 +260,7 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
                             use_events=False, window=[-4,4]):
     data = mean_df[mean_df.pref_stim == True].copy()
     if use_events:
-        vmax = 0.03
+        vmax = 0.05
         suffix = '_events'
     else:
         vmax = 0.5
@@ -273,11 +275,11 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
         if len(im_df) != 0:
             if i == 0:
                 order = np.argsort(im_df.mean_response.values)[::-1]
-                cells = im_df.cell.unique()[order]
+                cells = im_df.cell_specimen_id.unique()[order]
             len_trace = len(im_df.mean_trace.values[0])
             response_array = np.empty((len(cells), len_trace))
             for x, cell in enumerate(cells):
-                tmp = im_df[im_df.cell == cell]
+                tmp = im_df[im_df.cell_specimen_id == cell]
                 if len(tmp) >= 1:
                     trace = tmp.mean_trace.values[0]
                 else:
@@ -286,7 +288,7 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
                 response_array[x, :] = trace
 
             sns.heatmap(data=response_array, vmin=0, vmax=vmax, ax=ax[i], cmap='magma', cbar=False)
-            xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=1, window=window)
+            xticks, xticklabels = sf.get_xticks_xticklabels(trace, 31., interval_sec=2, window=window)
             ax[i].set_xticks(xticks)
             ax[i].set_xticklabels([int(x) for x in xticklabels])
             ax[i].set_yticks(np.arange(0, response_array.shape[0], 10))
@@ -300,18 +302,18 @@ def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['
         save_figure(fig, figsize, save_dir, 'experiment_summary', 'mean_trace_heatmap_' + condition + suffix)
 
 
-def get_upper_limit_and_intervals(traces, timestamps_ophys, ophys_frame_rate):
+def get_upper_limit_and_intervals(traces, ophys_timestamps, ophys_frame_rate):
     upper = np.round(traces.shape[1], -3) + 1000
     interval = 5 * 60  # use 5 min interval
     frame_interval = np.arange(0, traces.shape[1], interval * ophys_frame_rate)
-    time_interval = np.uint64(np.round(np.arange(timestamps_ophys[0], timestamps_ophys[-1], interval), 1))
+    time_interval = np.uint64(np.round(np.arange(ophys_timestamps[0], ophys_timestamps[-1], interval), 1))
     return upper, time_interval, frame_interval
 
 
-def plot_run_speed(running_speed, timestamps_stimulus, ax=None, label=False):
+def plot_run_speed(running_speed, stimulus_timestamps, ax=None, label=False):
     if ax is None:
         fig, ax = plt.subplots(figsize=(15, 5))
-    ax.plot(timestamps_stimulus, running_speed, color='gray')
+    ax.plot(stimulus_timestamps, running_speed, color='gray')
     if label:
         ax.set_ylabel('run speed (cm/s)')
         ax.set_xlabel('time(s)')
@@ -393,17 +395,17 @@ def plot_metrics_mask(dataset, metrics, cell_list, metric_name, max_image=True, 
 
 
 def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=None):
-    fdf = analysis.flash_response_df.copy()
+    fdf = analysis.stimulus_response_df
     fdf.image_block = [int(image_block) for image_block in fdf.image_block.values]
     data = fdf[(fdf.repeat == 1) & (fdf.pref_stim == True)]
-    mean_response = data.groupby(['cell']).apply(ut.get_mean_sem)
+    mean_response = data.groupby(['cell_specimen_id']).apply(ut.get_mean_sem)
     mean_response = mean_response.unstack()
 
     cell_order = np.argsort(mean_response.mean_response.values)
     if ax is None:
         figsize = (15, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data=data, x="image_block", y="mean_response", kind="point", hue='cell', hue_order=cell_order,
+    ax = sns.pointplot(data=data, x="image_block", y="mean_response", kind="point", hue='cell_specimen_id', hue_order=cell_order,
                        palette='Blues', ax=ax)
     # ax.legend(bbox_to_anchor=(1,1))
     ax.legend_.remove()
@@ -428,7 +430,7 @@ def plot_mean_response_across_image_block_sets(data, analysis_folder, save_dir=N
         figsize = (6, 5)
         fig, ax = plt.subplots(figsize=figsize)
     ax = sns.pointplot(data=data, x="block_set", y="mean_response", kind="point", palette='RdBu', ax=ax,
-                       hue='cell', hue_order=cell_order)
+                       hue='cell_specimen_id', hue_order=cell_order)
     # ax.legend(bbox_to_anchor=(1,1))
     ax.legend_.remove()
     min = np.amin(data.early_late_block_ratio.unique())
@@ -468,14 +470,14 @@ def plot_roi_masks(dataset, save=False):
 
 def plot_average_flash_response_example_cells(analysis, save_figures=False, save_dir=None, folder=None, ax=None):
     import visual_behavior.ophys.response_analysis.utilities as ut
-    fdf = analysis.flash_response_df.copy()
+    fdf = analysis.stimulus_response_df
     last_flash = fdf.flash_number.unique()[-1] #sometimes last flash is truncated
     fdf = fdf[fdf.flash_number!=last_flash]
 
     conditions=['cell_specimen_id', 'image_name']
     mdf = ut.get_mean_df(fdf, analysis, conditions=conditions, flashes=True)
 
-    active_cell_indices = ut.get_active_cell_indices(analysis.dataset.dff_traces)
+    active_cell_indices = ut.get_active_cell_indices(analysis.dataset.dff_traces_array)
     random_order = np.arange(0,len(active_cell_indices),1)
     np.random.shuffle(random_order)
     active_cell_indices = active_cell_indices[random_order]
@@ -525,10 +527,10 @@ def plot_average_flash_response_example_cells(analysis, save_figures=False, save
 def plot_experiment_summary_figure(analysis, save_dir=None):
     use_events = analysis.use_events
     if use_events:
-        traces = analysis.dataset.events.copy()
+        traces = analysis.dataset.events_array.copy()
         suffix = '_events'
     else:
-        traces = analysis.dataset.dff_traces.copy()
+        traces = analysis.dataset.dff_traces_array.copy()
         suffix = ''
 
     interval_seconds = 600
@@ -555,7 +557,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.axis('off')
 
     upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces,
-                                                                               analysis.dataset.timestamps_ophys,
+                                                                               analysis.dataset.ophys_timestamps,
                                                                                analysis.ophys_frame_rate)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.9), yspan=(0, .3))
@@ -564,9 +566,10 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
     ax.set_xticklabels(np.arange(0, upper_limit / ophys_frame_rate, interval_seconds))
     ax.set_xlabel('time (seconds)')
+    ax.set_title(analysis.dataset.analysis_folder)
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.22, 0.8), yspan=(.26, .41))
-    ax = plot_run_speed(analysis.dataset.running_speed.running_speed, analysis.dataset.timestamps_stimulus, ax=ax,
+    ax = plot_run_speed(analysis.dataset.running_speed.running_speed, analysis.dataset.stimulus_timestamps, ax=ax,
                         label=True)
     ax.set_xlim(time_interval[0], np.uint64(upper_limit / ophys_frame_rate))
     ax.set_xticks(np.arange(interval_seconds, upper_limit / ophys_frame_rate, interval_seconds))
@@ -584,8 +587,8 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
 
     ax = placeAxesOnGrid(fig, dim=(1, 4), xspan=(.2, .8), yspan=(.5, .8), wspace=0.35)
     try:
-        mdf = ut.get_mean_df(analysis.trial_response_df, analysis,
-                             conditions=['cell', 'change_image_name', 'behavioral_response_type'])
+        mdf = ut.get_mean_df(analysis.trials_response_df, analysis,
+                             conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'])
         ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
                                      condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None,
                                     use_events=use_events, window=analysis.trial_window)
@@ -593,11 +596,12 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
         pass
 
     ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(.78, 0.97), yspan=(.3, .8))
-    mdf = ut.get_mean_df(analysis.trial_response_df, analysis, conditions=['cell', 'change_image_name'])
+    mdf = ut.get_mean_df(analysis.trials_response_df, analysis, conditions=['cell_specimen_id', 'change_image_name'])
     ax = plot_mean_image_response_heatmap(mdf, title=None, ax=ax, save_dir=None, use_events=use_events)
 
+    # fig.canvas.draw()
     fig.tight_layout()
 
     if save_dir:
-        fig.tight_layout()
-        save_figure(fig, figsize, save_dir, 'experiment_summary', analysis.dataset.analysis_folder + suffix)
+        save_figure(fig, figsize, save_dir, 'experiment_summary_figures',
+                    str(analysis.dataset.experiment_id)+'_experiment_summary'+suffix)

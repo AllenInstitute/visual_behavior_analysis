@@ -4,14 +4,14 @@ import matplotlib as mpl
 import seaborn as sns
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png','.pdf']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
     mpl.rcParams['pdf.fonttype'] = 42
     fig.set_size_inches(figsize)
     for f in formats:
-        fig.savefig(os.path.join(fig_dir, fig_title + f), transparent=True, orientation='landscape')
+        fig.savefig(filename + f, transparent=True, orientation='landscape', bbox_inches='tight', dpi=300)
 
 
 def get_colors_for_session_numbers():

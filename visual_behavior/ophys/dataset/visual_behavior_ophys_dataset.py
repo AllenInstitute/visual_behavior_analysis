@@ -107,17 +107,23 @@ class VisualBehaviorOphysDataset(object):
 
     timestamps = LazyLoadable('_timestamps', get_timestamps)
 
-    def get_timestamps_stimulus(self):
-        self._timestamps_stimulus = self.timestamps['stimulus_frames']['timestamps']
-        return self._timestamps_stimulus
+    def get_stimulus_timestamps(self):
+        self._stimulus_timestamps = self.timestamps['stimulus_frames']['timestamps']
+        return self._stimulus_timestamps
 
-    timestamps_stimulus = LazyLoadable('_timestamps_stimulus', get_timestamps_stimulus)
+    stimulus_timestamps = LazyLoadable('_stimulus_timestamps', get_stimulus_timestamps)
 
-    def get_timestamps_ophys(self):
-        self._timestamps_ophys = self.timestamps['ophys_frames']['timestamps']
-        return self._timestamps_ophys
+    def get_ophys_timestamps(self):
+        self._ophys_timestamps = self.timestamps['ophys_frames']['timestamps']
+        return self._ophys_timestamps
 
-    timestamps_ophys = LazyLoadable('_timestamps_ophys', get_timestamps_ophys)
+    ophys_timestamps = LazyLoadable('_ophys_timestamps', get_ophys_timestamps)
+
+    def get_eye_tracking_timestamps(self):
+        self._eye_tracking_timestamps = self.timestamps['behavior_monitoring']['timestamps'] #line labels swapped
+        return self._eye_tracking_timestamps
+
+    eye_tracking_timestamps = LazyLoadable('_eye_tracking_timestamps', get_eye_tracking_timestamps)
 
     def get_stimulus_table(self):
         self._stimulus_table = pd.read_hdf(
@@ -130,7 +136,7 @@ class VisualBehaviorOphysDataset(object):
         # )
         self._stimulus_table = self._stimulus_table.drop(
             columns=['start_frame', 'end_frame', 'index'])
-        if 'level_0' in self._stimulus_table.keys():
+        if 'level_0' in list(self._stimulus_table.keys()):
             self._stimulus_table = self._stimulus_table.drop(columns=['level_0'])
         return self._stimulus_table
 
@@ -144,11 +150,15 @@ class VisualBehaviorOphysDataset(object):
     stimulus_template = LazyLoadable('_stimulus_template', get_stimulus_template)
 
     def get_stimulus_metadata(self):
-        self._stimulus_metadata = pd.read_hdf(
-            os.path.join(self.analysis_dir, 'stimulus_metadata.h5'),
-            key='df'
-        )
-        self._stimulus_metadata = self._stimulus_metadata.drop(columns='image_category')
+        stimulus_metadata = pd.read_hdf(
+            os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df')
+        stimulus_metadata = stimulus_metadata.drop(columns='image_category')
+        # Add an entry for omitted stimuli
+        omitted_df = pd.DataFrame({'image_name': ['omitted'],
+                                   'image_index': [stimulus_metadata['image_index'].max() + 1]})
+        stimulus_metadata = stimulus_metadata.append(omitted_df, ignore_index=True, sort=False)
+        # stimulus_metadata.set_index(['image_index'], inplace=True, drop=True)
+        self._stimulus_metadata = stimulus_metadata
         return self._stimulus_metadata
 
     stimulus_metadata = LazyLoadable('_stimulus_metadata', get_stimulus_metadata)
@@ -200,21 +210,24 @@ class VisualBehaviorOphysDataset(object):
              'reward_times',
              'reward_volume', 'reward_rate', 'start_time', 'end_time', 'trial_length', 'mouse_id',
              'start_date_time']]
+        trials['trials_id'] = trials.trial.values
+        trials.set_index('trials_id', inplace=True)
+        import visual_behavior.ophys.dataset.stimulus_processing as sp
+        trials = sp.add_run_speed_to_trials(self.running_speed, trials)
         self._trials = trials
         return self._trials
 
     trials = LazyLoadable('_trials', get_trials)
 
-    def get_dff_traces(self):
-        cell_specimen_ids = self.get_cell_specimen_ids()
+    def get_dff_traces_array(self):
         with h5py.File(os.path.join(self.analysis_dir, 'dff_traces.h5'), 'r') as dff_traces_file:
             dff_traces = []
-            for key in cell_specimen_ids:
-                dff_traces.append(np.asarray(dff_traces_file[str(key)]))
-        self._dff_traces = np.asarray(dff_traces)
-        return self._dff_traces
+            for key in dff_traces_file.keys():
+                dff_traces.append(np.asarray(dff_traces_file[key]))
+        self._dff_traces_array = np.asarray(dff_traces)
+        return self._dff_traces_array
 
-    dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
+    dff_traces_array = LazyLoadable('_dff_traces_array', get_dff_traces_array)
 
     def get_corrected_fluorescence_traces(self):
         with h5py.File(os.path.join(self.analysis_dir, 'corrected_fluorescence_traces.h5'),
@@ -227,32 +240,30 @@ class VisualBehaviorOphysDataset(object):
 
     corrected_fluorescence_traces = LazyLoadable('_corrected_fluorescence_traces', get_corrected_fluorescence_traces)
 
-    def get_events(self):
+    def get_events_array(self):
         events_folder = os.path.join(self.cache_dir, 'events')
         if os.path.exists(events_folder):
             events_file = [file for file in os.listdir(events_folder) if
                            str(self.experiment_id) + '_events.npz' in file]
             if len(events_file) > 0:
-                logger.info('getting L0 events')
+                print('getting L0 events')
                 f = np.load(os.path.join(events_folder, events_file[0]))
                 events = np.asarray(f['ev'])
                 f.close()
-                if events.shape[1] > self.timestamps_ophys.shape[0]:
-                    difference = self.timestamps_ophys.shape[0] - events.shape[1]
-                    logger.info('length of ophys timestamps <  length of events by', str(difference),
-                                'frames , truncating events')
-                    events = events[:, :self.timestamps_ophys.shape[0]]
+                # account for excess ophys frame times at end of recording due to Scientifica software error
+                if events.shape[1] > self.ophys_timestamps.shape[0]:
+                    difference = self.ophys_timestamps.shape[0] - events.shape[1]
+                    events = events[:, :self.ophys_timestamps.shape[0]]
             else:
-                logger.info('no events for this experiment')
+                print('no events for this experiment')
                 events = None
         else:
-            logger.info('no events for this experiment')
+            print('no events for this experiment')
             events = None
+        self._events_array = events
+        return self._events_array
 
-        self._events = events
-        return self._events
-
-    events = LazyLoadable('_events', get_events)
+    events_array = LazyLoadable('_events_array', get_events_array)
 
     def get_roi_metrics(self):
         self._roi_metrics = pd.read_hdf(os.path.join(self.analysis_dir, 'roi_metrics.h5'), key='df')
@@ -263,7 +274,7 @@ class VisualBehaviorOphysDataset(object):
     def get_roi_mask_dict(self):
         f = h5py.File(os.path.join(self.analysis_dir, 'roi_masks.h5'), 'r')
         roi_mask_dict = {}
-        for key in f.keys():
+        for key in list(f.keys()):
             roi_mask_dict[key] = np.asarray(f[key])
         f.close()
         self._roi_mask_dict = roi_mask_dict
@@ -273,7 +284,7 @@ class VisualBehaviorOphysDataset(object):
 
     def get_roi_mask_array(self):
         w, h = self.roi_mask_dict[list(self.roi_mask_dict.keys())[0]].shape
-        roi_mask_array = np.empty((len(self.roi_mask_dict.keys()), w, h))
+        roi_mask_array = np.empty((len(list(self.roi_mask_dict.keys())), w, h))
         for cell_specimen_id in self.cell_specimen_ids:
             cell_index = self.get_cell_index_for_cell_specimen_id(int(cell_specimen_id))
             roi_mask_array[cell_index] = self.roi_mask_dict[str(cell_specimen_id)]
@@ -283,7 +294,7 @@ class VisualBehaviorOphysDataset(object):
     roi_mask_array = LazyLoadable('_roi_mask_array', get_roi_mask_array)
 
     def get_max_projection(self):
-        with h5py.File(os.path.join(self.analysis_dir, 'max_projection.h5'), 'r') as max_projection_file:
+        with h5py.File(os.path.join(self.analysis_dir, 'normalized_max_projection.h5'), 'r') as max_projection_file:
             self._max_projection = np.asarray(max_projection_file['data'])
         return self._max_projection
 
@@ -329,6 +340,77 @@ class VisualBehaviorOphysDataset(object):
         cell_index = roi_metrics[roi_metrics.id == cell_specimen_id].cell_index.values[0]
         return cell_index
 
+    def get_dff_traces(self):
+        self._dff_traces = pd.DataFrame({'dff': [x for x in self.dff_traces_array]}, index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        return self._dff_traces
+
+    dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
+
+    def get_events(self):
+        self._events = pd.DataFrame({'events': [x for x in self.events_array]}, index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        return self._events
+
+    events = LazyLoadable('_events', get_events)
+
+    def get_pupil_area(self):
+        session_id = self.metadata.session_id.values[0]
+        data_dir = os.path.join(self.cache_dir, 'pupil_data')
+        filename = [file for file in os.listdir(data_dir) if str(session_id) in file]
+        if len(filename) > 0:
+            df = pd.read_csv(os.path.join(data_dir, filename[0]))
+            area = df.blink_corrected_area.values
+            # compare with timestamps
+            timestamps = self.timestamps.behavior_monitoring.values[0]
+            diff = len(area) - len(timestamps)
+            if diff <= 5:
+                df = pd.DataFrame()
+                df['pupil_area'] = area[:len(timestamps)]
+                df['time'] = timestamps[:len(area)]
+                self._pupil_area = df
+            else:
+                self._pupil_area = None
+        else:
+            print('no pupil data for', self.experiment_id)
+            self._pupil_area = None
+        return self._pupil_area
+
+    pupil_area = LazyLoadable('_pupil_area', get_pupil_area)
+
+    def get_stimulus_presentations(self):
+        stimulus_presentations_df = self.stimulus_table.copy()
+        stimulus_presentations_df = stimulus_presentations_df.rename(columns={'flash_number': 'stimulus_presentations_id'})
+        stimulus_presentations_df.set_index('stimulus_presentations_id', inplace=True)
+        stimulus_metadata_df = self.get_stimulus_metadata()
+        idx_name = stimulus_presentations_df.index.name
+        stimulus_presentations_df = stimulus_presentations_df.reset_index().merge(stimulus_metadata_df, on=['image_name']).set_index(idx_name)
+        stimulus_presentations_df.sort_index(inplace=True)
+        return stimulus_presentations_df
+
+    stimulus_presentations = LazyLoadable('_stimulus_presentations', get_stimulus_presentations)
+
+
+    def get_extended_stimulus_presentations(self):
+        '''
+        Calculates additional information for each stimulus presentation
+        '''
+        import visual_behavior.ophys.dataset.stimulus_processing as sp
+        stimulus_presentations_pre = self.get_stimulus_presentations()
+        change_times = self.trials['change_time'].values
+        change_times = change_times[~np.isnan(change_times)]
+        extended_stimulus_presentations = sp.get_extended_stimulus_presentations(
+            stimulus_presentations_df=stimulus_presentations_pre,
+            licks=self.licks,
+            rewards=self.rewards,
+            change_times=change_times,
+            running_speed_df=self.running_speed,
+            pupil_area=self.pupil_area
+        )
+        return extended_stimulus_presentations
+
+    extended_stimulus_presentations = LazyLoadable('_extended_stimulus_presentations', get_extended_stimulus_presentations)
+
+
+
     @classmethod
     def construct_and_load(cls, experiment_id, cache_dir=None, **kwargs):
         ''' Instantiate a VisualBehaviorOphysDataset and load its data
@@ -347,8 +429,9 @@ class VisualBehaviorOphysDataset(object):
         obj.get_analysis_dir()
         obj.get_metadata()
         obj.get_timestamps()
-        obj.get_timestamps_ophys()
-        obj.get_timestamps_stimulus()
+        obj.get_ophys_timestamps()
+        obj.get_stimulus_timestamps()
+        obj.get_eye_tracking_timestamps()
         obj.get_stimulus_table()
         obj.get_stimulus_template()
         obj.get_stimulus_metadata()
@@ -357,9 +440,9 @@ class VisualBehaviorOphysDataset(object):
         obj.get_rewards()
         obj.get_task_parameters()
         obj.get_trials()
-        obj.get_dff_traces()
+        obj.get_dff_traces_array()
         obj.get_corrected_fluorescence_traces()
-        obj.get_events()
+        obj.get_events_array()
         obj.get_roi_metrics()
         obj.get_roi_mask_dict()
         obj.get_roi_mask_array()
@@ -368,5 +451,10 @@ class VisualBehaviorOphysDataset(object):
         obj.get_max_projection()
         obj.get_average_image()
         obj.get_motion_correction()
+        obj.get_dff_traces()
+        obj.get_events()
+        obj.get_pupil_area()
+        obj.get_stimulus_presentations()
+        # obj.get_extended_stimulus_presentations()
 
         return obj
