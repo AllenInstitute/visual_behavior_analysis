@@ -178,7 +178,7 @@ def get_ica_ses_by_cre_line(cre_line, md):
     return cre_ses_success, cre_ses_fail
 
 
-def parse_input(data, exclude_labels=["union", "duplicate", "motion_border"]):
+def parse_input(data):
 
     exclude_labels = ["union", "duplicate", "motion_border"]
     movie_h5 = get_path(data, "movie_h5", True)
