@@ -89,28 +89,25 @@ def get_ica_done_sessions():
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame]
     """
     meso_data = ms.get_all_mesoscope_data()
-    meso_data['ICA_demix_roi_exp'] = 0
     meso_data['ICA_demix_roi_session'] = 0
     sessions = meso_data['session_id']
     sessions = sessions.drop_duplicates()
-
     for session in sessions:
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
+        session_ica_complete = True
         for pair in pairs:
             ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
-            ica_obj.set_ica_roi_dir(pair, roi_name="ica_traces")
-            ica_obj.set_ica_neuropil_dir(pair, np_name="ica_neuropil")
-
-            if os.path.isfile(ica_obj.plane1_ica_output_pointer):
-                meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[0]] = 1
-            if os.path.isfile(ica_obj.plane2_ica_output_pointer):
-                meso_data['ICA_demix_roi_exp'].loc[meso_data['experiment_id'] == pair[1]] = 1
-            session_data = meso_data.loc[meso_data['session_id'] == session]
-            if all(session_data.ICA_demix_roi_exp == 1):
-                for exp in session_data.experiment_id:
-                    meso_data['ICA_demix_roi_session'].loc[meso_data.experiment_id == exp] = 1
-
+            ica_obj.set_exp_ids(pair)
+            ica_obj.set_ica_dirs()
+            ica_obj.set_out_paths()
+            # check if both roi and europil outputs exist:
+            for pkey in ica_obj.pkeys:
+                for tkey in ica_obj.tkeys:
+                    if not os.path.isfile(ica_obj.outs_paths[pkey][tkey]):
+                        session_ica_complete = False
+        if session_ica_complete:
+            meso_data['ICA_demix_roi_session'].loc[meso_data.session_id == session] = 1
     ica_roi_success = meso_data.loc[meso_data['ICA_demix_roi_session'] == 1]
     ica_roi_fail = meso_data.loc[meso_data['ICA_demix_roi_session'] == 0]
     return ica_roi_success, ica_roi_fail, meso_data
