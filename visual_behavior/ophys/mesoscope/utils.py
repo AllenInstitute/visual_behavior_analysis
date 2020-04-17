@@ -226,7 +226,7 @@ def parse_input(data):
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
 
-def run_demixing_on_ica(session, cache=CACHE):
+def run_demixing_on_session(session, cache=CACHE):
     """
     run LIMS demixing on crosstalk corrected traces
     :param session: LIMS session id
@@ -249,8 +249,7 @@ def run_demixing_on_ica(session, cache=CACHE):
             movie_dir = exp_files_data.movie_dir.values[0]
             movie_file = exp_files_data.movie_name.values[0]
             movie_path = os.path.join(movie_dir, movie_file)
-
-            #check if file exist:
+            # check if file exist:
             if not os.path.exists(movie_path):
                 logger.info(f"Movie file does not exist for experiment {exp_id}, skipping")
                 continue
@@ -262,7 +261,7 @@ def run_demixing_on_ica(session, cache=CACHE):
                 continue
             else:
                 logging.info(f"Demixing {exp_id}")
-                exp_dir = mds['experiment_folder'].loc[mds['experiment_id'] == exp_id].values[0]
+                exp_dir = exp_files_data.exp_dir.values[0]
                 query = f"""
                 select *
                 from ophys_cell_segmentation_runs
