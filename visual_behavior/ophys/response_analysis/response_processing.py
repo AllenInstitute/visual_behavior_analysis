@@ -454,8 +454,7 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None):
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                  response_analysis_params, frame_rate)
     df = response_df(response_xr)
-    df = df.rename(
-        columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
+    df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
     window = response_analysis_params['window_around_timepoint_seconds']
     response_window = [np.abs(window[0]), np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
     if frame_rate is None:

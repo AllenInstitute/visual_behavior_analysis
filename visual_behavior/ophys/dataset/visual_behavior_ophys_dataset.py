@@ -153,6 +153,7 @@ class VisualBehaviorOphysDataset(object):
         stimulus_metadata = pd.read_hdf(
             os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df')
         stimulus_metadata = stimulus_metadata.drop(columns='image_category')
+        stimulus_metadata['image_name'] = [image_name.decode('utf-8') for image_name in stimulus_metadata.image_name.values]
         # Add an entry for omitted stimuli
         omitted_df = pd.DataFrame({'image_name': ['omitted'],
                                    'image_index': [stimulus_metadata['image_index'].max() + 1]})
@@ -294,7 +295,7 @@ class VisualBehaviorOphysDataset(object):
     roi_mask_array = LazyLoadable('_roi_mask_array', get_roi_mask_array)
 
     def get_max_projection(self):
-        with h5py.File(os.path.join(self.analysis_dir, 'normalized_max_projection.h5'), 'r') as max_projection_file:
+        with h5py.File(os.path.join(self.analysis_dir, 'max_projection.h5'), 'r') as max_projection_file:
             self._max_projection = np.asarray(max_projection_file['data'])
         return self._max_projection
 
