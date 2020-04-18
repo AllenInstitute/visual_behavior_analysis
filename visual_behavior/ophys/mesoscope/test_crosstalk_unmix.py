@@ -56,16 +56,16 @@ def test_validate_trtaces(test_session = None):
 	pair = pairs[0]
 	ica_obj.set_exp_ids(pair)
 	ica_obj.get_ica_traces()
+	ica_obj.validate_traces()
 	self = ica_obj
 
 	#remove jsons if they exist:
-	ica_obj.validate_traces()
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
 			os.remove(self.rois_valid_paths[pkey][tkey])
 
 	# return_vba = False (default value)
-	ica_obj.validate_traces()
+	self.validate_traces()
 	for pkey in self.pkeys:
 		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
 		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
@@ -75,8 +75,7 @@ def test_validate_trtaces(test_session = None):
 				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
 
 	#jsons exist, re-run validate to read them and test the same:
-	ica_obj.validate_traces()
-	self = ica_obj
+	self.validate_traces()
 	for pkey in self.pkeys:
 		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
 		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
@@ -91,8 +90,7 @@ def test_validate_trtaces(test_session = None):
 			os.remove(self.rois_valid_paths[pkey][tkey])
 
 	# rerun test with return_vba = False (default value
-	ica_obj.validate_traces(return_vba = True)
-	self = ica_obj
+	self.validate_traces(return_vba = True)
 	for pkey in self.pkeys:
 		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
 		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
@@ -100,5 +98,44 @@ def test_validate_trtaces(test_session = None):
 		for roi in roi_names:
 			assert self.rois_valid[pkey]['roi'][roi] == self.rois_valid[pkey]['np'][
 				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
+
+def test_debias_traces(test_session = None):
+
+	if not test_session:
+		session = 786144371
+	else:
+		session = test_session
+
+	ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+	pairs = ica_obj.dataset.get_paired_planes()
+	pair = pairs[0]
+	ica_obj.set_exp_ids(pair)
+	ica_obj.get_ica_traces()
+	ica_obj.validate_traces()
+	ica_obj.debias_traces()
+	self = ica_obj
+
+	#remove outputs if they exist:
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			os.remove(self.ins_paths[pkey][tkey])
+
+	self.debias_traces()
+	# 1. test if number of traces and offsets in the output is equal to number of valid rois:
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			rois_valid = self.rois_valid[pkey][tkey]
+			inp = self.ins[pkey][tkey]
+			sig_offset = self.offsets[pkey][tkey]['sig_offset']
+			ct_offset = self.offsets[pkey][tkey]['ct_offset']
+			valid_rois = [roi for roi, valid in rois_valid.items() if valid]
+			assert inp.shape[1] == len(
+				valid_rois), f"Number of traces in debiasing output doesn't agree with valid dict for {pkey}, {tkey}"
+			assert sig_offset.shape[0] == len(
+				valid_rois), f"Number of traces in sig offset output doesn't agree with valid dict for {pkey}, {tkey}"
+			assert ct_offset.shape[0] == len(
+				valid_rois), f"Number of traces in ct offset output doesn't agree with valid dict for {pkey}, {tkey}"
+
+
 
 
