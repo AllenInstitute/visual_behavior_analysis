@@ -56,10 +56,16 @@ def test_validate_trtaces(test_session = None):
 	pair = pairs[0]
 	ica_obj.set_exp_ids(pair)
 	ica_obj.get_ica_traces()
+	self = ica_obj
+
+	#remove jsons if they exist:
+	ica_obj.validate_traces()
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			os.remove(self.rois_valid_paths[pkey][tkey])
 
 	# return_vba = False (default value)
 	ica_obj.validate_traces()
-	self = ica_obj
 	for pkey in self.pkeys:
 		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
 		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
