@@ -144,11 +144,11 @@ class MesoscopeICA(object):
         self.rois_valid = {}
         self.rois_valid_paths = {}
         # pointers and attirbutes for ica output files
-        self.outs = {}
-        self.outs_paths = {}
-        self.crosstalk = {}
-        self.mixing = {}
-        self.a_mixing = {}
+        self.outs = {}  # output unmixing traces
+        self.outs_paths = {}  # paths to save unmixing output
+        self.crosstalk = {}  # slope of linear fit to the 2D plot of signal Vs Crosstalk
+        self.mixing = {}  # raw mixing matrix on the output of FastICA
+        self.a_mixing = {}  # adjusted mixing matrix on the output of FastICA
         self.plot_dirs = {}
         for pkey in self.pkeys:
             self.rois_names[pkey] = {}
@@ -611,7 +611,7 @@ class MesoscopeICA(object):
                     self.found_offsets[pkey][tkey] = [True, True]
         return
 
-    def unmix_pair(self, do_plots=True):
+    def unmix_pair(self):
         """
         function to unmix a pair of panels:
         """
@@ -677,30 +677,31 @@ class MesoscopeICA(object):
                         figs_ct_in[pkey] = {}
                         figs_ct_out[pkey] = {}
                         for tkey in self.tkeys:
-                            rois_valid[pkey][tkey] = self.rois_valid[pkey][tkey]['signal']
+                            rois_valid[pkey][tkey] = self.rois_valid[pkey][tkey]
                             traces_in[pkey][tkey] = self.ins[pkey][tkey]
 
                             # don't run unmixing if neuropil, instead read roi unmixing matrix
                             if tkey == 'np':
                                 mixing[pkey][tkey] = self.a_mixing[pkey]['roi']
                                 traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
-                                    = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey], mixing[pkey][tkey])
+                                    = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey],
+                                                       mixing[pkey][tkey])
                             else:
                                 traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
                                     = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
 
                             # saving to self
                             self.outs[pkey][tkey] = np.array(
-                                [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['pl1_sig_offset'],
+                                [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['sig_offset'],
                                  traces_out[pkey][tkey][1] + self.offsets[pkey][tkey][
-                                     'pl1_ct_offset']])
+                                     'ct_offset']])
                             self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
                             self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
                             self.mixing[pkey][tkey] = mixing[pkey][tkey]
                             self.a_mixing[pkey][tkey] = a_mixing[pkey][tkey]
                             self.found_solution[pkey][tkey] = True
 
-                            # writing ica ou    t traces to disk
+                            # writing ica ouput traces to disk
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
                                 f.create_dataset(f"data", data=traces_out[pkey][tkey])
                                 f.create_dataset(f"crosstalk", data=crosstalk[pkey][tkey])
@@ -736,9 +737,9 @@ class MesoscopeICA(object):
 
                 for i in range(len(self.rois_names_valid[pkey][tkey])):
                     roi_name = self.rois_names_valid[pkey][tkey][i]
-                    before_sig = self.ins[pkey][tkey][0][i] + self.offsets[pkey][tkey]['pl1_sig_offset'][i]
+                    before_sig = self.ins[pkey][tkey][0][i] + self.offsets[pkey][tkey]['sig_offset'][i]
                     after_sig = self.outs[pkey][tkey][0][i]
-                    before_ct = self.ins[pkey][tkey][1][i] + self.offsets[pkey][tkey]['pl1_ct_offset'][i]
+                    before_ct = self.ins[pkey][tkey][1][i] + self.offsets[pkey][tkey]['ct_offset'][i]
                     after_ct = self.outs[pkey][tkey][1][i]
                     traces_before = [before_sig, before_ct]
                     traces_after = [after_sig, after_ct]

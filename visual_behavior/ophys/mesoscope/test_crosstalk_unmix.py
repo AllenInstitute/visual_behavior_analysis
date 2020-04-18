@@ -1,7 +1,9 @@
 import numpy as np
 import os
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
+from scipy import linalg
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
+
 
 
 def test_get_ica_traces(test_session = None):
@@ -62,10 +64,10 @@ def test_validate_traces(test_session = None):
 	self = ica_obj
 
 	# 1. Test if all attributes ahve been set:
-	for pkey in ica_obj.pkeys:
-		for tkey in ica_obj.tkeys:
-			assert ica_obj.rois_valid[pkey][tkey] is not None, f"Failed to set attributes self.rois_valid for {pkey}, {tkey}"
-			assert ica_obj.rois_valid_paths[pkey][tkey] is not None, f"Failed to set attributes self.rois_valid_paths for {pkey}, {tkey}"
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			assert self.rois_valid[pkey][tkey] is not None, f"Failed to set attributes self.rois_valid for {pkey}, {tkey}"
+			assert self.rois_valid_paths[pkey][tkey] is not None, f"Failed to set attributes self.rois_valid_paths for {pkey}, {tkey}"
 
 	# remove jsons if they exist - for the case whne they have been read fomr disk
 	for pkey in self.pkeys:
@@ -73,22 +75,23 @@ def test_validate_traces(test_session = None):
 			os.remove(self.rois_valid_paths[pkey][tkey])
 
 	# testing with return_vba = False (default value)
+
 	self.validate_traces()
-	for pkey in self.pkeys:
+	for pkey in self.pkeys:  # test if ROi names and NP names align:
 		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
 		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
 		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
-		for roi in roi_names:
+		for roi in roi_names:  # test is valid values are the same for ROI and nueropil
 			assert self.rois_valid[pkey]['roi'][roi] == self.rois_valid[pkey]['np'][
 				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
 
 	# jsons exist, re-run validate to read them and test the same:
 	self.validate_traces()
-	for pkey in self.pkeys:
+	for pkey in self.pkeys:  # test if ROi names and NP names align:
 		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
 		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
 		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
-		for roi in roi_names:
+		for roi in roi_names:  # test is valid values are the same for ROI and nueropil
 			assert self.rois_valid[pkey]['roi'][roi] == self.rois_valid[pkey]['np'][
 				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
 
@@ -99,11 +102,11 @@ def test_validate_traces(test_session = None):
 
 	# rerun test with return_vba = True
 	self.validate_traces(return_vba=True)
-	for pkey in self.pkeys:
+	for pkey in self.pkeys:  # test if ROi names and NP names align:
 		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
 		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
 		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
-		for roi in roi_names:
+		for roi in roi_names:  # test is valid values are the same for ROI and nueropil
 			assert self.rois_valid[pkey]['roi'][roi] == self.rois_valid[pkey]['np'][
 				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
 
@@ -136,11 +139,11 @@ def test_debias_traces(test_session=None):
 
 	self.debias_traces()
 
-	# 1. test that all attributes have been set
-	for pkey in ica_obj.pkeys:
-		for tkey in ica_obj.tkeys:
-			assert ica_obj.ins[pkey][tkey] is not None, f"Failed to set attributes self.ins for {pkey}, {tkey}"
-			assert ica_obj.ins_paths[pkey][tkey] is not None, f"Failed to set attributes self.ins_paths for {pkey}, {tkey}"
+	# 1. test whether all attributes have been set
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			assert self.ins[pkey][tkey] is not None, f"Failed to set attributes self.ins for {pkey}, {tkey}"
+			assert self.ins_paths[pkey][tkey] is not None, f"Failed to set attributes self.ins_paths for {pkey}, {tkey}"
 
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
@@ -177,5 +180,64 @@ def test_debias_traces(test_session=None):
 					i])), f'Debiasing went wrong :) for plane: {pkey}, trace:{tkey}, roi #: {i}, id: {valid_rois[i]}'
 
 
+def test_unmix_pair(test_session=None):
+	"""
+	testing trace debiasing:
+	:param test_session:
+	:return:
+	"""
 
+	if not test_session:
+		session = 786144371
+	else:
+		session = test_session
 
+	ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+	pairs = ica_obj.dataset.get_paired_planes()
+	pair = pairs[0]
+	ica_obj.set_exp_ids(pair)
+	ica_obj.get_ica_traces()
+	ica_obj.validate_traces()
+	ica_obj.debias_traces()
+	ica_obj.unmix_pair()
+	self = ica_obj
+
+	# remove outputs if they were read from disk :
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			os.remove(self.ins_paths[pkey][tkey])
+
+	self.unmix_pair()
+	# 1. test that all attributes have been set
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			assert self.outs[pkey][tkey] is not None, f"Failed to set attributes self.outs for {pkey}, {tkey}"
+			assert self.outs_paths[pkey][tkey] is not None, f"Failed to set attributes self.outs_paths for {pkey}, {tkey}"
+			assert self.crosstalk[pkey][tkey] is not None, f"Failed to set attributes self.crosstalk for {pkey}, {tkey}"
+			assert self.mixing[pkey][tkey] is not None, f"Failed to set attributes self.mixing for {pkey}, {tkey}"
+			assert self.a_mixing[pkey][tkey] is not None, f"Failed to set attributes self.a_mixing for {pkey}, {tkey}"
+
+	# 2. testing shape ouf outputs
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			out_sig = self.outs[pkey][tkey][0]
+			out_ct = self.outs[pkey][tkey][1]
+			rois_valid = self.rois_valid[pkey][tkey]
+			inp_sig = self.ins[pkey][tkey][0]
+			inp_ct = self.ins[pkey][tkey][1]
+			mixing = self.mixing[pkey][tkey]
+			only_valid_rois = [roi for roi, valid in rois_valid.items() if valid]
+			# 2.a Test that number of traces in unmixing output is equal number of valid rois
+			assert out_sig.shape[0] == len(
+				only_valid_rois), f"Number of traces in unmixing output doesn't agree with number of valid rois for plane: {pkey}, trace:{tkey}"
+			assert out_ct.shape[0] == len(
+				only_valid_rois), f"Number of traces in unmixing output doesn't agree with number of valid rois for plane: {pkey}, trace:{tkey}"
+			assert mixing.shape[0] == len(
+				only_valid_rois), f"Number of entries in self.mixing  doesn't agree with number of valid rois for plane: {pkey}, trace:{tkey}"
+			# 2.b. test taht number of output traces is equal to number input traces
+			assert out_sig.shape[0] == inp_sig.shape[
+				0], f"shape of filtered output traces SIGNAL does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
+			assert out_ct.shape[0] == inp_ct.shape[
+				0], f"shape of filtered output traces CROSSTALK does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
+
+	# 3. test that unmixing is correct: unmixing_out - offset = unmixing_in / unmixing_matrix
