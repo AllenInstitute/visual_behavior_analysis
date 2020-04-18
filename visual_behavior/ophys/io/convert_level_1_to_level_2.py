@@ -229,8 +229,7 @@ def get_sync_path(lims_data):
         #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except Exception as e:
-            print(e)
+        except:
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
     return sync_path
