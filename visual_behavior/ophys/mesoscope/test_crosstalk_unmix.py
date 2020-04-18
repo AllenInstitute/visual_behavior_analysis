@@ -39,7 +39,7 @@ def test_get_ica_traces(test_session = None):
 			assert os.path.isfile(ica_obj.raw_paths[pkey][tkey]), f'input traces not found for plane {pkey}, {tkey}'
 
 
-def test_validate_trtaces(test_session = None):
+def test_validate_traces(test_session = None):
 	"""
 	visual_behavior.ophys.mesoscope.crosstalk_unmix.MesoscopeICA.validate_traces()
 	Testing:
