@@ -24,15 +24,17 @@ def test_get_ica_traces(test_session = None):
 	ica_obj.set_exp_ids(pair)
 	ica_obj.get_ica_traces()
 
+	# 1. Test if all attributes ahve been set:
 	for pkey in ica_obj.pkeys:
 		for tkey in ica_obj.tkeys:
 			assert ica_obj.raws[pkey][tkey] is not None, f"Failed to set attributes self.raws for {pkey}, {tkey}"
 			assert ica_obj.raw_paths[pkey][tkey] is not None, f"Failed to set attributes self.raw_paths for {pkey}, {tkey}"
 			assert ica_obj.rois_names[pkey][tkey] is not None, f"Failed to set attributes self.rois_names for {pkey}, {tkey}"
 
+	# 2. Test wether Number of traces in ROI and NP aligns, files have been saved to disk
 	for pkey in ica_obj.pkeys:
 		assert ica_obj.raws[pkey]['roi'].shape == ica_obj.raws[pkey]['np'].shape, f"Number of traces for ROI and Neuropil doens't align for plane {pkey}"
-		assert np.all(ica_obj.rois_names[pkey]['roi'] == ica_obj.rois_names[pkey]['np']), f'Roi IDs for roi and np for {pkey} are not aligned'
+		assert np.all(ica_obj.rois_names[pkey]['roi'] == ica_obj.rois_names[pkey]['np']), f'Roi IDs for ROI and Neuropil for {pkey} are not aligned'
 		for tkey in ica_obj.tkeys:
 			assert os.path.isfile(ica_obj.raw_paths[pkey][tkey]), f'input traces not found for plane {pkey}, {tkey}'
 
@@ -59,12 +61,18 @@ def test_validate_trtaces(test_session = None):
 	ica_obj.validate_traces()
 	self = ica_obj
 
-	#remove jsons if they exist:
+	# 1. Test if all attributes ahve been set:
+	for pkey in ica_obj.pkeys:
+		for tkey in ica_obj.tkeys:
+			assert ica_obj.rois_valid[pkey][tkey] is not None, f"Failed to set attributes self.rois_valid for {pkey}, {tkey}"
+			assert ica_obj.rois_valid_paths[pkey][tkey] is not None, f"Failed to set attributes self.rois_valid_paths for {pkey}, {tkey}"
+
+	# remove jsons if they exist - for the case whne they have been read fomr disk
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
 			os.remove(self.rois_valid_paths[pkey][tkey])
 
-	# return_vba = False (default value)
+	# testing with return_vba = False (default value)
 	self.validate_traces()
 	for pkey in self.pkeys:
 		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
@@ -74,7 +82,7 @@ def test_validate_trtaces(test_session = None):
 			assert self.rois_valid[pkey]['roi'][roi] == self.rois_valid[pkey]['np'][
 				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
 
-	#jsons exist, re-run validate to read them and test the same:
+	# jsons exist, re-run validate to read them and test the same:
 	self.validate_traces()
 	for pkey in self.pkeys:
 		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
@@ -84,13 +92,13 @@ def test_validate_trtaces(test_session = None):
 			assert self.rois_valid[pkey]['roi'][roi] == self.rois_valid[pkey]['np'][
 				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
 
-	#remove jsons:
+	# remove jsons:
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
 			os.remove(self.rois_valid_paths[pkey][tkey])
 
-	# rerun test with return_vba = False (default value
-	self.validate_traces(return_vba = True)
+	# rerun test with return_vba = True
+	self.validate_traces(return_vba=True)
 	for pkey in self.pkeys:
 		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
 		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
@@ -98,8 +106,14 @@ def test_validate_trtaces(test_session = None):
 		for roi in roi_names:
 			assert self.rois_valid[pkey]['roi'][roi] == self.rois_valid[pkey]['np'][
 				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
+
 
 def test_debias_traces(test_session = None):
+	"""
+	testing trace debiasing:
+	:param test_session:
+	:return:
+	"""
 
 	if not test_session:
 		session = 786144371
@@ -115,26 +129,51 @@ def test_debias_traces(test_session = None):
 	ica_obj.debias_traces()
 	self = ica_obj
 
-	#remove outputs if they exist:
+	# remove outputs if they exist:
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
 			os.remove(self.ins_paths[pkey][tkey])
 
 	self.debias_traces()
-	# 1. test if number of traces and offsets in the output is equal to number of valid rois:
+
+	# 1. test that all attributes have been set
+	for pkey in ica_obj.pkeys:
+		for tkey in ica_obj.tkeys:
+			assert ica_obj.ins[pkey][tkey] is not None, f"Failed to set attributes self.ins for {pkey}, {tkey}"
+			assert ica_obj.ins_paths[pkey][tkey] is not None, f"Failed to set attributes self.ins_paths for {pkey}, {tkey}"
+
+	# 2. test if number of traces and offsets in the output is equal to number of valid rois:
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
+			raw_sig = self.raws[pkey][tkey][0]
+			raw_ct = self.raws[pkey][tkey][1]
 			rois_valid = self.rois_valid[pkey][tkey]
-			inp = self.ins[pkey][tkey]
+			# filter raws :
+			valid_mask = [valid for _, valid in rois_valid.items()]
+			raw_sig = raw_sig[valid_mask, :]
+			raw_ct = raw_ct[valid_mask, :]
+			inp_sig = self.ins[pkey][tkey][0]
+			inp_ct = self.ins[pkey][tkey][1]
 			sig_offset = self.offsets[pkey][tkey]['sig_offset']
 			ct_offset = self.offsets[pkey][tkey]['ct_offset']
 			valid_rois = [roi for roi, valid in rois_valid.items() if valid]
-			assert inp.shape[1] == len(
-				valid_rois), f"Number of traces in debiasing output doesn't agree with valid dict for {pkey}, {tkey}"
+			assert inp_sig.shape[0] == len(
+				valid_rois), f"Number of traces in debiasing output doesn't agree with valid dict for plane: {pkey}, trace:{tkey}"
+			assert inp_ct.shape[0] == len(
+				valid_rois), f"Number of traces in debiasing output doesn't agree with valid dict for plane: {pkey}, trace:{tkey}"
 			assert sig_offset.shape[0] == len(
-				valid_rois), f"Number of traces in sig offset output doesn't agree with valid dict for {pkey}, {tkey}"
+				valid_rois), f"Number of traces in sig offset output doesn't agree with valid dict for plane: {pkey}, trace:{tkey}"
 			assert ct_offset.shape[0] == len(
-				valid_rois), f"Number of traces in ct offset output doesn't agree with valid dict for {pkey}, {tkey}"
+				valid_rois), f"Number of traces in ct offset output doesn't agree with valid dict for plane: {pkey}, trace:{tkey}"
+			# 3. test filtered_raws.shape[0]  = inp.shape[0]
+			assert raw_sig.shape[0] == inp_sig.shape[0], f"shape of filtered raw traces SIGNAL does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
+			assert raw_ct.shape[0] == inp_ct.shape[0], f"shape of filtered raw traces CROSSTALK does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
+			# 4. test that debiasing is correct: outputs = input + offset
+			for i in range(len(valid_rois)):
+				assert np.all(np.isclose(inp_sig[i] + sig_offset[i], raw_sig[
+					i])), f'Debiasing went wrong for plane: {pkey}, trace:{tkey}, roi #: {i}, id: {valid_rois[i]}'
+				assert np.all(np.isclose(inp_ct[i] + ct_offset[i], raw_ct[
+					i])), f'Debiasing went wrong :) for plane: {pkey}, trace:{tkey}, roi #: {i}, id: {valid_rois[i]}'
 
 
 
