@@ -260,9 +260,11 @@ def get_sdk_dataset_obj(ophys_experiment_id, cache_dir, include_invalid_rois=Fal
         dataset.ophys_timestamps = dataset.timestamps['ophys_frames']['timestamps']
     # reformat running speed df
     df = dataset.running_data_df.reset_index()
-    dataset.running_speed_df = df[['timestamps', 'speed']].rename(columns={'timestamps': 'time', 'speed': 'running_speed'})
-    dataset.running_speed = dataset.running_speed_df # lame hack to avoid resolving elsewhere
+    dataset.running_speed_df = df[['timestamps', 'speed']].rename(columns={'speed': 'running_speed'})
+    dataset.running_speed_df['time'] = dataset.running_speed_df['timestamps']
+    dataset.running_speed = dataset.running_speed_df # lame hack to avoid resolving naming elsewhere
     # reformat rewards
+    dataset.rewards['timestamps'] = dataset.rewards.index
     dataset.rewards['time'] = dataset.rewards.index
     dataset.extended_stimulus_presentations = get_extended_stimulus_presentations(dataset)
     return dataset
@@ -272,7 +274,7 @@ def get_analysis_folder(cache_dir, experiment_id):
     candidates = [file for file in os.listdir(cache_dir) if str(experiment_id) in file]
     if len(candidates) == 1:
         analysis_folder = candidates[0]
-    elif len(candidates) < 1:
+    elif len(candidates) == 0:
         raise OSError(
             'unable to locate analysis folder for experiment {} in {}'.format(experiment_id, cache_dir))
     elif len(candidates) > 1:
