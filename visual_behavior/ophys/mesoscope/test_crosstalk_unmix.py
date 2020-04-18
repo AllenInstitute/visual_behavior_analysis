@@ -108,7 +108,7 @@ def test_validate_traces(test_session = None):
 				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
 
 
-def test_debias_traces(test_session = None):
+def test_debias_traces(test_session=None):
 	"""
 	testing trace debiasing:
 	:param test_session:
@@ -142,7 +142,6 @@ def test_debias_traces(test_session = None):
 			assert ica_obj.ins[pkey][tkey] is not None, f"Failed to set attributes self.ins for {pkey}, {tkey}"
 			assert ica_obj.ins_paths[pkey][tkey] is not None, f"Failed to set attributes self.ins_paths for {pkey}, {tkey}"
 
-	# 2. test if number of traces and offsets in the output is equal to number of valid rois:
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
 			raw_sig = self.raws[pkey][tkey][0]
@@ -157,18 +156,20 @@ def test_debias_traces(test_session = None):
 			sig_offset = self.offsets[pkey][tkey]['sig_offset']
 			ct_offset = self.offsets[pkey][tkey]['ct_offset']
 			valid_rois = [roi for roi, valid in rois_valid.items() if valid]
+			# 2. test if number of ica input traces in the output is equal to number of valid rois:
 			assert inp_sig.shape[0] == len(
 				valid_rois), f"Number of traces in debiasing output doesn't agree with valid dict for plane: {pkey}, trace:{tkey}"
 			assert inp_ct.shape[0] == len(
 				valid_rois), f"Number of traces in debiasing output doesn't agree with valid dict for plane: {pkey}, trace:{tkey}"
+			# 3. test if number offsets in the output is equal to number of valid rois:
 			assert sig_offset.shape[0] == len(
 				valid_rois), f"Number of traces in sig offset output doesn't agree with valid dict for plane: {pkey}, trace:{tkey}"
 			assert ct_offset.shape[0] == len(
 				valid_rois), f"Number of traces in ct offset output doesn't agree with valid dict for plane: {pkey}, trace:{tkey}"
-			# 3. test filtered_raws.shape[0]  = inp.shape[0]
+			# 4. test filtered_raws.shape[0]  = inp.shape[0]
 			assert raw_sig.shape[0] == inp_sig.shape[0], f"shape of filtered raw traces SIGNAL does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
 			assert raw_ct.shape[0] == inp_ct.shape[0], f"shape of filtered raw traces CROSSTALK does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
-			# 4. test that debiasing is correct: outputs = input + offset
+			# 5. test that debiasing is correct: outputs = input + offset
 			for i in range(len(valid_rois)):
 				assert np.all(np.isclose(inp_sig[i] + sig_offset[i], raw_sig[
 					i])), f'Debiasing went wrong for plane: {pkey}, trace:{tkey}, roi #: {i}, id: {valid_rois[i]}'
