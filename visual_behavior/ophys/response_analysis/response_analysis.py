@@ -153,6 +153,13 @@ class ResponseAnalysis(object):
             else:
                 df = self.get_df_for_df_name(df_name)
                 self.save_response_df(df, df_name)
+        if ('response' in df_name):
+            if self.sdk_dataset:
+                df['cell'] = [loading.get_cell_index_for_cell_specimen_id(self.dataset, cell_specimen_id) for
+                              cell_specimen_id in df.cell_specimen_id.values]
+            else:
+                df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(int(cell_specimen_id)) for
+                              cell_specimen_id in df.cell_specimen_id.values]
         if 'trials' in df_name:
             trials = self.dataset.trials
             trials = trials.rename(
@@ -170,13 +177,7 @@ class ResponseAnalysis(object):
             # response_params = rp.get_default_omission_response_params()
             # stimulus_presentations = sp.add_window_running_speed(running_speed, stimulus_presentations, response_params)
             df = df.merge(stimulus_presentations, right_on = 'stimulus_presentations_id', left_on = 'stimulus_presentations_id')
-        if ('response' in df_name):
-            if self.sdk_dataset:
-                df['cell'] = [loading.get_cell_index_for_cell_specimen_id(self.dataset, cell_specimen_id) for
-                         cell_specimen_id in df.cell_specimen_id.values]
-            else:
-                df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(int(cell_specimen_id)) for
-                              cell_specimen_id in df.cell_specimen_id.values]
+
         return df
 
 
