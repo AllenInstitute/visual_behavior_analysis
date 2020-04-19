@@ -5,7 +5,6 @@ from scipy import linalg
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 
-
 def test_get_ica_traces(test_session = None):
 	"""
 	test for visual_behavior.ophys.mesoscope.crosstalk_unmix.MesoscopeICA.get_ica_traces()
