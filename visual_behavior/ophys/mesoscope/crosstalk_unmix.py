@@ -700,8 +700,7 @@ class MesoscopeICA(object):
                             # saving to self
                             self.outs[pkey][tkey] = np.array(
                                 [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['sig_offset'],
-                                 traces_out[pkey][tkey][1] + self.offsets[pkey][tkey][
-                                     'ct_offset']])
+                                 traces_out[pkey][tkey][1] + self.offsets[pkey][tkey]['ct_offset']])
                             self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
                             self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
                             self.mixing[pkey][tkey] = mixing[pkey][tkey]
@@ -710,10 +709,12 @@ class MesoscopeICA(object):
 
                             # writing ica ouput traces to disk
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
-                                f.create_dataset(f"data", data=traces_out[pkey][tkey])
-                                f.create_dataset(f"crosstalk", data=crosstalk[pkey][tkey])
-                                f.create_dataset(f"mixing_matrix_adjusted", data=a_mixing[pkey][tkey])
-                                f.create_dataset(f"mixing_matrix", data=mixing[pkey][tkey])
+                                f.create_dataset(f"data", data=self.outs[pkey][tkey])
+                                f.create_dataset(f"crosstalk", data=self.crosstalk[pkey][tkey])
+                                f.create_dataset(f"mixing_matrix_adjusted", data=self.a_mixing[pkey][tkey])
+                                f.create_dataset(f"mixing_matrix", data=self.mixing[pkey][tkey])
+                                f.create_dataset(f"offset_sig", data=self.offsets[pkey][tkey]['sig_offset'])
+                                f.create_dataset(f"offset_ct", data=self.offsets[pkey][tkey]['ct_offset'])
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
             for pkey in self.pkeys:
