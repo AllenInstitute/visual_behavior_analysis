@@ -11,6 +11,7 @@ import visual_behavior.ophys.mesoscope.dataset as ms
 import gc
 import shutil
 import time
+import sciris as sc
 
 import matplotlib.pyplot as plt
 from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
@@ -196,7 +197,7 @@ def parse_input(data):
     with h5py.File(traces_h5, "r") as f:
         trace_ids = [int(rid) for rid in f["roi_names"][()]]
 
-    exp_traces_valid = ju.read(traces_valid)["signal"]
+    exp_traces_valid = ju.read(traces_valid)
 
     rois = get_path(data, "roi_masks", False)
     masks = None
@@ -721,3 +722,35 @@ def delete_old_files(sessions, CACHE, names_files= None, remove_by_date='04/01/2
             print(f"sessions {session} doens't exist")
             continue
     return
+
+
+def refactor_valid(sessions):
+    list_exp = {}
+    for session in sessions:
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+        pairs = ica_obj.dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj.set_exp_ids(pair)
+            ica_obj.set_ica_dirs()
+            ica_obj.set_valid_paths()
+            for pkey in ica_obj.pkeys:
+                for tkey in ica_obj.tkeys:
+                    old_path = ica_obj.rois_valid_paths[pkey][tkey]
+                    # make a paht to the new filename
+                    new_valid_path = sc.makefilepath(filename=f"{ica_obj.exp_ids[pkey]}_valid_1.json",
+                                                     folder=ica_obj.dirs[tkey])
+                    # copy valid json to the new filename
+                    shutil.copy(old_path, new_valid_path)
+                    # read old valid json, reformat and save to disk to the same name.
+                    valid_old = ju.read(old_path)
+                    if 'signal' in valid_old:
+                        print(f"Refactoring {ica_obj.exp_ids[pkey]}")
+                        valid_new_r = valid_old['signal']
+                        if 'roi' in valid_new_r:
+                            del valid_new_r['roi']
+                        if 'np' in valid_new_r:
+                            del valid_new_r['np']
+                        ju.write(old_path, valid_new_r)
+                    else:
+                        list_exp[tkey] = ica_obj.exp_ids[pkey]
+    return list_exp
