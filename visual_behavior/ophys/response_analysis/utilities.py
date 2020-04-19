@@ -556,7 +556,8 @@ def add_metadata_to_mean_df(mdf, metadata):
     # metadata = metadata.reset_index()
     metadata['experiment_id'] = metadata['ophys_experiment_id'].values[0]
     # metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
-    # metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate'])
+    metadata = metadata.drop(columns=['excitation_lambda', 'emission_lambda', 'indicator',
+                                      'field_of_view_width', 'field_of_view_height'])
     # metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
     metadata['image_set'] = metadata['session_type'].values[0][-1]
     metadata['session_number'] = metadata['session_type'].values[0][6]
