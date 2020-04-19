@@ -197,7 +197,7 @@ def parse_input(data):
     with h5py.File(traces_h5, "r") as f:
         trace_ids = [int(rid) for rid in f["roi_names"][()]]
 
-    exp_traces_valid = ju.read(traces_valid)["signal"]
+    exp_traces_valid = ju.read(traces_valid)
 
     rois = get_path(data, "roi_masks", False)
     masks = None
