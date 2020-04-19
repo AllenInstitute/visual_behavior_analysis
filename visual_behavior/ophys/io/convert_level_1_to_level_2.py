@@ -84,16 +84,21 @@ def get_lims_id(lims_data):
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
     specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
-    if len(specimen_driver_lines) > 1:
-        for i in range(len(specimen_driver_lines)):
-            if 'Cre' in specimen_driver_lines[i]:
-                specimen_driver_line = specimen_driver_lines[i]  # .split('-')[0]
-            else:
-                specimen_driver_line = specimen_driver_lines[0]
-    elif len(specimen_driver_lines) == 1:
-        specimen_driver_line = specimen_driver_lines[0]
-    else:
+    if len(specimen_driver_lines[0])>1: #if there is a driver line
+        print(specimen_driver_lines)
+        if len(specimen_driver_lines) > 1: #if there are two lines
+            for i in range(len(specimen_driver_lines)):
+                if 'Cre' in specimen_driver_lines[i]: #pick the one that has Cre in it
+                    specimen_driver_line = specimen_driver_lines[i]  # .split('-')[0]
+                else:
+                    specimen_driver_line = specimen_driver_lines[0]
+            print(specimen_driver_line)
+        elif len(specimen_driver_lines) == 1: #if there is only one, pick that one
+            specimen_driver_line = specimen_driver_lines[0]
+            print(specimen_driver_line)
+    else: #if there is no line, say line unknown
         specimen_driver_line = 'cre_line_unknown'
+    print(specimen_driver_line)
     if specimen_driver_line == '':
         raise Exception('specimen_driver_line is empty! check why! This may result in "multiple analysis folders".')
     if lims_data.depth.values[0] is None:
