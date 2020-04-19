@@ -311,9 +311,11 @@ class MesoscopeICA(object):
                     self.raw_paths[pkey][tkey] = path[pkey][tkey]
                     with h5py.File(path[pkey][tkey], "r") as f:
                         self.raws[pkey][tkey] = f["data"][()]
+
         else:
             # some traces are missing, run extraction:
             logger.info('Traces dont exist in cache, extracting')
+
             # if traces don't exist, do we need to reset unmixed and debiased traces flaggs to none?
             # yes, as we want unmixed traces be out on ICA using original traces
             folders = {}
@@ -323,6 +325,7 @@ class MesoscopeICA(object):
                     self.rois_names[pkey][tkey] = None
                     self.ins_paths[pkey][tkey] = None
                     self.outs_paths[pkey][tkey] = None
+
             sig = {}
             ct = {}
             roi_names = {}
@@ -337,13 +340,13 @@ class MesoscopeICA(object):
 
             # extract signal and crosstalk traces for pl 1
             sig["pl1"]["roi"], sig["pl1"]["np"], roi_names["pl1"]['roi'] = get_traces(folders["pl1"], self.exp_ids["pl1"],
-                                                                                      folders["pl1"], self.exp_ids["pl1"])
+                                                                               folders["pl1"], self.exp_ids["pl1"])
             roi_names["pl1"]['np'] = roi_names["pl1"]['roi']
             ct["pl1"]["roi"], ct["pl1"]["np"], _ = get_traces(folders["pl2"], self.exp_ids["pl2"], folders["pl1"],
                                                               self.exp_ids["pl1"])
             # extract signal and crosstalk traces for pl 2
             sig["pl2"]["roi"], sig["pl2"]["np"], roi_names["pl2"]['roi'] = get_traces(folders["pl2"], self.exp_ids["pl2"],
-                                                                                      folders["pl2"], self.exp_ids["pl2"])
+                                                                               folders["pl2"], self.exp_ids["pl2"])
             roi_names["pl2"]['np'] = roi_names["pl2"]['roi']
             ct["pl2"]["roi"], ct["pl2"]["np"], _ = get_traces(folders["pl1"], self.exp_ids["pl1"], folders["pl2"],
                                                               self.exp_ids["pl2"])
