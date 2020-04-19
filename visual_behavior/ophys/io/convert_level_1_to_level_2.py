@@ -161,41 +161,41 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
         lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
     return analysis_dir
 
-# def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
-#     cache_dir = get_cache_dir(cache_dir=cache_dir)
-#     if 'analysis_dir' in lims_data.columns:
-#         return lims_data['analysis_dir'].values[0]
-#     else:
-#         # look for existing analysis folders
-#         analysis_folder = [folder for folder in os.listdir(cache_dir) if str(lims_data.lims_id.values[0]) in folder]
-#         if len(analysis_folder) > 1: #if there are multiple analysis folders with this lims_id
-#             print('Multiple analysis folders exist, removing duplicates')
-#             # Get the modification times of the existing analysis folders
-#             mod_times = [os.path.getmtime(os.path.join(cache_dir, analysis_folder[i])) for i in range(len(analysis_folder))]
-#             # Find all the old analysis folders
-#             old_inds = np.argsort(mod_times)[:-1]
-#             old_folders = [os.path.join(cache_dir, analysis_folder[i]) for i in range(len(analysis_folder))]
-#             # Remove old analysis folders
-#             for i in range(len(old_folders)):
-#                 print('Removing old analysis folder : %s' % old_folders[i])
-#                 shutil.rmtree(old_folders[i])
-#
-#         # check again for remaining folders
-#         analysis_folder = [folder for folder in os.listdir(cache_dir) if str(lims_data.lims_id.values[0]) in folder]
-#         if len(analysis_folder) == 0: #if there are no folders associated with this lims_id
-#             print('Creating a new analysis folder')
-#             analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
-#             os.mkdir(analysis_dir)
-#         elif len(analysis_folder) == 1: #if there is one folder for this lims_id
-#             print('Analysis folder exists, removing old files')
-#             analysis_dir = os.path.join(cache_dir, analysis_folder[0])
-#             # delete files in directory - this is necessary or else file sizes will increase with each overwrite
-#             [os.remove(os.path.join(analysis_dir, file)) for file in os.listdir(analysis_dir)]
-#
-#         print(analysis_dir)
-#         if cache_on_lims_data:
-#             lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
-#         return analysis_dir
+def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
+    cache_dir = get_cache_dir(cache_dir=cache_dir)
+    if 'analysis_dir' in lims_data.columns:
+        return lims_data['analysis_dir'].values[0]
+    else:
+        # look for existing analysis folders
+        analysis_folder = [folder for folder in os.listdir(cache_dir) if str(lims_data.lims_id.values[0]) in folder]
+        if len(analysis_folder) > 1: #if there are multiple analysis folders with this lims_id
+            print('Multiple analysis folders exist, removing duplicates')
+            # Get the modification times of the existing analysis folders
+            mod_times = [os.path.getmtime(os.path.join(cache_dir, analysis_folder[i])) for i in range(len(analysis_folder))]
+            # Find all the old analysis folders
+            old_inds = np.argsort(mod_times)[:-1]
+            old_folders = [os.path.join(cache_dir, analysis_folder[i]) for i in range(len(analysis_folder))]
+            # Remove old analysis folders
+            for i in range(len(old_folders)):
+                print('Removing old analysis folder : %s' % old_folders[i])
+                shutil.rmtree(old_folders[i])
+
+        # check again for remaining folders
+        analysis_folder = [folder for folder in os.listdir(cache_dir) if str(lims_data.lims_id.values[0]) in folder]
+        if len(analysis_folder) == 0: #if there are no folders associated with this lims_id
+            print('Creating a new analysis folder')
+            analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
+            os.mkdir(analysis_dir)
+        elif len(analysis_folder) == 1: #if there is one folder for this lims_id
+            print('Analysis folder exists')
+            analysis_dir = os.path.join(cache_dir, analysis_folder[0])
+            # delete files in directory - this is necessary or else file sizes will increase with each overwrite
+            # [os.remove(os.path.join(analysis_dir, file)) for file in os.listdir(analysis_dir)]
+
+        print(analysis_dir)
+        if cache_on_lims_data:
+            lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
+        return analysis_dir
 
 
 def get_ophys_session_dir(lims_data):
