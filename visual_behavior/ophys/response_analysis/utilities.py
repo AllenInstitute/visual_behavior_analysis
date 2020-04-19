@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
+import visual_behavior.ophys.response_analysis.response_processing as rp
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -394,7 +396,14 @@ def get_window(analysis=None, flashes=False, omitted=False):
 def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
                 get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True):
 
-    window = get_window(analysis, flashes, omitted)
+    if omitted:
+        params = rp.get_default_omission_response_params()
+    elif flashes:
+        params = rp.get_default_stimulus_response_params()
+    else:
+        params = rp.get_default_trial_response_params()
+    window = params['window_around_timepoint_seconds']
+    # window = get_window(analysis, flashes, omitted)
 
     rdf = response_df.copy()
 
@@ -544,13 +553,15 @@ def get_colors_for_behavioral_response_types():
 
 
 def add_metadata_to_mean_df(mdf, metadata):
-    metadata = metadata.reset_index()
-    metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
-    metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate', 'index'])
-    metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
-    metadata['image_set'] = metadata.session_type.values[0][-1]
-    metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in
-                                  metadata.image_set.values]
+    # metadata = metadata.reset_index()
+    metadata['experiment_id'] = metadata['ophys_experiment_id'].values[0]
+    # metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
+    # metadata = metadata.drop(columns=['ophys_frame_rate', 'stimulus_frame_rate'])
+    # metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
+    metadata['image_set'] = metadata['session_type'].values[0][-1]
+    metadata['session_number'] = metadata['session_type'].values[0][6]
+    # metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in
+    #                               metadata.image_set.values]
     # metadata['session_type'] = ['image_set_' + image_set for image_set in metadata.image_set.values]
     mdf = mdf.merge(metadata, how='outer', on='experiment_id')
     return mdf

@@ -266,7 +266,18 @@ def get_sdk_dataset_obj(ophys_experiment_id, cache_dir, include_invalid_rois=Fal
     # reformat rewards
     dataset.rewards['timestamps'] = dataset.rewards.index
     dataset.rewards['time'] = dataset.rewards.index
-    dataset.extended_stimulus_presentations = get_extended_stimulus_presentations(dataset)
+    # get extended stim presentations
+    # dataset.extended_stimulus_presentations = get_extended_stimulus_presentations(dataset)
+    # reformat metadata
+    metadata = dataset.metadata.copy()
+    if len(metadata['driver_line']) > 1:
+        metadata['driver_line'] = metadata['driver_line'][1] + ';' + metadata['driver_line'][0]
+    else:
+        metadata['driver_line'] = metadata['driver_line'][0]
+    metadata['reporter_line'] = metadata['reporter_line'][0]
+    metadata['ophys_frame_rate'] = 1 / np.diff(dataset.ophys_timestamps).mean()
+    metadata['experiment_id'] = metadata['ophys_experiment_id']
+    dataset.metadata = pd.DataFrame(metadata, index=[0])
     return dataset
 
 

@@ -57,13 +57,14 @@ class ResponseAnalysis(object):
     If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
     """
 
-    def __init__(self, dataset, overwrite_analysis_files=False, use_events=False):
+    def __init__(self, dataset, overwrite_analysis_files=False, use_events=False, use_extended_stimulus_presentations=False):
         self.dataset = dataset
         self.use_events = use_events
-        self.overwrite_analysis_files = overwrite_analysis_files
         self.cache_dir = self.dataset.cache_dir
         self.experiment_id = self.dataset.experiment_id
         self.dataset.analysis_dir = self.get_analysis_dir()
+        self.overwrite_analysis_files = overwrite_analysis_files
+        self.use_extended_stimulus_presentations = use_extended_stimulus_presentations
         self.trial_window = rp.get_default_trial_response_params()['window_around_timepoint_seconds']
         self.flash_window = rp.get_default_stimulus_response_params()['window_around_timepoint_seconds']
         self.omitted_flash_window = rp.get_default_omission_response_params()['window_around_timepoint_seconds']
@@ -160,7 +161,11 @@ class ResponseAnalysis(object):
                          'response_latency': 'behavioral_response_latency'})
             df = df.merge(trials, right_on='trials_id', left_on='trials_id')
         elif ('stimulus' in df_name) or ('omission' in df_name):
-            stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
+            if self.use_extended_stimulus_presentations:
+                self.dataset.extended_stimulus_presentations = get_extended_stimulus_presentations(self.dataset)
+                stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
+            else:
+                stimulus_presentations = self.dataset.stimulus_presentations.copy()
             # running_speed = self.dataset.running_speed
             # response_params = rp.get_default_omission_response_params()
             # stimulus_presentations = sp.add_window_running_speed(running_speed, stimulus_presentations, response_params)

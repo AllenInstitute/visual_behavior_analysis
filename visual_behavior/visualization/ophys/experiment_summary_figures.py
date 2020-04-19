@@ -191,7 +191,7 @@ def plot_traces_heatmap(dataset, ax=None, save=False, use_events=False):
     ax.set_ylabel('cells')
 
     interval_seconds = 5 * 60
-    ophys_frame_rate = int(dataset.metadata.ophys_frame_rate.values[0])
+    ophys_frame_rate = int(dataset.metadata['ophys_frame_rate'])
     upper_limit, time_interval, frame_interval = get_upper_limit_and_intervals(traces, dataset.ophys_timestamps,
                                                                                ophys_frame_rate)
     ax.set_xticks(np.arange(0, upper_limit, interval_seconds * ophys_frame_rate))
