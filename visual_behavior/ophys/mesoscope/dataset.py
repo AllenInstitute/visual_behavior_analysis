@@ -229,7 +229,7 @@ class MesoscopeDataset(object):
 
     def get_splitting_json(self):
         session_folder = self.get_session_folder()
-        splitting_json = os.path.join(session_folder, f"MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json")
+        splitting_json = os.path.join(session_folder, f"MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json") ### need a query here
         if os.path.isfile(splitting_json):
             self.splitting_json_present = True
         else:
