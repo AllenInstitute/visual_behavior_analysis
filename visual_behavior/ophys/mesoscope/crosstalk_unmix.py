@@ -713,8 +713,7 @@ class MesoscopeICA(object):
                                 f.create_dataset(f"crosstalk", data=self.crosstalk[pkey][tkey])
                                 f.create_dataset(f"mixing_matrix_adjusted", data=self.a_mixing[pkey][tkey])
                                 f.create_dataset(f"mixing_matrix", data=self.mixing[pkey][tkey])
-                                f.create_dataset(f"offset_sig", data=self.offsets[pkey][tkey]['sig_offset'])
-                                f.create_dataset(f"offset_ct", data=self.offsets[pkey][tkey]['ct_offset'])
+
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
             for pkey in self.pkeys:
