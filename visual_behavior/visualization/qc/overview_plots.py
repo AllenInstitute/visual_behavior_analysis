@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from visual_behavior.visualization import utils as ut
-from visual_behavior.visualization.qc import data_loading as dl
+from visual_behavior.data_access import loading as data_loading
 # from visual_behavior.visualization.qc import session_plots as sp
 # from visual_behavior.visualization.qc import plotting_utils as pu
-# from visual_behavior.visualization.qc import data_processing as dp
+# from visual_behavior.data import processing as data_processing
 # from visual_behavior.visualization.qc import experiment_plots as ep
 
 
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     # project_code = 'VisualBehaviorMultiscope4areasx2d'
     # project_code = 'VisualBehaviorMultiscope'
 
-    experiments = dl.get_filtered_ophys_experiment_table(include_failed_data=True)
+    experiments = data_loading.get_filtered_ophys_experiment_table(include_failed_data=True)
     project_expts = experiments[experiments.project_code == project_code]
 
     list_of_filters = ['passing_expts',

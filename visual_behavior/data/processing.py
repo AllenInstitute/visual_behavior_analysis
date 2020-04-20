@@ -1,4 +1,4 @@
-import visual_behavior.visualization.qc.data_loading as load
+from visual_behavior.data_access import loading as data_loading
 
 import itertools
 import numpy as np
@@ -8,9 +8,10 @@ from functools import reduce
 
 # csid = cell_specimen_id
 
+### FUNCTIONS TO MANIPULATE DATA FOR ANALSYSIS ###
+
 
 # BASIC INFO/DATAFRAMES (EXP, SESSION & CONTAINER)
-
 
 def ophys_experiment_info_df(ophys_experiment_id):
     """manifest style information about a specific
@@ -36,9 +37,9 @@ def ophys_experiment_info_df(ophys_experiment_id):
                                                 "stage_name_mtrain"
     """
 
-    experiment_info_df = load.get_lims_experiment_info(ophys_experiment_id)
+    experiment_info_df = data_loading.get_lims_experiment_info(ophys_experiment_id)
     experiment_info_df = split_mouse_info_column(experiment_info_df)
-    experiment_info_df = load.get_mtrain_stage_name(experiment_info_df)
+    experiment_info_df = data_loading.get_mtrain_stage_name(experiment_info_df)
     experiment_info_df = experiment_info_df.drop(["mouse_info", "foraging_id"], axis=1)
     return experiment_info_df
 
@@ -68,10 +69,10 @@ def ophys_container_info_df(ophys_container_id):
                     "stage_name_mtrain"
 
     """
-    container_info_df = load.get_lims_container_info(ophys_container_id)
+    container_info_df = data_loading.get_lims_container_info(ophys_container_id)
     container_info_df = calc_retake_number(container_info_df, stage_name_column="stage_name_lims")
     container_info_df = split_mouse_info_column(container_info_df)
-    container_info_df = load.get_mtrain_stage_name(container_info_df)
+    container_info_df = data_loading.get_mtrain_stage_name(container_info_df)
     container_info_df = container_info_df.drop(["mouse_info", "foraging_id"], axis=1)
     return container_info_df
 
@@ -223,7 +224,7 @@ def segmentation_summary_for_experiment(ophys_experiment_id):
                             "invalid_percent"
     """
 
-    cell_table = load.get_lims_cell_rois_table(ophys_experiment_id)
+    cell_table = data_loading.get_lims_cell_rois_table(ophys_experiment_id)
 
     total_rois = len(cell_table)
     number_valid = len(cell_table.loc[cell_table["valid_roi"] == True])
@@ -329,7 +330,7 @@ def get_lims_cell_roi_tables_for_container(ophys_container_id):
     container_cell_table = pd.DataFrame()
 
     for ophys_experiment_id in passed_container["ophys_experiment_id"].unique():
-        exp_cell_table = load.get_lims_cell_rois_table(ophys_experiment_id)
+        exp_cell_table = data_loading.get_lims_cell_rois_table(ophys_experiment_id)
 
         exp_cell_table = exp_cell_table[["ophys_experiment_id",
                                          "cell_specimen_id",
@@ -364,6 +365,7 @@ def get_valid_csids_from_lims_for_container(ophys_container_id):
     return valid_container_csid_df
 
 
+#### does this go in data.validation?
 def cell_specimen_id_matches_in_dataframe(dataframe):
     """takes a dataframe that contains the column "cell_specimen_id"
         and returns the number of times that cell_specimen_id appears
@@ -671,7 +673,7 @@ def gen_transparent_validity_masks(ophys_experiment_id):
                     "valid_rois",
                     "transparent_mask"
     """
-    sdk_cell_table = load.get_sdk_cell_specimen_table(ophys_experiment_id)
+    sdk_cell_table = data_loading.get_sdk_cell_specimen_table(ophys_experiment_id)
     sdk_cell_table = shift_image_masks(sdk_cell_table)
 
     validity_masks_df = pd.DataFrame()
@@ -703,8 +705,8 @@ def valid_sdk_dff_traces_experiment(ophys_experiment_id):
                     "dff"
                     "ophys_experiment_id
     """
-    dff_traces = load.get_sdk_dff_traces(ophys_experiment_id)
-    cell_specimen_table = load.get_sdk_cell_specimen_table(ophys_experiment_id)
+    dff_traces = data_loading.get_sdk_dff_traces(ophys_experiment_id)
+    cell_specimen_table = data_loading.get_sdk_cell_specimen_table(ophys_experiment_id)
     merged_dfs = dff_traces.merge(cell_specimen_table, left_index=True, right_index=True)
     merged_dfs["cell_specimen_id"] = merged_dfs.index
     merged_dfs = remove_invalid_rois(merged_dfs)
@@ -936,7 +938,7 @@ def get_experiment_average_intensity_timeseries(ophys_experiment_id):
         frame_numbers -- array of frame numbers the frame intensitites
                             were calculated for
     """
-    motion_corrected_movie_array = load.load_motion_corrected_movie(ophys_experiment_id)
+    motion_corrected_movie_array = data_loading.load_motion_corrected_movie(ophys_experiment_id)
 
     subset = motion_corrected_movie_array[::500, 100:400, 50:400]
 
@@ -959,7 +961,7 @@ def experiment_average_FOV_from_motion_corrected_movie(ophys_experiment_id):
     Returns:s
         2d array   -- 2d array thats the average of the motion corrected FOV
     """
-    motion_corrected_movie_array = load.load_motion_corrected_movie(ophys_experiment_id)
+    motion_corrected_movie_array = data_loading.load_motion_corrected_movie(ophys_experiment_id)
     subset = motion_corrected_movie_array[::500, :, :]
     average_FOV = np.mean(subset, axis=0)
     return average_FOV
@@ -975,7 +977,7 @@ def experiment_max_FOV_from_motion_corrected_movie(ophys_experiment_id):
     Returns:
         2d array   -- 2d array thats the average of the motion corrected FOV
     """
-    motion_corrected_movie_array = load.load_motion_corrected_movie(ophys_experiment_id)
+    motion_corrected_movie_array = data_loading.load_motion_corrected_movie(ophys_experiment_id)
     subset = motion_corrected_movie_array[::500, :, :]
     max_FOV = np.amax(subset, axis=0)
     return max_FOV
@@ -1048,7 +1050,7 @@ def experiment_FOV_information(ophys_experiment_id):
     """
     intensity_df = experiment_intensity_mean_and_std(ophys_experiment_id)
     intensity_df["median_rsnr_all_csids"] = experiment_median_robust_snr_all_csids(ophys_experiment_id)
-    intensity_df["pmt_gain"] = load.get_pmt_gain_for_experiment(ophys_experiment_id)
+    intensity_df["pmt_gain"] = data_loading.get_pmt_gain_for_experiment(ophys_experiment_id)
 
     return intensity_df
 
@@ -1068,7 +1070,7 @@ def container_pmt_settings(ophys_container_id):
     container_df = passed_experiment_info_for_container(ophys_container_id).sort_values('stage_name_lims').reset_index(drop=True)
     container_pmt_df = pd.DataFrame()
     for ophys_experiment_id in container_df["ophys_experiment_id"].unique():
-        exp_pmt = load.get_pmt_gain_for_experiment(ophys_experiment_id)
+        exp_pmt = data_loading.get_pmt_gain_for_experiment(ophys_experiment_id)
         exp_pmt_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
                                    "pmt_gain": exp_pmt}, index=[0])
         container_pmt_df = container_pmt_df.append(exp_pmt_df)
