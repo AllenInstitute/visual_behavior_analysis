@@ -370,7 +370,7 @@ def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=
     plt.close()
 
 
-def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name="ica_neuropil"):
+def run_neuropil_correction_on_ica(session, ica_cache_dir = CACHE):
     """
     run neuropil correction on CIA output files
     :param session: LIMS session id
@@ -378,25 +378,26 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name="ica_neuropil"
     :param np_name: str, filename prefix to for neuropil-related files if different from default
     :return: None
     """
-    dataset = ms.MesoscopeDataset(session)
-    pairs = dataset.get_paired_planes()
+    ica_obj = ica.MesoscopeICA(session_id=session, cache=ica_cache_dir, roi_name="ica_traces", np_name="ica_neuropil")
+    pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
-        for exp_id in pair:
-            # prelude -- get processing metadata
-            ses_dir = os.path.join(an_dir, f'session_{session}')
-
+        ica_obj.set_exp_ids(pair)
+        ica_obj.set_ica_dirs()
+        ica_obj.set_ica_input_paths()
+        ica_obj.set_out_paths()
+        # prelude -- get processing metadata
+        ses_dir = ica_obj.session_dir
+        for pkey in ica_obj.pkeys:
+            exp_id = ica_obj.exp_ids[pkey]
             neuropil_file = os.path.join(ses_dir, f'neuropil_corrected_{exp_id}',
                                          f'neuropil_correction.h5')
-
             if os.path.isfile(neuropil_file):
                 logging.info(f"Neuropil corrected traces exist for experiment {exp_id}, skipping neuropil correction")
                 continue
             else:
-
                 demix_dir = os.path.join(ses_dir, f'demixing_{exp_id}')
                 trace_file = os.path.join(demix_dir, f'traces_demixing_output_{exp_id}.h5')
-                neuropil_ica_dir = os.path.join(ses_dir, f'{np_name}_{pair[0]}_{pair[1]}')
-                neuropil_trace_file = os.path.join(neuropil_ica_dir, f'{np_name}_output_{exp_id}.h5')
+                neuropil_trace_file = ica_obj.outs_paths[pkey]['np']
                 storage_dir = os.path.join(ses_dir, f'neuropil_corrected_{exp_id}')
                 if not os.path.isdir(storage_dir):
                     os.mkdir(storage_dir)
@@ -427,7 +428,6 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name="ica_neuropil"
                     neuropil_traces = h5py.File(neuropil_trace_file, "r")
                 except Exception as e:
                     logging.error(f"Error: {e} most likely unable to open neuropil trace file {neuropil_trace_file}")
-                    raise
 
                 # get number of traces, length, etc.
                 num_traces, t = roi_traces['data'].shape
@@ -448,6 +448,85 @@ def run_neuropil_correction_on_ica(session, an_dir=CACHE, np_name="ica_neuropil"
                 roi_names = n_id
                 corrected = np.zeros((num_traces, t_orig))
                 r_vals = [None] * num_traces
+
+                for n in range(num_traces):
+                    roi = roi_traces['data'][n]
+                    neuropil = neuropil_traces['data'][0][n]
+
+                    if np.any(np.isnan(neuropil)):
+                        logging.warning("neuropil trace for roi %d contains NaNs, skipping", n)
+                        continue
+
+                    if np.any(np.isnan(roi)):
+                        logging.warning("roi trace for roi %d contains NaNs, skipping", n)
+                        continue
+
+                    # r = None
+
+                    logging.info("Correcting trace %d (roi %s)", n, str(n_id[n]))
+                    results = estimate_contamination_ratios(roi, neuropil)
+                    logging.info("r=%f err=%f it=%d", results["r"], results["err"], results["it"])
+
+                    r = results["r"]
+                    fc = roi - r * neuropil
+                    rmse_list[n] = results["err"]
+                    r_vals[n] = results["r_vals"]
+
+                    debug_plot(os.path.join(plot_dir, "initial_%04d.png" % n),
+                               roi, neuropil, fc, r, results["r_vals"], results["err_vals"])
+
+                    # mean of the corrected trace must be positive
+                    if fc.mean() > 0:
+                        r_list[n] = r
+                        corrected[n, :] = fc
+                    else:
+                        logging.warning("fc has negative baseline, skipping this r value")
+
+                # fill in empty r values
+                for n in range(num_traces):
+                    roi = roi_traces['data'][n]
+                    neuropil = neuropil_traces['data'][0][n]
+
+                    if r_list[n] is None:
+                        logging.warning("Error estimated r for trace %d. Setting to zero.", n)
+                        r_list[n] = 0
+                        corrected[n, :] = roi
+
+                    # save a debug plot
+                    debug_plot(os.path.join(plot_dir, "final_%04d.png" % n),
+                               roi, neuropil, corrected[n, :], r_list[n])
+
+                    # one last sanity check
+                    eps = -0.0001
+                    if np.mean(corrected[n, :]) < eps:
+                        raise Exception("Trace %d baseline is still negative value after correction" % n)
+
+                    if r_list[n] < 0.0:
+                        raise Exception("Trace %d ended with negative r" % n)
+
+                # write out processed data
+
+                try:
+                    savefile = os.path.join(storage_dir, "neuropil_correction.h5")
+                    hf = h5py.File(savefile, 'w')
+                    hf.create_dataset("r", data=r_list)
+                    hf.create_dataset("RMSE", data=rmse_list)
+                    hf.create_dataset("FC", data=corrected, compression="gzip")
+                    hf.create_dataset("roi_names", data=roi_names)
+
+                    for n in range(num_traces):
+                        r = r_vals[n]
+                        if r is not None:
+                            hf.create_dataset("r_vals/%d" % n, data=r)
+                    hf.close()
+                except Exception as e:
+                    logging.error(f"Error creating output h5 file: {e}")
+                    raise
+
+                roi_traces.close()
+                neuropil_traces.close()
+
+                logging.info("finished")
 
                 for n in range(num_traces):
                     roi = roi_traces['data'][n]
