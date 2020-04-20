@@ -241,17 +241,17 @@ class MesoscopeICA(object):
         for pkey in self.pkeys:
             for tkey in self.tkeys:
                 self.rois_valid_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
-                                                           f'{self.exp_ids[pkey]}_valid.json')
+                                                                 f'{self.exp_ids[pkey]}_valid.json')
         return
 
     def set_ica_input_paths(self):
         for pkey in self.pkeys:
             for tkey in self.tkeys:
                 self.ins_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
-                                                           f'{self.exp_ids[pkey]}_in.h5')
+                                                          f'{self.exp_ids[pkey]}_in.h5')
         return
 
-    def set_plot_dirs(self, dir_name = None):
+    def set_plot_dirs(self, dir_name=None):
         if dir_name is None:
             dir_name = self.names
 
@@ -283,9 +283,10 @@ class MesoscopeICA(object):
             for tkey in self.tkeys:
                 self.found_raws[pkey][tkey] = True
 
+        traces_exist = None
         for i in range(len(names_prefix)):
-            # check ith set of names:
             traces_exist = True
+            # check ith set of names:
             name_prefix = names_prefix[i]
             name = {}
             for tkey in self.tkeys:
@@ -347,13 +348,13 @@ class MesoscopeICA(object):
 
             # extract signal and crosstalk traces for pl 1
             sig["pl1"]["roi"], sig["pl1"]["np"], roi_names["pl1"]['roi'] = get_traces(folders["pl1"], self.exp_ids["pl1"],
-                                                                               folders["pl1"], self.exp_ids["pl1"])
+                                                                                      folders["pl1"], self.exp_ids["pl1"])
             roi_names["pl1"]['np'] = roi_names["pl1"]['roi']
             ct["pl1"]["roi"], ct["pl1"]["np"], _ = get_traces(folders["pl2"], self.exp_ids["pl2"], folders["pl1"],
                                                               self.exp_ids["pl1"])
             # extract signal and crosstalk traces for pl 2
             sig["pl2"]["roi"], sig["pl2"]["np"], roi_names["pl2"]['roi'] = get_traces(folders["pl2"], self.exp_ids["pl2"],
-                                                                               folders["pl2"], self.exp_ids["pl2"])
+                                                                                      folders["pl2"], self.exp_ids["pl2"])
             roi_names["pl2"]['np'] = roi_names["pl2"]['roi']
             ct["pl2"]["roi"], ct["pl2"]["np"], _ = get_traces(folders["pl1"], self.exp_ids["pl1"], folders["pl2"],
                                                               self.exp_ids["pl2"])
@@ -472,9 +473,8 @@ class MesoscopeICA(object):
                     # validating agains VBA rois set:
                     if return_vba:
                         for pkey in self.pkeys:
-                            for tkey in self.tkeys:
-                                rois_valid[pkey] = self.validate_against_vba(rois_valid[pkey],
-                                                                        self.exp_ids[pkey], VBA_CACHE)
+                            rois_valid[pkey] = self.validate_against_vba(rois_valid[pkey],
+                                                                         self.exp_ids[pkey], VBA_CACHE)
                 # saving to json:
                 for pkey in self.pkeys:
                     for tkey in self.tkeys:
@@ -728,7 +728,7 @@ class MesoscopeICA(object):
                         self.a_mixing[pkey][tkey] = f["mixing_matrix_adjusted"][()]
         return
 
-    def plot_ica_pair(self, pair, dir_name=None, samples = 5000):
+    def plot_ica_pair(self, pair, dir_name=None, samples=5000):
         if not dir_name:
             dir_name = self.names
         for pkey in self.pkeys:
@@ -755,12 +755,12 @@ class MesoscopeICA(object):
                     crosstalk_before = self.crosstalk[pkey][tkey][0][i]
                     crosstalk_after = self.crosstalk[pkey][tkey][1][i]
                     crosstalk = [crosstalk_before, crosstalk_after]
-                    self.plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples, fig_show=False)
+                    self.plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples)
                 self.plot_dirs[pkey][tkey] = plot_dir
         return
 
     @staticmethod
-    def plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples, fig_show=False):
+    def plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples):
 
         pdf_name = os.path.join(plot_dir, f"cell_{roi_name}.pdf")
         if os.path.isfile(pdf_name):
@@ -845,14 +845,14 @@ class MesoscopeICA(object):
                 plt.ylim(y_min, y_max)
                 plt.plot(sig_before_i, 'r-', label='signal pl')
                 plt.plot(ct_before_i, 'g-', label='cross-talk pl')
-                plt.title(f'raw traces for cell {roi_name}', fontsize = 18)
+                plt.title(f'raw traces for cell {roi_name}', fontsize=18)
                 plt.legend(loc='best')
 
                 plt.subplot(212)
                 plt.ylim(y_min, y_max)
                 plt.plot(sig_after_i, 'r-', label='signal pl')
                 plt.plot(ct_after_i, 'g-', label='cross-talk pl')
-                plt.title(f'post-ica traces, cell # {roi_name}', fontsize = 18)
+                plt.title(f'post-ica traces, cell # {roi_name}', fontsize=18)
                 plt.legend(loc='best')
                 pdf.savefig(f1)
                 plt.close()
@@ -869,7 +869,7 @@ class MesoscopeICA(object):
         pl_crosstalk = np.empty((2, ica_in.shape[1]))
         ica_pl_out = np.empty(ica_in.shape)
 
-        if not mixing is None:  # this is indicative taht traces are form neuropil, use mixing to unmix them
+        if mixing is not None:  # this is indicative taht traces are form neuropil, use mixing to unmix them
             #  get unmixing
             for i in range(len(roi_names)):
                 mixing_roi = mixing[i]
@@ -1115,5 +1115,3 @@ def extract_active(traces, len_ne=20, th_ag=10, do_plots=0):
             traces_ct_evs.append(traces_ct[i])
             valid.append(False)
     return traces_sig_evs, traces_ct_evs, valid
-
-
