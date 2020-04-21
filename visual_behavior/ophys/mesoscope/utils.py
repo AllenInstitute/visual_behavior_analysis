@@ -11,7 +11,6 @@ import visual_behavior.ophys.mesoscope.dataset as ms
 import gc
 import shutil
 import time
-import sciris as sc
 
 import matplotlib.pyplot as plt
 from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
@@ -37,17 +36,15 @@ def get_path(obj, key, check_exists):
     return path
 
 
-def run_ica_on_session(session, iter_roi, iter_neuropil, roi_name=None, np_name=None):
+def run_ica_on_session(session, roi_name=None, np_name=None):
     """
     helper function to run all crosstalk-demixing functions on a given session
     :param session: int, LIMS session ID
-    :param iter_roi: int, number of iterations for FastICA on Rois
-    :param iter_neuropil: int, number of iterations for FastICa on neuropil
     :param roi_name: str, filename prefix to use for roi-related data, if different form default "roi_ica"
     :param np_name: str, filename prefix to use for neuropil-related data, if different from default "neuropil_ica"
     :return: None
     """
-    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name=roi_name, np_name=np_name)
     pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
         ica_obj.set_exp_ids(pair)
@@ -60,20 +57,18 @@ def run_ica_on_session(session, iter_roi, iter_neuropil, roi_name=None, np_name=
     return ica_obj
 
 
-def run_ica_on_pair(session, pair, iter_ica, iter_neuropil, roi_name=None, np_name=None):
+def run_ica_on_pair(session, pair, roi_name=None, np_name=None):
     """
     helper function to run all crosstalk-demixing functions on a given pair of planes
     :param pair: [int, int]: list size 2 of two LIMS experiment IDs for two planes
     :param session: int, LIMS session ID
-    :param iter_ica: int, number of iterations for FastICA on Rois
-    :param iter_neuropil: int, number of iterations for FastICa on neuropil
     :param roi_name: str, filename prefix to use for roi-related data, if different form default "roi_ica"
     :param np_name: str, filename prefix to use for neuropil-related data, if different from default "neuropil_ica"
     :return: None
     """
     ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name=roi_name, np_name=np_name)
-    ica_obj.get_ica_traces(pair)
-    ica_obj.validate_traces()
+    ica_obj.set_exp_ids(pair)
+    ica_obj.get_ica_traces()
     ica_obj.validate_traces(return_vba=False)
     ica_obj.debias_traces()
     ica_obj.unmix_pair()
@@ -111,6 +106,37 @@ def get_ica_done_sessions():
     ica_roi_success = meso_data.loc[meso_data['ICA_demix_roi_session'] == 1]
     ica_roi_fail = meso_data.loc[meso_data['ICA_demix_roi_session'] == 0]
     return ica_roi_success, ica_roi_fail, meso_data
+
+
+def get_demixing_done_sessions():
+    """
+    function to find all post-ica sessions that also ran through LIMS demixing module
+    :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : demixing_done, demixing_not_done, ica_success
+    """
+    ica_success, _, _ = get_ica_done_sessions()
+    ica_success['demixing_done_exp'] = 0
+    ica_success['demixing_done_session'] = 0
+    sessions = ica_success['session_id']
+    sessions = sessions.drop_duplicates()
+    for session in sessions:
+        dataset = ms.MesoscopeDataset(session)
+        pairs = dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+            ica_obj.set_exp_ids(pair)
+            ica_obj.set_ica_dirs()
+            if os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[0]}_dff.h5")):
+                ica_success['demixing_done_exp'].loc[ica_success['experiment_id'] == pair[0]] = 1
+            if os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[1]}_dff.h5")):
+                ica_success['demixing_done_exp'].loc[ica_success['experiment_id'] == pair[1]] = 1
+            session_data = ica_success.loc[ica_success['session_id'] == session]
+            if all(session_data.LIMS_done_exp == 1):
+                for exp in session_data.experiment_id:
+                    ica_success['demixing_done_session'].loc[ica_success.experiment_id == exp] = 1
+    lims_roi_success = ica_success.loc[ica_success['demixing_done_session'] == 1]
+    lims_roi_fail = ica_success.loc[ica_success['demixing_done_session'] == 0]
+
+    return lims_roi_success, lims_roi_fail, ica_success
 
 
 def get_lims_done_sessions():
@@ -232,7 +258,6 @@ def run_demixing_on_session(session, cache=CACHE):
     run LIMS demixing on crosstalk corrected traces
     :param session: LIMS session id
     :param cache: directory containing crosstalk corrected traces
-    :param roi_name: filename prefix used to find roi trace files if different form default "ica_traces"
     :return:
     """
 
@@ -370,12 +395,11 @@ def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=
     plt.close()
 
 
-def run_neuropil_correction_on_ica(session, ica_cache_dir = CACHE):
+def run_neuropil_correction_on_ica(session, ica_cache_dir=CACHE):
     """
     run neuropil correction on CIA output files
     :param session: LIMS session id
-    :param an_dir: directory to find processed ica-demixed outputs
-    :param np_name: str, filename prefix to for neuropil-related files if different from default
+    :param ica_cache_dir: directory to find processed ica-demixed outputs
     :return: None
     """
     ica_obj = ica.MesoscopeICA(session_id=session, cache=ica_cache_dir, roi_name="ica_traces", np_name="ica_neuropil")
@@ -737,8 +761,7 @@ def refactor_valid(sessions):
                 for tkey in ica_obj.tkeys:
                     old_path = ica_obj.rois_valid_paths[pkey][tkey]
                     # make a paht to the new filename
-                    new_valid_path = sc.makefilepath(filename=f"{ica_obj.exp_ids[pkey]}_valid_1.json",
-                                                     folder=ica_obj.dirs[tkey])
+                    new_valid_path = os.path.join(ica_obj.dirs[tkey], f"{ica_obj.exp_ids[pkey]}_valid_1.json")
                     # copy valid json to the new filename
                     shutil.copy(old_path, new_valid_path)
                     # read old valid json, reformat and save to disk to the same name.
