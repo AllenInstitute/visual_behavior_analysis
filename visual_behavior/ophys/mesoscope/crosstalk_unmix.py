@@ -694,7 +694,7 @@ class MesoscopeICA(object):
                                 traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
                                     = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey],
                                                        mixing[pkey][tkey])
-                                crosstalk[pkey][tkey] = crosstalk[pkey]['roi']
+                                crosstalk[pkey][tkey] = crosstalk[pkey]['roi']  # use same crosstalk value as per Roi traces (since the mixing matrix is assumed to be the same)
                             else:
                                 traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
                                     = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])

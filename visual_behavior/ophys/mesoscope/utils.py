@@ -777,3 +777,60 @@ def refactor_valid(sessions):
                     else:
                         list_exp[tkey] = ica_obj.exp_ids[pkey]
     return list_exp
+
+
+def refactor_outputs(sessions):
+    for session in sessions:
+        print(f'processing session: {session}')
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+        pairs = ica_obj.dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj.set_exp_ids(pair)
+            ica_obj.set_ica_dirs()
+            ica_obj.set_ica_input_paths()
+            ica_obj.set_out_paths()
+            self = ica_obj
+            ct_offset = {}
+            traces_out = {}
+            sig_offset = {}
+            for pkey in self.pkeys:
+                sig_offset[pkey] = {}
+                ct_offset[pkey] = {}
+                traces_out[pkey] = {}
+                for tkey in self.tkeys:
+                    sig_offset[pkey][tkey] = {}
+                    ct_offset[pkey][tkey] = {}
+                    traces_out[pkey][tkey] = {}
+                    # copy old output ot out_1.h5
+                    old_path = self.outs_paths[pkey][tkey]
+                    # make a paht to the new filename
+                    new_path = sc.makefilepath(filename = f"{self.exp_ids[pkey]}_out_1.h5", folder = self.dirs[tkey])
+                    # copy valid json to the new filename
+                    if os.path.isfile(new_path):
+                        print(f"skipping experint {self.exp_ids[pkey]}")
+                        continue # skipping to next exp
+                    else:
+                        if os.path.isfile(self.ins_paths[pkey][tkey]) and os.path.isfile(self.outs_paths[pkey][tkey]):
+                            print(f'processing experiment {self.exp_ids[pkey]}, {tkey}')
+                            with h5py.File(self.ins_paths[pkey][tkey], "r") as f:
+                                sig_offset[pkey][tkey] = f['sig_offset'][()]
+                                ct_offset[pkey][tkey] = f['ct_offset'][()]
+                            with h5py.File(self.outs_paths[pkey][tkey], "r") as f:
+                                traces_out[pkey][tkey] = f["data"][()]
+                                self.crosstalk[pkey][tkey] = f["crosstalk"][()]
+                                self.mixing[pkey][tkey] = f["mixing_matrix"][()]
+                                self.a_mixing[pkey][tkey] = f["mixing_matrix_adjusted"][()]
+                            self.offsets[pkey][tkey] = {'sig_offset': sig_offset[pkey][tkey],
+                                                        'ct_offset': ct_offset[pkey][tkey]}
+                            self.outs[pkey][tkey] = np.array(
+                                                    [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['sig_offset'],
+                                                     traces_out[pkey][tkey][1] + self.offsets[pkey][tkey]['ct_offset']])
+                            shutil.copy(old_path, new_path)
+                            with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
+                                f.create_dataset(f"data", data=self.outs[pkey][tkey])
+                                f.create_dataset(f"crosstalk", data=self.crosstalk[pkey][tkey])
+                                f.create_dataset(f"mixing_matrix_adjusted", data=self.a_mixing[pkey][tkey])
+                                f.create_dataset(f"mixing_matrix", data=self.mixing[pkey][tkey])
+                        else:
+                            print(f"input or putput for exp {self.exp_ids[pkey]}, {tkey} doesn't exist")
+    return
