@@ -115,6 +115,7 @@ class MesoscopeDataset(object):
         self.full_field_present = None
         self.splitting_json_present = None
         self.exp_id = None
+        self.pairs = self.get_paired_planes()
 
     def get_session_id(self):
         return self.session_id
@@ -241,6 +242,7 @@ class MesoscopeDataset(object):
         return splitting_json_path
 
     def get_paired_planes(self):
+        pairs = []
         try:
             query = (f"""SELECT 
             os.id as session_id, 
@@ -250,19 +252,22 @@ class MesoscopeDataset(object):
             FROM ophys_sessions os
             JOIN ophys_experiments oe ON oe.ophys_session_id=os.id
             JOIN ophys_imaging_plane_groups oipg ON oipg.id=oe.ophys_imaging_plane_group_id
-            JOIN equipment e ON e.id = os.equipment_id
-            WHERE e.name = 'MESO.1' AND os.id = {self.session_id}
+            WHERE os.id = {self.session_id}
             ORDER BY exp_id
             """)
+            pairs_df = pd.DataFrame(psycopg2_select(query))
         except Exception as e:
             logger.error("Unable to query LIMS database: {}".format(e))
-        pairs_df = pd.DataFrame(psycopg2_select(query))
-        num_groups = pairs_df['group_order'].drop_duplicates().values
-        pairs = []
-        for i in num_groups:
-            pair = [exp_id for exp_id in pairs_df.loc[pairs_df['group_order'] == i].exp_id]
-            pairs.append(pair)
-        return pairs
+        if len(pairs_df) > 0:
+            num_groups = pairs_df['group_order'].drop_duplicates().values
+            pairs = []
+            for i in num_groups:
+                pair = [exp_id for exp_id in pairs_df.loc[pairs_df['group_order'] == i].exp_id]
+                pairs.append(pair)
+        else:
+            logging.error(f"Lims returned no group information about session {self.session_id}")
+        self.pairs = pairs
+        return self.pairs
 
     def get_exp_by_structure(self, structure):
         experiment = pd.DataFrame(self.get_mesoscope_session_data())
