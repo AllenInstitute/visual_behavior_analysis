@@ -656,8 +656,6 @@ def lims_query(query):
         >> lims_query('select * from ophys_sessions where specimen_id = 830901424')
 
         returns all rows and columns in the ophys_sessions table for specimen_id = 830901424
-
-        >>
     '''
     api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
     conn = api.get_connection()
