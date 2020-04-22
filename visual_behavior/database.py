@@ -630,3 +630,46 @@ def get_specimen_id_from_labtracks_id(labtracks_id, show_warnings=True):
                     res.values,
                 ))
             return int(res.iloc[0])
+
+
+def lims_query(query):
+    '''
+    execute a SQL query in LIMS
+    returns:
+        * the result if the result is a single element
+        * results in a pandas dataframe otherwise
+
+    Examples:
+
+        >> lims_query('select ophys_session_id from ophys_experiments where id = 878358326')
+
+        returns 877907546
+
+        >> lims_query('select * from ophys_experiments where id = 878358326')
+
+        returns a single line dataframe with all columns from the ophys_experiments table for ophys_experiment_id =  878358326
+
+        >> lims_query('select * from ophys_sessions where id in (877907546, 876522267, 869118259)')
+
+        returns a three line dataframe with all columns from the ophys_sessions table for ophys_session_id in the list [877907546, 876522267, 869118259]
+
+        >> lims_query('select * from ophys_sessions where specimen_id = 830901424')
+
+        returns all rows and columns in the ophys_sessions table for specimen_id = 830901424
+
+        >>
+    '''
+    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+    conn = api.get_connection()
+    cur = conn.cursor()
+
+    df = pd.read_sql(query, conn)
+
+    conn.close()
+
+    if df.shape == (1, 1):
+        # if the result is a single element, return only that element
+        return df.iloc[0][0]
+    else:
+        # otherwise return in dataframe format
+        return df
