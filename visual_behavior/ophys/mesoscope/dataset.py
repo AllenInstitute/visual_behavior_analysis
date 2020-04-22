@@ -265,7 +265,7 @@ class MesoscopeDataset(object):
                 pair = [exp_id for exp_id in pairs_df.loc[pairs_df['group_order'] == i].exp_id]
                 pairs.append(pair)
         else:
-            logging.error(f"Lims returned no group information about session {self.session_id}")
+            logging.error(f"Lims returned no group information about session {self.session_id}, sesson probably from before 2020, use mesosocpe.dataset.get_paired_planes() instead")
         self.pairs = pairs
         return self.pairs
 

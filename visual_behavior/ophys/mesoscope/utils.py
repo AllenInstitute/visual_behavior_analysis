@@ -90,7 +90,7 @@ def get_ica_done_sessions(session_list=None):
         sessions = sessions.drop_duplicates()
     else:
         sessions = session_list
-
+    ica_done_sessions = []
     for session in sessions:
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
@@ -106,13 +106,11 @@ def get_ica_done_sessions(session_list=None):
                     if not os.path.isfile(ica_obj.outs_paths[pkey][tkey]):
                         session_ica_complete = False
         if session_ica_complete:
-            meso_data['ICA_demix_roi_session'].loc[meso_data.session_id == session] = 1
-    ica_roi_success = meso_data.loc[meso_data['ICA_demix_roi_session'] == 1]
-    ica_roi_fail = meso_data.loc[meso_data['ICA_demix_roi_session'] == 0]
-    return ica_roi_success, ica_roi_fail, meso_data
+            ica_done_sessions.append(session)
+    return ica_done_sessions
 
 
-def get_demixing_done_sessions(session_list):
+def get_demixing_done_sessions(session_list=None):
     """
     function to find all post-ica sessions that also ran through LIMS demixing module
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : demixing_done, demixing_not_done, ica_success
@@ -139,35 +137,34 @@ def get_demixing_done_sessions(session_list):
     return demixing_done_sessions
 
 
-def get_lims_done_sessions():
+def get_lims_done_sessions(session_list=None):
     """
     function to find all post-ica sessions that also ran through LIMS modules
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : lims_roi_success, lims_roi_fail, ica_success
     """
-    ica_success, _, _ = get_ica_done_sessions()
-    ica_success['LIMS_done_exp'] = 0
-    ica_success['LIMS_done_session'] = 0
-    sessions = ica_success['session_id']
-    sessions = sessions.drop_duplicates()
+    if not session_list:
+        meso_data = ms.get_all_mesoscope_data()
+        sessions = meso_data['session_id'].drop_duplicates()
+    else:
+        sessions = session_list
+    lims_sessions = []
     for session in sessions:
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
+        lims_session_done = True
         for pair in pairs:
             ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
             ica_obj.set_exp_ids(pair)
             ica_obj.set_ica_dirs()
-            if os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[0]}_dff.h5")):
-                ica_success['LIMS_done_exp'].loc[ica_success['experiment_id'] == pair[0]] = 1
-            if os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[1]}_dff.h5")):
-                ica_success['LIMS_done_exp'].loc[ica_success['experiment_id'] == pair[1]] = 1
-            session_data = ica_success.loc[ica_success['session_id'] == session]
-            if all(session_data.LIMS_done_exp == 1):
-                for exp in session_data.experiment_id:
-                    ica_success['LIMS_done_session'].loc[ica_success.experiment_id == exp] = 1
-    lims_roi_success = ica_success.loc[ica_success['LIMS_done_session'] == 1]
-    lims_roi_fail = ica_success.loc[ica_success['LIMS_done_session'] == 0]
+            if not os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[0]}_dff.h5")):
+                lims_session_done = False
+            if not os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[1]}_dff.h5")):
+                lims_session_done = False
 
-    return lims_roi_success, lims_roi_fail, ica_success
+            if lims_session_done:
+                lims_sessions.append(session)
+
+    return lims_sessions
 
 
 def get_ica_exp_by_cre_line(cre_line, md):
