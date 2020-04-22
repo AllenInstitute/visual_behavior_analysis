@@ -661,7 +661,6 @@ def lims_query(query):
     '''
     api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
     conn = api.get_connection()
-    cur = conn.cursor()
 
     df = pd.read_sql(query, conn)
 
