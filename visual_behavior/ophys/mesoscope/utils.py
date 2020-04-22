@@ -609,7 +609,7 @@ def before_date(file_date, thr_date="01/01/2020"):
     return flag
 
 
-def clean_up_cache(sessions, cache, remove_by_date="01/01/2020"):
+def clean_up_cache(sessions, cache, remove_inputs=False, remove_by_date="01/01/2020"):
     """
     deletes ica outputs from cache:
         neuropil_ica_output_pair{i}.h5
@@ -623,6 +623,7 @@ def clean_up_cache(sessions, cache, remove_by_date="01/01/2020"):
         dff traces files
     :param remove_by_date: file creating date threshold - don't remove if created after this date
     :param sessions: list of LIMS session ids
+    :param remove_inputs: falg that controls whether we are deleting extracted traces or not
     :param cache: cache directory
     :return: None
     """
@@ -663,6 +664,11 @@ def clean_up_cache(sessions, cache, remove_by_date="01/01/2020"):
                                     if before_date(plot_dir, remove_by_date):
                                         print(f'deteling {plot_dir}')
                                         shutil.rmtree(plot_dir, ignore_errors=True)
+                                if remove_inputs:
+                                    raw = ica_obj.raw_paths[pkey][tkey]
+                                    if before_date(raw, remove_by_date):
+                                        print(f'deteling {raw}')
+                                        os.remove(raw)
                     else:
                         print(f"ICA ROI dir does not exist: {exp_dir}")
                 # removing LIMS processing outputs:
