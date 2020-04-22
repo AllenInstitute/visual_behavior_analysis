@@ -160,9 +160,8 @@ def get_lims_done_sessions(session_list=None):
                 lims_session_done = False
             if not os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[1]}_dff.h5")):
                 lims_session_done = False
-
-            if lims_session_done:
-                lims_sessions.append(session)
+        if lims_session_done:
+            lims_sessions.append(session)
 
     return lims_sessions
 
