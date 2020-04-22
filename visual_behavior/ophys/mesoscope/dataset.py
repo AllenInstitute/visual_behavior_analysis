@@ -241,7 +241,7 @@ class MesoscopeDataset(object):
             logger.error("Unable to find splitting json")
         return splitting_json_path
 
-    def get_paired_planes(self):
+    def get_paired_planes_new(self):
         pairs = []
         try:
             query = (f"""SELECT 
@@ -268,6 +268,15 @@ class MesoscopeDataset(object):
             logging.error(f"Lims returned no group information about session {self.session_id}")
         self.pairs = pairs
         return self.pairs
+
+    def get_paired_planes(self):
+        splitting_json = self.get_splitting_json()
+        with open(splitting_json, "r") as f:
+            data = json.load(f)
+        pairs = []
+        for pg in data.get("plane_groups", []):
+            pairs.append([p["experiment_id"] for p in pg.get("ophys_experiments", [])])
+        return pairs
 
     def get_exp_by_structure(self, structure):
         experiment = pd.DataFrame(self.get_mesoscope_session_data())
