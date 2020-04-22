@@ -1,7 +1,6 @@
 import numpy as np
 import os
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
-from scipy import linalg
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 

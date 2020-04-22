@@ -12,8 +12,6 @@ class TestMesoscopeDataset(TestCase):
 			self.session = 958772311
 		else:
 			self.session = test_session
-
-	def setUp(self):
 		self.ds = ms.MesoscopeDataset(session_id=self.session)
 
 	def test_get_paired_planes(self):

@@ -241,12 +241,24 @@ class MesoscopeDataset(object):
         return splitting_json_path
 
     def get_paired_planes(self):
-        splitting_json = self.get_splitting_json()
-        with open(splitting_json, "r") as f:
-            data = json.load(f)
+        query = (f"""SELECT 
+        os.id as session_id, 
+        oe.id as exp_id,
+        oe.ophys_imaging_plane_group_id as pair_id,
+        oipg.group_order
+        FROM ophys_sessions os
+        JOIN ophys_experiments oe ON oe.ophys_session_id=os.id
+        JOIN ophys_imaging_plane_groups oipg ON oipg.id=oe.ophys_imaging_plane_group_id
+        JOIN equipment e ON e.id = os.equipment_id
+        WHERE e.name = 'MESO.1' AND os.id = {self.session_id}
+        ORDER BY exp_id
+        """)
+        pairs_df = pd.DataFrame(psycopg2_select(query))
+        num_groups = pairs_df['group_order'].drop_duplicates().values
         pairs = []
-        for pg in data.get("plane_groups", []):
-            pairs.append([p["experiment_id"] for p in pg.get("ophys_experiments", [])])
+        for i in num_groups:
+            pair = [exp_id for exp_id in pairs_df.loc[pairs_df['group_order'] == i].exp_id]
+            pairs.append(pair)
         return pairs
 
     def get_exp_by_structure(self, structure):
