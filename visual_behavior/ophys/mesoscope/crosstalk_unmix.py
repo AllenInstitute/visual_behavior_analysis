@@ -383,7 +383,7 @@ class MesoscopeICA(object):
                         self.raw_paths[pkey][tkey] = path[pkey][tkey]
                         with h5py.File(path[pkey][tkey], "w") as f:
                             f.create_dataset(f"data", data=traces_raw)
-                            f.create_dataset(f"roi_names", data=np.int_(roi_names[pkey]))
+                            f.create_dataset(f"roi_names", data=np.int_(roi_names[pkey][tkey]))
         return
 
     def validate_traces(self, return_vba=False):
