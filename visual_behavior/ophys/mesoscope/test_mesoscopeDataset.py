@@ -30,10 +30,7 @@ class TestMesoscopeDataset(TestCase):
 			session = 958772311
 		else:
 			session = test_session
-
 		splitting_json_path = self.ds.get_splitting_json()
-
-		# 1. Test if a valid filepath is returned
 		self.assertTrue(os.path.isfile(splitting_json_path), f"Failed find a slitting json for session {session}")
 
 

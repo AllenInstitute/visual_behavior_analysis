@@ -158,7 +158,7 @@ class MesoscopeDataset(object):
                     "join projects p on p.id = os.project_id "
                     "join imaging_depths on imaging_depths.id = oe.imaging_depth_id "
                     "join structures st on st.id = oe.targeted_structure_id "
-                    "where (p.code = 'MesoscopeDevelopment' or p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d' ) and os.workflow_state ='uploaded' "
+                    "where (p.code = 'get+paiscopeDevelopment' or p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d' ) and os.workflow_state ='uploaded' "
                     " and os.id='{}'  ",
                 ))
 
@@ -241,7 +241,7 @@ class MesoscopeDataset(object):
             logger.error("Unable to find splitting json")
         return splitting_json_path
 
-    def get_paired_planes_new(self):
+    def get_paired_planes(self):
         pairs = []
         try:
             query = (f"""SELECT 
@@ -260,12 +260,16 @@ class MesoscopeDataset(object):
             logger.error("Unable to query LIMS database: {}".format(e))
         if len(pairs_df) > 0:
             num_groups = pairs_df['group_order'].drop_duplicates().values
-            pairs = []
             for i in num_groups:
                 pair = [exp_id for exp_id in pairs_df.loc[pairs_df['group_order'] == i].exp_id]
                 pairs.append(pair)
         else:
-            logging.error(f"Lims returned no group information about session {self.session_id}, sesson probably from before 2020, use mesosocpe.dataset.get_paired_planes() instead")
+            logging.warning(f"Lims returned no group information about session {self.session_id}, using hardcoded splitting json filename")
+            splitting_json = self.get_splitting_json()
+            with open(splitting_json, "r") as f:
+                data = json.load(f)
+            for pg in data.get("plane_groups", []):
+                pairs.append([p["experiment_id"] for p in pg.get("ophys_experiments", [])])
         self.pairs = pairs
         return self.pairs
 
