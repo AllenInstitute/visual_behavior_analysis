@@ -241,18 +241,21 @@ class MesoscopeDataset(object):
         return splitting_json_path
 
     def get_paired_planes(self):
-        query = (f"""SELECT 
-        os.id as session_id, 
-        oe.id as exp_id,
-        oe.ophys_imaging_plane_group_id as pair_id,
-        oipg.group_order
-        FROM ophys_sessions os
-        JOIN ophys_experiments oe ON oe.ophys_session_id=os.id
-        JOIN ophys_imaging_plane_groups oipg ON oipg.id=oe.ophys_imaging_plane_group_id
-        JOIN equipment e ON e.id = os.equipment_id
-        WHERE e.name = 'MESO.1' AND os.id = {self.session_id}
-        ORDER BY exp_id
-        """)
+        try:
+            query = (f"""SELECT 
+            os.id as session_id, 
+            oe.id as exp_id,
+            oe.ophys_imaging_plane_group_id as pair_id,
+            oipg.group_order
+            FROM ophys_sessions os
+            JOIN ophys_experiments oe ON oe.ophys_session_id=os.id
+            JOIN ophys_imaging_plane_groups oipg ON oipg.id=oe.ophys_imaging_plane_group_id
+            JOIN equipment e ON e.id = os.equipment_id
+            WHERE e.name = 'MESO.1' AND os.id = {self.session_id}
+            ORDER BY exp_id
+            """)
+        except Exception as e:
+            logger.error("Unable to query LIMS database: {}".format(e))
         pairs_df = pd.DataFrame(psycopg2_select(query))
         num_groups = pairs_df['group_order'].drop_duplicates().values
         pairs = []
