@@ -690,9 +690,11 @@ class MesoscopeICA(object):
                             # don't run unmixing if neuropil, instead read roi unmixing matrix
                             if tkey == 'np':
                                 mixing[pkey][tkey] = self.a_mixing[pkey]['roi']
+
                                 traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
                                     = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey],
                                                        mixing[pkey][tkey])
+                                crosstalk[pkey][tkey] = crosstalk[pkey]['roi']  # use same crosstalk value as per Roi traces (since the mixing matrix is assumed to be the same)
                             else:
                                 traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
                                     = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
@@ -793,7 +795,7 @@ class MesoscopeICA(object):
             plt.ylim((yedges_b[0], yedges_b[-1]))
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
-            title = f"Crosstalk before: {round(crosstalk[0], 2)}\n{fitfn_b} R2={round(r_value_b, 2)}"
+            title = f"Crosstalk before: {round(crosstalk[0], 3)}\n{fitfn_b} R2={round(r_value_b, 2)}"
             plt.title(title, linespacing=0.5, fontsize=18)
 
             # after demxing
@@ -869,14 +871,13 @@ class MesoscopeICA(object):
         pl_crosstalk = np.empty((2, ica_in.shape[1]))
         ica_pl_out = np.empty(ica_in.shape)
 
-        if mixing is not None:  # this is indicative taht traces are form neuropil, use mixing to unmix them
-            #  get unmixing
+        if mixing is not None:  # this is indicative that traces are form neuropil, use provided mixing to unmix them
             for i in range(len(roi_names)):
                 mixing_roi = mixing[i]
                 trace_sig = traces_sig[i]
                 trace_ct = traces_ct[i]
                 traces = np.array([trace_sig, trace_ct]).T
-                # inverting roi mixing matrix
+                # get unmixing matrix by inverting roi mixing matrix
                 a_unmix = linalg.pinv(mixing_roi)
                 # recontructing sources
                 r_sources = np.dot(a_unmix, traces.T).T

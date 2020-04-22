@@ -228,14 +228,17 @@ class MesoscopeDataset(object):
         return self.session_folder
 
     def get_splitting_json(self):
-        session_folder = self.get_session_folder()
-        splitting_json = os.path.join(session_folder, f"MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json")  # need a query here!!!!
-        if os.path.isfile(splitting_json):
+        try:
+            query = (f"""SELECT storage_directory || 'MESOSCOPE_FILE_SPLITTING_QUEUE_{self.session_id}_input.json' 
+                FROM ophys_sessions WHERE id = {self.session_id}""")
+            splitting_json_path = pd.DataFrame(psycopg2_select(query)).values[0][0]
             self.splitting_json_present = True
-        else:
-            logger.error("Unable to find splitting json")
+        except Exception as e:
+            logger.error("Unable to query LIMS database: {}".format(e))
             self.splitting_json_present = False
-        return splitting_json
+        if not os.path.isfile(splitting_json_path):
+            logger.error("Unable to find splitting json")
+        return splitting_json_path
 
     def get_paired_planes(self):
         splitting_json = self.get_splitting_json()
