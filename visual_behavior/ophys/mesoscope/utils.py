@@ -636,6 +636,7 @@ def clean_up_cache(sessions, cache, remove_inputs=False, remove_by_date="01/01/2
             for pair in pairs:
                 ica_obj.set_exp_ids(pair)
                 ica_obj.set_ica_dirs()
+                ica_obj.set_raws_paths()
                 ica_obj.set_out_paths()
                 ica_obj.set_valid_paths()
                 ica_obj.set_plot_dirs(dir_name=None)
@@ -666,9 +667,10 @@ def clean_up_cache(sessions, cache, remove_inputs=False, remove_by_date="01/01/2
                                         shutil.rmtree(plot_dir, ignore_errors=True)
                                 if remove_inputs:
                                     raw = ica_obj.raw_paths[pkey][tkey]
-                                    if before_date(raw, remove_by_date):
-                                        print(f'deteling {raw}')
-                                        os.remove(raw)
+                                    if os.path.isfile(raw):
+                                        if before_date(raw, remove_by_date):
+                                            print(f'deteling {raw}')
+                                            os.remove(raw)
                     else:
                         print(f"ICA ROI dir does not exist: {exp_dir}")
                 # removing LIMS processing outputs:
