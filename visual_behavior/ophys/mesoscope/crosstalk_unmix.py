@@ -416,7 +416,7 @@ class MesoscopeICA(object):
                     rois_valid[pkey][tkey] = ju.read(rois_valid_paths[pkey][tkey])
                     self.rois_valid[pkey] = rois_valid[pkey][tkey]
                     self.rois_names_valid[pkey][tkey] = [int(roi_name) for roi_name, valid in
-                                                         self.rois_valid[pkey][tkey].items() if valid]
+                                                         self.rois_valid[pkey].items() if valid]
         else:  # if not - run validation, set attributes, save to disk.
             # check if  extracted traces exist?
             traces_exist = True
