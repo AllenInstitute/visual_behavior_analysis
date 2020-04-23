@@ -781,11 +781,11 @@ class MesoscopeICA(object):
                 # plotting raw traces
                 ct_before = crosstalk_before[i]
                 if ct_before > 130:
-                    self.rois_valid[pkey]['roi'][roi_name] = False
-                    self.rois_valid[pkey]['np'][roi_name] = False
+                    self.rois_valid[pkey][roi_name] = False
             ju.write(self.rois_valid_paths[pkey]['roi'], self.rois_valid[pkey]['roi'])
             ju.write(self.rois_valid_paths[pkey]['np'], self.rois_valid[pkey]['np'])
         return
+    
 
     @staticmethod
     def plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples):
