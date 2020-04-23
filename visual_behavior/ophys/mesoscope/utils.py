@@ -651,31 +651,31 @@ def clean_up_cache(sessions, cache, remove_lims=False, remove_raw_traces=False, 
                                 raw = ica_obj.raw_paths[pkey][tkey]
                                 if os.path.isfile(raw):
                                     if before_date(raw, remove_by_date):
-                                        print(f'deteling {raw}')
+                                        print(f'Deteling {raw}')
                                         os.remove(raw)
                             if remove_ica_output:
                                 out = ica_obj.outs_paths[pkey][tkey]
                                 if os.path.isfile(out):
                                     if before_date(out, remove_by_date):
-                                        print(f'deteling {out}')
+                                        print(f'Deteling {out}')
                                         os.remove(out)
                             if remove_ica_input:
                                 ica_input = ica_obj.ins_paths[pkey][tkey]
                                 if os.path.isfile(ica_input):
                                     if before_date(ica_input, remove_by_date):
-                                        print(f'deteling {ica_input}')
+                                        print(f'Deteling {ica_input}')
                                         os.remove(ica_input)
                             if remove_valid:
                                 valid = ica_obj.rois_valid_paths[pkey][tkey]
                                 if os.path.isfile(valid):
                                     if before_date(valid, remove_by_date):
-                                        print(f'deteling {valid}')
+                                        print(f'Deteling {valid}')
                                         os.remove(valid)
                             if remove_ica_plots:
                                 plot_dir = ica_obj.plot_dirs[pkey][tkey]
                                 if os.path.isdir(plot_dir):
                                     if before_date(plot_dir, remove_by_date):
-                                        print(f'deteling {plot_dir}')
+                                        print(f'Deteling {plot_dir}')
                                         shutil.rmtree(plot_dir, ignore_errors=True)
                     else:
                         print(f"ICA ROI dir does not exist: {exp_dir}")
@@ -716,6 +716,8 @@ def clean_up_cache(sessions, cache, remove_lims=False, remove_raw_traces=False, 
                         if before_date(np_out_p2, remove_by_date):
                             shutil.rmtree(np_out_p2, ignore_errors=True)
                             print(f'deteling {np_out_p2}')
+                else:
+                    logger.info("Not removing LIMS outputs")
 
     return
 
