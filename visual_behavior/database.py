@@ -641,7 +641,7 @@ def get_mouse_ids(id_type, id_number):
         a dataframe with columns for `donor_id`, `labtracks_id`, `specimen_id`
 
     Note: in rare cases, a single donor_id/labtracks_id was associated with multiple specimen_ids
-          this occured for IDs used as test_mice (e.g. labtracks_id 900002) 
+          this occured for IDs used as test_mice (e.g. labtracks_id 900002)
           and should not have occured for real experimental mice
     '''
 
@@ -657,7 +657,7 @@ def get_mouse_ids(id_type, id_number):
     id_number = [str(i) for i in id_number]
 
     query = """
-    select donors.id donor_id, donors.external_donor_name as labtracks_id, specimens.id as specimen_id 
+    select donors.id donor_id, donors.external_donor_name as labtracks_id, specimens.id as specimen_id
     from donors
     join specimens on donors.external_donor_name = specimens.external_specimen_name
     where {} in {}
