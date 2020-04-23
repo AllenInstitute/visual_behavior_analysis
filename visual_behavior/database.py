@@ -632,6 +632,50 @@ def get_specimen_id_from_labtracks_id(labtracks_id, show_warnings=True):
             return int(res.iloc[0])
 
 
+def get_mouse_ids(id_type, id_number):
+    '''
+    returns a dataframe of all variations of mouse ID for a given input ID
+
+    inputs:
+        id_type: (string) the type of ID to search on
+        id_number: (int,string, list of ints or list of strings) the associated ID number(s)
+
+    allowable id_types:
+        donor_id: LIMS donor_id
+        specimen_id: LIMS specimen ID
+        labtracks_id: Labtracks ID (6 digit ID on mouse cage)
+        external_specimen_name: alternate name for labtracks_id (used in specimens table)
+        external_donor_name: alternate name for labtracks_id (used in donors table)
+
+    returns:
+        a dataframe with columns for `donor_id`, `labtracks_id`, `specimen_id`
+
+    Note: in rare cases, a single donor_id/labtracks_id was associated with multiple specimen_ids
+          this occured for IDs used as test_mice (e.g. labtracks_id 900002) 
+          and should not have occured for real experimental mice
+    '''
+
+    if id_type == 'donor_id':
+        id_type_string = 'donors.id'
+    elif id_type == 'specimen_id':
+        id_type_string = 'specimens.id'
+    elif id_type in ['labtracks_id', 'external_specimen_name', 'external_donor_name']:
+        id_type_string = 'donors.external_donor_name'
+
+    if isinstance(id_number, (str, int, np.int64)):
+        id_number = [id_number]
+    id_number = [str(i) for i in id_number]
+
+    query = """
+    select donors.id donor_id, donors.external_donor_name as labtracks_id, specimens.id as specimen_id 
+    from donors
+    join specimens on donors.external_donor_name = specimens.external_specimen_name
+    where {} in {}
+    """.format(id_type_string, tuple(id_number)).replace(',)', ')')
+
+    return lims_query(query)
+
+
 def lims_query(query):
     '''
     execute a SQL query in LIMS
