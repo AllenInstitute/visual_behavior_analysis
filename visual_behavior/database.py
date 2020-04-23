@@ -576,12 +576,7 @@ def get_labtracks_id_from_specimen_id(specimen_id, show_warnings=True):
         to
             6 digit labtracks ID
     '''
-    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
-    conn = api.get_connection()
-
-    query = "select external_specimen_name from specimens where specimens.id = {}".format(specimen_id)
-    res = pd.read_sql(query, conn).squeeze()
-    conn.close()
+    res = lims_query("select external_specimen_name from specimens where specimens.id = {}".format(specimen_id))
 
     if isinstance(res, (str, int, np.int64)):
         return int(res)
@@ -608,12 +603,7 @@ def get_specimen_id_from_labtracks_id(labtracks_id, show_warnings=True):
         to
             9 or 10 digit specimen_id (from LIMS)
     '''
-    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
-    conn = api.get_connection()
-
-    query = "select id from specimens where specimens.external_specimen_name = '{}'".format(labtracks_id)
-    res = pd.read_sql(query, conn).squeeze()
-    conn.close()
+    res = lims_query("select id from specimens where specimens.external_specimen_name = '{}'".format(labtracks_id))
 
     if isinstance(res, (str, int, np.int64)):
         return int(res)
