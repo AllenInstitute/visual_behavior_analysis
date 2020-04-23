@@ -449,7 +449,6 @@ class MesoscopeICA(object):
                     traces_valid = {}
                     # set flags to true:
                     for pkey in self.pkeys:
-                        print(f"pkey : {pkey}")
                         trace_sig[pkey] = {}
                         trace_ct[pkey] = {}
                         traces_valid[pkey] = {}
