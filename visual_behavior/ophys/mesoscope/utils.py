@@ -11,6 +11,7 @@ import visual_behavior.ophys.mesoscope.dataset as ms
 import gc
 import shutil
 import time
+import pandas as pd
 
 import matplotlib.pyplot as plt
 from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
@@ -808,7 +809,7 @@ def refactor_outputs(sessions):
                     # copy old output ot out_1.h5
                     old_path = self.outs_paths[pkey][tkey]
                     # make a paht to the new filename
-                    new_path = sc.makefilepath(filename = f"{self.exp_ids[pkey]}_out_1.h5", folder = self.dirs[tkey])
+                    new_path = os.path.join(self.dirs[tkey], f"{self.exp_ids[pkey]}_out_1.h5")
                     # copy valid json to the new filename
                     if os.path.isfile(new_path):
                         print(f"skipping experint {self.exp_ids[pkey]}")
@@ -838,3 +839,54 @@ def refactor_outputs(sessions):
                         else:
                             print(f"input or putput for exp {self.exp_ids[pkey]}, {tkey} doesn't exist")
     return
+
+
+def plot_ica_traces(sig, ct, name, title):
+    plt.figure(figsize=(20, 10))
+    plt.rcParams.update({'font.size': 22})
+    plt.subplot(211)
+    plt.ylim(min(min(sig), min(ct)), max(max(sig), max(ct)))
+    plt.plot(sig, 'r-', label='signal pl')
+    plt.plot(ct, 'g-', label='cross-talk pl')
+    plt.title(f'{title} for cell {name}', fontsize = 18)
+    plt.legend(loc='best')
+    return
+
+
+def get_all_rois_crosstalk(session_list=None):
+    if not session_list:
+        meso_data = ms.get_all_mesoscope_data()
+        sessions = meso_data['session_id'].drop_duplicates()
+    else:
+        sessions = session_list
+    rois_crosstalk_dict = {}
+    rois_crosstalk_before_list = []
+    rois_crosstalk_after_list = []
+    for session in sessions:
+        rois_crosstalk_dict[session] = {}
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+        pairs = ica_obj.dataset.get_paired_planes()
+        for pair in pairs :
+            ica_obj.set_exp_ids(pair)
+            ica_obj.set_ica_dirs()
+            ica_obj.set_ica_input_paths()
+            ica_obj.set_out_paths()
+            ica_obj.set_valid_paths()
+            for pkey in ica_obj.pkeys:
+                tkey = 'roi'
+                # read ica input, output and valid json data
+                with h5py.File(ica_obj.outs_paths[pkey][tkey], "r") as f:
+                    ica_obj.crosstalk[pkey][tkey] = f["crosstalk"][()]
+                rois_valid = ju.read(ica_obj.rois_valid_paths[pkey][tkey])
+                crosstalk = ica_obj.crosstalk[pkey][tkey]
+                crosstalk_before = crosstalk[0]
+                crosstalk_after = crosstalk[1]
+                rois_crosstalk_before_list.append(crosstalk_before)
+                rois_crosstalk_after_list.append(crosstalk_after)
+                roi_names = [roi for roi, valid in rois_valid.items() if valid]
+                for i in range(len(roi_names)):
+                    roi_name = roi_names[i]
+                    rois_crosstalk_dict[session][roi_name] = {'crosstalk_before': crosstalk_before[i], 'crosstalk_after': crosstalk_after[i]}
+
+    return rois_crosstalk_dict, rois_crosstalk_before_list, rois_crosstalk_after_list
+

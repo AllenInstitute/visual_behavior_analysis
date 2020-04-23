@@ -107,7 +107,7 @@ class MesoscopeICA(object):
     Class to perform ica-based demixing on a pair of mesoscope planes
     """
 
-    def __init__(self, session_id, cache, debug_mode=False, roi_name="roi_ica", np_name="neuropil_ica"):
+    def __init__(self, session_id, cache, debug_mode=False, roi_name="ica_traces", np_name="ica_neuropil"):
         """
         :param session_id: LIMS session ID
         :param cache: directory to store/find ins/outs
@@ -759,6 +759,29 @@ class MesoscopeICA(object):
                     crosstalk = [crosstalk_before, crosstalk_after]
                     self.plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples)
                 self.plot_dirs[pkey][tkey] = plot_dir
+        return
+
+    def validate_cells_crosstalk(self):
+        """
+        validate cells based ont eh amount of crosstalk: if ct amount > 130 : cell is detected based on activity form it's paired plane
+        :return:
+
+        """
+        for pkey in self.pkeys:
+            tkey = 'roi'
+            rois_valid = self.rois_valid[pkey][tkey]
+            crosstalk = self.crosstalk[pkey][tkey]
+            crosstalk_before = crosstalk[0]
+            roi_names = [roi for roi, valid in rois_valid.items() if valid]
+            for i in range(len(roi_names) - 1):
+                roi_name = roi_names[i]
+                # plotting raw traces
+                ct_before = crosstalk_before[i]
+                if ct_before > 130:
+                    self.rois_valid[pkey]['roi'][roi_name] = False
+                    self.rois_valid[pkey]['np'][roi_name] = False
+            ju.write(self.rois_valid_paths[pkey]['roi'], self.rois_valid[pkey]['roi'])
+            ju.write(self.rois_valid_paths[pkey]['np'], self.rois_valid[pkey]['np'])
         return
 
     @staticmethod
