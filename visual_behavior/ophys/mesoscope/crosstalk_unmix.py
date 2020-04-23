@@ -392,16 +392,14 @@ class MesoscopeICA(object):
         return_vba: bool, flag to control whether to validate against vba roi set or return ica roi set
         :return: None
         """
-        if self.debug_mode:
-            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
-        else:
-            logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+
         rois_valid_paths = {}
         rois_valid = {}
         for pkey in self.pkeys:
             rois_valid_paths[pkey] = {}
             rois_valid[pkey] = {}
             for tkey in self.tkeys:
+                rois_valid[pkey][tkey] = {}
                 rois_valid_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
                                                             f'{self.exp_ids[pkey]}_valid.json')  # first define locally
         # validation json already exists, skip validating
@@ -415,8 +413,8 @@ class MesoscopeICA(object):
                 for tkey in self.tkeys:
                     logger.info("Validation jsons exist, skipping validation")
                     self.rois_valid_paths[pkey][tkey] = rois_valid_paths[pkey][tkey]
-                    rois_valid[pkey] = ju.read(rois_valid_paths[pkey][tkey])
-                    self.rois_valid[pkey][tkey] = rois_valid[pkey]
+                    rois_valid[pkey][tkey] = ju.read(rois_valid_paths[pkey][tkey])
+                    self.rois_valid[pkey] = rois_valid[pkey][tkey]
                     self.rois_names_valid[pkey][tkey] = [int(roi_name) for roi_name, valid in
                                                          self.rois_valid[pkey][tkey].items() if valid]
         else:  # if not - run validation, set attributes, save to disk.
@@ -429,18 +427,15 @@ class MesoscopeICA(object):
             if not traces_exist:
                 logger.info('Raw traces dont exist, run extract traces first')
             else:
-                traces_valid = {}
                 num_traces_sig = {}
                 num_traces_ct = {}
                 for pkey in self.pkeys:
-                    traces_valid[pkey] = {}
                     num_traces_sig[pkey] = {}
                     num_traces_ct[pkey] = {}
                     for tkey in self.tkeys:
                         # check signal and crosstalk for given trace:
                         num_traces_sig[pkey][tkey] = self.raws[pkey][tkey][0].shape[0]
                         num_traces_ct[pkey][tkey] = self.raws[pkey][tkey][1].shape[0]
-                        traces_valid[pkey][tkey] = {}
 
                 # check if traces are aligned:
                 traces_aligned = True
@@ -448,41 +443,51 @@ class MesoscopeICA(object):
                     if not num_traces_sig[pkey]["roi"] == num_traces_sig[pkey]["np"]:
                         traces_aligned = False
                         logger.info('Neuropil and ROI traces are not aligned')
+
                 if traces_aligned:
                     trace_sig = {}
                     trace_ct = {}
+                    traces_valid = {}
                     # set flags to true:
                     for pkey in self.pkeys:
+                        print(f"pkey : {pkey}")
                         trace_sig[pkey] = {}
                         trace_ct[pkey] = {}
-                        for n in range(num_traces_sig[pkey]['roi']):  # loop over roi names
-                            roi_name = str(self.rois_names[pkey]['roi'][n])  # read roi name:
-                            traces_valid[pkey][tkey][roi_name] = True  # first set flag to true
-                            # check if both roi and np trace has no NaNs:
-                            for tkey in self.tkeys:
-                                trace_sig[pkey][tkey] = self.raws[pkey][tkey][0][n]  # read Nth roi's trace - signal
-                                trace_ct[pkey][tkey] = self.raws[pkey][tkey][1][n]  # read Nth roi's trace - crosstalk
+                        traces_valid[pkey] = {}
+                        for tkey in self.tkeys:
+                            traces_valid[pkey][tkey] = {}
+                            for n in range(num_traces_sig[pkey]['roi']):
+                                roi_name = str(self.rois_names[pkey]['roi'][n])
+                                traces_valid[pkey][tkey][roi_name] = True
+                                # check if both roi and np trace has no NaNs:
+                                trace_sig[pkey][tkey] = self.raws[pkey][tkey][0][n]
+                                trace_ct[pkey][tkey] = self.raws[pkey][tkey][1][n]
                                 if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_ct[pkey][tkey])):
-                                    # print(f"Traces for roi {roi_name}, trace {tkey} contains Nans")
                                     traces_valid[pkey][tkey][roi_name] = False
-                            if traces_valid[pkey][tkey][roi_name]:
-                                rois_valid[pkey][roi_name] = True
-                            else:
-                                rois_valid[pkey][
-                                    roi_name] = False  # set flag to false if either signal or crosstalk trace has NaNs
+                                if not traces_valid[pkey][tkey][roi_name]:
+                                    rois_valid[pkey][tkey][roi_name] = False
+                                else:
+                                    rois_valid[pkey][tkey][roi_name] = True
+
+                    self.rois_valid = {}
+                    for pkey in self.pkeys:
+                        self.rois_valid[pkey] = {}
+                        for roi_name in rois_valid[pkey]['roi'].keys():
+                            tf = rois_valid[pkey]['roi'][roi_name] and rois_valid[pkey]['np'][roi_name]
+                            self.rois_valid[pkey][roi_name] = tf
+
                     # validating agains VBA rois set:
                     if return_vba:
                         for pkey in self.pkeys:
-                            rois_valid[pkey] = self.validate_against_vba(rois_valid[pkey],
+                            rois_valid[pkey] = self.validate_against_vba(self.rois_valid[pkey],
                                                                          self.exp_ids[pkey], VBA_CACHE)
                 # saving to json:
                 for pkey in self.pkeys:
                     for tkey in self.tkeys:
                         self.rois_valid_paths[pkey][tkey] = rois_valid_paths[pkey][tkey]
-                        ju.write(rois_valid_paths[pkey][tkey], rois_valid[pkey])
-                        self.rois_valid[pkey][tkey] = rois_valid[pkey]
+                        ju.write(rois_valid_paths[pkey][tkey], self.rois_valid[pkey])
                         self.rois_names_valid[pkey][tkey] = [int(roi_name) for roi_name, valid in
-                                                             rois_valid[pkey].items() if valid]
+                                                             self.rois_valid[pkey].items() if valid]
         return
 
     def debias_traces(self):
