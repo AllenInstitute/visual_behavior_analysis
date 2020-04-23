@@ -645,12 +645,14 @@ def get_mouse_ids(id_type, id_number):
           and should not have occured for real experimental mice
     '''
 
-    if id_type == 'donor_id':
+    if id_type.lower() == 'donor_id':
         id_type_string = 'donors.id'
-    elif id_type == 'specimen_id':
+    elif id_type.lower() == 'specimen_id':
         id_type_string = 'specimens.id'
-    elif id_type in ['labtracks_id', 'external_specimen_name', 'external_donor_name']:
+    elif id_type.lower() in ['labtracks_id', 'external_specimen_name', 'external_donor_name']:
         id_type_string = 'donors.external_donor_name'
+    else:
+        raise TypeError('invalid `id_type` {}'.format(id_type))
 
     if isinstance(id_number, (str, int, np.int64)):
         id_number = [id_number]
