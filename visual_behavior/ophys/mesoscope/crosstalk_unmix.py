@@ -171,7 +171,6 @@ class MesoscopeICA(object):
                 self.rois_names_valid[pkey][tkey] = None
                 self.raws[pkey][tkey] = None
                 self.raw_paths[pkey][tkey] = None
-                self.rois_valid[pkey][tkey] = None
                 self.rois_valid_paths[pkey][tkey] = None
                 self.ins[pkey][tkey] = None
                 self.ins_paths[pkey][tkey] = None
@@ -558,7 +557,7 @@ class MesoscopeICA(object):
                         self.found_ins[pkey][tkey] = False
                         sig[pkey][tkey] = self.raws[pkey][tkey][0]
                         ct[pkey][tkey] = self.raws[pkey][tkey][1]
-                        roi_valid[pkey][tkey] = self.rois_valid[pkey][tkey]
+                        roi_valid[pkey][tkey] = self.rois_valid[pkey]
                         # check if traces aligned and separate signal/crosstalk
                         if len(self.rois_names[pkey][tkey]) == len(sig[pkey][tkey]):
                             valid_idx_mask = np.array(
@@ -689,7 +688,7 @@ class MesoscopeICA(object):
                         figs_ct_in[pkey] = {}
                         figs_ct_out[pkey] = {}
                         for tkey in self.tkeys:
-                            rois_valid[pkey][tkey] = self.rois_valid[pkey][tkey]
+                            rois_valid[pkey][tkey] = self.rois_valid[pkey]
                             traces_in[pkey][tkey] = self.ins[pkey][tkey]
 
                             # don't run unmixing if neuropil, instead read roi unmixing matrix
@@ -774,7 +773,7 @@ class MesoscopeICA(object):
         """
         for pkey in self.pkeys:
             tkey = 'roi'
-            rois_valid = self.rois_valid[pkey][tkey]
+            rois_valid = self.rois_valid[pkey]
             crosstalk = self.crosstalk[pkey][tkey]
             crosstalk_before = crosstalk[0]
             roi_names = [roi for roi, valid in rois_valid.items() if valid]
