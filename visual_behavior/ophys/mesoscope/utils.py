@@ -327,7 +327,7 @@ def run_demixing_on_session(session, cache=CACHE):
 
                     # only demix non-union, non-duplicate ROIs
                     valid_idxs = np.where(valid)
-                    demix_traces = traces[valid]
+                    demix_traces = traces
                     demix_masks = masks[valid_idxs]
 
                     with h5py.File(movie_h5, 'r') as f:
