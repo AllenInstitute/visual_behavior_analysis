@@ -5,8 +5,8 @@ import setuptools
 setuptools.setup(
     name="visual-behavior",
     version="0.7.0",
-    author="Justin Kiggins",
-    author_email="justink@alleninstitute.org",
+    author="Allen Institute for Brain Science",
+    author_email="marinag@alleninstitute.org, dougo@alleninstitute.org",
     description="analysis package for visual behavior",
     packages=setuptools.find_packages(exclude=['data', 'figures', 'notebooks', 'scripts']),
     install_requires=[
