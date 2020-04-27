@@ -766,7 +766,7 @@ class MesoscopeICA(object):
 
     def validate_cells_crosstalk(self):
         """
-        validate cells based ont eh amount of crosstalk: if ct amount > 130 : cell is detected based on activity form it's paired plane
+        validate cells based ont the amount of crosstalk: if ct amount > 130 : cell is detected based on activity form it's paired plane
         :return:
 
         """
@@ -778,14 +778,21 @@ class MesoscopeICA(object):
             roi_names = [roi for roi, valid in rois_valid.items() if valid]
             for i in range(len(roi_names) - 1):
                 roi_name = roi_names[i]
-                # plotting raw traces
                 ct_before = crosstalk_before[i]
                 if ct_before > 130:
                     self.rois_valid[pkey][roi_name] = False
-            ju.write(self.rois_valid_paths[pkey]['roi'], self.rois_valid[pkey])
-            ju.write(self.rois_valid_paths[pkey]['np'], self.rois_valid[pkey])
+            new_fn_roi = self.add_suffix(self.rois_valid_paths[pkey]['roi'], '_new')
+            new_fn_np = self.add_suffix(self.rois_valid_paths[pkey]['np'], '_new')
+            ju.write(new_fn_roi, self.rois_valid[pkey])
+            ju.write(new_fn_np, self.rois_valid[pkey])
         return
 
+    @staticmethod
+    def add_suffix(abs_path, suffix):
+        file_ext = os.path.splitext(abs_path)[1]
+        file_name = os.path.splitext(abs_path)[0]
+        new_file_name = f"{file_name}{suffix}{file_ext}"
+        return new_file_name
 
     @staticmethod
     def plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples):
