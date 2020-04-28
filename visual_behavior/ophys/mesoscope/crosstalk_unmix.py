@@ -143,6 +143,7 @@ class MesoscopeICA(object):
         # pointers and attributes for validation jsons
         self.rois_valid = {}
         self.rois_valid_paths = {}
+        self.rois_valid_ct = {}
         # pointers and attirbutes for ica output files
         self.outs = {}  # output unmixing traces
         self.outs_paths = {}  # paths to save unmixing output
@@ -155,6 +156,7 @@ class MesoscopeICA(object):
             self.rois_names_valid[pkey] = {}
             self.rois_valid[pkey] = {}
             self.rois_valid_paths[pkey] = {}
+            self.rois_valid_ct[pkey] = {}
             self.raw_paths[pkey] = {}
             self.raws[pkey] = {}
             self.ins[pkey] = {}
@@ -770,26 +772,26 @@ class MesoscopeICA(object):
         :return:
 
         """
+        self.rois_valid_ct = {}
         for pkey in self.pkeys:
             ct_fn_roi = self.add_suffix(self.rois_valid_paths[pkey]['roi'], '_ct')
             ct_fn_np = self.add_suffix(self.rois_valid_paths[pkey]['np'], '_ct')
             if not os.path.isfile(ct_fn_roi) or not os.path.isfile(ct_fn_np):
                 tkey = 'roi'
-                rois_valid = self.rois_valid[pkey]
+                self.rois_valid_ct[pkey] = self.rois_valid[pkey]
                 crosstalk = self.crosstalk[pkey][tkey]
                 crosstalk_before = crosstalk[0]
-                roi_names = [roi for roi, valid in rois_valid.items() if valid]
+                roi_names = [roi for roi, valid in self.rois_valid_ct[pkey].items() if valid]
                 for i in range(len(roi_names) - 1):
                     roi_name = roi_names[i]
                     ct_before = crosstalk_before[i]
                     if ct_before > 130:
-                        self.rois_valid[pkey][roi_name] = False
-                new_fn_roi = self.add_suffix(self.rois_valid_paths[pkey]['roi'], '_ct')
-                new_fn_np = self.add_suffix(self.rois_valid_paths[pkey]['np'], '_ct')
-                ju.write(new_fn_roi, self.rois_valid[pkey])
-                ju.write(new_fn_np, self.rois_valid[pkey])
+                        self.rois_valid_ct[pkey][roi_name] = False
+                ju.write(ct_fn_roi, self.rois_valid_ct[pkey])
+                ju.write(ct_fn_np, self.rois_valid_ct[pkey])
             else:
-                print(f"crosstlak validation file exists, skipping")
+                print(f"crosstalk validation json exists, skipping")
+                self.rois_valid_ct[pkey] = ju.read(ct_fn_roi)
         return
 
     @staticmethod
