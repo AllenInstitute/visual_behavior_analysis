@@ -11,6 +11,7 @@ import visual_behavior.ophys.mesoscope.dataset as ms
 import gc
 import shutil
 import time
+import sys
 
 import matplotlib.pyplot as plt
 from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
@@ -901,3 +902,29 @@ def get_all_rois_crosstalk(session_list=None):
 
     return rois_crosstalk_dict, rois_crosstalk_before_list, rois_crosstalk_after_list
 
+
+def get_errors_lims(sessions):
+    lims_fail_log = {}
+    for session in sessions:
+        try:
+            print(f"Running neuropil correction on {session}")
+            run_neuropil_correction_on_ica(str(session))
+        except:
+            print(f"Error in np correction, session: {session}")
+            e = sys.exc_info()[0]
+            lims_fail_log[session] = {}
+            lims_fail_log[session] = {'proccess': 'neuropil_correcton'}, {'error': e}
+        else:
+            print(f"Finihsed np correction  for session {session}")
+
+            try:
+                print(f"Calculating dff for {session}")
+                run_dff_on_ica(str(session))
+            except:
+                print(f"Error in dff calculation session: {session}")
+                e = sys.exc_info()[0]
+                lims_fail_log[session] = {}
+                lims_fail_log[session] = {'proccess': 'calculating dff'}, {'error': e}
+            else:
+                print(f"Finihsed dff calculation for session {session}")
+    return lims_fail_log

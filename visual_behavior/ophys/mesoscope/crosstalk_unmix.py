@@ -771,20 +771,25 @@ class MesoscopeICA(object):
 
         """
         for pkey in self.pkeys:
-            tkey = 'roi'
-            rois_valid = self.rois_valid[pkey]
-            crosstalk = self.crosstalk[pkey][tkey]
-            crosstalk_before = crosstalk[0]
-            roi_names = [roi for roi, valid in rois_valid.items() if valid]
-            for i in range(len(roi_names) - 1):
-                roi_name = roi_names[i]
-                ct_before = crosstalk_before[i]
-                if ct_before > 130:
-                    self.rois_valid[pkey][roi_name] = False
-            new_fn_roi = self.add_suffix(self.rois_valid_paths[pkey]['roi'], '_new')
-            new_fn_np = self.add_suffix(self.rois_valid_paths[pkey]['np'], '_new')
-            ju.write(new_fn_roi, self.rois_valid[pkey])
-            ju.write(new_fn_np, self.rois_valid[pkey])
+            ct_fn_roi = self.add_suffix(self.rois_valid_paths[pkey]['roi'], '_ct')
+            ct_fn_np = self.add_suffix(self.rois_valid_paths[pkey]['np'], '_ct')
+            if not os.path.isfile(ct_fn_roi) or not os.path.isfile(ct_fn_np):
+                tkey = 'roi'
+                rois_valid = self.rois_valid[pkey]
+                crosstalk = self.crosstalk[pkey][tkey]
+                crosstalk_before = crosstalk[0]
+                roi_names = [roi for roi, valid in rois_valid.items() if valid]
+                for i in range(len(roi_names) - 1):
+                    roi_name = roi_names[i]
+                    ct_before = crosstalk_before[i]
+                    if ct_before > 130:
+                        self.rois_valid[pkey][roi_name] = False
+                new_fn_roi = self.add_suffix(self.rois_valid_paths[pkey]['roi'], '_ct')
+                new_fn_np = self.add_suffix(self.rois_valid_paths[pkey]['np'], '_ct')
+                ju.write(new_fn_roi, self.rois_valid[pkey])
+                ju.write(new_fn_np, self.rois_valid[pkey])
+            else:
+                print(f"crosstlak validation file exists, skipping")
         return
 
     @staticmethod
