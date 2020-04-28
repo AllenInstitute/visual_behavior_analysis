@@ -12,7 +12,7 @@ import gc
 import shutil
 import time
 import sys
-
+import sciris as sc
 import matplotlib.pyplot as plt
 from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
 
@@ -722,12 +722,12 @@ def clean_up_cache(sessions, cache, remove_lims=False, remove_raw_traces=False, 
     return
 
 
-def delete_old_files(sessions, CACHE, names_files= None, remove_by_date='04/01/2020'):
+def delete_old_files(sessions, ch, names_files=None, remove_by_date='04/01/2020'):
     if not names_files:
         names_files = {'roi': ['ica_traces', 'traces_ica', 'roi_traces', 'traces_roi', 'crosstalk', 'mixing'],
                        'np': ['ica_neuropil', 'neuropil_ica', 'crosstalk', 'mixing']}
     for session in sessions:
-        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=ch, roi_name="ica_traces", np_name="ica_neuropil")
         ses_dir = ica_obj.session_dir
         print(f'scanning sesion : {session}')
         if os.path.isdir(ses_dir):
@@ -797,6 +797,11 @@ def refactor_valid(sessions):
 
 
 def refactor_outputs(sessions):
+    """
+    this fn adds offset to the outputs is they where written to disk debiased
+    :param sessions:
+    :return:
+    """
     for session in sessions:
         print(f'processing session: {session}')
         ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
@@ -825,7 +830,7 @@ def refactor_outputs(sessions):
                     # copy valid json to the new filename
                     if os.path.isfile(new_path):
                         print(f"skipping experint {self.exp_ids[pkey]}")
-                        continue # skipping to next exp
+                        continue  # skipping to next exp
                     else:
                         if os.path.isfile(self.ins_paths[pkey][tkey]) and os.path.isfile(self.outs_paths[pkey][tkey]):
                             print(f'processing experiment {self.exp_ids[pkey]}, {tkey}')
@@ -844,7 +849,7 @@ def refactor_outputs(sessions):
                                                      traces_out[pkey][tkey][1] + self.offsets[pkey][tkey]['ct_offset']])
                             shutil.copy(old_path, new_path)
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
-                                f.create_dataset(f"data", data=self.outs[pkey][tkey])
+                                f.create_dataset(f"data", data=self.outs[pkey][tkey], compression="gzip")
                                 f.create_dataset(f"crosstalk", data=self.crosstalk[pkey][tkey])
                                 f.create_dataset(f"mixing_matrix_adjusted", data=self.a_mixing[pkey][tkey])
                                 f.create_dataset(f"mixing_matrix", data=self.mixing[pkey][tkey])
@@ -860,7 +865,7 @@ def plot_ica_traces(sig, ct, name, title):
     plt.ylim(min(min(sig), min(ct)), max(max(sig), max(ct)))
     plt.plot(sig, 'r-', label='signal pl')
     plt.plot(ct, 'g-', label='cross-talk pl')
-    plt.title(f'{title} for cell {name}', fontsize = 18)
+    plt.title(f'{title} for cell {name}', fontsize=18)
     plt.legend(loc='best')
     return
 
@@ -878,7 +883,7 @@ def get_all_rois_crosstalk(session_list=None):
         rois_crosstalk_dict[session] = {}
         ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
         pairs = ica_obj.dataset.get_paired_planes()
-        for pair in pairs :
+        for pair in pairs:
             ica_obj.set_exp_ids(pair)
             ica_obj.set_ica_dirs()
             ica_obj.set_ica_input_paths()
@@ -909,9 +914,8 @@ def get_errors_lims(sessions):
         try:
             print(f"Running neuropil correction on {session}")
             run_neuropil_correction_on_ica(str(session))
-        except:
+        except Exception as e:
             print(f"Error in np correction, session: {session}")
-            e = sys.exc_info()[0]
             lims_fail_log[session] = {}
             lims_fail_log[session] = {'proccess': 'neuropil_correcton'}, {'error': e}
         else:
@@ -920,11 +924,65 @@ def get_errors_lims(sessions):
             try:
                 print(f"Calculating dff for {session}")
                 run_dff_on_ica(str(session))
-            except:
+            except Exception as e:
                 print(f"Error in dff calculation session: {session}")
-                e = sys.exc_info()[0]
                 lims_fail_log[session] = {}
                 lims_fail_log[session] = {'proccess': 'calculating dff'}, {'error': e}
             else:
                 print(f"Finihsed dff calculation for session {session}")
     return lims_fail_log
+
+
+def del_files_with_str(sessions, ext):
+    """
+    :param sessions: list of sessons to go through and clean up
+    :param ext: list of strings to look int he filenames for deletion
+    :return:
+    """
+    for session in sessions:
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE)
+        pairs = ica_obj.dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj.set_exp_ids(pair)
+            ica_obj.set_ica_dirs()
+            for tkey in ica_obj.tkeys:
+                os.chdir(ica_obj.dirs[tkey])
+                for ext_i in ext:
+                    found_out = sc.runcommand(f'find *{ext_i}*')
+                    if "No such file" not in found_out:
+                        print(f"Found files:{found_out}Deleting")
+                        sc.runcommand(f"rm -rf *{ext_i}*")
+
+
+def refactor_outputs_to_lims(sessions):
+    for session in sessions:
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+        pairs = ica_obj.dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj.set_exp_ids(pair)
+            ica_obj.get_ica_traces()
+            ica_obj.validate_traces(return_vba=False)
+            ica_obj.debias_traces()
+            ica_obj.unmix_pair()
+            for pkey in ica_obj.pkeys:
+                rois_valid = [i for i, valid in ica_obj.rois_valid[pkey].items() if valid]
+                num_rois_valid = len(rois_valid)
+                for tkey in ica_obj.tkeys:
+                    num_outputs = ica_obj.outs[pkey][tkey][0].shape[0]
+                    assert num_outputs == num_rois_valid, "Number of outputs not equal to number of valid roi names"
+                    # make new output: add _lims at the end
+                    lims_path = add_suffix_to_path(ica_obj.outs_paths[pkey][tkey], '_lims')
+                    with h5py.File(lims_path, "w") as f:
+                        f.create_dataset("data", data=ica_obj.outs[pkey][tkey], compression="gzip")
+                        f.create_dataset("roi_names", data=ica_obj.rois_names_valid[pkey][tkey])
+                        f.create_dataset("crosstalk", data=ica_obj.crosstalk[pkey][tkey])
+                        f.create_dataset("mixing_matrix_adjusted", data=ica_obj.a_mixing[pkey][tkey])
+                        f.create_dataset("mixing_matrix", data=ica_obj.mixing[pkey][tkey])
+    return
+
+
+def add_suffix_to_path(abs_path, suffix):
+    file_ext = os.path.splitext(abs_path)[1]
+    file_name = os.path.splitext(abs_path)[0]
+    new_file_name = f"{file_name}{suffix}{file_ext}"
+    return new_file_name

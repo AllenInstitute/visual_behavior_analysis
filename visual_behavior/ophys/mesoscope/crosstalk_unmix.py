@@ -383,8 +383,8 @@ class MesoscopeICA(object):
                         self.raws[pkey][tkey] = traces_raw
                         self.raw_paths[pkey][tkey] = path[pkey][tkey]
                         with h5py.File(path[pkey][tkey], "w") as f:
-                            f.create_dataset(f"data", data=traces_raw)
-                            f.create_dataset(f"roi_names", data=np.int_(roi_names[pkey][tkey]))
+                            f.create_dataset("data", data=traces_raw, compression="gzip")
+                            f.create_dataset("roi_names", data=np.int_(roi_names[pkey][tkey]))
         return
 
     def validate_traces(self, return_vba=False):
@@ -593,7 +593,8 @@ class MesoscopeICA(object):
 
                             # write ica input traces to disk
                             with h5py.File(self.ins_paths[pkey][tkey], "w") as f:
-                                f.create_dataset("debiased_traces", data=self.ins[pkey][tkey])
+                                f.create_dataset("debiased_traces", data=self.ins[pkey][tkey], compression="gzip")
+                                f.create_dataset("roi_names", data=self.rois_names_valid[pkey][tkey])
                                 f.create_dataset('sig_offset', data=sig_offset[pkey][tkey])
                                 f.create_dataset('ct_offset', data=ct_offset[pkey][tkey])
                         else:
@@ -716,10 +717,11 @@ class MesoscopeICA(object):
 
                             # writing ica ouput traces to disk
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
-                                f.create_dataset(f"data", data=self.outs[pkey][tkey])
-                                f.create_dataset(f"crosstalk", data=self.crosstalk[pkey][tkey])
-                                f.create_dataset(f"mixing_matrix_adjusted", data=self.a_mixing[pkey][tkey])
-                                f.create_dataset(f"mixing_matrix", data=self.mixing[pkey][tkey])
+                                f.create_dataset("data", data=self.outs[pkey][tkey], compression="gzip")
+                                f.create_dataset("roi_names", data=self.rois_names_valid[pkey][tkey])
+                                f.create_dataset("crosstalk", data=self.crosstalk[pkey][tkey])
+                                f.create_dataset("mixing_matrix_adjusted", data=self.a_mixing[pkey][tkey])
+                                f.create_dataset("mixing_matrix", data=self.mixing[pkey][tkey])
 
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
@@ -774,8 +776,8 @@ class MesoscopeICA(object):
         """
         self.rois_valid_ct = {}
         for pkey in self.pkeys:
-            ct_fn_roi = self.add_suffix(self.rois_valid_paths[pkey]['roi'], '_ct')
-            ct_fn_np = self.add_suffix(self.rois_valid_paths[pkey]['np'], '_ct')
+            ct_fn_roi = add_suffix_to_path(self.rois_valid_paths[pkey]['roi'], '_ct')
+            ct_fn_np = add_suffix_to_path(self.rois_valid_paths[pkey]['np'], '_ct')
             if not os.path.isfile(ct_fn_roi) or not os.path.isfile(ct_fn_np):
                 tkey = 'roi'
                 self.rois_valid_ct[pkey] = self.rois_valid[pkey]
@@ -793,13 +795,6 @@ class MesoscopeICA(object):
                 print(f"crosstalk validation json exists, skipping")
                 self.rois_valid_ct[pkey] = ju.read(ct_fn_roi)
         return
-
-    @staticmethod
-    def add_suffix(abs_path, suffix):
-        file_ext = os.path.splitext(abs_path)[1]
-        file_name = os.path.splitext(abs_path)[0]
-        new_file_name = f"{file_name}{suffix}{file_ext}"
-        return new_file_name
 
     @staticmethod
     def plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples):
@@ -1156,3 +1151,10 @@ def extract_active(traces, len_ne=20, th_ag=10, do_plots=0):
             traces_ct_evs.append(traces_ct[i])
             valid.append(False)
     return traces_sig_evs, traces_ct_evs, valid
+
+
+def add_suffix_to_path(abs_path, suffix):
+    file_ext = os.path.splitext(abs_path)[1]
+    file_name = os.path.splitext(abs_path)[0]
+    new_file_name = f"{file_name}{suffix}{file_ext}"
+    return new_file_name

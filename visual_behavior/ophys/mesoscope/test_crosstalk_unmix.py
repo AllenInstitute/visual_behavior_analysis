@@ -239,3 +239,9 @@ def test_unmix_pair(test_session=None):
 				0], f"shape of filtered output traces CROSSTALK does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
 
 	# 3. test that unmixing is correct: unmixing_out - offset = unmixing_in / unmixing_matrix
+
+
+def test_validate_cells_crosstalk(self):
+	# 1. test attributes
+	# 2. test that cells are amrked invalid based on crosstalk being above 130
+	return
