@@ -956,6 +956,7 @@ def del_files_with_str(sessions, ext):
 
 def refactor_outputs_to_lims(sessions):
     for session in sessions:
+        logging.info(f"Processing session {session}")
         ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
         pairs = ica_obj.dataset.get_paired_planes()
         for pair in pairs:
@@ -981,6 +982,7 @@ def refactor_outputs_to_lims(sessions):
                             f.create_dataset("mixing_matrix", data=ica_obj.mixing[pkey][tkey])
                     else:
                         logging.info(f"Lims output exists for exp {ica_obj.exp_ids[pkey]}")
+        del ica_obj
     return
 
 
