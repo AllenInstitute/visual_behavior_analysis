@@ -585,15 +585,22 @@ class EyeTrackingData(object):
         return image
 
 
-def convert_to_fraction(df_in):
+def convert_to_fraction(df_in, baseline_conditional=None):
     '''
     converts all columns of an input dataframe, excluding the columns labeled 't' or 'time' to a fractional change
+
+    baseline conditional can be a string used to subselect rows for baseline calculation
+        (e.g. 'time <= 0')
     '''
     df = df_in.copy()
-    cols = [col for col in df.columns if col not in ['t', 'time']]
+    cols = [col for col in df.columns if col not in ['t', 'time', 'timestamps']]
     for col in cols:
         s = df[col]
-        s0 = df[col].mean(axis=0)
+        if baseline_conditional is None:
+            # use the entire timeseries as baseline
+            s0 = df[col].mean(axis=0)
+        else:
+            s0 = df.query(baseline_conditional)[col].mean(axis=0)
         df[col] = (s - s0) / s0
     return df
 
@@ -616,6 +623,8 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
     if time_key is None:
         if 't' in df.columns:
             time_key = 't'
+        elif 'timestamps' in df.columns:
+            time_key = 'timestamps'
         else:
             time_key = 'time'
 
