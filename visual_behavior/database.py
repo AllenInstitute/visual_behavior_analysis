@@ -168,7 +168,7 @@ def get_pkl_path(session_id=None, id_type='behavior_session_uuid'):
     get the path to a pkl file for a given session
     '''
     osid = convert_id({id_type: session_id}, 'ophys_session_id')
-    rec = get_well_known_files(osid).set_index('name').loc['StimulusPickle']
+    rec = get_well_known_files(osid).loc['StimulusPickle']
     pkl_path = ''.join([rec['storage_directory'], rec['filename']])
     return pkl_path
 
@@ -509,19 +509,25 @@ def get_manifest(server='visual_behavior_data'):
     return pd.DataFrame(list(man))
 
 
-def get_well_known_files(ophys_session_id):
-    lims_api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)
-                (PostgresQueryMixin)())
+def get_well_known_files(session_id, attachable_id_type='OphysSession'):
+    '''
+    return well_known_files table with names as index
+    inputs:
+        session_id (int): session id from LIMS
+        attachable_id_type (str): session id type. Choose from 'OphysSession' (default) or 'EcephysSession'
+    returns:
+        pandas dataframe with all LIMS well known files for the given session
+    '''
+
     query = '''
     select * from well_known_files wkf
     join well_known_file_types wkft
     on wkft.id = wkf.well_known_file_type_id
-    where wkf.attachable_type = 'OphysSession'
+    where wkf.attachable_type = '{}'
     and wkf.attachable_id in ({});
-    '''.format(ophys_session_id)
+    '''.format(attachable_id_type, session_id)
 
-    result = pd.read_sql(query, lims_api.get_connection())
-    return result
+    return lims_query(query).set_index('name')
 
 
 def simplify_type(x):
