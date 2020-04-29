@@ -993,61 +993,58 @@ def add_suffix_to_path(abs_path, suffix):
     return new_file_name
 
 
-def filter_outputs_crosstalk(sessions):
-    for session in sessions:
-        print(f"Demixing session {session}")
-        # read traces for these rois:
-        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
-        pairs = ica_obj.dataset.get_paired_planes()
-        for pair in pairs:
-            ica_obj.set_exp_ids(pair)
-            ica_obj.get_ica_traces()
-            ica_obj.validate_traces(return_vba=False)
-            ica_obj.debias_traces()
-            ica_obj.unmix_pair()
-            ica_obj.validate_cells_crosstalk()
-            ica_obj.outs_ct = {}
-            ica_obj.roi_names_valid_ct = {}
-            ica_obj.outs_ct_path = {}
-            for pkey in ica_obj.pkeys:
-                ica_obj.outs_ct[pkey] = {}
-                ica_obj.roi_names_valid_ct[pkey] = {}
-                ica_obj.outs_ct_path[pkey] = {}
-                rois_valid_ct = ica_obj.rois_valid_ct[pkey]
-                for tkey in ica_obj.tkeys:
-                    sig_outs = ica_obj.outs[pkey][tkey][0]
-                    ct_outs = ica_obj.outs[pkey][tkey][1]
-                    traces_dict = {}
-                    if ct_outs.shape[0] == len(ica_obj.rois_names_valid[pkey][tkey]):
-                        for i in range(len(ica_obj.rois_names_valid[pkey][tkey])):
-                            roi_name = ica_obj.rois_names_valid[pkey][tkey][i]
-                            traces_dict[roi_name] = {}
-                            traces_dict[roi_name]['sig'] = sig_outs[i]
-                            traces_dict[roi_name]['ct'] = ct_outs[i]
-                    traces_out_sig = [traces['sig'] for roi_name, traces in traces_dict.items() if
-                                      rois_valid_ct[str(roi_name)]]
-                    traces_out_ct = [traces['ct'] for roi_name, traces in traces_dict.items() if
-                                     rois_valid_ct[str(roi_name)]]
-                    traces_out = np.array([traces_out_sig, traces_out_ct])
-                    ct_outs_path = add_suffix_to_path(ica_obj.outs_paths[pkey][tkey], '_ct')
-                    roi_names_valid_ct = [roi_name for roi_name, valid in ica_obj.rois_valid_ct[pkey].items() if valid]
-                    if not os.path.isfile(ct_outs_path):
-                        with h5py.File(ct_outs_path, "w") as f:
-                            f.create_dataset("data", data=traces_out, compression="gzip")
-                            f.create_dataset("roi_names", data=[np.string_(rn) for rn in roi_names_valid_ct])
-                            f.create_dataset("crosstalk", data=ica_obj.crosstalk[pkey][tkey])
-                            f.create_dataset("mixing_matrix_adjusted", data=ica_obj.a_mixing[pkey][tkey])
-                            f.create_dataset("mixing_matrix", data=ica_obj.mixing[pkey][tkey])
-                    else:
-                        with h5py.File(ct_outs_path, "r") as f:
-                            traces_out = f["data"][()]
-                            roi_names_valid_ct = f["roi_names"][()]
-                            ica_obj.crosstalk[pkey][tkey] = f["crosstalk"][()]
-                            ica_obj.a_mixing[pkey][tkey] = f["mixing_matrix_adjusted"]
-                            ica_obj.mixing[pkey][tkey] = f["mixing_matrix"]
+def filter_outputs_crosstalk(session):
+    # read traces for these rois:
+    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+    pairs = ica_obj.dataset.get_paired_planes()
+    for pair in pairs:
+        ica_obj.set_exp_ids(pair)
+        ica_obj.get_ica_traces()
+        ica_obj.validate_traces(return_vba=False)
+        ica_obj.debias_traces()
+        ica_obj.unmix_pair()
+        ica_obj.validate_cells_crosstalk()
+        ica_obj.outs_ct = {}
+        ica_obj.roi_names_valid_ct = {}
+        ica_obj.outs_ct_path = {}
+        for pkey in ica_obj.pkeys:
+            ica_obj.outs_ct[pkey] = {}
+            ica_obj.roi_names_valid_ct[pkey] = {}
+            ica_obj.outs_ct_path[pkey] = {}
+            rois_valid_ct = ica_obj.rois_valid_ct[pkey]
+            for tkey in ica_obj.tkeys:
+                sig_outs = ica_obj.outs[pkey][tkey][0]
+                ct_outs = ica_obj.outs[pkey][tkey][1]
+                traces_dict = {}
+                if ct_outs.shape[0] == len(ica_obj.rois_names_valid[pkey][tkey]):
+                    for i in range(len(ica_obj.rois_names_valid[pkey][tkey])):
+                        roi_name = ica_obj.rois_names_valid[pkey][tkey][i]
+                        traces_dict[roi_name] = {}
+                        traces_dict[roi_name]['sig'] = sig_outs[i]
+                        traces_dict[roi_name]['ct'] = ct_outs[i]
+                traces_out_sig = [traces['sig'] for roi_name, traces in traces_dict.items() if
+                                  rois_valid_ct[str(roi_name)]]
+                traces_out_ct = [traces['ct'] for roi_name, traces in traces_dict.items() if
+                                 rois_valid_ct[str(roi_name)]]
+                traces_out = np.array([traces_out_sig, traces_out_ct])
+                ct_outs_path = add_suffix_to_path(ica_obj.outs_paths[pkey][tkey], '_ct')
+                roi_names_valid_ct = [roi_name for roi_name, valid in ica_obj.rois_valid_ct[pkey].items() if valid]
+                if not os.path.isfile(ct_outs_path):
+                    with h5py.File(ct_outs_path, "w") as f:
+                        f.create_dataset("data", data=traces_out, compression="gzip")
+                        f.create_dataset("roi_names", data=[np.string_(rn) for rn in roi_names_valid_ct])
+                        f.create_dataset("crosstalk", data=ica_obj.crosstalk[pkey][tkey])
+                        f.create_dataset("mixing_matrix_adjusted", data=ica_obj.a_mixing[pkey][tkey])
+                        f.create_dataset("mixing_matrix", data=ica_obj.mixing[pkey][tkey])
+                else:
+                    with h5py.File(ct_outs_path, "r") as f:
+                        traces_out = f["data"][()]
+                        roi_names_valid_ct = f["roi_names"][()]
+                        ica_obj.crosstalk[pkey][tkey] = f["crosstalk"][()]
+                        ica_obj.a_mixing[pkey][tkey] = f["mixing_matrix_adjusted"]
+                        ica_obj.mixing[pkey][tkey] = f["mixing_matrix"]
 
-                    ica_obj.outs_ct[pkey][tkey] = traces_out
-                    ica_obj.roi_names_valid_ct[pkey][tkey] = roi_names_valid_ct
-                    ica_obj.outs_ct_path[pkey][tkey] = ct_outs_path
-
-    return
+                ica_obj.outs_ct[pkey][tkey] = traces_out
+                ica_obj.roi_names_valid_ct[pkey][tkey] = roi_names_valid_ct
+                ica_obj.outs_ct_path[pkey][tkey] = ct_outs_path
+    return ica_obj
