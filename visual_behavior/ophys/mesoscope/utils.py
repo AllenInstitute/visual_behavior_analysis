@@ -1032,7 +1032,7 @@ def filter_outputs_crosstalk(session):
                 if not os.path.isfile(ct_outs_path):
                     with h5py.File(ct_outs_path, "w") as f:
                         f.create_dataset("data", data=traces_out, compression="gzip")
-                        f.create_dataset("roi_names", data=[np.string_(rn) for rn in roi_names_valid_ct])
+                        f.create_dataset("roi_names", data=[str(rn) for rn in roi_names_valid_ct])
                         f.create_dataset("crosstalk", data=ica_obj.crosstalk[pkey][tkey])
                         f.create_dataset("mixing_matrix_adjusted", data=ica_obj.a_mixing[pkey][tkey])
                         f.create_dataset("mixing_matrix", data=ica_obj.mixing[pkey][tkey])
@@ -1048,3 +1048,8 @@ def filter_outputs_crosstalk(session):
                 ica_obj.roi_names_valid_ct[pkey][tkey] = roi_names_valid_ct
                 ica_obj.outs_ct_path[pkey][tkey] = ct_outs_path
     return ica_obj
+
+
+def filter_dff_traces_crosstalk():
+
+    return
