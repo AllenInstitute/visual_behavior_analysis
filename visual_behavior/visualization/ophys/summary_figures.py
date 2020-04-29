@@ -188,7 +188,7 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1, window=None):
 
     :return: xticks, xticklabels = xticks in frames corresponding to timepoints in the trace, xticklabels in seconds
     """
-    interval_frames = int(interval_sec * frame_rate)
+    interval_frames = interval_sec * frame_rate
     n_frames = len(trace)
     n_sec = n_frames / frame_rate
     xticks = np.arange(0, n_frames + 5, interval_frames)
@@ -197,13 +197,11 @@ def get_xticks_xticklabels(trace, frame_rate, interval_sec=1, window=None):
         xticklabels = xticklabels - n_sec / 2
     else:
         xticklabels = xticklabels + window[0]
-    if interval_sec >= 1:
-        xticklabels = [int(x) for x in xticklabels]
     return xticks, xticklabels
 
 
 def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color='k', interval_sec=1, xlims=[-4, 4],
-                    ax=None):
+                    plot_sem=True, ax=None):
     """
     Function that accepts an array of single trial traces and plots the mean and SEM of the trace, with xticklabels in seconds
 
@@ -226,8 +224,9 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
         trace = np.mean(traces, axis=0)
         times = np.arange(0, len(trace), 1)
         sem = (traces.std()) / np.sqrt(float(len(traces)))
-        ax.plot(trace, label=legend_label, linewidth=3, color=color)
-        ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
+        ax.plot(trace, label=legend_label, linewidth=2, color=color)
+        if plot_sem:
+            ax.fill_between(times, trace + sem, trace - sem, alpha=0.5, color=color)
 
         xticks, xticklabels = get_xticks_xticklabels(trace, frame_rate, interval_sec, window=xlims)
         ax.set_xticks(xticks)
@@ -240,7 +239,6 @@ def plot_mean_trace(traces, frame_rate, ylabel='dF/F', legend_label=None, color=
         ax.set_ylabel(ylabel)
     sns.despine(ax=ax)
     return ax
-
 
 def plot_flashes_on_trace(ax, analysis, window=[-4,8], trial_type=None, omitted=False, alpha=0.15, facecolor='gray'):
     """

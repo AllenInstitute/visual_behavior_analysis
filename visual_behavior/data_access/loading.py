@@ -6,6 +6,8 @@ from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorO
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
+from visual_behavior.data_access import processing
+
 
 import os
 import h5py  # for loading motion corrected movie
@@ -118,7 +120,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
-    experiments = experiments.set_index('ophys_experiment_id')
+    # experiments = experiments.set_index('ophys_experiment_id')
     return experiments
 
 
@@ -253,6 +255,8 @@ def get_sdk_dataset_obj(ophys_experiment_id, cache_dir, include_invalid_rois=Fal
         valid_cells = dataset.cell_specimen_table[dataset.cell_specimen_table.valid_roi == True].cell_roi_id.values
         dataset.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
     dataset = get_cell_indices(dataset)
+    # move roi_masks
+    dataset.cell_specimen_table = processing.shift_image_masks(dataset.cell_specimen_table)
     # get timestamps for other data streams and resample for mesoscope
     lims_data = convert.get_lims_data(dataset.experiment_id)
     dataset.timestamps = convert.get_timestamps(lims_data, dataset.analysis_dir)
@@ -968,3 +972,186 @@ def build_container_df():
         list_of_dicts.append(temp_dict)
 
     return pd.DataFrame(list_of_dicts).sort_values(by='container_id', ascending=False)
+
+
+###### multi session summary data #########
+
+def get_annotated_experiments_table():
+    project_codes = ['VisualBehavior', 'VisualBehaviorTask1B',
+                     'VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d']
+
+    experiments_table = get_filtered_ophys_experiment_table()
+    experiments_table = experiments_table[experiments_table.project_code.isin(project_codes)]
+    # add columns
+    experiments_table['depth'] = ['superficial' if experiments_table.loc[expt].imaging_depth <= 355 else 'deep' for expt
+                                  in experiments_table.index]
+    experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
+                                     experiments_table.loc[expt].depth for expt in experiments_table.index]
+
+    experiments_table['location2'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
+                                      experiments_table.loc[expt].depth for expt in experiments_table.index]
+
+    experiments_table['layer'] = None
+    indices = experiments_table[(experiments_table.imaging_depth < 125)].index.values
+    experiments_table.at[indices, 'layer'] = 'L3'
+    indices = experiments_table[
+        (experiments_table.imaging_depth >= 125) & (experiments_table.imaging_depth < 200)].index.values
+    experiments_table.at[indices, 'layer'] = 'L3'
+    indices = experiments_table[
+        (experiments_table.imaging_depth >= 200) & (experiments_table.imaging_depth < 250)].index.values
+    experiments_table.at[indices, 'layer'] = 'L4'
+    indices = experiments_table[
+        (experiments_table.imaging_depth >= 250) & (experiments_table.imaging_depth < 345)].index.values
+    experiments_table.at[indices, 'layer'] = 'L5a'
+    indices = experiments_table[
+        (experiments_table.imaging_depth >= 345) & (experiments_table.imaging_depth < 500)].index.values
+    experiments_table.at[indices, 'layer'] = 'L5b'
+    experiments_table['location_layer'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
+                                           experiments_table.loc[expt].targeted_structure + '_' +
+                                           experiments_table.loc[expt].layer for expt in experiments_table.index]
+
+    indices = experiments_table[experiments_table.location == 'Slc17a7_superficial'].index.values
+    experiments_table.at[indices, 'location'] = 'Excitatory superficial'
+    indices = experiments_table[experiments_table.location == 'Slc17a7_deep'].index.values
+    experiments_table.at[indices, 'location'] = 'Excitatory deep'
+    indices = experiments_table[experiments_table.location == 'Vip_superficial'].index.values
+    experiments_table.at[indices, 'location'] = 'Vip'
+    indices = experiments_table[experiments_table.location == 'Sst_superficial'].index.values
+    experiments_table.at[indices, 'location'] = 'Sst'
+    indices = experiments_table[experiments_table.location == 'Vip_deep'].index.values
+    experiments_table.at[indices, 'location'] = 'Vip'
+    indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
+    experiments_table.at[indices, 'location'] = 'Sst'
+
+    return experiments_table
+
+
+def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events):
+    if use_events:
+        suffix = '_events'
+    else:
+        suffix = ''
+
+    if len(conditions) == 5:
+        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] +'_'+ conditions[3] +'_'+ conditions[4] + suffix + '.h5'
+    elif len(conditions) == 4:
+        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
+            3] + suffix + '.h5'
+    elif len(conditions) == 3:
+        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] + suffix + '.h5'
+    elif len(conditions) == 2:
+        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] + suffix + '.h5'
+    elif len(conditions) == 1:
+        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[0] + suffix + '.h5'
+
+    return filename
+
+
+def get_multi_session_df(cache_dir, df_name, conditions, project_codes, use_events=False):
+    experiments_table = get_annotated_experiments_table()
+    multi_session_df = pd.DataFrame()
+    for project_code in project_codes:
+        experiments = experiments_table[(experiments_table.project_code==project_code)]
+        if project_code == 'VisualBehaviorMultiscope':
+            experiments = experiments[experiments.session_type!='OPHYS_2_images_B_passive']
+        expts = experiments.reset_index()
+        for session_type in np.sort(experiments.session_type.unique()):
+            filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
+            filepath = os.path.join(cache_dir, 'multi_session_summary_dfs',filename)
+            df = pd.read_hdf(filepath, key='df')
+            df = df.merge(expts[['ophys_experiment_id','cre_line','location','location_layer',
+                                 'layer','ophys_session_id','project_code','location2',
+                                 'specimen_id','depth','exposure_number','container_id']], on='ophys_experiment_id')
+            outlier_cells = df[df.mean_response>5].cell_specimen_id.unique()
+            df = df[df.cell_specimen_id.isin(outlier_cells)==False]
+            multi_session_df = pd.concat([multi_session_df, df])
+    return multi_session_df
+
+
+def remove_outlier_traces_from_multi_session_df(multi_session_df):
+    indices = [row for row in multi_session_df.index.values if (multi_session_df.mean_trace.values[row].max()>5)]
+
+    multi_session_df = multi_session_df[multi_session_df.index.isin(indices)==False]
+    multi_session_df = multi_session_df.reset_index()
+    multi_session_df = multi_session_df.drop(columns=['index'])
+    return multi_session_df
+
+
+def remove_first_novel_session_retakes_from_multi_session_df(multi_session_df):
+    multi_session_df = multi_session_df.reset_index()
+    multi_session_df = multi_session_df.drop(columns=['index'])
+
+    indices = multi_session_df[(multi_session_df.session_number==4)&(multi_session_df.exposure_number!=0)].index
+    multi_session_df = multi_session_df.drop(index=indices)
+
+    multi_session_df = multi_session_df.reset_index()
+    multi_session_df = multi_session_df.drop(columns=['index'])
+
+    indices = multi_session_df[(multi_session_df.session_number == 1) & (multi_session_df.exposure_number != 0)].index
+    multi_session_df = multi_session_df.drop(index=indices)
+
+    multi_session_df = multi_session_df.reset_index()
+    multi_session_df = multi_session_df.drop(columns=['index'])
+
+    return multi_session_df
+
+
+def remove_problematic_data_from_multi_session_df(multi_session_df):
+    #### notes on containers, experiments & mice #####
+    # experiments too exclude
+    # another Slc mouse with large familiar passive 840542948, also ramping in some familiar sessions, generally noisy
+    # all mouse 920877188 remove & investiate later - weirdness
+    # slc superficial very high novel 2 container 1018027834
+    # Slc container 1018027644 has inconsistent familiar sessions
+    # another Slc mouse with large passive familiar responses 837581585, only one container
+    # slc deep with abnormally large familiar passive 1018028067, 1018028055
+
+    # havent exlcuded these yet
+    # 904363938, 905955240 #weird
+    # 903485718, 986518889, 903485718 # omission in Slc?!
+    # 971813765 # potentially bad
+
+    # experiments of interest
+    # Sst mouse with omission ramping 813702151, containers 1018028135, 1019028153
+    # sst large novelty response N1 mouse 850862430 container 1018028339, 1018028351
+    # SST omission ramping for familiar 904922342
+
+    # slc containers with omission responses for familiar sessions, superficial - 1018028046, 1018028061 same mouse
+    # another Slc with omission ramping 840390377 but only container 1018027878
+    # Slc with omission ramping in all session types 843122504 container 1018027663 VISl superficial at 275 but not at 75 in VIsl or at 275 in V1
+
+    # Vip mouse with really large familiar 1 activity 810573072, noisy familiar 2
+    # VIp mouse with abnormally high familiar 3 791871803
+    # Vip with abormally high novel 1 837628436
+    # Vip mouse with novelty like responses to familiar 3 807248992, container 1018028367 especially but also others
+
+
+    bad_specimen_ids = [810573072] #840542948, 920877188, 837581585
+    bad_experiment_ids = [989610992, 904352692, 905955211, 974362760, 904363938,  905955240,
+                          957759566, 957759574, 916220452, 934550023,
+        986518876, 986518891, 989610991, 989213058, 989213062, 990400778, 990681008, 991852002,# specimen 920877188
+        915229064, 934550019, 919419011,  # specimen 840542948
+        847267618, 847267620, 848039121, 848039125, 848039123, 848760990,  # specimen 810573072
+        886585138, 886565136,  # specimen 837581585
+                           ]
+    multi_session_df = multi_session_df[multi_session_df.specimen_id.isin(bad_specimen_ids) == False]
+    multi_session_df = multi_session_df[multi_session_df.experiment_id.isin(bad_experiment_ids) == False]
+
+    return multi_session_df
+
+
+def annotate_and_clean_multi_session_df(multi_session_df):
+    def get_session_labels():
+        return ['F1', 'F2', 'F3', 'N1', 'N2', 'N3']
+
+    multi_session_df.session_number = [int(number) for number in multi_session_df.session_number.values]
+    multi_session_df['session_name'] = [get_session_labels()[session_number - 1] for session_number in
+                                        multi_session_df.session_number.values]
+
+    multi_session_df = remove_first_novel_session_retakes_from_multi_session_df(multi_session_df)
+    multi_session_df = remove_outlier_traces_from_multi_session_df(multi_session_df)
+    # multi_session_df = remove_problematic_data_from_multi_session_df(multi_session_df)
+
+    return multi_session_df
+
+
