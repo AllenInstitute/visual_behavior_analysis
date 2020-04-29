@@ -168,7 +168,7 @@ def get_pkl_path(session_id=None, id_type='behavior_session_uuid'):
     get the path to a pkl file for a given session
     '''
     osid = convert_id({id_type: session_id}, 'ophys_session_id')
-    rec = get_well_known_files(osid).set_index('name').loc['StimulusPickle']
+    rec = get_well_known_files(osid).loc['StimulusPickle']
     pkl_path = ''.join([rec['storage_directory'], rec['filename']])
     return pkl_path
 
@@ -529,7 +529,7 @@ def get_well_known_files(session_id, attachable_id_type='OphysSession'):
     '''.format(attachable_id_type, session_id)
 
     result = pd.read_sql(query, lims_api.get_connection())
-    return result
+    return result.set_index('name')
 
 
 def simplify_type(x):
