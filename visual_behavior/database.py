@@ -518,8 +518,7 @@ def get_well_known_files(session_id, attachable_id_type='OphysSession'):
     returns:
         pandas dataframe with all LIMS well known files for the given session
     '''
-    lims_api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)
-                (PostgresQueryMixin)())
+
     query = '''
     select * from well_known_files wkf
     join well_known_file_types wkft
@@ -528,8 +527,7 @@ def get_well_known_files(session_id, attachable_id_type='OphysSession'):
     and wkf.attachable_id in ({});
     '''.format(attachable_id_type, session_id)
 
-    result = pd.read_sql(query, lims_api.get_connection())
-    return result.set_index('name')
+    return lims_query(query).set_index('name')
 
 
 def simplify_type(x):
