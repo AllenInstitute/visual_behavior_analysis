@@ -510,6 +510,14 @@ def get_manifest(server='visual_behavior_data'):
 
 
 def get_well_known_files(session_id, attachable_id_type='OphysSession'):
+    '''
+    return well_known_files table with names as index
+    inputs:
+        session_id (int): session id from LIMS
+        attachable_id_type (str): session id type. Choose from 'OphysSession' (default) or 'EcephysSession'
+    returns:
+        pandas dataframe with all LIMS well known files for the given session
+    '''
     lims_api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)
                 (PostgresQueryMixin)())
     query = '''
