@@ -143,6 +143,7 @@ class MesoscopeICA(object):
         # pointers and attributes for validation jsons
         self.rois_valid = {}
         self.rois_valid_paths = {}
+        self.rois_valid_ct_paths = {}
         self.rois_valid_ct = {}
         # pointers and attirbutes for ica output files
         self.outs = {}  # output unmixing traces
@@ -157,6 +158,7 @@ class MesoscopeICA(object):
             self.rois_valid[pkey] = {}
             self.rois_valid_paths[pkey] = {}
             self.rois_valid_ct[pkey] = {}
+            self.rois_valid_ct_paths[pkey] = {}
             self.raw_paths[pkey] = {}
             self.raws[pkey] = {}
             self.ins[pkey] = {}
@@ -174,6 +176,7 @@ class MesoscopeICA(object):
                 self.raws[pkey][tkey] = None
                 self.raw_paths[pkey][tkey] = None
                 self.rois_valid_paths[pkey][tkey] = None
+                self.rois_valid_ct_paths[pkey][tkey] = None
                 self.ins[pkey][tkey] = None
                 self.ins_paths[pkey][tkey] = None
                 self.offsets[pkey][tkey] = None
@@ -243,6 +246,8 @@ class MesoscopeICA(object):
             for tkey in self.tkeys:
                 self.rois_valid_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
                                                                  f'{self.exp_ids[pkey]}_valid.json')
+                self.rois_valid_ct_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
+                                                                    f'{self.exp_ids[pkey]}_valid_ct.json')
         return
 
     def set_ica_input_paths(self):
