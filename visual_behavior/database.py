@@ -509,16 +509,16 @@ def get_manifest(server='visual_behavior_data'):
     return pd.DataFrame(list(man))
 
 
-def get_well_known_files(ophys_session_id):
+def get_well_known_files(session_id, attachable_id_type='OphysSession'):
     lims_api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)
                 (PostgresQueryMixin)())
     query = '''
     select * from well_known_files wkf
     join well_known_file_types wkft
     on wkft.id = wkf.well_known_file_type_id
-    where wkf.attachable_type = 'OphysSession'
+    where wkf.attachable_type = '{}'
     and wkf.attachable_id in ({});
-    '''.format(ophys_session_id)
+    '''.format(attachable_id_type, session_id)
 
     result = pd.read_sql(query, lims_api.get_connection())
     return result
