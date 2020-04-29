@@ -972,12 +972,15 @@ def refactor_outputs_to_lims(sessions):
                     assert num_outputs == num_rois_valid, "Number of outputs not equal to number of valid roi names"
                     # make new output: add _lims at the end
                     lims_path = add_suffix_to_path(ica_obj.outs_paths[pkey][tkey], '_lims')
-                    with h5py.File(lims_path, "w") as f:
-                        f.create_dataset("data", data=ica_obj.outs[pkey][tkey], compression="gzip")
-                        f.create_dataset("roi_names", data=ica_obj.rois_names_valid[pkey][tkey])
-                        f.create_dataset("crosstalk", data=ica_obj.crosstalk[pkey][tkey])
-                        f.create_dataset("mixing_matrix_adjusted", data=ica_obj.a_mixing[pkey][tkey])
-                        f.create_dataset("mixing_matrix", data=ica_obj.mixing[pkey][tkey])
+                    if not os.path.isfile(lims_path):
+                        with h5py.File(lims_path, "w") as f:
+                            f.create_dataset("data", data=ica_obj.outs[pkey][tkey], compression="gzip")
+                            f.create_dataset("roi_names", data=ica_obj.rois_names_valid[pkey][tkey])
+                            f.create_dataset("crosstalk", data=ica_obj.crosstalk[pkey][tkey])
+                            f.create_dataset("mixing_matrix_adjusted", data=ica_obj.a_mixing[pkey][tkey])
+                            f.create_dataset("mixing_matrix", data=ica_obj.mixing[pkey][tkey])
+                    else:
+                        logging.info(f"Lims output exists for exp {ica_obj.exp_ids[pkey]}")
     return
 
 
