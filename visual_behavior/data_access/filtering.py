@@ -87,7 +87,7 @@ def get_experiment_ids_that_pass_qc(experiments_table):
     return filtered_experiment_ids
 
 
-def get_first_passing_novel_image_exposure_experiment_ids(experiments_table):
+# def get_first_passing_novel_image_exposure_experiment_ids(experiments_table):
     # note: get_passed_experiments_from_experiments_table is not defined. Commenting out whole function to pass linter
     # data = get_passed_experiments_from_experiments_table(experiments_table)
     # data = data[data.session_type.isin(['OPHYS_4_images_B', 'OPHYS_4_images_A', 'OPHYS_4_images_H'])]
@@ -104,7 +104,7 @@ def get_first_novel_image_exposure_experiment_ids(experiments_table):
     return filtered_experiment_ids
 
 
-def get_first_passing_omission_exposure_experiment_ids(experiments_table):
+# def get_first_passing_omission_exposure_experiment_ids(experiments_table):
     # note: get_passed_experiments_from_experiments_table is not defined. Commenting out whole function to pass linter
     # data = get_passed_experiments_from_experiments_table(experiments_table)
     # data = data[data.session_type.isin(['OPHYS_1_images_B', 'OPHYS_1_images_A', 'OPHYS_1_images_G'])]
