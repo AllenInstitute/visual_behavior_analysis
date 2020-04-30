@@ -784,6 +784,7 @@ class MesoscopeICA(object):
             ct_fn_roi = add_suffix_to_path(self.rois_valid_paths[pkey]['roi'], '_ct')
             ct_fn_np = add_suffix_to_path(self.rois_valid_paths[pkey]['np'], '_ct')
             if not os.path.isfile(ct_fn_roi) or not os.path.isfile(ct_fn_np):
+                logging.info(f"validating traces against crosstalk")
                 tkey = 'roi'
                 self.rois_valid_ct[pkey] = self.rois_valid[pkey]
                 crosstalk = self.crosstalk[pkey][tkey]
@@ -799,6 +800,9 @@ class MesoscopeICA(object):
             else:
                 print(f"crosstalk validation json exists, skipping")
                 self.rois_valid_ct[pkey] = ju.read(ct_fn_roi)
+                
+            self.rois_valid_ct_paths[pkey]['roi'] = ct_fn_roi
+            self.rois_valid_ct_paths[pkey]['np'] = ct_fn_np
         return
 
     @staticmethod
@@ -976,7 +980,7 @@ class MesoscopeICA(object):
     @staticmethod
     def validate_against_vba(rois_valid_ica, exp_id, vba_cache=VBA_CACHE):
         """
-        :param rois_valid_ica: dict, returned by MesoscopeICA.pl1_rois_valid or MesoscopeICA.pl2_rois_valid
+        :param rois_valid_ica: dict, returned by MesoscopeICA.rois_valid or MesoscopeICA.rois_valid
         :param exp_id: int, LIMS experiment ID, can be retrieved by MesoscopeICA.pl1_exp_id or MesoscopeICA.pl2_exp_id
         :param vba_cache: str, path to visual behavior analysis package cache directory
         :return: rois_valid_vba: dict, same structure as rois_valid_ica

@@ -11,7 +11,6 @@ import visual_behavior.ophys.mesoscope.dataset as ms
 import gc
 import shutil
 import time
-import sys
 import sciris as sc
 import matplotlib.pyplot as plt
 from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
