@@ -243,7 +243,7 @@ def test_unmix_pair(test_session=None):
 
 def test_validate_cells_crosstalk(self):
 	# 1. test attributes
-	# 2. test that cells are amrked invalid based on crosstalk being above 130
+	# 2. test that cells are marked invalid based on crosstalk being above 130
 	return
 
 
@@ -255,13 +255,25 @@ def test_filter_dff_traces_crosstalk(session=None):
 
     ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
     pairs = ica_obj.dataset.get_paired_planes()
-    for pair in pairs:
-        ica_obj.set_exp_ids(pair)
-        ica_obj.get_ica_traces()
-        ica_obj.validate_traces(return_vba=False)
-        ica_obj.debias_traces()
-        ica_obj.unmix_pair()
-        ica.obj.validate_cells_crosstalk()
-        ica_obj.filter_dff_traces_crosstalk()
+    pair = pairs[0]
+    ica_obj.set_exp_ids(pair)
+    ica_obj.get_ica_traces()
+    ica_obj.validate_traces(return_vba=False)
+    ica_obj.debias_traces()
+    ica_obj.unmix_pair()
+    ica_obj.validate_cells_crosstalk()
+    ica_obj.filter_dff_traces_crosstalk()
 
+    # 1. test that all attributes have been set
+    for pkey in ica_obj.pkeys:
+		assert len(ica_obj.dff_files[pkey]) != 0, f"Failed to set attributes self.dff_files for {ica_obj.exp_ids[pkey]}"
+		assert len(ica_obj.dff[pkey]) != 0, f"Failed to set attributes self.dffs for {ica_obj.exp_ids[pkey]}"
+		assert len(ica_obj.dff_ct_files[pkey]) != 0, f"Failed to set attributes self.dff_ct_files {ica_obj.exp_ids[pkey]}"
+		assert len(ica_obj.dff_ct[pkey]) != 0, f"Failed to set attributes self.dffs_ct for {ica_obj.exp_ids[pkey]}"
 
+	# 2. test that input dff files are aligned with ica_obj.rois_valid
+    for pkey in ica_obj.pkeys:
+	    assert len(ica_obj.dff[pkey]) == len(ica_obj.rois_names_valid[pkey]['roi']), f"dff traces are not alligned wiht rois_vali for exp {ica_obj.exp_ids[pkey]}"
+	# 3. test if filtered dff are aligned with ica_obj.rois_valid_ct
+    for pkey in ica_obj.pkeys:
+        assert len(ica_obj.dff_ct[pkey]) == len(ica_obj.rois_names_valid_ct[pkey]['roi']), f"filtered dff traces are not alligned wiht rois_vali for exp {ica_obj.exp_ids[pkey]}"
