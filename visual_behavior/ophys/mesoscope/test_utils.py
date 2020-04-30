@@ -23,6 +23,7 @@ def test_get_demixing_done_sessions():
     demixing_done_sessions = mu.get_demixing_done_sessions()
     return demixing_done_sessions
 
+
 if __name__ == "__main__":
     test_get_lims_done_sessions()
     test_get_ica_done_sessions()

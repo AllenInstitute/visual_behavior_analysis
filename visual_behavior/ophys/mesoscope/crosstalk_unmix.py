@@ -153,6 +153,11 @@ class MesoscopeICA(object):
         self.mixing = {}  # raw mixing matrix on the output of FastICA
         self.a_mixing = {}  # adjusted mixing matrix on the output of FastICA
         self.plot_dirs = {}
+        #dff files filtering attributes
+        self.dff_files = {}
+        self.dffs = {}
+        self.dff_ct_files = {}
+        self.dffs_ct = {}
         for pkey in self.pkeys:
             self.rois_names[pkey] = {}
             self.rois_names_valid[pkey] = {}
@@ -806,6 +811,33 @@ class MesoscopeICA(object):
             self.rois_names_valid_ct[pkey]['np'] = [roi for roi, valid in self.rois_valid_ct[pkey].items() if valid]
             self.rois_valid_ct_paths[pkey]['roi'] = ct_fn_roi
             self.rois_valid_ct_paths[pkey]['np'] = ct_fn_np
+        return
+
+    def filter_dff_traces_crosstalk(self):
+        for pkey in self.pkeys:
+            tkey = 'roi'
+            self.dff_files[pkey] = os.path.join(self.session_dir, f"{self.exp_ids[pkey]}_dff.h5")
+            with h5py.File(self.dff_files[pkey], 'r') as f:
+                self.dffs[pkey] = f['data'][()]
+            traces_dict = {}
+            assert self.dffs[pkey].shape[0] == len(
+                self.rois_names_valid[pkey][tkey]), f"Dff traces are not aligned to validation json for {self.exp_ids[pkey]}"
+            for i in range(len(self.rois_names_valid[pkey][tkey])):
+                roi_name = self.rois_names_valid[pkey][tkey][i]
+                traces_dict[roi_name] = self.dffs[pkey][i]
+            traces_dff_ct = [traces for roi_name, traces in traces_dict.items() if
+                             self.rois_valid_ct[pkey][str(roi_name)]]
+            dffs_ct_path = add_suffix_to_path(self.dff_files[pkey], '_ct')
+            if not os.path.isfile(dffs_ct_path):
+                with h5py.File(dffs_ct_path, "w") as f:
+                    f.create_dataset("data", data=traces_dff_ct, compression="gzip")
+                    f.create_dataset("roi_names",
+                                     data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
+            else:
+                with h5py.File(dffs_ct_path, "r") as f:
+                    traces_dff_ct = f["data"][()]
+            self.dffs_ct[pkey] = traces_dff_ct
+            self.dff_ct_files[pkey] = dffs_ct_path
         return
 
     @staticmethod

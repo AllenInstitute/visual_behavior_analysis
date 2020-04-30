@@ -245,3 +245,23 @@ def test_validate_cells_crosstalk(self):
 	# 1. test attributes
 	# 2. test that cells are amrked invalid based on crosstalk being above 130
 	return
+
+
+def test_filter_dff_traces_crosstalk(session=None):
+    if not session:
+        ses=839208243
+    else:
+        ses = session
+
+    ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+    pairs = ica_obj.dataset.get_paired_planes()
+    for pair in pairs:
+        ica_obj.set_exp_ids(pair)
+        ica_obj.get_ica_traces()
+        ica_obj.validate_traces(return_vba=False)
+        ica_obj.debias_traces()
+        ica_obj.unmix_pair()
+        ica.obj.validate_cells_crosstalk()
+        ica_obj.filter_dff_traces_crosstalk()
+
+
