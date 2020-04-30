@@ -143,8 +143,9 @@ class MesoscopeICA(object):
         # pointers and attributes for validation jsons
         self.rois_valid = {}
         self.rois_valid_paths = {}
-        self.rois_valid_ct_paths = {}
         self.rois_valid_ct = {}
+        self.rois_names_valid_ct = {}
+        self.rois_valid_ct_paths = {}
         # pointers and attirbutes for ica output files
         self.outs = {}  # output unmixing traces
         self.outs_paths = {}  # paths to save unmixing output
@@ -155,6 +156,7 @@ class MesoscopeICA(object):
         for pkey in self.pkeys:
             self.rois_names[pkey] = {}
             self.rois_names_valid[pkey] = {}
+            self.rois_names_valid_ct[pkey] = {}
             self.rois_valid[pkey] = {}
             self.rois_valid_paths[pkey] = {}
             self.rois_valid_ct[pkey] = {}
@@ -173,6 +175,7 @@ class MesoscopeICA(object):
             for tkey in self.tkeys:
                 self.rois_names[pkey][tkey] = None
                 self.rois_names_valid[pkey][tkey] = None
+                self.rois_names_valid_ct[pkey][tkey] = None
                 self.raws[pkey][tkey] = None
                 self.raw_paths[pkey][tkey] = None
                 self.rois_valid_paths[pkey][tkey] = None
@@ -779,7 +782,6 @@ class MesoscopeICA(object):
         :return:
 
         """
-        self.rois_valid_ct = {}
         for pkey in self.pkeys:
             ct_fn_roi = add_suffix_to_path(self.rois_valid_paths[pkey]['roi'], '_ct')
             ct_fn_np = add_suffix_to_path(self.rois_valid_paths[pkey]['np'], '_ct')
@@ -800,7 +802,8 @@ class MesoscopeICA(object):
             else:
                 print(f"crosstalk validation json exists, skipping")
                 self.rois_valid_ct[pkey] = ju.read(ct_fn_roi)
-                
+            self.rois_names_valid_ct[pkey]['roi'] = [roi for roi, valid in self.rois_valid_ct[pkey].items() if valid]
+            self.rois_names_valid_ct[pkey]['np'] = [roi for roi, valid in self.rois_valid_ct[pkey].items() if valid]
             self.rois_valid_ct_paths[pkey]['roi'] = ct_fn_roi
             self.rois_valid_ct_paths[pkey]['np'] = ct_fn_np
         return
