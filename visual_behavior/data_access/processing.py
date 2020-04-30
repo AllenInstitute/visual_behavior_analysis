@@ -364,6 +364,7 @@ def get_valid_csids_from_lims_for_container(ophys_container_id):
     valid_container_csid_df = valid_container_csid_df.dropna(subset=['cell_specimen_id'])
     return valid_container_csid_df
 
+
 def get_valid_and_invalid_csids_from_lims_for_container(ophys_container_id):
     """uses the LIMS cell_roi_table and returns all
         cell_specimen_ids and for all PASSED ophys_experiment_id's
@@ -384,7 +385,9 @@ def get_valid_and_invalid_csids_from_lims_for_container(ophys_container_id):
     container_csid_table = container_csid_table.dropna(subset=['cell_specimen_id'])
     return container_csid_table
 
-#### does this go in data.validation?
+# does this go in data.validation?
+
+
 def cell_specimen_id_matches_in_dataframe(dataframe):
     """takes a dataframe that contains the column "cell_specimen_id"
         and returns the number of times that cell_specimen_id appears

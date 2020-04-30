@@ -1,5 +1,4 @@
 from allensdk.internal.api import PostgresQueryMixin
-from visual_behavior.translator.allensdk_sessions import sdk_utils
 import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
@@ -103,14 +102,14 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
                 experiments -- filtered version of ophys_experiment_table from cache
             """
     if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
-        experiments = pd.read_csv(os.path.join(get_cache_dir(),'filtered_ophys_experiment_table.csv'))
+        experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     else:
         cache = get_visual_behavior_cache()
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
         experiments = filtering.limit_to_production_project_codes(experiments)
         experiments = experiments.set_index('ophys_experiment_id')
-        experiments.to_csv(os.path.join(get_cache_dir(),'filtered_ophys_experiment_table.csv'))
+        experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
 
     if include_failed_data:
         experiments = filtering.limit_to_experiments_with_final_qc_state(experiments)
@@ -146,9 +145,9 @@ def get_filtered_ophys_session_table():
     return sessions
 
 
-def get_ophys_container_ids():
+def get_ophys_container_ids(cache):
     """Get container_ids that meet the criteria in get_filtered_ophys_experiment_table(). """
-    experiments = get_experiment_table()
+    experiments = cache.get_experiment_table()
     container_ids = np.sort(experiments.container_id.unique())
     return container_ids
 
