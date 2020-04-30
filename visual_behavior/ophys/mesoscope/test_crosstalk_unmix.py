@@ -241,15 +241,9 @@ def test_unmix_pair(test_session=None):
 	# 3. test that unmixing is correct: unmixing_out - offset = unmixing_in / unmixing_matrix
 
 
-def test_validate_cells_crosstalk(self):
-	# 1. test attributes
-	# 2. test that cells are marked invalid based on crosstalk being above 130
-	return
-
-
 def test_filter_dff_traces_crosstalk(session=None):
     if not session:
-        ses=839208243
+        ses = 839208243
     else:
         ses = session
 
@@ -273,7 +267,9 @@ def test_filter_dff_traces_crosstalk(session=None):
 
 	# 2. test that input dff files are aligned with ica_obj.rois_valid
     for pkey in ica_obj.pkeys:
-	    assert len(ica_obj.dff[pkey]) == len(ica_obj.rois_names_valid[pkey]['roi']), f"dff traces are not alligned wiht rois_vali for exp {ica_obj.exp_ids[pkey]}"
+	    assert len(ica_obj.dff[pkey]) == len(ica_obj.rois_names_valid[pkey]['roi']), \
+		                                     f"dff traces are not alligned wiht rois_vali for exp {ica_obj.exp_ids[pkey]}"
 	# 3. test if filtered dff are aligned with ica_obj.rois_valid_ct
     for pkey in ica_obj.pkeys:
-        assert len(ica_obj.dff_ct[pkey]) == len(ica_obj.rois_names_valid_ct[pkey]['roi']), f"filtered dff traces are not alligned wiht rois_vali for exp {ica_obj.exp_ids[pkey]}"
+        assert len(ica_obj.dff_ct[pkey]) == len(ica_obj.rois_names_valid_ct[pkey]['roi']), \
+	                                            f"filtered dff traces are not alligned wiht rois_vali for exp {ica_obj.exp_ids[pkey]}"
