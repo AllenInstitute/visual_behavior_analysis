@@ -169,7 +169,7 @@ class ResponseAnalysis(object):
             df = df.merge(trials, right_on='trials_id', left_on='trials_id')
         elif ('stimulus' in df_name) or ('omission' in df_name):
             if self.use_extended_stimulus_presentations:
-                self.dataset.extended_stimulus_presentations = get_extended_stimulus_presentations(self.dataset)
+                self.dataset.extended_stimulus_presentations = loading.get_extended_stimulus_presentations(self.dataset)
                 stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
             else:
                 stimulus_presentations = self.dataset.stimulus_presentations.copy()
