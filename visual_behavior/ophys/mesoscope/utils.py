@@ -11,7 +11,7 @@ import visual_behavior.ophys.mesoscope.dataset as ms
 import gc
 import shutil
 import time
-
+import sciris as sc
 import matplotlib.pyplot as plt
 from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
 
@@ -77,16 +77,20 @@ def run_ica_on_pair(session, pair, roi_name=None, np_name=None):
     return
 
 
-def get_ica_done_sessions():
+def get_ica_done_sessions(session_list=None):
     """
     function to scan all LIMS sessions nad return lists of ones that have been run through crosstalk demixing successfully, and that have not.
     as well as all mesoscope data found in lime
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame]
     """
-    meso_data = ms.get_all_mesoscope_data()
-    meso_data['ICA_demix_roi_session'] = 0
-    sessions = meso_data['session_id']
-    sessions = sessions.drop_duplicates()
+    if not session_list:
+        meso_data = ms.get_all_mesoscope_data()
+        meso_data['ICA_demix_roi_session'] = 0
+        sessions = meso_data['session_id']
+        sessions = sessions.drop_duplicates()
+    else:
+        sessions = session_list
+    ica_done_sessions = []
     for session in sessions:
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
@@ -102,72 +106,64 @@ def get_ica_done_sessions():
                     if not os.path.isfile(ica_obj.outs_paths[pkey][tkey]):
                         session_ica_complete = False
         if session_ica_complete:
-            meso_data['ICA_demix_roi_session'].loc[meso_data.session_id == session] = 1
-    ica_roi_success = meso_data.loc[meso_data['ICA_demix_roi_session'] == 1]
-    ica_roi_fail = meso_data.loc[meso_data['ICA_demix_roi_session'] == 0]
-    return ica_roi_success, ica_roi_fail, meso_data
+            ica_done_sessions.append(session)
+    return ica_done_sessions
 
 
-def get_demixing_done_sessions():
+def get_demixing_done_sessions(session_list=None):
     """
     function to find all post-ica sessions that also ran through LIMS demixing module
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : demixing_done, demixing_not_done, ica_success
     """
-    ica_success, _, _ = get_ica_done_sessions()
-    ica_success['demixing_done_exp'] = 0
-    ica_success['demixing_done_session'] = 0
-    sessions = ica_success['session_id']
-    sessions = sessions.drop_duplicates()
+    if not session_list:
+        meso_data = ms.get_all_mesoscope_data()
+        sessions = meso_data['session_id'].drop_duplicates()
+    else:
+        sessions = session_list
+
+    demixing_done_sessions = []
     for session in sessions:
+        demixing_session_done = True
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
         for pair in pairs:
             ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
-            ica_obj.set_exp_ids(pair)
-            ica_obj.set_ica_dirs()
-            if os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[0]}_dff.h5")):
-                ica_success['demixing_done_exp'].loc[ica_success['experiment_id'] == pair[0]] = 1
-            if os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[1]}_dff.h5")):
-                ica_success['demixing_done_exp'].loc[ica_success['experiment_id'] == pair[1]] = 1
-            session_data = ica_success.loc[ica_success['session_id'] == session]
-            if all(session_data.LIMS_done_exp == 1):
-                for exp in session_data.experiment_id:
-                    ica_success['demixing_done_session'].loc[ica_success.experiment_id == exp] = 1
-    lims_roi_success = ica_success.loc[ica_success['demixing_done_session'] == 1]
-    lims_roi_fail = ica_success.loc[ica_success['demixing_done_session'] == 0]
-
-    return lims_roi_success, lims_roi_fail, ica_success
+            if not os.path.isdir(os.path.join(ica_obj.session_dir, f"demixing_{pair[0]}")):
+                demixing_session_done = False
+            if not os.path.isdir(os.path.join(ica_obj.session_dir, f"demixing_{pair[1]}")):
+                demixing_session_done = False
+        if demixing_session_done:
+            demixing_done_sessions.append(session)
+    return demixing_done_sessions
 
 
-def get_lims_done_sessions():
+def get_lims_done_sessions(session_list=None):
     """
     function to find all post-ica sessions that also ran through LIMS modules
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : lims_roi_success, lims_roi_fail, ica_success
     """
-    ica_success, _, _ = get_ica_done_sessions()
-    ica_success['LIMS_done_exp'] = 0
-    ica_success['LIMS_done_session'] = 0
-    sessions = ica_success['session_id']
-    sessions = sessions.drop_duplicates()
+    if not session_list:
+        meso_data = ms.get_all_mesoscope_data()
+        sessions = meso_data['session_id'].drop_duplicates()
+    else:
+        sessions = session_list
+    lims_sessions = []
     for session in sessions:
         dataset = ms.MesoscopeDataset(session)
         pairs = dataset.get_paired_planes()
+        lims_session_done = True
         for pair in pairs:
             ica_obj = ica.MesoscopeICA(session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
             ica_obj.set_exp_ids(pair)
             ica_obj.set_ica_dirs()
-            if os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[0]}_dff.h5")):
-                ica_success['LIMS_done_exp'].loc[ica_success['experiment_id'] == pair[0]] = 1
-            if os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[1]}_dff.h5")):
-                ica_success['LIMS_done_exp'].loc[ica_success['experiment_id'] == pair[1]] = 1
-            session_data = ica_success.loc[ica_success['session_id'] == session]
-            if all(session_data.LIMS_done_exp == 1):
-                for exp in session_data.experiment_id:
-                    ica_success['LIMS_done_session'].loc[ica_success.experiment_id == exp] = 1
-    lims_roi_success = ica_success.loc[ica_success['LIMS_done_session'] == 1]
-    lims_roi_fail = ica_success.loc[ica_success['LIMS_done_session'] == 0]
+            if not os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[0]}_dff.h5")):
+                lims_session_done = False
+            if not os.path.isfile(os.path.join(ica_obj.session_dir, f"{pair[1]}_dff.h5")):
+                lims_session_done = False
+        if lims_session_done:
+            lims_sessions.append(session)
 
-    return lims_roi_success, lims_roi_fail, ica_success
+    return lims_sessions
 
 
 def get_ica_exp_by_cre_line(cre_line, md):
@@ -609,7 +605,7 @@ def before_date(file_date, thr_date="01/01/2020"):
     return flag
 
 
-def clean_up_cache(sessions, cache, remove_inputs=False, remove_by_date="01/01/2020"):
+def clean_up_cache(sessions, cache, remove_lims=False, remove_raw_traces=False, remove_valid=False, remove_ica_input=False, remove_ica_output=False, remove_ica_plots=False, remove_by_date="01/01/2020"):
     """
     deletes ica outputs from cache:
         neuropil_ica_output_pair{i}.h5
@@ -621,9 +617,14 @@ def clean_up_cache(sessions, cache, remove_inputs=False, remove_by_date="01/01/2
         neuropil correction files
         demixing files
         dff traces files
+    :param remove_lims: flag that controls whether we are deleting lims outputs files
+    :param remove_ica_plots: flag that controls whether we are deleting ica plots
+    :param remove_ica_output: flag that controls whether we are deleting ica output hdf5 file
+    :param remove_ica_input: flag that controls whether we are deleting ica input hdf5 file
+    :param remove_valid: flag that controls whether we are deleting valid json file
     :param remove_by_date: file creating date threshold - don't remove if created after this date
     :param sessions: list of LIMS session ids
-    :param remove_inputs: falg that controls whether we are deleting extracted traces or not
+    :param remove_raw_traces: falg that controls whether we are deleting extracted traces or not
     :param cache: cache directory
     :return: None
     """
@@ -645,80 +646,87 @@ def clean_up_cache(sessions, cache, remove_inputs=False, remove_by_date="01/01/2
                     exp_dir = ica_obj.dirs[tkey]
                     if os.path.isdir(exp_dir):
                         for pkey in ica_obj.pkeys:
+                            if remove_raw_traces:
+                                raw = ica_obj.raw_paths[pkey][tkey]
+                                if os.path.isfile(raw):
+                                    if before_date(raw, remove_by_date):
+                                        print(f'Deteling {raw}')
+                                        os.remove(raw)
+                            if remove_ica_output:
                                 out = ica_obj.outs_paths[pkey][tkey]
-                                valid = ica_obj.rois_valid_paths[pkey][tkey]
-                                ica_input = ica_obj.ins_paths[pkey][tkey]
-                                plot_dir = ica_obj.plot_dirs[pkey][tkey]
                                 if os.path.isfile(out):
                                     if before_date(out, remove_by_date):
-                                        print(f'deteling {out}')
+                                        print(f'Deteling {out}')
                                         os.remove(out)
-                                if os.path.isfile(valid):
-                                    if before_date(valid, remove_by_date):
-                                        print(f'deteling {valid}')
-                                        os.remove(valid)
+                            if remove_ica_input:
+                                ica_input = ica_obj.ins_paths[pkey][tkey]
                                 if os.path.isfile(ica_input):
                                     if before_date(ica_input, remove_by_date):
-                                        print(f'deteling {ica_input}')
+                                        print(f'Deteling {ica_input}')
                                         os.remove(ica_input)
+                            if remove_valid:
+                                valid = ica_obj.rois_valid_paths[pkey][tkey]
+                                if os.path.isfile(valid):
+                                    if before_date(valid, remove_by_date):
+                                        print(f'Deteling {valid}')
+                                        os.remove(valid)
+                            if remove_ica_plots:
+                                plot_dir = ica_obj.plot_dirs[pkey][tkey]
                                 if os.path.isdir(plot_dir):
                                     if before_date(plot_dir, remove_by_date):
-                                        print(f'deteling {plot_dir}')
+                                        print(f'Deteling {plot_dir}')
                                         shutil.rmtree(plot_dir, ignore_errors=True)
-                                if remove_inputs:
-                                    raw = ica_obj.raw_paths[pkey][tkey]
-                                    if os.path.isfile(raw):
-                                        if before_date(raw, remove_by_date):
-                                            print(f'deteling {raw}')
-                                            os.remove(raw)
                     else:
                         print(f"ICA ROI dir does not exist: {exp_dir}")
-                # removing LIMS processing outputs:
-                dem_out_p1 = os.path.join(ses_dir, f'demixing_{pair[0]}')
-                dem_out_p2 = os.path.join(ses_dir, f'demixing_{pair[1]}')
-                np_out_p1 = os.path.join(ses_dir, f'neuropil_corrected_{pair[0]}')
-                np_out_p2 = os.path.join(ses_dir, f'neuropil_corrected_{pair[1]}')
-                dff_p1 = os.path.join(ses_dir, f'{pair[0]}_dff.h5')
-                dff_p2 = os.path.join(ses_dir, f'{pair[1]}_dff.h5')
-                # removing dff files
-                if os.path.isfile(dff_p1):
-                    if before_date(dff_p1, remove_by_date):
-                        os.remove(dff_p1)
-                        print(f'deteling {dff_p2}')
-                if os.path.isfile(dff_p2):
-                    if before_date(dff_p2, remove_by_date):
-                        os.remove(dff_p2)
-                        print(f'deteling {dff_p2}')
-                # removing directories for demixing plane 1
-                if os.path.isdir(dem_out_p1):
-                    if before_date(dem_out_p1, remove_by_date):
-                        shutil.rmtree(dem_out_p1, ignore_errors=True)
-                        print(f'deteling {dem_out_p1}')
-                # removing directories for demixing plane 2
-                if os.path.isdir(dem_out_p2):
-                    if before_date(dem_out_p2, remove_by_date):
-                        shutil.rmtree(dem_out_p2, ignore_errors=True)
-                        print(f'deteling {dem_out_p2}')
-                # removing directories for neuropil correction plane 1
-                if os.path.isdir(np_out_p1):
-                    if before_date(np_out_p1, remove_by_date):
-                        shutil.rmtree(np_out_p1, ignore_errors=True)
-                        print(f'deteling {np_out_p1}')
-                # removing directories for neuropil correction plane 2
-                if os.path.isdir(np_out_p2):
-                    if before_date(np_out_p2, remove_by_date):
-                        shutil.rmtree(np_out_p2, ignore_errors=True)
-                        print(f'deteling {np_out_p2}')
+                if remove_lims:
+                    # removing LIMS processing outputs:
+                    dem_out_p1 = os.path.join(ses_dir, f'demixing_{pair[0]}')
+                    dem_out_p2 = os.path.join(ses_dir, f'demixing_{pair[1]}')
+                    np_out_p1 = os.path.join(ses_dir, f'neuropil_corrected_{pair[0]}')
+                    np_out_p2 = os.path.join(ses_dir, f'neuropil_corrected_{pair[1]}')
+                    dff_p1 = os.path.join(ses_dir, f'{pair[0]}_dff.h5')
+                    dff_p2 = os.path.join(ses_dir, f'{pair[1]}_dff.h5')
+                    # removing dff files
+                    if os.path.isfile(dff_p1):
+                        if before_date(dff_p1, remove_by_date):
+                            os.remove(dff_p1)
+                            print(f'deteling {dff_p2}')
+                    if os.path.isfile(dff_p2):
+                        if before_date(dff_p2, remove_by_date):
+                            os.remove(dff_p2)
+                            print(f'deteling {dff_p2}')
+                    # removing directories for demixing plane 1
+                    if os.path.isdir(dem_out_p1):
+                        if before_date(dem_out_p1, remove_by_date):
+                            shutil.rmtree(dem_out_p1, ignore_errors=True)
+                            print(f'deteling {dem_out_p1}')
+                    # removing directories for demixing plane 2
+                    if os.path.isdir(dem_out_p2):
+                        if before_date(dem_out_p2, remove_by_date):
+                            shutil.rmtree(dem_out_p2, ignore_errors=True)
+                            print(f'deteling {dem_out_p2}')
+                    # removing directories for neuropil correction plane 1
+                    if os.path.isdir(np_out_p1):
+                        if before_date(np_out_p1, remove_by_date):
+                            shutil.rmtree(np_out_p1, ignore_errors=True)
+                            print(f'deteling {np_out_p1}')
+                    # removing directories for neuropil correction plane 2
+                    if os.path.isdir(np_out_p2):
+                        if before_date(np_out_p2, remove_by_date):
+                            shutil.rmtree(np_out_p2, ignore_errors=True)
+                            print(f'deteling {np_out_p2}')
+                else:
+                    logger.info("Not removing LIMS outputs")
 
     return
 
 
-def delete_old_files(sessions, CACHE, names_files= None, remove_by_date='04/01/2020'):
+def delete_old_files(sessions, ch, names_files=None, remove_by_date='04/01/2020'):
     if not names_files:
         names_files = {'roi': ['ica_traces', 'traces_ica', 'roi_traces', 'traces_roi', 'crosstalk', 'mixing'],
                        'np': ['ica_neuropil', 'neuropil_ica', 'crosstalk', 'mixing']}
     for session in sessions:
-        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=ch, roi_name="ica_traces", np_name="ica_neuropil")
         ses_dir = ica_obj.session_dir
         print(f'scanning sesion : {session}')
         if os.path.isdir(ses_dir):
@@ -788,6 +796,11 @@ def refactor_valid(sessions):
 
 
 def refactor_outputs(sessions):
+    """
+    this fn adds offset to the outputs is they where written to disk debiased
+    :param sessions:
+    :return:
+    """
     for session in sessions:
         print(f'processing session: {session}')
         ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
@@ -812,11 +825,11 @@ def refactor_outputs(sessions):
                     # copy old output ot out_1.h5
                     old_path = self.outs_paths[pkey][tkey]
                     # make a paht to the new filename
-                    new_path = sc.makefilepath(filename = f"{self.exp_ids[pkey]}_out_1.h5", folder = self.dirs[tkey])
+                    new_path = os.path.join(self.dirs[tkey], f"{self.exp_ids[pkey]}_out_1.h5")
                     # copy valid json to the new filename
                     if os.path.isfile(new_path):
                         print(f"skipping experint {self.exp_ids[pkey]}")
-                        continue # skipping to next exp
+                        continue  # skipping to next exp
                     else:
                         if os.path.isfile(self.ins_paths[pkey][tkey]) and os.path.isfile(self.outs_paths[pkey][tkey]):
                             print(f'processing experiment {self.exp_ids[pkey]}, {tkey}')
@@ -835,10 +848,203 @@ def refactor_outputs(sessions):
                                                      traces_out[pkey][tkey][1] + self.offsets[pkey][tkey]['ct_offset']])
                             shutil.copy(old_path, new_path)
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
-                                f.create_dataset(f"data", data=self.outs[pkey][tkey])
+                                f.create_dataset(f"data", data=self.outs[pkey][tkey], compression="gzip")
                                 f.create_dataset(f"crosstalk", data=self.crosstalk[pkey][tkey])
                                 f.create_dataset(f"mixing_matrix_adjusted", data=self.a_mixing[pkey][tkey])
                                 f.create_dataset(f"mixing_matrix", data=self.mixing[pkey][tkey])
                         else:
                             print(f"input or putput for exp {self.exp_ids[pkey]}, {tkey} doesn't exist")
     return
+
+
+def plot_ica_traces(sig, ct, name, title):
+    plt.figure(figsize=(20, 10))
+    plt.rcParams.update({'font.size': 22})
+    plt.subplot(211)
+    plt.ylim(min(min(sig), min(ct)), max(max(sig), max(ct)))
+    plt.plot(sig, 'r-', label='signal pl')
+    plt.plot(ct, 'g-', label='cross-talk pl')
+    plt.title(f'{title} for cell {name}', fontsize=18)
+    plt.legend(loc='best')
+    return
+
+
+def get_all_rois_crosstalk(session_list=None):
+    if not session_list:
+        meso_data = ms.get_all_mesoscope_data()
+        sessions = meso_data['session_id'].drop_duplicates()
+    else:
+        sessions = session_list
+    rois_crosstalk_dict = {}
+    rois_crosstalk_before_list = []
+    rois_crosstalk_after_list = []
+    for session in sessions:
+        rois_crosstalk_dict[session] = {}
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+        pairs = ica_obj.dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj.set_exp_ids(pair)
+            ica_obj.set_ica_dirs()
+            ica_obj.set_ica_input_paths()
+            ica_obj.set_out_paths()
+            ica_obj.set_valid_paths()
+            for pkey in ica_obj.pkeys:
+                tkey = 'roi'
+                # read ica input, output and valid json data
+                with h5py.File(ica_obj.outs_paths[pkey][tkey], "r") as f:
+                    ica_obj.crosstalk[pkey][tkey] = f["crosstalk"][()]
+                rois_valid = ju.read(ica_obj.rois_valid_paths[pkey][tkey])
+                crosstalk = ica_obj.crosstalk[pkey][tkey]
+                crosstalk_before = crosstalk[0]
+                crosstalk_after = crosstalk[1]
+                rois_crosstalk_before_list.append(crosstalk_before)
+                rois_crosstalk_after_list.append(crosstalk_after)
+                roi_names = [roi for roi, valid in rois_valid.items() if valid]
+                for i in range(len(roi_names)):
+                    roi_name = roi_names[i]
+                    rois_crosstalk_dict[session][roi_name] = {'crosstalk_before': crosstalk_before[i], 'crosstalk_after': crosstalk_after[i]}
+
+    return rois_crosstalk_dict, rois_crosstalk_before_list, rois_crosstalk_after_list
+
+
+def get_errors_lims(sessions):
+    lims_fail_log = {}
+    for session in sessions:
+        try:
+            print(f"Running neuropil correction on {session}")
+            run_neuropil_correction_on_ica(str(session))
+        except Exception as e:
+            print(f"Error in np correction, session: {session}")
+            lims_fail_log[session] = {}
+            lims_fail_log[session] = {'proccess': 'neuropil_correcton'}, {'error': e}
+        else:
+            print(f"Finihsed np correction  for session {session}")
+
+            try:
+                print(f"Calculating dff for {session}")
+                run_dff_on_ica(str(session))
+            except Exception as e:
+                print(f"Error in dff calculation session: {session}")
+                lims_fail_log[session] = {}
+                lims_fail_log[session] = {'proccess': 'calculating dff'}, {'error': e}
+            else:
+                print(f"Finihsed dff calculation for session {session}")
+    return lims_fail_log
+
+
+def del_files_with_str(sessions, ext):
+    """
+    :param sessions: list of sessons to go through and clean up
+    :param ext: list of strings to look int he filenames for deletion
+    :return:
+    """
+    for session in sessions:
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE)
+        pairs = ica_obj.dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj.set_exp_ids(pair)
+            ica_obj.set_ica_dirs()
+            for tkey in ica_obj.tkeys:
+                os.chdir(ica_obj.dirs[tkey])
+                for ext_i in ext:
+                    found_out = sc.runcommand(f'find *{ext_i}*')
+                    if "No such file" not in found_out:
+                        print(f"Found files:{found_out}Deleting")
+                        sc.runcommand(f"rm -rf *{ext_i}*")
+
+
+def refactor_outputs_to_lims(sessions):
+    for session in sessions:
+        logging.info(f"Processing session {session}")
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+        pairs = ica_obj.dataset.get_paired_planes()
+        for pair in pairs:
+            ica_obj.set_exp_ids(pair)
+            ica_obj.get_ica_traces()
+            ica_obj.validate_traces(return_vba=False)
+            ica_obj.debias_traces()
+            ica_obj.unmix_pair()
+            for pkey in ica_obj.pkeys:
+                rois_valid = [i for i, valid in ica_obj.rois_valid[pkey].items() if valid]
+                num_rois_valid = len(rois_valid)
+                for tkey in ica_obj.tkeys:
+                    num_outputs = ica_obj.outs[pkey][tkey][0].shape[0]
+                    assert num_outputs == num_rois_valid, "Number of outputs not equal to number of valid roi names"
+                    # make new output: add _lims at the end
+                    lims_path = add_suffix_to_path(ica_obj.outs_paths[pkey][tkey], '_lims')
+                    if not os.path.isfile(lims_path):
+                        with h5py.File(lims_path, "w") as f:
+                            f.create_dataset("data", data=ica_obj.outs[pkey][tkey], compression="gzip")
+                            f.create_dataset("roi_names", data=[np.string_(rn) for rn in ica_obj.rois_names_valid[pkey][tkey]])
+                            f.create_dataset("crosstalk", data=ica_obj.crosstalk[pkey][tkey])
+                            f.create_dataset("mixing_matrix_adjusted", data=ica_obj.a_mixing[pkey][tkey])
+                            f.create_dataset("mixing_matrix", data=ica_obj.mixing[pkey][tkey])
+                    else:
+                        logging.info(f"Lims output exists for exp {ica_obj.exp_ids[pkey]}")
+        del ica_obj
+    return
+
+
+def add_suffix_to_path(abs_path, suffix):
+    file_ext = os.path.splitext(abs_path)[1]
+    file_name = os.path.splitext(abs_path)[0]
+    new_file_name = f"{file_name}{suffix}{file_ext}"
+    return new_file_name
+
+
+def filter_outputs_crosstalk(session):
+    # read traces for these rois:
+    ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+    pairs = ica_obj.dataset.get_paired_planes()
+    for pair in pairs:
+        ica_obj.set_exp_ids(pair)
+        ica_obj.get_ica_traces()
+        ica_obj.validate_traces(return_vba=False)
+        ica_obj.debias_traces()
+        ica_obj.unmix_pair()
+        ica_obj.validate_cells_crosstalk()
+        ica_obj.outs_ct = {}
+        ica_obj.roi_names_valid_ct = {}
+        ica_obj.outs_ct_path = {}
+        for pkey in ica_obj.pkeys:
+            ica_obj.outs_ct[pkey] = {}
+            ica_obj.roi_names_valid_ct[pkey] = {}
+            ica_obj.outs_ct_path[pkey] = {}
+            rois_valid_ct = ica_obj.rois_valid_ct[pkey]
+            for tkey in ica_obj.tkeys:
+                sig_outs = ica_obj.outs[pkey][tkey][0]
+                ct_outs = ica_obj.outs[pkey][tkey][1]
+                traces_dict = {}
+                if ct_outs.shape[0] == len(ica_obj.rois_names_valid[pkey][tkey]):
+                    for i in range(len(ica_obj.rois_names_valid[pkey][tkey])):
+                        roi_name = ica_obj.rois_names_valid[pkey][tkey][i]
+                        traces_dict[roi_name] = {}
+                        traces_dict[roi_name]['sig'] = sig_outs[i]
+                        traces_dict[roi_name]['ct'] = ct_outs[i]
+                traces_out_sig = [traces['sig'] for roi_name, traces in traces_dict.items() if
+                                  rois_valid_ct[str(roi_name)]]
+                traces_out_ct = [traces['ct'] for roi_name, traces in traces_dict.items() if
+                                 rois_valid_ct[str(roi_name)]]
+                traces_out = np.array([traces_out_sig, traces_out_ct])
+                ct_outs_path = add_suffix_to_path(ica_obj.outs_paths[pkey][tkey], '_ct')
+                roi_names_valid_ct = [roi_name for roi_name, valid in ica_obj.rois_valid_ct[pkey].items() if valid]
+                if not os.path.isfile(ct_outs_path):
+                    with h5py.File(ct_outs_path, "w") as f:
+                        f.create_dataset("data", data=traces_out, compression="gzip")
+                        f.create_dataset("roi_names", data=[str(rn) for rn in roi_names_valid_ct])
+                        f.create_dataset("crosstalk", data=ica_obj.crosstalk[pkey][tkey])
+                        f.create_dataset("mixing_matrix_adjusted", data=ica_obj.a_mixing[pkey][tkey])
+                        f.create_dataset("mixing_matrix", data=ica_obj.mixing[pkey][tkey])
+                else:
+                    with h5py.File(ct_outs_path, "r") as f:
+                        traces_out = f["data"][()]
+                        roi_names_valid_ct = f["roi_names"][()]
+                        ica_obj.crosstalk[pkey][tkey] = f["crosstalk"][()]
+                        ica_obj.a_mixing[pkey][tkey] = f["mixing_matrix_adjusted"]
+                        ica_obj.mixing[pkey][tkey] = f["mixing_matrix"]
+
+                ica_obj.outs_ct[pkey][tkey] = traces_out
+                ica_obj.roi_names_valid_ct[pkey][tkey] = roi_names_valid_ct
+                ica_obj.outs_ct_path[pkey][tkey] = ct_outs_path
+    return ica_obj
+

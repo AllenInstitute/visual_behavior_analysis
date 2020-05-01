@@ -115,6 +115,7 @@ class MesoscopeDataset(object):
         self.full_field_present = None
         self.splitting_json_present = None
         self.exp_id = None
+        self.pairs = self.get_paired_planes()
 
     def get_session_id(self):
         return self.session_id
@@ -157,7 +158,7 @@ class MesoscopeDataset(object):
                     "join projects p on p.id = os.project_id "
                     "join imaging_depths on imaging_depths.id = oe.imaging_depth_id "
                     "join structures st on st.id = oe.targeted_structure_id "
-                    "where (p.code = 'MesoscopeDevelopment' or p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d' ) and os.workflow_state ='uploaded' "
+                    "where (p.code = 'get+paiscopeDevelopment' or p.code = 'VisualBehaviorMultiscope' or p.code = 'VisualBehaviorMultiscope4areasx2d' ) and os.workflow_state ='uploaded' "
                     " and os.id='{}'  ",
                 ))
 
@@ -239,6 +240,38 @@ class MesoscopeDataset(object):
         if not os.path.isfile(splitting_json_path):
             logger.error("Unable to find splitting json")
         return splitting_json_path
+
+    def get_paired_planes(self):
+        pairs = []
+        try:
+            query = (f"""SELECT 
+            os.id as session_id, 
+            oe.id as exp_id,
+            oe.ophys_imaging_plane_group_id as pair_id,
+            oipg.group_order
+            FROM ophys_sessions os
+            JOIN ophys_experiments oe ON oe.ophys_session_id=os.id
+            JOIN ophys_imaging_plane_groups oipg ON oipg.id=oe.ophys_imaging_plane_group_id
+            WHERE os.id = {self.session_id}
+            ORDER BY exp_id
+            """)
+            pairs_df = pd.DataFrame(psycopg2_select(query))
+        except Exception as e:
+            logger.error("Unable to query LIMS database: {}".format(e))
+        if len(pairs_df) > 0:
+            num_groups = pairs_df['group_order'].drop_duplicates().values
+            for i in num_groups:
+                pair = [exp_id for exp_id in pairs_df.loc[pairs_df['group_order'] == i].exp_id]
+                pairs.append(pair)
+        else:
+            logging.warning(f"Lims returned no group information about session {self.session_id}, using hardcoded splitting json filename")
+            splitting_json = self.get_splitting_json()
+            with open(splitting_json, "r") as f:
+                data = json.load(f)
+            for pg in data.get("plane_groups", []):
+                pairs.append([p["experiment_id"] for p in pg.get("ophys_experiments", [])])
+        self.pairs = pairs
+        return self.pairs
 
     def get_paired_planes(self):
         splitting_json = self.get_splitting_json()

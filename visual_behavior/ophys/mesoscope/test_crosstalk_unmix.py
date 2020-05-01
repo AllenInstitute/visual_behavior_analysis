@@ -1,11 +1,11 @@
 import numpy as np
 import os
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
-from scipy import linalg
+import sciris as sc
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 
-def test_get_ica_traces(test_session = None):
+def test_get_ica_traces(test_session=None):
 	"""
 	test for visual_behavior.ophys.mesoscope.crosstalk_unmix.MesoscopeICA.get_ica_traces()
 	Testing that:
@@ -113,7 +113,7 @@ def test_validate_traces(test_session = None):
 def test_debias_traces(test_session=None):
 	"""
 	testing trace debiasing:
-	:param test_session:
+	:param test_session: LIMS session ID to use in test
 	:return:
 	"""
 
@@ -240,3 +240,49 @@ def test_unmix_pair(test_session=None):
 				0], f"shape of filtered output traces CROSSTALK does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
 
 	# 3. test that unmixing is correct: unmixing_out - offset = unmixing_in / unmixing_matrix
+
+
+def test_filter_dff_traces_crosstalk(session=None):
+    if not session:
+        ses = 839208243
+        """LIMS session ID to use for test,
+	    use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
+	    which takes ~ 5 hours"""
+    else:
+        ses = session
+
+    ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+    pairs = ica_obj.dataset.get_paired_planes()
+    pair = pairs[0]
+    ica_obj.set_exp_ids(pair)
+    ica_obj.get_ica_traces()
+    ica_obj.validate_traces(return_vba=False)
+    ica_obj.debias_traces()
+    ica_obj.unmix_pair()
+    ica_obj.validate_cells_crosstalk()
+
+    # 0. if dff_ct files exist - delete them first, this test will regenerate the files
+    for pkey in ica_obj.pkeys:
+	    dff_file = os.path.join(ica_obj.session_dir, f"{ica_obj.exp_ids[pkey]}_dff_ct.h5")
+	    if os.path.isfile(dff_file):
+		    os.chdir(ica_obj.session_dir)
+		    print(f"Filtered dff files exist for {ica_obj.exp_ids[pkey]}, deleting for the test purposes")
+		    sc.runcommand(f"rm -rf {dff_file}")
+
+    ica_obj.filter_dff_traces_crosstalk()
+
+    # 1. test that all attributes have been set
+    for pkey in ica_obj.pkeys:
+	    assert len(ica_obj.dff_files[pkey]) != 0, f"Failed to set attributes self.dff_files for {ica_obj.exp_ids[pkey]}"
+	    assert len(ica_obj.dff[pkey]) != 0, f"Failed to set attributes self.dffs for {ica_obj.exp_ids[pkey]}"
+	    assert len(ica_obj.dff_ct_files[pkey]) != 0, f"Failed to set attributes self.dff_ct_files {ica_obj.exp_ids[pkey]}"
+	    assert len(ica_obj.dff_ct[pkey]) != 0, f"Failed to set attributes self.dffs_ct for {ica_obj.exp_ids[pkey]}"
+
+	# 2. test that input dff files are aligned with ica_obj.rois_valid
+    for pkey in ica_obj.pkeys:
+	    assert len(ica_obj.dff[pkey]) == len(ica_obj.rois_names_valid[pkey]['roi']), \
+		                                     f"dff traces are not alligned wiht rois_vali for exp {ica_obj.exp_ids[pkey]}"
+	# 3. test if filtered dff are aligned with ica_obj.rois_valid_ct
+    for pkey in ica_obj.pkeys:
+        assert len(ica_obj.dff_ct[pkey]) == len(ica_obj.rois_names_valid_ct[pkey]['roi']), \
+	                                            f"filtered dff traces are not alligned with rois_valid_ct for exp {ica_obj.exp_ids[pkey]}"
