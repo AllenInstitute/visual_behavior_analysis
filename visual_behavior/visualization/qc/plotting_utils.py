@@ -1,7 +1,7 @@
 import pandas as pd
 import seaborn as sns
 
-from visual_behavior.visualization.qc import data_processing as dp
+from visual_behavior.data_access import processing as data_processing
 
 
 def gen_stage_name_color_palettes():
@@ -66,7 +66,7 @@ def map_stage_name_colors_to_ophys_experiment_ids(dataframe):
 
 
 def experiment_id_stage_color_dict_for_experiment(ophys_experiment_id):
-    experiment_df = dp.ophys_experiment_info_df(ophys_experiment_id)
+    experiment_df = data_processing.ophys_experiment_info_df(ophys_experiment_id)
     exp_color_dict = map_stage_name_colors_to_ophys_experiment_ids(experiment_df)
     return exp_color_dict
 
@@ -80,7 +80,7 @@ def experiment_id_stage_color_dict_for_container(ophys_container_id):
     Returns:
         [type] -- [description]
     """
-    container_df = dp.ophys_container_info_df(ophys_container_id)
+    container_df = data_processing.ophys_container_info_df(ophys_container_id)
     exp_color_dict = map_stage_name_colors_to_ophys_experiment_ids(container_df)
     return exp_color_dict
 
