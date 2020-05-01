@@ -705,7 +705,6 @@ class MesoscopeICA(object):
                         for tkey in self.tkeys:
                             rois_valid[pkey][tkey] = self.rois_valid[pkey]
                             traces_in[pkey][tkey] = self.ins[pkey][tkey]
-
                             # don't run unmixing if neuropil, instead read roi unmixing matrix
                             if tkey == 'np':
                                 mixing[pkey][tkey] = self.a_mixing[pkey]['roi']
@@ -717,7 +716,6 @@ class MesoscopeICA(object):
                             else:
                                 traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
                                     = self.unmix_plane(traces_in[pkey][tkey], rois_valid[pkey][tkey])
-
                             # saving to self
                             self.outs[pkey][tkey] = np.array(
                                 [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['sig_offset'],
@@ -727,7 +725,6 @@ class MesoscopeICA(object):
                             self.mixing[pkey][tkey] = mixing[pkey][tkey]
                             self.a_mixing[pkey][tkey] = a_mixing[pkey][tkey]
                             self.found_solution[pkey][tkey] = True
-
                             # writing ica ouput traces to disk
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
                                 f.create_dataset("data", data=self.outs[pkey][tkey], compression="gzip")
@@ -735,7 +732,6 @@ class MesoscopeICA(object):
                                 f.create_dataset("crosstalk", data=self.crosstalk[pkey][tkey])
                                 f.create_dataset("mixing_matrix_adjusted", data=self.a_mixing[pkey][tkey])
                                 f.create_dataset("mixing_matrix", data=self.mixing[pkey][tkey])
-
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
             for pkey in self.pkeys:

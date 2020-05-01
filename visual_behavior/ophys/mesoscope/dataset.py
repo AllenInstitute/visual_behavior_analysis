@@ -34,67 +34,6 @@ def psycopg2_select(query, database=DEFAULT_DATABASE, host=DEFAULT_HOST, port=DE
     return response
 
 
-def get_all_mesoscope_data():
-    query = ("select os.id as session_id, oe.id as experiment_id, "
-             "os.storage_directory as session_folder, "
-             "oe.storage_directory as experiment_folder, "
-             "sp.name as specimen, "
-             "os.date_of_acquisition as date, "
-             "oe.workflow_state as exp_workflow_state, "
-             "os.workflow_state as session_workflow_state "
-             "from ophys_experiments oe "
-             "join ophys_sessions os on os.id = oe.ophys_session_id "
-             "join specimens sp on sp.id = os.specimen_id "
-             "join projects p on p.id = os.project_id "
-             "where (p.code = 'VisualBehaviorMultiscope' "
-             "or p.code = 'VisualBehaviorMultiscope4areasx2d' "
-             "or p.code = 'MesoscopeDevelopment') and os.workflow_state ='uploaded' "
-             "order by session_id")
-    return pd.DataFrame(psycopg2_select(query))
-
-
-def get_all_mesoscope_files():
-    query = (""" SELECT
-    e.name as rig_name, 
-    p.code as project_code, 
-    os.id AS ses_id, 
-    os.date_of_acquisition as date, 
-    oe.id AS exp_id, 
-    oe.storage_directory as exp_dir,
-    wkft.name AS wkf_type, 
-    wkf.storage_directory as movie_dir, 
-    wkf.filename as movie_name
-    FROM ophys_sessions os
-    JOIN ophys_experiments oe ON os.id = oe.ophys_session_id
-    JOIN projects p ON p.id = os.project_id
-    JOIN equipment e ON e.id = os.equipment_id
-    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
-    JOIN welL_known_file_types wkft ON wkft.id = wkf.welL_known_file_type_id AND wkft.name = 'MotionCorrectedImageStack'
-    WHERE e.name = 'MESO.1'""")
-    return pd.DataFrame(psycopg2_select(query))
-
-
-def get_mesoscope_exp_files(exp_id):
-    query = (f""" SELECT
-    e.name as rig_name, 
-    p.code as project_code, 
-    os.id AS ses_id, 
-    os.date_of_acquisition as date, 
-    oe.id AS exp_id, 
-    oe.storage_directory as exp_dir,
-    wkft.name AS wkf_type, 
-    wkf.storage_directory as movie_dir, 
-    wkf.filename as movie_name
-    FROM ophys_sessions os
-    JOIN ophys_experiments oe ON os.id = oe.ophys_session_id
-    JOIN projects p ON p.id = os.project_id
-    JOIN equipment e ON e.id = os.equipment_id
-    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
-    JOIN welL_known_file_types wkft ON wkft.id = wkf.welL_known_file_type_id AND wkft.name = 'MotionCorrectedImageStack'
-    WHERE e.name = 'MESO.1' AND oe.id = {exp_id}""")
-    return pd.DataFrame(psycopg2_select(query))
-
-
 class MesoscopeDataset(object):
     def __init__(self, session_id, experiment_id=None):
         self.exp_folder = None

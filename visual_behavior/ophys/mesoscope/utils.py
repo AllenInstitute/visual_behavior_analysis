@@ -14,11 +14,18 @@ import time
 import sciris as sc
 import matplotlib.pyplot as plt
 from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
-
+import pandas as pd
+import psycopg2
+import psycopg2.extras
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
+DEFAULT_DATABASE = 'lims2'
+DEFAULT_HOST = 'limsdb2'
+DEFAULT_PORT = 5432
+DEFAULT_USERNAME = 'limsreader'
+PW = 'limsro'
 
 
 def assert_exists(file_name):
@@ -34,6 +41,83 @@ def get_path(obj, key, check_exists):
     if check_exists:
         assert_exists(path)
     return path
+
+
+def psycopg2_select(query, database=DEFAULT_DATABASE, host=DEFAULT_HOST, port=DEFAULT_PORT, username=DEFAULT_USERNAME,
+                    password=PW):
+    connection = psycopg2.connect(
+        host=host, port=port, dbname=database, user=username, password=password,
+        cursor_factory=psycopg2.extras.RealDictCursor
+    )
+    cursor = connection.cursor()
+    try:
+        cursor.execute(query)
+        response = cursor.fetchall()
+    finally:
+        cursor.close()
+        connection.close()
+    return response
+
+
+def get_all_mesoscope_files():
+    query = (""" SELECT
+    e.name as rig_name, 
+    p.code as project_code, 
+    os.id AS ses_id, 
+    os.date_of_acquisition as date, 
+    oe.id AS exp_id, 
+    oe.storage_directory as exp_dir,
+    wkft.name AS wkf_type, 
+    wkf.storage_directory as movie_dir, 
+    wkf.filename as movie_name
+    FROM ophys_sessions os
+    JOIN ophys_experiments oe ON os.id = oe.ophys_session_id
+    JOIN projects p ON p.id = os.project_id
+    JOIN equipment e ON e.id = os.equipment_id
+    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
+    JOIN welL_known_file_types wkft ON wkft.id = wkf.welL_known_file_type_id AND wkft.name = 'MotionCorrectedImageStack'
+    WHERE e.name = 'MESO.1'""")
+    return pd.DataFrame(psycopg2_select(query))
+
+
+def get_mesoscope_exp_files(exp_id):
+    query = (f""" SELECT
+    e.name as rig_name, 
+    p.code as project_code, 
+    os.id AS ses_id, 
+    os.date_of_acquisition as date, 
+    oe.id AS exp_id, 
+    oe.storage_directory as exp_dir,
+    wkft.name AS wkf_type, 
+    wkf.storage_directory as movie_dir, 
+    wkf.filename as movie_name
+    FROM ophys_sessions os
+    JOIN ophys_experiments oe ON os.id = oe.ophys_session_id
+    JOIN projects p ON p.id = os.project_id
+    JOIN equipment e ON e.id = os.equipment_id
+    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
+    JOIN welL_known_file_types wkft ON wkft.id = wkf.welL_known_file_type_id AND wkft.name = 'MotionCorrectedImageStack'
+    WHERE e.name = 'MESO.1' AND oe.id = {exp_id}""")
+    return pd.DataFrame(psycopg2_select(query))
+
+
+def get_all_mesoscope_data():
+    query = ("select os.id as session_id, oe.id as experiment_id, "
+             "os.storage_directory as session_folder, "
+             "oe.storage_directory as experiment_folder, "
+             "sp.name as specimen, "
+             "os.date_of_acquisition as date, "
+             "oe.workflow_state as exp_workflow_state, "
+             "os.workflow_state as session_workflow_state "
+             "from ophys_experiments oe "
+             "join ophys_sessions os on os.id = oe.ophys_session_id "
+             "join specimens sp on sp.id = os.specimen_id "
+             "join projects p on p.id = os.project_id "
+             "where (p.code = 'VisualBehaviorMultiscope' "
+             "or p.code = 'VisualBehaviorMultiscope4areasx2d' "
+             "or p.code = 'MesoscopeDevelopment') and os.workflow_state ='uploaded' "
+             "order by session_id")
+    return pd.DataFrame(psycopg2_select(query))
 
 
 def run_ica_on_session(session, roi_name=None, np_name=None):
@@ -84,7 +168,7 @@ def get_ica_done_sessions(session_list=None):
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame]
     """
     if not session_list:
-        meso_data = ms.get_all_mesoscope_data()
+        meso_data = get_all_mesoscope_data()
         meso_data['ICA_demix_roi_session'] = 0
         sessions = meso_data['session_id']
         sessions = sessions.drop_duplicates()
@@ -116,7 +200,7 @@ def get_demixing_done_sessions(session_list=None):
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : demixing_done, demixing_not_done, ica_success
     """
     if not session_list:
-        meso_data = ms.get_all_mesoscope_data()
+        meso_data = get_all_mesoscope_data()
         sessions = meso_data['session_id'].drop_duplicates()
     else:
         sessions = session_list
@@ -143,7 +227,7 @@ def get_lims_done_sessions(session_list=None):
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : lims_roi_success, lims_roi_fail, ica_success
     """
     if not session_list:
-        meso_data = ms.get_all_mesoscope_data()
+        meso_data = get_all_mesoscope_data()
         sessions = meso_data['session_id'].drop_duplicates()
     else:
         sessions = session_list
@@ -267,7 +351,7 @@ def run_demixing_on_session(session, cache=CACHE):
 
     for pair in pairs:
         for exp_id in pair:
-            exp_files_data = ms.get_mesoscope_exp_files(exp_id)
+            exp_files_data = get_mesoscope_exp_files(exp_id)
             if len(exp_files_data) == 0:
                 logger.info(f"Movie file does not exist for experiment {exp_id}, skipping")
                 continue
@@ -871,7 +955,7 @@ def plot_ica_traces(sig, ct, name, title):
 
 def get_all_rois_crosstalk(session_list=None):
     if not session_list:
-        meso_data = ms.get_all_mesoscope_data()
+        meso_data = get_all_mesoscope_data()
         sessions = meso_data['session_id'].drop_duplicates()
     else:
         sessions = session_list
