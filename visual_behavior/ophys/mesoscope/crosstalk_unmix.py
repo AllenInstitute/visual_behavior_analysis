@@ -104,13 +104,13 @@ def create_roi_masks(rois, w, h, motion_border):
 
 class MesoscopeICA(object):
     """
-    Class to perform ica-based demixing on a pair of mesoscope planes
+    Class to perform ica-based demixing on a pair of Multiscope planes
     """
 
     def __init__(self, session_id, cache, debug_mode=False, roi_name="ica_traces", np_name="ica_neuropil"):
         """
         :param session_id: LIMS session ID
-        :param cache: directory to store/find ins/outs
+        :param cache: directory to store/find ins/outs of ICA and all complimentary files
         :param debug_mode: flag that controls whether debug logger messages are out
         :param roi_name: string, default name for roi-related in/outs
         :param np_name: string, default name for neuropil-related ins/outs
@@ -153,7 +153,7 @@ class MesoscopeICA(object):
         self.mixing = {}  # raw mixing matrix on the output of FastICA
         self.a_mixing = {}  # adjusted mixing matrix on the output of FastICA
         self.plot_dirs = {}
-        #dff files filtering attributes
+        # dff files filtering attributes
         self.dff_files = {}
         self.dff = {}
         self.dff_ct_files = {}
@@ -472,7 +472,7 @@ class MesoscopeICA(object):
                             for n in range(num_traces_sig[pkey]['roi']):
                                 roi_name = str(self.rois_names[pkey]['roi'][n])
                                 traces_valid[pkey][tkey][roi_name] = True
-                                # check if both roi and np trace has no NaNs:
+                                # check if both roi and np trace have no NaNs:
                                 trace_sig[pkey][tkey] = self.raws[pkey][tkey][0][n]
                                 trace_ct[pkey][tkey] = self.raws[pkey][tkey][1][n]
                                 if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_ct[pkey][tkey])):

@@ -5,7 +5,7 @@ import sciris as sc
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 
-def test_get_ica_traces(test_session = None):
+def test_get_ica_traces(test_session=None):
 	"""
 	test for visual_behavior.ophys.mesoscope.crosstalk_unmix.MesoscopeICA.get_ica_traces()
 	Testing that:
@@ -113,7 +113,7 @@ def test_validate_traces(test_session = None):
 def test_debias_traces(test_session=None):
 	"""
 	testing trace debiasing:
-	:param test_session:
+	:param test_session: LIMS session ID to use in test
 	:return:
 	"""
 
