@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
+import sciris as sc
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 
@@ -244,6 +245,9 @@ def test_unmix_pair(test_session=None):
 def test_filter_dff_traces_crosstalk(session=None):
     if not session:
         ses = 839208243
+        """LIMS session ID to use for test,
+	    use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
+	    which takes ~ 5 hours"""
     else:
         ses = session
 
@@ -256,6 +260,15 @@ def test_filter_dff_traces_crosstalk(session=None):
     ica_obj.debias_traces()
     ica_obj.unmix_pair()
     ica_obj.validate_cells_crosstalk()
+
+    # 0. if dff_ct files exist - delete them first
+    for pkey in ica_obj.pkeys:
+	    dff_file = os.path.join(ica_obj.session_dir, f"{ica_obj.exp_ids[pkey]}_dff_ct.h5")
+	    if os.path.isfile(dff_file):
+		    os.chdir(ica_obj.session_dir)
+		    print(f"Filtered dff files exist for {ica_obj.exp_ids[pkey]}, deleting for the test purposes")
+		    sc.runcommand(f"rm -rf {dff_file}")
+
     ica_obj.filter_dff_traces_crosstalk()
 
     # 1. test that all attributes have been set
