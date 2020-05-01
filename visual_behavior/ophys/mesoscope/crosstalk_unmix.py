@@ -791,7 +791,7 @@ class MesoscopeICA(object):
             ct_fn_roi = add_suffix_to_path(self.rois_valid_paths[pkey]['roi'], '_ct')
             ct_fn_np = add_suffix_to_path(self.rois_valid_paths[pkey]['np'], '_ct')
             if not os.path.isfile(ct_fn_roi) or not os.path.isfile(ct_fn_np):
-                logging.info(f"validating traces against crosstalk")
+                logging.info(f"Validating traces against crosstalk")
                 tkey = 'roi'
                 self.rois_valid_ct[pkey] = self.rois_valid[pkey]
                 crosstalk = self.crosstalk[pkey][tkey]
@@ -805,7 +805,7 @@ class MesoscopeICA(object):
                 ju.write(ct_fn_roi, self.rois_valid_ct[pkey])
                 ju.write(ct_fn_np, self.rois_valid_ct[pkey])
             else:
-                print(f"crosstalk validation json exists, skipping")
+                logging.info(f"Crosstalk validation json exists, skipping")
                 self.rois_valid_ct[pkey] = ju.read(ct_fn_roi)
             self.rois_names_valid_ct[pkey]['roi'] = [roi for roi, valid in self.rois_valid_ct[pkey].items() if valid]
             self.rois_names_valid_ct[pkey]['np'] = [roi for roi, valid in self.rois_valid_ct[pkey].items() if valid]
@@ -821,7 +821,8 @@ class MesoscopeICA(object):
                 self.dff[pkey] = f['data'][()]
             traces_dict = {}
             assert self.dff[pkey].shape[0] == len(
-                self.rois_names_valid[pkey][tkey]), f"Dff traces are not aligned to validation json for {self.exp_ids[pkey]}"
+                self.rois_names_valid[pkey][tkey]), f"dff traces are not aligned to validation json for {self.exp_ids[pkey]}"
+            logging.info(f"Filtering dff traces for exp: {self.exp_ids[pkey]}")
             for i in range(len(self.rois_names_valid[pkey][tkey])):
                 roi_name = self.rois_names_valid[pkey][tkey][i]
                 traces_dict[roi_name] = self.dff[pkey][i]
@@ -834,6 +835,7 @@ class MesoscopeICA(object):
                     f.create_dataset("roi_names",
                                      data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
             else:
+                logging.info(f"Filtered dff traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
                 with h5py.File(dff_ct_path, "r") as f:
                     traces_dff_ct = f["data"][()]
             self.dff_ct[pkey] = traces_dff_ct

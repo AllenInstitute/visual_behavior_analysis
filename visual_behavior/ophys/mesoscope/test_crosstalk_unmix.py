@@ -261,7 +261,7 @@ def test_filter_dff_traces_crosstalk(session=None):
     ica_obj.unmix_pair()
     ica_obj.validate_cells_crosstalk()
 
-    # 0. if dff_ct files exist - delete them first
+    # 0. if dff_ct files exist - delete them first, this test will regenerate the files
     for pkey in ica_obj.pkeys:
 	    dff_file = os.path.join(ica_obj.session_dir, f"{ica_obj.exp_ids[pkey]}_dff_ct.h5")
 	    if os.path.isfile(dff_file):
@@ -285,4 +285,4 @@ def test_filter_dff_traces_crosstalk(session=None):
 	# 3. test if filtered dff are aligned with ica_obj.rois_valid_ct
     for pkey in ica_obj.pkeys:
         assert len(ica_obj.dff_ct[pkey]) == len(ica_obj.rois_names_valid_ct[pkey]['roi']), \
-	                                            f"filtered dff traces are not alligned wiht rois_vali for exp {ica_obj.exp_ids[pkey]}"
+	                                            f"filtered dff traces are not alligned with rois_valid_ct for exp {ica_obj.exp_ids[pkey]}"
