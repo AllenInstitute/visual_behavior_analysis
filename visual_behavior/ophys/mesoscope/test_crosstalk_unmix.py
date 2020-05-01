@@ -2,6 +2,7 @@ import numpy as np
 import os
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import sciris as sc
+import h5py
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 
@@ -286,3 +287,12 @@ def test_filter_dff_traces_crosstalk(session=None):
     for pkey in ica_obj.pkeys:
         assert len(ica_obj.dff_ct[pkey]) == len(ica_obj.rois_names_valid_ct[pkey]['roi']), \
 	                                            f"filtered dff traces are not alligned with rois_valid_ct for exp {ica_obj.exp_ids[pkey]}"
+
+    # 4. test if files were written to disc and both datasets exist in hdf5 files (traces and roi names)
+    for pkey in ica_obj.pkeys:
+	    assert os.path.isfile(ica_obj.dff_ct_files[pkey]), f"Filtered hdf 5 file does not exist for {ica_obj.exp_ids[pkey]}"
+	    f = h5py.File(ica_obj.dff_ct_files[pkey], 'r')
+	    datasets = f.keys()
+	    assert 'data' in datasets, f"traces are not present in dff_ct file for exp {ica_obj.exp_ids[pkey]}"
+	    assert 'roi_names' in datasets, f"roi names are not present in dff_ct file for exp {ica_obj.exp_ids[pkey]}"
+	    f.close()
