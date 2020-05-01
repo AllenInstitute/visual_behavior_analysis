@@ -1,5 +1,5 @@
 import os
-from visual_behavior.visualization.qc import data_loading
+from visual_behavior.data import loading as data_loading
 import argparse
 import sys
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')

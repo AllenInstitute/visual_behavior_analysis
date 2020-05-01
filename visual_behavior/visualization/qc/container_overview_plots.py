@@ -1,4 +1,4 @@
-from visual_behavior.visualization.qc import data_loading as dl
+from visual_behavior.data import loading as data_loading
 import pandas as pd
 import numpy as np
 
@@ -46,7 +46,7 @@ def get_value(container_df, container_id, session_number, value):
     session_stats = get_session_stats(container_df, container_id, session_number)
     if value == 'session_prefix':
         oeid = get_oeid(container_df, container_id, session_number)
-        return dl.get_session_type_for_ophys_experiment_id(oeid)[:7]
+        return data_loading.get_session_type_for_ophys_experiment_id(oeid)[:7]
     elif value == 'ophys_experiment_id' or value == 'ophys_session_id':
         return db.convert_id({'behavior_session_uuid': behavior_session_uuid}, value)
     else:
@@ -73,8 +73,8 @@ def rewrite_record(uuid):
 
 
 def load_data():
-    container_df = dl.build_container_df()
-    filtered_container_list = dl.get_filtered_ophys_container_ids()  # NOQA F841
+    container_df = data_loading.build_container_df()
+    filtered_container_list = data_loading.get_filtered_ophys_container_ids()  # NOQA F841
     return container_df.query('container_id in @filtered_container_list')
 
 
