@@ -310,7 +310,7 @@ class MesoscopeICA(object):
             for pkey in self.pkeys:
                 path[pkey] = {}
                 for tkey in self.tkeys:
-                    path[pkey][tkey] = f'{self.dirs[tkey]}{name[tkey]}_{self.exp_ids[pkey]}.h5'
+                    path[pkey][tkey] = os.path.join({self.dirs[tkey]}, f"{self.exp_ids[pkey]}_{name[tkey]}.h5")
             # check if traces exist already:
             for pkey in self.pkeys:
                 for tkey in self.tkeys:

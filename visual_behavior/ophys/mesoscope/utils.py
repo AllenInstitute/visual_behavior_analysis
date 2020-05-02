@@ -1,20 +1,19 @@
-import logging
-import os
-import allensdk.internal.brain_observatory.demixer as demixer
-import allensdk.internal.core.lims_utilities as lu
 import allensdk.core.json_utilities as ju
 from allensdk.brain_observatory.dff import calculate_dff
-import h5py
-import numpy as np
+from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
+import allensdk.internal.brain_observatory.demixer as demixer
+import allensdk.internal.core.lims_utilities as lu
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import visual_behavior.ophys.mesoscope.dataset as ms
-import gc
+import logging
+import os
 import shutil
 import time
 import sciris as sc
-import matplotlib.pyplot as plt
-from allensdk.brain_observatory.r_neuropil import estimate_contamination_ratios
+import h5py
+import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import psycopg2
 import psycopg2.extras
 
@@ -137,7 +136,6 @@ def run_ica_on_session(session, roi_name=None, np_name=None):
         ica_obj.debias_traces()
         ica_obj.unmix_pair()
         ica_obj.plot_ica_pair(pair)
-        gc.collect()
     return ica_obj
 
 
@@ -157,7 +155,6 @@ def run_ica_on_pair(session, pair, roi_name=None, np_name=None):
     ica_obj.debias_traces()
     ica_obj.unmix_pair()
     ica_obj.plot_ica_pair(pair)
-    gc.collect()
     return
 
 
