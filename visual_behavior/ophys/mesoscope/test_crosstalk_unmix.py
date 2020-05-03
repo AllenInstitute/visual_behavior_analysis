@@ -33,7 +33,13 @@ def test_get_ica_traces(test_session=None):
 			assert ica_obj.raw_paths[pkey][tkey] is not None, f"Failed to set attributes self.raw_paths for {pkey}, {tkey}"
 			assert ica_obj.rois_names[pkey][tkey] is not None, f"Failed to set attributes self.rois_names for {pkey}, {tkey}"
 
-	# 2. Test wether Number of traces in ROI and NP aligns, files have been saved to disk
+	# 2. Test if number of rois is the same as nuber of traces
+	for pkey in ica_obj.pkeys:
+		for tkey in ica_obj.tkeys:
+			assert len(ica_obj.rois_names[pkey][tkey]) == ica_obj.raws[pkey][tkey].shape[1], f"Failed : Number of rois " \
+				f"doesn't align wiht number of traces for exp: {ica_obj.exp_ids[pkey]}"
+
+	# 3. Test wether # of traces in ROI and NP aligns, files have been saved to disk
 	for pkey in ica_obj.pkeys:
 		assert ica_obj.raws[pkey]['roi'].shape == ica_obj.raws[pkey]['np'].shape, f"Number of traces for ROI and Neuropil doens't align for plane {pkey}"
 		assert np.all(ica_obj.rois_names[pkey]['roi'] == ica_obj.rois_names[pkey]['np']), f'Roi IDs for ROI and Neuropil for {pkey} are not aligned'
@@ -63,11 +69,11 @@ def test_validate_traces(test_session = None):
 	ica_obj.validate_traces()
 	self = ica_obj
 
-	# 1. Test if all attributes ahve been set:
+	# 1. Test if all attributes have been set:
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
-			assert self.rois_valid[pkey][tkey] is not None, f"Failed to set attributes self.rois_valid for {pkey}, {tkey}"
-			assert self.rois_valid_paths[pkey][tkey] is not None, f"Failed to set attributes self.rois_valid_paths for {pkey}, {tkey}"
+			assert self.rois_valid[pkey] is not None, f"Failed to set attributes self.rois_valid for {pkey}, {tkey}"
+			assert self.rois_valid_paths[pkey] is not None, f"Failed to set attributes self.rois_valid_paths for {pkey}, {tkey}"
 
 	# remove jsons if they exist - for the case whne they have been read fomr disk
 	for pkey in self.pkeys:
@@ -78,22 +84,16 @@ def test_validate_traces(test_session = None):
 
 	self.validate_traces()
 	for pkey in self.pkeys:  # test if ROi names and NP names align:
-		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
-		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
+		roi_names = self.rois_names_valid[pkey]['roi']
+		np_names = self.rois_names_valid[pkey]['np']
 		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
-		for roi in roi_names:  # test is valid values are the same for ROI and nueropil
-			assert self.rois_valid[pkey]['roi'][roi] == self.rois_valid[pkey]['np'][
-				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
 
 	# jsons exist, re-run validate to read them and test the same:
 	self.validate_traces()
 	for pkey in self.pkeys:  # test if ROi names and NP names align:
-		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
-		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
+		roi_names = self.rois_names_valid[pkey]['roi']
+		np_names = self.rois_names_valid[pkey]['np']
 		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
-		for roi in roi_names:  # test is valid values are the same for ROI and nueropil
-			assert self.rois_valid[pkey]['roi'][roi] == self.rois_valid[pkey]['np'][
-				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
 
 	# remove jsons:
 	for pkey in self.pkeys:
@@ -101,14 +101,11 @@ def test_validate_traces(test_session = None):
 			os.remove(self.rois_valid_paths[pkey][tkey])
 
 	# rerun test with return_vba = True
-	self.validate_traces(return_vba=True)
+	self.validate_traces(return_vba=True) # here might fail bc sessions has not been processed by coonvert_level_1_to_level_2
 	for pkey in self.pkeys:  # test if ROi names and NP names align:
-		roi_names = [roi for roi, _ in self.rois_valid[pkey]['roi'].items()]
-		np_names = [roi for roi, _ in self.rois_valid[pkey]['np'].items()]
+		roi_names = self.rois_names_valid[pkey]['roi']
+		np_names = self.rois_names_valid[pkey]['np']
 		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
-		for roi in roi_names:  # test is valid values are the same for ROI and nueropil
-			assert self.rois_valid[pkey]['roi'][roi] == self.rois_valid[pkey]['np'][
-				roi], f"roi valid flag is not the same for ROI and NP cell {roi} in {pkey}"
 
 
 def test_debias_traces(test_session=None):
