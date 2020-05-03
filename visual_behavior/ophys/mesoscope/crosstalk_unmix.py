@@ -611,7 +611,7 @@ class MesoscopeICA(object):
                                 f.create_dataset('sig_offset', data=sig_offset[pkey][tkey])
                                 f.create_dataset('ct_offset', data=ct_offset[pkey][tkey])
                         else:
-                            logger.info("Debiasing failed - output contains Nones, check inputs")
+                            logger.info("Debiasing failed - output contains Nones, check raw traces")
             else:
                 raise ValueError('Extract traces first')
         else:  # if debiased traces exist - read them form h5 files

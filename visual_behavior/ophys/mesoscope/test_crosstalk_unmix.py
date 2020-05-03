@@ -75,7 +75,7 @@ def test_validate_traces(test_session = None):
 			assert self.rois_valid[pkey] is not None, f"Failed to set attributes self.rois_valid for {pkey}, {tkey}"
 			assert self.rois_valid_paths[pkey] is not None, f"Failed to set attributes self.rois_valid_paths for {pkey}, {tkey}"
 
-	# remove jsons if they exist - for the case whne they have been read fomr disk
+	# remove jsons if they exist - for the case when they have been read from disk
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
 			os.remove(self.rois_valid_paths[pkey][tkey])
@@ -163,7 +163,8 @@ def test_debias_traces(test_session=None):
 			# 4. test filtered_raws.shape[0]  = inp.shape[0]
 			assert raw_sig.shape[0] == inp_sig.shape[0], f"shape of filtered raw traces SIGNAL does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
 			assert raw_ct.shape[0] == inp_ct.shape[0], f"shape of filtered raw traces CROSSTALK does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
-			# 5. test that debiasing is correct: outputs = input + offset
+
+			# 6. test that debiasing is correct: outputs = input + offset
 			for i in range(len(valid_rois)):
 				assert np.all(np.isclose(inp_sig[i] + sig_offset[i], raw_sig[
 					i])), f'Debiasing went wrong for plane: {pkey}, trace:{tkey}, roi #: {i}, id: {valid_rois[i]}'
@@ -232,6 +233,68 @@ def test_unmix_pair(test_session=None):
 				0], f"shape of filtered output traces CROSSTALK does not agree with the shape of ica input traces for plane: {pkey}, trace:{tkey}"
 
 	# 3. test that unmixing is correct: unmixing_out - offset = unmixing_in / unmixing_matrix
+
+
+def test_validate_cells_crosstalk(session):
+	"""
+	test function for crosstalkunmix.validate_cells_crosstalk
+	:param session: LIMS session id for sessiong to use for the test
+	:return: none
+	"""
+
+	if not session:
+		ses = 839208243
+		"""LIMS session ID to use for test,
+		use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
+		which takes ~ 5 hours"""
+	else:
+		ses = session
+
+	ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+	pairs = ica_obj.dataset.get_paired_planes()
+	pair = pairs[0]
+	ica_obj.set_exp_ids(pair)
+	ica_obj.get_ica_traces()
+	ica_obj.validate_traces()
+	ica_obj.debias_traces()
+	ica_obj.unmix_pair()
+	ica_obj.validate_cells_crosstalk()
+	self = ica_obj
+
+	# 1. Test if all attributes have been set:
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			assert self.rois_valid_ct[pkey] is not None, f"Failed to set attributes self.rois_valid for {pkey}, {tkey}"
+			assert self.rois_valid_ct_paths[pkey] is not None, f"Failed to set attributes self.rois_valid_paths for {pkey}, {tkey}"
+
+	# 2. remove jsons if they exist - for the case when they have been read from disk
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			os.remove(self.rois_valid_ct_paths[pkey][tkey])
+
+	self.validate_cells_crosstalk()
+
+	# 3. test that roi and np ids are identical:
+	for pkey in self.pkeys:  # test if ROi names and NP names align:
+		roi_names = self.rois_names_valid_ct[pkey]['roi']
+		np_names = self.rois_names_valid_ct[pkey]['np']
+		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
+
+	# 4. now that jsons exist, test teh same whne they are read from disk:
+	self.validate_cells_crosstalk()
+
+	for pkey in self.pkeys:  # test if ROi names and NP names align:
+		roi_names = self.rois_names_valid_ct[pkey]['roi']
+		np_names = self.rois_names_valid_ct[pkey]['np']
+		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
+
+	# 5. test if roi ids in valid json came from corresponding raw output
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			roi_names_valid_ct = [str(roi) for roi in self.rois_names_valid_ct[pkey][tkey]]
+			raw_roi_names = self.rois_names[pkey][tkey]
+			assert all([roi_v in raw_roi_names for roi_v in roi_names_valid_ct])
+	return
 
 
 def test_filter_dff_traces_crosstalk(session=None):
