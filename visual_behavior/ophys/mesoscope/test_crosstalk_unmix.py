@@ -81,7 +81,6 @@ def test_validate_traces(test_session = None):
 			os.remove(self.rois_valid_paths[pkey][tkey])
 
 	# testing with return_vba = False (default value)
-
 	self.validate_traces()
 	for pkey in self.pkeys:  # test if ROi names and NP names align:
 		roi_names = self.rois_names_valid[pkey]['roi']
@@ -95,17 +94,12 @@ def test_validate_traces(test_session = None):
 		np_names = self.rois_names_valid[pkey]['np']
 		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
 
-	# remove jsons:
+	# 3. test if roi ids in valid json came from corresponding raw output
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
-			os.remove(self.rois_valid_paths[pkey][tkey])
-
-	# rerun test with return_vba = True
-	self.validate_traces(return_vba=True) # here might fail bc sessions has not been processed by coonvert_level_1_to_level_2
-	for pkey in self.pkeys:  # test if ROi names and NP names align:
-		roi_names = self.rois_names_valid[pkey]['roi']
-		np_names = self.rois_names_valid[pkey]['np']
-		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
+			roi_names_valid = [str(roi) for roi in self.rois_names_valid[pkey][tkey]]
+			raw_roi_names = self.rois_names[pkey][tkey]
+			assert all([roi_v in raw_roi_names for roi_v in roi_names_valid])
 
 
 def test_debias_traces(test_session=None):
@@ -146,7 +140,7 @@ def test_debias_traces(test_session=None):
 		for tkey in self.tkeys:
 			raw_sig = self.raws[pkey][tkey][0]
 			raw_ct = self.raws[pkey][tkey][1]
-			rois_valid = self.rois_valid[pkey][tkey]
+			rois_valid = self.rois_valid[pkey]
 			# filter raws :
 			valid_mask = [valid for _, valid in rois_valid.items()]
 			raw_sig = raw_sig[valid_mask, :]
@@ -229,7 +223,7 @@ def test_unmix_pair(test_session=None):
 				only_valid_rois), f"Number of traces in unmixing output doesn't agree with number of valid rois for plane: {pkey}, trace:{tkey}"
 			assert out_ct.shape[0] == len(
 				only_valid_rois), f"Number of traces in unmixing output doesn't agree with number of valid rois for plane: {pkey}, trace:{tkey}"
-			assert mixing.shape[0] == len(
+			assert len(mixing) == len(
 				only_valid_rois), f"Number of entries in self.mixing  doesn't agree with number of valid rois for plane: {pkey}, trace:{tkey}"
 			# 2.b. test taht number of output traces is equal to number input traces
 			assert out_sig.shape[0] == inp_sig.shape[
