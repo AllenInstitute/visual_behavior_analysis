@@ -472,14 +472,22 @@ def debug_plot(file_name, roi_trace, neuropil_trace, corrected_trace, r, r_vals=
     plt.close()
 
 
-def run_neuropil_correction_on_ica(session, ica_cache_dir=CACHE):
+def run_neuropil_correction_on_ica(session, ica_cache_dir=CACHE, roi_name=None, np_name=None):
     """
     run neuropil correction on CIA output files
     :param session: LIMS session id
     :param ica_cache_dir: directory to find processed ica-demixed outputs
+    :param roi_name: prefix to use for roi ica dir
+    :param np_name: prefix to use for neuropil ica dir
     :return: None
     """
-    ica_obj = ica.MesoscopeICA(session_id=session, cache=ica_cache_dir, roi_name="ica_traces", np_name="ica_neuropil")
+    if roi_name is None:
+        roi_name = "ica_traces"
+
+    if np_name is None:
+        np_name = 'ica_neuropil'
+
+    ica_obj = ica.MesoscopeICA(session_id=session, cache=ica_cache_dir, roi_name=roi_name, np_name=np_name)
     pairs = ica_obj.dataset.get_paired_planes()
     for pair in pairs:
         ica_obj.set_exp_ids(pair)
