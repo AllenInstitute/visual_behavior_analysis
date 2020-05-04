@@ -310,7 +310,7 @@ class MesoscopeICA(object):
             for pkey in self.pkeys:
                 path[pkey] = {}
                 for tkey in self.tkeys:
-                    path[pkey][tkey] = os.path.join(self.dirs[tkey], f"{self.exp_ids[pkey]}_{name[tkey]}.h5") # this is to handle old names - not sure how to solve the naming roder issue for now
+                    path[pkey][tkey] = os.path.join(self.dirs[tkey], f"{self.exp_ids[pkey]}_{name[tkey]}.h5")  # this is to handle old names - not sure how to solve the naming roder issue for now
             # check if traces exist already:
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
@@ -756,7 +756,7 @@ class MesoscopeICA(object):
                 plane = pair[1]
             for tkey in self.tkeys:
                 plot_dir = os.path.join(self.session_dir,
-                                        f'{dir_name[tkey]}_{pair[0]}_{pair[1]}/{dir_name[tkey]}_ica_plots_{plane}')
+                                        f'{dir_name[tkey]}_{pair[0]}_{pair[1]}/ica_plots_{plane}')
                 if not os.path.isdir(plot_dir):
                     os.mkdir(plot_dir)
 
