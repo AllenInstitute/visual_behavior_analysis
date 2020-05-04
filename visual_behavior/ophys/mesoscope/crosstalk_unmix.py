@@ -310,7 +310,7 @@ class MesoscopeICA(object):
             for pkey in self.pkeys:
                 path[pkey] = {}
                 for tkey in self.tkeys:
-                    path[pkey][tkey] = os.path.join(self.dirs[tkey], f"{self.exp_ids[pkey]}_{name[tkey]}.h5")
+                    path[pkey][tkey] = os.path.join(self.dirs[tkey], f"{name[tkey]}_{self.exp_ids[pkey]}.h5") # this is to handle old names - not sure how to solve the naming roder issue for now
             # check if traces exist already:
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
