@@ -330,13 +330,16 @@ def parse_input(data):
     return traces, masks, valid, np.array(trace_ids), movie_h5, output_h5
 
 
-def run_demixing_on_session(session, cache=CACHE):
+def run_demixing_on_session(session, cache=CACHE, roi_name=None):
     """
     run LIMS demixing on crosstalk corrected traces
+    :param roi_name: prefix to use for roi ica dir
     :param session: LIMS session id
     :param cache: directory containing crosstalk corrected traces
     :return:
     """
+    if roi_name is None:
+        roi_name = "ica_traces"
 
     dataset = ms.MesoscopeDataset(session)
     pairs = dataset.get_paired_planes()
@@ -392,7 +395,7 @@ def run_demixing_on_session(session, cache=CACHE):
                                              exclusion_labels=[])
                              for roi in rois}
                     demix_path = os.path.join(cache, f'session_{session}/demixing_{exp_id}')
-                    ica_dir = f'session_{session}/rois_{pair[0]}_{pair[1]}/'
+                    ica_dir = f'session_{session}/{roi_name}_{pair[0]}_{pair[1]}/'
                     traces_valid = os.path.join(cache, ica_dir, f'{exp_id}_valid.json')
                     data = {
                         "movie_h5": os.path.join(exp_dir, "processed", "concat_31Hz_0.h5"),
