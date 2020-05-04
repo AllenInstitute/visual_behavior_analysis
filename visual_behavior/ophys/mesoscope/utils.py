@@ -684,6 +684,12 @@ def run_dff_on_ica(session, an_dir=CACHE):
 
 
 def before_date(file_date, thr_date="01/01/2020"):
+    """
+    fn to check if file was last modified before specific date
+    :param file_date:
+    :param thr_date:
+    :return:
+    """
     # convert th_date to time
     thr = time.strptime(thr_date, "%m/%d/%Y")
     # get file's time of modification:
@@ -1140,3 +1146,31 @@ def filter_outputs_crosstalk(session):
                 ica_obj.outs_ct_path[pkey][tkey] = ct_outs_path
     return ica_obj
 
+
+def rename_old_traces(sessions):
+    raw_names = {"roi"  : "traces_original", "np": "neuropil_original"}
+    list_ses_renamed = []
+    for session in sessions:
+        found_renaming = False
+        ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE)
+        pairs = ica_obj.dataset.get_paired_planes()
+        for pair in pairs:
+            print(f"Processing pair: {pair}")
+            ica_obj.set_exp_ids(pair)
+            ica_obj.set_ica_dirs()
+            for pkey in ica_obj.pkeys:
+                for tkey in ica_obj.tkeys:
+                    os.chdir(ica_obj.dirs[tkey])
+                    old_raw_name = f"{raw_names[tkey]}_{ica_obj.exp_ids[pkey]}.h5"
+                    if os.path.isfile(old_raw_name):
+                        print(f"Found old file names: {old_raw_name}")
+                        sc.runcommand(f"cp {old_raw_name} {ica_obj.exp_ids[pkey]}_raw.h5")
+                        sc.runcommand(f"rm -rf {old_raw_name}")
+                        found_renaming = True
+                    sc.runcommand(f"rm -rf *_1.*")
+                    sc.runcommand(f"rm -rf *_lims.*")
+                    sc.runcommand(f"rm -rf *valid_.*")
+        if found_renaming:
+            list_ses_renamed.append(session)
+            
+    return list_ses_renamed
