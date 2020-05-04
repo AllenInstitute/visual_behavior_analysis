@@ -968,9 +968,15 @@ def plot_ica_traces(sig, ct, name, title):
 
 
 def get_all_rois_crosstalk(session_list=None):
+    """
+    fn to collect crosstalk information from all ica-processed sessions
+    :param session_list: one can supply a list of sessions, if not - we will find all ica-done sessions and extract crosstalk data
+    :return: rois_crosstalk_list (dict): {'session_id' : {'roi_id' : {'crosstalk_before' : float}, {'crosstalk_after': float}, ...}, ...}
+             rois_crosstalk_before_list (list): [[array], [array], ...] each array is crosstalk before demixing values for experiment
+             rois_crosstalk_after_list (list): [[array], [array], ...] each array is crosstalk after demixing values for experiment
+    """
     if not session_list:
-        meso_data = get_all_mesoscope_data()
-        sessions = meso_data['session_id'].drop_duplicates()
+        sessions = get_ica_done_sessions()
     else:
         sessions = session_list
     rois_crosstalk_dict = {}
@@ -1172,5 +1178,5 @@ def rename_old_traces(sessions):
                     sc.runcommand(f"rm -rf *valid_.*")
         if found_renaming:
             list_ses_renamed.append(session)
-            
+
     return list_ses_renamed
