@@ -98,6 +98,94 @@ def validate_attribute(behavior_session_id, attribute):
         return None
 
 
+def make_sdk_heatmap(validation_results):
+    '''input is validation matrix, output is plotly figure'''
+
+    behavior_only_cols = [
+        'licks',
+        'metadata',
+        'rewards',
+        'running_data_df',
+        'running_speed',
+        'stimulus_presentations',
+        'stimulus_templates',
+        'stimulus_timestamps',
+        'task_parameters',
+        'trials',
+    ]
+    ophys_cols = [
+        'average_projection',
+        'cell_specimen_table',
+        'corrected_fluorescence_traces',
+        'dff_traces',
+        'eye_tracking',
+        'max_projection',
+        'motion_correction',
+        'ophys_timestamps',
+        'segmentation_mask_image',
+    ]
+
+    results_to_plot = validation_results[behavior_only_cols + ophys_cols]
+
+    x = results_to_plot.columns
+    y = ['behavior_session_id:\n  {}'.format(bsid) for bsid in results_to_plot.index]
+    session_type = ['session_type: {}'.format(st) for st in validation_results['session_type']]
+    equipment_name = ['equipment_name: {}'.format(en) for en in validation_results['equipment_name']]
+    project_code = ['project_code: {}'.format(pj) for pj in validation_results['project_code']]
+    z = results_to_plot.values
+
+    hovertext = list()
+    for yi, yy in enumerate(y):
+        hovertext.append(list())
+        for xi, xx in enumerate(x):
+            hovertext[-1].append('attribute: {}<br />{}<br />{}<br />{}<br />{}<br />Successfully Loaded: {}'.format(
+                xx,
+                yy,
+                session_type[yi],
+                equipment_name[yi],
+                project_code[yi],
+                z[yi][xi]
+            ))
+
+    fig = go.Figure(
+        data=go.Heatmap(
+            x=results_to_plot.columns,
+            y=results_to_plot.index,
+            z=results_to_plot.values,
+            hoverongaps=True,
+            showscale=False,
+            colorscale='inferno',
+            xgap=2,
+            ygap=0,
+            hoverinfo='text',
+            text=hovertext
+        )
+    )
+
+    timestamp = datetime.datetime.now()
+    timestamp_string = 'last updated on {} @ {}'.format(timestamp.strftime('%D'), timestamp.strftime('%H:%M:%S'))
+
+    fig.update_layout(
+        autosize=False,
+        width=1200,
+        height=900,
+        margin=dict(
+            l=0,  # NOQA E741
+            r=0,
+            b=0,
+            t=50,
+            pad=0
+        ),
+        xaxis_title='SDK attribute',
+        yaxis_title='Behavior Session ID',
+        title='SDK Attribute Validation (black = failed) {}'.format(timestamp_string)
+    )
+    fig.update_yaxes(autorange="reversed", type='category', showticklabels=False, showgrid=False)
+    fig.update_xaxes(dtick=1, showgrid=False)
+
+    return fig
+
+
 class ValidateSDK(object):
     def __init__(self, behavior_session_id):
         self.behavior_session_id = behavior_session_id
