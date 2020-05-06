@@ -1,4 +1,6 @@
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from allensdk.brain_observatory.behavior.behavior_data_session import BehaviorDataSession
+from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 import traceback
 import allensdk
 import datetime
@@ -6,6 +8,7 @@ import sys
 import platform
 import pandas as pd
 import argparse
+import plotly.graph_objs as go
 
 from visual_behavior import database as db
 
@@ -24,15 +27,29 @@ def is_ophys(behavior_session_id):
     return pd.notnull(behavior_session_table.loc[behavior_session_id]['ophys_session_id'])
 
 
+def bsid_to_oeid(behavior_session_id):
+    oeid = db.lims_query(
+        '''
+        select oe.id 
+        from behavior_sessions
+        join ophys_experiments oe on oe.ophys_session_id = behavior_sessions.ophys_session_id
+        where behavior_sessions.id = {}
+        '''.format(behavior_session_id)
+    )
+    if isinstance(oeid, pd.DataFrame):
+        return oeid.iloc[0][0]
+    else:
+        return oeid
+
+
 def get_sdk_session(behavior_session_id, is_ophys):
     cache = get_cache()
 
     if is_ophys:
-        behavior_session = cache.get_behavior_session_data(behavior_session_id)
-        ophys_experiment_id = behavior_session.ophys_experiment_ids[0]
-        return cache.get_session_data(ophys_experiment_id)
+        ophys_experiment_id = bsid_to_oeid(behavior_session_id)
+        return BehaviorOphysSession.from_lims(ophys_experiment_id)
     else:
-        return cache.get_behavior_session_data(behavior_session_id)
+        return BehaviorDataSession.from_lims(behavior_session_id)
 
 
 def log_error_to_mongo(behavior_session_id, failed_attribute, error_class, traceback):
@@ -76,7 +93,14 @@ def get_validation_results(behavior_session_id=None):
         res = conn['sdk_validation']['validation_results'].find({})
     else:
         res = conn['sdk_validation']['validation_results'].find({'behavior_session_id': behavior_session_id})
-    return pd.DataFrame(list(res)).drop(columns=['_id']).set_index('behavior_session_id')
+
+    if res.count() > 0:
+        ans = pd.DataFrame(list(res)).drop(columns=['_id']).set_index('behavior_session_id')
+        conn.close()
+        return ans
+    else:
+        conn.close()
+        return pd.DataFrame()
 
 
 def validate_attribute(behavior_session_id, attribute):
@@ -95,10 +119,11 @@ def validate_attribute(behavior_session_id, attribute):
             )
             return False
     else:
+        # return None if attribute doesn't exist
         return None
 
 
-def make_sdk_heatmap(validation_results):
+def make_sdk_heatmap(validation_results, title_addendum=''):
     '''input is validation matrix, output is plotly figure'''
 
     behavior_only_cols = [
@@ -178,7 +203,7 @@ def make_sdk_heatmap(validation_results):
         ),
         xaxis_title='SDK attribute',
         yaxis_title='Behavior Session ID',
-        title='SDK Attribute Validation (black = failed) {}'.format(timestamp_string)
+        title='SDK Attribute Validation {} (black = failed) {}'.format(title_addendum, timestamp_string)
     )
     fig.update_yaxes(autorange="reversed", type='category', showticklabels=False, showgrid=False)
     fig.update_xaxes(dtick=1, showgrid=False)
@@ -187,16 +212,34 @@ def make_sdk_heatmap(validation_results):
 
 
 class ValidateSDK(object):
-    def __init__(self, behavior_session_id):
+    '''
+    SDK validation class
+    inputs:
+        behavior_session_id (int): behavior session to validate
+        validate_only_failed (boolean, default = False):
+            if True, check for previous validation and check only attributes that previously failed
+            if False, check all attributes
+    '''
+
+    def __init__(self, behavior_session_id, validate_only_failed=False):
         self.behavior_session_id = behavior_session_id
-        self.attributes = self.get_attributes()
         self.is_ophys = is_ophys(behavior_session_id)
         self.session = get_sdk_session(behavior_session_id, self.is_ophys)
 
-        self.results = self.validate_all_attributes()
+        if validate_only_failed == True:
+            previous_results_df = get_validation_results(self.behavior_session_id)
+            if len(previous_results_df) == 0:
+                warnings.warn('no existing attributes for session {}, validating all'.format(self.behavior_session_id))
+                attributes_to_validate = self.get_attributes()
+            else:
+                previous_results_dict = dict(previous_results_df.iloc[0])
+                attributes_to_validate = [key for key, value in previous_results_dict.items() if (key != 'is_ophys' and value == 0)]
+        else:
+            attributes_to_validate = self.get_attributes()
+        self.validate_attributes(attributes_to_validate)
         log_validation_results_to_mongo(
             behavior_session_id,
-            self.results
+            self.validation_results
         )
 
     def get_attributes(self):
@@ -223,17 +266,28 @@ class ValidateSDK(object):
         ]
         return expected_attributes
 
-    def validate_all_attributes(self):
-        validation_results = {}
-        for attribute in self.attributes:
-            validation_results[attribute] = validate_attribute(self.behavior_session_id, attribute)
+    def validate_attributes(self, attributes_to_validate):
+        self.validation_results = {}
+        for attribute in attributes_to_validate:
+            print('checking {}'.format(attribute))
+            self.validation_results[attribute] = validate_attribute(self.behavior_session_id, attribute)
 
-        return validation_results
+
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='run sdk validation')
     parser.add_argument("--behavior-session-id", type=str, default=None, metavar='behavior session id')
+    parser.add_argument("--validate-only-failed", type=str2bool, default=False, metavar='validate only previously failed attributes')
     args = parser.parse_args()
-
-    validation = ValidateSDK(int(args.behavior_session_id))
+    print('args.validate_only_failed: {}'.format(args.validate_only_failed))
+    validation = ValidateSDK(int(args.behavior_session_id), args.validate_only_failed)
