@@ -240,7 +240,7 @@ class MesoscopeICA(object):
         for pkey in self.pkeys:
             for tkey in self.tkeys:
                 self.raw_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
-                                                          f'traces_original_{self.exp_ids[pkey]}.h5')
+                                                          f'{self.exp_ids[pkey]}_raw.h5')
         return
 
     def set_out_paths(self):
