@@ -159,6 +159,17 @@ class MesoscopeICA(object):
         self.dff = {}
         self.dff_ct_files = {}
         self.dff_ct = {}
+        # demixing filtering attributes:
+        self.dem_files = {}
+        self.dem = {}
+        self.dem_ct_files = {}
+        self.dem_ct = {}
+        # neuriopil corected traces filtering attributes:
+        self.np_cor_files = {}
+        self.np_cor = {}
+        self.np_cor_ct_files = {}
+        self.np_cor_ct = {}
+
         for pkey in self.pkeys:
             self.rois_names[pkey] = {}
             self.rois_names_valid[pkey] = {}
@@ -311,7 +322,7 @@ class MesoscopeICA(object):
             for pkey in self.pkeys:
                 path[pkey] = {}
                 for tkey in self.tkeys:
-                    path[pkey][tkey] = os.path.join(self.dirs[tkey], f"{self.exp_ids[pkey]}_{name[tkey]}.h5")  # this is to handle old names - not sure how to solve the naming roder issue for now
+                    path[pkey][tkey] = os.path.join(self.dirs[tkey], f"{self.exp_ids[pkey]}_{name[tkey]}.h5")
             # check if traces exist already:
             for pkey in self.pkeys:
                 for tkey in self.tkeys:
@@ -843,6 +854,91 @@ class MesoscopeICA(object):
             self.dff_ct[pkey] = traces_dff_ct
             self.dff_ct_files[pkey] = dff_ct_path
         return
+
+    def filter_demixed_traces(self):
+        for pkey in self.pkeys:
+            tkey = 'roi'
+            exp_id = self.exp_ids[pkey]
+
+            dem_dir = os.path.join(self.session_dir, f"demixing_{exp_id}")
+            self.dem_files[pkey] = os.path.join(dem_dir, f"traces_demixing_output_{self.exp_ids[pkey]}.h5")
+
+            self.dem_ct_files[pkey] = add_suffix_to_path(self.dem_files[pkey], '_ct')
+
+            if not os.path.isfile(self.dem_ct_files[pkey]):
+                logging.info(f"Filtering demixed traces for exp: {self.exp_ids[pkey]}")
+                logging.info(f"Reading demixed traces from {self.dem_files[pkey]}")
+                if os.path.isfile(self.dem_files[pkey]):
+                    with h5py.File(self.dem_files[pkey], 'r') as f:
+                        self.dem[pkey] = f['data'][()]
+                else:
+                    print(f"Demixed traces don't exist at {self.dem_files[pkey]}")
+                assert self.dem[pkey].shape[0] == len(
+                    self.rois_names_valid[pkey][tkey]), f"Demixed traces are not aligned to validation json for {self.exp_ids[pkey]}"
+
+                traces_dict = {}
+                for i in range(len(self.rois_names_valid[pkey][tkey])):
+                    roi_name = self.rois_names_valid[pkey][tkey][i]
+                    traces_dict[roi_name] = self.dem[pkey][i]
+
+                self.dem_ct[pkey] = [traces for roi_name, traces in traces_dict.items() if
+                                     self.rois_valid_ct[pkey][str(roi_name)]]
+
+                logging.info(f"Saving filtered demixed traces to {self.dem_ct_files[pkey]}")
+                with h5py.File(self.dem_ct_files[pkey], "w") as f:
+                    f.create_dataset("data", data=self.dem_ct[pkey], compression="gzip")
+                    f.create_dataset("roi_names",
+                                     data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
+            else:
+                logging.info(f"Filtered demixed traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
+                with h5py.File(self.dem_ct_files[pkey], "r") as f:
+                    self.dem_ct[pkey] = f["data"][()]
+                with h5py.File(self.dem_files[pkey], "r") as f:
+                    self.dem[pkey] = f["data"][()]
+        return
+
+    def filter_np_corrected_traces(self):
+        for pkey in self.pkeys:
+            tkey = 'roi'
+            exp_id = self.exp_ids[pkey]
+
+            np_cor_dir = os.path.join(self.session_dir, f"neuropil_corrected_{exp_id}")
+            self.np_cor_files[pkey] = os.path.join(np_cor_dir, f"neuropil_correction.h5")
+
+            self.np_cor_ct_files[pkey] = add_suffix_to_path(self.np_cor_files[pkey], '_ct')
+
+            if not os.path.isfile(self.np_cor_ct_files[pkey]):
+                logging.info(f"Filtering neuropil corrected traces for exp: {self.exp_ids[pkey]}")
+                logging.info(f"Reading neuropil corrected traces from {self.np_cor_files[pkey]}")
+                if os.path.isfile(self.np_cor_files[pkey]):
+                    with h5py.File(self.np_cor_files[pkey], 'r') as f:
+                        self.np_cor[pkey] = f['FC'][()]
+                else:
+                    print(f"Neuropil corrected traces don't exist at {self.np_cor_files[pkey]}")
+                assert self.np_cor[pkey].shape[0] == len(
+                    self.rois_names_valid[pkey][tkey]), f"Neuropil corrected traces are not aligned to validation json for {self.exp_ids[pkey]}"
+
+                traces_dict = {}
+                for i in range(len(self.rois_names_valid[pkey][tkey])):
+                    roi_name = self.rois_names_valid[pkey][tkey][i]
+                    traces_dict[roi_name] = self.np_cor[pkey][i]
+
+                self.np_cor_ct[pkey] = [traces for roi_name, traces in traces_dict.items() if
+                                        self.rois_valid_ct[pkey][str(roi_name)]]
+
+                logging.info(f"Saving filtered neuropil corrected traces to {self.np_cor_ct_files[pkey]}")
+                with h5py.File(self.np_cor_ct_files[pkey], "w") as f:
+                    f.create_dataset("data", data=self.np_cor_ct[pkey], compression="gzip")
+                    f.create_dataset("roi_names",
+                                     data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
+            else:
+                logging.info(f"Filtered neuropil corrected traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
+                with h5py.File(self.np_cor_ct_files[pkey], "r") as f:
+                    self.np_cor_ct[pkey] = f["data"][()]
+                with h5py.File(self.np_cor_files[pkey], "r") as f:
+                    self.np_cor[pkey] = f["data"][()]
+        return
+
 
     @staticmethod
     def plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples):
