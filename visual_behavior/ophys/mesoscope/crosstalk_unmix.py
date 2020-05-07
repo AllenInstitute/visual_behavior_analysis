@@ -946,7 +946,7 @@ class MesoscopeICA(object):
                 with h5py.File(self.np_cor_ct_files[pkey], "r") as f:
                     self.np_cor_ct[pkey] = f["data"][()]
                 with h5py.File(self.np_cor_files[pkey], "r") as f:
-                    self.np_cor[pkey] = f["data"][()]
+                    self.np_cor[pkey] = f["FC"][()]
         return
 
 
