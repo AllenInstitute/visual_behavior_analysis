@@ -126,13 +126,34 @@ def get_filtered_ophys_session_table():
         add session_workflow_state to table (defined as >1 experiment within session passing),
         and return only sessions where container and session workflow states are 'passed'.
         Includes Multiscope data.
-
-        Arguments:
-            None
-
-        Returns:
-            sessions -- filtered version of ophys_session_table from cache
-        """
+            filtering criteria:
+                project codes: VisualBehavior, VisualBehaviorTask1B,
+                            VisualBehaviorMultiscope, VisualBehaviorMultiscope4areasx2d
+                session workflow state: "passed"
+                session_type: OPHYS_1_images_A', 'OPHYS_1_images_B',  'OPHYS_1_images_G',
+                            'OPHYS_2_images_A_passive',  'OPHYS_2_images_B_passive',  'OPHYS_2_images_G_passive'
+                            'OPHYS_3_images_A',  'OPHYS_3_images_B', 'OPHYS_3_images_G',
+                            'OPHYS_4_images_A', 'OPHYS_4_images_B',  'OPHYS_4_images_H'
+                            'OPHYS_5_images_A_passive', 'OPHYS_5_images_B_passive', 'OPHYS_5_images_H_passive'
+                            'OPHYS_6_images_A',  'OPHYS_6_images_B',   'OPHYS_6_images_H'
+    Returns:
+        dataframe -- filtered version of the ophys sessions table(filtering criteria above) with the
+                        following columns:
+                        "ophys_session_id": df index,
+                        "ophys_experiment_id":
+                        "project_code":
+                        "session_name":
+                        "session_type":
+                        "equipment_name":
+                        "date_of_acquisition":
+                        "specimen_id":
+                        "reporter_line":
+                        "driver_line":
+                        "at_least_one_experiment_passed":
+                        "session_workflow_state":
+                        "container_id":
+                        "container_workflow_state":
+    """
     cache = get_visual_behavior_cache()
     sessions = cache.get_session_table()
     sessions = filtering.limit_to_production_project_codes(sessions)
