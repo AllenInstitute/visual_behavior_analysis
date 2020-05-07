@@ -9,7 +9,7 @@ import platform
 import pandas as pd
 import argparse
 import plotly.graph_objs as go
-
+import warnings
 from visual_behavior import database as db
 
 
@@ -30,7 +30,7 @@ def is_ophys(behavior_session_id):
 def bsid_to_oeid(behavior_session_id):
     oeid = db.lims_query(
         '''
-        select oe.id 
+        select oe.id
         from behavior_sessions
         join ophys_experiments oe on oe.ophys_session_id = behavior_sessions.ophys_session_id
         where behavior_sessions.id = {}
@@ -43,7 +43,6 @@ def bsid_to_oeid(behavior_session_id):
 
 
 def get_sdk_session(behavior_session_id, is_ophys):
-    cache = get_cache()
 
     if is_ophys:
         ophys_experiment_id = bsid_to_oeid(behavior_session_id)
@@ -109,9 +108,9 @@ def validate_attribute(behavior_session_id, attribute):
     if attribute in dir(session):
         # if the attribute exists, try to load it
         try:
-            res = getattr(session, attribute)
+            getattr(session, attribute)
             return True
-        except Exception as e:
+        except Exception:
             log_error_to_mongo(
                 behavior_session_id,
                 attribute,
