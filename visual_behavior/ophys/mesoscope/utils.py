@@ -563,7 +563,7 @@ def run_neuropil_correction_on_ica(session, ica_cache_dir=CACHE, roi_name=None, 
                 r_vals = [None] * num_traces
 
                 for n in range(num_traces):
-                    roi = roi_traces['data'][n]
+                    roi = roi_traces['data'][0][n]
                     neuropil = neuropil_traces['data'][0][n]
 
                     if np.any(np.isnan(neuropil)):
