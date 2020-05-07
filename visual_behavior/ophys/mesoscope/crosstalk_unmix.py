@@ -829,40 +829,48 @@ class MesoscopeICA(object):
     def filter_dff_traces_crosstalk(self):
         for pkey in self.pkeys:
             tkey = 'roi'
-            self.dff_files[pkey] = os.path.join(self.session_dir, f"{self.exp_ids[pkey]}_dff.h5")
-            with h5py.File(self.dff_files[pkey], 'r') as f:
-                self.dff[pkey] = f['data'][()]
-            traces_dict = {}
-            assert self.dff[pkey].shape[0] == len(
-                self.rois_names_valid[pkey][tkey]), f"dff traces are not aligned to validation json for {self.exp_ids[pkey]}"
-            logging.info(f"Filtering dff traces for exp: {self.exp_ids[pkey]}")
-            for i in range(len(self.rois_names_valid[pkey][tkey])):
-                roi_name = self.rois_names_valid[pkey][tkey][i]
-                traces_dict[roi_name] = self.dff[pkey][i]
-            traces_dff_ct = [traces for roi_name, traces in traces_dict.items() if
-                             self.rois_valid_ct[pkey][str(roi_name)]]
-            dff_ct_path = add_suffix_to_path(self.dff_files[pkey], '_ct')
-            if not os.path.isfile(dff_ct_path):
-                with h5py.File(dff_ct_path, "w") as f:
-                    f.create_dataset("data", data=traces_dff_ct, compression="gzip")
-                    f.create_dataset("roi_names",
-                                     data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
+            exp_id = self.exp_ids[pkey]
+            self.dff_files[pkey] = os.path.join(self.session_dir, f"{exp_id}_dff.h5")
+            self.dff_ct_files[pkey] = add_suffix_to_path(self.dff_files[pkey], '_ct')
+
+            if not os.path.isfile(self.dff_ct_files[pkey]):
+                logging.info(f"Filtering dff traces for exp: {self.exp_ids[pkey]}")
+                logging.info(f"Reading dff traces from {self.dff_files[pkey]}")
+
+                if os.path.isfile(self.dff_files[pkey]):
+                    with h5py.File(self.dff_files[pkey], 'r') as f:
+                        self.dff[pkey] = f['data'][()]
+                else:
+                    print(f"Dff traces don't exist at {self.dff_files[pkey]}")
+                    continue
+
+                traces_dict = {}
+                assert self.dff[pkey].shape[0] == len(self.rois_names_valid[pkey][tkey]), f"dff traces are not aligned " \
+                                                       f"to validation json for {self.exp_ids[pkey]}"
+                for i in range(len(self.rois_names_valid[pkey][tkey])):
+                    roi_name = self.rois_names_valid[pkey][tkey][i]
+                    traces_dict[roi_name] = self.dff[pkey][i]
+
+                self.dff_ct[pkey] = [traces for roi_name, traces in traces_dict.items() if
+                                     self.rois_valid_ct[pkey][str(roi_name)]]
+
+                with h5py.File(self.dff_ct_files[pkey], "w") as f:
+                    f.create_dataset("data", data=self.dff_ct[pkey], compression="gzip")
+                    f.create_dataset("roi_names", data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
             else:
                 logging.info(f"Filtered dff traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
-                with h5py.File(dff_ct_path, "r") as f:
-                    traces_dff_ct = f["data"][()]
-            self.dff_ct[pkey] = traces_dff_ct
-            self.dff_ct_files[pkey] = dff_ct_path
+                with h5py.File(self.dff_ct_files[pkey], "r") as f:
+                    self.dff_ct[pkey] = f["data"][()]
+                with h5py.File(self.dff_files[pkey], "r") as f:
+                    self.dff[pkey] = f["data"][()]
         return
 
     def filter_demixed_traces(self):
         for pkey in self.pkeys:
             tkey = 'roi'
             exp_id = self.exp_ids[pkey]
-
             dem_dir = os.path.join(self.session_dir, f"demixing_{exp_id}")
             self.dem_files[pkey] = os.path.join(dem_dir, f"traces_demixing_output_{self.exp_ids[pkey]}.h5")
-
             self.dem_ct_files[pkey] = add_suffix_to_path(self.dem_files[pkey], '_ct')
 
             if not os.path.isfile(self.dem_ct_files[pkey]):
@@ -873,6 +881,8 @@ class MesoscopeICA(object):
                         self.dem[pkey] = f['data'][()]
                 else:
                     print(f"Demixed traces don't exist at {self.dem_files[pkey]}")
+                    continue
+
                 assert self.dem[pkey].shape[0] == len(
                     self.rois_names_valid[pkey][tkey]), f"Demixed traces are not aligned to validation json for {self.exp_ids[pkey]}"
 
