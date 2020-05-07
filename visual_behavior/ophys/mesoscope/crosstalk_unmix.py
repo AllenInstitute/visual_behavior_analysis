@@ -835,8 +835,6 @@ class MesoscopeICA(object):
 
             if not os.path.isfile(self.dff_ct_files[pkey]):
                 logging.info(f"Filtering dff traces for exp: {self.exp_ids[pkey]}")
-                logging.info(f"Reading dff traces from {self.dff_files[pkey]}")
-
                 if os.path.isfile(self.dff_files[pkey]):
                     with h5py.File(self.dff_files[pkey], 'r') as f:
                         self.dff[pkey] = f['data'][()]
@@ -875,7 +873,6 @@ class MesoscopeICA(object):
 
             if not os.path.isfile(self.dem_ct_files[pkey]):
                 logging.info(f"Filtering demixed traces for exp: {self.exp_ids[pkey]}")
-                logging.info(f"Reading demixed traces from {self.dem_files[pkey]}")
                 if os.path.isfile(self.dem_files[pkey]):
                     with h5py.File(self.dem_files[pkey], 'r') as f:
                         self.dem[pkey] = f['data'][()]
@@ -894,7 +891,6 @@ class MesoscopeICA(object):
                 self.dem_ct[pkey] = [traces for roi_name, traces in traces_dict.items() if
                                      self.rois_valid_ct[pkey][str(roi_name)]]
 
-                logging.info(f"Saving filtered demixed traces to {self.dem_ct_files[pkey]}")
                 with h5py.File(self.dem_ct_files[pkey], "w") as f:
                     f.create_dataset("data", data=self.dem_ct[pkey], compression="gzip")
                     f.create_dataset("roi_names",
@@ -919,7 +915,6 @@ class MesoscopeICA(object):
 
             if not os.path.isfile(self.np_cor_ct_files[pkey]):
                 logging.info(f"Filtering neuropil corrected traces for exp: {self.exp_ids[pkey]}")
-                logging.info(f"Reading neuropil corrected traces from {self.np_cor_files[pkey]}")
                 if os.path.isfile(self.np_cor_files[pkey]):
                     with h5py.File(self.np_cor_files[pkey], 'r') as f:
                         self.np_cor[pkey] = f['FC'][()]
@@ -935,8 +930,6 @@ class MesoscopeICA(object):
 
                 self.np_cor_ct[pkey] = [traces for roi_name, traces in traces_dict.items() if
                                         self.rois_valid_ct[pkey][str(roi_name)]]
-
-                logging.info(f"Saving filtered neuropil corrected traces to {self.np_cor_ct_files[pkey]}")
                 with h5py.File(self.np_cor_ct_files[pkey], "w") as f:
                     f.create_dataset("data", data=self.np_cor_ct[pkey], compression="gzip")
                     f.create_dataset("roi_names",
