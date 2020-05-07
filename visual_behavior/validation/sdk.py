@@ -83,8 +83,9 @@ def log_validation_results_to_mongo(behavior_session_id, validation_results):
 def get_error_logs(behavior_session_id):
     conn = db.Database('visual_behavior_data')
     res = conn['sdk_validation']['error_logs'].find({'behavior_session_id': behavior_session_id})
+    error_logs = pd.DataFrame(list(res))
     conn.close()
-    return pd.DataFrame(list(res))
+    return error_logs
 
 
 def get_validation_results(behavior_session_id=None):
@@ -110,7 +111,7 @@ def validate_attribute(behavior_session_id, attribute):
         try:
             res = getattr(session, attribute)
             return True
-        except:
+        except Exception as e:
             log_error_to_mongo(
                 behavior_session_id,
                 attribute,
