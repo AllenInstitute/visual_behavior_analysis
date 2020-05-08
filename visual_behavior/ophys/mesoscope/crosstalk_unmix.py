@@ -939,19 +939,19 @@ class MesoscopeICA(object):
                     f.create_dataset("data", data=self.np_cor_ct[pkey], compression="gzip")
                     f.create_dataset("roi_names",
                                      data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
-                    f.create_datasset('RMSE', self.np_cor[pkey]['RMSE'])
-                    f.create_datasset('r', self.np_cor[pkey]['r'])
+                    f.create_datasset("RMSE", self.np_cor[pkey]["RMSE"])
+                    f.create_datasset("r", self.np_cor[pkey]["r"])
 
             else:
                 logging.info(f"Filtered neuropil corrected traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
                 with h5py.File(self.np_cor_ct_files[pkey], "r") as f:
                     self.np_cor_ct[pkey] = f["data"][()]
-                    self.np_cor[pkey]['RMSE'] = f['RMSE'][()]
-                    self.np_cor[pkey]['r'] = f['r'][()]
+                    self.np_cor[pkey]["RMSE"] = f["RMSE"][()]
+                    self.np_cor[pkey]["r"] = f["r"][()]
                 with h5py.File(self.np_cor_files[pkey], "r") as f:
                     self.np_cor[pkey] = f["FC"][()]
-                    self.np_cor[pkey]['RMSE'] = f['RMSE'][()]
-                    self.np_cor[pkey]['r'] = f['r'][()]
+                    self.np_cor[pkey]["RMSE"] = f["RMSE"][()]
+                    self.np_cor[pkey]["r"] = f["r"][()]
         return
 
 
