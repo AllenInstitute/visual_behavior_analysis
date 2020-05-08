@@ -911,21 +911,26 @@ class MesoscopeICA(object):
             np_cor_dir = os.path.join(self.session_dir, f"neuropil_corrected_{exp_id}")
             self.np_cor_files[pkey] = os.path.join(np_cor_dir, f"neuropil_correction.h5")
 
-            self.np_cor_ct_files[pkey] = add_suffix_to_path(self.np_cor_files[pkey], '_ct')
+            self.np_cor_ct_files[pkey] = mu.add_suffix_to_path(self.np_cor_files[pkey], '_ct')
             self.np_cor_ct[pkey] = {}
             self.np_cor[pkey] = {}
             if not os.path.isfile(self.np_cor_ct_files[pkey]):
-                logging.info(f"Filtering neuropil corrected traces for exp: {self.exp_ids[pkey]}")
+                #             logging.info(f"Filtering neuropil corrected traces for exp: {self.exp_ids[pkey]}")
 
                 if os.path.isfile(self.np_cor_files[pkey]):
                     with h5py.File(self.np_cor_files[pkey], 'r') as f:
-                        self.np_cor[pkey] = f
-                        self.np_cor_ct[pkey] = f
+                        self.np_cor[pkey]['FC'] = f['FC'][()]
+                        self.np_cor[pkey]['RMSE'] = f['RMSE'][()]
+                        self.np_cor[pkey]['r'] = f['r'][()]
+                        self.np_cor_ct[pkey]['RMSE'] = f['RMSE'][()]
+                        self.np_cor_ct[pkey]['r'] = f['r'][()]
+
 
                 else:
                     print(f"Neuropil corrected traces don't exist at {self.np_cor_files[pkey]}")
                 assert self.np_cor[pkey]['FC'].shape[0] == len(
-                    self.rois_names_valid[pkey][tkey]), f"Neuropil corrected traces are not aligned to validation json for {self.exp_ids[pkey]}"
+                    self.rois_names_valid[pkey][
+                        tkey]), f"Neuropil corrected traces are not aligned to validation json for {self.exp_ids[pkey]}"
 
                 traces_dict = {}
                 for i in range(len(self.rois_names_valid[pkey][tkey])):
@@ -942,12 +947,17 @@ class MesoscopeICA(object):
                     f.create_dataset("RMSE", self.np_cor[pkey]["RMSE"])
                     f.create_dataset("r", self.np_cor[pkey]["r"])
 
+
             else:
-                logging.info(f"Filtered neuropil corrected traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
+                #             logging.info(f"Filtered neuropil corrected traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
                 with h5py.File(self.np_cor_ct_files[pkey], "r") as f:
-                    self.np_cor_ct[pkey] = f
+                    self.np_cor_ct[pkey]['FC'] = f['FC'][()]
+                    self.np_cor_ct[pkey]['RMSE'] = f['RMSE'][()]
+                    self.np_cor_ct[pkey]['r'] = f['r'][()]
                 with h5py.File(self.np_cor_files[pkey], "r") as f:
-                    self.np_cor[pkey] = f
+                    self.np_cor[pkey]['FC'] = f['FC'][()]
+                    self.np_cor[pkey]['RMSE'] = f['RMSE'][()]
+                    self.np_cor[pkey]['r'] = f['r'][()]
 
         return
 
