@@ -209,28 +209,28 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
 
 
 #  FROM SDK
+#
+# def get_sdk_session_obj(ophys_experiment_id, include_invalid_rois=False):
+#     """Use LIMS API from SDK to return session object
+#
+#     Arguments:
+#         ophys_experiment_id {int} -- 9 digit ophys experiment ID
+#         include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
+#
+#     Returns:
+#         session object -- session object from SDK
+#     """
+#     api = BehaviorOphysLimsApi(ophys_experiment_id)
+#     session = BehaviorOphysSession(api)
+#     # filter dff traces
+#     if include_invalid_rois == False:
+#         dff_traces = session.dff_traces
+#         valid_cells = session.cell_specimen_table[session.cell_specimen_table.valid_roi == True].cell_roi_id.values
+#         session.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
+#     return session
 
-def get_sdk_session_obj(ophys_experiment_id, include_invalid_rois=False):
-    """Use LIMS API from SDK to return session object
 
-    Arguments:
-        ophys_experiment_id {int} -- 9 digit ophys experiment ID
-        include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
-
-    Returns:
-        session object -- session object from SDK
-    """
-    api = BehaviorOphysLimsApi(ophys_experiment_id)
-    session = BehaviorOphysSession(api)
-    # filter dff traces
-    if include_invalid_rois == False:
-        dff_traces = session.dff_traces
-        valid_cells = session.cell_specimen_table[session.cell_specimen_table.valid_roi == True].cell_roi_id.values
-        session.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
-    return session
-
-
-def get_sdk_dataset_obj(ophys_experiment_id, cache_dir, include_invalid_rois=False):
+def get_sdk_dataset(ophys_experiment_id, cache_dir, include_invalid_rois=False):
     """Use LIMS API from SDK to return session object
 
     Arguments:
