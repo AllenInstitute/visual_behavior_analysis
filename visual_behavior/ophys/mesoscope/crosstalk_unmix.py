@@ -912,11 +912,11 @@ class MesoscopeICA(object):
             self.np_cor_files[pkey] = os.path.join(np_cor_dir, f"neuropil_correction.h5")
 
             self.np_cor_ct_files[pkey] = add_suffix_to_path(self.np_cor_files[pkey], '_ct')
-
+            self.np_cor_ct[pkey] = {}
+            self.np_cor[pkey] = {}
             if not os.path.isfile(self.np_cor_ct_files[pkey]):
                 logging.info(f"Filtering neuropil corrected traces for exp: {self.exp_ids[pkey]}")
-                self.np_cor_ct[pkey] = {}
-                self.np_cor[pkey] = {}
+
                 if os.path.isfile(self.np_cor_files[pkey]):
                     with h5py.File(self.np_cor_files[pkey], 'r') as f:
                         self.np_cor[pkey]['FC'] = f['FC'][()]
@@ -948,11 +948,11 @@ class MesoscopeICA(object):
             else:
                 logging.info(f"Filtered neuropil corrected traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
                 with h5py.File(self.np_cor_ct_files[pkey], "r") as f:
-                    self.np_cor_ct[pkey] = f["FC"][()]
+                    self.np_cor_ct[pkey]["FC"] = f["FC"][()]
                     self.np_cor_ct[pkey]["RMSE"] = f["RMSE"][()]
                     self.np_cor_ct[pkey]["r"] = f["r"][()]
                 with h5py.File(self.np_cor_files[pkey], "r") as f:
-                    self.np_cor[pkey] = f["FC"][()]
+                    self.np_cor[pkey]["FC"] = f["FC"][()]
                     self.np_cor[pkey]["RMSE"] = f["RMSE"][()]
                     self.np_cor[pkey]["r"] = f["r"][()]
         return
