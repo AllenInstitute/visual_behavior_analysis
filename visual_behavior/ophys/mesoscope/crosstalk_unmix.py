@@ -911,7 +911,7 @@ class MesoscopeICA(object):
             np_cor_dir = os.path.join(self.session_dir, f"neuropil_corrected_{exp_id}")
             self.np_cor_files[pkey] = os.path.join(np_cor_dir, f"neuropil_correction.h5")
 
-            self.np_cor_ct_files[pkey] = mu.add_suffix_to_path(self.np_cor_files[pkey], '_ct')
+            self.np_cor_ct_files[pkey] = add_suffix_to_path(self.np_cor_files[pkey], '_ct')
             self.np_cor_ct[pkey] = {}
             self.np_cor[pkey] = {}
             if not os.path.isfile(self.np_cor_ct_files[pkey]):
@@ -924,8 +924,6 @@ class MesoscopeICA(object):
                         self.np_cor[pkey]['r'] = f['r'][()]
                         self.np_cor_ct[pkey]['RMSE'] = f['RMSE'][()]
                         self.np_cor_ct[pkey]['r'] = f['r'][()]
-
-
                 else:
                     print(f"Neuropil corrected traces don't exist at {self.np_cor_files[pkey]}")
                 assert self.np_cor[pkey]['FC'].shape[0] == len(
@@ -934,22 +932,32 @@ class MesoscopeICA(object):
 
                 traces_dict = {}
                 for i in range(len(self.rois_names_valid[pkey][tkey])):
-                    roi_name = self.rois_names_valid[pkey][tkey][i]
-                    traces_dict[roi_name] = self.np_cor[pkey]['FC'][i]
+                    roi_name = str(self.rois_names_valid[pkey][tkey][i])
+                    traces_dict[roi_name] = {}
+                    traces_dict[roi_name]['FC'] = self.np_cor[pkey]['FC'][i]
+                    traces_dict[roi_name]['r'] = self.np_cor[pkey]['r'][i]
+                    traces_dict[roi_name]['RMSE'] = self.np_cor[pkey]['RMSE'][i]
 
-                self.np_cor_ct[pkey]['FC'] = [traces for roi_name, traces in traces_dict.items() if
-                                              self.rois_valid_ct[pkey][str(roi_name)]]
+                self.np_cor_ct[pkey]['FC'] = []
+                self.np_cor_ct[pkey]['r'] = []
+                self.np_cor_ct[pkey]['RMSE'] = []
+                for roi in self.rois_names_valid[pkey][tkey]:
+                    if self.rois_valid_ct[pkey][str(roi)]:
+                        self.np_cor_ct[pkey]['FC'].append(traces_dict[str(roi)]['FC'])
+                        self.np_cor_ct[pkey]['r'].append(traces_dict[str(roi)]['r'])
+                        self.np_cor_ct[pkey]['RMSE'].append(traces_dict[str(roi)]['RMSE'])
+                self.np_cor_ct[pkey]['FC'] = np.array(self.np_cor_ct[pkey]['FC'])
+                self.np_cor_ct[pkey]['r'] = np.array(self.np_cor_ct[pkey]['r'])
+                self.np_cor_ct[pkey]['RMSE'] = np.array(self.np_cor_ct[pkey]['RMSE'])
 
                 with h5py.File(self.np_cor_ct_files[pkey], "w") as f:
                     f.create_dataset("FC", data=self.np_cor_ct[pkey]['FC'], compression="gzip")
-                    f.create_dataset("roi_names",
-                                     data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
-                    f.create_dataset("RMSE", self.np_cor[pkey]["RMSE"])
-                    f.create_dataset("r", self.np_cor[pkey]["r"])
-
+                    f.create_dataset("roi_names", data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
+                    f.create_dataset("RMSE", self.np_cor_ct[pkey]['RMSE'])
+                    f.create_dataset("r", self.np_cor_ct[pkey]['r'])
 
             else:
-                #             logging.info(f"Filtered neuropil corrected traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
+                logging.info(f"Filtered neuropil corrected traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
                 with h5py.File(self.np_cor_ct_files[pkey], "r") as f:
                     self.np_cor_ct[pkey]['FC'] = f['FC'][()]
                     self.np_cor_ct[pkey]['RMSE'] = f['RMSE'][()]
