@@ -939,8 +939,8 @@ class MesoscopeICA(object):
                     f.create_dataset("data", data=self.np_cor_ct[pkey], compression="gzip")
                     f.create_dataset("roi_names",
                                      data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
-                    f.create_datasset("RMSE", self.np_cor[pkey]["RMSE"])
-                    f.create_datasset("r", self.np_cor[pkey]["r"])
+                    f.create_dataset("RMSE", self.np_cor[pkey]["RMSE"])
+                    f.create_dataset("r", self.np_cor[pkey]["r"])
 
             else:
                 logging.info(f"Filtered neuropil corrected traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
