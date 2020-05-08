@@ -939,7 +939,7 @@ class MesoscopeICA(object):
                                               self.rois_valid_ct[pkey][str(roi_name)]]
 
                 with h5py.File(self.np_cor_ct_files[pkey], "w") as f:
-                    f.create_dataset("data", data=self.np_cor_ct[pkey], compression="gzip")
+                    f.create_dataset("data", data=self.np_cor_ct[pkey]['FC'], compression="gzip")
                     f.create_dataset("roi_names",
                                      data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
                     f.create_dataset("RMSE", self.np_cor_ct[pkey]["RMSE"])
