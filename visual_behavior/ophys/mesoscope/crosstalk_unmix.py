@@ -412,12 +412,25 @@ class MesoscopeICA(object):
                             f.create_dataset("roi_names", data=np.int_(roi_names[pkey][tkey]))
         return
 
+    def get_active_traces(self, run_ct=False):
+        # here we will run get active traces on all rois traces from the plane (signal only, apply  them to crosstalk and write to disk and assign to self.raws_active
+
+        return
+
     @staticmethod
     def traces_not_nan(sig, ct):
         if np.any(np.isnan(sig)) or np.any(np.isnan(ct)):
             return False
         else:
             return True
+
+
+    @staticmethod
+    def roi_from_wrong_plane(sig, ct):
+        # here we will read active traces,
+
+
+        return
 
     def validate_traces(self, return_vba=False):
         """
@@ -1089,7 +1102,7 @@ class MesoscopeICA(object):
         pl_crosstalk = np.empty((2, ica_in.shape[1]))
         ica_pl_out = np.empty(ica_in.shape)
 
-        if mixing is not None:  # this is indicative that traces are form neuropil, use provided mixing to unmix them
+        if mixing is not None:  # this is indicative that traces are from neuropil, use provided mixing to unmix them
             for i in range(len(roi_names)):
                 mixing_roi = mixing[i]
                 trace_sig = traces_sig[i]
@@ -1113,7 +1126,7 @@ class MesoscopeICA(object):
             traces_sig_evs, traces_ct_evs, valid = extract_active(ica_in, len_ne=20, th_ag=10, do_plots=0)
             # run ica on active traces, apply unmixing matrix to the entire trace
             ica_pl_out = np.empty(ica_in.shape)
-            # perform unmixing separately on eah ROI:
+            # perform unmixing separately on each ROI:
             for i in range(len(roi_names)):
                 # get events traces
                 trace_sig_evs = traces_sig_evs[i]
@@ -1333,7 +1346,7 @@ def extract_active(traces, len_ne=20, th_ag=10, do_plots=0):
             traces_sig_evs[i] = traces_sig[i]
             traces_ct_evs.append(traces_ct[i])
             valid.append(False)
-    return traces_sig_evs, traces_ct_evs, valid
+    return traces_sig_evs, np.array(traces_ct_evs), valid
 
 
 def add_suffix_to_path(abs_path, suffix):

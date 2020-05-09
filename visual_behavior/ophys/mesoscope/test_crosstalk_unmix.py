@@ -350,3 +350,40 @@ def test_filter_dff_traces_crosstalk(session=None):
 	    assert 'data' in datasets, f"traces are not present in dff_ct file for exp {ica_obj.exp_ids[pkey]}"
 	    assert 'roi_names' in datasets, f"roi names are not present in dff_ct file for exp {ica_obj.exp_ids[pkey]}"
 	    f.close()
+
+
+def test_extract_active(session):
+	if not session:
+		ses = 839208243
+		"""LIMS session ID to use for test,
+		use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
+		which takes ~ 5 hours"""
+	else:
+		ses = session
+
+	ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+	pairs = ica_obj.dataset.get_paired_planes()
+	pair = pairs[0]
+	ica_obj.set_exp_ids(pair)
+	ica_obj.get_ica_traces()
+	ica_obj.validate_traces(return_vba=False)
+	ica_obj.debias_traces()
+
+	pkey = 'pl1'
+	tkey = 'roi'
+	traces = ica_obj.ins[pkey][tkey]
+	traces_sig_evs, traces_ct_evs, valid = ica_obj.get_active_traces(traces)
+
+	# 1. Check data alignment
+	assert traces_sig_evs.shape[0] == traces.shape[1], f"Output of active traces SIGNAL contains different number of " \
+													   f"traces (number of rois doesn't align)"
+	assert traces_ct_evs.shape[0] == traces.shape[1], f"Output of active traces CROSSTALK contains different number of " \
+													  f"traces (number of rois doesn't align)"
+	assert len(valid) == traces.shape[1], f"Length of Valid list contains different number of elements than number of " \
+										  f"cells in input traces"
+
+	# 2. Check if valid actually has true for traces with no Nans
+	for i in range(traces_sig_evs.shape[0]):
+		assert valid[i] == (not np.any(np.isnan(traces_sig_evs[i])) and not np.any(np.isnan(traces_ct_evs[i])))
+
+	return
