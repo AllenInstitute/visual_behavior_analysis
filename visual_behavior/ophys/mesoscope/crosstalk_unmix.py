@@ -169,7 +169,9 @@ class MesoscopeICA(object):
         self.np_cor = {}
         self.np_cor_ct_files = {}
         self.np_cor_ct = {}
-
+        # active traces:
+        self.ins_active = {}
+        self.ins_active_paths = {}
         for pkey in self.pkeys:
             self.rois_names[pkey] = {}
             self.rois_names_valid[pkey] = {}
@@ -189,6 +191,8 @@ class MesoscopeICA(object):
             self.mixing[pkey] = {}
             self.a_mixing[pkey] = {}
             self.plot_dirs[pkey] = {}
+            self.ins_active[pkey] = {}
+            self.ins_active_paths[pkey] = {}
             for tkey in self.tkeys:
                 self.rois_names[pkey][tkey] = None
                 self.rois_names_valid[pkey][tkey] = None
@@ -412,9 +416,30 @@ class MesoscopeICA(object):
                             f.create_dataset("roi_names", data=np.int_(roi_names[pkey][tkey]))
         return
 
-    def get_active_traces(self, run_ct=False):
-        # here we will run get active traces on all rois traces from the plane (signal only, apply  them to crosstalk and write to disk and assign to self.raws_active
+    def get_active_traces(self):
+        """
+        method to run extract_active traces on all rois traces from the plane (signal only, apply events filter to
+        crosstalk, write to disk and assign to self.ins_active
+        :return: 
+        """
 
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                self.ins_active_paths[pkey][tkey] = add_suffix_to_path(self.ins_paths[pkey][tkey], '_at')
+
+                if not os.path.isfile(self.ins_active_paths[pkey][tkey]):
+                    logging.info(f"Extracting active traces for {self.exp_ids[pkey][tkey]}, skipping")
+                    traces = self.ins[pkey][tkey]
+                    traces_sig_evs, traces_ct_evs, _ = extract_active(traces)
+                    traces_active = np.array([traces_sig_evs, traces_ct_evs])
+                    self.ins_active[pkey][tkey] = traces_active
+
+                    with h5py.File(self.ins_active_paths[pkey][tkey], 'w') as f:
+                        f.create_dataset('data', data=self.ins_active[pkey][tkey], compression="gzip")
+                else:
+                    logging.info(f"Active traces exist for {self.exp_ids[pkey][tkey]}, skipping extraction, reading from hdf5 file")
+                    with h5py.File(self.ins_active_paths[pkey][tkey], 'r') as f:
+                        self.ins_active[pkey][tkey] = f['data']
         return
 
     @staticmethod

@@ -372,7 +372,7 @@ def test_extract_active(session):
 	pkey = 'pl1'
 	tkey = 'roi'
 	traces = ica_obj.ins[pkey][tkey]
-	traces_sig_evs, traces_ct_evs, valid = ica_obj.get_active_traces(traces)
+	traces_sig_evs, traces_ct_evs, valid = ica.extract_active(traces)
 
 	# 1. Check data alignment
 	assert traces_sig_evs.shape[0] == traces.shape[1], f"Output of active traces SIGNAL contains different number of " \
