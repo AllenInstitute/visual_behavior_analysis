@@ -412,6 +412,13 @@ class MesoscopeICA(object):
                             f.create_dataset("roi_names", data=np.int_(roi_names[pkey][tkey]))
         return
 
+    @staticmethod
+    def traces_not_nan(sig, ct):
+        if np.any(np.isnan(sig)) or np.any(np.isnan(ct)):
+            return False
+        else:
+            return True
+
     def validate_traces(self, return_vba=False):
         """
         fn to check if the traces don't have Nans, writes {exp_id}_valid.json to cache for each pl in pair
@@ -484,11 +491,13 @@ class MesoscopeICA(object):
                             for n in range(num_traces_sig[pkey]['roi']):
                                 roi_name = str(self.rois_names[pkey]['roi'][n])
                                 traces_valid[pkey][tkey][roi_name] = True
-                                # check if both roi and np trace have no NaNs:
+
                                 trace_sig[pkey][tkey] = self.raws[pkey][tkey][0][n]
                                 trace_ct[pkey][tkey] = self.raws[pkey][tkey][1][n]
-                                if np.any(np.isnan(trace_sig[pkey][tkey])) or np.any(np.isnan(trace_ct[pkey][tkey])):
-                                    traces_valid[pkey][tkey][roi_name] = False
+
+                                # check if both roi and np trace have no NaNs:
+                                traces_valid[pkey][tkey][roi_name] = self.traces_not_nan(trace_sig[pkey][tkey], trace_ct[pkey][tkey])
+
                                 if not traces_valid[pkey][tkey][roi_name]:
                                     rois_valid[pkey][tkey][roi_name] = False
                                 else:
