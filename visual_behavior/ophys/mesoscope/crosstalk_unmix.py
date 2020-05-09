@@ -915,8 +915,7 @@ class MesoscopeICA(object):
             self.np_cor_ct[pkey] = {}
             self.np_cor[pkey] = {}
             if not os.path.isfile(self.np_cor_ct_files[pkey]):
-                #             logging.info(f"Filtering neuropil corrected traces for exp: {self.exp_ids[pkey]}")
-
+                logging.info(f"Filtering neuropil corrected traces for exp: {self.exp_ids[pkey]}")
                 if os.path.isfile(self.np_cor_files[pkey]):
                     with h5py.File(self.np_cor_files[pkey], 'r') as f:
                         self.np_cor[pkey]['FC'] = f['FC'][()]
@@ -924,6 +923,8 @@ class MesoscopeICA(object):
                         self.np_cor[pkey]['r'] = f['r'][()]
                         self.np_cor_ct[pkey]['RMSE'] = f['RMSE'][()]
                         self.np_cor_ct[pkey]['r'] = f['r'][()]
+
+
                 else:
                     print(f"Neuropil corrected traces don't exist at {self.np_cor_files[pkey]}")
                 assert self.np_cor[pkey]['FC'].shape[0] == len(
@@ -953,8 +954,8 @@ class MesoscopeICA(object):
                 with h5py.File(self.np_cor_ct_files[pkey], "w") as f:
                     f.create_dataset("FC", data=self.np_cor_ct[pkey]['FC'], compression="gzip")
                     f.create_dataset("roi_names", data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
-                    f.create_dataset("RMSE", self.np_cor_ct[pkey]['RMSE'])
-                    f.create_dataset("r", self.np_cor_ct[pkey]['r'])
+                    f.create_dataset("RMSE", data=self.np_cor_ct[pkey]['RMSE'], compression="gzip")
+                    f.create_dataset("r", data=self.np_cor_ct[pkey]['r'], compression="gzip")
 
             else:
                 logging.info(f"Filtered neuropil corrected traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
@@ -968,7 +969,6 @@ class MesoscopeICA(object):
                     self.np_cor[pkey]['r'] = f['r'][()]
 
         return
-
 
     @staticmethod
     def plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples):
