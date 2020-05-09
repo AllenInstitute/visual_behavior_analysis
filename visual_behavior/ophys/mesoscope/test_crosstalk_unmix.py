@@ -99,7 +99,7 @@ def test_validate_traces(test_session = None):
 		for tkey in self.tkeys:
 			roi_names_valid = [str(roi) for roi in self.rois_names_valid[pkey][tkey]]
 			raw_roi_names = self.rois_names[pkey][tkey]
-			assert all([roi_v in raw_roi_names for roi_v in roi_names_valid])
+			assert all([int(roi_v) in raw_roi_names for roi_v in roi_names_valid]), f"Some roi names in self.self.rois_names_valid are not in self.rois_names for {pkey}, {tkey}"
 
 
 def test_debias_traces(test_session=None):
