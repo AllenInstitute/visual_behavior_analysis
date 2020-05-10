@@ -1395,7 +1395,6 @@ def run_ica(sig, ct):
     return mix, a_mix, a_unmix, r_source
 
 
-@staticmethod
 def validate_active_traces(evs_ind):
     """
     fn to egenrate a valid dict based on whether any evens where detected in traces
