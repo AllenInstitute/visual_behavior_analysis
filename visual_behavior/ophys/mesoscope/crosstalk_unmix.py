@@ -433,18 +433,24 @@ class MesoscopeICA(object):
         elif input_type == 'Output':
             traces_in = self.outs
             path_in = self.outs_paths
+        else:
+            logging.error(f"input_type must be Input or Output")
+            raise ValueError
 
         active = {}
         active_paths = {}
+        active_flat = {}
         for pkey in self.pkeys:
             active[pkey] = {}
             active_paths[pkey] = {}
+            active_flat[pkey] = {}
             for tkey in self.tkeys:
                 active[pkey][tkey] = {}
-                active_paths[pkey][tkey] = add_suffix_to_path(path_in[pkey][tkey], '_at')
+                active_flat[pkey][tkey] = {}
+                active_paths[pkey][tkey] = mu.add_suffix_to_path(path_in[pkey][tkey], '_at')
                 roi_names = self.rois_names_valid[pkey][tkey]
                 if not os.path.isfile(active_paths[pkey][tkey]):
-                    logging.info(f"Extracting active traces for {input_type}, {self.exp_ids[pkey]}")
+                    logging.info(f"Extracting active traces for {input_type}, {tkey}, {self.exp_ids[pkey]}")
                     traces = traces_in[pkey][tkey]
                     traces_evs_sig, evs_ind_sig, valid_sig, traces_evs_ct, evs_ind_ct, valid_ct = extract_active(traces)
                     for i in range(len(roi_names)):
@@ -458,30 +464,32 @@ class MesoscopeICA(object):
                         active[pkey][tkey][roi]['ct']['trace'] = traces_evs_ct[i]
                         active[pkey][tkey][roi]['ct']['events'] = evs_ind_ct[i]
                         active[pkey][tkey][roi]['ct']['valid'] = valid_ct[i]
-                        active[pkey][tkey] = sc.flattendict(active[pkey][tkey], sep='_')
+                        active_flat[pkey][tkey] = sc.flattendict(active[pkey][tkey], sep='_')
                     with h5py.File(active_paths[pkey][tkey], 'w') as f:
-                        for k in active[pkey][tkey].keys():
-                            f.create_dataset(k, data=active[pkey][tkey][k])
+                        for k in active_flat[pkey][tkey].keys():
+                            f.create_dataset(k, data=active_flat[pkey][tkey][k])
                 else:
-                    logging.info(f"Active traces exist for {input_type}, {self.exp_ids[pkey]}, skipping extraction, reading from hdf5 file")
+                    logging.info(f"Active traces exist for {input_type}, {tkey}, {self.exp_ids[
+                        pkey]}, skipping extraction, reading from hdf5 file")
                     with h5py.File(active_paths[pkey][tkey], 'r') as f:
                         for i in range(len(roi_names)):
                             roi = str(roi_names[i])
+                            active[pkey][tkey][roi] = {}
                             active[pkey][tkey][roi]['sig'] = {}
                             active[pkey][tkey][roi]['ct'] = {}
-                            active[pkey][tkey][roi]['sig']['trace'] = f[f"{roi}_sig_trace"]
-                            active[pkey][tkey][roi]['sig']['events'] = f[f"{roi}_sig_events"]
-                            active[pkey][tkey][roi]['sig']['valid'] = f[f"{roi}_sig_valid"]
-                            active[pkey][tkey][roi]['ct']['trace'] = f[f"{roi}_ct_trace"]
-                            active[pkey][tkey][roi]['ct']['events'] = f[f"{roi}_ct_events"]
-                            active[pkey][tkey][roi]['ct']['valid'] = f[f"{roi}_ct_valid"]
+                            active[pkey][tkey][roi]['sig']['trace'] = f[f"{roi}_sig_trace"][()]
+                            active[pkey][tkey][roi]['sig']['events'] = f[f"{roi}_sig_events"][()]
+                            active[pkey][tkey][roi]['sig']['valid'] = f[f"{roi}_sig_valid"][()]
+                            active[pkey][tkey][roi]['ct']['trace'] = f[f"{roi}_ct_trace"][()]
+                            active[pkey][tkey][roi]['ct']['events'] = f[f"{roi}_ct_events"][()]
+                            active[pkey][tkey][roi]['ct']['valid'] = f[f"{roi}_ct_valid"][()]
 
         if input_type == 'Input':
             self.ins_active = active
             self.ins_active_paths = active_paths
         elif input_type == 'Output':
             self.outs_active = active
-            self.outs_active_paths = active_paths
+            self.ous_active_paths = active_paths
 
         return
 
