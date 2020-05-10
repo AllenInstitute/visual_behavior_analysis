@@ -4,7 +4,7 @@ import allensdk.internal.core.lims_utilities as lu
 import os
 import h5py
 import numpy as np
-
+import sciris as sc
 import json
 from sklearn.decomposition import FastICA
 import scipy.optimize as opt
