@@ -352,6 +352,11 @@ def test_filter_dff_traces_crosstalk(session=None):
 	    f.close()
 
 
+def test_get_active_traces(session):
+
+	return
+
+
 def test_extract_active(session):
 	if not session:
 		ses = 839208243
@@ -387,3 +392,7 @@ def test_extract_active(session):
 		assert valid[i] == (not np.any(np.isnan(traces_sig_evs[i])) and not np.any(np.isnan(traces_ct_evs[i])))
 
 	return
+
+
+def test_get_active_traces(self, input_type):
+
