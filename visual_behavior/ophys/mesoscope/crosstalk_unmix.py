@@ -433,10 +433,6 @@ class MesoscopeICA(object):
         elif input_type == 'Output':
             traces_in = self.outs
             path_in = self.outs_paths
-        else:
-            logging.error(f"input_type must be Input or Output")
-            raise ValueError
-
         active = {}
         active_paths = {}
         active_flat = {}
@@ -447,7 +443,7 @@ class MesoscopeICA(object):
             for tkey in self.tkeys:
                 active[pkey][tkey] = {}
                 active_flat[pkey][tkey] = {}
-                active_paths[pkey][tkey] = mu.add_suffix_to_path(path_in[pkey][tkey], '_at')
+                active_paths[pkey][tkey] = add_suffix_to_path(path_in[pkey][tkey], '_at')
                 roi_names = self.rois_names_valid[pkey][tkey]
                 if not os.path.isfile(active_paths[pkey][tkey]):
                     logging.info(f"Extracting active traces for {input_type}, {tkey}, {self.exp_ids[pkey]}")
@@ -469,8 +465,7 @@ class MesoscopeICA(object):
                         for k in active_flat[pkey][tkey].keys():
                             f.create_dataset(k, data=active_flat[pkey][tkey][k])
                 else:
-                    logging.info(f"Active traces exist for {input_type}, {tkey}, {self.exp_ids[
-                        pkey]}, skipping extraction, reading from hdf5 file")
+                    logging.info(f"Active traces exist for {input_type}, {tkey}, {self.exp_ids[pkey]}, skipping extraction, reading from hdf5 file")
                     with h5py.File(active_paths[pkey][tkey], 'r') as f:
                         for i in range(len(roi_names)):
                             roi = str(roi_names[i])
@@ -483,14 +478,12 @@ class MesoscopeICA(object):
                             active[pkey][tkey][roi]['ct']['trace'] = f[f"{roi}_ct_trace"][()]
                             active[pkey][tkey][roi]['ct']['events'] = f[f"{roi}_ct_events"][()]
                             active[pkey][tkey][roi]['ct']['valid'] = f[f"{roi}_ct_valid"][()]
-
         if input_type == 'Input':
             self.ins_active = active
             self.ins_active_paths = active_paths
         elif input_type == 'Output':
             self.outs_active = active
-            self.ous_active_paths = active_paths
-
+            self.outs_active_paths = active_paths
         return
 
     @staticmethod
