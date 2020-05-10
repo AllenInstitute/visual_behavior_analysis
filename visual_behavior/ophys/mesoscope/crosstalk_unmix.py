@@ -4,7 +4,7 @@ import allensdk.internal.core.lims_utilities as lu
 import os
 import h5py
 import numpy as np
-import logging
+
 import json
 from sklearn.decomposition import FastICA
 import scipy.optimize as opt
@@ -17,7 +17,7 @@ from matplotlib.colors import LogNorm
 import visual_behavior.ophys.mesoscope.active_traces as at
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 import copy
-
+import logging
 logger = logging.getLogger(__name__)
 
 mpl_logger = logging.getLogger("matplotlib")
@@ -135,8 +135,8 @@ class MesoscopeICA(object):
         # pointers and attributes related to raw traces
         self.raws = {}
         self.raw_paths = {}
-        self.rois_names = {}
-        self.rois_names_valid = {}
+        self.rois_names = {}  # list of roi names for raw traces
+        self.rois_names_valid = {}  # list of roi names after raw traces validation
         # pointers and attributes related to ica input traces
         self.ins = {}
         self.ins_paths = {}
@@ -427,51 +427,62 @@ class MesoscopeICA(object):
 
         :return:
         """
-        if input_type == 'in':
-            for pkey in self.pkeys:
-                for tkey in self.tkeys:
-                    self.ins_active[pkey][tkey] = {}
-                    self.ins_active_paths[pkey][tkey] = add_suffix_to_path(self.ins_paths[pkey][tkey], '_at')
-                    if not os.path.isfile(self.ins_active_paths[pkey][tkey]):
-                        logging.info(f"Extracting input active traces for {self.exp_ids[pkey][tkey]}, skipping")
-                        traces = self.ins[pkey][tkey]
-                        traces_evs_sig, evs_ind_sig, valid_sig, traces_evs_ct, evs_ind_ct, valid_ct = extract_active(traces)
-                        self.ins_active[pkey][tkey]['traces_active'] = np.array([traces_evs_sig, traces_evs_ct])
-                        self.ins_active[pkey][tkey]['events'] = np.array([evs_ind_sig, evs_ind_ct])
-                        self.ins_active[pkey][tkey]['valid'] = np.array([valid_sig, valid_ct])
-                        with h5py.File(self.ins_active_paths[pkey][tkey], 'w') as f:
-                            f.create_dataset('traces_active', data=self.ins_active[pkey][tkey]['traces_active'], compression="gzip")
-                            f.create_dataset('events', data=self.ins_active[pkey][tkey]['events'], compression="gzip")
-                            f.create_dataset('valid', data=self.ins_active[pkey][tkey]['valid'], compression="gzip")
-                    else:
-                        logging.info(f"Input active traces exist for {self.exp_ids[pkey][tkey]}, skipping extraction, reading from hdf5 file")
-                        with h5py.File(self.ins_active_paths[pkey][tkey], 'r') as f:
-                            self.ins_active[pkey][tkey]['traces_active'] = f['traces_active']
-                            self.ins_active[pkey][tkey]['events'] = f['events']
-                            self.ins_active[pkey][tkey]['valid'] = f['valid']
+        if input_type == 'Input':
+            traces_in = self.ins
+            path_in = self.ins_paths
+        elif input_type == 'Output':
+            traces_in = self.outs
+            path_in = self.outs_paths
 
-        if input_type == 'out':  # extract active traces for ica_out
-            for pkey in self.pkeys:
-                for tkey in self.tkeys:
-                    self.outs_active[pkey][tkey] = {}
-                    self.outs_active_paths[pkey][tkey] = add_suffix_to_path(self.outs_paths[pkey][tkey], '_at')
-                    if not os.path.isfile(self.outs_active_paths[pkey][tkey]):
-                        logging.info(f"Extracting output active traces for {self.exp_ids[pkey][tkey]}, skipping")
-                        traces = self.outs[pkey][tkey]
-                        traces_evs_sig, evs_ind_sig, valid_sig, traces_evs_ct, evs_ind_ct, valid_ct = extract_active(traces)
-                        self.outs_active[pkey][tkey]['traces_active'] = np.array([traces_evs_sig, traces_evs_ct])
-                        self.outs_active[pkey][tkey]['events'] = np.array([evs_ind_sig, evs_ind_ct])
-                        self.outs_active[pkey][tkey]['valid'] = np.array([valid_sig, valid_ct])
-                        with h5py.File(self.outs_active_paths[pkey][tkey], 'w') as f:
-                            f.create_dataset('traces_active', data=self.outs_active[pkey][tkey]['traces_active'], compression="gzip")
-                            f.create_dataset('events', data=self.outs_active[pkey][tkey]['events'], compression="gzip")
-                            f.create_dataset('valid', data=self.outs_active[pkey][tkey]['valid'], compression="gzip")
-                    else:
-                        logging.info(f"output active traces exist for {self.exp_ids[pkey][tkey]}, skipping extraction, reading from hdf5 file")
-                        with h5py.File(self.outs_active_paths[pkey][tkey], 'r') as f:
-                            self.outs_active[pkey][tkey]['traces_active'] = f['traces_active']
-                            self.outs_active[pkey][tkey]['events'] = f['events']
-                            self.outs_active[pkey][tkey]['valid'] = f['valid']
+        active = {}
+        active_paths = {}
+        for pkey in self.pkeys:
+            active[pkey] = {}
+            active_paths[pkey] = {}
+            for tkey in self.tkeys:
+                active[pkey][tkey] = {}
+                active_paths[pkey][tkey] = add_suffix_to_path(path_in[pkey][tkey], '_at')
+                roi_names = self.rois_names_valid[pkey][tkey]
+                if not os.path.isfile(active_paths[pkey][tkey]):
+                    logging.info(f"Extracting active traces for {input_type}, {self.exp_ids[pkey]}")
+                    traces = traces_in[pkey][tkey]
+                    traces_evs_sig, evs_ind_sig, valid_sig, traces_evs_ct, evs_ind_ct, valid_ct = extract_active(traces)
+                    for i in range(len(roi_names)):
+                        roi = str(roi_names[i])
+                        active[pkey][tkey][roi] = {}
+                        active[pkey][tkey][roi]['sig'] = {}
+                        active[pkey][tkey][roi]['ct'] = {}
+                        active[pkey][tkey][roi]['sig']['trace'] = traces_evs_sig[i]
+                        active[pkey][tkey][roi]['sig']['events'] = evs_ind_sig[i]
+                        active[pkey][tkey][roi]['sig']['valid'] = valid_sig[i]
+                        active[pkey][tkey][roi]['ct']['trace'] = traces_evs_ct[i]
+                        active[pkey][tkey][roi]['ct']['events'] = evs_ind_ct[i]
+                        active[pkey][tkey][roi]['ct']['valid'] = valid_ct[i]
+                        active[pkey][tkey] = sc.flattendict(active[pkey][tkey], sep='_')
+                    with h5py.File(active_paths[pkey][tkey], 'w') as f:
+                        for k in active[pkey][tkey].keys():
+                            f.create_dataset(k, data=active[pkey][tkey][k])
+                else:
+                    logging.info(f"Active traces exist for {input_type}, {self.exp_ids[pkey]}, skipping extraction, reading from hdf5 file")
+                    with h5py.File(active_paths[pkey][tkey], 'r') as f:
+                        for i in range(len(roi_names)):
+                            roi = str(roi_names[i])
+                            active[pkey][tkey][roi]['sig'] = {}
+                            active[pkey][tkey][roi]['ct'] = {}
+                            active[pkey][tkey][roi]['sig']['trace'] = f[f"{roi}_sig_trace"]
+                            active[pkey][tkey][roi]['sig']['events'] = f[f"{roi}_sig_events"]
+                            active[pkey][tkey][roi]['sig']['valid'] = f[f"{roi}_sig_valid"]
+                            active[pkey][tkey][roi]['ct']['trace'] = f[f"{roi}_ct_trace"]
+                            active[pkey][tkey][roi]['ct']['events'] = f[f"{roi}_ct_events"]
+                            active[pkey][tkey][roi]['ct']['valid'] = f[f"{roi}_ct_valid"]
+
+        if input_type == 'Input':
+            self.ins_active = active
+            self.ins_active_paths = active_paths
+        elif input_type == 'Output':
+            self.outs_active = active
+            self.outs_active_paths = active_paths
+
         return
 
     @staticmethod
@@ -487,7 +498,7 @@ class MesoscopeICA(object):
         # here we will read active traces,
         return
 
-    def validate_traces(self, return_vba=False):
+    def validate_raw_traces(self, return_vba=False):
         """
         fn to check if the traces don't have Nans, writes {exp_id}_valid.json to cache for each pl in pair
         return_vba: bool, flag to control whether to validate against vba roi set or return ica roi set
@@ -728,7 +739,7 @@ class MesoscopeICA(object):
 
     def unmix_pair(self):
         """
-        function to unmix a pair of panels:
+        function to unmix a pair of planes:
         """
         # lcoal vars for out paths:
         outs_paths = {}
