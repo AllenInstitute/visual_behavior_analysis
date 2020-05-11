@@ -249,10 +249,10 @@ def get_roi_group(lims_data):
     return expt_roi_group
 
 
-def get_sync_path(lims_data):
+def get_sync_path(lims_data, analysis_dir):
     #    import shutil
     ophys_session_dir = get_ophys_session_dir(lims_data)
-    analysis_dir = get_analysis_dir(lims_data)
+    # analysis_dir = get_analysis_dir(lims_data)
 
     # First attempt
     sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file]
@@ -276,9 +276,9 @@ def get_sync_path(lims_data):
     return sync_path
 
 
-def get_sync_data(lims_data, use_acq_trigger):
+def get_sync_data(lims_data, analysis_dir, use_acq_trigger):
     logger.info('getting sync data')
-    sync_path = get_sync_path(lims_data)
+    sync_path = get_sync_path(lims_data, analysis_dir)
     sync_dataset = SyncDataset(sync_path)
     # Handle mesoscope missing labels
     try:
@@ -378,7 +378,7 @@ def get_timestamps(lims_data, analysis_dir):
         use_acq_trigger = True
     else:
         use_acq_trigger = False
-    sync_data = get_sync_data(lims_data, use_acq_trigger)
+    sync_data = get_sync_data(lims_data, analysis_dir, use_acq_trigger)
     timestamps = pd.DataFrame(sync_data)
     return timestamps
 
