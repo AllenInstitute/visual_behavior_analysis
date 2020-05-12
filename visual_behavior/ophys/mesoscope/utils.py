@@ -1203,6 +1203,10 @@ def plot_trace(x1, x1_name, roi_id, title, c_x1 = 'blue'):
 
 
 def plot_rois_from_plane(ica_obj, pkey, plot_interval='all', roi_id=None):
+    """
+    fn to plot either all rois from plane that are valid (Accroding to ica_obj.rois_names_valid_ct)
+    or a single roi
+    """
     tkey = 'roi'
     session = ica_obj.session_id
     exp_id = ica_obj.exp_ids[pkey]
@@ -1217,7 +1221,7 @@ def plot_rois_from_plane(ica_obj, pkey, plot_interval='all', roi_id=None):
 
     if plot_interval == 'all':
         start = 0
-        end = raws_sig_roi.shape[0]
+        end = raws_sig_roi.shape[1]
     else:
         start = plot_interval[0]
         end = plot_interval[1]
@@ -1244,4 +1248,4 @@ def plot_rois_from_plane(ica_obj, pkey, plot_interval='all', roi_id=None):
                         roi, f"{session}/{exp_id}: ROI traces, signal: RAW and after ICA")
         else:
             continue
-    return
+    return roi_names_valid_ct
