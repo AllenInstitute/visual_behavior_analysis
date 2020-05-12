@@ -1169,3 +1169,79 @@ def rename_old_traces(sessions):
             list_ses_renamed.append(session)
 
     return list_ses_renamed
+
+
+def plot_traces(x1, x1_name, x2, x2_name, roi_id, title, c_x1='red', c_x2='green', r_ica=None, r_raw=None,
+                rmse_ica=None, rmse_raw=None):
+    plt.figure(figsize=(20, 10))
+    plt.rcParams.update({'font.size': 22})
+    plt.subplot(211)
+    plt.ylim(min(min(x1), min(x2)), max(max(x1), max(x2)))
+    plt.plot(x1, c_x1, label=x1_name, alpha=0.7)
+    plt.plot(x2, c_x2, label=x2_name, alpha=0.7)
+    plt.title(f'{title} for cell {roi_id}', fontsize=18)
+    if r_ica is not None and r_raw is not None:
+        ax = plt.gca()
+        plt.text(0, 0.8, f" r raw: {np.round(r_raw, 2)}\n r ica: {np.round(r_ica, 2)}", transform=ax.transAxes)
+        plt.text(0, 0.6, f"mean d: {np.round(x2.mean() * r_raw - x1.mean() * r_ica, 2)}", transform=ax.transAxes)
+
+    if r_ica is not None and r_raw is not None:
+        ax = plt.gca()
+        plt.text(0.2, 0.8, f" rmse raw: {np.round(rmse_raw, 2)}\n rmse ica: {np.round(rmse_ica, 2)}",
+                 transform=ax.transAxes)
+    plt.legend(loc='best')
+    return
+
+
+def plot_trace(x1, x1_name, roi_id, title, c_x1 = 'blue'):
+    plt.figure(figsize=(20, 5))
+    plt.rcParams.update({'font.size': 22})
+    plt.plot(x1, c_x1, label=x1_name)
+    plt.title(f'{title} for cell {roi_id}', fontsize=18)
+    plt.legend(loc='best')
+    return
+
+
+def plot_rois_from_plane(ica_obj, pkey, plot_interval='all', roi_id=None):
+    tkey = 'roi'
+    session = ica_obj.session_id
+    exp_id = ica_obj.exp_ids[pkey]
+    traces_raw_sig_roi = {}
+    traces_out_sig_roi = {}
+
+    roi_names = ica_obj.rois_names[pkey][tkey]
+    roi_names_valid = ica_obj.rois_names_valid[pkey][tkey]
+    roi_names_valid_ct = ica_obj.rois_names_valid_ct[pkey][tkey]
+    raws_sig_roi = ica_obj.raws[pkey][tkey][0]
+    ica_outs_sig_roi = ica_obj.outs[pkey][tkey][0]
+
+    if plot_interval == 'all':
+        start = 0
+        end = raws_sig_roi.shape[0]
+    else:
+        start = plot_interval[0]
+        end = plot_interval[1]
+
+    assert len(roi_names) == raws_sig_roi.shape[0], f"Raw traces sig not aligned for exp {exp_id}"
+    assert len(roi_names_valid) == ica_outs_sig_roi.shape[0], f"ICA outs sig is not aligned for exp {exp_id}"
+
+    # create dictionaries of raw and ica output traces
+    i = 0
+    for roi in roi_names:
+        traces_raw_sig_roi[str(roi)] = raws_sig_roi[i][start:end]
+        i += 1
+    i = 0
+    for roi in roi_names_valid:
+        traces_out_sig_roi[str(roi)] = ica_outs_sig_roi[i][start:end]
+        i += 1
+
+    for roi in roi_names_valid_ct:
+        if roi_id is None:  # plot all roi traces
+            plot_traces(traces_raw_sig_roi[str(roi)], "raw signal roi", traces_out_sig_roi[str(roi)], "ica signal roi",
+                        roi, f"{session}/{exp_id}: ROI traces, signal: RAW and after ICA")
+        elif roi == str(roi_id):  # plot only roi of interest:
+            plot_traces(traces_raw_sig_roi[str(roi)], "raw signal roi", traces_out_sig_roi[str(roi)], "ica signal roi",
+                        roi, f"{session}/{exp_id}: ROI traces, signal: RAW and after ICA")
+        else:
+            continue
+    return
