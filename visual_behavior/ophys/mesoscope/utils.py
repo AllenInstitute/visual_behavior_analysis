@@ -247,38 +247,26 @@ def get_lims_done_sessions(session_list=None):
     return lims_sessions
 
 
-def get_ica_exp_by_cre_line(cre_line, md):
+def get_exp_by_cre_line(cre_line):
     """
-    helper function to get ica experiments by cre line
-    :param cre_line: str, cre line name form LIMS
-    :param md: pandas.Dataframe - all mesoscope data - returned by mesoscope.get_all_mesoscope_data()
-    :return: [pandas.DataFrame, pandas.DataFrame] : data frames with information on cre-line specific
-    experiments that failed or succeed crosstalk correction
+    helper function to get ica experiments by cre line: i.e Vip-IRES-Cre
+    :param cre_line: str, cre line name from LIMS
+    :return: list of mesoscope experiments for cre line
     """
-    md_success = md.loc[md['ICA_demix_session'] == 1]
-    md_fail = md.loc[md['ICA_demix_session'] == 0]
-    cre_md_success = md_success.loc[md_success['specimen'].str.contains(cre_line)]
-    cre_md_fail = md_fail.loc[md_fail['specimen'].str.contains(cre_line)]
-    cre_exp_success = cre_md_success['experiment_id']
-    cre_exp_fail = cre_md_fail['experiment_id']
-    return cre_exp_success, cre_exp_fail
+    md = get_all_mesoscope_data()
+    exp_cre = list(md.loc[md['specimen'].str.contains(cre_line)]['experiment_id'].drop_duplicates())
+    return exp_cre
 
 
-def get_ica_ses_by_cre_line(cre_line, md):
+def get_ses_by_cre_line(cre_line):
     """
     helper function to get ica sessions by cre line
-    :param cre_line: str, cre line name form LIMS
-    :param md: pandas.Dataframe - all mesoscope data - returned by mesoscope.get_all_mesoscope_data()
-    :return: [pandas.DataFrame, pandas.DataFrame] : data frames with information on cre-line specific
-    sessions that failed or succeed crosstalk correction
+    :param cre_line: str, cre line name from LIMS, i.e. Vip-IRES-Cre
+    :return: list of mesoscope sessoins for cre line
     """
-    md_success = md.loc[md['ICA_demix_session'] == 1]
-    md_fail = md.loc[md['ICA_demix_session'] == 0]
-    cre_md_success = md_success.loc[md_success['specimen'].str.contains(cre_line)]
-    cre_md_fail = md_fail.loc[md_fail['specimen'].str.contains(cre_line)]
-    cre_ses_success = cre_md_success.drop_duplicates('session_id')['session_id']
-    cre_ses_fail = cre_md_fail.drop_duplicates('session_id')['session_id']
-    return cre_ses_success, cre_ses_fail
+    md = get_all_mesoscope_data()
+    ses_cre = list(md.loc[md['specimen'].str.contains(cre_line)]['session_id'].drop_duplicates())
+    return ses_cre
 
 
 def parse_input(data):
