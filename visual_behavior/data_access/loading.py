@@ -105,14 +105,14 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
                 experiments -- filtered version of ophys_experiment_table from cache
             """
     if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
-        experiments = pd.read_csv(os.path.join(get_cache_dir(),'filtered_ophys_experiment_table.csv'))
+        experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     else:
         cache = get_visual_behavior_cache()
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
         experiments = filtering.limit_to_production_project_codes(experiments)
         experiments = experiments.set_index('ophys_experiment_id')
-        experiments.to_csv(os.path.join(get_cache_dir(),'filtered_ophys_experiment_table.csv'))
+        experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
 
     if include_failed_data:
         experiments = filtering.limit_to_experiments_with_final_qc_state(experiments)
@@ -266,7 +266,7 @@ def get_sdk_dataset(ophys_experiment_id, cache_dir, include_invalid_rois=False):
     df = dataset.running_data_df.reset_index()
     dataset.running_speed_df = df[['timestamps', 'speed']].rename(columns={'speed': 'running_speed'})
     dataset.running_speed_df['time'] = dataset.running_speed_df['timestamps']
-    dataset.running_speed = dataset.running_speed_df # lame hack to avoid resolving naming elsewhere
+    dataset.running_speed = dataset.running_speed_df  # lame hack to avoid resolving naming elsewhere
     # reformat rewards
     dataset.rewards['timestamps'] = dataset.rewards.index
     dataset.rewards['time'] = dataset.rewards.index
@@ -296,19 +296,23 @@ def get_analysis_folder(cache_dir, experiment_id):
         raise OSError('{} contains multiple possible analysis folders: {}'.format(cache_dir, candidates))
     return analysis_folder
 
+
 def get_analysis_dir(cache_dir, experiment_id):
     analysis_dir = os.path.join(cache_dir, get_analysis_folder(cache_dir, experiment_id))
     return analysis_dir
+
 
 def get_cell_specimen_ids(session):
     session.cell_specimen_ids = np.sort(session.cell_specimen_table.index.values)
     return session
 
+
 def get_cell_indices(session):
     session = get_cell_specimen_ids(session)
-    session.cell_specimen_table['cell_index'] = [np.where(session.cell_specimen_ids==cell_specimen_id)[0][0] for cell_specimen_id in session.cell_specimen_ids]
+    session.cell_specimen_table['cell_index'] = [np.where(session.cell_specimen_ids == cell_specimen_id)[0][0] for cell_specimen_id in session.cell_specimen_ids]
     session.cell_indices = session.cell_specimen_table.cell_index
     return session
+
 
 def get_cell_specimen_id_for_cell_index(session, cell_index):
     session = get_cell_indices(session)
@@ -316,11 +320,13 @@ def get_cell_specimen_id_for_cell_index(session, cell_index):
     cell_specimen_id = roi_metrics[roi_metrics.cell_index == cell_index].index.values[0]
     return cell_specimen_id
 
+
 def get_cell_index_for_cell_specimen_id(session, cell_specimen_id):
     session = get_cell_indices(session)
     roi_metrics = session.cell_specimen_table
     cell_index = roi_metrics[roi_metrics.index == cell_specimen_id].cell_index.values[0]
     return cell_index
+
 
 def get_extended_stimulus_presentations(session):
     '''
@@ -467,6 +473,31 @@ def get_sdk_trials(ophys_session_id):
     session = get_sdk_session_obj(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
     trials = session.trials.reset_index()
     return trials
+
+
+def get_stim_metrics_summary(behavior_session_id, load_location='from_file'):
+    '''
+    gets flashwise stimulus presentation summary including behavior model weights
+
+    inputs:
+        behavior_session_id (int): LIMS behavior_session_id
+        load_location (int): location from which to load data
+            'from_file' (default) loads from a CSV on disk
+            'from_database' loads from a Mongo database
+
+    returns:
+        a pandas dataframe containing columns describing stimulus information for each stimulus presentation
+    '''
+    if load_location == 'from_file':
+        stim_metrics_summary_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/flashwise_metric_summary_2020.04.14.csv"
+        stim_metrics_summary = pd.read_csv(flash_metrics_path)
+        return flash_summary.query('behavior_session_id == @behavior_session_id').copy()
+    elif load_location == 'from_database':
+        conn = db.Database('visual_behavior_data')
+        collection = conn['behavior_analysis']['annotated_stimulus_presentations']
+        df = pd.DataFrame(list(collection.find({'behavior_session_id': int(behavior_session_id)})))
+        conn.close()
+        return df.sort_values(by=['behavior_session_id', 'flash_index'])
 
 
 #  FROM LIMS DATABASE
@@ -1033,16 +1064,16 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
         suffix = ''
 
     if len(conditions) == 5:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] +'_'+ conditions[3] +'_'+ conditions[4] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
             3] + suffix + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
     elif len(conditions) == 2:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
     elif len(conditions) == 1:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[0] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[0] + suffix + '.h5'
 
     return filename
 
@@ -1051,27 +1082,27 @@ def get_multi_session_df(cache_dir, df_name, conditions, project_codes, use_even
     experiments_table = get_annotated_experiments_table()
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:
-        experiments = experiments_table[(experiments_table.project_code==project_code)]
+        experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
-            experiments = experiments[experiments.session_type!='OPHYS_2_images_B_passive']
+            experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
         expts = experiments.reset_index()
         for session_type in np.sort(experiments.session_type.unique()):
             filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
-            filepath = os.path.join(cache_dir, 'multi_session_summary_dfs',filename)
+            filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
             df = pd.read_hdf(filepath, key='df')
-            df = df.merge(expts[['ophys_experiment_id','cre_line','location','location_layer',
-                                 'layer','ophys_session_id','project_code','location2',
-                                 'specimen_id','depth','exposure_number','container_id']], on='ophys_experiment_id')
-            outlier_cells = df[df.mean_response>5].cell_specimen_id.unique()
-            df = df[df.cell_specimen_id.isin(outlier_cells)==False]
+            df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
+                                 'layer', 'ophys_session_id', 'project_code', 'location2',
+                                 'specimen_id', 'depth', 'exposure_number', 'container_id']], on='ophys_experiment_id')
+            outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
+            df = df[df.cell_specimen_id.isin(outlier_cells) == False]
             multi_session_df = pd.concat([multi_session_df, df])
     return multi_session_df
 
 
 def remove_outlier_traces_from_multi_session_df(multi_session_df):
-    indices = [row for row in multi_session_df.index.values if (multi_session_df.mean_trace.values[row].max()>5)]
+    indices = [row for row in multi_session_df.index.values if (multi_session_df.mean_trace.values[row].max() > 5)]
 
-    multi_session_df = multi_session_df[multi_session_df.index.isin(indices)==False]
+    multi_session_df = multi_session_df[multi_session_df.index.isin(indices) == False]
     multi_session_df = multi_session_df.reset_index()
     multi_session_df = multi_session_df.drop(columns=['index'])
     return multi_session_df
@@ -1081,7 +1112,7 @@ def remove_first_novel_session_retakes_from_multi_session_df(multi_session_df):
     multi_session_df = multi_session_df.reset_index()
     multi_session_df = multi_session_df.drop(columns=['index'])
 
-    indices = multi_session_df[(multi_session_df.session_number==4)&(multi_session_df.exposure_number!=0)].index
+    indices = multi_session_df[(multi_session_df.session_number == 4) & (multi_session_df.exposure_number != 0)].index
     multi_session_df = multi_session_df.drop(index=indices)
 
     multi_session_df = multi_session_df.reset_index()
@@ -1125,15 +1156,14 @@ def remove_problematic_data_from_multi_session_df(multi_session_df):
     # Vip with abormally high novel 1 837628436
     # Vip mouse with novelty like responses to familiar 3 807248992, container 1018028367 especially but also others
 
-
-    bad_specimen_ids = [810573072] #840542948, 920877188, 837581585
-    bad_experiment_ids = [989610992, 904352692, 905955211, 974362760, 904363938,  905955240,
+    bad_specimen_ids = [810573072]  # 840542948, 920877188, 837581585
+    bad_experiment_ids = [989610992, 904352692, 905955211, 974362760, 904363938, 905955240,
                           957759566, 957759574, 916220452, 934550023,
-        986518876, 986518891, 989610991, 989213058, 989213062, 990400778, 990681008, 991852002,# specimen 920877188
-        915229064, 934550019, 919419011,  # specimen 840542948
-        847267618, 847267620, 848039121, 848039125, 848039123, 848760990,  # specimen 810573072
-        886585138, 886565136,  # specimen 837581585
-                           ]
+                          986518876, 986518891, 989610991, 989213058, 989213062, 990400778, 990681008, 991852002,  # specimen 920877188
+                          915229064, 934550019, 919419011,  # specimen 840542948
+                          847267618, 847267620, 848039121, 848039125, 848039123, 848760990,  # specimen 810573072
+                          886585138, 886565136,  # specimen 837581585
+                          ]
     multi_session_df = multi_session_df[multi_session_df.specimen_id.isin(bad_specimen_ids) == False]
     multi_session_df = multi_session_df[multi_session_df.experiment_id.isin(bad_experiment_ids) == False]
 
@@ -1153,5 +1183,3 @@ def annotate_and_clean_multi_session_df(multi_session_df):
     # multi_session_df = remove_problematic_data_from_multi_session_df(multi_session_df)
 
     return multi_session_df
-
-
