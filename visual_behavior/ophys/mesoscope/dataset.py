@@ -113,9 +113,7 @@ class MesoscopeDataset(object):
         return lims_data
 
     def get_mesoscope_experiment_data(self, experiment_id):
-
         lims_data = None
-
         self.experiment_id = experiment_id
         try:
 
@@ -211,15 +209,6 @@ class MesoscopeDataset(object):
                 pairs.append([p["experiment_id"] for p in pg.get("ophys_experiments", [])])
         self.pairs = pairs
         return self.pairs
-
-    def get_paired_planes(self):
-        splitting_json = self.get_splitting_json()
-        with open(splitting_json, "r") as f:
-            data = json.load(f)
-        pairs = []
-        for pg in data.get("plane_groups", []):
-            pairs.append([p["experiment_id"] for p in pg.get("ophys_experiments", [])])
-        return pairs
 
     def get_exp_by_structure(self, structure):
         experiment = pd.DataFrame(self.get_mesoscope_session_data())
