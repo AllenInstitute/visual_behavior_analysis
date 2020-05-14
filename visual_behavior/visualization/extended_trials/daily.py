@@ -334,7 +334,7 @@ def make_daily_figure(
 
     # CB added to display both the trial adjusted and legacy dprime metric on same plot
     for apply_trial_number_limit, first_valid_trial, append_ticks, line_label, color \
-        in zip([False, True], [50, 100], [False, True], ['raw', 'adjusted'], ['black', 'grey']):
+            in zip([False, True], [50, 100], [False, True], ['raw', 'adjusted'], ['black', 'grey']):
         hit_rate, fa_rate, d_prime = get_response_rates(
             df_nonaborted,
             sliding_window=sliding_window,
