@@ -7,6 +7,7 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorP
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import processing
+import visual_behavior.database as db
 
 
 import os
@@ -490,8 +491,8 @@ def get_stim_metrics_summary(behavior_session_id, load_location='from_file'):
     '''
     if load_location == 'from_file':
         stim_metrics_summary_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/flashwise_metric_summary_2020.04.14.csv"
-        stim_metrics_summary = pd.read_csv(flash_metrics_path)
-        return flash_summary.query('behavior_session_id == @behavior_session_id').copy()
+        stim_metrics_summary = pd.read_csv(stim_metrics_summary_path)
+        return stim_metrics_summary.query('behavior_session_id == @behavior_session_id').copy()
     elif load_location == 'from_database':
         conn = db.Database('visual_behavior_data')
         collection = conn['behavior_analysis']['annotated_stimulus_presentations']
