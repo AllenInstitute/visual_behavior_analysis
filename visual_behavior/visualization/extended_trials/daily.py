@@ -220,10 +220,10 @@ def make_rolling_dprime_plot(d_prime, ax, format='vertical', peak_dprime=None, c
         if peak_dprime is not None:
             ax.axhline(peak_dprime, linestyle='--', color=color)  # peak dprime line
     ax.set_title("Rolling d'", fontsize=16)
-    
+
     if line_label is not None:
         line.set_label(line_label)
-        
+
     if peak_dprime is not None:
         if append_ticks:
             current_xticks = ax.get_xticks()
@@ -331,15 +331,15 @@ def make_daily_figure(
     make_rolling_response_probability_plot(hit_rate, fa_rate, ax[2], palette=palette)
     mean_rate = np.mean(check_responses(df_nonaborted, reward_window=reward_window) == 1.0)
     ax[2].axvline(mean_rate, color='0.5', linestyle=':')
-    
+
     # CB added to display both the trial adjusted and legacy dprime metric on same plot
     for apply_trial_number_limit, first_valid_trial, append_ticks, line_label, color \
-    in zip([False, True], [50, 100], [False, True], ['raw', 'adjusted'],['black', 'grey']):
+        in zip([False, True], [50, 100], [False, True], ['raw', 'adjusted'], ['black', 'grey']):
         hit_rate, fa_rate, d_prime = get_response_rates(
-                df_nonaborted,
-                sliding_window=sliding_window,
-                apply_trial_number_limit=apply_trial_number_limit
-                )
+            df_nonaborted,
+            sliding_window=sliding_window,
+            apply_trial_number_limit=apply_trial_number_limit
+        )
         peak_dprime = session_metrics.peak_dprime(extended_trials, first_valid_trial=first_valid_trial, apply_trial_number_limit=apply_trial_number_limit)
         if not np.isnan(peak_dprime):
             make_rolling_dprime_plot(d_prime, ax[3], peak_dprime=peak_dprime, append_ticks=append_ticks, line_label=line_label, color=color)
