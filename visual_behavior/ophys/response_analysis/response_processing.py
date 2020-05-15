@@ -492,9 +492,12 @@ def get_omission_response_xr(dataset, use_events=False, frame_rate=None):
 
     return response_xr
 
-def get_omission_response_df(dataset, use_events=False, frame_rate=None):
+def get_omission_response_df(dataset, use_events=False, frame_rate=None, format='wide'):
     response_xr = get_omission_response_xr(dataset=dataset, use_events=use_events, frame_rate=frame_rate)
-    df = response_df(response_xr)
+    if format == 'wide':
+        df = response_df(response_xr)
+    elif format == 'long':
+        df = response_xr.to_dataframe().reset_index()
     df = df.rename(
         columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
     return df
