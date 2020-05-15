@@ -1,13 +1,9 @@
 from allensdk.internal.api import PostgresQueryMixin
+from visual_behavior.translator.allensdk_sessions import sdk_utils
 import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
-from visual_behavior.data_access import filtering
-from visual_behavior.data_access import reformat
-from visual_behavior.data_access import processing
-import visual_behavior.database as db
-
 
 import os
 import h5py  # for loading motion corrected movie
@@ -50,7 +46,7 @@ config = configp.ConfigParser()
 # ophys_container_id
 
 
-#  RELEVANT DIRECTORIES
+#  GENERAL STUFF
 
 def get_super_container_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
@@ -68,110 +64,179 @@ def get_experiment_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 
-# LOAD MANIFEST FROM CACHE
+#  FROM MANIFEST
 
-
-def get_cache_dir():
-    """Get directory of data cache for analysis - this should be the standard cache location"""
-    cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
-    return cache_dir
-
-
-def get_manifest_path():
-    """Get path to default manifest file for analysis"""
-    manifest_path = os.path.join(get_cache_dir(), "manifest.json")
+def get_qc_manifest_path():
+    """Get path to default manifest file for QC"""
+    manifest_path = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache/manifest.json"
     return manifest_path
 
 
-def get_visual_behavior_cache(manifest_path=None):
+def get_qc_cache(manifest_path=None):
     """Get cache using default QC manifest path"""
     if manifest_path is None:
-        manifest_path = get_manifest_path()
-    cache = bpc.from_lims(manifest=get_manifest_path())
+        manifest_path = get_qc_manifest_path()
+    cache = bpc.from_lims(manifest=get_qc_manifest_path())
     return cache
 
 
+def get_filtered_ophys_sessions_table():
+    """Get ophys sessions that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
+    must be 'complete' or 'container_qc', and experiments associated with the session are passing. In addition,
+    add container_id and container_workflow_state to table.
+
+        Arguments:
+            None
+
+        Returns:
+            filtered_sessions -- filtered version of ophys_session_table from QC cache
+        """
+    cache = get_qc_cache()
+    sessions = sdk_utils.get_filtered_sessions_table(cache, include_multiscope=True, require_full_container=False,
+                                                     require_exp_pass=False)
+    sessions = sessions.reset_index()
+    experiments = get_filtered_ophys_experiment_table()
+    filtered_sessions = sessions.merge(experiments[['ophys_session_id', 'container_id', 'container_workflow_state']],
+                                       right_on='ophys_session_id', left_on='ophys_session_id')
+    return filtered_sessions
+
+
 def get_filtered_ophys_experiment_table(include_failed_data=False):
-    """Get ophys experiments table from cache, add additional useful columns to the table (currently adds exposure_number and mouse-seeks fail tags)
-        and filter out failed experiments and containers (unless include_failed_data=True).
-        Includes MultiScope data. Includes containers with container_workflow_state='holding' (most of Multiscope experiments).
-        Saves a reformatted (pre-filtering) version of the table with additional columns added for future loading speed.
+    """Get ophys experiments that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
+        must be 'complete' or 'container_qc', and experiments are passing. Includes MultiScope data.
 
             Arguments:
                 include_failed_data: Boolean, if False, only include passing behavior experiments from containers that were not failed.
                                 If True, return all experiments including those from failed containers and receptive field mapping experiments.
 
             Returns:
-                experiments -- filtered version of ophys_experiment_table from cache
+                filtered_experiments -- filtered version of ophys_experiment_table from QC cache
             """
-    if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
-        experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
-    else:
-        cache = get_visual_behavior_cache()
-        experiments = cache.get_experiment_table()
-        experiments = reformat.reformat_experiments_table(experiments)
-        experiments = filtering.limit_to_production_project_codes(experiments)
-        experiments = experiments.set_index('ophys_experiment_id')
-        experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
+    cache = get_qc_cache()
+    experiments = cache.get_experiment_table()
+    experiments = experiments.reset_index()
+    experiments['super_container_id'] = experiments['specimen_id'].values
 
+    experiments = reformat_experiments_table(experiments)
     if include_failed_data:
-        experiments = filtering.limit_to_experiments_with_final_qc_state(experiments)
+        filtered_experiments = experiments[experiments.experiment_workflow_state.isin(['passed', 'failed'])]
     else:
-        experiments = filtering.limit_to_passed_experiments(experiments)
-        experiments = filtering.limit_to_valid_ophys_session_types(experiments)
-        experiments = filtering.remove_failed_containers(experiments)
-    # experiments = experiments.set_index('ophys_experiment_id')
+        # sessions = sdk_utils.get_filtered_sessions_table(cache, include_multiscope=True, require_full_container=False, require_exp_pass=False)
+        # sessions = sessions.reset_index()
+        # filtered_experiments = experiments[experiments.ophys_session_id.isin(sessions.ophys_session_id.unique())]
+        filtered_experiments = experiments.copy()
+        filtered_experiments = filtered_experiments[filtered_experiments.experiment_workflow_state == 'passed']
+        filtered_experiments = filtered_experiments[filtered_experiments.container_workflow_state != 'failed']  # include containers in holding
+
+    return filtered_experiments
+
+
+def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
+    mouse_seeks_report_file_base = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
+    report_file = 'ophys_session_log_031820.xlsx'
+    vb_report_path = os.path.join(mouse_seeks_report_file_base, report_file)
+    vb_report_df = pd.read_excel(vb_report_path)
+
+    def clean_columns(columns):
+        return [c.lower().replace(' ', '_') for c in columns]
+
+    vb_report_df.columns = clean_columns(vb_report_df.columns)
+    vb_report_df = vb_report_df.rename(columns={'session_id': 'ophys_session_id'})
+    # merge fail tags into all_experiments manifest
+    experiments = experiments.merge(vb_report_df[['ophys_session_id', 'session_tags', 'failure_tags']],
+                                    right_on='ophys_session_id', left_on='ophys_session_id')
     return experiments
 
 
-def get_filtered_ophys_session_table():
-    """Get ophys sessions table from SDK, and add container_id and container_workflow_state to table,
-        add session_workflow_state to table (defined as >1 experiment within session passing),
-        and return only sessions where container and session workflow states are 'passed'.
-        Includes Multiscope data.
+# def reformat_fail_tags_for_multiscope(experiments):
+#     experiments['fail_tags'] = experiments['failure_tags']
+#     meso_expts = experiments[
+#         experiments.project_code.isin(['VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d'])]
+#     experiments.at[meso_expts.index.values, 'fail_tags'] = None
+#
+#     for session_id in meso_expts.ophys_session_id.unique():
+#         experiment_ids = meso_expts[meso_expts.ophys_session_id == session_id].ophys_experiment_id.values
+#         for i, experiment_id in enumerate(experiment_ids):
+#             expt_data = experiments[experiments.ophys_experiment_id == experiment_id]
+#             index = expt_data.index.values[0]
+#             if type(expt_data.failure_tags.values[0]) == str:
+#                 fail_tags = expt_data.failure_tags.values[0].split(',')
+#                 tags_this_expt = []
+#                 for fail_tag in fail_tags:
+#                     if (fail_tag[-1].isdigit()) and (fail_tag[-1] == str(int(expt_data.container_index.values[0]))):
+#                         tags_this_expt.append(fail_tag)
+#                     elif (fail_tag[-1].isdigit() == False):
+#                         tags_this_expt.append(fail_tag)
+#                         experiments.at[index, 'fail_tags'] = tags_this_expt
+#     return experiments
 
-        Arguments:
-            None
 
-        Returns:
-            sessions -- filtered version of ophys_session_table from cache
-        """
-    cache = get_visual_behavior_cache()
-    sessions = cache.get_session_table()
-    sessions = filtering.limit_to_production_project_codes(sessions)
-    sessions = filtering.limit_to_valid_ophys_session_types(sessions)
-    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
-    sessions = filtering.limit_to_passed_ophys_sessions(sessions)
-    sessions = filtering.remove_failed_containers(sessions)
-    # sessions = sessions.reset_index()
-
-    return sessions
+def add_location_to_expts(expts):
+    expts['location'] = [expts.loc[x]['cre_line'].split('-')[0] + '_' + expts.loc[x]['targeted_structure'] + '_' + str(int(expts.loc[x]['imaging_depth'])) for x in expts.index.values]
+    return expts
 
 
-def get_ophys_container_ids(cache):
-    """Get container_ids that meet the criteria in get_filtered_ophys_experiment_table(). """
-    experiments = cache.get_experiment_table()
-    container_ids = np.sort(experiments.container_id.unique())
-    return container_ids
+def get_exposure_number_for_group(group):
+    order = np.argsort(group['date_of_acquisition'].values)
+    group['exposure_number'] = order
+    return group
+
+
+def add_exposure_number_to_experiments_table(experiments):
+    experiments = experiments.groupby(['super_container_id', 'container_id', 'session_type']).apply(get_exposure_number_for_group)
+    return experiments
+
+
+def reformat_experiments_table(experiments):
+    experiments = experiments.reset_index()
+    # clean up cre_line naming
+    experiments['cre_line'] = [driver_line[1] if driver_line[0] == 'Camk2a-tTA' else driver_line[0] for driver_line in
+                               experiments.driver_line.values]
+    experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']  # why is this here?
+    # replace session types that are NaN with string None
+    experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
+    # experiments = add_container_index_to_experiments_table(experiments)
+    # experiments = revise_container_id_for_multiscope(experiments)
+    experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
+    # experiments = reformat_fail_tags_for_multiscope(experiments)
+    experiments = add_exposure_number_to_experiments_table(experiments)
+    if 'level_0' in experiments.columns:
+        experiments = experiments.drop(columns='level_0')
+    if 'index' in experiments.columns:
+        experiments = experiments.drop(columns='index')
+    experiments = add_location_to_expts(experiments)
+    return experiments
+
+
+def get_filtered_ophys_container_ids():
+    """Get container_ids that meet the criteria in sdk_utils.get_filtered_sessions_table(), including that the container
+    must be 'complete' or 'container_qc', and experiments associated with the container are passing. """
+    experiments = get_filtered_ophys_experiment_table()
+    filtered_container_ids = np.sort(experiments.container_id.unique())
+    return filtered_container_ids
 
 
 def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
-    """Get ophys_session_ids belonging to a given ophys_container_id. Ophys session must pass QC.
+    """Get ophys_session_ids belonging to a given ophys_container_id. ophys container must meet the criteria in
+    sdk_utils.get_filtered_sessions_table()
 
             Arguments:
-                ophys_container_id -- must be in get_ophys_container_ids()
+                ophys_container_id -- must be in get_filtered_ophys_container_ids()
 
             Returns:
                 ophys_session_ids -- list of ophys_session_ids that meet filtering criteria
             """
+    # sessions = get_filtered_ophys_sessions_table()
+    # ophys_session_ids = np.sort(sessions[(sessions.container_id == ophys_container_id)].ophys_session_id.values)
+    # temporary fix - need to make get_filtered_ophys_sessions_table work properly
     experiments = get_filtered_ophys_experiment_table()
-    ophys_session_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_session_id.unique())
+    ophys_session_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_session_id.values)
     return ophys_session_ids
 
 
 def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
     """Get ophys_experiment_ids belonging to a given ophys_container_id. ophys container must meet the criteria in
-        sdk_utils.get_filtered_session_table()
+        sdk_utils.get_filtered_sessions_table()
 
                 Arguments:
                     ophys_container_id -- must be in get_filtered_ophys_container_ids()
@@ -180,57 +245,40 @@ def get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id):
                     ophys_experiment_ids -- list of ophys_experiment_ids that meet filtering criteria
                 """
     experiments = get_filtered_ophys_experiment_table()
-    ophys_experiment_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].index.values)
+    ophys_experiment_ids = np.sort(experiments[(experiments.container_id == ophys_container_id)].ophys_experiment_id.values)
     return ophys_experiment_ids
 
 
 def get_session_type_for_ophys_experiment_id(ophys_experiment_id):
     experiments = get_filtered_ophys_experiment_table()
-    session_type = experiments.loc[ophys_experiment_id].session_type
+    session_type = experiments[experiments.ophys_experiment_id == ophys_experiment_id].session_type.values[0]
     return session_type
 
 
 def get_session_type_for_ophys_session_id(ophys_session_id):
-    sessions = get_filtered_ophys_session_table()
-    session_type = sessions.loc[ophys_session_id].session_type
+    # sessions = get_filtered_ophys_sessions_table()
+    # session_type = sessions[sessions.ophys_session_id == ophys_session_id].session_type.values[0]
+    # temporary fix!!
+    experiments = get_filtered_ophys_experiment_table()
+    session_type = experiments[experiments.ophys_session_id == ophys_session_id].session_type.values[0]
     return session_type
 
 
 def get_ophys_experiment_id_for_ophys_session_id(ophys_session_id):
     experiments = get_filtered_ophys_experiment_table()
-    ophys_experiment_id = experiments[(experiments.ophys_session_id == ophys_session_id)].index.values[0]
+    ophys_experiment_id = experiments[(experiments.ophys_session_id == ophys_session_id)].ophys_experiment_id.values[0]
     return ophys_experiment_id
 
 
 def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
-    experiments = get_filtered_ophys_experiment_table()
-    ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
+    lims_experiment_info = get_lims_experiment_info(ophys_experiment_id)
+    ophys_session_id = lims_experiment_info["ophys_session_id"][0]
     return ophys_session_id
 
-
 #  FROM SDK
-#
-# def get_sdk_session_obj(ophys_experiment_id, include_invalid_rois=False):
-#     """Use LIMS API from SDK to return session object
-#
-#     Arguments:
-#         ophys_experiment_id {int} -- 9 digit ophys experiment ID
-#         include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
-#
-#     Returns:
-#         session object -- session object from SDK
-#     """
-#     api = BehaviorOphysLimsApi(ophys_experiment_id)
-#     session = BehaviorOphysSession(api)
-#     # filter dff traces
-#     if include_invalid_rois == False:
-#         dff_traces = session.dff_traces
-#         valid_cells = session.cell_specimen_table[session.cell_specimen_table.valid_roi == True].cell_roi_id.values
-#         session.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
-#     return session
 
 
-def get_sdk_dataset(ophys_experiment_id, cache_dir, include_invalid_rois=False):
+def get_sdk_session_obj(ophys_experiment_id, include_invalid_rois=False):
     """Use LIMS API from SDK to return session object
 
     Arguments:
@@ -241,110 +289,12 @@ def get_sdk_dataset(ophys_experiment_id, cache_dir, include_invalid_rois=False):
         session object -- session object from SDK
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
-    dataset = BehaviorOphysSession(api)
-    dataset.cache_dir = cache_dir
-    dataset.experiment_id = ophys_experiment_id
-    dataset.analysis_folder = get_analysis_folder(dataset.cache_dir, dataset.experiment_id)
-    dataset.analysis_dir = get_analysis_dir(dataset.cache_dir, dataset.experiment_id)
-    # set pupil area and events to None for now
-    dataset.pupil_area = None
-    dataset.events = None
-    # filter dff traces
+    session = BehaviorOphysSession(api)
     if include_invalid_rois == False:
-        dff_traces = dataset.dff_traces
-        valid_cells = dataset.cell_specimen_table[dataset.cell_specimen_table.valid_roi == True].cell_roi_id.values
-        dataset.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
-    dataset = get_cell_indices(dataset)
-    # move roi_masks
-    dataset.cell_specimen_table = processing.shift_image_masks(dataset.cell_specimen_table)
-    # get timestamps for other data streams and resample for mesoscope
-    lims_data = convert.get_lims_data(dataset.experiment_id)
-    dataset.timestamps = convert.get_timestamps(lims_data, dataset.analysis_dir)
-    if dataset.metadata['rig_name'] == 'MESO.1':
-        dataset.ophys_timestamps = dataset.timestamps['ophys_frames']['timestamps']
-    # reformat running speed df
-    df = dataset.running_data_df.reset_index()
-    dataset.running_speed_df = df[['timestamps', 'speed']].rename(columns={'speed': 'running_speed'})
-    dataset.running_speed_df['time'] = dataset.running_speed_df['timestamps']
-    dataset.running_speed = dataset.running_speed_df  # lame hack to avoid resolving naming elsewhere
-    # reformat rewards
-    dataset.rewards['timestamps'] = dataset.rewards.index
-    dataset.rewards['time'] = dataset.rewards.index
-    # get extended stim presentations
-    # dataset.extended_stimulus_presentations = get_extended_stimulus_presentations(dataset)
-    # reformat metadata
-    metadata = dataset.metadata.copy()
-    if len(metadata['driver_line']) > 1:
-        metadata['driver_line'] = metadata['driver_line'][1] + ';' + metadata['driver_line'][0]
-    else:
-        metadata['driver_line'] = metadata['driver_line'][0]
-    metadata['reporter_line'] = metadata['reporter_line'][0]
-    metadata['ophys_frame_rate'] = 1 / np.diff(dataset.ophys_timestamps).mean()
-    metadata['experiment_id'] = metadata['ophys_experiment_id']
-    dataset.metadata = pd.DataFrame(metadata, index=[0])
-    return dataset
-
-
-def get_analysis_folder(cache_dir, experiment_id):
-    candidates = [file for file in os.listdir(cache_dir) if str(experiment_id) in file]
-    if len(candidates) == 1:
-        analysis_folder = candidates[0]
-    elif len(candidates) == 0:
-        raise OSError(
-            'unable to locate analysis folder for experiment {} in {}'.format(experiment_id, cache_dir))
-    elif len(candidates) > 1:
-        raise OSError('{} contains multiple possible analysis folders: {}'.format(cache_dir, candidates))
-    return analysis_folder
-
-
-def get_analysis_dir(cache_dir, experiment_id):
-    analysis_dir = os.path.join(cache_dir, get_analysis_folder(cache_dir, experiment_id))
-    return analysis_dir
-
-
-def get_cell_specimen_ids(session):
-    session.cell_specimen_ids = np.sort(session.cell_specimen_table.index.values)
+        dff_traces = session.dff_traces
+        valid_cells = session.cell_specimen_table[session.cell_specimen_table.valid_roi == True].cell_roi_id.values
+        session.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
     return session
-
-
-def get_cell_indices(session):
-    session = get_cell_specimen_ids(session)
-    session.cell_specimen_table['cell_index'] = [np.where(session.cell_specimen_ids == cell_specimen_id)[0][0] for cell_specimen_id in session.cell_specimen_ids]
-    session.cell_indices = session.cell_specimen_table.cell_index
-    return session
-
-
-def get_cell_specimen_id_for_cell_index(session, cell_index):
-    session = get_cell_indices(session)
-    roi_metrics = session.cell_specimen_table
-    cell_specimen_id = roi_metrics[roi_metrics.cell_index == cell_index].index.values[0]
-    return cell_specimen_id
-
-
-def get_cell_index_for_cell_specimen_id(session, cell_specimen_id):
-    session = get_cell_indices(session)
-    roi_metrics = session.cell_specimen_table
-    cell_index = roi_metrics[roi_metrics.index == cell_specimen_id].cell_index.values[0]
-    return cell_index
-
-
-def get_extended_stimulus_presentations(session):
-    '''
-    Calculates additional information for each stimulus presentation
-    '''
-    import visual_behavior.ophys.dataset.stimulus_processing as sp
-    stimulus_presentations_pre = session.stimulus_presentations
-    change_times = session.trials['change_time'].values
-    change_times = change_times[~np.isnan(change_times)]
-    extended_stimulus_presentations = sp.get_extended_stimulus_presentations(
-        stimulus_presentations_df=stimulus_presentations_pre,
-        licks=session.licks,
-        rewards=session.rewards,
-        change_times=change_times,
-        running_speed_df=session.running_speed_df,
-        pupil_area=session.pupil_area
-    )
-    return extended_stimulus_presentations
 
 
 def get_sdk_max_projection(ophys_experiment_id):
@@ -473,31 +423,6 @@ def get_sdk_trials(ophys_session_id):
     session = get_sdk_session_obj(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
     trials = session.trials.reset_index()
     return trials
-
-
-def get_stim_metrics_summary(behavior_session_id, load_location='from_file'):
-    '''
-    gets flashwise stimulus presentation summary including behavior model weights
-
-    inputs:
-        behavior_session_id (int): LIMS behavior_session_id
-        load_location (int): location from which to load data
-            'from_file' (default) loads from a CSV on disk
-            'from_database' loads from a Mongo database
-
-    returns:
-        a pandas dataframe containing columns describing stimulus information for each stimulus presentation
-    '''
-    if load_location == 'from_file':
-        stim_metrics_summary_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/flashwise_metric_summary_2020.04.14.csv"
-        stim_metrics_summary = pd.read_csv(stim_metrics_summary_path)
-        return stim_metrics_summary.query('behavior_session_id == @behavior_session_id').copy()
-    elif load_location == 'from_database':
-        conn = db.Database('visual_behavior_data')
-        collection = conn['behavior_analysis']['annotated_stimulus_presentations']
-        df = pd.DataFrame(list(collection.find({'behavior_session_id': int(behavior_session_id)})))
-        conn.close()
-        return df.sort_values(by=['behavior_session_id', 'flash_index'])
 
 
 #  FROM LIMS DATABASE
@@ -1003,183 +928,3 @@ def build_container_df():
         list_of_dicts.append(temp_dict)
 
     return pd.DataFrame(list_of_dicts).sort_values(by='container_id', ascending=False)
-
-
-###### multi session summary data #########
-
-def get_annotated_experiments_table():
-    project_codes = ['VisualBehavior', 'VisualBehaviorTask1B',
-                     'VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d']
-
-    experiments_table = get_filtered_ophys_experiment_table()
-    experiments_table = experiments_table[experiments_table.project_code.isin(project_codes)]
-    # add columns
-    experiments_table['depth'] = ['superficial' if experiments_table.loc[expt].imaging_depth <= 355 else 'deep' for expt
-                                  in experiments_table.index]
-    experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
-                                     experiments_table.loc[expt].depth for expt in experiments_table.index]
-
-    experiments_table['location2'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
-                                      experiments_table.loc[expt].depth for expt in experiments_table.index]
-
-    experiments_table['layer'] = None
-    indices = experiments_table[(experiments_table.imaging_depth < 125)].index.values
-    experiments_table.at[indices, 'layer'] = 'L3'
-    indices = experiments_table[
-        (experiments_table.imaging_depth >= 125) & (experiments_table.imaging_depth < 200)].index.values
-    experiments_table.at[indices, 'layer'] = 'L3'
-    indices = experiments_table[
-        (experiments_table.imaging_depth >= 200) & (experiments_table.imaging_depth < 250)].index.values
-    experiments_table.at[indices, 'layer'] = 'L4'
-    indices = experiments_table[
-        (experiments_table.imaging_depth >= 250) & (experiments_table.imaging_depth < 345)].index.values
-    experiments_table.at[indices, 'layer'] = 'L5a'
-    indices = experiments_table[
-        (experiments_table.imaging_depth >= 345) & (experiments_table.imaging_depth < 500)].index.values
-    experiments_table.at[indices, 'layer'] = 'L5b'
-    experiments_table['location_layer'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
-                                           experiments_table.loc[expt].targeted_structure + '_' +
-                                           experiments_table.loc[expt].layer for expt in experiments_table.index]
-
-    indices = experiments_table[experiments_table.location == 'Slc17a7_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Excitatory superficial'
-    indices = experiments_table[experiments_table.location == 'Slc17a7_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Excitatory deep'
-    indices = experiments_table[experiments_table.location == 'Vip_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Vip'
-    indices = experiments_table[experiments_table.location == 'Sst_superficial'].index.values
-    experiments_table.at[indices, 'location'] = 'Sst'
-    indices = experiments_table[experiments_table.location == 'Vip_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Vip'
-    indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
-    experiments_table.at[indices, 'location'] = 'Sst'
-
-    return experiments_table
-
-
-def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events):
-    if use_events:
-        suffix = '_events'
-    else:
-        suffix = ''
-
-    if len(conditions) == 5:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
-    elif len(conditions) == 4:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
-            3] + suffix + '.h5'
-    elif len(conditions) == 3:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
-    elif len(conditions) == 2:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
-    elif len(conditions) == 1:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[0] + suffix + '.h5'
-
-    return filename
-
-
-def get_multi_session_df(cache_dir, df_name, conditions, project_codes, use_events=False):
-    experiments_table = get_annotated_experiments_table()
-    multi_session_df = pd.DataFrame()
-    for project_code in project_codes:
-        experiments = experiments_table[(experiments_table.project_code == project_code)]
-        if project_code == 'VisualBehaviorMultiscope':
-            experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        expts = experiments.reset_index()
-        for session_type in np.sort(experiments.session_type.unique()):
-            filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
-            filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
-            df = pd.read_hdf(filepath, key='df')
-            df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
-                                 'layer', 'ophys_session_id', 'project_code', 'location2',
-                                 'specimen_id', 'depth', 'exposure_number', 'container_id']], on='ophys_experiment_id')
-            outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
-            df = df[df.cell_specimen_id.isin(outlier_cells) == False]
-            multi_session_df = pd.concat([multi_session_df, df])
-    return multi_session_df
-
-
-def remove_outlier_traces_from_multi_session_df(multi_session_df):
-    indices = [row for row in multi_session_df.index.values if (multi_session_df.mean_trace.values[row].max() > 5)]
-
-    multi_session_df = multi_session_df[multi_session_df.index.isin(indices) == False]
-    multi_session_df = multi_session_df.reset_index()
-    multi_session_df = multi_session_df.drop(columns=['index'])
-    return multi_session_df
-
-
-def remove_first_novel_session_retakes_from_multi_session_df(multi_session_df):
-    multi_session_df = multi_session_df.reset_index()
-    multi_session_df = multi_session_df.drop(columns=['index'])
-
-    indices = multi_session_df[(multi_session_df.session_number == 4) & (multi_session_df.exposure_number != 0)].index
-    multi_session_df = multi_session_df.drop(index=indices)
-
-    multi_session_df = multi_session_df.reset_index()
-    multi_session_df = multi_session_df.drop(columns=['index'])
-
-    indices = multi_session_df[(multi_session_df.session_number == 1) & (multi_session_df.exposure_number != 0)].index
-    multi_session_df = multi_session_df.drop(index=indices)
-
-    multi_session_df = multi_session_df.reset_index()
-    multi_session_df = multi_session_df.drop(columns=['index'])
-
-    return multi_session_df
-
-
-def remove_problematic_data_from_multi_session_df(multi_session_df):
-    #### notes on containers, experiments & mice #####
-    # experiments too exclude
-    # another Slc mouse with large familiar passive 840542948, also ramping in some familiar sessions, generally noisy
-    # all mouse 920877188 remove & investiate later - weirdness
-    # slc superficial very high novel 2 container 1018027834
-    # Slc container 1018027644 has inconsistent familiar sessions
-    # another Slc mouse with large passive familiar responses 837581585, only one container
-    # slc deep with abnormally large familiar passive 1018028067, 1018028055
-
-    # havent exlcuded these yet
-    # 904363938, 905955240 #weird
-    # 903485718, 986518889, 903485718 # omission in Slc?!
-    # 971813765 # potentially bad
-
-    # experiments of interest
-    # Sst mouse with omission ramping 813702151, containers 1018028135, 1019028153
-    # sst large novelty response N1 mouse 850862430 container 1018028339, 1018028351
-    # SST omission ramping for familiar 904922342
-
-    # slc containers with omission responses for familiar sessions, superficial - 1018028046, 1018028061 same mouse
-    # another Slc with omission ramping 840390377 but only container 1018027878
-    # Slc with omission ramping in all session types 843122504 container 1018027663 VISl superficial at 275 but not at 75 in VIsl or at 275 in V1
-
-    # Vip mouse with really large familiar 1 activity 810573072, noisy familiar 2
-    # VIp mouse with abnormally high familiar 3 791871803
-    # Vip with abormally high novel 1 837628436
-    # Vip mouse with novelty like responses to familiar 3 807248992, container 1018028367 especially but also others
-
-    bad_specimen_ids = [810573072]  # 840542948, 920877188, 837581585
-    bad_experiment_ids = [989610992, 904352692, 905955211, 974362760, 904363938, 905955240,
-                          957759566, 957759574, 916220452, 934550023,
-                          986518876, 986518891, 989610991, 989213058, 989213062, 990400778, 990681008, 991852002,  # specimen 920877188
-                          915229064, 934550019, 919419011,  # specimen 840542948
-                          847267618, 847267620, 848039121, 848039125, 848039123, 848760990,  # specimen 810573072
-                          886585138, 886565136,  # specimen 837581585
-                          ]
-    multi_session_df = multi_session_df[multi_session_df.specimen_id.isin(bad_specimen_ids) == False]
-    multi_session_df = multi_session_df[multi_session_df.experiment_id.isin(bad_experiment_ids) == False]
-
-    return multi_session_df
-
-
-def annotate_and_clean_multi_session_df(multi_session_df):
-    def get_session_labels():
-        return ['F1', 'F2', 'F3', 'N1', 'N2', 'N3']
-
-    multi_session_df.session_number = [int(number) for number in multi_session_df.session_number.values]
-    multi_session_df['session_name'] = [get_session_labels()[session_number - 1] for session_number in
-                                        multi_session_df.session_number.values]
-
-    multi_session_df = remove_first_novel_session_retakes_from_multi_session_df(multi_session_df)
-    multi_session_df = remove_outlier_traces_from_multi_session_df(multi_session_df)
-    # multi_session_df = remove_problematic_data_from_multi_session_df(multi_session_df)
-
-    return multi_session_df

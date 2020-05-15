@@ -7,9 +7,9 @@ from visual_behavior.data_access import loading
 import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
 
-### FUNCTIONS TO REFORMAT DATA LOADED FROM ALLENSDK TO ADDRESS ISSUES WITH MISSING, INCORRECT OR IMPROPERLY STRUCTURED DATA ###
+# FUNCTIONS TO REFORMAT DATA LOADED FROM ALLENSDK TO ADDRESS ISSUES WITH MISSING, INCORRECT OR IMPROPERLY STRUCTURED DATA ###
 
-### THESE FUNCTIONS ARE TEMPORARY WORKAROUNDS UNTIL THE ISSUES CAN BE RESOLVED IN THE SDK ###
+# THESE FUNCTIONS ARE TEMPORARY WORKAROUNDS UNTIL THE ISSUES CAN BE RESOLVED IN THE SDK ###
 
 
 # REFORMATTING MANIFEST DATA #
@@ -67,7 +67,6 @@ def reformat_experiments_table(experiments):
     return experiments
 
 
-
 def add_all_qc_states_to_ophys_session_table(session_table):
     """ Add 'experiment_workflow_state', 'container_workflow_state', and 'session_workflow_state' to session_table.
             :param session_table: session_table from SDK cache
@@ -89,10 +88,11 @@ def add_session_workflow_state_to_ophys_session_table(session_table, experiment_
     passed_experiments = experiment_table[experiment_table.experiment_workflow_state == 'passed'].copy()
     session_ids = session_table.index.values
     session_table['at_least_one_experiment_passed'] = [any(passed_experiments['ophys_session_id'] == x) for x in
-                                                      session_ids]
+                                                       session_ids]
     session_table['session_workflow_state'] = ['passed' if criterion == True else 'failed' for criterion in
                                                session_table.at_least_one_experiment_passed.values]
     return session_table
+
 
 def add_container_workflow_state_to_ophys_session_table(session_table, experiment_table):
     """
@@ -340,5 +340,3 @@ def filter_invalid_rois_inplace(session):
     session.dff_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.corrected_fluorescence_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.cell_specimen_table.drop(index=invalid_cell_specimen_ids, inplace=True)
-
-
