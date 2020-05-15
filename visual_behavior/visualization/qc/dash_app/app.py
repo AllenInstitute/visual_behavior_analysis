@@ -128,6 +128,7 @@ def change_entries_per_page(entries_per_page):
 def embed_iframe(value):
     return app.get_asset_url('qc_plots/overview_plots/{}'.format(value))
 
+
 # update container overview options when container checklist state is changed
 @app.callback(Output('container_overview_dropdown', 'options'), [Input('container_checklist', 'value')])
 def update_container_overview_options(checkbox_values):
@@ -135,12 +136,14 @@ def update_container_overview_options(checkbox_values):
     container_overview_plot_options = functions.load_container_overview_plot_options()
     return container_overview_plot_options
 
+
 # update container plot options when container checklist state is changed
 @app.callback(Output('container_plot_dropdown', 'options'), [Input('container_checklist', 'value')])
 def update_container_plot_options(checkbox_values):
     global container_plot_options
     container_plot_options = functions.load_container_plot_options()
     return container_plot_options
+
 
 # show/hide container view frame based on 'container_checklist'
 @app.callback(Output('container_overview_iframe', 'hidden'), [Input('container_checklist', 'value')])
@@ -151,6 +154,7 @@ def show_container_view(checkbox_values):
     else:
         # return hidden = True
         return True
+
 
 # repopulate plot inventory frame based on 'container_checklist'
 @app.callback(Output('plot_inventory_graph', 'figure'), [Input('container_checklist', 'value')])
@@ -166,6 +170,7 @@ def regenerate_plot_inventory(checkbox_values):
         temp_fig = go.Figure(data=[go.Scatter(x=[1, 2, 3], y=[0, 0, 0])])
         return temp_fig
 
+
 # show/hide plot inventory frame based on 'container_checklist'
 @app.callback(Output('plot_inventory_container', 'style'), [Input('container_checklist', 'value')])
 def show_plot_inventory(checkbox_values):
@@ -176,6 +181,7 @@ def show_plot_inventory(checkbox_values):
     else:
         # return hidden = True
         return {'display': 'none'}
+
 
 # show/hide container dropdown based on 'container_checklist'
 @app.callback(Output('container_overview_dropdown', 'style'), [Input('container_checklist', 'value')])
