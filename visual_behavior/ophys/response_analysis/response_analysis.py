@@ -39,6 +39,7 @@ class LazyLoadable(object):
             setattr(obj, self.name, self.calculate(obj))
         return getattr(obj, self.name)
 
+
 class ResponseAnalysis(object):
     """ Contains methods for organizing responses by trial or by  visual stimulus flashes in a DataFrame.
 
@@ -57,7 +58,8 @@ class ResponseAnalysis(object):
     If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
     """
 
-    def __init__(self, dataset, overwrite_analysis_files=False, use_events=False, use_extended_stimulus_presentations=False):
+    def __init__(self, dataset, overwrite_analysis_files=False, load_from_cache=False,
+                 use_events=False, use_extended_stimulus_presentations=False):
         self.dataset = dataset
         self.use_events = use_events
         self.cache_dir = self.dataset.cache_dir
@@ -91,7 +93,6 @@ class ResponseAnalysis(object):
                 'unable to locate analysis folder for experiment {} in {}'.format(self.dataset.experiment_id, self.dataset.cache_dir))
         elif len(candidates) > 1:
             raise OSError('{} contains multiple possible analysis folders: {}'.format(self.dataset.cache_dir, candidates))
-
         return self._analysis_folder
 
     analysis_folder = LazyLoadable('_analysis_folder', get_analysis_folder)
@@ -138,21 +139,22 @@ class ResponseAnalysis(object):
         return df
 
     def get_response_df(self, df_name='trials_response_df'):
-        if self.overwrite_analysis_files:
-            # delete old file or else it will keep growing in size
+        if self.load_from_cache: # get saved response df
+            if os.path.exists(self.get_response_df_path(df_name)):
+                print('loading', df_name)
+                df = pd.read_hdf(self.get_response_df_path(df_name), key='df')
+            else:
+                print(df_name, 'not cached for this experiment')
+        elif self.overwrite_analysis_files: # delete any old files, generate new df and save
             import h5py
             file_path = self.get_response_df_path(df_name)
             if os.path.exists(file_path):
                 os.remove(file_path)
             df = self.get_df_for_df_name(df_name)
             self.save_response_df(df, df_name)
-        else:
-            if os.path.exists(self.get_response_df_path(df_name)):
-                print('loading', df_name)
-                df = pd.read_hdf(self.get_response_df_path(df_name), key='df')
-            else:
-                df = self.get_df_for_df_name(df_name)
-                self.save_response_df(df, df_name)
+        else: # default behavior - create the df
+            df = self.get_df_for_df_name(df_name)
+
         # if ('response' in df_name):
         #     if self.sdk_dataset:
         #         df['cell'] = [loading.get_cell_index_for_cell_specimen_id(self.dataset, cell_specimen_id) for
