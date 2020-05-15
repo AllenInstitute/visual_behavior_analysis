@@ -472,7 +472,7 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None):
     return df
 
 
-def get_omission_response_df(dataset, use_events=False, frame_rate=None):
+def get_omission_response_xr(dataset, use_events=False, frame_rate=None):
     if use_events:
         traces = np.stack(dataset.events['events'].values)
         traces = filter_events_array(traces, scale=2)
@@ -489,6 +489,11 @@ def get_omission_response_df(dataset, use_events=False, frame_rate=None):
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                  response_analysis_params, frame_rate)
+
+    return response_xr
+
+def get_omission_response_df(dataset, use_events=False, frame_rate=None):
+    response_xr = get_omission_response_xr(dataset=dataset, use_events=use_events, frame_rate=frame_rate)
     df = response_df(response_xr)
     df = df.rename(
         columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
