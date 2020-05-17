@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 import pandas as pd
@@ -33,7 +32,8 @@ def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
 
 
 def add_location_to_expts(expts):
-    expts['location'] = [expts.loc[x]['cre_line'].split('-')[0] + '_' + expts.loc[x]['targeted_structure'] + '_' + str(int(expts.loc[x]['imaging_depth'])) for x in expts.index.values]
+    expts['location'] = [expts.loc[x]['cre_line'].split('-')[0] + '_' + expts.loc[x]['targeted_structure'] + '_' + str(
+        int(expts.loc[x]['imaging_depth'])) for x in expts.index.values]
     return expts
 
 
@@ -44,7 +44,8 @@ def get_exposure_number_for_group(group):
 
 
 def add_exposure_number_to_experiments_table(experiments):
-    experiments = experiments.groupby(['super_container_id', 'container_id', 'session_type']).apply(get_exposure_number_for_group)
+    experiments = experiments.groupby(['super_container_id', 'container_id', 'session_type']).apply(
+        get_exposure_number_for_group)
     return experiments
 
 
@@ -313,7 +314,6 @@ def add_time_from_last_change(stimulus_presentations):
     return stimulus_presentations
 
 
-
 ### INPLACE VERSIONS ###
 
 def convert_licks_inplace(licks_df):
@@ -350,7 +350,8 @@ def add_change_each_flash_inplace(session):
         RETURNS: nothing
         MODIFIES: session.stimulus_presentations dataframe
     '''
-    changes = esp.find_change(session.stimulus_presentations['image_index'], esp.get_omitted_index(session.stimulus_presentations))
+    changes = esp.find_change(session.stimulus_presentations['image_index'],
+                              esp.get_omitted_index(session.stimulus_presentations))
     session.stimulus_presentations['change'] = changes
 
 

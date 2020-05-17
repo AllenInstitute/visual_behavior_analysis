@@ -1,17 +1,10 @@
 # @nickponvert
 # For calculating trial and flash responses
-import sys
-import os
 import numpy as np
-import math
 import pandas as pd
-from scipy import stats
-import itertools
 import xarray as xr
 
 from visual_behavior.ophys.response_analysis import utilities as ut
-
-OPHYS_FRAME_RATE = 31.
 
 
 def get_default_trial_response_params():
@@ -230,10 +223,11 @@ def get_p_value_from_shuffled_omissions(mean_responses,
 
     stim_table = stimulus_presentations_df.copy()
     omitted_flashes = stim_table[stim_table.omitted == True]
-    omitted_flashes.at[:,'start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
-                                      omitted_flashes.start_time.values]
+    omitted_flashes.at[:, 'start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
+                                            omitted_flashes.start_time.values]
     omitted_start_frames = omitted_flashes.start_frame.values
-    omitted_start_frames = omitted_start_frames[:-1]  # exclude last omission for cases where it occured at the end of the recording
+    omitted_start_frames = omitted_start_frames[
+                           :-1]  # exclude last omission for cases where it occured at the end of the recording
     # shuffle omitted flash frames
     shuffled_omitted_start_frames = np.random.choice(omitted_start_frames, number_of_shuffles)
 
@@ -243,7 +237,8 @@ def get_p_value_from_shuffled_omissions(mean_responses,
     trace_len = np.round(response_window_duration * ophys_frame_rate).astype(int)
     start_ind_offset = 0
     end_ind_offset = trace_len
-    omission_traces = eventlocked_traces(dff_traces_arr, shuffled_omitted_start_frames, start_ind_offset, end_ind_offset)
+    omission_traces = eventlocked_traces(dff_traces_arr, shuffled_omitted_start_frames, start_ind_offset,
+                                         end_ind_offset)
     omission_mean = omission_traces.mean(axis=0)  # Returns (nShuffles, nCells)
 
     # Goal is to figure out how each response compares to the shuffled distribution, which is just
@@ -282,8 +277,8 @@ def get_p_value_from_shuffled_flashes(mean_responses,
 
     stim_table = stimulus_presentations_df.copy()
     stimulus_flashes = stim_table[stim_table.omitted == False]
-    stimulus_flashes.at[:,'start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
-                                       stimulus_flashes.start_time.values]
+    stimulus_flashes.at[:, 'start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
+                                             stimulus_flashes.start_time.values]
     stimulus_flash_start_frames = stimulus_flashes.start_frame.values
     stimulus_flash_start_frames = stimulus_flash_start_frames[:-1]  # exclude last one
     # shuffle flash frames
@@ -295,7 +290,8 @@ def get_p_value_from_shuffled_flashes(mean_responses,
     trace_len = np.round(response_window_duration * ophys_frame_rate).astype(int)
     start_ind_offset = 0
     end_ind_offset = trace_len
-    flash_traces = eventlocked_traces(dff_traces_arr, shuffled_stimulus_flash_start_frames, start_ind_offset, end_ind_offset)
+    flash_traces = eventlocked_traces(dff_traces_arr, shuffled_stimulus_flash_start_frames, start_ind_offset,
+                                      end_ind_offset)
     flash_mean = flash_traces.mean(axis=0)  # Returns (nShuffles, nCells)
 
     # Goal is to figure out how each response compares to the shuffled distribution, which is just
@@ -311,8 +307,8 @@ def get_p_value_from_shuffled_flashes(mean_responses,
     return result
 
 
-def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_ids, response_analysis_params, frame_rate=None):
-
+def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_ids, response_analysis_params,
+                    frame_rate=None):
     event_indices, start_ind_offset, end_ind_offset, trace_timebase = slice_inds_and_offsets(
         ophys_times=timestamps,
         event_times=event_times,
@@ -352,7 +348,8 @@ def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_i
                                                                 session.stimulus_presentations,
                                                                 timestamps,
                                                                 traces,
-                                                                response_analysis_params['response_window_duration_seconds'],
+                                                                response_analysis_params[
+                                                                    'response_window_duration_seconds'],
                                                                 frame_rate)
     p_values_stimulus = get_p_value_from_shuffled_flashes(mean_response,
                                                           session.stimulus_presentations,
@@ -365,7 +362,8 @@ def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_i
                                                                 session.stimulus_presentations,
                                                                 timestamps,
                                                                 traces,
-                                                                response_analysis_params['response_window_duration_seconds'],
+                                                                response_analysis_params[
+                                                                    'response_window_duration_seconds'],
                                                                 frame_rate)
     result = xr.Dataset({
         'eventlocked_traces': eventlocked_traces_xr,
@@ -471,7 +469,8 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, format=
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
     window = response_analysis_params['window_around_timepoint_seconds']
-    response_window = [np.abs(window[0]), np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
+    response_window = [np.abs(window[0]),
+                       np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
     if frame_rate is None:
         frame_rate = 1 / np.diff(timestamps).mean()
     df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]

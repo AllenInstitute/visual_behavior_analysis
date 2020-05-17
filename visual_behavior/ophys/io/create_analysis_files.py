@@ -4,12 +4,12 @@
 
 # import numpy as np
 from visual_behavior.ophys.io.convert_level_1_to_level_2 import convert_level_1_to_level_2
-from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
+# from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 import visual_behavior.data_access.loading as loading
-
-from visual_behavior.visualization.ophys import experiment_summary_figures as esf
-from visual_behavior.visualization.ophys import summary_figures as sf
+#
+# from visual_behavior.visualization.ophys import experiment_summary_figures as esf
+# from visual_behavior.visualization.ophys import summary_figures as sf
 
 
 # import logging
@@ -26,7 +26,7 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
             ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir, plot_roi_validation=False);
         except:
             print('could not convert', experiment_id)
-    dataset = loading.get_sdk_dataset_obj(experiment_id, cache_dir)
+    dataset = loading.get_ophys_dataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, use_events=use_events, overwrite_analysis_files=overwrite_analysis_files)
 
     tmp = analysis.trials_response_df

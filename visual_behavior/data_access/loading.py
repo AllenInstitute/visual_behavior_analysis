@@ -3,19 +3,17 @@ import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
-from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
+# from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import processing
 import visual_behavior.database as db
-
 
 import os
 import h5py  # for loading motion corrected movie
 import numpy as np
 import pandas as pd
 import configparser as configp  # for parsing scientifica ini files
-
 
 lims_dbname = os.environ["LIMS_DBNAME"]
 lims_user = os.environ["LIMS_USER"]
@@ -43,6 +41,7 @@ mtrain_engine = PostgresQueryMixin(dbname=mtrain_dbname,
 
 get_psql_dict_cursor = convert.get_psql_dict_cursor  # to load well-known files
 config = configp.ConfigParser()
+
 
 # function inputs
 # ophys_experiment_id
@@ -211,9 +210,6 @@ def get_filtered_ophys_session_table():
 ##### INSERT get_filtered_behavior_sessions_table() FUNCTION HERE #####
 
 
-
-
-
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
 
@@ -225,6 +221,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             BehaviorOphysDataset object -- class with attributes & methods to access ophys and behavior data
                                                 associated with an ophys_experiment_id (single imaging plane)
         """
+
     def __init__(self, api, cache_dir, include_invalid_rois=False):
         """
         :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
@@ -238,31 +235,31 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         # self.pupil_area = None
         self.events = None
 
-
     @property
     def analysis_folder(self):
         candidates = [file for file in os.listdir(self.cache_dir) if str(self.ophys_experiment_id) in file]
         if len(candidates) == 1:
             self._analysis_folder = candidates[0]
         elif len(candidates) == 0:
-            print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id, self.cache_dir))
+            print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
+                                                                                    self.cache_dir))
             print('creating new analysis folder')
             m = self.metadata
             date = m['experiment_datetime']
             date = str(date)[:10]
-            date = date[2:4]+date[5:7]+date[8:10]
-            self._analysis_folder = str(m['ophys_experiment_id'])+'_'+str(m['donor_id'])+'_'+date+'_'+m['targeted_structure']+'_'+str(m['imaging_depth'])+'_'+m['driver_line'][0]+'_'+m['rig_name']+'_'+m['session_type']
+            date = date[2:4] + date[5:7] + date[8:10]
+            self._analysis_folder = str(m['ophys_experiment_id']) + '_' + str(m['donor_id']) + '_' + date + '_' + m[
+                'targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['driver_line'][0] + '_' + m[
+                                        'rig_name'] + '_' + m['session_type']
             os.mkdir(os.path.join(self.cache_dir, self._analysis_folder))
         elif len(candidates) > 1:
             raise OSError('{} contains multiple possible analysis folders: {}'.format(self.cache_dir, candidates))
         return self._analysis_folder
 
-
     @property
     def analysis_dir(self):
         self._analysis_dir = os.path.join(self.cache_dir, self.analysis_folder)
         return self._analysis_dir
-
 
     @property
     def cell_specimen_table(self) -> pd.DataFrame:
@@ -276,18 +273,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self._cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         return self._cell_specimen_table
 
-
     @property
     def cell_indices(self):
         self._cell_indices = self.cell_specimen_table.cell_index
         return self._cell_indices
 
-
     @property
     def cell_specimen_ids(self):
         self._cell_specimen_ids = np.sort(self.cell_specimen_table.index.values)
         return self._cell_specimen_ids
-
 
     @property
     def dff_traces(self):
@@ -300,14 +294,12 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             self._dff_traces = super().dff_traces
         return self._dff_traces
 
-
     @property
     def timestamps(self):
         # need to get full set of timestamps because SDK only provides stimulus and ophys timestamps (not eye tracking for example)
         lims_data = convert.get_lims_data(self.ophys_experiment_id)
         self._timestamps = convert.get_timestamps(lims_data, self.analysis_dir)
         return self._timestamps
-
 
     @property
     def ophys_timestamps(self):
@@ -316,7 +308,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         else:
             self._ophys_timestamps = super().ophys_timestamps
         return self._ophys_timestamps
-
 
     @property
     def metadata(self):
@@ -333,13 +324,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self._metadata = metadata
         return self._metadata
 
-
     @property
     def metadata_string(self):
         # for figure titles & filenames
-        self._metadata_string = m['driver_line'][0] + '_' + str(m['donor_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['session_type'] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth'])
+        m = self.metadata
+        self._metadata_string = str(m['donor_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['driver_line'][
+            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
         return self._metadata_string
-
 
     @property
     def licks(self):
@@ -348,7 +339,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             self._licks = reformat.convert_licks(self._licks)
         return self._licks
 
-
     @property
     def rewards(self):
         self._rewards = super().rewards
@@ -356,14 +346,12 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             self._rewards = reformat.convert_rewards(super().rewards)
         return self._rewards
 
-
     @property
     def running_speed(self):
         self._running_speed = super().running_speed
-        if type(self._running_speed)!=pd.core.frame.DataFrame:
+        if type(self._running_speed) != pd.core.frame.DataFrame:
             self._running_speed = reformat.convert_running_speed(self._running_speed)
         return self._running_speed
-
 
     @property
     def stimulus_presentations(self):
@@ -373,7 +361,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
         self._stimulus_presentations = stimulus_presentations
         return self._stimulus_presentations
-
 
     @property
     def extended_stimulus_presentations(self):
@@ -392,16 +379,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
 
-
     def get_cell_specimen_id_for_cell_index(self, cell_index):
         cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_index == cell_index].index.values[0]
         return cell_specimen_id
 
-
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
         cell_index = self.cell_specimen_table[self.cell_specimen_table.index == cell_specimen_id].cell_index.values[0]
         return cell_index
-
 
 
 def get_ophys_dataset(ophys_experiment_id, cache_dir, include_invalid_rois=False):
@@ -422,7 +406,7 @@ def get_ophys_dataset(ophys_experiment_id, cache_dir, include_invalid_rois=False
 
 def get_ophys_container_ids():
     """Get container_ids that meet the criteria in get_filtered_ophys_experiment_table(). """
-    experiments = cache.get_experiment_table()
+    experiments = get_filtered_ophys_experiment_table()
     container_ids = np.sort(experiments.container_id.unique())
     return container_ids
 
@@ -509,7 +493,7 @@ def get_sdk_max_projection(ophys_experiment_id):
     Returns:
         image -- can be visualized via plt.imshow(max_projection)
     """
-    session = get_sdk_session_obj(ophys_experiment_id)
+    session = get_ophys_dataset(ophys_experiment_id)
     max_projection = session.max_projection
     return max_projection
 
@@ -524,7 +508,7 @@ def get_sdk_ave_projection(ophys_experiment_id):
     Returns:
         image -- can be visualized via plt.imshow(ave_projection)
     """
-    session = get_sdk_session_obj(ophys_experiment_id)
+    session = get_ophys_dataset(ophys_experiment_id)
     ave_projection = session.average_projection
     return ave_projection
 
@@ -539,7 +523,7 @@ def get_sdk_segmentation_mask_image(ophys_experiment_id):
        array -- a 2D boolean array
                 visualized via plt.imshow(seg_mask_image)
     """
-    session = get_sdk_session_obj(ophys_experiment_id)
+    session = get_ophys_dataset(ophys_experiment_id)
     seg_mask_image = session.segmentation_mask_image.data
     return seg_mask_image
 
@@ -560,13 +544,13 @@ def get_sdk_roi_masks(ophys_experiment_id):
                     plt.imshow(roi_masks[cell_specimen_id])
     """
 
-    session = get_sdk_session_obj(ophys_experiment_id)
+    session = get_ophys_dataset(ophys_experiment_id)
     roi_masks = session.get_roi_masks
     return roi_masks
 
 
 def get_valid_segmentation_mask(ophys_experiment_id):
-    session = get_sdk_session_obj(ophys_experiment_id)
+    session = get_ophys_dataset(ophys_experiment_id)
     ct = session.cell_specimen_table
     valid_cell_specimen_ids = ct[ct.valid_roi == True].index.values
     roi_masks = session.get_roi_masks()
@@ -598,13 +582,13 @@ def get_sdk_cell_specimen_table(ophys_experiment_id):
                     "x"
                     "y"
     """
-    session = get_sdk_session_obj(ophys_experiment_id)
+    session = get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = session.cell_specimen_table
     return cell_specimen_table
 
 
 def get_sdk_dff_traces(ophys_experiment_id):
-    session = get_sdk_session_obj(ophys_experiment_id)
+    session = get_ophys_dataset(ophys_experiment_id)
     dff_traces = session.dff_traces
     return dff_traces
 
@@ -616,13 +600,13 @@ def get_sdk_dff_traces_array(ophys_experiment_id):
 
 
 def get_sdk_running_speed(ophys_session_id):
-    session = get_sdk_session_obj(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
+    session = get_ophys_dataset(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
     running_speed = session.running_data_df['speed']
     return running_speed
 
 
 def get_sdk_trials(ophys_session_id):
-    session = get_sdk_session_obj(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
+    session = get_ophys_dataset(get_ophys_experiment_id_for_ophys_session_id(ophys_session_id))
     trials = session.trials.reset_index()
     return trials
 
@@ -951,7 +935,8 @@ def get_pmt_gain_for_session(ophys_session_id):
         pmt_gain = pmt_gain_from_timeseries_ini(timeseries_ini_path)
     except IndexError:
         ophys_experiment_id = get_ophys_experiment_id_for_ophys_session_id(ophys_session_id)
-        print("lims query did not return timeseries_XYT.ini location for session_id: " + str(ophys_session_id) + ", experiment_id: " + str(ophys_experiment_id))
+        print("lims query did not return timeseries_XYT.ini location for session_id: " + str(
+            ophys_session_id) + ", experiment_id: " + str(ophys_experiment_id))
         pmt_gain = np.nan
     return pmt_gain
 
@@ -1012,8 +997,10 @@ def get_motion_corrected_movie_h5_location(ophys_experiment_id):
         filepath -- [description]
     """
     motion_corrected_movie_h5_wkf_info = get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id)
-    motion_corrected_movie_h5_path = motion_corrected_movie_h5_wkf_info[0]['?column?']  # idk why it's ?column? but it is :(
-    motion_corrected_movie_h5_path = motion_corrected_movie_h5_path.replace('/allen', '//allen')  # works with windows and linux filepaths
+    motion_corrected_movie_h5_path = motion_corrected_movie_h5_wkf_info[0][
+        '?column?']  # idk why it's ?column? but it is :(
+    motion_corrected_movie_h5_path = motion_corrected_movie_h5_path.replace('/allen',
+                                                                            '//allen')  # works with windows and linux filepaths
     return motion_corrected_movie_h5_path
 
 
@@ -1077,8 +1064,10 @@ def get_rigid_motion_transform_csv_location(ophys_experiment_id):
         filepath -- [description]
     """
     rigid_motion_transform_csv_wkf_info = get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id)
-    rigid_motion_transform_csv_path = rigid_motion_transform_csv_wkf_info[0]['?column?']  # idk why it's ?column? but it is :(
-    rigid_motion_transform_csv_path = rigid_motion_transform_csv_path.replace('/allen', '//allen')  # works with windows and linux filepaths
+    rigid_motion_transform_csv_path = rigid_motion_transform_csv_wkf_info[0][
+        '?column?']  # idk why it's ?column? but it is :(
+    rigid_motion_transform_csv_path = rigid_motion_transform_csv_path.replace('/allen',
+                                                                              '//allen')  # works with windows and linux filepaths
     return rigid_motion_transform_csv_path
 
 
@@ -1133,10 +1122,13 @@ def build_container_df():
     container_ids = table['container_id'].unique()
     list_of_dicts = []
     for container_id in container_ids:
-        subset = table.query('container_id == @container_id').sort_values(by='date_of_acquisition', ascending=True).drop_duplicates('ophys_session_id').reset_index()
+        subset = table.query('container_id == @container_id').sort_values(by='date_of_acquisition',
+                                                                          ascending=True).drop_duplicates(
+            'ophys_session_id').reset_index()
         temp_dict = {
             'container_id': container_id,
-            'container_workflow_state': table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
+            'container_workflow_state':
+                table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
             'first_acquistion_date': subset['date_of_acquisition'].min().split(' ')[0],
             'project_code': subset['project_code'].unique()[0],
             'driver_line': subset['driver_line'][0],
@@ -1150,7 +1142,8 @@ def build_container_df():
             'age_in_days': subset['age_in_days'].min(),
         }
         for idx, row in subset.iterrows():
-            temp_dict.update({'session_{}'.format(idx): '{} {}'.format(row['session_type'], row['ophys_experiment_id'])})
+            temp_dict.update(
+                {'session_{}'.format(idx): '{} {}'.format(row['session_type'], row['ophys_experiment_id'])})
 
         list_of_dicts.append(temp_dict)
 
@@ -1167,7 +1160,7 @@ def get_annotated_experiments_table():
     experiments_table = experiments_table[experiments_table.project_code.isin(project_codes)]
     # add columns
     experiments_table['depth'] = ['superficial' if experiments_table.loc[expt].imaging_depth <= 250 else 'deep' for expt
-                                  in experiments_table.index] #355
+                                  in experiments_table.index]  # 355
     experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                      experiments_table.loc[expt].depth for expt in experiments_table.index]
 
@@ -1216,12 +1209,15 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
         suffix = ''
 
     if len(conditions) == 5:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
+            2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
-            3] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
+            2] + '_' + conditions[
+                       3] + suffix + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
+            2] + suffix + '.h5'
     elif len(conditions) == 2:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
     elif len(conditions) == 1:
@@ -1311,7 +1307,8 @@ def remove_problematic_data_from_multi_session_df(multi_session_df):
     bad_specimen_ids = [810573072]  # 840542948, 920877188, 837581585
     bad_experiment_ids = [989610992, 904352692, 905955211, 974362760, 904363938, 905955240,
                           957759566, 957759574, 916220452, 934550023,
-                          986518876, 986518891, 989610991, 989213058, 989213062, 990400778, 990681008, 991852002,  # specimen 920877188
+                          986518876, 986518891, 989610991, 989213058, 989213062, 990400778, 990681008, 991852002,
+                          # specimen 920877188
                           915229064, 934550019, 919419011,  # specimen 840542948
                           847267618, 847267620, 848039121, 848039125, 848039123, 848760990,  # specimen 810573072
                           886585138, 886565136,  # specimen 837581585

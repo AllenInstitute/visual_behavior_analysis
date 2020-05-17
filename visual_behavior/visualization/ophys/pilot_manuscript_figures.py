@@ -4,8 +4,10 @@ import pandas as pd
 import scipy.stats as st
 import matplotlib.pyplot as plt
 import seaborn as sns
+
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True,})
+sns.set_style('white',
+              {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True, })
 sns.set_palette('deep')
 
 import visual_behavior.visualization.ophys.population_summary_figures as psf
@@ -28,32 +30,34 @@ def get_stats_for_conditions(df, metric, sample_type, group, group_names, condit
     df[metric] = pd.to_numeric(df[metric])
     df_list = []
     for group_name in group_names:
-        data = df[(df[group]==group_name)]
-        data = data[data[condition].isnull()==False]
+        data = df[(df[group] == group_name)]
+        data = data[data[condition].isnull() == False]
         # get rid of NaNs
         condition_values = []
         for condition_name in condition_names:
-            t = data[(data[condition]==condition_name)][metric].values
-            t = [val for val in t if np.isnan(val)==False]
+            t = data[(data[condition] == condition_name)][metric].values
+            t = [val for val in t if np.isnan(val) == False]
             condition_values.append(t)
         # ANOVA to test for overall effect
         if len(condition_names) == 2:
             group_f_stat, group_p_value = stats.f_oneway(condition_values[0], condition_values[1])
         elif len(condition_names) == 4:
-            group_f_stat, group_p_value = stats.f_oneway(condition_values[0], condition_values[1], condition_values[2], condition_values[3])
+            group_f_stat, group_p_value = stats.f_oneway(condition_values[0], condition_values[1], condition_values[2],
+                                                         condition_values[3])
         # Welch's t-test for all combinations within a group (does not assume equal variance or sample size)
         pairs = itertools.combinations(condition_names, 2)
         n_pairs = sum(1 for p in itertools.combinations(condition_names, 2))
-        significance_level = 0.05/n_pairs # Bonferroni correction for multiple comparisons
+        significance_level = 0.05 / n_pairs  # Bonferroni correction for multiple comparisons
         for pair in pairs:
-            cond1_values = data[(data[condition]==pair[0])&(data[metric].isnull()==False)][metric].values
-            cond2_values = data[(data[condition]==pair[1])&(data[metric].isnull()==False)][metric].values
+            cond1_values = data[(data[condition] == pair[0]) & (data[metric].isnull() == False)][metric].values
+            cond2_values = data[(data[condition] == pair[1]) & (data[metric].isnull() == False)][metric].values
             pair_t_stat, pair_p_value = stats.ttest_ind(cond1_values, cond2_values, equal_var=False)
             rounded_p_value = np.round(pair_p_value, 6)
-            significant = [True if (group_p_value<0.05) & (pair_p_value <= significance_level) else False]
+            significant = [True if (group_p_value < 0.05) & (pair_p_value <= significance_level) else False]
             df_list.append([metric, sample_type, group_name, group_f_stat, group_p_value, significance_level, condition,
                             pair[0], pair[1], pair_t_stat, pair_p_value, rounded_p_value, significant[0]])
-    columns = ['metric', 'sample_type', 'group', 'ANOVA_f_stat', 'ANOVA_p_value', 'corrected_significance_level', 'condition' ,
+    columns = ['metric', 'sample_type', 'group', 'ANOVA_f_stat', 'ANOVA_p_value', 'corrected_significance_level',
+               'condition',
                'condition1', 'condition2', 'ttest_statistic', 'ttest_p_value', 'rounded_p_value', 'significant']
     stats_df = pd.DataFrame(data=df_list, columns=columns)
     return stats_df
@@ -154,7 +158,8 @@ def get_stats_for_session_metric_areas(session_summary_df, metric):
 
     stats_df = pd.DataFrame()
     for cre_line in df.cre_line.unique():
-        tmp = get_stats_for_conditions(df[df.cre_line == cre_line], metric, sample_type, condition, condition_values, hue, hue_names)
+        tmp = get_stats_for_conditions(df[df.cre_line == cre_line], metric, sample_type, condition, condition_values,
+                                       hue, hue_names)
         stats_df = pd.concat([stats_df, tmp])
     return stats_df
 
@@ -203,35 +208,35 @@ def get_stats_for_cell_summary_areas(cell_summary_df, metric):
 
 
 def plot_behavior_metrics(rdf, x='trial_type', y='response_rate', ylabel='response rate', hue=None, show_stats=True,
-                         colors=None, gray_sessions=False, legend=False, title=None, save_dir=None, suffix=''):
-    figsize=(3.5,3.5)
+                          colors=None, gray_sessions=False, legend=False, title=None, save_dir=None, suffix=''):
+    figsize = (3.5, 3.5)
     fig, ax = plt.subplots(figsize=figsize)
     if colors:
         if not legend:
             if gray_sessions:
-                ax = sns.swarmplot(data=rdf, x=x, y=y,  color='gray', ax=ax, size=3, zorder=1)
+                ax = sns.swarmplot(data=rdf, x=x, y=y, color='gray', ax=ax, size=3, zorder=1)
             else:
-                ax = sns.swarmplot(data=rdf, x=x, y=y,  hue=hue, palette=colors, ax=ax, size=3, zorder=1)
+                ax = sns.swarmplot(data=rdf, x=x, y=y, hue=hue, palette=colors, ax=ax, size=3, zorder=1)
         ax = sns.pointplot(data=rdf, x=x, y=y, hue=hue, palette=colors, ax=ax, zorder=100)
     else:
         if not legend:
             ax = sns.swarmplot(data=rdf, x=x, y=y, color='gray', ax=ax, size=3, zorder=1)
         ax = sns.pointplot(data=rdf, x=x, y=y, color='gray', ax=ax, zorder=100)
-    ax.set_xlim(-0.2, len(rdf[x].unique())-1+0.2)
+    ax.set_xlim(-0.2, len(rdf[x].unique()) - 1 + 0.2)
     ax.set_ylabel(ylabel)
     ax.set_xlabel('')
     if legend:
-        suffix = suffix+'_legend'
+        suffix = suffix + '_legend'
         l = ax.legend(fontsize='large', title='image set')
-        plt.setp(l.get_title(),fontsize='large')
+        plt.setp(l.get_title(), fontsize='large')
     else:
-        suffix = suffix+''
+        suffix = suffix + ''
         if colors:
             ax.get_legend().remove()
         else:
             hue = 'none'
     ax.set_ylim(ymin=0)
-    ax.set_xlabel(x.split('_')[0]+' '+x.split('_')[1])
+    ax.set_xlabel(x.split('_')[0] + ' ' + x.split('_')[1])
     if x is 'image_name':
         ax.set_xticklabels(rdf.image_name.unique(), rotation=90)
     if title:
@@ -251,7 +256,7 @@ def plot_behavior_metrics(rdf, x='trial_type', y='response_rate', ylabel='respon
 
     fig.tight_layout()
     if save_dir:
-        sf.save_figure(fig, figsize, save_dir, 'behavior', y+'_'+x+'_'+hue+suffix)
+        sf.save_figure(fig, figsize, save_dir, 'behavior', y + '_' + x + '_' + hue + suffix)
 
 
 def plot_behavior_metrics_lines(rdf, x='trial_type', y='response_rate', ylabel='response rate', hue=None,
@@ -304,11 +309,13 @@ def plot_behavior_metrics_lines(rdf, x='trial_type', y='response_rate', ylabel='
     if save_dir:
         sf.save_figure(fig, figsize, save_dir, 'behavior', y + '_' + x + '_' + hue + suffix + '_lines')
 
+
 def generate_image_count_summary(mouse_list):
     from visual_behavior.translator import foraging2, foraging  # NOQA: E402
     df_list = []
     for mouse_id in mouse_list:
-        folder = os.path.join(r"\\allen\programs\braintv\workgroups\neuralcoding\Behavior\Data", "M{}".format(mouse_id), "output")
+        folder = os.path.join(r"\\allen\programs\braintv\workgroups\neuralcoding\Behavior\Data", "M{}".format(mouse_id),
+                              "output")
         files = np.sort(os.listdir(folder))
         for file in files:
             if ('NaturalImages' in file) & ('Ophys' not in file):
@@ -318,13 +325,14 @@ def generate_image_count_summary(mouse_list):
                 st = core_data['visual_stimuli']
                 tmp = [mouse_id, file]
                 for image_name in np.sort(st.image_name.unique()):
-                    n = len(st[st.image_name==image_name])
+                    n = len(st[st.image_name == image_name])
                     tmp = tmp + [n]
                 df_list.append(tmp)
 
-    df = pd.DataFrame(data=df_list, columns=['mouse_id','filename']+list(np.sort(st.image_name.unique())))
-    df.at[df[df.mouse_id=='m329071'].index, 'mouse_id'] = 'M329071'
+    df = pd.DataFrame(data=df_list, columns=['mouse_id', 'filename'] + list(np.sort(st.image_name.unique())))
+    df.at[df[df.mouse_id == 'm329071'].index, 'mouse_id'] = 'M329071'
     df.to_hdf(os.path.join(cache_dir, 'multi_session_summary_dfs', 'image_count.h5'), key='df')
+
 
 def generate_behavior_session_summary(mouse_list):
     df_list = []
@@ -377,15 +385,16 @@ def add_inter_trial_lick_diff_to_trials_df(trials):
     inter_trial_lick_diff = []
     for row in range(len(trials)):
         current_trial = trials.iloc[row]
-        previous_trial = trials.iloc[row-1]
+        previous_trial = trials.iloc[row - 1]
         if len(current_trial.lick_times) > 0 and len(previous_trial.lick_times) > 0:
-            inter_trial_lick_diff.append(current_trial.lick_times[0]-previous_trial.lick_times[-1])
+            inter_trial_lick_diff.append(current_trial.lick_times[0] - previous_trial.lick_times[-1])
         else:
             inter_trial_lick_diff.append(np.nan)
     trials['inter_trial_lick_diff'] = inter_trial_lick_diff
     return trials
 
-def annotate_trials(trials, dataset, window=[-2,3]):
+
+def annotate_trials(trials, dataset, window=[-2, 3]):
     running_trace = dataset.running_speed.running_speed.values
     post_change_lick_times = []
     first_lick_time = []
@@ -398,17 +407,19 @@ def annotate_trials(trials, dataset, window=[-2,3]):
             first_lick_time.append([])
         post_change_lick_times.append(times)
         trial_run_speed, times = ut.get_trace_around_timepoint(trials.iloc[row].change_time, running_trace,
-                                                 dataset.timestamps_stimulus, frame_rate=60., window=window)
+                                                               dataset.timestamps_stimulus, frame_rate=60.,
+                                                               window=window)
         running_speed.append(trial_run_speed)
     trials['experiment_id'] = dataset.experiment_id
     trials['post_change_lick_times'] = post_change_lick_times
     trials['first_lick_time'] = first_lick_time
     trials['running_speed'] = running_speed
-    trials['trial_duration'] = trials.endtime-trials.starttime
+    trials['trial_duration'] = trials.endtime - trials.starttime
     trials = add_inter_trial_lick_diff_to_trials_df(trials)
     return trials
 
-def annotate_all_trials(all_trials, dataset, window=[-2,3]):
+
+def annotate_all_trials(all_trials, dataset, window=[-2, 3]):
     post_start_lick_times = []
     post_change_lick_times = []
     first_lick_time_after_start = []
@@ -436,18 +447,20 @@ def annotate_all_trials(all_trials, dataset, window=[-2,3]):
     all_trials['experiment_id'] = dataset.experiment_id
     return all_trials
 
+
 def generate_multi_session_all_trials_df(experiment_ids):
     from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
     multi_session_all_trials = pd.DataFrame()
     for experiment_id in experiment_ids:
         dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
         all_trials = dataset.all_trials.copy()
-        all_trials = annotate_all_trials(all_trials, dataset, window=[-2,6])
+        all_trials = annotate_all_trials(all_trials, dataset, window=[-2, 6])
         all_trials = ut.add_metadata_to_mean_df(all_trials, dataset.metadata)
         multi_session_all_trials = pd.concat([multi_session_all_trials, all_trials])
 
     save_path = os.path.join(cache_dir, 'multi_session_summary_dfs', 'multi_session_all_trials.h5')
     multi_session_all_trials.to_hdf(save_path, key='df')
+
 
 def generate_multi_session_trials_df(experiment_ids):
     from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
@@ -532,7 +545,7 @@ def get_consumption_licks(flashes):
         if (row_data.trial_type == 'go') and (row_data.first_lick_in_bout == True):
             flashes.loc[row, 'consumption_licks'] = True
         if (flashes.iloc[row - 1].consumption_licks == True) & (
-            flashes.iloc[row].inter_flash_lick_diff < median_inter_lick_interval * 3):
+                flashes.iloc[row].inter_flash_lick_diff < median_inter_lick_interval * 3):
             flashes.loc[row, 'consumption_licks'] = True
     return flashes
 
@@ -612,7 +625,7 @@ def get_response_latencies(flashes):
 
     abort_fa_response_times = flashes[(flashes.trial_type.isin(['go', 'catch']) == False) &
                                       (flashes.first_lick_in_bout == True) & (
-                                      flashes.n_licks > 0)].post_flash_response_latency.values
+                                              flashes.n_licks > 0)].post_flash_response_latency.values
 
     return hit_response_times, catch_fa_response_times, abort_fa_response_times
 
@@ -669,8 +682,6 @@ def generate_response_rate_summary_df(experiment_ids):
     response_rate_summary_df.to_hdf(save_path, key='df')
 
 
-
-
 ## boxplots
 
 def adjust_box_widths(ax, fac):
@@ -719,7 +730,7 @@ def plot_boxplot_for_condition(df, metric, condition='image_set', condition_valu
             suffix = '_stats'
         else:
             suffix = ''
-        save_figure(fig, figsize, save_dir, folder, metric + '_by_' + condition + '_box'+suffix)
+        save_figure(fig, figsize, save_dir, folder, metric + '_by_' + condition + '_box' + suffix)
     return ax
 
 
@@ -792,6 +803,7 @@ def plot_boxplot_and_swarm_for_condition(df, metric, condition='cre_line', condi
 
     return ax
 
+
 ### pointplots
 
 def plot_pointplot_for_condition(df, metric, condition='cre_line', condition_values=['A', 'B'],
@@ -863,7 +875,8 @@ def plot_pointplot_for_condition(df, metric, condition='cre_line', condition_val
 
 
 def plot_points_for_image_sets_cre_lines(df, metric, points_range=(0, 1), xlabel=None, show_stats=False,
-                                         label_kde=False, show_legend=False, bins=30, offset=False, ylabel='', sample_type='sessions',
+                                         label_kde=False, show_legend=False, bins=30, offset=False, ylabel='',
+                                         sample_type='sessions',
                                          save_figures=False, save_dir=None, folder=None, use_events=False):
     condition = 'image_set'
     condition_values = ut.get_image_sets(df)
@@ -1004,10 +1017,10 @@ def plot_hist_for_image_sets_cre_lines(df, metric, hist_ranges=[(-1, 1), (-1, 1)
     for i, cre_line in enumerate(cre_lines):
         tmp = df[df.cre_line == cre_line].copy()
         ax[i] = plot_hist_for_condition(tmp, metric, condition, condition_values, colors, cre_line,
-                                           hist_range=hist_ranges[i],
-                                           show_stats=show_stats, show_legend=show_legend, show_kde=show_kde,
-                                           label_kde=label_kde, bins=bins,
-                                           ax=ax[i], offset=offset, save_figures=False)
+                                        hist_range=hist_ranges[i],
+                                        show_stats=show_stats, show_legend=show_legend, show_kde=show_kde,
+                                        label_kde=label_kde, bins=bins,
+                                        ax=ax[i], offset=offset, save_figures=False)
         if xlabel:
             ax[i].set_xlabel(xlabel)
         else:
@@ -1133,7 +1146,7 @@ def plot_cdf_for_condition(df, metric, condition='image_set', condition_values=[
         else:
             suffix = ''
         save_figure(fig, figsize, save_dir, folder,
-                        metric + '_by_' + condition + '_' + cre_line.split('-')[0] + '_cdf' + suffix)
+                    metric + '_by_' + condition + '_' + cre_line.split('-')[0] + '_cdf' + suffix)
     return ax
 
 
@@ -1286,6 +1299,7 @@ def plot_cdf_for_areas_stacked(df, metric, cdf_ranges=[(0, 1), (0, 1)], xlabel=N
         else:
             suffix = ''
         save_figure(fig, figsize, save_dir, folder, metric + '_by_' + condition + '_cdf_stacked' + suffix)
+
 
 ### barplots
 
@@ -1472,6 +1486,7 @@ def plot_percent_cells_over_threshold_stacked(cell_df, metric, threshold, condit
     if save_figures:
         save_figure(fig, figsize, save_dir, folder, metric + '_' + condition + '_percent_stacked' + suffix)
 
+
 def plot_mean_value_barplot(cell_df, metric, condition='image_set', condition_values=['A', 'B', 'C', 'D'],
                             ylabel='metric',
                             colors=sns.color_palette(), title=None, sharey=True, ymax=None,
@@ -1541,7 +1556,8 @@ def generate_figures_for_session_metric_image_sets(session_summary_df, metric, r
                                          show_stats=show_stats)
 
     plot_pointplot_for_condition(df, metric, condition, condition_values, colors, hue, hue_order=hue_order,
-                                 ylabel=ylabel, xlabel=xlabel, title=title, range=points_range, ax=None, use_events=use_events,
+                                 ylabel=ylabel, xlabel=xlabel, title=title, range=points_range, ax=None,
+                                 use_events=use_events,
                                  plot_swarm=True, show_stats=False, save_figures=save_figures, save_dir=save_dir,
                                  folder=folder)
 
@@ -1672,12 +1688,12 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
         fig.tight_layout()
     if horizontal_legend:
         ax = sns.heatmap(response_matrix, cmap='magma', linewidths=0, linecolor='white', square=False,
-                     vmin=0, vmax=vmax, robust=True, cbar=colorbar,
-                     cbar_kws={"drawedges": False, "shrink": 1, "label": label, "orientation":"horizontal"}, ax=ax)
+                         vmin=0, vmax=vmax, robust=True, cbar=colorbar,
+                         cbar_kws={"drawedges": False, "shrink": 1, "label": label, "orientation": "horizontal"}, ax=ax)
     else:
         ax = sns.heatmap(response_matrix, cmap='magma', linewidths=0, linecolor='white', square=False,
-                     vmin=0, vmax=vmax, robust=True, cbar=colorbar,
-                     cbar_kws={"drawedges": False, "shrink": 1, "label": label}, ax=ax)
+                         vmin=0, vmax=vmax, robust=True, cbar=colorbar,
+                         cbar_kws={"drawedges": False, "shrink": 1, "label": label}, ax=ax)
     ax.set_title(cre_line, va='bottom', ha='center')
     ax.set_xticklabels(images, rotation=90, fontsize=12)
     ax.set_ylabel('cells')
@@ -1755,9 +1771,8 @@ def plot_response_across_conditions_population(df, condition='image_set', condit
     return ax
 
 
-
 def plot_population_activity_heatmap(df, vmax=0.01, colorbar=False, ax=None, save_dir=None, folder=None, interval_sec=2,
-                             use_events=False, window=[-3,3]):
+                                     use_events=False, window=[-3, 3]):
     if use_events:
         label = 'mean response'
         suffix = '_events'
@@ -1767,7 +1782,7 @@ def plot_population_activity_heatmap(df, vmax=0.01, colorbar=False, ax=None, sav
     image_set = df.image_set.unique()[0]
     cre_line = df.cre_line.unique()[0]
     if ax is None:
-        figsize = (4,7)
+        figsize = (4, 7)
         fig, ax = plt.subplots(figsize=figsize)
 
     order = np.argsort(df.mean_response.values)[::-1]
@@ -1802,75 +1817,75 @@ def plot_population_activity_heatmap(df, vmax=0.01, colorbar=False, ax=None, sav
     return ax
 
 
-def plot_scatter_for_cre_line(df, cre_line, x, y, x_label, y_label, lim=None, xlim=None, ylim=(-1,1),
+def plot_scatter_for_cre_line(df, cre_line, x, y, x_label, y_label, lim=None, xlim=None, ylim=(-1, 1),
                               annotate=False, show_fit=True, ax=None, legend=True, fit_image_sets=True,
                               save_figures=False, save_dir=None, folder='response_dynamics', suffix=''):
     import scipy.stats as st
-    df = df[df.cre_line==cre_line]
+    df = df[df.cre_line == cre_line]
     colors = ut.get_colors_for_image_sets()
     if ax is None:
-        figsize=(7.3,4)
+        figsize = (7.3, 4)
         fig, ax = plt.subplots(figsize=figsize)
     ax = sns.scatterplot(data=df, x=x, y=y, hue='image_set',
                          ax=ax, palette=colors, legend=False, s=10, linewidth=0)
     ax.set_ylabel(y_label)
     ax.set_xlabel(x_label)
     if lim:
-        ax.set_xlim(-lim,lim)
-        ax.set_ylim(-lim,lim)
+        ax.set_xlim(-lim, lim)
+        ax.set_ylim(-lim, lim)
     elif xlim:
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
     xmin, xmax = ax.get_xlim()
     if fit_image_sets:
-        for c,image_set in enumerate(ut.get_image_sets(df)):
-            x_vals = df[(df.image_set==image_set)&(df[x].isnull()==False)&(df[y].isnull()==False)][x].values
-            y_vals = df[(df.image_set==image_set)&(df[y].isnull()==False)&(df[x].isnull()==False)][y].values
-            slope, intercept, r_value, p_value, std_err = st.linregress(x_vals,y_vals)
+        for c, image_set in enumerate(ut.get_image_sets(df)):
+            x_vals = df[(df.image_set == image_set) & (df[x].isnull() == False) & (df[y].isnull() == False)][x].values
+            y_vals = df[(df.image_set == image_set) & (df[y].isnull() == False) & (df[x].isnull() == False)][y].values
+            slope, intercept, r_value, p_value, std_err = st.linregress(x_vals, y_vals)
             x_axis = np.arange(xmin, xmax, 0.01)
             line_values = np.asarray([slope * i + intercept for i in x_axis])
-            r = np.round(r_value,2)
-            p = np.round(p_value,6)
-            if p_value<0.005:
+            r = np.round(r_value, 2)
+            p = np.round(p_value, 6)
+            if p_value < 0.005:
                 p_string = ', p<0.005'
             else:
-                p_string = ', p = '+str(p)
+                p_string = ', p = ' + str(p)
             if show_fit:
-                ax.plot(x_axis, line_values, '-', color=colors[c], label=image_set+', r: '+str(r)+p_string)
+                ax.plot(x_axis, line_values, '-', color=colors[c], label=image_set + ', r: ' + str(r) + p_string)
     else:
-        x_vals = df[(df[x].isnull()==False)&(df[y].isnull()==False)][x].values
-        y_vals = df[(df[y].isnull()==False)&(df[x].isnull()==False)][y].values
-        slope, intercept, r_value, p_value, std_err = st.linregress(x_vals,y_vals)
+        x_vals = df[(df[x].isnull() == False) & (df[y].isnull() == False)][x].values
+        y_vals = df[(df[y].isnull() == False) & (df[x].isnull() == False)][y].values
+        slope, intercept, r_value, p_value, std_err = st.linregress(x_vals, y_vals)
         x_axis = np.arange(xmin, xmax, 0.01)
         line_values = np.asarray([slope * i + intercept for i in x_axis])
-        r = np.round(r_value,2)
-        p = np.round(p_value,6)
-        if p_value<0.005:
+        r = np.round(r_value, 2)
+        p = np.round(p_value, 6)
+        if p_value < 0.005:
             p_string = ', p<0.005'
         else:
-            p_string = ', p = '+str(p)
+            p_string = ', p = ' + str(p)
         if show_fit:
-            ax.plot(x_axis, line_values, '-', color='gray', label='r: '+str(r)+p_string)
-    ax.set_title(cre_line,fontsize=16)
+            ax.plot(x_axis, line_values, '-', color='gray', label='r: ' + str(r) + p_string)
+    ax.set_title(cre_line, fontsize=16)
     if annotate and lim:
         ymin, ymax = ax.get_ylim()
-        ax.vlines(0, ymin=ymin, ymax=ymax,color='gray', linestyle='--')
+        ax.vlines(0, ymin=ymin, ymax=ymax, color='gray', linestyle='--')
         xmin, xmax = ax.get_xlim()
-        ax.hlines(0, xmin=xmin, xmax=xmax,color='gray', linestyle='--')
-        ax.text(xmin+(lim*.1),ymax-(lim*.2),s='Q1',fontsize=14)
-        ax.text(xmax-(lim*.3),ymax-(lim*.2),s='Q2',fontsize=14)
-        ax.text(xmin+(lim*.1),ymin+(lim*.1),s='Q3',fontsize=14)
-        ax.text(xmax-(lim*.3),ymin+(lim*.1),s='Q4',fontsize=14)
+        ax.hlines(0, xmin=xmin, xmax=xmax, color='gray', linestyle='--')
+        ax.text(xmin + (lim * .1), ymax - (lim * .2), s='Q1', fontsize=14)
+        ax.text(xmax - (lim * .3), ymax - (lim * .2), s='Q2', fontsize=14)
+        ax.text(xmin + (lim * .1), ymin + (lim * .1), s='Q3', fontsize=14)
+        ax.text(xmax - (lim * .3), ymin + (lim * .1), s='Q4', fontsize=14)
     else:
         print('cannot annotate if lim not provided')
     if legend:
-        ax.legend(bbox_to_anchor=(1.2,1), fontsize=12)
+        ax.legend(bbox_to_anchor=(1.2, 1), fontsize=12)
     if save_figures:
         plt.gcf().subplots_adjust(top=0.75)
         plt.gcf().subplots_adjust(right=0.6)
         plt.gcf().subplots_adjust(bottom=0.2)
         plt.gcf().subplots_adjust(left=0.3)
-        sf.save_figure(fig, figsize, save_dir, folder ,cre_line+'_'+x+'_'+y+suffix)
+        sf.save_figure(fig, figsize, save_dir, folder, cre_line + '_' + x + '_' + y + suffix)
     return ax
 
 

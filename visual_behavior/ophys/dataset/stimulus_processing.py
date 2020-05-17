@@ -27,6 +27,7 @@ def convert_filepath_caseinsensitive(filename_in):
 def load_pickle(pstream):
     return pickle.load(pstream, encoding="bytes")
 
+
 def add_run_speed_to_trials(running_speed_df, trials):
     trial_running_speed = trials.apply(lambda row: trace_average(
         running_speed_df['speed'].values,
@@ -200,7 +201,7 @@ def get_visual_stimuli_df(data, time):
                     "end_frame": epoch_end,
                     "time": time[epoch_start],
                     "duration": time[epoch_end] - time[epoch_start],
-                # this will always work because an epoch will never occur near the end of time
+                    # this will always work because an epoch will never occur near the end of time
                     "omitted": False,
                 })
 
@@ -330,7 +331,7 @@ def get_consumption_licks(stimulus_presentations):
         if (row_data.change == True) and (row_data.first_lick_in_bout == True):
             st.loc[row, 'consumption_licks'] = True
         if (st.iloc[row - 1].consumption_licks == True) & (
-            st.iloc[row].inter_flash_lick_diff < median_inter_lick_interval * 3):
+                st.iloc[row].inter_flash_lick_diff < median_inter_lick_interval * 3):
             st.loc[row, 'consumption_licks'] = True
     return st
 
@@ -421,7 +422,7 @@ def classify_by_flash_metrics(stimulus_presentations, lick_threshold=0.1, reward
                                                       zip(stimulus_presentations['high_lick'],
                                                           stimulus_presentations['high_reward'])]
     stimulus_presentations['flash_metrics_labels'] = [
-        'low-lick,low-reward' if x == 0  else 'high-lick,high-reward' if x == 1 else 'high-lick,low-reward' for x in
+        'low-lick,low-reward' if x == 0 else 'high-lick,high-reward' if x == 1 else 'high-lick,low-reward' for x in
         stimulus_presentations['flash_metrics_epochs']]
 
 
@@ -531,7 +532,7 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
     # Repeat number within a block
     repeat_number = np.full(len(stimulus_presentations_df), np.nan)
     assert (
-        stimulus_presentations_df.iloc[0].name == 0
+            stimulus_presentations_df.iloc[0].name == 0
     )  # Assuming that the row index starts at zero
     for ind_group, group in stimulus_presentations_df.groupby("block_index"):
         repeat = 0
@@ -552,8 +553,8 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
     rewards_each_flash = stimulus_presentations_df.apply(
         lambda row: reward_times[
             (
-                (reward_times > row["start_time"])
-                & (reward_times < row["start_time"] + 0.75)
+                    (reward_times > row["start_time"])
+                    & (reward_times < row["start_time"] + 0.75)
             )
         ],
         axis=1,
@@ -568,7 +569,7 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
             running_speed_df['speed'].values,
             running_speed_df['time'].values,
             row["start_time"],
-            row["start_time"] + 0.25,),axis=1,)
+            row["start_time"] + 0.25, ), axis=1, )
     stimulus_presentations_df["mean_running_speed"] = flash_running_speed
 
     # Average running speed before each flash
@@ -577,7 +578,7 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
             running_speed_df['speed'].values,
             running_speed_df['time'].values,
             row["start_time"] - 0.25,
-            row["start_time"],),axis=1,)
+            row["start_time"], ), axis=1, )
     stimulus_presentations_df["pre_flash_running_speed"] = pre_flash_running_speed
 
     if pupil_area is not None:
@@ -598,7 +599,6 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
                 row["start_time"] - 0.25,
                 row["start_time"], ), axis=1, )
         stimulus_presentations_df["pre_flash_pupil_area"] = pre_flash_pupil_area
-
 
     # add flass after omitted
     stimulus_presentations_df['flash_after_omitted'] = np.hstack((False, stimulus_presentations_df.omitted.values[:-1]))

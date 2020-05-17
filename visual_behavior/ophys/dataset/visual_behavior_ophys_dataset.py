@@ -120,7 +120,7 @@ class VisualBehaviorOphysDataset(object):
     ophys_timestamps = LazyLoadable('_ophys_timestamps', get_ophys_timestamps)
 
     def get_eye_tracking_timestamps(self):
-        self._eye_tracking_timestamps = self.timestamps['behavior_monitoring']['timestamps'] #line labels swapped
+        self._eye_tracking_timestamps = self.timestamps['behavior_monitoring']['timestamps']  # line labels swapped
         return self._eye_tracking_timestamps
 
     eye_tracking_timestamps = LazyLoadable('_eye_tracking_timestamps', get_eye_tracking_timestamps)
@@ -153,7 +153,8 @@ class VisualBehaviorOphysDataset(object):
         stimulus_metadata = pd.read_hdf(
             os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df')
         stimulus_metadata = stimulus_metadata.drop(columns='image_category')
-        stimulus_metadata['image_name'] = [image_name.decode('utf-8') for image_name in stimulus_metadata.image_name.values]
+        stimulus_metadata['image_name'] = [image_name.decode('utf-8') for image_name in
+                                           stimulus_metadata.image_name.values]
         # Add an entry for omitted stimuli
         omitted_df = pd.DataFrame({'image_name': ['omitted'],
                                    'image_index': [stimulus_metadata['image_index'].max() + 1]})
@@ -253,7 +254,7 @@ class VisualBehaviorOphysDataset(object):
                 f.close()
                 # account for excess ophys frame times at end of recording due to Scientifica software error
                 if events.shape[1] > self.ophys_timestamps.shape[0]:
-                    difference = self.ophys_timestamps.shape[0] - events.shape[1]
+                    # difference = self.ophys_timestamps.shape[0] - events.shape[1]
                     events = events[:, :self.ophys_timestamps.shape[0]]
             else:
                 print('no events for this experiment')
@@ -342,13 +343,15 @@ class VisualBehaviorOphysDataset(object):
         return cell_index
 
     def get_dff_traces(self):
-        self._dff_traces = pd.DataFrame({'dff': [x for x in self.dff_traces_array]}, index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        self._dff_traces = pd.DataFrame({'dff': [x for x in self.dff_traces_array]},
+                                        index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._dff_traces
 
     dff_traces = LazyLoadable('_dff_traces', get_dff_traces)
 
     def get_events(self):
-        self._events = pd.DataFrame({'events': [x for x in self.events_array]}, index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        self._events = pd.DataFrame({'events': [x for x in self.events_array]},
+                                    index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
 
     events = LazyLoadable('_events', get_events)
@@ -379,16 +382,17 @@ class VisualBehaviorOphysDataset(object):
 
     def get_stimulus_presentations(self):
         stimulus_presentations_df = self.stimulus_table.copy()
-        stimulus_presentations_df = stimulus_presentations_df.rename(columns={'flash_number': 'stimulus_presentations_id'})
+        stimulus_presentations_df = stimulus_presentations_df.rename(
+            columns={'flash_number': 'stimulus_presentations_id'})
         stimulus_presentations_df.set_index('stimulus_presentations_id', inplace=True)
         stimulus_metadata_df = self.get_stimulus_metadata()
         idx_name = stimulus_presentations_df.index.name
-        stimulus_presentations_df = stimulus_presentations_df.reset_index().merge(stimulus_metadata_df, on=['image_name']).set_index(idx_name)
+        stimulus_presentations_df = stimulus_presentations_df.reset_index().merge(stimulus_metadata_df,
+                                                                                  on=['image_name']).set_index(idx_name)
         stimulus_presentations_df.sort_index(inplace=True)
         return stimulus_presentations_df
 
     stimulus_presentations = LazyLoadable('_stimulus_presentations', get_stimulus_presentations)
-
 
     def get_extended_stimulus_presentations(self):
         '''
@@ -408,9 +412,8 @@ class VisualBehaviorOphysDataset(object):
         )
         return extended_stimulus_presentations
 
-    extended_stimulus_presentations = LazyLoadable('_extended_stimulus_presentations', get_extended_stimulus_presentations)
-
-
+    extended_stimulus_presentations = LazyLoadable('_extended_stimulus_presentations',
+                                                   get_extended_stimulus_presentations)
 
     @classmethod
     def construct_and_load(cls, experiment_id, cache_dir=None, **kwargs):

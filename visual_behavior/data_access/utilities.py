@@ -152,7 +152,6 @@ def get_donor_id_from_specimen_id(specimen_id, cache):
     return donor_id
 
 
-
 class LazyLoadable(object):
     def __init__(self, name, calculate):
         ''' Wrapper for attributes intended to be computed or loaded once, then held in memory by a containing object.
@@ -168,5 +167,3 @@ class LazyLoadable(object):
 
         self.name = name
         self.calculate = calculate
-
-

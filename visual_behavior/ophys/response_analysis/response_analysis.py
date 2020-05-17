@@ -15,7 +15,6 @@ import pandas as pd
 import itertools
 
 
-
 class LazyLoadable(object):
     def __init__(self, name, calculate):
         ''' Wrapper for attributes intended to be computed or loaded once, then held in memory by a containing object.
@@ -82,16 +81,18 @@ class ResponseAnalysis(object):
         else:
             self.blank_duration = self.dataset.task_parameters['blank_duration'][0]
 
-
     def get_analysis_folder(self):
-        candidates = [file for file in os.listdir(self.dataset.cache_dir) if str(self.dataset.ophys_experiment_id) in file]
+        candidates = [file for file in os.listdir(self.dataset.cache_dir) if
+                      str(self.dataset.ophys_experiment_id) in file]
         if len(candidates) == 1:
             self._analysis_folder = candidates[0]
         elif len(candidates) < 1:
             raise OSError(
-                'unable to locate analysis folder for experiment {} in {}'.format(self.dataset.ophys_experiment_id, self.dataset.cache_dir))
+                'unable to locate analysis folder for experiment {} in {}'.format(self.dataset.ophys_experiment_id,
+                                                                                  self.dataset.cache_dir))
         elif len(candidates) > 1:
-            raise OSError('{} contains multiple possible analysis folders: {}'.format(self.dataset.cache_dir, candidates))
+            raise OSError(
+                '{} contains multiple possible analysis folders: {}'.format(self.dataset.cache_dir, candidates))
         return self._analysis_folder
 
     analysis_folder = LazyLoadable('_analysis_folder', get_analysis_folder)
@@ -105,11 +106,11 @@ class ResponseAnalysis(object):
     def get_response_df_path(self, df_name):
         if self.use_events:
             if 'response' in df_name:
-                path = os.path.join(self.dataset.analysis_dir, df_name+'_events.h5')
+                path = os.path.join(self.dataset.analysis_dir, df_name + '_events.h5')
             else:
-                path = os.path.join(self.dataset.analysis_dir, df_name+'.h5')
+                path = os.path.join(self.dataset.analysis_dir, df_name + '.h5')
         else:
-            path = os.path.join(self.dataset.analysis_dir, df_name+'.h5')
+            path = os.path.join(self.dataset.analysis_dir, df_name + '.h5')
         return path
 
     def save_response_df(self, df, df_name):
@@ -146,20 +147,20 @@ class ResponseAnalysis(object):
                 'omission_licks_df']
 
     def get_response_df(self, df_name='trials_response_df'):
-        if self.load_from_cache: # get saved response df
+        if self.load_from_cache:  # get saved response df
             if os.path.exists(self.get_response_df_path(df_name)):
                 print('loading', df_name)
                 df = pd.read_hdf(self.get_response_df_path(df_name), key='df')
             else:
                 print(df_name, 'not cached for this experiment')
-        elif self.overwrite_analysis_files: # delete any old files, generate new df and save
+        elif self.overwrite_analysis_files:  # delete any old files, generate new df and save
             import h5py
             file_path = self.get_response_df_path(df_name)
             if os.path.exists(file_path):
                 os.remove(file_path)
             df = self.get_df_for_df_name(df_name)
             self.save_response_df(df, df_name)
-        else: # default behavior - create the df
+        else:  # default behavior - create the df
             df = self.get_df_for_df_name(df_name)
 
         # if ('response' in df_name):
@@ -185,10 +186,10 @@ class ResponseAnalysis(object):
             # running_speed = self.dataset.running_speed
             # response_params = rp.get_default_omission_response_params()
             # stimulus_presentations = sp.add_window_running_speed(running_speed, stimulus_presentations, response_params)
-            df = df.merge(stimulus_presentations, right_on = 'stimulus_presentations_id', left_on = 'stimulus_presentations_id')
+            df = df.merge(stimulus_presentations, right_on='stimulus_presentations_id',
+                          left_on='stimulus_presentations_id')
 
         return df
-
 
     def get_trials_response_df(self):
         df_name = 'trials_response_df'
@@ -281,7 +282,3 @@ class ResponseAnalysis(object):
     #     return self._omitted_flash_response_df
     #
     # omitted_flash_response_df = LazyLoadable('_omitted_flash_response_df', get_omitted_flash_response_df)
-
-
-
-

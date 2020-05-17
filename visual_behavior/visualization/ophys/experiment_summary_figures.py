@@ -15,7 +15,8 @@ import seaborn as sns
 
 # formatting
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-sns.set_style('white', {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True,})
+sns.set_style('white',
+              {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True, })
 sns.set_palette('deep')
 
 
@@ -67,6 +68,7 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
     return inner_ax
 
+
 #
 # def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
 #     fig_dir = os.path.join(save_dir, folder)
@@ -113,9 +115,10 @@ def plot_lick_raster(trials, ax=None, save_dir=None):
     if save_dir:
         save_figure(fig, figsize, save_dir, 'behavior', 'lick_raster')
 
+
 def reorder_traces(original_traces, analysis):
     tdf = analysis.trials_response_df
-    df = ut.get_mean_df(tdf, analysis, conditions=['cell','change_image_name'])
+    df = ut.get_mean_df(tdf, analysis, conditions=['cell', 'change_image_name'])
 
     images = np.sort(df.change_image_name.unique())
 
@@ -128,7 +131,7 @@ def reorder_traces(original_traces, analysis):
 
     reordered_traces = []
     for cell_index in cell_list:
-        reordered_traces.append(original_traces[cell_index,:])
+        reordered_traces.append(original_traces[cell_index, :])
     return np.asarray(reordered_traces)
 
 
@@ -151,7 +154,6 @@ def plot_sorted_traces_heatmap(dataset, analysis, ax=None, save=False, use_event
     if ax is None:
         figsize = (14, 5)
         fig, ax = plt.subplots(figsize=figsize)
-
 
     cax = ax.pcolormesh(traces, cmap='magma', vmin=0, vmax=vmax)
     ax.set_ylabel('cells')
@@ -257,7 +259,7 @@ def plot_mean_image_response_heatmap(mean_df, title=None, ax=None, save_dir=None
 
 
 def plot_mean_trace_heatmap(mean_df, condition='trial_type', condition_values=['go', 'catch'], ax=None, save_dir=None,
-                            use_events=False, window=[-4,4]):
+                            use_events=False, window=[-4, 4]):
     data = mean_df[mean_df.pref_stim == True].copy()
     if use_events:
         vmax = 0.05
@@ -405,7 +407,8 @@ def plot_mean_first_flash_response_by_image_block(analysis, save_dir=None, ax=No
     if ax is None:
         figsize = (15, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.pointplot(data=data, x="image_block", y="mean_response", kind="point", hue='cell_specimen_id', hue_order=cell_order,
+    ax = sns.pointplot(data=data, x="image_block", y="mean_response", kind="point", hue='cell_specimen_id',
+                       hue_order=cell_order,
                        palette='Blues', ax=ax)
     # ax.legend(bbox_to_anchor=(1,1))
     ax.legend_.remove()
@@ -471,17 +474,18 @@ def plot_roi_masks(dataset, save=False):
 def plot_average_flash_response_example_cells(analysis, save_figures=False, save_dir=None, folder=None, ax=None):
     import visual_behavior.ophys.response_analysis.utilities as ut
     fdf = analysis.stimulus_response_df
-    last_flash = fdf.flash_number.unique()[-1] #sometimes last flash is truncated
-    fdf = fdf[fdf.flash_number!=last_flash]
+    last_flash = fdf.flash_number.unique()[-1]  # sometimes last flash is truncated
+    fdf = fdf[fdf.flash_number != last_flash]
 
-    conditions=['cell_specimen_id', 'image_name']
+    conditions = ['cell_specimen_id', 'image_name']
     mdf = ut.get_mean_df(fdf, analysis, conditions=conditions, flashes=True)
 
     active_cell_indices = ut.get_active_cell_indices(analysis.dataset.dff_traces_array)
-    random_order = np.arange(0,len(active_cell_indices),1)
+    random_order = np.arange(0, len(active_cell_indices), 1)
     np.random.shuffle(random_order)
     active_cell_indices = active_cell_indices[random_order]
-    cell_specimen_ids = [analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index) for cell_index in active_cell_indices]
+    cell_specimen_ids = [analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index) for cell_index in
+                         active_cell_indices]
 
     image_names = np.sort(mdf.image_name.unique())
 
@@ -492,21 +496,21 @@ def plot_average_flash_response_example_cells(analysis, save_figures=False, save
 
     i = 0
     for c, cell_specimen_id in enumerate(cell_specimen_ids):
-        cell_data = mdf[(mdf.cell_specimen_id==cell_specimen_id)]
+        cell_data = mdf[(mdf.cell_specimen_id == cell_specimen_id)]
         maxs = [np.amax(trace) for trace in cell_data.mean_trace.values]
-        ymax = np.amax(maxs)*1.2
+        ymax = np.amax(maxs) * 1.2
         for m, image_name in enumerate(image_names):
-            cdf = cell_data[(cell_data.image_name==image_name)]
+            cdf = cell_data[(cell_data.image_name == image_name)]
             color = ut.get_color_for_image_name(image_names, image_name)
-#             ax[i] = psf.plot_mean_trace_from_mean_df(cdf, 31., color=sns.color_palette()[0], interval_sec=0.5,
-#                                                      xlims=analysis.flash_window, ax=ax[i])
+            #             ax[i] = psf.plot_mean_trace_from_mean_df(cdf, 31., color=sns.color_palette()[0], interval_sec=0.5,
+            #                                                      xlims=analysis.flash_window, ax=ax[i])
             ax[i] = sf.plot_mean_trace_from_mean_df(cdf, analysis.ophys_frame_rate,
                                                     color=sns.color_palette()[0], interval_sec=0.5,
-                                                     xlims=analysis.flash_window, ax=ax[i])
+                                                    xlims=analysis.flash_window, ax=ax[i])
             ax[i] = sf.plot_flashes_on_trace(ax[i], analysis, flashes=True, facecolor=color, alpha=0.3)
-#             ax[i] = psf.plot_flashes_on_trace(ax[i], flashes=True, facecolor=color, window=analysis.flash_window, alpha=0.3)
+            #             ax[i] = psf.plot_flashes_on_trace(ax[i], flashes=True, facecolor=color, window=analysis.flash_window, alpha=0.3)
             ax[i].vlines(x=-0.05, ymin=0, ymax=0.1, linewidth=3)
-    #         sns.despine(ax=ax[i])
+            #         sns.despine(ax=ax[i])
             ax[i].axis('off')
             ax[i].set_ylim(-0.05, ymax)
             if m == 0:
@@ -515,13 +519,14 @@ def plot_average_flash_response_example_cells(analysis, save_figures=False, save
                 ax[i].set_title(image_name)
             if c == len(cell_specimen_ids):
                 ax[i].set_xlabel('time (s)')
-            i+=1
+            i += 1
 
     # fig.tight_layout()
     if save_figures:
         if save_dir:
-            sf.save_figure(fig ,figsize, save_dir, folder, analysis.dataset.analysis_folder)
-        sf.save_figure(fig ,figsize, analysis.dataset.analysis_dir, 'example_traces_all_flashes', analysis.dataset.analysis_folder)
+            sf.save_figure(fig, figsize, save_dir, folder, analysis.dataset.analysis_folder)
+        sf.save_figure(fig, figsize, analysis.dataset.analysis_dir, 'example_traces_all_flashes',
+                       analysis.dataset.analysis_folder)
 
 
 def plot_experiment_summary_figure(analysis, save_dir=None):
@@ -591,7 +596,7 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
                              conditions=['cell_specimen_id', 'change_image_name', 'behavioral_response_type'])
         ax = plot_mean_trace_heatmap(mdf, condition='behavioral_response_type',
                                      condition_values=['HIT', 'MISS', 'CR', 'FA'], ax=ax, save_dir=None,
-                                    use_events=use_events, window=analysis.trial_window)
+                                     use_events=use_events, window=analysis.trial_window)
     except:
         pass
 
@@ -604,4 +609,4 @@ def plot_experiment_summary_figure(analysis, save_dir=None):
 
     if save_dir:
         save_figure(fig, figsize, save_dir, 'experiment_summary_figures',
-                    str(analysis.dataset.experiment_id)+'_experiment_summary'+suffix)
+                    str(analysis.dataset.experiment_id) + '_experiment_summary' + suffix)

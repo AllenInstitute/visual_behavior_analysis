@@ -84,19 +84,19 @@ def get_lims_id(lims_data):
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
     specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
-    if len(specimen_driver_lines[0])>1: #if there is a driver line
+    if len(specimen_driver_lines[0]) > 1:  # if there is a driver line
         print(specimen_driver_lines)
-        if len(specimen_driver_lines) > 1: #if there are two lines
+        if len(specimen_driver_lines) > 1:  # if there are two lines
             for i in range(len(specimen_driver_lines)):
-                if 'Cre' in specimen_driver_lines[i]: #pick the one that has Cre in it
+                if 'Cre' in specimen_driver_lines[i]:  # pick the one that has Cre in it
                     specimen_driver_line = specimen_driver_lines[i]  # .split('-')[0]
                 else:
                     specimen_driver_line = specimen_driver_lines[0]
             print(specimen_driver_line)
-        elif len(specimen_driver_lines) == 1: #if there is only one, pick that one
+        elif len(specimen_driver_lines) == 1:  # if there is only one, pick that one
             specimen_driver_line = specimen_driver_lines[0]
             print(specimen_driver_line)
-    else: #if there is no line, say line unknown
+    else:  # if there is no line, say line unknown
         specimen_driver_line = 'cre_line_unknown'
     print(specimen_driver_line)
     if specimen_driver_line == '':
@@ -107,16 +107,18 @@ def get_analysis_folder_name(lims_data):
         depth = lims_data.depth.values[0]
     if lims_data.rig.values[0][0] == 'M':
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
-                            specimen_driver_line + '_' + lims_data.rig.values[0] + \
-                            '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
+                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
+                                   2] + '_' + \
+                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+                               specimen_driver_line + '_' + lims_data.rig.values[0] + \
+                               '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
     else:
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
-                            specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
-                            lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
+                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
+                                   2] + '_' + \
+                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+                               specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
+                               lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
 
     return analysis_folder_name
 
@@ -147,7 +149,8 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
     existingFolders = np.argwhere(np.array(inds) != -1)
     # Get the modification times of the existing analysis folders
-    modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in range(len(existingFolders))]
+    modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in
+                  range(len(existingFolders))]
     # Find all the old analysis folders
     indsOld = np.argsort(modifTimes)[:-1]
     oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
@@ -159,6 +162,7 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
         lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
     return analysis_dir
 
+
 def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     cache_dir = get_cache_dir(cache_dir=cache_dir)
     if 'analysis_dir' in lims_data.columns:
@@ -166,10 +170,11 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     else:
         # look for existing analysis folders
         analysis_folder = [folder for folder in os.listdir(cache_dir) if str(lims_data.lims_id.values[0]) in folder]
-        if len(analysis_folder) > 1: #if there are multiple analysis folders with this lims_id
+        if len(analysis_folder) > 1:  # if there are multiple analysis folders with this lims_id
             print('Multiple analysis folders exist, removing duplicates')
             # Get the modification times of the existing analysis folders
-            mod_times = [os.path.getmtime(os.path.join(cache_dir, analysis_folder[i])) for i in range(len(analysis_folder))]
+            mod_times = [os.path.getmtime(os.path.join(cache_dir, analysis_folder[i])) for i in
+                         range(len(analysis_folder))]
             # Find all the old analysis folders
             old_inds = np.argsort(mod_times)[:-1]
             old_folders = [os.path.join(cache_dir, analysis_folder[i]) for i in range(len(analysis_folder))]
@@ -180,11 +185,11 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
 
         # check again for remaining folders
         analysis_folder = [folder for folder in os.listdir(cache_dir) if str(lims_data.lims_id.values[0]) in folder]
-        if len(analysis_folder) == 0: #if there are no folders associated with this lims_id
+        if len(analysis_folder) == 0:  # if there are no folders associated with this lims_id
             print('Creating a new analysis folder')
             analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
             os.mkdir(analysis_dir)
-        elif len(analysis_folder) == 1: #if there is one folder for this lims_id
+        elif len(analysis_folder) == 1:  # if there is one folder for this lims_id
             print('Analysis folder exists')
             analysis_dir = os.path.join(cache_dir, analysis_folder[0])
             # delete files in directory - this is necessary or else file sizes will increase with each overwrite
@@ -553,7 +558,8 @@ def save_core_data_components(core_data, lims_data, stimulus_timestamps):
             stimulus_table['omitted'] = False
     else:
         stimulus_table['omitted'] = False
-    if np.isnan(stimulus_table.loc[0, 'end_frame']): #exception for cases where the first flash in the session is omitted
+    if np.isnan(
+            stimulus_table.loc[0, 'end_frame']):  # exception for cases where the first flash in the session is omitted
         stimulus_table = stimulus_table.drop(index=0)
     # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
