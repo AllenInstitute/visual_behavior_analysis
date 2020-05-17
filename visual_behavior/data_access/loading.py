@@ -3,6 +3,7 @@ import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import processing
@@ -68,7 +69,7 @@ def get_experiment_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 
-# LOAD MANIFEST FROM CACHE
+# LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
 
 
 def get_cache_dir():
@@ -148,7 +149,219 @@ def get_filtered_ophys_session_table():
     return sessions
 
 
-def get_ophys_container_ids(cache):
+##### INSERT get_filtered_behavior_sessions_table() FUNCTION HERE #####
+
+
+
+
+
+# LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
+
+
+class BehaviorOphysDataset(BehaviorOphysSession):
+    """Takes SDK ophys session object attributes and filters/reformats to compensate for bugs and missing SDK features.
+        This class should eventually be entirely replaced by the BehaviorOphysSession SDK class when all requested features have been implemented.
+
+        Returns:
+            BehaviorOphysDataset object -- class with attributes & methods to access ophys and behavior data
+                                                associated with an ophys_experiment_id (single imaging plane)
+        """
+    def __init__(self, api, cache_dir, include_invalid_rois=False):
+        """
+        :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
+        :param cache_dir: directory to save & load cached analysis files from
+        :param include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
+        """
+        super().__init__(api)
+        self.cache_dir = cache_dir
+        self.include_invalid_rois = include_invalid_rois
+        # set pupil area and events to None for now
+        # self.pupil_area = None
+        self.events = None
+
+
+    @property
+    def analysis_folder(self):
+        candidates = [file for file in os.listdir(self.cache_dir) if str(self.ophys_experiment_id) in file]
+        if len(candidates) == 1:
+            self._analysis_folder = candidates[0]
+        elif len(candidates) == 0:
+            print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id, self.cache_dir))
+            print('creating new analysis folder')
+            m = self.metadata
+            date = m['experiment_datetime']
+            date = str(date)[:10]
+            date = date[2:4]+date[5:7]+date[8:10]
+            self._analysis_folder = str(m['ophys_experiment_id'])+'_'+str(m['donor_id'])+'_'+date+'_'+m['targeted_structure']+'_'+str(m['imaging_depth'])+'_'+m['driver_line'][0]+'_'+m['rig_name']+'_'+m['session_type']
+            os.mkdir(os.path.join(self.cache_dir, self._analysis_folder))
+        elif len(candidates) > 1:
+            raise OSError('{} contains multiple possible analysis folders: {}'.format(self.cache_dir, candidates))
+        return self._analysis_folder
+
+
+    @property
+    def analysis_dir(self):
+        self._analysis_dir = os.path.join(self.cache_dir, self.analysis_folder)
+        return self._analysis_dir
+
+
+    @property
+    def cell_specimen_table(self) -> pd.DataFrame:
+        cell_specimen_table = super().cell_specimen_table
+        if self.include_invalid_rois == False:
+            cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
+        # add cell index corresponding to the index of the cell in dff_traces_array
+        cell_specimen_ids = np.sort(cell_specimen_table.index.values)
+        cell_specimen_table.loc[:, 'cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
+                                                    cell_specimen_id in cell_specimen_table.index.values]
+        self._cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
+        return self._cell_specimen_table
+
+
+    @property
+    def cell_indices(self):
+        self._cell_indices = self.cell_specimen_table.cell_index
+        return self._cell_indices
+
+
+    @property
+    def cell_specimen_ids(self):
+        self._cell_specimen_ids = np.sort(self.cell_specimen_table.index.values)
+        return self._cell_specimen_ids
+
+
+    @property
+    def dff_traces(self):
+        if self.include_invalid_rois == False:
+            dff_traces = super().dff_traces
+            cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
+            valid_cells = cell_specimen_table.cell_roi_id.values
+            self._dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
+        else:
+            self._dff_traces = super().dff_traces
+        return self._dff_traces
+
+
+    @property
+    def timestamps(self):
+        # need to get full set of timestamps because SDK only provides stimulus and ophys timestamps (not eye tracking for example)
+        lims_data = convert.get_lims_data(self.ophys_experiment_id)
+        self._timestamps = convert.get_timestamps(lims_data, self.analysis_dir)
+        return self._timestamps
+
+
+    @property
+    def ophys_timestamps(self):
+        if super().metadata['rig_name'] == 'MESO.1':
+            self._ophys_timestamps = self.timestamps['ophys_frames']['timestamps']
+        else:
+            self._ophys_timestamps = super().ophys_timestamps
+        return self._ophys_timestamps
+
+
+    @property
+    def metadata(self):
+        metadata = super().metadata
+        # if len(metadata['driver_line']) > 1:
+        #     metadata['driver_line'] = metadata['driver_line'][1] + ';' + metadata['driver_line'][0]
+        # else:
+        #     metadata['driver_line'] = metadata['driver_line'][0]
+        # metadata['reporter_line'] = metadata['reporter_line'][0]
+        # reset ophys frame rate for accuracy & to account for mesoscope resampling
+        metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
+        if 'donor_id' not in metadata.keys():
+            metadata['donor_id'] = metadata.pop('LabTracks_ID')
+        self._metadata = metadata
+        return self._metadata
+
+
+    @property
+    def metadata_string(self):
+        # for figure titles & filenames
+        self._metadata_string = m['driver_line'][0] + '_' + str(m['donor_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['session_type'] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth'])
+        return self._metadata_string
+
+
+    @property
+    def licks(self):
+        self._licks = super().licks
+        if 'timestamps' not in self._licks.columns:
+            self._licks = reformat.convert_licks(self._licks)
+        return self._licks
+
+
+    @property
+    def rewards(self):
+        self._rewards = super().rewards
+        if 'timestamps' not in self._rewards.columns:
+            self._rewards = reformat.convert_rewards(super().rewards)
+        return self._rewards
+
+
+    @property
+    def running_speed(self):
+        self._running_speed = super().running_speed
+        if type(self._running_speed)!=pd.core.frame.DataFrame:
+            self._running_speed = reformat.convert_running_speed(self._running_speed)
+        return self._running_speed
+
+
+    @property
+    def stimulus_presentations(self):
+        stimulus_presentations = super().stimulus_presentations
+        if 'orientation' in stimulus_presentations.columns:
+            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
+        stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
+        self._stimulus_presentations = stimulus_presentations
+        return self._stimulus_presentations
+
+
+    @property
+    def extended_stimulus_presentations(self):
+        stimulus_presentations = super().stimulus_presentations
+        if 'orientation' in stimulus_presentations.columns:
+            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
+        stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
+        stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
+        stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
+        stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
+        stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
+        stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
+        stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
+        stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
+        stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
+        self._extended_stimulus_presentations = stimulus_presentations
+        return self._extended_stimulus_presentations
+
+
+    def get_cell_specimen_id_for_cell_index(self, cell_index):
+        cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_index == cell_index].index.values[0]
+        return cell_specimen_id
+
+
+    def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
+        cell_index = self.cell_specimen_table[self.cell_specimen_table.index == cell_specimen_id].cell_index.values[0]
+        return cell_index
+
+
+
+def get_ophys_dataset(ophys_experiment_id, cache_dir, include_invalid_rois=False):
+    """Use LIMS API from SDK to return session object
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+        include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
+
+    Returns:
+        session object -- session object from SDK
+    """
+    api = BehaviorOphysLimsApi(ophys_experiment_id)
+    # session = BehaviorOphysSession(api)
+    dataset = BehaviorOphysDataset(api, cache_dir, include_invalid_rois)
+    return dataset
+
+
+def get_ophys_container_ids():
     """Get container_ids that meet the criteria in get_filtered_ophys_experiment_table(). """
     experiments = cache.get_experiment_table()
     container_ids = np.sort(experiments.container_id.unique())
@@ -206,126 +419,6 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     experiments = get_filtered_ophys_experiment_table()
     ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
-
-
-#  FROM SDK
-#
-# def get_sdk_session_obj(ophys_experiment_id, include_invalid_rois=False):
-#     """Use LIMS API from SDK to return session object
-#
-#     Arguments:
-#         ophys_experiment_id {int} -- 9 digit ophys experiment ID
-#         include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
-#
-#     Returns:
-#         session object -- session object from SDK
-#     """
-#     api = BehaviorOphysLimsApi(ophys_experiment_id)
-#     session = BehaviorOphysSession(api)
-#     # filter dff traces
-#     if include_invalid_rois == False:
-#         dff_traces = session.dff_traces
-#         valid_cells = session.cell_specimen_table[session.cell_specimen_table.valid_roi == True].cell_roi_id.values
-#         session.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
-#     return session
-
-
-def get_sdk_dataset(ophys_experiment_id, cache_dir, include_invalid_rois=False):
-    """Use LIMS API from SDK to return session object
-
-    Arguments:
-        ophys_experiment_id {int} -- 9 digit ophys experiment ID
-        include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
-
-    Returns:
-        session object -- session object from SDK
-    """
-    api = BehaviorOphysLimsApi(ophys_experiment_id)
-    dataset = BehaviorOphysSession(api)
-    dataset.cache_dir = cache_dir
-    dataset.experiment_id = ophys_experiment_id
-    dataset.analysis_folder = get_analysis_folder(dataset.cache_dir, dataset.experiment_id)
-    dataset.analysis_dir = get_analysis_dir(dataset.cache_dir, dataset.experiment_id)
-    # set pupil area and events to None for now
-    dataset.pupil_area = None
-    dataset.events = None
-    # filter dff traces
-    if include_invalid_rois == False:
-        dff_traces = dataset.dff_traces
-        valid_cells = dataset.cell_specimen_table[dataset.cell_specimen_table.valid_roi == True].cell_roi_id.values
-        dataset.dff_traces = dff_traces[dff_traces.cell_roi_id.isin(valid_cells)]
-    dataset = get_cell_indices(dataset)
-    # move roi_masks
-    dataset.cell_specimen_table = processing.shift_image_masks(dataset.cell_specimen_table)
-    # get timestamps for other data streams and resample for mesoscope
-    lims_data = convert.get_lims_data(dataset.experiment_id)
-    dataset.timestamps = convert.get_timestamps(lims_data, dataset.analysis_dir)
-    if dataset.metadata['rig_name'] == 'MESO.1':
-        dataset.ophys_timestamps = dataset.timestamps['ophys_frames']['timestamps']
-    # reformat running speed df
-    df = dataset.running_data_df.reset_index()
-    dataset.running_speed_df = df[['timestamps', 'speed']].rename(columns={'speed': 'running_speed'})
-    dataset.running_speed_df['time'] = dataset.running_speed_df['timestamps']
-    dataset.running_speed = dataset.running_speed_df  # lame hack to avoid resolving naming elsewhere
-    # reformat rewards
-    dataset.rewards['timestamps'] = dataset.rewards.index
-    dataset.rewards['time'] = dataset.rewards.index
-    # get extended stim presentations
-    # dataset.extended_stimulus_presentations = get_extended_stimulus_presentations(dataset)
-    # reformat metadata
-    metadata = dataset.metadata.copy()
-    if len(metadata['driver_line']) > 1:
-        metadata['driver_line'] = metadata['driver_line'][1] + ';' + metadata['driver_line'][0]
-    else:
-        metadata['driver_line'] = metadata['driver_line'][0]
-    metadata['reporter_line'] = metadata['reporter_line'][0]
-    metadata['ophys_frame_rate'] = 1 / np.diff(dataset.ophys_timestamps).mean()
-    metadata['experiment_id'] = metadata['ophys_experiment_id']
-    dataset.metadata = pd.DataFrame(metadata, index=[0])
-    return dataset
-
-
-def get_analysis_folder(cache_dir, experiment_id):
-    candidates = [file for file in os.listdir(cache_dir) if str(experiment_id) in file]
-    if len(candidates) == 1:
-        analysis_folder = candidates[0]
-    elif len(candidates) == 0:
-        raise OSError(
-            'unable to locate analysis folder for experiment {} in {}'.format(experiment_id, cache_dir))
-    elif len(candidates) > 1:
-        raise OSError('{} contains multiple possible analysis folders: {}'.format(cache_dir, candidates))
-    return analysis_folder
-
-
-def get_analysis_dir(cache_dir, experiment_id):
-    analysis_dir = os.path.join(cache_dir, get_analysis_folder(cache_dir, experiment_id))
-    return analysis_dir
-
-
-def get_cell_specimen_ids(session):
-    session.cell_specimen_ids = np.sort(session.cell_specimen_table.index.values)
-    return session
-
-
-def get_cell_indices(session):
-    session = get_cell_specimen_ids(session)
-    session.cell_specimen_table['cell_index'] = [np.where(session.cell_specimen_ids == cell_specimen_id)[0][0] for cell_specimen_id in session.cell_specimen_ids]
-    session.cell_indices = session.cell_specimen_table.cell_index
-    return session
-
-
-def get_cell_specimen_id_for_cell_index(session, cell_index):
-    session = get_cell_indices(session)
-    roi_metrics = session.cell_specimen_table
-    cell_specimen_id = roi_metrics[roi_metrics.cell_index == cell_index].index.values[0]
-    return cell_specimen_id
-
-
-def get_cell_index_for_cell_specimen_id(session, cell_specimen_id):
-    session = get_cell_indices(session)
-    roi_metrics = session.cell_specimen_table
-    cell_index = roi_metrics[roi_metrics.index == cell_specimen_id].cell_index.values[0]
-    return cell_index
 
 
 def get_extended_stimulus_presentations(session):
@@ -1014,8 +1107,8 @@ def get_annotated_experiments_table():
     experiments_table = get_filtered_ophys_experiment_table()
     experiments_table = experiments_table[experiments_table.project_code.isin(project_codes)]
     # add columns
-    experiments_table['depth'] = ['superficial' if experiments_table.loc[expt].imaging_depth <= 355 else 'deep' for expt
-                                  in experiments_table.index]
+    experiments_table['depth'] = ['superficial' if experiments_table.loc[expt].imaging_depth <= 250 else 'deep' for expt
+                                  in experiments_table.index] #355
     experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                      experiments_table.loc[expt].depth for expt in experiments_table.index]
 

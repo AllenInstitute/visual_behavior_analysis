@@ -29,7 +29,7 @@ def load_pickle(pstream):
 
 def add_run_speed_to_trials(running_speed_df, trials):
     trial_running_speed = trials.apply(lambda row: trace_average(
-        running_speed_df['running_speed'].values,
+        running_speed_df['speed'].values,
         running_speed_df['time'].values,
         row["change_time"],
         row["change_time"] + 0.25, ), axis=1, )
@@ -565,7 +565,7 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
     # Average running speed on each flash
     flash_running_speed = stimulus_presentations_df.apply(
         lambda row: trace_average(
-            running_speed_df['running_speed'].values,
+            running_speed_df['speed'].values,
             running_speed_df['time'].values,
             row["start_time"],
             row["start_time"] + 0.25,),axis=1,)
@@ -574,7 +574,7 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
     # Average running speed before each flash
     pre_flash_running_speed = stimulus_presentations_df.apply(
         lambda row: trace_average(
-            running_speed_df['running_speed'].values,
+            running_speed_df['speed'].values,
             running_speed_df['time'].values,
             row["start_time"] - 0.25,
             row["start_time"],),axis=1,)
@@ -617,7 +617,7 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
 
 def add_window_running_speed(running_speed, stimulus_presentations, response_params):
     window_running_speed = stimulus_presentations.apply(lambda row: trace_average(
-        running_speed['running_speed'].values,
+        running_speed['speed'].values,
         running_speed['time'].values,
         row["start_time"] + response_params['window_around_timepoint_seconds'][0],
         row["start_time"] + response_params['window_around_timepoint_seconds'][1], ), axis=1, )

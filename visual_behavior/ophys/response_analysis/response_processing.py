@@ -227,12 +227,10 @@ def get_p_value_from_shuffled_omissions(mean_responses,
     '''
 
     import visual_behavior.ophys.response_analysis.utilities as ut
-    # spontaneous_frames = get_spontaneous_frames(stimulus_presentations_df, ophys_timestamps)
-    # shuffled_spont_inds = np.random.choice(spontaneous_frames, number_of_shuffles)
 
     stim_table = stimulus_presentations_df.copy()
     omitted_flashes = stim_table[stim_table.omitted == True]
-    omitted_flashes['start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
+    omitted_flashes.at[:,'start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
                                       omitted_flashes.start_time.values]
     omitted_start_frames = omitted_flashes.start_frame.values
     omitted_start_frames = omitted_start_frames[:-1]  # exclude last omission for cases where it occured at the end of the recording
@@ -281,12 +279,10 @@ def get_p_value_from_shuffled_flashes(mean_responses,
     '''
 
     import visual_behavior.ophys.response_analysis.utilities as ut
-    # spontaneous_frames = get_spontaneous_frames(stimulus_presentations_df, ophys_timestamps)
-    # shuffled_spont_inds = np.random.choice(spontaneous_frames, number_of_shuffles)
 
     stim_table = stimulus_presentations_df.copy()
     stimulus_flashes = stim_table[stim_table.omitted == False]
-    stimulus_flashes['start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
+    stimulus_flashes.at[:,'start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
                                        stimulus_flashes.start_time.values]
     stimulus_flash_start_frames = stimulus_flashes.start_frame.values
     stimulus_flash_start_frames = stimulus_flash_start_frames[:-1]  # exclude last one
@@ -336,7 +332,7 @@ def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_i
     )
 
     response_range = [0, response_analysis_params['response_window_duration_seconds']]
-    baseline_range = [-1 * response_analysis_params['baseline_window_duration_seconds']]
+    baseline_range = [-response_analysis_params['baseline_window_duration_seconds'], 0]
 
     mean_response = eventlocked_traces_xr.loc[
         {'eventlocked_timestamps': slice(*response_range)}
@@ -510,7 +506,7 @@ def get_omission_response_df(dataset, use_events=False, frame_rate=None, format=
 
 
 def get_trials_run_speed_df(dataset, frame_rate=None, format='wide'):
-    traces = np.vstack((dataset.running_speed.running_speed.values, dataset.running_speed.running_speed.values))
+    traces = np.vstack((dataset.running_speed.speed.values, dataset.running_speed.speed.values))
     trace_ids = np.asarray([0, 1])
     timestamps = dataset.stimulus_timestamps
     change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])][:-1]  # last trial can get cut off
@@ -530,7 +526,7 @@ def get_trials_run_speed_df(dataset, frame_rate=None, format='wide'):
 
 
 def get_stimulus_run_speed_df(dataset, frame_rate=None, format='wide'):
-    traces = np.vstack((dataset.running_speed.running_speed.values, dataset.running_speed.running_speed.values))
+    traces = np.vstack((dataset.running_speed.speed.values, dataset.running_speed.speed.values))
     trace_ids = [0, 1]
     timestamps = dataset.stimulus_timestamps
     event_times = dataset.stimulus_presentations['start_time'].values[:-1]  # last one can get truncated
@@ -557,7 +553,7 @@ def get_stimulus_run_speed_df(dataset, frame_rate=None, format='wide'):
 
 
 def get_omission_run_speed_df(dataset, frame_rate=None, format='wide'):
-    traces = np.vstack((dataset.running_speed.running_speed.values, dataset.running_speed.running_speed.values))
+    traces = np.vstack((dataset.running_speed.speed.values, dataset.running_speed.speed.values))
     trace_ids = [0, 1]
     timestamps = dataset.stimulus_timestamps
     stimuli = dataset.stimulus_presentations
@@ -576,6 +572,39 @@ def get_omission_run_speed_df(dataset, frame_rate=None, format='wide'):
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
     df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
+    return df
+
+
+def get_trials_pupil_area_df(dataset, frame_rate=None, format='wide'):
+    pupil_area = dataset.pupil_area.pupil_area.values
+    traces = np.vstack((pupil_area, pupil_area))
+    trace_ids = [0, 1]
+    timestamps = dataset.pupil_area.time.values
+    change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])][:-1]  # last trial can get cut off
+    event_times = change_trials['change_time'].values
+    event_ids = change_trials.index.values
+    response_analysis_params = get_default_trial_response_params()
+
+    response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
+                                  response_analysis_params, frame_rate)
+    if format == 'wide':
+        df = response_df(response_xr)
+    elif format == 'long':
+        df = response_xr.to_dataframe().reset_index()
+
+    df = df.rename(columns={'trial_id': 'trials_id', 'trace_id': 'tmp'})
+    df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
+
+    window = response_analysis_params['window_around_timepoint_seconds']
+    response_window = [np.abs(window[0]),
+                       np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
+    if frame_rate is None:
+        frame_rate = 1 / np.diff(timestamps).mean()
+    df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
+    # remove trials with nan values
+    ind = np.where(np.asarray([np.isnan(trace).any() for trace in df.trace.values]) == True)[0]
+    df = df.drop(index=ind)
+    df = df.drop(columns='index')
     return df
 
 

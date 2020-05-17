@@ -150,6 +150,172 @@ def convert_rewards(rewards_df):
     return rewards_df.reset_index()
 
 
+def convert_running_speed(running_speed_obj):
+    '''
+    running speed is returned as a custom object, inconsistent with other attrs.
+    should be a dataframe with cols for timestamps and speed.
+
+    ARGS: running_speed object
+    RETURNS: dataframe with columns timestamps and speed
+    '''
+    return pd.DataFrame({
+        'timestamps': running_speed_obj.timestamps,
+        'speed': running_speed_obj.values
+    })
+
+
+def add_change_each_flash(stimulus_presentations):
+    '''
+        Adds a column to stimulus_presentations, ['change'], which is True if the stimulus was a change image, and False otherwise
+
+        ARGS: stimulus_presentations dataframe
+        RETURNS: modified stimulus_presentations dataframe
+    '''
+    changes = esp.find_change(stimulus_presentations['image_index'], esp.get_omitted_index(stimulus_presentations))
+    stimulus_presentations['change'] = changes
+    return stimulus_presentations
+
+
+def add_mean_running_speed(stimulus_presentations, running_speed, range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the mean running speed between
+
+    Args:
+        stimulus_presentations(pd.DataFrame): dataframe of stimulus presentations.
+                Must contain: 'start_time'
+        running_speed (pd.DataFrame): dataframe of running speed.
+            Must contain: 'speed', 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed.
+    Returns:
+        nothing, modifies session in place. Same as the input, but with 'mean_running_speed' column added
+    '''
+    if isinstance(running_speed, pd.DataFrame):
+        mean_running_speed_df = esp.mean_running_speed(stimulus_presentations,
+                                                       running_speed,
+                                                       range_relative_to_stimulus_start)
+    else:
+        mean_running_speed_df = esp.mean_running_speed(stimulus_presentations,
+                                                       convert_running_speed(running_speed),
+                                                       range_relative_to_stimulus_start)
+
+    stimulus_presentations["mean_running_speed"] = mean_running_speed_df
+    return stimulus_presentations
+
+
+def add_licks_each_flash(stimulus_presentations, licks, range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the timestamps of licks that occur
+    in a range relative to the onset of the stimulus.
+
+    Args:
+        stimulus_presentations (pd.DataFrame): dataframe of stimulus presentations.
+            Must contain: 'start_time'
+        licks (pd.DataFrame): lick dataframe. Must contain 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed.
+    Returns:
+        nothing, modifies session in place. Same as the input, but with 'licks' column added
+    '''
+
+    licks_each_flash = esp.licks_each_flash(stimulus_presentations,
+                                            licks,
+                                            range_relative_to_stimulus_start)
+    stimulus_presentations['licks'] = licks_each_flash
+    return stimulus_presentations
+
+
+def add_rewards_each_flash(stimulus_presentations, rewards, range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the timestamps of rewards that occur
+    in a range relative to the onset of the stimulus.
+
+    Args:
+        stimulus_presentations (pd.DataFrame): dataframe of stimulus presentations.
+            Must contain: 'start_time'
+        rewards (pd.DataFrame): rewards dataframe. Must contain 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed.
+    Returns:
+        nothing. session.stimulus_presentations is modified in place with 'rewards' column added
+    '''
+
+    rewards_each_flash = esp.rewards_each_flash(stimulus_presentations,
+                                                rewards,
+                                                range_relative_to_stimulus_start)
+    stimulus_presentations['rewards'] = rewards_each_flash
+    return stimulus_presentations
+
+
+def add_time_from_last_lick(stimulus_presentations, licks):
+    '''
+        Adds a column in place to session.stimulus_presentations['time_from_last_lick'], which is the time, in seconds
+        since the last lick
+
+        Args:
+        stimulus_presentations (pd.DataFrame): dataframe of stimulus presentations.
+            Must contain: 'start_time'
+        licks (pd.DataFrame): lick dataframe. Must contain 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed.
+
+        Returns:
+            modified stimulus_presentations table
+    '''
+    lick_times = licks['timestamps'].values
+    flash_times = stimulus_presentations["start_time"].values
+    if len(lick_times) < 5:  # Passive sessions
+        time_from_last_lick = np.full(len(flash_times), np.nan)
+    else:
+        time_from_last_lick = esp.time_from_last(flash_times, lick_times)
+    stimulus_presentations["time_from_last_lick"] = time_from_last_lick
+    return stimulus_presentations
+
+
+def add_time_from_last_reward(stimulus_presentations, rewards):
+    '''
+        Adds a column to stimulus_presentations['time_from_last_reward'], which is the time, in seconds
+        since the last reward
+
+        Args:
+        stimulus_presentations (pd.DataFrame): dataframe of stimulus presentations.
+            Must contain: 'start_time'
+        rewards (pd.DataFrame): rewards dataframe. Must contain 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the running speed.
+        Returns:
+            modified stimulus_presentations table
+    '''
+    reward_times = rewards['timestamps'].values
+    flash_times = stimulus_presentations["start_time"].values
+
+    if len(reward_times) < 1:  # Sometimes mice are bad
+        time_from_last_reward = np.full(len(flash_times), np.nan)
+    else:
+        time_from_last_reward = esp.time_from_last(flash_times, reward_times)
+    stimulus_presentations["time_from_last_reward"] = time_from_last_reward
+    return stimulus_presentations
+
+
+def add_time_from_last_change(stimulus_presentations):
+    '''
+        Adds a column to session.stimulus_presentations, 'time_from_last_change', which is the time, in seconds
+        since the last image change
+
+        ARGS: SDK session object
+        MODIFIES: session.stimulus_presentations
+        RETURNS: nothing
+    '''
+    flash_times = stimulus_presentations["start_time"].values
+    change_times = stimulus_presentations.query('change')['start_time'].values
+    time_from_last_change = esp.time_from_last(flash_times, change_times)
+    stimulus_presentations["time_from_last_change"] = time_from_last_change
+    return stimulus_presentations
+
+
+
+### INPLACE VERSIONS ###
+
 def convert_licks_inplace(licks_df):
     '''
     licks has a column called 'time', inconsistent with the rest of the sdk.
@@ -174,20 +340,6 @@ def convert_rewards_inplace(rewards_df):
     '''
     assert rewards_df.index.name == 'timestamps'
     rewards_df.reset_index(inplace=True)
-
-
-def convert_running_speed(running_speed_obj):
-    '''
-    running speed is returned as a custom object, inconsistent with other attrs.
-    should be a dataframe with cols for timestamps and speed.
-
-    ARGS: running_speed object
-    RETURNS: dataframe with columns timestamps and speed
-    '''
-    return pd.DataFrame({
-        'timestamps': running_speed_obj.timestamps,
-        'speed': running_speed_obj.values
-    })
 
 
 def add_change_each_flash_inplace(session):
