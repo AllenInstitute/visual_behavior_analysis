@@ -40,36 +40,58 @@ class LazyLoadable(object):
 
 
 class ResponseAnalysis(object):
-    """ Contains methods for organizing responses by trial or by  visual stimulus flashes in a DataFrame.
+    """
 
-    For trial responses, a segment of the dF/F trace for each cell is extracted for each trial in the trials records in a +/-4 seconds window (the 'trial_window') around the change time.
-    The mean_response for each cell is taken in a 500ms window after the change time (the 'response_window').
-    The trial_response_df also contains behavioral metadata from the trial records such as lick times, running speed, reward rate, and initial and change stimulus names.
+    Contains methods for organizing cell responses by trials, stimulus presentations, or omissions in a DataFrame.
 
-    For stimulus flashes, the mean response is taken in a 500ms window after each stimulus presentation (the 'response_window') in the stimulus_table.
-    The flash_response_df contains the mean response for every cell, for every stimulus flash.
+    For each trial, stimulus presentation, or omission, a segment of the dF/F trace (or events if available and use_events=True) is extracted for each cell aligned to the time of the relevant event (ex: at the change time for each trial).
+    The duration of each trace segment is a window around the event time, with default values for trials = [-5,5], stimulus presentations = [-0.5,0.75], and omissions = [-5,5].
+    The mean_response for each cell is taken in a 500ms window after the change time or stimulus onset time, or in a 750ms window after omission time.
+    Response dataframes also include extensive metadata for each event condition, such as image name, lick times, reward rate, etc.
+
+    To load a response dataframe, use the method get_response_df() by providing an accepted response df type.
+    Available response df types include: ['trials_response_df', 'stimulus_response_df', 'omission_response_df',
+                                                'trials_run_speed_df', 'stimulus_run_speed_df', 'omission_run_speed_df',
+                                                'trials_pupil_area_df', 'stimulus_pupil_area_df', 'omission_pupil_area_df']
 
     Parameters
     ----------
-    dataset: VisualBehaviorOphysDataset instance
-    overwrite_analysis_files: Boolean, if True will create and overwrite response analysis files.
-    This can be used if new functionality is added to the ResponseAnalysis class to modify existing structures or make new ones.
-    If False, will load existing analysis files from dataset.analysis_dir, or generate and save them if none exist.
+    dataset {object} -- VisualBehaviorOphysDataset or BehaviorOphysDataset class instance
+
+    analysis_cache_dir {str} --  directory to save and load analysis files from. If None, defaults to:
+        '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
+
+    load_from_cache {Boolean} -- if True, will load pre-existing response dataframes from analysis_cache_dir. If response dataframes do not exist, they will be generated and saved.
+                    If False, will generate new response dataframes.
+
+    use_events {Boolean} -- if True, will use extracted events instead of dF/F traces. Events files must be located in a folder called 'events' within the analysis_cache_dir.
+                    If False, uses dF/F traces by default.
+
+    use_extended_stimulus_presentations {Boolean} -- if True, will include extended stimulus presentations table columns in the response dataframe. This takes longer to load.
+                    If False, will use the simple version of stimulus presentations.
+
+    overwrite_analysis_files {Boolean} -- if True will create and overwrite response analysis files.
+        *** Please do not overwrite files in the default cache without consulting other scientists using this cache!!! Only overwrite things in your own cache ***
+        This can be used if new functionality is added to the ResponseAnalysis class to modify existing structures or make new ones.
+        If False, will load existing analysis files from analysis_cache_dir, or generate and save them if none exist.
+
     """
 
-    def __init__(self, dataset, overwrite_analysis_files=False, load_from_cache=False,
-                 use_events=False, use_extended_stimulus_presentations=False):
+    def __init__(self, dataset, analysis_cache_dir=None, load_from_cache=False, use_events=False,
+                 use_extended_stimulus_presentations=False, overwrite_analysis_files=False):
         self.dataset = dataset
         self.use_events = use_events
-        self.cache_dir = self.dataset.cache_dir
+        if analysis_cache_dir is None:
+            self.analysis_cache_dir = loading.get_analysis_cache_dir()
+        else:
+            self.analysis_cache_dir = analysis_cache_dir
         self.ophys_experiment_id = self.dataset.ophys_experiment_id
-        # self.dataset.analysis_dir = self.get_analysis_dir()
         self.load_from_cache = load_from_cache
         self.overwrite_analysis_files = overwrite_analysis_files
         self.use_extended_stimulus_presentations = use_extended_stimulus_presentations
-        self.trial_window = rp.get_default_trial_response_params()['window_around_timepoint_seconds']
-        self.flash_window = rp.get_default_stimulus_response_params()['window_around_timepoint_seconds']
-        self.omitted_flash_window = rp.get_default_omission_response_params()['window_around_timepoint_seconds']
+        self.trials_window = rp.get_default_trial_response_params()['window_around_timepoint_seconds']
+        self.stimulus_presentations_window = rp.get_default_stimulus_response_params()['window_around_timepoint_seconds']
+        self.omissions_window = rp.get_default_omission_response_params()['window_around_timepoint_seconds']
         # self.response_window_duration = 0.25  # window, in seconds, over which to take the mean for a given trial or flash
         # self.omission_response_window_duration = 0.75 # compute omission mean response and baseline response over 750ms
         self.stimulus_duration = 0.25  # self.dataset.task_parameters['stimulus_duration'].values[0]
@@ -81,24 +103,31 @@ class ResponseAnalysis(object):
         else:
             self.blank_duration = self.dataset.task_parameters['blank_duration'][0]
 
+
     def get_analysis_folder(self):
-        candidates = [file for file in os.listdir(self.dataset.cache_dir) if
-                      str(self.dataset.ophys_experiment_id) in file]
+        candidates = [file for file in os.listdir(self.analysis_cache_dir) if str(self.ophys_experiment_id) in file]
         if len(candidates) == 1:
             self._analysis_folder = candidates[0]
-        elif len(candidates) < 1:
-            raise OSError(
-                'unable to locate analysis folder for experiment {} in {}'.format(self.dataset.ophys_experiment_id,
-                                                                                  self.dataset.cache_dir))
+        elif len(candidates) == 0:
+            print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
+                                                                                    self.analysis_cache_dir))
+            print('creating new analysis folder')
+            m = self.dataset.metadata
+            date = m['experiment_datetime']
+            date = str(date)[:10]
+            date = date[2:4] + date[5:7] + date[8:10]
+            self._analysis_folder = str(m['ophys_experiment_id']) + '_' + str(m['donor_id']) + '_' + date + '_' + m[
+                'targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['driver_line'][0] + '_' + m[
+                                        'rig_name'] + '_' + m['session_type']
+            os.mkdir(os.path.join(self.analysis_cache_dir, self._analysis_folder))
         elif len(candidates) > 1:
-            raise OSError(
-                '{} contains multiple possible analysis folders: {}'.format(self.dataset.cache_dir, candidates))
+            raise OSError('{} contains multiple possible analysis folders: {}'.format(self.analysis_cache_dir, candidates))
         return self._analysis_folder
 
     analysis_folder = LazyLoadable('_analysis_folder', get_analysis_folder)
 
     def get_analysis_dir(self):
-        self._analysis_dir = os.path.join(self.dataset.cache_dir, self.analysis_folder)
+        self._analysis_dir = os.path.join(self.analysis_cache_dir, self.analysis_folder)
         return self._analysis_dir
 
     analysis_dir = LazyLoadable('_analysis_dir', get_analysis_dir)
@@ -163,13 +192,6 @@ class ResponseAnalysis(object):
         else:  # default behavior - create the df
             df = self.get_df_for_df_name(df_name)
 
-        # if ('response' in df_name):
-        #     if self.sdk_dataset_provided:
-        #         df['cell'] = [loading.get_cell_index_for_cell_specimen_id(self.dataset, cell_specimen_id) for
-        #                       cell_specimen_id in df.cell_specimen_id.values]
-        #     else:
-        #         df['cell'] = [self.dataset.get_cell_index_for_cell_specimen_id(int(cell_specimen_id)) for
-        #                       cell_specimen_id in df.cell_specimen_id.values]
         if 'trials' in df_name:
             trials = self.dataset.trials
             trials = trials.rename(
@@ -179,16 +201,11 @@ class ResponseAnalysis(object):
             df = df.merge(trials, right_on='trials_id', left_on='trials_id')
         elif ('stimulus' in df_name) or ('omission' in df_name):
             if self.use_extended_stimulus_presentations:
-                # self.dataset.extended_stimulus_presentations = loading.get_extended_stimulus_presentations(self.dataset)
                 stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
             else:
                 stimulus_presentations = self.dataset.stimulus_presentations.copy()
-            # running_speed = self.dataset.running_speed
-            # response_params = rp.get_default_omission_response_params()
-            # stimulus_presentations = sp.add_window_running_speed(running_speed, stimulus_presentations, response_params)
             df = df.merge(stimulus_presentations, right_on='stimulus_presentations_id',
                           left_on='stimulus_presentations_id')
-
         return df
 
     def get_trials_response_df(self):

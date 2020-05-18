@@ -68,6 +68,10 @@ def get_experiment_plots_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 
+def get_analysis_cache_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
+
+
 # LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
 
 
@@ -94,7 +98,7 @@ def get_visual_behavior_cache(manifest_path=None):
 def get_filtered_ophys_experiment_table(include_failed_data=False):
     """get ophys experiments table from cache, filters based on a number of criteria
         and adds additional useful columns to the table
-        Saves a reformatted (pre-filtering) version of the table with additional columns
+        Saves a reformatted version of the table with additional columns
         added for future loading speed.
             filtering criteria:
                  project codes: VisualBehavior, VisualBehaviorTask1B,
@@ -158,7 +162,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
-    # experiments = experiments.set_index('ophys_experiment_id')
+    experiments = experiments.set_index('ophys_experiment_id')
     return experiments
 
 
@@ -222,47 +226,19 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                                                 associated with an ophys_experiment_id (single imaging plane)
         """
 
-    def __init__(self, api, cache_dir, include_invalid_rois=False):
+    def __init__(self, api, include_invalid_rois=False):
         """
         :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
-        :param cache_dir: directory to save & load cached analysis files from
         :param include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
         """
         super().__init__(api)
-        self.cache_dir = cache_dir
         self.include_invalid_rois = include_invalid_rois
         # set pupil area and events to None for now
         # self.pupil_area = None
         self.events = None
 
     @property
-    def analysis_folder(self):
-        candidates = [file for file in os.listdir(self.cache_dir) if str(self.ophys_experiment_id) in file]
-        if len(candidates) == 1:
-            self._analysis_folder = candidates[0]
-        elif len(candidates) == 0:
-            print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
-                                                                                    self.cache_dir))
-            print('creating new analysis folder')
-            m = self.metadata
-            date = m['experiment_datetime']
-            date = str(date)[:10]
-            date = date[2:4] + date[5:7] + date[8:10]
-            self._analysis_folder = str(m['ophys_experiment_id']) + '_' + str(m['donor_id']) + '_' + date + '_' + m[
-                'targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['driver_line'][0] + '_' + m[
-                                        'rig_name'] + '_' + m['session_type']
-            os.mkdir(os.path.join(self.cache_dir, self._analysis_folder))
-        elif len(candidates) > 1:
-            raise OSError('{} contains multiple possible analysis folders: {}'.format(self.cache_dir, candidates))
-        return self._analysis_folder
-
-    @property
-    def analysis_dir(self):
-        self._analysis_dir = os.path.join(self.cache_dir, self.analysis_folder)
-        return self._analysis_dir
-
-    @property
-    def cell_specimen_table(self) -> pd.DataFrame:
+    def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table
         if self.include_invalid_rois == False:
             cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
@@ -312,11 +288,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        # if len(metadata['driver_line']) > 1:
-        #     metadata['driver_line'] = metadata['driver_line'][1] + ';' + metadata['driver_line'][0]
-        # else:
-        #     metadata['driver_line'] = metadata['driver_line'][0]
-        # metadata['reporter_line'] = metadata['reporter_line'][0]
         # reset ophys frame rate for accuracy & to account for mesoscope resampling
         metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
         if 'donor_id' not in metadata.keys():
@@ -355,7 +326,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def stimulus_presentations(self):
-        stimulus_presentations = super().stimulus_presentations
+        stimulus_presentations = super().stimulus_presentations.copy()
         if 'orientation' in stimulus_presentations.columns:
             stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
@@ -364,7 +335,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def extended_stimulus_presentations(self):
-        stimulus_presentations = super().stimulus_presentations
+        stimulus_presentations = super().stimulus_presentations.copy()
         if 'orientation' in stimulus_presentations.columns:
             stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
@@ -388,19 +359,19 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         return cell_index
 
 
-def get_ophys_dataset(ophys_experiment_id, cache_dir, include_invalid_rois=False):
-    """Use LIMS API from SDK to return session object
+def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
+    """Gets behavior + ophys data for one experiment (single imaging plane), using the SDK LIMS API, then reformats & filters to compensate for bugs and missing SDK features.
+        This functionality should eventually be entirely replaced by the SDK when all requested features have been implemented.
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
         include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
 
     Returns:
-        session object -- session object from SDK
+        BehaviorOphysDataset {object} -- BehaviorOphysDataset instance, inherits attributes & methods from SDK BehaviorOphysSession class
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
-    # session = BehaviorOphysSession(api)
-    dataset = BehaviorOphysDataset(api, cache_dir, include_invalid_rois)
+    dataset = BehaviorOphysDataset(api, include_invalid_rois)
     return dataset
 
 

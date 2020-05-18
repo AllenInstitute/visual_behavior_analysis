@@ -20,8 +20,8 @@ def get_default_trial_response_params():
         '''
     trial_response_params = {
         "window_around_timepoint_seconds": [-5, 5],
-        "response_window_duration_seconds": 0.25,
-        "baseline_window_duration_seconds": 0.25
+        "response_window_duration_seconds": 0.5,
+        "baseline_window_duration_seconds": 0.5
     }
     return trial_response_params
 
@@ -371,7 +371,7 @@ def get_response_xr(session, traces, timestamps, event_times, event_ids, trace_i
         'mean_baseline': mean_baseline,
         'p_value_omission': p_values_omission,
         'p_value_stimulus': p_values_stimulus,
-        'p_value_gray_screen': p_value_gray_screen
+        'p_value_gray_screen': p_value_gray_screen,
     })
 
     return result
@@ -386,11 +386,13 @@ def response_df(response_xr):
     mean_baseline = response_xr['mean_baseline']
     p_vals_omission = response_xr['p_value_omission']
     p_vals_stimulus = response_xr['p_value_stimulus']
+    p_vals_gray_screen = response_xr['p_value_gray_screen']
     stacked_traces = traces.stack(multi_index=('trial_id', 'trace_id')).transpose()
     stacked_response = mean_response.stack(multi_index=('trial_id', 'trace_id')).transpose()
     stacked_baseline = mean_baseline.stack(multi_index=('trial_id', 'trace_id')).transpose()
     stacked_pval_omission = p_vals_omission.stack(multi_index=('trial_id', 'trace_id')).transpose()
     stacked_pval_stimulus = p_vals_stimulus.stack(multi_index=('trial_id', 'trace_id')).transpose()
+    stacked_pval_gray_screen = p_vals_gray_screen.stack(multi_index=('trial_id', 'trace_id')).transpose()
 
     num_repeats = len(stacked_traces)
     trace_timestamps = np.repeat(
@@ -404,8 +406,9 @@ def response_df(response_xr):
         'trace_timestamps': list(trace_timestamps),
         'mean_response': stacked_response.data,
         'baseline_response': stacked_baseline.data,
+        'p_value_gray_screen': stacked_pval_gray_screen,
         'p_value_omission': stacked_pval_omission,
-        'p_value_stimulus': stacked_pval_stimulus
+        'p_value_stimulus': stacked_pval_stimulus,
     })
     return df
 

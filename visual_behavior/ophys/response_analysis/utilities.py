@@ -305,6 +305,11 @@ def get_fraction_significant_trials(group):
     return pd.Series({'fraction_significant_trials': fraction_significant_trials})
 
 
+def get_fraction_significant_p_value_gray_screen(group):
+    fraction_significant_p_value_gray_screen= len(group[group.p_value_gray_screen < 0.05]) / float(len(group))
+    return pd.Series({'fraction_significant_p_value_gray_screen': fraction_significant_p_value_gray_screen})
+
+
 def get_fraction_significant_p_value_omission(group):
     fraction_significant_p_value_omission = len(group[group.p_value_omission < 0.05]) / float(len(group))
     return pd.Series({'fraction_significant_p_value_omission': fraction_significant_p_value_omission})
@@ -408,7 +413,6 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
     else:
         params = rp.get_default_trial_response_params()
     window = params['window_around_timepoint_seconds']
-    # window = get_window(analysis, flashes, omitted)
 
     rdf = response_df.copy()
 
@@ -420,18 +424,19 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         if ('image_name' in conditions) or ('change_image_name' in conditions) or ('prior_image_name' in conditions):
             mdf = annotate_mean_df_with_pref_stim(mdf, exclude_omitted_from_pref_stim)
     if analysis is not None:
-        # mdf = annotate_mean_df_with_p_value(analysis, mdf, window=window)
-        # mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
+        mdf = annotate_mean_df_with_p_value(analysis, mdf, window=window)
+        mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
         try:
             mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
             mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
         except:
             pass
 
-    # # if flashes or omitted:
-    # fraction_significant_trials = rdf.groupby(conditions).apply(get_fraction_significant_trials)
-    # fraction_significant_trials = fraction_significant_trials.reset_index()
-    # mdf['fraction_significant_trials'] = fraction_significant_trials.fraction_significant_trials
+    fraction_significant_p_value_gray_screen = rdf.groupby(conditions).apply(get_fraction_significant_p_value_gray_screen)
+    fraction_significant_p_value_gray_screen = fraction_significant_p_value_gray_screen.reset_index()
+    mdf[
+        'fraction_significant_p_value_gray_screen'] = fraction_significant_p_value_gray_screen.fraction_significant_p_value_gray_screen
+
 
     fraction_significant_p_value_omission = rdf.groupby(conditions).apply(get_fraction_significant_p_value_omission)
     fraction_significant_p_value_omission = fraction_significant_p_value_omission.reset_index()
