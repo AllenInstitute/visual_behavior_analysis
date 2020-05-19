@@ -146,27 +146,27 @@ class ResponseAnalysis(object):
         print('saving', df_name)
         df.to_hdf(self.get_response_df_path(df_name), key='df')
 
-    def get_df_for_df_name(self, df_name):
+    def get_df_for_df_name(self, df_name, format='wide'):
         if df_name == 'trials_response_df':
-            df = rp.get_trials_response_df(self.dataset, self.use_events)
+            df = rp.get_trials_response_df(self.dataset, self.use_events, format=format)
         elif df_name == 'stimulus_response_df':
-            df = rp.get_stimulus_response_df(self.dataset, self.use_events)
+            df = rp.get_stimulus_response_df(self.dataset, self.use_events, format=format)
         elif df_name == 'omission_response_df':
-            df = rp.get_omission_response_df(self.dataset, self.use_events)
+            df = rp.get_omission_response_df(self.dataset, self.use_events, format=format)
         elif df_name == 'trials_run_speed_df':
-            df = rp.get_trials_run_speed_df(self.dataset)
+            df = rp.get_trials_run_speed_df(self.dataset, format=format)
         elif df_name == 'stimulus_run_speed_df':
-            df = rp.get_stimulus_run_speed_df(self.dataset)
+            df = rp.get_stimulus_run_speed_df(self.dataset, format=format)
         elif df_name == 'omission_run_speed_df':
-            df = rp.get_omission_run_speed_df(self.dataset)
+            df = rp.get_omission_run_speed_df(self.dataset, format=format)
         elif df_name == 'trials_pupil_area_df':
-            df = rp.get_trials_pupil_area_df(self.dataset)
+            df = rp.get_trials_pupil_area_df(self.dataset, format=format)
         elif df_name == 'stimulus_pupil_area_df':
-            df = rp.get_stimulus_pupil_area_df(self.dataset)
+            df = rp.get_stimulus_pupil_area_df(self.dataset, format=format)
         elif df_name == 'omission_pupil_area_df':
-            df = rp.get_omission_pupil_area_df(self.dataset)
+            df = rp.get_omission_pupil_area_df(self.dataset, format=format)
         elif df_name == 'omission_licks_df':
-            df = rp.get_omission_licks_df(self.dataset)
+            df = rp.get_omission_licks_df(self.dataset, format=format)
         return df
 
     def get_response_df_types(self):
@@ -175,7 +175,7 @@ class ResponseAnalysis(object):
                 'trials_pupil_area_df', 'stimulus_pupil_area_df', 'omission_pupil_area_df',
                 'omission_licks_df']
 
-    def get_response_df(self, df_name='trials_response_df'):
+    def get_response_df(self, df_name='trials_response_df', format='wide'):
         if self.load_from_cache:  # get saved response df
             if os.path.exists(self.get_response_df_path(df_name)):
                 print('loading', df_name)
@@ -187,10 +187,10 @@ class ResponseAnalysis(object):
             file_path = self.get_response_df_path(df_name)
             if os.path.exists(file_path):
                 os.remove(file_path)
-            df = self.get_df_for_df_name(df_name)
+            df = self.get_df_for_df_name(df_name, format=format)
             self.save_response_df(df, df_name)
         else:  # default behavior - create the df
-            df = self.get_df_for_df_name(df_name)
+            df = self.get_df_for_df_name(df_name, format=format)
 
         if 'trials' in df_name:
             trials = self.dataset.trials
