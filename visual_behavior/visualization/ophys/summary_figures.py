@@ -1780,3 +1780,59 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
                         dataset.analysis_folder + '_' + str(cell_specimen_id) + '_' + str(cell_index) + suffix)
     if not show:
         plt.close()
+
+def designate_flashes(ax, omit=None, pre_color='blue', post_color='blue'):
+    '''
+    Function to add vertical spans to designate stimulus flashes
+
+    :param ax: axis on which to plot stimulus presentation times
+    :param omit: time to omit (default = None)
+    :param pre_color: color of vspans before time = 0 (default = 'blue')
+    :param post_color: color of vspans after time = 0 (default = 'blue')
+
+    :return: None
+    '''
+    lims = ax.get_xlim()
+    for flash_start in np.arange(0, lims[1], 0.75):
+        if flash_start != omit:
+            ax.axvspan(flash_start, flash_start+0.25,
+                       color=post_color, alpha=0.25, zorder=-np.inf)
+    for flash_start in np.arange(-0.75, lims[0]-0.001, -0.75):
+        if flash_start != omit:
+            ax.axvspan(flash_start, flash_start+0.25,
+                       color=pre_color, alpha=0.25, zorder=-np.inf)
+
+
+def designate_flashes_plotly(fig, omit=None, pre_color='blue', post_color='blue', alpha=0.25, plotnumbers=[1], lims=[-10, 10]):
+    '''add vertical spans to designate stimulus flashes'''
+
+    post_flashes = np.arange(0, lims[1], 0.75)
+    post_flash_colors = np.array([post_color]*len(post_flashes))
+    pre_flashes = np.arange(-0.75, lims[0]-0.001, -0.75)
+    pre_flash_colors = np.array([pre_color]*len(pre_flashes))
+
+    flash_times = np.hstack((pre_flashes, post_flashes))
+    flash_colors = np.hstack((pre_flash_colors, post_flash_colors))
+
+    shape_list = list(fig.layout.shapes)
+
+    for plotnumber in plotnumbers:
+        for flash_start, flash_color in zip(flash_times, flash_colors):
+            if flash_start != omit:
+                shape_list.append(
+                    go.layout.Shape(
+                        type="rect",
+                        x0=flash_start,
+                        x1=flash_start+0.25,
+                        y0=-100,
+                        y1=100,
+                        fillcolor=flash_color,
+                        opacity=alpha,
+                        layer="below",
+                        line_width=0,
+                        xref='x{}'.format(plotnumber),
+                        yref='y{}'.format(plotnumber),
+                    ),
+                )
+
+    fig.update_layout(shapes=shape_list)
