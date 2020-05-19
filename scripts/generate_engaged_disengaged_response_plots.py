@@ -78,23 +78,45 @@ def colormap():
     }
     return colormap
 
-def make_engagement_time_summary_plot(sdf,ax):
-    sdf_engagement_state = sdf.drop_duplicates('start_time')[['start_time','engagement_state']].copy().reset_index()
-    
+
+def make_engagement_time_summary_plot(sdf, ax):
+    sdf_engagement_state = sdf.drop_duplicates('start_time')[['start_time', 'engagement_state']].copy().reset_index()
+
     sdf_engagement_state['next_start_time'] = sdf_engagement_state['start_time'].shift(-1)
     sdf_engagement_state['state_change'] = sdf_engagement_state['engagement_state'] != sdf_engagement_state['engagement_state'].shift()
-    
+
     state_changes = sdf_engagement_state.query('state_change == True').copy()
     state_changes['next_state_change'] = state_changes['start_time'].shift(-1)
-    
+    state_changes.loc[state_changes.index.max(), 'next_state_change'] = sdf['start_time'].max()
+
     state_colors = colormap()
-    
-    for idx,row in state_changes.iterrows():
-        ax.axvspan(row['start_time']/60.,row['next_state_change']/60.,color=state_colors[row['engagement_state']])
+
+    for idx, row in state_changes.iterrows():
+        ax.axvspan(row['start_time'] / 60., row['next_state_change'] / 60., color=state_colors[row['engagement_state']])
+
     ax.set_yticks([])
     ax.set_xlabel('session time (minutes)')
     ax.set_title('engagement state vs. session time')
-    ax.set_xlim(0,sdf['start_time'].max()/60.)
+    ax.set_xlim(0, sdf['start_time'].max() / 60.)
+
+
+def make_cell_plot(dataset, cell_specimen_id, ax):
+    roi_masks = loading.get_sdk_roi_masks(dataset.cell_specimen_table)
+    ax[0].imshow(dataset.max_projection, cmap='gray')
+    ax[0].set_title('max projection')
+
+    ax[1].imshow(roi_masks[cell_specimen_id], cmap='gray')
+    ax[1].set_title('ROI mask for\ncell_specimen_id {}'.format(cell_specimen_id))
+
+    ax[2].imshow(dataset.max_projection, cmap='gray')
+    v = roi_masks[cell_specimen_id].copy()
+    v[v == 0] = np.nan
+    ax[2].imshow(v, cmap='spring_r', alpha=0.5)
+    ax[2].set_title('overlay (ROI mask in yellow)')
+
+    for axis in ax:
+        axis.axis('off')
+
 
 def seaborn_plot(df, ax, cell_id, legend='brief'):
     state_colors = colormap()
@@ -104,8 +126,8 @@ def seaborn_plot(df, ax, cell_id, legend='brief'):
         y='eventlocked_traces',
         data=df.query('cell_specimen_id == @cell_id'),
         hue='engagement_state',
-        hue_order = ['engaged','disengaged'],
-        palette = [state_colors[state] for state in ['engaged','disengaged']],
+        hue_order=['engaged', 'disengaged'],
+        palette=[state_colors[state] for state in ['engaged', 'disengaged']],
         ax=ax,
         legend=legend,
     )
@@ -126,42 +148,54 @@ def make_plots(dataset):
 
     oeid = dataset.ophys_experiment_id
 
-    for cell_id in dfs['omission_response_df']['cell_specimen_id'].unique():
-        fig = plt.figure(figsize=(20, 8))
-        ax = {
-            'state_summary': sf.placeAxesOnGrid(fig, xspan=[0, 1], yspan=[0, 0.2]),
-            'response_dfs': sf.placeAxesOnGrid(fig, dim = [1,3], xspan=[0, 1], yspan=[0.3, 1], sharey=True),
-        }
+    fig = plt.figure(figsize=(20, 15))
+    ax = {
+        'state_summary': sf.placeAxesOnGrid(fig, xspan=[0, 1], yspan=[0, 0.05]),
+        'cell_images_dfs': sf.placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.175, 0.5], sharey=True, wspace=0),
+        'response_dfs': sf.placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.6, 1], sharey=True),
+    }
 
-        make_engagement_time_summary_plot(dfs['stimulus_response_df'], ax['state_summary'])
+    for cell_id in dfs['stimulus_response_df']['cell_specimen_id'].unique():
+        dft = dfs['stimulus_response_df'].query('cell_specimen_id == @cell_id')
+        print('on cell {}, number of non-null responses = {}'.format(cell_id, len(dft[pd.notnull(dft['eventlocked_traces'])])))
+        if len(dft[pd.notnull(dft['eventlocked_traces'])]) > 0:
+            print('plotting cell {}'.format(cell_id))
 
-        for ii, df_name in enumerate(['stimulus_response_df', 'omission_response_df', 'trials_response_df']):
-            ax['response_dfs'][ii].cla()
-            df = dfs[df_name]
-            if df_name == 'stimulus_response_df':
-                legend = 'brief'
-            else:
-                legend = False
+            make_engagement_time_summary_plot(dfs['stimulus_response_df'], ax['state_summary'])
 
-            seaborn_plot(df, ax['response_dfs'][ii], cell_id, legend=legend)
+            make_cell_plot(dataset, cell_id, ax['cell_images_dfs'])
 
-            if df_name == 'stimulus_response_df':
-                plotting.designate_flashes(ax['response_dfs'][ii])
-                ax['response_dfs'][ii].set_xlim(-0.5, 0.75)
-            elif df_name == 'omission_response_df':
-                plotting.designate_flashes(ax['response_dfs'][ii], omit=0)
-                ax['response_dfs'][ii].set_xlim(-3, 3)
-            elif df_name == 'trials_response_df':
-                plotting.designate_flashes(ax['response_dfs'][ii], pre_color='black', post_color='green')
-                ax['response_dfs'][ii].set_xlim(-3, 3)
-            ax['response_dfs'][ii].set_xlabel('time (s)')
-            ax['response_dfs'][0].set_ylabel('$\Delta$F/F')
+            for ii, df_name in enumerate(['stimulus_response_df', 'omission_response_df', 'trials_response_df']):
+                ax['response_dfs'][ii].cla()
+                df = dfs[df_name]
+                if df_name == 'stimulus_response_df':
+                    legend = 'brief'
+                else:
+                    legend = False
 
-        fig.tight_layout()
-        plt.subplots_adjust(top=0.9)
-        title = get_title(oeid, cell_id)
-        fig.suptitle(title)
-        fig.savefig(os.path.join(figure_savedir, title + '.png'), dpi=200)
+                seaborn_plot(df, ax['response_dfs'][ii], cell_id, legend=legend)
+
+                if df_name == 'stimulus_response_df':
+                    plotting.designate_flashes(ax['response_dfs'][ii])
+                    ax['response_dfs'][ii].set_xlim(-0.5, 0.75)
+                    ax['response_dfs'][ii].set_title('Average Stimulus Response')
+                elif df_name == 'omission_response_df':
+                    plotting.designate_flashes(ax['response_dfs'][ii], omit=0)
+                    ax['response_dfs'][ii].set_xlim(-3, 3)
+                    ax['response_dfs'][ii].set_title('Average Omission Response')
+                elif df_name == 'trials_response_df':
+                    plotting.designate_flashes(ax['response_dfs'][ii], pre_color='black', post_color='green')
+                    ax['response_dfs'][ii].set_xlim(-3, 3)
+                    ax['response_dfs'][ii].set_title('Average Change Response')
+                ax['response_dfs'][ii].set_xlabel('time (s)')
+                ax['response_dfs'][0].set_ylabel('$\Delta$F/F')
+                for col in [1,2]:
+                    ax['response_dfs'][col].set_ylabel('')
+
+            plt.subplots_adjust(top=0.9)
+            title = get_title(oeid, cell_id)
+            fig.suptitle(title)
+            fig.savefig(os.path.join(figure_savedir, title + '.png'), dpi=200)
 
 
 def get_title(oeid, cell_specimen_id):
