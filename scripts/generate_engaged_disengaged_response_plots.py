@@ -166,7 +166,7 @@ def make_plots(dataset):
 
 def get_title(oeid, cell_specimen_id):
     cache = loading.get_visual_behavior_cache()
-    experiments_table = loading.get_filtered_ophys_experiment_table()
+    experiments_table = loading.get_filtered_ophys_experiment_table().reset_index()
 
     row = experiments_table.query('ophys_experiment_id == @oeid').iloc[0].to_dict()
     title = '{}__specimen_id={}__exp_id={}__{}__{}__depth={}__cell_id={}'.format(
