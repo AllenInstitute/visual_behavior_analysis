@@ -476,15 +476,15 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     '''
     model_output_dir = get_behavior_model_outputs_dir()
     model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
-    if len(model_output_file)>0:
+    if len(model_output_file) > 0:
         model_outputs = pd.read_csv(os.path.join(model_output_dir, model_output_file[0]))
-        model_outputs.drop(columns=['image_index','image_name','omitted','change'], inplace=True)
+        model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change'], inplace=True)
         stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id', left_on='stimulus_presentations_id').set_index('stimulus_presentations_id')
         stimulus_presentations['engagement_state'] = ['engaged' if flash_metrics_label != 'low-lick,low-reward' else 'disengaged' for flash_metrics_label in
-            stimulus_presentations.flash_metrics_labels.values]
+                                                      stimulus_presentations.flash_metrics_labels.values]
         return stimulus_presentations
     else:
-        print('no model outputs saved for behavior_session_id:',behavior_session_id)
+        print('no model outputs saved for behavior_session_id:', behavior_session_id)
 
 
 def get_sdk_max_projection(ophys_experiment_id):
@@ -729,7 +729,8 @@ def get_current_segmentation_run_id(ophys_experiment_id):
 
 
 def get_lims_cell_segmentation_run_info(ophys_experiment_id):
-    """Queries LIMS via AllenSDK PostgresQuery function to retrieve information on all segmentations run in the
+    """Queries LIMS via AllenSDK PostgresQuery function to retrieve
+        information on all segmentations run in the
         ophys_cell_segmenatation_runs table for a given experiment
 
     Arguments:
@@ -898,8 +899,10 @@ def get_timeseries_ini_wkf_info(ophys_session_id):
 
 
 def get_timeseries_ini_location(ophys_session_id):
-    """use SQL and the LIMS well known file system to get info for the timeseries_XYT.ini file
-        for a given ophys session, and then parses that information to get the filepath
+    """use SQL and the LIMS well known file system to
+        get info for the timeseries_XYT.ini file for a
+        given ophys session, and then parses that information
+        to get the filepath
 
     Arguments:
         ophys_session_id {int} -- 9 digit ophys session id
@@ -914,7 +917,8 @@ def get_timeseries_ini_location(ophys_session_id):
 
 
 def pmt_gain_from_timeseries_ini(timeseries_ini_path):
-    """parses the timeseries ini file and extracts the pmt gain setting
+    """parses the timeseries ini file (scientifica experiments only)
+        and extracts the pmt gain setting
 
     Arguments:
         timeseries_ini_path {[type]} -- [description]
@@ -964,6 +968,37 @@ def get_pmt_gain_for_experiment(ophys_experiment_id):
     ophys_session_id = get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
     pmt_gain = get_pmt_gain_for_session(ophys_session_id)
     return pmt_gain
+
+
+def get_wkf_dff_h5_location(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        dff traces h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the dff.h5 file
+                    for the given ophys_experiment_id
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 514173073 AND
+    attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    dff_h5_location_info = (lims_cursor.fetchall())
+
+    dff_h5_path = dff_h5_location_info[0]['?column?']  # idk why it's ?column? but it is :(
+    dff_h5_path = dff_h5_path.replace('/allen', '//allen')  # works with windows and linux filepaths
+    return dff_h5_path
 
 
 def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
@@ -1222,7 +1257,7 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
     elif len(conditions) == 4:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
             2] + '_' + conditions[
-                       3] + suffix + '.h5'
+            3] + suffix + '.h5'
     elif len(conditions) == 3:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
             2] + suffix + '.h5'
