@@ -260,6 +260,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         return self._cell_specimen_ids
 
     @property
+    def roi_masks(self):
+        cell_specimen_table = super().cell_specimen_table
+        cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
+        self._roi_masks = get_sdk_roi_masks(cell_specimen_table)
+        return self._roi_masks
+
+    @property
     def dff_traces(self):
         if self.include_invalid_rois == False:
             dff_traces = super().dff_traces
@@ -499,12 +506,12 @@ def get_sdk_segmentation_mask_image(ophys_experiment_id):
     return seg_mask_image
 
 
-def get_sdk_roi_masks(ophys_experiment_id):
+def get_sdk_roi_masks(cell_specimen_table):
     """uses sdk to return a dictionary with individual ROI
         masks for each cell specimen ID.
 
     Arguments:
-        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+        cell_specimen_table {DataFrame} -- cell_specimen_table from SDK session object
 
     Returns:
         dictonary -- keys are cell specimen ids(ints)
