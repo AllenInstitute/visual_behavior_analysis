@@ -7,6 +7,7 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorP
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import processing
+from visual_behavior.data_access import utilities
 import visual_behavior.database as db
 
 import os
@@ -70,6 +71,10 @@ def get_experiment_plots_dir():
 
 def get_analysis_cache_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
+
+
+def get_behavior_model_outputs_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
 
 
 # LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
@@ -299,6 +304,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
         if 'donor_id' not in metadata.keys():
             metadata['donor_id'] = metadata.pop('LabTracks_ID')
+            metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(self.ophys_experiment_id, get_visual_behavior_cache())
         self._metadata = metadata
         return self._metadata
 
@@ -354,6 +360,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
         stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
         stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
+        stimulus_presentations = add_model_outputs_to_stimulus_presentations(stimulus_presentations, self.metadata['behavior_session_id'])
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
 
@@ -459,6 +466,23 @@ def get_extended_stimulus_presentations(session):
         pupil_area=session.pupil_area
     )
     return extended_stimulus_presentations
+
+
+def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior_session_id):
+    '''
+       Adds additional columns to stimulus table for model weights and related metrics
+    '''
+    model_output_dir = get_behavior_model_outputs_dir()
+    model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
+    if len(model_output_file)>0:
+        model_outputs = pd.read_csv(os.path.join(model_output_dir, model_output_file[0]))
+        model_outputs.drop(columns=['image_index','image_name','omitted','change'], inplace=True)
+        stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id', left_on='stimulus_presentations_id').set_index('stimulus_presentations_id')
+        stimulus_presentations['engagement_state'] = ['engaged' if flash_metrics_label != 'low-lick,low-reward' else 'disengaged' for flash_metrics_label in
+            stimulus_presentations.flash_metrics_labels.values]
+        return stimulus_presentations
+    else:
+        print('no model outputs saved for behavior_session_id:',behavior_session_id)
 
 
 def get_sdk_max_projection(ophys_experiment_id):

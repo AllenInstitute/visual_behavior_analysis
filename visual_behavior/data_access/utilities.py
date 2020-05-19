@@ -167,3 +167,11 @@ class LazyLoadable(object):
 
         self.name = name
         self.calculate = calculate
+
+def check_for_model_outputs(behavior_session_id):
+    model_output_dir = loading.get_behavior_model_outputs_dir()
+    model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
+    if len(model_output_file)>0:
+        return True
+    else:
+        return False

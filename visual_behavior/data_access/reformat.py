@@ -117,6 +117,7 @@ def add_container_workflow_state_to_ophys_session_table(session_table, experimen
 # design decisions. If we can get some of these changes backported into the SDK, then they
 # can be removed from this module.
 
+
 def convert_licks(licks_df):
     '''
     licks has a column called 'time', inconsistent with the rest of the sdk.
