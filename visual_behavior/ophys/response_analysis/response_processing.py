@@ -441,7 +441,7 @@ def get_trials_response_df(dataset, use_events=False, frame_rate=None, format='w
                                   response_analysis_params, frame_rate)
     if format == 'wide':
         df = response_df(response_xr)
-    elif format == 'long':
+    elif format == 'tidy' or format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'trials_id', 'trace_id': 'cell_specimen_id'})
@@ -467,7 +467,7 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, format=
 
     if format == 'wide':
         df = response_df(response_xr)
-    elif format == 'long':
+    elif format == 'tidy' or format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
@@ -476,7 +476,8 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, format=
                        np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
     if frame_rate is None:
         frame_rate = 1 / np.diff(timestamps).mean()
-    df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
+    if format == 'wide':
+        df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
     return df
 
 
@@ -500,7 +501,7 @@ def get_omission_response_df(dataset, use_events=False, frame_rate=None, format=
 
     if format == 'wide':
         df = response_df(response_xr)
-    elif format == 'long':
+    elif format == 'tidy' or format == 'long':
         df = response_xr.to_dataframe().reset_index()
     df = df.rename(
         columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
@@ -520,7 +521,7 @@ def get_trials_run_speed_df(dataset, frame_rate=None, format='wide'):
                                   response_analysis_params, frame_rate)
     if format == 'wide':
         df = response_df(response_xr)
-    elif format == 'long':
+    elif format == 'tidy' or format == 'long':
         df = response_xr.to_dataframe().reset_index()
     df = df.rename(columns={'trial_id': 'trials_id', 'trace_id': 'tmp'})
     df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
@@ -539,7 +540,7 @@ def get_stimulus_run_speed_df(dataset, frame_rate=None, format='wide'):
                                   response_analysis_params, frame_rate)
     if format == 'wide':
         df = response_df(response_xr)
-    elif format == 'long':
+    elif format == 'tidy' or format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
@@ -569,7 +570,7 @@ def get_omission_run_speed_df(dataset, frame_rate=None, format='wide'):
                                   response_analysis_params, frame_rate)
     if format == 'wide':
         df = response_df(response_xr)
-    elif format == 'long':
+    elif format == 'tidy' or format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
@@ -591,7 +592,7 @@ def get_trials_pupil_area_df(dataset, frame_rate=None, format='wide'):
                                   response_analysis_params, frame_rate)
     if format == 'wide':
         df = response_df(response_xr)
-    elif format == 'long':
+    elif format == 'tidy' or format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'trials_id', 'trace_id': 'tmp'})
@@ -623,7 +624,7 @@ def get_stimulus_pupil_area_df(dataset, frame_rate=None, format='wide'):
                                   response_analysis_params, frame_rate)
     if format == 'wide':
         df = response_df(response_xr)
-    elif format == 'long':
+    elif format == 'tidy' or format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
@@ -658,7 +659,7 @@ def get_omission_pupil_area_df(dataset, frame_rate=30, format='wide'):
                                   response_analysis_params, frame_rate)
     if format == 'wide':
         df = response_df(response_xr)
-    elif format == 'long':
+    elif format == 'tidy' or format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
