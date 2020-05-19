@@ -522,8 +522,12 @@ def get_sdk_roi_masks(cell_specimen_table):
                     plt.imshow(roi_masks[cell_specimen_id])
     """
 
-    session = get_ophys_dataset(ophys_experiment_id)
-    roi_masks = session.get_roi_masks
+    roi_masks = {}
+    for cell_specimen_id in cell_specimen_table.index:
+        mask = cell_specimen_table.at[cell_specimen_id, 'image_mask']
+        binary_mask = np.zeros(mask.shape)
+        binary_mask[mask == True] = 1
+        roi_masks[cell_specimen_id] = binary_mask
     return roi_masks
 
 
