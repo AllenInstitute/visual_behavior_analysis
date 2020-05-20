@@ -385,6 +385,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         if 'orientation' in stimulus_presentations.columns:
             stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
+        stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._stimulus_presentations = stimulus_presentations
         return self._stimulus_presentations
 
@@ -403,8 +404,16 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
         stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
         stimulus_presentations = add_model_outputs_to_stimulus_presentations(stimulus_presentations, self.metadata['behavior_session_id'])
+        stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
+
+    @property
+    def trials(self):
+        trials = super().trials.copy()
+        trials = reformat.add_epoch_times(trials)
+        self._trials = trials
+        return self._trials
 
     def get_cell_specimen_id_for_cell_index(self, cell_index):
         cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_index == cell_index].index.values[0]

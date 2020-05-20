@@ -329,6 +329,28 @@ def add_time_from_last_change(stimulus_presentations):
     return stimulus_presentations
 
 
+def add_epoch_times(df, time_column='start_time', epoch_duration_mins=10):
+    """
+    Add column called 'epoch' with values as an index for the epoch within a session, for a given epoch duration.
+
+    :param df: dataframe with a column indicating event start times. Can be stimulus_presentations or trials table.
+    :param time_column: name of column in dataframe indicating event times
+    :param epoch_duration_mins: desired epoch length in minutes
+    :return: input dataframe with epoch column added
+    """
+    start_time = df[time_column].values[0]
+    stop_time = df[time_column].values[-1]
+    epoch_times = np.arange(start_time, stop_time, epoch_duration_mins*60)
+    df['epoch'] = None
+    for i, time in enumerate(epoch_times):
+        if i < len(epoch_times)-1:
+            indices = df[(df[time_column]>=epoch_times[i])&(df[time_column]<epoch_times[i+1])].index.values
+        else:
+            indices = df[(df[time_column]>=epoch_times[i])].index.values
+        df.at[indices, 'epoch'] = i
+    return df
+
+
 ### INPLACE VERSIONS ###
 
 def convert_licks_inplace(licks_df):
