@@ -78,7 +78,7 @@ class ResponseAnalysis(object):
     """
 
     def __init__(self, dataset, analysis_cache_dir=None, load_from_cache=False, use_events=False,
-                 use_extended_stimulus_presentations=False, overwrite_analysis_files=False):
+                 use_extended_stimulus_presentations=False, overwrite_analysis_files=False,dataframe_format='wide'):
         self.dataset = dataset
         self.use_events = use_events
         if analysis_cache_dir is None:
@@ -88,6 +88,7 @@ class ResponseAnalysis(object):
         self.ophys_experiment_id = self.dataset.ophys_experiment_id
         self.load_from_cache = load_from_cache
         self.overwrite_analysis_files = overwrite_analysis_files
+        self.dataframe_format = dataframe_format
         self.use_extended_stimulus_presentations = use_extended_stimulus_presentations
         self.trials_window = rp.get_default_trial_response_params()['window_around_timepoint_seconds']
         self.stimulus_presentations_window = rp.get_default_stimulus_response_params()['window_around_timepoint_seconds']
@@ -146,27 +147,27 @@ class ResponseAnalysis(object):
         print('saving', df_name)
         df.to_hdf(self.get_response_df_path(df_name), key='df')
 
-    def get_df_for_df_name(self, df_name, format='wide'):
+    def get_df_for_df_name(self, df_name, df_format):
         if df_name == 'trials_response_df':
-            df = rp.get_trials_response_df(self.dataset, self.use_events, format=format)
+            df = rp.get_trials_response_df(self.dataset, self.use_events, df_format=df_format)
         elif df_name == 'stimulus_response_df':
-            df = rp.get_stimulus_response_df(self.dataset, self.use_events, format=format)
+            df = rp.get_stimulus_response_df(self.dataset, self.use_events, df_format=df_format)
         elif df_name == 'omission_response_df':
-            df = rp.get_omission_response_df(self.dataset, self.use_events, format=format)
+            df = rp.get_omission_response_df(self.dataset, self.use_events, df_format=df_format)
         elif df_name == 'trials_run_speed_df':
-            df = rp.get_trials_run_speed_df(self.dataset, format=format)
+            df = rp.get_trials_run_speed_df(self.dataset, df_format=df_format)
         elif df_name == 'stimulus_run_speed_df':
-            df = rp.get_stimulus_run_speed_df(self.dataset, format=format)
+            df = rp.get_stimulus_run_speed_df(self.dataset, df_format=df_format)
         elif df_name == 'omission_run_speed_df':
-            df = rp.get_omission_run_speed_df(self.dataset, format=format)
+            df = rp.get_omission_run_speed_df(self.dataset, df_format=df_format)
         elif df_name == 'trials_pupil_area_df':
-            df = rp.get_trials_pupil_area_df(self.dataset, format=format)
+            df = rp.get_trials_pupil_area_df(self.dataset, df_format=df_format)
         elif df_name == 'stimulus_pupil_area_df':
-            df = rp.get_stimulus_pupil_area_df(self.dataset, format=format)
+            df = rp.get_stimulus_pupil_area_df(self.dataset, df_format=df_format)
         elif df_name == 'omission_pupil_area_df':
-            df = rp.get_omission_pupil_area_df(self.dataset, format=format)
+            df = rp.get_omission_pupil_area_df(self.dataset, df_format=df_format)
         elif df_name == 'omission_licks_df':
-            df = rp.get_omission_licks_df(self.dataset, format=format)
+            df = rp.get_omission_licks_df(self.dataset, df_format=df_format)
         return df
 
     def get_response_df_types(self):
@@ -175,7 +176,7 @@ class ResponseAnalysis(object):
                 'trials_pupil_area_df', 'stimulus_pupil_area_df', 'omission_pupil_area_df',
                 'omission_licks_df']
 
-    def get_response_df(self, df_name='trials_response_df', format='wide'):
+    def get_response_df(self, df_name='trials_response_df', df_format=None):
         if self.load_from_cache:  # get saved response df
             if os.path.exists(self.get_response_df_path(df_name)):
                 print('loading', df_name)
@@ -187,10 +188,10 @@ class ResponseAnalysis(object):
             file_path = self.get_response_df_path(df_name)
             if os.path.exists(file_path):
                 os.remove(file_path)
-            df = self.get_df_for_df_name(df_name, format=format)
+            df = self.get_df_for_df_name(df_name, df_format if df_format is not None else self.dataframe_format)
             self.save_response_df(df, df_name)
         else:  # default behavior - create the df
-            df = self.get_df_for_df_name(df_name, format=format)
+            df = self.get_df_for_df_name(df_name, df_format if df_format is not None else self.dataframe_format)
 
         if 'trials' in df_name:
             trials = self.dataset.trials
@@ -208,73 +209,73 @@ class ResponseAnalysis(object):
                           left_on='stimulus_presentations_id')
         return df
 
-    def get_trials_response_df(self):
+    def get_trials_response_df(self, df_format=None):
         df_name = 'trials_response_df'
-        df = self.get_response_df(df_name)
+        df = self.get_response_df(df_name, df_format)
         self._trials_response_df = df
         return self._trials_response_df
 
     trials_response_df = LazyLoadable('_trials_response_df', get_trials_response_df)
 
-    def get_stimulus_response_df(self):
+    def get_stimulus_response_df(self, df_format=None):
         df_name = 'stimulus_response_df'
-        df = self.get_response_df(df_name)
+        df = self.get_response_df(df_name, df_format)
         self._stimulus_response_df = df
         return self._stimulus_response_df
 
     stimulus_response_df = LazyLoadable('_stimulus_response_df', get_stimulus_response_df)
 
-    def get_omission_response_df(self):
+    def get_omission_response_df(self, df_format=None):
         df_name = 'omission_response_df'
-        df = self.get_response_df(df_name)
+        df = self.get_response_df(df_name, df_format)
         self._omission_response_df = df
         return self._omission_response_df
 
     omission_response_df = LazyLoadable('_omission_response_df', get_omission_response_df)
 
-    def get_trials_run_speed_df(self):
+    def get_trials_run_speed_df(self, df_format=None):
         df_name = 'trials_run_speed_df'
-        df = self.get_response_df(df_name)
+        df = self.get_response_df(df_name, df_format)
         self._trials_run_speed_df = df
         return self._trials_run_speed_df
 
     trials_run_speed_df = LazyLoadable('_trials_run_speed_df', get_trials_run_speed_df)
 
-    def get_stimulus_run_speed_df(self):
+    def get_stimulus_run_speed_df(self, df_format=None):
         df_name = 'stimulus_run_speed_df'
-        df = self.get_response_df(df_name)
+        df = self.get_response_df(df_name, df_format)
         self._stimulus_run_speed_df = df
         return self._stimulus_run_speed_df
 
     stimulus_run_speed_df = LazyLoadable('_stimulus_run_speed_df', get_stimulus_run_speed_df)
 
-    def get_omission_run_speed_df(self):
+    def get_omission_run_speed_df(self, df_format=None):
         df_name = 'omission_run_speed_df'
-        df = self.get_response_df(df_name)
+        df = self.get_response_df(df_name, df_format)
         self._omission_run_speed_df = df
         return self._omission_run_speed_df
 
     omission_run_speed_df = LazyLoadable('_omission_run_speed_df', get_omission_run_speed_df)
 
-    def get_omission_pupil_area_df(self):
+    def get_omission_pupil_area_df(self, df_format=None):
         df_name = 'omission_pupil_area_df'
-        df = self.get_response_df(df_name)
+        df = self.get_response_df(df_name, df_format)
         self._omission_pupil_area_df = df
         return self._omission_pupil_area_df
 
     omission_pupil_area_df = LazyLoadable('_omission_pupil_area_df', get_omission_pupil_area_df)
 
-    def get_stimulus_run_speed_df(self):
+    def get_stimulus_run_speed_df(self, df_format=None):
         df_name = 'stimulus_run_speed_df'
-        df = self.get_response_df(df_name)
+        df = self.get_response_df(df_name, df_format)
         self._stimulus_run_speed_df = df
         return self._stimulus_run_speed_df
 
     stimulus_run_speed_df = LazyLoadable('_stimulus_run_speed_df', get_stimulus_run_speed_df)
 
-    def get_stimulus_pupil_area_df(self):
+    def get_stimulus_pupil_area_df(self, df_format=None):
         df_name = 'stimulus_pupil_area_df'
-        df = self.get_response_df(df_name)
+        df = self.get_response_df(df_name, df_format)
         self._stimulus_pupil_area_df = df
         return self._stimulus_pupil_area_df
 
