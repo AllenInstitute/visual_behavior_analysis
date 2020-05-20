@@ -160,7 +160,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_production_project_codes(experiments)
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
-
+        experiments = experiments.reset_index()
+        experiments = experiments.drop(columns='index')
     if include_failed_data:
         experiments = filtering.limit_to_experiments_with_final_qc_state(experiments)
     else:
@@ -211,6 +212,7 @@ def get_filtered_ophys_session_table():
     sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
+    sessions = reformat.add_model_outputs_availability_to_table(sessions)
     # sessions = sessions.reset_index()
 
     return sessions
@@ -243,6 +245,33 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self.events = None
 
     @property
+    def analysis_folder(self):
+        analysis_cache_dir = get_analysis_cache_dir()
+        candidates = [file for file in os.listdir(analysis_cache_dir) if str(self.ophys_experiment_id) in file]
+        if len(candidates) == 1:
+            self._analysis_folder = candidates[0]
+        elif len(candidates) == 0:
+            print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
+                                                                                    analysis_cache_dir))
+            print('creating new analysis folder')
+            m = self.dataset.metadata
+            date = m['experiment_datetime']
+            date = str(date)[:10]
+            date = date[2:4] + date[5:7] + date[8:10]
+            self._analysis_folder = str(m['ophys_experiment_id']) + '_' + str(m['donor_id']) + '_' + date + '_' + m[
+                'targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['driver_line'][0] + '_' + m[
+                                        'rig_name'] + '_' + m['session_type']
+            os.mkdir(os.path.join(analysis_cache_dir, self._analysis_folder))
+        elif len(candidates) > 1:
+            raise OSError('{} contains multiple possible analysis folders: {}'.format(analysis_cache_dir, candidates))
+        return self._analysis_folder
+
+    @property
+    def analysis_dir(self):
+        self._analysis_dir = os.path.join(get_analysis_cache_dir(), self.analysis_folder)
+        return self._analysis_dir
+
+    @property
     def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table
         if self.include_invalid_rois == False:
@@ -272,6 +301,17 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._roi_masks = get_sdk_roi_masks(cell_specimen_table)
         return self._roi_masks
+
+    @property
+    def corrected_fluorescence_traces(self):
+        if self.include_invalid_rois == False:
+            corrected_fluorescence_traces = super().corrected_fluorescence_traces
+            cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
+            valid_cells = cell_specimen_table.cell_roi_id.values
+            self._corrected_fluorescence_traces = corrected_fluorescence_traces[corrected_fluorescence_traces.cell_roi_id.isin(valid_cells)]
+        else:
+            self._corrected_fluorescence_traces = super().corrected_fluorescence_traces
+        return self._corrected_fluorescence_traces
 
     @property
     def dff_traces(self):
@@ -485,6 +525,7 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
         return stimulus_presentations
     else:
         print('no model outputs saved for behavior_session_id:',behavior_session_id)
+    return stimulus_presentations
 
 
 def get_sdk_max_projection(ophys_experiment_id):

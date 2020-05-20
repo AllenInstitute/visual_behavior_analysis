@@ -1,8 +1,33 @@
-# CONVENIENCE FUNCTIONS TO GET VARIOUS INFORMATION #
+import os
+from visual_behavior.data_access import loading
 
+# CONVENIENCE FUNCTIONS TO GET VARIOUS INFORMATION #
 
 # put functions here such as get_ophys_experiment_id_for_ophys_session_id()
 
+class LazyLoadable(object):
+    def __init__(self, name, calculate):
+        ''' Wrapper for attributes intended to be computed or loaded once, then held in memory by a containing object.
+
+        Parameters
+        ----------
+        name : str
+            The name of the hidden attribute in which this attribute's data will be stored.
+        calculate : fn
+            a function (presumably expensive) used to calculate or load this attribute's data
+
+        '''
+
+        self.name = name
+        self.calculate = calculate
+
+def check_for_model_outputs(behavior_session_id):
+    model_output_dir = loading.get_behavior_model_outputs_dir()
+    model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
+    if len(model_output_file)>0:
+        return True
+    else:
+        return False
 
 # retrieve data from cache
 def get_behavior_session_id_from_ophys_session_id(ophys_session_id, cache):
@@ -151,27 +176,18 @@ def get_donor_id_from_specimen_id(specimen_id, cache):
     donor_id = behavior_sessions.query('ophys_session_id ==@ophys_session_id')['donor_id'].values[0]
     return donor_id
 
+def model_outputs_available_for_behavior_session(behavior_session_id):
+    """
+    Check whether behavior model outputs are available in the default directory
 
-class LazyLoadable(object):
-    def __init__(self, name, calculate):
-        ''' Wrapper for attributes intended to be computed or loaded once, then held in memory by a containing object.
-
-        Parameters
-        ----------
-        name : str
-            The name of the hidden attribute in which this attribute's data will be stored.
-        calculate : fn
-            a function (presumably expensive) used to calculate or load this attribute's data
-
-        '''
-
-        self.name = name
-        self.calculate = calculate
-
-def check_for_model_outputs(behavior_session_id):
+    :param behavior_session_id: 9-digit behavior session ID
+    :return: Boolean, True if outputs are available, False if not
+    """
     model_output_dir = loading.get_behavior_model_outputs_dir()
     model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
     if len(model_output_file)>0:
         return True
     else:
         return False
+
+
