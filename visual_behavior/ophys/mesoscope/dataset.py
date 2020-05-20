@@ -148,7 +148,7 @@ class MesoscopeDataset(object):
         except Exception as e:
             logger.error("Unable to query LIMS database: {}".format(e))
             self.data_present = False
-        return lims_data
+        return pd.DataFrame(lims_data)
 
     def get_exp_folder(self, exp_id):
         self.exp_id = exp_id
