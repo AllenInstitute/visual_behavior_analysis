@@ -2,7 +2,10 @@ import numpy as np
 import os
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import sciris as sc
+import pylab as pl
 import h5py
+from visual_behavior.ophys.mesoscope.crosstalk_unmix import run_ica
+import copy
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 
@@ -395,4 +398,43 @@ def test_extract_active(session):
 
 
 def test_get_active_traces(self, input_type):
+	return
+
+
+def test_run_ica(snr=30):
+	"""
+	simulate noisy signals and test ICA function on them
+	:param snr:
+	:return:
+	"""
+	# create simulated signals
+	npts = 1000
+	x = pl.arange(npts)
+	sig1 = pl.sin(x / 100) ** 500 + 1 / snr * pl.randn(npts)
+	sig2 = pl.sin(x / 84) ** 500 + 1 / snr * pl.randn(npts)
+
+	### Scaling signals
+	S = np.array([sig1, sig2])
+	D = np.array([[1, 0], [0, 0.3]])  # sclaing matrix
+	S_s = np.dot(D, S) # scaled sources
+
+	### Mixing signals
+	M = np.array([[0.9, 0.1], [0.2, 0.8]])  # mixing matrix
+	O = np.dot(S_s.T, M)  # mixed observations
+
+	mix, a_mix, a_unmix, r_source = run_ica(O[:,0], O[:,1])
+	#normallize mixing matrix and compare to original
+
+	b_mix = copy.deepcopy(a_mix)
+	b_mix = b_mix / b_mix.sum(axis=0)
+	b_mix = b_mix.T
+
+	# test if ICA mixing matrix == original mixing matrix
+	assert(np.all(np.isclose(b_mix, M, atol=0.05))), f"Normalized ICA mixign matrix is not similar to original mixing matrix"
+	# test if unmixing matrix is inverse of mixing:
+	assert(np.all(np.isclose(np.linalg.inv(a_mix), a_unmix))), f"Unmixing is not an inverse of mixing"
+	# test the shape of recovered sources is same as shape of input observations:
+	assert (r_source.shape == O.shape), f"output of ICA is not shaped the same as input observations"
+
+	return
 
