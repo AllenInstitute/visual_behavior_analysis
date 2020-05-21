@@ -424,7 +424,7 @@ def filter_events_array(trace_arr, scale=2):
     return filtered_arr
 
 
-def get_trials_response_df(dataset, use_events=False, frame_rate=None, format='wide'):
+def get_trials_response_df(dataset, use_events=False, frame_rate=None, df_format='wide'):
     if use_events:
         traces = np.stack(dataset.events['events'].values)
         traces = filter_events_array(traces, scale=2)
@@ -439,16 +439,16 @@ def get_trials_response_df(dataset, use_events=False, frame_rate=None, format='w
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
-    if format == 'wide':
+    if df_format == 'wide':
         df = response_df(response_xr)
-    elif format == 'tidy' or format == 'long':
+    elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'trials_id', 'trace_id': 'cell_specimen_id'})
     return df
 
 
-def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, format='wide'):
+def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, df_format='wide'):
     from visual_behavior.ophys.response_analysis import utilities as ut
     if use_events:
         traces = np.stack(dataset.events['events'].values)
@@ -465,9 +465,9 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, format=
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
 
-    if format == 'wide':
+    if df_format == 'wide':
         df = response_df(response_xr)
-    elif format == 'tidy' or format == 'long':
+    elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
@@ -476,12 +476,12 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, format=
                        np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
     if frame_rate is None:
         frame_rate = 1 / np.diff(timestamps).mean()
-    if format == 'wide':
+    if df_format == 'wide':
         df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
     return df
 
 
-def get_omission_response_df(dataset, use_events=False, frame_rate=None, format='wide'):
+def get_omission_response_df(dataset, use_events=False, frame_rate=None, df_format='wide'):
     if use_events:
         traces = np.stack(dataset.events['events'].values)
         traces = filter_events_array(traces, scale=2)
@@ -499,16 +499,16 @@ def get_omission_response_df(dataset, use_events=False, frame_rate=None, format=
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
 
-    if format == 'wide':
+    if df_format == 'wide':
         df = response_df(response_xr)
-    elif format == 'tidy' or format == 'long':
+    elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
     df = df.rename(
         columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
     return df
 
 
-def get_trials_run_speed_df(dataset, frame_rate=None, format='wide'):
+def get_trials_run_speed_df(dataset, frame_rate=None, df_format='wide'):
     traces = np.vstack((dataset.running_speed.speed.values, dataset.running_speed.speed.values))
     trace_ids = np.asarray([0, 1])
     timestamps = dataset.stimulus_timestamps
@@ -519,16 +519,16 @@ def get_trials_run_speed_df(dataset, frame_rate=None, format='wide'):
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
-    if format == 'wide':
+    if df_format == 'wide':
         df = response_df(response_xr)
-    elif format == 'tidy' or format == 'long':
+    elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
     df = df.rename(columns={'trial_id': 'trials_id', 'trace_id': 'tmp'})
     df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
     return df
 
 
-def get_stimulus_run_speed_df(dataset, frame_rate=None, format='wide'):
+def get_stimulus_run_speed_df(dataset, frame_rate=None, df_format='wide'):
     traces = np.vstack((dataset.running_speed.speed.values, dataset.running_speed.speed.values))
     trace_ids = [0, 1]
     timestamps = dataset.stimulus_timestamps
@@ -538,9 +538,9 @@ def get_stimulus_run_speed_df(dataset, frame_rate=None, format='wide'):
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
-    if format == 'wide':
+    if df_format == 'wide':
         df = response_df(response_xr)
-    elif format == 'tidy' or format == 'long':
+    elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
@@ -555,7 +555,7 @@ def get_stimulus_run_speed_df(dataset, frame_rate=None, format='wide'):
     return df
 
 
-def get_omission_run_speed_df(dataset, frame_rate=None, format='wide'):
+def get_omission_run_speed_df(dataset, frame_rate=None, df_format='wide'):
     traces = np.vstack((dataset.running_speed.speed.values, dataset.running_speed.speed.values))
     trace_ids = [0, 1]
     timestamps = dataset.stimulus_timestamps
@@ -568,9 +568,9 @@ def get_omission_run_speed_df(dataset, frame_rate=None, format='wide'):
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
-    if format == 'wide':
+    if df_format == 'wide':
         df = response_df(response_xr)
-    elif format == 'tidy' or format == 'long':
+    elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
@@ -578,7 +578,7 @@ def get_omission_run_speed_df(dataset, frame_rate=None, format='wide'):
     return df
 
 
-def get_trials_pupil_area_df(dataset, frame_rate=None, format='wide'):
+def get_trials_pupil_area_df(dataset, frame_rate=None, df_format='wide'):
     pupil_area = dataset.pupil_area.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
@@ -590,9 +590,9 @@ def get_trials_pupil_area_df(dataset, frame_rate=None, format='wide'):
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
-    if format == 'wide':
+    if df_format == 'wide':
         df = response_df(response_xr)
-    elif format == 'tidy' or format == 'long':
+    elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'trials_id', 'trace_id': 'tmp'})
@@ -611,7 +611,7 @@ def get_trials_pupil_area_df(dataset, frame_rate=None, format='wide'):
     return df
 
 
-def get_stimulus_pupil_area_df(dataset, frame_rate=None, format='wide'):
+def get_stimulus_pupil_area_df(dataset, frame_rate=None, df_format='wide'):
     pupil_area = dataset.pupil_area.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
@@ -622,9 +622,9 @@ def get_stimulus_pupil_area_df(dataset, frame_rate=None, format='wide'):
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
-    if format == 'wide':
+    if df_format == 'wide':
         df = response_df(response_xr)
-    elif format == 'tidy' or format == 'long':
+    elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
@@ -643,7 +643,7 @@ def get_stimulus_pupil_area_df(dataset, frame_rate=None, format='wide'):
     return df
 
 
-def get_omission_pupil_area_df(dataset, frame_rate=30, format='wide'):
+def get_omission_pupil_area_df(dataset, frame_rate=30, df_format='wide'):
     pupil_area = dataset.pupil_area.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
@@ -657,9 +657,9 @@ def get_omission_pupil_area_df(dataset, frame_rate=30, format='wide'):
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
-    if format == 'wide':
+    if df_format == 'wide':
         df = response_df(response_xr)
-    elif format == 'tidy' or format == 'long':
+    elif df_format == 'tidy' or df_format == 'long':
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
