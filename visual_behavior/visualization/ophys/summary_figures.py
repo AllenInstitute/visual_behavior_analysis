@@ -1741,6 +1741,23 @@ def colormap():
     }
     return colormap
 
+
+def get_title(ophys_experiment_id, cell_specimen_id):
+    cache = loading.get_visual_behavior_cache()
+    experiments_table = loading.get_filtered_ophys_experiment_table().reset_index()
+
+    row = experiments_table.query('ophys_experiment_id == @ophys_experiment_id').iloc[0].to_dict()
+    title = '{}__specimen_id={}__exp_id={}__{}__{}__depth={}__cell_id={}'.format(
+        row['cre_line'],
+        row['specimen_id'],
+        row['ophys_experiment_id'],
+        row['session_type'],
+        row['targeted_structure'],
+        row['imaging_depth'],
+        cell_specimen_id,
+    )
+    return title
+
 def merge_in_extended_stimulus_presentations(analysis):
     '''
     merges extended_stimulus_presentations into the response dataframes
