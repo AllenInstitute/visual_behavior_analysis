@@ -804,47 +804,28 @@ class MesoscopeICA(object):
                         "ValueError: ICA input contains NaN, infinity or a value too large for dtype float64")
                 else:
                     logger.info("Unmixed traces do not exist in cache, running ICA")
-
-                    rois_valid = {}
-                    traces_in = {}
-                    traces_out = {}
-                    crosstalk = {}
-                    mixing = {}
-                    a_mixing = {}
-                    figs_ct_in = {}
-                    figs_ct_out = {}
                     for pkey in self.pkeys:
-                        rois_valid[pkey] = {}
-                        traces_in[pkey] = {}
-                        traces_out[pkey] = {}
-                        crosstalk[pkey] = {}
-                        mixing[pkey] = {}
-                        a_mixing[pkey] = {}
-                        figs_ct_in[pkey] = {}
-                        figs_ct_out[pkey] = {}
                         for tkey in self.tkeys:
-                            rois_valid[pkey][tkey] = self.rois_valid[pkey]
-                            traces_in[pkey][tkey] = self.ins[pkey][tkey]
+                            traces_in = self.ins[pkey][tkey]
                             traces_in_active = self.get_ica_active_events(self.ins[pkey][tkey], self.ins_active[pkey][tkey])
                             # don't run unmixing if neuropil, instead read roi unmixing matrix
                             if tkey == 'np':
-                                mixing[pkey][tkey] = self.a_mixing[pkey]['roi']
+                                mixing = self.a_mixing[pkey]['roi']
 
-                                traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
-                                    = self.unmix_plane(traces_in[pkey][tkey], traces_in_active, mixing[pkey][tkey])
-                                crosstalk[pkey][tkey] = crosstalk[pkey]['roi']  # use same crosstalk value as per Roi traces (since the mixing matrix is assumed to be the same)
+                                traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active, mixing)
+                                crosstalk = self.crosstalk[pkey]['roi']  # use same crosstalk value as per Roi traces (since the mixing matrix is assumed to be the same)
                             else:
-                                traces_out[pkey][tkey], crosstalk[pkey][tkey], mixing[pkey][tkey], a_mixing[pkey][tkey] \
-                                    = self.unmix_plane(traces_in[pkey][tkey], traces_in_active)
+                                traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active)
                             # saving to self
                             self.outs[pkey][tkey] = np.array(
-                                [traces_out[pkey][tkey][0] + self.offsets[pkey][tkey]['sig_offset'],
-                                 traces_out[pkey][tkey][1] + self.offsets[pkey][tkey]['ct_offset']])
-                            self.crosstalk[pkey][tkey] = crosstalk[pkey][tkey]
+                                [traces_out[0] + self.offsets[pkey][tkey]['sig_offset'],
+                                 traces_out[1] + self.offsets[pkey][tkey]['ct_offset']])
+                            self.crosstalk[pkey][tkey] = crosstalk
                             self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
-                            self.mixing[pkey][tkey] = mixing[pkey][tkey]
-                            self.a_mixing[pkey][tkey] = a_mixing[pkey][tkey]
+                            self.mixing[pkey][tkey] = mixing
+                            self.a_mixing[pkey][tkey] = a_mixing
                             self.found_solution[pkey][tkey] = True
+
                             # writing ica ouput traces to disk
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
                                 f.create_dataset("data", data=self.outs[pkey][tkey], compression="gzip")

@@ -506,12 +506,20 @@ def test_unmix_plane(session):
 	ica_obj.get_ica_traces()
 	ica_obj.validate_raw_traces(return_vba=False)
 	ica_obj.debias_traces()
-
+	self = ica_obj
 	pkey = 'pl1'
-	tkey = 'roi'
-	traces_in = ica_obj.ins[pkey][tkey]
-	rois_valid = ica_obj.rois_valid[pkey]
-	traces_out, crosstalk, mixing, a_mixing = ica_obj.unmix_plane(traces_in, rois_valid)
+	for tkey in self.tkeys:
+		traces_in = self.ins[pkey][tkey]
+		traces_in_active = self.get_ica_active_events(self.ins[pkey][tkey], self.ins_active[pkey][tkey])
+		# don't run unmixing if neuropil, instead read roi unmixing matrix
+		if tkey == 'np':
+			mixing = self.a_mixing[pkey]['roi']
+
+			traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active, mixing)
+			crosstalk = self.crosstalk[pkey]['roi']  # use same crosstalk value as per Roi traces (since the mixing matrix is assumed to be the same)
+		else:
+			traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active)
+
 
 
 	return
