@@ -1733,6 +1733,194 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     if not show:
         plt.close()
 
+
+def colormap():
+    colormap = {
+        'engaged': 'olivedrab',
+        'disengaged': 'firebrick'
+    }
+    return colormap
+
+def merge_in_extended_stimulus_presentations(analysis):
+    '''
+    merges extended_stimulus_presentations into the response dataframes
+    operates in place
+    takes ~30 seconds to run
+    '''
+    analysis.stimulus_response_df = analysis.stimulus_response_df.merge(
+        analysis.dataset.extended_stimulus_presentations,
+        left_on = 'stimulus_presentations_id',
+        right_index=True,
+        how='left',
+        suffixes=('','_duplicate')
+    )
+    analysis.omission_response_df = analysis.omission_response_df.merge(
+        analysis.dataset.extended_stimulus_presentations,
+        left_on = 'stimulus_presentations_id',
+        right_index=True,
+        how='left',
+        suffixes=('','_duplicate')
+    )
+    analysis.trials_response_df = analysis.trials_response_df.merge(
+        analysis.dataset.extended_stimulus_presentations,
+        left_on = 'change_time',
+        right_on = 'start_time',
+        how='left',
+        suffixes=('','_duplicate')
+    )
+
+def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
+    '''
+    plots raw F and deltaF/F with engagement state denoted by background color
+    inputs:
+        analysis object
+        cell_specimen_id (int))
+        axes (list or array): an array of axes, expected length = 2
+    returns:
+        None
+    '''
+    
+    if 'engagement_state' not in analysis.stimulus_response_df.columns:
+        merge_in_extended_stim_presentations(analysis)
+    sdf = analysis.stimulus_response_df
+
+    sdf_engagement_state = sdf.drop_duplicates('start_time')[['start_time', 'engagement_state']].copy().reset_index()
+
+    sdf_engagement_state['next_start_time'] = sdf_engagement_state['start_time'].shift(-1)
+    sdf_engagement_state['state_change'] = sdf_engagement_state['engagement_state'] != sdf_engagement_state['engagement_state'].shift()
+
+    state_changes = sdf_engagement_state.query('state_change == True').copy()
+    state_changes['next_state_change'] = state_changes['start_time'].shift(-1)
+    state_changes.loc[state_changes.index.max(), 'next_state_change'] = sdf['start_time'].max()
+
+    state_colors = colormap()
+
+    for ii,ax in enumerate(axes):
+        ax.axvspan(0,state_changes.iloc[0]['start_time'], color='gray', alpha=0.5)
+        for idx, row in state_changes.iterrows():
+            ax.axvspan(row['start_time'] / 60., row['next_state_change'] / 60., color=state_colors[row['engagement_state']])
+
+        ax.set_xlim(0, sdf['start_time'].max() / 60.)
+        
+        if ii == 0:
+            ax.plot(
+                analysis.dataset.ophys_timestamps/60, 
+                analysis.dataset.corrected_fluorescence_traces.loc[cell_specimen_id]['corrected_fluorescence'],
+                linewidth=2,
+                color='black'
+            )
+            ax.set_ylabel('Corrected\nFluor.', rotation=0, ha='right')
+            ax.set_xticks([])
+            ax.set_title('engagement state vs. session time\n(gray = pre-session gray screen, green = engaged, red = disengaged)')
+        if ii == 1:
+            ax.plot(
+                analysis.dataset.ophys_timestamps/60, 
+                analysis.dataset.dff_traces.loc[cell_specimen_id]['dff'],
+                linewidth=2,
+                color='black'
+            )
+            ax.set_ylabel('$\Delta$F/F', rotation=0, ha='right')
+            ax.set_xlabel('session time (minutes)')
+
+
+def make_cell_plot(dataset, cell_specimen_id, ax):
+    roi_masks = loading.get_sdk_roi_masks(dataset.cell_specimen_table)
+    ax[0].imshow(dataset.max_projection, cmap='gray')
+    ax[0].set_title('max projection')
+
+    ax[1].imshow(roi_masks[cell_specimen_id], cmap='gray')
+    ax[1].set_title('ROI mask for\ncell_specimen_id {}'.format(cell_specimen_id))
+
+    ax[2].imshow(dataset.max_projection, cmap='gray')
+    v = roi_masks[cell_specimen_id].copy()
+    v[v == 0] = np.nan
+    ax[2].imshow(v, cmap='spring_r', alpha=0.5)
+    ax[2].set_title('overlay (ROI mask in yellow)')
+
+    for axis in ax:
+        axis.axis('off')
+
+def seaborn_lineplot(df, ax, cell_id, legend='brief', xlabel='time (s)', ylabel='$\Delta$F/F', n_boot=1000):
+    state_colors = colormap()
+
+    sns.lineplot(
+        x='eventlocked_timestamps',
+        y='eventlocked_traces',
+        data=df.query('cell_specimen_id == @cell_id'),
+        hue='engagement_state',
+        hue_order=['engaged', 'disengaged'],
+        palette=[state_colors[state] for state in ['engaged', 'disengaged']],
+        ax=ax,
+        legend=legend,
+        n_boot=n_boot,
+    )
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+
+def make_cell_response_summary_plot(analysis, cell_specimen_id, savefig=False, errorbar_bootstrap_iterations=1000):
+    figure_savedir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/single_cell_plots/response_plots'
+    hspace = 0.05
+    oeid = analysis.dataset.ophys_experiment_id
+
+    params_dict = {
+        'stimulus response':{
+            'df':analysis.stimulus_response_df,
+            'xlims':(-0.5, 0.75),
+            'omit':None,
+            'pre_color':'blue',
+            'post_color':'blue'
+        },
+        'omission response':{
+            'df':analysis.omission_response_df,
+            'xlims':(-3, 3),
+            'omit':0,
+            'pre_color':'blue',
+            'post_color':'blue'
+        },
+        'change response':{
+            'df':analysis.trials_response_df,
+            'xlims':(-3, 3),
+            'omit':None,
+            'pre_color':'gray',
+            'post_color':'green'
+        },
+    }
+
+    fig = plt.figure(figsize=(20, 18))
+    ax = {
+        'state_summary': placeAxesOnGrid(fig, dim=[2, 1], xspan=[0, 1], yspan=[0, 0.2], sharex=False, hspace=0),
+        'cell_images': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.3, 0.65], sharey=True, wspace=0),
+        'response_plots': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.725, 1], sharey=True),
+    }
+
+    make_engagement_time_summary_plot(analysis, cell_specimen_id, ax['state_summary'])
+    make_cell_plot(analysis.dataset, cell_specimen_id, ax['cell_images'])
+    dfs = {
+        'stimulus_response_df':analysis
+    }
+    for ii, plot_type in enumerate(params_dict.keys()):
+        if plot_type == 'stimulus response':
+            legend = 'brief'
+        else:
+            legend = False
+            
+        seaborn_lineplot(
+            params_dict[plot_type]['df'], 
+            ax['response_plots'][ii], 
+            cell_specimen_id, 
+            legend=legend, 
+            n_boot=errorbar_bootstrap_iterations
+        )
+        ax['response_plots'][ii].set_title(plot_type)
+        ax['response_plots'][ii].set_xlim(params_dict[plot_type]['xlims'])
+        designate_flashes(
+            ax['response_plots'][ii], 
+            omit=params_dict[plot_type]['omit'], 
+            pre_color=params_dict[plot_type]['pre_color'],
+            post_color=params_dict[plot_type]['post_color']
+        )
+
+
 def designate_flashes(ax, omit=None, pre_color='blue', post_color='blue'):
     '''
     Function to add vertical spans to designate stimulus flashes
