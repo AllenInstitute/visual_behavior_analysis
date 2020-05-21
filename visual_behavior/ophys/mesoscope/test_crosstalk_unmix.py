@@ -508,17 +508,28 @@ def test_unmix_plane(session):
 	ica_obj.debias_traces()
 	self = ica_obj
 	pkey = 'pl1'
-	for tkey in self.tkeys:
-		traces_in = self.ins[pkey][tkey]
-		traces_in_active = self.get_ica_active_events(self.ins[pkey][tkey], self.ins_active[pkey][tkey])
-		# don't run unmixing if neuropil, instead read roi unmixing matrix
-		if tkey == 'np':
-			mixing = self.a_mixing[pkey]['roi']
 
-			traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active, mixing)
-			crosstalk = self.crosstalk[pkey]['roi']  # use same crosstalk value as per Roi traces (since the mixing matrix is assumed to be the same)
-		else:
-			traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active)
+	# testing for roi functionality : do full unmix
+	tkey = 'roi'
+	traces_in = self.ins[pkey][tkey]
+	traces_in_active = self.get_ica_active_events(self.ins[pkey][tkey], self.ins_active[pkey][tkey])
+	traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active)
+
+	assert traces_out.shape == traces_in.shape, f"output traces are not shaped the same as input traces"
+	assert len(a_mixing) != 0, f"No mixing matrix returned"
+	assert len(crosstalk) != 0, f"No crosstalk data returned"
+	assert len(mixing) != 0, f"No raw mixing matrices recorded"
+
+	# testing neuropil - apply roi mixing matrix:
+	tkey = 'np'
+	traces_in = self.ins[pkey][tkey]
+	traces_in_active = self.get_ica_active_events(self.ins[pkey][tkey], self.ins_active[pkey][tkey])
+	traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active, mixing)
+
+	assert traces_out.shape == traces_in.shape, f"output traces are not shaped the same as input traces"
+	assert len(a_mixing) != 0, f"No mixing matrix returned"
+	assert len(crosstalk) != 0, f"No crosstalk data returned"
+	assert len(mixing) != 0, f"No raw mixing matrices recorded"
 
 
 
