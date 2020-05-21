@@ -1184,8 +1184,8 @@ class MesoscopeICA(object):
         # initialize outputs
         plane_mixing = []
         plane_a_mixing = []
-        plane_crosstalk = np.empty((2, ica_in.shape[1]))
-        ica_plane_out = np.empty(ica_in.shape)
+        plane_crosstalk = []
+        ica_plane_out = []
 
         if mixing is not None:  # this is indicative that traces are from neuropil, use provided mixing to unmix them
             for i, roi in enumerate(rois):
@@ -1196,6 +1196,7 @@ class MesoscopeICA(object):
                 # get unmixing matrix by inverting roi mixing matrix
                 a_unmix = linalg.pinv(mixing_roi)
                 # recontructing sources
+
                 r_sources = np.dot(a_unmix, traces.T).T
                 plane_mixing.append(mixing_roi)
                 plane_a_mixing.append(mixing_roi)
@@ -1208,7 +1209,6 @@ class MesoscopeICA(object):
 
         else:  # traces are rois, do full unmixing.
             # run ica on active traces, apply unmixing matrix to the entire trace
-            ica_pl_out = np.empty(ica_in.shape)
             # perform unmixing separately on each ROI:
             for i, roi in enumerate(rois):
                 # get events traces
@@ -1235,6 +1235,7 @@ class MesoscopeICA(object):
                 trace_ct = traces_ct[i]
                 # recontructing sources
                 traces = np.array([trace_sig, trace_ct]).T
+
                 r_sources = np.dot(a_unmix, traces.T).T
                 plane_a_mixing.append(adjusted_mixing_matrix)
                 plane_mixing.append(mixing_matrix)
@@ -1242,8 +1243,8 @@ class MesoscopeICA(object):
                 trace_ct_out = r_sources[:, 1]
                 rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)
                 rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
-                ica_pl_out[0, i, :] = rescaled_trace_sig_out
-                ica_pl_out[1, i, :] = rescaled_trace_ct_out
+                ica_plane_out[0, i, :] = rescaled_trace_sig_out
+                ica_plane_out[1, i, :] = rescaled_trace_ct_out
 
         return ica_plane_out, plane_crosstalk, plane_mixing, plane_a_mixing
 
