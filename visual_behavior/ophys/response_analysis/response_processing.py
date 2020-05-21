@@ -551,7 +551,8 @@ def get_stimulus_run_speed_df(dataset, frame_rate=None, df_format='wide'):
                        np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
     if frame_rate is None:
         frame_rate = 1 / np.diff(timestamps).mean()
-    df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
+    if df_format == 'wide':
+        df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
     return df
 
 
