@@ -1937,6 +1937,12 @@ def make_cell_response_summary_plot(analysis, cell_specimen_id, savefig=False, e
             post_color=params_dict[plot_type]['post_color']
         )
 
+    plt.subplots_adjust(top=0.9)
+    title = get_title(oeid, cell_specimen_id)
+    fig.suptitle(title)
+    if savefig == True:
+        fig.savefig(os.path.join(figure_savedir, title + '.png'), dpi=200)
+
 
 def designate_flashes(ax, omit=None, pre_color='blue', post_color='blue'):
     '''
