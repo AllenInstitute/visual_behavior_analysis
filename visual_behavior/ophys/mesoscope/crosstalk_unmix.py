@@ -1184,8 +1184,8 @@ class MesoscopeICA(object):
         # initialize outputs
         plane_mixing = []
         plane_a_mixing = []
-        plane_crosstalk = []
-        ica_plane_out = []
+        plane_crosstalk = np.zeros((2, ica_in.shape[1]))
+        ica_plane_out = np.empty(ica_in.shape)
 
         if mixing is not None:  # this is indicative that traces are from neuropil, use provided mixing to unmix them
             for i, roi in enumerate(rois):

@@ -515,23 +515,25 @@ def test_unmix_plane(session):
 	traces_in_active = self.get_ica_active_events(self.ins[pkey][tkey], self.ins_active[pkey][tkey])
 	traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active)
 
-	assert traces_out.shape == traces_in.shape, f"output traces are not shaped the same as input traces"
-	assert len(a_mixing) != 0, f"No mixing matrix returned"
-	assert len(crosstalk) != 0, f"No crosstalk data returned"
-	assert len(mixing) != 0, f"No raw mixing matrices recorded"
+	assert traces_out.shape == traces_in.shape, f"output traces are not shaped the same as input traces for {tkey}"
+	assert np.all(crosstalk != 0.0), f"No crosstalk data returned for {tkey}"
+	assert crosstalk.shape == (traces_out.shape[0], traces_out.shape[1]), f"Incorrect shape for crosstlak output for {tkey}"
+	assert len(a_mixing) == traces_in.shape[1], f"Adjusted mixing matrix output has wrong length for {tkey}"
+	assert len(mixing) == traces_in.shape[1], f"Mixing matrix output has wrong length for {tkey}"
 
 	# testing neuropil - apply roi mixing matrix:
 	tkey = 'np'
-	traces_in = self.ins[pkey][tkey]
-	traces_in_active = self.get_ica_active_events(self.ins[pkey][tkey], self.ins_active[pkey][tkey])
-	traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active, mixing)
+	traces_in_np = self.ins[pkey][tkey]
+	traces_in_active_np = self.get_ica_active_events(self.ins[pkey][tkey], self.ins_active[pkey][tkey])
+	traces_out_np, crosstalk_np, mixing_np, a_mixing_np = self.unmix_plane(traces_in_np, traces_in_active_np, a_mixing)
 
-	assert traces_out.shape == traces_in.shape, f"output traces are not shaped the same as input traces"
-	assert len(a_mixing) != 0, f"No mixing matrix returned"
-	assert len(crosstalk) != 0, f"No crosstalk data returned"
-	assert len(mixing) != 0, f"No raw mixing matrices recorded"
+	assert traces_out_np.shape == traces_in_np.shape, f"output traces are not shaped the same as input traces for {tkey}"
+	assert np.all(crosstalk_np != 0.0), f"No crosstalk data returned for {tkey}"
+	assert crosstalk_np.shape == (traces_out_np.shape[0], traces_out_np.shape[1]), f"Incorrect shape for crosstlak output for {tkey}"
+	assert len(a_mixing_np) == traces_in_np.shpe[1], f"Adjusted mixing matrix output has wrong length for {tkey}"
+	assert len(mixing_np) == traces_in_np.shape[1], f"Mixing matrix output has wrong length for {tkey}"
 
-
+	assert np.all(a_mixing_np == a_mixing), f"Mixing matrix for neuropil should be teh same as for roi"
 
 	return
 
