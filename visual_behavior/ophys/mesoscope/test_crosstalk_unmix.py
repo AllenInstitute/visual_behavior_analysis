@@ -355,7 +355,7 @@ def test_filter_dff_traces_crosstalk(session=None):
 	    f.close()
 
 
-def test_extract_active(session):
+def test_extract_active(session=None):
 	if not session:
 		ses = 839208243
 		"""LIMS session ID to use for test,
@@ -429,7 +429,7 @@ def test_run_ica(snr=30):
 	return
 
 
-def test_get_active_traces(session):
+def test_get_active_traces(session=None):
 
 	if not session:
 		ses = 839208243
@@ -461,7 +461,7 @@ def test_get_active_traces(session):
 	return
 
 
-def test_get_ica_active_events(session):
+def test_get_ica_active_events(session=None):
 	if not session:
 		ses = 839208243
 		"""LIMS session ID to use for test,
@@ -490,7 +490,7 @@ def test_get_ica_active_events(session):
 	return
 
 
-def test_unmix_plane(session):
+def test_unmix_plane(session=None):
 	if not session:
 		ses = 839208243
 		"""LIMS session ID to use for test,
@@ -499,7 +499,7 @@ def test_unmix_plane(session):
 	else:
 		ses = session
 
-	ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+	ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="roi", np_name="neuropil")
 	pairs = ica_obj.dataset.get_paired_planes()
 	pair = pairs[0]
 	ica_obj.set_exp_ids(pair)
