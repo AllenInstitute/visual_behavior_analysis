@@ -1210,7 +1210,7 @@ class MesoscopeICA(object):
             # perform unmixing separately on each ROI:
             for i, roi in enumerate(rois):
                 # get events traces
-                if len(traces_in_active[roi] != 1): # if active trace exists, use it to unmix, else - skip unmixing for this roi
+                if not np.all(np.isnan(traces_in_active[roi])): # if active trace exists, use it to unmix, else - skip unmixing for this roi
                     trace_sig_evs = traces_in_active[roi][0]
                     trace_ct_evs = traces_in_active[roi][1]
                     mix, a_mix, a_unmix, r_sources_evs = run_ica(trace_sig_evs, trace_ct_evs)
