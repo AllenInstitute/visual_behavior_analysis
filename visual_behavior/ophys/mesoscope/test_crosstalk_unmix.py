@@ -194,6 +194,7 @@ def test_unmix_pair(test_session=None):
 	ica_obj.get_ica_traces()
 	ica_obj.validate_raw_traces()
 	ica_obj.debias_traces()
+	ica_obj.get_active_traces("Input")
 	ica_obj.unmix_pair()
 	self = ica_obj
 
