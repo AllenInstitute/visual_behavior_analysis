@@ -1188,22 +1188,29 @@ class MesoscopeICA(object):
         if mixing is not None:  # this is indicative that traces are from neuropil, use provided mixing to unmix them
             for i, roi in enumerate(rois):
                 mixing_roi = mixing[i]
-                trace_sig = traces_sig[i]
-                trace_ct = traces_ct[i]
-                traces = np.array([trace_sig, trace_ct]).T
-                # get unmixing matrix by inverting roi mixing matrix
-                a_unmix = linalg.pinv(mixing_roi)
-                # recontructing sources
+                if not np.all(np.isnan(traces_in_active[roi])):
+                    trace_sig = traces_sig[i]
+                    trace_ct = traces_ct[i]
+                    traces = np.array([trace_sig, trace_ct]).T
+                    # get unmixing matrix by inverting roi mixing matrix
+                    a_unmix = linalg.pinv(mixing_roi)
+                    # recontructing sources
 
-                r_sources = np.dot(a_unmix, traces.T).T
-                plane_mixing[i, :, :] = mixing_roi
-                plane_a_mixing[i, :, :] = mixing_roi
-                trace_sig_out = r_sources[:, 0]
-                trace_ct_out = r_sources[:, 1]
-                rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)  # change this to use new rescaling
-                rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
-                ica_plane_out[0, i, :] = rescaled_trace_sig_out
-                ica_plane_out[1, i, :] = rescaled_trace_ct_out
+                    r_sources = np.dot(a_unmix, traces.T).T
+                    plane_mixing[i, :, :] = mixing_roi
+                    plane_a_mixing[i, :, :] = mixing_roi
+                    trace_sig_out = r_sources[:, 0]
+                    trace_ct_out = r_sources[:, 1]
+                    rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)  # change this to use new rescaling
+                    rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
+                    ica_plane_out[0, i, :] = rescaled_trace_sig_out
+                    ica_plane_out[1, i, :] = rescaled_trace_ct_out
+                else:
+                    # skip unmixing, write input traces to output
+                    ica_plane_out[0, i, :] = traces_sig[i]
+                    ica_plane_out[1, i, :] = traces_ct[i]
+                    plane_mixing[i, :, :] = np.nan
+                    plane_a_mixing[i, :, :] = np.nan
 
         else:  # traces are rois, do full unmixing.
             # run ica on active traces, apply unmixing matrix to the entire trace
