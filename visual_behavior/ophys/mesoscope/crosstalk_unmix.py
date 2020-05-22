@@ -1180,8 +1180,8 @@ class MesoscopeICA(object):
         traces_ct = ica_in[1, :, :]
 
         # initialize outputs
-        plane_mixing = []
-        plane_a_mixing = []
+        plane_mixing = np.zeros((ica_in.shape[1], 2, 2))
+        plane_a_mixing = np.zeros((ica_in.shape[1], 2, 2))
         plane_crosstalk = np.zeros((2, ica_in.shape[1]))
         ica_plane_out = np.empty(ica_in.shape)
 
@@ -1196,8 +1196,8 @@ class MesoscopeICA(object):
                 # recontructing sources
 
                 r_sources = np.dot(a_unmix, traces.T).T
-                plane_mixing.append(mixing_roi)
-                plane_a_mixing.append(mixing_roi)
+                plane_mixing[i, :, :] = mixing_roi
+                plane_a_mixing[i, :, :] = mixing_roi
                 trace_sig_out = r_sources[:, 0]
                 trace_ct_out = r_sources[:, 1]
                 rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)  # change this to use new rescaling
@@ -1236,8 +1236,8 @@ class MesoscopeICA(object):
                     traces = np.array([trace_sig, trace_ct]).T
 
                     r_sources = np.dot(a_unmix, traces.T).T
-                    plane_a_mixing.append(adjusted_mixing_matrix)
-                    plane_mixing.append(mixing_matrix)
+                    plane_a_mixing[i, :, :] = adjusted_mixing_matrix
+                    plane_mixing[i, :, :] = mixing_matrix
                     trace_sig_out = r_sources[:, 0]
                     trace_ct_out = r_sources[:, 1]
                     rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)
@@ -1248,8 +1248,8 @@ class MesoscopeICA(object):
                     ica_plane_out[0, i, :] = traces_sig[i]
                     ica_plane_out[1, i, :] = traces_ct[i]
                     plane_crosstalk[:, i] = np.nan
-                    plane_mixing.append(np.nan)
-                    plane_a_mixing.append(np.nan)
+                    plane_mixing[i, :, :] = np.nan
+                    plane_a_mixing[i, :, :] = np.nan
 
         return ica_plane_out, plane_crosstalk, plane_mixing, plane_a_mixing
 
