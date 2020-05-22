@@ -529,7 +529,7 @@ def test_unmix_plane(session=None):
 	traces_out_np, crosstalk_np, mixing_np, a_mixing_np = self.unmix_plane(traces_in_np, traces_in_active_np, a_mixing)
 
 	assert traces_out_np.shape == traces_in_np.shape, f"output traces are not shaped the same as input traces for {tkey}"
-	assert np.all(crosstalk_np != 0.0), f"No crosstalk data returned for {tkey}"
+	assert np.all(crosstalk_np == 0.0), f"No crosstalk data returned for {tkey}"
 	assert crosstalk_np.shape == (traces_out_np.shape[0], traces_out_np.shape[1]), f"Incorrect shape for crosstlak output for {tkey}"
 	assert len(a_mixing_np) == traces_in_np.shpe[1], f"Adjusted mixing matrix output has wrong length for {tkey}"
 	assert len(mixing_np) == traces_in_np.shape[1], f"Mixing matrix output has wrong length for {tkey}"
