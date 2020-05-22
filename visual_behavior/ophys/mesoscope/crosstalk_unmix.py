@@ -738,7 +738,6 @@ class MesoscopeICA(object):
                     self.found_offsets[pkey][tkey] = [True, True]
         return
 
-
     @staticmethod
     def get_ica_active_events(traces, traces_active):
         dict_traces_active = {}
@@ -753,9 +752,8 @@ class MesoscopeICA(object):
                 traces_ica_active = np.array([signal_trace_active, crosstalk_trace_active])
                 dict_traces_active[roi] = traces_ica_active
             else:
-                dict_traces_active[roi] = active_valid
+                dict_traces_active[roi] = np.nan
         return dict_traces_active
-
 
     def unmix_pair(self):
         """
@@ -1212,39 +1210,46 @@ class MesoscopeICA(object):
             # perform unmixing separately on each ROI:
             for i, roi in enumerate(rois):
                 # get events traces
-                trace_sig_evs = traces_in_active[roi][0]
-                trace_ct_evs = traces_in_active[roi][1]
-                mix, a_mix, a_unmix, r_sources_evs = run_ica(trace_sig_evs, trace_ct_evs)
-                adjusted_mixing_matrix = a_mix
-                mixing_matrix = mix
-                trace_sig_evs_out = r_sources_evs[:, 0]
-                trace_ct_evs_out = r_sources_evs[:, 1]
-                rescaled_trace_sig_evs_out = rescale(trace_sig_evs, trace_sig_evs_out)
-                rescaled_trace_ct_evs_out = rescale(trace_ct_evs, trace_ct_evs_out)
+                if not np.isnan(traces_in_active[roi]): # if active trace exists, use it to unmix, else - skip unmixing for this roi
+                    trace_sig_evs = traces_in_active[roi][0]
+                    trace_ct_evs = traces_in_active[roi][1]
+                    mix, a_mix, a_unmix, r_sources_evs = run_ica(trace_sig_evs, trace_ct_evs)
+                    adjusted_mixing_matrix = a_mix
+                    mixing_matrix = mix
+                    trace_sig_evs_out = r_sources_evs[:, 0]
+                    trace_ct_evs_out = r_sources_evs[:, 1]
+                    rescaled_trace_sig_evs_out = rescale(trace_sig_evs, trace_sig_evs_out)
+                    rescaled_trace_ct_evs_out = rescale(trace_ct_evs, trace_ct_evs_out)
 
-                # calculating crosstalk : on events
-                slope_in, _, _, _ = get_crosstalk_data(trace_sig_evs, trace_ct_evs, generate_plot_data=False)
-                slope_out, _, _, _ = get_crosstalk_data(rescaled_trace_sig_evs_out, rescaled_trace_ct_evs_out,
-                                                        generate_plot_data=False)
-                crosstalk_before_demixing_evs = slope_in * 100
-                crosstalk_after_demixing_evs = slope_out * 100
-                plane_crosstalk[:, i] = [crosstalk_before_demixing_evs, crosstalk_after_demixing_evs]
+                    # calculating crosstalk : on events
+                    slope_in, _, _, _ = get_crosstalk_data(trace_sig_evs, trace_ct_evs, generate_plot_data=False)
+                    slope_out, _, _, _ = get_crosstalk_data(rescaled_trace_sig_evs_out, rescaled_trace_ct_evs_out,
+                                                            generate_plot_data=False)
+                    crosstalk_before_demixing_evs = slope_in * 100
+                    crosstalk_after_demixing_evs = slope_out * 100
+                    plane_crosstalk[:, i] = [crosstalk_before_demixing_evs, crosstalk_after_demixing_evs]
 
-                # applying unmixing matrix to the entire trace
-                trace_sig = traces_sig[i]
-                trace_ct = traces_ct[i]
-                # recontructing sources
-                traces = np.array([trace_sig, trace_ct]).T
+                    # applying unmixing matrix to the entire trace
+                    trace_sig = traces_sig[i]
+                    trace_ct = traces_ct[i]
+                    # recontructing sources
+                    traces = np.array([trace_sig, trace_ct]).T
 
-                r_sources = np.dot(a_unmix, traces.T).T
-                plane_a_mixing.append(adjusted_mixing_matrix)
-                plane_mixing.append(mixing_matrix)
-                trace_sig_out = r_sources[:, 0]
-                trace_ct_out = r_sources[:, 1]
-                rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)
-                rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
-                ica_plane_out[0, i, :] = rescaled_trace_sig_out
-                ica_plane_out[1, i, :] = rescaled_trace_ct_out
+                    r_sources = np.dot(a_unmix, traces.T).T
+                    plane_a_mixing.append(adjusted_mixing_matrix)
+                    plane_mixing.append(mixing_matrix)
+                    trace_sig_out = r_sources[:, 0]
+                    trace_ct_out = r_sources[:, 1]
+                    rescaled_trace_sig_out = rescale(trace_sig, trace_sig_out)
+                    rescaled_trace_ct_out = rescale(trace_ct, trace_ct_out)
+                    ica_plane_out[0, i, :] = rescaled_trace_sig_out
+                    ica_plane_out[1, i, :] = rescaled_trace_ct_out
+                else:  # trace did not have events, skipping unmixing, adding original trace to the output
+                    ica_plane_out[0, i, :] = traces_sig[i]
+                    ica_plane_out[1, i, :] = traces_ct[i]
+                    plane_crosstalk[:, i] = np.nan
+                    plane_mixing.append(np.nan)
+                    plane_a_mixing.append(np.nan)
 
         return ica_plane_out, plane_crosstalk, plane_mixing, plane_a_mixing
 
