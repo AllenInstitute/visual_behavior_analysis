@@ -217,7 +217,7 @@ def test_unmix_pair(test_session=None):
 		for tkey in self.tkeys:
 			out_sig = self.outs[pkey][tkey][0]
 			out_ct = self.outs[pkey][tkey][1]
-			rois_valid = self.rois_valid[pkey][tkey]
+			rois_valid = self.rois_valid[pkey]
 			inp_sig = self.ins[pkey][tkey][0]
 			inp_ct = self.ins[pkey][tkey][1]
 			mixing = self.mixing[pkey][tkey]
@@ -533,7 +533,6 @@ def test_unmix_plane(session=None):
 	assert crosstalk_np.shape == (traces_out_np.shape[0], traces_out_np.shape[1]), f"Incorrect shape for crosstlak output for {tkey}"
 	assert len(a_mixing_np) == traces_in_np.shape[1], f"Adjusted mixing matrix output has wrong length for {tkey}"
 	assert len(mixing_np) == traces_in_np.shape[1], f"Mixing matrix output has wrong length for {tkey}"
-
 	assert np.all(a_mixing_np == a_mixing), f"Mixing matrix for neuropil should be teh same as for roi"
 
 	return
