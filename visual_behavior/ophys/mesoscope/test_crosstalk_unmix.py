@@ -506,6 +506,7 @@ def test_unmix_plane(session=None):
 	ica_obj.get_ica_traces()
 	ica_obj.validate_raw_traces(return_vba=False)
 	ica_obj.debias_traces()
+	ica_obj.get_active_traces("Input")
 	self = ica_obj
 	pkey = 'pl1'
 
