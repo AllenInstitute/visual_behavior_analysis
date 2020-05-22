@@ -200,7 +200,7 @@ def test_unmix_pair(test_session=None):
 	# remove outputs if they were read from disk :
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
-			os.remove(self.ins_paths[pkey][tkey])
+			os.remove(self.outs_paths[pkey][tkey])
 
 	self.unmix_pair()
 	# 1. test that all attributes have been set
