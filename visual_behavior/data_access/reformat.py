@@ -320,12 +320,27 @@ def add_time_from_last_change(stimulus_presentations):
 
         ARGS: SDK session object
         MODIFIES: session.stimulus_presentations
-        RETURNS: nothing
+        RETURNS: stimulus_presentations
     '''
     flash_times = stimulus_presentations["start_time"].values
     change_times = stimulus_presentations.query('change')['start_time'].values
     time_from_last_change = esp.time_from_last(flash_times, change_times)
     stimulus_presentations["time_from_last_change"] = time_from_last_change
+    return stimulus_presentations
+
+def add_time_from_last_omission(stimulus_presentations):
+    '''
+        Adds a column to session.stimulus_presentations, 'time_from_last_omission', which is the time, in seconds
+        since the last stimulus omission
+
+        ARGS: SDK session object
+        MODIFIES: session.stimulus_presentations
+        RETURNS: stimulus_presentations
+    '''
+    flash_times = stimulus_presentations["start_time"].values
+    omission_times = stimulus_presentations.query('omitted')['start_time'].values
+    time_from_last_omission = esp.time_from_last(flash_times, omission_times, side='left')
+    stimulus_presentations["time_from_last_omission"] = time_from_last_omission
     return stimulus_presentations
 
 
