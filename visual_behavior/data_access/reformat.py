@@ -73,7 +73,7 @@ def reformat_experiments_table(experiments):
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
     experiments = add_exposure_number_to_experiments_table(experiments)
-    experiments = add_model_outputs_availability_to_experiments_table(experiments)
+    experiments = add_model_outputs_availability_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
     if 'index' in experiments.columns:

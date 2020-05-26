@@ -524,7 +524,7 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
        Adds additional columns to stimulus table for model weights and related metrics
     '''
     model_output_dir = get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
+    model_output_file = [file for file in os.listdir(model_output_dir) if (str(behavior_session_id) in file) and ('training' not in file)]
     if len(model_output_file) > 0:
         model_outputs = pd.read_csv(os.path.join(model_output_dir, model_output_file[0]))
         model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change'], inplace=True)

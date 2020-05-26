@@ -22,8 +22,13 @@ class LazyLoadable(object):
         self.calculate = calculate
 
 def check_for_model_outputs(behavior_session_id):
+    """
+    Checks whether model output file with omission regressors exists (does not say '_training' at end of filename)
+    :param behavior_session_id:
+    :return:
+    """
     model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
+    model_output_file = [file for file in os.listdir(model_output_dir) if (str(behavior_session_id) in file) and ('training' not in file)]
     if len(model_output_file)>0:
         return True
     else:
