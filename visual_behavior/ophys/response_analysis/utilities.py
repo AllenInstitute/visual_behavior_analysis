@@ -424,8 +424,8 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         if ('image_name' in conditions) or ('change_image_name' in conditions) or ('prior_image_name' in conditions):
             mdf = annotate_mean_df_with_pref_stim(mdf, exclude_omitted_from_pref_stim)
     if analysis is not None:
-        mdf = annotate_mean_df_with_p_value(analysis, mdf, window=window)
-        mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
+        # mdf = annotate_mean_df_with_p_value(analysis, mdf, window=window)
+        # mdf = annotate_mean_df_with_sd_over_baseline(analysis, mdf, window=window)
         try:
             mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
             mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
@@ -567,17 +567,13 @@ def get_colors_for_behavioral_response_types():
 
 def add_metadata_to_mean_df(mdf, metadata):
     # metadata = metadata.reset_index()
-    metadata['experiment_id'] = metadata['ophys_experiment_id'].values[0]
+    # metadata['experiment_id'] = metadata['ophys_experiment_id']
     # metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
     metadata = metadata.drop(columns=['excitation_lambda', 'emission_lambda', 'indicator',
                                       'field_of_view_width', 'field_of_view_height'])
-    # metadata['experiment_id'] = [int(experiment_id) for experiment_id in metadata.experiment_id]
     metadata['image_set'] = metadata['session_type'].values[0][-1]
     metadata['session_number'] = metadata['session_type'].values[0][6]
-    # metadata['training_state'] = ['trained' if image_set == 'A' else 'untrained' for image_set in
-    #                               metadata.image_set.values]
-    # metadata['session_type'] = ['image_set_' + image_set for image_set in metadata.image_set.values]
-    mdf = mdf.merge(metadata, how='outer', on='experiment_id')
+    mdf = mdf.merge(metadata, how='outer', on='ophys_experiment_id')
     return mdf
 
 
