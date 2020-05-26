@@ -1296,40 +1296,51 @@ def get_annotated_experiments_table():
     return experiments_table
 
 
-def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events):
+def get_file_name_for_multi_session_df(df_name, project_code, conditions, use_events):
     if use_events:
         suffix = '_events'
     else:
         suffix = ''
 
     if len(conditions) == 5:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
+        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
             2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
+        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
             2] + '_' + conditions[
             3] + suffix + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
+        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
             2] + suffix + '.h5'
     elif len(conditions) == 2:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + suffix + '.h5'
     elif len(conditions) == 1:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[0] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[0] + suffix + '.h5'
 
-    return filename
+    return filepathsname
 
 
 def get_multi_session_df(cache_dir, df_name, conditions, project_codes, use_events=False):
-    experiments_table = get_annotated_experiments_table()
+    experiments_table = get_filtered_ophys_experiment_table()
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
         expts = experiments.reset_index()
-        for session_type in np.sort(experiments.session_type.unique()):
-            filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
+        if 'session_type' in conditions:
+            for session_type in np.sort(experiments.session_type.unique()):
+                filename = get_file_name_for_multi_session_df(df_name, project_code, conditions, use_events)
+                filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
+                df = pd.read_hdf(filepath, key='df')
+                df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
+                                     'layer', 'ophys_session_id', 'project_code', 'location2',
+                                     'specimen_id', 'depth', 'exposure_number', 'container_id']], on='ophys_experiment_id')
+                outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
+                df = df[df.cell_specimen_id.isin(outlier_cells) == False]
+                multi_session_df = pd.concat([multi_session_df, df])
+        else:
+            filename = get_file_name_for_multi_session_df(df_name, project_code, conditions, use_events)
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
             df = pd.read_hdf(filepath, key='df')
             df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
@@ -1337,7 +1348,6 @@ def get_multi_session_df(cache_dir, df_name, conditions, project_codes, use_even
                                  'specimen_id', 'depth', 'exposure_number', 'container_id']], on='ophys_experiment_id')
             outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
             df = df[df.cell_specimen_id.isin(outlier_cells) == False]
-            multi_session_df = pd.concat([multi_session_df, df])
     return multi_session_df
 
 
