@@ -9,8 +9,9 @@ import numpy as np
 import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from visual_behavior.visualization.utils import save_figure
+from visual_behavior.visualization.utils import save_figure, placeAxesOnGrid
 from visual_behavior.ophys.response_analysis import utilities as ut
+import visual_behavior.data_access.loading as loading
 
 # from visual_behavior.visualization.ophys import population_summary_figures as psf
 
@@ -20,55 +21,6 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_style('white',
               {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True, })
 sns.set_palette('deep')
-
-
-def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
-    '''
-    Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
-
-    Takes as arguments:
-        fig: figure handle - required
-        dim: number of rows and columns in the subaxes - defaults to 1x1
-        xspan: fraction of figure that the subaxes subtends in the x-direction (0 = left edge, 1 = right edge)
-        yspan: fraction of figure that the subaxes subtends in the y-direction (0 = top edge, 1 = bottom edge)
-        wspace and hspace: white space between subaxes in vertical and horizontal directions, respectively
-
-    returns:
-        subaxes handles
-    '''
-    import matplotlib.gridspec as gridspec
-
-    outer_grid = gridspec.GridSpec(100, 100)
-    inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
-                                                  subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
-                                                               # flake8: noqa: E999
-                                                               int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace,
-                                                  hspace=hspace)  # flake8: noqa: E999
-
-    # NOTE: A cleaner way to do this is with list comprehension:
-    # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
-    inner_ax = dim[0] * [dim[1] * [
-        fig]]  # filling the list with figure objects prevents an error when it they are later replaced by axis handles
-    inner_ax = np.array(inner_ax)
-    idx = 0
-    for row in range(dim[0]):
-        for col in range(dim[1]):
-            if row > 0 and sharex == True:
-                share_x_with = inner_ax[0][col]
-            else:
-                share_x_with = None
-
-            if col > 0 and sharey == True:
-                share_y_with = inner_ax[row][0]
-            else:
-                share_y_with = None
-
-            inner_ax[row][col] = plt.Subplot(fig, inner_grid[idx], sharex=share_x_with, sharey=share_y_with)
-            fig.add_subplot(inner_ax[row, col])
-            idx += 1
-
-    inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
-    return inner_ax
 
 
 def plot_max_projection_image(dataset, save_dir=None, folder='max_projection'):
@@ -1780,6 +1732,274 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
                         dataset.analysis_folder + '_' + str(cell_specimen_id) + '_' + str(cell_index) + suffix)
     if not show:
         plt.close()
+
+
+def colormap():
+    colormap = {
+        'engaged': 'olivedrab',
+        'disengaged': 'firebrick'
+    }
+    return colormap
+
+
+def get_title(ophys_experiment_id, cell_specimen_id):
+    '''
+    generate a standardized figure title containing identifying information
+    '''
+    cache = loading.get_visual_behavior_cache()
+    experiments_table = loading.get_filtered_ophys_experiment_table().reset_index()
+
+    row = experiments_table.query('ophys_experiment_id == @ophys_experiment_id').iloc[0].to_dict()
+    title = '{}__specimen_id={}__exp_id={}__{}__{}__depth={}__cell_id={}'.format(
+        row['cre_line'],
+        row['specimen_id'],
+        row['ophys_experiment_id'],
+        row['session_type'],
+        row['targeted_structure'],
+        row['imaging_depth'],
+        cell_specimen_id,
+    )
+    return title
+
+def merge_in_extended_stimulus_presentations(analysis):
+    '''
+    merges extended_stimulus_presentations into the response dataframes
+    operates in place
+    takes ~30-60 seconds to run
+    '''
+    # merge on stim presentations id
+    dfs_to_merge = [
+        'stimulus_response_df', 
+        'stimulus_run_speed_df',
+        'omission_response_df',
+        'omission_run_speed_df',
+    ]
+    for df in dfs_to_merge:
+        setattr(analysis, df, getattr(analysis, df).merge(
+                analysis.dataset.extended_stimulus_presentations,
+                left_on = 'stimulus_presentations_id',
+                right_index=True,
+                how='left',
+                suffixes=('','_duplicate')
+        ))
+
+    # merge on change time
+    dfs_to_merge = [
+        'trials_response_df',
+        'trials_run_speed_df'
+    ]
+    for df in dfs_to_merge:
+        setattr(analysis, df, getattr(analysis, df).merge(
+            analysis.dataset.extended_stimulus_presentations,
+            left_on = 'change_time',
+            right_on = 'start_time',
+            how='left',
+            suffixes=('','_duplicate')
+        ))
+
+
+def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
+    '''
+    plots raw F and deltaF/F with engagement state denoted by background color
+    inputs:
+        analysis object
+        cell_specimen_id (int))
+        axes (list or array): an array of axes, expected length = 3
+    returns:
+        None
+    '''
+    
+    sdf = analysis.stimulus_response_df
+
+    sdf_engagement_state = sdf.drop_duplicates('start_time')[['start_time', 'engagement_state']].copy().reset_index()
+
+    sdf_engagement_state['next_start_time'] = sdf_engagement_state['start_time'].shift(-1)
+    sdf_engagement_state['state_change'] = sdf_engagement_state['engagement_state'] != sdf_engagement_state['engagement_state'].shift()
+
+    state_changes = sdf_engagement_state.query('state_change == True').copy()
+    state_changes['next_state_change'] = state_changes['start_time'].shift(-1)
+    state_changes.loc[state_changes.index.max(), 'next_state_change'] = sdf['start_time'].max()
+
+    state_colors = colormap()
+
+    for ii,ax in enumerate(axes):
+        ax.axvspan(0,state_changes.iloc[0]['start_time'], color='gray', alpha=0.5)
+        for idx, row in state_changes.iterrows():
+            ax.axvspan(row['start_time'] / 60., row['next_state_change'] / 60., color=state_colors[row['engagement_state']])
+        ax.axvspan(
+            row['next_state_change'] / 60.,
+            row['next_state_change'] / 60. + 5, 
+            color='gray', 
+            alpha=0.5
+        )
+        ax.axvspan(
+            row['next_state_change'] / 60. + 5,
+            analysis.dataset.ophys_timestamps.max() / 60., 
+            color='yellow', 
+            alpha=0.5
+        )
+
+        ax.set_xlim(0, analysis.dataset.ophys_timestamps.max() / 60.)
+        
+        if ii == 0:
+            ax.plot(
+                analysis.dataset.ophys_timestamps/60, 
+                analysis.dataset.corrected_fluorescence_traces.loc[cell_specimen_id]['corrected_fluorescence'],
+                linewidth=2,
+                color='black'
+            )
+            ax.set_ylabel('Corrected\nFluor.', rotation=0, ha='right', va='center')
+            ax.set_xticks([])
+            ax.set_title('engagement state vs. session time\n(gray = gray screen, green = engaged, red = disengaged, yellow = fingerprint movie)')
+        if ii == 1:
+            ax.plot(
+                analysis.dataset.ophys_timestamps/60, 
+                analysis.dataset.dff_traces.loc[cell_specimen_id]['dff'],
+                linewidth=2,
+                color='black'
+            )
+            ax.set_ylabel('$\Delta$F/F', rotation=0, ha='right', va='center')
+            ax.set_xticks([])
+        if ii == 2:
+            ax.plot(
+                analysis.dataset.running_speed['timestamps']/60, 
+                analysis.dataset.running_speed['speed'],
+                linewidth=2,
+                color='black'
+            )
+            ax.set_ylabel('running\nspeed\n(cm/s)', rotation=0, ha='right', va='center')
+            ax.set_xlabel('session time (minutes)')
+
+
+def make_cell_plot(dataset, cell_specimen_id, ax):
+    roi_masks = loading.get_sdk_roi_masks(dataset.cell_specimen_table)
+    ax[0].imshow(dataset.max_projection, cmap='gray')
+    ax[0].set_title('max projection')
+
+    ax[1].imshow(roi_masks[cell_specimen_id], cmap='gray')
+    ax[1].set_title('ROI mask for\ncell_specimen_id {}'.format(cell_specimen_id))
+
+    ax[2].imshow(dataset.max_projection, cmap='gray')
+    v = roi_masks[cell_specimen_id].copy()
+    v[v == 0] = np.nan
+    ax[2].imshow(v, cmap='spring_r', alpha=0.5)
+    ax[2].set_title('overlay (ROI mask in yellow)')
+
+    for axis in ax:
+        axis.axis('off')
+
+def seaborn_lineplot(df, ax, legend='brief', xlabel='time (s)', ylabel='$\Delta$F/F', n_boot=1000):
+    state_colors = colormap()
+
+    sns.lineplot(
+        x='eventlocked_timestamps',
+        y='eventlocked_traces',
+        data=df,
+        hue='engagement_state',
+        hue_order=['engaged', 'disengaged'],
+        palette=[state_colors[state] for state in ['engaged', 'disengaged']],
+        ax=ax,
+        legend=legend,
+        n_boot=n_boot,
+    )
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel,rotation=0,ha='right')
+
+def make_cell_response_summary_plot(analysis, cell_specimen_id, save=False, show=True, errorbar_bootstrap_iterations=1000):
+    figure_savedir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/single_cell_plots/response_plots'
+    hspace = 0.05
+    oeid = analysis.dataset.ophys_experiment_id
+
+    if 'engagement_state' not in analysis.stimulus_response_df.columns:
+        print('merging')
+        merge_in_extended_stimulus_presentations(analysis)
+
+    params_dict = {
+        'stimulus response':{
+            'ophys_df':analysis.stimulus_response_df,
+            'running_df':analysis.stimulus_run_speed_df,
+            'xlims':(-0.5, 0.75),
+            'omit':None,
+            'pre_color':'blue',
+            'post_color':'blue'
+        },
+        'omission response':{
+            'ophys_df':analysis.omission_response_df,
+            'running_df':analysis.omission_run_speed_df,
+            'xlims':(-3, 3),
+            'omit':0,
+            'pre_color':'blue',
+            'post_color':'blue'
+        },
+        'change response':{
+            'ophys_df':analysis.trials_response_df,
+            'running_df':analysis.trials_run_speed_df,
+            'pupil_df':None,
+            'xlims':(-3, 3),
+            'omit':None,
+            'pre_color':'gray',
+            'post_color':'green'
+        },
+    }
+    ylabels = {
+        'ophys':'$\Delta$F/F',
+        'running':'Running Speed\n(cm/s)'
+    }
+
+    fig = plt.figure(figsize=(20, 18))
+    ax = {
+        'state_summary': placeAxesOnGrid(fig, dim=[3, 1], xspan=[0, 1], yspan=[0, 0.2], sharex=False, hspace=0),
+        'cell_images': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.3, 0.65], sharey=True, wspace=0),
+        'ophys_response_plots': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.7, 0.84], sharey=True),
+        'running_response_plots': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.86, 1], sharey=True),
+    }
+
+    make_engagement_time_summary_plot(analysis, cell_specimen_id, ax['state_summary'])
+    make_cell_plot(analysis.dataset, cell_specimen_id, ax['cell_images'])
+    dfs = {
+        'stimulus_response_df':analysis
+    }
+    for col, response_type in enumerate(params_dict.keys()):
+        for row, datastream in enumerate(['ophys','running']):
+            if response_type == 'stimulus response' and datastream == 'ophys':
+                legend = 'brief'
+            else:
+                legend = False
+            
+            if datastream == 'ophys':
+                data = params_dict[response_type]['{}_df'.format(datastream)].query('cell_specimen_id == @cell_specimen_id')
+                ax['{}_response_plots'.format(datastream)][col].set_title(response_type)
+                ax['{}_response_plots'.format(datastream)][col].set_xticklabels([])
+            else:
+                data = params_dict[response_type]['{}_df'.format(datastream)]
+                ax['{}_response_plots'.format(datastream)][col].set_title('')
+
+            seaborn_lineplot(
+                data,
+                ax['{}_response_plots'.format(datastream)][col],
+                legend=legend,
+                n_boot=errorbar_bootstrap_iterations,
+                xlabel='time (s)' if row == 1 else '',
+                ylabel=ylabels[datastream] if col == 0 else '',
+            )
+
+            
+            ax['{}_response_plots'.format(datastream)][col].set_xlim(params_dict[response_type]['xlims'])
+            designate_flashes(
+                ax['{}_response_plots'.format(datastream)][col], 
+                omit=params_dict[response_type]['omit'], 
+                pre_color=params_dict[response_type]['pre_color'],
+                post_color=params_dict[response_type]['post_color']
+            )
+
+    plt.subplots_adjust(top=0.9)
+    title = get_title(oeid, cell_specimen_id)
+    fig.suptitle(title)
+    if save:
+        fig.savefig(os.path.join(figure_savedir, title + '.png'), dpi=200)
+    if not show:
+        plt.close()
+
 
 def designate_flashes(ax, omit=None, pre_color='blue', post_color='blue'):
     '''
