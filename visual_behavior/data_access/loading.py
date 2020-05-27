@@ -378,8 +378,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def metadata_string(self):
         # for figure titles & filenames
         m = self.metadata
+        rig_name = m['rig_name'].split('.')[0]+m['rig_name'].split('.')[1]
         self._metadata_string = str(m['donor_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['driver_line'][
-            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
+            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type'] + '_'+ rig_name
         return self._metadata_string
 
     @property
