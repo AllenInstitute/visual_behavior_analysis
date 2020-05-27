@@ -214,7 +214,7 @@ def test_unmix_pair(test_session=None):
 		for tkey in self.tkeys:
 			out_sig = self.outs[pkey][tkey][0]
 			out_ct = self.outs[pkey][tkey][1]
-			rois_valid = self.rois_valid[pkey][tkey]
+			rois_valid = self.rois_valid[pkey]
 			inp_sig = self.ins[pkey][tkey][0]
 			inp_ct = self.ins[pkey][tkey][1]
 			mixing = self.mixing[pkey][tkey]
