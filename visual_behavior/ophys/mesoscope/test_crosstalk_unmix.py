@@ -2,7 +2,10 @@ import numpy as np
 import os
 import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import sciris as sc
+import pylab as pl
 import h5py
+from visual_behavior.ophys.mesoscope.crosstalk_unmix import run_ica
+import copy
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 
 
@@ -47,9 +50,9 @@ def test_get_ica_traces(test_session=None):
 			assert os.path.isfile(ica_obj.raw_paths[pkey][tkey]), f'input traces not found for plane {pkey}, {tkey}'
 
 
-def test_validate_traces(test_session = None):
+def test_validate_raw_traces(test_session = None):
 	"""
-	visual_behavior.ophys.mesoscope.crosstalk_unmix.MesoscopeICA.validate_traces()
+	visual_behavior.ophys.mesoscope.crosstalk_unmix.MesoscopeICA.validate_raw_traces()
 	Testing:
 		1. reading existing valid jsons, confirming the shape, confirming that roi and neuropil valid jsons are the same
 		2. validating tarces: confirming
@@ -66,7 +69,7 @@ def test_validate_traces(test_session = None):
 	pair = pairs[0]
 	ica_obj.set_exp_ids(pair)
 	ica_obj.get_ica_traces()
-	ica_obj.validate_traces()
+	ica_obj.validate_raw_traces()
 	self = ica_obj
 
 	# 1. Test if all attributes have been set:
@@ -81,14 +84,14 @@ def test_validate_traces(test_session = None):
 			os.remove(self.rois_valid_paths[pkey][tkey])
 
 	# testing with return_vba = False (default value)
-	self.validate_traces()
+	self.validate_raw_traces()
 	for pkey in self.pkeys:  # test if ROi names and NP names align:
 		roi_names = self.rois_names_valid[pkey]['roi']
 		np_names = self.rois_names_valid[pkey]['np']
 		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
 
 	# jsons exist, re-run validate to read them and test the same:
-	self.validate_traces()
+	self.validate_raw_traces()
 	for pkey in self.pkeys:  # test if ROi names and NP names align:
 		roi_names = self.rois_names_valid[pkey]['roi']
 		np_names = self.rois_names_valid[pkey]['np']
@@ -119,7 +122,7 @@ def test_debias_traces(test_session=None):
 	pair = pairs[0]
 	ica_obj.set_exp_ids(pair)
 	ica_obj.get_ica_traces()
-	ica_obj.validate_traces()
+	ica_obj.validate_raw_traces()
 	ica_obj.debias_traces()
 	self = ica_obj
 
@@ -189,15 +192,16 @@ def test_unmix_pair(test_session=None):
 	pair = pairs[0]
 	ica_obj.set_exp_ids(pair)
 	ica_obj.get_ica_traces()
-	ica_obj.validate_traces()
+	ica_obj.validate_raw_traces()
 	ica_obj.debias_traces()
+	ica_obj.get_active_traces("Input")
 	ica_obj.unmix_pair()
 	self = ica_obj
 
 	# remove outputs if they were read from disk :
 	for pkey in self.pkeys:
 		for tkey in self.tkeys:
-			os.remove(self.ins_paths[pkey][tkey])
+			os.remove(self.outs_paths[pkey][tkey])
 
 	self.unmix_pair()
 	# 1. test that all attributes have been set
@@ -214,7 +218,7 @@ def test_unmix_pair(test_session=None):
 		for tkey in self.tkeys:
 			out_sig = self.outs[pkey][tkey][0]
 			out_ct = self.outs[pkey][tkey][1]
-			rois_valid = self.rois_valid[pkey][tkey]
+			rois_valid = self.rois_valid[pkey]
 			inp_sig = self.ins[pkey][tkey][0]
 			inp_ct = self.ins[pkey][tkey][1]
 			mixing = self.mixing[pkey][tkey]
@@ -250,12 +254,12 @@ def test_validate_cells_crosstalk(session):
 	else:
 		ses = session
 
-	ica_obj = ica.MesoscopeICA(session_id=session, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+	ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
 	pairs = ica_obj.dataset.get_paired_planes()
 	pair = pairs[0]
 	ica_obj.set_exp_ids(pair)
 	ica_obj.get_ica_traces()
-	ica_obj.validate_traces()
+	ica_obj.validate_raw_traces()
 	ica_obj.debias_traces()
 	ica_obj.unmix_pair()
 	ica_obj.validate_cells_crosstalk()
@@ -311,7 +315,7 @@ def test_filter_dff_traces_crosstalk(session=None):
     pair = pairs[0]
     ica_obj.set_exp_ids(pair)
     ica_obj.get_ica_traces()
-    ica_obj.validate_traces(return_vba=False)
+    ica_obj.validate_raw_traces(return_vba=False)
     ica_obj.debias_traces()
     ica_obj.unmix_pair()
     ica_obj.validate_cells_crosstalk()
@@ -350,3 +354,189 @@ def test_filter_dff_traces_crosstalk(session=None):
 	    assert 'data' in datasets, f"traces are not present in dff_ct file for exp {ica_obj.exp_ids[pkey]}"
 	    assert 'roi_names' in datasets, f"roi names are not present in dff_ct file for exp {ica_obj.exp_ids[pkey]}"
 	    f.close()
+
+
+def test_extract_active(session=None):
+	if not session:
+		ses = 839208243
+		"""LIMS session ID to use for test,
+		use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
+		which takes ~ 5 hours"""
+	else:
+		ses = session
+
+	ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+	pairs = ica_obj.dataset.get_paired_planes()
+	pair = pairs[0]
+	ica_obj.set_exp_ids(pair)
+	ica_obj.get_ica_traces()
+	ica_obj.validate_raw_traces(return_vba=False)
+	ica_obj.debias_traces()
+
+	pkey = 'pl1'
+	tkey = 'roi'
+	traces = ica_obj.ins[pkey][tkey]
+	traces_sig_evs, traces_ct_evs, valid = ica.extract_active(traces)
+
+	# 1. Check data alignment
+	assert traces_sig_evs.shape[0] == traces.shape[1], f"Output of active traces SIGNAL contains different number of " \
+													   f"traces (number of rois doesn't align)"
+	assert traces_ct_evs.shape[0] == traces.shape[1], f"Output of active traces CROSSTALK contains different number of " \
+													  f"traces (number of rois doesn't align)"
+	assert len(valid) == traces.shape[1], f"Length of Valid list contains different number of elements than number of " \
+										  f"cells in input traces"
+
+	# 2. Check if valid actually has true for traces with no Nans
+	for i in range(traces_sig_evs.shape[0]):
+		assert valid[i] == (not np.any(np.isnan(traces_sig_evs[i])) and not np.any(np.isnan(traces_ct_evs[i])))
+
+	return
+
+
+def test_run_ica(snr=30):
+	"""
+	simulate noisy signals and test ICA function on them
+	:param snr: singal to noise ratio to test the ICA with
+	:return:
+	"""
+	# create simulated signals
+	npts = 1000
+	x = pl.arange(npts)
+	sig1 = pl.sin(x / 100) ** 500 + 1 / snr * pl.randn(npts)
+	sig2 = pl.sin(x / 84) ** 500 + 1 / snr * pl.randn(npts)
+
+	# Scaling signals
+	S = np.array([sig1, sig2])
+	D = np.array([[1, 0], [0, 0.3]])  # sclaing matrix
+	S_s = np.dot(D, S) # scaled sources
+
+	# Mixing signals
+	M = np.array([[0.9, 0.1], [0.2, 0.8]])  # mixing matrix
+	O = np.dot(S_s.T, M)  # mixed observations
+
+	mix, a_mix, a_unmix, r_source = run_ica(O[:,0], O[:,1])
+
+	# normallize mixing matrix and compare to original
+	b_mix = copy.deepcopy(a_mix)
+	b_mix = b_mix / b_mix.sum(axis=0)
+	b_mix = b_mix.T
+
+	# test if ICA mixing matrix == original mixing matrix
+	assert(np.all(np.isclose(b_mix, M, atol=0.05))), f"Normalized ICA mixign matrix is not similar to original mixing matrix"
+	# test if unmixing matrix is inverse of mixing:
+	assert(np.all(np.isclose(np.linalg.inv(a_mix), a_unmix))), f"Unmixing is not an inverse of mixing"
+	# test the shape of recovered sources is same as shape of input observations:
+	assert (r_source.shape == O.shape), f"output of ICA is not shaped the same as input observations"
+	return
+
+
+def test_get_active_traces(session=None):
+
+	if not session:
+		ses = 839208243
+		"""LIMS session ID to use for test,
+		use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
+		which takes ~ 5 hours"""
+	else:
+		ses = session
+
+	ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="roi", np_name="neuropil")
+	pairs = ica_obj.dataset.get_paired_planes()
+	pair = pairs[0]
+	ica_obj.set_exp_ids(pair)
+	ica_obj.get_ica_traces()
+	ica_obj.validate_raw_traces(return_vba=False)
+	ica_obj.debias_traces()
+	ica_obj.get_active_traces("Input")
+	self = ica_obj
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+
+			# test if attibutes not nones
+			assert len(ica_obj.ins_active[pkey]) != 0, f"Failed to set attributes self.ins_active for {ica_obj.exp_ids[pkey]}"
+			assert len(ica_obj.ins_active_paths[pkey]) != 0, f"Failed to set attributes self.ins_active_paths for {ica_obj.exp_ids[pkey]}"
+			# testing if output files exist:
+			assert os.path.isfile(ica_obj.ins_active_paths[pkey][tkey]), f"Output file doesn't exist for {ica_obj.exp_ids[pkey]}"
+			# testing to check if number of rois in ins_active is equal ot number of rois_valid
+			assert len(ica_obj.ins_active[pkey][tkey]) == len(ica_obj.rois_names_valid[pkey][tkey]), f"Number of ROIs in ins_active doesnt align with number of valid rois for {ica_obj.exp_ids[pkey]} "
+	return
+
+
+def test_get_ica_active_events(session=None):
+	if not session:
+		ses = 839208243
+		"""LIMS session ID to use for test,
+		use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
+		which takes ~ 5 hours"""
+	else:
+		ses = session
+
+	ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="roi", np_name="neuropil")
+	pairs = ica_obj.dataset.get_paired_planes()
+	pair = pairs[0]
+	ica_obj.set_exp_ids(pair)
+	ica_obj.get_ica_traces()
+	ica_obj.validate_raw_traces(return_vba=False)
+	ica_obj.debias_traces()
+	ica_obj.get_active_traces("Input")
+	self = ica_obj
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			traces_active = ica_obj.ins_active[pkey][tkey]
+			traces = ica_obj.ins[pkey][tkey]
+			dict_traces_active = self.get_ica_active_events(traces, traces_active)
+
+			assert len(dict_traces_active) == len(ica_obj.rois_names_valid[pkey][tkey]), f"Length of dict_traces_active is not the same as rois_names_valid for {ica_obj.exp_ids[pkey]}"
+
+	return
+
+
+def test_unmix_plane(session=None):
+	if not session:
+		ses = 839208243
+		"""LIMS session ID to use for test,
+		use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
+		which takes ~ 5 hours"""
+	else:
+		ses = session
+
+	ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="roi", np_name="neuropil")
+	pairs = ica_obj.dataset.get_paired_planes()
+	pair = pairs[0]
+	ica_obj.set_exp_ids(pair)
+	ica_obj.get_ica_traces()
+	ica_obj.validate_raw_traces(return_vba=False)
+	ica_obj.debias_traces()
+	ica_obj.get_active_traces("Input")
+	self = ica_obj
+	pkey = 'pl1'
+
+	# testing for roi functionality : do full unmix
+	tkey = 'roi'
+	traces_in = self.ins[pkey][tkey]
+	traces_in_active = self.get_ica_active_events(self.ins[pkey][tkey], self.ins_active[pkey][tkey])
+	traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active)
+
+	assert traces_out.shape == traces_in.shape, f"output traces are not shaped the same as input traces for {tkey}"
+	assert np.all(crosstalk != 0.0), f"No crosstalk data returned for {tkey}"
+	assert crosstalk.shape == (traces_out.shape[0], traces_out.shape[1]), f"Incorrect shape for crosstlak output for {tkey}"
+	assert a_mixing.shape == (traces_in.shape[1], 2, 2), f"Adjusted mixing matrix output has wrong length for {tkey}"
+	assert mixing.shape == (traces_in.shape[1], 2, 2), f"Mixing matrix output has wrong length for {tkey}"
+
+	# testing neuropil - apply roi mixing matrix:
+	tkey = 'np'
+	traces_in_np = self.ins[pkey][tkey]
+	traces_in_active_np = self.get_ica_active_events(self.ins[pkey][tkey], self.ins_active[pkey][tkey])
+	traces_out_np, crosstalk_np, mixing_np, a_mixing_np = self.unmix_plane(traces_in_np, traces_in_active_np, a_mixing)
+
+	assert traces_out_np.shape == traces_in_np.shape, f"output traces are not shaped the same as input traces for {tkey}"
+	assert np.all(crosstalk_np == 0.0), f"No crosstalk data returned for {tkey}"
+	assert crosstalk_np.shape == (traces_out_np.shape[0], traces_out_np.shape[1]), f"Incorrect shape for crosstlak output for {tkey}"
+	assert a_mixing_np.shape == (traces_in_np.shape[1], 2, 2), f"Adjusted mixing matrix output has wrong length for {tkey}"
+	assert mixing_np.shape == (traces_in_np.shape[1], 2,2), f"Mixing matrix output has wrong length for {tkey}"
+	np.testing.assert_equal(a_mixing_np, a_mixing, err_msg="Mixing matrix for neuropil should be teh same as for roi")
+
+	return
+
+
+
