@@ -534,7 +534,7 @@ def test_unmix_plane(session=None):
 	assert crosstalk_np.shape == (traces_out_np.shape[0], traces_out_np.shape[1]), f"Incorrect shape for crosstlak output for {tkey}"
 	assert a_mixing_np.shape == (traces_in_np.shape[1], 2, 2), f"Adjusted mixing matrix output has wrong length for {tkey}"
 	assert mixing_np.shape == (traces_in_np.shape[1], 2,2), f"Mixing matrix output has wrong length for {tkey}"
-	assert np.all(a_mixing_np == a_mixing), f"Mixing matrix for neuropil should be teh same as for roi"
+	np.testing.assert_equal(a_mixing_np, a_mixing, err_msg="Mixing matrix for neuropil should be teh same as for roi")
 
 	return
 

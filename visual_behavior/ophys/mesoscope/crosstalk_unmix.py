@@ -1188,7 +1188,7 @@ class MesoscopeICA(object):
         if mixing is not None:  # this is indicative that traces are from neuropil, use provided mixing to unmix them
             for i, roi in enumerate(rois):
                 mixing_roi = mixing[i]
-                if not np.all(np.isnan(traces_in_active[roi])):
+                if not np.any(np.isnan(traces_in_active[roi])) and not np.any(np.isnan(mixing_roi)):
                     trace_sig = traces_sig[i]
                     trace_ct = traces_ct[i]
                     traces = np.array([trace_sig, trace_ct]).T
@@ -1469,3 +1469,6 @@ def add_suffix_to_path(abs_path, suffix):
     file_name = os.path.splitext(abs_path)[0]
     new_file_name = f"{file_name}{suffix}{file_ext}"
     return new_file_name
+
+
+
