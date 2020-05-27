@@ -226,8 +226,8 @@ def get_p_value_from_shuffled_omissions(mean_responses,
     omitted_flashes.at[:, 'start_frame'] = [ut.get_nearest_frame(start_time, ophys_timestamps) for start_time in
                                             omitted_flashes.start_time.values]
     omitted_start_frames = omitted_flashes.start_frame.values
-    omitted_start_frames = omitted_start_frames[
-                           :-1]  # exclude last omission for cases where it occured at the end of the recording
+    # exclude last omission for cases where it occured at the end of the recording
+    omitted_start_frames = omitted_start_frames[:-1]
     # shuffle omitted flash frames
     shuffled_omitted_start_frames = np.random.choice(omitted_start_frames, number_of_shuffles)
 
@@ -424,7 +424,7 @@ def filter_events_array(trace_arr, scale=2):
     return filtered_arr
 
 
-def get_trials_response_df(dataset, use_events=False, frame_rate=None, df_format='wide'):
+def get_trials_response_xr(dataset, use_events=False, frame_rate=None):
     if use_events:
         traces = np.stack(dataset.events['events'].values)
         traces = filter_events_array(traces, scale=2)
@@ -432,13 +432,19 @@ def get_trials_response_df(dataset, use_events=False, frame_rate=None, df_format
         traces = np.stack(dataset.dff_traces['dff'].values)
     trace_ids = dataset.dff_traces.index.values
     timestamps = dataset.ophys_timestamps
-    change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])][:-1]  # last trial can get cut off
+    change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])]  # [:-1]  # last trial can get cut off
     event_times = change_trials['change_time'].values
     event_ids = change_trials.index.values
     response_analysis_params = get_default_trial_response_params()
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
+    return response_xr
+
+
+def get_trials_response_df(dataset, use_events=False, frame_rate=None, df_format='wide'):
+    response_xr = get_trials_response_xr(dataset, use_events, frame_rate)
+
     if df_format == 'wide':
         df = response_df(response_xr)
     elif df_format == 'tidy' or df_format == 'long':
@@ -448,8 +454,7 @@ def get_trials_response_df(dataset, use_events=False, frame_rate=None, df_format
     return df
 
 
-def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, df_format='wide'):
-    from visual_behavior.ophys.response_analysis import utilities as ut
+def get_stimulus_response_xr(dataset, use_events=False, frame_rate=None):
     if use_events:
         traces = np.stack(dataset.events['events'].values)
         traces = filter_events_array(traces, scale=2)
@@ -457,13 +462,17 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, df_form
         traces = np.stack(dataset.dff_traces['dff'].values)
     trace_ids = dataset.dff_traces.index.values
     timestamps = dataset.ophys_timestamps
-    event_times = dataset.stimulus_presentations['start_time'].values[:-1]  # last one can get truncated
-    event_indices = index_of_nearest_value(dataset.ophys_timestamps, event_times)
-    event_ids = dataset.stimulus_presentations.index.values[:-1]
+    event_times = dataset.stimulus_presentations['start_time'].values
+    event_ids = dataset.stimulus_presentations.index.values
     response_analysis_params = get_default_stimulus_response_params()
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
+    return response_xr
+
+
+def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, df_format='wide'):
+    response_xr = get_stimulus_response_xr(dataset, use_events, frame_rate)
 
     if df_format == 'wide':
         df = response_df(response_xr)
@@ -471,17 +480,10 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, df_form
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
-    window = response_analysis_params['window_around_timepoint_seconds']
-    response_window = [np.abs(window[0]),
-                       np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
-    if frame_rate is None:
-        frame_rate = 1 / np.diff(timestamps).mean()
-    if df_format == 'wide':
-        df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
     return df
 
 
-def get_omission_response_df(dataset, use_events=False, frame_rate=None, df_format='wide'):
+def get_omission_response_xr(dataset, use_events=False, frame_rate=None):
     if use_events:
         traces = np.stack(dataset.events['events'].values)
         traces = filter_events_array(traces, scale=2)
@@ -491,13 +493,17 @@ def get_omission_response_df(dataset, use_events=False, frame_rate=None, df_form
     timestamps = dataset.ophys_timestamps
     stimuli = dataset.stimulus_presentations
     omission_presentations = stimuli[stimuli.image_name == 'omitted']
-    event_times = omission_presentations['start_time'].values[:-1]  # last omission can get truncated
-    event_indices = index_of_nearest_value(dataset.ophys_timestamps, event_times)
-    event_ids = omission_presentations.index.values[:-1]
+    event_times = omission_presentations['start_time'].values
+    event_ids = omission_presentations.index.values
     response_analysis_params = get_default_omission_response_params()
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
+    return response_xr
+
+
+def get_omission_response_df(dataset, use_events=False, frame_rate=None, df_format='wide'):
+    response_xr = get_omission_response_xr(dataset, use_events, frame_rate)
 
     if df_format == 'wide':
         df = response_df(response_xr)
@@ -699,11 +705,10 @@ def get_omission_licks_df(dataset, frame_rate=None):
 
 
 if __name__ == "__main__":
-    import time
     from allensdk.brain_observatory.behavior import behavior_project_cache as bpc
 
     manifest_path = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/sfn_2019/manifest_20190916.json'
     cache = bpc.InternalCacheFromLims(manifest=manifest_path)
     session = cache.get_session(806203732)
-    trial_response_xr = trial_response_xr(session)
+    trial_response_xr = get_trials_response_xr(session)
     #  result = trial_response_df(trial_response_xr)

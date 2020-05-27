@@ -242,7 +242,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self.include_invalid_rois = include_invalid_rois
         # set pupil area and events to None for now
         # self.pupil_area = None
-        self.events = None
 
     @property
     def analysis_folder(self):
@@ -308,7 +307,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             corrected_fluorescence_traces = super().corrected_fluorescence_traces
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
-            self._corrected_fluorescence_traces = corrected_fluorescence_traces[corrected_fluorescence_traces.cell_roi_id.isin(valid_cells)]
+            self._corrected_fluorescence_traces = corrected_fluorescence_traces[
+                corrected_fluorescence_traces.cell_roi_id.isin(valid_cells)]
         else:
             self._corrected_fluorescence_traces = super().corrected_fluorescence_traces
         return self._corrected_fluorescence_traces
@@ -323,6 +323,31 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         else:
             self._dff_traces = super().dff_traces
         return self._dff_traces
+
+    def get_events_array(self):
+        events_folder = os.path.join(get_analysis_cache_dir(), 'events')
+        if os.path.exists(events_folder):
+            events_file = [file for file in os.listdir(events_folder) if
+                           str(self.ophys_experiment_id) + '_events.npz' in file]
+            if len(events_file) > 0:
+                print('getting L0 events')
+                f = np.load(os.path.join(events_folder, events_file[0]))
+                events = np.asarray(f['ev'])
+                f.close()
+            else:
+                print('no events for this experiment')
+                events = None
+        else:
+            print('no events for this experiment')
+            events = None
+        self.events_array = events
+        return self.events_array
+
+    @property
+    def events(self):
+        self._events = pd.DataFrame({'events': [x for x in self.get_events_array()]},
+                                    index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        return self._events
 
     @property
     def timestamps(self):
@@ -346,7 +371,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
         if 'donor_id' not in metadata.keys():
             metadata['donor_id'] = metadata.pop('LabTracks_ID')
-            metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(self.ophys_experiment_id, get_visual_behavior_cache())
+            metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
+                self.ophys_experiment_id, get_visual_behavior_cache())
         self._metadata = metadata
         return self._metadata
 
@@ -354,8 +380,10 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def metadata_string(self):
         # for figure titles & filenames
         m = self.metadata
+        rig_name = m['rig_name'].split('.')[0] + m['rig_name'].split('.')[1]
         self._metadata_string = str(m['donor_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['driver_line'][
-            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type']
+            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m[
+            'session_type'] + '_' + rig_name
         return self._metadata_string
 
     @property
@@ -404,7 +432,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
         stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
         stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
-        stimulus_presentations = add_model_outputs_to_stimulus_presentations(stimulus_presentations, self.metadata['behavior_session_id'])
+        stimulus_presentations = add_model_outputs_to_stimulus_presentations(stimulus_presentations,
+                                                                             self.metadata['behavior_session_id'])
+        stimulus_presentations.at[
+            stimulus_presentations.index.values[1:], 'lick_on_next_flash'] = stimulus_presentations.licked.values[:-1]
+        stimulus_presentations.at[
+            stimulus_presentations.index.values[1:], 'lick_rate_next_flash'] = stimulus_presentations.lick_rate.values[
+                                                                               :-1]
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
@@ -525,17 +559,22 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
        Adds additional columns to stimulus table for model weights and related metrics
     '''
     model_output_dir = get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if (str(behavior_session_id) in file) and ('training' not in file)]
+    model_output_file = [file for file in os.listdir(model_output_dir) if
+                         (str(behavior_session_id) in file) and ('training' not in file)]
     if len(model_output_file) > 0:
         model_outputs = pd.read_csv(os.path.join(model_output_dir, model_output_file[0]))
         model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change'], inplace=True)
-        stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id', left_on='stimulus_presentations_id').set_index('stimulus_presentations_id')
-        stimulus_presentations['engagement_state'] = ['engaged' if flash_metrics_label != 'low-lick,low-reward' else 'disengaged' for flash_metrics_label in
-                                                      stimulus_presentations.flash_metrics_labels.values]
-        stimulus_presentations = stimulus_presentations.drop(columns=['hit_rate', 'miss_rate', 'false_alarm_rate', 'correct_reject_rate', 'd_prime', 'criterion'])
+        stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id',
+                                                              left_on='stimulus_presentations_id').set_index(
+            'stimulus_presentations_id')
+        stimulus_presentations['engagement_state'] = [
+            'engaged' if flash_metrics_label != 'low-lick,low-reward' else 'disengaged' for flash_metrics_label in
+            stimulus_presentations.flash_metrics_labels.values]
+        stimulus_presentations = stimulus_presentations.drop(
+            columns=['hit_rate', 'miss_rate', 'false_alarm_rate', 'correct_reject_rate', 'd_prime', 'criterion'])
         return stimulus_presentations
     else:
-        print('no model outputs saved for behavior_session_id:',behavior_session_id)
+        print('no model outputs saved for behavior_session_id:', behavior_session_id)
     return stimulus_presentations
 
 
@@ -696,7 +735,7 @@ def get_stim_metrics_summary(behavior_session_id, load_location='from_file'):
         return df.sort_values(by=['behavior_session_id', 'flash_index'])
 
 
-#  FROM LIMS DATABASE
+# FROM LIMS DATABASE
 
 
 # EXPERIMENT LEVEL
@@ -1308,8 +1347,7 @@ def get_file_name_for_multi_session_df(df_name, project_code, conditions, use_ev
             2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
     elif len(conditions) == 4:
         filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
-            2] + '_' + conditions[
-            3] + suffix + '.h5'
+            2] + '_' + conditions[3] + suffix + '.h5'
     elif len(conditions) == 3:
         filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[1] + '_' + conditions[
             2] + suffix + '.h5'
@@ -1318,7 +1356,7 @@ def get_file_name_for_multi_session_df(df_name, project_code, conditions, use_ev
     elif len(conditions) == 1:
         filename = 'mean_' + df_name + '_' + project_code + '_' + conditions[0] + suffix + '.h5'
 
-    return filepathsname
+    return filename
 
 
 def get_multi_session_df(cache_dir, df_name, conditions, project_codes, use_events=False):
@@ -1336,7 +1374,8 @@ def get_multi_session_df(cache_dir, df_name, conditions, project_codes, use_even
                 df = pd.read_hdf(filepath, key='df')
                 df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
                                      'layer', 'ophys_session_id', 'project_code', 'location2',
-                                     'specimen_id', 'depth', 'exposure_number', 'container_id']], on='ophys_experiment_id')
+                                     'specimen_id', 'depth', 'exposure_number', 'container_id']],
+                              on='ophys_experiment_id')
                 outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
                 df = df[df.cell_specimen_id.isin(outlier_cells) == False]
                 multi_session_df = pd.concat([multi_session_df, df])
