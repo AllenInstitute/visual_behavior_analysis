@@ -483,13 +483,14 @@ def get_stimulus_response_df(dataset, use_events=False, frame_rate=None, df_form
         df = response_xr.to_dataframe().reset_index()
 
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'cell_specimen_id'})
-    window = response_analysis_params['window_around_timepoint_seconds']
-    response_window = [np.abs(window[0]),
-                       np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
-    if frame_rate is None:
-        frame_rate = 1 / np.diff(timestamps).mean()
-    if df_format == 'wide':
-        df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
+    # response_analysis_params = get_default_stimulus_response_params()
+    # window = response_analysis_params['window_around_timepoint_seconds']
+    # response_window = [np.abs(window[0]),
+    #                    np.abs(window[0]) + response_analysis_params['response_window_duration_seconds']]
+    # if frame_rate is None:
+    #     frame_rate = 1 / np.diff(timestamps).mean()
+    # if df_format == 'wide':
+    #     df['p_value_baseline'] = [ut.get_p_val(trace, response_window, frame_rate) for trace in df.trace.values]
     return df
 
 
