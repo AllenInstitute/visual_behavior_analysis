@@ -4,15 +4,11 @@ Created on Sunday July 15 2018
 @author: marinag
 """
 
-from visual_behavior.ophys.response_analysis import utilities as ut
-import visual_behavior.ophys.response_analysis.response_processing as rp
-import visual_behavior.ophys.dataset.stimulus_processing as sp
-import visual_behavior.data_access.loading as loading
 
 import os
-import numpy as np
 import pandas as pd
-import itertools
+import visual_behavior.data_access.loading as loading
+import visual_behavior.ophys.response_analysis.response_processing as rp
 
 
 class LazyLoadable(object):
@@ -78,7 +74,7 @@ class ResponseAnalysis(object):
     """
 
     def __init__(self, dataset, analysis_cache_dir=None, load_from_cache=False, use_events=False,
-                 use_extended_stimulus_presentations=False, overwrite_analysis_files=False,dataframe_format='wide'):
+                 use_extended_stimulus_presentations=False, overwrite_analysis_files=False, dataframe_format='wide'):
         self.dataset = dataset
         self.use_events = use_events
         if analysis_cache_dir is None:
@@ -91,7 +87,8 @@ class ResponseAnalysis(object):
         self.dataframe_format = dataframe_format
         self.use_extended_stimulus_presentations = use_extended_stimulus_presentations
         self.trials_window = rp.get_default_trial_response_params()['window_around_timepoint_seconds']
-        self.stimulus_presentations_window = rp.get_default_stimulus_response_params()['window_around_timepoint_seconds']
+        self.stimulus_presentations_window = rp.get_default_stimulus_response_params()[
+            'window_around_timepoint_seconds']
         self.omissions_window = rp.get_default_omission_response_params()['window_around_timepoint_seconds']
         # self.response_window_duration = 0.25  # window, in seconds, over which to take the mean for a given trial or flash
         # self.omission_response_window_duration = 0.75 # compute omission mean response and baseline response over 750ms
@@ -103,7 +100,6 @@ class ResponseAnalysis(object):
             # self.dataset.running_speed = self.dataset.running_speed_df
         else:
             self.blank_duration = self.dataset.task_parameters['blank_duration'][0]
-
 
     def get_analysis_folder(self):
         candidates = [file for file in os.listdir(self.analysis_cache_dir) if str(self.ophys_experiment_id) in file]
@@ -122,7 +118,8 @@ class ResponseAnalysis(object):
                                         'rig_name'] + '_' + m['session_type']
             os.mkdir(os.path.join(self.analysis_cache_dir, self._analysis_folder))
         elif len(candidates) > 1:
-            raise OSError('{} contains multiple possible analysis folders: {}'.format(self.analysis_cache_dir, candidates))
+            raise OSError(
+                '{} contains multiple possible analysis folders: {}'.format(self.analysis_cache_dir, candidates))
         return self._analysis_folder
 
     analysis_folder = LazyLoadable('_analysis_folder', get_analysis_folder)
@@ -184,7 +181,6 @@ class ResponseAnalysis(object):
             else:
                 print(df_name, 'not cached for this experiment')
         elif self.overwrite_analysis_files:  # delete any old files, generate new df and save
-            import h5py
             file_path = self.get_response_df_path(df_name)
             if os.path.exists(file_path):
                 os.remove(file_path)

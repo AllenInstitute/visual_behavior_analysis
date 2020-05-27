@@ -58,7 +58,7 @@ def add_model_outputs_availability_to_table(table):
     :return: table with added column 'model_outputs_available', values are Boolean
     """
     table['model_outputs_available'] = [utilities.model_outputs_available_for_behavior_session(behavior_session_id)
-                                                    for behavior_session_id in table.behavior_session_id.values]
+                                        for behavior_session_id in table.behavior_session_id.values]
     return table
 
 
@@ -328,6 +328,7 @@ def add_time_from_last_change(stimulus_presentations):
     stimulus_presentations["time_from_last_change"] = time_from_last_change
     return stimulus_presentations
 
+
 def add_time_from_last_omission(stimulus_presentations):
     '''
         Adds a column to session.stimulus_presentations, 'time_from_last_omission', which is the time, in seconds
@@ -355,13 +356,13 @@ def add_epoch_times(df, time_column='start_time', epoch_duration_mins=10):
     """
     start_time = df[time_column].values[0]
     stop_time = df[time_column].values[-1]
-    epoch_times = np.arange(start_time, stop_time, epoch_duration_mins*60)
+    epoch_times = np.arange(start_time, stop_time, epoch_duration_mins * 60)
     df['epoch'] = None
     for i, time in enumerate(epoch_times):
-        if i < len(epoch_times)-1:
-            indices = df[(df[time_column]>=epoch_times[i])&(df[time_column]<epoch_times[i+1])].index.values
+        if i < len(epoch_times) - 1:
+            indices = df[(df[time_column] >= epoch_times[i]) & (df[time_column] < epoch_times[i + 1])].index.values
         else:
-            indices = df[(df[time_column]>=epoch_times[i])].index.values
+            indices = df[(df[time_column] >= epoch_times[i])].index.values
         df.at[indices, 'epoch'] = i
     return df
 

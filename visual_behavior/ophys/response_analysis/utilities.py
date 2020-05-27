@@ -111,7 +111,6 @@ def get_p_values_from_shuffle_synthetic(analysis, stimulus_table, flash_response
     # get data
     dataset = analysis.dataset
     fdf = flash_response_df.copy()
-    odf = fdf[fdf.omitted == True].copy()
     stim_table = stimulus_table.copy()
     included_flashes = fdf.flash_number.unique()
     stim_table = stim_table[stim_table.flash_number.isin(included_flashes)]
@@ -127,15 +126,13 @@ def get_p_values_from_shuffle_synthetic(analysis, stimulus_table, flash_response
     n_cells = len(cell_indices)
     # get omitted flash frames across full response window
     omitted_start_times = omitted_flashes.start_frame.values
-    omitted_start_times = omitted_start_times[
-                          :-1]  # exclude last omission for cases where it occured at the end of the recording
+    omitted_start_times = omitted_start_times[:-1]  # exclude last omission for cases where it occured at the end of the recording
     # shuffle omitted flash frames
     shuffled_omitted_start_frames = np.random.choice(omitted_start_times, n_shuffles)
     # create synthetic traces by drawing from shuffled omitted frames
     shuffled_omitted_responses = np.empty((n_cells, n_shuffles, n_mean_window_frames))
     for mean_window_frame in range(n_mean_window_frames):
-        shuffled_omitted_responses[:, :, mean_window_frame] = dataset.dff_traces[:,
-                                                              shuffled_omitted_start_frames + mean_window_frame]
+        shuffled_omitted_responses[:, :, mean_window_frame] = dataset.dff_traces[:, shuffled_omitted_start_frames + mean_window_frame]
     # average across mean response window
     shuffled_means = shuffled_omitted_responses.mean(axis=2)
     # compare flash responses to shuffled mean response values and make a dataframe of p_value for cell by sweep
@@ -160,8 +157,6 @@ def get_p_values_from_shuffle(analysis, flash_response_df):
     # set params
     n_shuffles = 10000
     cell_indices = dataset.get_cell_indices()
-    n_cells = len(cell_indices)
-    n_omitted_flashes = len(odf.flash_number.unique())
     # create p-values by comparing flash responses to shuffled omitted responses
     flash_p_values = pd.DataFrame(index=fdf.flash_number.unique(), columns=cell_indices.astype(str))
     for i, cell_index in enumerate(cell_indices):
@@ -306,7 +301,7 @@ def get_fraction_significant_trials(group):
 
 
 def get_fraction_significant_p_value_gray_screen(group):
-    fraction_significant_p_value_gray_screen= len(group[group.p_value_gray_screen < 0.05]) / float(len(group))
+    fraction_significant_p_value_gray_screen = len(group[group.p_value_gray_screen < 0.05]) / float(len(group))
     return pd.Series({'fraction_significant_p_value_gray_screen': fraction_significant_p_value_gray_screen})
 
 
@@ -432,11 +427,11 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         except:
             pass
 
-    fraction_significant_p_value_gray_screen = rdf.groupby(conditions).apply(get_fraction_significant_p_value_gray_screen)
+    fraction_significant_p_value_gray_screen = rdf.groupby(conditions).apply(
+        get_fraction_significant_p_value_gray_screen)
     fraction_significant_p_value_gray_screen = fraction_significant_p_value_gray_screen.reset_index()
     mdf[
         'fraction_significant_p_value_gray_screen'] = fraction_significant_p_value_gray_screen.fraction_significant_p_value_gray_screen
-
 
     fraction_significant_p_value_omission = rdf.groupby(conditions).apply(get_fraction_significant_p_value_omission)
     fraction_significant_p_value_omission = fraction_significant_p_value_omission.reset_index()
@@ -693,7 +688,7 @@ def annotate_flash_response_df_with_pref_stim(fdf):
     m = mean_response.unstack()
     for cell in m.index:
         image_index = \
-        np.where(m.loc[cell]['mean_response'].values == np.nanmax(m.loc[cell]['mean_response'].values))[0][0]
+            np.where(m.loc[cell]['mean_response'].values == np.nanmax(m.loc[cell]['mean_response'].values))[0][0]
         pref_image = m.loc[cell]['mean_response'].index[image_index]
         trials = fdf[(fdf[cell_key] == cell) & (fdf.image_name == pref_image)].index
         for trial in trials:
@@ -914,7 +909,7 @@ def compute_lifetime_sparseness(image_responses):
     # emulated from https://github.com/AllenInstitute/visual_coding_2p_analysis/blob/master/visual_coding_2p_analysis/natural_scenes_events.py
     # formulated similar to Froudarakis et al., 2014
     ls = ((1 - (1 / N) * ((np.power(image_responses.sum(axis=0), 2)) / (np.power(image_responses, 2).sum(axis=0)))) / (
-            1 - (1 / N)))
+        1 - (1 / N)))
     return ls
 
 

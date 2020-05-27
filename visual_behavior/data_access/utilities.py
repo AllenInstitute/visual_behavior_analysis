@@ -1,6 +1,7 @@
 import os
 from visual_behavior.data_access import loading
 
+
 # CONVENIENCE FUNCTIONS TO GET VARIOUS INFORMATION #
 
 # put functions here such as get_ophys_experiment_id_for_ophys_session_id()
@@ -21,6 +22,7 @@ class LazyLoadable(object):
         self.name = name
         self.calculate = calculate
 
+
 def check_for_model_outputs(behavior_session_id):
     """
     Checks whether model output file with omission regressors exists (does not say '_training' at end of filename)
@@ -28,11 +30,13 @@ def check_for_model_outputs(behavior_session_id):
     :return:
     """
     model_output_dir = loading.get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if (str(behavior_session_id) in file) and ('training' not in file)]
-    if len(model_output_file)>0:
+    model_output_file = [file for file in os.listdir(model_output_dir) if
+                         (str(behavior_session_id) in file) and ('training' not in file)]
+    if len(model_output_file) > 0:
         return True
     else:
         return False
+
 
 # retrieve data from cache
 def get_behavior_session_id_from_ophys_session_id(ophys_session_id, cache):
@@ -50,9 +54,9 @@ def get_behavior_session_id_from_ophys_session_id(ophys_session_id, cache):
                 behavior_session
     """
     ophys_sessions_table = cache.get_session_table()
-    if ophys_session_id not in ophys_sessions.index:
+    if ophys_session_id not in ophys_sessions_table.index:
         raise Exception('ophys_session_id not in session table')
-    return ophys_sessions.loc[ophys_session_id].behavior_session_id
+    return ophys_sessions_table.loc[ophys_session_id].behavior_session_id
 
 
 def get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache):
@@ -94,8 +98,9 @@ def get_ophys_experiment_id_from_behavior_session_id(behavior_session_id, cache,
         int -- ophys_experiment_id(s), 9 digit unique identifier for an ophys_experiment
                 possible that there are multip ophys_experiments for one behavior_session
     """
-    ophy_session_id = get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache)
-    return get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_num=exp_num)
+    ophys_session_id = get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache)
+    ophys_experiment_id = get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_num=exp_num)
+    return ophys_experiment_id
 
 
 def get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_num=0):
@@ -181,6 +186,7 @@ def get_donor_id_from_specimen_id(specimen_id, cache):
     donor_id = behavior_sessions.query('ophys_session_id ==@ophys_session_id')['donor_id'].values[0]
     return donor_id
 
+
 def model_outputs_available_for_behavior_session(behavior_session_id):
     """
     Check whether behavior model outputs are available in the default directory
@@ -190,9 +196,7 @@ def model_outputs_available_for_behavior_session(behavior_session_id):
     """
     model_output_dir = loading.get_behavior_model_outputs_dir()
     model_output_file = [file for file in os.listdir(model_output_dir) if str(behavior_session_id) in file]
-    if len(model_output_file)>0:
+    if len(model_output_file) > 0:
         return True
     else:
         return False
-
-

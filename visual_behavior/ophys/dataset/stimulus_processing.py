@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pickle
 from allensdk.brain_observatory.behavior import IMAGE_SETS
-import os
 
 IMAGE_SETS_REV = {val: key for key, val in IMAGE_SETS.items()}
 
@@ -331,7 +330,7 @@ def get_consumption_licks(stimulus_presentations):
         if (row_data.change == True) and (row_data.first_lick_in_bout == True):
             st.loc[row, 'consumption_licks'] = True
         if (st.iloc[row - 1].consumption_licks == True) & (
-                st.iloc[row].inter_flash_lick_diff < median_inter_lick_interval * 3):
+                    st.iloc[row].inter_flash_lick_diff < median_inter_lick_interval * 3):
             st.loc[row, 'consumption_licks'] = True
     return st
 
@@ -532,7 +531,7 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
     # Repeat number within a block
     repeat_number = np.full(len(stimulus_presentations_df), np.nan)
     assert (
-            stimulus_presentations_df.iloc[0].name == 0
+        stimulus_presentations_df.iloc[0].name == 0
     )  # Assuming that the row index starts at zero
     for ind_group, group in stimulus_presentations_df.groupby("block_index"):
         repeat = 0
@@ -553,8 +552,8 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
     rewards_each_flash = stimulus_presentations_df.apply(
         lambda row: reward_times[
             (
-                    (reward_times > row["start_time"])
-                    & (reward_times < row["start_time"] + 0.75)
+                (reward_times > row["start_time"])
+                & (reward_times < row["start_time"] + 0.75)
             )
         ],
         axis=1,
