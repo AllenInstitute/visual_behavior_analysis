@@ -1743,6 +1743,9 @@ def colormap():
 
 
 def get_title(ophys_experiment_id, cell_specimen_id):
+    '''
+    generate a standardized figure title containing identifying information
+    '''
     cache = loading.get_visual_behavior_cache()
     experiments_table = loading.get_filtered_ophys_experiment_table().reset_index()
 
@@ -1762,29 +1765,38 @@ def merge_in_extended_stimulus_presentations(analysis):
     '''
     merges extended_stimulus_presentations into the response dataframes
     operates in place
-    takes ~30 seconds to run
+    takes ~30-60 seconds to run
     '''
-    analysis.stimulus_response_df = analysis.stimulus_response_df.merge(
-        analysis.dataset.extended_stimulus_presentations,
-        left_on = 'stimulus_presentations_id',
-        right_index=True,
-        how='left',
-        suffixes=('','_duplicate')
-    )
-    analysis.omission_response_df = analysis.omission_response_df.merge(
-        analysis.dataset.extended_stimulus_presentations,
-        left_on = 'stimulus_presentations_id',
-        right_index=True,
-        how='left',
-        suffixes=('','_duplicate')
-    )
-    analysis.trials_response_df = analysis.trials_response_df.merge(
-        analysis.dataset.extended_stimulus_presentations,
-        left_on = 'change_time',
-        right_on = 'start_time',
-        how='left',
-        suffixes=('','_duplicate')
-    )
+    # merge on stim presentations id
+    dfs_to_merge = [
+        'stimulus_response_df', 
+        'stimulus_run_speed_df',
+        'omission_response_df',
+        'omission_run_speed_df',
+    ]
+    for df in dfs_to_merge:
+        setattr(analysis, df, getattr(analysis, df).merge(
+                analysis.dataset.extended_stimulus_presentations,
+                left_on = 'stimulus_presentations_id',
+                right_index=True,
+                how='left',
+                suffixes=('','_duplicate')
+        ))
+
+    # merge on change time
+    dfs_to_merge = [
+        'trials_response_df',
+        'trials_run_speed_df'
+    ]
+    for df in dfs_to_merge:
+        setattr(analysis, df, getattr(analysis, df).merge(
+            analysis.dataset.extended_stimulus_presentations,
+            left_on = 'change_time',
+            right_on = 'start_time',
+            how='left',
+            suffixes=('','_duplicate')
+        ))
+
 
 def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
     '''
@@ -1792,13 +1804,11 @@ def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
     inputs:
         analysis object
         cell_specimen_id (int))
-        axes (list or array): an array of axes, expected length = 2
+        axes (list or array): an array of axes, expected length = 3
     returns:
         None
     '''
     
-    if 'engagement_state' not in analysis.stimulus_response_df.columns:
-        merge_in_extended_stim_presentations(analysis)
     sdf = analysis.stimulus_response_df
 
     sdf_engagement_state = sdf.drop_duplicates('start_time')[['start_time', 'engagement_state']].copy().reset_index()
@@ -1816,8 +1826,20 @@ def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
         ax.axvspan(0,state_changes.iloc[0]['start_time'], color='gray', alpha=0.5)
         for idx, row in state_changes.iterrows():
             ax.axvspan(row['start_time'] / 60., row['next_state_change'] / 60., color=state_colors[row['engagement_state']])
+        ax.axvspan(
+            row['next_state_change'] / 60.,
+            row['next_state_change'] / 60. + 5, 
+            color='gray', 
+            alpha=0.5
+        )
+        ax.axvspan(
+            row['next_state_change'] / 60. + 5,
+            analysis.dataset.ophys_timestamps.max() / 60., 
+            color='yellow', 
+            alpha=0.5
+        )
 
-        ax.set_xlim(0, sdf['start_time'].max() / 60.)
+        ax.set_xlim(0, analysis.dataset.ophys_timestamps.max() / 60.)
         
         if ii == 0:
             ax.plot(
@@ -1826,9 +1848,9 @@ def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
                 linewidth=2,
                 color='black'
             )
-            ax.set_ylabel('Corrected\nFluor.', rotation=0, ha='right')
+            ax.set_ylabel('Corrected\nFluor.', rotation=0, ha='right', va='center')
             ax.set_xticks([])
-            ax.set_title('engagement state vs. session time\n(gray = pre-session gray screen, green = engaged, red = disengaged)')
+            ax.set_title('engagement state vs. session time\n(gray = gray screen, green = engaged, red = disengaged, yellow = fingerprint movie)')
         if ii == 1:
             ax.plot(
                 analysis.dataset.ophys_timestamps/60, 
@@ -1836,7 +1858,16 @@ def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
                 linewidth=2,
                 color='black'
             )
-            ax.set_ylabel('$\Delta$F/F', rotation=0, ha='right')
+            ax.set_ylabel('$\Delta$F/F', rotation=0, ha='right', va='center')
+            ax.set_xticks([])
+        if ii == 2:
+            ax.plot(
+                analysis.dataset.running_speed['timestamps']/60, 
+                analysis.dataset.running_speed['speed'],
+                linewidth=2,
+                color='black'
+            )
+            ax.set_ylabel('running\nspeed\n(cm/s)', rotation=0, ha='right', va='center')
             ax.set_xlabel('session time (minutes)')
 
 
@@ -1857,13 +1888,13 @@ def make_cell_plot(dataset, cell_specimen_id, ax):
     for axis in ax:
         axis.axis('off')
 
-def seaborn_lineplot(df, ax, cell_id, legend='brief', xlabel='time (s)', ylabel='$\Delta$F/F', n_boot=1000):
+def seaborn_lineplot(df, ax, legend='brief', xlabel='time (s)', ylabel='$\Delta$F/F', n_boot=1000):
     state_colors = colormap()
 
     sns.lineplot(
         x='eventlocked_timestamps',
         y='eventlocked_traces',
-        data=df.query('cell_specimen_id == @cell_id'),
+        data=df,
         hue='engagement_state',
         hue_order=['engaged', 'disengaged'],
         palette=[state_colors[state] for state in ['engaged', 'disengaged']],
@@ -1872,42 +1903,55 @@ def seaborn_lineplot(df, ax, cell_id, legend='brief', xlabel='time (s)', ylabel=
         n_boot=n_boot,
     )
     ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
+    ax.set_ylabel(ylabel,rotation=0,ha='right')
 
-def make_cell_response_summary_plot(analysis, cell_specimen_id, savefig=False, errorbar_bootstrap_iterations=1000):
+def make_cell_response_summary_plot(analysis, cell_specimen_id, save=False, show=True, errorbar_bootstrap_iterations=1000):
     figure_savedir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/single_cell_plots/response_plots'
     hspace = 0.05
     oeid = analysis.dataset.ophys_experiment_id
 
+    if 'engagement_state' not in analysis.stimulus_response_df.columns:
+        print('merging')
+        merge_in_extended_stimulus_presentations(analysis)
+
     params_dict = {
         'stimulus response':{
-            'df':analysis.stimulus_response_df,
+            'ophys_df':analysis.stimulus_response_df,
+            'running_df':analysis.stimulus_run_speed_df,
             'xlims':(-0.5, 0.75),
             'omit':None,
             'pre_color':'blue',
             'post_color':'blue'
         },
         'omission response':{
-            'df':analysis.omission_response_df,
+            'ophys_df':analysis.omission_response_df,
+            'running_df':analysis.omission_run_speed_df,
             'xlims':(-3, 3),
             'omit':0,
             'pre_color':'blue',
             'post_color':'blue'
         },
         'change response':{
-            'df':analysis.trials_response_df,
+            'ophys_df':analysis.trials_response_df,
+            'running_df':analysis.trials_run_speed_df,
+            'pupil_df':None,
             'xlims':(-3, 3),
             'omit':None,
             'pre_color':'gray',
             'post_color':'green'
         },
     }
+    ylabels = {
+        'ophys':'$\Delta$F/F',
+        'running':'Running Speed\n(cm/s)'
+    }
 
     fig = plt.figure(figsize=(20, 18))
     ax = {
-        'state_summary': placeAxesOnGrid(fig, dim=[2, 1], xspan=[0, 1], yspan=[0, 0.2], sharex=False, hspace=0),
+        'state_summary': placeAxesOnGrid(fig, dim=[3, 1], xspan=[0, 1], yspan=[0, 0.2], sharex=False, hspace=0),
         'cell_images': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.3, 0.65], sharey=True, wspace=0),
-        'response_plots': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.725, 1], sharey=True),
+        'ophys_response_plots': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.7, 0.84], sharey=True),
+        'running_response_plots': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.86, 1], sharey=True),
     }
 
     make_engagement_time_summary_plot(analysis, cell_specimen_id, ax['state_summary'])
@@ -1915,33 +1959,46 @@ def make_cell_response_summary_plot(analysis, cell_specimen_id, savefig=False, e
     dfs = {
         'stimulus_response_df':analysis
     }
-    for ii, plot_type in enumerate(params_dict.keys()):
-        if plot_type == 'stimulus response':
-            legend = 'brief'
-        else:
-            legend = False
+    for col, response_type in enumerate(params_dict.keys()):
+        for row, datastream in enumerate(['ophys','running']):
+            if response_type == 'stimulus response' and datastream == 'ophys':
+                legend = 'brief'
+            else:
+                legend = False
             
-        seaborn_lineplot(
-            params_dict[plot_type]['df'], 
-            ax['response_plots'][ii], 
-            cell_specimen_id, 
-            legend=legend, 
-            n_boot=errorbar_bootstrap_iterations
-        )
-        ax['response_plots'][ii].set_title(plot_type)
-        ax['response_plots'][ii].set_xlim(params_dict[plot_type]['xlims'])
-        designate_flashes(
-            ax['response_plots'][ii], 
-            omit=params_dict[plot_type]['omit'], 
-            pre_color=params_dict[plot_type]['pre_color'],
-            post_color=params_dict[plot_type]['post_color']
-        )
+            if datastream == 'ophys':
+                data = params_dict[response_type]['{}_df'.format(datastream)].query('cell_specimen_id == @cell_specimen_id')
+                ax['{}_response_plots'.format(datastream)][col].set_title(response_type)
+                ax['{}_response_plots'.format(datastream)][col].set_xticklabels([])
+            else:
+                data = params_dict[response_type]['{}_df'.format(datastream)]
+                ax['{}_response_plots'.format(datastream)][col].set_title('')
+
+            seaborn_lineplot(
+                data,
+                ax['{}_response_plots'.format(datastream)][col],
+                legend=legend,
+                n_boot=errorbar_bootstrap_iterations,
+                xlabel='time (s)' if row == 1 else '',
+                ylabel=ylabels[datastream] if col == 0 else '',
+            )
+
+            
+            ax['{}_response_plots'.format(datastream)][col].set_xlim(params_dict[response_type]['xlims'])
+            designate_flashes(
+                ax['{}_response_plots'.format(datastream)][col], 
+                omit=params_dict[response_type]['omit'], 
+                pre_color=params_dict[response_type]['pre_color'],
+                post_color=params_dict[response_type]['post_color']
+            )
 
     plt.subplots_adjust(top=0.9)
     title = get_title(oeid, cell_specimen_id)
     fig.suptitle(title)
-    if savefig == True:
+    if save:
         fig.savefig(os.path.join(figure_savedir, title + '.png'), dpi=200)
+    if not show:
+        plt.close()
 
 
 def designate_flashes(ax, omit=None, pre_color='blue', post_color='blue'):
