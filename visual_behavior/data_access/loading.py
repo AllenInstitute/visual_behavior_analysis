@@ -242,7 +242,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self.include_invalid_rois = include_invalid_rois
         # set pupil area and events to None for now
         # self.pupil_area = None
-        self.events = None
 
     @property
     def analysis_folder(self):
@@ -323,6 +322,31 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         else:
             self._dff_traces = super().dff_traces
         return self._dff_traces
+
+    def get_events_array(self):
+        events_folder = os.path.join(get_analysis_cache_dir(), 'events')
+        if os.path.exists(events_folder):
+            events_file = [file for file in os.listdir(events_folder) if
+                           str(self.ophys_experiment_id) + '_events.npz' in file]
+            if len(events_file) > 0:
+                print('getting L0 events')
+                f = np.load(os.path.join(events_folder, events_file[0]))
+                events = np.asarray(f['ev'])
+                f.close()
+            else:
+                print('no events for this experiment')
+                events = None
+        else:
+            print('no events for this experiment')
+            events = None
+        self.events_array = events
+        return self.events_array
+
+    @property
+    def events(self):
+        self._events = pd.DataFrame({'events': [x for x in self.get_events_array()]},
+                                    index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        return self._events
 
     @property
     def timestamps(self):
