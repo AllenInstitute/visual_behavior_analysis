@@ -172,8 +172,8 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
         if len(analysis_folder) > 1:  # if there are multiple analysis folders with this lims_id
             print('Multiple analysis folders exist, removing duplicates')
             # Get the modification times of the existing analysis folders
-            mod_times = [os.path.getmtime(os.path.join(cache_dir, analysis_folder[i])) for i in
-                         range(len(analysis_folder))]
+            # mod_times = [os.path.getmtime(os.path.join(cache_dir, analysis_folder[i])) for i in
+            #              range(len(analysis_folder))]
             # Find all the old analysis folders
             # old_inds = np.argsort(mod_times)[:-1]
             old_folders = [os.path.join(cache_dir, analysis_folder[i]) for i in range(len(analysis_folder))]
