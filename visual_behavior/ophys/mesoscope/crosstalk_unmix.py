@@ -493,7 +493,6 @@ class MesoscopeICA(object):
         else:
             return True
 
-
     @staticmethod
     def roi_from_wrong_plane(sig, ct):
         # here we will read active traces,
@@ -847,44 +846,40 @@ class MesoscopeICA(object):
 
         # local vars for crosstalk paths:
         crosstalk_paths = {}
+        self.crosstalk_paths = {}
         for pkey in self.pkeys:
             crosstalk_paths[pkey] = {}
+            self.crosstalk_paths[pkey] = {}
             for tkey in self.tkeys:
                 self.crosstalk_paths[pkey][tkey] = None
                 crosstalk_paths[pkey][tkey] = os.path.join(self.dirs[tkey], f'{self.exp_ids[pkey]}_crosstalk.json')
 
         # check if crosstalk json exist:
         crosstalk_json_exist = True
+        self.crosstalk = {}
         for pkey in self.pkeys:
+            self.crosstalk[pkey] = {}
             for tkey in self.tkeys:
+                self.crosstalk[pkey][tkey] = {}
                 if not os.path.isfile(crosstalk_paths[pkey][tkey]):
                     crosstalk_json_exist = False
 
-        for pkey in self.pkeys:
-            for tkey in self.tkeys:
-                if crosstalk_json_exist:  # if output traces exist, set self.outs_paths
+                if crosstalk_json_exist:  # crosstalk json exists, read it to self.crosstalk and self.crossta_path:
                     self.crosstalk_paths[pkey][tkey] = crosstalk_paths[pkey][tkey]
+                    self.crosstalk[pkey][tkey] = ju.read(self.crosstalk[pkey][tkey])
                 else:
                     self.crosstalk_paths[pkey][tkey] = None
 
-        if not crosstalk_json_exist: # crosstalk json doesn't exist, calculate crosstalk
+                    # crosstalk json doesn't exist, calculate crosstalk
 
-            # check if ica input active and ica output active traces exist
-            in_traces_exist = True
-            for pkey in self.pkeys:
-                for tkey in self.tkeys:
-                    if not os. path.isfile(self.outs_active_paths[pkey][tkey]):
+                    # check if ica input active and ica output active traces exist
+                    in_traces_exist = True
+                    if not os.path.isfile(self.outs_active_paths[pkey][tkey]):
                         in_traces_exist = False
-                    if not os. path.isfile(self.ins_active_paths[pkey][tkey]):
+                    if not os.path.isfile(self.ins_active_paths[pkey][tkey]):
                         in_traces_exist = False
 
-            if in_traces_exist:  # if ica input active and ica output active traces exist:
-                self.crosstalk = {}
-                for pkey in self.pkeys:
-                    self.crosstalk[pkey] = {}
-                    for tkey in self.tkeys:
-                        self.crosstalk[pkey][tkey] = {}
-
+                    if in_traces_exist:  # if ica input active and ica output active traces exist:
                         traces_in = self.ins[pkey][tkey]
                         traces_out = self.outs[pkey][tkey]
                         trace_evs_in = self.ins_active[pkey][tkey]
@@ -912,12 +907,13 @@ class MesoscopeICA(object):
                                 crosstalk_after_demixing_evs = slope_out * 100
                             else:  # this roi had no events on the output, skipping
                                 crosstalk_after_demixing_evs = np.nan
-                            self.crosstalk[pkey][tkey][roi] = [crosstalk_before_demixing_evs, crosstalk_after_demixing_evs]
-            else:
-                logger.error("Input active traces don't exist, run get_active traces first")
-        else:  # crosstalk json exists, read it to self.crosstalk and self.crossta_path:
-            self.crosstalk[pkey][tkey] = ju.read(self.crosstalk[pkey][tkey])
-        return self.crosstalk
+                            self.crosstalk[pkey][tkey][roi] = [crosstalk_before_demixing_evs,
+                                                               crosstalk_after_demixing_evs]
+                        self.crosstalk_paths[pkey][tkey] = crosstalk_paths[pkey][tkey]
+                        ju.write(self.crosstalk_paths[pkey][tkey], self.crosstalk[pkey][tkey])
+                    else:
+                        logger.error("Input active traces don't exist, run get_active traces first")
+        return
 
     def plot_ica_pair(self, pair, dir_name=None, samples=5000):
         if not dir_name:
