@@ -424,7 +424,7 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         try:
             mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
             mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
-        except:
+        except: # NOQA E722
             pass
 
     fraction_significant_p_value_gray_screen = rdf.groupby(conditions).apply(

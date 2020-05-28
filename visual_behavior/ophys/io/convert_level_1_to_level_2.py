@@ -107,18 +107,16 @@ def get_analysis_folder_name(lims_data):
         depth = lims_data.depth.values[0]
     if lims_data.rig.values[0][0] == 'M':
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
-                                   2] + '_' + \
-                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
-                               specimen_driver_line + '_' + lims_data.rig.values[0] + \
-                               '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
+            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+            specimen_driver_line + '_' + lims_data.rig.values[0] + \
+            '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
     else:
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                               str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[
-                                   2] + '_' + \
-                               lims_data.structure.values[0] + '_' + str(depth) + '_' + \
-                               specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
-                               lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
+            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+            specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
+            lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
 
     return analysis_folder_name
 
@@ -133,34 +131,35 @@ def get_experiment_date(lims_data):
     return experiment_date
 
 
-def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
-    cache_dir = get_cache_dir(cache_dir=cache_dir)
-    if 'analysis_dir' in lims_data.columns:
-        return lims_data['analysis_dir'].values[0]
-    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
-    print(analysis_dir)
-    if not os.path.exists(analysis_dir):
-        print('Creating a new analysis folder')
-        os.mkdir(analysis_dir)
-    else:
-        print('Analysis folder exists')
-    # Check if more than one analysis folder exists
-    allFiles = os.listdir(cache_dir)
-    inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
-    existingFolders = np.argwhere(np.array(inds) != -1)
-    # Get the modification times of the existing analysis folders
-    modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in
-                  range(len(existingFolders))]
-    # Find all the old analysis folders
-    indsOld = np.argsort(modifTimes)[:-1]
-    oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
-    # Remove old analysis folders
-    for i in range(len(oldFiles)):
-        print('Removing old analysis folder : %s' % oldFiles[i])
-        shutil.rmtree(oldFiles[i])
-    if cache_on_lims_data:
-        lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
-    return analysis_dir
+# NOTE: This function is defined again below. Commenting this one out. DRO, 5/28/20
+# def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
+#     cache_dir = get_cache_dir(cache_dir=cache_dir)
+#     if 'analysis_dir' in lims_data.columns:
+#         return lims_data['analysis_dir'].values[0]
+#     analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
+#     print(analysis_dir)
+#     if not os.path.exists(analysis_dir):
+#         print('Creating a new analysis folder')
+#         os.mkdir(analysis_dir)
+#     else:
+#         print('Analysis folder exists')
+#     # Check if more than one analysis folder exists
+#     allFiles = os.listdir(cache_dir)
+#     inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
+#     existingFolders = np.argwhere(np.array(inds) != -1)
+#     # Get the modification times of the existing analysis folders
+#     modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in
+#                   range(len(existingFolders))]
+#     # Find all the old analysis folders
+#     indsOld = np.argsort(modifTimes)[:-1]
+#     oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
+#     # Remove old analysis folders
+#     for i in range(len(oldFiles)):
+#         print('Removing old analysis folder : %s' % oldFiles[i])
+#         shutil.rmtree(oldFiles[i])
+#     if cache_on_lims_data:
+#         lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
+#     return analysis_dir
 
 
 def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
@@ -176,7 +175,7 @@ def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
             mod_times = [os.path.getmtime(os.path.join(cache_dir, analysis_folder[i])) for i in
                          range(len(analysis_folder))]
             # Find all the old analysis folders
-            old_inds = np.argsort(mod_times)[:-1]
+            # old_inds = np.argsort(mod_times)[:-1]
             old_folders = [os.path.join(cache_dir, analysis_folder[i]) for i in range(len(analysis_folder))]
             # Remove old analysis folders
             for i in range(len(old_folders)):
@@ -273,7 +272,7 @@ def get_sync_path(lims_data, analysis_dir):
         #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except:
+        except: # NOQA E722
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
     return sync_path

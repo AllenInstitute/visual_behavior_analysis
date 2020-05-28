@@ -23,15 +23,15 @@ def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=Tru
     analysis_dir = loading.get_analysis_dir(cache_dir, experiment_id)
     if len(analysis_dir) == 0:
         try:
-            ophys_data = convert_level_1_to_level_2(experiment_id, cache_dir, plot_roi_validation=False);
-        except:
+            _ = convert_level_1_to_level_2(experiment_id, cache_dir, plot_roi_validation=False)
+        except:  # NOQA E722
             print('could not convert', experiment_id)
     dataset = loading.get_ophys_dataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, use_events=use_events, overwrite_analysis_files=overwrite_analysis_files)
 
-    tmp = analysis.trials_response_df
-    tmp = analysis.omission_response_df
-    tmp = analysis.stimulus_response_df
+    _ = analysis.trials_response_df
+    _ = analysis.omission_response_df
+    _ = analysis.stimulus_response_df
     # tmp = analysis.omission_run_speed_df
     # tmp = analysis.trials_run_speed_df
     # tmp = analysis.stimulus_run_speed_df
