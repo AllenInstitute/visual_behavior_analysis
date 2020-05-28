@@ -447,6 +447,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def trials(self):
         trials = super().trials.copy()
         trials = reformat.add_epoch_times(trials)
+        trials = reformat.add_trial_type_to_trials_table(trials)
         self._trials = trials
         return self._trials
 
@@ -1298,8 +1299,8 @@ def get_annotated_experiments_table():
     experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                      experiments_table.loc[expt].depth for expt in experiments_table.index]
 
-    experiments_table['location2'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
-                                      experiments_table.loc[expt].depth for expt in experiments_table.index]
+    # experiments_table['location2'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
+    #                                   experiments_table.loc[expt].depth for expt in experiments_table.index]
 
     experiments_table['layer'] = None
     indices = experiments_table[(experiments_table.imaging_depth < 125)].index.values
@@ -1336,7 +1337,7 @@ def get_annotated_experiments_table():
     return experiments_table
 
 
-def get_file_name_for_multi_session_df(df_name, project_code, conditions, use_events):
+def get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events):
     if use_events:
         suffix = '_events'
     else:
@@ -1359,28 +1360,50 @@ def get_file_name_for_multi_session_df(df_name, project_code, conditions, use_ev
     return filename
 
 
-def get_multi_session_df(cache_dir, df_name, conditions, project_codes, use_events=False):
-    experiments_table = get_filtered_ophys_experiment_table()
+def get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events):
+    if use_events:
+        suffix = '_events'
+    else:
+        suffix = ''
+
+    if len(conditions) == 5:
+        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] +'_'+ conditions[3] +'_'+ conditions[4] + suffix + '.h5'
+    elif len(conditions) == 4:
+        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
+            3] + suffix + '.h5'
+    elif len(conditions) == 3:
+        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] + suffix + '.h5'
+    elif len(conditions) == 2:
+        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] + suffix + '.h5'
+    elif len(conditions) == 1:
+        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[0] + suffix + '.h5'
+
+    return filename
+
+
+def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_session_type=True, use_events=False):
+    # experiments_table = get_annotated_experiments_table()
+    project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
         expts = experiments.reset_index()
-        if 'session_type' in conditions:
+        if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
-                filename = get_file_name_for_multi_session_df(df_name, project_code, conditions, use_events)
+                filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
                 filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
                 df = pd.read_hdf(filepath, key='df')
                 df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
-                                     'layer', 'ophys_session_id', 'project_code', 'location2',
+                                     'layer', 'ophys_session_id', 'project_code',
                                      'specimen_id', 'depth', 'exposure_number', 'container_id']],
                               on='ophys_experiment_id')
                 outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
                 df = df[df.cell_specimen_id.isin(outlier_cells) == False]
                 multi_session_df = pd.concat([multi_session_df, df])
         else:
-            filename = get_file_name_for_multi_session_df(df_name, project_code, conditions, use_events)
+            filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events)
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
             df = pd.read_hdf(filepath, key='df')
             df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',

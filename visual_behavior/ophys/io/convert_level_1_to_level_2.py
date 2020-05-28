@@ -30,7 +30,7 @@ from visual_behavior.translator import foraging2, foraging  # NOQA: E402
 from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E402
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NOQA: E402
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
-from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
+# from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 from psycopg2 import extras  # NOQA: E402
 
@@ -1089,7 +1089,7 @@ def save_roi_validation(roi_validation, lims_data):
                     str(index) + '_' + str(id) + '_' + str(cell_index))
 
 
-def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
+def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=False):
     logger.info('converting %d', lims_id)
     print('converting', lims_id)
 

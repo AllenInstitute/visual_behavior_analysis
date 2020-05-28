@@ -41,7 +41,7 @@ class LazyLoadable(object):
 class VisualBehaviorOphysDataset(object):
     # TODO getter methods no longer need to set attributes directly
 
-    def __init__(self, experiment_id, cache_dir=None, append_omitted_to_stim_metadata=True, **kwargs):
+    def __init__(self, experiment_id, cache_dir=None, **kwargs):
         """Initialize visual behavior ophys experiment dataset.
             Loads experiment data from cache_dir, including dF/F traces, roi masks, stimulus metadata, running speed, licks, rewards, and metadata.
 
@@ -58,7 +58,7 @@ class VisualBehaviorOphysDataset(object):
         self.cache_dir = cache_dir
         self.cache_dir = self.get_cache_dir()
         self.roi_metrics = self.get_roi_metrics()
-        self.append_omitted_to_stim_metadata = append_omitted_to_stim_metadata
+        self.append_omitted_to_stim_metadata = True
         if self.roi_metrics.cell_specimen_id.values[0] is None:
             self.cell_matching = False
         else:

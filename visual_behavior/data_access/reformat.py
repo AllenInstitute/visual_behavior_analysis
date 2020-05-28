@@ -131,6 +131,16 @@ def add_container_workflow_state_to_ophys_session_table(session_table, experimen
 # design decisions. If we can get some of these changes backported into the SDK, then they
 # can be removed from this module.
 
+def add_trial_type_to_trials_table(trials):
+    trials['trial_type'] = None
+    trials.at[trials[trials.auto_rewarded].index, 'trial_type'] = 'auto_rewarded'
+    trials.at[trials[trials.hit].index, 'trial_type'] = 'hit'
+    trials.at[trials[trials.miss].index, 'trial_type'] = 'miss'
+    trials.at[trials[trials.correct_reject].index, 'trial_type'] = 'correct_reject'
+    trials.at[trials[trials.false_alarm].index, 'trial_type'] = 'false_alarm'
+    return trials
+
+
 def convert_metadata_to_dataframe(original_metadata):
     metadata = original_metadata.copy()
     metadata['reporter_line'] = metadata['reporter_line'][0]
