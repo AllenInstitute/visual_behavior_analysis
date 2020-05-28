@@ -328,13 +328,13 @@ def test_get_ophys_timestamps(fn, ophys_dataset, stimulus_template):
     
 @pytest.mark.parametrize('fn', [
     lambda ds: ds.stimulus_metadata,
-    lambda ds: ds.get_stimulus_metadata(append_omitted_to_stim_metadata=False)
+    lambda ds: ds.get_stimulus_metadata()
 ])
 def test_get_stimulus_metadata(fn, ophys_dataset, stimulus_metadata):
     
     obtained = fn(ophys_dataset)
     stimulus_metadata = stimulus_metadata.loc[:, ('image_index', 'image_name')]
-    pd.testing.assert_frame_equal(obtained, stimulus_metadata, check_like=True) 
+    pd.testing.assert_frame_equal(obtained.query('image_name != "omitted"'), stimulus_metadata, check_like=True) 
     
     
 @pytest.mark.parametrize('fn', [
