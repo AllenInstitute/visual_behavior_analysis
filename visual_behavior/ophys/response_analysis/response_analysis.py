@@ -196,6 +196,16 @@ class ResponseAnalysis(object):
                          'response_time': 'behavioral_response_time',
                          'response_latency': 'behavioral_response_latency'})
             df = df.merge(trials, right_on='trials_id', left_on='trials_id')
+            if self.use_extended_stimulus_presentations:
+                # merge in the extended stimulus presentations df on the change_time/start_time columns
+                stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
+                df = df.merge(
+                    stimulus_presentations,
+                    left_on='change_time',
+                    right_on='start_time',
+                    how='left',
+                    suffixes=('', '_duplicate')
+                )
         elif ('stimulus' in df_name) or ('omission' in df_name):
             if self.use_extended_stimulus_presentations:
                 stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
