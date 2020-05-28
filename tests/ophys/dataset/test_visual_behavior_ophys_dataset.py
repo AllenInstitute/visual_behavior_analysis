@@ -328,7 +328,7 @@ def test_get_ophys_timestamps(fn, ophys_dataset, stimulus_template):
     
 @pytest.mark.parametrize('fn', [
     lambda ds: ds.stimulus_metadata,
-    lambda ds: ds.get_stimulus_metadata()
+    lambda ds: ds.get_stimulus_metadata(append_omitted_to_stim_metadata=False)
 ])
 def test_get_stimulus_metadata(fn, ophys_dataset, stimulus_metadata):
     
