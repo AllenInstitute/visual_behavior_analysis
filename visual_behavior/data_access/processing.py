@@ -594,7 +594,7 @@ def shift_image_masks(dataframe):
     Returns:
         [type] -- [description]
     """
-    dataframe.loc[:,"image_mask"] = dataframe.apply(shift_mask_by_row, axis=1)
+    dataframe.loc[:, "image_mask"] = dataframe.apply(shift_mask_by_row, axis=1)
     return dataframe
 
 

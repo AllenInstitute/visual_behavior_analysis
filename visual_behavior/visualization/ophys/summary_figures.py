@@ -4,13 +4,15 @@ Created on Sunday July 15 2018
 @author: marinag
 """
 import os
-import h5py
 import numpy as np
 import seaborn as sns
-import matplotlib as mpl
 import matplotlib.pyplot as plt
-from visual_behavior.visualization.utils import save_figure
+import plotly.graph_objects as go
+from visual_behavior.visualization.utils import save_figure, placeAxesOnGrid
 from visual_behavior.ophys.response_analysis import utilities as ut
+import visual_behavior.data_access.loading as loading
+import visual_behavior.ophys.response_analysis.response_analysis as ra
+import pandas as pd
 
 # from visual_behavior.visualization.ophys import population_summary_figures as psf
 
@@ -20,55 +22,6 @@ sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
 sns.set_style('white',
               {'axes.spines.right': False, 'axes.spines.top': False, 'xtick.bottom': True, 'ytick.left': True, })
 sns.set_palette('deep')
-
-
-def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hspace=None, sharex=False, sharey=False):
-    '''
-    Takes a figure with a gridspec defined and places an array of sub-axes on a portion of the gridspec
-
-    Takes as arguments:
-        fig: figure handle - required
-        dim: number of rows and columns in the subaxes - defaults to 1x1
-        xspan: fraction of figure that the subaxes subtends in the x-direction (0 = left edge, 1 = right edge)
-        yspan: fraction of figure that the subaxes subtends in the y-direction (0 = top edge, 1 = bottom edge)
-        wspace and hspace: white space between subaxes in vertical and horizontal directions, respectively
-
-    returns:
-        subaxes handles
-    '''
-    import matplotlib.gridspec as gridspec
-
-    outer_grid = gridspec.GridSpec(100, 100)
-    inner_grid = gridspec.GridSpecFromSubplotSpec(dim[0], dim[1],
-                                                  subplot_spec=outer_grid[int(100 * yspan[0]):int(100 * yspan[1]),
-                                                               # flake8: noqa: E999
-                                                               int(100 * xspan[0]):int(100 * xspan[1])], wspace=wspace,
-                                                  hspace=hspace)  # flake8: noqa: E999
-
-    # NOTE: A cleaner way to do this is with list comprehension:
-    # inner_ax = [[0 for ii in range(dim[1])] for ii in range(dim[0])]
-    inner_ax = dim[0] * [dim[1] * [
-        fig]]  # filling the list with figure objects prevents an error when it they are later replaced by axis handles
-    inner_ax = np.array(inner_ax)
-    idx = 0
-    for row in range(dim[0]):
-        for col in range(dim[1]):
-            if row > 0 and sharex == True:
-                share_x_with = inner_ax[0][col]
-            else:
-                share_x_with = None
-
-            if col > 0 and sharey == True:
-                share_y_with = inner_ax[row][0]
-            else:
-                share_y_with = None
-
-            inner_ax[row][col] = plt.Subplot(fig, inner_grid[idx], sharex=share_x_with, sharey=share_y_with)
-            fig.add_subplot(inner_ax[row, col])
-            idx += 1
-
-    inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
-    return inner_ax
 
 
 def plot_max_projection_image(dataset, save_dir=None, folder='max_projection'):
@@ -260,8 +213,8 @@ def plot_flashes_on_trace(ax, analysis, window=[-4, 8], trial_type=None, omitted
     blank_duration = analysis.blank_duration
     if window:
         window = window
-    elif flashes and not omitted:
-        window = analysis.flash_window
+    # elif flashes and not omitted:
+    #     window = analysis.flash_window
     elif omitted:
         window = analysis.omitted_flash_window
     else:
@@ -463,6 +416,8 @@ def plot_event_detection(dff_traces_array, events, analysis_dir):
 def get_colors_for_response_types(response_types):
     c = sns.color_palette()
     colors_dict = {'HIT': c[1], 'MISS': c[4], 'CR': c[0], 'FA': c[2]}
+    # note: the following colors were used in another version of this function:
+    # colors_dict = {'HIT': c[2], 'MISS': c[8], 'CR': c[0], 'FA': c[3]}
     colors = []
     for val in response_types:
         colors.append(colors_dict[val])
@@ -603,9 +558,18 @@ def get_ylabel_and_suffix(use_events):
     return ylabel, suffix
 
 
+# def get_color_for_image_name(dataset, image_name):
+#     images = np.sort(dataset.stimulus_table.image_name.unique())
+#     images = images[images != 'omitted']
+#     colors = sns.color_palette("hls", len(images))
+#     image_index = np.where(images == image_name)[0][0]
+#     color = colors[image_index]
+#     return color
+
 def get_color_for_image_name(dataset, image_name):
     images = np.sort(dataset.stimulus_table.image_name.unique())
-    images = images[images != 'omitted']
+    if 'omitted' in images:
+        images = images[images != 'omitted']
     colors = sns.color_palette("hls", len(images))
     image_index = np.where(images == image_name)[0][0]
     color = colors[image_index]
@@ -819,12 +783,12 @@ def plot_behavior_block(dataset, initial_time, duration=60, save_figures=False, 
     # ax[0].set_title(dataset.analysis_folder+' - '+str(initial_time), fontsize=14)
     ax[0].set_title('example task flow and behavior performance', fontsize=18)
     xlim = (start_time, start_time + duration + 1)
-    ax[i].set_xticks(np.arange(xlim[0], xlim[1], 10));
+    ax[i].set_xticks(np.arange(xlim[0], xlim[1], 10))
     xticklabels = np.arange(xlim[0], xlim[1], 10) - xlim[0]
-    ax[i].set_xticklabels([int(x) for x in xticklabels]);
+    ax[i].set_xticklabels([int(x) for x in xticklabels])
     ax[i].set_xlabel('time (seconds)')
-    l = ax[i].legend(bbox_to_anchor=(0.125, -0.2), fontsize='x-small')
-    plt.setp(l.get_title(), fontsize='x-small')
+    legend = ax[i].legend(bbox_to_anchor=(0.125, -0.2), fontsize='x-small')
+    plt.setp(legend.get_title(), fontsize='x-small')
     if save_figures:
         folder = 'behavior_blocks'
         if save_dir:
@@ -834,8 +798,8 @@ def plot_behavior_block(dataset, initial_time, duration=60, save_figures=False, 
 
 def plot_lick_raster(dataset, ax=None, save_figures=False, save_dir=None):
     trials = dataset.trials
-    image_set = dataset.metadata.session_type.values[0][-1]
-    mouse_id = str(dataset.metadata.donor_id.values[0])
+    # image_set = dataset.metadata.session_type.values[0][-1]
+    # mouse_id = str(dataset.metadata.donor_id.values[0])
     if ax is None:
         figsize = (4, 5)
         fig, ax = plt.subplots(figsize=figsize)
@@ -906,7 +870,6 @@ def plot_behavior_events_trace(dataset, cell_list, xmin=360, length=3, ax=None, 
 # only plots events or traces
 def plot_average_flash_response_example_cells(analysis, active_cell_indices, include_changes=False,
                                               save_figures=False, save_dir=None, folder=None, ax=None):
-    import visual_behavior.visualization.ophys.population_summary_figures as psf
     dataset = analysis.dataset
     fdf = analysis.get_response_df(df_name='stimulus_response_df')
     last_flash = fdf.stimulus_presentations_id.unique()[-1]  # sometimes last flash is truncated
@@ -1036,8 +999,8 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     ax[i].set_xlim(xlim)
     ax[i].set_title('')
     #     ax[i].legend(bbox_to_anchor=(-1,-1), fontsize=14)
-    l = ax[i].legend(bbox_to_anchor=(0.15, -0.2), fontsize='small')
-    plt.setp(l.get_title(), fontsize='small')
+    legend = ax[i].legend(bbox_to_anchor=(0.15, -0.2), fontsize='small')
+    plt.setp(legend.get_title(), fontsize='small')
     sns.despine(ax=ax[i], left=True, bottom=True)
     ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
                       labeltop=False, labelright=False, labelleft=False, labelbottom=True)
@@ -1078,8 +1041,8 @@ def plot_reliability_trials(analysis, tdf, mean_tdf, cell, xlims=[-4, 8], save_f
                                           xlims=xlims, ax=ax)
     ax = plot_flashes_on_trace(ax, analysis, trial_type='go', window=xlims)
     reliability = \
-    mean_tdf[(mean_tdf.cell == cell) & (mean_tdf.pref_stim == True) & (mean_tdf.trial_type == 'go')].reliability.values[
-        0]
+        mean_tdf[(mean_tdf.cell == cell) & (mean_tdf.pref_stim == True) & (mean_tdf.trial_type == 'go')].reliability.values[
+            0]
     ax.set_title('reliability: ' + str(np.round(reliability, 2)))
     fig.tight_layout()
 
@@ -1100,7 +1063,7 @@ def plot_reliability_flashes(analysis, fdf, mean_fdf, cell, xlims=[-0.5, 0.75], 
                                           xlims=xlims, ax=ax)
     ax = plot_flashes_on_trace(ax, analysis, flashes=True, window=xlims)
     reliability = \
-    mean_fdf[(mean_fdf.cell == cell) & (mean_fdf.pref_stim == True) & (mean_fdf.repeat == 1)].reliability.values[0]
+        mean_fdf[(mean_fdf.cell == cell) & (mean_fdf.pref_stim == True) & (mean_fdf.repeat == 1)].reliability.values[0]
     ax.set_title('reliability: ' + str(np.round(reliability, 2)))
 
     fig.tight_layout()
@@ -1108,15 +1071,6 @@ def plot_reliability_flashes(analysis, fdf, mean_fdf, cell, xlims=[-0.5, 0.75], 
         save_figure(fig, figsize, save_dir, folder,
                     analysis.dataset.analysis_folder + '_reliability_flashes_' + str(cell_specimen_id))
         plt.close()
-
-
-def get_colors_for_response_types(values):
-    c = sns.color_palette()
-    colors_dict = {'HIT': c[2], 'MISS': c[8], 'CR': c[0], 'FA': c[3]}
-    colors = []
-    for val in values:
-        colors.append(colors_dict[val])
-    return colors
 
 
 def plot_transition_type_heatmap(analysis, cell_list, cmap='jet', vmax=None, save=False, ax=None, colorbar=True):
@@ -1130,8 +1084,8 @@ def plot_transition_type_heatmap(analysis, cell_list, cmap='jet', vmax=None, sav
     for cell in cell_list:
         cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell)
         if ax is None:
-            fig, ax = plt.subplots(rows, cols, figsize=figsize, sharex=True);
-            ax = ax.ravel();
+            fig, ax = plt.subplots(rows, cols, figsize=figsize, sharex=True)
+            ax = ax.ravel()
         resp_types = []
         for i, image_name in enumerate(images):
             im_df = df[(df.cell == cell) & (df.change_image_name == image_name) & (df.trial_type != 'autorewarded')]
@@ -1151,26 +1105,26 @@ def plot_transition_type_heatmap(analysis, cell_list, cmap='jet', vmax=None, sav
                     idx += 1
                 segments.append(idx)
                 if vmax:
-                    cax = ax[i].pcolormesh(response_matrix, cmap=cmap, vmax=vmax, vmin=0);
+                    cax = ax[i].pcolormesh(response_matrix, cmap=cmap, vmax=vmax, vmin=0)
                 else:
-                    cax = ax[i].pcolormesh(response_matrix, cmap=cmap);
-                ax[i].set_ylim(0, response_matrix.shape[0]);
-                ax[i].set_xlim(0, response_matrix.shape[1]);
-                ax[i].set_yticks(segments);
+                    cax = ax[i].pcolormesh(response_matrix, cmap=cmap)
+                ax[i].set_ylim(0, response_matrix.shape[0])
+                ax[i].set_xlim(0, response_matrix.shape[1])
+                ax[i].set_yticks(segments)
                 ax[i].set_yticklabels('')
-                ax[i].set_xlabel('time (s)');
+                ax[i].set_xlabel('time (s)')
                 xticks, xticklabels = get_xticks_xticklabels(im_df.trace.values[0], analysis.ophys_frame_rate,
                                                              interval_sec=2, window=analysis.trial_window)
                 xticklabels = [int(label) for label in xticklabels]
-                ax[i].set_xticks(xticks);
-                ax[i].set_xticklabels(xticklabels);
-                ax[i].set_title(image_name);
+                ax[i].set_xticks(xticks)
+                ax[i].set_xticklabels(xticklabels)
+                ax[i].set_title(image_name)
             for s in range(len(segments) - 1):
                 ax[i].vlines(x=-10, ymin=segments[s], ymax=segments[s + 1], color=colors[s], linewidth=25)
             ax[0].set_ylabel('trials')
             resp_types.append(response_type_list)
             if colorbar:
-                plt.colorbar(cax, ax=ax[i], use_gridspec=True);
+                plt.colorbar(cax, ax=ax[i], use_gridspec=True)
         plt.tight_layout()
         if save:
             save_figure(fig, figsize, ra.analysis_dir, 'transition_type_heatmap', str(cell_specimen_id))
@@ -1241,17 +1195,17 @@ def plot_ranked_image_tuning_curve_trial_types(analysis, cell, ax=None, save=Fal
     # ax.set_ylim(ymin=0)
     ax.set_ylabel('mean ' + ylabel)
     ax.set_xticks(np.arange(0, len(responses), 1))
-    ax.set_xticklabels(images, rotation=90);
+    ax.set_xticklabels(images, rotation=90)
     ax.legend()
     ax.set_title('lifetime sparseness go: ' + str(np.round(ls_list[0], 3)) + '\nlifetime sparseness catch: ' + str(
-        np.round(ls_list[1], 3)));
+        np.round(ls_list[1], 3)))
     if save:
         save_figure(fig, figsize, analysis.dataset.analysis_dir, 'lifetime_sparseness' + suffix,
                     'trial_types_tc_' + str(cell_specimen_id))
     return ax
 
 
-def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=None, use_events=False):
+def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=None, save_dir=None, use_events=False):
     from scipy.stats import sem as compute_sem
     from visual_behavior.ophys.response_analysis import utilities as ut
     c = sns.color_palette()
@@ -1266,7 +1220,7 @@ def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=Non
         fig, ax = plt.subplots(figsize=figsize)
     tmp = fdf[(fdf.cell_specimen_id == cell_specimen_id)]
     responses = fmdf[(fmdf.cell_specimen_id == cell_specimen_id)].mean_response.values
-    ls = compute_lifetime_sparseness(responses)
+    ls = ut.compute_lifetime_sparseness(responses)
     order = np.argsort(responses)[::-1]
     images = fmdf[(fmdf.cell_specimen_id == cell_specimen_id)].image_name.values
     images = images[order]
@@ -1279,8 +1233,8 @@ def plot_ranked_image_tuning_curve_all_flashes(analysis, cell, ax=None, save=Non
     # ax.set_ylim(ymin=0)
     ax.set_ylabel('mean dF/F')
     ax.set_xticks(np.arange(0, len(responses), 1))
-    ax.set_xticklabels(images, rotation=90);
-    ax.set_title('lifetime sparseness all flashes: ' + str(np.round(ls, 3)));
+    ax.set_xticklabels(images, rotation=90)
+    ax.set_title('lifetime sparseness all flashes: ' + str(np.round(ls, 3)))
     ax.legend()
     if save:
         save_figure(fig, figsize, save_dir, 'lifetime_sparseness_flashes', 'roi_' + str(cell))
@@ -1320,7 +1274,7 @@ def plot_ranked_image_tuning_curve_flashes(analysis, cell, repeats=[1, 5, 10], a
     # ax.set_ylim(ymin=0)
     ax.set_ylabel('mean ' + ylabel)
     ax.set_xticks(np.arange(0, len(responses), 1))
-    ax.set_xticklabels(images, rotation=90);
+    ax.set_xticklabels(images, rotation=90)
     ax.set_title('lifetime sparseness repeat ' + str(repeats[0]) + ': ' + str(np.round(ls_list[0], 3)) +
                  '\nlifetime sparseness repeat ' + str(repeats[1]) + ': ' + str(np.round(ls_list[1], 3)) +
                  '\nlifetime sparseness repeat ' + str(repeats[2]) + ': ' + str(np.round(ls_list[2], 3)))
@@ -1364,8 +1318,8 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
         fig, ax = plt.subplots()
     if len(traces) > 0:
         mean_trace = np.mean(traces, axis=0)
-        times = np.arange(0, len(mean_trace), 1)
-        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        # times = np.arange(0, len(mean_trace), 1)
+        # sem = (traces.std()) / np.sqrt(float(len(traces)))
         for trace in traces:
             ax.plot(trace, linewidth=1, color='gray')
         ax.plot(mean_trace, label=label, linewidth=3, color=color, zorder=100)
@@ -1415,7 +1369,7 @@ def plot_mean_response_pref_stim_metrics(analysis, cell, ax=None, save=None, use
         fraction_sig_trials = np.round(mean_df.fraction_significant_trials.values[0], 3)
         ax[i].set_title(trial_type + ' - mean: ' + str(mean) + '\np_val: ' + str(p_val) +  # ', sd: ' + str(sd) +
                         # '\ntime_to_peak: ' + str(time_to_peak) +
-                        '\nfraction_sig_trials: ' + str(fraction_sig_trials));  # +
+                        '\nfraction_sig_trials: ' + str(fraction_sig_trials))  # +
         # '\nfano_factor: ' + str(fano_factor));
     ax[1].set_ylabel('')
     if save:
@@ -1436,16 +1390,6 @@ def format_table_data(dataset):
     return table_data
 
 
-def get_color_for_image_name(dataset, image_name):
-    images = np.sort(dataset.stimulus_table.image_name.unique())
-    if 'omitted' in images:
-        images = images[images != 'omitted']
-    colors = sns.color_palette("hls", len(images))
-    image_index = np.where(images == image_name)[0][0]
-    color = colors[image_index]
-    return color
-
-
 def plot_images(dataset, orientation='row', rows=1, color_box=True, save_dir=None, ax=None):
     meta = dataset.stimulus_metadata
     meta = meta[meta.image_name != 'omitted']
@@ -1462,7 +1406,7 @@ def plot_images(dataset, orientation='row', rows=1, color_box=True, save_dir=Non
         cols = 1
         rows = n_images
     if ax is None:
-        fig, ax = plt.subplots(rows, cols, figsize=figsize);
+        fig, ax = plt.subplots(rows, cols, figsize=figsize)
 
     stimuli = dataset.stimulus_metadata
     image_names = np.sort(dataset.stimulus_table.image_name.unique())
@@ -1471,16 +1415,16 @@ def plot_images(dataset, orientation='row', rows=1, color_box=True, save_dir=Non
     for i, image_name in enumerate(image_names):
         image_index = stimuli[stimuli.image_name == image_name].image_index.values[0]
         image = dataset.stimulus_template[image_index]
-        ax[i].imshow(image, cmap='gray', vmin=0, vmax=np.amax(image));
-        ax[i].grid('off');
-        ax[i].axis('off');
-        ax[i].set_title(image_name, color='k');
+        ax[i].imshow(image, cmap='gray', vmin=0, vmax=np.amax(image))
+        ax[i].grid('off')
+        ax[i].axis('off')
+        ax[i].set_title(image_name, color='k')
         if color_box:
             linewidth = 6
-            ax[i].axhline(y=-20, xmin=0.04, xmax=0.95, linewidth=linewidth, color=colors[i]);
-            ax[i].axhline(y=image.shape[0] - 20, xmin=0.04, xmax=0.95, linewidth=linewidth, color=colors[i]);
-            ax[i].axvline(x=-30, ymin=0.05, ymax=0.95, linewidth=linewidth, color=colors[i]);
-            ax[i].axvline(x=image.shape[1], ymin=0, ymax=0.95, linewidth=linewidth, color=colors[i]);
+            ax[i].axhline(y=-20, xmin=0.04, xmax=0.95, linewidth=linewidth, color=colors[i])
+            ax[i].axhline(y=image.shape[0] - 20, xmin=0.04, xmax=0.95, linewidth=linewidth, color=colors[i])
+            ax[i].axvline(x=-30, ymin=0.05, ymax=0.95, linewidth=linewidth, color=colors[i])
+            ax[i].axvline(x=image.shape[1], ymin=0, ymax=0.95, linewidth=linewidth, color=colors[i])
             # ax[i].set_title(str(stim_code), color=colors[i])
     if save_dir:
         title = 'images_' + dataset.metadata.session_type[0]
@@ -1639,7 +1583,7 @@ def plot_running_and_behavior(dataset, start_time, duration, save_figures=False,
     xlim = (start_time, start_time + duration + 1)
     running_speed = dataset.running_speed.running_speed.values
     running_times = dataset.running_speed.time.values
-    running_diff = dataset.running_speed.running_speed.rolling(window=15).apply(diff)
+    # running_diff = dataset.running_speed.running_speed.rolling(window=15).apply(diff)
     figsize = (15, 2)
     fig, ax = plt.subplots(figsize=figsize)
     ax.plot(running_times, running_speed, color=sns.color_palette()[0])
@@ -1691,7 +1635,7 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     use_events = analysis.use_events
     dataset = analysis.dataset
     rdf = analysis.trials_response_df
-    fdf = analysis.stimulus_response_df
+    # fdf = analysis.stimulus_response_df
     ylabel, suffix = get_ylabel_and_suffix(use_events)
     cell_specimen_id = analysis.dataset.get_cell_specimen_id_for_cell_index(cell_index)
 
@@ -1745,8 +1689,8 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
 
     ax = placeAxesOnGrid(fig, dim=(8, 1), xspan=(.68, .86), yspan=(.2, .99), wspace=0.25, hspace=0.25)
     try:
-        ax = plot_images(dataset, orientation='column', color_box=True, save=False, ax=ax);
-    except:
+        ax = plot_images(dataset, orientation='column', color_box=True, save=False, ax=ax)
+    except:  # NOQA E722
         pass
 
     # ax = placeAxesOnGrid(fig, dim=(1, 1), xspan=(0.0, 0.2), yspan=(.79, 1))
@@ -1781,6 +1725,272 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
     if not show:
         plt.close()
 
+
+def colormap():
+    colormap = {
+        'engaged': 'olivedrab',
+        'disengaged': 'firebrick'
+    }
+    return colormap
+
+
+def get_title(ophys_experiment_id, cell_specimen_id):
+    '''
+    generate a standardized figure title containing identifying information
+    '''
+    experiments_table = loading.get_filtered_ophys_experiment_table().reset_index()
+
+    row = experiments_table.query('ophys_experiment_id == @ophys_experiment_id').iloc[0].to_dict()
+    title = '{}__specimen_id={}__exp_id={}__{}__{}__depth={}__cell_id={}'.format(
+        row['cre_line'],
+        row['specimen_id'],
+        row['ophys_experiment_id'],
+        row['session_type'],
+        row['targeted_structure'],
+        row['imaging_depth'],
+        cell_specimen_id,
+    )
+    return title
+
+
+def merge_in_extended_stimulus_presentations(analysis):
+    '''
+    merges extended_stimulus_presentations into the response dataframes
+    operates in place
+    takes ~30-60 seconds to run
+    '''
+    # merge on stim presentations id
+    dfs_to_merge = [
+        'stimulus_response_df',
+        'stimulus_run_speed_df',
+        'omission_response_df',
+        'omission_run_speed_df',
+    ]
+    for df in dfs_to_merge:
+        setattr(analysis, df, getattr(analysis, df).merge(
+                analysis.dataset.extended_stimulus_presentations,
+                left_on='stimulus_presentations_id',
+                right_index=True,
+                how='left',
+                suffixes=('', '_duplicate')
+                ))
+
+    # merge on change time
+    dfs_to_merge = [
+        'trials_response_df',
+        'trials_run_speed_df'
+    ]
+    for df in dfs_to_merge:
+        setattr(analysis, df, getattr(analysis, df).merge(
+            analysis.dataset.extended_stimulus_presentations,
+            left_on='change_time',
+            right_on='start_time',
+            how='left',
+            suffixes=('', '_duplicate')
+        ))
+
+
+def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
+    '''
+    plots raw F and deltaF/F with engagement state denoted by background color
+    inputs:
+        analysis object
+        cell_specimen_id (int))
+        axes (list or array): an array of axes, expected length = 3
+    returns:
+        None
+    '''
+
+    sdf = analysis.stimulus_response_df
+
+    sdf_engagement_state = sdf.drop_duplicates('start_time')[['start_time', 'engagement_state']].copy().reset_index()
+
+    sdf_engagement_state['next_start_time'] = sdf_engagement_state['start_time'].shift(-1)
+    sdf_engagement_state['state_change'] = sdf_engagement_state['engagement_state'] != sdf_engagement_state['engagement_state'].shift()
+
+    state_changes = sdf_engagement_state.query('state_change == True').copy()
+    state_changes['next_state_change'] = state_changes['start_time'].shift(-1)
+    state_changes.loc[state_changes.index.max(), 'next_state_change'] = sdf['start_time'].max()
+
+    state_colors = colormap()
+
+    for ii, ax in enumerate(axes):
+        ax.axvspan(0, state_changes.iloc[0]['start_time'], color='gray', alpha=0.5)
+        for idx, row in state_changes.iterrows():
+            ax.axvspan(row['start_time'] / 60., row['next_state_change'] / 60., color=state_colors[row['engagement_state']])
+        ax.axvspan(
+            row['next_state_change'] / 60.,
+            row['next_state_change'] / 60. + 5,
+            color='gray',
+            alpha=0.5
+        )
+        ax.axvspan(
+            row['next_state_change'] / 60. + 5,
+            analysis.dataset.ophys_timestamps.max() / 60.,
+            color='yellow',
+            alpha=0.5
+        )
+
+        ax.set_xlim(0, analysis.dataset.ophys_timestamps.max() / 60.)
+
+        if ii == 0:
+            ax.plot(
+                analysis.dataset.ophys_timestamps / 60,
+                analysis.dataset.corrected_fluorescence_traces.loc[cell_specimen_id]['corrected_fluorescence'],
+                linewidth=2,
+                color='black'
+            )
+            ax.set_ylabel('Corrected\nFluor.', rotation=0, ha='right', va='center')
+            ax.set_xticks([])
+            ax.set_title('engagement state vs. session time\n(gray = gray screen, green = engaged, red = disengaged, yellow = fingerprint movie)')
+        if ii == 1:
+            ax.plot(
+                analysis.dataset.ophys_timestamps / 60,
+                analysis.dataset.dff_traces.loc[cell_specimen_id]['dff'],
+                linewidth=2,
+                color='black'
+            )
+            ax.set_ylabel('$\Delta$F/F', rotation=0, ha='right', va='center')  # NOQA W605
+            ax.set_xticks([])
+        if ii == 2:
+            ax.plot(
+                analysis.dataset.running_speed['timestamps'] / 60,
+                analysis.dataset.running_speed['speed'],
+                linewidth=2,
+                color='black'
+            )
+            ax.set_ylabel('running\nspeed\n(cm/s)', rotation=0, ha='right', va='center')
+            ax.set_xlabel('session time (minutes)')
+
+
+def make_cell_plot(dataset, cell_specimen_id, ax):
+    roi_masks = loading.get_sdk_roi_masks(dataset.cell_specimen_table)
+    ax[0].imshow(dataset.max_projection, cmap='gray')
+    ax[0].set_title('max projection')
+
+    ax[1].imshow(roi_masks[cell_specimen_id], cmap='gray')
+    ax[1].set_title('ROI mask for\ncell_specimen_id {}'.format(cell_specimen_id))
+
+    ax[2].imshow(dataset.max_projection, cmap='gray')
+    v = roi_masks[cell_specimen_id].copy()
+    v[v == 0] = np.nan
+    ax[2].imshow(v, cmap='spring_r', alpha=0.5)
+    ax[2].set_title('overlay (ROI mask in yellow)')
+
+    for axis in ax:
+        axis.axis('off')
+
+
+def seaborn_lineplot(df, ax, legend='brief', xlabel='time (s)', ylabel='$\Delta$F/F', n_boot=1000):  # NOQA W605
+    state_colors = colormap()
+
+    sns.lineplot(
+        x='eventlocked_timestamps',
+        y='eventlocked_traces',
+        data=df,
+        hue='engagement_state',
+        hue_order=['engaged', 'disengaged'],
+        palette=[state_colors[state] for state in ['engaged', 'disengaged']],
+        ax=ax,
+        legend=legend,
+        n_boot=n_boot,
+    )
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel, rotation=0, ha='right')
+
+
+def make_cell_response_summary_plot(analysis, cell_specimen_id, save=False, show=True, errorbar_bootstrap_iterations=1000):
+    figure_savedir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/single_cell_plots/response_plots'
+    oeid = analysis.dataset.ophys_experiment_id
+
+    if 'engagement_state' not in analysis.stimulus_response_df.columns:
+        print('merging')
+        merge_in_extended_stimulus_presentations(analysis)
+
+    params_dict = {
+        'stimulus response': {
+            'ophys_df': analysis.stimulus_response_df,
+            'running_df': analysis.stimulus_run_speed_df,
+            'xlims': (-0.5, 0.75),
+            'omit': None,
+            'pre_color': 'blue',
+            'post_color': 'blue'
+        },
+        'omission response': {
+            'ophys_df': analysis.omission_response_df,
+            'running_df': analysis.omission_run_speed_df,
+            'xlims': (-3, 3),
+            'omit': 0,
+            'pre_color': 'blue',
+            'post_color': 'blue'
+        },
+        'change response': {
+            'ophys_df': analysis.trials_response_df,
+            'running_df': analysis.trials_run_speed_df,
+            'pupil_df': None,
+            'xlims': (-3, 3),
+            'omit': None,
+            'pre_color': 'gray',
+            'post_color': 'green'
+        },
+    }
+    ylabels = {
+        'ophys': '$\Delta$F/F',  # NOQA W605
+        'running': 'Running Speed\n(cm/s)'
+    }
+
+    fig = plt.figure(figsize=(20, 18))
+    ax = {
+        'state_summary': placeAxesOnGrid(fig, dim=[3, 1], xspan=[0, 1], yspan=[0, 0.2], sharex=False, hspace=0),
+        'cell_images': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.3, 0.65], sharey=True, wspace=0),
+        'ophys_response_plots': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.7, 0.84], sharey=True),
+        'running_response_plots': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.86, 1], sharey=True),
+    }
+
+    make_engagement_time_summary_plot(analysis, cell_specimen_id, ax['state_summary'])
+    make_cell_plot(analysis.dataset, cell_specimen_id, ax['cell_images'])
+
+    for col, response_type in enumerate(params_dict.keys()):
+        for row, datastream in enumerate(['ophys', 'running']):
+            if response_type == 'stimulus response' and datastream == 'ophys':
+                legend = 'brief'
+            else:
+                legend = False
+
+            if datastream == 'ophys':
+                data = params_dict[response_type]['{}_df'.format(datastream)].query('cell_specimen_id == @cell_specimen_id')
+                ax['{}_response_plots'.format(datastream)][col].set_title(response_type)
+                ax['{}_response_plots'.format(datastream)][col].set_xticklabels([])
+            else:
+                data = params_dict[response_type]['{}_df'.format(datastream)]
+                ax['{}_response_plots'.format(datastream)][col].set_title('')
+
+            seaborn_lineplot(
+                data,
+                ax['{}_response_plots'.format(datastream)][col],
+                legend=legend,
+                n_boot=errorbar_bootstrap_iterations,
+                xlabel='time (s)' if row == 1 else '',
+                ylabel=ylabels[datastream] if col == 0 else '',
+            )
+
+            ax['{}_response_plots'.format(datastream)][col].set_xlim(params_dict[response_type]['xlims'])
+            designate_flashes(
+                ax['{}_response_plots'.format(datastream)][col],
+                omit=params_dict[response_type]['omit'],
+                pre_color=params_dict[response_type]['pre_color'],
+                post_color=params_dict[response_type]['post_color']
+            )
+
+    plt.subplots_adjust(top=0.9)
+    title = get_title(oeid, cell_specimen_id)
+    fig.suptitle(title)
+    if save:
+        fig.savefig(os.path.join(figure_savedir, title + '.png'), dpi=200)
+    if not show:
+        plt.close()
+
+
 def designate_flashes(ax, omit=None, pre_color='blue', post_color='blue'):
     '''
     Function to add vertical spans to designate stimulus flashes
@@ -1795,11 +2005,11 @@ def designate_flashes(ax, omit=None, pre_color='blue', post_color='blue'):
     lims = ax.get_xlim()
     for flash_start in np.arange(0, lims[1], 0.75):
         if flash_start != omit:
-            ax.axvspan(flash_start, flash_start+0.25,
+            ax.axvspan(flash_start, flash_start + 0.25,
                        color=post_color, alpha=0.25, zorder=-np.inf)
-    for flash_start in np.arange(-0.75, lims[0]-0.001, -0.75):
+    for flash_start in np.arange(-0.75, lims[0] - 0.001, -0.75):
         if flash_start != omit:
-            ax.axvspan(flash_start, flash_start+0.25,
+            ax.axvspan(flash_start, flash_start + 0.25,
                        color=pre_color, alpha=0.25, zorder=-np.inf)
 
 
@@ -1807,9 +2017,9 @@ def designate_flashes_plotly(fig, omit=None, pre_color='blue', post_color='blue'
     '''add vertical spans to designate stimulus flashes'''
 
     post_flashes = np.arange(0, lims[1], 0.75)
-    post_flash_colors = np.array([post_color]*len(post_flashes))
-    pre_flashes = np.arange(-0.75, lims[0]-0.001, -0.75)
-    pre_flash_colors = np.array([pre_color]*len(pre_flashes))
+    post_flash_colors = np.array([post_color] * len(post_flashes))
+    pre_flashes = np.arange(-0.75, lims[0] - 0.001, -0.75)
+    pre_flash_colors = np.array([pre_color] * len(pre_flashes))
 
     flash_times = np.hstack((pre_flashes, post_flashes))
     flash_colors = np.hstack((pre_flash_colors, post_flash_colors))
@@ -1823,7 +2033,7 @@ def designate_flashes_plotly(fig, omit=None, pre_color='blue', post_color='blue'
                     go.layout.Shape(
                         type="rect",
                         x0=flash_start,
-                        x1=flash_start+0.25,
+                        x1=flash_start + 0.25,
                         y0=-100,
                         y1=100,
                         fillcolor=flash_color,

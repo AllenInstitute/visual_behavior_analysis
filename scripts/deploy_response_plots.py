@@ -15,8 +15,8 @@ parser.add_argument('--env', type=str, default='visual_behavior', metavar='name 
 job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/sdk_validation"
 
 job_settings = {'queue': 'braintv',
-                'mem': '100g',
-                'walltime': '3:00:00',
+                'mem': '128g',
+                'walltime': '1:00:00',
                 'ppn': 1,
                 }
 
@@ -40,25 +40,24 @@ if __name__ == "__main__":
     python_executable = "{}/.conda/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
     print('python executable = {}'.format(python_executable))
     python_file = "{}/code/visual_behavior_analysis/scripts/generate_engaged_disengaged_response_plots.py".format(os.path.expanduser('~'))
-    
-    flash_summary = load_flashwise_summary()
 
-    cache = loading.get_visual_behavior_cache()
     experiments_table = loading.get_filtered_ophys_experiment_table()
-    experiments_table['in_flash_summary'] = experiments_table['behavior_session_id'].map(lambda bsid: bsid in list(flash_summary['behavior_session_id'].unique()))
 
-    experiment_ids = experiments_table.reset_index().query('in_flash_summary == True')['ophys_experiment_id'].unique()
+    experiment_ids = experiments_table.query('model_outputs_available == True').index.values
 
-    for ii, experiment_id in enumerate(experiment_ids):
+    for experiment_id in experiment_ids:
+        dataset = loading.get_ophys_dataset(experiment_id)
+        
+        for action in ['plot']: # action to execute ("plot" or "log")
 
-        print('starting cluster job for {}'.format(experiment_id))
-        job_title = 'response_plots_oeid_{}'.format(experiment_id)
-        pbstools.PythonJob(
-            python_file,
-            python_executable,
-            python_args="--oeid {}".format(experiment_id),
-            jobname=job_title,
-            jobdir=job_dir,
-            **job_settings
-        ).run(dryrun=False)
-        time.sleep(0.001)
+            print('starting cluster job for {}'.format(experiment_id))
+            job_title = 'response_plots_oeid_{}_action={}'.format(experiment_id,action)
+            pbstools.PythonJob(
+                python_file,
+                python_executable,
+                python_args="--experiment-id {} --action {}".format(experiment_id, action),
+                jobname=job_title,
+                jobdir=job_dir,
+                **job_settings
+            ).run(dryrun=False)
+            time.sleep(0.001)
