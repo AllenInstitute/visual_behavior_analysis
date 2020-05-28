@@ -158,8 +158,7 @@ class VisualBehaviorOphysDataset(object):
         stimulus_metadata['image_name'] = [image_name for image_name in stimulus_metadata.image_name.values]
         # Add an entry for omitted stimuli
         if self.append_omitted_to_stim_metadata:
-            omitted_df = pd.DataFrame({'image_name': ['omitted'],
-                                    'image_index': [stimulus_metadata['image_index'].max() + 1]})
+            omitted_df = pd.DataFrame({'image_name': ['omitted'], 'image_index': [stimulus_metadata['image_index'].max() + 1]})
             stimulus_metadata = stimulus_metadata.append(omitted_df, ignore_index=True, sort=False)
         # stimulus_metadata.set_index(['image_index'], inplace=True, drop=True)
         self._stimulus_metadata = stimulus_metadata
