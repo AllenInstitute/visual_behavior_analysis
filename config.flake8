@@ -1,0 +1,3 @@
+[flake8]
+exclude =
+    visual_behavior/visualization/ophys/pilot_manuscript_figures.py
