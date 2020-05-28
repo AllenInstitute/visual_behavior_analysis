@@ -334,7 +334,7 @@ def test_get_stimulus_metadata(fn, ophys_dataset, stimulus_metadata):
     
     obtained = fn(ophys_dataset)
     stimulus_metadata = stimulus_metadata.loc[:, ('image_index', 'image_name')]
-    pd.testing.assert_frame_equal(obtained, stimulus_metadata, check_like=True) 
+    pd.testing.assert_frame_equal(obtained.query('image_name != "omitted"'), stimulus_metadata, check_like=True) 
     
     
 @pytest.mark.parametrize('fn', [

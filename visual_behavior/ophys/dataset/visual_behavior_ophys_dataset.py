@@ -41,7 +41,7 @@ class LazyLoadable(object):
 class VisualBehaviorOphysDataset(object):
     # TODO getter methods no longer need to set attributes directly
 
-    def __init__(self, experiment_id, cache_dir=None, **kwargs):
+    def __init__(self, experiment_id, cache_dir=None, append_omitted_to_stim_metadata=True, **kwargs):
         """Initialize visual behavior ophys experiment dataset.
             Loads experiment data from cache_dir, including dF/F traces, roi masks, stimulus metadata, running speed, licks, rewards, and metadata.
 
@@ -52,11 +52,13 @@ class VisualBehaviorOphysDataset(object):
         ----------
         experiment_id : ophys experiment ID
         cache_dir : directory where data files are located
+        append_omitted_to_stim_metadata (bool): adds an additional omitted stimulus row to the end of stimulus_metadata
         """
         self.experiment_id = experiment_id
         self.cache_dir = cache_dir
         self.cache_dir = self.get_cache_dir()
         self.roi_metrics = self.get_roi_metrics()
+        self.append_omitted_to_stim_metadata = append_omitted_to_stim_metadata
         if self.roi_metrics.cell_specimen_id.values[0] is None:
             self.cell_matching = False
         else:
@@ -149,16 +151,15 @@ class VisualBehaviorOphysDataset(object):
 
     stimulus_template = LazyLoadable('_stimulus_template', get_stimulus_template)
 
-    def get_stimulus_metadata(self):
+    def get_stimulus_metadata(self, append_omitted_to_stim_metadata=True):
         stimulus_metadata = pd.read_hdf(
             os.path.join(self.analysis_dir, 'stimulus_metadata.h5'), key='df')
         stimulus_metadata = stimulus_metadata.drop(columns='image_category')
-        stimulus_metadata['image_name'] = [image_name.decode('utf-8') for image_name in
-                                           stimulus_metadata.image_name.values]
+        stimulus_metadata['image_name'] = [image_name for image_name in stimulus_metadata.image_name.values]
         # Add an entry for omitted stimuli
-        omitted_df = pd.DataFrame({'image_name': ['omitted'],
-                                   'image_index': [stimulus_metadata['image_index'].max() + 1]})
-        stimulus_metadata = stimulus_metadata.append(omitted_df, ignore_index=True, sort=False)
+        if append_omitted_to_stim_metadata:
+            omitted_df = pd.DataFrame({'image_name': ['omitted'], 'image_index': [stimulus_metadata['image_index'].max() + 1]})
+            stimulus_metadata = stimulus_metadata.append(omitted_df, ignore_index=True, sort=False)
         # stimulus_metadata.set_index(['image_index'], inplace=True, drop=True)
         self._stimulus_metadata = stimulus_metadata
         return self._stimulus_metadata
@@ -385,7 +386,7 @@ class VisualBehaviorOphysDataset(object):
         stimulus_presentations_df = stimulus_presentations_df.rename(
             columns={'flash_number': 'stimulus_presentations_id'})
         stimulus_presentations_df.set_index('stimulus_presentations_id', inplace=True)
-        stimulus_metadata_df = self.get_stimulus_metadata()
+        stimulus_metadata_df = self.get_stimulus_metadata(self.append_omitted_to_stim_metadata)
         idx_name = stimulus_presentations_df.index.name
         stimulus_presentations_df = stimulus_presentations_df.reset_index().merge(stimulus_metadata_df,
                                                                                   on=['image_name']).set_index(idx_name)

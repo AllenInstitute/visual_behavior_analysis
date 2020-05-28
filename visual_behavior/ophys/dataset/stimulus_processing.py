@@ -1,4 +1,4 @@
-## @nickponvert
+# @nickponvert
 
 import numpy as np
 import pandas as pd
@@ -329,8 +329,7 @@ def get_consumption_licks(stimulus_presentations):
         row_data = st.iloc[row]
         if (row_data.change == True) and (row_data.first_lick_in_bout == True):
             st.loc[row, 'consumption_licks'] = True
-        if (st.iloc[row - 1].consumption_licks == True) & (
-                    st.iloc[row].inter_flash_lick_diff < median_inter_lick_interval * 3):
+        if (st.iloc[row - 1].consumption_licks == True) & (st.iloc[row].inter_flash_lick_diff < median_inter_lick_interval * 3):
             st.loc[row, 'consumption_licks'] = True
     return st
 
@@ -522,9 +521,7 @@ def get_extended_stimulus_presentations(stimulus_presentations_df,
         if image_name != "omitted":
             for ind_block, block_number in enumerate(image_blocks):
                 # block_rep_number starts as a copy of block_inds, so we can go write over the index number with the rep number
-                block_repetition_number[
-                    block_repetition_number == block_number
-                    ] = ind_block
+                block_repetition_number[block_repetition_number == block_number] = ind_block
 
     stimulus_presentations_df["image_block_repetition"] = block_repetition_number
 

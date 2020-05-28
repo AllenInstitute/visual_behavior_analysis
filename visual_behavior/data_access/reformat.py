@@ -134,7 +134,7 @@ def add_container_workflow_state_to_ophys_session_table(session_table, experimen
 def convert_metadata_to_dataframe(original_metadata):
     metadata = original_metadata.copy()
     metadata['reporter_line'] = metadata['reporter_line'][0]
-    if len(metadata['driver_line'])>1:
+    if len(metadata['driver_line']) > 1:
         index = [i for i, driver_line in enumerate(metadata['driver_line']) if 'Camk2a-tTA' in driver_line][0]
         metadata['driver_line'] = metadata['driver_line'][index]
     else:

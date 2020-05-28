@@ -94,8 +94,8 @@ def plot_hist_for_condition(df, metric, condition='image_set', condition_values=
     sns.despine(right=False)
     if save_figures:
         if show_legend:
-            l = ax.legend(title=condition, fontsize='small')
-            plt.setp(l.get_title(), fontsize='small')
+            legend = ax.legend(title=condition, fontsize='small')
+            plt.setp(legend.get_title(), fontsize='small')
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(left=0.25)
         plt.gcf().subplots_adjust(right=0.85)
@@ -153,8 +153,8 @@ def plot_cdf_for_condition(df, metric, condition='image_set', condition_values=[
 
     if save_figures:
         if show_legend:
-            l = ax.legend(title=condition, fontsize='small')
-            plt.setp(l.get_title(), fontsize='small')
+            legend = ax.legend(title=condition, fontsize='small')
+            plt.setp(legend.get_title(), fontsize='small')
         #         fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(left=0.25)
@@ -185,8 +185,8 @@ def plot_cdf_for_image_sets(df, metric, cdf_range=(0, 1), xlabel=None, show_lege
             ax[i].set_xlabel(xlabel)
     ax[1].set_ylabel('')
     if show_legend:
-        l = ax[i].legend(title=condition, fontsize='x-small')
-        plt.setp(l.get_title(), fontsize='x-small')
+        legend = ax[i].legend(title=condition, fontsize='x-small')
+        plt.setp(legend.get_title(), fontsize='x-small')
     if save_figures:
         plt.gcf().subplots_adjust(top=0.85)
         plt.gcf().subplots_adjust(left=0.25)
@@ -211,9 +211,9 @@ def adjust_box_widths(ax, fac):
             xmax_new = xmid + fac * xhalf
             verts_sub[verts_sub[:, 0] == xmin, 0] = xmin_new
             verts_sub[verts_sub[:, 0] == xmax, 0] = xmax_new
-            for l in ax.lines:
-                if np.all(l.get_xdata() == [xmin, xmax]):
-                    l.set_xdata([xmin_new, xmax_new])
+            for legend in ax.lines:
+                if np.all(legend.get_xdata() == [xmin, xmax]):
+                    legend.set_xdata([xmin_new, xmax_new])
 
 
 def plot_boxplot_for_condition(df, metric, condition='image_set', condition_values=['A', 'B', 'C', 'D'],
@@ -335,9 +335,9 @@ def generate_figures_for_cell_summary_image_sets(cell_summary_df, metric, cdf_ra
     plot_cdf_for_image_sets(df, metric, cdf_range=cdf_range, show_legend=show_legend, xlabel=xlabel,
                             save_figures=save_figures, save_dir=save_dir, folder=folder)
 
-    condition = 'image_set'
-    condition_values = ut.get_image_sets(df)
-    colors = ut.get_colors_for_image_sets()
+    # condition = 'image_set'
+    # condition_values = ut.get_image_sets(df)
+    # colors = ut.get_colors_for_image_sets()
 
     # for cre_line in cre_lines:
     #     df = cell_summary_df[cell_summary_df.cre_line==cre_line].copy()
@@ -639,22 +639,22 @@ def plot_flashes_on_trace_time(ax, trial_type=None, omitted=False, flashes=False
 def plot_pre_stim_on_trace(ax, window=[-0.5, 0.75], alpha=0.3, facecolor='gray'):
     frame_rate = 31.
     stim_duration = .25
-    blank_duration = .5
+    # blank_duration = .5
     end_frame = int(np.abs(window[0]) * frame_rate)
     start_frame = int((np.abs(window[0]) - stim_duration) * frame_rate)
     ax.axvspan(start_frame, end_frame, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
-    interval = int((blank_duration + stim_duration) * frame_rate)
+    # interval = int((blank_duration + stim_duration) * frame_rate)
     return ax
 
 
 def plot_stim_on_trace(ax, window=[-0.5, 0.75], alpha=0.3, facecolor='gray'):
     frame_rate = 31.
     stim_duration = .25
-    blank_duration = .5
+    # blank_duration = .5
     start_frame = int(np.abs(window[0]) * frame_rate)
     end_frame = int((np.abs(window[0]) + stim_duration) * frame_rate)
     ax.axvspan(start_frame, end_frame, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
-    interval = int((blank_duration + stim_duration) * frame_rate)
+    # interval = int((blank_duration + stim_duration) * frame_rate)
     return ax
 
 
@@ -688,7 +688,7 @@ def plot_mean_trace(mean_trace, frame_rate, ylabel='dF/F', legend_label=None, co
     xlim = [0, xlims[1] + np.abs(xlims[0])]
     if ax is None:
         fig, ax = plt.subplots()
-    times = np.arange(0, len(mean_trace), 1)
+    # times = np.arange(0, len(mean_trace), 1)
     ax.plot(mean_trace, label=legend_label, linewidth=3, color=color)
     xticks, xticklabels = sf.get_xticks_xticklabels(mean_trace, frame_rate, interval_sec, window=xlims)
     ax.set_xticks(xticks)
@@ -1125,7 +1125,7 @@ def plot_population_response_across_conditions(df, condition='repeat', condition
                                                window=[-0.5, 0.75], save_figures=False, colors=None, autoscale=False,
                                                save_dir=None, folder=None, ax=None, pref_stim=True, omitted=False):
     image_set = df.image_set.unique()[0]
-    cre_line = df.cre_line.unique()[0]
+    # cre_line = df.cre_line.unique()[0]
     colors = colors[::-1]
     if pref_stim:
         df = df[df.pref_stim == True].copy()
@@ -1138,10 +1138,11 @@ def plot_population_response_across_conditions(df, condition='repeat', condition
         interval_sec = 0.5
     for c, condition_value in enumerate(conditions[::-1]):
         tmp = df[df[condition] == condition_value]
-        if colors is None:
-            image_lookup = get_image_color_lookup(mdf)
-            image_names = df[df.image_set == image_set].image_name.unique()
-            colors = get_colors_for_image_names(image_names, image_lookup)
+        # NOTE: The `get_image_color_lookup` function isn't defined. I'm commenting out this entire block to avoid linting errors. DRO, 5/28/20
+        # if colors is None:
+        #     image_lookup = get_image_color_lookup(mdf)
+        #     image_names = df[df.image_set == image_set].image_name.unique()
+        #     colors = get_colors_for_image_names(image_names, image_lookup)
         traces = tmp.mean_trace.values
         trace = np.mean(traces)
         ax = sf.plot_mean_trace(traces, 31., legend_label=condition_value, color=colors[c], interval_sec=interval_sec,
@@ -1164,10 +1165,11 @@ def plot_population_response_across_conditions(df, condition='repeat', condition
             ax.set_ylim(ymin * 1.2, ymax * 1.2)
     ax.set_title(image_set)
     if save_figures:
-        fig.tight_layout()
-        save_figure(fig, figsize, save_dir, folder,
-                    str(int(cdf.experiment_id.unique()[0])) + '_' + str(int(cell_specimen_id)))
-        plt.close()
+        assert False, 'save function not implemented'
+        # fig.tight_layout()
+        # save_figure(fig, figsize, save_dir, folder,
+        #             str(int(cdf.experiment_id.unique()[0])) + '_' + str(int(cell_specimen_id)))
+        # plt.close()
     return ax
 
 

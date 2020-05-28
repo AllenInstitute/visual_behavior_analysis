@@ -3,8 +3,6 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-import visual_behavior.ophys.response_analysis.response_processing as rp
-
 import logging
 
 logger = logging.getLogger(__name__)
@@ -401,6 +399,10 @@ def get_window(analysis=None, flashes=False, omitted=False):
 
 def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
                 get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True):
+
+    # import rp here. This avoids an error caused by the fact that rp itself imports utilities
+    import visual_behavior.ophys.response_analysis.response_processing as rp
+
     if omitted:
         params = rp.get_default_omission_response_params()
     elif flashes:
@@ -424,7 +426,7 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         try:
             mdf = annotate_mean_df_with_time_to_peak(analysis, mdf, window=window)
             mdf = annotate_mean_df_with_fano_factor(analysis, mdf)
-        except:
+        except:  # NOQA E722
             pass
 
     fraction_significant_p_value_gray_screen = rdf.groupby(conditions).apply(
