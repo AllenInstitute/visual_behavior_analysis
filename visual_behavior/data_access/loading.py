@@ -447,6 +447,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def trials(self):
         trials = super().trials.copy()
         trials = reformat.add_epoch_times(trials)
+        trials = reformat.add_trial_type_to_trials_table(trials)
         self._trials = trials
         return self._trials
 
