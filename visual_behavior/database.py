@@ -168,7 +168,7 @@ def get_pkl_path(session_id=None, id_type='behavior_session_uuid'):
     get the path to a pkl file for a given session
     '''
     osid = convert_id({id_type: session_id}, 'ophys_session_id')
-    rec = get_well_known_files(osid).set_index('name').loc['StimulusPickle']
+    rec = get_well_known_files(osid).loc['StimulusPickle']
     pkl_path = ''.join([rec['storage_directory'], rec['filename']])
     return pkl_path
 
@@ -509,19 +509,25 @@ def get_manifest(server='visual_behavior_data'):
     return pd.DataFrame(list(man))
 
 
-def get_well_known_files(ophys_session_id):
-    lims_api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)
-                (PostgresQueryMixin)())
+def get_well_known_files(session_id, attachable_id_type='OphysSession'):
+    '''
+    return well_known_files table with names as index
+    inputs:
+        session_id (int): session id from LIMS
+        attachable_id_type (str): session id type. Choose from 'OphysSession' (default) or 'EcephysSession'
+    returns:
+        pandas dataframe with all LIMS well known files for the given session
+    '''
+
     query = '''
     select * from well_known_files wkf
     join well_known_file_types wkft
     on wkft.id = wkf.well_known_file_type_id
-    where wkf.attachable_type = 'OphysSession'
+    where wkf.attachable_type = '{}'
     and wkf.attachable_id in ({});
-    '''.format(ophys_session_id)
+    '''.format(attachable_id_type, session_id)
 
-    result = pd.read_sql(query, lims_api.get_connection())
-    return result
+    return lims_query(query).set_index('name')
 
 
 def simplify_type(x):
@@ -576,12 +582,7 @@ def get_labtracks_id_from_specimen_id(specimen_id, show_warnings=True):
         to
             6 digit labtracks ID
     '''
-    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
-    conn = api.get_connection()
-
-    query = "select external_specimen_name from specimens where specimens.id = {}".format(specimen_id)
-    res = pd.read_sql(query, conn).squeeze()
-    conn.close()
+    res = lims_query("select external_specimen_name from specimens where specimens.id = {}".format(specimen_id))
 
     if isinstance(res, (str, int, np.int64)):
         return int(res)
@@ -608,12 +609,7 @@ def get_specimen_id_from_labtracks_id(labtracks_id, show_warnings=True):
         to
             9 or 10 digit specimen_id (from LIMS)
     '''
-    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
-    conn = api.get_connection()
-
-    query = "select id from specimens where specimens.external_specimen_name = '{}'".format(labtracks_id)
-    res = pd.read_sql(query, conn).squeeze()
-    conn.close()
+    res = lims_query("select id from specimens where specimens.external_specimen_name = '{}'".format(labtracks_id))
 
     if isinstance(res, (str, int, np.int64)):
         return int(res)
@@ -630,3 +626,89 @@ def get_specimen_id_from_labtracks_id(labtracks_id, show_warnings=True):
                     res.values,
                 ))
             return int(res.iloc[0])
+
+
+def get_mouse_ids(id_type, id_number):
+    '''
+    returns a dataframe of all variations of mouse ID for a given input ID
+
+    inputs:
+        id_type: (string) the type of ID to search on
+        id_number: (int,string, list of ints or list of strings) the associated ID number(s)
+
+    allowable id_types:
+        donor_id: LIMS donor_id
+        specimen_id: LIMS specimen ID
+        labtracks_id: Labtracks ID (6 digit ID on mouse cage)
+        external_specimen_name: alternate name for labtracks_id (used in specimens table)
+        external_donor_name: alternate name for labtracks_id (used in donors table)
+
+    returns:
+        a dataframe with columns for `donor_id`, `labtracks_id`, `specimen_id`
+
+    Note: in rare cases, a single donor_id/labtracks_id was associated with multiple specimen_ids
+          this occured for IDs used as test_mice (e.g. labtracks_id 900002)
+          and should not have occured for real experimental mice
+    '''
+
+    if id_type.lower() == 'donor_id':
+        id_type_string = 'donors.id'
+    elif id_type.lower() == 'specimen_id':
+        id_type_string = 'specimens.id'
+    elif id_type.lower() in ['labtracks_id', 'external_specimen_name', 'external_donor_name']:
+        id_type_string = 'donors.external_donor_name'
+    else:
+        raise TypeError('invalid `id_type` {}'.format(id_type))
+
+    if isinstance(id_number, (str, int, np.int64)):
+        id_number = [id_number]
+    id_number = [str(i) for i in id_number]
+
+    query = """
+    select donors.id donor_id, donors.external_donor_name as labtracks_id, specimens.id as specimen_id
+    from donors
+    join specimens on donors.external_donor_name = specimens.external_specimen_name
+    where {} in {}
+    """.format(id_type_string, tuple(id_number)).replace(',)', ')')
+
+    return lims_query(query)
+
+
+def lims_query(query):
+    '''
+    execute a SQL query in LIMS
+    returns:
+        * the result if the result is a single element
+        * results in a pandas dataframe otherwise
+
+    Examples:
+
+        >> lims_query('select ophys_session_id from ophys_experiments where id = 878358326')
+
+        returns 877907546
+
+        >> lims_query('select * from ophys_experiments where id = 878358326')
+
+        returns a single line dataframe with all columns from the ophys_experiments table for ophys_experiment_id =  878358326
+
+        >> lims_query('select * from ophys_sessions where id in (877907546, 876522267, 869118259)')
+
+        returns a three line dataframe with all columns from the ophys_sessions table for ophys_session_id in the list [877907546, 876522267, 869118259]
+
+        >> lims_query('select * from ophys_sessions where specimen_id = 830901424')
+
+        returns all rows and columns in the ophys_sessions table for specimen_id = 830901424
+    '''
+    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+    conn = api.get_connection()
+
+    df = pd.read_sql(query, conn)
+
+    conn.close()
+
+    if df.shape == (1, 1):
+        # if the result is a single element, return only that element
+        return df.iloc[0][0]
+    else:
+        # otherwise return in dataframe format
+        return df
