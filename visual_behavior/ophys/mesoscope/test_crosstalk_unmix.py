@@ -258,19 +258,24 @@ def test_extract_active(session=None):
 	pkey = 'pl1'
 	tkey = 'roi'
 	traces = ica_obj.ins[pkey][tkey]
-	traces_sig_evs, traces_ct_evs, valid = ica.extract_active(traces)
+	traces_sig_evs, evs_ind_sig, valid_sig, traces_ct_evs, evs_ind_ct, valid_ct = ica.extract_active(traces)
 
 	# 1. Check data alignment
 	assert traces_sig_evs.shape[0] == traces.shape[1], f"Output of active traces SIGNAL contains different number of " \
 													   f"traces (number of rois doesn't align)"
 	assert traces_ct_evs.shape[0] == traces.shape[1], f"Output of active traces CROSSTALK contains different number of " \
 													  f"traces (number of rois doesn't align)"
-	assert len(valid) == traces.shape[1], f"Length of Valid list contains different number of elements than number of " \
+	assert len(valid_sig) == traces.shape[1], f"Length of Valid list contains different number of elements than number of " \
 										  f"cells in input traces"
+	# 2. check alignment of events ideces to events traces
+	assert evs_ind_sig.shape == traces_sig_evs.shape, f"number of events traces does not align for number of enets indeces for signal"
+	assert evs_ind_ct.shape == traces_ct_evs.shape, f"number of events traces does not align for number of enets indeces for signal"
 
-	# 2. Check if valid actually has true for traces with no Nans
+	# 3. Check if valid actually has true for traces with no Nans
 	for i in range(traces_sig_evs.shape[0]):
-		assert valid[i] == (not np.any(np.isnan(traces_sig_evs[i])) and not np.any(np.isnan(traces_ct_evs[i])))
+		assert valid_sig[i] == (not np.any(np.isnan(traces_sig_evs[i])))
+	for i in range(traces_ct_evs.shape[0]):
+		assert valid_ct[i] == (not np.any(np.isnan(traces_ct_evs[i])))
 
 	return
 
