@@ -239,6 +239,11 @@ def test_unmix_pair(test_session=None):
 
 
 def test_extract_active(session=None):
+	"""
+	test fn for visual_behavior.ophys.mesoscope.crosstalk_unmix.extract_active
+	:param session: LIMS session ID of the session to test this functionality on
+	:return: None
+	"""
 	if not session:
 		ses = 786144371
 		"""LIMS session ID to use for test,
