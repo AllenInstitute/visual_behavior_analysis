@@ -1,4 +1,0 @@
-[flake8]
-exclude =
-    *pilot_manuscript_figures.py
-    
