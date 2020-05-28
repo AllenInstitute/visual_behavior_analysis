@@ -561,6 +561,8 @@ def get_colors_for_behavioral_response_types():
 
 
 def add_metadata_to_mean_df(mdf, metadata):
+    import visual_behavior.data_access.reformat as reformat
+    metadata = reformat.convert_metadata_to_dataframe(metadata)
     # metadata = metadata.reset_index()
     # metadata['experiment_id'] = metadata['ophys_experiment_id']
     # metadata = metadata.rename(columns={'ophys_experiment_id': 'experiment_id'})
