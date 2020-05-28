@@ -218,7 +218,7 @@ def get_filtered_ophys_session_table():
     return sessions
 
 
-##### INSERT get_filtered_behavior_sessions_table() FUNCTION HERE #####
+# INSERT get_filtered_behavior_sessions_table() FUNCTION HERE #####
 
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
@@ -438,7 +438,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             stimulus_presentations.index.values[1:], 'lick_on_next_flash'] = stimulus_presentations.licked.values[:-1]
         stimulus_presentations.at[
             stimulus_presentations.index.values[1:], 'lick_rate_next_flash'] = stimulus_presentations.lick_rate.values[
-                                                                               :-1]
+            :-1]
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
@@ -1284,7 +1284,7 @@ def build_container_df():
     return pd.DataFrame(list_of_dicts).sort_values(by='container_id', ascending=False)
 
 
-###### multi session summary data #########
+# multi session summary data #########
 
 def get_annotated_experiments_table():
     project_codes = ['VisualBehavior', 'VisualBehaviorTask1B',
@@ -1420,7 +1420,7 @@ def remove_first_novel_session_retakes_from_multi_session_df(multi_session_df):
 
 
 def remove_problematic_data_from_multi_session_df(multi_session_df):
-    #### notes on containers, experiments & mice #####
+    # notes on containers, experiments & mice #####
     # experiments too exclude
     # another Slc mouse with large familiar passive 840542948, also ramping in some familiar sessions, generally noisy
     # all mouse 920877188 remove & investiate later - weirdness

@@ -367,7 +367,7 @@ def add_epoch_times(df, time_column='start_time', epoch_duration_mins=10):
     return df
 
 
-### INPLACE VERSIONS ###
+# INPLACE VERSIONS ###
 
 def convert_licks_inplace(licks_df):
     '''

@@ -89,9 +89,9 @@ def get_ophys_experiment_id_from_behavior_session_id(behavior_session_id, cache,
 
     Keyword Arguments:
         exp_num {int} -- number of expected ophys_experiments
-                        For scientifica sessions, there is only one experiment 
+                        For scientifica sessions, there is only one experiment
                         per behavior_session, so exp_num = 0
-                        For mesoscope, there are 8 experiments, 
+                        For mesoscope, there are 8 experiments,
                         so exp_num = (0,7) (default: {0})
 
     Returns:
@@ -112,9 +112,9 @@ def get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_n
 
     Keyword Arguments:
         exp_num {int} -- number of expected ophys_experiments
-                        For scientifica sessions, there is only one experiment 
+                        For scientifica sessions, there is only one experiment
                         per ophys_session, so exp_num = 0
-                        For mesoscope, there are 8 experiments, 
+                        For mesoscope, there are 8 experiments,
                         so exp_num = (0,7) (default: {0})
 
     Raises:
@@ -171,7 +171,7 @@ def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
 
 def get_donor_id_from_specimen_id(specimen_id, cache):
     """gets a donor_id associated with a specimen_id. Both donor_id
-        and specimen_id are identifiers for a mouse. 
+        and specimen_id are identifiers for a mouse.
 
     Arguments:
         specimen_id {int} -- 9 digit unique identifier for a mouse
