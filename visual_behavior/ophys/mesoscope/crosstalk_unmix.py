@@ -810,15 +810,13 @@ class MesoscopeICA(object):
                             if tkey == 'np':
                                 mixing = self.a_mixing[pkey]['roi']
 
-                                traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active, mixing)
-                                crosstalk = self.crosstalk[pkey]['roi']  # use same crosstalk value as per Roi traces (since the mixing matrix is assumed to be the same)
+                                traces_out, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active, mixing)
                             else:
-                                traces_out, crosstalk, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active)
+                                traces_out, mixing, a_mixing = self.unmix_plane(traces_in, traces_in_active)
                             # saving to self
                             self.outs[pkey][tkey] = np.array(
                                 [traces_out[0] + self.offsets[pkey][tkey]['sig_offset'],
                                  traces_out[1] + self.offsets[pkey][tkey]['ct_offset']])
-                            self.crosstalk[pkey][tkey] = crosstalk
                             self.outs_paths[pkey][tkey] = outs_paths[pkey][tkey]
                             self.mixing[pkey][tkey] = mixing
                             self.a_mixing[pkey][tkey] = a_mixing
@@ -828,9 +826,10 @@ class MesoscopeICA(object):
                             with h5py.File(self.outs_paths[pkey][tkey], "w") as f:
                                 f.create_dataset("data", data=self.outs[pkey][tkey], compression="gzip")
                                 f.create_dataset("roi_names", data=self.rois_names_valid[pkey][tkey])
-                                f.create_dataset("crosstalk", data=self.crosstalk[pkey][tkey])
                                 f.create_dataset("mixing_matrix_adjusted", data=self.a_mixing[pkey][tkey])
                                 f.create_dataset("mixing_matrix", data=self.mixing[pkey][tkey])
+            else:
+                logger.error("Input traces don't exist, run get_Trace, validate_trae and debias_traces first")
         else:
             logger.info("Unmixed traces exist in cache, reading from h5 file")
             for pkey in self.pkeys:
@@ -840,10 +839,85 @@ class MesoscopeICA(object):
 
                     with h5py.File(self.outs_paths[pkey][tkey], "r") as f:
                         self.outs[pkey][tkey] = f["data"][()]
-                        self.crosstalk[pkey][tkey] = f["crosstalk"][()]
                         self.mixing[pkey][tkey] = f["mixing_matrix"][()]
                         self.a_mixing[pkey][tkey] = f["mixing_matrix_adjusted"][()]
         return
+
+    def get_crosstalk(self, do_plot=True):
+
+        # local vars for crosstalk paths:
+        crosstalk_paths = {}
+        for pkey in self.pkeys:
+            crosstalk_paths[pkey] = {}
+            for tkey in self.tkeys:
+                self.crosstalk_paths[pkey][tkey] = None
+                crosstalk_paths[pkey][tkey] = os.path.join(self.dirs[tkey], f'{self.exp_ids[pkey]}_crosstalk.json')
+
+        # check if crosstalk json exist:
+        crosstalk_json_exist = True
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                if not os.path.isfile(crosstalk_paths[pkey][tkey]):
+                    crosstalk_json_exist = False
+
+        for pkey in self.pkeys:
+            for tkey in self.tkeys:
+                if crosstalk_json_exist:  # if output traces exist, set self.outs_paths
+                    self.crosstalk_paths[pkey][tkey] = crosstalk_paths[pkey][tkey]
+                else:
+                    self.crosstalk_paths[pkey][tkey] = None
+
+        if not crosstalk_json_exist: # crosstalk json doesn't exist, calculate crosstalk
+
+            # check if ica input active and ica output active traces exist
+            in_traces_exist = True
+            for pkey in self.pkeys:
+                for tkey in self.tkeys:
+                    if not os. path.isfile(self.outs_active_paths[pkey][tkey]):
+                        in_traces_exist = False
+                    if not os. path.isfile(self.ins_active_paths[pkey][tkey]):
+                        in_traces_exist = False
+
+            if in_traces_exist:  # if ica input active and ica output active traces exist:
+                self.crosstalk = {}
+                for pkey in self.pkeys:
+                    self.crosstalk[pkey] = {}
+                    for tkey in self.tkeys:
+                        self.crosstalk[pkey][tkey] = {}
+
+                        traces_in = self.ins[pkey][tkey]
+                        traces_out = self.outs[pkey][tkey]
+                        trace_evs_in = self.ins_active[pkey][tkey]
+                        trace_evs_out = self.outs_active[pkey][tkey]
+                        traces_in_active = self.get_ica_active_events(traces_in, trace_evs_in)
+                        traces_out_active = self.get_ica_active_events(traces_out, trace_evs_out)
+
+                        assert traces_in_active.keys() == traces_out_active.keys(), f"ROI sets are not the same in ICA input and ICA output"
+
+                        # calculating crosstalk and plotting traces for each roi
+                        for roi in traces_in_active:
+                            trace_in = traces_in_active[roi]
+                            trace_out = traces_out_active[roi]
+
+                            # if not nan, calculate crosstalk on ICA inputs:
+                            if not np.any(np.isnan(trace_in)):
+                                slope_in, _, _, _ = get_crosstalk_data(trace_in[0], trace_in[1], do_plot)
+                                crosstalk_before_demixing_evs = slope_in * 100
+                            else:  # this roi had no events on the input, skipping
+                                crosstalk_before_demixing_evs = np.nan
+
+                            # if not nan, calculate crosstalk on ICA outputs:
+                            if not np.any(np.isnan(trace_out)):
+                                slope_out, _, _, _ = get_crosstalk_data(trace_out[0], trace_out[1], do_plot)
+                                crosstalk_after_demixing_evs = slope_out * 100
+                            else:  # this roi had no events on the output, skipping
+                                crosstalk_after_demixing_evs = np.nan
+                            self.crosstalk[pkey][tkey][roi] = [crosstalk_before_demixing_evs, crosstalk_after_demixing_evs]
+            else:
+                logger.error("Input active traces don't exist, run get_active traces first")
+        else:  # crosstalk json exists, read it to self.crosstalk and self.crossta_path:
+            self.crosstalk[pkey][tkey] = ju.read(self.crosstalk[pkey][tkey])
+        return self.crosstalk
 
     def plot_ica_pair(self, pair, dir_name=None, samples=5000):
         if not dir_name:
@@ -1157,7 +1231,6 @@ class MesoscopeICA(object):
             pdf.close()
         return
 
-
     @staticmethod
     def unmix_plane(ica_in, traces_in_active, mixing=None):
         """
@@ -1182,7 +1255,6 @@ class MesoscopeICA(object):
         # initialize outputs
         plane_mixing = np.zeros((ica_in.shape[1], 2, 2))
         plane_a_mixing = np.zeros((ica_in.shape[1], 2, 2))
-        plane_crosstalk = np.zeros((2, ica_in.shape[1]))
         ica_plane_out = np.empty(ica_in.shape)
 
         if mixing is not None:  # this is indicative that traces are from neuropil, use provided mixing to unmix them
@@ -1223,18 +1295,6 @@ class MesoscopeICA(object):
                     mix, a_mix, a_unmix, r_sources_evs = run_ica(trace_sig_evs, trace_ct_evs)
                     adjusted_mixing_matrix = a_mix
                     mixing_matrix = mix
-                    trace_sig_evs_out = r_sources_evs[:, 0]
-                    trace_ct_evs_out = r_sources_evs[:, 1]
-                    rescaled_trace_sig_evs_out = rescale(trace_sig_evs, trace_sig_evs_out)
-                    rescaled_trace_ct_evs_out = rescale(trace_ct_evs, trace_ct_evs_out)
-
-                    # calculating crosstalk : on events
-                    slope_in, _, _, _ = get_crosstalk_data(trace_sig_evs, trace_ct_evs, generate_plot_data=False)
-                    slope_out, _, _, _ = get_crosstalk_data(rescaled_trace_sig_evs_out, rescaled_trace_ct_evs_out,
-                                                            generate_plot_data=False)
-                    crosstalk_before_demixing_evs = slope_in * 100
-                    crosstalk_after_demixing_evs = slope_out * 100
-                    plane_crosstalk[:, i] = [crosstalk_before_demixing_evs, crosstalk_after_demixing_evs]
 
                     # applying unmixing matrix to the entire trace
                     trace_sig = traces_sig[i]
@@ -1254,11 +1314,14 @@ class MesoscopeICA(object):
                 else:  # trace did not have events, skipping unmixing, adding original trace to the output
                     ica_plane_out[0, i, :] = traces_sig[i]
                     ica_plane_out[1, i, :] = traces_ct[i]
-                    plane_crosstalk[:, i] = np.nan
+                    # plane_crosstalk[:, i] = np.nan
                     plane_mixing[i, :, :] = np.nan
                     plane_a_mixing[i, :, :] = np.nan
 
-        return ica_plane_out, plane_crosstalk, plane_mixing, plane_a_mixing
+        return ica_plane_out, plane_mixing, plane_a_mixing
+
+        # return ica_plane_out, plane_crosstalk, plane_mixing, plane_a_mixing
+
 
     @staticmethod
     def validate_against_vba(rois_valid_ica, exp_id, vba_cache=VBA_CACHE):
