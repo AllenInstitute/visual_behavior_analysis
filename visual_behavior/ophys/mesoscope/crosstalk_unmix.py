@@ -151,6 +151,7 @@ class MesoscopeICA(object):
         self.outs = {}  # output unmixing traces
         self.outs_paths = {}  # paths to save unmixing output
         self.crosstalk = {}  # slope of linear fit to the 2D plot of signal Vs Crosstalk
+        self.crosstalk_paths = {}
         self.mixing = {}  # raw mixing matrix on the output of FastICA
         self.a_mixing = {}  # adjusted mixing matrix on the output of FastICA
         self.plot_dirs = {}
@@ -173,7 +174,7 @@ class MesoscopeICA(object):
         self.ins_active = {}
         self.ins_active_paths = {}
         self.outs_active = {}
-        self.outs_active_paths ={}
+        self.outs_active_paths = {}
         for pkey in self.pkeys:
             self.rois_names[pkey] = {}
             self.rois_names_valid[pkey] = {}
@@ -190,6 +191,7 @@ class MesoscopeICA(object):
             self.outs[pkey] = {}
             self.outs_paths[pkey] = {}
             self.crosstalk[pkey] = {}
+            self.crosstalk_paths[pkey] = {}
             self.mixing[pkey] = {}
             self.a_mixing[pkey] = {}
             self.plot_dirs[pkey] = {}
@@ -197,23 +199,6 @@ class MesoscopeICA(object):
             self.ins_active_paths[pkey] = {}
             self.outs_active[pkey] = {}
             self.outs_active_paths[pkey] = {}
-            for tkey in self.tkeys:
-                self.rois_names[pkey][tkey] = None
-                self.rois_names_valid[pkey][tkey] = None
-                self.rois_names_valid_ct[pkey][tkey] = None
-                self.raws[pkey][tkey] = None
-                self.raw_paths[pkey][tkey] = None
-                self.rois_valid_paths[pkey][tkey] = None
-                self.rois_valid_ct_paths[pkey][tkey] = None
-                self.ins[pkey][tkey] = None
-                self.ins_paths[pkey][tkey] = None
-                self.offsets[pkey][tkey] = None
-                self.outs[pkey][tkey] = None
-                self.outs_paths[pkey][tkey] = None
-                self.crosstalk[pkey][tkey] = None
-                self.mixing[pkey][tkey] = None
-                self.a_mixing[pkey][tkey] = None
-                self.plot_dirs[pkey][tkey] = None
 
         self.found_raws = {}  # flag if raw traces exist in self.dirs; output of get_traces
         self.found_ins = {}  # flag if ica input traces exists
@@ -225,9 +210,6 @@ class MesoscopeICA(object):
             self.found_offsets[pkey] = {}
             self.found_solution[pkey] = {}
             for tkey in self.tkeys:
-                self.found_raws[pkey][tkey] = None
-                self.found_ins[pkey][tkey] = [None, None]
-                self.found_offsets[pkey][tkey] = [None, None]
                 self.found_solution[pkey][tkey] = False
 
     def set_exp_ids(self, pair):
@@ -846,7 +828,7 @@ class MesoscopeICA(object):
 
         # local vars for crosstalk paths:
         crosstalk_paths = {}
-        self.crosstalk_paths = {}
+
         for pkey in self.pkeys:
             crosstalk_paths[pkey] = {}
             self.crosstalk_paths[pkey] = {}
@@ -889,7 +871,7 @@ class MesoscopeICA(object):
 
                         assert traces_in_active.keys() == traces_out_active.keys(), f"ROI sets are not the same in ICA input and ICA output"
 
-                        # calculating crosstalk and plotting traces for each roi
+                        # calculating crosstalk for each roi
                         for roi in traces_in_active:
                             trace_in = traces_in_active[roi]
                             trace_out = traces_out_active[roi]
@@ -1001,7 +983,7 @@ class MesoscopeICA(object):
 
                 traces_dict = {}
                 assert self.dff[pkey].shape[0] == len(self.rois_names_valid[pkey][tkey]), f"dff traces are not aligned " \
-                                                       f"to validation json for {self.exp_ids[pkey]}"
+                    f"to validation json for {self.exp_ids[pkey]}"
                 for i in range(len(self.rois_names_valid[pkey][tkey])):
                     roi_name = self.rois_names_valid[pkey][tkey][i]
                     traces_dict[roi_name] = self.dff[pkey][i]
@@ -1080,8 +1062,6 @@ class MesoscopeICA(object):
                         self.np_cor[pkey]['r'] = f['r'][()]
                         self.np_cor_ct[pkey]['RMSE'] = f['RMSE'][()]
                         self.np_cor_ct[pkey]['r'] = f['r'][()]
-
-
                 else:
                     print(f"Neuropil corrected traces don't exist at {self.np_cor_files[pkey]}")
                 assert self.np_cor[pkey]['FC'].shape[0] == len(
@@ -1233,7 +1213,6 @@ class MesoscopeICA(object):
         fn to run unmixing on all rois in a sinagle plane
         :param ica_in: input traces, numpy array 2 X num_rois X timeseries
         :param traces_in_active: input ica traces, active parts only: dict of {"roi_id" : 2 x timestamps numpy array}
-        :param ica_roi_valid: disctionary of {"roi_id" : True/False}
         :param mixing: list of mixing ROI matrices to use if unmixing neuropil
         :return:
             ica_plane_out: numpy array of demixed traces, same shape as ica_in
@@ -1285,7 +1264,7 @@ class MesoscopeICA(object):
             # perform unmixing separately on each ROI:
             for i, roi in enumerate(rois):
                 # get events traces
-                if not np.all(np.isnan(traces_in_active[roi])): # if active trace exists, use it to unmix, else - skip unmixing for this roi
+                if not np.all(np.isnan(traces_in_active[roi])):  # if active trace exists, use it to unmix, else - skip unmixing for this roi
                     trace_sig_evs = traces_in_active[roi][0]
                     trace_ct_evs = traces_in_active[roi][1]
                     mix, a_mix, a_unmix, r_sources_evs = run_ica(trace_sig_evs, trace_ct_evs)
@@ -1317,7 +1296,6 @@ class MesoscopeICA(object):
         return ica_plane_out, plane_mixing, plane_a_mixing
 
         # return ica_plane_out, plane_crosstalk, plane_mixing, plane_a_mixing
-
 
     @staticmethod
     def validate_against_vba(rois_valid_ica, exp_id, vba_cache=VBA_CACHE):
@@ -1451,7 +1429,13 @@ def find_scale_ica_roi(ica_in, ica_out):
     return scale.x
 
 
-def adjust_order(a_mix, O):
+def adjust_order(a_mix, obs):
+    """
+    fn to try and correct order and inversion of the mixing matrix
+    :param a_mix: mixing matrix
+    :param obs: input to ICA
+    :return: adjsuted mixing matrix
+    """
     # swap elements of first column if top is lower than bottom
     if a_mix[0, 0] < a_mix[1, 0]:
         a_mix[[0, 1], 0] = a_mix[[1, 0], 0]
@@ -1460,8 +1444,8 @@ def adjust_order(a_mix, O):
         a_mix[[0, 1], 1] = a_mix[[1, 0], 1]
 
     # swap rows and columns based on observations' variances
-    var_0 = np.var(O[0])
-    var_1 = np.var(O[1])
+    var_0 = np.var(obs[0])
+    var_1 = np.var(obs[1])
     scale = a_mix.sum(axis=1)
 
     if (var_0 < var_1 and scale[0] > scale[1]) or (var_0 > var_1 and scale[0] < scale[1]):
@@ -1528,6 +1512,4 @@ def add_suffix_to_path(abs_path, suffix):
     file_name = os.path.splitext(abs_path)[0]
     new_file_name = f"{file_name}{suffix}{file_ext}"
     return new_file_name
-
-
 
