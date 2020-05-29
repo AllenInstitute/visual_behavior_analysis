@@ -64,6 +64,8 @@ class ResponseAnalysis(object):
                     If False, uses dF/F traces by default.
 
     use_extended_stimulus_presentations {Boolean} -- if True, will include extended stimulus presentations table columns in the response dataframe. This takes longer to load.
+                        Note that some columns of extended_stimulus_presentations are also merged with the trials_response_df. These metrics are computed on each stimulus presentation, but 
+                        only the values on the change-stimulus are included in the trials_response_df.
                     If False, will use the simple version of stimulus presentations.
 
     overwrite_analysis_files {Boolean} -- if True will create and overwrite response analysis files.
@@ -199,13 +201,23 @@ class ResponseAnalysis(object):
             if self.use_extended_stimulus_presentations:
                 # merge in the extended stimulus presentations df on the change_time/start_time columns
                 stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
+                columns_to_keep = [
+                    'start_time',
+                    'bias',
+                    'omissions1',
+                    'task0',
+                    'timing1D',
+                    'engagement_state',
+                    'licked',
+                    'lick_on_next_flash',
+                ]
                 df = df.merge(
-                    stimulus_presentations,
+                    stimulus_presentations[columns_to_keep],
                     left_on='change_time',
                     right_on='start_time',
                     how='left',
                     suffixes=('', '_duplicate')
-                )
+                ).drop(columns=['start_time_duplicate'])
         elif ('stimulus' in df_name) or ('omission' in df_name):
             if self.use_extended_stimulus_presentations:
                 stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
