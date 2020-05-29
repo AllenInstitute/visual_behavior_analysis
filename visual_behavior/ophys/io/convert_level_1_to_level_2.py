@@ -30,7 +30,7 @@ from visual_behavior.translator import foraging2, foraging  # NOQA: E402
 from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E402
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NOQA: E402
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
-# from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
+from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
 from psycopg2 import extras  # NOQA: E402
 
