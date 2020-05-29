@@ -1367,16 +1367,16 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
         suffix = ''
 
     if len(conditions) == 5:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] +'_'+ conditions[3] +'_'+ conditions[4] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
             3] + suffix + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
     elif len(conditions) == 2:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
     elif len(conditions) == 1:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[0] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[0] + suffix + '.h5'
 
     return filename
 
