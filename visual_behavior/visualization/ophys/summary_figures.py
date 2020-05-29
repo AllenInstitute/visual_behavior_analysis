@@ -1728,8 +1728,14 @@ def plot_cell_summary_figure(analysis, cell_index, save=False, show=False, cache
 
 def colormap():
     colormap = {
-        'engaged': 'olivedrab',
-        'disengaged': 'firebrick'
+        'engagement_state': {
+            'disengaged': 'firebrick',
+            'engaged': 'olivedrab',
+        },
+        'lick_on_next_flash': {
+            0: 'blue',
+            1: 'orange',
+        }
     }
     return colormap
 
@@ -1753,7 +1759,7 @@ def get_title(ophys_experiment_id, cell_specimen_id):
     return title
 
 
-def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
+def make_time_summary_plot(analysis, cell_specimen_id, split_by, axes):
     '''
     plots raw F and deltaF/F with engagement state denoted by background color
     inputs:
@@ -1766,21 +1772,22 @@ def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
 
     sdf = analysis.stimulus_response_df
 
-    sdf_engagement_state = sdf.drop_duplicates('start_time')[['start_time', 'engagement_state']].copy().reset_index()
+    sdf_subset = sdf.drop_duplicates('start_time')[['start_time', split_by]].copy().reset_index().dropna()
+    values_in_split = np.sort(sdf_subset[split_by].unique())
 
-    sdf_engagement_state['next_start_time'] = sdf_engagement_state['start_time'].shift(-1)
-    sdf_engagement_state['state_change'] = sdf_engagement_state['engagement_state'] != sdf_engagement_state['engagement_state'].shift()
+    sdf_subset['next_start_time'] = sdf_subset['start_time'].shift(-1)
+    sdf_subset['state_change'] = sdf_subset[split_by] != sdf_subset[split_by].shift()
 
-    state_changes = sdf_engagement_state.query('state_change == True').copy()
+    state_changes = sdf_subset.query('state_change == True').copy()
     state_changes['next_state_change'] = state_changes['start_time'].shift(-1)
     state_changes.loc[state_changes.index.max(), 'next_state_change'] = sdf['start_time'].max()
 
-    state_colors = colormap()
+    cmap = colormap()
 
     for ii, ax in enumerate(axes):
         ax.axvspan(0, state_changes.iloc[0]['start_time'], color='gray', alpha=0.5)
         for idx, row in state_changes.iterrows():
-            ax.axvspan(row['start_time'] / 60., row['next_state_change'] / 60., color=state_colors[row['engagement_state']])
+            ax.axvspan(row['start_time'] / 60., row['next_state_change'] / 60., color=cmap[split_by][row[split_by]])
         ax.axvspan(
             row['next_state_change'] / 60.,
             row['next_state_change'] / 60. + 5,
@@ -1805,7 +1812,14 @@ def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
             )
             ax.set_ylabel('Corrected\nFluor.', rotation=0, ha='right', va='center')
             ax.set_xticks([])
-            ax.set_title('engagement state vs. session time\n(gray = gray screen, green = engaged, red = disengaged, yellow = fingerprint movie)')
+            ax.set_title('engagement state vs. session time\n(gray = gray screen, {} = {}:{}, {} = {}:{}, yellow = fingerprint movie)'.format(
+                cmap[split_by][values_in_split[0]],
+                split_by,
+                values_in_split[0],
+                cmap[split_by][values_in_split[1]],
+                split_by,
+                values_in_split[1],
+            ))
         if ii == 1:
             ax.plot(
                 analysis.dataset.ophys_timestamps / 60,
@@ -1844,16 +1858,19 @@ def make_cell_plot(dataset, cell_specimen_id, ax):
         axis.axis('off')
 
 
-def seaborn_lineplot(df, ax, legend='brief', xlabel='time (s)', ylabel='$\Delta$F/F', n_boot=1000):  # NOQA W605
-    state_colors = colormap()
+def seaborn_lineplot(df, ax, split_by, legend='brief', xlabel='time (s)', ylabel='$\Delta$F/F', n_boot=1000):  # NOQA W605
+    cmap = colormap()
+
+    df = df[['eventlocked_timestamps', 'eventlocked_traces', split_by]].dropna()
+    values_in_split = np.sort(df[split_by].unique())
 
     sns.lineplot(
         x='eventlocked_timestamps',
         y='eventlocked_traces',
         data=df,
-        hue='engagement_state',
-        hue_order=['engaged', 'disengaged'],
-        palette=[state_colors[state] for state in ['engaged', 'disengaged']],
+        hue=split_by,
+        hue_order=np.sort(values_in_split),
+        palette=[cmap[split_by][state] for state in values_in_split],
         ax=ax,
         legend=legend,
         n_boot=n_boot,
@@ -1862,7 +1879,7 @@ def seaborn_lineplot(df, ax, legend='brief', xlabel='time (s)', ylabel='$\Delta$
     ax.set_ylabel(ylabel, rotation=0, ha='right')
 
 
-def make_cell_response_summary_plot(analysis, cell_specimen_id, save=False, show=True, errorbar_bootstrap_iterations=1000):
+def make_cell_response_summary_plot(analysis, cell_specimen_id, split_by, save=False, show=True, errorbar_bootstrap_iterations=1000):
     figure_savedir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/single_cell_plots/response_plots'
     oeid = analysis.dataset.ophys_experiment_id\
 
@@ -1906,7 +1923,7 @@ def make_cell_response_summary_plot(analysis, cell_specimen_id, save=False, show
         'running_response_plots': placeAxesOnGrid(fig, dim=[1, 3], xspan=[0, 1], yspan=[0.86, 1], sharey=True),
     }
 
-    make_engagement_time_summary_plot(analysis, cell_specimen_id, ax['state_summary'])
+    make_time_summary_plot(analysis, cell_specimen_id, split_by, ax['state_summary'])
     make_cell_plot(analysis.dataset, cell_specimen_id, ax['cell_images'])
 
     for col, response_type in enumerate(params_dict.keys()):
@@ -1927,6 +1944,7 @@ def make_cell_response_summary_plot(analysis, cell_specimen_id, save=False, show
             seaborn_lineplot(
                 data,
                 ax['{}_response_plots'.format(datastream)][col],
+                split_by=split_by,
                 legend=legend,
                 n_boot=errorbar_bootstrap_iterations,
                 xlabel='time (s)' if row == 1 else '',
