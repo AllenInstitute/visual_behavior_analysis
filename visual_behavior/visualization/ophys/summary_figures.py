@@ -1753,43 +1753,6 @@ def get_title(ophys_experiment_id, cell_specimen_id):
     return title
 
 
-def merge_in_extended_stimulus_presentations(analysis):
-    '''
-    merges extended_stimulus_presentations into the response dataframes
-    operates in place
-    takes ~30-60 seconds to run
-    '''
-    # merge on stim presentations id
-    dfs_to_merge = [
-        'stimulus_response_df',
-        'stimulus_run_speed_df',
-        'omission_response_df',
-        'omission_run_speed_df',
-    ]
-    for df in dfs_to_merge:
-        setattr(analysis, df, getattr(analysis, df).merge(
-                analysis.dataset.extended_stimulus_presentations,
-                left_on='stimulus_presentations_id',
-                right_index=True,
-                how='left',
-                suffixes=('', '_duplicate')
-                ))
-
-    # merge on change time
-    dfs_to_merge = [
-        'trials_response_df',
-        'trials_run_speed_df'
-    ]
-    for df in dfs_to_merge:
-        setattr(analysis, df, getattr(analysis, df).merge(
-            analysis.dataset.extended_stimulus_presentations,
-            left_on='change_time',
-            right_on='start_time',
-            how='left',
-            suffixes=('', '_duplicate')
-        ))
-
-
 def make_engagement_time_summary_plot(analysis, cell_specimen_id, axes):
     '''
     plots raw F and deltaF/F with engagement state denoted by background color
@@ -1901,11 +1864,7 @@ def seaborn_lineplot(df, ax, legend='brief', xlabel='time (s)', ylabel='$\Delta$
 
 def make_cell_response_summary_plot(analysis, cell_specimen_id, save=False, show=True, errorbar_bootstrap_iterations=1000):
     figure_savedir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/single_cell_plots/response_plots'
-    oeid = analysis.dataset.ophys_experiment_id
-
-    if 'engagement_state' not in analysis.stimulus_response_df.columns:
-        print('merging')
-        merge_in_extended_stimulus_presentations(analysis)
+    oeid = analysis.dataset.ophys_experiment_id\
 
     params_dict = {
         'stimulus response': {
