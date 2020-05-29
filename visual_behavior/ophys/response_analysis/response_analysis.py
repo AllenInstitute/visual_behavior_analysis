@@ -64,7 +64,7 @@ class ResponseAnalysis(object):
                     If False, uses dF/F traces by default.
 
     use_extended_stimulus_presentations {Boolean} -- if True, will include extended stimulus presentations table columns in the response dataframe. This takes longer to load.
-                        Note that some columns of extended_stimulus_presentations are also merged with the trials_response_df. These metrics are computed on each stimulus presentation, but 
+                        Note that some columns of extended_stimulus_presentations are also merged with the trials_response_df. These metrics are computed on each stimulus presentation, but
                         only the values on the change-stimulus are included in the trials_response_df.
                     If False, will use the simple version of stimulus presentations.
 
