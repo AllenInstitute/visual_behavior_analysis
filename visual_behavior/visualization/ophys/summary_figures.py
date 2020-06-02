@@ -1735,7 +1735,11 @@ def colormap():
         'lick_on_next_flash': {
             0: 'blue',
             1: 'orange',
-        }
+        },
+        'lick_on_previous_flash': {
+            0: 'indigo',
+            1: 'turquoise',
+        },
     }
     return colormap
 
@@ -1747,10 +1751,11 @@ def get_title(ophys_experiment_id, cell_specimen_id):
     experiments_table = loading.get_filtered_ophys_experiment_table().reset_index()
 
     row = experiments_table.query('ophys_experiment_id == @ophys_experiment_id').iloc[0].to_dict()
-    title = '{}__specimen_id={}__exp_id={}__{}__{}__depth={}__cell_id={}'.format(
+    title = '{}_spec_id={}_exp_id={}_{}_{}_{}_depth={}_cell_id={}'.format(
         row['cre_line'],
         row['specimen_id'],
         row['ophys_experiment_id'],
+        row['equipment_name'],
         row['session_type'],
         row['targeted_structure'],
         row['imaging_depth'],
@@ -1880,7 +1885,9 @@ def seaborn_lineplot(df, ax, split_by, legend='brief', xlabel='time (s)', ylabel
 
 
 def make_cell_response_summary_plot(analysis, cell_specimen_id, split_by, save=False, show=True, errorbar_bootstrap_iterations=1000):
-    figure_savedir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/single_cell_plots/response_plots'
+    figure_savedir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/single_cell_plots/response_plots/split_by_{}'.format(split_by)
+    if os.path.exists(figure_savedir) == False:
+        os.mkdir(figure_savedir)
     oeid = analysis.dataset.ophys_experiment_id\
 
     params_dict = {
