@@ -6,17 +6,15 @@ import pandas as pd
 
 import argparse
 
-def generate_save_plots(experiment_id):
+def generate_save_plots(experiment_id, split_by):
     dataset = loading.get_ophys_dataset(experiment_id)
-    analysis = ResponseAnalysis(dataset, overwrite_analysis_files=False, dataframe_format='tidy')
-    sf.merge_in_extended_stimulus_presentations(analysis)
+    analysis = ResponseAnalysis(dataset, overwrite_analysis_files=False, dataframe_format='tidy', use_extended_stimulus_presentations=True)
     for cell_specimen_id in dataset.cell_specimen_table.query('valid_roi==True').index.values:
-        sf.make_cell_response_summary_plot(analysis, cell_specimen_id, save=True, show=False, errorbar_bootstrap_iterations=1000)
+        sf.make_cell_response_summary_plot(analysis, cell_specimen_id, split_by, save=True, show=False, errorbar_bootstrap_iterations=1000)
 
 def summarize_responses(experiment_id):
     dataset = loading.get_ophys_dataset(experiment_id)
-    analysis = ResponseAnalysis(dataset, overwrite_analysis_files=False, dataframe_format='tidy')
-    sf.merge_in_extended_stimulus_presentations(analysis)
+    analysis = ResponseAnalysis(dataset, overwrite_analysis_files=False, dataframe_format='tidy', use_extended_stimulus_presentations=True)
 
     valid_cells = list(dataset.cell_specimen_table.query('valid_roi==True').index.values)
     summaries = []
@@ -68,8 +66,16 @@ if __name__ == '__main__':
         default='plot',
         metavar='action to execute ("plot" or "log")'
     )
+
+    parser.add_argument(
+        '--split-by',
+        type=str,
+        default='engagement_state',
+        metavar='variable to split by'
+    )
+
     args = parser.parse_args()
     if args.action == 'log':
         summarize_and_log(args.experiment_id)
     elif args.action == 'plot':
-        generate_save_plots(args.experiment_id)
+        generate_save_plots(args.experiment_id, args.split_by)
