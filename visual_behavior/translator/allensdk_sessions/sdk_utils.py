@@ -6,99 +6,99 @@ import numpy as np
 # Currently works on SDK v.1.3.2
 
 
-def get_bsid_from_osid(osid, cache):
+def get_behavior_session_id_from_ophys_session_id(ophys_session_id, cache):
     '''
         Finds the behavior_session_id associated with an ophys_session_id
         ARGS
-            osid    ophys_session_id
+            ophys_session_id    ophys_session_id
             cache   cache from BehaviorProjectCache
         Returns
-            bsid    behavior_session_id for that ophys_session
+            behavior_session_id    behavior_session_id for that ophys_session
     '''
     ophys_sessions = cache.get_session_table()
-    if osid not in ophys_sessions.index:
+    if ophys_session_id not in ophys_sessions.index:
         raise Exception('ophys_session_id not in session table')
-    return ophys_sessions.loc[osid].behavior_session_id
+    return ophys_sessions.loc[ophys_session_id].behavior_session_id
 
 
-def get_osid_from_bsid(bsid, cache):
+def get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache):
     '''
         Finds the ophys_session_id associated with an behavior_session_id
         ARGS
-            bsid    behavior_session_id
+            behavior_session_id    behavior_session_id
             cache   cache from BehaviorProjectCache
         Returns
-            osid    ophys_session_id for that behavior_session
+            ophys_session_id    ophys_session_id for that behavior_session
     '''
     behavior_sessions = cache.get_behavior_session_table()
-    if bsid not in behavior_sessions.index:
+    if behavior_session_id not in behavior_sessions.index:
         raise Exception('behavior_session_id not in behavior session table')
-    return behavior_sessions.loc[bsid].ophys_session_id.astype(int)
+    return behavior_sessions.loc[behavior_session_id].ophys_session_id.astype(int)
 
 
-def get_oeid_from_bsid(bsid, cache, exp_num=0):
+def get_ophys_experiment_id_from_behavior_session_id(behavior_session_id, cache, exp_num=0):
     '''
         Finds the ophys_experiment_id associated with an behavior_session_id
         ARGS
-            bsid    behavior_session_id
+            behavior_session_id    behavior_session_id
             cache   cache from BehaviorProjectCache
             exp_num index for which experiment to grab the id for
         Returns
-            oeid    ophys_experiment_id for that behavior_session
+            ophys_experiment_id    ophys_experiment_id for that behavior_session
                     For scientifica sessions, there is only one experiment per behavior_session, so exp_num = 0
                     For mesoscope, there are 8 experiments, so exp_num = (0,7)
     '''
-    osid = get_osid_from_bsid(bsid, cache)
-    return get_oeid_from_osid(osid, cache, exp_num=exp_num)
+    ophys_session_id = get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache)
+    return get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_num=exp_num)
 
 
-def get_oeid_from_osid(osid, cache, exp_num=0):
+def get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_num=0):
     '''
         Finds the behavior_session_id associated with an ophys_session_id
         ARGS
-            osid    ophys_session_id
+            ophys_session_id    ophys_session_id
             cache   cache from BehaviorProjectCache
             exp_num index for which experiment to grab the id for
         Returns
-            oeid    ophys_experiment_id for that ophys_session
+            ophys_experiment_id    ophys_experiment_id for that ophys_session
                     For scientifica sessions, there is only one experiment per ophys_session, so exp_num = 0
                     For mesoscope, there are 8 experiments, so exp_num = (0,7)
     '''
     ophys_sessions = cache.get_session_table()
-    if osid not in ophys_sessions.index:
+    if ophys_session_id not in ophys_sessions.index:
         raise Exception('ophys_session_id not in session table')
-    experiments = ophys_sessions.loc[osid].ophys_experiment_id
+    experiments = ophys_sessions.loc[ophys_session_id].ophys_experiment_id
     return experiments[0]
 
 
-def get_bsid_from_oeid(oeid, cache):
+def get_behavior_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
     '''
         Finds the behavior_session_id associated with an ophys_experiment_id
         ARGS
-            oeid    ophys_experiment_id
+            ophys_experiment_id    ophys_experiment_id
             cache   cache from BehaviorProjectCache
         Returns
-            bsid    behavior_session_id for that ophys_experiment
+            behavior_session_id    behavior_session_id for that ophys_experiment
     '''
     ophys_experiments = cache.get_experiment_table()
-    if oeid not in ophys_experiments.index:
+    if ophys_experiment_id not in ophys_experiments.index:
         raise Exception('ophys_experiment_id not in experiment table')
-    return ophys_experiments.loc[oeid].behavior_session_id
+    return ophys_experiments.loc[ophys_experiment_id].behavior_session_id
 
 
-def get_osid_from_oeid(oeid, cache):
+def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
     '''
         Finds the ophys_session_id associated with an ophys_experiment_id
         ARGS
-            oeid    ophys_experiment_id
+            ophys_experiment_id    ophys_experiment_id
             cache   cache from BehaviorProjectCache
         Returns
-            osid    ophys_session_id for that ophys_experiment
+            ophys_session_id    ophys_session_id for that ophys_experiment
     '''
     ophys_experiments = cache.get_experiment_table()
-    if oeid not in ophys_experiments.index:
+    if ophys_experiment_id not in ophys_experiments.index:
         raise Exception('ophys_experiment_id not in experiment table')
-    return ophys_experiments.loc[oeid].ophys_session_id
+    return ophys_experiments.loc[ophys_experiment_id].ophys_session_id
 
 
 def get_specimen_id_from_donor_id(d_id, cache):
@@ -115,8 +115,8 @@ def get_specimen_id_from_donor_id(d_id, cache):
     ophys_sessions = cache.get_session_table()
     behavior_sessions = cache.get_behavior_session_table()
     x = behavior_sessions.query('donor_id == @d_id')['ophys_session_id']
-    osid = x[~x.isnull()].values[0].astype(int)  # noqa: F841
-    specimen_id = ophys_sessions.query('ophys_session_id ==@osid')['specimen_id'].values[0]
+    ophys_session_id = x[~x.isnull()].values[0].astype(int)  # noqa: F841
+    specimen_id = ophys_sessions.query('ophys_session_id ==@ophys_session_id')['specimen_id'].values[0]
     return specimen_id
 
 
@@ -131,12 +131,12 @@ def get_donor_id_from_specimen_id(s_id, cache):
     '''
     ophys_sessions = cache.get_session_table()
     behavior_sessions = cache.get_behavior_session_table()
-    osid = ophys_sessions.query('specimen_id == @s_id').iloc[0].name  # noqa: F841
-    donor_id = behavior_sessions.query('ophys_session_id ==@osid')['donor_id'].values[0]
+    ophys_session_id = ophys_sessions.query('specimen_id == @s_id').iloc[0].name  # noqa: F841
+    donor_id = behavior_sessions.query('ophys_session_id ==@ophys_session_id')['donor_id'].values[0]
     return donor_id
 
 
-def add_stimulus_presentations_analysis(session):
+def add_stimulus_presentations_analysis(session, add_running_speed=True):
     '''
         Adds a series of columns to the stimulus_presentations table
 
@@ -159,10 +159,11 @@ def add_stimulus_presentations_analysis(session):
     sa.add_time_from_last_lick_inplace(session)
     sa.add_time_from_last_reward_inplace(session)
     sa.add_time_from_last_change_inplace(session)
-    sa.add_mean_running_speed_inplace(session)
+    if add_running_speed:
+        sa.add_mean_running_speed_inplace(session)
 
 
-def get_filtered_sessions_table(cache, require_cell_matching=False, require_full_container=True, require_exp_pass=True, include_multiscope=False):
+def get_filtered_sessions_table(cache, require_cell_matching=False, require_full_container=True, require_exp_pass=True, include_multiscope=False, no_filter=False):
     '''
         Applies some filters to the ophys_sessions_table. It will always filter out all sessions that do not have
         project codes of 'VisualBehavior' or 'VisualBehaviorTask1B'. This currently removes all Mesoscope sessions.
@@ -212,15 +213,8 @@ def get_filtered_sessions_table(cache, require_cell_matching=False, require_full
 
     # Check Session Type
     good_session = ophys_sessions['session_type'].isin(['OPHYS_1_images_A', 'OPHYS_3_images_A', 'OPHYS_4_images_B',
-                                                        'OPHYS_5_images_B_passive', 'OPHYS_6_images_B',
-                                                        'OPHYS_2_images_A_passive', 'OPHYS_1_images_B',
-                                                        'OPHYS_2_images_B_passive', 'OPHYS_3_images_B', 'OPHYS_4_images_A',
-                                                        'OPHYS_5_images_A_passive', 'OPHYS_6_images_A',
-                                                        'OPHYS_1_images_G', 'OPHYS_3_images_G',
-                                                        'OPHYS_2_images_G_passive',
-                                                        'OPHYS_4_images_H', 'OPHYS_5_images_H_passive',
-                                                        'OPHYS_6_images_H',
-                                                        ])
+                                                        'OPHYS_5_images_B_passive', 'OPHYS_6_images_B', 'OPHYS_2_images_A_passive', 'OPHYS_1_images_B',
+                                                        'OPHYS_2_images_B_passive', 'OPHYS_3_images_B', 'OPHYS_4_images_A', 'OPHYS_5_images_A_passive', 'OPHYS_6_images_A'])
     ophys_sessions['good_session'] = good_session
 
     # Check Experiment Workflow state
@@ -247,14 +241,16 @@ def get_filtered_sessions_table(cache, require_cell_matching=False, require_full
         filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table & good_container_workflow')
     elif require_exp_pass:
         filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table & good_exp_workflow')
+    elif no_filter:
+        filtered = ophys_sessions
     else:
         filtered = ophys_sessions.query('good_project_code & good_session & in_bsession_table & in_experiment_table')
 
-    # if require_cell_matching:
-    #     if not (np.mod(len(filtered), 6) == 0):
-    #         print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
-    # elif require_full_container and require_exp_pass:
-    #     if not (np.mod(len(filtered), 6) == 0):
-    #         print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
+    if require_cell_matching:
+        if not (np.mod(len(filtered), 6) == 0):
+            print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
+    elif require_full_container and require_exp_pass:
+        if not (np.mod(len(filtered), 6) == 0):
+            print('WARNING: number of experiments not divisible by 6, likely incomplete containers')
 
     return filtered

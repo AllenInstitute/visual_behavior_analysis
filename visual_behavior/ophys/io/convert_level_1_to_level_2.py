@@ -58,9 +58,9 @@ def save_dataframe_as_h5(df, name, analysis_dir):
 def get_cache_dir(cache_dir=None):
     if not cache_dir:
         if platform.system() == 'Linux':
-            cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+            cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
         else:
-            cache_dir = r'\\allen\aibs\informatics\swdb2018\visual_behavior'
+            cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
         return cache_dir
     else:
         return cache_dir
@@ -84,32 +84,39 @@ def get_lims_id(lims_data):
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
     specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
-    if len(specimen_driver_lines) > 1:
-        for i in range(len(specimen_driver_lines)):
-            if 'S' in specimen_driver_lines[i]:
-                specimen_driver_line = specimen_driver_lines[i]  # .split('-')[0]
-            else:
-                specimen_driver_line = specimen_driver_lines[0]
-    else:
-        specimen_driver_line = specimen_driver_lines[0]
+    if len(specimen_driver_lines[0]) > 1:  # if there is a driver line
+        print(specimen_driver_lines)
+        if len(specimen_driver_lines) > 1:  # if there are two lines
+            for i in range(len(specimen_driver_lines)):
+                if 'Cre' in specimen_driver_lines[i]:  # pick the one that has Cre in it
+                    specimen_driver_line = specimen_driver_lines[i]  # .split('-')[0]
+                else:
+                    specimen_driver_line = specimen_driver_lines[0]
+            print(specimen_driver_line)
+        elif len(specimen_driver_lines) == 1:  # if there is only one, pick that one
+            specimen_driver_line = specimen_driver_lines[0]
+            print(specimen_driver_line)
+    else:  # if there is no line, say line unknown
+        specimen_driver_line = 'cre_line_unknown'
+    print(specimen_driver_line)
     if specimen_driver_line == '':
-        raise Exception('specimen_driver_line is empty! check why! This will result in "multiple analysis folders".')
+        raise Exception('specimen_driver_line is empty! check why! This may result in "multiple analysis folders".')
     if lims_data.depth.values[0] is None:
         depth = 0
     else:
         depth = lims_data.depth.values[0]
     if lims_data.rig.values[0][0] == 'M':
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
-                            specimen_driver_line + '_' + lims_data.rig.values[0] + \
-                            '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
+            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+            specimen_driver_line + '_' + lims_data.rig.values[0] + \
+            '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
     else:
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
-                            specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
-                            lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
+            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+            specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
+            lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
 
     return analysis_folder_name
 
@@ -124,33 +131,73 @@ def get_experiment_date(lims_data):
     return experiment_date
 
 
+# NOTE: This function is defined again below. Commenting this one out. DRO, 5/28/20
+# def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
+#     cache_dir = get_cache_dir(cache_dir=cache_dir)
+#     if 'analysis_dir' in lims_data.columns:
+#         return lims_data['analysis_dir'].values[0]
+#     analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
+#     print(analysis_dir)
+#     if not os.path.exists(analysis_dir):
+#         print('Creating a new analysis folder')
+#         os.mkdir(analysis_dir)
+#     else:
+#         print('Analysis folder exists')
+#     # Check if more than one analysis folder exists
+#     allFiles = os.listdir(cache_dir)
+#     inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
+#     existingFolders = np.argwhere(np.array(inds) != -1)
+#     # Get the modification times of the existing analysis folders
+#     modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in
+#                   range(len(existingFolders))]
+#     # Find all the old analysis folders
+#     indsOld = np.argsort(modifTimes)[:-1]
+#     oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
+#     # Remove old analysis folders
+#     for i in range(len(oldFiles)):
+#         print('Removing old analysis folder : %s' % oldFiles[i])
+#         shutil.rmtree(oldFiles[i])
+#     if cache_on_lims_data:
+#         lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
+#     return analysis_dir
+
+
 def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     cache_dir = get_cache_dir(cache_dir=cache_dir)
     if 'analysis_dir' in lims_data.columns:
         return lims_data['analysis_dir'].values[0]
-    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
-    print(analysis_dir)
-    if not os.path.exists(analysis_dir):
-        print('Creating a new analysis folder')
-        os.mkdir(analysis_dir)
     else:
-        print('Analysis folder already exists!')
-    # Check if more than one analysis folder exists
-    allFiles = os.listdir(cache_dir)
-    inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
-    existingFolders = np.argwhere(np.array(inds) != -1)
-    # Get the modification times of the existing analysis folders
-    modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in range(len(existingFolders))]
-    # Find all the old analysis folders
-    indsOld = np.argsort(modifTimes)[:-1]
-    oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
-    # Remove old analysis folders
-    for i in range(len(oldFiles)):
-        print('Removing old analysis folder : %s' % oldFiles[i])
-        shutil.rmtree(oldFiles[i])
-    if cache_on_lims_data:
-        lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
-    return analysis_dir
+        # look for existing analysis folders
+        analysis_folder = [folder for folder in os.listdir(cache_dir) if str(lims_data.lims_id.values[0]) in folder]
+        if len(analysis_folder) > 1:  # if there are multiple analysis folders with this lims_id
+            print('Multiple analysis folders exist, removing duplicates')
+            # Get the modification times of the existing analysis folders
+            # mod_times = [os.path.getmtime(os.path.join(cache_dir, analysis_folder[i])) for i in
+            #              range(len(analysis_folder))]
+            # Find all the old analysis folders
+            # old_inds = np.argsort(mod_times)[:-1]
+            old_folders = [os.path.join(cache_dir, analysis_folder[i]) for i in range(len(analysis_folder))]
+            # Remove old analysis folders
+            for i in range(len(old_folders)):
+                print('Removing old analysis folder : %s' % old_folders[i])
+                shutil.rmtree(old_folders[i])
+
+        # check again for remaining folders
+        analysis_folder = [folder for folder in os.listdir(cache_dir) if str(lims_data.lims_id.values[0]) in folder]
+        if len(analysis_folder) == 0:  # if there are no folders associated with this lims_id
+            print('Creating a new analysis folder')
+            analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
+            os.mkdir(analysis_dir)
+        elif len(analysis_folder) == 1:  # if there is one folder for this lims_id
+            print('Analysis folder exists')
+            analysis_dir = os.path.join(cache_dir, analysis_folder[0])
+            # delete files in directory - this is necessary or else file sizes will increase with each overwrite
+            # [os.remove(os.path.join(analysis_dir, file)) for file in os.listdir(analysis_dir)]
+
+        print(analysis_dir)
+        if cache_on_lims_data:
+            lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
+        return analysis_dir
 
 
 def get_ophys_session_dir(lims_data):
@@ -204,10 +251,10 @@ def get_roi_group(lims_data):
     return expt_roi_group
 
 
-def get_sync_path(lims_data):
+def get_sync_path(lims_data, analysis_dir):
     #    import shutil
     ophys_session_dir = get_ophys_session_dir(lims_data)
-    analysis_dir = get_analysis_dir(lims_data)
+    # analysis_dir = get_analysis_dir(lims_data)
 
     # First attempt
     sync_file = [file for file in os.listdir(ophys_session_dir) if 'sync' in file]
@@ -225,16 +272,15 @@ def get_sync_path(lims_data):
         #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except Exception as e:
-            print(e)
+        except: # NOQA E722
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
     return sync_path
 
 
-def get_sync_data(lims_data, use_acq_trigger):
+def get_sync_data(lims_data, analysis_dir, use_acq_trigger):
     logger.info('getting sync data')
-    sync_path = get_sync_path(lims_data)
+    sync_path = get_sync_path(lims_data, analysis_dir)
     sync_dataset = SyncDataset(sync_path)
     # Handle mesoscope missing labels
     try:
@@ -334,24 +380,24 @@ def get_timestamps(lims_data, analysis_dir):
         use_acq_trigger = True
     else:
         use_acq_trigger = False
-    sync_data = get_sync_data(lims_data, use_acq_trigger)
+    sync_data = get_sync_data(lims_data, analysis_dir, use_acq_trigger)
     timestamps = pd.DataFrame(sync_data)
     return timestamps
 
 
-def get_timestamps_stimulus(timestamps):
-    timestamps_stimulus = timestamps['stimulus_frames']['timestamps']
-    return timestamps_stimulus
+def get_stimulus_timestamps(timestamps):
+    stimulus_timestamps = timestamps['stimulus_frames']['timestamps']
+    return stimulus_timestamps
 
 
-def get_timestamps_ophys(timestamps):
-    timestamps_ophys = timestamps['ophys_frames']['timestamps']
-    return timestamps_ophys
+def get_ophys_timestamps(timestamps):
+    ophys_timestamps = timestamps['ophys_frames']['timestamps']
+    return ophys_timestamps
 
 
 def get_metadata(lims_data, timestamps, core_data):
-    timestamps_stimulus = get_timestamps_stimulus(timestamps)
-    timestamps_ophys = get_timestamps_ophys(timestamps)
+    stimulus_timestamps = get_stimulus_timestamps(timestamps)
+    ophys_timestamps = get_ophys_timestamps(timestamps)
     metadata = OrderedDict()
     metadata['ophys_experiment_id'] = lims_data['experiment_id'].values[0]
     if lims_data.parent_session_id.values[0]:
@@ -390,8 +436,8 @@ def get_metadata(lims_data, timestamps, core_data):
     metadata['session_id'] = int(lims_data.session_id.values[0])
     metadata['project_id'] = lims_data.project_id.values[0]
     metadata['rig'] = lims_data.rig.values[0]
-    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_ophys)), 0)
-    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(timestamps_stimulus)), 0)
+    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(ophys_timestamps)), 0)
+    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(stimulus_timestamps)), 0)
     # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
     metadata = pd.DataFrame(metadata, index=[metadata['ophys_experiment_id']])
     return metadata
@@ -447,11 +493,11 @@ def get_pkl(lims_data):
     return pkl
 
 
-def get_core_data(pkl, timestamps_stimulus):
+def get_core_data(pkl, stimulus_timestamps):
     try:
-        core_data = foraging.data_to_change_detection_core(pkl, time=timestamps_stimulus)
+        core_data = foraging.data_to_change_detection_core(pkl, time=stimulus_timestamps)
     except KeyError:
-        core_data = foraging2.data_to_change_detection_core(pkl, time=timestamps_stimulus)
+        core_data = foraging2.data_to_change_detection_core(pkl, time=stimulus_timestamps)
     return core_data
 
 
@@ -476,7 +522,7 @@ def get_task_parameters(core_data):
     return task_parameters
 
 
-def save_core_data_components(core_data, lims_data, timestamps_stimulus):
+def save_core_data_components(core_data, lims_data, stimulus_timestamps):
     rewards = core_data['rewards']
     save_dataframe_as_h5(rewards, 'rewards', get_analysis_dir(lims_data))
 
@@ -511,12 +557,17 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
             stimulus_table['omitted'] = False
     else:
         stimulus_table['omitted'] = False
-    # rename columns to harmonize with visual coding and rebase timestamps to sync time
+    if np.isnan(
+            stimulus_table.loc[0, 'end_frame']):  # exception for cases where the first flash in the session is omitted
+        stimulus_table = stimulus_table.drop(index=0)
+    # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
     stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
     stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
-    start_time = [timestamps_stimulus[start_frame] for start_frame in stimulus_table.start_frame.values]
+    start_time = [stimulus_timestamps[start_frame] for start_frame in stimulus_table.start_frame.values]
     stimulus_table.start_time = start_time
-    end_time = [timestamps_stimulus[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
+    end_time = [stimulus_timestamps[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
+    # end_time = [stimulus_timestamps[int(end_frame)] if np.isnan(end_frame) is False else np.nan()
+    #             for end_frame in stimulus_table.end_frame.values]
     stimulus_table.insert(loc=4, column='end_time', value=end_time)
     if 'level_0' in stimulus_table.keys():
         stimulus_table.drop(columns=['level_0'])
@@ -950,26 +1001,15 @@ def get_max_projection(lims_data):
 
 def save_max_projections(lims_data):
     analysis_dir = get_analysis_dir(lims_data)
-    # regular one
-    if os.path.exists(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png')):
-        print('loading max')
-        max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
-        save_data_as_h5(max_projection, 'max_projection', analysis_dir)
-        mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
-                     cmap='gray')
-    else:
-        print(
-            'max_downsample_4Hz_0.png no longer exists, using normalized max projection from segmentation output instead')
-        # contrast enhanced one
-        max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
-        save_data_as_h5(max_projection, 'max_projection', analysis_dir)
-        mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'),
-                     arr=max_projection, cmap='gray')
+    # # regular one
+    # max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
+    # save_data_as_h5(max_projection, 'max_projection', analysis_dir)
+    # mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
+    #              cmap='gray')
     # contrast enhanced one
     max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
-    save_data_as_h5(max_projection, 'normalized_max_projection', analysis_dir)
-    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'),
-                 arr=max_projection,
+    save_data_as_h5(max_projection, 'max_projection', analysis_dir)
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
                  cmap='gray')
 
 
@@ -1049,7 +1089,7 @@ def save_roi_validation(roi_validation, lims_data):
                     str(index) + '_' + str(id) + '_' + str(cell_index))
 
 
-def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
+def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=False):
     logger.info('converting %d', lims_id)
     print('converting', lims_id)
 
@@ -1062,9 +1102,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
     timestamps = get_timestamps(lims_data, analysis_dir)
 
     pkl = get_pkl(lims_data)
-    timestamps_stimulus = get_timestamps_stimulus(timestamps)
-    core_data = get_core_data(pkl, timestamps_stimulus)
-    save_core_data_components(core_data, lims_data, timestamps_stimulus)
+    stimulus_timestamps = get_stimulus_timestamps(timestamps)
+    core_data = get_core_data(pkl, stimulus_timestamps)
+    save_core_data_components(core_data, lims_data, stimulus_timestamps)
 
     metadata = get_metadata(lims_data, timestamps, core_data)
     save_metadata(metadata, lims_data)

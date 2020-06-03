@@ -594,7 +594,7 @@ def shift_image_masks(dataframe):
     Returns:
         [type] -- [description]
     """
-    dataframe["shifted_image_mask"] = dataframe.apply(shift_mask_by_row, axis=1)
+    dataframe.loc[:, "image_mask"] = dataframe.apply(shift_mask_by_row, axis=1)
     return dataframe
 
 
@@ -700,7 +700,7 @@ def gen_transparent_validity_masks(ophys_experiment_id):
 
     validity_masks_df = pd.DataFrame()
     for TF in sdk_cell_table["valid_roi"].unique():
-        shifted_image_masks_array = sdk_cell_table.loc[sdk_cell_table["valid_roi"] == TF, "shifted_image_mask"].values
+        shifted_image_masks_array = sdk_cell_table.loc[sdk_cell_table["valid_roi"] == TF, "image_mask"].values
         transparent_mask = gen_transparent_multi_roi_mask(shifted_image_masks_array)
 
         temp_df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
