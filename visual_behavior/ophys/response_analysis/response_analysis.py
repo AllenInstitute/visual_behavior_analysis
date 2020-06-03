@@ -78,6 +78,8 @@ class ResponseAnalysis(object):
     def __init__(self, dataset, analysis_cache_dir=None, load_from_cache=False, use_events=False,
                  use_extended_stimulus_presentations=False, overwrite_analysis_files=False, dataframe_format='wide'):
         self.dataset = dataset
+        # promote ophys timestamps up to the top level
+        self.ophys_timestamps = self.dataset.ophys_timestamps
         self.use_events = use_events
         if analysis_cache_dir is None:
             self.analysis_cache_dir = loading.get_analysis_cache_dir()
