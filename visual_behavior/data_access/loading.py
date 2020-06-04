@@ -7,7 +7,6 @@ from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import processing
 from visual_behavior.data_access import utilities
-from visual_behavior.ophys.io.lims_database import LimsDatabase
 import visual_behavior.database as db
 
 import os

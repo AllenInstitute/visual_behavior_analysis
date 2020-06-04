@@ -7,6 +7,7 @@ import traceback
 import datetime
 import uuid
 import warnings
+from psycopg2 import extras
 
 from allensdk.internal.api import PostgresQueryMixin
 from allensdk.core.authentication import credential_injector
