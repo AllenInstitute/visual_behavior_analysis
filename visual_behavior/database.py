@@ -64,6 +64,14 @@ class Database(object):
         self.client.close()
 
 
+def get_psql_dict_cursor():
+    """Set up a connection to a psql db server with a dict cursor"""
+    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+    con = api.get_connection()
+    con.set_session(readonly=True, autocommit=True)
+    return con.cursor(cursor_factory=extras.RealDictCursor)
+
+
 def get_behavior_data(table_name, session_id=None, id_type='behavior_session_uuid'):
     '''
     look up behavior data for a given behavior session

@@ -25,6 +25,7 @@ from allensdk.core.authentication import credential_injector
 from allensdk.core.auth_config import LIMS_DB_CREDENTIAL_MAP
 
 # relative import doesnt work on cluster
+import visual_behavior.database as db
 from visual_behavior.ophys.io.lims_database import LimsDatabase  # NOQA: E402
 from visual_behavior.translator import foraging2, foraging  # NOQA: E402
 from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E402
@@ -32,17 +33,10 @@ from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NO
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
+from visual_behavior.data_access.utilities import get_lims_data, get_timestamps
 from psycopg2 import extras  # NOQA: E402
 
 logger = logging.getLogger(__name__)
-
-
-def get_psql_dict_cursor():
-    """Set up a connection to a psql db server with a dict cursor"""
-    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
-    con = api.get_connection()
-    con.set_session(readonly=True, autocommit=True)
-    return con.cursor(cursor_factory=extras.RealDictCursor)
 
 
 def save_data_as_h5(data, name, analysis_dir):
@@ -64,16 +58,6 @@ def get_cache_dir(cache_dir=None):
         return cache_dir
     else:
         return cache_dir
-
-
-def get_lims_data(lims_id):
-    ld = LimsDatabase(lims_id)
-    lims_data = ld.get_qc_param()
-    lims_data.insert(loc=2, column='experiment_id', value=lims_data.lims_id.values[0])
-    lims_data.insert(loc=2, column='session_type',
-                     value='behavior_' + lims_data.experiment_name.values[0].split('_')[-1])
-    lims_data.insert(loc=2, column='ophys_session_dir', value=lims_data.datafolder.values[0][:-28])
-    return lims_data
 
 
 def get_lims_id(lims_data):
@@ -272,7 +256,7 @@ def get_sync_path(lims_data, analysis_dir):
         #        print(sync_path, os.path.join(analysis_dir, sync_file))
         try:
             shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except: # NOQA E722
+        except:  # NOQA E722
             print('shutil.copy2 gave an error perhaps related to copying stat data... passing!')
             pass
     return sync_path
@@ -373,16 +357,6 @@ def get_sync_data(lims_data, analysis_dir, use_acq_trigger):
                  'ophys_trigger': times_trigger,
                  }
     return sync_data
-
-
-def get_timestamps(lims_data, analysis_dir):
-    if '2P6' in analysis_dir:
-        use_acq_trigger = True
-    else:
-        use_acq_trigger = False
-    sync_data = get_sync_data(lims_data, analysis_dir, use_acq_trigger)
-    timestamps = pd.DataFrame(sync_data)
-    return timestamps
 
 
 def get_stimulus_timestamps(timestamps):
@@ -632,7 +606,7 @@ def get_extract_json_file(experiment_id):
     WHERE well_known_file_type_id = (SELECT id FROM well_known_file_types WHERE name = 'OphysExtractedTracesInputJson') 
     AND attachable_id = '{0}';
     '''  # NOQA: W291
-    lims_cursor = get_psql_dict_cursor()
+    lims_cursor = db.get_psql_dict_cursor()
     lims_cursor.execute(QUERY.format(experiment_id))
     return (lims_cursor.fetchall())  # return(lims_cursor.fetchone())
 

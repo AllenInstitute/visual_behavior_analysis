@@ -1,5 +1,4 @@
 from allensdk.internal.api import PostgresQueryMixin
-import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
@@ -8,6 +7,7 @@ from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import processing
 from visual_behavior.data_access import utilities
+from visual_behavior.ophys.io.lims_database import LimsDatabase
 import visual_behavior.database as db
 
 import os
@@ -40,7 +40,6 @@ mtrain_engine = PostgresQueryMixin(dbname=mtrain_dbname,
                                    password=mtrain_password,
                                    port=mtrain_port)
 
-get_psql_dict_cursor = convert.get_psql_dict_cursor  # to load well-known files
 config = configp.ConfigParser()
 
 
@@ -352,8 +351,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def timestamps(self):
         # need to get full set of timestamps because SDK only provides stimulus and ophys timestamps (not eye tracking for example)
-        lims_data = convert.get_lims_data(self.ophys_experiment_id)
-        self._timestamps = convert.get_timestamps(lims_data, self.analysis_dir)
+        lims_data = utilities.get_lims_data(self.ophys_experiment_id)
+        self._timestamps = utilities.get_timestamps(lims_data, self.analysis_dir)
         return self._timestamps
 
     @property
@@ -983,7 +982,7 @@ def get_timeseries_ini_wkf_info(ophys_session_id):
 
     '''.format(ophys_session_id)
 
-    lims_cursor = get_psql_dict_cursor()
+    lims_cursor = db.get_psql_dict_cursor()
     lims_cursor.execute(QUERY)
 
     timeseries_ini_wkf_info = (lims_cursor.fetchall())
@@ -1083,7 +1082,7 @@ def get_wkf_dff_h5_location(ophys_experiment_id):
 
     '''.format(ophys_experiment_id)
 
-    lims_cursor = get_psql_dict_cursor()
+    lims_cursor = db.get_psql_dict_cursor()
     lims_cursor.execute(QUERY)
 
     dff_h5_location_info = (lims_cursor.fetchall())
@@ -1113,7 +1112,7 @@ def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
 
     '''.format(ophys_experiment_id)
 
-    lims_cursor = get_psql_dict_cursor()
+    lims_cursor = db.get_psql_dict_cursor()
     lims_cursor.execute(QUERY)
 
     motion_corrected_movie_h5_wkf_info = (lims_cursor.fetchall())
@@ -1180,7 +1179,7 @@ def get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id):
 
     '''.format(ophys_experiment_id)
 
-    lims_cursor = get_psql_dict_cursor()
+    lims_cursor = db.get_psql_dict_cursor()
     lims_cursor.execute(QUERY)
 
     rigid_motion_transform_csv_wkf_info = (lims_cursor.fetchall())
