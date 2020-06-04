@@ -4,7 +4,7 @@ import setuptools
 
 setuptools.setup(
     name="visual-behavior",
-    version="0.8.0.dev0",
+    version="0.8.1.dev0",
     author="Allen Institute for Brain Science",
     author_email="marinag@alleninstitute.org, dougo@alleninstitute.org",
     description="analysis package for visual behavior",
