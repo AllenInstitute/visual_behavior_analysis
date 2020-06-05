@@ -6,6 +6,7 @@ from ... import metrics
 from ...translator.core.annotate import annotate_epochs, annotate_change_detect
 from functools import partial
 
+
 def create_summarizer(**kwargs):
     """ creates a function that can be applied to a dataframe
 
