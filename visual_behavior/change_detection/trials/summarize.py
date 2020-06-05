@@ -4,7 +4,7 @@ import numpy as np
 from . import session_metrics
 from ... import metrics
 from ...translator.core.annotate import annotate_epochs, annotate_change_detect
-
+from functools import partial
 
 def create_summarizer(**kwargs):
     """ creates a function that can be applied to a dataframe
@@ -53,6 +53,7 @@ DEFAULT_SUMMARY_METRICS = dict(
     # behavior_session_uuid=session_metrics.session_id,
     session_duration=session_metrics.session_duration,
     d_prime_peak=session_metrics.peak_dprime,
+    d_prime_peak_trial_adjusted=partial(session_metrics.peak_dprime, first_valid_trial=100, apply_trial_number_limit=True),
     d_prime=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.d_prime),
     discrim_p=lambda grp: session_metrics.discrim(grp, 'change', 'detect', metric=metrics.discrim_p),
     response_bias=lambda grp: session_metrics.response_bias(grp, 'detect'),
