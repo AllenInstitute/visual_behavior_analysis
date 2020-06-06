@@ -124,13 +124,23 @@ def make_performance_plot(df_summary, ax, palette='trial_types'):
 
 def make_dprime_plot(df_summary, ax, reward_window=None, sliding_window=100, height=0.8):
 
-    ax.barh(
-        np.arange(len(df_summary)),
-        df_summary['d_prime_peak'].values,
-        height=height,
-        color='DimGray',
-        alpha=1
-    )
+    b1 = ax.barh(
+            np.arange(len(df_summary)),
+            df_summary['d_prime_peak'].values,
+            height=height,
+            color='k',
+            alpha=1
+        )
+
+    if 'd_prime_peak_trial_adjusted' in df_summary.columns:
+        b2 = ax.barh(
+                np.arange(len(df_summary)),
+                df_summary['d_prime_peak_trial_adjusted'].values,
+                height=height,
+                color='0.5',
+                alpha=1
+            )
+        ax.legend([b1, b2], ['raw', 'adjusted'])
 
     ax.set_title('PEAK \ndprime')
     ax.set_xlabel('Max dprime')
