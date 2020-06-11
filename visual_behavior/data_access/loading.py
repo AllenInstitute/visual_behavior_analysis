@@ -80,8 +80,7 @@ def get_behavior_model_outputs_dir():
 
 def get_cache_dir():
     """Get directory of data cache for analysis - this should be the standard cache location"""
-    #cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
-    cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/alex.piet/GLM/manifest/"
+    cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
     return cache_dir
 
 
