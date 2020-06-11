@@ -80,7 +80,8 @@ def get_behavior_model_outputs_dir():
 
 def get_cache_dir():
     """Get directory of data cache for analysis - this should be the standard cache location"""
-    cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
+    #cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
+    cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/alex.piet/GLM/manifest/"
     return cache_dir
 
 
@@ -159,7 +160,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
         experiments = experiments.reset_index()
-        experiments = experiments.drop(columns='index')
+        experiments = experiments.drop(columns='index',errors='ignore')
     if include_failed_data:
         experiments = filtering.limit_to_experiments_with_final_qc_state(experiments)
     else:
@@ -272,11 +273,11 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table
         if self.include_invalid_rois == False:
-            cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
+            cell_specimen_table = cell_specimen_table.query('valid_roi')
         # add cell index corresponding to the index of the cell in dff_traces_array
         cell_specimen_ids = np.sort(cell_specimen_table.index.values)
         if 'cell_index' not in cell_specimen_table.columns:
-            cell_specimen_table.loc[:, 'cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
+            cell_specimen_table['cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
                                                         cell_specimen_id in cell_specimen_table.index.values]
             cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._cell_specimen_table = cell_specimen_table
