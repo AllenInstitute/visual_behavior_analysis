@@ -79,13 +79,13 @@ class ResponseAnalysis(object):
                  use_extended_stimulus_presentations=False, overwrite_analysis_files=False, dataframe_format='wide'):
         self.dataset = dataset
         # promote ophys timestamps up to the top level
-        self.ophys_timestamps = self.dataset.ophys_timestamps # THROWS WARNING
+        self.ophys_timestamps = self.dataset.ophys_timestamps  # THROWS WARNING
         # promote stimulus_presentations to the top level
         self.stimulus_presentations = self.dataset.stimulus_presentations
         # promote dff_traces to the top level
         self.dff_traces = self.dataset.dff_traces
         # promote cell_specimen_table to the top level
-        self.cell_specimen_table = self.dataset.cell_specimen_table 
+        self.cell_specimen_table = self.dataset.cell_specimen_table
         self.use_events = use_events
         if analysis_cache_dir is None:
             self.analysis_cache_dir = loading.get_analysis_cache_dir()
