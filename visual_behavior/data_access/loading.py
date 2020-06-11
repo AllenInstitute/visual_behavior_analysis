@@ -273,6 +273,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         cell_specimen_table = super().cell_specimen_table
         if self.include_invalid_rois == False:
             cell_specimen_table = cell_specimen_table.query('valid_roi')
+        cell_specimen_table = cell_specimen_table.copy()
         # add cell index corresponding to the index of the cell in dff_traces_array
         cell_specimen_ids = np.sort(cell_specimen_table.index.values)
         if 'cell_index' not in cell_specimen_table.columns:
