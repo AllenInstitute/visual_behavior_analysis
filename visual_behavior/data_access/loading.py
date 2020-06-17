@@ -1382,14 +1382,14 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
 
 
 def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_session_type=True, use_events=False):
-    # experiments_table = get_annotated_experiments_table()
+    annotated_experiments_table = get_annotated_experiments_table()
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        expts = experiments.reset_index()
+        expts = annotated_experiments_table.reset_index()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
                 filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
