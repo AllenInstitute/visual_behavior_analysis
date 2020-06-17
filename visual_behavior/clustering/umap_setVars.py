@@ -6,7 +6,7 @@ Here, we set all_sess_now and other vars needed to do umap/clustering analysis.
 To set vars needed her, run omissions_traces_peaks_plots_setVars.py with "doCorrs = -1" and "useSDK = 1" to load allsess. 
 (Note: all_sess is created by the script load_behavior_ophys_dataset_fn.py)
 
-After this script, run umap_run.py to run umap.
+After this script, run umap_run.py to run umap/pca and make plots.
 
 Created on Wed Jun 10 16:05:25 2020
 @author: farzaneh
@@ -127,9 +127,11 @@ cre_all = all_sess_now['cre'].values # len_mice_withData
 cre_lines = np.unique(cre_all)
 
 # loop through each cre line
-all_sess_ns_fof_all_cre = [] # size: number of distinct cre lines; # includes image before omission, omission, and image after omission (24 frames) # use samps_bef_now to find omission time.
+all_sess_ns_fof_all_cre = [] # size: number of distinct cre lines; # includes 1 image before omission, omission, and 1 image after omission (24 frames) # use samps_bef_now to find omission time.
 bl_preOmit_all_cre = []
 all_sess_ns_all_cre = [] # 40 frames; use samps_bef to find omission time.
+all_sess_areas_all_cre = []
+all_sess_depths_all_cre = []
 
 for icre in range(len(cre_lines)): # icre = 0
     
@@ -141,18 +143,19 @@ for icre in range(len(cre_lines)): # icre = 0
 #     print(all_sess_thisCre.shape)
 
 
-    ############### set area
+    ############### set area ###############
     n = all_sess_thisCre['n_neurons'].values
     
     a = all_sess_thisCre['area'].values.astype('str') # each element is frames x units x trials    
     aa = [np.full((n[i]), a[i]) for i in range(len(a))] # replicate the area value of each experiment to the number of neurons in that experiment
     all_sess_areas = np.concatenate((aa)) # neurons_allExp_thisCre
     
-    ############### set depth    
-    a = all_sess_thisCre['depth'].values.astype('str') # each element is frames x units x trials    
+    ############### set depth ###############   
+    a = all_sess_thisCre['depth'].values.astype('int') # each element is frames x units x trials    
     aa = [np.full((n[i]), a[i]) for i in range(len(a))] # replicate the area value of each experiment to the number of neurons in that experiment
-    all_sess_areas = np.concatenate((aa)) # neurons_allExp_thisCre
+    all_sess_depths = np.concatenate((aa)) # neurons_allExp_thisCre
 
+    
     
     ############### set traces ###############
     # note: local_fluo_allOmitt for invalid experiments will be a nan trace as if they had one neuron
@@ -178,10 +181,15 @@ for icre in range(len(cre_lines)): # icre = 0
     print(f'{all_sess_ns_fof_thisCre.shape}: size of neurons_allExp_thisCre') # neurons_allExp_thisCre x 24(frames)
 #     plt.plot(np.nanmean(all_sess_ns_fof_thisCre, axis=0))
     
-    # keep arrays for all cres
+    
+    
+    ############### keep arrays for all cres ###############
+    all_sess_ns_all_cre.append(all_sess_ns) # each element is # neurons_allExp_thisCre x frames    
     all_sess_ns_fof_all_cre.append(all_sess_ns_fof_thisCre) # each element is # neurons_allExp_thisCre x 24(frames)
     bl_preOmit_all_cre.append(bl_preOmit) # each element is # neurons_allExp_thisCre
-    all_sess_ns_all_cre.append(all_sess_ns) # each element is # neurons_allExp_thisCre x frames
+    all_sess_areas_all_cre.append(all_sess_areas)
+    all_sess_depths_all_cre.append(all_sess_depths)
+    
     
     
  
@@ -222,4 +230,8 @@ for icre in range(len(cre_lines)): # icre = 0
     peak_amp_eachN_traceMed_flash_all_cre.append(peak_amp_eachN_traceMed_flash)
     peak_timing_eachN_traceMed_flash_all_cre.append(peak_timing_eachN_traceMed_flash)
 
-    
+
+
+###########################################################################
+#%% After this script, run umap_run.py to run umap/pca and make plots.    
+###########################################################################

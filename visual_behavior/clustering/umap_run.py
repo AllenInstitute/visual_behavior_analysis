@@ -12,74 +12,9 @@ Created on Thu May 14 21:27:25 2020
 @author: farzaneh
 """
 
-    
-################################################################################################    
-################################################################################################        
-#%% Run PCA
-################################################################################################    
-################################################################################################    
-
-from sklearn.decomposition import PCA
-varexpmax = .99 # 1 # .9
-
-pc_all_cre = []
-
-for icre in range(len(cre_lines)): # icre=0
-    cre = cre_lines[icre]    
-    all_sess_ns_fof_thisCre = all_sess_ns_fof_all_cre[icre] # neurons_allExp_thisCre x 24(frames)
-    print(f'Running PCA on {cre}, matrix size: {np.shape(all_sess_ns_fof_thisCre)}')
-
-    x_train_pc, pca = doPCA(all_sess_ns_fof_thisCre, varexpmax=varexpmax, doplot=1)
-    x_train_pc.shape
-
-    pc_all_cre.append(x_train_pc)
-
-
-
-#%% Scatter plots for each cre line; 2 subplots, each colored for flash and omission responses.
-
-cut_axes = 1 # if 1, show from 1 to 99 percentile of x and y values. helps when there are some outliers.
-plot_scatter_fo(cre_lines, pc_all_cre, peak_amp_eachN_traceMed_flash_all_cre, peak_amp_eachN_traceMed_all_cre, lab_analysis='PCA', cut_axes=cut_axes, same_norm_fo=1, dosavefig=dosavefig)
-
-
-    
-################################################################################################    
-################################################################################################    
-#%% Run umap on all_sess_ns_fof_thisCre
-################################################################################################
-################################################################################################
-
-import umap    
-import seaborn as sns
-from mpl_toolkits.mplot3d import Axes3D
-
-ncomp = 2 # 3 # number of umap components
-
-embedding_all_cre = []
-
-for icre in range(len(cre_lines)): # icre = 2    
-    cre = cre_lines[icre]    
-    all_sess_ns_fof_thisCre = all_sess_ns_fof_all_cre[icre] # neurons_allExp_thisCre x 24(frames)
-    print(f'Running UMAP on {cre}')
-
-    sp = 2
-    neigh = 7
-    embedding = umap.UMAP(spread= sp, n_neighbors = neigh, n_components = ncomp).fit_transform(all_sess_ns_fof_thisCre)
-    print(f'embedding size: {embedding.shape}')
-    embedding_all_cre.append(embedding)
-    
-
-# embedding_all_cre_3d = copy.deepcopy(embedding_all_cre)
-
-
-
-
-###############################################################
-###############################################################
-###########################  Plots  ###########################
-###############################################################
-###############################################################
 # from matplotlib import cm # colormap
+cmap = plt.cm.jet #bwr #or any other colormap 
+
 
 #%% Scatter plots for each cre line; 2 subplots, each colored for flash and omission responses.                
 
@@ -201,13 +136,78 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, peak_amp_eachN_traceMed_flash_al
 
 
             
+################################################################################################    
+################################################################################################        
+#%% Run PCA
+################################################################################################    
+################################################################################################    
+
+from sklearn.decomposition import PCA
+varexpmax = .99 # 1 # .9
+
+pc_all_cre = []
+
+for icre in range(len(cre_lines)): # icre=0
+    cre = cre_lines[icre]    
+    all_sess_ns_fof_thisCre = all_sess_ns_fof_all_cre[icre] # neurons_allExp_thisCre x 24(frames)
+    print(f'Running PCA on {cre}, matrix size: {np.shape(all_sess_ns_fof_thisCre)}')
+
+    x_train_pc, pca = doPCA(all_sess_ns_fof_thisCre, varexpmax=varexpmax, doplot=1)
+    x_train_pc.shape
+
+    pc_all_cre.append(x_train_pc)
+
+
+
+#%% Scatter plots for each cre line; 2 subplots, each colored for flash and omission responses.
+
+cut_axes = 1 # if 1, show from 1 to 99 percentile of x and y values. helps when there are some outliers.
+plot_scatter_fo(cre_lines, pc_all_cre, peak_amp_eachN_traceMed_flash_all_cre, peak_amp_eachN_traceMed_all_cre, lab_analysis='PCA', cut_axes=cut_axes, same_norm_fo=1, dosavefig=dosavefig)
+
+
+    
+################################################################################################    
+################################################################################################    
+#%% Run umap on all_sess_ns_fof_thisCre
+################################################################################################
+################################################################################################
+
+import umap    
+import seaborn as sns
+from mpl_toolkits.mplot3d import Axes3D
+
+ncomp = 2 # 3 # number of umap components
+
+embedding_all_cre = []
+
+for icre in range(len(cre_lines)): # icre = 2    
+    cre = cre_lines[icre]    
+    all_sess_ns_fof_thisCre = all_sess_ns_fof_all_cre[icre] # neurons_allExp_thisCre x 24(frames)
+    print(f'Running UMAP on {cre}')
+
+    sp = 2
+    neigh = 7
+    embedding = umap.UMAP(spread= sp, n_neighbors = neigh, n_components = ncomp).fit_transform(all_sess_ns_fof_thisCre)
+    print(f'embedding size: {embedding.shape}')
+    embedding_all_cre.append(embedding)
+    
+
+# embedding_all_cre_3d = copy.deepcopy(embedding_all_cre)
+
+
+
+
+###############################################################
+###############################################################
+###########################  Plots  ###########################
+###############################################################
+###############################################################            
             
 #%% Make scatter plots; all cre lines superimposed 
 
 color_cre_omit_flash = 3 # if 1: color neurons according to cre line; if 2, according to omission responses; if 3, according to flash responses.
 
 cols_cre = ['b', 'r', 'g'] # slc, sst, vip
-cmap = plt.cm.jet #bwr #or any other colormap 
 
 if color_cre_omit_flash==2:
     clab = 'omission-evoked amplitude'
