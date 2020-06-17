@@ -79,7 +79,7 @@ class ResponseAnalysis(object):
                  use_extended_stimulus_presentations=False, overwrite_analysis_files=False, dataframe_format='wide'):
         self.dataset = dataset
         # promote ophys timestamps up to the top level
-        self.ophys_timestamps = self.dataset.ophys_timestamps
+        self.ophys_timestamps = self.dataset.ophys_timestamps  # THROWS WARNING
         # promote stimulus_presentations to the top level
         self.stimulus_presentations = self.dataset.stimulus_presentations
         # promote dff_traces to the top level
@@ -106,6 +106,7 @@ class ResponseAnalysis(object):
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate']
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate']
         if 'blank_duration_sec' in self.dataset.task_parameters.keys():
+
             self.blank_duration = self.dataset.task_parameters['blank_duration_sec'][0]
             # self.dataset.running_speed = self.dataset.running_speed_df
         else:
