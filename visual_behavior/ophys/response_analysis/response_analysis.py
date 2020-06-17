@@ -219,6 +219,7 @@ class ResponseAnalysis(object):
                     'engagement_state',
                     'licked',
                     'lick_on_next_flash',
+                    'lick_on_previous_flash',
                 ]
                 df = df.merge(
                     stimulus_presentations[columns_to_keep],

@@ -431,13 +431,14 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
         stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
         stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
-        stimulus_presentations = add_model_outputs_to_stimulus_presentations(stimulus_presentations,
-                                                                             self.metadata['behavior_session_id'])
-        stimulus_presentations.at[
-            stimulus_presentations.index.values[1:], 'lick_on_next_flash'] = stimulus_presentations.licked.values[:-1]
-        stimulus_presentations.at[
-            stimulus_presentations.index.values[1:], 'lick_rate_next_flash'] = stimulus_presentations.lick_rate.values[
-            :-1]
+        stimulus_presentations = add_model_outputs_to_stimulus_presentations(
+            stimulus_presentations,
+            self.metadata['behavior_session_id']
+        )
+        stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
+        stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
+        stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
+        stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
