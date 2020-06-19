@@ -115,25 +115,37 @@ else: # use allenSDK
 
     all_sess_now = all_sess_now.sort_values(by=['session_id','area', 'depth'])
 
-
+    
     #%% Add plane_index to the columns of all_sess_now
+    # NOTE: below is incorrect
+    # the problem with the method below is that sometimes depths of the same planes are different for v1 and lm.
+    # the right way to find plane_index is to use the order of experiment_ids
 
+    '''    
     sess_ids = np.unique(all_sess_now['session_id'].values)
-
+    areas = np.unique(all_sess_now['area'].values) # ['VISl', 'VISp']
+    
     cols = all_sess_now.columns.tolist()
     cols_newp = np.concatenate((cols[:np.argwhere(np.in1d(cols,'depth')).squeeze()+1], ['plane_index'], cols[np.argwhere(np.in1d(cols,'depth')).squeeze()+1:]))
     all_sess_nowp = pd.DataFrame([], columns=cols_newp)
 
     for i in sess_ids:
         this_sess = all_sess_now.iloc[all_sess_now['session_id'].values==i]
+        
         ud, plane_ind = np.unique(this_sess['depth'], return_inverse=True)
+#         for arn in areas: # arn = 'VISl'
+#         this_sess_this_area = this_sess[this_sess['area']==arn]
+#         ud, plane_ind = np.unique(this_sess_this_area['depth'], return_inverse=True)
 
         if len(plane_ind) < num_depth: # if not all 8 experiments exist (due to qc failure), we wont be able to set plane_index!!
             print(i)
             plane_ind = np.full(len(plane_ind), np.nan)
-
+        
+#         if len(plane_ind)>4:
+#             print(np.diff(ud))            
+            
         # add plane_index to this_sess
-        this_sess_nowp = this_sess
+        this_sess_nowp = this_sess_this_area
         this_sess_nowp.at[:, 'plane_index'] = plane_ind
         this_sess_nowp = this_sess_nowp[cols_newp]
 
@@ -163,6 +175,8 @@ else: # use allenSDK
     #%% Finally, reset all_sess_now
     
     all_sess_now = all_sess_nowp2 
+    '''
+    
     print(f'\n\nFinal size of all_sess_now: {all_sess_now.shape}\n\n')
 
           
@@ -192,6 +206,8 @@ all_sess_ns_fof_all_cre = [] # size: number of distinct cre lines; # includes 1 
 bl_preOmit_all_cre = []
 area_all_cre = []
 depth_all_cre = []
+depth_categ_all_cre = []
+# plane_all_cre = []
 
 for icre in range(len(cre_lines)): # icre = 0
     
@@ -216,6 +232,21 @@ for icre in range(len(cre_lines)): # icre = 0
     a = all_sess_thisCre['depth'].values.astype('int') # each element is frames x units x trials    
     aa = [np.full((n[i]), a[i]) for i in range(len(a))] # replicate the area value of each experiment to the number of neurons in that experiment
     all_sess_depths = np.concatenate((aa)) # neurons_allExp_thisCre
+
+    ############### set depth category ###############   
+    
+    all_sess_depth_categ = np.full((len(all_sess_depths)), 1)
+#     np.diff(np.unique(all_sess_depths))
+    all_sess_depth_categ[all_sess_depths<100] = 0
+    all_sess_depth_categ[all_sess_depths>350] = 2
+    
+    
+    ############### set plane ###############  
+    # we dont have this yet.
+    
+#     a = all_sess_thisCre['plane_index'].values.astype('int') # each element is frames x units x trials    
+#     aa = [np.full((n[i]), a[i]) for i in range(len(a))] # replicate the area value of each experiment to the number of neurons in that experiment
+#     all_sess_planes = np.concatenate((aa)) # neurons_allExp_thisCre
 
     
     
@@ -253,9 +284,10 @@ for icre in range(len(cre_lines)): # icre = 0
     bl_preOmit_all_cre.append(bl_preOmit) # each element is # neurons_allExp_thisCre
     area_all_cre.append(all_sess_areas)
     depth_all_cre.append(all_sess_depths)
-    
-    
+#     plane_all_cre.append(all_sess_planes)
+    depth_categ_all_cre.append(all_sess_depth_categ)
 
+    
     
 ################################################################################## 
 #%% Compute flash and omission-evoked responses on trial-averaged traces in all_sess_ns_fof_thisCre (relative to baseline)

@@ -10,6 +10,8 @@ Created on Thu May 14 21:27:25 2020
 @author: farzaneh
 """
 
+import matplotlib.patches as mpatches
+
 # from matplotlib import cm # colormap
 cmap = plt.cm.jet #viridis #bwr #or any other colormap 
 prop_cycle = plt.rcParams['axes.prop_cycle']
@@ -18,7 +20,7 @@ colors = prop_cycle.by_key()['color']
 
 #%% Scatter plots for each cre line; 2 subplots, each colored for flash and omission responses.                
 
-def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image_amp, omit_amp'], lab_analysis='UMAP', cut_axes=0, same_norm_fo=1, dosavefig=0):
+def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image_amp, omit_amp'], lab_analysis='UMAP', cut_axes=0, same_norm_fo=[1,1], dosavefig=0, fign_subp='imageOmit_', pc_exp_var=np.nan):
 
 #     low_dim_all_cre = embedding_all_cre
 #     color_metric1 = peak_amp_eachN_traceMed_flash_all_cre # neurons will be color coded based on this metric in subplot 1
@@ -26,7 +28,7 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image
 #     color_metric = [color_metric1, color_metric2]
 #     color_labs = ['image-evoked amplitude', 'omission-evoked amplitude']
 #     cut_axes = 1 # if 1, show from 1 to 99 percentile of x and y values. helps when there are some outliers.
-#     same_norm_fo = 1 # if -1, color_matric is not float (eg area, or depth), if 1, use the same cmap scale for both subplots (eg image and omission response amplitude); if 0, plot each using its own min and max. (NOTE: to avoid color saturation we use 1st and 99th percentiles of amplitude).
+#     same_norm_fo = 1 # if 1, use the same cmap scale for both subplots (eg image and omission response amplitude); if 0, plot each using its own min and max. (NOTE: to avoid color saturation we use 1st and 99th percentiles of amplitude).
 
 
     for icre in range(len(cre_lines)): # icre = 2
@@ -38,19 +40,18 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image
         y = low_dim_all_cre[icre][:, 1]
     #     z = low_dim_all_cre[icre][:, 2]
 
+    
         mnx = np.percentile(x, .5)
         mny = np.percentile(y, .5)    
         mxx = np.percentile(x, 99.5)
         mxy = np.percentile(y, 99.5)
         
         if same_norm_fo==1: # use the same cmap scale for image and omission
-            amp = np.concatenate((color_metric1[icre], color_metric2[icre]))
+            amp = np.concatenate((color_metric[0][icre], color_metric[1][icre]))
             mn = np.percentile(amp, 1)
             mx = np.percentile(amp, 99)
             norm = matplotlib.colors.Normalize(vmin=mn, vmax=mx)
-        elif same_norm_fo==-1:
-            norm = None
-            
+                        
 
         ##################################################################################
         ###### make different subplots, all show the same scatter plot ######
@@ -61,19 +62,22 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image
         fig = plt.figure(figsize=(14,5)) #(figsize=(10,3))
         plt.suptitle(f'{cre[:3]}', y=.995, fontsize=22) 
 
-        for isp in range(len(color_metric)):
+        for isp in range(len(color_metric)): # isp = 0
             
             amp = color_metric[isp][icre]    
             clab = color_labs[isp]
 
-            if same_norm_fo==-1:
+            if type(amp[0])==np.str_: # eg depth   #same_norm_fo[isp]==-1:
+                norm = None
+                
                 u = np.unique(amp)
+#                 u = np.unique(np.concatenate((color_metric[isp])))
                 c_value = np.full((len(amp), 3), np.nan)
                 for ia in range(len(u)):
                     c_value[amp==u[ia]] = colors[ia]
             else:
                 c_value = amp
-
+                
 
             ax = fig.add_subplot(1,2,isp+1)
             # ax = fig.add_subplot(111, projection='3d')
@@ -84,23 +88,30 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image
                 norm = matplotlib.colors.Normalize(vmin=mn, vmax=mx)
 
             # each neuron is colored according to its omission or flash response
-            scatter = ax.scatter(x, y, s=10, label=cre[:3], marker='o', c=c_value, cmap=cmap, norm=norm) #cmap=cm.jet) 
+            scatter = ax.scatter(x, y, s=2, label=cre[:3], marker='o', c=c_value, cmap=cmap, norm=norm) #cmap=cm.jet) 
                 
                 
             # add legend
-            if same_norm_fo==-1:
+            if type(amp[0])==np.str_: # eg depth    # same_norm_fo[isp]==-1:
                 h = []
                 for ia in range(len(u)):
                     h.append(mpatches.Patch(color=colors[ia], label=u[ia]))
-
-            plt.legend(handles=h)
+                plt.legend(handles=h, loc='center left', bbox_to_anchor=(-.1, 1.2, 1, .1), frameon=False, fontsize=12, ncol=2) # (1, .7)
             
+            if type(pc_exp_var)==list:
+                xle = f'\n{pc_exp_var[icre][0]:.02f} variance'
+                yle = f'\n{pc_exp_var[icre][1]:.02f} variance'
+            xlab = f'{lab_analysis} axis 1{xle}' # (arbitrary Units)')
+            ylab = f'{lab_analysis} axis 2{yle}'
             
-            ax.set_xlabel(f'{lab_analysis} axis 1 (arbitrary Units)')
-            ax.set_ylabel(f'{lab_analysis} axis 2')        #     ax.set_zlabel('UMAP Axis 3 ')    
-            if same_norm_fo!=-1: # dont add cmap
-                fig.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=clab) 
-            plt.title(color_labs[0]) #'Image')          #     ax.title(cre[:3])
+            ax.set_xlabel(xlab, fontsize=12)
+            ax.set_ylabel(ylab, fontsize=12)        #     ax.set_zlabel('UMAP Axis 3 ')    
+            if type(amp[0])!=np.str_: # eg depth: dont add cmap
+                cbar = fig.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=clab)
+                cbar.set_label(clab, size=10)
+                cbar.ax.tick_params(labelsize=10) 
+                
+            plt.title(clab, fontsize=12)
             ax.set_aspect('equal')
 
             if cut_axes:
@@ -115,13 +126,13 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image
                 ax.grid(True, which='both') # major
 
                 
-        plt.subplots_adjust(wspace=0.5)
+        plt.subplots_adjust(wspace=0.7)
 
         
 
         if dosavefig:
             cre_short = cre[:3]
-            fgn_umap = f'{lab_analysis}_scatter_imageOmit_allNeurSess'
+            fgn_umap = f'{lab_analysis}_scatter_{fign_subp}allNeurSess'
     #         if useSDK:
     #             fgn_umap = f'{fgn_umap}_sdk_'
             nam = '%s_%s%s_%s_%s' %(cre_short, fgn_umap, whatSess, fgn, now)
@@ -146,19 +157,33 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image
 
 lab_analysis = 'PCA'
 cut_axes = 1 # if 1, show from 1 to 99 percentile of x and y values. helps when there are some outliers.
-same_norm_fo = -1 # if -1, color_matric is not float (eg area, or depth), if 1, use the same cmap scale for both subplots (eg image and omission response amplitude); if 0, plot each using its own min and max. (NOTE: to avoid color saturation we use 1st and 99th percentiles of amplitude).
-
-
-# color by area and depth.
-color_labs = ['area', 'depth']
-color_metric = [area_all_cre, depth_all_cre]
-plot_scatter_fo(cre_lines, pc_all_cre, color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, dosavefig)
+pc_exp_var = pca_variance_all_cre
 
 
 # color by flash and omission responses.
+same_norm_fo = 1 # if 1, use the same cmap scale for both subplots (eg image and omission response amplitude); if 0, plot each using its own min and max. (NOTE: to avoid color saturation we use 1st and 99th percentiles of amplitude).
 color_labs = ['image-evoked amplitude', 'omission-evoked amplitude']
 color_metric = [peak_amp_eachN_traceMed_flash_all_cre, peak_amp_eachN_traceMed_all_cre]
-plot_scatter_fo(cre_lines, pc_all_cre, color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, dosavefig)
+fign_subp = 'imageOmit_'
+plot_scatter_fo(cre_lines, pc_all_cre, color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, dosavefig, fign_subp, pc_exp_var)
+
+
+# color by area and depth.
+same_norm_fo = 0
+color_labs = ['area', 'depth']
+color_metric = [area_all_cre, depth_all_cre]
+fign_subp = 'areaDepth_'
+plot_scatter_fo(cre_lines, pc_all_cre, color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, dosavefig, fign_subp, pc_exp_var)
+
+
+# color by area and depth category (superficial, middle, deep).
+same_norm_fo = 0
+color_labs = ['area', 'depth']
+# turn depth_categ_all_cre to str so plot_scatter_fo doesnt use colormap for it; otherwise bc vip doesnt have any deep neurons its colormap wont match the other cells colormap unless you add vmax to it (to be 2 and not 1)
+depth_categ_all_cre = [depth_categ_all_cre[i].astype(str) for i in range(3)]
+color_metric = [area_all_cre, depth_categ_all_cre]
+fign_subp = 'areaDepth_'
+plot_scatter_fo(cre_lines, pc_all_cre, color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, dosavefig, fign_subp, pc_exp_var)
 
 
     
@@ -170,13 +195,14 @@ plot_scatter_fo(cre_lines, pc_all_cre, color_metric, color_labs, lab_analysis, c
 
 lab_analysis='UMAP'
 cut_axes = 0
-same_norm_fo = 1 # if -1, color_matric is not float (eg area, or depth), if 1, use the same cmap scale for both subplots (eg image and omission response amplitude); if 0, plot each using its own min and max. (NOTE: to avoid color saturation we use 1st and 99th percentiles of amplitude).
+same_norm_fo = 1
 
 
 # color by flash and omission responses.
 color_labs = ['image-evoked amplitude', 'omission-evoked amplitude']
 color_metric = [peak_amp_eachN_traceMed_flash_all_cre, peak_amp_eachN_traceMed_all_cre]
-plot_scatter_fo(cre_lines, embedding_all_cre, color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, dosavefig)
+fign_subp = 'imageOmit_'
+plot_scatter_fo(cre_lines, embedding_all_cre, color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, dosavefig, fign_subp)
 
 
 
