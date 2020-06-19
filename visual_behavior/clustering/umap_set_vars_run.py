@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Here, we set all_sess_now and other vars needed to do umap/clustering analysis.
+Here, we set dataframe all_sess_now, also some arrays for distinct crea lines (all_sess_ns_fof_all_cre (trial averaged traces), image/omission response amplitude, area/depth)  
+these vars will be needed to do umap/clustering analysis.
 
-To set vars needed her, run omissions_traces_peaks_plots_setVars.py with "doCorrs = -1" and "useSDK = 1" to load allsess. 
-(Note: all_sess is created by the script load_behavior_ophys_dataset_fn.py)
+To set vars needed here, run omissions_traces_peaks_plots_setVars.py with "doCorrs = -1" and "useSDK = 1" to load allsess. 
+(Note: all_sess is created and saved in the script load_behavior_ophys_dataset_fn.py. Script omissions_traces_peaks_plots_setVars.py loads them)
 
-After this script, run umap_run.py to run umap/pca and make plots.
+After this script, run umap_plots.py to make plots.
 
 Created on Wed Jun 10 16:05:25 2020
 @author: farzaneh
 """
-
 
 peak_win = [0, .75] # this should be named omit_win
 flash_win = [-.75, -.25] # flash responses are computed on omission-aligned traces; # [-.75, 0] 
 
 
 ##################################################################################
-#%% Set all_sess_now
+#%% Set dataframe all_sess_now
 ##################################################################################
 
 if useSDK==0:
@@ -39,12 +39,12 @@ if useSDK==0:
     print(len(all_sess_now))
 
 
-else:
+else: # use allenSDK
     #%% all_sess_now: it is like all_sess_allN_allO, but also has traces_fut: omit-aligned traces
 
     # all_sess = all_sess_allN_allO
     cols0 = all_sess_2an.columns
-    cols = np.concatenate((cols0, ['n_neurons', 'n_omissions', 'local_fluo_allOmitt']))
+    cols = np.concatenate((cols0, ['plane', 'n_neurons', 'n_omissions', 'local_fluo_allOmitt']))
 
     ##### Set all_sess_thisCre, which is like all_sess_now, but also has omit-aligned traces
     all_sess_now = pd.DataFrame([], columns=cols)
@@ -96,20 +96,81 @@ else:
 
                 all_sess_now.at[iexp, ['n_neurons', 'n_omissions', 'local_fluo_allOmitt']] = n_neurons, n_omissions, traces_fut    
 
-    print(np.shape(all_sess_now))
+    all_sess_now0 = copy.deepcopy(all_sess_now)
+    print(np.shape(all_sess_now0))
+    
+    
 
-
-    ### Remove experiments (rows) without any neurons
-    exp_noNeur = np.argwhere(np.isnan(all_sess_now['n_neurons'].values.astype(float))).flatten()
-    all_sess_now = all_sess_now.drop(exp_noNeur)
+    #%% Remove experiments (rows) without any neurons
+    # remember "drop" uses the value of index to remove a row, not based on its location
+    
+    exp_noNeur = np.argwhere(np.isnan(all_sess_now0['n_neurons'].values.astype(float))).flatten()
+    all_sess_now = all_sess_now0.drop(exp_noNeur, axis=0)
     print('\nExperiments with no neurons removed!')
     print(np.shape(all_sess_now))
 
+    
+
+    #%% Sort all_sess_now by session_id, area and depth    
+
+    all_sess_now = all_sess_now.sort_values(by=['session_id','area', 'depth'])
+
+
+    #%% Add plane_index to the columns of all_sess_now
+
+    sess_ids = np.unique(all_sess_now['session_id'].values)
+
+    cols = all_sess_now.columns.tolist()
+    cols_newp = np.concatenate((cols[:np.argwhere(np.in1d(cols,'depth')).squeeze()+1], ['plane_index'], cols[np.argwhere(np.in1d(cols,'depth')).squeeze()+1:]))
+    all_sess_nowp = pd.DataFrame([], columns=cols_newp)
+
+    for i in sess_ids:
+        this_sess = all_sess_now.iloc[all_sess_now['session_id'].values==i]
+        ud, plane_ind = np.unique(this_sess['depth'], return_inverse=True)
+
+        if len(plane_ind) < num_depth: # if not all 8 experiments exist (due to qc failure), we wont be able to set plane_index!!
+            print(i)
+            plane_ind = np.full(len(plane_ind), np.nan)
+
+        # add plane_index to this_sess
+        this_sess_nowp = this_sess
+        this_sess_nowp.at[:, 'plane_index'] = plane_ind
+        this_sess_nowp = this_sess_nowp[cols_newp]
+
+        all_sess_nowp = all_sess_nowp.append(this_sess_nowp)
+
+    #     this_sess_nowp = pd.DataFrame([], columns=cols_newp)
+    #     for iexp in range(this_sess.shape[0]):
+    #         this_sess_nowp.at[iexp, all_sess_now.columns] = this_sess.iloc[iexp]
 
 
 
+    #%% Remove sessions that have <4 experiments (because we couldnt set their plane_index)
+    # note: this is a temporary thing, once we get all the experiments from loading (even the failed ones), we wont need to do this part anymore.
+    # note we cant use drop anymore, because all_sess_nowp is sorted (, so indeces are not in numerical order anymore), also we already removed some indeces (when removing no neuron experiments). Remember "drop" uses the value of index to remove a row, not based on its location.
+    
+    exp_missing = np.argwhere(np.isnan(all_sess_nowp['plane_index'].values.astype(float))).flatten()
+    print(f'\nRemoving {len(exp_missing)} experiments that have <4 experiments, so we cant set their plane_index.\n')
+    mask = np.full((all_sess_nowp.shape[0]), True)
+    mask[exp_missing] = False
+
+    all_sess_nowp2 = all_sess_nowp[mask]
+
+    print(all_sess_nowp.shape)
+    print(all_sess_nowp2.shape)
+
+
+    #%% Finally, reset all_sess_now
+    
+    all_sess_now = all_sess_nowp2 
+    print(f'\n\nFinal size of all_sess_now: {all_sess_now.shape}\n\n')
+
+          
+          
+          
+    
 ##################################################################################
-#%% Set trial-averaged (omission-aligned) traces for all mice (all experiments, all neurons concatenated) of a specific cre line
+#%% Set trial-averaged (omission-aligned) traces (also area and depth) for all mice (all experiments, all neurons concatenated) of a specific cre line
 ##################################################################################
 
 #%%
@@ -126,12 +187,11 @@ bl_index_pre_omit = np.arange(0,samps_bef) # we will need it for response amplit
 cre_all = all_sess_now['cre'].values # len_mice_withData
 cre_lines = np.unique(cre_all)
 
-# loop through each cre line
+# all_sess_ns_all_cre = [] # 40 frames; use samps_bef to find omission time.
 all_sess_ns_fof_all_cre = [] # size: number of distinct cre lines; # includes 1 image before omission, omission, and 1 image after omission (24 frames) # use samps_bef_now to find omission time.
 bl_preOmit_all_cre = []
-all_sess_ns_all_cre = [] # 40 frames; use samps_bef to find omission time.
-all_sess_areas_all_cre = []
-all_sess_depths_all_cre = []
+area_all_cre = []
+depth_all_cre = []
 
 for icre in range(len(cre_lines)): # icre = 0
     
@@ -144,6 +204,7 @@ for icre in range(len(cre_lines)): # icre = 0
 
 
     ############### set area ###############
+    
     n = all_sess_thisCre['n_neurons'].values
     
     a = all_sess_thisCre['area'].values.astype('str') # each element is frames x units x trials    
@@ -151,6 +212,7 @@ for icre in range(len(cre_lines)): # icre = 0
     all_sess_areas = np.concatenate((aa)) # neurons_allExp_thisCre
     
     ############### set depth ###############   
+    
     a = all_sess_thisCre['depth'].values.astype('int') # each element is frames x units x trials    
     aa = [np.full((n[i]), a[i]) for i in range(len(a))] # replicate the area value of each experiment to the number of neurons in that experiment
     all_sess_depths = np.concatenate((aa)) # neurons_allExp_thisCre
@@ -158,6 +220,7 @@ for icre in range(len(cre_lines)): # icre = 0
     
     
     ############### set traces ###############
+    
     # note: local_fluo_allOmitt for invalid experiments will be a nan trace as if they had one neuron
     a = all_sess_thisCre['local_fluo_allOmitt'].values # each element is frames x units x trials
 #     a.shape
@@ -184,16 +247,19 @@ for icre in range(len(cre_lines)): # icre = 0
     
     
     ############### keep arrays for all cres ###############
-    all_sess_ns_all_cre.append(all_sess_ns) # each element is # neurons_allExp_thisCre x frames    
+    
+#     all_sess_ns_all_cre.append(all_sess_ns) # each element is # neurons_allExp_thisCre x frames    
     all_sess_ns_fof_all_cre.append(all_sess_ns_fof_thisCre) # each element is # neurons_allExp_thisCre x 24(frames)
     bl_preOmit_all_cre.append(bl_preOmit) # each element is # neurons_allExp_thisCre
-    all_sess_areas_all_cre.append(all_sess_areas)
-    all_sess_depths_all_cre.append(all_sess_depths)
+    area_all_cre.append(all_sess_areas)
+    depth_all_cre.append(all_sess_depths)
     
     
+
     
- 
+################################################################################## 
 #%% Compute flash and omission-evoked responses on trial-averaged traces in all_sess_ns_fof_thisCre (relative to baseline)
+##################################################################################
 
 from omissions_traces_peaks_quantify import *
 
@@ -232,6 +298,62 @@ for icre in range(len(cre_lines)): # icre = 0
 
 
 
+    
+    
+################################################################################################    
+################################################################################################        
+#%% Run PCA on all_seall_sess_ns_fof_this_cre
+################################################################################################    
+################################################################################################    
+
+from sklearn.decomposition import PCA
+varexpmax = .99 # 1 # .9
+
+pc_all_cre = []
+pca_variance_all_cre = []
+
+for icre in range(len(cre_lines)): # icre=0
+    cre = cre_lines[icre]    
+    all_sess_ns_fof_thisCre = all_sess_ns_fof_all_cre[icre] # neurons_allExp_thisCre x 24(frames)
+    print(f'Running PCA on {cre}, matrix size: {np.shape(all_sess_ns_fof_thisCre)}')
+
+    x_train_pc, pca = doPCA(all_sess_ns_fof_thisCre, varexpmax=varexpmax, doplot=1)
+    pca_variance = pca.explained_variance_ratio_
+#     x_train_pc.shape
+
+    pc_all_cre.append(x_train_pc)
+    pca_variance_all_cre.append(pca_variance)
+    
+    
+################################################################################################    
+################################################################################################    
+#%% Run umap on all_sess_ns_fof_thisCre
+################################################################################################
+################################################################################################
+
+import umap    
+import seaborn as sns
+from mpl_toolkits.mplot3d import Axes3D
+
+ncomp = 2 # 3 # number of umap components
+
+embedding_all_cre = []
+
+for icre in range(len(cre_lines)): # icre = 2    
+    cre = cre_lines[icre]    
+    all_sess_ns_fof_thisCre = all_sess_ns_fof_all_cre[icre] # neurons_allExp_thisCre x 24(frames)
+    print(f'Running UMAP on {cre}')
+
+    sp = 2
+    neigh = 7
+    embedding = umap.UMAP(spread= sp, n_neighbors = neigh, n_components = ncomp).fit_transform(all_sess_ns_fof_thisCre)
+    print(f'embedding size: {embedding.shape}')
+    embedding_all_cre.append(embedding)
+    
+# embedding_all_cre_3d = copy.deepcopy(embedding_all_cre)
+
+    
+    
 ###########################################################################
-#%% After this script, run umap_run.py to run umap/pca and make plots.    
+#%% After this script, run umap_plot.py to make plots for umap/pca analysis.    
 ###########################################################################

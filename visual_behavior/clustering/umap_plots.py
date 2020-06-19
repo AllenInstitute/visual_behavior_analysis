@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Vars needed here are set in umap_setVars.py
+Vars needed here are set in umap_setVars_run.py
 
-The main variable used here is all_sess_now.
-
-This script runs umap/pca, and makes plots.
+This script makes plots for umap and pca (which were ran on neurons x frames).
 
 
 Created on Thu May 14 21:27:25 2020
@@ -13,18 +11,28 @@ Created on Thu May 14 21:27:25 2020
 """
 
 # from matplotlib import cm # colormap
-cmap = plt.cm.jet #bwr #or any other colormap 
+cmap = plt.cm.jet #viridis #bwr #or any other colormap 
+prop_cycle = plt.rcParams['axes.prop_cycle']
+colors = prop_cycle.by_key()['color']
 
 
 #%% Scatter plots for each cre line; 2 subplots, each colored for flash and omission responses.                
 
-def plot_scatter_fo(cre_lines, low_dim_all_cre, peak_amp_eachN_traceMed_flash_all_cre, peak_amp_eachN_traceMed_all_cre, lab_analysis='UMAP', cut_axes=0, same_norm_fo=1, dosavefig=0):
-#     same_norm_fo = 1 # use the same cmap scale for image and omission; otherwise plot each using its own min and max
+def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image_amp, omit_amp'], lab_analysis='UMAP', cut_axes=0, same_norm_fo=1, dosavefig=0):
+
+#     low_dim_all_cre = embedding_all_cre
+#     color_metric1 = peak_amp_eachN_traceMed_flash_all_cre # neurons will be color coded based on this metric in subplot 1
+#     color_metric2 = peak_amp_eachN_traceMed_all_cre # neurons will be color coded based on this metric in subplot 2
+#     color_metric = [color_metric1, color_metric2]
+#     color_labs = ['image-evoked amplitude', 'omission-evoked amplitude']
 #     cut_axes = 1 # if 1, show from 1 to 99 percentile of x and y values. helps when there are some outliers.
+#     same_norm_fo = 1 # if -1, color_matric is not float (eg area, or depth), if 1, use the same cmap scale for both subplots (eg image and omission response amplitude); if 0, plot each using its own min and max. (NOTE: to avoid color saturation we use 1st and 99th percentiles of amplitude).
+
 
     for icre in range(len(cre_lines)): # icre = 2
-
+        
         cre = cre_lines[icre]
+#         all_sess_thisCre = all_sess_now.iloc[cre_all==cre]
 
         x = low_dim_all_cre[icre][:, 0]
         y = low_dim_all_cre[icre][:, 1]
@@ -35,90 +43,78 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, peak_amp_eachN_traceMed_flash_al
         mxx = np.percentile(x, 99.5)
         mxy = np.percentile(y, 99.5)
         
-        if same_norm_fo: # use the same cmap scale for image and omission
-            amp = np.concatenate((peak_amp_eachN_traceMed_flash_all_cre[icre], peak_amp_eachN_traceMed_all_cre[icre]))
+        if same_norm_fo==1: # use the same cmap scale for image and omission
+            amp = np.concatenate((color_metric1[icre], color_metric2[icre]))
             mn = np.percentile(amp, 1)
             mx = np.percentile(amp, 99)
             norm = matplotlib.colors.Normalize(vmin=mn, vmax=mx)
+        elif same_norm_fo==-1:
+            norm = None
+            
 
+        ##################################################################################
+        ###### make different subplots, all show the same scatter plot ######
+        ###### but color coded based on different metrics/ features #########
+        ###### eg. image/omission response amplitude, area/depth ############
+        ##################################################################################
 
         fig = plt.figure(figsize=(14,5)) #(figsize=(10,3))
         plt.suptitle(f'{cre[:3]}', y=.995, fontsize=22) 
 
-        #########################################
-        ###### plot flash-evoked responses ######
-        #########################################
-        amp = peak_amp_eachN_traceMed_flash_all_cre[icre]    
-        clab = 'image-evoked amplitude'
+        for isp in range(len(color_metric)):
+            
+            amp = color_metric[isp][icre]    
+            clab = color_labs[isp]
 
-        ax3D = fig.add_subplot(121)
-        # ax3D = fig.add_subplot(111, projection='3d')
-
-        if same_norm_fo==0: # use different cmap scales for image and omission
-            mn = np.percentile(amp, 1)
-            mx = np.percentile(amp, 99)
-            norm = matplotlib.colors.Normalize(vmin=mn, vmax=mx)
-
-        # each neuron is colored according to its omission or flash response
-        ax3D.scatter(x, y, s=10, label=cre[:3], marker='o', c=amp, cmap=cmap, norm=norm) #cmap=cm.jet) 
-
-        ax3D.set_xlabel(f'{lab_analysis} axis 1 (arbitrary Units)')
-        ax3D.set_ylabel(f'{lab_analysis} axis 2')
-    #     ax3D.set_zlabel('UMAP Axis 3 ')    
-        fig.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax3D, label=clab) 
-    #     ax3D.title(cre[:3])
-        plt.title('Image')
-        ax3D.set_aspect('equal')
-
-        if cut_axes:
-            plt.xlim([mnx, mxx])
-            plt.ylim([mny, mxy])
-        
-        else:
-            xmj = np.unique(np.concatenate((np.arange(0, min(x), -5), np.arange(0, max(x), 5)))) # (max(x)-min(x))/5)
-        #     xmn = np.arange(.25, x[-1], .5)
-            ax3D.set_xticks(xmj)
-            ax3D.set_yticks(xmj)
-            ax3D.grid(True, which='both') # major
+            if same_norm_fo==-1:
+                u = np.unique(amp)
+                c_value = np.full((len(amp), 3), np.nan)
+                for ia in range(len(u)):
+                    c_value[amp==u[ia]] = colors[ia]
+            else:
+                c_value = amp
 
 
+            ax = fig.add_subplot(1,2,isp+1)
+            # ax = fig.add_subplot(111, projection='3d')
 
-        ############################################
-        ###### plot omission-evoked responses ######
-        ############################################
-        amp = peak_amp_eachN_traceMed_all_cre[icre]    
-        clab = 'omission-evoked amplitude'
+            if same_norm_fo==0: # use different cmap scales for image and omission
+                mn = np.percentile(c_value, 1)
+                mx = np.percentile(c_value, 99)
+                norm = matplotlib.colors.Normalize(vmin=mn, vmax=mx)
 
-        ax3D = fig.add_subplot(122)
-        # ax3D = fig.add_subplot(111, projection='3d')
+            # each neuron is colored according to its omission or flash response
+            scatter = ax.scatter(x, y, s=10, label=cre[:3], marker='o', c=c_value, cmap=cmap, norm=norm) #cmap=cm.jet) 
+                
+                
+            # add legend
+            if same_norm_fo==-1:
+                h = []
+                for ia in range(len(u)):
+                    h.append(mpatches.Patch(color=colors[ia], label=u[ia]))
 
-        if same_norm_fo==0: # use different cmap scales for image and omission
-            mn = np.percentile(amp, 1)
-            mx = np.percentile(amp, 99)
-            norm = matplotlib.colors.Normalize(vmin=mn, vmax=mx)
+            plt.legend(handles=h)
+            
+            
+            ax.set_xlabel(f'{lab_analysis} axis 1 (arbitrary Units)')
+            ax.set_ylabel(f'{lab_analysis} axis 2')        #     ax.set_zlabel('UMAP Axis 3 ')    
+            if same_norm_fo!=-1: # dont add cmap
+                fig.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=clab) 
+            plt.title(color_labs[0]) #'Image')          #     ax.title(cre[:3])
+            ax.set_aspect('equal')
 
-        # each neuron is colored according to its omission or flash response
-        ax3D.scatter(x, y, s=10, label=cre[:3], marker='o', c=amp, cmap=cmap, norm=norm) #cmap=cm.jet) 
+            if cut_axes:
+                plt.xlim([mnx, mxx])
+                plt.ylim([mny, mxy])
 
-        ax3D.set_xlabel(f'{lab_analysis} axis 1 (arbitrary Units)')
-        ax3D.set_ylabel(f'{lab_analysis} axis 2')
-    #     ax3D.set_zlabel('UMAP Axis 3 ')    
-        fig.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax3D, label=clab) 
-    #     ax3D.title(cre[:3])    
-        plt.title('Omission')
-        ax3D.set_aspect('equal')
+            else:
+                xmj = np.unique(np.concatenate((np.arange(0, min(x), -5), np.arange(0, max(x), 5)))) # (max(x)-min(x))/5)
+            #     xmn = np.arange(.25, x[-1], .5)
+                ax.set_xticks(xmj)
+                ax.set_yticks(xmj)
+                ax.grid(True, which='both') # major
 
-        if cut_axes:
-            plt.xlim([mnx, mxx])
-            plt.ylim([mny, mxy])
-        
-        else:        
-            xmj = np.unique(np.concatenate((np.arange(0, min(x), -5), np.arange(0, max(x), 5)))) # (max(x)-min(x))/5)
-        #     xmn = np.arange(.25, x[-1], .5)
-            ax3D.set_xticks(xmj)
-            ax3D.set_yticks(xmj)
-            ax3D.grid(True, which='both') # major
-
+                
         plt.subplots_adjust(wspace=0.5)
 
         
@@ -136,73 +132,56 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, peak_amp_eachN_traceMed_flash_al
 
 
             
-################################################################################################    
-################################################################################################        
-#%% Run PCA
-################################################################################################    
-################################################################################################    
-
-from sklearn.decomposition import PCA
-varexpmax = .99 # 1 # .9
-
-pc_all_cre = []
-
-for icre in range(len(cre_lines)): # icre=0
-    cre = cre_lines[icre]    
-    all_sess_ns_fof_thisCre = all_sess_ns_fof_all_cre[icre] # neurons_allExp_thisCre x 24(frames)
-    print(f'Running PCA on {cre}, matrix size: {np.shape(all_sess_ns_fof_thisCre)}')
-
-    x_train_pc, pca = doPCA(all_sess_ns_fof_thisCre, varexpmax=varexpmax, doplot=1)
-    x_train_pc.shape
-
-    pc_all_cre.append(x_train_pc)
-
-
-
-#%% Scatter plots for each cre line; 2 subplots, each colored for flash and omission responses.
-
-cut_axes = 1 # if 1, show from 1 to 99 percentile of x and y values. helps when there are some outliers.
-plot_scatter_fo(cre_lines, pc_all_cre, peak_amp_eachN_traceMed_flash_all_cre, peak_amp_eachN_traceMed_all_cre, lab_analysis='PCA', cut_axes=cut_axes, same_norm_fo=1, dosavefig=dosavefig)
-
-
-    
-################################################################################################    
-################################################################################################    
-#%% Run umap on all_sess_ns_fof_thisCre
-################################################################################################
-################################################################################################
-
-import umap    
-import seaborn as sns
-from mpl_toolkits.mplot3d import Axes3D
-
-ncomp = 2 # 3 # number of umap components
-
-embedding_all_cre = []
-
-for icre in range(len(cre_lines)): # icre = 2    
-    cre = cre_lines[icre]    
-    all_sess_ns_fof_thisCre = all_sess_ns_fof_all_cre[icre] # neurons_allExp_thisCre x 24(frames)
-    print(f'Running UMAP on {cre}')
-
-    sp = 2
-    neigh = 7
-    embedding = umap.UMAP(spread= sp, n_neighbors = neigh, n_components = ncomp).fit_transform(all_sess_ns_fof_thisCre)
-    print(f'embedding size: {embedding.shape}')
-    embedding_all_cre.append(embedding)
-    
-
-# embedding_all_cre_3d = copy.deepcopy(embedding_all_cre)
-
-
-
-
-###############################################################
-###############################################################
-###########################  Plots  ###########################
-###############################################################
-###############################################################            
             
+##########################################################################################
+###########################  Plots  ######################################################
+##########################################################################################
+
+
+################################################################################################                
+# PCA plots
+################################################################################################    
+
+#%% Scatter plots for each cre line; 2 subplots, each colored for a distinct metric
+
+lab_analysis = 'PCA'
+cut_axes = 1 # if 1, show from 1 to 99 percentile of x and y values. helps when there are some outliers.
+same_norm_fo = -1 # if -1, color_matric is not float (eg area, or depth), if 1, use the same cmap scale for both subplots (eg image and omission response amplitude); if 0, plot each using its own min and max. (NOTE: to avoid color saturation we use 1st and 99th percentiles of amplitude).
+
+
+# color by area and depth.
+color_labs = ['area', 'depth']
+color_metric = [area_all_cre, depth_all_cre]
+plot_scatter_fo(cre_lines, pc_all_cre, color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, dosavefig)
+
+
+# color by flash and omission responses.
+color_labs = ['image-evoked amplitude', 'omission-evoked amplitude']
+color_metric = [peak_amp_eachN_traceMed_flash_all_cre, peak_amp_eachN_traceMed_all_cre]
+plot_scatter_fo(cre_lines, pc_all_cre, color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, dosavefig)
+
+
+    
+################################################################################################                
+# UMAP plots
+################################################################################################                
+
+#%% Scatter plots for each cre line; 2 subplots, each colored for a distinct metric
+
+lab_analysis='UMAP'
+cut_axes = 0
+same_norm_fo = 1 # if -1, color_matric is not float (eg area, or depth), if 1, use the same cmap scale for both subplots (eg image and omission response amplitude); if 0, plot each using its own min and max. (NOTE: to avoid color saturation we use 1st and 99th percentiles of amplitude).
+
+
+# color by flash and omission responses.
+color_labs = ['image-evoked amplitude', 'omission-evoked amplitude']
+color_metric = [peak_amp_eachN_traceMed_flash_all_cre, peak_amp_eachN_traceMed_all_cre]
+plot_scatter_fo(cre_lines, embedding_all_cre, color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, dosavefig)
+
+
+
+
+
 #%% Make scatter plots; all cre lines superimposed 
 
 color_cre_omit_flash = 3 # if 1: color neurons according to cre line; if 2, according to omission responses; if 3, according to flash responses.
@@ -222,8 +201,8 @@ norm = matplotlib.colors.Normalize(vmin=mn, vmax=mx)
 
 fs = (5,5)
 fig = plt.figure(figsize=fs) #(figsize=(10,3))
-ax3D = fig.add_subplot(111)
-# ax3D = fig.add_subplot(111, projection='3d')
+ax = fig.add_subplot(111)
+# ax = fig.add_subplot(111, projection='3d')
 
 for icre in range(len(cre_lines)): # icre = 2
     
@@ -242,33 +221,28 @@ for icre in range(len(cre_lines)): # icre = 2
     y = embedding_all_cre[icre][:, 1]
 #     z = embedding_all_cre[icre][:, 2]
     
-#     ax3D = fig.add_subplot(1,3,icre+1, projection='3d')    
-#     ax3D.set_title(cre)
-#     ax3D.scatter(x, y, z, s=10, c=cols_cre[icre], label=cre[:3], marker='o') 
+#     ax = fig.add_subplot(1,3,icre+1, projection='3d')    
+#     ax.set_title(cre)
+#     ax.scatter(x, y, z, s=10, c=cols_cre[icre], label=cre[:3], marker='o') 
 
     if color_cre_omit_flash==1:
-        ax3D.scatter(x, y, s=10, c=cols_cre[icre], label=cre[:3], marker='o')
-        ax3D.legend()
+        ax.scatter(x, y, s=10, c=cols_cre[icre], label=cre[:3], marker='o')
+        ax.legend()
 
     else:     # each neuron is colored according to its omission or flash response
-        ax3D.scatter(x, y, s=10, label=cre[:3], marker='o', c=amp, cmap=cmap, norm=norm) #cmap=cm.jet) 
+        ax.scatter(x, y, s=10, label=cre[:3], marker='o', c=amp, cmap=cmap, norm=norm) #cmap=cm.jet) 
     
     if icre==0:
-        ax3D.set_xlabel('UMAP Axis 1 (Arbitrary Units)', )
-        ax3D.set_ylabel('UMAP Axis 2')
-    #     ax3D.set_zlabel('UMAP Axis 3 ')
+        ax.set_xlabel('UMAP Axis 1 (Arbitrary Units)', )
+        ax.set_ylabel('UMAP Axis 2')
+    #     ax.set_zlabel('UMAP Axis 3 ')
         if color_cre_omit_flash!=1:
-            fig.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax3D, label=clab) 
+            fig.colorbar(cm.ScalarMappable(norm=norm, cmap=cmap), ax=ax, label=clab) 
     
-    ax3D.set_aspect('equal')
+    ax.set_aspect('equal')
     
     
    
-
-#%% Scatter plots for each cre line; 2 subplots, each colored for flash and omission responses.
-
-plot_scatter_fo(cre_lines, embedding_all_cre, peak_amp_eachN_traceMed_flash_all_cre, peak_amp_eachN_traceMed_all_cre, lab_analysis='UMAP', cut_axes=0, same_norm_fo=1, dosavefig=dosavefig)
-
                 
 
     

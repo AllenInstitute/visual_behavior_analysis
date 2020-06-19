@@ -2721,8 +2721,8 @@ def doPCA_transform(x, pca, varexpmax=.90, doplot=1):
     
     if doplot:
         plt.figure()
-        plt.plot(pca_variance, '.', label='var')
         plt.plot(np.cumsum(pca_variance), '.', label='cumsum var')
+        plt.plot(pca_variance, '.', label='var')
         plt.xlabel('pc component')
         plt.ylabel('varience explained')
         plt.hlines(varexpmax, 0, pca.n_components_)    
