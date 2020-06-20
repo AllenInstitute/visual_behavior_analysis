@@ -101,6 +101,9 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image
             if type(pc_exp_var)==list:
                 xle = f'\n{pc_exp_var[icre][0]:.02f} variance'
                 yle = f'\n{pc_exp_var[icre][1]:.02f} variance'
+            else:
+                xle = ''
+                yle = ''
             xlab = f'{lab_analysis} axis 1{xle}' # (arbitrary Units)')
             ylab = f'{lab_analysis} axis 2{yle}'
             

@@ -74,11 +74,12 @@ experiments_table_2an.insert(loc=1, column='experiment_id', value=experiments_ta
 
 #%% For each experiment set trial-average omission-aligned traces.
 
-cols = ['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'frame_dur', 'omission_response_xr'] 
+cols = ['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'frame_dur', 'omission_response_xr', 'trials_response_df', 'image_names_inds', 'run_speed_times', 'run_speed_traces'] 
 all_sess_allN_allO = pd.DataFrame([], columns=cols) # size: 8*len(num_sessions)
 
 errors_iexp = []
 errors_log = []
+
 for iexp in np.arange(0, experiments_table_2an.shape[0]): # iexp = 0 
         
     experiment_id = experiments_table_2an.index[iexp]     # experiments_table_2an.iloc[experiments_table_2an.index == ophys_experiment_id]
@@ -120,11 +121,66 @@ for iexp in np.arange(0, experiments_table_2an.shape[0]): # iexp = 0
         else:
             omission_response_xr = np.nan
 
-        '''
-        # ResponseAnalysis class provides access to time aligned cell responses for trials, stimuli, and omissions
+
+            
+        #%% ResponseAnalysis class provides access to time aligned cell responses for trials, stimuli, and omissions
         # VBA also has useful functionality for creating data frames with cell traces aligned to the time of stimulus presentations, omissions, or behavioral trials. 
+
         analysis = ResponseAnalysis(dataset)  
 
+        
+        #%% Keep image names
+        
+        stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
+#         np.shape(stim_response_df) # (neurons x flashes) x 19 (columns)
+    
+        cell0 = stim_response_df['cell_specimen_id'].values[0] # get flashes for one of the cells
+        s = stim_response_df[stim_response_df['cell_specimen_id'].values==cell0]
+        image_names_inds = s[['stimulus_presentations_id', 'image_index', 'image_name']]
+
+
+        #%% Get image-change aligned traces
+        
+        trials_response_df = analysis.get_response_df(df_name='trials_response_df')
+        
+        
+        #%% Get running speed for omission-aligned traces 
+
+        run_speed_df = analysis.get_response_df(df_name='omission_run_speed_df')
+#         run_speed_df.head()
+#         np.shape(run_speed_df)
+
+        # running speed averaged across all omissions
+        run_speed_times = run_speed_df['trace_timestamps'].values[0] # times (60Hz)
+        run_speed_traces = np.vstack(run_speed_df['trace']).T # times x omissions (remember the last omission is missing due to some issues in responseAnalysis)
+        
+#         plt.plot(run_speed_times, run_speed_df.trace.mean())
+#         plt.title('average omission triggered running behavior')
+#         plt.xlabel('time after omission (s)')
+#         plt.ylabel('run speed (cm/s)')
+        
+    
+        
+        #%% Get pupil area for omission-aligned traces 
+        # this part didnt work; wrote marina/doug about it:
+        '''
+        pupil_area_df = analysis.get_response_df(df_name='omission_pupil_area_df')
+        
+        pupil_area_df.head()
+        np.shape(pupil_area_df)
+
+        # pupil area averaged across all omissions
+        pupil_times = pupil_area_df['trace_timestamps'].values[0] # times (60Hz)
+        pupil_traces = np.vstack(pupil_area_df['trace']).T # times x neurons
+        
+#         plt.plot(run_times, run_speed_df.trace.mean())
+#         plt.title('average omission triggered running behavior')
+#         plt.xlabel('time after omission (s)')
+#         plt.ylabel('run speed (cm/s)')
+        '''
+        
+    
+        '''
         # get omission triggered responses 
         omission_response_df = analysis.get_response_df(df_name='omission_response_df')
 
@@ -147,8 +203,8 @@ for iexp in np.arange(0, experiments_table_2an.shape[0]): # iexp = 0
         '''
 
         all_sess_allN_allO.at[iexp, ['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', \
-                                     'frame_dur', 'omission_response_xr']] = \
-            session_id ,  experiment_id ,  mouse_id ,  date ,  cre ,  stage ,  area ,  depth ,  frame_dur ,  omission_response_xr
+                                     'frame_dur', 'omission_response_xr', 'trials_response_df', 'image_names_inds', 'run_speed_times', 'run_speed_traces']] = \
+            session_id ,  experiment_id ,  mouse_id ,  date ,  cre ,  stage ,  area ,  depth ,  frame_dur ,  omission_response_xr, trials_response_df, image_names_inds, run_speed_times, run_speed_traces
 
     #     all_sess_allN_allO.at[iexp, ['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', \
     #                                  'n_omissions', 'n_neurons', 'frame_dur', 'cell_specimen_id', 'traces_allN_allO']] = \
@@ -203,3 +259,37 @@ if saveResults:
     
     
     
+# relevant keys of trials_response_df:
+'''
+cell_specimen_id
+trace
+trace_timestamps  
+
+lick_times  
+reward_time 
+initial_image_name                                                         im035
+change_image_name
+
+start_time                                                               546.125
+stop_time                                                                553.414
+trial_length                                                             7.28932
+behavioral_response_time                                                 549.578
+change_frame                                                               32432
+change_time                                                              549.174
+behavioral_response_latency  
+
+hit                                                                         True
+false_alarm                                                                False
+miss                                                                       False
+stimulus_change                                                             True
+aborted                                                                    False
+go                                                                          True
+catch                                                                      False
+auto_rewarded                                                              False
+correct_reject       
+
+trial_type
+'''
+
+
+
