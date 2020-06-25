@@ -559,7 +559,7 @@ def get_ylabel_and_suffix(use_events):
 
 
 # def get_color_for_image_name(dataset, image_name):
-#     images = np.sort(dataset.stimulus_table.image_name.unique())
+#     images = np.sort(dataset.stimulus_presentations.image_name.unique())
 #     images = images[images != 'omitted']
 #     colors = sns.color_palette("hls", len(images))
 #     image_index = np.where(images == image_name)[0][0]
@@ -567,7 +567,7 @@ def get_ylabel_and_suffix(use_events):
 #     return color
 
 def get_color_for_image_name(dataset, image_name):
-    images = np.sort(dataset.stimulus_table.image_name.unique())
+    images = np.sort(dataset.stimulus_presentations.image_name.unique())
     if 'omitted' in images:
         images = images[images != 'omitted']
     colors = sns.color_palette("hls", len(images))
@@ -586,18 +586,18 @@ def addSpan(ax, amin, amax, color='k', alpha=0.3, axtype='x', zorder=1):
 def add_stim_color_span(dataset, ax, xlim=None):
     # xlim should be in seconds
     if xlim is None:
-        stim_table = dataset.stimulus_table.copy()
+        stim_table = dataset.stimulus_presentations.copy()
     else:
-        stim_table = dataset.stimulus_table.copy()
-        stim_table = stim_table[(stim_table.start_time >= xlim[0]) & (stim_table.end_time <= xlim[1])]
+        stim_table = dataset.stimulus_presentations.copy()
+        stim_table = stim_table[(stim_table.start_time >= xlim[0]) & (stim_table.stop_time <= xlim[1])]
     if 'omitted' in stim_table.keys():
         stim_table = stim_table[stim_table.omitted == False].copy()
     for idx in stim_table.index:
         start_time = stim_table.loc[idx]['start_time']
-        end_time = stim_table.loc[idx]['end_time']
+        stop_time = stim_table.loc[idx]['stop_time']
         image_name = stim_table.loc[idx]['image_name']
         color = get_color_for_image_name(dataset, image_name)
-        addSpan(ax, start_time, end_time, color=color)
+        addSpan(ax, start_time, stop_time, color=color)
     return ax
 
 
@@ -626,7 +626,7 @@ def plot_behavior_events(dataset, ax, behavior_only=False, linewidth=2):
 
 
 def plot_behavior_for_session(dataset, cache_dir):
-    flashes = dataset.stimulus_table.copy()
+    flashes = dataset.stimulus_presentations.copy()
     flashes = ut.annotate_flashes_with_reward_rate(dataset)
     figsize = (15, 4)
     fig, ax = plt.subplots(figsize=figsize)
@@ -653,7 +653,7 @@ def plot_behavior_annotated(dataset, xmin=1800, duration=20, plot_reward_rate=Fa
     abort_starts = all_trials[all_trials.trial_type == 'aborted'].starttime.values
     ab = abort_starts[(abort_starts > xlim[0])]
     ab = ab[(ab < xlim[1])]
-    flashes = dataset.stimulus_table.copy()
+    flashes = dataset.stimulus_presentations.copy()
     flashes = ut.annotate_flashes_with_reward_rate(dataset)
     figsize = (15, 4)
     fig, ax = plt.subplots(figsize=figsize)
@@ -701,8 +701,8 @@ def restrict_axes(xmin, xmax, interval, ax):
 
 
 def plot_licks_and_rewards(dataset, ax, behavior_only=False):
-    lick_times = dataset.licks.time.values
-    reward_times = dataset.rewards.time.values
+    lick_times = dataset.licks.timestamps.values
+    reward_times = dataset.rewards.timestamps.values
     if behavior_only:
         lick_y = 0
         reward_y = -0.2
@@ -727,8 +727,8 @@ def plot_licks_and_rewards(dataset, ax, behavior_only=False):
 def plot_behavior_for_epoch(dataset, start_time, duration, exclude_running=False, legend=False,
                             save_figures=False, save_dir=None, ax=None):
     xlim = (start_time, start_time + duration + 1)
-    running_speed = dataset.running_speed.running_speed.values
-    running_times = dataset.running_speed.time.values
+    running_speed = dataset.running_speed.speed.values
+    running_times = dataset.running_speed.timestamps.values
     if ax is None:
         figsize = (15, 2)
         fig, ax = plt.subplots(figsize=figsize)
@@ -939,12 +939,14 @@ def plot_average_flash_response_example_cells(analysis, active_cell_indices, inc
 
 def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length_mins, save_figures=False, dff_max=3,
                                      include_running=False, cell_label=False, use_events=False, save_dir=None,
-                                     folder='example_traces'):
+                                     include_pupil_area=True, folder='example_traces'):
     if use_events:
         suffix = '_events'
     else:
         suffix = ''
-    if include_running:
+    if include_running and include_pupil_area:
+        n = 3
+    elif include_running or include_pupil_area:
         n = 2
     else:
         n = 1
@@ -952,7 +954,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     xmax_seconds = xmin_seconds + (length_mins * 60) + 1
     xlim = [xmin_seconds, xmax_seconds]
 
-    figsize = (16, 5)
+    figsize = (16, 10)
     fig, ax = plt.subplots(len(cell_indices) + n, 1, figsize=figsize, sharex=True)
     ax = ax.ravel()
     if dff_max > 3:
@@ -960,10 +962,11 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
     else:
         scale = 1.
 
+    dff_traces_array = np.vstack(dataset.dff_traces.dff.values)
     ymins = []
     ymaxs = []
     for i, cell_index in enumerate(cell_indices):
-        ax[i] = plot_trace(dataset.ophys_timestamps, dataset.dff_traces_array[cell_index, :], ax=ax[i],
+        ax[i] = plot_trace(dataset.ophys_timestamps, dff_traces_array[cell_index, :], ax=ax[i],
                            title='', ylabel=str(cell_index), color=[.6, .6, .6])
         ax[i] = add_stim_color_span(dataset, ax=ax[i], xlim=xlim)
         ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
@@ -973,7 +976,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         ax[i].set_ylim(ymin=-1, ymax=dff_max)
         if use_events:
             ax2 = ax[i].twinx()
-            ax2 = plot_trace(dataset.ophys_timestamps, dataset.events_array[cell_index, :], ax=ax2,
+            ax2 = plot_trace(dataset.ophys_timestamps, events_array[cell_index, :], ax=ax2,
                              title='', ylabel=None, color=sns.color_palette()[0], width=1.5)  # color=[.4,.4,.4])
             sns.despine(ax=ax2, left=True, bottom=True)
             ax2.tick_params(which='both', bottom=False, top=False, right=False, left=False,
@@ -1015,6 +1018,21 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         sns.despine(ax=ax[i], left=True, bottom=True)
         ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
                           labelbottom=True, labeltop=False, labelright=False, labelleft=False)
+
+    if include_pupil_area:
+        if dataset.eye_tracking is not None:
+            i += 1
+            ax[i].plot(dataset.eye_tracking.time.values, dataset.eye_tracking.pupil_area.values, color=sns.color_palette()[0], label='pupil_area')
+            ax[i].set_ylabel('pupil area\n(pixels**2')
+            ymin, ymax = ax[i].get_ylim()
+            ax[i].set_ylim(np.percentile(ymin,5) * 1.1, np.percentile(ymax, 95))
+            ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim)
+            ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
+            ax[i].set_xlabel('time (seconds)')
+            ax[i].set_title('')
+            sns.despine(ax=ax[i], left=True, bottom=True)
+            ax[i].tick_params(which='both', bottom=True, top=False, right=False, left=False,
+                              labelbottom=True, labeltop=False, labelright=False, labelleft=False)
 
     xticks = np.arange(xmin_seconds, xmax_seconds, interval_seconds)
     xticklabels = np.arange(0, xmax_seconds - xmin_seconds, interval_seconds)
@@ -1409,7 +1427,7 @@ def plot_images(dataset, orientation='row', rows=1, color_box=True, save_dir=Non
         fig, ax = plt.subplots(rows, cols, figsize=figsize)
 
     stimuli = dataset.stimulus_metadata
-    image_names = np.sort(dataset.stimulus_table.image_name.unique())
+    image_names = np.sort(dataset.stimulus_presentations.image_name.unique())
     image_names = image_names[image_names != 'omitted']
     colors = sns.color_palette("hls", len(image_names))
     for i, image_name in enumerate(image_names):
@@ -1735,7 +1753,11 @@ def colormap():
         'lick_on_next_flash': {
             0: 'blue',
             1: 'orange',
-        }
+        },
+        'lick_on_previous_flash': {
+            0: 'indigo',
+            1: 'turquoise',
+        },
     }
     return colormap
 
@@ -1747,10 +1769,11 @@ def get_title(ophys_experiment_id, cell_specimen_id):
     experiments_table = loading.get_filtered_ophys_experiment_table().reset_index()
 
     row = experiments_table.query('ophys_experiment_id == @ophys_experiment_id').iloc[0].to_dict()
-    title = '{}__specimen_id={}__exp_id={}__{}__{}__depth={}__cell_id={}'.format(
+    title = '{}_spec_id={}_exp_id={}_{}_{}_{}_depth={}_cell_id={}'.format(
         row['cre_line'],
         row['specimen_id'],
         row['ophys_experiment_id'],
+        row['equipment_name'],
         row['session_type'],
         row['targeted_structure'],
         row['imaging_depth'],
@@ -1880,7 +1903,9 @@ def seaborn_lineplot(df, ax, split_by, legend='brief', xlabel='time (s)', ylabel
 
 
 def make_cell_response_summary_plot(analysis, cell_specimen_id, split_by, save=False, show=True, errorbar_bootstrap_iterations=1000):
-    figure_savedir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/single_cell_plots/response_plots'
+    figure_savedir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/summary_plots/single_cell_plots/response_plots/split_by_{}'.format(split_by)
+    if os.path.exists(figure_savedir) == False:
+        os.mkdir(figure_savedir)
     oeid = analysis.dataset.ophys_experiment_id\
 
     params_dict = {

@@ -166,6 +166,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
+    experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
     return experiments
 
@@ -327,11 +328,11 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         events_folder = os.path.join(get_analysis_cache_dir(), 'events')
         if os.path.exists(events_folder):
             events_file = [file for file in os.listdir(events_folder) if
-                           str(self.ophys_experiment_id) + '_events.npz' in file]
+                           str(self.ophys_experiment_id) in file]
             if len(events_file) > 0:
                 print('getting L0 events')
                 f = np.load(os.path.join(events_folder, events_file[0]))
-                events = np.asarray(f['ev'])
+                events = np.asarray(f['events'])
                 f.close()
             else:
                 print('no events for this experiment')
@@ -431,13 +432,14 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
         stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
         stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
-        stimulus_presentations = add_model_outputs_to_stimulus_presentations(stimulus_presentations,
-                                                                             self.metadata['behavior_session_id'])
-        stimulus_presentations.at[
-            stimulus_presentations.index.values[1:], 'lick_on_next_flash'] = stimulus_presentations.licked.values[:-1]
-        stimulus_presentations.at[
-            stimulus_presentations.index.values[1:], 'lick_rate_next_flash'] = stimulus_presentations.lick_rate.values[
-            :-1]
+        stimulus_presentations = add_model_outputs_to_stimulus_presentations(
+            stimulus_presentations,
+            self.metadata['behavior_session_id']
+        )
+        stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
+        stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
+        stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
+        stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
@@ -1381,14 +1383,14 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
 
 
 def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_session_type=True, use_events=False):
-    # experiments_table = get_annotated_experiments_table()
+    annotated_experiments_table = get_annotated_experiments_table()
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        expts = experiments.reset_index()
+        expts = annotated_experiments_table.reset_index()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
                 filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
