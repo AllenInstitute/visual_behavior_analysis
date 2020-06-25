@@ -328,11 +328,11 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         events_folder = os.path.join(get_analysis_cache_dir(), 'events')
         if os.path.exists(events_folder):
             events_file = [file for file in os.listdir(events_folder) if
-                           str(self.ophys_experiment_id) + '_events.npz' in file]
+                           str(self.ophys_experiment_id) in file]
             if len(events_file) > 0:
                 print('getting L0 events')
                 f = np.load(os.path.join(events_folder, events_file[0]))
-                events = np.asarray(f['ev'])
+                events = np.asarray(f['events'])
                 f.close()
             else:
                 print('no events for this experiment')
