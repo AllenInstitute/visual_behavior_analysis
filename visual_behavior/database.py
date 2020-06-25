@@ -176,8 +176,8 @@ def get_pkl_path(session_id=None, id_type='BehaviorSession'):
     '''
     get the path to a pkl file for a given session
     '''
-    if id_type == 'behavior_session_uuid':
-        session_id = convert_id({foraging_id: session_id}, 'behavior_session_id')
+    # if id_type == 'behavior_session_uuid':
+    #     session_id = convert_id({foraging_id: session_id}, 'behavior_session_id')
 
     rec = get_well_known_files(session_id, attachable_id_type=id_type).loc['StimulusPickle']
     pkl_path = ''.join([rec['storage_directory'], rec['filename']])
