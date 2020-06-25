@@ -59,20 +59,13 @@ def get_responses_around_event_times(trace, timestamps, event_times, frame_rate,
 
 
 def get_mean_in_window(trace, window, frame_rate, use_events=False):
-    # if use_events:
-    #     trace[trace==0] = np.nan
-    # mean = np.nanmean(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]) # 181212
-    mean = np.nanmean(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])  # modified 190127
-    # if np.isnan(mean):
-    #     mean = 0
+    mean = np.nanmean(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])
     return mean
 
 
 def get_sd_in_window(trace, window, frame_rate):
-    # std = np.std(
-    #     trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))])  # modified 181212
     std = np.std(
-        trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])  # modified 190127
+        trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])
     return std
 
 
@@ -400,7 +393,6 @@ def get_window(analysis=None, flashes=False, omitted=False):
 def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
                 get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True):
 
-    # import rp here. This avoids an error caused by the fact that rp itself imports utilities
     import visual_behavior.ophys.response_analysis.response_processing as rp
 
     if omitted:
