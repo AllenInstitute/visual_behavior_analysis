@@ -586,7 +586,7 @@ def get_omission_run_speed_df(dataset, frame_rate=None, df_format='wide'):
 
 
 def get_trials_pupil_area_df(dataset, frame_rate=None, df_format='wide'):
-    pupil_area = dataset.pupil_area.pupil_area.values
+    pupil_area = dataset.eye_tracking.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
     timestamps = dataset.pupil_area.time.values
@@ -619,7 +619,7 @@ def get_trials_pupil_area_df(dataset, frame_rate=None, df_format='wide'):
 
 
 def get_stimulus_pupil_area_df(dataset, frame_rate=None, df_format='wide'):
-    pupil_area = dataset.pupil_area.pupil_area.values
+    pupil_area = dataset.eye_tracking.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
     timestamps = dataset.pupil_area.time.values
@@ -651,7 +651,7 @@ def get_stimulus_pupil_area_df(dataset, frame_rate=None, df_format='wide'):
 
 
 def get_omission_pupil_area_df(dataset, frame_rate=30, df_format='wide'):
-    pupil_area = dataset.pupil_area.pupil_area.values
+    pupil_area = dataset.eye_tracking.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
     timestamps = dataset.pupil_area.time.values

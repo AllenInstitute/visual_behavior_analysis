@@ -336,30 +336,15 @@ def compute_reliability_for_traces(traces):
     return reliability
 
 
-def compute_reliability(group, analysis=None, flashes=True, omitted=False):
+def compute_reliability(group, params, frame_rate):
     # computes trial to trial correlation across input traces in group,
     # only for portion of the trace after the change time or flash onset time
     from itertools import combinations
     import scipy as sp
-    if analysis:
-        fr = analysis.ophys_frame_rate
-    else:
-        fr = 31.
-    if analysis and omitted:
-        response_window = [int(np.abs(analysis.omitted_flash_window[0]) * fr),
-                           int((np.abs(analysis.omitted_flash_window[0]) + analysis.omitted_flash_window[1]) * fr)]
-    elif analysis and flashes and not omitted:
-        response_window = [int(np.abs(analysis.flash_window[0]) * fr),
-                           int((np.abs(analysis.flash_window[0]) + analysis.flash_window[1]) * fr)]
-    elif analysis and not flashes and not omitted:
-        response_window = [int(np.abs(analysis.trial_window[0]) * fr),
-                           int((np.abs(analysis.trial_window[0]) + analysis.trial_window[1]) * fr)]
-    elif not analysis and flashes and not omitted:
-        response_window = [int(0.5 * fr), int(1.25 * fr)]
-    elif not analysis and omitted:
-        response_window = [int(3 * fr), int(6 * fr)]
-    else:
-        response_window = [int(4 * fr), int(8 * fr)]
+
+    onset = int(np.abs(params['window_around_timepoint_seconds'][0]) * frame_rate)
+    response_window = [onset, onset + (int(params['response_window_duration_seconds'] * frame_rate))]
+
     corr_values = []
     traces = group['trace'].values
     traces = np.vstack(traces)
@@ -444,10 +429,14 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
 
     if get_reliability:
         print('computing reliability')
-        reliability = rdf.groupby(conditions).apply(compute_reliability, analysis, flashes, omitted)
-        reliability = reliability.reset_index()
-        mdf['reliability'] = reliability.reliability
-        print('done computing reliability')
+        if analysis:
+            frame_rate = analysis.ophys_frame_rate
+            reliability = rdf.groupby(conditions).apply(compute_reliability, params, frame_rate)
+            reliability = reliability.reset_index()
+            mdf['reliability'] = reliability.reliability
+            print('done computing reliability')
+        else:
+            print('must provide analysis object to get_mean_df to compute reliability')
     if 'index' in mdf.keys():
         mdf = mdf.drop(columns=['index'])
     return mdf
