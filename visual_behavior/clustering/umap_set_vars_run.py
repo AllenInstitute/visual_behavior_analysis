@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Here, we set dataframe all_sess_now, also some arrays for distinct crea lines (all_sess_ns_fof_all_cre (trial averaged traces), image/omission response amplitude, area/depth)  
+Here, we set dataframe all_sess_now, also some arrays for distinct cre lines (all_sess_ns_fof_all_cre (trial averaged traces), image/omission response amplitude, area/depth)  
 these vars will be needed to do umap/clustering analysis.
 
 To set vars needed here, run omissions_traces_peaks_plots_setVars.py with "doCorrs = -1" and "useSDK = 1" to load allsess. 
@@ -334,7 +334,7 @@ for icre in range(len(cre_lines)): # icre = 0
     
 ################################################################################################    
 ################################################################################################        
-#%% Run PCA on all_seall_sess_ns_fof_this_cre
+#%% Run PCA on all_sess_ns_fof_this_cre
 ################################################################################################    
 ################################################################################################    
 
