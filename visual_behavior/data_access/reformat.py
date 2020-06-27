@@ -133,11 +133,11 @@ def add_container_workflow_state_to_ophys_session_table(session_table, experimen
 
 def add_trial_type_to_trials_table(trials):
     trials['trial_type'] = None
-    trials.at[trials[trials.auto_rewarded].index, 'trial_type'] = 'auto_rewarded'
-    trials.at[trials[trials.hit].index, 'trial_type'] = 'hit'
-    trials.at[trials[trials.miss].index, 'trial_type'] = 'miss'
-    trials.at[trials[trials.correct_reject].index, 'trial_type'] = 'correct_reject'
-    trials.at[trials[trials.false_alarm].index, 'trial_type'] = 'false_alarm'
+    trials.loc[trials[trials.auto_rewarded].index, 'trial_type'] = 'auto_rewarded'
+    trials.loc[trials[trials.hit].index, 'trial_type'] = 'hit'
+    trials.loc[trials[trials.miss].index, 'trial_type'] = 'miss'
+    trials.loc[trials[trials.correct_reject].index, 'trial_type'] = 'correct_reject'
+    trials.loc[trials[trials.false_alarm].index, 'trial_type'] = 'false_alarm'
     return trials
 
 
