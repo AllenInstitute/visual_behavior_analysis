@@ -6,6 +6,7 @@ Vars needed here are loaded from the already saved h5 files (created by the func
 
 If doCorrs=0, the loaded var is all_sess, a pandas table that includes vars related to median traces across trials, aligned on omission, and their peak amplitude.
 If doCorrs=1, we load vars for each session from the server (this_sess), and then here we concatenate them into all_sess.
+doCorrs=-1, eg. for umap analysis.
 
 The main thing this script does is that it sets all_sess_2an which includes sessions to be analyzed given their imageset (A,B)
 
@@ -19,9 +20,8 @@ if doCorrs:
 else:
     omissions_traces_peaks_plots_setVars_ave.py    
 
-If doing umap analysis, follow this script by:
-umap_sdk_setVars.py, and then umap_setVars.py  (if useSDK=1)
-umap_setVars.py  (if useSDK=0)
+If doing umap analysis, "all_sess" is set in load_behavior_ophys_dataset_fn.py. "all_sess" will be loaded from server. 
+Follow this script by umap_set_vars_run.py
 
 
 Created on Mon Aug 26 12:23:25 2019
