@@ -601,7 +601,7 @@ def annotate_mean_df_with_fano_factor(analysis, mean_df):
         mean_responses = mean_df.iloc[idx].mean_responses
         sd = np.std(mean_responses)
         mean_response = np.mean(mean_responses)
-        fano_factor = (sd * 2) / mean_response
+        fano_factor = np.abs((sd * 2) / mean_response) #take abs value to account for negative mean_response
         ff_list.append(fano_factor)
     mean_df['fano_factor'] = ff_list
     return mean_df

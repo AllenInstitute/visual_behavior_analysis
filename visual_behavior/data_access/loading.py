@@ -432,14 +432,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
         stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
         stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
-        stimulus_presentations = add_model_outputs_to_stimulus_presentations(
-            stimulus_presentations,
-            self.metadata['behavior_session_id']
-        )
-        stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
-        stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
-        stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
-        stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
+        if check_if_model_output_available(self.metadata['behavior_session_id']):
+            stimulus_presentations = add_model_outputs_to_stimulus_presentations(
+                stimulus_presentations, self.metadata['behavior_session_id'])
+            stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
+            stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
+            stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
+            stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
+        else:
+            stimulus_presentations['licked'] = [True if len(licks)>0 else False for licks in stimulus_presentations.licks.values]
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
@@ -556,15 +557,28 @@ def get_extended_stimulus_presentations(session):
     return extended_stimulus_presentations
 
 
+def get_model_output_file(behavior_session_id):
+    model_output_dir = get_behavior_model_outputs_dir()
+    model_output_file = [file for file in os.listdir(model_output_dir) if
+                         (str(behavior_session_id) in file) and ('training' not in file)]
+    return model_output_file
+
+
+def check_if_model_output_available(behavior_session_id):
+    model_output_file = get_model_output_file(behavior_session_id)
+    if len(model_output_file) > 0:
+        return True
+    else:
+        return False
+
+
 def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior_session_id):
     '''
        Adds additional columns to stimulus table for model weights and related metrics
     '''
-    model_output_dir = get_behavior_model_outputs_dir()
-    model_output_file = [file for file in os.listdir(model_output_dir) if
-                         (str(behavior_session_id) in file) and ('training' not in file)]
-    if len(model_output_file) > 0:
-        model_outputs = pd.read_csv(os.path.join(model_output_dir, model_output_file[0]))
+
+    if check_if_model_output_available(behavior_session_id):
+        model_outputs = pd.read_csv(os.path.join(get_behavior_model_outputs_dir(), get_model_output_file(behavior_session_id)[0]))
         model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change'], inplace=True)
         stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id',
                                                               left_on='stimulus_presentations_id').set_index(
