@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Here, we set dataframe all_sess_now, also some arrays for distinct cre lines (all_sess_ns_fof_all_cre (trial averaged traces), image/omission response amplitude, area/depth)  
-these vars will be needed to do umap/clustering analysis.
-
 To set vars needed here, run omissions_traces_peaks_plots_setVars.py with "doCorrs = -1" and "useSDK = 1" to load allsess. 
 (Note: all_sess is created and saved in the script load_behavior_ophys_dataset_fn.py. Script omissions_traces_peaks_plots_setVars.py loads them)
 
-After this script, run umap_plots.py to make plots.
+Here, we set dataframe all_sess_now, also some arrays for distinct cre lines (all_sess_ns_fof_all_cre (trial averaged traces), image/omission response amplitude, area/depth)  
+these vars will be needed to do umap/clustering analysis.
+
+After this script, run umap_run.py to run umap/pca.
+
 
 Created on Wed Jun 10 16:05:25 2020
 @author: farzaneh
@@ -331,61 +332,6 @@ for icre in range(len(cre_lines)): # icre = 0
 
 
     
-    
-################################################################################################    
-################################################################################################        
-#%% Run PCA on all_sess_ns_fof_this_cre
-################################################################################################    
-################################################################################################    
-
-from sklearn.decomposition import PCA
-varexpmax = .99 # 1 # .9
-
-pc_all_cre = []
-pca_variance_all_cre = []
-
-for icre in range(len(cre_lines)): # icre=0
-    cre = cre_lines[icre]    
-    all_sess_ns_fof_thisCre = all_sess_ns_fof_all_cre[icre] # neurons_allExp_thisCre x 24(frames)
-    print(f'Running PCA on {cre}, matrix size: {np.shape(all_sess_ns_fof_thisCre)}')
-
-    x_train_pc, pca = doPCA(all_sess_ns_fof_thisCre, varexpmax=varexpmax, doplot=1)
-    pca_variance = pca.explained_variance_ratio_
-#     x_train_pc.shape
-
-    pc_all_cre.append(x_train_pc)
-    pca_variance_all_cre.append(pca_variance)
-    
-    
-################################################################################################    
-################################################################################################    
-#%% Run umap on all_sess_ns_fof_thisCre
-################################################################################################
-################################################################################################
-
-import umap    
-import seaborn as sns
-from mpl_toolkits.mplot3d import Axes3D
-
-ncomp = 2 # 3 # number of umap components
-
-embedding_all_cre = []
-
-for icre in range(len(cre_lines)): # icre = 2    
-    cre = cre_lines[icre]    
-    all_sess_ns_fof_thisCre = all_sess_ns_fof_all_cre[icre] # neurons_allExp_thisCre x 24(frames)
-    print(f'Running UMAP on {cre}')
-
-    sp = 2
-    neigh = 7
-    embedding = umap.UMAP(spread= sp, n_neighbors = neigh, n_components = ncomp).fit_transform(all_sess_ns_fof_thisCre)
-    print(f'embedding size: {embedding.shape}')
-    embedding_all_cre.append(embedding)
-    
-# embedding_all_cre_3d = copy.deepcopy(embedding_all_cre)
-
-    
-    
 ###########################################################################
-#%% After this script, run umap_plot.py to make plots for umap/pca analysis.    
+#%% After this script, run umap_run.py to run umap/pca.
 ###########################################################################
