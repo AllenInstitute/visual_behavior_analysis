@@ -321,18 +321,38 @@ def get_fraction_nonzero_trials(group):
     return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
 
 
-def compute_reliability_for_traces(traces):
-    # computes trial to trial correlation across input traces, across entire trace timeseries
-    import scipy as sp
-    from itertools import combinations
-    traces = np.vstack(traces)
-    combos = combinations(traces, 2)
-    corr_values = []
-    for combo in combos:
-        corr = sp.stats.pearsonr(combo[0], combo[1])[0]
-        corr_values.append(corr)
-    corr_values = np.asarray(corr_values)
-    reliability = np.mean(corr_values)
+# def compute_reliability_for_traces(traces):
+#     # computes trial to trial correlation across input traces, across entire trace timeseries
+#     import scipy as sp
+#     from itertools import combinations
+#     traces = np.vstack(traces)
+#     combos = combinations(traces, 2)
+#     corr_values = []
+#     for combo in combos:
+#         corr = sp.stats.pearsonr(combo[0], combo[1])[0]
+#         corr_values.append(corr)
+#     corr_values = np.asarray(corr_values)
+#     reliability = np.mean(corr_values)
+#     return reliability
+
+
+def compute_reliability_vectorized(traces):
+    '''
+    Compute average pearson correlation between pairs of rows of the input matrix.
+    Args:
+        traces(np.ndarray): trace array with shape m*n, with m traces and n trace timepoints
+    Returns:
+        reliability (float): Average correlation between pairs of rows
+    '''
+    # Compute m*m pearson product moment correlation matrix between rows of input.
+    # This matrix is 1 on the diagonal (correlation with self) and mirrored across
+    # the diagonal (corr(A, B) = corr(B, A))
+    corrmat = np.corrcoef(traces)
+    # We want the inds of the lower triangle, without the diagonal, to average
+    m = traces.shape[0]
+    lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
+    # Take the lower triangle values from the corrmat and averge them
+    reliability = np.mean(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
     return reliability
 
 
@@ -345,17 +365,10 @@ def compute_reliability(group, params, frame_rate):
     onset = int(np.abs(params['window_around_timepoint_seconds'][0]) * frame_rate)
     response_window = [onset, onset + (int(params['response_window_duration_seconds'] * frame_rate))]
 
-    corr_values = []
     traces = group['trace'].values
     traces = np.vstack(traces)
-    traces = traces[:, response_window[0]:response_window[1]]  # limit to post change window
-    combos = combinations(traces, 2)
-    corr_values = []
-    for combo in combos:
-        corr = sp.stats.pearsonr(combo[0], combo[1])[0]
-        corr_values.append(corr)
-    corr_values = np.asarray(corr_values)
-    reliability = np.mean(corr_values)
+    traces = traces[:, response_window[0]:response_window[1]]  # limit to response window
+    reliability = compute_reliability_vectorized(traces)
     return pd.Series({'reliability': reliability})
 
 
@@ -376,7 +389,7 @@ def get_window(analysis=None, flashes=False, omitted=False):
 
 
 def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
-                get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True):
+                get_reliability=True, get_pref_stim=True, exclude_omitted_from_pref_stim=True):
 
     import visual_behavior.ophys.response_analysis.response_processing as rp
 
@@ -427,16 +440,17 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         fraction_responsive_trials = fraction_responsive_trials.reset_index()
         mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
 
-    if get_reliability:
-        print('computing reliability')
-        if analysis:
-            frame_rate = analysis.ophys_frame_rate
-            reliability = rdf.groupby(conditions).apply(compute_reliability, params, frame_rate)
-            reliability = reliability.reset_index()
-            mdf['reliability'] = reliability.reliability
-            print('done computing reliability')
-        else:
-            print('must provide analysis object to get_mean_df to compute reliability')
+    # if get_reliability:
+        # print('computing reliability')
+    if analysis:
+        frame_rate = analysis.ophys_frame_rate
+        reliability = rdf.groupby(conditions).apply(compute_reliability, params, frame_rate)
+        reliability = reliability.reset_index()
+        mdf['reliability'] = reliability.reliability
+        # print('done computing reliability')
+    else:
+        print('must provide analysis object to get_mean_df to compute reliability')
+
     if 'index' in mdf.keys():
         mdf = mdf.drop(columns=['index'])
     return mdf
