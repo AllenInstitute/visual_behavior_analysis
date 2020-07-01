@@ -3545,3 +3545,23 @@ def map_inds(train_data_inds, len_win, inds_final_all, neuron_y, doPlots=0):
     return train_data_inds_on_yy_alltrace, train_data_inds_on_traces_y0
 
 
+
+
+#%
+'''
+f = h5py.File(np_corr_file, 'w')
+dset = f.create_dataset("data", data=neuropil_correction_man) 
+f.close()
+'''
+
+'''
+f = open(np_corr_file, 'wb')
+pickle.dump(df_grid, f)        
+f.close()
+'''
+
+'''
+f = np_corr_file
+pkl = open(f, 'rb')
+this_sess = pickle.load(pkl)
+'''

@@ -253,7 +253,15 @@ for icre in range(len(cre_lines)): # icre = 2
 #     ax = fig.add_subplot(1,3,icre+1, projection='3d')    
 #     ax.set_title(cre)
 #     ax.scatter(x, y, z, s=10, c=cols_cre[icre], label=cre[:3], marker='o') 
-
+    '''
+    plt.scatter(
+        embedding[:, 0],
+        embedding[:, 1],
+        c=[sns.color_palette()[x] for x in penguins.species_short.map({"Adelie":0, "Chinstrap":1, "Gentoo":2})])
+    plt.gca().set_aspect('equal', 'datalim')
+    plt.title('UMAP projection of the Penguin dataset', fontsize=24)
+    '''
+    
     if color_cre_omit_flash==1:
         ax.scatter(x, y, s=10, c=cols_cre[icre], label=cre[:3], marker='o')
         ax.legend()

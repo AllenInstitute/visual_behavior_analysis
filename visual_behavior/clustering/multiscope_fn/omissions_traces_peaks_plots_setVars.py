@@ -119,6 +119,9 @@ else:
 #%% Load all_sess h5 file name
 ##############################################################################    
 ##############################################################################    
+
+print(f'Loading all_sess dataframe...')
+
 if doCorrs==0:
     all_sess = pd.read_hdf(allSessName, key='all_sess') #'svm_vars')        ## Load all_sess dataframe
     input_vars = pd.read_hdf(allSessName, key='input_vars')     ## Load input_vars dataframe    
