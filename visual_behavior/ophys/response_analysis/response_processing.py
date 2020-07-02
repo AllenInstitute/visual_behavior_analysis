@@ -21,7 +21,7 @@ def get_default_trial_response_params():
     trial_response_params = {
         "window_around_timepoint_seconds": [-5, 5],
         "response_window_duration_seconds": 0.5,
-        "baseline_window_duration_seconds": 0.5
+        "baseline_window_duration_seconds": 0.25
     }
     return trial_response_params
 
@@ -40,7 +40,7 @@ def get_default_stimulus_response_params():
     stimulus_response_params = {
         "window_around_timepoint_seconds": [-0.5, 0.75],
         "response_window_duration_seconds": 0.5,
-        "baseline_window_duration_seconds": 0.5
+        "baseline_window_duration_seconds": 0.25
     }
     return stimulus_response_params
 
@@ -59,7 +59,7 @@ def get_default_omission_response_params():
     omission_response_params = {
         "window_around_timepoint_seconds": [-5, 5],
         "response_window_duration_seconds": 0.75,
-        "baseline_window_duration_seconds": 0.75
+        "baseline_window_duration_seconds": 0.25
     }
     return omission_response_params
 

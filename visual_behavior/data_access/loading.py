@@ -1496,7 +1496,7 @@ def remove_problematic_data_from_multi_session_df(multi_session_df):
                           886585138, 886565136,  # specimen 837581585
                           ]
     multi_session_df = multi_session_df[multi_session_df.specimen_id.isin(bad_specimen_ids) == False]
-    multi_session_df = multi_session_df[multi_session_df.experiment_id.isin(bad_experiment_ids) == False]
+    multi_session_df = multi_session_df[multi_session_df.ophys_experiment_id.isin(bad_experiment_ids) == False]
 
     return multi_session_df
 
