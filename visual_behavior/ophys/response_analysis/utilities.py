@@ -357,6 +357,7 @@ def compute_reliability_vectorized(traces):
     return reliability, correlation_values
 
 
+
 def compute_reliability(group, params, frame_rate):
     # computes trial to trial correlation across input traces in group,
     # only for portion of the trace after the change time or flash onset time
@@ -365,11 +366,14 @@ def compute_reliability(group, params, frame_rate):
 
     onset = int(np.abs(params['window_around_timepoint_seconds'][0]) * frame_rate)
     response_window = [onset, onset + (int(params['response_window_duration_seconds'] * frame_rate))]
-
     traces = group['trace'].values
     traces = np.vstack(traces)
-    traces = traces[:, response_window[0]:response_window[1]]  # limit to response window
-    reliability, correlation_values = compute_reliability_vectorized(traces)
+    if traces.shape[0] > 5:
+        traces = traces[:, response_window[0]:response_window[1]]  # limit to response window
+        reliability, correlation_values = compute_reliability_vectorized(traces)
+    else:
+        reliability = np.nan
+        correlation_values = []
     return pd.Series({'reliability': reliability, 'correlation_values': correlation_values})
 
 
