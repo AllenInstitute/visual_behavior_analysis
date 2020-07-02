@@ -352,8 +352,9 @@ def compute_reliability_vectorized(traces):
     m = traces.shape[0]
     lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
     # Take the lower triangle values from the corrmat and averge them
-    reliability = np.mean(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
-    return reliability
+    correlation_values = corrmat[lower_tri_inds[0], lower_tri_inds[1]]
+    reliability = np.mean(correlation_values)
+    return reliability, correlation_values
 
 
 def compute_reliability(group, params, frame_rate):
@@ -368,8 +369,8 @@ def compute_reliability(group, params, frame_rate):
     traces = group['trace'].values
     traces = np.vstack(traces)
     traces = traces[:, response_window[0]:response_window[1]]  # limit to response window
-    reliability = compute_reliability_vectorized(traces)
-    return pd.Series({'reliability': reliability})
+    reliability, correlation_values = compute_reliability_vectorized(traces)
+    return pd.Series({'reliability': reliability, 'correlation_values': correlation_values})
 
 
 def get_window(analysis=None, flashes=False, omitted=False):
@@ -447,6 +448,7 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         reliability = rdf.groupby(conditions).apply(compute_reliability, params, frame_rate)
         reliability = reliability.reset_index()
         mdf['reliability'] = reliability.reliability
+        mdf['correlation_values'] = reliability.correlation_values
         # print('done computing reliability')
     else:
         print('must provide analysis object to get_mean_df to compute reliability')
