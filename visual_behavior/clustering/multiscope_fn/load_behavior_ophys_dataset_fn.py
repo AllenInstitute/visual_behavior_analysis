@@ -27,7 +27,7 @@ import visual_behavior.data_access.loading as loading
 
 #%% The get_filtered_ophys_experiment_table() function returns a table describing passing ophys experiments from relevant project codes 
 
-experiments_table = loading.get_filtered_ophys_experiment_table() 
+experiments_table = loading.get_filtered_ophys_experiment_table() # include_failed_data=False
 # experiments_table.keys()
 # experiments_table.head()
 np.shape(experiments_table)
