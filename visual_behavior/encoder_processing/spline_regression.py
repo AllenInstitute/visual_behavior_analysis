@@ -90,13 +90,13 @@ def spline_regression(df, col_to_smooth, n_knots, time_column='time'):
     n_knots = int(n_knots)
 
     # reshape the time vector
-    t = df_sample[time_column].values.reshape(-1, 1)
+    t = df[time_column].values.reshape(-1, 1)
 
     # instantiate the regression Pipeline
     regression = perform_natural_cubic_regression(n_knots=n_knots)
 
     # fill any NaNs in the y-vector
-    y = df_sample[col_to_smooth].fillna(method='bfill').values
+    y = df[col_to_smooth].fillna(method='bfill').values
 
     # perform the fit
     regression.fit(t, y)

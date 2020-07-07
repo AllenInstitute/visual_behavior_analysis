@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+from visual_behavior.encoder_processing.spline_regression import spline_regression
+
 def identify_wraps(row, lower_threshold=1.5, upper_threshold=3.5):
     '''
     identify "wraps" in the voltage signal as any point where the crosses from 5V to 0V or vice-versa
@@ -150,6 +152,8 @@ def make_visualization(df_to_plot, n_knot_factors):
 
     fig.tight_layout()
 
+    return fig, ax
+
 
 def mean_squared_jerk(df_in, voltage_col):
     df = df_in.copy()
@@ -232,7 +236,7 @@ def plot_optimization_results(optimization_results):
 
 def calculate_optimal_knot_factor(optimization_results):
     optimal_index = optimization_results['j'].argmin()
-    return optimization_results.iloc[optimal_index]['n_knot_factor'])
+    return optimization_results.iloc[optimal_index]['n_knot_factor']
 
 
 def apply_spline_regression(df_in, n_knot_factor):
