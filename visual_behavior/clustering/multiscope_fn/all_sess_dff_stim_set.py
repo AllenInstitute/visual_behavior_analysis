@@ -11,16 +11,13 @@ Created on Mon Jul 6 19:52:25 2020
 saveResults = 1 # save allsess file (in a pkl file named "all_sess_omit_traces_peaks_allTraces_sdk...")
 
 from def_funs import *
-
 import visual_behavior.data_access.loading as loading  # VBA data_access module provides useful functions for identifying and loading experiments to analyze. 
 
 
 #%% The get_filtered_ophys_experiment_table() function returns a table describing passing ophys experiments from relevant project codes 
 
 experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True) # 
-# experiments_table.keys()
-# experiments_table.head()
-np.shape(experiments_table)
+print(np.shape(experiments_table))
 
 
 #%% Get VisualBehaviorMultiscope experiments
@@ -31,7 +28,7 @@ experiments_table_2an = experiments_table[a=='VisualBehaviorMultiscope']
 
 # add experiment_id to the columns
 experiments_table_2an.insert(loc=1, column='experiment_id', value=experiments_table_2an.index.values)
-experiments_table_2an.shape
+print(experiments_table_2an.shape)
 
 
 #%% For each experiment set dff traces, and stimulus data.
@@ -121,12 +118,13 @@ if len(exp_noNeur)>0:
 else:
     all_sess_now = all_sess_now0
     
-    
+print(np.shape(all_sess_now))    
     
     
 
-#%% Remove sessions with less than 8 experiments.
-
+#%% Remove sessions with less than 8 experiments
+# this part is commented so we save all experiments; but when we load it, we should apply this part if needed.
+'''
 sess_ids = np.unique(all_sess_now['session_id'].values)
 
 # set session_ids that have <8 experiments
@@ -150,7 +148,7 @@ print(all_sess_now2.shape)
 #%% Finally, reset all_sess_now
 
 all_sess_now = all_sess_now2 
-
+'''
     
     
     
@@ -181,8 +179,9 @@ if saveResults:
     print(allSessName)
 
     
-    #### save the file ####
+    #### save all_sess_dff_stim to allSessName ####
     f = open(allSessName, 'wb')
+
     pickle.dump(all_sess_dff_stim, f)    
     pickle.dump(errors_iexp, f)
     pickle.dump(errors_log, f)
@@ -190,4 +189,8 @@ if saveResults:
     f.close()
 
     
+    
+
+
+#%% After this script run all_sess_dff_stim_load.py to load the pandas saved here.
 
