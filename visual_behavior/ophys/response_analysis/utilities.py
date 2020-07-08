@@ -352,7 +352,7 @@ def compute_reliability_vectorized(traces):
     m = traces.shape[0]
     lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
     # Take the lower triangle values from the corrmat and averge them
-    correlation_values = corrmat[lower_tri_inds[0], lower_tri_inds[1]]
+    correlation_values = list(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
     reliability = np.mean(correlation_values)
     return reliability, correlation_values
 
