@@ -1117,28 +1117,31 @@ class MesoscopeICA(object):
             pdf = plt_pdf.PdfPages(pdf_name)
             # get crosstalk data and plot on first page of the pdf:
             # before demixing
-            _, _, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
-                                                                                             traces_before[1],
-                                                                                             generate_plot_data=True)
-            f = plt.figure(figsize=(30, 10))
-            plt.rcParams.update({'font.size': 28})
-            plt.suptitle(f"Crosstalk plots for cell {roi_name}\n", linespacing=0.5)
             xlabel = "signal"
             ylabel = "crosstalk"
-            # plot crosstalk before demxing
-            plt.subplot(131)
-            plt.imshow(hist_before, interpolation='nearest', origin='low',
-                       extent=[xedges_b[0], xedges_b[-1], yedges_b[0], yedges_b[-1]], aspect='auto', norm=LogNorm())
-            cbar = plt.colorbar()
-            cbar.set_label('# of counts', rotation=270, labelpad=20)
-            cbar.ax.tick_params(labelsize=18)
-            plt.plot(hist_before, fitfn_b(hist_before), '--k')
-            plt.xlim((xedges_b[0], xedges_b[-1]))
-            plt.ylim((yedges_b[0], yedges_b[-1]))
-            plt.xlabel(xlabel)
-            plt.ylabel(ylabel)
-            title = f"Crosstalk before: {np.round(crosstalk[0], 3)}\n{fitfn_b} R2={np.round(r_value_b, 2)}"
-            plt.title(title, linespacing=0.5, fontsize=18)
+
+            if crosstalk[0]:
+                _, _, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
+                                                                                                 traces_before[1],
+                                                                                                 generate_plot_data=True)
+                f = plt.figure(figsize=(30, 10))
+                plt.rcParams.update({'font.size': 28})
+                plt.suptitle(f"Crosstalk plots for cell {roi_name}\n", linespacing=0.5)
+
+                # plot crosstalk before demxing
+                plt.subplot(131)
+                plt.imshow(hist_before, interpolation='nearest', origin='low',
+                           extent=[xedges_b[0], xedges_b[-1], yedges_b[0], yedges_b[-1]], aspect='auto', norm=LogNorm())
+                cbar = plt.colorbar()
+                cbar.set_label('# of counts', rotation=270, labelpad=20)
+                cbar.ax.tick_params(labelsize=18)
+                plt.plot(traces_before[0], fitfn_b(traces_before[0]), '--k')
+                plt.xlim((xedges_b[0], xedges_b[-1]))
+                plt.ylim((yedges_b[0], yedges_b[-1]))
+                plt.xlabel(xlabel)
+                plt.ylabel(ylabel)
+                title = f"Crosstalk before: {np.round(crosstalk[0], 3)}\n{fitfn_b} R2={np.round(r_value_b, 2)}"
+                plt.title(title, linespacing=0.5, fontsize=18)
 
             if crosstalk[1]:  # only plot crosstlak after if the value is not None
                 # after demxing
@@ -1152,14 +1155,13 @@ class MesoscopeICA(object):
                 cbar = plt.colorbar()
                 cbar.set_label('# of counts', rotation=270, labelpad=20)
                 cbar.ax.tick_params(labelsize=18)
-                plt.plot(hist_after, fitfn_a(hist_after), '--k')
+                plt.plot(traces_after[0], fitfn_a(traces_after[0]), '--k')
                 plt.xlim((xedges_a[0], xedges_a[-1]))
                 plt.ylim((yedges_a[0], yedges_a[-1]))
                 plt.xlabel(xlabel)
                 plt.ylabel(ylabel)
                 title = f"Crosstalk after: {np.round(crosstalk[1], 2)}\n{fitfn_a} R2={np.round(r_value_a, 2)}"
                 plt.title(title, linespacing=0.5, fontsize=18)
-
 
             # add mixing matrix info to the plot
             plt.subplot(133)
