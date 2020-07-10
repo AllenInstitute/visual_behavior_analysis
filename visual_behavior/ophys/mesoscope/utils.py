@@ -1069,14 +1069,27 @@ def rename_old_traces(sessions):
                 else:
                     ica_obj.set_ica_dirs(names={'roi': "roi", 'np': "neuropil"})
                     for pkey in ica_obj.pkeys:
-                        for tkey in ica_obj.tkeys:
-                            os.chdir(ica_obj.dirs[tkey])
-                            old_raw_name = f"{raw_names[tkey]}_{ica_obj.exp_ids[pkey]}.h5"
-                            if os.path.isfile(old_raw_name):
-                                print(f"Found old file names: {old_raw_name}")
-                                sc.runcommand(f"cp {old_raw_name} {ica_obj.exp_ids[pkey]}_raw.h5")
-                                sc.runcommand(f"rm -rf {old_raw_name}")
-                                found_renaming = True
+                        if os.path.isdir(ica_obj.dirs[tkey]):
+                            for tkey in ica_obj.tkeys:
+                                os.chdir(ica_obj.dirs[tkey])
+                                old_raw_name = f"{raw_names[tkey]}_{ica_obj.exp_ids[pkey]}.h5"
+                                if os.path.isfile(old_raw_name):
+                                    print(f"Found old file names: {old_raw_name}")
+                                    sc.runcommand(f"cp {old_raw_name} {ica_obj.exp_ids[pkey]}_raw.h5")
+                                    sc.runcommand(f"rm -rf {old_raw_name}")
+                                    found_renaming = True
+                        else:
+                            ica_obj.set_ica_dirs(names={'roi': "rois", 'np': "neuropil"})
+                            for pkey in ica_obj.pkeys:
+                                for tkey in ica_obj.tkeys:
+                                    os.chdir(ica_obj.dirs[tkey])
+                                    old_raw_name = f"{raw_names[tkey]}_{ica_obj.exp_ids[pkey]}.h5"
+                                    if os.path.isfile(old_raw_name):
+                                        print(f"Found old file names: {old_raw_name}")
+                                        sc.runcommand(f"cp {old_raw_name} {ica_obj.exp_ids[pkey]}_raw.h5")
+                                        sc.runcommand(f"rm -rf {old_raw_name}")
+                                        found_renaming = True
+
         if found_renaming:
             list_ses_renamed.append(session)
 
