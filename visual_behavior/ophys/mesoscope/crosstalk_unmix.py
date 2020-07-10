@@ -912,7 +912,7 @@ class MesoscopeICA(object):
                     os.mkdir(plot_dir)
 
                 for i in range(len(self.rois_names_valid[pkey][tkey])):
-                    roi_name = self.rois_names_valid[pkey][tkey][i]
+                    roi_name = str(self.rois_names_valid[pkey][tkey][i])
                     before_sig = self.ins[pkey][tkey][0][i] + self.offsets[pkey][tkey]['sig_offset'][i]
                     after_sig = self.outs[pkey][tkey][0][i]
                     before_ct = self.ins[pkey][tkey][1][i] + self.offsets[pkey][tkey]['ct_offset'][i]
@@ -921,8 +921,8 @@ class MesoscopeICA(object):
                     traces_after = [after_sig, after_ct]
                     mixing = self.mixing[pkey][tkey][i]
                     a_mixing = self.a_mixing[pkey][tkey][i]
-                    crosstalk_before = self.crosstalk[pkey][tkey][0][i]
-                    crosstalk_after = self.crosstalk[pkey][tkey][1][i]
+                    crosstalk_before = self.crosstalk[pkey][tkey][roi_name][0]
+                    crosstalk_after = self.crosstalk[pkey][tkey][roi_name][1]
                     crosstalk = [crosstalk_before, crosstalk_after]
                     self.plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples)
                 self.plot_dirs[pkey][tkey] = plot_dir
@@ -1122,10 +1122,11 @@ class MesoscopeICA(object):
             # get crosstalk data and plot on first page of the pdf:
             # before demixing
             slope_before, offset_before, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
-                                                                                                                    traces_before[1],                                                                                           generate_plot_data=True)
+                                                                                                                    traces_before[1],
+                                                                                                                    generate_plot_data=True)
             f = plt.figure(figsize=(30, 10))
             plt.rcParams.update({'font.size': 28})
-            plt.suptitle(f"Crosstalk plost for cell {roi_name}\n", linespacing=0.5)
+            plt.suptitle(f"Crosstalk plots for cell {roi_name}\n", linespacing=0.5)
             xlabel = "signal"
             ylabel = "crosstalk"
             # plot crosstalk before demxing
@@ -1159,7 +1160,7 @@ class MesoscopeICA(object):
             plt.ylim((yedges_a[0], yedges_a[-1]))
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
-            title = f"Crosstalk after: {round(crosstalk[1], 2)}\n{fitfn_a} R2={round(r_value_a, 2)}"
+            title = f"Crosstalk after: {round(crosstalk[1], 2)}\n{fitfn_a} R2={np.round(r_value_a, 2)}"
             plt.title(title, linespacing=0.5, fontsize=18)
 
             # add mixing matrix info to the plot
