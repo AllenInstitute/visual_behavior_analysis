@@ -1067,7 +1067,7 @@ def rename_old_traces(sessions):
                                 sc.runcommand(f"rm -rf {old_raw_name}")
                                 found_renaming = True
                 else:
-                    ica_obj.set_ica_dirs(names={'roi': "ica_traces", 'np': "ica_neuropil"})
+                    ica_obj.set_ica_dirs(names={'roi': "roi", 'np': "neuropil"})
                     for pkey in ica_obj.pkeys:
                         for tkey in ica_obj.tkeys:
                             os.chdir(ica_obj.dirs[tkey])
