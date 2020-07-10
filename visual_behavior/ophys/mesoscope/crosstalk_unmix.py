@@ -64,7 +64,7 @@ def get_traces(movie_exp_dir, movie_exp_id, mask_exp_dir, mask_exp_id):
         h = d.shape[1]
         w = d.shape[2]
 
-    # reading traces extracting json for masks
+    # reading trace extracting json for masks
     with open(jin_mask_path, "r") as f:
         jin_mask = json.load(f)
 
@@ -848,7 +848,7 @@ class MesoscopeICA(object):
 
                 if crosstalk_json_exist:  # crosstalk json exists, read it to self.crosstalk and self.crossta_path:
                     self.crosstalk_paths[pkey][tkey] = crosstalk_paths[pkey][tkey]
-                    self.crosstalk[pkey][tkey] = ju.read(self.crosstalk[pkey][tkey])
+                    self.crosstalk[pkey][tkey] = ju.read(self.crosstalk_paths[pkey][tkey])
                 else:
                     self.crosstalk_paths[pkey][tkey] = None
 
@@ -1122,8 +1122,7 @@ class MesoscopeICA(object):
             # get crosstalk data and plot on first page of the pdf:
             # before demixing
             slope_before, offset_before, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
-                                                                                                                    traces_before[1],
-                                                                                                                    generate_plot_data=True)
+                                                                                                                    traces_before[1],                                                                                           generate_plot_data=True)
             f = plt.figure(figsize=(30, 10))
             plt.rcParams.update({'font.size': 28})
             plt.suptitle(f"Crosstalk plost for cell {roi_name}\n", linespacing=0.5)
@@ -1343,6 +1342,13 @@ class MesoscopeICA(object):
 
 
 def get_crosstalk_data(x, y, generate_plot_data=True):
+    """
+    fn to return crosstalk data
+    :param x: signal data
+    :param y: crosstalk data
+    :param generate_plot_data: flag to control whether to generate plot data
+    :return: slope, offset, r_value, plot_output
+    """
 
     slope, offset, r_value, p_value, std_err = linregress(x, y)
 
@@ -1429,13 +1435,14 @@ def find_scale_ica_roi(ica_in, ica_out):
     return scale.x
 
 
-def adjust_order(a_mix, obs):
+def adjust_mixing(a_mix, obs):
     """
     fn to try and correct order and inversion of the mixing matrix
     :param a_mix: mixing matrix
     :param obs: input to ICA
     :return: adjsuted mixing matrix
     """
+    a_mix[a_mix < 0] *= -1
     # swap elements of first column if top is lower than bottom
     if a_mix[0, 0] < a_mix[1, 0]:
         a_mix[[0, 1], 0] = a_mix[[1, 0], 0]
@@ -1453,7 +1460,6 @@ def adjust_order(a_mix, obs):
         a_mix[[0, 1], :] = a_mix[[1, 0], :]
         # swap columns:
         a_mix[:, [0, 1]] = a_mix[:, [1, 0]]
-
     return a_mix
 
 
@@ -1464,8 +1470,7 @@ def run_ica(sig, ct):
     mix = f_ica.mixing_  # Get estimated mixing matrix
     # make sure no negative coeffs (inversion of traces)
     a_mix = mix
-    a_mix[a_mix < 0] *= -1
-    a_mix = adjust_order(a_mix, traces)
+    a_mix = adjust_mixing(a_mix, traces)
     a_unmix = np.linalg.pinv(a_mix)
     # recontructing signals: dot product of unmixing matrix and input traces
     r_source = np.dot(a_unmix, traces.T).T

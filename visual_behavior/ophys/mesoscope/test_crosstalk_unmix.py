@@ -4,9 +4,9 @@ import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import sciris as sc
 import pylab as pl
 import h5py
-from visual_behavior.ophys.mesoscope.crosstalk_unmix import run_ica
 import copy
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
+from sklearn.decomposition import FastICA
 
 
 def test_get_ica_traces(test_session=None):
@@ -281,8 +281,42 @@ def test_extract_active(session=None):
 		assert valid_sig[i] == (not np.any(np.isnan(traces_sig_evs[i])))
 	for i in range(traces_ct_evs.shape[0]):
 		assert valid_ct[i] == (not np.any(np.isnan(traces_ct_evs[i])))
-
 	return
+
+
+def test_adjust_mixing(snr=30):
+	"""
+	simulate noisy signals and test ICA function on them
+	:param snr: singal to noise ratio to test the ICA with
+	:return:
+	"""
+	# create simulated signals
+	npts = 1000
+	x = pl.arange(npts)
+	sig1 = pl.sin(x / 100) ** 500 + 1 / snr * pl.randn(npts)
+	sig2 = pl.sin(x / 84) ** 500 + 1 / snr * pl.randn(npts)
+
+	# Scaling signals
+	S = np.array([sig1, sig2])
+	D = np.array([[1, 0], [0, 0.3]])  # sclaing matrix
+	S_s = np.dot(D, S) # scaled sources
+
+	# Mixing signals
+	M = np.array([[0.9, 0.1], [0.2, 0.8]])  # mixing matrix
+	O = np.dot(S_s.T, M)  # mixed observations
+
+	traces = O.T
+	f_ica = ica.FastICA(n_components=2, max_iter=50)
+	_ = f_ica.fit_transform(traces)  # Reconstruct signals
+	mix = f_ica.mixing_  # Get estimated mixing matrix
+	# make sure no negative coeffs (inversion of traces)
+	a_mix = copy.deepcopy(mix)
+
+	b_mix = ica.adjust_mixing(a_mix, traces)
+
+	# test if ICA mixing matrix == original mixing matrix
+	assert (np.all(
+		np.isclose(b_mix, M, atol=0.05))), f"Normalized ICA mixign matrix is not similar to original mixing matrix"
 
 
 def test_run_ica(snr=30):
@@ -306,15 +340,13 @@ def test_run_ica(snr=30):
 	M = np.array([[0.9, 0.1], [0.2, 0.8]])  # mixing matrix
 	O = np.dot(S_s.T, M)  # mixed observations
 
-	mix, a_mix, a_unmix, r_source = run_ica(O[:,0], O[:,1])
+	mix, a_mix, a_unmix, r_source = ica.run_ica(O[:,0], O[:,1])
 
 	# normallize mixing matrix and compare to original
 	b_mix = copy.deepcopy(a_mix)
 	b_mix = b_mix / b_mix.sum(axis=0)
 	b_mix = b_mix.T
 
-	# test if ICA mixing matrix == original mixing matrix
-	assert(np.all(np.isclose(b_mix, M, atol=0.05))), f"Normalized ICA mixign matrix is not similar to original mixing matrix"
 	# test if unmixing matrix is inverse of mixing:
 	assert(np.all(np.isclose(np.linalg.inv(a_mix), a_unmix))), f"Unmixing is not an inverse of mixing"
 	# test the shape of recovered sources is same as shape of input observations:
