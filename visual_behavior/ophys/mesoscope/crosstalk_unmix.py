@@ -1093,7 +1093,6 @@ class MesoscopeICA(object):
                     f.create_dataset("roi_names", data=[int(roi) for roi in self.rois_names_valid_ct[pkey][tkey]])
                     f.create_dataset("RMSE", data=self.np_cor_ct[pkey]['RMSE'], compression="gzip")
                     f.create_dataset("r", data=self.np_cor_ct[pkey]['r'], compression="gzip")
-
             else:
                 logging.info(f"Filtered neuropil corrected traces for exp: {self.exp_ids[pkey]} exist, reading from h5 file")
                 with h5py.File(self.np_cor_ct_files[pkey], "r") as f:
@@ -1109,16 +1108,13 @@ class MesoscopeICA(object):
 
     @staticmethod
     def plot_roi(traces_before, traces_after, mixing, a_mixing, crosstalk, roi_name, plot_dir, samples):
-
         pdf_name = os.path.join(plot_dir, f"cell_{roi_name}.pdf")
         if os.path.isfile(pdf_name):
             logging.info(f"cell trace figure exist for  cell {roi_name}")
         else:
             logging.info(f"creating figures for cell {roi_name}")
-
             # define pdf filename:
             pdf = plt_pdf.PdfPages(pdf_name)
-
             # get crosstalk data and plot on first page of the pdf:
             # before demixing
             slope_before, offset_before, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
@@ -1141,9 +1137,8 @@ class MesoscopeICA(object):
             plt.ylim((yedges_b[0], yedges_b[-1]))
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
-            title = f"Crosstalk before: {round(crosstalk[0], 3)}\n{fitfn_b} R2={round(r_value_b, 2)}"
+            title = f"Crosstalk before: {np.round(crosstalk[0], 3)}\n{fitfn_b} R2={np.round(r_value_b, 2)}"
             plt.title(title, linespacing=0.5, fontsize=18)
-
             # after demxing
             slope_after, offset_after, r_value_a, [hist_after, xedges_a, yedges_a, fitfn_a] = get_crosstalk_data(traces_after[0],
                                                                                                                  traces_after[1],
@@ -1160,9 +1155,8 @@ class MesoscopeICA(object):
             plt.ylim((yedges_a[0], yedges_a[-1]))
             plt.xlabel(xlabel)
             plt.ylabel(ylabel)
-            title = f"Crosstalk after: {round(crosstalk[1], 2)}\n{fitfn_a} R2={np.round(r_value_a, 2)}"
+            title = f"Crosstalk after: {np.round(crosstalk[1], 2)}\n{fitfn_a} R2={np.round(r_value_a, 2)}"
             plt.title(title, linespacing=0.5, fontsize=18)
-
             # add mixing matrix info to the plot
             plt.subplot(133)
             ax = plt.gca()
@@ -1176,17 +1170,14 @@ class MesoscopeICA(object):
             plt.tick_params(left=False, labelleft=False)
             pdf.savefig(f)
             plt.close()
-
             # plot traces of {roi_name} roi : two plots per page: before ica, after ica
             y_min = min(min(traces_before[0]), min(traces_before[1]), min(traces_after[0]), min(traces_after[1]))
             y_max = max(max(traces_before[0]), max(traces_before[1]), max(traces_after[0]), max(traces_after[1]))
-
             for i in range(int(traces_before[0].shape[0] / samples) + 1):
                 sig_before_i = traces_before[0][i * samples:(i + 1) * samples]
                 ct_before_i = traces_before[1][i * samples:(i + 1) * samples]
                 sig_after_i = traces_after[0][i * samples:(i + 1) * samples]
                 ct_after_i = traces_after[1][i * samples:(i + 1) * samples]
-
                 f1 = plt.figure(figsize=(20, 10))
                 plt.rcParams.update({'font.size': 22})
                 plt.subplot(211)
@@ -1195,7 +1186,6 @@ class MesoscopeICA(object):
                 plt.plot(ct_before_i, 'g-', label='cross-talk pl')
                 plt.title(f'raw traces for cell {roi_name}', fontsize=18)
                 plt.legend(loc='best')
-
                 plt.subplot(212)
                 plt.ylim(y_min, y_max)
                 plt.plot(sig_after_i, 'r-', label='signal pl')
