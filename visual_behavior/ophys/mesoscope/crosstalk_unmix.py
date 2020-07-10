@@ -1121,7 +1121,7 @@ class MesoscopeICA(object):
             ylabel = "crosstalk"
             f = plt.figure(figsize=(30, 10))
             plt.rcParams.update({'font.size': 28})
-            
+
             if crosstalk[0]:
                 _, _, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
                                                                                                  traces_before[1],
