@@ -1119,13 +1119,14 @@ class MesoscopeICA(object):
             # before demixing
             xlabel = "signal"
             ylabel = "crosstalk"
-
+            f = plt.figure(figsize=(30, 10))
+            plt.rcParams.update({'font.size': 28})
+            
             if crosstalk[0]:
                 _, _, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
                                                                                                  traces_before[1],
                                                                                                  generate_plot_data=True)
-                f = plt.figure(figsize=(30, 10))
-                plt.rcParams.update({'font.size': 28})
+
                 plt.suptitle(f"Crosstalk plots for cell {roi_name}\n", linespacing=0.5)
 
                 # plot crosstalk before demxing
