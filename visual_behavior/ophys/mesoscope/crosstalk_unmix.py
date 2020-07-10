@@ -221,19 +221,41 @@ class MesoscopeICA(object):
         self.exp_ids["pl2"] = pair[1]
         return
 
-    def set_ica_dirs(self, names=None):
+    def set_ica_dirs(self):
         """
         create path to ica-related inputs/outs for the pair
         :param names: roi_nam if different form self.names["roi"] to use to locate old inputs/outs
         :return: None
         """
-        if not names:
-            names = self.names
+
+        names_prefix = [{"roi": 'roi', "np": 'neuropil'},
+                        {"roi": 'ica_traces', "np": 'ica_neuropil'}]
 
         session_dir = self.session_dir
 
-        for tkey in self.tkeys:
-            self.dirs[tkey] = os.path.join(session_dir, f'{names[tkey]}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
+        dirs_exist = None
+
+        for i in range(len(names_prefix)):
+
+            dirs_exist = True
+            # check ith set of names:
+            name_prefix = names_prefix[i]
+            name = {}
+            for tkey in self.tkeys:
+                name[tkey] = name_prefix[tkey]
+
+            # define paths to dirs
+            path = {}
+            for tkey in self.tkeys:
+                self.dirs[tkey] = os.path.join(session_dir, f'{name[tkey]}_{self.exp_ids["pl1"]}_{self.exp_ids["pl2"]}/')
+
+            # check if traces exist already:
+            for tkey in self.tkeys:
+                if not os.path.isdir(self.dirs[tkey]):
+                    dirs_exist = False
+
+            if dirs_exist:
+                break
 
         return
 
