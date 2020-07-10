@@ -691,20 +691,24 @@ def before_date(file_date, thr_date="01/01/2020"):
         flag = False
     return flag
 
-def clean_up_session(session, remove_raw_traces=False, remove_valid=False, remove_ica_input=False, remove_ica_output=False, remove_crosstalk=False):
-    ica_o = ica.MesoscopeICA(session_id=session, cache=CACHE)
-    os.chdir(ica_o.session_dir)
-    if remove_raw_traces:
-	    sc.runcommand('rm -rf */*_raw.h5')  # deleting raw extracted traces
+
+def clean_up_session(session,
+                     remove_raw_traces=False,
+                     remove_valid=False, remove_ica_input=False, remove_ica_output=False, remove_crosstalk=False):
+	ica_o = ica.MesoscopeICA(session_id=session, cache=CACHE)
+	os.chdir(ica_o.session_dir)
+	if remove_raw_traces:
+	    sc.runcommand('rm -rf */*_raw.h5')
 	if remove_ica_input:
-		sc.runcommand('rm -rf */*_in.h5')  # deleting ica input files
+		sc.runcommand('rm -rf */*_in.h5')
 	if remove_valid:
-		sc.runcommand('rm -rf */*.json')  # deleting all json files
+		sc.runcommand('rm -rf */*.json')
 	if remove_ica_output:
-        sc.runcommand('rm -rf */*_out.h5') # deleting ica output files
+		sc.runcommand('rm -rf */*_out.h5')
 	if remove_crosstalk:
-	    sc.runcommand('rm -rf */*_ct.h5') # deleting any _ct files
+	    sc.runcommand('rm -rf */*_ct.h5')
 	    sc.runcommand('rm -rf *_ct.h5')
+
 
 def delete_old_files(sessions, ch, names_files=None, remove_by_date='04/01/2020'):
     if not names_files:
