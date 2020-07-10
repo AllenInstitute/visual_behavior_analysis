@@ -1117,9 +1117,9 @@ class MesoscopeICA(object):
             pdf = plt_pdf.PdfPages(pdf_name)
             # get crosstalk data and plot on first page of the pdf:
             # before demixing
-            slope_before, offset_before, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
-                                                                                                                    traces_before[1],
-                                                                                                                    generate_plot_data=True)
+            _, _, r_value_b, [hist_before, xedges_b, yedges_b, fitfn_b] = get_crosstalk_data(traces_before[0],
+                                                                                             traces_before[1],
+                                                                                             generate_plot_data=True)
             f = plt.figure(figsize=(30, 10))
             plt.rcParams.update({'font.size': 28})
             plt.suptitle(f"Crosstalk plots for cell {roi_name}\n", linespacing=0.5)
@@ -1139,24 +1139,28 @@ class MesoscopeICA(object):
             plt.ylabel(ylabel)
             title = f"Crosstalk before: {np.round(crosstalk[0], 3)}\n{fitfn_b} R2={np.round(r_value_b, 2)}"
             plt.title(title, linespacing=0.5, fontsize=18)
-            # after demxing
-            slope_after, offset_after, r_value_a, [hist_after, xedges_a, yedges_a, fitfn_a] = get_crosstalk_data(traces_after[0],
-                                                                                                                 traces_after[1],
-                                                                                                                 generate_plot_data=True)
-            plt.subplot(132)
-            plt.rcParams.update({'font.size': 28})
-            plt.imshow(hist_after, interpolation='nearest', origin='low',
-                       extent=[xedges_a[0], xedges_a[-1], yedges_a[0], yedges_a[-1]], aspect='auto', norm=LogNorm())
-            cbar = plt.colorbar()
-            cbar.set_label('# of counts', rotation=270, labelpad=20)
-            cbar.ax.tick_params(labelsize=18)
-            plt.plot(hist_after, fitfn_a(hist_after), '--k')
-            plt.xlim((xedges_a[0], xedges_a[-1]))
-            plt.ylim((yedges_a[0], yedges_a[-1]))
-            plt.xlabel(xlabel)
-            plt.ylabel(ylabel)
-            title = f"Crosstalk after: {np.round(crosstalk[1], 2)}\n{fitfn_a} R2={np.round(r_value_a, 2)}"
-            plt.title(title, linespacing=0.5, fontsize=18)
+
+            if crosstalk[1]:  # only plot crosstlak after if the value is not None
+                # after demxing
+                _, _, r_value_a, [hist_after, xedges_a, yedges_a, fitfn_a] = get_crosstalk_data(traces_after[0],
+                                                                                                traces_after[1],
+                                                                                                generate_plot_data=True)
+                plt.subplot(132)
+                plt.rcParams.update({'font.size': 28})
+                plt.imshow(hist_after, interpolation='nearest', origin='low',
+                           extent=[xedges_a[0], xedges_a[-1], yedges_a[0], yedges_a[-1]], aspect='auto', norm=LogNorm())
+                cbar = plt.colorbar()
+                cbar.set_label('# of counts', rotation=270, labelpad=20)
+                cbar.ax.tick_params(labelsize=18)
+                plt.plot(hist_after, fitfn_a(hist_after), '--k')
+                plt.xlim((xedges_a[0], xedges_a[-1]))
+                plt.ylim((yedges_a[0], yedges_a[-1]))
+                plt.xlabel(xlabel)
+                plt.ylabel(ylabel)
+                title = f"Crosstalk after: {np.round(crosstalk[1], 2)}\n{fitfn_a} R2={np.round(r_value_a, 2)}"
+                plt.title(title, linespacing=0.5, fontsize=18)
+
+
             # add mixing matrix info to the plot
             plt.subplot(133)
             ax = plt.gca()
