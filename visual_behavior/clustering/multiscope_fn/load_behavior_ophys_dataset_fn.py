@@ -84,6 +84,7 @@ for iexp in np.arange(0, experiments_table_2an.shape[0]): # iexp = 0
         
     experiment_id = experiments_table_2an.index[iexp]     # experiments_table_2an.iloc[experiments_table_2an.index == ophys_experiment_id]
     session_id = experiments_table_2an.iloc[iexp]['ophys_session_id']
+#     session_id = experiments_table[experiments_table.index.values==ophys_experiment_id].iloc[0]['ophys_session_id']
 
     print(f'\n\n------------ Setting vars for experiment_id {experiment_id} , session_id {session_id} , ({iexp} / {experiments_table_2an.shape[0]}) ------------\n\n')
     

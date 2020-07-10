@@ -4,6 +4,8 @@
 """
 Using AllenSDK to set all_sess_dff_stim which has the dff traces as well as stimulus information and some metadata for each mesoscope experiment.
 
+After this script run all_sess_dff_stim_load.py to load the pandas saved here.
+
 Created on Mon Jul 6 19:52:25 2020
 @author: farzaneh
 """
