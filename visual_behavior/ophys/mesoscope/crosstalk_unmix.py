@@ -952,7 +952,7 @@ class MesoscopeICA(object):
 
     def validate_cells_crosstalk(self):
         """
-        validate cells based ont the amount of crosstalk: if ct amount > 130 : cell is detected based on activity form it's paired plane
+        validate cells based on the amount of crosstalk: if ct amount > 130 : cell is detected based on activity form it's paired plane
         :return:
 
         """
@@ -960,22 +960,18 @@ class MesoscopeICA(object):
             ct_fn_roi = add_suffix_to_path(self.rois_valid_paths[pkey]['roi'], '_ct')
             ct_fn_np = add_suffix_to_path(self.rois_valid_paths[pkey]['np'], '_ct')
             if not os.path.isfile(ct_fn_roi) or not os.path.isfile(ct_fn_np):
-                #             logging.info(f"Validating traces against crosstalk")
+                logging.info(f"Validating traces against crosstalk")
                 tkey = 'roi'
                 self.rois_valid_ct[pkey] = copy.deepcopy(self.rois_valid[pkey])
                 crosstalk = self.crosstalk[pkey][tkey]
-                crosstalk_before = crosstalk[0]
-
                 roi_names = self.rois_names_valid[pkey][tkey]
 
-                assert len(roi_names) == len(
-                    crosstalk_before), "number of crosstalk values doesn't align with number of valid rois in ica.rois_names_valid"
+                assert len(roi_names) == len(crosstalk), "number of crosstalk values doesn't align with number of valid rois in ica.rois_names_valid"
 
-                for i in range(len(roi_names)):
-                    roi_name = str(roi_names[i])
-                    ct_before = crosstalk_before[i]
-                    if ct_before > 130:
-                        self.rois_valid_ct[pkey][roi_name] = False
+                for roi_name in roi_names:
+                    if crosstalk[str(roi_name)][0] > 130:
+                        self.rois_valid_ct[pkey][str(roi_name)] = False
+
                 ju.write(ct_fn_roi, self.rois_valid_ct[pkey])
                 ju.write(ct_fn_np, self.rois_valid_ct[pkey])
             else:
