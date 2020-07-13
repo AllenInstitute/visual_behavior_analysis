@@ -960,18 +960,16 @@ class MesoscopeICA(object):
             ct_fn_roi = add_suffix_to_path(self.rois_valid_paths[pkey]['roi'], '_ct')
             ct_fn_np = add_suffix_to_path(self.rois_valid_paths[pkey]['np'], '_ct')
             if not os.path.isfile(ct_fn_roi) or not os.path.isfile(ct_fn_np):
-                logging.info(f"Validating traces against crosstalk")
+                logging.info(f"Validating traces against crosstalk for {self.exp_ids[pkey]}")
                 tkey = 'roi'
                 self.rois_valid_ct[pkey] = copy.deepcopy(self.rois_valid[pkey])
                 crosstalk = self.crosstalk[pkey][tkey]
                 roi_names = self.rois_names_valid[pkey][tkey]
-
-                assert len(roi_names) == len(crosstalk), "number of crosstalk values doesn't align with number of valid rois in ica.rois_names_valid"
-
+                assert len(roi_names) == len(
+                    crosstalk), "number of crosstalk values doesn't align with number of valid rois in ica.rois_names_valid"
                 for roi_name in roi_names:
                     if crosstalk[str(roi_name)][0] > 130:
                         self.rois_valid_ct[pkey][str(roi_name)] = False
-
                 ju.write(ct_fn_roi, self.rois_valid_ct[pkey])
                 ju.write(ct_fn_np, self.rois_valid_ct[pkey])
             else:
