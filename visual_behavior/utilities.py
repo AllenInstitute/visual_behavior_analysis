@@ -392,7 +392,7 @@ class EyeTrackingData(object):
         self.foraging_id = db.get_value_from_table('id', ophys_session_id, 'ophys_sessions', 'foraging_id')
 
         # get paths of well known files
-        well_known_files = db.get_well_known_files(ophys_session_id).set_index('name')
+        well_known_files = db.get_well_known_files(ophys_session_id)
         self.filepaths = {}
         wkf_to_variable_map = {
             "RawEyeTrackingVideo": 'eye_movie',
