@@ -4,6 +4,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from visual_behavior.encoder_processing.spline_regression import spline_regression
+import visual_behavior.database as db
+from visual_behavior.translator.foraging2 import data_to_change_detection_core
+
+
+def load_running_df(bsid=None, pkl_path=None, camstim_type='foraging2'):
+    '''
+    loads running data from pkl file using VBA
+    input is either the behavior session ID (bsid) or the pkl path (not both!)
+    '''
+    if bsid:
+        pkl_path = db.get_pkl_path(int(bsid))
+
+    data = pd.read_pickle(pkl_path)
+    if camstim_type == 'foraging2':
+        core_data = data_to_change_detection_core(data)
+    else:
+        core_data = data_to_change_detection_core_legacy(data)
+    return core_data['running']
+
 
 def identify_wraps(row, lower_threshold=1.5, upper_threshold=3.5):
     '''
@@ -199,7 +218,7 @@ def calculate_cost_function(df_in):
     optimization_results = []
     df_temp = df_in.copy()
     for F in range(1, 100):
-        n_knots = len(df_sample) / F
+        n_knots = len(df_temp) / F
         df_temp['v_spline_smoothed'] = spline_regression(df_temp, col_to_smooth='v_sig_unwrapped', n_knots=n_knots)
         df_temp['speed_spline_smoothed'] = calculate_speed(df_temp, voltage_column='v_spline_smoothed')
 
@@ -233,6 +252,8 @@ def plot_optimization_results(optimization_results):
     ax[2].set_title('optimization function (k1*total_jerk + k2*MSE)')
     fig.tight_layout()
 
+    return fig, ax
+
 
 def calculate_optimal_knot_factor(optimization_results):
     optimal_index = optimization_results['j'].argmin()
@@ -240,15 +261,15 @@ def calculate_optimal_knot_factor(optimization_results):
 
 
 def apply_spline_regression(df_in, n_knot_factor):
-    df_in=add_columns_and_unwrap(df_in.copy())
-    df_in['speed_raw']=calculate_speed(df_in, voltage_column = 'v_sig_unwrapped')
-    df_in['acceleration_raw']=calculate_derivative(df_in, 'speed_raw')
-    df_in['jerk_raw']=calculate_derivative(df_in, 'acceleration_raw')
+    df_in = add_columns_and_unwrap(df_in.copy())
+    df_in['speed_raw'] = calculate_speed(df_in, voltage_column='v_sig_unwrapped')
+    df_in['acceleration_raw'] = calculate_derivative(df_in, 'speed_raw')
+    df_in['jerk_raw'] = calculate_derivative(df_in, 'acceleration_raw')
 
-    n_knots=len(df_in) / n_knot_factor
-    df_in['v_spline_smoothed_F={}'.format(n_knot_factor)]=spline_regression(df_in, col_to_smooth = 'v_sig_unwrapped', n_knots = n_knots)
-    df_in['speed_spline_smoothed_F={}'.format(n_knot_factor)]=calculate_speed(df_in, voltage_column = 'v_spline_smoothed_F={}'.format(n_knot_factor))
-    df_in['acceleration_spline_smoothed_F={}'.format(n_knot_factor)]=calculate_derivative(df_in, 'speed_spline_smoothed_F={}'.format(n_knot_factor))
-    df_in['jerk_spline_smoothed_F={}'.format(n_knot_factor)]=calculate_derivative(df_in, 'acceleration_spline_smoothed_F={}'.format(n_knot_factor))
+    n_knots = len(df_in) / n_knot_factor
+    df_in['v_spline_smoothed_F={}'.format(n_knot_factor)] = spline_regression(df_in, col_to_smooth='v_sig_unwrapped', n_knots=n_knots)
+    df_in['speed_spline_smoothed_F={}'.format(n_knot_factor)] = calculate_speed(df_in, voltage_column='v_spline_smoothed_F={}'.format(n_knot_factor))
+    df_in['acceleration_spline_smoothed_F={}'.format(n_knot_factor)] = calculate_derivative(df_in, 'speed_spline_smoothed_F={}'.format(n_knot_factor))
+    df_in['jerk_spline_smoothed_F={}'.format(n_knot_factor)] = calculate_derivative(df_in, 'acceleration_spline_smoothed_F={}'.format(n_knot_factor))
 
     return df_in

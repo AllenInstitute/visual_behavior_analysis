@@ -1,14 +1,21 @@
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import os
+import time
 
 from sklearn import linear_model
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LinearRegression
 from sklearn.base import BaseEstimator, TransformerMixin
 
+from visual_behavior.encoder_processing import utilities
+
+import argparse
+
 # Natural cubic spline fitting algorithm adapted from:
 # https://github.com/madrury/basis-expansions/blob/master/basis_expansions/basis_expansions.py
+
 
 class NaturalCubicSpline(BaseEstimator, TransformerMixin):
     """Apply a natural cubic basis expansion to an array.
@@ -103,3 +110,44 @@ def spline_regression(df, col_to_smooth, n_knots, time_column='time'):
 
     # return the prediction (same as the fit, since we're not splitting data)
     return regression.predict(t)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='run spline regression on a session')
+    parser.add_argument(
+        '--bsid',
+        type=int,
+        default=0,
+        metavar='behavior_session_id'
+    )
+    parser.add_argument(
+        '--f',
+        type=int,
+        default=12,
+        metavar='f-value'
+    )
+    parser.add_argument(
+        '--save-folder',
+        type=str,
+        default='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/smoothed_running_data',
+        metavar='save_directory'
+    )
+    args = parser.parse_args()
+
+    t0 = time.time()
+    print('loading running data for bsid {}...'.format(args.bsid))
+    running_data = utilities.load_running_df(args.bsid)
+    print('done loading\n')
+
+    print('applying smoothing with F = {}'.format(args.f))
+    running_data_smoothed = utilities.apply_spline_regression(running_data, n_knot_factor=args.f)
+    print('done smoothing\n')
+    
+    filename = os.path.join(
+        args.save_folder,
+        'running_data_behavior_session_id={}.csv'.format(args.bsid)
+    )
+    print('saving to {}'.format(filename))
+    running_data_smoothed.to_csv(filename)
+    print('done saving\n')
+    print('the full process took {:0.2f} seconds'.format(time.time() - t0))
