@@ -23,5 +23,6 @@ pymongo
 pyyaml
 opencv-python
 dash
+xarray
 
 plotly
