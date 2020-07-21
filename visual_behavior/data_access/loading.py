@@ -1109,10 +1109,10 @@ def get_wkf_dff_h5_location(ophys_experiment_id):
 
 
 
-def get_wkf_raw_trace_h5_location(ophys_experiment_id):
+def get_wkf_roi_trace_h5_location(ophys_experiment_id):
     """uses well known file system to query lims
         and get the directory and filename for the
-        raw fluorescence traces h5 for a given ophys experiment
+        roi_traces.h5 for a given ophys experiment
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit unique identifier for
@@ -1140,7 +1140,7 @@ def get_wkf_raw_trace_h5_location(ophys_experiment_id):
     return trace_h5_path
 
 
-def get_raw_traces_array(ophys_experiment_id):
+def get_roi_traces_array(ophys_experiment_id):
     """use SQL and the LIMS well known file system to find and load
             "roi_traces.h5" then return the traces as an array
 
@@ -1152,9 +1152,88 @@ def get_raw_traces_array(ophys_experiment_id):
         """
     filepath = get_wkf_raw_trace_h5_location(ophys_experiment_id)
     f = h5py.File(filepath, 'r')
-    raw_traces_array = np.asarray(f['data'])
+    roi_traces_array = np.asarray(f['data'])
     f.close()
-    return raw_traces_array
+    return roi_traces_array
+
+
+def get_wkf_neuropil_trace_h5_location(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        neuropil_traces.h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the neuropil_traces.h5 file
+                    for the given ophys_experiment_id
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 514173078 AND
+    attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    trace_h5_location_info = (lims_cursor.fetchall())
+
+    trace_h5_path = trace_h5_location_info[0]['?column?']  # idk why it's ?column? but it is :(
+    trace_h5_path = trace_h5_path.replace('/allen', '//allen')  # works with windows and linux filepaths
+    return trace_h5_path
+
+
+def get_neuropil_traces_array(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to find and load
+            "neuropil_traces.h5" then return the traces as an array
+
+        Arguments:
+            ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+        Returns:
+            neuropil_traces_array -- mxn array where m = rois and n = time
+        """
+    filepath = get_wkf_neuropil_trace_h5_location(ophys_experiment_id)
+    f = h5py.File(filepath, 'r')
+    neuropil_traces_array = np.asarray(f['data'])
+    f.close()
+    return neuropil_traces_array
+
+
+def get_wkf_extracted_trace_h5_location(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        neuropil_traces.h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the neuropil_traces.h5 file
+                    for the given ophys_experiment_id
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 486797213 AND
+    attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    trace_h5_location_info = (lims_cursor.fetchall())
+
+    trace_h5_path = trace_h5_location_info[0]['?column?']  # idk why it's ?column? but it is :(
+    trace_h5_path = trace_h5_path.replace('/allen', '//allen')  # works with windows and linux filepaths
+    return trace_h5_path
 
 
 def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
