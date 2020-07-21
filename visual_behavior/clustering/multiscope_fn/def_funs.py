@@ -3,7 +3,7 @@
 #get_ipython().magic(u'matplotlib inline')   
 
 import numpy as np
-
+len(min_dist_vals), len(neigh_vals)
 frame_dur = np.array([0.093]) # sec # mesoscope time resolution (4 depth, 2 areas) (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)
 flash_dur = .25
 gray_dur = .5

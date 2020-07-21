@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 To set vars needed here, run omissions_traces_peaks_plots_setVars.py with "doCorrs = -1" and "useSDK = 1" to load allsess. 
-(Note: all_sess is created and saved in the script load_behavior_ophys_dataset_fn.py. Script omissions_traces_peaks_plots_setVars.py loads them)
+(Note: all_sess is created and saved by the script load_behavior_ophys_dataset_fn.py. Script omissions_traces_peaks_plots_setVars.py loads them)
 
 Here, we set dataframe all_sess_now, also some arrays for distinct cre lines (all_sess_ns_fof_all_cre (trial averaged traces), image/omission response amplitude, area/depth)  
 these vars will be needed to do umap/clustering analysis.

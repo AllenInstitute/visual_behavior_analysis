@@ -72,3 +72,30 @@ all_sess_now.iloc[:2]
 #       image_index (8 is omitted; the rest are the indices of the 8 images shown to mouse); 
 #       start_time and stop_time: onset and offset of image presentation
 
+
+#%% 
+
+import matplotlib.pyplot as plt
+all_sess_now.iloc[0]['dff'].shape
+
+plt.plot(all_sess_now.iloc[0]['dff'][2])
+plt.xlim([2.97e4, 2.98e4])
+plt.ylim([-5,2]);
+
+
+plt.plot(all_sess_now.iloc[2]['dff'][10])
+
+all_sess_now.iloc[2]['cell_specimen_ids'][10]
+
+
+## 
+a = all_sess_now.iloc[38:]['dff'].values
+aa = np.vstack([a[i][:,:40000] for i in range(len(a))])
+aa.shape
+
+plt.plot(np.mean(aa, axis=0))
+
+
+all_sess_now.iloc[41:]
+
+np.unique(all_sess_now.iloc[:41]['experiment_id'])
