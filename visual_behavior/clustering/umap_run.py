@@ -11,6 +11,7 @@ Created on Mon Jun 29 11:31:25 2020
 
 """
 
+from umap_funs import *
 
 ################################################################################################    
 ################################################################################################        
@@ -66,31 +67,30 @@ for icre in range(len(cre_lines)): # icre = 2
 
     
     
-###########################################################################
-#%% After this script, run umap_plot.py to make plots for umap/pca analysis.    
-###########################################################################
+##########################################################################################
+#%% After this script, run umap_plot.py to make plots for umap/pca analysis done above.    
+##########################################################################################
 
 
 
 
-
-#%% Try umap on a range of parameteres
+########################################################################
+#%% Try umap on a range of parameteres, and do GMM on each embedding, if desired
+########################################################################
 
 from sklearn import mixture
 from sklearn.mixture import GaussianMixture
 from sklearn.model_selection import KFold
 
+doGMM = 0 # if 1, run GMM (with different parameters) on each embedding found below
 
 ncomp = 50 #2 # number of umap components
-neigh_vals = np.concatenate(([10, 50], np.arange(200, int(all_sess_ns_fof_thisCre.shape[0]/10), 500)))
-# neigh_vals = list(range(2,20))
-print(neigh_vals)
-
 min_dist_vals = [.1, .3, .7]
+neigh_vals = np.concatenate(([10, 50], np.arange(200, int(all_sess_ns_fof_thisCre.shape[0]/10), 500))) # neigh_vals = list(range(2,20))
+print(neigh_vals)
 # sp_vals = [1, 3, 7] # np.arange(1,10)
 
 # embedding_all_cre = []
-
 for icre in [0]: #range(len(cre_lines)): # icre = 2
     
     cre = cre_lines[icre]    
@@ -128,71 +128,73 @@ for icre in [0]: #range(len(cre_lines)): # icre = 2
         
             #%% Iterating through GMM configurations, 5 fold validation
             
-            X = embedding # cluster the umap embedding
+            if doGMM:
+                X = embedding # cluster the umap embedding
 
-            kf = KFold(5)
-            n_components_range = np.arange(3,11) #range(2, 20)
-            cv_types = ['full'] #['spherical', 'tied', 'diag', 'full']
+                kf = KFold(5)
+                n_components_range = np.arange(3,11) #range(2, 20)
+                cv_types = ['full'] #['spherical', 'tied', 'diag', 'full']
 
-            bic_array = []
-            lowest_bic = np.infty
-            bic = []
-            
-            for cv_type in cv_types:
-                for n_components in n_components_range:
-                    print(f'cv_type: {cv_type}, n_components: {n_components}')
-                    
-                    bic_temp = []
-                    for train_index, test_index in kf.split(X):
-                        
-                        X_train = X[train_index]
-                        X_test = X[test_index]
-                        gmm = mixture.GaussianMixture(n_components=n_components,
-                                                      covariance_type=cv_type)
-                        gmm.fit(X_train)
-                        bic_temp.append(gmm.bic(X_test))
-                        
-                    bic.append(np.average(bic_temp))
-                    bic_array.append(bic_temp)
+                bic_array = []
+                lowest_bic = np.infty
+                bic = []
 
-                    if bic[-1] < lowest_bic:
-                        lowest_bic = bic[-1]
-                        best_gmm = gmm
-                        best_cv = cv_type
-                        
-#             color_iter = itertools.cycle(['navy', 'turquoise', 'cornflowerblue', 'darkorange'])
-            clf = best_gmm
-            bars = []
-            bic = np.array(bic)
-            std_bars = np.std(bic_array, axis = 1)
-            
-            best_clust.append(best_gmm.n_components)
-            best_type.append(best_gmm.covariance_type)
-            umap_neigh.append(neigh)
-#             spreads.append(sp)
-            umap_mindist.append(mindist)
-            bic_list.append(np.min(bic))
+                for cv_type in cv_types:
+                    for n_components in n_components_range:
+                        print(f'cv_type: {cv_type}, n_components: {n_components}')
+
+                        bic_temp = []
+                        for train_index, test_index in kf.split(X):
+
+                            X_train = X[train_index]
+                            X_test = X[test_index]
+                            gmm = mixture.GaussianMixture(n_components=n_components,
+                                                          covariance_type=cv_type)
+                            gmm.fit(X_train)
+                            bic_temp.append(gmm.bic(X_test))
+
+                        bic.append(np.average(bic_temp))
+                        bic_array.append(bic_temp)
+
+                        if bic[-1] < lowest_bic:
+                            lowest_bic = bic[-1]
+                            best_gmm = gmm
+                            best_cv = cv_type
+
+    #             color_iter = itertools.cycle(['navy', 'turquoise', 'cornflowerblue', 'darkorange'])
+                clf = best_gmm
+                bars = []
+                bic = np.array(bic)
+                std_bars = np.std(bic_array, axis = 1)
+
+                best_clust.append(best_gmm.n_components)
+                best_type.append(best_gmm.covariance_type)
+                umap_neigh.append(neigh)
+    #             spreads.append(sp)
+                umap_mindist.append(mindist)
+                bic_list.append(np.min(bic))
 
     
 
 emb = np.reshape(embedding_neigh_sp, (len(min_dist_vals), len(neigh_vals), np.shape(embedding_neigh_sp)[1], np.shape(embedding_neigh_sp)[2]), order='F')
 emb.shape
 
-bic_listr = np.reshape(bic_list, (len(min_dist_vals), len(neigh_vals)), order='F')
-bic_listr.shape
-bic_listr
+if doGMM:
+    bic_listr = np.reshape(bic_list, (len(min_dist_vals), len(neigh_vals)), order='F')
+    bic_listr.shape
+    bic_listr
+
+    #%% Set a dataframe related to GMM configs
+    # spreads = umap_mindist    
+    df_grid = pd.DataFrame([umap_neigh, spreads, best_clust, bic_list, best_type]).T    
+    df_grid.columns = ['umap_neighbor_config', 'umap_spread_config', 'n_best_cluster', 'bic', 'best_gmm_type']
+    # df_grid = pd.DataFrame([best_clust, best_type, umap_neigh, spreads]).T
+    # df_grid.columns = ['n_best_cluster', 'best_gmm_type', 'umap_neighbor_config', 'umap_spread_config']
 
 
 
-# spreads = umap_mindist    
-df_grid = pd.DataFrame([umap_neigh, spreads, best_clust, bic_list, best_type]).T    
-df_grid.columns = ['umap_neighbor_config', 'umap_spread_config', 'n_best_cluster', 'bic', 'best_gmm_type']
-# df_grid = pd.DataFrame([best_clust, best_type, umap_neigh, spreads]).T
-# df_grid.columns = ['n_best_cluster', 'best_gmm_type', 'umap_neighbor_config', 'umap_spread_config']
+#%% Save all the embeddings and GMM output
 
-
-
-#%% save gmm output
 now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
 dest_ct = f'/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/'
 np_corr_fold = os.path.join(dest_ct, f'umap')
@@ -202,22 +204,88 @@ if not os.path.exists(np_corr_fold):
     os.makedirs(np_corr_fold)
 
     
-    
-f = open(np_corr_file, 'wb')
-pickle.dump(df_grid, f)        
+f = open(np_corr_file, 'wb')        
 pickle.dump(emb, f)    
-pickle.dump(bic_listr, f)    
+if doGMM:
+    pickle.dump(df_grid, f)
 f.close()
 
 # f = np_corr_file
 # pkl = open(f, 'rb')
-# this_sess = pickle.load(pkl)
 # this_sess_emb = pickle.load(pkl)
+# this_sess = pickle.load(pkl)
 # this_sess_bic = pickle.load(pkl)
 
+    
+    
 
+########################################################################    
+#%% Umap ran on different values of n_neighbors and spread; make scatter plots for each parameter
+########################################################################
+
+#%% Set vars for making the scatter plot (umap ran on all cre lines concatenated)
+
+color_metric = [[cres]] # if umap was run on a matrix that included all cre lines                 
+color_labs = ['cre']
+dosavefig = 1
+
+
+amp = color_metric[0][0] # cres    
+clab = color_labs[0]
+
+                 
+lab_analysis='UMAP'
+cut_axes = 0
+
+same_norm_fo = 0
+fign_subp = 'cre_'
+
+now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
+dir_now = 'umap_cluster'
+fmt = '.pdf'
+
+
+
+#%% Plot all embeddings ran with different UMAP parameters
+
+# color by cre
+
+fig = plt.figure(figsize=(21,7)) #(figsize=(10,3)) (14,5)
+# plt.suptitle(f'{cre[:3]}', y=.995, fontsize=22) 
+
+for isp in range(np.shape(embedding_neigh_sp)[0]): # isp=0 
+#     fig = plt.figure(figsize=(21,7)) #(figsize=(10,3)) (14,5)
+    xy = embedding_neigh_sp[isp]
+    
+    x = xy[:, 0]
+    y = xy[:, 1]
+    z = xy[:, 2]
+
+#     ax = fig.add_subplot(len(min_dist_vals), len(neigh_vals), isp+1)
+    ax = fig.add_subplot(len(min_dist_vals), len(neigh_vals), isp+1, projection='3d')    
+    
+    fig_ax = [fig, ax]
+    
+    scatter_umap(x, y, amp, clab, fig_ax, lab_analysis, cut_axes, same_norm_fo, 0, fign_subp, pc_exp_var=np.nan, whatSess = '_AallBall', fgn='', dim=[3,z])
+
+    
+plt.subplots_adjust(wspace=0.4, hspace=0.4)
+
+if dosavefig:
+    cre_short = 'allCre_allUMAPconfig'
+    fgn_umap = f'{lab_analysis}_scatter_{fign_subp}allNeurSess'
+#         if useSDK:
+#             fgn_umap = f'{fgn_umap}_sdk_'
+    nam = '%s_%s%s_%s_%s' %(cre_short, fgn_umap, '_AallBall', '', now)
+    fign = os.path.join(dir0, dir_now, nam+fmt)     
+
+    plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
+
+
+    
 
 #%% plot umap with a specific configuration
+
 spread = 0 #7
 neigh = 1
 embedding_all_cre = emb[spread,neigh]
@@ -227,7 +295,11 @@ z = embedding_all_cre[:,2]
 plot_scatter_fo([cre_lines[0]], [embedding_all_cre], color_metric, color_labs, lab_analysis, cut_axes, same_norm_fo, 0, fign_subp, pc_exp_var=np.nan, whatSess='_AallBall', fgn='', dim=[3,z])
 
 
-#%%
+
+########################################################################    
+#%% Make a number of plots to visualize GMM output
+########################################################################
+
 # df_grid = pd.DataFrame([best_clust, best_type, umap_neigh, spreads]).T
 # df_grid.columns = ['n_best_cluster', 'best_gmm_type', 'umap_neighbor_config', 'umap_spread_config']
 df_grid
@@ -275,11 +347,10 @@ plt.show()
 
 
 
-#################################################################
-#################################################################
-#%% run UMAP on your choice of configuration
-#################################################################
-#################################################################
+
+##########################################################################################
+#%% Run UMAP on your choice of configuration (based on the GMM outputs)
+##########################################################################################
 
 n_neighbors = 50 #10 #50
 min_dist = .1
@@ -300,9 +371,9 @@ plot_scatter_fo([cre_lines[0]], [X], color_metric, color_labs, lab_analysis, cut
 # X = df[['umap-1', 'umap-2', 'umap-3']]
 
 
-################################################################
-################ use GMM for clustering ################
-################################################################
+################################################################################
+################ Use GMM to cluster the UMAP embedding that you chose ################
+################################################################################
 #%% on the embedding found above, iterate GMM (different covariance types and # of clusters) with 5 fold validation
 
 kf = KFold(5)
@@ -331,7 +402,7 @@ for cv_type in cv_types:
         
 
 
-#%% plot the output of the above analysis: BIC scores per GMM (most of this I pulled from someone elses code online)
+#%% Plot the output of the above analysis: BIC scores per GMM (most of this I pulled from someone elses code online)
 
 import itertools        
 
@@ -388,7 +459,10 @@ gmm.fit(X)
 labels = gmm.predict(X)
 
 
-#%% Plot UMAP, color using GMM clusters
+
+################################################################
+#%% Plot UMAP; subplot 1: color using GMM clusters; subplot 2: color using cre lines
+################################################################
 
 x = X[:,0] #['umap-1']
 y = X[:,1] #['umap-2']
@@ -397,6 +471,8 @@ z = X[:,2]# z =X['umap-3']
 
 fig = plt.figure(figsize=(10,5))
 
+
+#### Subplot 1: color using GMM clusters ####
 
 colors = list(plt.get_cmap('tab10').colors)
 color_list = []
@@ -422,7 +498,7 @@ plt.title('UMAP Clusters (GMM)', fontsize = 11)
 
 
 
-#%% Plot umap; color based on cre line
+#### Subplot 2: color using cre lines ####
 
 cmap = plt.cm.jet #viridis #bwr #or any other colormap 
 prop_cycle = plt.rcParams['axes.prop_cycle']
