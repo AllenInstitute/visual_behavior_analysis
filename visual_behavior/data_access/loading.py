@@ -1150,7 +1150,7 @@ def get_roi_traces_array(ophys_experiment_id):
         Returns:
             raw_traces_array -- mxn array where m = rois and n = time
         """
-    filepath = get_wkf_raw_trace_h5_location(ophys_experiment_id)
+    filepath = get_wkf_roi_trace_h5_location(ophys_experiment_id)
     f = h5py.File(filepath, 'r')
     roi_traces_array = np.asarray(f['data'])
     f.close()
