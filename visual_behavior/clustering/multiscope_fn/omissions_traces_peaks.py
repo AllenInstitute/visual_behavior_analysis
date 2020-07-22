@@ -16,13 +16,17 @@ Created on Wed May  8 15:25:18 2019
 @author: Farzaneh
 """
 
+# %load_ext autoreload
+# %autoreload 2
+
+
 from def_funs import *
 from def_funs_general import *
 from omissions_traces_peaks_quantify import *
 from omissions_traces_peaks_quantify_flashAl import *
                 
 #%%
-def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, use_ct_traces=1, doPlots=0, doROC=0):    
+def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1, doPlots=0, doROC=0):    
     
     #%% Set initial vars
         
@@ -125,7 +129,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
     #%% Load some important variables from the experiment
     
 #    [whole_data, data_list, table_stim] = load_session_data(session_id) # data_list is similar to whole_data but sorted by area and depth
-    [whole_data, data_list, table_stim, behav_data] = load_session_data_new(session_id, experiment_ids, use_ct_traces)
+    [whole_data, data_list, table_stim, behav_data] = load_session_data_new(session_id, experiment_ids, use_ct_traces, use_np_corr, use_common_vb_roi)
 
     if any(np.isnan(data_list['depth'].values.astype(float))):
         session_exclude = 1
@@ -247,12 +251,12 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
         # initiate the pandas table
         this_sess = pd.DataFrame([], columns = cols) # index = range(num_planes), 
-        this_sess_l = pd.DataFrame([], columns = colsa) # index = range(num_planes), 
+        this_sess_l = pd.DataFrame([], columns = cols_this_sess_l) # colsa # index = range(num_planes), 
 #         this_sess_l = pd.DataFrame([], columns = ['valid', 'local_fluo_allOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
 #         this_sess_l = pd.DataFrame([], columns = ['valid', 'local_fluo_allOmitt', 'local_fluo_flashBefOmitt', 'local_fluo_traces', 'local_time_traces', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
 
         # the following are at the session level, even though we are saving them at the experiment level.
-        for ind in range(num_planes):
+        for ind in range(num_planes): # ind=0
             this_sess_l.at[ind, 'list_flashes'] = [list_flashes] # flash onset
             this_sess_l.at[ind, 'list_omitted'] = [list_omitted] # omission onset
             this_sess_l.at[ind, 'running_speed'] = behav_data['running_speed']
@@ -318,7 +322,14 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                 # Get traces of all neurons for the entire session
                 local_fluo_traces = whole_data[lims_id]['fluo_traces'] # neurons x frames
                 local_time_traces = whole_data[lims_id]['time_trace']  # frame times in sec. Volume rate is 10 Hz. Are these the time of frame onsets?? (I think yes... double checking with Jerome/ Marina.) # dataset.timestamps['ophys_frames'][0]             
-
+                roi_ids = whole_data[lims_id]['roi_ids']
+                
+                
+                this_sess_l.at[index, 'local_fluo_traces'] = local_fluo_traces
+                this_sess_l.at[index, 'local_time_traces'] = local_time_traces
+                this_sess_l.at[index, 'roi_ids'] = roi_ids
+                
+                
                 frame_dur = np.mean(np.diff(local_time_traces)) # difference in sec between frames
                 print(f'Frame duration {frame_dur:.3f} ms')
                 if np.logical_or(frame_dur < .09, frame_dur > .1):

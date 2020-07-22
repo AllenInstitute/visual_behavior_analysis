@@ -3,7 +3,7 @@
 #get_ipython().magic(u'matplotlib inline')   
 
 import numpy as np
-len(min_dist_vals), len(neigh_vals)
+
 frame_dur = np.array([0.093]) # sec # mesoscope time resolution (4 depth, 2 areas) (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)
 flash_dur = .25
 gray_dur = .5
@@ -1541,11 +1541,73 @@ def is_session_valid(session_id, list_mesoscope_exp=[], exp_date_analyze=[]):
     return validity_log
 
 
+
+#%% Set ROI ids of neurons in crosstalk-corrected dff traces that you created    
+
+def set_roiIds_manDff(dir_ica, indiv_id):
+    
+#     dir_ica = f'/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/ICA_crossTalk/session_{session_id}'
+#     indiv_id = experiment_id
+    
+    import allensdk.core.json_utilities as ju
+    
+    ############ ROI ids in traces_out file. ############
+    tnam = os.path.join(dir_ica, f'traces_out_{indiv_id}.h5')
+    tfo = h5py.File(tnam, 'r') # <KeysViewHDF5 ['data', 'mixing_matrix', 'mixing_matrix_adjusted', 'roi_names']>
+    traces_rois = np.array(tfo['roi_names']) # roi_names in traces_out file
+
+    
+    ############ valid ROI ids ############
+    ############ load valid_ct file 
+    regex = re.compile(f'ica_traces_(.*)') # valid_{839716139}.json        
+    list_files = os.listdir(dir_ica) # list of files in session_xxxx
+    ica_traces_folders = [string for string in list_files if re.match(regex, string)]
+#         print(ica_traces_folders)
+
+    # find the ica_traces folder that belongs to experiment indiv_id; the correct file name will have an output other than -1 when we run str.find()
+    ica_traces_ind = np.argwhere([-1!=ica_traces_folders[ifo].find(str(indiv_id)) for ifo in range(len(ica_traces_folders))]).squeeze()
+    ica_traces_dir = ica_traces_folders[ica_traces_ind]
+#         print(ica_traces_dir)
+
+    # ica traces : json filename
+    # valid_json_dir = os.path.join(dir_ica, ica_traces_dir, f'{indiv_id}_valid.json')
+    valid_json_dir = os.path.join(dir_ica, ica_traces_dir, f'{indiv_id}_valid_ct.json')
+#     print(f'\n{valid_json_dir}')
+
+
+    rois = ju.read(valid_json_dir)
+    # set the roi ids for true ROIs in the json file
+    ra = np.array(list(rois.keys())) # all ROIs
+    rv = np.array(list(rois.values())) # array of False and True
+    roi_ids_ct = ra[rv].astype(int) # only valid ROIs
+#     print(len(ra), len(roi_ids_ct))
+    # print(roi_ids_ct)
+#     print(f'{np.mean(rv)} : fraction valid_ct ROIs')
+
+    
+    roi_ids_ct_dff = traces_rois[np.in1d(traces_rois, roi_ids_ct)]
+#     common_rois = np.in1d(traces_rois, roi_ids_ct) # those rois of traces_out that also exist in valid_ct file.
+#     print(sum(common_rois))
+    # if the number of rois in valid_ct and traces_out is the same common_rois will be the same as "rv".
+
+
+    return roi_ids_ct_dff # ,roi_ids_ct, traces_rois
+                
+
+    
 #%%
-def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1):
+def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1):
+    
+    # if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
+    # if use_common_vb_roi=1, only those ct dff ROIs that exist in vb rois will be used.    
+    # list_mesoscope_exp = experiment_ids
+    
+    import visual_behavior.data_access.loading as loading
     
     cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
+    r_fact = .7 # manual neuropil correction: np_corr = soma_trace - r_fact*np_trace
+    
     # Get list of experiments using ophysextractor
     '''
     Session_obj = LimsOphysSession(lims_id=session_id)
@@ -1577,59 +1639,108 @@ def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1):
                 print('Using crosstalk-corrected dff traces.')
                 ######## read the crosstalk-corrected dff traces ########
                 dir_ica = f'/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/ICA_crossTalk/session_{session_id}'
-                dir_ica_sess = os.path.join(dir_ica, f'{indiv_id}_dff_ct.h5') # _dff.h5'
-#                 print(dir_ica_sess)
+                
+                # load manually neuropil corrected trace
+                r_dff_dir = os.path.join(dir_ica, f'neuropil_correction_r{r_fact}_dff_{indiv_id}.h5')
+                # load soma trace
+                t_dff_dir = os.path.join(dir_ica, f'traces_out_dff_{indiv_id}.h5')
+                
+                if use_np_corr==1:
+                    dir_ica_sess = r_dff_dir
+                else: # use soma traces
+                    dir_ica_sess = t_dff_dir
+                                    
                 f = h5py.File(dir_ica_sess, 'r') 
-                dff_traces0 = np.asarray(f.get('data'))            
-                roi_ids_ct  = np.array(f.get('roi_names'))
+                dff_traces0 = np.asarray(f.get('data')).T # neurons x frames            
+
+                roi_ids_ct_dff = set_roiIds_manDff(dir_ica, indiv_id) # set ROI ids for the neurons in crosstalk-corrected dff traces that you created                
+    
+                # old dff files
+#                 dir_ica_sess = os.path.join(dir_ica, f'{indiv_id}_dff_ct.h5') # _dff.h5'
+#                 print(dir_ica_sess)
+
+#                 f = h5py.File(dir_ica_sess, 'r') 
+#                 dff_traces0 = np.asarray(f.get('data')) # neurons x frames            
+#                 roi_ids_ct_dff  = np.array(f.get('roi_names'))    
+    
                 
                 ### take care of nan neurons
                 nan_rois = np.isnan(dff_traces0[:,0])
                 if sum(nan_rois)>0:
                     print(f'Removing {sum(nan_rois)} NaN ROIs...')
                     dff_traces0 = dff_traces0[~nan_rois]
-                    roi_ids_ct = roi_ids_ct[~nan_rois]
+                    roi_ids_ct_dff = roi_ids_ct_dff[~nan_rois]
                 
                 ######## make sure crosstalk traces have the same set of ROIs as those created by the convert code ########
-                '''
-                # set the json file name
-                regex = re.compile(f'ica_traces_(.*)') # valid_{839716139}.json        
-                list_files = os.listdir(dir_ica) # list of files in session_xxxx
-                ica_traces_folders = [string for string in list_files if re.match(regex, string)]
-                # find the ica_traces folder that belongs to experiment indiv_id; the correct file name will have an output other than -1 when we run str.find()
-                ica_traces_ind = np.argwhere([-1!=ica_traces_folders[ifo].find(str(indiv_id)) for ifo in range(len(ica_traces_folders))]).squeeze()
-                ica_traces_dir = ica_traces_folders[ica_traces_ind]
-                # json filename:
-                valid_json_dir = os.path.join(dir_ica, ica_traces_dir, f'valid_{indiv_id}.json')
+                if use_common_vb_roi==1:
+                    '''
+                    # set the json file name
+                    regex = re.compile(f'ica_traces_(.*)') # valid_{839716139}.json        
+                    list_files = os.listdir(dir_ica) # list of files in session_xxxx
+                    ica_traces_folders = [string for string in list_files if re.match(regex, string)]
+                    # find the ica_traces folder that belongs to experiment indiv_id; the correct file name will have an output other than -1 when we run str.find()
+                    ica_traces_ind = np.argwhere([-1!=ica_traces_folders[ifo].find(str(indiv_id)) for ifo in range(len(ica_traces_folders))]).squeeze()
+                    ica_traces_dir = ica_traces_folders[ica_traces_ind]
+                    # json filename:
+                    valid_json_dir = os.path.join(dir_ica, ica_traces_dir, f'valid_{indiv_id}.json')
 
-                # read the valid_xx.json file to get the list of valid ROIs    
-                import allensdk.core.json_utilities as ju
-                rois_valid = ju.read(valid_json_dir)
-                rois = rois_valid["signal"]
-    #             print(sum(rois.values())) # sum of true rois      
-                # set the roi ids for true ROIs in the json file
-                ra = np.array(list(rois.keys()))
-                rv = np.array(list(rois.values()))
-                roi_ids_ct = ra[rv].astype(int)
-    #             print(len(roi_ids_ct))
-                '''
+                    # read the valid_xx.json file to get the list of valid ROIs    
+                    import allensdk.core.json_utilities as ju
+                    rois_valid = ju.read(valid_json_dir)
+                    rois = rois_valid["signal"]
+        #             print(sum(rois.values())) # sum of true rois      
+                    # set the roi ids for true ROIs in the json file
+                    ra = np.array(list(rois.keys()))
+                    rv = np.array(list(rois.values()))
+                    roi_ids_ct_dff = ra[rv].astype(int)
+        #             print(len(roi_ids_ct_dff))
+                    '''
+
+                    ####### get VB roi set
+                    roi_ids_vb = dataset.roi_metrics['id'].values
+        #             print(len(roi_ids_vb))
+
+                    # get only those ct rois that exist in dataset roi 
+                    commonROIs = np.in1d(roi_ids_ct_dff, roi_ids_vb)
+                    print(f'{len(roi_ids_vb)} VB ROIs. {len(roi_ids_ct_dff)} CT ROIs. {sum(commonROIs)} final common ROIs.')
+                    print(f'{sum(commonROIs)/len(roi_ids_vb):.2f}: fraction VB ROIs that exist in the final ROI set!\n')
+    #                 roi_ids_ct_dff[commonROIs]
     
-                ####### get VB roi set
-                roi_ids = dataset.roi_metrics['id'].values
-    #             print(len(roi_ids))
+                    if sum(commonROIs)==0: # this problem happens when roi_ids that we got above are indeed cell_specimen_ids; to fix this we get the roi_ids from allenSDK
+                        
+                        print(f'ATTN: 0 common ROIs; so setting ROI ids using loading!')                
+                        print(f'session_id: {session_id}; experiment_id: {indiv_id}')
+                    
+                        dataset2 = loading.get_ophys_dataset(indiv_id, include_invalid_rois=False)
+                        roi_ids_vb = dataset2.cell_specimen_table['cell_roi_id'].values
 
-                # get only those ct rois that exist in dataset roi 
-                commonROIs = np.in1d(roi_ids_ct, roi_ids)
-                print(f'{len(roi_ids)} VB ROIs. {len(roi_ids_ct)} CT ROIs. {sum(commonROIs)} final common ROIs.')
-                print(f'{sum(commonROIs)/len(roi_ids):.2f}: fraction VB ROIs that exist in the final ROI set!\n')
-    #             roi_ids_ct[commonROIs]
-                dff_traces = dff_traces0[commonROIs]
+                        # get only those ct rois that exist in dataset roi 
+                        commonROIs = np.in1d(roi_ids_ct_dff, roi_ids_vb)
+                        print(f'{len(roi_ids_vb)} VB ROIs. {len(roi_ids_ct_dff)} CT ROIs. {sum(commonROIs)} final common ROIs.')
+                        print(f'{sum(commonROIs)/len(roi_ids_vb):.2f}: fraction VB ROIs that exist in the final ROI set!\n')
+                
+#                         print(f'session_id: {session_id}; experiment_id: {indiv_id}')
+#                         print(f'roi_ids_vb:\n{roi_ids_vb}')
+#                         print(f'\nroi_ids_ct_dff:\n{roi_ids_ct_dff}')
+        
+                    ###### set final dff_traces; only includes rois common between VB and cross-talk.
+                    dff_traces = dff_traces0[commonROIs]
+                    roi_ids_final = roi_ids_ct_dff[commonROIs]
+
+                    
+                else: # dont worry about using common rois with vb; use all rois that exist in ct traces.
+                    dff_traces = dff_traces0
+                    roi_ids_final = roi_ids_ct_dff
+
+            
                 indiv_data['fluo_traces'] = dff_traces
-
+                indiv_data['roi_ids'] = roi_ids_final
+                
     #             plt.figure(figsize=(15,10)); plt.subplot(211); plt.plot(dff_traces.T); plt.subplot(212); plt.plot(dataset.dff_traces.T);
 
             else:
                 indiv_data['fluo_traces'] = dataset.dff_traces
+                
                 
         except Exception as e:
             print('session: %d' %session_id)
@@ -1676,6 +1787,7 @@ def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1):
         whole_data[str(indiv_id)] = indiv_data
     
     
+    
     ########################################################################    
     ##### Set data_list : contains area and depth for each experiment, sorted by area and depth ####
     ########################################################################
@@ -1702,6 +1814,8 @@ def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1):
         data_list = data_list.sort_values(by=['area', 'depth'])
     else:
         data_list.loc[:,'depth']=np.nan
+    
+    
     
     ########################################################################    
     #### Set table_stim & behavioral parameters; these are all at the session level ####

@@ -6,22 +6,36 @@ Created on Tue Jul 7 17:06:25 2020
 @author: farzaneh
 """
 
-
-
 #%% Load the pkl file on the server that contains all_sess_df_stim      
     
 import pickle
 import os
 import numpy as np
 
-name = 'all_sess_dff_stim_20200707_160837'
+
 dir_now = os.path.join(os.sep, 'allen', 'programs', 'braintv', 'workgroups', 'nc-ophys', 'Farzaneh')
+
+
+#%% original dff                       
+name = 'all_sess_dff_stim_20200707_160837'
+
+
+#%% de-cross-talked dff
+name = 'all_sess_omit_traces_peaks_allTraces_20200721_225720'
+dir_now = os.path.join(os.sep, dir_now, 'omit_traces_peaks')
+# dff: 'local_fluo_traces'
+# dff_times: 'local_time_traces'
+# 'roi_ids'
+
+
+
 
 allSessName = os.path.join(dir_now , name + '.pkl') # save to a pickle file
 print(allSessName)
 
 pkl = open(allSessName, 'rb')
 all_sess_now = pickle.load(pkl) # all_sess_dff_stim
+print(all_sess_now.keys())
 
 
 #%% Remove sessions with less than 8 experiments

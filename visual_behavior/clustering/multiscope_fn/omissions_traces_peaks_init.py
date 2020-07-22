@@ -30,10 +30,13 @@ import pickle
 import os
 import socket
 
-use_ct_traces = 0 #1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
-saveResults = 0 # save the all_sess pandas at the end
+use_ct_traces = 1 #1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
+use_np_corr = 1 # if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
+use_common_vb_roi = 1 # only those ct dff ROIs that exist in vb rois will be used.
 
-doCorrs = -1  # -1 #0 #1 # if -1, only get the traces, dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
+saveResults = 1 # save the all_sess pandas at the end
+
+doCorrs = -1  # -1 #0 #1 # if -1, only get the traces (entire session, also omission-aligned), dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
 # note: when doCorrs=1, run this code on the cluster: omissions_traces_peaks_init_pbs.py (this will call omissions_traces_peaks_pbs.py) 
 num_shfl_corr = 0 #50 # set to 0 if you dont want to compute corrs for shuffled data # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
 subtractSigCorrs = 1 # if 1, compute average response to each image, and subtract it out from all trials of that image. Then compute correlations; ie remove signal correlations.
@@ -149,6 +152,7 @@ print(f'\n{len(list_all_sessions_valid)} : Number of sessions for analysis')
 
 #%% crosstalk-corrected sessions
 if use_ct_traces:
+
     '''
     # Later when we call load_session_data_new, it will load the ct traces if use_ct_traces is 1; otherwise it will seet dataset which loads the original dff traces using vb codes.
 
@@ -159,20 +163,24 @@ if use_ct_traces:
     lims_done = lims_done.session_id.drop_duplicates()
     lims_done.values
     '''
-
-    sessions_ctDone = np.array([839514418,  841778484, 842623907, 844469521, 847758278, 848401585, 848983781, 849304162, 850667270, 850894918, 851428829, 852070825, 852794141, 853416532, 855711263, 863815473, 864458864, 865024413, 865854762, 866197765, 868688430, 869117575])
     
-    # old ct:
-#     ([839208243, 839514418, 840490733, 841303580, 841682738, 841778484,
-#                                842023261, 842364341, 842623907, 843059122, 843871999, 844469521,
-#                                845444695, 846652517, 846871218, 847758278, 848401585, 848983781,
-#                                849304162, 850667270, 850894918, 851428829, 851740017, 852070825,
-#                                852794141, 853177377, 853416532, 854060305, 856201876, 857040020,
-#                                863815473, 864458864, 865024413, 865854762, 866197765, 867027875,
-#                                868688430, 869117575, 870352564, 870762788, 871526950, 871906231,
-#                                872592724, 873720614, 874070091, 874616920, 875259383, 876303107,
-#                                880498009, 882674040, 884451806, 885303356, 886806800, 888009781,
-#                                889944877, 906299056, 906521029])
+    # remove these sessions; because: 
+    # ct dff files dont exist (843871999)
+    # one depth is nan, so dataset cannot be set: 958772311
+    # dataset.cell_specimen_table couldnt be set (error in load_session_data_new): 986767503
+    
+    # this is resolved by using loading dataset: there is no common ROI between VB and CT traces: 843871999, 882674040, 884451806, 914728054, 944888114, 952430817, 971922380, 974486549, 976167513, 976382032, 977760370, 978201478, 981705001, 982566889, 986130604, 988768058, 988903485, 989267296, 990139534, 990464099, 991958444, 993253587, 
+    
+    sessions_ctDone = np.array([839514418, 840490733, 841303580, 841682738, 841778484, 842023261, 842364341, 842623907, 844469521, 845235947, 846871218, 847758278, 848401585, 849304162, 850667270, 850894918, 852794141, 853416532, 854060305, 855711263, 863815473, 864458864, 865024413, 865854762, 866197765, 867027875, 868688430, 869117575, 870352564, 870762788, 871526950, 871906231, 872592724, 873247524, 874616920, 875259383, 876303107, 880498009, 880709154, 882674040, 884451806, 886130638, 886806800, 888009781, 889944877, 902884228, 903621170, 903813946, 904418381, 904771513, 906299056, 906521029, 906968227, 907177554, 907753304, 907991198, 908441202, 911719666, 913564409, 914161594, 914639324, 914728054, 915306390, 916650386, 917498735, 918889065, 919041767, 919888953, 920695792, 921636320, 921922878, 922564930, 923705570, 925478114, 926488384, 927787876, 928414538, 929255311, 929686773, 931687751, 933439847, 933604359, 935559843, 937162622, 937682841, 938140092, 938898514, 939526443, 940145217, 940775208, 941676716, 946015345, 947199653, 947358663, 948042811, 948252173, 949217880, 950031363, 951410079, 952430817, 954954402, 955775716, 957020350, 958105827, 959458018, 971632311, 971922380, 973384292, 973701907, 974167263, 974486549, 975452945, 976167513, 976382032, 977760370, 978201478, 980062339, 981705001, 981845703, 982566889, 985609503, 985888070, 986130604, 987352048, 988768058, 988903485, 989267296, 990139534, 990464099, 991639544, 991958444, 992393325, 993253587, 993420347, 993738515, 993962221, 1000439105, 1002120640, 1005374186])
+
+#     sessions_ctDone = np.array([839514418, 840490733, 841303580, 841682738, 841778484, 842023261, 842364341, 842623907, 844469521, 845235947, 846871218, 847758278, 848401585, 849304162, 850667270, 850894918, 852794141, 853416532, 854060305, 855711263, 863815473, 864458864, 865024413, 865854762, 866197765, 867027875, 868688430, 869117575, 870352564, 870762788, 871526950, 871906231, 872592724, 873247524, 874616920, 875259383, 876303107, 880498009, 880709154, 886130638, 886806800, 888009781, 889944877, 902884228, 903621170, 903813946, 904418381, 904771513, 906299056, 906521029, 906968227, 907177554, 907753304, 907991198, 908441202, 911719666, 913564409, 914161594, 914639324, 915306390, 916650386, 917498735, 918889065, 919041767, 919888953, 920695792, 921636320, 921922878, 922564930, 923705570, 925478114, 926488384, 927787876, 928414538, 929255311, 929686773, 931687751, 933439847, 933604359, 935559843, 937162622, 937682841, 938140092, 938898514, 939526443, 940145217, 940775208, 941676716, 944888114, 946015345, 947199653, 947358663, 948042811, 948252173, 949217880, 950031363, 951410079, 954954402, 955775716, 957020350, 958105827, 959458018, 971632311, 991639544, 
+#                                 973384292, 973701907, 974167263, 975452945, 980062339, 981845703, 985609503, 985888070, 986767503, 987352048, 
+#                                 992393325, 993420347, 993738515, 993962221, 1000439105, 1002120640, 1005374186])        
+
+
+#     old ct:        
+#     [839514418,  841778484, 842623907, 844469521, 847758278, 848401585, 848983781, 849304162, 850667270, 850894918, 851428829, 852070825, 852794141, 853416532, 855711263, 863815473, 864458864, 865024413, 865854762, 866197765, 868688430, 869117575]    
+#     [839208243, 839514418, 840490733, 841303580, 841682738, 841778484, 842023261, 842364341, 842623907, 843059122, 843871999, 844469521, 845444695, 846652517, 846871218, 847758278, 848401585, 848983781, 849304162, 850667270, 850894918, 851428829, 851740017, 852070825, 852794141, 853177377, 853416532, 854060305, 856201876, 857040020, 863815473, 864458864, 865024413, 865854762, 866197765, 867027875, 868688430, 869117575, 870352564, 870762788, 871526950, 871906231, 872592724, 873720614, 874070091, 874616920, 875259383, 876303107, 880498009, 882674040, 884451806, 885303356, 886806800, 888009781, 889944877, 906299056, 906521029]
 
     print(sessions_ctDone.shape)
 
@@ -214,7 +222,6 @@ if use_ct_traces:
 
 #from svm_funs import *
 
-
 #%% Initiate all_sess panda table
 
 cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_omissions', 'n_neurons', 'frame_dur', 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
@@ -227,9 +234,11 @@ elif doCorrs==0:
                      'peak_amp_eachN_traceMed', 'peak_timing_eachN_traceMed', 'peak_amp_trs_ns', 'peak_timing_trs_ns',
                      'peak_h1', 'peak_h2', 'auc_peak_h1_h2', 'peak_amp_eachN_traceMed_flash', 'peak_timing_eachN_traceMed_flash'])
 elif doCorrs==-1:
-    colsa = np.array(['valid', 'local_fluo_allOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
+    colsa = np.array(['valid', 'local_fluo_traces', 'local_time_traces', 'roi_ids', 'local_fluo_allOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
     
 cols = np.concatenate((cols_basic, colsa))
+
+cols_this_sess_l = np.array(['valid', 'local_fluo_traces', 'local_time_traces', 'roi_ids', 'local_fluo_allOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
 
 #%% problematic sessions: (5/16/20) ... related to segmentation.
 # 923469780 experiment 924211430
@@ -243,13 +252,15 @@ all_sess = pd.DataFrame([], columns=cols) # size: 8*len(num_sessions)
 #%% Loop through valid sessions to perform the analysis
 
 #sess_no_omission = []
-cnt_sess = -1
 
 # VIP: isess = 20
 # SST: isess = 50
 # SLC: isess = 76 ; isess = 147
 # [152]: #isess = 27 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
 # mouse_all=[]
+
+cnt_sess = -1
+
 for isess in np.arange(0, len(list_all_sessions_valid)): #[10]: # isess=0 #
 #     isess = np.argwhere(list_all_sessions_valid==1005374186).squeeze()
     session_id = int(list_all_sessions_valid[isess])
@@ -267,12 +278,13 @@ for isess in np.arange(0, len(list_all_sessions_valid)): #[10]: # isess=0 #
 
     #%% Run the function
     this_sess = omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median,
-       doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, use_ct_traces, doPlots, doROC)
+       doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces, use_np_corr, use_common_vb_roi, doPlots, doROC)
 
 #     mouse_all.append(this_sess)
     all_sess = all_sess.append(this_sess)
 
 print(len(all_sess))    
+    
     
     
 # %% Save the output of the analysis
