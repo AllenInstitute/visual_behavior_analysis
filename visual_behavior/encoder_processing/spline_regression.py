@@ -127,6 +127,18 @@ if __name__ == '__main__':
         metavar='f-value'
     )
     parser.add_argument(
+        '--ti',
+        type=float,
+        default=None,
+        metavar='initial_time'
+    )
+    parser.add_argument(
+        '--tf',
+        type=float,
+        default=None,
+        metavar='final_time'
+    )
+    parser.add_argument(
         '--save-folder',
         type=str,
         default='/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/smoothed_running_data',
@@ -138,6 +150,9 @@ if __name__ == '__main__':
     print('loading running data for bsid {}...'.format(args.bsid))
     running_data = utilities.load_running_df(args.bsid)
     print('done loading\n')
+
+    if args.ti is not None and args.tf is not None:
+        running_data = running_data.query('time >= {} and time <= {}'.format(args.ti, args.tf))
 
     print('applying smoothing with F = {}'.format(args.f))
     running_data_smoothed = utilities.apply_spline_regression(running_data, n_knot_factor=args.f)
