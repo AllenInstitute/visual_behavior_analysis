@@ -3,7 +3,7 @@
 """
 This is the first script to be run for doing SVM analysis.
 
-To perform SVM (do this on the cluster; here this part is commented out.), it will call "svm_main" (for this, you will need to run svm_init_pbs on the cluster which calls svm_main_pbs).
+To perform SVM (do this on the cluster; here this part is commented out), it will call "svm_main" (for this, you will need to run svm_init_pbs on the cluster which calls svm_main_pbs).
 
 To set vars for plotting svm results, it will call "svm_main_post". The output (all_sess), includes for each experiment the average and st error of class accuracies across CV samples.
 all_sess will be saved to /allen/programs/braintv/workgroups/nc-ophys/Farzaneh/SVM/same_num_neurons_all_planes/all_sess_svm_gray_omit*

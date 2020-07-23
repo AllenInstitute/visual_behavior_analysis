@@ -4,14 +4,14 @@
 # This is the initial script to be called for most analyses. It creates df/f traces 
 # for the session, also aligned on omission.
 
-Before running this script we need to run set_valid_sessions.py to get the list of valid session.
+Before running this script we need to run "set_valid_sessions.py" to get the list of valid session.
 
 This funciton calls omissions_traces_peaks.py: it creates a pandas table (all_sess) that
 includes vars related to median traces across trials, aligned on omission, and their peak amplitude.
 It saves the results in an h5 file named "all_sess_omit_traces_peaks"
 
-# Note: if you are going to follow this script by "omissions_traces_peaks_plots_setVars.py", 
-# in addition to saving updated all_sess to file, you also need to save to file the updated "mouse_trainHist_all2". 
+# Note: if you are going to follow this script by "omissions_traces_peaks_plots_setVars.py", you need to
+# save the updated all_sess, alse the updated "mouse_trainHist_all2". 
 # You do this by: 1) updating the list of all_mice_id in set_mouse_trainHist_all2.py, and 
 # 2) running set_mouse_trainHist_init_pbs.py on the cluster (which calls set_mouse_trainHist_all2.py).
 
@@ -20,7 +20,7 @@ Created on Wed Jul 31 13:24:19 2019
 """
 # get_ipython().magic(u'matplotlib inline')
 
-# %% Set initial vars
+##%% Set initial vars
 
 import re
 from omissions_traces_peaks import *
@@ -35,14 +35,14 @@ use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will l
 
 saveResults = 1 # save the all_sess pandas at the end
 
-doCorrs = 0 # -1 #0 #1 # if -1, only get the traces (entire session, also omission-aligned), dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
+doCorrs = 1 # -1 #0 #1 # if -1, only get the traces (entire session, also omission-aligned), dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
 # note: when doCorrs=1, run this code on the cluster: omissions_traces_peaks_init_pbs.py (this will call omissions_traces_peaks_pbs.py) 
 num_shfl_corr = 0 #50 # set to 0 if you dont want to compute corrs for shuffled data # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
 subtractSigCorrs = 1 # if 1, compute average response to each image, and subtract it out from all trials of that image. Then compute correlations; ie remove signal correlations.
 
 # To align on omissions, get 40 frames before omission and 39 frames after omission
 samps_bef = 16 # 40 # 40 is a lot especially for correlation analysis which takes a long time; the advantage of 40 thouth is that bl_preOmit and bl_preFlash will be more accurate as they use 10th percentile of frames before omission (or flash), so more frames means better accuracy.
-samps_aft = 24 #40 # 
+samps_aft = 24 # 40 # 
 
 
 # remember the following two were 1, for autoencoder analuysis you changed them to 0.
@@ -77,7 +77,7 @@ flash_win_timing = [-.875, -.25] # this is not needed anymore bc we are using di
 # one solution is to go with flash_win (for non-vip and vip, B1 session) and flash_win_vip (for vip sessions except B1); use those same windows for both amp and timing computation. 
 # the other solution is what currently we are using which is a wider window for flash_timing so it takes care of vip responses; and a flash_win that is non-optimal for vip responses (bc it doesnt precede the image; although now that i extended it to 0 (previously it was [-.75, -.25]) it will include vip ramping activity too, so perhaps non-optimality is less of a problem).
 
-bl_percentile = 10 #20  # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
+bl_percentile = 10 # 20 # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
 
 norm_to_max = 0  # normalize each neuron trace by its max
 # In this case doScale is automatically set to zero, because:
@@ -262,7 +262,7 @@ all_sess = pd.DataFrame([], columns=cols) # size: 8*len(num_sessions)
 
 cnt_sess = -1
 
-for isess in np.arange(0, len(list_all_sessions_valid)): #[10]: # isess=0 #
+for isess in [0,1]: # np.arange(0, len(list_all_sessions_valid)): # isess=0 #
 #     isess = np.argwhere(list_all_sessions_valid==1005374186).squeeze()
     session_id = int(list_all_sessions_valid[isess])
 #    experiment_ids = list_all_experiments_valid[isess]

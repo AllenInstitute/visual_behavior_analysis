@@ -28,22 +28,6 @@ from omissions_traces_peaks_quantify_flashAl import *
 #%%
 def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1, doPlots=0, doROC=0):    
     
-    #%% Set initial vars
-        
-    # Use a different window to compute flash timing: the idea is to be able to capture the timing
-    # also for VIP A sessions, in which the response rises before the flash and peaks right at flash time.
-    # Also to get an accurate response magnitude measure for VIP A sessions, try: flash_win = [-1, -.65] 
-#     flash_win_timing = [-.85, -.5]
-#     bl_percentile = 10 #20  # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
-#     num_shfl_corr = 50 # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
-
-    if num_shfl_corr==0:
-        corr_doShfl =  0 #1 # if 1, compute shuffled corrcoeff too.
-    else:
-        corr_doShfl = 1
-
-    doPeakPerTrial = 1 # if 1, find amplitude of peak response on each omission trial (noisier compared to peak_amp_eachN_traceMed which is computed on trial-median trace)
-    
     '''
     doCorrs = 1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm 
     doShift_again = 1 #0 # this is a second shift just to make sure the pre-omit activity has baseline at 0. (it is after we normalize the traces by baseline ave and sd... but because the traces are median of trials (or computed from the initial gray screen activity), and the baseline is mean of trials, the traces wont end up at baseline of 0)                                      
@@ -79,57 +63,43 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
     
     saveResults = 1    
     '''
+
+    #%% Set initial vars
+        
+    if num_shfl_corr==0:
+        corr_doShfl =  0 #1 # if 1, compute shuffled corrcoeff too.
+    else:
+        corr_doShfl = 1
+
+    doPeakPerTrial = 1 # if 1, find amplitude of peak response on each omission trial (noisier compared to peak_amp_eachN_traceMed which is computed on trial-median trace)
     
-#    #%%              
-#    if norm_to_max:
-#        doScale = 0
-#    
-#    ### set this so you know what input vars you ran the script with
-#    cols = np.array(['norm_to_max', 'mean_notPeak', 'peak_win', 'trace_median', 'samps_bef', 'samps_aft', 'doScale', 'doShift'])
-#    input_vars = pd.DataFrame([], columns=cols)
-#    
-#    input_vars.at[0, cols] = norm_to_max, mean_notPeak, peak_win, trace_median, samps_bef, samps_aft, doScale, doShift
-#    #input_vars.iloc[0]
-#    
-#        
-#    #%% Initiate all_sess and this_sess panda tables
-    colsn = np.concatenate((cols_basic, colsa))
-#     colsn = cols
+    # define columns for dataframes
+    colsn = np.concatenate((cols_basic, colsa)) # colsn = cols
     if doCorrs==1:
         cols = cols_basic
-#         cols = cols[:np.argwhere(np.in1d(cols, 'cc_cols_area12')).squeeze()] # all the vars that are non-correlation; the correlatiton ones we will set later.
-#         np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', \
-#                  'n_omissions', 'n_neurons', 'flash_omit_dur_all', 'flash_omit_dur_fr_all']) #, 'cc_a1_a2', 'cc_a1_a1', 'cc_a2_a2', 'p_a1_a2', 'p_a1_a1', 'p_a2_a2'])
-#     else:
-#         cols = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', \
-#                          'n_omissions', 'n_neurons', 'flash_omit_dur_all', 'flash_omit_dur_fr_all', \
-#                          'traces_aveTrs_time_ns', 'traces_aveNs_time_trs', 'traces_aveTrs_time_ns_f', 'traces_aveNs_time_trs_f', \
-#                          'peak_amp_eachN_traceMed', 'peak_timing_eachN_traceMed', 'peak_amp_trs_ns', 'peak_timing_trs_ns', \
-#                          'peak_h1', 'peak_h2', 'auc_peak_h1_h2', 'peak_amp_eachN_traceMed_flash', 'peak_timing_eachN_traceMed_flash'])
 
-#    all_sess = pd.DataFrame([], columns=cols)
-#    
-#    
-#    #%% Loop through valid sessions to perform the analysis
-#    
-##    sess_no_omission = []
-#    cnt_sess = -1     
-#    
-#    for isess in range(len(list_all_sessions_valid)):  # isess = 0 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
-#        
-#        session_id = int(list_all_sessions_valid[isess])
-#    #    experiment_ids = list_all_experiments_valid[isess]
-#        experiment_ids = list_all_experiments[isess] # we want to have the list of all experiments for each session regardless of whethere they were valid or not... this way we can find the same plane across all sessions.
-#    #    experiment_ids = list_all_experiments_valid[np.squeeze(np.argwhere(np.in1d(list_all_sessions_valid, session_id)))]
-#        
-#        cnt_sess = cnt_sess + 1    
-#        print('%d: session %d out of %d sessions' %(session_id, cnt_sess+1, len(list_all_sessions_valid)))
-#    
-#        
-    #%% Load some important variables from the experiment
+    # Use a different window to compute flash timing: the idea is to be able to capture the timing
+    # also for VIP A sessions, in which the response rises before the flash and peaks right at flash time.
+    # Also to get an accurate response magnitude measure for VIP A sessions, try: flash_win = [-1, -.65] 
+#     flash_win_timing = [-.85, -.5]
+#     bl_percentile = 10 #20  # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
+#     num_shfl_corr = 50 # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
     
+#    if norm_to_max:
+#        doScale = 0
+
+
+    ################################################################################
+    ######################################################################
+    ######################################################################
+    #%% Load the traces and metadata for the session
+    ######################################################################
+    ######################################################################
+    ################################################################################
+
+    # load the traces, behavioral and metadata for the session
+    [whole_data, data_list, table_stim, behav_data] = load_session_data_new(session_id, experiment_ids, use_ct_traces, use_np_corr, use_common_vb_roi)    
 #    [whole_data, data_list, table_stim] = load_session_data(session_id) # data_list is similar to whole_data but sorted by area and depth
-    [whole_data, data_list, table_stim, behav_data] = load_session_data_new(session_id, experiment_ids, use_ct_traces, use_np_corr, use_common_vb_roi)
 
     if any(np.isnan(data_list['depth'].values.astype(float))):
         session_exclude = 1
@@ -137,20 +107,38 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
         
     else:
-        #%%
+        #####################################################################################
+        #%% Set metadata: mouse, cre, stage, etc.
+        #####################################################################################
+        
         exp_ids = list(whole_data.keys())
         mouse = whole_data[exp_ids[0]]['mouse']
         date = whole_data[exp_ids[0]]['experiment_date']    
         cre = whole_data[exp_ids[0]]['cre'] # it will be the same for all lims_ids (all planes in a session)
         stage = whole_data[exp_ids[0]]['stage']
 
-        print(f'\n {cre} , {stage}')
+        print(f'\n {cre} , {stage}\n\n')
     #     this_sess = mouse
     #     return this_sess
 
+        #%% Set flash_win: use a different window for computing flash responses if it is VIP, and B1 session (1st novel session)
 
-        #%% Set omissions
+        session_novel = is_session_novel(dir_server_me, mouse, date) # first determine if the session is the 1st novel session or not
 
+        # vip, except for B1, needs a different timewindow for computing image-triggered average (because its response precedes the image).
+        # sst, slc, and vip B1 sessions all need a timewindow that immediately follows the images.
+        if np.logical_and(cre.find('Vip')==1 , session_novel) or cre.find('Vip')==-1: # VIP B1, SST, SLC: window after images (response follows the image)
+            flash_win_final = flash_win # [0, .75]
+
+        else: # VIP (non B1,familiar sessions): window precedes the image (pre-stimulus ramping activity)
+            flash_win_final = flash_win_vip # [-.25, .5] 
+        
+
+        #####################################################################################
+        #%% Set stimulus and behavioral variables
+        #####################################################################################
+
+        #%% Set omissions and flashes
         list_omitted = table_stim[table_stim['omitted']==True]['start_time'] # start time of omissions (in sec)
         list_omitted0 = list_omitted + 0
 
@@ -160,13 +148,6 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
     ##            sess_no_omission.append(session_id)
     #        
     #    else:
-        ######################################################################
-        ######################################################################
-        #%% Set the omission-aligned traces
-        # go through each experiment and if it is valid, we do a bunch of computations.
-        ######################################################################
-        ######################################################################
-
 
         #%%
         # start time of all flashes (in sec)
@@ -191,7 +172,6 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
         print(flash_dur_med, gray_dur_med, flashgray_dur_med)
         '''
 
-
         #%% Check for repeated omission entries (based on start times) or consecutive omissions
         #s = np.sort(np.diff(list_omitted))
         #si = np.argsort(np.diff(list_omitted))
@@ -215,18 +195,21 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
         #        list_omitted0, ist_omitted
 
 
+        
+        #%% Set dataframe this_sess_l        
+        
+        this_sess_l = pd.DataFrame([], columns = cols_this_sess_l) # colsa # index = range(num_planes), 
+#         this_sess_l = pd.DataFrame([], columns = ['valid', 'local_fluo_allOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
+#         this_sess_l = pd.DataFrame([], columns = ['valid', 'local_fluo_allOmitt', 'local_fluo_flashBefOmitt', 'local_fluo_traces', 'local_time_traces', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
 
-        #%% Set flash_win: use a different window for computing flash responses if it is VIP, and B1 session (1st novel session)
-
-        session_novel = is_session_novel(dir_server_me, mouse, date) # first determine if the session is the 1st novel session or not
-
-        # vip, except for B1, needs a different timewindow for computing image-triggered average (because its response precedes the image).
-        # sst, slc, and vip B1 sessions all need a timewindow that immediately follows the images.
-        if np.logical_and(cre.find('Vip')==1 , session_novel) or cre.find('Vip')==-1: # VIP B1, SST, SLC: window after images (response follows the image)
-            flash_win_final = flash_win # [0, .75]
-
-        else: # VIP (non B1,familiar sessions): window precedes the image (pre-stimulus ramping activity)
-            flash_win_final = flash_win_vip # [-.25, .5] 
+        # the following are at the session level, even though we are saving them at the experiment level.
+        for ind in range(num_planes): # ind=0
+            this_sess_l.at[ind, 'list_flashes'] = [list_flashes] # flash onset
+            this_sess_l.at[ind, 'list_omitted'] = [list_omitted] # omission onset
+            this_sess_l.at[ind, 'running_speed'] = behav_data['running_speed']
+            this_sess_l.at[ind, 'licks'] = behav_data['licks'] 
+            this_sess_l.at[ind, 'rewards'] = behav_data['rewards']                        
+        #'running_speed', 'licks', 'rewards', 'd_prime', 'hit_rate', 'catch_rate'
 
 
         #%% Set vars (time window and image names/indeces) for removing signal so correlations are not affected by signal, and instead reflect noise corrletions.
@@ -249,22 +232,6 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
         
         #%% Loop through the 8 planes of each session
 
-        # initiate the pandas table
-        this_sess = pd.DataFrame([], columns = cols) # index = range(num_planes), 
-        this_sess_l = pd.DataFrame([], columns = cols_this_sess_l) # colsa # index = range(num_planes), 
-#         this_sess_l = pd.DataFrame([], columns = ['valid', 'local_fluo_allOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
-#         this_sess_l = pd.DataFrame([], columns = ['valid', 'local_fluo_allOmitt', 'local_fluo_flashBefOmitt', 'local_fluo_traces', 'local_time_traces', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
-
-        # the following are at the session level, even though we are saving them at the experiment level.
-        for ind in range(num_planes): # ind=0
-            this_sess_l.at[ind, 'list_flashes'] = [list_flashes] # flash onset
-            this_sess_l.at[ind, 'list_omitted'] = [list_omitted] # omission onset
-            this_sess_l.at[ind, 'running_speed'] = behav_data['running_speed']
-            this_sess_l.at[ind, 'licks'] = behav_data['licks'] 
-            this_sess_l.at[ind, 'rewards'] = behav_data['rewards']            
-            
-        #'running_speed', 'licks', 'rewards', 'd_prime', 'hit_rate', 'catch_rate'
-
         #        local_time_traces_all = []                
         #        depth_all = []
         #        area_all = []
@@ -282,8 +249,20 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
         plt.figure(figsize=(8,11)) # show all traces of all neurons for each plane individually, to see how the activity changes in a session!
         '''
 
+        ################################################################################
+        ######################################################################
+        ######################################################################
+        #%% Go through each experiment and if it is valid, we do a number of analyses.
+        ######################################################################
+        ######################################################################
+        ################################################################################
+
+        # initiate the pandas dataframe this_sess
+        this_sess = pd.DataFrame([], columns = cols) # index = range(num_planes), 
+                
         for index, lims_id in enumerate(data_list['lims_id']): 
             print(lims_id)
+            
             '''
             for il in [0]: #range(num_planes):
                 index = il
@@ -319,6 +298,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
         #                this_sess.at[index, :] = np.nan # check this works.
 
             else:
+
                 # Get traces of all neurons for the entire session
                 local_fluo_traces = whole_data[lims_id]['fluo_traces'] # neurons x frames
                 local_time_traces = whole_data[lims_id]['time_trace']  # frame times in sec. Volume rate is 10 Hz. Are these the time of frame onsets?? (I think yes... double checking with Jerome/ Marina.) # dataset.timestamps['ophys_frames'][0]             
@@ -352,9 +332,14 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
             if doCorrs==-1: # in case an experiment is invalid or there are no omissions we make sure we set this_sess
                 this_sess = this_sess.iloc[:,range(len(cols_basic))].join(this_sess_l) # len(cols_basic) = 13
 
-                
+            
+            ################################################################################
+            ################################################################################
+            # If the session is valid, start the analysis:
+            ################################################################################
+            ################################################################################
+            
             if this_sess_l.at[index, 'valid'] == 1 and len(list_omitted)>0:
-#                 else: #elif len(list_omitted)>0: # only run the analysis if there are omissions in the session. #else: # 
 
                 #%% Plot the trace of all neurons (for the entire session) and mark the flash onsets
                 '''    
@@ -422,13 +407,15 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
                 ################################################################################
                 ################################################################################
+                ################################################################################
                 #%% Align on omission trials:
                 # samps_bef (=40) frames before omission ; index: 0:39
                 # omission frame ; index: 40
                 # samps_aft - 1 (=39) frames after omission ; index: 41:79
                 ################################################################################
                 ################################################################################
-
+                ################################################################################
+                
                 # Keep a matrix of omission-aligned traces for all neurons and all omission trials    
                 local_fluo_allOmitt = np.full((samps_bef + samps_aft, num_neurons, len(list_omitted)), np.nan) # time x neurons x omissions_trials 
                 local_time_allOmitt = np.full((samps_bef + samps_aft, len(list_omitted)), np.nan) # time x omissions_trials
@@ -491,6 +478,10 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                         image_names_surr_omit0 = table_stim[a]['image_name'].values[np.argwhere(flashes_win_trace==0).squeeze()-1: np.argwhere(flashes_win_trace==0).squeeze()+3]
                         image_names_surr_omit = image_names_surr_omit0[image_names_surr_omit0!='omitted'] # remove 'omitted'
                         # 'im', 'omitted', 'im', 'im' : normal sequence; but somettimes: there are two alternating omissions: 'im', 'omitted', 'im', 'omitted'
+                        
+                        # remove the omission if it was not preceded by another image in the repetitive structure that we expect to see.
+                        if len(image_names_surr_omit) == 0: # session_id: 839514418; there is a last omission after 5.23sec of previous image
+                            
     #                     if len(image_names_surr_omit) < 3:
     #                         print(f'There are two alternating omissions: {image_names_surr_omit0}')
                         if len(image_names_surr_omit)>0 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
@@ -499,7 +490,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                         '''
                         plt.plot(local_time_allOmitt[:,num_omissions], local_fluo_allOmitt[:,:,num_omissions])
                         plt.vlines(flashes_win_trace, -.4, .4)
-
+                        
+                        plt.figure()
                         plt.plot(local_fluo_allOmitt[:,:,num_omissions])
                         plt.vlines(flashes_win_trace_index, -.4, .4)
                         '''
@@ -576,21 +568,20 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
                 #%%#############################################################
                 ###### The following two variables are the key variables: ######
-                ###### (they are ready to be used)                        ######
-                ###### calcium traces aligned on omissions:               ######
-                ###### local_fluo_allOmitt  (frames x units x trials)     ######
-                ###### and their time traces:                             ######
-                ###### local_time_allOmitt  (frames x trials)             ######
+                ###### (they are ready to be used; unless you want to shift and scale them below) 
+                ###### local_fluo_allOmitt  (frames x units x trials)     ###### # calcium traces aligned on omissions
+                ###### local_time_allOmitt  (frames x trials)             ###### # and their time traces
                 ################################################################
 
 
-
+                ################################################################################
                 ##############################################################
                 ##############################################################
                 ############ Take care of centering and scaling the traces if desired.
                 ##############################################################
                 ##############################################################
-
+                ################################################################################
+                
                 #%% Normalize each neuron trace by its max (so if on a day a neuron has low FR in general, it will not be read as non responsive!)
                 ### In this case doScale is automatically set to zero, because:
                 # Remember whether you are normalizing to max peak activity or not will not matter if you normalize by baseline SD (next section). because if you normalize to max peak activity, baseline SD will also get changed by that same amount, so after normalizing to baseseline SD the effect of normalizing to max peak activity will be gone.
@@ -612,6 +603,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                 plt.plot(aa)
                 '''
                 if norm_to_max: 
+                    
                     # not sure if it makes more sense to compute the max on the entire trace of the session, or only on omission-aligned traces
 
                     # compute max on the entire trace of the session:
@@ -634,7 +626,10 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                     local_fluo_flashBefOmitt = np.transpose(b, (0,2,1)) # frames x units x trials
 
 
-
+                    
+                ################################################################################
+                ################################################################################
+                
                 #%% Define baseline (frames of spontanteous activity)
                 # Note: bl_gray_screen is relevant for scaling and shifting df/f traces (the default is not to do so);
                 # but when quantifying flash/omission responses, we always use 10th percentile of midian traces of omit-aligned traces to compute baseline and subtract it off quantifications (within those windows).
@@ -649,6 +644,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
     #             bl_index_pre_flash = np.arange(0,flash_index)
 
                 if bl_gray_screen==1:
+            
                     # the only problem with this method is that, we wont necessarily get the same starting point for 
                     # A, B omit-aligned traces. Especially for VIP, pre-omit in A is always lower than B. Which is an 
                     # interesting finding!
@@ -701,7 +697,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                     bl_ave = np.percentile(baseline_trace, 10, axis=0) # neurons 
                     '''                         
 
-
+                ################################################################################
                 #%% Center and scale (normalize) the average trace by baseline mean and std (ie pre-omitted fluctuations)
 
         #                local_fluo_allOmitt0_orig = local_fluo_allOmitt + 0
@@ -715,17 +711,19 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                     local_fluo_flashBefOmitt = local_fluo_flashBefOmitt / bl_sd
 
 
-
+                    
+                ################################################################################
                 ########################################################################
                 ########################################################################
                 ########################################################################
-                #%% Remove signal from local_fluo_traces so when we later compute correlations, they are not affected by signal, and instead reflect noise corrletions.
+                #%% Remove signal from local_fluo_allOmitt so when we later compute correlations, they are not affected by signal, and instead reflect noise corrletions.
                 # for each image type, in omit-aligned trace, we will compute average response across all trials of that image, and will subtract this average response from individual trials. This will be done for each neuron separately.
                 # we know that the image before and after an omission will be the same type, so there will be 8 types of omission-aligned traces.
                 ########################################################################
                 ########################################################################
                 ########################################################################
-
+                ################################################################################
+                
                 if np.logical_and(doCorrs==1, subtractSigCorrs==1):
 
                     ###### find image types within local_fluo_allOmitt (this applies to the 1 image before and 1 image after omission, both are always of the same type.)
@@ -814,12 +812,14 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
 
                 #%%
+                ################################################################################
                 ######################################################################
                 ######################################################################            
-                #%% Set median of omission-aligned traces. Quantify the response amplitudes and timings.
+                #%% Set median of omission-aligned traces (across trials). Quantify the response amplitudes and timings.
                 ######################################################################
                 ######################################################################            
-
+                ################################################################################
+                
                 if doCorrs==0:
 
                     #%% Set median traces (across trials, also neurons)
@@ -957,13 +957,14 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
 
 
-
+                    ################################################################################
                     ######################################################################
                     ######################################################################            
                     #%% Quanity flash and omission evoked responses: use flash-aligned traces for computing flash responses
                     ######################################################################
                     ######################################################################            
-
+                    ################################################################################
+                    
                     peak_amp_eachN_traceMed, peak_timing_eachN_traceMed, peak_amp_eachN_traceMed_flash, peak_timing_eachN_traceMed_flash, \
                         peak_allTrsNs, peak_timing_allTrsNs, peak_om_av_h1, peak_om_av_h2, auc_peak_h1_h2 = \
                                 omissions_traces_peaks_quantify_flashAl(traces_aveTrs_time_ns, traces_aveTrs_time_ns_f, bl_preOmit, bl_preFlash, mean_notPeak, cre, peak_win, flash_win_final, samps_bef, frame_dur, doShift_again, doPeakPerTrial, doROC, doPlots, index, local_fluo_allOmitt, num_omissions) # note now that we are using a different window for VIP,B1 thatn the rest of the sessions, we use the same window for computing flash timing as computing flash amplitude.

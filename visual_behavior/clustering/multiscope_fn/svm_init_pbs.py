@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Wed Jul 31 13:24:19 2019
+This is the first script to be run for doing SVM analysis.
 
+To perform SVM (do this on the cluster), it will call "svm_main_pbs.py".
+
+To do a quick test of the code on the cluster: 
+change the mem and isess range in this script. Also numSamples and frames_svm in svm_main_pbs.py
+
+
+Created on Wed Jul 31 13:24:19 2019
 @author: farzaneh
 """
 
@@ -31,6 +38,7 @@ svm_main(session_id, experiment_ids, validity_log_all, dir_svm, frames_svm, numS
 
 #%%
 use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
+same_num_neuron_all_planes = 1 # 0 # if 1, use the same number of neurons for all planes to train svm
 
 # vars below will be set at the end of svm_main_pbs.py
 '''
@@ -38,8 +46,6 @@ use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will l
 use_common_vb_roi = 1 # only those ct dff ROIs that exist in vb rois will be used.
 
 # Set SVM vars
-same_num_neuron_all_planes = 0 # 1 # if 1, use the same number of neurons for all planes to train svm
-
 frames_svm = range(-10, 30) # range(-1,1) # frames_after_omission = 30 # 5 # run svm on how many frames after omission
 numSamples = 50 # 2 #10 #
 saveResults = 1 # 0 #
