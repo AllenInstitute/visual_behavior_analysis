@@ -445,7 +445,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
                     try:
                         ######### Align on omission
-                        local_fluo_allOmitt[:,:, num_omissions] = local_fluo_traces[:, be:af].T # frame x neurons x omissions_trials (10Hz)
+                        local_fluo_allOmitt[:,:, iomit] = local_fluo_traces[:, be:af].T # frame x neurons x omissions_trials (10Hz)
                         # local_time_allOmitt is frame onset relative to omission onset. (assuming that the times in local_time_traces are frame onsets.... still checking on this, but it seems to be the rising edge, hence frame onset time!)
                         # so local_time_allOmitt will be positive if frame onset is after omission onset.
 
@@ -461,17 +461,17 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
                         # so we dont save local_time_allOmitt, although it will be more accurate to use it than time_trace, but the
                         # difference is very minimum
-                        local_time_allOmitt[:, num_omissions] = local_time_traces[be:af] - indiv_time # frame x omissions_trials
+                        local_time_allOmitt[:, iomit] = local_time_traces[be:af] - indiv_time # frame x omissions_trials
 
 
 
                         ######### Identify the flashes (time and index on local_time_allOmitt) that happened within local_time_allOmitt                    
                         flashes_relative_timing = list_flashesOmissions - indiv_time # timing of all flashes in the session relative to the current omission
                         # the time of flashes that happened within the omit-aligned trace
-                        a = np.logical_and(flashes_relative_timing >= local_time_allOmitt[0, num_omissions], flashes_relative_timing <= local_time_allOmitt[-1, num_omissions]) # which flashes are within local_time
+                        a = np.logical_and(flashes_relative_timing >= local_time_allOmitt[0, iomit], flashes_relative_timing <= local_time_allOmitt[-1, iomit]) # which flashes are within local_time
                         flashes_win_trace = flashes_relative_timing[a] 
                         # now find the index of flashes_win_trace on local_time_allOmitt
-                        a2 = [np.argmin(np.abs(local_time_allOmitt[:, num_omissions] - flashes_win_trace[i])) for i in range(len(flashes_win_trace))]
+                        a2 = [np.argmin(np.abs(local_time_allOmitt[:, iomit] - flashes_win_trace[i])) for i in range(len(flashes_win_trace))]
                         flashes_win_trace_index = a2 # the index of omission on local_time_traces
 
                         # image names for 1 flash before and 2 flashes after omission 
@@ -479,58 +479,62 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                         image_names_surr_omit = image_names_surr_omit0[image_names_surr_omit0!='omitted'] # remove 'omitted'
                         # 'im', 'omitted', 'im', 'im' : normal sequence; but somettimes: there are two alternating omissions: 'im', 'omitted', 'im', 'omitted'
                         
-                        # remove the omission if it was not preceded by another image in the repetitive structure that we expect to see.
-                        if len(image_names_surr_omit) == 0: # session_id: 839514418; there is a last omission after 5.23sec of previous image
-                            
     #                     if len(image_names_surr_omit) < 3:
     #                         print(f'There are two alternating omissions: {image_names_surr_omit0}')
                         if len(image_names_surr_omit)>0 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
                             print('image after omission is different from image before omission! uncanny!') # sys.exit
 
-                        '''
-                        plt.plot(local_time_allOmitt[:,num_omissions], local_fluo_allOmitt[:,:,num_omissions])
-                        plt.vlines(flashes_win_trace, -.4, .4)
-                        
-                        plt.figure()
-                        plt.plot(local_fluo_allOmitt[:,:,num_omissions])
-                        plt.vlines(flashes_win_trace_index, -.4, .4)
-                        '''
+                        # set to nan the omission trace if it was not preceded by another image in the repetitive structure that we expect to see.
+                        if len(image_names_surr_omit) == 0: # session_id: 839514418; there is a last omission after 5.23sec of previous image
+                            print(f'Omission {iomit} is uncanny! no images around it! so removing it!')
+                            local_fluo_allOmitt[:,:, iomit] = np.nan
+                            
+                        else:
+                            
+                            '''
+                            plt.plot(local_time_allOmitt[:,iomit], local_fluo_allOmitt[:,:,iomit])
+                            plt.vlines(flashes_win_trace, -.4, .4)
 
-                        #################################################################################
-                        ######### Align traces on the flash preceding the omission (I used to just take .75sec before omission, but due to frame-drop/unknown issues flashes dont exactly happen every 750ms (revealed by np.unique(np.diff(list_flashesOmissions)))) #########
-                        #################################################################################
-                        indiv_timef = list_flashesOmissions[np.argwhere(flashes_relative_timing==0).squeeze()-1]
-                        local_indexf = np.argmin(np.abs(local_time_traces - indiv_timef)) # the index of omission on local_time_traces               
+                            plt.figure()
+                            plt.plot(local_fluo_allOmitt[:,:,iomit])
+                            plt.vlines(flashes_win_trace_index, -.4, .4)
+                            '''
 
-                        bef = local_indexf - samps_bef
-                        aff = local_indexf + samps_aft
+                            #################################################################################
+                            ######### Align traces on the flash preceding the omission (I used to just take .75sec before omission, but due to frame-drop/unknown issues flashes dont exactly happen every 750ms (revealed by np.unique(np.diff(list_flashesOmissions)))) #########
+                            #################################################################################
+                            indiv_timef = list_flashesOmissions[np.argwhere(flashes_relative_timing==0).squeeze()-1]
+                            local_indexf = np.argmin(np.abs(local_time_traces - indiv_timef)) # the index of omission on local_time_traces               
 
-                        # align on the flash preceding the omission
-                        local_fluo_flashBefOmitt[:,:, num_omissions] = local_fluo_traces[:, bef:aff].T # frame x neurons x omissions_trials (10Hz)
-                        local_time_flashBefOmitt[:, num_omissions] = local_time_traces[bef:aff] - indiv_timef # frame x omissions_trials
+                            bef = local_indexf - samps_bef
+                            aff = local_indexf + samps_aft
 
-                        '''
-                        plt.plot(np.nanmean(local_time_allOmitt, axis=1), np.nanmean(local_fluo_allOmitt, axis=(1,2)))
-                        plt.vlines(flashes_win_trace, -.4, .4)
+                            # align on the flash preceding the omission
+                            local_fluo_flashBefOmitt[:,:, iomit] = local_fluo_traces[:, bef:aff].T # frame x neurons x omissions_trials (10Hz)
+                            local_time_flashBefOmitt[:, iomit] = local_time_traces[bef:aff] - indiv_timef # frame x omissions_trials
 
-                        plt.plot(np.nanmean(local_time_flashBefOmitt, axis=1), np.nanmean(local_fluo_flashBefOmitt, axis=(1,2)))
-                        plt.vlines(flashes_win_trace, -.4, .4)
-                        '''
+                            '''
+                            plt.plot(np.nanmean(local_time_allOmitt, axis=1), np.nanmean(local_fluo_allOmitt, axis=(1,2)))
+                            plt.vlines(flashes_win_trace, -.4, .4)
 
-                        ######### 
-                        num_omissions = num_omissions + 1
-                        flash_omit_dur = indiv_time - indiv_timef # sec # this is to check how much the values deviate from the expected .75sec
-                        flash_omit_dur_fr = local_index - local_indexf # in frames; same as above
+                            plt.plot(np.nanmean(local_time_flashBefOmitt, axis=1), np.nanmean(local_fluo_flashBefOmitt, axis=(1,2)))
+                            plt.vlines(flashes_win_trace, -.4, .4)
+                            '''
 
-                        flashes_win_trace_all.append(flashes_win_trace)
-                        flashes_win_trace_index_all.append(flashes_win_trace_index)
-                        image_names_surr_omit_all.append(image_names_surr_omit)
-                        flash_omit_dur_all.append(flash_omit_dur)
-                        flash_omit_dur_fr_all.append(flash_omit_dur_fr)
+                            ######### 
+    #                         num_omissions = num_omissions + 1
+                            flash_omit_dur = indiv_time - indiv_timef # sec # this is to check how much the values deviate from the expected .75sec
+                            flash_omit_dur_fr = local_index - local_indexf # in frames; same as above
 
-    #                    time 0 (omissions) values:
-    #                    local_fluo_allOmitt[samps_bef,:,:]
-    #                    local_time_allOmitt[samps_bef,:]
+                            flashes_win_trace_all.append(flashes_win_trace)
+                            flashes_win_trace_index_all.append(flashes_win_trace_index)
+                            image_names_surr_omit_all.append(image_names_surr_omit)
+                            flash_omit_dur_all.append(flash_omit_dur)
+                            flash_omit_dur_fr_all.append(flash_omit_dur_fr)
+
+        #                    time 0 (omissions) values:
+        #                    local_fluo_allOmitt[samps_bef,:,:]
+        #                    local_time_allOmitt[samps_bef,:]
 
 
                     except Exception as e:
@@ -549,6 +553,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                 '''
 
                 # remove the last nan rows from the traces, which happen if some of the omissions are not used for alignment (due to being too early or too late in the session) 
+                # change this to removing nan rows and define num_omiss
                 if len(list_omitted)-num_omissions > 0:
                     local_fluo_allOmitt = local_fluo_allOmitt[:,:,0:-(len(list_omitted)-num_omissions)]
                     local_time_allOmitt = local_time_allOmitt[:,0:-(len(list_omitted)-num_omissions)]
