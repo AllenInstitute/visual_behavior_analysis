@@ -14,7 +14,7 @@ setuptools.setup(
         "plotly",
         "pandas==0.25.3",
         "six",
-        "scikit-learn>=0.19.2",
+        "scikit-learn==0.23.0",
         "scipy>=1.0.0",
         "deepdish>=0.3.6",
         "numpy>=1.9.0",
