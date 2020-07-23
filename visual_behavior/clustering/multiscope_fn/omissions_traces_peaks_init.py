@@ -31,19 +31,18 @@ import os
 import socket
 
 use_ct_traces = 1 #1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
-use_np_corr = 1 # if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
-use_common_vb_roi = 1 # only those ct dff ROIs that exist in vb rois will be used.
+use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 
 saveResults = 1 # save the all_sess pandas at the end
 
-doCorrs = -1  # -1 #0 #1 # if -1, only get the traces (entire session, also omission-aligned), dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
+doCorrs = 0 # -1 #0 #1 # if -1, only get the traces (entire session, also omission-aligned), dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
 # note: when doCorrs=1, run this code on the cluster: omissions_traces_peaks_init_pbs.py (this will call omissions_traces_peaks_pbs.py) 
 num_shfl_corr = 0 #50 # set to 0 if you dont want to compute corrs for shuffled data # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
 subtractSigCorrs = 1 # if 1, compute average response to each image, and subtract it out from all trials of that image. Then compute correlations; ie remove signal correlations.
 
 # To align on omissions, get 40 frames before omission and 39 frames after omission
-samps_bef = 16 #40 # 40 is a lot especially for correlation analysis which takes a long time; the advantage of 40 thouth is that bl_preOmit and bl_preFlash will be more accurate as they use 10th percentile of frames before omission (or flash), so more frames means better accuracy.
-samps_aft = 24 #40
+samps_bef = 16 # 40 # 40 is a lot especially for correlation analysis which takes a long time; the advantage of 40 thouth is that bl_preOmit and bl_preFlash will be more accurate as they use 10th percentile of frames before omission (or flash), so more frames means better accuracy.
+samps_aft = 24 #40 # 
 
 
 # remember the following two were 1, for autoencoder analuysis you changed them to 0.
@@ -67,12 +66,12 @@ mean_notPeak = 1  # set to 1, so mean is computed; it is preferred because SST a
 
 ### Note: the windows below will be used when doCorrs=0. For doCorrs=1, windows will be set in omissions_traces_peaks_plots_setVars_corr.py
 # you should totally not go beyond 0.75!!! # go with 0.75ms if you don't want the responses to be contaminated by the next flash
-peak_win = [0, .75] # this should be named omit_win
+peak_win = [0, .5] #[0, .75] # this should be named omit_win
 # [0,2] # flashes are 250ms and gray screen is 500ms # sec # time window to find peak activity, seconds relative to omission onset
 # [-.75, 0] is too large for flash responses... (unlike omit responses, they peak fast!
 # [-.75, -.4] #[-.75, 0] # window (relative to omission) for computing flash-evoked responses (750ms includes flash and gray)
-flash_win = [0, .75] # now using flash-aligned traces; previously flash responses were computed on omission-aligned traces; problem: not all flashes happen every .75sec # [-.75, 0] # previous value: # [-.75, -.25] # 
-flash_win_vip = [-.25, .5] # on flash-aligned traces # [-1, -.25] # previous value (for flash_win of all cre lines): # [-.75, -.25] # 
+flash_win = [0, .35] #[0, .75] # now using flash-aligned traces; previously flash responses were computed on omission-aligned traces; problem: not all flashes happen every .75sec # [-.75, 0] # previous value: # [-.75, -.25] # 
+flash_win_vip = [-.25, .1] #[-.25, .5] # on flash-aligned traces # [-1, -.25] # previous value (for flash_win of all cre lines): # [-.75, -.25] # 
 flash_win_timing = [-.875, -.25] # this is not needed anymore bc we are using different values for vip vs others, so we just use flash_win and flash_win_vip to compute timing. # previous value: #[-.85, -.5] 
 # we use flash_win_timing, so it can take care of vip responses too, but maybe start using different windows for non-vip and vip lines; those windows will be used for both timing and amplitude computation. This whole thing is because vip responses in familiar imagesets precedes the flash occurrence. So for the first novel session we need to use a similar window as in non-vip lines, but for all the other sessions we need to use flash_win_vip to find the amp and timing of vip responses. 
 # one solution is to go with flash_win (for non-vip and vip, B1 session) and flash_win_vip (for vip sessions except B1); use those same windows for both amp and timing computation. 
@@ -91,6 +90,8 @@ trace_median = 1
 doPlots = 0  # some plots (not the main summary ones at the end)... set to 0
 doROC = 0  # if 1, do ROC analysis: for each experiment, find, across all neurons, how separable the distributions of trial-averaged peak amplitudes are for half-1 omissions vs. half-2 omissions
 #dosavefig = 1
+
+use_common_vb_roi = 1 # only those ct dff ROIs that exist in vb rois will be used.
 
 
 
@@ -293,7 +294,7 @@ print(len(all_sess))
 #####################################################################################
 
 # Set below to 1 when you need to save the results # if doCorrs, we save values for each session (because we run it on the cluster). Or if you dont wish to run on the cluster, we keep values of each session, append them, and them save "all_sess" var.
-if 0:
+if 1:
     
     #%% Set pandas dataframe input_vars, to save it below
     # set this so you know what input vars you ran the script with
@@ -326,8 +327,16 @@ if 0:
     else:
         namespec = namespec + ''
 
+    
+    if use_np_corr==1:
+        namespec = namespec + '_np_corr_dff'
+    else:
+        namespec = namespec + '_soma_dff'
+
+        
     now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
 
+    
     if saveResults:
 
         print('Saving .h5 file')

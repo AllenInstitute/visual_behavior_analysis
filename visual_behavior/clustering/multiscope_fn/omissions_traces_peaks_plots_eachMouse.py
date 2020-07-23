@@ -169,7 +169,7 @@ for im in range(len(all_mice_id)): # im=9
             plt.vlines(np.cumsum(num_trs_each_sess)+1, mn-r, mx+r)
             plt.title('plane %d, area %s, depth %dum' %(iplane, np.unique(area)[0], np.mean(depth)), fontsize=13.5, y=1)
             if iplane==3:
-                plt.ylabel('peak amp %s, omit-evoked response ' %(ylab), fontsize=12)
+                plt.ylabel('peak amp %s, omit-evoked response ' %(ylab_short), fontsize=12)
             if iplane==0: #num_planes-1:
                 plt.xlabel('trial', fontsize=12)            
             ax.tick_params(labelsize=10)
@@ -213,7 +213,7 @@ for im in range(len(all_mice_id)): # im=9
                     
             
             if iplane==3:
-                plt.ylabel('DF/F %s' %(ylab), fontsize=12)
+                plt.ylabel('DF/F %s' %(ylab_short), fontsize=12)
                 plt.xlabel('Time (s)', fontsize=12)
             if iplane==0: #num_planes-1:
                 plt.xlabel('Time (s)', fontsize=12)
@@ -564,7 +564,7 @@ if plot_eachSess_trAve_neurAve:
             cre = all_exp_now.iloc[0]['cre']
             cre = cre[:cre.find('-')] # remove the IRES-Cre part
             stage = str(all_exp_now.iloc[0]['stage'])[15:]
-#             experiment_ids = all_exp_now['experiment_id'].values     
+            experiment_ids = all_exp_now['experiment_id'].values     
 
             plt.figure(figsize=(11,10))        
             plt.suptitle('%s, mouse %d, session %d, %s' %(cre, mouse_id, session_id, stage), y=.995, fontsize=18)

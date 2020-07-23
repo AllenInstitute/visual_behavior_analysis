@@ -1211,13 +1211,13 @@ else:
         ylabs = 'Resp amplitude'
         
         top = np.nanmean(paf_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(paf_all[:, cre_all[0,:]==cre], axis=1)        
+        top_sd = np.nanstd(paf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))        
 
         ax1 = plt.subplot(gs3[0])         
         ax1.errorbar(x, top[inds_v1], yerr=top_sd[inds_v1], fmt='o', markersize=3, capsize=3, label='V1', color=cols_area[1])
         ax1.errorbar(x + xgap_areas, top[inds_lm], yerr=top_sd[inds_lm], fmt='o', markersize=3, capsize=3, label='LM', color=cols_area[0])
 
-        plt.hlines(0, 0, len(x)-1, linestyle=':')
+#         plt.hlines(0, 0, len(x)-1, linestyle=':')
         ax1.set_xticks(x)
         ax1.set_xticklabels(xticklabs, rotation=45)
         ax1.tick_params(labelsize=10)
@@ -1240,7 +1240,7 @@ else:
         ylabs = 'Peak timing (s)'
         
         top = np.nanmean(ptf_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(ptf_all[:, cre_all[0,:]==cre], axis=1)        
+        top_sd = np.nanstd(ptf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))                
 
         ax2 = plt.subplot(gs3[1])
         ax2.errorbar(x, top[inds_v1], yerr=top_sd[inds_v1], fmt='o', markersize=3, capsize=3, label='V1', color=cols_area[1])
@@ -1272,13 +1272,13 @@ else:
 #        x = np.arange(num_depth)
         
         top = np.nanmean(pa_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1)        
+        top_sd = np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))                
 
         ax1 = plt.subplot(gs4[0])         
         ax1.errorbar(x, top[inds_v1], yerr=top_sd[inds_v1], fmt='o', markersize=3, capsize=3, label='V1', color=cols_area[1])
         ax1.errorbar(x + xgap_areas, top[inds_lm], yerr=top_sd[inds_lm], fmt='o', markersize=3, capsize=3, label='LM', color=cols_area[0])
 
-        plt.hlines(0, 0, len(x)-1, linestyle=':')
+#         plt.hlines(0, 0, len(x)-1, linestyle=':')
         ax1.set_xticks(x)
         ax1.set_xticklabels(xticklabs, rotation=45)
         ax1.tick_params(labelsize=10)
@@ -1302,7 +1302,7 @@ else:
         ylabs = 'Peak timing (s)'
         
         top = np.nanmean(pt_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(pt_all[:, cre_all[0,:]==cre], axis=1)        
+        top_sd = np.nanstd(pt_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))                
 
         ax2 = plt.subplot(gs4[1])
         ax2.errorbar(x, top[inds_v1], yerr=top_sd[inds_v1], fmt='o', markersize=3, capsize=3, label='V1', color=cols_area[1])
@@ -1344,12 +1344,12 @@ else:
         ylabs = 'Amplitude'
         
         top = np.nanmean(paf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(paf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]        
+        top_sd = np.nanstd(paf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))      
 
         ax1 = plt.subplot(gs5[0])         
         ax1.errorbar(x, top, yerr=top_sd, fmt='o', markersize=3, capsize=3, color=cols_area[1])
 
-        plt.hlines(0, 0, len(x)-1, linestyle=':')
+#         plt.hlines(0, 0, len(x)-1, linestyle=':')
         ax1.set_xticks(x)
         ax1.set_xticklabels(xticklabs, rotation=45)
         ax1.tick_params(labelsize=10)
@@ -1373,7 +1373,7 @@ else:
         ylabs = 'Timing (s)'
         
         top = np.nanmean(ptf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(ptf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]        
+        top_sd = np.nanstd(ptf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))        
 
         ax2 = plt.subplot(gs5[1])
         ax2.errorbar(x, top, yerr=top_sd, fmt='o', markersize=3, capsize=3, color=cols_area[1])
@@ -1405,12 +1405,12 @@ else:
 #        xticklabs = xticklabs
         
         top = np.nanmean(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]    
+        top_sd = np.nanstd(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))            
 
         ax1 = plt.subplot(gs6[0])         
         ax1.errorbar(x, top, yerr=top_sd, fmt='o', markersize=3, capsize=3, color=cols_area[1])
 
-        plt.hlines(0, 0, len(x)-1, linestyle=':')
+#         plt.hlines(0, 0, len(x)-1, linestyle=':')
         ax1.set_xticks(x)
         ax1.set_xticklabels(xticklabs, rotation=45)
         ax1.tick_params(labelsize=10)
@@ -1434,7 +1434,7 @@ else:
         ylabs = 'Timing (s)'
         
         top = np.nanmean(pt_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(pt_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]     
+        top_sd = np.nanstd(pt_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))             
 
         ax2 = plt.subplot(gs6[1])
         ax2.errorbar(x, top, yerr=top_sd, fmt='o', markersize=3, capsize=3, color=cols_area[1])
