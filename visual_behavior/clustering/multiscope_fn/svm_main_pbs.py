@@ -262,6 +262,9 @@ def svm_main_pbs(session_id, experiment_ids, validity_log_all, dir_svm, frames_s
     '''
     
     for index, lims_id in enumerate(data_list['lims_id']): 
+
+        print(f'\n\n=========== Analyzing experiment_id: {lims_id} ===========\n\n')
+
         '''
         for il in [0]: #range(num_planes):
             index = il
@@ -892,8 +895,8 @@ use_common_vb_roi = 1 # only those ct dff ROIs that exist in vb rois will be use
 
 same_num_neuron_all_planes = 1 # 0 #if 1, use the same number of neurons for all planes to train svm
 
-frames_svm = range(-1,1) # range(-16, 24) # range(-10, 30) # frames_after_omission = 30 # 5 # run svm on how many frames after omission
-numSamples = 2 #50 # 10 #
+frames_svm = range(-16, 24) # range(-10, 30) # range(-1,1) # frames_after_omission = 30 # 5 # run svm on how many frames after omission
+numSamples = 50 # 2 # 10 #
 saveResults = 1 # 0 #
 
 

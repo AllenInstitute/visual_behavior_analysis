@@ -72,8 +72,8 @@ elif socket.gethostname() == 'ibs-farzaneh-ux2': # allen pc
 elif socket.gethostname() == 'hpc-login.corp.alleninstitute.org': # hpc server
     dirAna = "/home/farzaneh.najafi/analysis_codes/"        
     
-dirMs = os.path.join(dirAna, 'multiscope_fn')    
-os.chdir(dirMs)
+# dirMs = os.path.join(dirAna, 'multiscope_fn')    
+# os.chdir(dirMs)
 
 
 # make svm dir to save analysis results
@@ -194,7 +194,7 @@ from pbstools import PythonJob # flake8: noqa: E999
 #    sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/Doug/pbstools')
 
 
-python_file = r"/home/farzaneh.najafi/analysis_codes/visual_behavior_analysis/visual_behavior/clustering/multiscope_fn/multiscope_fn/svm_main_pbs.py" #r"/home/farzaneh.najafi/analysis_codes/multiscope_fn/svm_main_pbs.py"
+python_file = r"/home/farzaneh.najafi/analysis_codes/visual_behavior_analysis/visual_behavior/clustering/multiscope_fn/svm_main_pbs.py" #r"/home/farzaneh.najafi/analysis_codes/multiscope_fn/svm_main_pbs.py"
 
 
 #%%

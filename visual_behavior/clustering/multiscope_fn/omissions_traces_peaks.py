@@ -261,7 +261,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
         this_sess = pd.DataFrame([], columns = cols) # index = range(num_planes), 
                 
         for index, lims_id in enumerate(data_list['lims_id']): 
-            print(lims_id)
+            
+            print(f'\n\n=========== Analyzing experiment_id: {lims_id} ===========\n\n')
             
             '''
             for il in [0]: #range(num_planes):
@@ -554,12 +555,23 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
                 # remove the last nan rows from the traces, which happen if some of the omissions are not used for alignment (due to being too early or too late in the session) 
                 # change this to removing nan rows and define num_omiss
-                if len(list_omitted)-num_omissions > 0:
-                    local_fluo_allOmitt = local_fluo_allOmitt[:,:,0:-(len(list_omitted)-num_omissions)]
-                    local_time_allOmitt = local_time_allOmitt[:,0:-(len(list_omitted)-num_omissions)]
-                    local_fluo_flashBefOmitt = local_fluo_flashBefOmitt[:,:,0:-(len(list_omitted)-num_omissions)]
-                    local_time_flashBefOmitt = local_time_flashBefOmitt[:,0:-(len(list_omitted)-num_omissions)]
-                    ##### Note: you need to take care of local_fluo_flashBefOmitt below if norm_to_max, doShift, or doScale are set to 1.
+                # find nan rows
+                mask_valid_trs = np.nansum(local_fluo_allOmitt, axis=(0,1))!=0
+                if sum(mask_valid_trs==False) > 0:
+                    local_fluo_allOmitt = local_fluo_allOmitt[:,:,mask_valid_trs]
+                    local_time_allOmitt = local_time_allOmitt[:,mask_valid_trs]
+                    local_fluo_flashBefOmitt = local_fluo_flashBefOmitt[:,:,mask_valid_trs]
+                    local_time_flashBefOmitt = local_time_flashBefOmitt[:,mask_valid_trs]
+                 
+                num_omissions = sum(mask_valid_trs)
+                
+#                 if len(list_omitted)-num_omissions > 0:
+#                     local_fluo_allOmitt = local_fluo_allOmitt[:,:,0:-(len(list_omitted)-num_omissions)]
+#                     local_time_allOmitt = local_time_allOmitt[:,0:-(len(list_omitted)-num_omissions)]
+#                     local_fluo_flashBefOmitt = local_fluo_flashBefOmitt[:,:,0:-(len(list_omitted)-num_omissions)]
+#                     local_time_flashBefOmitt = local_time_flashBefOmitt[:,0:-(len(list_omitted)-num_omissions)]
+
+                ##### Note: you need to take care of local_fluo_flashBefOmitt below if norm_to_max, doShift, or doScale are set to 1.
 
 
                 local_fluo_allOmitt0_orig = local_fluo_allOmitt + 0   
