@@ -31,6 +31,9 @@ svm_main(session_id, experiment_ids, validity_log_all, dir_svm, frames_svm, numS
 
 #%%
 use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
+
+# vars below will be set at the end of svm_main_pbs.py
+'''
 use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 use_common_vb_roi = 1 # only those ct dff ROIs that exist in vb rois will be used.
 
@@ -42,7 +45,7 @@ numSamples = 50 # 2 #10 #
 saveResults = 1 # 0 #
 
 # frames_after_omission = 30
-
+'''
 
 #%%
 import socket
@@ -228,7 +231,7 @@ cnt_sess = -1
 #cols = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_omissions', 'n_neurons', 'meanX_allFrs', 'stdX_allFrs', 'av_train_data_new', 'av_test_data_new', 'av_test_shfl_new', 'av_test_chance_new', 'sd_train_data_new', 'sd_test_data_new', 'sd_test_shfl_new', 'sd_test_chance_new'])
 #all_sess = pd.DataFrame([], columns=cols)
 
-for isess in range(len(list_all_sessions_valid)):   # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
+for isess in range(len(list_all_sessions_valid)): # [0,1]: # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
     
     # none of the below is really need (unless we want to print the part below when calling the function on the cluster); we can just directly call PythonJob below.
     
