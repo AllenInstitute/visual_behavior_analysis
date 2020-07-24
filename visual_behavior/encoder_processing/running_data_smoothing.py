@@ -1,12 +1,11 @@
-import seaborn as sns
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy import stats
 from scipy import signal
 
 import visual_behavior.database as db
 from visual_behavior.translator.foraging2 import data_to_change_detection_core
+from visual_behavior.translator.foraging import data_to_change_detection_core as data_to_change_detection_core_legacy
 
 
 def load_running_df(bsid=None, pkl_path=None, camstim_type='foraging2'):
@@ -83,7 +82,7 @@ def remove_outliers(df_in, column_to_filter, boolean_col, t_span, time_column='t
     df['outlier_removed'] = df[column_to_filter]
     df_to_filter = df[df[boolean_col]]
     for idx, row in df_to_filter.iterrows():
-        t_now = row[time_column]
+        t_now = row[time_column]  # NOQA F841
         local_vals = df.query('{0} >= @t_now - @t_span and {0} <= @t_now + @t_span and {1} == False'.format(time_column, boolean_col))[column_to_filter]
         df.at[idx, 'outlier_removed'] = np.clip(df.at[idx, column_to_filter], np.nanmin(local_vals), np.nanmax(local_vals))
 
@@ -230,7 +229,7 @@ def process_encoder_data(running_data_df, time_column='timestamps', v_max='v_sig
         running_data_df,
         column_label='raw',
         v_max=v_max,
-        remove_outliers_at_wraps=remove_outliers_at_wraps, 
+        remove_outliers_at_wraps=remove_outliers_at_wraps,
         zscore_thresold=zscore_thresold
     )
     filtered_speed = apply_lowpass_filter(
@@ -247,5 +246,5 @@ def process_encoder_data(running_data_df, time_column='timestamps', v_max='v_sig
     cols_to_drop = ['dx', 'v_sig_last', 'v_sig_diff', 'wrap_bool', 'zscored_speed_raw']
     for col in cols_to_drop:
         running_data_df = running_data_df.drop(columns=[col]) if col in running_data_df.columns else running_data_df
-    
+
     return running_data_df
