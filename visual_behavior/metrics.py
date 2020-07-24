@@ -2,9 +2,9 @@
 the metrics contained in this module conform to scikit-learn styled `metric(y_true,y_pred,**args,**kwargs)`
 
 """
+from sklearn.metrics import confusion_matrix
 import numpy as np
 from scipy import stats
-from sklearn.metrics import confusion_matrix
 from .utilities import dprime as __dprime
 from .utilities import trial_number_limit
 from scipy.stats import norm
