@@ -11,44 +11,8 @@ import argparse
 import plotly.graph_objs as go
 import warnings
 from visual_behavior import database as db
+from visual_behavior.data_access import utilities as data_access_utilities
 
-
-def get_cache():
-    MANIFEST_PATH = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache/manifest.json"
-    cache = bpc.from_lims(manifest=MANIFEST_PATH)
-    return cache
-
-
-def is_ophys(behavior_session_id):
-    cache = get_cache()
-
-    behavior_session_table = cache.get_behavior_session_table()
-
-    return pd.notnull(behavior_session_table.loc[behavior_session_id]['ophys_session_id'])
-
-
-def bsid_to_oeid(behavior_session_id):
-    oeid = db.lims_query(
-        '''
-        select oe.id
-        from behavior_sessions
-        join ophys_experiments oe on oe.ophys_session_id = behavior_sessions.ophys_session_id
-        where behavior_sessions.id = {}
-        '''.format(behavior_session_id)
-    )
-    if isinstance(oeid, pd.DataFrame):
-        return oeid.iloc[0][0]
-    else:
-        return oeid
-
-
-def get_sdk_session(behavior_session_id, is_ophys):
-
-    if is_ophys:
-        ophys_experiment_id = bsid_to_oeid(behavior_session_id)
-        return BehaviorOphysSession.from_lims(ophys_experiment_id)
-    else:
-        return BehaviorDataSession.from_lims(behavior_session_id)
 
 
 def log_error_to_mongo(behavior_session_id, failed_attribute, error_class, traceback):
@@ -69,7 +33,7 @@ def log_error_to_mongo(behavior_session_id, failed_attribute, error_class, trace
 
 def log_validation_results_to_mongo(behavior_session_id, validation_results):
     validation_results.update({'behavior_session_id': behavior_session_id})
-    validation_results.update({'is_ophys': is_ophys(behavior_session_id)})
+    validation_results.update({'is_ophys': data_access_utilities.is_ophys(behavior_session_id)})
     validation_results.update({'timestamp': str(datetime.datetime.now())})
     conn = db.Database('visual_behavior_data')
     collection = conn['sdk_validation']['validation_results']
@@ -104,7 +68,10 @@ def get_validation_results(behavior_session_id=None):
 
 
 def validate_attribute(behavior_session_id, attribute):
-    session = get_sdk_session(behavior_session_id, is_ophys(behavior_session_id))
+    session = data_access_utilities.get_sdk_session(
+        behavior_session_id, 
+        data_access_utilities.is_ophys(behavior_session_id)
+    )
     if attribute in dir(session):
         # if the attribute exists, try to load it
         try:
@@ -223,8 +190,11 @@ class ValidateSDK(object):
 
     def __init__(self, behavior_session_id, validate_only_failed=False):
         self.behavior_session_id = behavior_session_id
-        self.is_ophys = is_ophys(behavior_session_id)
-        self.session = get_sdk_session(behavior_session_id, self.is_ophys)
+        self.is_ophys = data_access_utilities.is_ophys(behavior_session_id)
+        self.session = data_access_utilities.get_sdk_session(
+            behavior_session_id, 
+            self.is_ophys
+        )
 
         if validate_only_failed == True:
             previous_results_df = get_validation_results(self.behavior_session_id)
