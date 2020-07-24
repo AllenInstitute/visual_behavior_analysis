@@ -177,7 +177,7 @@ def make_trial_count_plot(df_summary, ax, palette='trial_types'):
     ax.set_xlabel('number of trials')
     ax.set_xlim(0, 500)
     # note: nudge the outermost ticklabels slightly inward to avoid overlap with the next plot
-    modify_xticks(ax, xticks=[0.025, 100, 200, 300, 400, 500], xticklabels=['0', '', '200', '', '400'], vertical_gridlines=[0, 100, 200, 300, 400])
+    modify_xticks(ax, xticks=[0.025, 100, 200, 300, 400, 500], xticklabels=['0', '', '200', '', '400', ''], vertical_gridlines=[0, 100, 200, 300, 400, 500])
 
 
 def add_y_labels(df_summary, ax):
