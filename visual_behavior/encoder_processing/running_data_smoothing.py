@@ -148,7 +148,7 @@ def add_speed(df_in, column_label, voltage_column='v_sig_unwrapped', v_max='v_si
     add columns for speed (cm/s), acceleration (cm/s^2) and jerk (cm/s^3) to the dataframe
     inputs:
         df_in (dataframe): encoder dataframe with (at minimum) columns for v_in and v_sig
-        column_label (string): what to call the output columns (default = 'raw', eg. speed_raw, acceleration_raw, jerk_raw) 
+        column_label (string): what to call the output columns (default = 'raw', eg. speed_raw, acceleration_raw, jerk_raw)
         voltage_column (string): the column on which to calculate derivative to calculate speed
         v_max (string): how maxiumum encoder voltage should be defined. See add_columns_and_unwrap for detailed explanation. (default = 'v_sig_max')
         remove_outliers_at_wrap (boolean): If True, ensures that velocity at voltage wrap does not exceed range of velocities in nearby +/- 0.25 second window (default = True)
