@@ -1,6 +1,3 @@
-from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
-from allensdk.brain_observatory.behavior.behavior_data_session import BehaviorDataSession
-from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 import traceback
 import allensdk
 import datetime
@@ -12,7 +9,6 @@ import plotly.graph_objs as go
 import warnings
 from visual_behavior import database as db
 from visual_behavior.data_access import utilities as data_access_utilities
-
 
 
 def log_error_to_mongo(behavior_session_id, failed_attribute, error_class, traceback):
@@ -69,7 +65,7 @@ def get_validation_results(behavior_session_id=None):
 
 def validate_attribute(behavior_session_id, attribute):
     session = data_access_utilities.get_sdk_session(
-        behavior_session_id, 
+        behavior_session_id,
         data_access_utilities.is_ophys(behavior_session_id)
     )
     if attribute in dir(session):
@@ -192,7 +188,7 @@ class ValidateSDK(object):
         self.behavior_session_id = behavior_session_id
         self.is_ophys = data_access_utilities.is_ophys(behavior_session_id)
         self.session = data_access_utilities.get_sdk_session(
-            behavior_session_id, 
+            behavior_session_id,
             self.is_ophys
         )
 

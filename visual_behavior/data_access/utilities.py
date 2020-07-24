@@ -8,6 +8,10 @@ from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
 from visual_behavior import database as db
 
+from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from allensdk.brain_observatory.behavior.behavior_data_session import BehaviorDataSession
+from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -386,7 +390,7 @@ def get_roi_group(lims_data):
 
 def get_lims_id(lims_data):
     lims_id = lims_data.lims_id.values[0]
-    return lims_
+    return lims_id
 
 
 def bsid_to_oeid(behavior_session_id):
