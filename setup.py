@@ -4,7 +4,7 @@ import setuptools
 
 setuptools.setup(
     name="visual-behavior",
-    version="0.7.0",
+    version="0.8.2.dev0",
     author="Allen Institute for Brain Science",
     author_email="marinag@alleninstitute.org, dougo@alleninstitute.org",
     description="analysis package for visual behavior",
@@ -14,7 +14,7 @@ setuptools.setup(
         "plotly",
         "pandas==0.25.3",
         "six",
-        "scikit-learn>=0.19.2",
+        "scikit-learn==0.20.4",
         "scipy>=1.0.0",
         "deepdish>=0.3.6",
         "numpy>=1.9.0",

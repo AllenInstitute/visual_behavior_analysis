@@ -4,6 +4,39 @@ from matplotlib import cm
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from colorsys import hls_to_rgb
+
+
+def generate_random_colors(n, lightness_range=(0, 1), saturation_range=(0, 1), random_seed=0, order_colors=False):
+    '''
+    get n distinct colors specified in HLS (Hue, Lightness, Saturation) colorspace
+    hue is random
+    lightness is random in range between all black (0) and all white (1)
+    saturation is random in range between lightness value (0) and pure color (1)
+
+    inputs:
+        n (int) - number of desired colors
+        lightness_range (2 value tuple) - desired range of lightness values (from 0 to 1)
+        saturation_range (2 value tuple) - desired range of saturation values (from 0 to 1)
+        random_seed (int) - seed for random number generator (ensures repeatability)
+        order_colors (bool) - if True, colors will be ordered by hue, if False, hue order will be random
+
+    returns:
+        list of tuples containing RGB values (which can be used as a matplotlib palette)
+    '''
+    np.random.seed(random_seed)
+    colors = []
+
+    hues = np.random.rand(n)
+    if order_colors:
+        hues = np.sort(hues)
+
+    for hue in hues:
+        lightness = np.random.uniform(lightness_range[0], lightness_range[1])
+        saturation = np.random.uniform(saturation_range[0], saturation_range[1])
+        colors.append(hls_to_rgb(hue, lightness, saturation))
+
+    return colors
 
 
 def placeAxesOnGrid(
