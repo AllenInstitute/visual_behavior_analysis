@@ -172,12 +172,14 @@ def get_behavior_session_summary(exclude_error_sessions=True):
     return summary
 
 
-def get_pkl_path(session_id=None, id_type='behavior_session_uuid'):
+def get_pkl_path(session_id=None, id_type='behavior_session_id'):
     '''
     get the path to a pkl file for a given session
     '''
-    osid = convert_id({id_type: session_id}, 'ophys_session_id')
-    rec = get_well_known_files(osid).loc['StimulusPickle']
+    if id_type == 'behavior_session_id':
+        rec = get_well_known_files(session_id, 'BehaviorSession').loc['StimulusPickle']
+    elif id_type == 'ophys_session_id':
+        rec = get_well_known_files(session_id, 'OphysSession').loc['StimulusPickle']
     pkl_path = ''.join([rec['storage_directory'], rec['filename']])
     return pkl_path
 
