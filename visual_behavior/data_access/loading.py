@@ -231,13 +231,18 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                                                 associated with an ophys_experiment_id (single imaging plane)
         """
 
-    def __init__(self, api, include_invalid_rois=False):
+    def __init__(self, api, include_invalid_rois=False, eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2):
         """
         :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
-        :param include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
+        :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
         """
-        super().__init__(api)
-        self.include_invalid_rois = include_invalid_rois
+        super().__init__(api,
+                        eye_tracking_z_threshold=eye_tracking_z_threshold,
+                        eye_tracking_dilation_frames=eye_tracking_dilation_frames
+                        )
+
+        self._include_invalid_rois = include_invalid_rois
+
         # set pupil area and events to None for now
         # self.pupil_area = None
 
@@ -271,7 +276,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table
-        if self.include_invalid_rois == False:
+        if self._include_invalid_rois == False:
             cell_specimen_table = cell_specimen_table.query('valid_roi')
         cell_specimen_table = cell_specimen_table.copy()
         # add cell index corresponding to the index of the cell in dff_traces_array
@@ -302,7 +307,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def corrected_fluorescence_traces(self):
-        if self.include_invalid_rois == False:
+        if self._include_invalid_rois == False:
             corrected_fluorescence_traces = super().corrected_fluorescence_traces
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
@@ -314,7 +319,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def dff_traces(self):
-        if self.include_invalid_rois == False:
+        if self._include_invalid_rois == False:
             dff_traces = super().dff_traces
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
