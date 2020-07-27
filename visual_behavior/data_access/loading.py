@@ -236,7 +236,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
         :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
         """
-        super().__init__(api,eye_tracking_z_threshold=eye_tracking_z_threshold, eye_tracking_dilation_frames=eye_tracking_dilation_frames)
+        super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold, eye_tracking_dilation_frames=eye_tracking_dilation_frames)
 
         self._include_invalid_rois = include_invalid_rois
 
