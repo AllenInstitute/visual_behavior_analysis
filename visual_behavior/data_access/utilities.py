@@ -6,6 +6,11 @@ from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
+from visual_behavior import database as db
+
+from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from allensdk.brain_observatory.behavior.behavior_data_session import BehaviorDataSession
+from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 
 import logging
 logger = logging.getLogger(__name__)
@@ -41,10 +46,7 @@ def check_for_model_outputs(behavior_session_id):
     model_output_dir = loading.get_behavior_model_outputs_dir()
     model_output_file = [file for file in os.listdir(model_output_dir) if
                          (str(behavior_session_id) in file) and ('training' not in file)]
-    if len(model_output_file) > 0:
-        return True
-    else:
-        return False
+    return len(model_output_file) > 0
 
 
 # retrieve data from cache
@@ -389,3 +391,44 @@ def get_roi_group(lims_data):
 def get_lims_id(lims_data):
     lims_id = lims_data.lims_id.values[0]
     return lims_id
+
+
+def bsid_to_oeid(behavior_session_id):
+    '''
+    convert a behavior_session_id to an ophys_experiment_id
+    '''
+    oeid = db.lims_query(
+        '''
+        select oe.id
+        from behavior_sessions
+        join ophys_experiments oe on oe.ophys_session_id = behavior_sessions.ophys_session_id
+        where behavior_sessions.id = {}
+        '''.format(behavior_session_id)
+    )
+    if isinstance(oeid, pd.DataFrame):
+        return oeid.iloc[0][0]
+    else:
+        return oeid
+
+
+def get_cache():
+    MANIFEST_PATH = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache/manifest.json"
+    cache = bpc.from_lims(manifest=MANIFEST_PATH)
+    return cache
+
+
+def is_ophys(behavior_session_id):
+    cache = get_cache()
+
+    behavior_session_table = cache.get_behavior_session_table()
+
+    return pd.notnull(behavior_session_table.loc[behavior_session_id]['ophys_session_id'])
+
+
+def get_sdk_session(behavior_session_id, is_ophys):
+
+    if is_ophys:
+        ophys_experiment_id = bsid_to_oeid(behavior_session_id)
+        return BehaviorOphysSession.from_lims(ophys_experiment_id)
+    else:
+        return BehaviorDataSession.from_lims(behavior_session_id)
