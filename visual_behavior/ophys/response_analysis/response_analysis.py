@@ -216,6 +216,7 @@ class ResponseAnalysis(object):
                     'licked',
                     'lick_on_next_flash',
                     'lick_on_previous_flash',
+                    'mean_running_speed'
                 ]
                 df = df.merge(
                     stimulus_presentations[columns_to_keep],

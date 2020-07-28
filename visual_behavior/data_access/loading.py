@@ -1525,6 +1525,9 @@ def get_annotated_experiments_table():
     indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
     experiments_table.at[indices, 'location'] = 'Sst'
 
+    experiments_table['session_number'] = [int(session_type[6]) for session_type in experiments_table.session_type.values]
+    experiments_table['cre'] = [cre.split('-')[0] for cre in experiments_table.cre_line.values]
+
     return experiments_table
 
 
@@ -1595,7 +1598,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
             df = pd.read_hdf(filepath, key='df')
             df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
-                                 'layer', 'ophys_session_id', 'project_code', 'location2',
+                                 'layer', 'ophys_session_id', 'project_code', 'session_type',
                                  'specimen_id', 'depth', 'exposure_number', 'container_id']], on='ophys_experiment_id')
             outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
             df = df[df.cell_specimen_id.isin(outlier_cells) == False]
