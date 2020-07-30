@@ -7,6 +7,7 @@ import traceback
 import datetime
 import uuid
 import warnings
+from psycopg2 import extras
 
 from allensdk.internal.api import PostgresQueryMixin
 from allensdk.core.authentication import credential_injector
@@ -62,6 +63,14 @@ class Database(object):
         close connection to client
         '''
         self.client.close()
+
+
+def get_psql_dict_cursor():
+    """Set up a connection to a psql db server with a dict cursor"""
+    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
+    con = api.get_connection()
+    con.set_session(readonly=True, autocommit=True)
+    return con.cursor(cursor_factory=extras.RealDictCursor)
 
 
 def get_behavior_data(table_name, session_id=None, id_type='behavior_session_uuid'):
@@ -337,6 +346,14 @@ def is_uuid(n):
     return isinstance(n, uuid.UUID)
 
 
+def is_bool(n):
+    return isinstance(n, (bool, np.bool_))
+
+
+def is_array(n):
+    return isinstance(n, np.ndarray)
+
+
 def add_behavior_record(behavior_session_uuid=None, pkl_path=None, overwrite=False, db_connection=None, db_name='behavior_data', data_type='foraging2'):
     '''
     for a given behavior_session_uuid:
@@ -533,10 +550,14 @@ def get_well_known_files(session_id, attachable_id_type='OphysSession'):
 def simplify_type(x):
     if is_int(x):
         return int(x)
+    elif is_bool(x):
+        return int(x)
     elif is_float(x):
         return float(x)
     elif is_uuid(x):
         return str(x)
+    elif is_array(x):
+        return[simplify_type(e) for e in x]
     else:
         return x
 

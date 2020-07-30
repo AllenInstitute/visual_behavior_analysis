@@ -136,7 +136,7 @@ def get_donor_id_from_specimen_id(s_id, cache):
     return donor_id
 
 
-def add_stimulus_presentations_analysis(session,add_running_speed = True):
+def add_stimulus_presentations_analysis(session, add_running_speed=True):
     '''
         Adds a series of columns to the stimulus_presentations table
 
@@ -163,7 +163,7 @@ def add_stimulus_presentations_analysis(session,add_running_speed = True):
         sa.add_mean_running_speed_inplace(session)
 
 
-def get_filtered_sessions_table(cache, require_cell_matching=False, require_full_container=True, require_exp_pass=True, include_multiscope=False,no_filter=False):
+def get_filtered_sessions_table(cache, require_cell_matching=False, require_full_container=True, require_exp_pass=True, include_multiscope=False, no_filter=False):
     '''
         Applies some filters to the ophys_sessions_table. It will always filter out all sessions that do not have
         project codes of 'VisualBehavior' or 'VisualBehaviorTask1B'. This currently removes all Mesoscope sessions.
