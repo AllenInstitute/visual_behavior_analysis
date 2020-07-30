@@ -359,10 +359,16 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def ophys_timestamps(self):
         if super().metadata['rig_name'] == 'MESO.1':
-            self._ophys_timestamps = self.timestamps['ophys_frames']['timestamps']
+            self._ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
         else:
             self._ophys_timestamps = super().ophys_timestamps
         return self._ophys_timestamps
+
+    @property
+    def behavior_movie_timestamps(self):
+        # note that due to sync line label issues, 'eye_tracking' timestamps are loaded here instead of 'behavior_movie' timestamps
+        self._behavior_movie_timestamps = self.timestamps['eye_tracking']['timestamps'].copy()
+        return self._behavior_movie_timestamps
 
     @property
     def metadata(self):
@@ -453,6 +459,20 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self._trials = trials
         return self._trials
 
+    @property
+    def behavior_movie_pc_masks(self):
+        cache = get_visual_behavior_cache()
+        ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
+        self._behavior_movie_pc_masks = get_pc_masks_for_session(ophys_session_id)
+        return self._behavior_movie_pc_masks
+
+    @property
+    def behavior_movie_pc_activations(self):
+        cache = get_visual_behavior_cache()
+        ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
+        self._behavior_movie_pc_activations = get_pc_activations_for_session(ophys_session_id)
+        return self._behavior_movie_pc_activations
+
     def get_cell_specimen_id_for_cell_index(self, cell_index):
         cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_index == cell_index].index.values[0]
         return cell_specimen_id
@@ -536,6 +556,28 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     experiments = get_filtered_ophys_experiment_table()
     ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
+
+
+def get_pc_masks_for_session(ophys_session_id):
+    facemap_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/facemap_results'
+    session_file = [file for file in os.listdir(facemap_output_dir) if (str(ophys_session_id) in file) and ('motMask' in file)]
+    try:
+        pc_masks = np.load(os.path.join(facemap_output_dir, session_file[0]))
+    except:
+        print('could not load PC masks for ophys_session_id', ophys_session_id)
+        pc_masks = []
+    return pc_masks
+
+
+def get_pc_activations_for_session(ophys_session_id):
+    facemap_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/facemap_results'
+    session_file = [file for file in os.listdir(facemap_output_dir) if (str(ophys_session_id) in file) and ('motSVD' in file)]
+    try:
+        pc_activations = np.load(os.path.join(facemap_output_dir, session_file[0]))
+    except:
+        print('could not load PC activations for ophys_session_id', ophys_session_id)
+        pc_activations = []
+    return pc_activations
 
 
 def get_extended_stimulus_presentations(session):
@@ -1589,7 +1631,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_
                 filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
                 filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
                 df = pd.read_hdf(filepath, key='df')
-                # df = df.merge(expts, on='ophys_experiment_id')
+                df = df.merge(expts, on='ophys_experiment_id')
                 outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
                 df = df[df.cell_specimen_id.isin(outlier_cells) == False]
                 multi_session_df = pd.concat([multi_session_df, df])
