@@ -706,7 +706,7 @@ def svm_main_pbs(session_id, experiment_ids, validity_log_all, dir_svm, frames_s
                 ################################################
                 else:   
 
-                    indBestC = [0 if cbestKnown else np.in1d(cvect, cbest)]
+                    indBestC = np.squeeze([0 if cbestKnown else np.in1d(cvect, cbest)])
         #                for ifr in range(nFrs):   
     #                if cbestKnown:
     #                    indBestC = 0

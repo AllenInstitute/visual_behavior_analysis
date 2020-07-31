@@ -226,6 +226,7 @@ if use_ct_traces:
 #%% Initiate all_sess panda table
 
 cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_omissions', 'n_neurons', 'frame_dur', 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
+
 if doCorrs==1:
     colsa = np.array(['cc_cols_area12', 'cc_cols_areaSame',
                      'cc_a12', 'cc_a11', 'cc_a22', 'p_a12', 'p_a11', 'p_a22',
