@@ -20,7 +20,7 @@ from visual_behavior.ophys.sync.sync_dataset import Dataset
 def flatten_list(in_list):
     out_list = []
     for i in range(len(in_list)):
-        # check to see if each entry is a list or array
+        # check to see if each entry is a list or array.
         if isinstance(in_list[i], list) or isinstance(in_list[i], np.ndarray):
             # if so, iterate over each value and append to out_list
             for entry in in_list[i]:
@@ -392,7 +392,7 @@ class EyeTrackingData(object):
         self.foraging_id = db.get_value_from_table('id', ophys_session_id, 'ophys_sessions', 'foraging_id')
 
         # get paths of well known files
-        well_known_files = db.get_well_known_files(ophys_session_id).set_index('name')
+        well_known_files = db.get_well_known_files(ophys_session_id)
         self.filepaths = {}
         wkf_to_variable_map = {
             "RawEyeTrackingVideo": 'eye_movie',
