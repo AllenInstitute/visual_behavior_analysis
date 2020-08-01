@@ -482,12 +482,16 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                         
     #                     if len(image_names_surr_omit) < 3:
     #                         print(f'There are two alternating omissions: {image_names_surr_omit0}')
-                        if len(image_names_surr_omit)>0 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
+                        if len(image_names_surr_omit)>1 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
                             print('image after omission is different from image before omission! uncanny!') # sys.exit
 
                         # set to nan the omission trace if it was not preceded by another image in the repetitive structure that we expect to see.
                         if len(image_names_surr_omit) == 0: # session_id: 839514418; there is a last omission after 5.23sec of previous image
                             print(f'Omission {iomit} is uncanny! no images around it! so removing it!')
+                            local_fluo_allOmitt[:,:, iomit] = np.nan
+
+                        if len(image_names_surr_omit) == 1: # session_id: 47758278; there is a last omission after 1.48sec of previous image and no images after that!
+                            print(f'Omission {iomit} is uncanny! no images after it! so removing it!')
                             local_fluo_allOmitt[:,:, iomit] = np.nan
                             
                         else:
@@ -540,7 +544,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
                     except Exception as e:
                         print(f'Omission alignment failed; omission index: {iomit}, omission frame: {local_index}, starting and ending frames: {be, af}') # indiv_time, 
-    #                     print(e)
+#                         print(e)
 
 
                 flash_omit_dur_all = np.array(flash_omit_dur_all)
@@ -1913,7 +1917,7 @@ session_id = int(list_all_sessions_valid[isess])
 experiment_ids = list_all_experiments[isess] # we want to have the list of all experiments for each session regardless of whethere they were valid or not... this way we can find the same plane across all sessions.
 
 #cnt_sess = cnt_sess + 1
-print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess+1, len(list_all_sessions_valid)))
+print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
 #print('%d: session %d out of %d sessions' %(session_id, cnt_sess+1, len(list_all_sessions_valid)))
 
 

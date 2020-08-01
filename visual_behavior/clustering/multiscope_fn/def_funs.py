@@ -1,5 +1,9 @@
 # %load_ext autoreload
 
+# from importlib import reload
+# import(x) 
+# reload(x)
+
 #get_ipython().magic(u'matplotlib inline')   
 
 import numpy as np

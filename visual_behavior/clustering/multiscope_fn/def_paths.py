@@ -17,7 +17,8 @@ elif socket.gethostname() == 'W10DTMJ02D7Z8': # jerome's windows machine
     dirAna = 'C:\\Users\\farzaneh.najafi\\Documents\\analysis_codes\\'
     dir0 = "C:\\Users\\farzaneh.najafi\\OneDrive - Allen Institute\\Analysis"
         
-dirMs = os.path.join(dirAna, 'multiscope_fn')    
+# dirMs = os.path.join(dirAna, 'multiscope_fn')
+dirMs = os.path.join(dirAna, 'visual_behavior_analysis', 'visual_behavior', 'clustering', 'multiscope_fn')
 os.chdir(dirMs)
 
 

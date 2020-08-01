@@ -490,6 +490,10 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                             print(f'Omission {iomit} is uncanny! no images around it! so removing it!')
                             local_fluo_allOmitt[:,:, iomit] = np.nan
                             
+                        if len(image_names_surr_omit) == 1: # session_id: 47758278; there is a last omission after 1.48sec of previous image and no images after that!
+                            print(f'Omission {iomit} is uncanny! no images after it! so removing it!')
+                            local_fluo_allOmitt[:,:, iomit] = np.nan
+                            
                         else:
                             
                             '''

@@ -18,7 +18,7 @@ from def_funs import *
 from omissions_traces_peaks_quantify import *
 # import re
 
-def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_svm, all_sess, same_num_neuron_all_planes, use_ct_traces, mean_notPeak, peak_win, flash_win, flash_win_vip, flash_win_timing, bl_percentile, cols, doShift_again, analysis_dates, doPlots=0):
+def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_svm, all_sess, same_num_neuron_all_planes, use_ct_traces, use_np_corr, use_common_vb_roi, mean_notPeak, peak_win, flash_win, flash_win_vip, flash_win_timing, bl_percentile, cols, doShift_again, analysis_dates, doPlots=0):
     
     #%%    
     if type(frames_svm)==int: # First type you ran svm analysis: SVM was run on 30 frames after omission and 0 frames before omission (each frame after omission was compared with a gray frame (frame -1 relative to omission))
@@ -63,7 +63,7 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
     #%% Load some important variables from the experiment
     
     #    [whole_data, data_list, table_stim] = load_session_data(session_id) # data_list is similar to whole_data but sorted by area and depth
-    [whole_data, data_list, table_stim, behav_data] = load_session_data_new(session_id, experiment_ids, use_ct_traces)
+    [whole_data, data_list, table_stim, behav_data] = load_session_data_new(session_id, experiment_ids, use_ct_traces, use_np_corr, use_common_vb_roi)
     
     
     #%%
