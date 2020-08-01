@@ -1201,10 +1201,13 @@ def set_y_this_plane_allsess(y, num_sessions, takeAve=0): # set takeAve to 1 for
 
 
 
-#%% Align on omission trials:
+#%% Align on omission trials
+
+# local_fluo_traces # neurons x frames
+# local_time_traces # frame times in sec. Volume rate is 10 Hz. Are these the time of frame onsets?? (I think yes... double checking with Jerome/ Marina.) # dataset.timestamps['ophys_frames'][0]             
 # samps_bef (=40) frames before omission ; index: 0:39
-# omission frame ; index: 40
-# samps_aft - 1 (=39) frames after omission ; index: 41:79
+    # omission frame ; index: 40
+    # samps_aft - 1 (=39) frames after omission ; index: 41:79
 
 def align_trace_on_event(local_fluo_traces, local_time_traces, samps_bef, samps_aft, list_omitted):
     
@@ -1228,8 +1231,8 @@ def align_trace_on_event(local_fluo_traces, local_time_traces, samps_bef, samps_
             print('Event %d at time %f cannot be analyzed: %d timepoints before it and %d timepoints after it!' %(iomit, indiv_time, be, af)) 
 
         try: # Align on omission
-            local_fluo_allOmitt[:,:, num_omissions] = local_fluo_traces[:, be:af].T # frame x neurons x omissions_trials (10Hz)
-            local_time_allOmitt[:, num_omissions] = local_time_traces[be:af] - indiv_time # frame x omissions_trials
+            local_fluo_allOmitt[:,:, iomit] = local_fluo_traces[:, be:af].T # frame x neurons x omissions_trials (10Hz)
+            local_time_allOmitt[:, iomit] = local_time_traces[be:af] - indiv_time # frame x omissions_trials
             
             # local_time_allOmitt is frame onset relative to omission onset. (assuming that the times in local_time_traces are frame onsets.... still checking on this, but it seems to be the rising edge, hence frame onset time!)
             # so local_time_allOmitt will be positive if frame onset is after omission onset.
@@ -1247,17 +1250,26 @@ def align_trace_on_event(local_fluo_traces, local_time_traces, samps_bef, samps_
             # so we dont save local_time_allOmitt, although it will be more accurate to use it than time_trace, but the
             # difference is very minimum
 
-            num_omissions = num_omissions + 1
+#             num_omissions = num_omissions + 1
             
         except Exception as e:
-            print(indiv_time, num_omissions, be, af, local_index)
+            print(f'Omission alignment failed; omission index: {iomit}, omission frame: {local_index}, starting and ending frames: {be, af}') # indiv_time, 
+#             print(indiv_time, num_omissions, be, af, local_index)
 #             print(e)
 
 
     # remove the last nan rows from the traces, which happen if some of the omissions are not used for alignment (due to being too early or too late in the session) 
-    if len(list_omitted)-num_omissions > 0:
-        local_fluo_allOmitt = local_fluo_allOmitt[:,:,0:-(len(list_omitted)-num_omissions)]
-        local_time_allOmitt = local_time_allOmitt[:,0:-(len(list_omitted)-num_omissions)]
+    # find nan rows
+    mask_valid_trs = np.nansum(local_fluo_allOmitt, axis=(0,1))!=0
+    if sum(mask_valid_trs==False) > 0:
+        local_fluo_allOmitt = local_fluo_allOmitt[:,:,mask_valid_trs]
+        local_time_allOmitt = local_time_allOmitt[:,mask_valid_trs]
+
+    num_omissions = sum(mask_valid_trs)
+
+#     if len(list_omitted)-num_omissions > 0:
+#         local_fluo_allOmitt = local_fluo_allOmitt[:,:,0:-(len(list_omitted)-num_omissions)]
+#         local_time_allOmitt = local_time_allOmitt[:,0:-(len(list_omitted)-num_omissions)]
 
         
     return local_fluo_allOmitt, local_time_allOmitt

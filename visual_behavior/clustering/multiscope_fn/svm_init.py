@@ -208,6 +208,9 @@ for isess in range(len(list_all_sessions_valid)):   # session_id = list_all_sess
     all_sess = all_sess.append(this_sess) 
     
 
+    
+##################################################################    
+##################################################################
 #%% Save all_sess
 
 samps_bef = -frames_svm[0] 
