@@ -1525,6 +1525,9 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
             else:
                 namespec = ''
 
+            if subtractSigCorrs==0:
+                namespec = namespec + '_withSigCorrs'                
+
             if doShift_again==1:
                 namespec = namespec + '_blShiftAgain'
             else:

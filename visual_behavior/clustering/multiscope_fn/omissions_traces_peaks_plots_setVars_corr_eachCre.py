@@ -6,7 +6,9 @@ Vars are set in "omissions_traces_peaks_plots_setVars_corr.py"
 Here we get vars to make summary plots for mice in each cre line (for individual mouse, also summary across mice)
 
 This function calls  "omissions_traces_peaks_plots_setVars_corr_sumMice.py" to make summary plots for mice.
-We can also call omissions_traces_peaks_plots_setVars_corr_eachMouse.py to make plots for each mouse. (currently commenetd out.)
+It may also run omissions_traces_peaks_plots_setVars_corr_eachMouse.py to make plots for each mouse, if do_single_mouse_plots=1 (set in omissions_traces_peaks_plots_setVars_corr.py)
+
+Figures are saved in folder 'corr_omit_flash' (inside OneDrive/Analysis/)
 
 
 Created on Mon Sep 23 15:58:29 2019

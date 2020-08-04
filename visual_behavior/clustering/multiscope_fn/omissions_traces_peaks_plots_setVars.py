@@ -92,6 +92,9 @@ elif doCorrs == -1:
 else:
     namespec = ''
 
+if subtractSigCorrs==0:
+    namespec = namespec + '_withSigCorrs'
+    
 if useSDK:
     namespec = namespec + '_sdk'
     
@@ -107,7 +110,7 @@ if doCorrs==0:
         namespec = namespec + '_soma_dff'
 
     
-if doCorrs==0 or doCorrs==-1:
+if (doCorrs == 0) or (doCorrs == -1):
 #    name = 'all_sess_%s%s_.' %(analysis_name, namespec) 
     name = 'all_sess_%s%s_[0-9].' %(analysis_name, namespec)
     all_files = 0
@@ -130,17 +133,17 @@ else:
 
 print(f'Loading all_sess dataframe...')
 
-if doCorrs==0:
+if doCorrs == 0:
     all_sess = pd.read_hdf(allSessName, key='all_sess') #'svm_vars')        ## Load all_sess dataframe
     input_vars = pd.read_hdf(allSessName, key='input_vars')     ## Load input_vars dataframe    
 
-if doCorrs==-1: # pkl file was saved
+if doCorrs == -1: # pkl file was saved
     f = allSessName
     pkl = open(f, 'rb')
     all_sess = pickle.load(pkl)
     input_vars = pickle.load(pkl)
 
-elif doCorrs==1: # load pkl files (each one is for one session)
+elif doCorrs == 1: # load pkl files (each one is for one session)
 
     l = os.listdir(dir_now) 
     
