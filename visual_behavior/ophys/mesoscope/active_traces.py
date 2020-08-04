@@ -137,7 +137,8 @@ def get_traces_evs(traces_y0, th_ag, len_ne, do_plots=1):
                     print(np.in1d(evs_inds, inds_final))
                     sys.exit(
                         'error in neuron %d! some of the events dont exist in inds_final! all events must exist in inds_final!' % iu)
-
+                        
+            inds_final = inds_final[inds_final>=0] # to avoid the negative values that can happen due to taking 20 frames before an even
             traces_y0_evs_now = traces_y0[iu][inds_final]
 
         else:  # there are no events in the neuron; assign a nan vector of length 10 to the following vars
