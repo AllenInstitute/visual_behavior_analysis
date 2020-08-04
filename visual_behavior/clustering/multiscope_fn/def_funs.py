@@ -3526,7 +3526,8 @@ def set_traces_evs(traces_y0, th_ag, len_ne, doPlots=1):
                     print(np.in1d(evs_inds, inds_final))
                     sys.exit('error in neuron %d! some of the events dont exist in inds_final! all events must exist in inds_final!' %iu)
         #    inds_final.shape
-
+            inds_final = inds_final[inds_final>=0] # to avoid the negative values that can happen due to taking 20 frames before an event.
+            
             traces_y0_evs_now = traces_y0[iu][inds_final]
         
         

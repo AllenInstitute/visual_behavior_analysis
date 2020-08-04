@@ -27,6 +27,11 @@ sameBl_allLayerPairs = 0 #1 # if 1, shift the baseline of cc trace of all 16 are
 use_spearman_p = 1 # if 1, we use spearman p to show fraction of significant neuron pairs, if 0, we use the manually computed p (one-sample ttest between cc_shlf distribution and the actual cc) to quantify fraciton of neuron pairs with significant cc values.
 do_single_mouse_plots = 1 #0 # make cc traces and peaks plots of session-averaged data, for each mouse
 
+peak_win = [0, .5] #[0, .75] # this should be named omit_win
+flash_win = np.array([0, .35])-.75 #[0, .75] # now using flash-aligned traces; previously flash responses were computed on omission-aligned traces; problem: not all flashes happen every .75sec # [-.75, 0] # previous value: # [-.75, -.25] # 
+flash_win_vip = np.array([-.25, .1])-.75 #[-.25, .5] # on flash-aligned traces # [-1, -.25] # previous value (for flash_win of all cre lines): # [-.75, -.25] # 
+
+'''
 ######## NOTE: in the new method (implemented 04/29/2020) we compute list_times from peak_win (for omission responses); then we use flash-omit interval (flash_omit_dur_fr_all) to compute list_times_flash from list_times; Then we use flash_win_vip_shift to compute list_times_flash_vip from list_times_flash.
 ### although, it really didn't make a difference really from when you defined flash_win as peak_win -.75 ... because fo_dur_fr_med is 8 frames which is about 750ms.
 # we set these vars in omissions_traces_peaks_init.py, but we dont used them until in this script. se we can just redifine them here.
@@ -34,6 +39,7 @@ peak_win = [0, .6] # [0, .75] # you should totally not go beyond 0.75!!! # go wi
 flash_win_vip_shift = .25 # sec; shift flash_win this much earlier to compute flash responses on vip B1 sessions.
 # flash_win = [-.75, -.15] # [-.75, -.25] #[-.75, -.4] #[-.75, 0] # window (relative to omission) for computing flash-evoked responses (750ms includes flash and gray)    
 # flash_win_vip = [-1, -.4] # [-1, -.25] # previous value (for flash_win of all cre lines): # [-.75, -.25] # 
+'''
 
 # fw0 = (peak_win[0] - (fo_dur_fr_med * frame_dur)).squeeze()
 # flash_win = [fw0, fw0 + np.diff(peak_win).squeeze()]
@@ -63,9 +69,10 @@ jet_cm = colorOrder(nlines=num_depth)
 #%%
 num_frs = samps_bef + samps_aft
 
-fo_dur_fr_med = np.median(np.hstack(all_sess_2an['flash_omit_dur_fr_all'].values)).astype(int)
+fo_dur_fr_med = np.nanmedian(np.hstack(all_sess_2an['flash_omit_dur_fr_all'].values)).astype(int)
 # flash_win_vip_shift = .25 # sec; shift flash_win this much earlier to compute flash responses on vip B1 sessions.
 
+'''
 ######## NOTE: in the new method (implemented 04/29/2020) we compute list_times from peak_win (for omission responses); then we use flash-omit interval (flash_omit_dur_fr_all) to compute list_times_flash from list_times; Then we use flash_win_vip_shift to compute list_times_flash_vip from list_times_flash.
 ### although, it really didn't make a difference really from when you defined flash_win as peak_win -.75 ... because fo_dur_fr_med is 8 frames which is about 750ms.
 # set time windows, in frame units, for computing flash and omission evoked responese
@@ -73,9 +80,12 @@ fo_dur_fr_med = np.median(np.hstack(all_sess_2an['flash_omit_dur_fr_all'].values
 list_times, _, _ = set_frame_window_flash_omit(peak_win, np.nan, np.nan, samps_bef, frame_dur)
 list_times_flash = list_times - fo_dur_fr_med
 list_times_flash_vip = list_times_flash - np.round(flash_win_vip_shift/frame_dur).astype(int) # we shift the window 250ms earlier to capture vip responses
-        
+'''
 
-    
+# 08/04/2020: going back to using set_frame_window_flash_omit to set the list_times, because I want to use different time windows for omissions and images.
+list_times, list_times_flash, list_times_flash_vip = set_frame_window_flash_omit(peak_win, flash_win, flash_win_vip, samps_bef, frame_dur)
+
+
     
     
     

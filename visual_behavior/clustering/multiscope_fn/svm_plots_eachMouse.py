@@ -3,6 +3,8 @@ Vars needed here are set in svm_plots_setvars.
 This script uses pandas table "svm_this_plane_allsess" to make svm related plots for each mouse.
 Figures will be saved in "/home/farzaneh/OneDrive/Analysis/svm_gray_omit/"
 
+# Follow this script by "svm_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
+
 
 Created on Thu Apr  9 01:09:00 2020
 @author: farzaneh

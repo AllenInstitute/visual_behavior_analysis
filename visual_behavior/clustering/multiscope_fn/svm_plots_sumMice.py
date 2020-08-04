@@ -1020,7 +1020,7 @@ else:
         ylabs = 'Resp amplitude'
         
         top = np.nanmean(paf_all[:, cre_all[0,:]==cre], axis=1) # 8 x 4(train, test, shuffle, chance)
-        top_sd = np.nanstd(paf_all[:, cre_all[0,:]==cre], axis=1)        
+        top_sd = np.nanstd(paf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))       
         
         # plot testing, and shuffle data, ie indeces 1 and 2 in top
 #         ind_ts_sh = [1,2] (train, test, shuffle, chance)
@@ -1060,7 +1060,7 @@ else:
         ylabs = 'Peak timing (s)'
         
         top = np.nanmean(ptf_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(ptf_all[:, cre_all[0,:]==cre], axis=1)        
+        top_sd = np.nanstd(ptf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))       
 
         ax2 = plt.subplot(gs3[1])
         
@@ -1098,7 +1098,7 @@ else:
 #        x = np.arange(num_depth)
         
         top = np.nanmean(pa_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1)        
+        top_sd = np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))        
 
         ax1 = plt.subplot(gs4[0])
         
@@ -1134,7 +1134,7 @@ else:
         ylabs = 'Peak timing (s)'
         
         top = np.nanmean(pt_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(pt_all[:, cre_all[0,:]==cre], axis=1)        
+        top_sd = np.nanstd(pt_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))        
 
         ax2 = plt.subplot(gs4[1])
         
@@ -1183,7 +1183,7 @@ else:
         ylabs = 'Amplitude'
         
         top = np.nanmean(paf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] # 2 x 4(train, test, shuffle, chance)
-        top_sd = np.nanstd(paf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]        
+        top_sd = np.nanstd(paf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))       
 
         ax1 = plt.subplot(gs5[0])         
 
@@ -1217,7 +1217,7 @@ else:
         ylabs = 'Timing (s)'
         
         top = np.nanmean(ptf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(ptf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]        
+        top_sd = np.nanstd(ptf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))        
 
         ax2 = plt.subplot(gs5[1])
         
@@ -1255,7 +1255,7 @@ else:
 #        xticklabs = xticklabs
         
         top = np.nanmean(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]    
+        top_sd = np.nanstd(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))   
 
         ax1 = plt.subplot(gs6[0])  
         
@@ -1289,7 +1289,7 @@ else:
         ylabs = 'Timing (s)'
         
         top = np.nanmean(pt_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(pt_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]     
+        top_sd = np.nanstd(pt_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))    
 
         ax2 = plt.subplot(gs6[1])
         

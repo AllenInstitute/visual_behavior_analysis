@@ -23,14 +23,16 @@ Created on Fri Aug  9 19:12:00 2019
 """
 
 #%%
-doCorrs = 0
-all_ABtransit_AbefB_Aall = 1 #3 # 1 # 0: analyze all sessions;  1: analyze AB transitions;  2: analyze only A sessions (before any B);  3: analyze all A sessions (before or after B)    
-only_1st_transit = 1 # relevant only if all_ABtransit_AbefB_Aall=1 # if 1, only include data from the 1st A-->B transition even if a mouse has more than one (safer, since in the subsequent transitions, B has been already introduced, so they are not like the 1st A-->B transition)
-dosavefig = 1
+
+frames_svm = range(-16, 24) # 30 #frames_after_omission = 30 # 5 # run svm on how many frames after omission
 same_num_neuron_all_planes = 1 # if 1, use the same number of neurons for all planes to train svm
 
-frames_svm = range(-10, 30) # 30 #frames_after_omission = 30 # 5 # run svm on how many frames after omission
+all_ABtransit_AbefB_Aall = 3 # 1 # 0: analyze all sessions;  1: analyze AB transitions;  2: analyze only A sessions (before any B);  3: analyze all A sessions (before or after B)    
+only_1st_transit = 1 # relevant only if all_ABtransit_AbefB_Aall=1 # if 1, only include data from the 1st A-->B transition even if a mouse has more than one (safer, since in the subsequent transitions, B has been already introduced, so they are not like the 1st A-->B transition)
+dosavefig = 1
+
 svmn = 'svm_gray_omit'
+doCorrs = 0
 
 
 #%%
@@ -71,7 +73,7 @@ if sum(rmv)>0:
 
 #%%    
 print(np.shape(all_sess))
-print(all_sess.iloc[0])
+all_sess.iloc[:2]
 
 
 
@@ -86,6 +88,8 @@ flash_win = input_vars['flash_win'].iloc[0]
 flash_win_timing = input_vars['flash_win_timing'].iloc[0]
 bl_percentile = input_vars['bl_percentile'].iloc[0]
 doShift_again = input_vars['doShift_again'].iloc[0]
+
+# frames_svm = range(-samps_bef, samps_aft)
 
 
 #%% Initialize variables

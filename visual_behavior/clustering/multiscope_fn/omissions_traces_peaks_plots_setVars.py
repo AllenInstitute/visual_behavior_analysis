@@ -36,15 +36,17 @@ Created on Mon Aug 26 12:23:25 2019
 
     
 #%%
-doCorrs = 0 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
-analysis_dates = ['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
+doCorrs = 1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
+analysis_dates = ['20200731'] #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
 # note: analysis_dates must not include the entire date_time (eg '20200508_233842'), because the code below assumes it is followed by some wildcard characters.
 use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 
-doShift_again = 0 #1 #0 # whether the all_sess_omit_traces_peaks file was saved for doShift_again or not; # this is a second shift just to make sure the pre-omit activity has baseline at 0. (it is after we normalize the traces by baseline ave and sd... but because the traces are median of trials (or computed from the initial gray screen activity), and the baseline is mean of trials, the traces wont end up at baseline of 0)                                      
-
 all_ABtransit_AbefB_Aall = 3 # 3 # 1 0: analyze all sessions;  1: analyze AB transitions;  2: analyze only A sessions (before any B);  3: analyze all A sessions (before or after B)    
 only_1st_transit = 1 # relevant only if all_ABtransit_AbefB_Aall=1 # if 1, only include data from the 1st A-->B transition even if a mouse has more than one (safer, since in the subsequent transitions, B has been already introduced, so they are not like the 1st A-->B transition)
+
+th_neurons = 3 # minimum number of neurons (for a plane), in order to use that plane in analysis. (for all cre lines)
+
+doShift_again = 0 #1 #0 # whether the all_sess_omit_traces_peaks file was saved for doShift_again or not; # this is a second shift just to make sure the pre-omit activity has baseline at 0. (it is after we normalize the traces by baseline ave and sd... but because the traces are median of trials (or computed from the initial gray screen activity), and the baseline is mean of trials, the traces wont end up at baseline of 0)                                      
 
 dosavefig = 1 #1
 #bl_gray_screen = 1 # this should be saved in all_sess, if not set it here. if 1, we used the initial gray screen at the beginning of the session to compute baseline
@@ -52,9 +54,7 @@ plot_flash = 1 # if 1, plot the amplitude of flash-evoked responses; if 0, plot 
 plot_eachSess_trAve_neurAve = 1 # 0# if 1, for each session plot trial-averaged and neuron-averaged traces for every individual plane 
 
 
-th_neurons = 3 # minimum number of neurons (for a plane), in order to use that plane in analysis. (for all cre lines)
-
-useSDK = 0 # load the all_sess file created by using allenSDK in script load_behavior_ophys_dataset_fn.py.
+useSDK = 0 # always 0; it's an old thing. # load the all_sess file created by using allenSDK in script load_behavior_ophys_dataset_fn.py.
 
 #%%
 from def_paths import * 
@@ -100,10 +100,11 @@ if doShift_again==1:
 else:
     namespec = namespec + ''
     
-if use_np_corr==1:
-    namespec = namespec + '_np_corr_dff'
-else:
-    namespec = namespec + '_soma_dff'
+if doCorrs==0:
+    if use_np_corr==1:
+        namespec = namespec + '_np_corr_dff'
+    else:
+        namespec = namespec + '_soma_dff'
 
     
 if doCorrs==0 or doCorrs==-1:
@@ -179,12 +180,16 @@ elif doCorrs==1: # load pkl files (each one is for one session)
 print(np.shape(all_sess))
 
 
+
+
 #%% Take care of sessions with unusual frame duration!!!    
 # make sure below works!
 
 # frame_durs = np.concatenate((all_sess['frame_dur'].values)) # wont work if there are invalid experiments, they will be nan for frame duration
 frame_durs = np.array([all_sess.iloc[i]['frame_dur'] for i in range(len(all_sess))])
-
+if doCorrs==1:
+    frame_durs = frame_durs[:,0] # take it only for one of the experiments
+    
 rmv = np.logical_or(frame_durs < .093, frame_durs > .094)
 if sum(rmv)>0:
     print(f'{sum(rmv)} experiments have unusual frame duration. Take a look at these sessions, and add them to set_sessions_valid, line 178 to be excluded.')
