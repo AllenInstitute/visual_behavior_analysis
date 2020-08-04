@@ -25,24 +25,14 @@ from allensdk.core.authentication import credential_injector
 from allensdk.core.auth_config import LIMS_DB_CREDENTIAL_MAP
 
 # relative import doesnt work on cluster
-from visual_behavior.ophys.io.lims_database import LimsDatabase  # NOQA: E402
+import visual_behavior.database as db
 from visual_behavior.translator import foraging2, foraging  # NOQA: E402
 from visual_behavior.translator.core import create_extended_dataframe  # NOQA: E402
-from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset  # NOQA: E402
-from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay  # NOQA: E402
 from visual_behavior.visualization.ophys.summary_figures import plot_roi_validation  # NOQA: E402
 from visual_behavior.visualization.utils import save_figure  # NOQA: E402
-from psycopg2 import extras  # NOQA: E402
+from visual_behavior.data_access.utilities import get_lims_data, get_timestamps, get_ophys_session_dir, get_ophys_experiment_dir, get_lims_id
 
 logger = logging.getLogger(__name__)
-
-
-def get_psql_dict_cursor():
-    """Set up a connection to a psql db server with a dict cursor"""
-    api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)(PostgresQueryMixin)())
-    con = api.get_connection()
-    con.set_session(readonly=True, autocommit=True)
-    return con.cursor(cursor_factory=extras.RealDictCursor)
 
 
 def save_data_as_h5(data, name, analysis_dir):
@@ -59,62 +49,50 @@ def save_dataframe_as_h5(df, name, analysis_dir):
 def get_cache_dir(cache_dir=None):
     if not cache_dir:
         if platform.system() == 'Linux':
-            cache_dir = r'/allen/aibs/informatics/swdb2018/visual_behavior'
+            cache_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
         else:
-            cache_dir = r'\\allen\aibs\informatics\swdb2018\visual_behavior'
+            cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
         return cache_dir
     else:
         return cache_dir
-
-
-def get_lims_data(lims_id):
-    ld = LimsDatabase(lims_id)
-    lims_data = ld.get_qc_param()
-    lims_data.insert(loc=2, column='experiment_id',
-                     value=lims_data.lims_id.values[0])
-    lims_data.insert(loc=2, column='session_type',
-                     value='behavior_' + lims_data.experiment_name.values[0].split('_')[-1])
-    lims_data.insert(loc=2, column='ophys_session_dir',
-                     value=lims_data.datafolder.values[0][:-28])
-    return lims_data
-
-
-def get_lims_id(lims_data):
-    lims_id = lims_data.lims_id.values[0]
-    return lims_id
 
 
 def get_analysis_folder_name(lims_data):
     date = str(lims_data.experiment_date.values[0])[:10].split('-')
     specimen_driver_lines = lims_data.specimen_driver_line.values[0].split(';')
-    if len(specimen_driver_lines) > 1:
-        for i in range(len(specimen_driver_lines)):
-            if 'S' in specimen_driver_lines[i]:
-                # .split('-')[0]
-                specimen_driver_line = specimen_driver_lines[i]
-            else:
-                specimen_driver_line = specimen_driver_lines[0]
-    else:
-        specimen_driver_line = specimen_driver_lines[0]
+    if len(specimen_driver_lines[0]) > 1:  # if there is a driver line
+        print(specimen_driver_lines)
+        if len(specimen_driver_lines) > 1:  # if there are two lines
+            for i in range(len(specimen_driver_lines)):
+                if 'Cre' in specimen_driver_lines[i]:  # pick the one that has Cre in it
+                    specimen_driver_line = specimen_driver_lines[i]  # .split('-')[0]
+                else:
+                    specimen_driver_line = specimen_driver_lines[0]
+            print(specimen_driver_line)
+        elif len(specimen_driver_lines) == 1:  # if there is only one, pick that one
+            specimen_driver_line = specimen_driver_lines[0]
+            print(specimen_driver_line)
+    else:  # if there is no line, say line unknown
+        specimen_driver_line = 'cre_line_unknown'
+    print(specimen_driver_line)
     if specimen_driver_line == '':
-        raise Exception(
-            'specimen_driver_line is empty! check why! This will result in "multiple analysis folders".')
+        raise Exception('specimen_driver_line is empty! check why! This may result in "multiple analysis folders".')
     if lims_data.depth.values[0] is None:
         depth = 0
     else:
         depth = lims_data.depth.values[0]
     if lims_data.rig.values[0][0] == 'M':
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
-                            specimen_driver_line + '_' + lims_data.rig.values[0] + \
-                            '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
+            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+            specimen_driver_line + '_' + lims_data.rig.values[0] + \
+            '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
     else:
         analysis_folder_name = str(lims_data.lims_id.values[0]) + '_' + \
-                            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
-                            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
-                            specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
-                            lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
+            str(lims_data.external_specimen_id.values[0]) + '_' + date[0][2:] + date[1] + date[2] + '_' + \
+            lims_data.structure.values[0] + '_' + str(depth) + '_' + \
+            specimen_driver_line + '_' + lims_data.rig.values[0][3:5] + \
+            lims_data.rig.values[0][6] + '_' + lims_data.session_type.values[0]  # NOQA: E126 E127
 
     return analysis_folder_name
 
@@ -129,49 +107,73 @@ def get_experiment_date(lims_data):
     return experiment_date
 
 
+# NOTE: This function is defined again below. Commenting this one out. DRO, 5/28/20
+# def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
+#     cache_dir = get_cache_dir(cache_dir=cache_dir)
+#     if 'analysis_dir' in lims_data.columns:
+#         return lims_data['analysis_dir'].values[0]
+#     analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
+#     print(analysis_dir)
+#     if not os.path.exists(analysis_dir):
+#         print('Creating a new analysis folder')
+#         os.mkdir(analysis_dir)
+#     else:
+#         print('Analysis folder exists')
+#     # Check if more than one analysis folder exists
+#     allFiles = os.listdir(cache_dir)
+#     inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values))) for i in range(len(allFiles))]
+#     existingFolders = np.argwhere(np.array(inds) != -1)
+#     # Get the modification times of the existing analysis folders
+#     modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[i])])) for i in
+#                   range(len(existingFolders))]
+#     # Find all the old analysis folders
+#     indsOld = np.argsort(modifTimes)[:-1]
+#     oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
+#     # Remove old analysis folders
+#     for i in range(len(oldFiles)):
+#         print('Removing old analysis folder : %s' % oldFiles[i])
+#         shutil.rmtree(oldFiles[i])
+#     if cache_on_lims_data:
+#         lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
+#     return analysis_dir
+
+
 def get_analysis_dir(lims_data, cache_dir=None, cache_on_lims_data=True):
     cache_dir = get_cache_dir(cache_dir=cache_dir)
     if 'analysis_dir' in lims_data.columns:
         return lims_data['analysis_dir'].values[0]
-    analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
-    print(analysis_dir)
-    if not os.path.exists(analysis_dir):
-        print('Creating a new analysis folder')
-        os.mkdir(analysis_dir)
     else:
-        print('Analysis folder already exists!')
-    # Check if more than one analysis folder exists
-    allFiles = os.listdir(cache_dir)
-    inds = [allFiles[i].find(str(np.squeeze(lims_data.lims_id.values)))
-            for i in range(len(allFiles))]
-    existingFolders = np.argwhere(np.array(inds) != -1)
-    # Get the modification times of the existing analysis folders
-    modifTimes = [os.path.getmtime(os.path.join(cache_dir, allFiles[np.squeeze(
-        existingFolders[i])])) for i in range(len(existingFolders))]
-    # Find all the old analysis folders
-    indsOld = np.argsort(modifTimes)[:-1]
-    oldFiles = [os.path.join(cache_dir, allFiles[np.squeeze(
-        existingFolders[indsOld[i]])]) for i in range(len(indsOld))]
-    # Remove old analysis folders
-    for i in range(len(oldFiles)):
-        print('Removing old analysis folder : %s' % oldFiles[i])
-        shutil.rmtree(oldFiles[i])
-    if cache_on_lims_data:
-        lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
-    return analysis_dir
+        # look for existing analysis folders
+        analysis_folder = [folder for folder in os.listdir(cache_dir) if str(lims_data.lims_id.values[0]) in folder]
+        if len(analysis_folder) > 1:  # if there are multiple analysis folders with this lims_id
+            print('Multiple analysis folders exist, removing duplicates')
+            # Get the modification times of the existing analysis folders
+            # mod_times = [os.path.getmtime(os.path.join(cache_dir, analysis_folder[i])) for i in
+            #              range(len(analysis_folder))]
+            # Find all the old analysis folders
+            # old_inds = np.argsort(mod_times)[:-1]
+            old_folders = [os.path.join(cache_dir, analysis_folder[i]) for i in range(len(analysis_folder))]
+            # Remove old analysis folders
+            for i in range(len(old_folders)):
+                print('Removing old analysis folder : %s' % old_folders[i])
+                shutil.rmtree(old_folders[i])
 
+        # check again for remaining folders
+        analysis_folder = [folder for folder in os.listdir(cache_dir) if str(lims_data.lims_id.values[0]) in folder]
+        if len(analysis_folder) == 0:  # if there are no folders associated with this lims_id
+            print('Creating a new analysis folder')
+            analysis_dir = os.path.join(cache_dir, get_analysis_folder_name(lims_data))
+            os.mkdir(analysis_dir)
+        elif len(analysis_folder) == 1:  # if there is one folder for this lims_id
+            print('Analysis folder exists')
+            analysis_dir = os.path.join(cache_dir, analysis_folder[0])
+            # delete files in directory - this is necessary or else file sizes will increase with each overwrite
+            # [os.remove(os.path.join(analysis_dir, file)) for file in os.listdir(analysis_dir)]
 
-def get_ophys_session_dir(lims_data):
-    ophys_session_dir = lims_data.ophys_session_dir.values[0]
-    return ophys_session_dir
-
-
-def get_ophys_experiment_dir(lims_data):
-    lims_id = get_lims_id(lims_data)
-    ophys_session_dir = get_ophys_session_dir(lims_data)
-    ophys_experiment_dir = os.path.join(
-        ophys_session_dir, 'ophys_experiment_' + str(lims_id))
-    return ophys_experiment_dir
+        print(analysis_dir)
+        if cache_on_lims_data:
+            lims_data.insert(loc=2, column='analysis_dir', value=analysis_dir)
+        return analysis_dir
 
 
 def get_demix_dir(lims_data):
@@ -194,186 +196,19 @@ def get_segmentation_dir(lims_data):
     return segmentation_dir
 
 
-def get_roi_group(lims_data):
-    experiment_id = int(lims_data.experiment_id.values[0])
-    ophys_session_dir = get_ophys_session_dir(lims_data)
-    import json
-    json_file = [file for file in os.listdir(ophys_session_dir) if (
-        'SPLITTING' in file) and ('input.json' in file)]
-    json_path = os.path.join(ophys_session_dir, json_file[0])
-    with open(json_path, 'r') as w:
-        jin = json.load(w)
-    # figure out which roi_group the current experiment belongs to
-    # plane_data = pd.DataFrame()
-    for i, roi_group in enumerate(range(len(jin['plane_groups']))):
-        group = jin['plane_groups'][roi_group]['ophys_experiments']
-        for j, plane in enumerate(range(len(group))):
-            expt_id = int(group[plane]['experiment_id'])
-            if expt_id == experiment_id:
-                expt_roi_group = i
-    return expt_roi_group
+def get_stimulus_timestamps(timestamps):
+    stimulus_timestamps = timestamps['stimulus_frames']['timestamps']
+    return stimulus_timestamps
 
 
-def get_sync_path(lims_data):
-    #    import shutil
-    ophys_session_dir = get_ophys_session_dir(lims_data)
-    analysis_dir = get_analysis_dir(lims_data)
-
-    # First attempt
-    sync_file = [file for file in os.listdir(
-        ophys_session_dir) if 'sync' in file]
-    if len(sync_file) > 0:
-        sync_file = sync_file[0]
-    else:
-        json_path = [file for file in os.listdir(
-            ophys_session_dir) if '_platform.json' in file][0]
-        with open(os.path.join(ophys_session_dir, json_path)) as pointer_json:
-            json_data = json.load(pointer_json)
-            sync_file = json_data['sync_file']
-    sync_path = os.path.join(ophys_session_dir, sync_file)
-
-    if sync_file not in os.listdir(analysis_dir):
-        logger.info('moving %s to analysis dir',
-                    sync_file)  # flake8: noqa: E999
-        #        print(sync_path, os.path.join(analysis_dir, sync_file))
-        try:
-            shutil.copy2(sync_path, os.path.join(analysis_dir, sync_file))
-        except Exception as e:
-            print(e)
-            print(
-                'shutil.copy2 gave an error perhaps related to copying stat data... passing!')
-            pass
-    return sync_path
-
-
-def get_sync_data(lims_data, use_acq_trigger):
-    logger.info('getting sync data')
-    sync_path = get_sync_path(lims_data)
-    sync_dataset = SyncDataset(sync_path)
-    # Handle mesoscope missing labels
-    try:
-        sync_dataset.get_rising_edges('2p_vsync')
-    except ValueError:
-        sync_dataset.line_labels = ['2p_vsync', '', 'stim_vsync', '', 'photodiode', 'acq_trigger', '', '',
-                                    'behavior_monitoring', 'eye_tracking', '', '', '', '', '', '', '', '', '', '', '',
-                                    '', '', '', '', '', '', '', '', '', '', 'lick_sensor']
-        sync_dataset.meta_data['line_labels'] = sync_dataset.line_labels
-
-    meta_data = sync_dataset.meta_data
-    sample_freq = meta_data['ni_daq']['counter_output_freq']
-    # 2P vsyncs
-    vs2p_r = sync_dataset.get_rising_edges('2p_vsync')
-    vs2p_f = sync_dataset.get_falling_edges(
-        '2p_vsync', )  # new sync may be able to do units = 'sec', so conversion can be skipped
-    vs2p_rsec = vs2p_r / sample_freq
-    vs2p_fsec = vs2p_f / sample_freq
-    if use_acq_trigger:  # if 2P6, filter out solenoid artifacts
-        vs2p_r_filtered, vs2p_f_filtered = filter_digital(
-            vs2p_rsec, vs2p_fsec, threshold=0.01)
-        frames_2p = vs2p_r_filtered
-    else:  # dont need to filter out artifacts in pipeline data
-        frames_2p = vs2p_rsec
-    # use rising edge for Scientifica, falling edge for Nikon http://confluence.corp.alleninstitute.org/display/IT/Ophys+Time+Sync
-    # Convert to seconds - skip if using units in get_falling_edges, otherwise convert before doing filter digital
-    # vs2p_rsec = vs2p_r / sample_freq
-    # frames_2p = vs2p_rsec
-    # stimulus vsyncs
-    # vs_r = d.get_rising_edges('stim_vsync')
-    vs_f = sync_dataset.get_falling_edges('stim_vsync')
-    # convert to seconds
-    # vs_r_sec = vs_r / sample_freq
-    vs_f_sec = vs_f / sample_freq
-    # vsyncs = vs_f_sec
-    # add display lag
-    monitor_delay = calculate_delay(sync_dataset, vs_f_sec, sample_freq)
-    vsyncs = vs_f_sec + monitor_delay  # this should be added, right!?
-    # line labels are different on 2P6 and production rigs - need options for both
-    if 'lick_times' in meta_data['line_labels']:
-        lick_times = sync_dataset.get_rising_edges('lick_1') / sample_freq
-    elif 'lick_sensor' in meta_data['line_labels']:
-        lick_times = sync_dataset.get_rising_edges('lick_sensor') / sample_freq
-    else:
-        lick_times = None
-    if '2p_trigger' in meta_data['line_labels']:
-        trigger = sync_dataset.get_rising_edges('2p_trigger') / sample_freq
-    elif 'acq_trigger' in meta_data['line_labels']:
-        trigger = sync_dataset.get_rising_edges('acq_trigger') / sample_freq
-    if 'stim_photodiode' in meta_data['line_labels']:
-        stim_photodiode = sync_dataset.get_rising_edges(
-            'stim_photodiode') / sample_freq
-    elif 'photodiode' in meta_data['line_labels']:
-        stim_photodiode = sync_dataset.get_rising_edges(
-            'photodiode') / sample_freq
-    if 'cam1_exposure' in meta_data['line_labels']:
-        eye_tracking = sync_dataset.get_rising_edges(
-            'cam1_exposure') / sample_freq
-    elif 'cam1' in meta_data['line_labels']:
-        eye_tracking = sync_dataset.get_rising_edges('cam1') / sample_freq
-    elif 'eye_tracking' in meta_data['line_labels']:
-        eye_tracking = sync_dataset.get_rising_edges(
-            'eye_tracking') / sample_freq
-    if 'cam2_exposure' in meta_data['line_labels']:
-        behavior_monitoring = sync_dataset.get_rising_edges(
-            'cam2_exposure') / sample_freq
-    elif 'cam2' in meta_data['line_labels']:
-        behavior_monitoring = sync_dataset.get_rising_edges(
-            'cam2') / sample_freq
-    elif 'behavior_monitoring' in meta_data['line_labels']:
-        behavior_monitoring = sync_dataset.get_rising_edges(
-            'behavior_monitoring') / sample_freq
-    # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only
-    if use_acq_trigger:
-        frames_2p = frames_2p[frames_2p > trigger[0]]
-    # print(len(frames_2p))
-    if lims_data.rig.values[0][0] == 'M':  # if Mesoscope
-        print('resampling mesoscope 2P frame times')
-        roi_group = get_roi_group(lims_data)  # get roi_group order
-        frames_2p = frames_2p[roi_group::4]  # resample sync times
-    # print(len(frames_2p))
-    logger.info('stimulus frames detected in sync: {}'.format(len(vsyncs)))
-    logger.info('ophys frames detected in sync: {}'.format(len(frames_2p)))
-    # put sync data in format to be compatible with downstream analysis
-    times_2p = {'timestamps': frames_2p}
-    times_vsync = {'timestamps': vsyncs}
-    times_lick = {'timestamps': lick_times}
-    times_trigger = {'timestamps': trigger}
-    times_eye_tracking = {'timestamps': eye_tracking}
-    times_behavior_monitoring = {'timestamps': behavior_monitoring}
-    times_stim_photodiode = {'timestamps': stim_photodiode}
-    sync_data = {'ophys_frames': times_2p,
-                 'stimulus_frames': times_vsync,
-                 'lick_times': times_lick,
-                 'eye_tracking': times_eye_tracking,
-                 'behavior_monitoring': times_behavior_monitoring,
-                 'stim_photodiode': times_stim_photodiode,
-                 'ophys_trigger': times_trigger,
-                 }
-    return sync_data
-
-
-def get_timestamps(lims_data, analysis_dir):
-    if '2P6' in analysis_dir:
-        use_acq_trigger = True
-    else:
-        use_acq_trigger = False
-    sync_data = get_sync_data(lims_data, use_acq_trigger)
-    timestamps = pd.DataFrame(sync_data)
-    return timestamps
-
-
-def get_timestamps_stimulus(timestamps):
-    timestamps_stimulus = timestamps['stimulus_frames']['timestamps']
-    return timestamps_stimulus
-
-
-def get_timestamps_ophys(timestamps):
-    timestamps_ophys = timestamps['ophys_frames']['timestamps']
-    return timestamps_ophys
+def get_ophys_timestamps(timestamps):
+    ophys_timestamps = timestamps['ophys_frames']['timestamps']
+    return ophys_timestamps
 
 
 def get_metadata(lims_data, timestamps, core_data):
-    timestamps_stimulus = get_timestamps_stimulus(timestamps)
-    timestamps_ophys = get_timestamps_ophys(timestamps)
+    stimulus_timestamps = get_stimulus_timestamps(timestamps)
+    ophys_timestamps = get_ophys_timestamps(timestamps)
     metadata = OrderedDict()
     metadata['ophys_experiment_id'] = lims_data['experiment_id'].values[0]
     if lims_data.parent_session_id.values[0]:
@@ -416,10 +251,8 @@ def get_metadata(lims_data, timestamps, core_data):
     metadata['session_id'] = int(lims_data.session_id.values[0])
     metadata['project_id'] = lims_data.project_id.values[0]
     metadata['rig'] = lims_data.rig.values[0]
-    metadata['ophys_frame_rate'] = np.round(
-        1 / np.mean(np.diff(timestamps_ophys)), 0)
-    metadata['stimulus_frame_rate'] = np.round(
-        1 / np.mean(np.diff(timestamps_stimulus)), 0)
+    metadata['ophys_frame_rate'] = np.round(1 / np.mean(np.diff(ophys_timestamps)), 0)
+    metadata['stimulus_frame_rate'] = np.round(1 / np.mean(np.diff(stimulus_timestamps)), 0)
     # metadata['eye_tracking_frame_rate'] = np.round(1 / np.mean(np.diff(self.timestamps_eye_tracking)),1)
     metadata = pd.DataFrame(metadata, index=[metadata['ophys_experiment_id']])
     return metadata
@@ -483,13 +316,11 @@ def get_pkl(lims_data):
     return pkl
 
 
-def get_core_data(pkl, timestamps_stimulus):
+def get_core_data(pkl, stimulus_timestamps):
     try:
-        core_data = foraging.data_to_change_detection_core(
-            pkl, time=timestamps_stimulus)
+        core_data = foraging.data_to_change_detection_core(pkl, time=stimulus_timestamps)
     except KeyError:
-        core_data = foraging2.data_to_change_detection_core(
-            pkl, time=timestamps_stimulus)
+        core_data = foraging2.data_to_change_detection_core(pkl, time=stimulus_timestamps)
     return core_data
 
 
@@ -516,7 +347,7 @@ def get_task_parameters(core_data):
     return task_parameters
 
 
-def save_core_data_components(core_data, lims_data, timestamps_stimulus):
+def save_core_data_components(core_data, lims_data, stimulus_timestamps):
     rewards = core_data['rewards']
     save_dataframe_as_h5(rewards, 'rewards', get_analysis_dir(lims_data))
 
@@ -559,16 +390,17 @@ def save_core_data_components(core_data, lims_data, timestamps_stimulus):
             stimulus_table['omitted'] = False
     else:
         stimulus_table['omitted'] = False
-    # rename columns to harmonize with visual coding and rebase timestamps to sync time
-    stimulus_table.insert(loc=0, column='flash_number',
-                          value=np.arange(0, len(stimulus_table)))
-    stimulus_table = stimulus_table.rename(
-        columns={'frame': 'start_frame', 'time': 'start_time'})
-    start_time = [timestamps_stimulus[start_frame]
-                  for start_frame in stimulus_table.start_frame.values]
+    if np.isnan(
+            stimulus_table.loc[0, 'end_frame']):  # exception for cases where the first flash in the session is omitted
+        stimulus_table = stimulus_table.drop(index=0)
+    # workaround to rename columns to harmonize with visual coding and rebase timestamps to sync time
+    stimulus_table.insert(loc=0, column='flash_number', value=np.arange(0, len(stimulus_table)))
+    stimulus_table = stimulus_table.rename(columns={'frame': 'start_frame', 'time': 'start_time'})
+    start_time = [stimulus_timestamps[start_frame] for start_frame in stimulus_table.start_frame.values]
     stimulus_table.start_time = start_time
-    end_time = [timestamps_stimulus[int(end_frame)]
-                for end_frame in stimulus_table.end_frame.values]
+    end_time = [stimulus_timestamps[int(end_frame)] for end_frame in stimulus_table.end_frame.values]
+    # end_time = [stimulus_timestamps[int(end_frame)] if np.isnan(end_frame) is False else np.nan()
+    #             for end_frame in stimulus_table.end_frame.values]
     stimulus_table.insert(loc=4, column='end_time', value=end_time)
     if 'level_0' in stimulus_table.keys():
         stimulus_table.drop(columns=['level_0'])
@@ -637,7 +469,7 @@ def get_extract_json_file(experiment_id):
     WHERE well_known_file_type_id = (SELECT id FROM well_known_file_types WHERE name = 'OphysExtractedTracesInputJson') 
     AND attachable_id = '{0}';
     '''  # NOQA: W291
-    lims_cursor = get_psql_dict_cursor()
+    lims_cursor = db.get_psql_dict_cursor()
     lims_cursor.execute(QUERY.format(experiment_id))
     return (lims_cursor.fetchall())  # return(lims_cursor.fetchone())
 
@@ -1025,29 +857,15 @@ def get_max_projection(lims_data):
 
 def save_max_projections(lims_data):
     analysis_dir = get_analysis_dir(lims_data)
-    # regular one
-    if os.path.exists(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png')):
-        print('loading max')
-        max_projection = mpimg.imread(os.path.join(
-            get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
-        save_data_as_h5(max_projection, 'max_projection', analysis_dir)
-        mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
-                     cmap='gray')
-    else:
-        print(
-            'max_downsample_4Hz_0.png no longer exists, using normalized max projection from segmentation output instead')
-        # contrast enhanced one
-        max_projection = mpimg.imread(os.path.join(
-            get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
-        save_data_as_h5(max_projection, 'max_projection', analysis_dir)
-        mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'),
-                     arr=max_projection, cmap='gray')
+    # # regular one
+    # max_projection = mpimg.imread(os.path.join(get_processed_dir(lims_data), 'max_downsample_4Hz_0.png'))
+    # save_data_as_h5(max_projection, 'max_projection', analysis_dir)
+    # mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
+    #              cmap='gray')
     # contrast enhanced one
-    max_projection = mpimg.imread(os.path.join(
-        get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
-    save_data_as_h5(max_projection, 'normalized_max_projection', analysis_dir)
-    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'normalized_max_intensity_projection.png'),
-                 arr=max_projection,
+    max_projection = mpimg.imread(os.path.join(get_segmentation_dir(lims_data), 'maxInt_a13a.png'))
+    save_data_as_h5(max_projection, 'max_projection', analysis_dir)
+    mpimg.imsave(os.path.join(get_analysis_dir(lims_data), 'max_intensity_projection.png'), arr=max_projection,
                  cmap='gray')
 
 
@@ -1129,7 +947,7 @@ def save_roi_validation(roi_validation, lims_data):
                     str(index) + '_' + str(id) + '_' + str(cell_index))
 
 
-def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True):
+def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=False):
     logger.info('converting %d', lims_id)
     print('converting', lims_id)
 
@@ -1143,9 +961,9 @@ def convert_level_1_to_level_2(lims_id, cache_dir=None, plot_roi_validation=True
     timestamps = get_timestamps(lims_data, analysis_dir)
 
     pkl = get_pkl(lims_data)
-    timestamps_stimulus = get_timestamps_stimulus(timestamps)
-    core_data = get_core_data(pkl, timestamps_stimulus)
-    save_core_data_components(core_data, lims_data, timestamps_stimulus)
+    stimulus_timestamps = get_stimulus_timestamps(timestamps)
+    core_data = get_core_data(pkl, stimulus_timestamps)
+    save_core_data_components(core_data, lims_data, stimulus_timestamps)
 
     metadata = get_metadata(lims_data, timestamps, core_data)
     save_metadata(metadata, lims_data)

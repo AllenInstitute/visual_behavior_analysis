@@ -6,7 +6,7 @@ from functools import partial
 logger = logging.getLogger(__name__)
 
 
-def time_from_last(timestamps, event_times):
+def time_from_last(timestamps, event_times, side='right'):
     '''
     For each timestamp, returns the time from the most recent other time (in event_times)
 
@@ -17,7 +17,7 @@ def time_from_last(timestamps, event_times):
         time_from_last_event (np.array): the time from the last event for each timestamp
 
     '''
-    last_event_index = np.searchsorted(a=event_times, v=timestamps, side='right') - 1
+    last_event_index = np.searchsorted(a=event_times, v=timestamps, side=side) - 1
     time_from_last_event = timestamps - event_times[last_event_index]
 
     # flashes that happened before the other thing happened should return nan

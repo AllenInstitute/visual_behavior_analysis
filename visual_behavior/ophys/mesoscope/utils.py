@@ -692,120 +692,22 @@ def before_date(file_date, thr_date="01/01/2020"):
     return flag
 
 
-def clean_up_cache(sessions, cache, remove_lims=False, remove_raw_traces=False, remove_valid=False, remove_ica_input=False, remove_ica_output=False, remove_ica_plots=False, remove_by_date="01/01/2020"):
-    """
-    deletes ica outputs from cache:
-        neuropil_ica_output_pair{i}.h5
-        neuropil_valid_pair{i}.json
-        neuropil_ica_mixing_pair{i}.h5
-        ica_traces_output_pair{i}.h5
-        ica_valid_pair{i}.json
-        ica_mixing_pair{i}.h5
-        neuropil correction files
-        demixing files
-        dff traces files
-    :param remove_lims: flag that controls whether we are deleting lims outputs files
-    :param remove_ica_plots: flag that controls whether we are deleting ica plots
-    :param remove_ica_output: flag that controls whether we are deleting ica output hdf5 file
-    :param remove_ica_input: flag that controls whether we are deleting ica input hdf5 file
-    :param remove_valid: flag that controls whether we are deleting valid json file
-    :param remove_by_date: file creating date threshold - don't remove if created after this date
-    :param sessions: list of LIMS session ids
-    :param remove_raw_traces: falg that controls whether we are deleting extracted traces or not
-    :param cache: cache directory
-    :return: None
-    """
-
-    for session in sessions:
-        ica_obj = ica.MesoscopeICA(session_id=session, cache=cache, roi_name="ica_traces", np_name="ica_neuropil")
-        ses_dir = ica_obj.session_dir
-        if os.path.isdir(ses_dir):
-            pairs = ica_obj.dataset.get_paired_planes()
-            for pair in pairs:
-                ica_obj.set_exp_ids(pair)
-                ica_obj.set_ica_dirs()
-                ica_obj.set_raws_paths()
-                ica_obj.set_out_paths()
-                ica_obj.set_valid_paths()
-                ica_obj.set_plot_dirs(dir_name=None)
-                ica_obj.set_ica_input_paths()
-                for tkey in ica_obj.tkeys:
-                    exp_dir = ica_obj.dirs[tkey]
-                    if os.path.isdir(exp_dir):
-                        for pkey in ica_obj.pkeys:
-                            if remove_raw_traces:
-                                raw = ica_obj.raw_paths[pkey][tkey]
-                                if os.path.isfile(raw):
-                                    if before_date(raw, remove_by_date):
-                                        print(f'Deteling {raw}')
-                                        os.remove(raw)
-                            if remove_ica_output:
-                                out = ica_obj.outs_paths[pkey][tkey]
-                                if os.path.isfile(out):
-                                    if before_date(out, remove_by_date):
-                                        print(f'Deteling {out}')
-                                        os.remove(out)
-                            if remove_ica_input:
-                                ica_input = ica_obj.ins_paths[pkey][tkey]
-                                if os.path.isfile(ica_input):
-                                    if before_date(ica_input, remove_by_date):
-                                        print(f'Deteling {ica_input}')
-                                        os.remove(ica_input)
-                            if remove_valid:
-                                valid = ica_obj.rois_valid_paths[pkey][tkey]
-                                if os.path.isfile(valid):
-                                    if before_date(valid, remove_by_date):
-                                        print(f'Deteling {valid}')
-                                        os.remove(valid)
-                            if remove_ica_plots:
-                                plot_dir = ica_obj.plot_dirs[pkey][tkey]
-                                if os.path.isdir(plot_dir):
-                                    if before_date(plot_dir, remove_by_date):
-                                        print(f'Deteling {plot_dir}')
-                                        shutil.rmtree(plot_dir, ignore_errors=True)
-                    else:
-                        print(f"ICA ROI dir does not exist: {exp_dir}")
-                if remove_lims:
-                    # removing LIMS processing outputs:
-                    dem_out_p1 = os.path.join(ses_dir, f'demixing_{pair[0]}')
-                    dem_out_p2 = os.path.join(ses_dir, f'demixing_{pair[1]}')
-                    np_out_p1 = os.path.join(ses_dir, f'neuropil_corrected_{pair[0]}')
-                    np_out_p2 = os.path.join(ses_dir, f'neuropil_corrected_{pair[1]}')
-                    dff_p1 = os.path.join(ses_dir, f'{pair[0]}_dff.h5')
-                    dff_p2 = os.path.join(ses_dir, f'{pair[1]}_dff.h5')
-                    # removing dff files
-                    if os.path.isfile(dff_p1):
-                        if before_date(dff_p1, remove_by_date):
-                            os.remove(dff_p1)
-                            print(f'deteling {dff_p2}')
-                    if os.path.isfile(dff_p2):
-                        if before_date(dff_p2, remove_by_date):
-                            os.remove(dff_p2)
-                            print(f'deteling {dff_p2}')
-                    # removing directories for demixing plane 1
-                    if os.path.isdir(dem_out_p1):
-                        if before_date(dem_out_p1, remove_by_date):
-                            shutil.rmtree(dem_out_p1, ignore_errors=True)
-                            print(f'deteling {dem_out_p1}')
-                    # removing directories for demixing plane 2
-                    if os.path.isdir(dem_out_p2):
-                        if before_date(dem_out_p2, remove_by_date):
-                            shutil.rmtree(dem_out_p2, ignore_errors=True)
-                            print(f'deteling {dem_out_p2}')
-                    # removing directories for neuropil correction plane 1
-                    if os.path.isdir(np_out_p1):
-                        if before_date(np_out_p1, remove_by_date):
-                            shutil.rmtree(np_out_p1, ignore_errors=True)
-                            print(f'deteling {np_out_p1}')
-                    # removing directories for neuropil correction plane 2
-                    if os.path.isdir(np_out_p2):
-                        if before_date(np_out_p2, remove_by_date):
-                            shutil.rmtree(np_out_p2, ignore_errors=True)
-                            print(f'deteling {np_out_p2}')
-                else:
-                    logger.info("Not removing LIMS outputs")
-
-    return
+def clean_up_session(session,
+                     remove_raw_traces=False,
+                     remove_valid=False, remove_ica_input=False, remove_ica_output=False, remove_crosstalk=False):
+	ica_o = ica.MesoscopeICA(session_id=session, cache=CACHE)
+	os.chdir(ica_o.session_dir)
+	if remove_raw_traces:
+	    sc.runcommand('rm -rf */*_raw.h5')
+	if remove_ica_input:
+		sc.runcommand('rm -rf */*_in.h5')
+	if remove_valid:
+		sc.runcommand('rm -rf */*.json')
+	if remove_ica_output:
+		sc.runcommand('rm -rf */*_out.h5')
+	if remove_crosstalk:
+	    sc.runcommand('rm -rf */*_ct.h5')
+	    sc.runcommand('rm -rf *_ct.h5')
 
 
 def delete_old_files(sessions, ch, names_files=None, remove_by_date='04/01/2020'):
@@ -1143,7 +1045,7 @@ def filter_outputs_crosstalk(session):
 
 
 def rename_old_traces(sessions):
-    raw_names = {"roi"  : "traces_original", "np": "neuropil_original"}
+    raw_names = {"roi" : "traces_original", "np": "neuropil_original"}
     list_ses_renamed = []
     for session in sessions:
         found_renaming = False
@@ -1153,18 +1055,41 @@ def rename_old_traces(sessions):
             print(f"Processing pair: {pair}")
             ica_obj.set_exp_ids(pair)
             ica_obj.set_ica_dirs()
-            for pkey in ica_obj.pkeys:
-                for tkey in ica_obj.tkeys:
-                    os.chdir(ica_obj.dirs[tkey])
-                    old_raw_name = f"{raw_names[tkey]}_{ica_obj.exp_ids[pkey]}.h5"
-                    if os.path.isfile(old_raw_name):
-                        print(f"Found old file names: {old_raw_name}")
-                        sc.runcommand(f"cp {old_raw_name} {ica_obj.exp_ids[pkey]}_raw.h5")
-                        sc.runcommand(f"rm -rf {old_raw_name}")
-                        found_renaming = True
-                    sc.runcommand(f"rm -rf *_1.*")
-                    sc.runcommand(f"rm -rf *_lims.*")
-                    sc.runcommand(f"rm -rf *valid_.*")
+
+            for tkey in ica_obj.tkeys:
+                if os.path.isdir(ica_obj.dirs[tkey]):
+                    for pkey in ica_obj.pkeys:
+                            os.chdir(ica_obj.dirs[tkey])
+                            old_raw_name = f"{raw_names[tkey]}_{ica_obj.exp_ids[pkey]}.h5"
+                            if os.path.isfile(old_raw_name):
+                                print(f"Found old file names: {old_raw_name}")
+                                sc.runcommand(f"cp {old_raw_name} {ica_obj.exp_ids[pkey]}_raw.h5")
+                                sc.runcommand(f"rm -rf {old_raw_name}")
+                                found_renaming = True
+                else:
+                    ica_obj.set_ica_dirs(names={'roi': "roi", 'np': "neuropil"})
+                    for pkey in ica_obj.pkeys:
+                        if os.path.isdir(ica_obj.dirs[tkey]):
+                            for tkey in ica_obj.tkeys:
+                                os.chdir(ica_obj.dirs[tkey])
+                                old_raw_name = f"{raw_names[tkey]}_{ica_obj.exp_ids[pkey]}.h5"
+                                if os.path.isfile(old_raw_name):
+                                    print(f"Found old file names: {old_raw_name}")
+                                    sc.runcommand(f"cp {old_raw_name} {ica_obj.exp_ids[pkey]}_raw.h5")
+                                    sc.runcommand(f"rm -rf {old_raw_name}")
+                                    found_renaming = True
+                        else:
+                            ica_obj.set_ica_dirs(names={'roi': "rois", 'np': "neuropil"})
+                            for pkey in ica_obj.pkeys:
+                                for tkey in ica_obj.tkeys:
+                                    os.chdir(ica_obj.dirs[tkey])
+                                    old_raw_name = f"{raw_names[tkey]}_{ica_obj.exp_ids[pkey]}.h5"
+                                    if os.path.isfile(old_raw_name):
+                                        print(f"Found old file names: {old_raw_name}")
+                                        sc.runcommand(f"cp {old_raw_name} {ica_obj.exp_ids[pkey]}_raw.h5")
+                                        sc.runcommand(f"rm -rf {old_raw_name}")
+                                        found_renaming = True
+
         if found_renaming:
             list_ses_renamed.append(session)
 

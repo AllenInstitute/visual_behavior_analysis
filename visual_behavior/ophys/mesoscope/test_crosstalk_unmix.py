@@ -4,9 +4,9 @@ import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import sciris as sc
 import pylab as pl
 import h5py
-from visual_behavior.ophys.mesoscope.crosstalk_unmix import run_ica
 import copy
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
+from sklearn.decomposition import FastICA
 
 
 def test_get_ica_traces(test_session=None):
@@ -209,7 +209,6 @@ def test_unmix_pair(test_session=None):
 		for tkey in self.tkeys:
 			assert self.outs[pkey][tkey] is not None, f"Failed to set attributes self.outs for {pkey}, {tkey}"
 			assert self.outs_paths[pkey][tkey] is not None, f"Failed to set attributes self.outs_paths for {pkey}, {tkey}"
-			assert self.crosstalk[pkey][tkey] is not None, f"Failed to set attributes self.crosstalk for {pkey}, {tkey}"
 			assert self.mixing[pkey][tkey] is not None, f"Failed to set attributes self.mixing for {pkey}, {tkey}"
 			assert self.a_mixing[pkey][tkey] is not None, f"Failed to set attributes self.a_mixing for {pkey}, {tkey}"
 
@@ -239,126 +238,14 @@ def test_unmix_pair(test_session=None):
 	# 3. test that unmixing is correct: unmixing_out - offset = unmixing_in / unmixing_matrix
 
 
-def test_validate_cells_crosstalk(session):
-	"""
-	test function for crosstalkunmix.validate_cells_crosstalk
-	:param session: LIMS session id for sessiong to use for the test
-	:return: none
-	"""
-
-	if not session:
-		ses = 839208243
-		"""LIMS session ID to use for test,
-		use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
-		which takes ~ 5 hours"""
-	else:
-		ses = session
-
-	ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
-	pairs = ica_obj.dataset.get_paired_planes()
-	pair = pairs[0]
-	ica_obj.set_exp_ids(pair)
-	ica_obj.get_ica_traces()
-	ica_obj.validate_raw_traces()
-	ica_obj.debias_traces()
-	ica_obj.unmix_pair()
-	ica_obj.validate_cells_crosstalk()
-	self = ica_obj
-
-	# 1. Test if all attributes have been set:
-	for pkey in self.pkeys:
-		for tkey in self.tkeys:
-			assert self.rois_valid_ct[pkey] is not None, f"Failed to set attributes self.rois_valid for {pkey}, {tkey}"
-			assert self.rois_valid_ct_paths[pkey] is not None, f"Failed to set attributes self.rois_valid_paths for {pkey}, {tkey}"
-
-	# 2. remove jsons if they exist - for the case when they have been read from disk
-	for pkey in self.pkeys:
-		for tkey in self.tkeys:
-			os.remove(self.rois_valid_ct_paths[pkey][tkey])
-
-	self.validate_cells_crosstalk()
-
-	# 3. test that roi and np ids are identical:
-	for pkey in self.pkeys:  # test if ROi names and NP names align:
-		roi_names = self.rois_names_valid_ct[pkey]['roi']
-		np_names = self.rois_names_valid_ct[pkey]['np']
-		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
-
-	# 4. now that jsons exist, test teh same whne they are read from disk:
-	self.validate_cells_crosstalk()
-
-	for pkey in self.pkeys:  # test if ROi names and NP names align:
-		roi_names = self.rois_names_valid_ct[pkey]['roi']
-		np_names = self.rois_names_valid_ct[pkey]['np']
-		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
-
-	# 5. test if roi ids in valid json came from corresponding raw output
-	for pkey in self.pkeys:
-		for tkey in self.tkeys:
-			roi_names_valid_ct = [str(roi) for roi in self.rois_names_valid_ct[pkey][tkey]]
-			raw_roi_names = self.rois_names[pkey][tkey]
-			assert all([roi_v in raw_roi_names for roi_v in roi_names_valid_ct])
-	return
-
-
-def test_filter_dff_traces_crosstalk(session=None):
-    if not session:
-        ses = 839208243
-        """LIMS session ID to use for test,
-	    use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
-	    which takes ~ 5 hours"""
-    else:
-        ses = session
-
-    ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
-    pairs = ica_obj.dataset.get_paired_planes()
-    pair = pairs[0]
-    ica_obj.set_exp_ids(pair)
-    ica_obj.get_ica_traces()
-    ica_obj.validate_raw_traces(return_vba=False)
-    ica_obj.debias_traces()
-    ica_obj.unmix_pair()
-    ica_obj.validate_cells_crosstalk()
-
-    # 0. if dff_ct files exist - delete them first, this test will regenerate the files
-    for pkey in ica_obj.pkeys:
-	    dff_file = os.path.join(ica_obj.session_dir, f"{ica_obj.exp_ids[pkey]}_dff_ct.h5")
-	    if os.path.isfile(dff_file):
-		    os.chdir(ica_obj.session_dir)
-		    print(f"Filtered dff files exist for {ica_obj.exp_ids[pkey]}, deleting for the test purposes")
-		    sc.runcommand(f"rm -rf {dff_file}")
-
-    ica_obj.filter_dff_traces_crosstalk()
-
-    # 1. test that all attributes have been set
-    for pkey in ica_obj.pkeys:
-	    assert len(ica_obj.dff_files[pkey]) != 0, f"Failed to set attributes self.dff_files for {ica_obj.exp_ids[pkey]}"
-	    assert len(ica_obj.dff[pkey]) != 0, f"Failed to set attributes self.dffs for {ica_obj.exp_ids[pkey]}"
-	    assert len(ica_obj.dff_ct_files[pkey]) != 0, f"Failed to set attributes self.dff_ct_files {ica_obj.exp_ids[pkey]}"
-	    assert len(ica_obj.dff_ct[pkey]) != 0, f"Failed to set attributes self.dffs_ct for {ica_obj.exp_ids[pkey]}"
-
-	# 2. test that input dff files are aligned with ica_obj.rois_valid
-    for pkey in ica_obj.pkeys:
-	    assert len(ica_obj.dff[pkey]) == len(ica_obj.rois_names_valid[pkey]['roi']), \
-		                                     f"dff traces are not alligned wiht rois_vali for exp {ica_obj.exp_ids[pkey]}"
-	# 3. test if filtered dff are aligned with ica_obj.rois_valid_ct
-    for pkey in ica_obj.pkeys:
-        assert len(ica_obj.dff_ct[pkey]) == len(ica_obj.rois_names_valid_ct[pkey]['roi']), \
-	                                            f"filtered dff traces are not alligned with rois_valid_ct for exp {ica_obj.exp_ids[pkey]}"
-
-    # 4. test if files were written to disc and both datasets exist in hdf5 files (traces and roi names)
-    for pkey in ica_obj.pkeys:
-	    assert os.path.isfile(ica_obj.dff_ct_files[pkey]), f"Filtered hdf 5 file does not exist for {ica_obj.exp_ids[pkey]}"
-	    f = h5py.File(ica_obj.dff_ct_files[pkey], 'r')
-	    datasets = f.keys()
-	    assert 'data' in datasets, f"traces are not present in dff_ct file for exp {ica_obj.exp_ids[pkey]}"
-	    assert 'roi_names' in datasets, f"roi names are not present in dff_ct file for exp {ica_obj.exp_ids[pkey]}"
-	    f.close()
-
-
 def test_extract_active(session=None):
+	"""
+	test fn for visual_behavior.ophys.mesoscope.crosstalk_unmix.extract_active
+	:param session: LIMS session ID of the session to test this functionality on
+	:return: None
+	"""
 	if not session:
-		ses = 839208243
+		ses = 786144371
 		"""LIMS session ID to use for test,
 		use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
 		which takes ~ 5 hours"""
@@ -376,21 +263,60 @@ def test_extract_active(session=None):
 	pkey = 'pl1'
 	tkey = 'roi'
 	traces = ica_obj.ins[pkey][tkey]
-	traces_sig_evs, traces_ct_evs, valid = ica.extract_active(traces)
+	traces_sig_evs, evs_ind_sig, valid_sig, traces_ct_evs, evs_ind_ct, valid_ct = ica.extract_active(traces)
 
 	# 1. Check data alignment
 	assert traces_sig_evs.shape[0] == traces.shape[1], f"Output of active traces SIGNAL contains different number of " \
 													   f"traces (number of rois doesn't align)"
 	assert traces_ct_evs.shape[0] == traces.shape[1], f"Output of active traces CROSSTALK contains different number of " \
 													  f"traces (number of rois doesn't align)"
-	assert len(valid) == traces.shape[1], f"Length of Valid list contains different number of elements than number of " \
+	assert len(valid_sig) == traces.shape[1], f"Length of Valid list contains different number of elements than number of " \
 										  f"cells in input traces"
+	# 2. check alignment of events ideces to events traces
+	assert evs_ind_sig.shape == traces_sig_evs.shape, f"number of events traces does not align for number of enets indeces for signal"
+	assert evs_ind_ct.shape == traces_ct_evs.shape, f"number of events traces does not align for number of enets indeces for signal"
 
-	# 2. Check if valid actually has true for traces with no Nans
+	# 3. Check if valid actually has true for traces with no Nans
 	for i in range(traces_sig_evs.shape[0]):
-		assert valid[i] == (not np.any(np.isnan(traces_sig_evs[i])) and not np.any(np.isnan(traces_ct_evs[i])))
-
+		assert valid_sig[i] == (not np.any(np.isnan(traces_sig_evs[i])))
+	for i in range(traces_ct_evs.shape[0]):
+		assert valid_ct[i] == (not np.any(np.isnan(traces_ct_evs[i])))
 	return
+
+
+def test_adjust_mixing(snr=30):
+	"""
+	simulate noisy signals and test ICA function on them
+	:param snr: singal to noise ratio to test the ICA with
+	:return:
+	"""
+	# create simulated signals
+	npts = 1000
+	x = pl.arange(npts)
+	sig1 = pl.sin(x / 100) ** 500 + 1 / snr * pl.randn(npts)
+	sig2 = pl.sin(x / 84) ** 500 + 1 / snr * pl.randn(npts)
+
+	# Scaling signals
+	S = np.array([sig1, sig2])
+	D = np.array([[1, 0], [0, 0.3]])  # sclaing matrix
+	S_s = np.dot(D, S) # scaled sources
+
+	# Mixing signals
+	M = np.array([[0.9, 0.1], [0.2, 0.8]])  # mixing matrix
+	O = np.dot(S_s.T, M)  # mixed observations
+
+	traces = O.T
+	f_ica = ica.FastICA(n_components=2, max_iter=50)
+	_ = f_ica.fit_transform(traces)  # Reconstruct signals
+	mix = f_ica.mixing_  # Get estimated mixing matrix
+	# make sure no negative coeffs (inversion of traces)
+	a_mix = copy.deepcopy(mix)
+
+	b_mix = ica.adjust_mixing(a_mix, traces)
+
+	# test if ICA mixing matrix == original mixing matrix
+	assert (np.all(
+		np.isclose(b_mix, M, atol=0.05))), f"Normalized ICA mixign matrix is not similar to original mixing matrix"
 
 
 def test_run_ica(snr=30):
@@ -414,15 +340,13 @@ def test_run_ica(snr=30):
 	M = np.array([[0.9, 0.1], [0.2, 0.8]])  # mixing matrix
 	O = np.dot(S_s.T, M)  # mixed observations
 
-	mix, a_mix, a_unmix, r_source = run_ica(O[:,0], O[:,1])
+	mix, a_mix, a_unmix, r_source = ica.run_ica(O[:,0], O[:,1])
 
 	# normallize mixing matrix and compare to original
 	b_mix = copy.deepcopy(a_mix)
 	b_mix = b_mix / b_mix.sum(axis=0)
 	b_mix = b_mix.T
 
-	# test if ICA mixing matrix == original mixing matrix
-	assert(np.all(np.isclose(b_mix, M, atol=0.05))), f"Normalized ICA mixign matrix is not similar to original mixing matrix"
 	# test if unmixing matrix is inverse of mixing:
 	assert(np.all(np.isclose(np.linalg.inv(a_mix), a_unmix))), f"Unmixing is not an inverse of mixing"
 	# test the shape of recovered sources is same as shape of input observations:
@@ -539,4 +463,118 @@ def test_unmix_plane(session=None):
 	return
 
 
+def test_validate_cells_crosstalk(session = None):
+	"""
+	test function for crosstalkunmix.validate_cells_crosstalk
+	:param session: LIMS session id for sessiong to use for the test
+	:return: none
+	"""
 
+	if not session:
+		ses = 839208243
+		"""LIMS session ID to use for test,
+		use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
+		which takes ~ 5 hours"""
+	else:
+		ses = session
+
+	ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+	pairs = ica_obj.dataset.get_paired_planes()
+	pair = pairs[0]
+	ica_obj.set_exp_ids(pair)
+	ica_obj.get_ica_traces()
+	ica_obj.validate_raw_traces()
+	ica_obj.debias_traces()
+	ica_obj.unmix_pair()
+	ica_obj.validate_cells_crosstalk()
+	self = ica_obj
+
+	# 1. Test if all attributes have been set:
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			assert self.rois_valid_ct[pkey] is not None, f"Failed to set attributes self.rois_valid for {pkey}, {tkey}"
+			assert self.rois_valid_ct_paths[pkey] is not None, f"Failed to set attributes self.rois_valid_paths for {pkey}, {tkey}"
+
+	# 2. remove jsons if they exist - for the case when they have been read from disk
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			os.remove(self.rois_valid_ct_paths[pkey][tkey])
+
+	self.validate_cells_crosstalk()
+
+	# 3. test that roi and np ids are identical:
+	for pkey in self.pkeys:  # test if ROi names and NP names align:
+		roi_names = self.rois_names_valid_ct[pkey]['roi']
+		np_names = self.rois_names_valid_ct[pkey]['np']
+		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
+
+	# 4. now that jsons exist, test teh same whne they are read from disk:
+	self.validate_cells_crosstalk()
+
+	for pkey in self.pkeys:  # test if ROi names and NP names align:
+		roi_names = self.rois_names_valid_ct[pkey]['roi']
+		np_names = self.rois_names_valid_ct[pkey]['np']
+		assert roi_names == np_names, f"roi names are not the same for ROI and NP in {pkey}"
+
+	# 5. test if roi ids in valid json came from corresponding raw output
+	for pkey in self.pkeys:
+		for tkey in self.tkeys:
+			roi_names_valid_ct = [str(roi) for roi in self.rois_names_valid_ct[pkey][tkey]]
+			raw_roi_names = self.rois_names[pkey][tkey]
+			assert all([roi_v in raw_roi_names for roi_v in roi_names_valid_ct])
+	return
+
+
+def test_filter_dff_traces_crosstalk(session=None):
+    if not session:
+        ses = 839208243
+        """LIMS session ID to use for test,
+	    use a test session with ica and lims processing performed on it to avoid runnign ICA from scratch
+	    which takes ~ 5 hours"""
+    else:
+        ses = session
+
+    ica_obj = ica.MesoscopeICA(session_id=ses, cache=CACHE, roi_name="ica_traces", np_name="ica_neuropil")
+    pairs = ica_obj.dataset.get_paired_planes()
+    pair = pairs[0]
+    ica_obj.set_exp_ids(pair)
+    ica_obj.get_ica_traces()
+    ica_obj.validate_raw_traces(return_vba=False)
+    ica_obj.debias_traces()
+    ica_obj.unmix_pair()
+    ica_obj.validate_cells_crosstalk()
+
+    # 0. if dff_ct files exist - delete them first, this test will regenerate the files
+    for pkey in ica_obj.pkeys:
+	    dff_file = os.path.join(ica_obj.session_dir, f"{ica_obj.exp_ids[pkey]}_dff_ct.h5")
+	    if os.path.isfile(dff_file):
+		    os.chdir(ica_obj.session_dir)
+		    print(f"Filtered dff files exist for {ica_obj.exp_ids[pkey]}, deleting for the test purposes")
+		    sc.runcommand(f"rm -rf {dff_file}")
+
+    ica_obj.filter_dff_traces_crosstalk()
+
+    # 1. test that all attributes have been set
+    for pkey in ica_obj.pkeys:
+	    assert len(ica_obj.dff_files[pkey]) != 0, f"Failed to set attributes self.dff_files for {ica_obj.exp_ids[pkey]}"
+	    assert len(ica_obj.dff[pkey]) != 0, f"Failed to set attributes self.dffs for {ica_obj.exp_ids[pkey]}"
+	    assert len(ica_obj.dff_ct_files[pkey]) != 0, f"Failed to set attributes self.dff_ct_files {ica_obj.exp_ids[pkey]}"
+	    assert len(ica_obj.dff_ct[pkey]) != 0, f"Failed to set attributes self.dffs_ct for {ica_obj.exp_ids[pkey]}"
+
+	# 2. test that input dff files are aligned with ica_obj.rois_valid
+    for pkey in ica_obj.pkeys:
+	    assert len(ica_obj.dff[pkey]) == len(ica_obj.rois_names_valid[pkey]['roi']), \
+		                                     f"dff traces are not alligned wiht rois_vali for exp {ica_obj.exp_ids[pkey]}"
+	# 3. test if filtered dff are aligned with ica_obj.rois_valid_ct
+    for pkey in ica_obj.pkeys:
+        assert len(ica_obj.dff_ct[pkey]) == len(ica_obj.rois_names_valid_ct[pkey]['roi']), \
+	                                            f"filtered dff traces are not alligned with rois_valid_ct for exp {ica_obj.exp_ids[pkey]}"
+
+    # 4. test if files were written to disc and both datasets exist in hdf5 files (traces and roi names)
+    for pkey in ica_obj.pkeys:
+	    assert os.path.isfile(ica_obj.dff_ct_files[pkey]), f"Filtered hdf 5 file does not exist for {ica_obj.exp_ids[pkey]}"
+	    f = h5py.File(ica_obj.dff_ct_files[pkey], 'r')
+	    datasets = f.keys()
+	    assert 'data' in datasets, f"traces are not present in dff_ct file for exp {ica_obj.exp_ids[pkey]}"
+	    assert 'roi_names' in datasets, f"roi names are not present in dff_ct file for exp {ica_obj.exp_ids[pkey]}"
+	    f.close()

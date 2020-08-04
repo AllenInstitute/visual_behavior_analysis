@@ -14,6 +14,7 @@ def limit_to_passed_experiments(table):
 def limit_to_experiments_with_final_qc_state(table):
     """
         :param table: experiments_table from SDK manifest or sessions_table with 'experiment_workflow_state' added
+        :param table: experiments_table from SDK manifest or sessions_table with 'experiment_workflow_state' added
         :return: table with rows where experiment_workflow_state is 'passed' or 'failed'.
                 Excludes experiment_workflow_state = 'created' or 'qc',
         """
