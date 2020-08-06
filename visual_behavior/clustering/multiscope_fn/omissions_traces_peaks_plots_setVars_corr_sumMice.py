@@ -123,6 +123,9 @@ if plot_cc_peaks:
     ###################################
 
     fgn = 'cc12'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
     areas = 'LM', 'V1' # np.unique(corr_trace_peak_allMice['areas'].iloc[im])
 
     f_top0 = cc12_peak_avMice_flash
@@ -147,7 +150,7 @@ if plot_cc_peaks:
         o_top_sd2 = p12_peak_sdMice_omit_shfl
 
 
-    plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd1, o_top1, o_top_sd1, f_top2, f_top_sd2, o_top2, o_top_sd2, fgn, areas, depths, title, jet_cm, alph, mouseid=np.nan, dosavefig=dosavefig)
+    plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd1, o_top1, o_top_sd1, f_top2, f_top_sd2, o_top2, o_top_sd2, fgn, areas, depth_sessAv_avMice, title, jet_cm, alph, mouseid=np.nan, dosavefig=dosavefig)
 
 
 
@@ -156,6 +159,9 @@ if plot_cc_peaks:
     ###################################
 
     fgn = 'cc11'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
     areas = 'LM', 'LM' # np.unique(corr_trace_peak_allMice['areas'].iloc[im])
 
     f_top0 = cc11_peak_avMice_flash
@@ -196,7 +202,7 @@ if plot_cc_peaks:
             o_top_sd2[i1,i2] = o_top_sd2[i2,i1]
 
 
-    plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd1, o_top1, o_top_sd1, f_top2, f_top_sd2, o_top2, o_top_sd2, fgn, areas, depths, title, jet_cm, alph, mouseid=np.nan, dosavefig=dosavefig)
+    plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd1, o_top1, o_top_sd1, f_top2, f_top_sd2, o_top2, o_top_sd2, fgn, areas, depth_sessAv_avMice, title, jet_cm, alph, mouseid=np.nan, dosavefig=dosavefig)
 
 
 
@@ -205,6 +211,9 @@ if plot_cc_peaks:
     ###################################
 
     fgn = 'cc22'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
     areas = 'V1', 'V1' # np.unique(corr_trace_peak_allMice['areas'].iloc[im])
 
     f_top0 = cc22_peak_avMice_flash
@@ -245,7 +254,7 @@ if plot_cc_peaks:
             o_top_sd2[i1,i2] = o_top_sd2[i2,i1]
 
 
-    plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd1, o_top1, o_top_sd1, f_top2, f_top_sd2, o_top2, o_top_sd2, fgn, areas, depths, title, jet_cm, alph, mouseid=np.nan, dosavefig=dosavefig)
+    plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd1, o_top1, o_top_sd1, f_top2, f_top_sd2, o_top2, o_top_sd2, fgn, areas, depth_sessAv_avMice, title, jet_cm, alph, mouseid=np.nan, dosavefig=dosavefig)
 
 
 
@@ -259,6 +268,9 @@ if plot_cc_peaks_heatmaps:
     ###################################
 
     fgn = 'cc12'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
     areas = 'LM', 'V1' # np.unique(corr_trace_peak_allMice['areas'].iloc[im])
 
     f_top0 = cc12_peak_avMice_flash
@@ -275,7 +287,7 @@ if plot_cc_peaks_heatmaps:
         o_top2 = p12_peak_avMice_omit_shfl
 
 
-    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depths, title, mouseid=np.nan, dosavefig=dosavefig)
+    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depth_sessAv_avMice, title, mouseid=np.nan, dosavefig=dosavefig)
 
 
 
@@ -284,6 +296,9 @@ if plot_cc_peaks_heatmaps:
     ###################################
 
     fgn = 'cc11'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
     areas = 'LM', 'LM' # np.unique(corr_trace_peak_allMice['areas'].iloc[im])
 
     f_top0 = cc11_peak_avMice_flash
@@ -310,7 +325,7 @@ if plot_cc_peaks_heatmaps:
             o_top2[i1,i2] = o_top2[i2,i1]
 
 
-    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depths, title, mouseid=np.nan, dosavefig=dosavefig)
+    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depth_sessAv_avMice, title, mouseid=np.nan, dosavefig=dosavefig)
 
 
 
@@ -319,6 +334,9 @@ if plot_cc_peaks_heatmaps:
     ###################################
 
     fgn = 'cc22'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
     areas = 'V1', 'V1' # np.unique(corr_trace_peak_allMice['areas'].iloc[im])
 
     f_top0 = cc22_peak_avMice_flash
@@ -345,7 +363,7 @@ if plot_cc_peaks_heatmaps:
             o_top2[i1,i2] = o_top2[i2,i1]
 
 
-    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depths, title, mouseid=np.nan, dosavefig=dosavefig)
+    plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depth_sessAv_avMice, title, mouseid=np.nan, dosavefig=dosavefig)
 
 
         
@@ -364,6 +382,9 @@ if plot_cc_pooled:
     ############################################################################################
 
     fgn = 'cc12'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
     areas = 'LM', 'V1' # np.unique(corr_trace_peak_allMice['areas'].iloc[im])
 
     # pooled; traces
@@ -455,6 +476,9 @@ if plot_cc_pooled:
     ############################################################################################
 
     fgn = 'cc11'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
     areas = 'LM', 'LM' # np.unique(corr_trace_peak_allMice['areas'].iloc[im])
 
     # pooled; traces
@@ -546,6 +570,9 @@ if plot_cc_pooled:
     ############################################################################################
 
     fgn = 'cc22'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
     areas = 'V1', 'V1' # np.unique(corr_trace_peak_allMice['areas'].iloc[im])
 
     # pooled; traces
@@ -647,6 +674,9 @@ if plot_cc_pooled_superimposed:
     ########################################################################
 
     yl = 'Spearman cc'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
     fgn = 'ccAll'
 
     # pooledAll; traces
@@ -690,6 +720,9 @@ if plot_cc_pooled_superimposed:
 
     yl = 'Fract sig neuron pairs'
     fgn = 'pAll'
+    if sameBl_allLayerPairs==1:
+        fgn = fgn + '_sameBl'
+    
 
     # pooledAll; traces
     top0a = p12_sessAv_pooledAll_avMice

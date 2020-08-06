@@ -847,12 +847,15 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
     #                 traces_aveTrs_time_ns0 = np.median(local_fluo_allOmitt0_orig, axis=2)
 
+                    ### UPDATED NOTE: 08/06/2020: I decided to go with mean (across trials, neurons) instead of median: it actually revealed that in the 3rd plane of LM (especially in LM) the mean response of Slc is slightly going up after omissions (we know some neurons are like this among slc).
+                    # Also, when we plot summary mice data, we take average across sessions of mice, so it makes sense that we also take average across trials and neurons (and not mean).    
+                    #
                     ### NOTE: tested on Slc mouse 451787, session_id 885557130:
                     ### There is a big difference between mean and median ... median seems to be a quite better measure!!
                     ### So I am going with median and iqr!
 
-                    traces_aveTrs_time_ns = np.median(local_fluo_allOmitt, axis=2) # time x neurons # Median across trials            
-                    traces_aveNs_time_trs = np.median(local_fluo_allOmitt, axis=1) # time x trials  # Median across neurons
+                    traces_aveTrs_time_ns = np.mean(local_fluo_allOmitt, axis=2) # time x neurons # Median across trials            
+                    traces_aveNs_time_trs = np.mean(local_fluo_allOmitt, axis=1) # time x trials  # Median across neurons
                     traces_aveTrs_time_ns0 = traces_aveTrs_time_ns + 0
                     # currently not saving the following ...             
                     #            traces_sdTrs_time_ns = st.iqr(local_fluo_allOmitt, axis=2) # time x neurons # Std across trials            
@@ -860,8 +863,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
 
                     ######### flash-aligned traces  
-                    traces_aveTrs_time_ns_f = np.median(local_fluo_flashBefOmitt, axis=2) # time x neurons # Median across trials
-                    traces_aveNs_time_trs_f = np.median(local_fluo_flashBefOmitt, axis=1) # time x trials  # Median across neurons
+                    traces_aveTrs_time_ns_f = np.mean(local_fluo_flashBefOmitt, axis=2) # time x neurons # Median across trials
+                    traces_aveNs_time_trs_f = np.mean(local_fluo_flashBefOmitt, axis=1) # time x trials  # Median across neurons
                     traces_aveTrs_time_ns0_f = traces_aveTrs_time_ns_f + 0
 
                     #%% Compute baseline of (normalized) traces (as 10th percentile pre-omit activity)
@@ -876,12 +879,43 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                     # even if you have shifted it to 0... because baseline is computed on the mean of each trial during bl_index_pre_omit!
                     # so to compute peak on aveTrs traces, we will again shift the traces below so their baseline is at 0.
 
-                    # try 10th or 20th percentile
+                    # defined in line 658
+#                     bl_index_pre_omit = np.arange(0,samps_bef) # you will need for response amplitude quantification, even if you dont use it below.
+#                     bl_index_pre_flash = np.arange(0,samps_bef) # we are computing flash responses on flash aligned traces.
+                    
+                    '''
+                    ### the 2 methods below lower the baseline value by a lot.
+                    
+                    # try 10th or 20th percentile                    
                     bl_preOmit = np.percentile(traces_aveTrs_time_ns[bl_index_pre_omit,:], bl_percentile, axis=0) # neurons # use the 10th percentile
                     bl_preFlash = np.percentile(traces_aveTrs_time_ns_f[bl_index_pre_flash,:], bl_percentile, axis=0) # neurons
                     # below was used when we were computing flash-evoked responses from omission aligned traces, and bl_index_pre_flash was defined differently.
     #                 bl_preFlash = np.percentile(traces_aveTrs_time_ns[bl_index_pre_flash,:], bl_percentile, axis=0) # neurons
     #                 bl_preOmit = np.mean(traces_aveTrs_time_ns[bl_index_pre_omit,:], axis=0) # use average                   
+                    print(np.mean(bl_preOmit))
+                    
+                    # new method
+                    # get the lowest 10 percentile values of the median trace preceding omission and then compute their mean and sd
+                    baseline_trace0 = traces_aveTrs_time_ns[bl_index_pre_omit] # frames x neurons
+                    n_p = int(samps_bef*.5) # take 20% of baseline frames
+                    # sort baseline frames, and then take the lowest 20% of them... this will define baseline frames
+                    baseline_trace = np.sort(baseline_trace0, axis=0)[:n_p] # 8 frames x units x trials
+                    # compute mean and sd across frames of baseline_trace                    
+                    bl_preOmit = np.mean(baseline_trace, axis=0) # units x trials
+                    bl_preFlash = bl_preOmit
+                    print(np.mean(bl_preOmit))
+                    '''
+                    
+                    # other method: take frames right before the flash onset (or shifted by .25sec in case of VIP, familiar) and average them
+                    b0_relOmit = np.round((flash_win_final[0]) / frame_dur).astype(int)
+                    stp = np.round(-.75 / frame_dur).astype(int)
+                    bl_index_pre_omit = np.sort(np.arange(samps_bef-1 + b0_relOmit , 0 , stp))
+#                     bl_index_pre_omit
+                    
+                    bl_preOmit = np.mean(traces_aveTrs_time_ns[bl_index_pre_omit,:]) # neurons # use the 10th percentile
+                    bl_preFlash = bl_preOmit
+#                     print(np.mean(bl_preOmit))
+    
 
                     # I think I should only use the following for the computation of the peak
                     # because for peak amplitude I want to see how much the trace changed... but 
@@ -891,7 +925,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                     if doShift_again: # this is a second shift just to make sure the pre-omit activity has baseline at 0.                                       
                     #                    traces_aveTrs_time_ns = traces_aveTrs_time_ns0 + 0                    
                         traces_aveTrs_time_ns = traces_aveTrs_time_ns0 - bl_preOmit
-                        traces_aveTrs_time_ns_f = traces_aveTrs_time_ns0_f - bl_preOmit                    
+                        traces_aveTrs_time_ns_f = traces_aveTrs_time_ns0_f - bl_preFlash #bl_preOmit                    
 
 
                     #%%                    

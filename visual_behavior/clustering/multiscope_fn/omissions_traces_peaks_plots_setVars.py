@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+First script that we need to run (for post analysis) after omissions_traces_peaks.py is run and the main vars are saved. 
+
 Vars needed here are loaded from the already saved h5 files (created by the function omissions_traces_peaks.py) 
 (if doCorrs=0, the h5 filename is "all_sess_omit_traces_peaks")
 
@@ -36,9 +38,12 @@ Created on Mon Aug 26 12:23:25 2019
 
     
 #%%
-doCorrs = 1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
-analysis_dates = ['20200731'] #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
+doCorrs = 0 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
+analysis_dates = ['20200731'] #(subtractSigCorrs=1) #['20200804'] #(subtractSigCorrs=0) #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
 # note: analysis_dates must not include the entire date_time (eg '20200508_233842'), because the code below assumes it is followed by some wildcard characters.
+
+subtractSigCorrs = 1 # only applicable to doCorrs=1; # if 1, the corr files were saved for the case that signal correlations were subtracted.
+
 use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 
 all_ABtransit_AbefB_Aall = 3 # 3 # 1 0: analyze all sessions;  1: analyze AB transitions;  2: analyze only A sessions (before any B);  3: analyze all A sessions (before or after B)    

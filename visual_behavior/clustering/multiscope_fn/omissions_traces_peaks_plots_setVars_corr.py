@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Vars are set in "omissions_traces_peaks_plots_setVars.py"
+Run "omissions_traces_peaks_plots_setVars.py" to set var "all_sess_2an" needed here.
 
 Follow this code by "omissions_traces_peaks_plots_setVars_corr_eachCre.py"
 
-This script sets dataframe "corr_trace_peak_allMice", which includes corr and p traces and their quantification for each layer pair, for each mouse:
+This script contains all the functions (plotting, etc), and also
+sets dataframe "corr_trace_peak_allMice", which includes corr and p traces and their quantification for each layer pair, for each mouse:
     # cc traces (session-averaged) for each layer pair: eg. cc12_sessAv_44
     # cc quantification (session-averaged) of peaks (after omission and flash) for each layer pair: eg. cc12_peak_amp_omit_sessAv
     
@@ -15,6 +16,8 @@ cc traces and cc quantification are done in three different ways:
     # cc12_pooledAll_sessAv, cc12_peak_amp_omit_sessAv_pooledAll: corr between all neuron pairs (regardless of their layer) (size: 1)
 
 
+Remember: baselines are not subtracted from the traces; but when we quantify the peak we subtract the baseline if sameBl_allLayerPairs is set to 1. Remember: baselines are not subtracted from the traces; but when we quantify the peak we subtract the baseline if sameBl_allLayerPairs is set to 1.
+
 
 Created on Mon Sep 23 15:58:29 2019
 @author: farzaneh
@@ -23,9 +26,9 @@ Created on Mon Sep 23 15:58:29 2019
 # from omissions_traces_peaks_plots_setVars_corrs_funs import *
 
 #%%
-sameBl_allLayerPairs = 0 #1 # if 1, shift the baseline of cc trace of all 16 area1-area2 layer combinations so their baseline is at 0.
+sameBl_allLayerPairs = 1 #1 # if 1, when quantifying cc, shift the baseline of cc trace of all 16 area1-area2 layer combinations so their baseline is at 0. Remember: baselines are not subtracted from the traces; but when we quantify the peak we subtract the baseline if sameBl_allLayerPairs is set to 1. # note: it makese sense to set it to 1 bc there is this difference in baseline of correlation plots which i dont understand why.
 use_spearman_p = 1 # if 1, we use spearman p to show fraction of significant neuron pairs, if 0, we use the manually computed p (one-sample ttest between cc_shlf distribution and the actual cc) to quantify fraciton of neuron pairs with significant cc values.
-do_single_mouse_plots = 1 #0 # make cc traces and peaks plots of session-averaged data, for each mouse
+do_single_mouse_plots = 0 # make cc traces and peaks plots of session-averaged data, for each mouse
 
 peak_win = [0, .5] #[0, .75] # this should be named omit_win
 flash_win = np.array([0, .35])-.75 #[0, .75] # now using flash-aligned traces; previously flash responses were computed on omission-aligned traces; problem: not all flashes happen every .75sec # [-.75, 0] # previous value: # [-.75, -.25] # 
@@ -63,7 +66,7 @@ r[1] = np.min([samps_aft-1, r[1]])
 xlim_frs = np.arange(int(np.argwhere(xnow==0).squeeze()) + r[0], int(np.argwhere(xnow==0).squeeze()) + r[1] + 1)
     
 
-jet_cm = colorOrder(nlines=num_depth)
+jet_cm = ['b', 'c', 'g', 'r'] # colorOrder(nlines=num_depth)
 
 
 #%%
@@ -128,7 +131,15 @@ def quant_cc(cc_sessAv, fo_dur, list_times, list_times_flash, samps_bef, bl_perc
         
     if sameBl_allLayerPairs:
         # Note: instead of defining a single flash_index for all sessions, I would use flash_omit_dur_fr_all (which now we are saving in this_sess (and all_sess)) for each session individually.
-        mxgp = np.max(fo_dur) # .75 #
+#         mxgp = np.max(fo_dur) # .75 #
+
+        if np.isnan(fo_dur).all():
+            mxgp = .77
+        else:
+            if np.max(fo_dur)>.77:
+                print(f'\n\nWARNING: {sum(fo_dur>.77)} flash-omission intervals are above .77sec; max = {np.max(fo_dur)} sec \n\n')
+            mxgp = np.max(fo_dur[fo_dur<=.77]) # i had to comment above because in mouse_id: 440631, session_id: 849304162, we have a flash that is about 5sec apart from the omission! remove this!
+
         # on 5/11/2020 I changed np.floor (below) to np.round, to make things consistent with set_frame_window_flash_omit... also i think it is more accurate to use round than floor!
         flash_index = samps_bef - np.round(mxgp / frame_dur).astype(int) # not quite accurate, if you want to be quite accurate you should align the traces on flashes!
         bl_index_pre_flash = np.arange(0,flash_index)

@@ -43,6 +43,9 @@ for im in range(len(all_mice_id)): # im=1
     mouse_id = all_mice_id[im]
     all_sess_2an_this_mouse = all_sess_2an[all_sess_2an['mouse_id']==mouse_id]
     
+    # NOTE: 08/06/2020: I decided to go with mean (across trials, neurons) instead of median: it actually revealed that in the 3rd plane of LM (especially in LM) the mean response of Slc is slightly going up after omissions (we know some neurons are like this among slc).
+    # Also, when we plot summary mice data, we take average across sessions of mice, so it makes sense that we also take average across trials and neurons (and not mean).        
+
     #################### #################### #################### #################### 
     #### Traces: take med and iqr across neurons; traces are already trial-median ####   
     #################### #################### #################### #################### 
@@ -51,7 +54,7 @@ for im in range(len(all_mice_id)): # im=1
     iqr_trace = []
     for ipl in range(len(a)):
         if np.sum(~np.isnan(a[ipl])) > 0: # experiment is valid
-            m = np.median(a[ipl], axis=1)
+            m = np.mean(a[ipl], axis=1)
             iq = st.iqr(a[ipl], axis=1)
         else:
             m = np.full((len_trace), np.nan)
@@ -72,7 +75,7 @@ for im in range(len(all_mice_id)): # im=1
     iqr_peak_eachTr = []
     for ipl in range(len(a)):
         if np.sum(~np.isnan(a[ipl])) > 0: # experiment is valid
-            m = np.median(a[ipl], axis=1)
+            m = np.mean(a[ipl], axis=1)
             iq = st.iqr(a[ipl], axis=1)
         else:
             m = np.array([np.nan])
@@ -120,7 +123,7 @@ for im in range(len(all_mice_id)): # im=1
     iqr_peak_amp_eachN = []
     for ipl in range(len(a)):
         if np.sum(~np.isnan(a[ipl])) > 0: # experiment is valid
-            m = np.median(a[ipl], axis=0)
+            m = np.mean(a[ipl], axis=0)
             iq = st.iqr(a[ipl], axis=0)
         else:
             m = np.array([np.nan])
@@ -158,7 +161,7 @@ for im in range(len(all_mice_id)): # im=1
     iqr_peak_timing_eachN = []
     for ipl in range(len(a)):
         if np.sum(~np.isnan(a[ipl])) > 0: # experiment is valid
-            m = np.median(a[ipl], axis=0)
+            m = np.mean(a[ipl], axis=0)
             iq = st.iqr(a[ipl], axis=0)
         else:
             m = np.array([np.nan])
@@ -269,6 +272,7 @@ for im in range(len(all_mice_id)): # im=0
         peak_timing_med_ns, peak_timing_25q_ns, peak_timing_75q_ns = med_perc_each_exp(peak_timing_ns) # total number of planes (8*num_sessions); each element: med of peak timing across neurons in that plane
         '''
         
+        
         ######## Peak amplitude, computed on trial-median *traces* ########    # get the peak measures computed on trial-median traces (above is computed on individual trials, but then median is taken across trials; the measure here is less noisy as the peaks are computed on the meidan of the traces.)
         peak_amp_ns_traceMed = all_sess_2an_this_mouse['peak_amp_eachN_traceMed'].values # size: total number of planes (8*num_sessions), and then each element has size (neurons,) 
         peak_timing_ns_traceMed = all_sess_2an_this_mouse['peak_timing_eachN_traceMed'].values
@@ -278,7 +282,7 @@ for im in range(len(all_mice_id)): # im=0
         peak_timing_med_ns_traceMed, peak_timing_25q_ns_traceMed, peak_timing_75q_ns_traceMed = med_perc_each_exp(peak_timing_ns_traceMed*frame_dur) # total number of planes (8*num_sessions); each element: med of peak timing across neurons in that plane
 
         
-        ######## FLASH-evoked responses: Peak amplitude, computed on trial-median *traces* ########    # get the peak measures computed on trial-median traces (above is computed on individual trials, but then median is taken across trials; the measure here is less noisy as the peaks are computed on the meidan of the traces.)
+        ######## Image-evoked responses: Peak amplitude, computed on trial-median *traces* ########    # get the peak measures computed on trial-median traces (above is computed on individual trials, but then median is taken across trials; the measure here is less noisy as the peaks are computed on the meidan of the traces.)
         peak_amp_ns_traceMed_flash = all_sess_2an_this_mouse['peak_amp_eachN_traceMed_flash'].values # size: total number of planes (8*num_sessions), and then each element has size (neurons,) 
         peak_timing_ns_traceMed_flash = all_sess_2an_this_mouse['peak_timing_eachN_traceMed_flash'].values
     

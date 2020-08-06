@@ -215,8 +215,11 @@ def med_perc_each_exp(all_exp_traces):
     # all_exp_traces[i] has size n, where n = number of neurons
     
     # output variables will have size e, where e = number of experiments
+
+    # NOTE: 08/06/2020: I decided to go with mean (across trials, neurons) instead of median: it actually revealed that in the 3rd plane of LM (especially in LM) the mean response of Slc is slightly going up after omissions (we know some neurons are like this among slc).
+    # Also, when we plot summary mice data, we take average across sessions of mice, so it makes sense that we also take average across trials and neurons (and not mean).    
     
-    med_ns = np.array([np.median(all_exp_traces[i]) for i in range(len(all_exp_traces))])
+    med_ns = np.array([np.mean(all_exp_traces[i]) for i in range(len(all_exp_traces))])
     q25_ns = np.array([np.percentile(all_exp_traces[i], 25) for i in range(len(all_exp_traces))]) # total number of planes (8*num_sessions); each element: med of peak timing across neurons in that plane
     q75_ns = np.array([np.percentile(all_exp_traces[i], 75) for i in range(len(all_exp_traces))]) # total number of planes (8*num_sessions); each element: med of peak timing across neurons in that plane
     

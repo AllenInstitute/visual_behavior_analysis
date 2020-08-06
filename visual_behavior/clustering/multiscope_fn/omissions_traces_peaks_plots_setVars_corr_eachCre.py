@@ -10,6 +10,8 @@ It may also run omissions_traces_peaks_plots_setVars_corr_eachMouse.py to make p
 
 Figures are saved in folder 'corr_omit_flash' (inside OneDrive/Analysis/)
 
+I created a notes file ("omissions_traces_peaks_plots_setVars_corr_sumMice_summaryCodeNotes.py") that explains what variables give us the average cc traces and cc quantifications. The file is located in the same folder as the scripts.
+
 
 Created on Mon Sep 23 15:58:29 2019
 @author: farzaneh

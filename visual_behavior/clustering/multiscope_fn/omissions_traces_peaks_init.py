@@ -35,7 +35,7 @@ use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will l
 
 saveResults = 1 # save the all_sess pandas at the end
 
-doCorrs = 1 # -1 #0 #1 # if -1, only get the traces (entire session, also omission-aligned), dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
+doCorrs = 0 # -1 #0 #1 # if -1, only get the traces (entire session, also omission-aligned), dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
 # note: when doCorrs=1, run this code on the cluster: omissions_traces_peaks_init_pbs.py (this will call omissions_traces_peaks_pbs.py) 
 num_shfl_corr = 2 #50 # set to 0 if you dont want to compute corrs for shuffled data # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
 subtractSigCorrs = 1 # if 1, compute average response to each image, and subtract it out from all trials of that image. Then compute correlations; ie remove signal correlations.
@@ -263,7 +263,7 @@ all_sess = pd.DataFrame([], columns=cols) # size: 8*len(num_sessions)
 
 cnt_sess = -1
 
-for isess in [0]: # np.arange(0, len(list_all_sessions_valid)): # isess=0 #
+for isess in np.arange(0, len(list_all_sessions_valid)): # isess=0 #
 
 #     isess = np.argwhere(list_all_sessions_valid==1005374186).squeeze()
     session_id = int(list_all_sessions_valid[isess])

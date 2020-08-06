@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+The 1st script to run to make plots (assuming the analysis is done and files are saved.)
+
 This script loads all_sess that is set by function svm_main_post (called in svm_init).
 It sets all_sess_2an, which is a subset of all_sess that only includes desired sessions for analysis (A, or B, etc).
 
@@ -121,7 +123,7 @@ num_depth = 4
 
 cols_each = colorOrder(num_planes)
 cols_area = ['b', 'k']    # first plot V1 (in black, index 1) then LM (in blue, index 0)   
-cols_depth = colorOrder(num_depth) #a.shape[0]) # depth1_area2    
+cols_depth = ['b', 'c', 'g', 'r'] #colorOrder(num_depth) #a.shape[0]) # depth1_area2    
 alph = .3 # for plots, transparency of errorbars
 bb = (.92, .7) # (.9, .7)
 xlim = [-1.2, 2.25] # [-13, 24]
