@@ -130,6 +130,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
                     "container_workflow_state":
                     "experiment_workflow_state":
                     "session_name":
+                    "session_number":
                     "equipment_name":
                     "date_of_acquisition":
                     "isi_experiment_id":
@@ -166,6 +167,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
+    experiments['session_number'] = [int(session_type[6]) for session_type in experiments.session_type.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
     return experiments
