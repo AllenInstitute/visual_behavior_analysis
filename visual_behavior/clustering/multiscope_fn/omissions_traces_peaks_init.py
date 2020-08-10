@@ -46,8 +46,9 @@ samps_aft = 24 # 40 #
 
 
 # remember the following two were 1, for autoencoder analuysis you changed them to 0.
-doScale = 0  # 1 # Scale the traces by baseline std
-doShift = 0  # 1 # Shift the y values so baseline mean is at 0 at time 0
+doScale = 1  # 1 # Scale the traces by baseline std
+doShift = 1  # 1 # Shift the y values so baseline mean is at 0 at time 0
+
 doShift_again = 0 # 0 # this is a second shift just to make sure the pre-omit activity has baseline at 0. (it is after we normalize the traces by baseline ave and sd... but because the traces are median of trials (or computed from the initial gray screen activity), and the baseline is mean of trials, the traces wont end up at baseline of 0)
 bl_gray_screen = 1 # 1 # if 1, baseline will be computed on the initial gray screen at the beginning of the session
 # if 0, get the lowest 20 percentile values of the median trace preceding omission and then compute their mean and sd

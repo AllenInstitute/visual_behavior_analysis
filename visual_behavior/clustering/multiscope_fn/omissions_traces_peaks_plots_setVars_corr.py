@@ -30,9 +30,9 @@ sameBl_allLayerPairs = 1 #1 # if 1, when quantifying cc, shift the baseline of c
 use_spearman_p = 1 # if 1, we use spearman p to show fraction of significant neuron pairs, if 0, we use the manually computed p (one-sample ttest between cc_shlf distribution and the actual cc) to quantify fraciton of neuron pairs with significant cc values.
 do_single_mouse_plots = 0 # make cc traces and peaks plots of session-averaged data, for each mouse
 
-peak_win = [0, .5] #[0, .75] # this should be named omit_win
-flash_win = np.array([0, .35])-.75 #[0, .75] # now using flash-aligned traces; previously flash responses were computed on omission-aligned traces; problem: not all flashes happen every .75sec # [-.75, 0] # previous value: # [-.75, -.25] # 
-flash_win_vip = np.array([-.25, .1])-.75 #[-.25, .5] # on flash-aligned traces # [-1, -.25] # previous value (for flash_win of all cre lines): # [-.75, -.25] # 
+peak_win = [0, .75] #[0, .5] #[0, .75] # this should be named omit_win
+flash_win = np.array([0, .5])-.75 #np.array([0, .35])-.75 #[0, .75] # now using flash-aligned traces; previously flash responses were computed on omission-aligned traces; problem: not all flashes happen every .75sec # [-.75, 0] # previous value: # [-.75, -.25] # 
+flash_win_vip = flash_win-.25 #[-.25, .5] # on flash-aligned traces # [-1, -.25] # previous value (for flash_win of all cre lines): # [-.75, -.25] # 
 
 '''
 ######## NOTE: in the new method (implemented 04/29/2020) we compute list_times from peak_win (for omission responses); then we use flash-omit interval (flash_omit_dur_fr_all) to compute list_times_flash from list_times; Then we use flash_win_vip_shift to compute list_times_flash_vip from list_times_flash.
@@ -47,9 +47,8 @@ flash_win_vip_shift = .25 # sec; shift flash_win this much earlier to compute fl
 # fw0 = (peak_win[0] - (fo_dur_fr_med * frame_dur)).squeeze()
 # flash_win = [fw0, fw0 + np.diff(peak_win).squeeze()]
 
-bl_percentile = 10 #20  # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
 alpha_sig = .05 # significance level when computing fraction of pairs with significant corrcoeff
-
+# bl_percentile = 10 #20  # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
 
 #%%
 xnow = time_trace # time_trace_new
@@ -127,8 +126,8 @@ def set_flash_win_final(cre, session_novel, flash_win, flash_win_vip):
 
 #%% Quantify corr after flash, and after omission (to get the heatmap of corrs!)
 
-def quant_cc(cc_sessAv, fo_dur, list_times, list_times_flash, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs): # cc_sessAv = cc11_sessAv
-        
+def quant_cc(cc_sessAv, fo_dur, list_times, list_times_flash, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs): # cc_sessAv = cc11_sessAv
+
     if sameBl_allLayerPairs:
         # Note: instead of defining a single flash_index for all sessions, I would use flash_omit_dur_fr_all (which now we are saving in this_sess (and all_sess)) for each session individually.
 #         mxgp = np.max(fo_dur) # .75 #
@@ -140,6 +139,7 @@ def quant_cc(cc_sessAv, fo_dur, list_times, list_times_flash, samps_bef, bl_perc
                 print(f'\n\nWARNING: {sum(fo_dur>.77)} flash-omission intervals are above .77sec; max = {np.max(fo_dur)} sec \n\n')
             mxgp = np.max(fo_dur[fo_dur<=.77]) # i had to comment above because in mouse_id: 440631, session_id: 849304162, we have a flash that is about 5sec apart from the omission! remove this!
 
+        '''
         # on 5/11/2020 I changed np.floor (below) to np.round, to make things consistent with set_frame_window_flash_omit... also i think it is more accurate to use round than floor!
         flash_index = samps_bef - np.round(mxgp / frame_dur).astype(int) # not quite accurate, if you want to be quite accurate you should align the traces on flashes!
         bl_index_pre_flash = np.arange(0,flash_index)
@@ -148,6 +148,20 @@ def quant_cc(cc_sessAv, fo_dur, list_times, list_times_flash, samps_bef, bl_perc
         
         bl_preOmit = np.percentile(cc_sessAv[bl_index_pre_omit], bl_percentile, axis=0) # 16 (layer combinations of the two areas)
         bl_preFlash = np.percentile(cc_sessAv[bl_index_pre_flash], bl_percentile, axis=0) # 16 (layer combinations of the two areas)
+        '''
+        
+        # newest method: take frames right before the flash onset (or shifted by .25sec in case of VIP, familiar) and average them
+        b0_relOmit = np.round((flash_win_final0) / frame_dur).astype(int)
+        stp = np.round(-.75 / frame_dur).astype(int)
+        # below is better: image and omission frames than the commented one down here, which is image-1 and omission-1.
+        bl_index_pre_omit = np.sort(np.arange(samps_bef + b0_relOmit , 0 , stp))
+#         bl_index_pre_omit = np.sort(np.arange(samps_bef-1 + b0_relOmit , 0 , stp))
+#         bl_index_pre_omit
+
+        bl_preOmit = np.mean(cc_sessAv[bl_index_pre_omit], axis=0) # 16
+        bl_preFlash = bl_preOmit
+        
+        
         
     # compute mean during peak_win to quantify cc after omission, for each layer pair
     peak_amp_omit = np.nanmean(cc_sessAv[list_times], axis=0) # 16        
@@ -2167,47 +2181,50 @@ for im in range(len(all_mice_id)): # im=0
                 list_times_flash_final = list_times_flash_vip # [ 5,  6,  7,  8,  9, 10]
             
             
-            cc12_peak_amp_omit_eachSess[ise], cc12_peak_amp_flash_eachSess[ise] = quant_cc(cc12_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            cc11_peak_amp_omit_eachSess[ise], cc11_peak_amp_flash_eachSess[ise] = quant_cc(cc11_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            cc22_peak_amp_omit_eachSess[ise], cc22_peak_amp_flash_eachSess[ise] = quant_cc(cc22_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
+            flash_win_final = set_flash_win_final(cre, session_novel, flash_win, flash_win_vip)
+            flash_win_final0 = flash_win_final[0] + .75 # we add .75 because here flash_win_final is relative to omission (unlike in omission_xx_init code, where it is relative to flash)
 
-            p12_peak_amp_omit_eachSess[ise], p12_peak_amp_flash_eachSess[ise] = quant_cc(p12_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p11_peak_amp_omit_eachSess[ise], p11_peak_amp_flash_eachSess[ise] = quant_cc(p11_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p22_peak_amp_omit_eachSess[ise], p22_peak_amp_flash_eachSess[ise] = quant_cc(p22_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc12_peak_amp_omit_eachSess[ise], cc12_peak_amp_flash_eachSess[ise] = quant_cc(cc12_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc11_peak_amp_omit_eachSess[ise], cc11_peak_amp_flash_eachSess[ise] = quant_cc(cc11_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc22_peak_amp_omit_eachSess[ise], cc22_peak_amp_flash_eachSess[ise] = quant_cc(cc22_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
 
-            cc12_peak_amp_omit_eachSess_shfl[ise], cc12_peak_amp_flash_eachSess_shfl[ise] = quant_cc(cc12_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            cc11_peak_amp_omit_eachSess_shfl[ise], cc11_peak_amp_flash_eachSess_shfl[ise] = quant_cc(cc11_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            cc22_peak_amp_omit_eachSess_shfl[ise], cc22_peak_amp_flash_eachSess_shfl[ise] = quant_cc(cc22_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p12_peak_amp_omit_eachSess[ise], p12_peak_amp_flash_eachSess[ise] = quant_cc(p12_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p11_peak_amp_omit_eachSess[ise], p11_peak_amp_flash_eachSess[ise] = quant_cc(p11_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p22_peak_amp_omit_eachSess[ise], p22_peak_amp_flash_eachSess[ise] = quant_cc(p22_aveNPairs_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
 
-            p12_peak_amp_omit_eachSess_shfl[ise], p12_peak_amp_flash_eachSess_shfl[ise] = quant_cc(p12_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p11_peak_amp_omit_eachSess_shfl[ise], p11_peak_amp_flash_eachSess_shfl[ise] = quant_cc(p11_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p22_peak_amp_omit_eachSess_shfl[ise], p22_peak_amp_flash_eachSess_shfl[ise] = quant_cc(p22_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc12_peak_amp_omit_eachSess_shfl[ise], cc12_peak_amp_flash_eachSess_shfl[ise] = quant_cc(cc12_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc11_peak_amp_omit_eachSess_shfl[ise], cc11_peak_amp_flash_eachSess_shfl[ise] = quant_cc(cc11_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc22_peak_amp_omit_eachSess_shfl[ise], cc22_peak_amp_flash_eachSess_shfl[ise] = quant_cc(cc22_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+
+            p12_peak_amp_omit_eachSess_shfl[ise], p12_peak_amp_flash_eachSess_shfl[ise] = quant_cc(p12_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p11_peak_amp_omit_eachSess_shfl[ise], p11_peak_amp_flash_eachSess_shfl[ise] = quant_cc(p11_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p22_peak_amp_omit_eachSess_shfl[ise], p22_peak_amp_flash_eachSess_shfl[ise] = quant_cc(p22_aveNPairs_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
             
             ### pooled (corr of neuron pairs in one layer with all other neuron pairs)
-            cc12_peak_amp_omit_eachSess_pooled[ise], cc12_peak_amp_flash_eachSess_pooled[ise] = quant_cc(cc12_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            cc11_peak_amp_omit_eachSess_pooled[ise], cc11_peak_amp_flash_eachSess_pooled[ise] = quant_cc(cc11_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            cc22_peak_amp_omit_eachSess_pooled[ise], cc22_peak_amp_flash_eachSess_pooled[ise] = quant_cc(cc22_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc12_peak_amp_omit_eachSess_pooled[ise], cc12_peak_amp_flash_eachSess_pooled[ise] = quant_cc(cc12_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc11_peak_amp_omit_eachSess_pooled[ise], cc11_peak_amp_flash_eachSess_pooled[ise] = quant_cc(cc11_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc22_peak_amp_omit_eachSess_pooled[ise], cc22_peak_amp_flash_eachSess_pooled[ise] = quant_cc(cc22_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
             
-            p12_peak_amp_omit_eachSess_pooled[ise], p12_peak_amp_flash_eachSess_pooled[ise] = quant_cc(p12_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p11_peak_amp_omit_eachSess_pooled[ise], p11_peak_amp_flash_eachSess_pooled[ise] = quant_cc(p11_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p22_peak_amp_omit_eachSess_pooled[ise], p22_peak_amp_flash_eachSess_pooled[ise] = quant_cc(p22_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p12_peak_amp_omit_eachSess_pooled[ise], p12_peak_amp_flash_eachSess_pooled[ise] = quant_cc(p12_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p11_peak_amp_omit_eachSess_pooled[ise], p11_peak_amp_flash_eachSess_pooled[ise] = quant_cc(p11_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p22_peak_amp_omit_eachSess_pooled[ise], p22_peak_amp_flash_eachSess_pooled[ise] = quant_cc(p22_aveNPairsPooled_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
 
-            p12_peak_amp_omit_eachSess_pooled_shfl[ise], p12_peak_amp_flash_eachSess_pooled_shfl[ise] = quant_cc(p12_aveNPairsPooled_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p11_peak_amp_omit_eachSess_pooled_shfl[ise], p11_peak_amp_flash_eachSess_pooled_shfl[ise] = quant_cc(p11_aveNPairsPooled_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p22_peak_amp_omit_eachSess_pooled_shfl[ise], p22_peak_amp_flash_eachSess_pooled_shfl[ise] = quant_cc(p22_aveNPairsPooled_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p12_peak_amp_omit_eachSess_pooled_shfl[ise], p12_peak_amp_flash_eachSess_pooled_shfl[ise] = quant_cc(p12_aveNPairsPooled_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p11_peak_amp_omit_eachSess_pooled_shfl[ise], p11_peak_amp_flash_eachSess_pooled_shfl[ise] = quant_cc(p11_aveNPairsPooled_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p22_peak_amp_omit_eachSess_pooled_shfl[ise], p22_peak_amp_flash_eachSess_pooled_shfl[ise] = quant_cc(p22_aveNPairsPooled_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
 
             ### pooledAll (corr of all neuron pairs in all layers with each other)
-            cc12_peak_amp_omit_eachSess_pooledAll[ise], cc12_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(cc12_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            cc11_peak_amp_omit_eachSess_pooledAll[ise], cc11_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(cc11_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            cc22_peak_amp_omit_eachSess_pooledAll[ise], cc22_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(cc22_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc12_peak_amp_omit_eachSess_pooledAll[ise], cc12_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(cc12_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc11_peak_amp_omit_eachSess_pooledAll[ise], cc11_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(cc11_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            cc22_peak_amp_omit_eachSess_pooledAll[ise], cc22_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(cc22_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
             
-            p12_peak_amp_omit_eachSess_pooledAll[ise], p12_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(p12_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p11_peak_amp_omit_eachSess_pooledAll[ise], p11_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(p11_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p22_peak_amp_omit_eachSess_pooledAll[ise], p22_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(p22_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p12_peak_amp_omit_eachSess_pooledAll[ise], p12_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(p12_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p11_peak_amp_omit_eachSess_pooledAll[ise], p11_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(p11_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p22_peak_amp_omit_eachSess_pooledAll[ise], p22_peak_amp_flash_eachSess_pooledAll[ise] = quant_cc(p22_aveNPairsPooledAll_allSess[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
 
-            p12_peak_amp_omit_eachSess_pooledAll_shfl[ise], p12_peak_amp_flash_eachSess_pooledAll_shfl[ise] = quant_cc(p12_aveNPairsPooledAll_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p11_peak_amp_omit_eachSess_pooledAll_shfl[ise], p11_peak_amp_flash_eachSess_pooledAll_shfl[ise] = quant_cc(p11_aveNPairsPooledAll_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
-            p22_peak_amp_omit_eachSess_pooledAll_shfl[ise], p22_peak_amp_flash_eachSess_pooledAll_shfl[ise] = quant_cc(p22_aveNPairsPooledAll_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, bl_percentile, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p12_peak_amp_omit_eachSess_pooledAll_shfl[ise], p12_peak_amp_flash_eachSess_pooledAll_shfl[ise] = quant_cc(p12_aveNPairsPooledAll_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p11_peak_amp_omit_eachSess_pooledAll_shfl[ise], p11_peak_amp_flash_eachSess_pooledAll_shfl[ise] = quant_cc(p11_aveNPairsPooledAll_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
+            p22_peak_amp_omit_eachSess_pooledAll_shfl[ise], p22_peak_amp_flash_eachSess_pooledAll_shfl[ise] = quant_cc(p22_aveNPairsPooledAll_allSess_shfl[ise], fo_dur, list_times, list_times_flash_final, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs) 
 
 
 
@@ -2749,7 +2766,7 @@ for im in range(len(all_mice_id)): # im=0
         
 #%%        
 print(len(corr_trace_peak_allMice))
-corr_trace_peak_allMice.iloc[0]
+corr_trace_peak_allMice.iloc[:2]
 #corr_trace_peak_allMice.iloc[0]['cc12_sessSd_44'].shape
 
 

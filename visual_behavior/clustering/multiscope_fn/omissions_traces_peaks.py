@@ -899,20 +899,22 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                     baseline_trace0 = traces_aveTrs_time_ns[bl_index_pre_omit] # frames x neurons
                     n_p = int(samps_bef*.5) # take 20% of baseline frames
                     # sort baseline frames, and then take the lowest 20% of them... this will define baseline frames
-                    baseline_trace = np.sort(baseline_trace0, axis=0)[:n_p] # 8 frames x units x trials
+                    baseline_trace = np.sort(baseline_trace0, axis=0)[:n_p] # baseline_frames x neurons 
                     # compute mean and sd across frames of baseline_trace                    
-                    bl_preOmit = np.mean(baseline_trace, axis=0) # units x trials
+                    bl_preOmit = np.mean(baseline_trace, axis=0) # neurons
                     bl_preFlash = bl_preOmit
                     print(np.mean(bl_preOmit))
                     '''
                     
-                    # other method: take frames right before the flash onset (or shifted by .25sec in case of VIP, familiar) and average them
+                    # newest method: take frames right before the flash onset (or shifted by .25sec in case of VIP, familiar) and average them
                     b0_relOmit = np.round((flash_win_final[0]) / frame_dur).astype(int)
                     stp = np.round(-.75 / frame_dur).astype(int)
                     bl_index_pre_omit = np.sort(np.arange(samps_bef-1 + b0_relOmit , 0 , stp))
+                    # Note below might be better (according to corr analysis): image and omission frames than image-1 and omission-1.
+#                     bl_index_pre_omit = np.sort(np.arange(samps_bef + b0_relOmit , 0 , stp))                    
 #                     bl_index_pre_omit
                     
-                    bl_preOmit = np.mean(traces_aveTrs_time_ns[bl_index_pre_omit,:]) # neurons # use the 10th percentile
+                    bl_preOmit = np.mean(traces_aveTrs_time_ns[bl_index_pre_omit,:], axis=0) # neurons # use the 10th percentile
                     bl_preFlash = bl_preOmit
 #                     print(np.mean(bl_preOmit))
     

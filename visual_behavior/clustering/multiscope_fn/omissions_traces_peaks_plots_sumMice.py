@@ -15,7 +15,7 @@ Created on Thu Sep 12 18:37:08 2019
 ############# Plot traces averaged across mice of the same cre line ################
 ##########################################################################################    
 ##########################################################################################
-            
+
 #%%
 if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B sessions, separately.
 
@@ -111,7 +111,7 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
         '''
         
         ############################################################
-        ########## Plot classification accuracies ##########
+        ########## Plot population averages ##########
         ############################################################        
 
         lims0 = [np.min(trace_now[icre,:,xlim_frs] - trace_sd_now[icre,:,xlim_frs]), np.max(trace_now[icre,:,xlim_frs] + trace_sd_now[icre,:,xlim_frs])]
@@ -239,12 +239,12 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
         inds_v1_lm = inds_v1, inds_lm
         labvl = 'V1 ', 'LM '
     
-        
+                
         ########################################################################
-        #%% Flash-evoked responses
+        #%% Image-evoked responses
         ########################################################################
         
-        ###### Flash: Response amplitude, V1, then LM ######
+        ###### Image: Response amplitude, V1, then LM ######
 
         y_ave_now = peak_amp_flash_ave_allCre # num_cre x (8 x num_sessions) 
         y_sd_now = peak_amp_flash_sd_allCre
@@ -292,11 +292,11 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
                 plt.ylim(lims0)
     #        ax1.set_ylabel('%s' %(ylabs), fontsize=12)
             plt.title('%s' %(ylabs), fontsize=13) #12
-    #        plt.title('Flash', fontsize=13.5, y=1)
+    #        plt.title('Image', fontsize=13.5, y=1)
             ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3
             if ivl==0:
-                plt.ylabel('Flash', fontsize=15, rotation=0, labelpad=35)
-    #        plt.text(3.2, text_y, 'Flash', fontsize=15)
+                plt.ylabel('Image', fontsize=15, rotation=0, labelpad=35)
+    #        plt.text(3.2, text_y, 'Image', fontsize=15)
             if ivl==0:
 #                 ax1.legend(loc=3, bbox_to_anchor=(-.1, 1.2, 1, .1), ncol=2, frameon=False, mode='expand', borderaxespad=0, fontsize=12, handletextpad=.5) # handlelength=1, 
                 plt.legend(loc='center left', bbox_to_anchor=(.97,.8), frameon=False, handlelength=1, fontsize=12)
@@ -305,7 +305,7 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
 
             
                 
-        ################## Flash: Response timing, V1, then LM ##################
+        ################## Image: Response timing, V1, then LM ##################
 
         y_ave_now = peak_timing_flash_ave_allCre # num_cre x (8 x num_sessions) 
         y_sd_now = peak_timing_flash_sd_allCre
@@ -354,10 +354,10 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
                 plt.ylim(lims0)
     #        ax1.set_ylabel('%s' %(ylabs), fontsize=12)
             plt.title('%s' %(ylabs), fontsize=13) #12
-    #        plt.title('Flash', fontsize=13.5, y=1)
+    #        plt.title('Image', fontsize=13.5, y=1)
             ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3
-#             plt.ylabel('Flash', fontsize=15, rotation=0, labelpad=35)
-    #        plt.text(3.2, text_y, 'Flash', fontsize=15)
+#             plt.ylabel('Image', fontsize=15, rotation=0, labelpad=35)
+    #        plt.text(3.2, text_y, 'Image', fontsize=15)
 #             ax1.legend(loc=3, bbox_to_anchor=(-.1, 1, 2, .1), ncol=2, frameon=False, mode='expand', borderaxespad=0, fontsize=12, handletextpad=.5) # handlelength=1, 
     #        plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
             plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
@@ -512,10 +512,10 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
             
         
         ###########################################
-        #%% Flash-evoked responses
+        #%% Image-evoked responses
         ###########################################
         
-        ################# left plot: flash, response amplitude #######################
+        ################# left plot: image, response amplitude #######################
 
         ylabs = 'Resp amplitude'
         
@@ -540,10 +540,10 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
 #        plt.ylim(lims0)
 #        ax1.set_ylabel('%s' %(ylabs), fontsize=12)
         plt.title('%s' %(ylabs), fontsize=13) #12
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
         ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3
-        plt.ylabel('Flash', fontsize=15, rotation=0, labelpad=35)
-#        plt.text(3.2, text_y, 'Flash', fontsize=15)
+        plt.ylabel('Image', fontsize=15, rotation=0, labelpad=35)
+#        plt.text(3.2, text_y, 'Image', fontsize=15)
 #        ax1.legend(loc=3, bbox_to_anchor=(-.1, 1, 2, .1), ncol=2, frameon=False, mode='expand', borderaxespad=0, fontsize=12, handletextpad=.5) # handlelength=1, 
 #        plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
@@ -576,9 +576,9 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
 #        plt.ylim(lims0)
 #        ax2.set_ylabel('%s' %(ylabs), fontsize=12)
         plt.title('%s' %(ylabs), fontsize=13) #12
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
 #        ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3.
-#        plt.text(1.2, text_y, 'Flash', fontsize=15)
+#        plt.text(1.2, text_y, 'Image', fontsize=15)
         plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
         seaborn.despine()#left=True, bottom=True, right=False, top=False)
@@ -614,7 +614,7 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
 #        plt.ylim(lims0)
 #        ax1.set_ylabel('%s' %(ylabs), fontsize=12)
 #        plt.title('%s' %(ylabs), fontsize=12)
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
         ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3
         plt.ylabel('Omission', fontsize=15, rotation=0, labelpad=35)
 #        plt.text(3.2, text_y, 'Omission', fontsize=15)
@@ -650,9 +650,9 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
 #        plt.ylim(lims0)
 #        ax2.set_ylabel('%s' %(ylabs), fontsize=12)
 #        plt.title('%s' %(ylabs), fontsize=12)
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
 #        ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3.
-#        plt.text(1.2, text_y, 'Flash', fontsize=15)
+#        plt.text(1.2, text_y, 'Image', fontsize=15)
         plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
         seaborn.despine()#left=True, bottom=True, right=False, top=False)
@@ -903,7 +903,7 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
             if iplane==4:
                 plt.title('%s' %area, fontsize=13.5, y=1)
                 ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3.
-                plt.text(1.2, text_y, 'Flash', fontsize=15)
+                plt.text(1.2, text_y, 'Image', fontsize=15)
             plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
             seaborn.despine()#left=True, bottom=True, right=False, top=False)
              
@@ -1196,7 +1196,7 @@ else:
         ####################################################################################
         ####################################################################################
         #%% Plot response amplitude and timing measures
-        # per depth; two areas in two subplots       
+        # per depth
         ####################################################################################
         ####################################################################################
 
@@ -1204,10 +1204,20 @@ else:
         x = np.arange(num_depth)
         xticklabs = np.round(depth_ave).astype(int)
             
+        top = np.concatenate((np.nanmean(paf_all[:, cre_all[0,:]==cre], axis=1), np.nanmean(pa_all[:, cre_all[0,:]==cre], axis=1)))
+        top_sd = np.concatenate((np.nanstd(paf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre)), np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))))        
         
-        #%% Flash-evoked responses
+        # same ylim for images and omissions
+        mn = np.min(top - top_sd)
+        mx = np.max(top + top_sd)
+        r = mx - mn
+        lims0 = [mn-r/20., mx+r/20.]  # set ylim: same for all plots of the same cre line
+        
+        
+        ########################################################
+        #########%% Image-evoked responses ########
 
-        # left plot: flash, response amplitude
+        ######## left plot: flash, response amplitude
         ylabs = 'Resp amplitude'
         
         top = np.nanmean(paf_all[:, cre_all[0,:]==cre], axis=1)
@@ -1223,20 +1233,21 @@ else:
         ax1.tick_params(labelsize=10)
         plt.xlim([-.5, len(x)-.5])
 #        plt.xlabel('Depth', fontsize=12)
-#        plt.ylim(lims0)
+        if same_y_fo:
+            plt.ylim(lims0)
 #        ax1.set_ylabel('%s' %(ylabs), fontsize=12)
         plt.title('%s' %(ylabs), fontsize=13) #12
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
         ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3
-        plt.ylabel('Flash', fontsize=15, rotation=0, labelpad=35)
-#        plt.text(3.2, text_y, 'Flash', fontsize=15)
+        plt.ylabel('Image', fontsize=15, rotation=0, labelpad=35)
+#        plt.text(3.2, text_y, 'Image', fontsize=15)
 #        ax1.legend(loc=3, bbox_to_anchor=(-.1, 1, 2, .1), ncol=2, frameon=False, mode='expand', borderaxespad=0, fontsize=12, handletextpad=.5) # handlelength=1, 
 #        plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
         seaborn.despine()#left=True, bottom=True, right=False, top=False)
 
         
-        # right plot: flash, response timing
+        ######### right plot: image, response timing
         ylabs = 'Peak timing (s)'
         
         top = np.nanmean(ptf_all[:, cre_all[0,:]==cre], axis=1)
@@ -1255,9 +1266,9 @@ else:
 #        plt.ylim(lims0)
 #        ax2.set_ylabel('%s' %(ylabs), fontsize=12)
         plt.title('%s' %(ylabs), fontsize=13) #12
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
 #        ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3.
-#        plt.text(1.2, text_y, 'Flash', fontsize=15)
+#        plt.text(1.2, text_y, 'Image', fontsize=15)
         plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
         seaborn.despine()#left=True, bottom=True, right=False, top=False)
@@ -1267,7 +1278,7 @@ else:
         ########################################################
         #%% Omission-evoked responses
 
-        # left plot: omission, response amplitude
+        ######### left plot: omission, response amplitude
         ylabs = 'Resp amplitude'
 #        x = np.arange(num_depth)
         
@@ -1284,10 +1295,11 @@ else:
         ax1.tick_params(labelsize=10)
         plt.xlim([-.5, len(x)-.5])
         plt.xlabel(xlabs, fontsize=12)
-#        plt.ylim(lims0)
+        if same_y_fo:
+            plt.ylim(lims0)
 #        ax1.set_ylabel('%s' %(ylabs), fontsize=12)
 #        plt.title('%s' %(ylabs), fontsize=12)
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
         ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3
         plt.ylabel('Omission', fontsize=15, rotation=0, labelpad=35)
 #        plt.text(3.2, text_y, 'Omission', fontsize=15)
@@ -1298,7 +1310,7 @@ else:
 
 
         
-        # right plot: omission, : response timing
+        ######### right plot: omission, response timing
         ylabs = 'Peak timing (s)'
         
         top = np.nanmean(pt_all[:, cre_all[0,:]==cre], axis=1)
@@ -1317,9 +1329,9 @@ else:
 #        plt.ylim(lims0)
 #        ax2.set_ylabel('%s' %(ylabs), fontsize=12)
 #        plt.title('%s' %(ylabs), fontsize=12)
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
 #        ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3.
-#        plt.text(1.2, text_y, 'Flash', fontsize=15)
+#        plt.text(1.2, text_y, 'Image', fontsize=15)
         plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
         seaborn.despine()#left=True, bottom=True, right=False, top=False)
@@ -1338,7 +1350,7 @@ else:
         xticklabs = distinct_areas[[1,0]] # so we plot V1 first, then LM
         
         
-        #%% Flash-evoked responses
+        #%% Image-evoked responses
         
         # left plot: flash response amplitude
         ylabs = 'Amplitude'
@@ -1358,10 +1370,10 @@ else:
 #        plt.ylim(lims0)
 #        ax1.set_ylabel('%s' %(ylabs), fontsize=12)
         plt.title('%s' %(ylabs), fontsize=13) #12
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
         ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3
-#        plt.ylabel('Flash', fontsize=15, rotation=0, labelpad=30)
-#        plt.text(3.2, text_y, 'Flash', fontsize=15)
+#        plt.ylabel('Image', fontsize=15, rotation=0, labelpad=30)
+#        plt.text(3.2, text_y, 'Image', fontsize=15)
 #        ax1.legend(loc=3, bbox_to_anchor=(-.1, 1, 2, .1), ncol=2, frameon=False, mode='expand', borderaxespad=0, fontsize=12, handletextpad=.5) # handlelength=1, 
 #        plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
@@ -1387,9 +1399,9 @@ else:
 #        plt.ylim(lims0)
 #        ax2.set_ylabel('%s' %(ylabs), fontsize=12)
         plt.title('%s' %(ylabs), fontsize=13) #12
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
 #        ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3.
-#        plt.text(1.2, text_y, 'Flash', fontsize=15)
+#        plt.text(1.2, text_y, 'Image', fontsize=15)
 #        plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
         seaborn.despine()#left=True, bottom=True, right=False, top=False)
@@ -1419,7 +1431,7 @@ else:
 #        plt.ylim(lims0)
 #        ax1.set_ylabel('%s' %(ylabs), fontsize=12)
 #        plt.title('%s' %(ylabs), fontsize=12)
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
         ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3
 #        plt.ylabel('Omission', fontsize=15, rotation=0, labelpad=30)
 #        plt.text(3.2, text_y, 'Omission', fontsize=15)
@@ -1448,9 +1460,9 @@ else:
 #        plt.ylim(lims0)
 #        ax2.set_ylabel('%s' %(ylabs), fontsize=12)
 #        plt.title('%s' %(ylabs), fontsize=12)
-#        plt.title('Flash', fontsize=13.5, y=1)
+#        plt.title('Image', fontsize=13.5, y=1)
 #        ylim = plt.gca().get_ylim(); text_y = ylim[1] + np.diff(ylim)/3.
-#        plt.text(1.2, text_y, 'Flash', fontsize=15)
+#        plt.text(1.2, text_y, 'Image', fontsize=15)
 #        plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
         seaborn.despine()#left=True, bottom=True, right=False, top=False)
