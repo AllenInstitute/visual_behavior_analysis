@@ -1343,7 +1343,7 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
         ax.plot(mean_trace, label=label, linewidth=3, color=color, zorder=100)
         xticks, xticklabels = get_xticks_xticklabels(mean_trace, frame_rate, interval_sec, window=xlims)
         ax.set_xticks(xticks)
-        ax.set_xticklabels([int(x) for x in xticklabels])
+        ax.set_xticklabels(xticklabels)
         ax.set_xlim(0, (np.abs(xlims[0]) + xlims[1]) * int(frame_rate))
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)

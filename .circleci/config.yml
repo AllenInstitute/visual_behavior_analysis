@@ -36,7 +36,7 @@ jobs:
           name: tox it up
           command: |
             . venv/bin/activate
-            tox -e py36
+            tox --recreate -e py36
 
   test-37:
     docker:
@@ -55,7 +55,7 @@ jobs:
           name: tox it up
           command: |
             . venv/bin/activate
-            tox -e py37
+            tox --recreate -e py37
 
   test-allensdk_head:
     docker:
@@ -74,7 +74,7 @@ jobs:
           name: tox it up
           command: |
             . venv/bin/activate
-            tox -e allensdk_head
+            tox --recreate -e allensdk_head
 
 workflows:
   version: 2
