@@ -12,7 +12,11 @@ Created on Tue Jul 21 11:52:25 2020
 
 # import matplotlib.patches as mpatches
 
-def scatter_umap(x, y, amp, clab, fig_ax='', lab_analysis='UMAP', cut_axes=0, same_norm_fo=[1,1], dosavefig=0, fign_subp='imageOmit_', pc_exp_var=np.nan, whatSess = '_AallBall', fgn='', dim=[2,2]):
+import numpy as np
+import matplotlib.pyplot as plt
+get_ipython().magic(u'matplotlib inline')   
+
+def scatter_umap(x, y, amp, clab, fig_ax='', lab_analysis='UMAP', cut_axes=0, same_norm_fo=[1,1], dosavefig=0, fign_subp='imageOmit_', pc_exp_var=np.nan, whatSess = '_AallBall', fgn='', dim=[2,2], cre='all'):
 
     # dim -> [2,2]: 2d plot ; [3,z]: 3d plot. (2nd element is the z values.)
     
@@ -46,12 +50,12 @@ def scatter_umap(x, y, amp, clab, fig_ax='', lab_analysis='UMAP', cut_axes=0, sa
     ####################################################################################
     ############## set c_value (the colors of each point), and norm (how to scale the 3rd dimension of the plot) ##############
     ####################################################################################
-    if type(amp[0])==np.str_: # eg depth   #same_norm_fo[isp]==-1:
+    if type(amp[0])==np.str_ or type(amp[0])==str: # eg depth   #same_norm_fo[isp]==-1:
         norm = None
 
         u = np.unique(amp)    # u = np.unique(np.concatenate((color_metric[isp])))
-#         c_value = np.full((len(amp), 3), np.nan)
-        c_value = np.full((len(amp)), colors[0]) # when colors is strings, eg '#1f77b4'
+        c_value = np.full((len(amp), 3), np.nan)
+#         c_value = np.full((len(amp)), colors[0]) # when colors is strings, eg '#1f77b4'
         for ia in range(len(u)):
             c_value[amp==u[ia]] = colors[ia]
     else:
@@ -176,7 +180,7 @@ def plot_scatter_fo(cre_lines, low_dim_all_cre, color_metric, color_labs=['image
             fig_ax = [fig, ax]
             
             # make the scatter plot of umap dimensions
-            scatter_umap(x, y, amp, clab, fig_ax, lab_analysis, cut_axes, same_norm_fo, dosavefig, fign_subp, pc_exp_var, whatSess, fgn, dim)
+            scatter_umap(x, y, amp, clab, fig_ax, lab_analysis, cut_axes, same_norm_fo, dosavefig, fign_subp, pc_exp_var, whatSess, fgn, dim, cre)
 
                 
         plt.subplots_adjust(wspace=0.7)

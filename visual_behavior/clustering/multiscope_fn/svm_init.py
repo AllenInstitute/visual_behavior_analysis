@@ -172,7 +172,8 @@ cols0 = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'sta
 if same_num_neuron_all_planes:
     cols = np.concatenate((cols0, ['population_sizes_to_try'])) 
 else:
-    cols = cols0
+    cols = np.concatenate((cols0, ['av_w_data_new', 'av_b_data_new']))
+#     cols = cols0
 all_sess = pd.DataFrame([], columns=cols)
 
 for isess in range(len(list_all_sessions_valid)):   # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]

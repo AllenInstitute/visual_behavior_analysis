@@ -2,6 +2,8 @@
 Load all_sess_dff_stim which has the dff traces as well as stimulus information and some metadata for all mesoscope experiments.
 all_sess_dff_stim is set in all_sess_dff_stim.py
 
+This is made for Akul Gupta, for the RNN analysis.
+
 Created on Tue Jul 7 17:06:25 2020
 @author: farzaneh
 """

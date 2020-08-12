@@ -1,7 +1,7 @@
 # %load_ext autoreload
 
 # from importlib import reload
-# import(x) 
+# import x
 # reload(x)
 
 #get_ipython().magic(u'matplotlib inline')   
@@ -33,6 +33,7 @@ def objective(x):
 
 
 #%%
+import numpy as np
 import socket
 import os
 import h5py 

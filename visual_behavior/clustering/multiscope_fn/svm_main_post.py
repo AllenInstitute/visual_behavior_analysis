@@ -189,6 +189,9 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
                 perClassErrorTest_shfl_allFrs = svm_vars.iloc[0]['perClassErrorTest_shfl_allFrs']
                 perClassErrorTest_chance_allFrs = svm_vars.iloc[0]['perClassErrorTest_chance_allFrs']
                 
+                w_data_allFrs = svm_vars.iloc[0]['w_data_allFrs'] # numSamps x nNeurons x nFrames
+                b_data_allFrs = svm_vars.iloc[0]['b_data_allFrs'] # numSamps x nFrames
+                
 #                frames_svm = svm_vars.iloc[0]['frames_svm']
                 
             #    plt.plot(cbest_allFrs)
@@ -244,7 +247,8 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
                     av_test_chance = np.mean(av_test_chance_all, axis=1).squeeze() # numFrames
                     sd_test_chance = np.std(av_test_chance_all, axis=1).squeeze() / np.sqrt(numShufflesN)
                             
-                else: # size perClassErrorTrain_data_allFrs: nSamples x nFrames
+                else: # average across cv samples # size perClassErrorTrain_data_allFrs: nSamples x nFrames
+
                     av_train_data = 100-np.nanmean(perClassErrorTrain_data_allFrs, axis=0) # numFrames
                     sd_train_data = np.nanstd(perClassErrorTrain_data_allFrs, axis=0) / np.sqrt(numSamples)  
                 
@@ -257,13 +261,18 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
                     av_test_chance = 100-np.nanmean(perClassErrorTest_chance_allFrs, axis=0) # numFrames
                     sd_test_chance = np.nanstd(perClassErrorTest_chance_allFrs, axis=0) / np.sqrt(numSamples)  
             
-            
-            
+                    av_w_data = np.nanmean(w_data_allFrs, axis=0) # nNeurons x nFrames
+                    av_b_data = np.nanmean(b_data_allFrs, axis=0) # nFrames
+                
+                    if n_neurons==1: # make sure all experiments have dimensions nNeurons x nFrames
+                        av_w_data = av_w_data[np.newaxis,:]
+                        
+                        
                 ########################################################################################################    
                 ########################################################################################################    
                 ########################################################################################################
                 ########################################################################################################                            
-                #%% Quanity flash and omission evoked responses
+                #%% Quantify flash and omission evoked responses
                 ########################################################################################################    
                 ########################################################################################################    
                 ########################################################################################################
@@ -340,6 +349,9 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
                 sd_test_shfl_new, _, _ = interp_imaging(sd_test_shfl, samps_bef, samps_aft, kind)
                 sd_test_chance_new, _, _ = interp_imaging(sd_test_chance, samps_bef, samps_aft, kind)
                 
+                av_w_data_new, _, _ = interp_imaging(av_w_data, samps_bef, samps_aft, kind)
+                av_b_data_new, _, _ = interp_imaging(av_b_data, samps_bef, samps_aft, kind)
+                
                 meanX_allFrs_new = np.full((len(xnew), n_neurons), np.nan)
                 stdX_allFrs_new = np.full((len(xnew), n_neurons), np.nan)
                 for ine in range(meanX_allFrs.shape[1]):
@@ -354,6 +366,8 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
                 
                 if same_num_neuron_all_planes:
                     this_sess.at[index, ['population_sizes_to_try']] = population_sizes_to_try
+                else:
+                    this_sess.at[index, ['av_w_data_new', 'av_b_data_new']] = [av_w_data_new, av_b_data_new]
 
 
                     
@@ -501,7 +515,10 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
             
             meanX_allFrs_new = np.full((len(xnew)), np.nan) # np.full((len(xnew), n_neurons), np.nan)
             stdX_allFrs_new = np.full((len(xnew)), np.nan) # np.full((len(xnew), n_neurons), np.nan)            
-                        
+            
+            av_w_data_new = np.full((1, len(xnew)), np.nan)
+            av_b_data_new = np.full((len(xnew)), np.nan)
+            
             this_sess.at[index, ['meanX_allFrs_new', 'stdX_allFrs_new', 'av_train_data_new', 'av_test_data_new', 'av_test_shfl_new', 'av_test_chance_new', 'sd_train_data_new', 'sd_test_data_new', 'sd_test_shfl_new', 'sd_test_chance_new']] = \
                 [meanX_allFrs_new, stdX_allFrs_new, av_train_data_new, av_test_data_new, av_test_shfl_new, av_test_chance_new, sd_train_data_new, sd_test_data_new, sd_test_shfl_new, sd_test_chance_new]
 
@@ -512,6 +529,8 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
             
             if same_num_neuron_all_planes:
                 this_sess.at[index, ['population_sizes_to_try']] = np.nan
+            else:
+                this_sess.at[index, ['av_w_data_new', 'av_b_data_new']] = [av_w_data_new, av_b_data_new]
 
 
     return this_sess            

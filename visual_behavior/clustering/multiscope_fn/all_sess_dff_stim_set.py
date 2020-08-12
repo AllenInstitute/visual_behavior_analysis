@@ -6,6 +6,8 @@ Using AllenSDK to set all_sess_dff_stim which has the dff traces as well as stim
 
 After this script run all_sess_dff_stim_load.py to load the pandas saved here.
 
+This is made for Akul Gupta, for the RNN analysis.
+
 Created on Mon Jul 6 19:52:25 2020
 @author: farzaneh
 """
