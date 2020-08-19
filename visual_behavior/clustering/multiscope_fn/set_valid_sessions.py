@@ -15,7 +15,7 @@ Created on Thu Aug  1 15:07:27 2019
 @author: farzaneh
 """
 
-from mouse_seeks_flags_FN import *
+from mouse_seeks_flags_FN import * # it has the key function all_fails
 from def_funs_general import *
 from def_funs import *
 import pickle
@@ -604,7 +604,7 @@ ignore_inds = np.array([1, 2, 4, 5, 6]) # parent and target match + behavioral p
 # ignore_inds = np.array([0, 1, 2, 3, 4, 5, 6])  # from the list above # zdrift + epilepsy + parent and target match + behavioral performance
 print('The following measure will be ignored:')
 print(list(np.array(all_measures)[ignore_inds]))
-# Remember: some experiments have failed bc their sync data is missing. The failure tags for them is empty ... so they will remain failed because they will not be ignored below.
+# Remember: some experiments have failed qc their sync data is missing. The failure tags for them is empty ... so they will remain failed because they will not be ignored below.
 
 
 # The following sessions have truly failed QC (I know this by having gone through these sessions manually)
