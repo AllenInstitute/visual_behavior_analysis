@@ -410,7 +410,6 @@ def make_multi_cmap_heatmap(df, col_defs, figsize=(6, 6), n_cbar_rows=2, cbar_sp
     }
     axes['cmaps'] = vbu.flatten_list(axes['cmaps'])
 
-    ims = {}
     for ii, sub_heatmap in enumerate(col_defs):
         # make a copy of the dataframe so we can manipulate without affecting the original df
         df_temp = df.copy()
