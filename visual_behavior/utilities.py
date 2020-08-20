@@ -9,7 +9,6 @@ from scipy import ndimage
 import datetime
 import os
 import h5py
-import cv2
 import warnings
 
 from . import database as db
@@ -290,7 +289,7 @@ class Movie(object):
     --------------
     - non-lazy-load a defined interval (would this be useful?)
     '''
-
+    import cv2 # import cv2 here to avoid errors
     def __init__(self, filepath, sync_timestamps=None, h5_filename=None, lazy_load=True):
 
         self.cap = cv2.VideoCapture(filepath)
