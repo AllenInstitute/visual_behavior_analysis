@@ -38,7 +38,7 @@ Created on Mon Aug 26 12:23:25 2019
 
     
 #%%
-doCorrs = 1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
+doCorrs = 0 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
 analysis_dates = ['20200731'] #(subtractSigCorrs=1) #['20200804'] #(subtractSigCorrs=0) #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
 # note: analysis_dates must not include the entire date_time (eg '20200508_233842'), because the code below assumes it is followed by some wildcard characters.
 
@@ -57,7 +57,7 @@ doShift_again = 0 #1 #0 # whether the all_sess_omit_traces_peaks file was saved 
 dosavefig = 1 #1
 #bl_gray_screen = 1 # this should be saved in all_sess, if not set it here. if 1, we used the initial gray screen at the beginning of the session to compute baseline
 plot_flash = 1 # if 1, plot the amplitude of flash-evoked responses; if 0, plot the timing of omission-evoked responses. (in either case peak amp of omissions would be plotted!)
-plot_eachSess_trAve_neurAve = 1 # 0# if 1, for each session plot trial-averaged and neuron-averaged traces for every individual plane 
+plot_eachSess_trAve_neurAve = 0 #1 # 0# if 1, for each session plot trial-averaged and neuron-averaged traces for every individual plane 
 
 
 useSDK = 0 # always 0; it's an old thing. # load the all_sess file created by using allenSDK in script load_behavior_ophys_dataset_fn.py.
