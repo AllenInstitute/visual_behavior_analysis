@@ -2,9 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import pandas as pd
+import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
 from colorsys import hls_to_rgb
+from . import utilities as vbu
 
 
 def generate_random_colors(n, lightness_range=(0, 1), saturation_range=(0, 1), random_seed=0, order_colors=False):
@@ -313,3 +315,127 @@ def designate_flashes_plotly(fig, omit=None, pre_color='blue', post_color='blue'
                 )
 
     fig.update_layout(shapes=shape_list)
+
+
+def make_multi_cmap_heatmap(df, col_defs, figsize=(6, 6), n_cbar_rows=2, cbar_spacing=5, top_buffer=0.1, bottom_buffer=0.1, heatmap_div=0.8, cbar_buffer=0.05):
+    '''
+    a function to make a heatmap where the colormaps are defined individually for all columns
+    Useful for plotting heatmaps when scales/types of data vary across columns
+
+    inputs:
+        df (dataframe) - dataframe containing data to plot
+        col_defs (list of dictionaries) - a list of dictionaries specifiying the different heatmap parameters. Each dict contains the following key/value pairs:
+            'columns': (required) a list of column names for which this parameter set applies
+            'cbar_label': (required) label to apply to the colorbar
+            'colormap': (optional) colormap to apply. Uses seaborn default if not specified
+            'cbar_ticks': (optional) ticks for cbar. Uses seaborn default if not specified
+            'vmin': (optional) lower limit for colormap. Uses seaborn default if not specified
+            'vmax': (optional) upper limit for colormap. Uses seaborn default if not specified
+        figsize (tuple): figsize default = (6,6))
+        n_cbar_rows (int): number of rows of colorbars (default = 2)
+        cbar_spacing (float): horizontal space betweewn colorbars (default = 5)
+        top_buffer (float): fraction of figure canvas to leave blank at top (default = 0.1)
+        bottom_buffer (float): fraction of figure canvas to leave blank at bottom (default = 0.1)
+        heatmap_div (float, range of (0,1)): fraction of figure canvas to devote to heatmap (from left edge) (default = 0.6)
+        cbar_buffer (float, range of (0,1)): fraction of figure canvas to devote to buffer between heatmap and cbars (default = 0.05)
+
+    returns:
+        fig, ax (fig = figure handle, ax = dictionary of axes with keys of 'main' for main axis, 'cmaps' for list of cmap axes)
+
+    sample useage:
+
+        ## generate some data to plot
+        size=20
+        np.random.seed(0)
+
+        # add 10 rows of mean-zero random data
+        data_dict = {'var_{}'.format(i):np.random.randn(size) for i in range(10)}
+
+        # add some additional rows with very different scales
+        data_dict.update({
+            'binary':np.random.choice([0,1],size=size),
+            'hundreds_1': np.random.choice(np.arange(0,100),size=size),
+            'hundreds_2': np.random.choice(np.arange(0,100),size=size),
+            'three_categories': np.random.choice([0,1,2],size=size)
+        })
+
+        # convert to a dataframe
+        df = pd.DataFrame(data_dict)
+
+        ## plot the data with varying colorbars
+        col_defs = [
+            {
+                'columns':[col for col in df if col.startswith('var')],
+                'cbar_label':'zero mean data',
+                'cbar_ticks':[-1,0,1],
+                'vmin':-1,
+                'vmax':1,
+                'cmap':'viridis',
+            },
+            {
+                'columns':['binary'],
+                'cbar_label':'binary data',
+                'cbar_ticks':[0,1],
+                'cmap':sns.color_palette("magma", 2)
+            },
+            {
+                'columns':['hundreds_1','hundreds_2'],
+                'cbar_label':'hundreds',
+                'cmap':'Reds'
+            },
+            {
+                'columns':['three_categories'],
+                'cbar_label':'three category data',
+                'cbar_ticks':[0,1,2],
+                'cmap':sns.color_palette("hls", 3)
+            },
+        ]
+
+        fig, axes = make_multi_cmap_heatmap(df, col_defs, figsize=(8,8))
+    '''
+    fig = plt.figure(figsize=figsize)
+    axes = {
+        'main': placeAxesOnGrid(
+            fig,
+            xspan=[0, heatmap_div],
+            yspan=[top_buffer, 1 - bottom_buffer]
+        ),
+        'cmaps': placeAxesOnGrid(
+            fig,
+            xspan=[heatmap_div + cbar_buffer, 1],
+            yspan=[top_buffer, 1 - bottom_buffer],
+            dim=[n_cbar_rows, np.int(np.ceil(len(col_defs) / n_cbar_rows))],
+            wspace=cbar_spacing
+        ),
+    }
+    axes['cmaps'] = vbu.flatten_list(axes['cmaps'])
+
+    ims = {}
+    for ii, sub_heatmap in enumerate(col_defs):
+        # make a copy of the dataframe so we can manipulate without affecting the original df
+        df_temp = df.copy()
+        # nan out all columns except the ones we want to plot
+        cols_to_nan = [col for col in df.columns if col not in sub_heatmap['columns']]
+
+        for col in cols_to_nan:
+            df_temp[col] = np.nan
+
+        sns.heatmap(
+            df_temp,
+            vmin=sub_heatmap['vmin'] if 'vmin' in sub_heatmap.keys() else None,
+            vmax=sub_heatmap['vmax'] if 'vmax' in sub_heatmap.keys() else None,
+            cmap=sub_heatmap['cmap'] if 'cmap' in sub_heatmap.keys() else None,
+            ax=axes['main'],
+            cbar=True,
+            cbar_ax=axes['cmaps'][ii],
+            cbar_kws={
+                'label': sub_heatmap['cbar_label'] if 'cbar_label' in sub_heatmap.keys() else None,
+                'ticks': sub_heatmap['cbar_ticks'] if 'cbar_ticks' in sub_heatmap.keys() else None
+            }
+        )
+    # turn off axes for any unused cbar axes
+    for remaining_cbar_axes in range(ii + 1, len(axes['cmaps'])):
+        axes['cmaps'][remaining_cbar_axes].axis('off')
+
+    axes['main'].set_xticklabels(axes['main'].get_xticklabels(), rotation=45, ha='right')
+    return fig, axes
