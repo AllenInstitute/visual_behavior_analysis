@@ -38,7 +38,7 @@ Created on Mon Aug 26 12:23:25 2019
 
     
 #%%
-doCorrs = 0 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
+doCorrs = 1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
 analysis_dates = ['20200731'] #(subtractSigCorrs=1) #['20200804'] #(subtractSigCorrs=0) #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
 # note: analysis_dates must not include the entire date_time (eg '20200508_233842'), because the code below assumes it is followed by some wildcard characters.
 
@@ -50,7 +50,7 @@ all_ABtransit_AbefB_Aall = 3 # 3 # 1 0: analyze all sessions;  1: analyze AB tra
 only_1st_transit = 1 # relevant only if all_ABtransit_AbefB_Aall=1 # if 1, only include data from the 1st A-->B transition even if a mouse has more than one (safer, since in the subsequent transitions, B has been already introduced, so they are not like the 1st A-->B transition)
 
 same_y_fo = 1 # in summary mice plots, use the same ylim for image- and omission-evoked responses.
-th_neurons = 3 # minimum number of neurons (for a plane), in order to use that plane in analysis. (for all cre lines)
+th_neurons = 3 # 5 #minimum number of neurons (for a plane), in order to use that plane in analysis. (for all cre lines)
     
 doShift_again = 0 #1 #0 # whether the all_sess_omit_traces_peaks file was saved for doShift_again or not; # this is a second shift just to make sure the pre-omit activity has baseline at 0. (it is after we normalize the traces by baseline ave and sd... but because the traces are median of trials (or computed from the initial gray screen activity), and the baseline is mean of trials, the traces wont end up at baseline of 0)                                      
 

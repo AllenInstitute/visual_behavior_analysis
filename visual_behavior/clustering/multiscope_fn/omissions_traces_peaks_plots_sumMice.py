@@ -1220,51 +1220,91 @@ else:
         
         
         ####################################################################################
-        ### ANOVA
         ####################################################################################
-        '''
-        # load packages
-        import statsmodels.api as sm
-        from statsmodels.formula.api import ols
-
-        # Ordinary Least Squares (OLS) model
-        # C(Genotype):C(years) represent interaction term
-        aa = paf_all[:, cre_all[0,:]==cre]
-
-        a = aa[inds_lm,:]
-
-        fvalue, pvalue = st.f_oneway(a[0][~np.isnan(a[0])], a[1][~np.isnan(a[1])], a[2][~np.isnan(a[2])], a[3][~np.isnan(a[3])])
-        print(fvalue, pvalue)
+        ### ANOVA on response quantifications (image and omission evoked response amplitudes)
+        ####################################################################################
+        ####################################################################################    
+        print(f'\n\n==============================\n========== {cre} ==========\n==============================\n\n')
         
-        cols = ['area', 'depth', 'value']
-        a_data = pd.DataFrame([], columns = cols)
-        i_at = 0
-        for i_depth in range(4):
-            inds_now = inds_v1
-            a_now = aa[inds_now[i_depth],:][~np.isnan(aa[inds_now[i_depth]])]
-            for i_a in range(len(a_now)):
-                i_at = i_at+1
-                a_data.at[i_at, 'area'] = 'V1'
-                a_data.at[i_at, 'depth'] = int(depth_ave[i_depth])
-                a_data.at[i_at, 'value'] = a_now[i_a]
+        aa_all = [pa_all[:, cre_all[0,:]==cre], paf_all[:, cre_all[0,:]==cre]]
+        aan = 'omission', 'image'
+        
+        for of in range(2): # omission, image
+            print(f'\n========== {aan[of]} ==========')
+            aa = aa_all[of]
+            ####
+            cols = ['area', 'depth', 'value']
+            a_data = pd.DataFrame([], columns = cols)
+            i_at = -1
+            for i_depth in range(4):
+                inds_now = inds_v1
+                a_now = aa[inds_now[i_depth],:][~np.isnan(aa[inds_now[i_depth]])]
+                for i_a in range(len(a_now)):
+                    i_at = i_at+1
+                    a_data.at[i_at, 'area'] = 'V1'
+                    a_data.at[i_at, 'depth'] = int(depth_ave[i_depth])
+                    a_data.at[i_at, 'value'] = a_now[i_a]
 
-        for i_depth in range(4):
-            inds_now = inds_lm
-            a_now = aa[inds_now[i_depth],:][~np.isnan(aa[inds_now[i_depth]])]
-            for i_a in range(len(a_now)):
-                i_at = i_at+1
-                a_data.at[i_at, 'area'] = 'LM'
-                a_data.at[i_at, 'depth'] = int(depth_ave[i_depth])
-                a_data.at[i_at, 'value'] = a_now[i_a]
+            for i_depth in range(4):
+                inds_now = inds_lm
+                a_now = aa[inds_now[i_depth],:][~np.isnan(aa[inds_now[i_depth]])]
+                for i_a in range(len(a_now)):
+                    i_at = i_at+1
+                    a_data.at[i_at, 'area'] = 'LM'
+                    a_data.at[i_at, 'depth'] = int(depth_ave[i_depth])
+                    a_data.at[i_at, 'value'] = a_now[i_a]
+            a_data.at[:,'value'] = a_data['value'].values.astype(float)
+#             a_data
+            
+            # Do anova and tukey for each area
+            for ars in ['V1', 'LM']:
+                print(ars)
+                a_data_now = a_data[a_data['area'].values==ars]
+        #         a_data_now = a_data
+
+                ### ANOVA
+                # https://reneshbedre.github.io/blog/anova.html        
+                # https://pythonhealthcare.org/2018/04/13/55-statistics-multi-comparison-with-tukeys-test-and-the-holm-bonferroni-method/
+                # https://help.xlstat.com/s/article/how-to-interpret-contradictory-results-between-anova-and-multiple-pairwise-comparisons?language=es
+                # https://pythonhealthcare.org/2018/04/13/55-statistics-multi-comparison-with-tukeys-test-and-the-holm-bonferroni-method/
+                import statsmodels.api as sm
+                from statsmodels.formula.api import ols
+
+                # Ordinary Least Squares (OLS) model
+                # 2-way
+                # C(Genotype):C(years) represent interaction term        
+        #         model = ols('value ~ C(area) + C(depth) + C(area):C(depth)', data=a_data).fit()
+                # 1-way
+                model = ols('value ~ C(depth)', data=a_data_now).fit() 
+        #         anova_table = sm.stats.anova_lm(model, typ=3)
+                anova_table = sm.stats.anova_lm(model, typ=2)
+                print(anova_table)        
+                print('\n')
+                # scipy anova: same result as above
+#                 a = aa[inds_v1,:]
+#                 fvalue, pvalue = st.f_oneway(a[0][~np.isnan(a[0])], a[1][~np.isnan(a[1])], a[2][~np.isnan(a[2])], a[3][~np.isnan(a[3])])
+#                 print(fvalue, pvalue)
+
+
+                ### TUKEY HSD        
+                from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
+
+        #         v = a_data['value']
+        #         f = a_data['depth']
+                v = a_data_now['value'] #a_data['value']
+                f = a_data_now['depth'] #a_data['depth']
+
+                MultiComp = MultiComparison(v, f)
+                print(MultiComp.tukeyhsd().summary()) # Show all pair-wise comparisons
+
+
                 
-        model = ols('value ~ C(area) + C(depth) + C(area):C(depth)', data=a_data).fit()
-#         anova_table = sm.stats.anova_lm(model, typ=2)
-#         anova_table        
-        '''
-        
+        ########################################################
+        ########################################################
         ########################################################
         #########%% Image-evoked responses ########
-
+        ########################################################
+        
         ######## left plot: flash, response amplitude
         ylabs = 'Resp amplitude'
         
