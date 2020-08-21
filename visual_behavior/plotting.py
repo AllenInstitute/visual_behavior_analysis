@@ -317,18 +317,19 @@ def designate_flashes_plotly(fig, omit=None, pre_color='blue', post_color='blue'
     fig.update_layout(shapes=shape_list)
 
 
-def make_multi_cmap_heatmap(df, col_defs, figsize=(6, 6), n_cbar_rows=2, cbar_spacing=5, top_buffer=0.1, bottom_buffer=0.1, heatmap_div=0.8, cbar_buffer=0.05):
+def make_multi_cmap_heatmap(df, heatmap_defs, figsize=(6, 6), n_cbar_rows=2, cbar_spacing=5, top_buffer=0.1, bottom_buffer=0.1, heatmap_div=0.8, cbar_buffer=0.05):
     '''
     a function to make a heatmap where the colormaps are defined individually for all columns
     Useful for plotting heatmaps when scales/types of data vary across columns
 
     inputs:
         df (dataframe) - dataframe containing data to plot
-        col_defs (list of dictionaries) - a list of dictionaries specifiying the different heatmap parameters. Each dict contains the following key/value pairs:
+        heatmap_defs (list of dictionaries) - a list of dictionaries specifiying the different heatmap parameters. Each dict contains the following key/value pairs:
             'columns': (required) a list of column names for which this parameter set applies
             'cbar_label': (required) label to apply to the colorbar
             'colormap': (optional) colormap to apply. Uses seaborn default if not specified
             'cbar_ticks': (optional) ticks for cbar. Uses seaborn default if not specified
+            'cbar_tick_labels: (optional) labels for cbar_ticks. Must be same length as 'cbar_ticks'
             'vmin': (optional) lower limit for colormap. Uses seaborn default if not specified
             'vmax': (optional) upper limit for colormap. Uses seaborn default if not specified
         figsize (tuple): figsize default = (6,6))
@@ -340,7 +341,7 @@ def make_multi_cmap_heatmap(df, col_defs, figsize=(6, 6), n_cbar_rows=2, cbar_sp
         cbar_buffer (float, range of (0,1)): fraction of figure canvas to devote to buffer between heatmap and cbars (default = 0.05)
 
     returns:
-        fig, ax (fig = figure handle, ax = dictionary of axes with keys of 'main' for main axis, 'cmaps' for list of cmap axes)
+        fig, ax (fig = figure handle, ax = dictionary of axes with keys of 'heatmap' for axis containing heatmap, 'cmaps' for list of cmap axes)
 
     sample useage:
 
@@ -363,7 +364,7 @@ def make_multi_cmap_heatmap(df, col_defs, figsize=(6, 6), n_cbar_rows=2, cbar_sp
         df = pd.DataFrame(data_dict)
 
         ## plot the data with varying colorbars
-        col_defs = [
+        heatmap_defs = [
             {
                 'columns':[col for col in df if col.startswith('var')],
                 'cbar_label':'zero mean data',
@@ -391,11 +392,11 @@ def make_multi_cmap_heatmap(df, col_defs, figsize=(6, 6), n_cbar_rows=2, cbar_sp
             },
         ]
 
-        fig, axes = make_multi_cmap_heatmap(df, col_defs, figsize=(8,8))
+        fig, axes = make_multi_cmap_heatmap(df, heatmap_defs, figsize=(8,8))
     '''
     fig = plt.figure(figsize=figsize)
     axes = {
-        'main': placeAxesOnGrid(
+        'heatmap': placeAxesOnGrid(
             fig,
             xspan=[0, heatmap_div],
             yspan=[top_buffer, 1 - bottom_buffer]
@@ -404,13 +405,16 @@ def make_multi_cmap_heatmap(df, col_defs, figsize=(6, 6), n_cbar_rows=2, cbar_sp
             fig,
             xspan=[heatmap_div + cbar_buffer, 1],
             yspan=[top_buffer, 1 - bottom_buffer],
-            dim=[n_cbar_rows, np.int(np.ceil(len(col_defs) / n_cbar_rows))],
+            dim=[n_cbar_rows, np.int(np.ceil(len(heatmap_defs) / n_cbar_rows))],
             wspace=cbar_spacing
         ),
     }
+    # special case for when the number of cbars is 1: axis needs to be cast to list
+    if n_cbar_rows == np.int(np.ceil(len(heatmap_defs) / n_cbar_rows)) == 1:
+        axes['cmaps'] = [axes['cmaps']]
     axes['cmaps'] = vbu.flatten_list(axes['cmaps'])
 
-    for ii, sub_heatmap in enumerate(col_defs):
+    for ii, sub_heatmap in enumerate(heatmap_defs):
         # make a copy of the dataframe so we can manipulate without affecting the original df
         df_temp = df.copy()
         # nan out all columns except the ones we want to plot
@@ -424,7 +428,7 @@ def make_multi_cmap_heatmap(df, col_defs, figsize=(6, 6), n_cbar_rows=2, cbar_sp
             vmin=sub_heatmap['vmin'] if 'vmin' in sub_heatmap.keys() else None,
             vmax=sub_heatmap['vmax'] if 'vmax' in sub_heatmap.keys() else None,
             cmap=sub_heatmap['cmap'] if 'cmap' in sub_heatmap.keys() else None,
-            ax=axes['main'],
+            ax=axes['heatmap'],
             cbar=True,
             cbar_ax=axes['cmaps'][ii],
             cbar_kws={
@@ -432,9 +436,13 @@ def make_multi_cmap_heatmap(df, col_defs, figsize=(6, 6), n_cbar_rows=2, cbar_sp
                 'ticks': sub_heatmap['cbar_ticks'] if 'cbar_ticks' in sub_heatmap.keys() else None
             }
         )
+
+        if 'cbar_ticklabels' in sub_heatmap.keys():
+            axes['cmaps'][ii].set_yticklabels(sub_heatmap['cbar_ticklabels'])
     # turn off axes for any unused cbar axes
     for remaining_cbar_axes in range(ii + 1, len(axes['cmaps'])):
         axes['cmaps'][remaining_cbar_axes].axis('off')
 
-    axes['main'].set_xticklabels(axes['main'].get_xticklabels(), rotation=45, ha='right')
+    axes['heatmap'].set_xticklabels(axes['heatmap'].get_xticklabels(), rotation=45, ha='right')
+
     return fig, axes
