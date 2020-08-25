@@ -18,7 +18,8 @@ zipfile2; python_version < '3.5'
 zipfile36; python_version >= '3.5'
 pymongo
 pyyaml
-opencv-python
+opencv-python==4.2.0.34; python_version <= "3.6"
+opencv-python; python_version > "3.6"
 dash
 xarray
 plotly
