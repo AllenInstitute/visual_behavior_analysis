@@ -259,7 +259,10 @@ for im in range(len(all_mice_id)): # im=0
         ######## Traces ########
         y = np.array(np.squeeze(peak_trace_this_mouse['med_peak_eachTr'])) # 8 x trials: if the mouse has only 1 session; # if more than one session: size: total number of planes (8*num_sessions), and then each element has size (trials,) 
         y_trace = np.array(np.squeeze(peak_trace_this_mouse['med_trace'])) # total number of planes (8*num_sessions) x time 
-    
+        
+        # turn to nan those planes with fewer than th_neurons neurons
+        y[n_neurons<th_neurons] = np.full((y[n_neurons<th_neurons].shape), np.nan)
+        y_trace[n_neurons<th_neurons] = np.full((y_trace[n_neurons<th_neurons].shape), np.nan)
         
         ######## Get the trial-median peak data for each neuron (peak computed on individual trials, then, median computed across trials)
         # remember: the first 8 are for the first session, the next 8 are for the next session..
@@ -281,6 +284,10 @@ for im in range(len(all_mice_id)): # im=0
         peak_amp_med_ns_traceMed, peak_amp_25q_ns_traceMed, peak_amp_75q_ns_traceMed = med_perc_each_exp(peak_amp_ns_traceMed) # total number of planes (8*num_sessions); each element: med of peak amp across neurons in that plane
         peak_timing_med_ns_traceMed, peak_timing_25q_ns_traceMed, peak_timing_75q_ns_traceMed = med_perc_each_exp(peak_timing_ns_traceMed*frame_dur) # total number of planes (8*num_sessions); each element: med of peak timing across neurons in that plane
 
+        # turn to nan those planes with fewer than th_neurons neurons
+        peak_amp_med_ns_traceMed[n_neurons<th_neurons] = np.full((peak_amp_med_ns_traceMed[n_neurons<th_neurons].shape), np.nan)
+        peak_timing_med_ns_traceMed[n_neurons<th_neurons] = np.full((peak_timing_med_ns_traceMed[n_neurons<th_neurons].shape), np.nan)
+
         
         ######## Image-evoked responses: Peak amplitude, computed on trial-median *traces* ########    # get the peak measures computed on trial-median traces (above is computed on individual trials, but then median is taken across trials; the measure here is less noisy as the peaks are computed on the meidan of the traces.)
         peak_amp_ns_traceMed_flash = all_sess_2an_this_mouse['peak_amp_eachN_traceMed_flash'].values # size: total number of planes (8*num_sessions), and then each element has size (neurons,) 
@@ -290,6 +297,11 @@ for im in range(len(all_mice_id)): # im=0
         peak_amp_med_ns_traceMed_flash, peak_amp_25q_ns_traceMed_flash, peak_amp_75q_ns_traceMed_flash = med_perc_each_exp(peak_amp_ns_traceMed_flash) # total number of planes (8*num_sessions); each element: med of peak amp across neurons in that plane
         peak_timing_med_ns_traceMed_flash, peak_timing_25q_ns_traceMed_flash, peak_timing_75q_ns_traceMed_flash = med_perc_each_exp(peak_timing_ns_traceMed_flash*frame_dur) # total number of planes (8*num_sessions); each element: med of peak timing across neurons in that plane
                 
+        # turn to nan those planes with fewer than th_neurons neurons
+        peak_amp_med_ns_traceMed_flash[n_neurons<th_neurons] = np.full((peak_amp_med_ns_traceMed_flash[n_neurons<th_neurons].shape), np.nan)
+        peak_timing_med_ns_traceMed_flash[n_neurons<th_neurons] = np.full((peak_timing_med_ns_traceMed_flash[n_neurons<th_neurons].shape), np.nan)
+
+        
         ######## Set session labels (stage names are too long)
     #    session_beg_inds = np.concatenate(([0], np.cumsum(num_trs_each_sess[:-1])+1))
         session_labs = []
@@ -300,7 +312,8 @@ for im in range(len(all_mice_id)): # im=0
             txt = txt[0:min(3, len(txt))]
             session_labs.append(txt)
         
-            
+#         print(np.sum(np.isnan(peak_amp_med_ns_traceMed)), np.sum(np.isnan(peak_amp_med_ns_traceMed_flash)))    
+
         #######%% Keep vars
         trace_peak_allMice.at[im, ['mouse_id', 'cre', 'cre_exp', 'session_ids', 'experiment_ids', 'session_stages', 'session_labs']] = mouse_id, cre, cre_exp, session_ids, experiment_ids, session_stages, session_labs
         trace_peak_allMice.at[im, ['area', 'depth', 'plane']] = areas.values, depths.values, planes

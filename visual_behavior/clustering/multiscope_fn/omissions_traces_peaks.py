@@ -854,8 +854,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                     ### There is a big difference between mean and median ... median seems to be a quite better measure!!
                     ### So I am going with median and iqr!
 
-                    traces_aveTrs_time_ns = np.mean(local_fluo_allOmitt, axis=2) # time x neurons # Median across trials            
-                    traces_aveNs_time_trs = np.mean(local_fluo_allOmitt, axis=1) # time x trials  # Median across neurons
+                    traces_aveTrs_time_ns = np.nanmean(local_fluo_allOmitt, axis=2) # time x neurons # Median across trials            
+                    traces_aveNs_time_trs = np.nanmean(local_fluo_allOmitt, axis=1) # time x trials  # Median across neurons
                     traces_aveTrs_time_ns0 = traces_aveTrs_time_ns + 0
                     # currently not saving the following ...             
                     #            traces_sdTrs_time_ns = st.iqr(local_fluo_allOmitt, axis=2) # time x neurons # Std across trials            
@@ -863,8 +863,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
 
                     ######### flash-aligned traces  
-                    traces_aveTrs_time_ns_f = np.mean(local_fluo_flashBefOmitt, axis=2) # time x neurons # Median across trials
-                    traces_aveNs_time_trs_f = np.mean(local_fluo_flashBefOmitt, axis=1) # time x trials  # Median across neurons
+                    traces_aveTrs_time_ns_f = np.nanmean(local_fluo_flashBefOmitt, axis=2) # time x neurons # Median across trials
+                    traces_aveNs_time_trs_f = np.nanmean(local_fluo_flashBefOmitt, axis=1) # time x trials  # Median across neurons
                     traces_aveTrs_time_ns0_f = traces_aveTrs_time_ns_f + 0
 
                     #%% Compute baseline of (normalized) traces (as 10th percentile pre-omit activity)

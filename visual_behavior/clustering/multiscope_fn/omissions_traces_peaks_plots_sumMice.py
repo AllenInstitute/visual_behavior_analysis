@@ -1058,7 +1058,7 @@ else:
         # Average across all pooled sessions for each plane # remember some experiments might be nan (because they were not valid, we keep all 8 experiments to make indexing easy)
         a = t_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum x 80
         av_trace_eachPlane = np.nanmean(a, axis=1) # 8 x 80
-        sd_trace_eachPlane = np.nanstd(a, axis=1) / np.sqrt(a.shape[1]) # 8 x 80
+        sd_trace_eachPlane = np.nanstd(a, axis=1) / np.sqrt(np.sum(~np.isnan(a[:,:,0]), axis=1))[:,np.newaxis] #(a.shape[1]) # 8 x 80
     
         areas = a_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum
         depths = d_all[:, cre_all[0,:]==cre]  # 8 x thisCre_pooledSessNum
@@ -1124,7 +1124,7 @@ else:
         # trace: average across all pooled sessions for each plane    
         a = t_eachArea[:, cre_eachArea[0,:]==cre]  # 2 x (4*thisCre_pooledSessNum) x 80
         av_trace_pooled_eachArea = np.nanmean(a, axis=1) # 2 x 80
-        sd_trace_pooled_eachArea = np.nanstd(a, axis=1) / np.sqrt(a.shape[1]) # 2 x 80
+        sd_trace_pooled_eachArea = np.nanstd(a, axis=1) / np.sqrt(np.sum(~np.isnan(a[:,:,0]), axis=1))[:,np.newaxis] #(a.shape[1]) # 2 x 80
         
         ##################
         ax = plt.subplot(gs2[0])
@@ -1160,7 +1160,7 @@ else:
         # trace: average across all pooled sessions for each plane    
         a = t_eachDepth[:, cre_eachDepth[0,:]==cre]  # 4 x (2*thisCre_pooledSessNum) x 80
         av_trace_pooled_eachDepth = np.nanmean(a, axis=1) # 4 x 80
-        sd_trace_pooled_eachDepth = np.nanstd(a, axis=1) / np.sqrt(a.shape[1]) # 4 x 80
+        sd_trace_pooled_eachDepth = np.nanstd(a, axis=1) / np.sqrt(np.sum(~np.isnan(a[:,:,0]), axis=1))[:,np.newaxis] #(a.shape[1]) # 4 x 80
     
         depth_ave = np.mean(depth_eachDepth[:, cre_eachDepth[0,:]==cre], axis=1).astype(float) # average across areas and sessions
         
@@ -1192,11 +1192,12 @@ else:
         plt.hlines(lims[1], flash_win[0], flash_win[1], color='green')
         
 
-        
+        ####################################################################################        
         ####################################################################################
         ####################################################################################
         #%% Plot response amplitude and timing measures
         # per depth
+        ####################################################################################
         ####################################################################################
         ####################################################################################
 
@@ -1205,7 +1206,11 @@ else:
         xticklabs = np.round(depth_ave).astype(int)
             
         top = np.concatenate((np.nanmean(paf_all[:, cre_all[0,:]==cre], axis=1), np.nanmean(pa_all[:, cre_all[0,:]==cre], axis=1)))
-        top_sd = np.concatenate((np.nanstd(paf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre)), np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))))        
+        aa = paf_all[:, cre_all[0,:]==cre]
+        pafn = np.sum(~np.isnan(aa), axis=1)
+        aa = pa_all[:, cre_all[0,:]==cre]
+        pan = np.sum(~np.isnan(aa), axis=1)        
+        top_sd = np.concatenate((np.nanstd(paf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(pafn), np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(pan)))        
         
         # same ylim for images and omissions
         mn = np.min(top - top_sd)
@@ -1214,14 +1219,97 @@ else:
         lims0 = [mn-r/20., mx+r/20.]  # set ylim: same for all plots of the same cre line
         
         
+        ####################################################################################
+        ####################################################################################
+        ### ANOVA on response quantifications (image and omission evoked response amplitudes)
+        ####################################################################################
+        ####################################################################################    
+        print(f'\n\n==============================\n========== {cre} ==========\n==============================\n\n')
+        
+        aa_all = [pa_all[:, cre_all[0,:]==cre], paf_all[:, cre_all[0,:]==cre]]
+        aan = 'omission', 'image'
+        
+        for of in range(2): # omission, image
+            print(f'\n========== {aan[of]} ==========')
+            aa = aa_all[of]
+            ####
+            cols = ['area', 'depth', 'value']
+            a_data = pd.DataFrame([], columns = cols)
+            i_at = -1
+            for i_depth in range(4):
+                inds_now = inds_v1
+                a_now = aa[inds_now[i_depth],:][~np.isnan(aa[inds_now[i_depth]])]
+                for i_a in range(len(a_now)):
+                    i_at = i_at+1
+                    a_data.at[i_at, 'area'] = 'V1'
+                    a_data.at[i_at, 'depth'] = int(depth_ave[i_depth])
+                    a_data.at[i_at, 'value'] = a_now[i_a]
+
+            for i_depth in range(4):
+                inds_now = inds_lm
+                a_now = aa[inds_now[i_depth],:][~np.isnan(aa[inds_now[i_depth]])]
+                for i_a in range(len(a_now)):
+                    i_at = i_at+1
+                    a_data.at[i_at, 'area'] = 'LM'
+                    a_data.at[i_at, 'depth'] = int(depth_ave[i_depth])
+                    a_data.at[i_at, 'value'] = a_now[i_a]
+            a_data.at[:,'value'] = a_data['value'].values.astype(float)
+#             a_data
+            
+            # Do anova and tukey for each area
+            for ars in ['V1', 'LM']:
+                print(ars)
+                a_data_now = a_data[a_data['area'].values==ars]
+        #         a_data_now = a_data
+
+                ### ANOVA
+                # https://reneshbedre.github.io/blog/anova.html        
+                # https://pythonhealthcare.org/2018/04/13/55-statistics-multi-comparison-with-tukeys-test-and-the-holm-bonferroni-method/
+                # https://help.xlstat.com/s/article/how-to-interpret-contradictory-results-between-anova-and-multiple-pairwise-comparisons?language=es
+                # https://pythonhealthcare.org/2018/04/13/55-statistics-multi-comparison-with-tukeys-test-and-the-holm-bonferroni-method/
+                import statsmodels.api as sm
+                from statsmodels.formula.api import ols
+
+                # Ordinary Least Squares (OLS) model
+                # 2-way
+                # C(Genotype):C(years) represent interaction term        
+        #         model = ols('value ~ C(area) + C(depth) + C(area):C(depth)', data=a_data).fit()
+                # 1-way
+                model = ols('value ~ C(depth)', data=a_data_now).fit() 
+        #         anova_table = sm.stats.anova_lm(model, typ=3)
+                anova_table = sm.stats.anova_lm(model, typ=2)
+                print(anova_table)        
+                print('\n')
+                # scipy anova: same result as above
+#                 a = aa[inds_v1,:]
+#                 fvalue, pvalue = st.f_oneway(a[0][~np.isnan(a[0])], a[1][~np.isnan(a[1])], a[2][~np.isnan(a[2])], a[3][~np.isnan(a[3])])
+#                 print(fvalue, pvalue)
+
+
+                ### TUKEY HSD        
+                from statsmodels.stats.multicomp import (pairwise_tukeyhsd, MultiComparison)
+
+        #         v = a_data['value']
+        #         f = a_data['depth']
+                v = a_data_now['value'] #a_data['value']
+                f = a_data_now['depth'] #a_data['depth']
+
+                MultiComp = MultiComparison(v, f)
+                print(MultiComp.tukeyhsd().summary()) # Show all pair-wise comparisons
+
+
+                
+        ########################################################
+        ########################################################
         ########################################################
         #########%% Image-evoked responses ########
-
+        ########################################################
+        
         ######## left plot: flash, response amplitude
         ylabs = 'Resp amplitude'
         
         top = np.nanmean(paf_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(paf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))        
+        top_sd = np.nanstd(paf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(pafn) # some are nan; you should divide it by the number of valid experiments!       
 
         ax1 = plt.subplot(gs3[0])         
         ax1.errorbar(x, top[inds_v1], yerr=top_sd[inds_v1], fmt='o', markersize=3, capsize=3, label='V1', color=cols_area[1])
@@ -1251,7 +1339,7 @@ else:
         ylabs = 'Peak timing (s)'
         
         top = np.nanmean(ptf_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(ptf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))                
+        top_sd = np.nanstd(ptf_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(pafn)                
 
         ax2 = plt.subplot(gs3[1])
         ax2.errorbar(x, top[inds_v1], yerr=top_sd[inds_v1], fmt='o', markersize=3, capsize=3, label='V1', color=cols_area[1])
@@ -1283,7 +1371,7 @@ else:
 #        x = np.arange(num_depth)
         
         top = np.nanmean(pa_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))                
+        top_sd = np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(pan)                
 
         ax1 = plt.subplot(gs4[0])         
         ax1.errorbar(x, top[inds_v1], yerr=top_sd[inds_v1], fmt='o', markersize=3, capsize=3, label='V1', color=cols_area[1])
@@ -1314,7 +1402,7 @@ else:
         ylabs = 'Peak timing (s)'
         
         top = np.nanmean(pt_all[:, cre_all[0,:]==cre], axis=1)
-        top_sd = np.nanstd(pt_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))                
+        top_sd = np.nanstd(pt_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(pan)                
 
         ax2 = plt.subplot(gs4[1])
         ax2.errorbar(x, top[inds_v1], yerr=top_sd[inds_v1], fmt='o', markersize=3, capsize=3, label='V1', color=cols_area[1])
@@ -1349,6 +1437,11 @@ else:
         x = np.arange(len(distinct_areas))
         xticklabs = distinct_areas[[1,0]] # so we plot V1 first, then LM
         
+        aa = paf_eachArea[:, cre_eachArea[0,:]==cre]
+        pafan = np.sum(~np.isnan(aa), axis=1)
+        aa = pa_eachArea[:, cre_eachArea[0,:]==cre]
+        paan = np.sum(~np.isnan(aa), axis=1)
+        
         
         #%% Image-evoked responses
         
@@ -1356,7 +1449,7 @@ else:
         ylabs = 'Amplitude'
         
         top = np.nanmean(paf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(paf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))      
+        top_sd = np.nanstd(paf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(pafan) #sum(cre_eachArea[0,:]==cre))      
 
         ax1 = plt.subplot(gs5[0])         
         ax1.errorbar(x, top, yerr=top_sd, fmt='o', markersize=3, capsize=3, color=cols_area[1])
@@ -1385,7 +1478,7 @@ else:
         ylabs = 'Timing (s)'
         
         top = np.nanmean(ptf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(ptf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))        
+        top_sd = np.nanstd(ptf_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(pafan) #sum(cre_eachArea[0,:]==cre))        
 
         ax2 = plt.subplot(gs5[1])
         ax2.errorbar(x, top, yerr=top_sd, fmt='o', markersize=3, capsize=3, color=cols_area[1])
@@ -1417,7 +1510,7 @@ else:
 #        xticklabs = xticklabs
         
         top = np.nanmean(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))            
+        top_sd = np.nanstd(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(paan) #sum(cre_eachArea[0,:]==cre))            
 
         ax1 = plt.subplot(gs6[0])         
         ax1.errorbar(x, top, yerr=top_sd, fmt='o', markersize=3, capsize=3, color=cols_area[1])
@@ -1446,7 +1539,7 @@ else:
         ylabs = 'Timing (s)'
         
         top = np.nanmean(pt_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
-        top_sd = np.nanstd(pt_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))             
+        top_sd = np.nanstd(pt_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(paan) #sum(cre_eachArea[0,:]==cre))             
 
         ax2 = plt.subplot(gs6[1])
         ax2.errorbar(x, top, yerr=top_sd, fmt='o', markersize=3, capsize=3, color=cols_area[1])

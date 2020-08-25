@@ -27,7 +27,7 @@ Created on Mon Sep 23 15:58:29 2019
 
 #%%
 sameBl_allLayerPairs = 1 #1 # if 1, when quantifying cc, shift the baseline of cc trace of all 16 area1-area2 layer combinations so their baseline is at 0. Remember: baselines are not subtracted from the traces; but when we quantify the peak we subtract the baseline if sameBl_allLayerPairs is set to 1. # note: it makese sense to set it to 1 bc there is this difference in baseline of correlation plots which i dont understand why.
-use_spearman_p = 1 # if 1, we use spearman p to show fraction of significant neuron pairs, if 0, we use the manually computed p (one-sample ttest between cc_shlf distribution and the actual cc) to quantify fraciton of neuron pairs with significant cc values.
+use_spearman_p = 1 # if 1, we use spearman p to show fraction of significant neuron pairs, if 0, we use the manually computed p (one-sample ttest between cc_shlf distribution and the actual cc) to quantify fraction of neuron pairs with significant cc values.
 do_single_mouse_plots = 0 # make cc traces and peaks plots of session-averaged data, for each mouse
 
 peak_win = [0, .75] #[0, .5] #[0, .75] # this should be named omit_win
@@ -422,7 +422,7 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
         if i2==0:
 #             plt.text(.3, text_y, 'Flash', fontsize=15) # 3.2
 #             plt.text(-3.8, text_y, 'Flash', fontsize=15, rotation= 'vertical') # 3.2
-            plt.text(-1, text_y, 'Flash', fontsize=15, rotation='vertical', horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes)
+            plt.text(-1, text_y, 'Image', fontsize=15, rotation='vertical', horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes)
 #        ax1.legend(loc=3, bbox_to_anchor=(-.1, 1, 2, .1), ncol=2, frameon=False, mode='expand', borderaxespad=0, fontsize=12, handletextpad=.5) # handlelength=1, 
 #        plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
@@ -498,15 +498,15 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
         plt.xlim([-.5, len(x)-.5])
         plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
         plt.ylim(lims0_f)
-        if i2==0:    
-            plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
+#         if i2==0:    
+#             plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
         ylim0 = lims0_f #plt.gca().get_ylim()
 #         text_y = ylim0[1] + np.diff(ylim0)/3
         text_y = .5 #ylim0[0] + np.diff(ylim0)/3.3
         if i2==0:
 #             plt.text(.3, text_y, 'Flash', fontsize=15) # 3.2
 #             plt.text(-4.8, text_y, 'Flash', fontsize=15, rotation='vertical')
-            plt.text(-1, text_y, 'Flash', fontsize=15, rotation='vertical', horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes)
+            plt.text(-1, text_y, 'Image', fontsize=15, rotation='vertical', horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes)
 #        ax1.legend(loc=3, bbox_to_anchor=(-.1, 1, 2, .1), ncol=2, frameon=False, mode='expand', borderaxespad=0, fontsize=12, handletextpad=.5) # handlelength=1, 
 #        plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
@@ -531,8 +531,8 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
         plt.xlim([-.5, len(x)-.5])
 #        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
         plt.ylim(lims0_o)        
-        if i2==0:    
-            plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
+#         if i2==0:    
+#             plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
         ylim0 = lims0_o #plt.gca().get_ylim()        
 #         text_y = ylim0[1] + np.diff(ylim0)/3
         text_y = .5 #ylim0[0] + np.diff(ylim0)/4.5
@@ -586,7 +586,7 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
         if i2==0:
 #             plt.text(.3, text_y, 'Flash', fontsize=15) # 3.2
 #             plt.text(-4.8, text_y, 'Flash', fontsize=15, rotation='vertical')
-            plt.text(-1, text_y, 'Flash', fontsize=15, rotation='vertical', horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes)
+            plt.text(-1, text_y, 'Image', fontsize=15, rotation='vertical', horizontalalignment='center', verticalalignment='center', transform=ax1.transAxes)
 #        ax1.legend(loc=3, bbox_to_anchor=(-.1, 1, 2, .1), ncol=2, frameon=False, mode='expand', borderaxespad=0, fontsize=12, handletextpad=.5) # handlelength=1, 
 #        plt.legend(loc='center left', bbox_to_anchor=bb, frameon=False, handlelength=1, fontsize=12)
         plt.grid(False) #    plt.box(on=None) #    plt.axis(True)

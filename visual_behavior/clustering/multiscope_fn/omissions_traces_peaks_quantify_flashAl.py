@@ -30,7 +30,7 @@ def omissions_traces_peaks_quantify_flashAl(traces_aveTrs_time_ns, traces_aveTrs
     ###### response amplitude : either max (peak) or mean during peak_win. Mean is preferred because SST and SLC responses don't increase after omission ######
     # for each trial-median neuron trace find the peak during the peak_win window
     if mean_notPeak: # compute average trace during peak_win
-        peak_amp_eachN_traceMed = np.mean(traces_aveTrs_time_ns[list_times], axis=0) # neurons
+        peak_amp_eachN_traceMed = np.nanmean(traces_aveTrs_time_ns[list_times], axis=0) # neurons
 
     else: # compute peak
         if cre.find('Vip')==-1: # SLC, SST # if the mouse is NOT a VIP line, instead of computing the peak, we compute the trough: we invert the trace, and then compute the max. (this is because in VIP mice the response after omission goes up, but not in SST or Slc)
@@ -42,7 +42,7 @@ def omissions_traces_peaks_quantify_flashAl(traces_aveTrs_time_ns, traces_aveTrs
     #                        print('BE CAUTIOUS: to compute peak amplitude, we are inverting the trace assuming it is inhibited by omission!')
     #                        peak_amp_eachN_traceMed = -np.max(-traces_aveTrs_time_ns[list_times], axis=0) # neurons
         else: # VIP, easy, just get the max
-            peak_amp_eachN_traceMed = np.max(traces_aveTrs_time_ns[list_times], axis=0) # neurons
+            peak_amp_eachN_traceMed = np.nanmax(traces_aveTrs_time_ns[list_times], axis=0) # neurons
     peak_amp_eachN_traceMed0 = peak_amp_eachN_traceMed + 0
 
 
@@ -54,7 +54,7 @@ def omissions_traces_peaks_quantify_flashAl(traces_aveTrs_time_ns, traces_aveTrs
     #                        print('BE CAUTIOUS: to compute peak timing, we are inverting the trace assuming it is inhibited by omission! Be cautious!')
     #                    peak_timing_eachN_traceMed = np.argmax(-traces_aveTrs_time_ns[list_times], axis=0)# neurons
     else: # VIP, easy, just get the argmax
-        peak_timing_eachN_traceMed = np.argmax(traces_aveTrs_time_ns[list_times], axis=0) # neurons
+        peak_timing_eachN_traceMed = np.nanargmax(traces_aveTrs_time_ns[list_times], axis=0) # neurons
     # compute timing relative to omission time
     peak_timing_eachN_traceMed = peak_timing_eachN_traceMed + (list_times[0] - samps_bef)
 
@@ -104,15 +104,15 @@ def omissions_traces_peaks_quantify_flashAl(traces_aveTrs_time_ns, traces_aveTrs
     ###### response amplitude : either max (peak) or mean during peak_win. Mean is preferred because SST and SLC responses don't increase after omission ######
     # for each trial-median neuron trace find the peak during the peak_win window
     if mean_notPeak: # compute average trace during peak_win
-        peak_amp_eachN_traceMed_flash = np.mean(traces_aveTrs_time_ns_f[list_times_flash], axis=0) # neurons
+        peak_amp_eachN_traceMed_flash = np.nanmean(traces_aveTrs_time_ns_f[list_times_flash], axis=0) # neurons
     else: # compute peak (unlike omissions, we know all cell lines respond to flash, so we just get the max)
-        peak_amp_eachN_traceMed_flash = np.max(traces_aveTrs_time_ns_f[list_times_flash], axis=0) # neurons
+        peak_amp_eachN_traceMed_flash = np.nanmax(traces_aveTrs_time_ns_f[list_times_flash], axis=0) # neurons
     peak_amp_eachN_traceMed_flash0 = peak_amp_eachN_traceMed_flash + 0
 
 
     ###### peak timing : wont be accurate, because not always the response goes up after omission (ie peak cant be computed always) ######
     # unlike omissions, we know all lines respond to flash, so we just get the argmax regadless of cell line
-    peak_timing_eachN_traceMed_flash = np.argmax(traces_aveTrs_time_ns_f[list_times_flash_timing], axis=0) # neurons
+    peak_timing_eachN_traceMed_flash = np.nanargmax(traces_aveTrs_time_ns_f[list_times_flash_timing], axis=0) # neurons
     # compute timing relative to flash time (remember flash_index is not quite accurate, I think); to be accurate you should align on the flash, instead of getting the flash timing from omission aligned traces.
     peak_timing_eachN_traceMed_flash = peak_timing_eachN_traceMed_flash + (list_times_flash_timing[0] - samps_bef)    
     # old: when we computed flash timing from omission aligned traces
@@ -171,14 +171,14 @@ def omissions_traces_peaks_quantify_flashAl(traces_aveTrs_time_ns, traces_aveTrs
 
             # for each trial and each neuron find amplitude of max response during [0,2] sec after omission trial    
             if mean_notPeak: # if 1, to quantify omission-evoked response, compute average trace during peak_win, instead of the peak amplitude.
-                peak_allTrsNs[itrial,:] = np.mean(a[list_times,:], axis=0) # neurons
+                peak_allTrsNs[itrial,:] = np.nanmean(a[list_times,:], axis=0) # neurons
             else:
-                peak_allTrsNs[itrial,:] = np.max(a[list_times,:], axis=0) # neurons
+                peak_allTrsNs[itrial,:] = np.nanmax(a[list_times,:], axis=0) # neurons
         #                peak_allTrsNs.append(np.max(a[:,list_times], axis = 1))
 
             # for each trial and each neuron find the timing (frame number) of the max response during [0,2] sec after omission trial    
             # compute peak timing relative to frame of omission
-            peak_timing_allTrsNs[itrial,:] = np.argmax(a[list_times,:], axis=0) # neurons
+            peak_timing_allTrsNs[itrial,:] = np.nanargmax(a[list_times,:], axis=0) # neurons
         #                peak_timing_allTrsNs[itrial,:] = list_times[0] + np.argmax(a[list_times,:], axis=0) # neurons # peak timing relative to the trace onset
 
         ### some tests :
