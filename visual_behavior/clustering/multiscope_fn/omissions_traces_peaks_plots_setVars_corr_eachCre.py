@@ -36,6 +36,13 @@ plot_cc_pooled_superimposed = 1 #0
 cre_all = corr_trace_peak_allMice['cre'].values # len_mice_withData
 cre_lines = np.unique(cre_all)
 
+p12f_allCre = [] # p value of ttest between actual and shuffled peak values
+p11f_allCre = []
+p22f_allCre = []
+p12o_allCre = []
+p11o_allCre = []
+p22o_allCre = []
+
 # loop through each cre line
 for icre in range(len(cre_lines)): # icre = 0
     
@@ -553,6 +560,31 @@ for icre in range(len(cre_lines)): # icre = 0
             exec(open("./omissions_traces_peaks_plots_setVars_corr_eachMouse.py").read())
 
 
+            
+    ###########################################################################    
+    ###########################################################################        
+    #%% Two-sided ttest between actual and shuffled correlations
+    ###########################################################################    
+    ###########################################################################    
+
+    # indeces: [LM, V1]; eg p[:,0] is p between each depth of LM, and depth 0 of V1.
+    _, p12f = st.ttest_ind(cc12_peak_sessAv_allMice_thisCre_flash, cc12_peak_sessAv_allMice_thisCre_flash_shfl, nan_policy='omit')
+    _, p11f = st.ttest_ind(cc11_peak_sessAv_allMice_thisCre_flash, cc11_peak_sessAv_allMice_thisCre_flash_shfl, nan_policy='omit')
+    _, p22f = st.ttest_ind(cc22_peak_sessAv_allMice_thisCre_flash, cc22_peak_sessAv_allMice_thisCre_flash_shfl, nan_policy='omit')
+
+    _, p12o = st.ttest_ind(cc12_peak_sessAv_allMice_thisCre_omit, cc12_peak_sessAv_allMice_thisCre_omit_shfl, nan_policy='omit')
+    _, p11o = st.ttest_ind(cc11_peak_sessAv_allMice_thisCre_omit, cc11_peak_sessAv_allMice_thisCre_omit_shfl, nan_policy='omit')
+    _, p22o = st.ttest_ind(cc22_peak_sessAv_allMice_thisCre_omit, cc22_peak_sessAv_allMice_thisCre_omit_shfl, nan_policy='omit')
+    
+    p12f_allCre.append(p12f.data) 
+    p11f_allCre.append(p11f.data)
+    p22f_allCre.append(p22f.data)
+    
+    p12o_allCre.append(p12o.data) 
+    p11o_allCre.append(p11o.data)
+    p22o_allCre.append(p22o.data)
+    
+    
     
     #%%
     ###########################################################################    
