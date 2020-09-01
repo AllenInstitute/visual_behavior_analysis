@@ -450,7 +450,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
             stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         else:
-            stimulus_presentations['licked'] = [True if len(licks)>0 else False for licks in stimulus_presentations.licks.values]
+            stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in stimulus_presentations.licks.values]
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
@@ -567,8 +567,9 @@ def get_pc_masks_for_session(ophys_session_id):
     session_file = [file for file in os.listdir(facemap_output_dir) if (str(ophys_session_id) in file) and ('motMask' in file)]
     try:
         pc_masks = np.load(os.path.join(facemap_output_dir, session_file[0]))
-    except:
+    except Exception as e:
         print('could not load PC masks for ophys_session_id', ophys_session_id)
+        print(e)
         pc_masks = []
     return pc_masks
 
@@ -578,8 +579,9 @@ def get_pc_activations_for_session(ophys_session_id):
     session_file = [file for file in os.listdir(facemap_output_dir) if (str(ophys_session_id) in file) and ('motSVD' in file)]
     try:
         pc_activations = np.load(os.path.join(facemap_output_dir, session_file[0]))
-    except:
+    except Exception as e:
         print('could not load PC activations for ophys_session_id', ophys_session_id)
+        print(e)
         pc_activations = []
     return pc_activations
 
@@ -1152,7 +1154,6 @@ def get_wkf_dff_h5_location(ophys_experiment_id):
     dff_h5_path = dff_h5_location_info[0]['?column?']  # idk why it's ?column? but it is :(
     dff_h5_path = dff_h5_path.replace('/allen', '//allen')  # works with windows and linux filepaths
     return dff_h5_path
-
 
 
 def get_wkf_roi_trace_h5_location(ophys_experiment_id):

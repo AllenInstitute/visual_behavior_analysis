@@ -305,4 +305,3 @@ class ResponseAnalysis(object):
         return self._stimulus_pupil_area_df
 
     stimulus_pupil_area_df = LazyLoadable('_stimulus_pupil_area_df', get_stimulus_pupil_area_df)
-
