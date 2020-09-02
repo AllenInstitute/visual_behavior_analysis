@@ -100,15 +100,11 @@ class ResponseAnalysis(object):
         self.stimulus_presentations_window = rp.get_default_stimulus_response_params()[
             'window_around_timepoint_seconds']
         self.omissions_window = rp.get_default_omission_response_params()['window_around_timepoint_seconds']
-        # self.response_window_duration = 0.25  # window, in seconds, over which to take the mean for a given trial or flash
-        # self.omission_response_window_duration = 0.75 # compute omission mean response and baseline response over 750ms
         self.stimulus_duration = 0.25  # self.dataset.task_parameters['stimulus_duration'].values[0]
         self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate']
         self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate']
         if 'blank_duration_sec' in self.dataset.task_parameters.keys():
-
             self.blank_duration = self.dataset.task_parameters['blank_duration_sec'][0]
-            # self.dataset.running_speed = self.dataset.running_speed_df
         else:
             self.blank_duration = self.dataset.task_parameters['blank_duration'][0]
 
@@ -219,6 +215,8 @@ class ResponseAnalysis(object):
                     'engagement_state',
                     'licked',
                     'lick_on_next_flash',
+                    'lick_on_previous_flash',
+                    'mean_running_speed'
                 ]
                 df = df.merge(
                     stimulus_presentations[columns_to_keep],
@@ -307,23 +305,3 @@ class ResponseAnalysis(object):
         return self._stimulus_pupil_area_df
 
     stimulus_pupil_area_df = LazyLoadable('_stimulus_pupil_area_df', get_stimulus_pupil_area_df)
-
-    # ## retain old calls for dfs
-    #
-    # def get_trial_response_df(self):
-    #     self._trial_response_df = rp.get_trials_response_df(self.dataset, self.use_events)
-    #     return self._trial_response_df
-    #
-    # trial_response_df = LazyLoadable('_trial_response_df', get_trial_response_df)
-    #
-    # def get_flash_response_df(self):
-    #     self._flash_response_df = rp.get_stimulus_response_df(self.dataset, self.use_events)
-    #     return self._flash_response_df
-    #
-    # flash_response_df = LazyLoadable('_flash_response_df', get_flash_response_df)
-    #
-    # def get_omitted_flash_response_df(self):
-    #     self._omitted_flash_response_df = rp.get_omission_response_df(self.dataset, self.use_events)
-    #     return self._omitted_flash_response_df
-    #
-    # omitted_flash_response_df = LazyLoadable('_omitted_flash_response_df', get_omitted_flash_response_df)

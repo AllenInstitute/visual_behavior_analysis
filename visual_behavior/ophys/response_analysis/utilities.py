@@ -59,20 +59,13 @@ def get_responses_around_event_times(trace, timestamps, event_times, frame_rate,
 
 
 def get_mean_in_window(trace, window, frame_rate, use_events=False):
-    # if use_events:
-    #     trace[trace==0] = np.nan
-    # mean = np.nanmean(trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))]) # 181212
-    mean = np.nanmean(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])  # modified 190127
-    # if np.isnan(mean):
-    #     mean = 0
+    mean = np.nanmean(trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])
     return mean
 
 
 def get_sd_in_window(trace, window, frame_rate):
-    # std = np.std(
-    #     trace[int(np.round(window[0] * frame_rate)): int(np.round(window[1] * frame_rate))])  # modified 181212
     std = np.std(
-        trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])  # modified 190127
+        trace[int(window[0] * frame_rate): int(window[1] * frame_rate)])
     return std
 
 
@@ -328,57 +321,57 @@ def get_fraction_nonzero_trials(group):
     return pd.Series({'fraction_nonzero_trials': fraction_nonzero_trials})
 
 
-def compute_reliability_for_traces(traces):
-    # computes trial to trial correlation across input traces, across entire trace timeseries
-    import scipy as sp
-    from itertools import combinations
-    traces = np.vstack(traces)
-    combos = combinations(traces, 2)
-    corr_values = []
-    for combo in combos:
-        corr = sp.stats.pearsonr(combo[0], combo[1])[0]
-        corr_values.append(corr)
-    corr_values = np.asarray(corr_values)
-    reliability = np.mean(corr_values)
-    return reliability
+# def compute_reliability_for_traces(traces):
+#     # computes trial to trial correlation across input traces, across entire trace timeseries
+#     import scipy as sp
+#     from itertools import combinations
+#     traces = np.vstack(traces)
+#     combos = combinations(traces, 2)
+#     corr_values = []
+#     for combo in combos:
+#         corr = sp.stats.pearsonr(combo[0], combo[1])[0]
+#         corr_values.append(corr)
+#     corr_values = np.asarray(corr_values)
+#     reliability = np.mean(corr_values)
+#     return reliability
 
 
-def compute_reliability(group, analysis=None, flashes=True, omitted=False):
+def compute_reliability_vectorized(traces):
+    '''
+    Compute average pearson correlation between pairs of rows of the input matrix.
+    Args:
+        traces(np.ndarray): trace array with shape m*n, with m traces and n trace timepoints
+    Returns:
+        reliability (float): Average correlation between pairs of rows
+    '''
+    # Compute m*m pearson product moment correlation matrix between rows of input.
+    # This matrix is 1 on the diagonal (correlation with self) and mirrored across
+    # the diagonal (corr(A, B) = corr(B, A))
+    corrmat = np.corrcoef(traces)
+    # We want the inds of the lower triangle, without the diagonal, to average
+    m = traces.shape[0]
+    lower_tri_inds = np.where(np.tril(np.ones([m, m]), k=-1))
+    # Take the lower triangle values from the corrmat and averge them
+    correlation_values = list(corrmat[lower_tri_inds[0], lower_tri_inds[1]])
+    reliability = np.mean(correlation_values)
+    return reliability, correlation_values
+
+
+def compute_reliability(group, params, frame_rate):
     # computes trial to trial correlation across input traces in group,
     # only for portion of the trace after the change time or flash onset time
-    from itertools import combinations
-    import scipy as sp
-    if analysis:
-        fr = analysis.ophys_frame_rate
-    else:
-        fr = 31.
-    if analysis and omitted:
-        response_window = [int(np.abs(analysis.omitted_flash_window[0]) * fr),
-                           int((np.abs(analysis.omitted_flash_window[0]) + analysis.omitted_flash_window[1]) * fr)]
-    elif analysis and flashes and not omitted:
-        response_window = [int(np.abs(analysis.flash_window[0]) * fr),
-                           int((np.abs(analysis.flash_window[0]) + analysis.flash_window[1]) * fr)]
-    elif analysis and not flashes and not omitted:
-        response_window = [int(np.abs(analysis.trial_window[0]) * fr),
-                           int((np.abs(analysis.trial_window[0]) + analysis.trial_window[1]) * fr)]
-    elif not analysis and flashes and not omitted:
-        response_window = [int(0.5 * fr), int(1.25 * fr)]
-    elif not analysis and omitted:
-        response_window = [int(3 * fr), int(6 * fr)]
-    else:
-        response_window = [int(4 * fr), int(8 * fr)]
-    corr_values = []
+
+    onset = int(np.abs(params['window_around_timepoint_seconds'][0]) * frame_rate)
+    response_window = [onset, onset + (int(params['response_window_duration_seconds'] * frame_rate))]
     traces = group['trace'].values
     traces = np.vstack(traces)
-    traces = traces[:, response_window[0]:response_window[1]]  # limit to post change window
-    combos = combinations(traces, 2)
-    corr_values = []
-    for combo in combos:
-        corr = sp.stats.pearsonr(combo[0], combo[1])[0]
-        corr_values.append(corr)
-    corr_values = np.asarray(corr_values)
-    reliability = np.mean(corr_values)
-    return pd.Series({'reliability': reliability})
+    if traces.shape[0] > 5:
+        traces = traces[:, response_window[0]:response_window[1]]  # limit to response window
+        reliability, correlation_values = compute_reliability_vectorized(traces)
+    else:
+        reliability = np.nan
+        correlation_values = []
+    return pd.Series({'reliability': reliability, 'correlation_values': correlation_values})
 
 
 def get_window(analysis=None, flashes=False, omitted=False):
@@ -398,9 +391,8 @@ def get_window(analysis=None, flashes=False, omitted=False):
 
 
 def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_name'], flashes=False, omitted=False,
-                get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True):
+                get_reliability=True, get_pref_stim=True, exclude_omitted_from_pref_stim=True):
 
-    # import rp here. This avoids an error caused by the fact that rp itself imports utilities
     import visual_behavior.ophys.response_analysis.response_processing as rp
 
     if omitted:
@@ -450,12 +442,18 @@ def get_mean_df(response_df, analysis=None, conditions=['cell', 'change_image_na
         fraction_responsive_trials = fraction_responsive_trials.reset_index()
         mdf['fraction_responsive_trials'] = fraction_responsive_trials.fraction_responsive_trials
 
-    if get_reliability:
-        print('computing reliability')
-        reliability = rdf.groupby(conditions).apply(compute_reliability, analysis, flashes, omitted)
+    # if get_reliability:
+        # print('computing reliability')
+    if analysis:
+        frame_rate = analysis.ophys_frame_rate
+        reliability = rdf.groupby(conditions).apply(compute_reliability, params, frame_rate)
         reliability = reliability.reset_index()
         mdf['reliability'] = reliability.reliability
-        print('done computing reliability')
+        mdf['correlation_values'] = reliability.correlation_values
+        # print('done computing reliability')
+    else:
+        print('must provide analysis object to get_mean_df to compute reliability')
+
     if 'index' in mdf.keys():
         mdf = mdf.drop(columns=['index'])
     return mdf
@@ -606,7 +604,7 @@ def annotate_mean_df_with_fano_factor(analysis, mean_df):
         mean_responses = mean_df.iloc[idx].mean_responses
         sd = np.std(mean_responses)
         mean_response = np.mean(mean_responses)
-        fano_factor = (sd * 2) / mean_response
+        fano_factor = np.abs((sd * 2) / mean_response)  # take abs value to account for negative mean_response
         ff_list.append(fano_factor)
     mean_df['fano_factor'] = ff_list
     return mean_df
