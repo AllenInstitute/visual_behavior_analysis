@@ -643,6 +643,24 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     return stimulus_presentations
 
 
+def get_behavior_model_summary_table():
+    data_dir = get_behavior_model_outputs_dir()
+    data = pd.read_csv(os.path.join(data_dir, '_summary_table.csv'))
+    data2 = pd.read_csv(os.path.join(data_dir, '_meso_summary_table.csv'))
+    data = data.append(data2)
+    return data
+
+
+def check_for_events_file(ophys_experiment_id):
+    events_folder = os.path.join(get_analysis_cache_dir(), 'events')
+    if os.path.exists(events_folder):
+        events_file = [file for file in os.listdir(events_folder) if
+                       str(ophys_experiment_id) in file]
+        if len(events_file) > 0:
+            return True
+        else:
+            return False
+
 def get_sdk_max_projection(ophys_experiment_id):
     """ uses SDK to return 2d max projection image of the microscope field of view
 
