@@ -478,6 +478,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self._behavior_movie_pc_activations = get_pc_activations_for_session(ophys_session_id)
         return self._behavior_movie_pc_activations
 
+    @property
+    def behavior_movie_predictions(self):
+        cache = get_visual_behavior_cache()
+        ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
+        self._behavior_movie_predictions = get_behavior_movie_predictions_for_session(ophys_session_id)
+        return self._behavior_movie_predictions
+
     def get_cell_specimen_id_for_cell_index(self, cell_index):
         cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_index == cell_index].index.values[0]
         return cell_specimen_id
@@ -660,6 +667,28 @@ def check_for_events_file(ophys_experiment_id):
             return True
         else:
             return False
+
+
+def get_behavior_movie_predictions_for_session(ophys_session_id):
+    """
+    Loads model predictions from behavior movie classifier and returns a dictionary with keys =
+    ['groom_reach_with_contact', 'groom_reach_without_contact', 'lick_with_contact', 'lick_without_contact', 'no_contact', 'paw_contact']
+    :param ophys_session_id: ophys_session_id
+    :return: dictionary of behavior prediction values
+    """
+    model_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/lick_detection_validation/models/six_class_model'
+    session_file = [file for file in os.listdir(model_output_dir) if (str(ophys_session_id) in file) and ('predictions' in file)]
+    try:
+        data = np.load(os.path.join(model_output_dir, session_file[0]))
+        keys = ['groom_reach_with_contact', 'groom_reach_without_contact', 'lick_with_contact',
+                'lick_without_contact', 'no_contact', 'paw_contact']
+        values = data['all_preds'].T
+        behavior_predictions = dict(zip(keys, values))
+    except Exception as e:
+        print('could not behavior movie model predictions for ophys_session_id', ophys_session_id)
+        print(e)
+        behavior_predictions = []
+    return behavior_predictions
 
 
 def get_sdk_max_projection(ophys_experiment_id):
