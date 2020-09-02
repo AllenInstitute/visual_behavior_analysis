@@ -661,6 +661,7 @@ def check_for_events_file(ophys_experiment_id):
         else:
             return False
 
+
 def get_sdk_max_projection(ophys_experiment_id):
     """ uses SDK to return 2d max projection image of the microscope field of view
 
