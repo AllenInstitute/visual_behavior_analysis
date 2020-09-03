@@ -482,7 +482,11 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def behavior_movie_predictions(self):
         cache = get_visual_behavior_cache()
         ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
-        self._behavior_movie_predictions = get_behavior_movie_predictions_for_session(ophys_session_id)
+        movie_predictions = get_behavior_movie_predictions_for_session(ophys_session_id)
+        movie_predictions = pd.DataFrame(movie_predictions)
+        movie_predictions.index.name = 'frame_index'
+        movie_predictions['timestamps'] = self.behavior_movie_timestamps[:len(movie_predictions)]  # length check will trim off spurious timestamps at the end
+        self._behavior_movie_predictions = movie_predictions
         return self._behavior_movie_predictions
 
     def get_cell_specimen_id_for_cell_index(self, cell_index):
@@ -683,12 +687,12 @@ def get_behavior_movie_predictions_for_session(ophys_session_id):
         keys = ['groom_reach_with_contact', 'groom_reach_without_contact', 'lick_with_contact',
                 'lick_without_contact', 'no_contact', 'paw_contact']
         values = data['all_preds'].T
-        behavior_predictions = dict(zip(keys, values))
+        movie_predictions = dict(zip(keys, values))
     except Exception as e:
         print('could not behavior movie model predictions for ophys_session_id', ophys_session_id)
         print(e)
-        behavior_predictions = []
-    return behavior_predictions
+        movie_predictions = []
+    return movie_predictions
 
 
 def get_sdk_max_projection(ophys_experiment_id):
