@@ -1,6 +1,7 @@
 from visual_behavior.utilities import local_time
 from visual_behavior.utilities import find_nearest_index
 from visual_behavior.utilities import Movie
+from visual_behavior.utilities import string_is_int
 import numpy as np
 import pytest
 import os
@@ -31,3 +32,11 @@ def test_movie_load():
     # get frame by frame number
     frame2 = movie.get_frame(frame=1000)
     assert frame2[100, 100, 0] == 150
+
+
+def test_string_is_int():
+    # `string_is_int` should return True for input of '2'
+    assert string_is_int('2')
+
+    # `string_is_int` should return False for input of 'e'
+    assert not string_is_int('e')
