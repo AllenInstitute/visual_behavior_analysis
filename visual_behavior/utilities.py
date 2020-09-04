@@ -642,3 +642,15 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
 
         _d.update({'event_{}_t={}'.format(ii, event_time): np.interp(_d['time'], t, y)})
     return pd.DataFrame(_d)
+
+
+def string_is_int(input_string):
+    '''
+    checks to see if input string can be converted to an int
+    returns Boolean
+    '''
+    try:
+        v = int(input_string)
+        return True
+    except ValueError:
+        return False
