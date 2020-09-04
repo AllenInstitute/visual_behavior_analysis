@@ -650,7 +650,7 @@ def string_is_int(input_string):
     returns Boolean
     '''
     try:
-        v = int(input_string)
+        int(input_string)
         return True
     except ValueError:
         return False
