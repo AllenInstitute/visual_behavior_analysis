@@ -9,6 +9,8 @@ from visual_behavior.data_access import processing
 from visual_behavior.data_access import utilities
 import visual_behavior.database as db
 
+import visual_behavior.utilities as vbu
+
 import os
 import h5py  # for loading motion corrected movie
 import numpy as np
@@ -168,7 +170,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
-    experiments['session_number'] = [int(session_type[6]) for session_type in experiments.session_type.values]
+    experiments['session_number'] = [int(session_type[6]) if pd.notnull(session_type) and vbu.string_is_int(session_type[6]) else None for session_type in experiments.session_type.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
     return experiments
