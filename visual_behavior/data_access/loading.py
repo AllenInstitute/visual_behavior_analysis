@@ -168,7 +168,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
-    experiments['session_number'] = [int(session_type[6]) for session_type in experiments.session_type.values]
+    experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in experiments.session_type.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
     return experiments
@@ -210,8 +210,8 @@ def get_filtered_ophys_session_table():
     cache = get_visual_behavior_cache()
     sessions = cache.get_session_table()
     sessions = filtering.limit_to_production_project_codes(sessions)
-    sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
+    sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
     sessions = reformat.add_model_outputs_availability_to_table(sessions)
