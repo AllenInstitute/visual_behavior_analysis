@@ -179,7 +179,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
-    experiments['session_number'] = [int(session_type[6]) for session_type in experiments.session_type.values]
+    experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in experiments.session_type.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
     return experiments
@@ -221,8 +221,8 @@ def get_filtered_ophys_session_table():
     cache = get_visual_behavior_cache()
     sessions = cache.get_session_table()
     sessions = filtering.limit_to_production_project_codes(sessions)
-    sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
+    sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
     sessions = reformat.add_model_outputs_availability_to_table(sessions)
@@ -489,6 +489,17 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self._behavior_movie_pc_activations = get_pc_activations_for_session(ophys_session_id)
         return self._behavior_movie_pc_activations
 
+    @property
+    def behavior_movie_predictions(self):
+        cache = get_visual_behavior_cache()
+        ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
+        movie_predictions = get_behavior_movie_predictions_for_session(ophys_session_id)
+        movie_predictions = pd.DataFrame(movie_predictions)
+        movie_predictions.index.name = 'frame_index'
+        movie_predictions['timestamps'] = self.behavior_movie_timestamps[:len(movie_predictions)]  # length check will trim off spurious timestamps at the end
+        self._behavior_movie_predictions = movie_predictions
+        return self._behavior_movie_predictions
+
     def get_cell_specimen_id_for_cell_index(self, cell_index):
         cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_index == cell_index].index.values[0]
         return cell_specimen_id
@@ -671,6 +682,28 @@ def check_for_events_file(ophys_experiment_id):
             return True
         else:
             return False
+
+
+def get_behavior_movie_predictions_for_session(ophys_session_id):
+    """
+    Loads model predictions from behavior movie classifier and returns a dictionary with keys =
+    ['groom_reach_with_contact', 'groom_reach_without_contact', 'lick_with_contact', 'lick_without_contact', 'no_contact', 'paw_contact']
+    :param ophys_session_id: ophys_session_id
+    :return: dictionary of behavior prediction values
+    """
+    model_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/lick_detection_validation/models/six_class_model'
+    session_file = [file for file in os.listdir(model_output_dir) if (str(ophys_session_id) in file) and ('predictions' in file)]
+    try:
+        data = np.load(os.path.join(model_output_dir, session_file[0]))
+        keys = ['groom_reach_with_contact', 'groom_reach_without_contact', 'lick_with_contact',
+                'lick_without_contact', 'no_contact', 'paw_contact']
+        values = data['all_preds'].T
+        movie_predictions = dict(zip(keys, values))
+    except Exception as e:
+        print('could not behavior movie model predictions for ophys_session_id', ophys_session_id)
+        print(e)
+        movie_predictions = []
+    return movie_predictions
 
 
 def get_sdk_max_projection(ophys_experiment_id):
