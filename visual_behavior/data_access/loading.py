@@ -47,7 +47,7 @@ try:
     )
 
 except Exception as e:
-    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately'.format(e)
+    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately\nfunctions requiring database access will fail'.format(e)
     warnings.warn(warn_string)
 
 config = configp.ConfigParser()
