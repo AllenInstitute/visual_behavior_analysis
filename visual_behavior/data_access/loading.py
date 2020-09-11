@@ -30,17 +30,21 @@ try:
     mtrain_password = os.environ["MTRAIN_PASSWORD"]
     mtrain_port = os.environ["MTRAIN_PORT"]
 
-    lims_engine = PostgresQueryMixin(dbname=lims_dbname,
-                                    user=lims_user,
-                                    host=lims_host,
-                                    password=lims_password,
-                                    port=lims_port)
+    lims_engine = PostgresQueryMixin(
+        dbname=lims_dbname,
+        user=lims_user,
+        host=lims_host,
+        password=lims_password,
+        port=lims_port
+    )
 
-    mtrain_engine = PostgresQueryMixin(dbname=mtrain_dbname,
-                                    user=mtrain_user,
-                                    host=mtrain_host,
-                                    password=mtrain_password,
-                                    port=mtrain_port)
+    mtrain_engine = PostgresQueryMixin(
+        dbname=mtrain_dbname,
+        user=mtrain_user,
+        host=mtrain_host,
+        password=mtrain_password,
+        port=mtrain_port
+    )
 
 except Exception as e:
     warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately'.format(e)
