@@ -15,29 +15,36 @@ import numpy as np
 import pandas as pd
 import configparser as configp  # for parsing scientifica ini files
 
-lims_dbname = os.environ["LIMS_DBNAME"]
-lims_user = os.environ["LIMS_USER"]
-lims_host = os.environ["LIMS_HOST"]
-lims_password = os.environ["LIMS_PASSWORD"]
-lims_port = os.environ["LIMS_PORT"]
+import warnings
 
-mtrain_dbname = os.environ["MTRAIN_DBNAME"]
-mtrain_user = os.environ["MTRAIN_USER"]
-mtrain_host = os.environ["MTRAIN_HOST"]
-mtrain_password = os.environ["MTRAIN_PASSWORD"]
-mtrain_port = os.environ["MTRAIN_PORT"]
+try:
+    lims_dbname = os.environ["LIMS_DBNAME"]
+    lims_user = os.environ["LIMS_USER"]
+    lims_host = os.environ["LIMS_HOST"]
+    lims_password = os.environ["LIMS_PASSWORD"]
+    lims_port = os.environ["LIMS_PORT"]
 
-lims_engine = PostgresQueryMixin(dbname=lims_dbname,
-                                 user=lims_user,
-                                 host=lims_host,
-                                 password=lims_password,
-                                 port=lims_port)
+    mtrain_dbname = os.environ["MTRAIN_DBNAME"]
+    mtrain_user = os.environ["MTRAIN_USER"]
+    mtrain_host = os.environ["MTRAIN_HOST"]
+    mtrain_password = os.environ["MTRAIN_PASSWORD"]
+    mtrain_port = os.environ["MTRAIN_PORT"]
 
-mtrain_engine = PostgresQueryMixin(dbname=mtrain_dbname,
-                                   user=mtrain_user,
-                                   host=mtrain_host,
-                                   password=mtrain_password,
-                                   port=mtrain_port)
+    lims_engine = PostgresQueryMixin(dbname=lims_dbname,
+                                    user=lims_user,
+                                    host=lims_host,
+                                    password=lims_password,
+                                    port=lims_port)
+
+    mtrain_engine = PostgresQueryMixin(dbname=mtrain_dbname,
+                                    user=mtrain_user,
+                                    host=mtrain_host,
+                                    password=mtrain_password,
+                                    port=mtrain_port)
+
+except Exception as e:
+    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately'.format(e)
+    warnings.warn(warn_string)
 
 config = configp.ConfigParser()
 
