@@ -357,12 +357,9 @@ def compute_reliability_vectorized(traces):
     return reliability, correlation_values
 
 
-
 def compute_reliability(group, params, frame_rate):
     # computes trial to trial correlation across input traces in group,
     # only for portion of the trace after the change time or flash onset time
-    from itertools import combinations
-    import scipy as sp
 
     onset = int(np.abs(params['window_around_timepoint_seconds'][0]) * frame_rate)
     response_window = [onset, onset + (int(params['response_window_duration_seconds'] * frame_rate))]
@@ -607,7 +604,7 @@ def annotate_mean_df_with_fano_factor(analysis, mean_df):
         mean_responses = mean_df.iloc[idx].mean_responses
         sd = np.std(mean_responses)
         mean_response = np.mean(mean_responses)
-        fano_factor = np.abs((sd * 2) / mean_response) #take abs value to account for negative mean_response
+        fano_factor = np.abs((sd * 2) / mean_response)  # take abs value to account for negative mean_response
         ff_list.append(fano_factor)
     mean_df['fano_factor'] = ff_list
     return mean_df
