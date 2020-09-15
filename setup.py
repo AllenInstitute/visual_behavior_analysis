@@ -19,7 +19,7 @@ setuptools.setup(
         "deepdish>=0.3.6",
         "numpy>=1.9.0",
         "python-dateutil",
-        "marshmallow==3.0.0rc4",
+        "marshmallow==3.0.0rc6",
         "psycopg2-binary",
         "seaborn",
         'zipfile2; python_version < "3.5"',
