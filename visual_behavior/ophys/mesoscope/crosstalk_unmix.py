@@ -1457,7 +1457,7 @@ def find_scale_ica_roi(ica_in, ica_out):
 
 def adjust_mixing(a_mix, obs):
     """
-    fn to try and correct order and inversion of the mixing matrix
+    fn to correct order and inversion in the mixing matrix
     :param a_mix: mixing matrix
     :param obs: input to ICA
     :return: adjsuted mixing matrix
