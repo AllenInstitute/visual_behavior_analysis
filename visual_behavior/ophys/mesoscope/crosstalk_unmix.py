@@ -1462,6 +1462,7 @@ def adjust_mixing(a_mix, obs):
     :param obs: input to ICA
     :return: adjsuted mixing matrix
     """
+    # correct negative coefficients
     a_mix[a_mix < 0] *= -1
     # swap elements of first column if top is lower than bottom
     if a_mix[0, 0] < a_mix[1, 0]:
