@@ -38,7 +38,7 @@ Created on Mon Aug 26 12:23:25 2019
 
     
 #%%
-doCorrs = 1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
+doCorrs = 1 #1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
 analysis_dates = ['20200731'] #(subtractSigCorrs=1) #['20200804'] #(subtractSigCorrs=0) #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
 # note: analysis_dates must not include the entire date_time (eg '20200508_233842'), because the code below assumes it is followed by some wildcard characters.
 
