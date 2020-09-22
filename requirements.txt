@@ -10,7 +10,7 @@ scikit-learn==0.20.4; python_version >= '3.5'
 tables>=3.5.1
 deepdish>=0.3.6
 python-dateutil>=2.6.1
-marshmallow==3.0.0rc4
+marshmallow==3.0.0rc6
 h5py>=2.7.1
 psycopg2-binary
 seaborn
