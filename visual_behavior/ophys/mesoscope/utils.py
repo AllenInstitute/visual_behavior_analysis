@@ -119,6 +119,18 @@ def get_all_mesoscope_data():
     return pd.DataFrame(psycopg2_select(query))
 
 
+def get_all_mesoscope_sessions():
+    query = ("select os.id as session_id "
+             "from ophys_experiments oe "
+             "join ophys_sessions os on os.id = oe.ophys_session_id "
+             "join projects p on p.id = os.project_id "
+             "where (p.code = 'VisualBehaviorMultiscope' "
+             "or p.code = 'VisualBehaviorMultiscope4areasx2d' "
+             "or p.code = 'MesoscopeDevelopment') and os.workflow_state ='uploaded' "
+             "order by session_id")
+    return pd.DataFrame(psycopg2_select(query))
+
+
 def run_ica_on_session(session, roi_name=None, np_name=None):
     """
     helper function to run all crosstalk-demixing functions on a given session
