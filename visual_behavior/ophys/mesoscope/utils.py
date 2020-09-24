@@ -128,7 +128,9 @@ def get_all_mesoscope_sessions():
              "or p.code = 'VisualBehaviorMultiscope4areasx2d' "
              "or p.code = 'MesoscopeDevelopment') and os.workflow_state ='uploaded' "
              "order by session_id")
-    return pd.DataFrame(psycopg2_select(query))
+    df = pd.DataFrame(psycopg2_select(query))
+    sessions = df.session_id.drop_duplicates().values
+    return sessions
 
 
 def run_ica_on_session(session, roi_name=None, np_name=None):
