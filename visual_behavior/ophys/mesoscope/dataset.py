@@ -9,7 +9,7 @@ import numpy as np
 from skimage.transform import resize
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.ERROR)
 
 DEFAULT_DATABASE = 'lims2'
 DEFAULT_HOST = 'limsdb2'

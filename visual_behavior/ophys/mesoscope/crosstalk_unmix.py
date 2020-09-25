@@ -21,7 +21,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 mpl_logger = logging.getLogger("matplotlib")
-mpl_logger.setLevel(logging.WARNING)
+mpl_logger.setLevel(logging.ERROR)
 
 IMAGEH, IMAGEW = 512, 512
 CELL_EXTRACT_JSON_FORMAT = ['OPHYS_EXTRACT_TRACES_QUEUE_%s_input.json', 'processed/%s_input_extract_traces.json']
@@ -282,7 +282,7 @@ class MesoscopeICA(object):
                                                                     f'{self.exp_ids[pkey]}_valid_ct.json')
         return
 
-    def set_ica_input_paths(self):
+    def set_input_paths(self):
         for pkey in self.pkeys:
             for tkey in self.tkeys:
                 self.ins_paths[pkey][tkey] = os.path.join(self.dirs[tkey],
@@ -1065,6 +1065,10 @@ class MesoscopeICA(object):
         return
 
     def filter_np_corrected_traces(self):
+        """
+        fn to remove crosstalk only rois fomr neuropil corrected file outputs
+        :return:
+        """
         for pkey in self.pkeys:
             tkey = 'roi'
             exp_id = self.exp_ids[pkey]

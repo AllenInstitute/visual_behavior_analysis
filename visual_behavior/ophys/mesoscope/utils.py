@@ -18,7 +18,7 @@ import psycopg2
 import psycopg2.extras
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
+logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.ERROR)
 CACHE = '/media/rd-storage/Z/MesoscopeAnalysis/'
 DEFAULT_DATABASE = 'lims2'
 DEFAULT_HOST = 'limsdb2'
@@ -235,6 +235,10 @@ def get_demixing_done_sessions(session_list=None):
 def get_lims_done_sessions(session_list=None):
     """
     function to find all post-ica sessions that also ran through LIMS modules
+    this checks whether dff traces exist for all planes, which should mean taht the following three modules ran:
+        * demixing
+        * neuropil subtraction
+        * dff calculation
     :return: [pandas.DataFrame, pandas.DataFrame, pandas.DataFrame] : lims_roi_success, lims_roi_fail, ica_success
     """
     if not session_list:
@@ -497,7 +501,7 @@ def run_neuropil_correction_on_ica(session, ica_cache_dir=CACHE, roi_name=None, 
     for pair in pairs:
         ica_obj.set_exp_ids(pair)
         ica_obj.set_ica_dirs()
-        ica_obj.set_ica_input_paths()
+        ica_obj.set_input_paths()
         ica_obj.set_out_paths()
         # prelude -- get processing metadata
         ses_dir = ica_obj.session_dir
@@ -811,7 +815,7 @@ def refactor_outputs(sessions):
         for pair in pairs:
             ica_obj.set_exp_ids(pair)
             ica_obj.set_ica_dirs()
-            ica_obj.set_ica_input_paths()
+            ica_obj.set_input_paths()
             ica_obj.set_out_paths()
             self = ica_obj
             ct_offset = {}
@@ -894,7 +898,7 @@ def get_all_rois_crosstalk(session_list=None):
         for pair in pairs:
             ica_obj.set_exp_ids(pair)
             ica_obj.set_ica_dirs()
-            ica_obj.set_ica_input_paths()
+            ica_obj.set_input_paths()
             ica_obj.set_out_paths()
             ica_obj.set_valid_paths()
             for pkey in ica_obj.pkeys:
