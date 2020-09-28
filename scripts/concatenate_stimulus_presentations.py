@@ -26,15 +26,18 @@ if __name__ == '__main__':
             ophys_experiment_id = loading.get_ophys_experiment_id_for_ophys_session_id(ophys_session_id)
             dataset = loading.get_ophys_dataset(ophys_experiment_id)
             stim = dataset.extended_stimulus_presentations.copy()
+            stim = stim.reset_index()
+            stim['ophys_session_id'] = ophys_session_id
             if 'hit_fraction' not in stim.keys():
                 stim['reward_rate'] = None
                 stim['hit_fraction'] = None
                 stim['engagement_state'] = None
                 stim['lick_on_next_flash'] = None
             stim['rewarded'] = [True if len(rewards)>0 else False for rewards in stim.rewards.values]
-            stim = stim[['image_index', 'image_name', 'image_name_next_flash', 'image_index_next_flash',
-                    'omitted', 'change', 'pre_change', 'mean_running_speed', 'licked', 'rewarded',
-                    'reward_rate', 'hit_fraction', 'engagement_state', 'lick_on_next_flash']]
+            stim = stim[['ophys_session_id', 'stimulus_presentations_id', 'image_index', 'image_name',
+                         'image_name_next_flash', 'image_index_next_flash',
+                         'omitted', 'change', 'pre_change', 'mean_running_speed', 'licked', 'rewarded',
+                         'reward_rate', 'hit_fraction', 'engagement_state', 'lick_on_next_flash']]
             stim_df = pd.concat([stim_df, stim])
         except Exception as e:
             print('problem for ophys_session_id:', ophys_session_id)
