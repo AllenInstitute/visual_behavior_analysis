@@ -452,8 +452,11 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
-        stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
-        stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
+        stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
+        stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
+        stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
+        stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
+        stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
         if check_if_model_output_available(self.metadata['behavior_session_id']):
             stimulus_presentations = add_model_outputs_to_stimulus_presentations(
                 stimulus_presentations, self.metadata['behavior_session_id'])
