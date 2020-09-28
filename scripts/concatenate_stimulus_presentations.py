@@ -9,6 +9,7 @@ if __name__ == '__main__':
     import sys
     project_code = sys.argv[1]
     session_number = sys.argv[2]
+    print(project_code, session_number)
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding/data'
 
     experiments_table = loading.get_filtered_ophys_experiment_table()

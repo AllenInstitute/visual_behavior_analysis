@@ -30,6 +30,6 @@ for project_code in experiments_table.project_code.unique():
             python_executable='/home/marinag/anaconda2/envs/visual_behavior_sdk/bin/python',
             python_args=[project_code, session_number],
             conda_env=None,
-            jobname=project_code+'_'+str(session_number)+'_stimulus_presentations',
+            jobname='stimulus_presentations_'+project_code+'_'+str(session_number),
             **job_settings
         ).run(dryrun=False)
