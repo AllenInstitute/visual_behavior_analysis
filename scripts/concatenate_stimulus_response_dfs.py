@@ -21,8 +21,8 @@ if __name__ == '__main__':
     response_df = pd.DataFrame()
     for ophys_experiment_id in experiments.index.values:
         try:
-            print(ophys_experiment_id, '-', np.where(experiments.ophys_experiment_id.unique() == ophys_experiment_id)[0][0],
-                  'out of ', len(experiments.ophys_experiment_id.unique()))
+            print(ophys_experiment_id, '-', np.where(experiments.index.values == ophys_experiment_id)[0][0],
+                  'out of ', len(experiments.index.values))
             dataset = loading.get_ophys_dataset(ophys_experiment_id)
             analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=False)
 
