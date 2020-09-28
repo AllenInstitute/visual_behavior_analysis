@@ -9,7 +9,7 @@ from pbstools import PythonJob # flake8: noqa: E999
 
 import visual_behavior.data_access.loading as loading
 
-python_file = r"/home/marinag/visual_behavior_analysis/scripts/concatenate_stimulus_response_df.py"
+python_file = r"/home/marinag/visual_behavior_analysis/scripts/concatenate_stimulus_response_dfs.py"
 
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 

@@ -38,6 +38,6 @@ if __name__ == '__main__':
         except Exception as e:
             print('problem for ophys_session_id:', ophys_session_id)
             print(e)
-    response_df.to_hdf(os.path.join(save_dir, 'stimulus_response_df_'+project_code+'_session_'+str(session_number)+'.h5'), key='df')
+    response_df.to_hdf(os.path.join(save_dir, 'stimulus_response_dfs_'+project_code+'_session_'+str(session_number)+'.h5'), key='df')
     print('done')
 
