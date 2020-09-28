@@ -7,14 +7,15 @@ import visual_behavior.data_access.loading as loading
 
 if __name__ == '__main__':
     import sys
-    project_code = sys.argv[1]
-    session_number = sys.argv[2]
+    project_code = sys.argv[1][1:-1]
+    session_number = sys.argv[2][:-1]
     print(project_code, session_number)
+    print(type(project_code), type(session_number))
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding/data'
 
     experiments_table = loading.get_filtered_ophys_experiment_table()
     experiments = experiments_table[(experiments_table.project_code == project_code) &
-                                    (experiments_table.session_number == session_number)].copy()
+                                    (experiments_table.session_number == int(session_number))].copy()
 
     stim_df = pd.DataFrame()
     for ophys_session_id in experiments.ophys_session_id.unique():
