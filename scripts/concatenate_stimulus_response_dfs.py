@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import visual_behavior.data_access.loading as loading
+from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
 
 if __name__ == '__main__':
