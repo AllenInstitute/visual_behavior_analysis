@@ -452,8 +452,11 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
-        stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
-        stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
+        stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
+        stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
+        stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
+        stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
+        stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
         if check_if_model_output_available(self.metadata['behavior_session_id']):
             stimulus_presentations = add_model_outputs_to_stimulus_presentations(
                 stimulus_presentations, self.metadata['behavior_session_id'])
@@ -1809,3 +1812,92 @@ def annotate_and_clean_multi_session_df(multi_session_df):
     # multi_session_df = remove_problematic_data_from_multi_session_df(multi_session_df)
 
     return multi_session_df
+
+
+def get_concatenated_stimulus_presentations(project_codes=None, session_numbers=None):
+    """
+    loads stimulus presentation table data for multiple sessions from cached files.
+    dataframe contains stimulus information including image_name, change, licked, omitted, etc for every stimulus presentation.
+    can be merged with stimulus_response_dfs to get cell responses for all stimulus presentations.
+
+    if desired project codes and session numbers are not specified, all data will be loaded.
+    project_codes and session_numbers should be provided as lists,
+    ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
+    """
+
+    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\decoding\data'
+    experiments_table = get_filtered_ophys_experiment_table()
+    if project_codes is None:
+        project_codes = experiments_table.project_code.unique()
+    if session_numbers is None:
+        session_numbers = experiments_table.session_number.unique()
+
+    concatenated_stimulus_presentations = pd.DataFrame()
+    for project_code in project_codes:
+        for session_number in session_numbers:
+            try:
+                df = pd.read_hdf(os.path.join(save_dir, 'stimulus_presentations_' + project_code + '_session_' + str(
+                    session_number) + '.h5'), key='df')
+                concatenated_stimulus_presentations = pd.concat([concatenated_stimulus_presentations, df])
+            except Exception as e:
+                print('problem for', project_code, session_number)
+                print(e)
+    return concatenated_stimulus_presentations
+
+
+def get_concatenated_stimulus_response_dfs(project_codes=None, session_numbers=None):
+    """
+    loads stimulus response dataframes for multiple sessions from cached files.
+    dataframe contains the response of each cell for each stimulus presentation across sessions,
+    including the trace in a [0, 0.75] second window, the mean response in that window, etc.
+    can be merged with stimulus presentations to get the stimulus conditions for each cell response.
+
+    if desired project codes and session numbers are not specified, all data will be loaded.
+    project_codes and session_numbers should be provided as lists,
+    ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
+    """
+
+    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\decoding\data'
+    experiments_table = get_filtered_ophys_experiment_table()
+    if project_codes is None:
+        project_codes = experiments_table.project_code.unique()
+    if session_numbers is None:
+        session_numbers = experiments_table.session_number.unique()
+    cre_lines = experiments_table.cre_line.unique()
+
+    concatenated_stimulus_response_dfs = pd.DataFrame()
+    for project_code in project_codes:
+        for session_number in session_numbers:
+            for cre_line in cre_lines:
+                try:
+                    df = pd.read_hdf(os.path.join(save_dir, 'stimulus_response_dfs_'+project_code+'_'+cre_line+'_session_'+str(session_number)+'.h5'), key='df')
+                    concatenated_stimulus_response_dfs = pd.concat([concatenated_stimulus_response_dfs, df])
+                except Exception as e:
+                    print('problem for', project_code, cre_line, session_number)
+                    print(e)
+    return concatenated_stimulus_response_dfs
+
+
+def get_stimulus_response_data_across_sessions(project_codes=None, session_numbers=None):
+    """
+    loads and merges stimulus_response_dfs, stimulus_presentations data, and experiments_table metadata
+    across sessions for a given set of project_codes and session_numbers.
+    returns all cell responses for all image flashes for that set of sessions.
+
+    if desired project codes and session numbers are not specified, all data will be loaded (slow).
+    project_codes and session_numbers should be provided as lists,
+    ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
+    """
+
+    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\decoding\data'
+    experiments_table = get_filtered_ophys_experiment_table()
+    if project_codes is None:
+        project_code = experiments_table.project_code.unique()
+    if session_numbers is None:
+        session_numbers = experiments_table.session_number.unique()
+
+    stim_presentations = get_concatenated_stimulus_presentations(project_codes, session_numbers)
+    stim_response_dfs = get_concatenated_stimulus_response_dfs(project_codes, session_numbers)
+    stimulus_response_data = stim_response_dfs.merge(stim_presentations, on='ophys_session_id')
+    stimulus_response_data = stimulus_response_data.merge(experiments_table, on=['ophys_experiment_id', 'ophys_session_id'])
+    return stimulus_response_data
