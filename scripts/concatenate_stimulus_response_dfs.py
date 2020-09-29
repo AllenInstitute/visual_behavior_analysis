@@ -10,9 +10,10 @@ from visual_behavior.ophys.response_analysis.response_analysis import ResponseAn
 if __name__ == '__main__':
     import sys
     project_code = sys.argv[1][1:-1]
-    session_number = int(sys.argv[2][1:-1])
-    cre_line = sys.argv[3][:-1]
-    print(project_code, session_number, cre_line)
+    cre_line = sys.argv[2][:-1]
+    session_number = sys.argv[3][:-1]
+    session_number = int(session_number)
+    print(project_code, cre_line, session_number)
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding/data'
 
     experiments_table = loading.get_filtered_ophys_experiment_table()
