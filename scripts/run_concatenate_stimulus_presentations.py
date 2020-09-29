@@ -14,7 +14,7 @@ python_file = r"/home/marinag/visual_behavior_analysis/scripts/concatenate_stimu
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Marina/ClusterJobs/JobRecords'
 
 job_settings = {'queue': 'braintv',
-                'mem': '75g',
+                'mem': '50g',
                 'walltime': '10:00:00',
                 'ppn': 1,
                 'jobdir': jobdir,

@@ -10,14 +10,15 @@ from visual_behavior.ophys.response_analysis.response_analysis import ResponseAn
 if __name__ == '__main__':
     import sys
     project_code = sys.argv[1][1:-1]
-    session_number = int(sys.argv[2][:-1])
-    print(project_code, session_number)
-    print(type(project_code), type(session_number))
+    session_number = int(sys.argv[2][1:-1])
+    cre_line = sys.argv[3][:-1]
+    print(project_code, session_number, cre_line)
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding/data'
 
     experiments_table = loading.get_filtered_ophys_experiment_table()
     experiments = experiments_table[(experiments_table.project_code == project_code) &
-                                    (experiments_table.session_number == session_number)].copy()
+                                    (experiments_table.session_number == session_number)&
+                                    (experiments_table.cre_line == cre_line)].copy()
 
     response_df = pd.DataFrame()
     for ophys_experiment_id in experiments.index.values:
@@ -32,13 +33,13 @@ if __name__ == '__main__':
             sdf['trace'] = [sdf.iloc[index].trace[sdf.iloc[index].trace_timestamps < 0] for index in sdf.index.values]
             sdf['ophys_experiment_id'] = ophys_experiment_id
             sdf['ophys_session_id'] = loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
-            sdf['ophys_frame_rate'] = analysis.ophys_frame_rate
+            sdf['ophys_frame_rate'] = np.round(analysis.ophys_frame_rate, 2)
             sdf = sdf[['ophys_experiment_id', 'ophys_session_id','stimulus_presentations_id', 'cell_specimen_id', 'trace',
                        'trace_timestamps', 'mean_response', 'baseline_response', 'ophys_frame_rate']]
             response_df = pd.concat([response_df, sdf])
         except Exception as e:
             print('problem for ophys_experiment_id:', ophys_experiment_id)
             print(e)
-    response_df.to_hdf(os.path.join(save_dir, 'stimulus_response_dfs_'+project_code+'_session_'+str(session_number)+'.h5'), key='df')
+        response_df.to_hdf(os.path.join(save_dir, 'stimulus_response_dfs_'+project_code+'_'+cre_line+'_session_'+str(session_number)+'.h5'), key='df')
     print('done')
 

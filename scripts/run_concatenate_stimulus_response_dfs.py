@@ -24,12 +24,12 @@ experiments_table = loading.get_filtered_ophys_experiment_table()
 
 for project_code in experiments_table.project_code.unique():
     for session_number in experiments_table.session_number.unique():
-
-        PythonJob(
-            python_file,
-            python_executable='/home/marinag/anaconda2/envs/visual_behavior_sdk/bin/python',
-            python_args=[project_code, session_number],
-            conda_env=None,
-            jobname='stimulus_response_dfs_'+project_code+'_'+str(session_number),
-            **job_settings
-        ).run(dryrun=False)
+        for cre_line in experiments_table.cre_line.unique():
+            PythonJob(
+                python_file,
+                python_executable='/home/marinag/anaconda2/envs/visual_behavior_sdk/bin/python',
+                python_args=[project_code, session_number, cre_line],
+                conda_env=None,
+                jobname='stimulus_presentations_' + cre_line + '_' + project_code + '_' + str(session_number),
+                **job_settings
+            ).run(dryrun=False)
