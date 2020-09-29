@@ -74,6 +74,8 @@ experiments_table_2an.insert(loc=1, column='experiment_id', value=experiments_ta
 
 import pickle
 import os
+import numpy as np
+import re
 
 def all_sess_set_h5_fileName(name, dir_now, all_files=0):
     #%% Look for a file in a directory; if desired, sort by modification time, and only return the latest file.

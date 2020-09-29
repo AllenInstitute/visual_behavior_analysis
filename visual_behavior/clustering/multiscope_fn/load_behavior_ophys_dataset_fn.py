@@ -74,7 +74,8 @@ experiments_table_2an.insert(loc=1, column='experiment_id', value=experiments_ta
 
 #%% For each experiment set trial-average omission-aligned traces.
 
-cols = ['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'frame_dur', 'omission_response_xr', 'trials_response_df', 'image_names_inds', 'run_speed_times', 'run_speed_traces'] 
+cols = ['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'frame_dur', 'stim_response_df', 'image_names_inds'] 
+# cols = ['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'frame_dur', 'omission_response_xr', 'trials_response_df', 'image_names_inds', 'run_speed_times', 'run_speed_traces'] 
 all_sess_allN_allO = pd.DataFrame([], columns=cols) # size: 8*len(num_sessions)
 
 errors_iexp = []
@@ -110,7 +111,7 @@ for iexp in np.arange(0, experiments_table_2an.shape[0]): # iexp = 0
         frame_dur = np.mean(np.diff(dataset.ophys_timestamps))
         n_neurons = dataset.dff_traces.shape[0]
 
-
+        '''
         if n_neurons > 0: # get 3d traces: frames x trials x units
             omission_response_xr = get_omission_response_xr(dataset, use_events=False, frame_rate=None)
         #     n_omissions = omission_response_xr['trial_id'].values.shape[0] 
@@ -121,14 +122,14 @@ for iexp in np.arange(0, experiments_table_2an.shape[0]): # iexp = 0
         #     cell_ids = omission_response_xr['trace_id'].values
         else:
             omission_response_xr = np.nan
-
+        '''
 
             
         #%% ResponseAnalysis class provides access to time aligned cell responses for trials, stimuli, and omissions
         # VBA also has useful functionality for creating data frames with cell traces aligned to the time of stimulus presentations, omissions, or behavioral trials. 
 
         analysis = ResponseAnalysis(dataset)  
-
+        
         
         #%% Keep image names
         
@@ -141,12 +142,12 @@ for iexp in np.arange(0, experiments_table_2an.shape[0]): # iexp = 0
 
 
         #%% Get image-change aligned traces
-        
+        '''
         trials_response_df = analysis.get_response_df(df_name='trials_response_df')
-        
+        '''
         
         #%% Get running speed for omission-aligned traces 
-
+        '''
         run_speed_df = analysis.get_response_df(df_name='omission_run_speed_df')
 #         run_speed_df.head()
 #         np.shape(run_speed_df)
@@ -159,7 +160,7 @@ for iexp in np.arange(0, experiments_table_2an.shape[0]): # iexp = 0
 #         plt.title('average omission triggered running behavior')
 #         plt.xlabel('time after omission (s)')
 #         plt.ylabel('run speed (cm/s)')
-        
+        '''
     
         
         #%% Get pupil area for omission-aligned traces 
@@ -204,8 +205,15 @@ for iexp in np.arange(0, experiments_table_2an.shape[0]): # iexp = 0
         '''
 
         all_sess_allN_allO.at[iexp, ['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', \
-                                     'frame_dur', 'omission_response_xr', 'trials_response_df', 'image_names_inds', 'run_speed_times', 'run_speed_traces']] = \
-            session_id ,  experiment_id ,  mouse_id ,  date ,  cre ,  stage ,  area ,  depth ,  frame_dur ,  omission_response_xr, trials_response_df, image_names_inds, run_speed_times, run_speed_traces
+                                     'frame_dur', 'stim_response_df', 'image_names_inds']] = \
+            session_id ,  experiment_id ,  mouse_id ,  date ,  cre ,  stage ,  area ,  depth ,  frame_dur ,  stim_response_df, image_names_inds
+        
+#         all_sess_allN_allO.at[iexp, ['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', \
+#                                      'frame_dur', 'omission_response_xr', 'trials_response_df', 'image_names_inds', 'run_speed_times', 'run_speed_traces']] = \
+#             session_id ,  experiment_id ,  mouse_id ,  date ,  cre ,  stage ,  area ,  depth ,  frame_dur ,  omission_response_xr, trials_response_df, image_names_inds, run_speed_times, run_speed_traces
+
+
+
 
     #     all_sess_allN_allO.at[iexp, ['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', \
     #                                  'n_omissions', 'n_neurons', 'frame_dur', 'cell_specimen_id', 'traces_allN_allO']] = \
