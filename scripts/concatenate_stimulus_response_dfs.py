@@ -31,7 +31,6 @@ if __name__ == '__main__':
 
             stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
             sdf = stim_response_df.copy()
-            sdf['trace'] = [sdf.iloc[index].trace[sdf.iloc[index].trace_timestamps < 0] for index in sdf.index.values]
             sdf['ophys_experiment_id'] = ophys_experiment_id
             sdf['ophys_session_id'] = loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
             sdf['ophys_frame_rate'] = np.round(analysis.ophys_frame_rate, 2)

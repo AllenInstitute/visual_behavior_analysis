@@ -459,6 +459,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
         stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
         stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
+        stimulus_presentations['image_name_previous_flash'] = stimulus_presentations['image_name'].shift(1)
+        stimulus_presentations['image_index_previous_flash'] = stimulus_presentations['image_index'].shift(1)
         stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
         if check_if_model_output_available(self.metadata['behavior_session_id']):
             stimulus_presentations = add_model_outputs_to_stimulus_presentations(
