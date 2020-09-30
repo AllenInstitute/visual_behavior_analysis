@@ -85,6 +85,9 @@ def get_analysis_cache_dir():
 def get_behavior_model_outputs_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
 
+def get_decoding_analysis_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
+
 
 # LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
 
@@ -1825,7 +1828,7 @@ def get_concatenated_stimulus_presentations(project_codes=None, session_numbers=
     ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
     """
 
-    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\decoding\data'
+    save_dir = os.path.join(get_decoding_analysis_dir(), 'data')
     experiments_table = get_filtered_ophys_experiment_table()
     if project_codes is None:
         project_codes = experiments_table.project_code.unique()
@@ -1857,7 +1860,7 @@ def get_concatenated_stimulus_response_dfs(project_codes=None, session_numbers=N
     ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
     """
 
-    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\decoding\data'
+    save_dir = os.path.join(get_decoding_analysis_dir(), 'data')
     experiments_table = get_filtered_ophys_experiment_table()
     if project_codes is None:
         project_codes = experiments_table.project_code.unique()
@@ -1889,7 +1892,7 @@ def get_stimulus_response_data_across_sessions(project_codes=None, session_numbe
     ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
     """
 
-    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\decoding\data'
+    save_dir = os.path.join(get_decoding_analysis_dir(), 'data')
     experiments_table = get_filtered_ophys_experiment_table()
     if project_codes is None:
         project_code = experiments_table.project_code.unique()
