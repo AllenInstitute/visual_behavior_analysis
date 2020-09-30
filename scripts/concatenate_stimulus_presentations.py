@@ -35,7 +35,7 @@ if __name__ == '__main__':
                 stim['lick_on_next_flash'] = None
             stim['rewarded'] = [True if len(rewards)>0 else False for rewards in stim.rewards.values]
             stim = stim[['ophys_session_id', 'stimulus_presentations_id', 'image_index', 'image_name',
-                         'image_name_next_flash', 'image_index_next_flash',
+                         'image_name_next_flash', 'image_index_next_flash', 'image_name_previous_flash', 'image_index_previous_flash',
                          'omitted', 'change', 'pre_change', 'mean_running_speed', 'licked', 'rewarded',
                          'reward_rate', 'hit_fraction', 'engagement_state', 'lick_on_next_flash']]
             stim_df = pd.concat([stim_df, stim])
