@@ -263,7 +263,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
         self._include_invalid_rois = include_invalid_rois
 
-
     @property
     def analysis_folder(self):
         analysis_cache_dir = get_analysis_cache_dir()
@@ -1900,10 +1899,9 @@ def get_stimulus_response_data_across_sessions(project_codes=None, session_numbe
     ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
     """
 
-    save_dir = os.path.join(get_decoding_analysis_dir(), 'data')
     experiments_table = get_filtered_ophys_experiment_table()
     if project_codes is None:
-        project_code = experiments_table.project_code.unique()
+        project_codes = experiments_table.project_code.unique()
     if session_numbers is None:
         session_numbers = experiments_table.session_number.unique()
 
