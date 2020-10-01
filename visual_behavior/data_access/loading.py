@@ -254,15 +254,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         """
 
     def __init__(self, api, include_invalid_rois=False,
-                 eye_tracking_z_threshold : float = 3.0, eye_tracking_dilation_frames : int = 2):
+                 eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2):
     """
     :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
     :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
     """
-    super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold,
-                     eye_tracking_dilation_frames=eye_tracking_dilation_frames)
+        super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold,
+                         eye_tracking_dilation_frames=eye_tracking_dilation_frames)
 
-    self._include_invalid_rois = include_invalid_rois
+        self._include_invalid_rois = include_invalid_rois
 
     @property
     def analysis_folder(self):
@@ -432,7 +432,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def running_speed(self):
         self._running_speed = super().running_speed
         if type(self._running_speed) != pd.core.frame.DataFrame:
-            self._running_speed = reformat.convert_running_speed(self._running_speed)
+           self._running_speed = reformat.convert_running_speed(self._running_speed)
         return self._running_speed
 
     @property
