@@ -243,7 +243,6 @@ def get_filtered_ophys_session_table():
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
-
 class BehaviorOphysDataset(BehaviorOphysSession):
     """Takes SDK ophys session object attributes and filters/reformats to compensate for bugs and missing SDK features.
         This class should eventually be entirely replaced by the BehaviorOphysSession SDK class when all requested features have been implemented.
@@ -255,14 +254,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     def __init__(self, api, include_invalid_rois=False,
                  eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2):
-    """
-    :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
-    :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
-    """
+        """
+        :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
+        :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
+        """
         super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold,
                          eye_tracking_dilation_frames=eye_tracking_dilation_frames)
 
         self._include_invalid_rois = include_invalid_rois
+
 
     @property
     def analysis_folder(self):
@@ -410,8 +410,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         m = self.metadata
         rig_name = m['rig_name'].split('.')[0] + m['rig_name'].split('.')[1]
         self._metadata_string = str(m['donor_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['driver_line'][
-            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m[
-                                    'session_type'] + '_' + rig_name
+            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type'] + '_' + rig_name
         return self._metadata_string
 
     @property
@@ -432,7 +431,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def running_speed(self):
         self._running_speed = super().running_speed
         if type(self._running_speed) != pd.core.frame.DataFrame:
-           self._running_speed = reformat.convert_running_speed(self._running_speed)
+            self._running_speed = reformat.convert_running_speed(self._running_speed)
         return self._running_speed
 
     @property
@@ -444,7 +443,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._stimulus_presentations = stimulus_presentations
         return self._stimulus_presentations
-
 
     @property
     def extended_stimulus_presentations(self):
@@ -1695,8 +1693,7 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
             2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
     elif len(conditions) == 4:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
-            2] + '_' + conditions[
-                       3] + suffix + '.h5'
+            2] + '_' + conditions[3] + suffix + '.h5'
     elif len(conditions) == 3:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
             2] + suffix + '.h5'
