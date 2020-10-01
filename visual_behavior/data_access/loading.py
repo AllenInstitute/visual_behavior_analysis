@@ -292,14 +292,14 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table
         if self._include_invalid_rois == False:
-            cell_specimen_table = cell_specimen_table.query('valid_roi')
+            cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi==True]
         cell_specimen_table = cell_specimen_table.copy()
         # add cell index corresponding to the index of the cell in dff_traces_array
         cell_specimen_ids = np.sort(cell_specimen_table.index.values)
         if 'cell_index' not in cell_specimen_table.columns:
             cell_specimen_table['cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
                                                  cell_specimen_id in cell_specimen_table.index.values]
-            cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
+        cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
 
@@ -777,7 +777,7 @@ def get_sdk_roi_masks(cell_specimen_table):
 
     roi_masks = {}
     for cell_specimen_id in cell_specimen_table.index:
-        mask = cell_specimen_table.at[cell_specimen_id, 'image_mask']
+        mask = cell_specimen_table.at[cell_specimen_id, 'roi_mask']
         binary_mask = np.zeros(mask.shape)
         binary_mask[mask == True] = 1
         roi_masks[cell_specimen_id] = binary_mask
