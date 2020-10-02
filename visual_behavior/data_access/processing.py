@@ -586,7 +586,7 @@ def shift_image_masks(dataframe):
     """takes a dataframe with cell specimen or roi information, and specifically
         the columns "image_mask", "x"(bbox_min_x), "y"(bbox_min_y) and shifts the
         image masks so they reflect where the ROI/Cell is within the imaging
-        FOV
+        FOV, adding the shifted FOV as a new column "roi_mask" to preserve the original masks
 
     Arguments:
         dataframe {[type]} -- [description]
@@ -594,7 +594,8 @@ def shift_image_masks(dataframe):
     Returns:
         [type] -- [description]
     """
-    dataframe.loc[:, "image_mask"] = dataframe.apply(shift_mask_by_row, axis=1)
+    dataframe["roi_mask"] = None
+    dataframe.loc[:, "roi_mask"] = dataframe.apply(shift_mask_by_row, axis=1)
     return dataframe
 
 

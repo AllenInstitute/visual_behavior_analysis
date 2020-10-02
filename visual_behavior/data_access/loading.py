@@ -47,7 +47,8 @@ try:
     )
 
 except Exception as e:
-    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately\nfunctions requiring database access will fail'.format(e)
+    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately\nfunctions requiring database access will fail'.format(
+        e)
     warnings.warn(warn_string)
 
 config = configp.ConfigParser()
@@ -84,6 +85,10 @@ def get_analysis_cache_dir():
 
 def get_behavior_model_outputs_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
+
+
+def get_decoding_analysis_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
 
 
 # LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
@@ -168,7 +173,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
         experiments = filtering.limit_to_production_project_codes(experiments)
-        experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in experiments.index.values]
+        experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in
+                                     experiments.index.values]
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
         experiments = experiments.reset_index()
@@ -179,7 +185,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
-    experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in experiments.session_type.values]
+    experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
+                                     experiments.session_type.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
     return experiments
@@ -236,7 +243,6 @@ def get_filtered_ophys_session_table():
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
-
 class BehaviorOphysDataset(BehaviorOphysSession):
     """Takes SDK ophys session object attributes and filters/reformats to compensate for bugs and missing SDK features.
         This class should eventually be entirely replaced by the BehaviorOphysSession SDK class when all requested features have been implemented.
@@ -246,17 +252,16 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                                                 associated with an ophys_experiment_id (single imaging plane)
         """
 
-    def __init__(self, api, include_invalid_rois=False, eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2):
+    def __init__(self, api, include_invalid_rois=False,
+                 eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2):
         """
         :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
         :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
         """
-        super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold, eye_tracking_dilation_frames=eye_tracking_dilation_frames)
+        super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold,
+                         eye_tracking_dilation_frames=eye_tracking_dilation_frames)
 
         self._include_invalid_rois = include_invalid_rois
-
-        # set pupil area and events to None for now
-        # self.pupil_area = None
 
     @property
     def analysis_folder(self):
@@ -289,14 +294,14 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table
         if self._include_invalid_rois == False:
-            cell_specimen_table = cell_specimen_table.query('valid_roi')
+            cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
         cell_specimen_table = cell_specimen_table.copy()
         # add cell index corresponding to the index of the cell in dff_traces_array
         cell_specimen_ids = np.sort(cell_specimen_table.index.values)
         if 'cell_index' not in cell_specimen_table.columns:
             cell_specimen_table['cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
                                                  cell_specimen_id in cell_specimen_table.index.values]
-            cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
+        cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
 
@@ -404,8 +409,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         m = self.metadata
         rig_name = m['rig_name'].split('.')[0] + m['rig_name'].split('.')[1]
         self._metadata_string = str(m['donor_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['driver_line'][
-            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m[
-            'session_type'] + '_' + rig_name
+            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type'] + '_' + rig_name
         return self._metadata_string
 
     @property
@@ -452,8 +456,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
-        stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
-        stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
+        stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
+        stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
+        stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
+        stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
+        stimulus_presentations['image_name_previous_flash'] = stimulus_presentations['image_name'].shift(1)
+        stimulus_presentations['image_index_previous_flash'] = stimulus_presentations['image_index'].shift(1)
+        stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
         if check_if_model_output_available(self.metadata['behavior_session_id']):
             stimulus_presentations = add_model_outputs_to_stimulus_presentations(
                 stimulus_presentations, self.metadata['behavior_session_id'])
@@ -462,7 +471,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
             stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         else:
-            stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in stimulus_presentations.licks.values]
+            stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
+                                                stimulus_presentations.licks.values]
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
@@ -496,7 +506,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         movie_predictions = get_behavior_movie_predictions_for_session(ophys_session_id)
         movie_predictions = pd.DataFrame(movie_predictions)
         movie_predictions.index.name = 'frame_index'
-        movie_predictions['timestamps'] = self.behavior_movie_timestamps[:len(movie_predictions)]  # length check will trim off spurious timestamps at the end
+        movie_predictions['timestamps'] = self.behavior_movie_timestamps[:len(
+            movie_predictions)]  # length check will trim off spurious timestamps at the end
         self._behavior_movie_predictions = movie_predictions
         return self._behavior_movie_predictions
 
@@ -587,7 +598,8 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
 
 def get_pc_masks_for_session(ophys_session_id):
     facemap_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/facemap_results'
-    session_file = [file for file in os.listdir(facemap_output_dir) if (str(ophys_session_id) in file) and ('motMask' in file)]
+    session_file = [file for file in os.listdir(facemap_output_dir) if
+                    (str(ophys_session_id) in file) and ('motMask' in file)]
     try:
         pc_masks = np.load(os.path.join(facemap_output_dir, session_file[0]))
     except Exception as e:
@@ -599,7 +611,8 @@ def get_pc_masks_for_session(ophys_session_id):
 
 def get_pc_activations_for_session(ophys_session_id):
     facemap_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/facemap_results'
-    session_file = [file for file in os.listdir(facemap_output_dir) if (str(ophys_session_id) in file) and ('motSVD' in file)]
+    session_file = [file for file in os.listdir(facemap_output_dir) if
+                    (str(ophys_session_id) in file) and ('motSVD' in file)]
     try:
         pc_activations = np.load(os.path.join(facemap_output_dir, session_file[0]))
     except Exception as e:
@@ -649,7 +662,8 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     '''
 
     if check_if_model_output_available(behavior_session_id):
-        model_outputs = pd.read_csv(os.path.join(get_behavior_model_outputs_dir(), get_model_output_file(behavior_session_id)[0]))
+        model_outputs = pd.read_csv(
+            os.path.join(get_behavior_model_outputs_dir(), get_model_output_file(behavior_session_id)[0]))
         model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change'], inplace=True)
         stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id',
                                                               left_on='stimulus_presentations_id').set_index(
@@ -692,7 +706,8 @@ def get_behavior_movie_predictions_for_session(ophys_session_id):
     :return: dictionary of behavior prediction values
     """
     model_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/lick_detection_validation/models/six_class_model'
-    session_file = [file for file in os.listdir(model_output_dir) if (str(ophys_session_id) in file) and ('predictions' in file)]
+    session_file = [file for file in os.listdir(model_output_dir) if
+                    (str(ophys_session_id) in file) and ('predictions' in file)]
     try:
         data = np.load(os.path.join(model_output_dir, session_file[0]))
         keys = ['groom_reach_with_contact', 'groom_reach_without_contact', 'lick_with_contact',
@@ -769,7 +784,7 @@ def get_sdk_roi_masks(cell_specimen_table):
 
     roi_masks = {}
     for cell_specimen_id in cell_specimen_table.index:
-        mask = cell_specimen_table.at[cell_specimen_id, 'image_mask']
+        mask = cell_specimen_table.at[cell_specimen_id, 'roi_mask']
         binary_mask = np.zeros(mask.shape)
         binary_mask[mask == True] = 1
         roi_masks[cell_specimen_id] = binary_mask
@@ -1636,7 +1651,8 @@ def get_annotated_experiments_table():
     indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
     experiments_table.at[indices, 'location'] = 'Sst'
 
-    experiments_table['session_number'] = [int(session_type[6]) for session_type in experiments_table.session_type.values]
+    experiments_table['session_number'] = [int(session_type[6]) for session_type in
+                                           experiments_table.session_type.values]
     experiments_table['cre'] = [cre.split('-')[0] for cre in experiments_table.cre_line.values]
 
     return experiments_table
@@ -1672,12 +1688,14 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
         suffix = ''
 
     if len(conditions) == 5:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
+            2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
-            3] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
+            2] + '_' + conditions[3] + suffix + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
+            2] + suffix + '.h5'
     elif len(conditions) == 2:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
     elif len(conditions) == 1:
@@ -1697,7 +1715,8 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_
         expts = annotated_experiments_table.reset_index()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
-                filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
+                filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
+                                                              use_events)
                 filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
                 df = pd.read_hdf(filepath, key='df')
                 df = df.merge(expts, on='ophys_experiment_id')
@@ -1801,3 +1820,94 @@ def annotate_and_clean_multi_session_df(multi_session_df):
     # multi_session_df = remove_problematic_data_from_multi_session_df(multi_session_df)
 
     return multi_session_df
+
+
+def get_concatenated_stimulus_presentations(project_codes=None, session_numbers=None):
+    """
+    loads stimulus presentation table data for multiple sessions from cached files.
+    dataframe contains stimulus information including image_name, change, licked, omitted, etc for every stimulus presentation.
+    can be merged with stimulus_response_dfs to get cell responses for all stimulus presentations.
+
+    if desired project codes and session numbers are not specified, all data will be loaded.
+    project_codes and session_numbers should be provided as lists,
+    ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
+    """
+
+    save_dir = os.path.join(get_decoding_analysis_dir(), 'data')
+    experiments_table = get_filtered_ophys_experiment_table()
+    if project_codes is None:
+        project_codes = experiments_table.project_code.unique()
+    if session_numbers is None:
+        session_numbers = experiments_table.session_number.unique()
+
+    concatenated_stimulus_presentations = pd.DataFrame()
+    for project_code in project_codes:
+        for session_number in session_numbers:
+            try:
+                df = pd.read_hdf(os.path.join(save_dir, 'stimulus_presentations_' + project_code + '_session_' + str(
+                    session_number) + '.h5'), key='df')
+                concatenated_stimulus_presentations = pd.concat([concatenated_stimulus_presentations, df])
+            except Exception as e:
+                print('problem for', project_code, session_number)
+                print(e)
+    return concatenated_stimulus_presentations
+
+
+def get_concatenated_stimulus_response_dfs(project_codes=None, session_numbers=None):
+    """
+    loads stimulus response dataframes for multiple sessions from cached files.
+    dataframe contains the response of each cell for each stimulus presentation across sessions,
+    including the trace in a [0, 0.75] second window, the mean response in that window, etc.
+    can be merged with stimulus presentations to get the stimulus conditions for each cell response.
+
+    if desired project codes and session numbers are not specified, all data will be loaded.
+    project_codes and session_numbers should be provided as lists,
+    ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
+    """
+
+    save_dir = os.path.join(get_decoding_analysis_dir(), 'data')
+    experiments_table = get_filtered_ophys_experiment_table()
+    if project_codes is None:
+        project_codes = experiments_table.project_code.unique()
+    if session_numbers is None:
+        session_numbers = experiments_table.session_number.unique()
+    cre_lines = experiments_table.cre_line.unique()
+
+    concatenated_stimulus_response_dfs = pd.DataFrame()
+    for project_code in project_codes:
+        for session_number in session_numbers:
+            for cre_line in cre_lines:
+                try:
+                    df = pd.read_hdf(os.path.join(save_dir,
+                                                  'stimulus_response_dfs_' + project_code + '_' + cre_line + '_session_' + str(
+                                                      session_number) + '.h5'), key='df')
+                    concatenated_stimulus_response_dfs = pd.concat([concatenated_stimulus_response_dfs, df])
+                except Exception as e:
+                    print('problem for', project_code, cre_line, session_number)
+                    print(e)
+    return concatenated_stimulus_response_dfs
+
+
+def get_stimulus_response_data_across_sessions(project_codes=None, session_numbers=None):
+    """
+    loads and merges stimulus_response_dfs, stimulus_presentations data, and experiments_table metadata
+    across sessions for a given set of project_codes and session_numbers.
+    returns all cell responses for all image flashes for that set of sessions.
+
+    if desired project codes and session numbers are not specified, all data will be loaded (slow).
+    project_codes and session_numbers should be provided as lists,
+    ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
+    """
+
+    experiments_table = get_filtered_ophys_experiment_table()
+    if project_codes is None:
+        project_codes = experiments_table.project_code.unique()
+    if session_numbers is None:
+        session_numbers = experiments_table.session_number.unique()
+
+    stim_presentations = get_concatenated_stimulus_presentations(project_codes, session_numbers)
+    stim_response_dfs = get_concatenated_stimulus_response_dfs(project_codes, session_numbers)
+    stimulus_response_data = stim_response_dfs.merge(stim_presentations, on='ophys_session_id')
+    stimulus_response_data = stimulus_response_data.merge(experiments_table,
+                                                          on=['ophys_experiment_id', 'ophys_session_id'])
+    return stimulus_response_data
