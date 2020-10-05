@@ -114,7 +114,8 @@ def get_all_mesoscope_data():
              "join projects p on p.id = os.project_id "
              "where (p.code = 'VisualBehaviorMultiscope' "
              "or p.code = 'VisualBehaviorMultiscope4areasx2d' "
-             "or p.code = 'MesoscopeDevelopment') and os.workflow_state ='uploaded' "
+             "or p.code = 'MesoscopeDevelopment' "
+             "or p.code = 'MultiscopeSignalNoise') and os.workflow_state ='uploaded' "
              "order by session_id")
     return pd.DataFrame(psycopg2_select(query))
 
@@ -126,7 +127,8 @@ def get_all_mesoscope_sessions():
              "join projects p on p.id = os.project_id "
              "where (p.code = 'VisualBehaviorMultiscope' "
              "or p.code = 'VisualBehaviorMultiscope4areasx2d' "
-             "or p.code = 'MesoscopeDevelopment') and os.workflow_state ='uploaded' "
+             "or p.code = 'MesoscopeDevelopment' "
+             "or p.code = 'MultiscopeSignalNoise') and os.workflow_state ='uploaded' "
              "order by session_id")
     df = pd.DataFrame(psycopg2_select(query))
     sessions = df.session_id.drop_duplicates().values
