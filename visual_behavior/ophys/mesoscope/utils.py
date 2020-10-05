@@ -129,7 +129,6 @@ def get_all_mesoscope_sessions():
              "or p.code = 'VisualBehaviorMultiscope4areasx2d' "
              "or p.code = 'MesoscopeDevelopment' "
              "or p.code = 'MultiscopeSignalNoise') and os.workflow_state ='uploaded' "
-             "and oe.workflow_state = 'qc' "
              "order by session_id")
     df = pd.DataFrame(psycopg2_select(query))
     sessions = df.session_id.drop_duplicates().values
