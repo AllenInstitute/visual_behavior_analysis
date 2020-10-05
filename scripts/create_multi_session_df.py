@@ -14,8 +14,6 @@ if __name__ == '__main__':
     session_number = int(sys.argv[2][:-1])
     print(project_code, session_number)
 
-    cache_dir = loading.get_ophys_analysis_dir()
-
     df_name = 'stimulus_response_df'
     conditions = ['change', 'image_name']
 
