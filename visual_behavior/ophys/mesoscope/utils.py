@@ -156,10 +156,9 @@ def get_mesoscope_backup_sessions(backup_locations):
     # filter out non-numeric folders
     sessions = []
     for x in sessions_:
-        y = re.sub('\D', '', x)
-        if len(y) > 1:
-            sessions.append(int(y))
-
+        session = os.path.basename(os.path.normpath(x))
+        if x.isdigit():
+            sessions.append(int(x))
     # return list of session ids
     return sessions
 
