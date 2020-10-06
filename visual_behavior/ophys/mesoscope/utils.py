@@ -7,6 +7,7 @@ import visual_behavior.ophys.mesoscope.crosstalk_unmix as ica
 import visual_behavior.ophys.mesoscope.dataset as ms
 import logging
 import os
+import re
 import shutil
 import time
 import sciris as sc
@@ -132,6 +133,34 @@ def get_all_mesoscope_sessions():
              "order by session_id")
     df = pd.DataFrame(psycopg2_select(query))
     sessions = df.session_id.drop_duplicates().values
+    return sessions
+
+
+def get_mesoscope_backup_sessions(backup_locations):
+    """
+    fn to check all backup locations and retunr a list of backed-up sessions
+    :param backup_locations: list of strings wiht all abckup locations
+    :return: list of strings where each item represents a session id
+    """
+    sessions_ = []
+    for d in backup_locations:
+        # pull sub-directories for W
+        w_drive = [os.path.join(d, o) for o in os.listdir(d)
+                   if os.path.isdir(os.path.join(d, o))]
+        # split out folder names
+        w = []
+        for n in w_drive:
+            w.append(n.split('\\')[-1])
+        sessions_.append(w)
+
+    # filter out non-numeric folders
+    sessions = []
+    for x in sessions_:
+        y = re.sub('\D', '', x)
+        if len(y) > 1:
+            sessions.append(int(y))
+
+    # return list of session ids
     return sessions
 
 
