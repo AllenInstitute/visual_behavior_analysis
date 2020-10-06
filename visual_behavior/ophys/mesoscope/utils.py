@@ -157,8 +157,8 @@ def get_mesoscope_backup_sessions(backup_locations):
     sessions = []
     for x in sessions_:
         session = os.path.basename(os.path.normpath(x))
-        if x.isdigit():
-            sessions.append(int(x))
+        if session.isdigit():
+            sessions.append(int(session))
     # return list of session ids
     return sessions
 
