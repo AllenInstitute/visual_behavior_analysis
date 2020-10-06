@@ -2,6 +2,9 @@ from allensdk.internal.api import PostgresQueryMixin
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from visual_behavior.translator.foraging2 import data_to_change_detection_core #loading session pkl
+from visual_behavior.translator.core import create_extended_dataframe #loading session pkl
+
 # from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
@@ -1522,6 +1525,43 @@ def get_wkf_session_pkl_filepath(ophys_session_id):
 
     filepath = get_filepath_from_wkf_info(wkf_storage_info)
     return filepath
+
+
+def load_session_pkl_as_df(ophys_session_id):
+    """gets the session pkl file filepath, reads the data with pandas,
+    then parses the data to turn it into a dataframe
+
+    Args:
+        ophys_session_id ([type]): [description]
+
+    Returns:
+        dataframe: dataframe with the following columns:
+            'index', 'lick_times', 'auto_rewarded', 'cumulative_volume',
+            'cumulative_reward_number', 'reward_volume', 'reward_times',
+            'reward_frames', 'rewarded', 'optogenetics', 'response_type',
+            'response_time', 'change_time', 'change_frame', 'response_latency',
+            'starttime', 'startframe', 'trial_length', 'scheduled_change_time',
+            'endtime', 'endframe', 'initial_image_category', 'initial_image_name',
+            'change_image_name', 'change_image_category', 'change_ori',
+            'change_contrast', 'initial_ori', 'initial_contrast', 'delta_ori',
+            'mouse_id', 'response_window', 'task', 'stage', 'session_duration',
+            'user_id', 'LDT_mode', 'blank_screen_timeout', 'stim_duration',
+            'blank_duration_range', 'prechange_minimum', 'stimulus_distribution',
+            'stimulus', 'distribution_mean', 'computer_name',
+            'behavior_session_uuid', 'startdatetime', 'date', 'year', 'month',
+            'day', 'hour', 'dayofweek', 'number_of_rewards', 'rig_id', 'trial_type',
+            'lick_frames', 'reward_licks', 'reward_lick_count',
+            'reward_lick_latency', 'reward_rate', 'response', 'color'
+    """
+    filepath = get_wkf_session_pkl_filepath(ophys_session_id)
+    data = pd.read_pickle(filepath)
+    core_data = data_to_change_detection_core(data)
+    extended_trials = create_extended_dataframe(
+    trials=core_data['trials'],
+    metadata=core_data['metadata'],
+    licks=core_data['licks'],
+    time=core_data['time'])
+    return extended_trials
 
 
 def get_wkf_session_h5_filepath(ophys_session_id):
