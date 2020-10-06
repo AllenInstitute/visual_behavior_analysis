@@ -145,22 +145,20 @@ def get_mesoscope_backup_sessions(backup_locations):
     sessions_ = []
     for d in backup_locations:
         # pull sub-directories for W
-        w_drive = [os.path.join(d, o) for o in os.listdir(d)
-                   if os.path.isdir(os.path.join(d, o))]
-        # split out folder names
-        w = []
-        for n in w_drive:
-            w.append(n.split('\\')[-1])
-        sessions_.append(w)
+        files = os.listdir(d)
+        sessions_.append(files)
+
+    # flatten lis tof lists
+    sessions_flat = [item for sublist in sessions_ for item in sublist]
 
     # filter out non-numeric folders
     sessions = []
-    for x in sessions_:
-        session = os.path.basename(os.path.normpath(x))
-        if session.isdigit():
-            sessions.append(int(session))
+    for x in sessions_flat:
+        if x.isdigit():
+            sessions.append(int(x))
     # return list of session ids
     return sessions
+
 
 
 def run_ica_on_session(session, roi_name=None, np_name=None):
