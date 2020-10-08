@@ -728,6 +728,7 @@ print('\n\n======================== Analyzing session %d, %d/%d ================
 
 #%% Get the inputs from the init file
 
+import sys
 session_data = sys.argv[1]
 session_trials = sys.argv[2]
 
