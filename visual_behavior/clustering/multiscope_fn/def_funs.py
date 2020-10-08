@@ -3681,6 +3681,20 @@ def map_inds(train_data_inds, len_win, inds_final_all, neuron_y, doPlots=0):
 
 
 
+#%%
+'''
+def set_frame_window_flash_omit(time_win, samps_bef, frame_dur):
+    # Convert a time window (relative to image/omission onset) to frames units. 
+    # samps_bef: number of frames before image/omission
+    
+    frames_win = samps_bef + np.round(time_win / frame_dur).astype(int) # convert peak_win to frames (new way to code list_times)
+    frames_win[-1] = frames_win[0] + np.round(np.diff(peak_win) / frame_dur).astype(int) # we redefine the upper limit of the window, otherwise the same window duration can lead to different upper limit values due to the division and flooring, and turning into int.
+    list_times = np.arange(frames_win[0], frames_win[-1]) #+1) # [40, 41, 42, 43, 44, 45, 46, 47, 48]
+    # for omit-evoked peak timing, compute it relative to samps_bef (which is the index of omission)
+        
+    return list_times
+'''
+
 
 #%
 '''
