@@ -366,7 +366,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def events(self):
-        self._events = pd.DataFrame({'events': [x for x in self.get_events_array()]},
+        self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
+                                    'filtered_events': [x for x in rp.filter_events_array(events_array)]},
                                     index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
 
