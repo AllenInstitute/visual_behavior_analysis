@@ -1,52 +1,45 @@
-#%% Set list of sessions to be analyzed
-
-import os
-import itertools
-import numpy as np
-import pandas as pd
-import scipy as sp
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-import visual_behavior.data_access.loading as loading
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Run svm_init_images_pre.py to save the pickle file which includes session and metadata information. This pickle file will be loaded here.
 
 
-#%% functions to load cell response data and stimulus presentations metadata for a set of sessions
-experiments_table = loading.get_filtered_ophys_experiment_table()
+Created on Thu Oct 9 12:29:43 2020
+
+@author: farzaneh
+"""
 
 
-#%% Set "stimulus_response_data" dataframe
-#%time 
-#this can be slow for larger amounts of data. limiting to non-mesoscope production codes is faster.
+#%% Sessions corresponding to project and stage below will be used in svm_images analysis
+
 project_codes = ['VisualBehaviorMultiscope']
 session_numbers = [4]
 
-# stimulus_response_data has cell response data and all experiment metadata
-stim_response_dfs = loading.get_concatenated_stimulus_response_dfs(project_codes, session_numbers)
-stimulus_response_data = stim_response_dfs.merge(experiments_table, on=['ophys_experiment_id', 'ophys_session_id'])
-# stimulus_response_data.keys()
 
-# stim_presentations has stimulus presentations metadata for the same set of experiments
-stim_presentations = loading.get_concatenated_stimulus_presentations(project_codes, session_numbers)
-# stim_presentations.keys()
+#%%
+import os
+import pickle
+
+# import itertools
+# import numpy as np
+# import pandas as pd
+# import scipy as sp
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
 
 
+#%% Load the pickle file which includes session and metadata information.
 
-#%% Set list_all_sessions_valid and list_all_experiments (for all sessions at stage 4)
+dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
+dir_svm = os.path.join(dir_server_me, 'SVM')
+filen = os.path.join(dir_svm, f'sessions_experiments_{project_codes}_{session_numbers}')
 
-# #%% lets get the VIP mice
-# stimulus_response_data = stimulus_response_data[stimulus_response_data.cre_line=='Vip-IRES-Cre']
+pkl = open(filen, 'rb')
+dict_se = pickle.load(pkl)
+# metadata_basic = pickle.load(pkl)
 
-# # number of sessions
-# s = stimulus_response_data['ophys_session_id'].unique()
-# s.shape
-
-list_all_sessions_valid = stimulus_response_data['ophys_session_id'].unique()
-# list_all_experiments = [stimulus_response_data[stimulus_response_data['ophys_session_id']==si]['ophys_experiment_id'].unique() for si in list_all_sessions_valid]
-# list_all_experiments = np.array(list_all_experiments, dtype=object)
-# # [a[i].shape for i in range(len(a))]
-print(list_all_sessions_valid.shape)
+list_all_sessions_valid = dict_se['list_all_sessions_valid']
 
 
 
@@ -86,11 +79,7 @@ job_settings.update({
 
 #%% Loop through valid sessions to perform the analysis
 
-#sess_no_omission = []
 cnt_sess = -1     
-
-#cols = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_omissions', 'n_neurons', 'meanX_allFrs', 'stdX_allFrs', 'av_train_data_new', 'av_test_data_new', 'av_test_shfl_new', 'av_test_chance_new', 'sd_train_data_new', 'sd_test_data_new', 'sd_test_shfl_new', 'sd_test_chance_new'])
-#all_sess = pd.DataFrame([], columns=cols)
 
 for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
     
@@ -102,7 +91,7 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # sessio
           (session_id, cnt_sess+1, len(list_all_sessions_valid)))    
 
     
-    
+    '''
     #%% Get session imaging data and session trial data
     # get cell response data for this session
     session_data = stimulus_response_data[stimulus_response_data['ophys_session_id']==session_id].copy()
@@ -110,12 +99,14 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # sessio
     # get stimulus presentations data for this session
     session_trials = stim_presentations[stim_presentations['ophys_session_id']==session_id].copy()
     # these two dataframes are linked by stimulus_presentations_id and ophys_session_id
-    
-        
+            
     python_arg1 = '%s ' %session_data
-    python_arg2 = '%s ' %session_trials
+    python_arg2 = '%s' %session_trials
+    '''
 
-    
+    python_arg1 = '%s ' %isess
+    python_arg2 = '%s' %filen
+
     
     #%%    
     jobname = 'SVM'
@@ -127,7 +118,7 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # sessio
         python_executable = '/home/farzaneh.najafi/anaconda3/envs/visbeh/bin/python',
         python_args = python_arg1+python_arg2,
 #         python_args = str(session_data) + str(session_trials), # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
-#        python_args = isess, # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
+#         python_args = isess, # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
         conda_env = None,
 #        jobname = 'process_{}'.format(session_id),
         **job_settings
@@ -139,14 +130,18 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # sessio
     
     
     
-###############################################################################################
-##### SAVE THE DF TO MONGO
-###############################################################################################
 
+    
+###############################################################################################
+##### Save a dataframe entries to MONGO and retrieve them later
+##### code from Doug: https://gist.github.com/dougollerenshaw/b2ddb9f5e26f33059001f21bae49ea2b
+###############################################################################################
+'''
 #%% save the dataframe to mongo (make every row a 'document' or entry)¶
 # This might be slow for a big table, but you only need to do it once
 
 df = stim_response_dfs
+print(df.shape)
 
 from visual_behavior import database
 
@@ -157,7 +152,13 @@ collection = conn['ophys_population_analysis'][collection_name]
 
 print(collection_name)
 
-for idx,row in df.iterrows():
+
+# if kernel stops, use below to find the last entry (or 1 to the last just to be safe), and resume running the code below to save the remaining data to mongo
+# alle = collection.find({}); alle[alle.count()-2]
+
+# for idx,row in df.iterrows():
+for idx in np.arange(323266, len(df)):  
+    row = df.iloc[idx]
     # run every document through the 'clean_and_timestamp' function.
     # this function ensures that all datatypes are good for mongo, then adds an additional field with the current timestamp
     document_to_save = database.clean_and_timestamp(row.to_dict()) 
@@ -169,26 +170,4 @@ for idx,row in df.iterrows():
     
 # close the connection when you're done with it
 conn.close()
-
-
-
-
-# Now get data from the table
-# Search for only the subset of data you're interested in
-
-%%time
-desired_oeid = 2
-# the find function returns a cursor. 
-# to actually get the data, it must be cast to a list.
-# to make it conviently readable, then cast to a dataframe
-
-conn = database.Database('visual_behavior_data')
-collection_name = 'test_table'
-collection = conn['ophys_population_analysis'][collection_name]
-
-df_subset = pd.DataFrame(list(collection.find({'ophys_experiment_id':desired_oeid})))
-
-# close the connection when you're done with it
-conn.close()
-
-df_subset
+'''
