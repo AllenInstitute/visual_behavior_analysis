@@ -1,8 +1,11 @@
 import os
-import pandas as pd
 import json
 import shutil
+import pandas as pd
+import configparser as configp
+
 from visual_behavior.data_access import loading
+from allensdk.internal.api import PostgresQueryMixin
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
@@ -12,8 +15,46 @@ from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorP
 from allensdk.brain_observatory.behavior.behavior_data_session import BehaviorDataSession
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 
+import warnings
+
 import logging
 logger = logging.getLogger(__name__)
+
+try:
+    lims_dbname = os.environ["LIMS_DBNAME"]
+    lims_user = os.environ["LIMS_USER"]
+    lims_host = os.environ["LIMS_HOST"]
+    lims_password = os.environ["LIMS_PASSWORD"]
+    lims_port = os.environ["LIMS_PORT"]
+
+    mtrain_dbname = os.environ["MTRAIN_DBNAME"]
+    mtrain_user = os.environ["MTRAIN_USER"]
+    mtrain_host = os.environ["MTRAIN_HOST"]
+    mtrain_password = os.environ["MTRAIN_PASSWORD"]
+    mtrain_port = os.environ["MTRAIN_PORT"]
+
+    lims_engine = PostgresQueryMixin(
+        dbname=lims_dbname,
+        user=lims_user,
+        host=lims_host,
+        password=lims_password,
+        port=lims_port
+    )
+
+    mtrain_engine = PostgresQueryMixin(
+        dbname=mtrain_dbname,
+        user=mtrain_user,
+        host=mtrain_host,
+        password=mtrain_password,
+        port=mtrain_port
+    )
+
+except Exception as e:
+    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately\nfunctions requiring database access will fail'.format(
+        e)
+    warnings.warn(warn_string)
+
+config = configp.ConfigParser()
 
 
 # CONVENIENCE FUNCTIONS TO GET VARIOUS INFORMATION #
@@ -432,3 +473,496 @@ def get_sdk_session(behavior_session_id, is_ophys):
         return BehaviorOphysSession.from_lims(ophys_experiment_id)
     else:
         return BehaviorDataSession.from_lims(behavior_session_id)
+
+
+#getting filepaths for well known files from LIMS
+
+
+def get_filepath_from_wkf_info(wkf_info):
+    """takes a RealDictRow object returned by one of the wkf_info functions
+    and parses it to return the filepath to the well known file.
+
+    Args:
+        wkf_info ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    filepath = wkf_info[0]['?column?']  # idk why it's ?column? but it is :(
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
+    return filepath
+
+
+def get_wkf_timeseries_ini_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the timeseries_XYT.ini file
+        for a given ophys session. only works for sessions *from a Scientifica rig*
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session id
+
+    Returns:
+
+    """
+
+    QUERY = '''
+    SELECT wkf.storage_directory || wkf.filename
+    FROM well_known_files wkf
+    JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
+    JOIN specimens sp ON sp.id=wkf.attachable_id
+    JOIN ophys_sessions os ON os.specimen_id=sp.id
+    WHERE wkft.name = 'SciVivoMetadata'
+    AND wkf.storage_directory LIKE '%ophys_session_{0}%'
+    AND os.id = {0}
+
+    '''.format(ophys_session_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def pmt_gain_from_timeseries_ini(timeseries_ini_path):
+    """parses the timeseries ini file (scientifica experiments only)
+        and extracts the pmt gain setting
+
+    Arguments:
+        timeseries_ini_path {[type]} -- [description]
+
+    Returns:
+        int -- int of the pmt gain
+    """
+    config.read(timeseries_ini_path)
+    pmt_gain = int(float(config['_']['PMT.2']))
+    return pmt_gain
+
+def get_wkf_dff_h5_filepath(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        dff traces h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the dff.h5 file
+                    for the given ophys_experiment_id
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 514173073 AND
+    attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_roi_trace_h5_filepath(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        roi_traces.h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the roi_traces.h5 file
+                    for the given ophys_experiment_id
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 514173076 AND
+    attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_neuropil_trace_h5_filepath(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        neuropil_traces.h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the neuropil_traces.h5 file
+                    for the given ophys_experiment_id
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 514173078 AND
+    attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+
+    return filepath
+
+
+def get_wkf_extracted_trace_h5_filepath(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        neuropil_traces.h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the neuropil_traces.h5 file
+                    for the given ophys_experiment_id
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 486797213 AND
+    attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+
+    return filepath
+
+
+def get_wkf_demixed_traces_h5_filepath(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        roi_traces.h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the roi_traces.h5 file
+                    for the given ophys_experiment_id
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 820011707 AND
+    attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_motion_corrected_movie_h5_filepath(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to get the
+        "motion_corrected_movie.h5" information for a given
+        ophys_experiment_id
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+    Returns:
+        [type] -- [description]
+    """
+
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 886523092 AND
+     attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_rigid_motion_transform_csv_filepath(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to get the
+        "rigid_motion_transform.csv" information for a given
+        ophys_experiment_id
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 514167000 AND
+     attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_session_pkl_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        session pkl file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 610487715 AND
+     attachable_id = {0}
+
+    '''.format(ophys_session_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+def get_wkf_session_h5_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        session h5 file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 610487713 AND
+     attachable_id = {0}
+
+    '''.format(ophys_session_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_behavior_avi_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        video-0 avi (behavior video) file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 695808672 AND
+    attachable_id = {0}
+
+    '''.format(ophys_session_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_behavior_h5_filepath(ophys_session_id):
+    avi_filepath = get_wkf_behavior_avi_filepath(ophys_session_id)
+    h5_filepath = avi_filepath[:-3] +"h5"
+    return h5_filepath
+
+
+def get_wkf_eye_tracking_avi_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        video-1 avi (eyetracking video) file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 695808172 AND
+    attachable_id = {0}
+
+    '''.format(ophys_session_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_ellipse_h5_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        ellipse.h5 file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 914623492 AND
+    attachable_id = {0}
+
+    '''.format(ophys_session_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_platform_json_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        platform.json file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 746251277 AND
+    attachable_id = {0}
+
+    '''.format(ophys_session_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_screen_mapping_h5_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        screen mapping .h5 file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 916857994 AND
+     attachable_id = {0}
+
+    '''.format(ophys_session_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_deepcut_h5_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        screen mapping .h5 file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 990460508 AND
+     attachable_id = {0}
+
+    '''.format(ophys_session_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
