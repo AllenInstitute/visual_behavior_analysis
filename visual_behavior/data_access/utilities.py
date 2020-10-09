@@ -767,6 +767,7 @@ def get_wkf_session_pkl_filepath(ophys_session_id):
     filepath = get_filepath_from_wkf_info(wkf_storage_info)
     return filepath
 
+
 def get_wkf_session_h5_filepath(ophys_session_id):
     """use SQL and the LIMS well known file system to get the
         session h5 file information for a given
@@ -825,7 +826,7 @@ def get_wkf_behavior_avi_filepath(ophys_session_id):
 
 def get_behavior_h5_filepath(ophys_session_id):
     avi_filepath = get_wkf_behavior_avi_filepath(ophys_session_id)
-    h5_filepath = avi_filepath[:-3] +"h5"
+    h5_filepath = avi_filepath[:-3] + "h5"
     return h5_filepath
 
 
@@ -966,3 +967,10 @@ def get_wkf_deepcut_h5_filepath(ophys_session_id):
     wkf_storage_info = (lims_cursor.fetchall())
     filepath = get_filepath_from_wkf_info(wkf_storage_info)
     return filepath
+
+
+def get_sync_timestamps(ophys_experiment_id):
+    lims_data = get_lims_data(ophys_experiment_id)
+    dataset = get_ophys_dataset(ophys_experiment_id)
+    timestamps = get_timestamps(lims_data, dataset.analysis_dir)
+    return timestamps
