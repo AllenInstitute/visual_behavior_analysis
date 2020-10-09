@@ -1212,7 +1212,7 @@ def load_motion_corrected_movie(ophys_experiment_id):
     filepath = utilities.get_wkf_motion_corrected_movie_h5_filepath(ophys_experiment_id)
     motion_corrected_movie_h5 = h5py.File(filepath, 'r')
     motion_corrected_movie = motion_corrected_movie_h5['data']
-    motion_corrected_movie_h5.close()
+    
 
     return motion_corrected_movie
 
@@ -1264,6 +1264,9 @@ def load_session_pkl_coredata(ophys_session_id):
 
     return core_data
 
+
+#timestamps
+
 def get_sync_timestamp_df(ophys_experiment_id):
     lims_data = utilities.get_lims_data(ophys_experiment_id)
     dataset = get_ophys_dataset(ophys_experiment_id)
@@ -1277,6 +1280,18 @@ def get_sync_timestamp_df(ophys_experiment_id):
                                       'ophys_trigger': len(timestamps['ophys_trigger'].timestamps)},
                                      index=[0])
     return sync_timestamp_df
+
+
+def get_pkl_timestamps_df(ophys_session_id):
+    pkl_data = load_session_pkl_coredata(ophys_session_id)
+    pkl_timestamp_df = pd.DataFrame({"visual_stim_timestamps": len(pkl_data["time"]),
+                                     "running_timestamps":len(pkl_data["time"]),
+                                     "licks": len(pkl_data["licks"])}, index = [0])
+    return pkl_timestamp_df
+
+
+
+
 
 # FROM MTRAIN DATABASE
 
