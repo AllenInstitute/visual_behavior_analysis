@@ -13,7 +13,7 @@ Created on Thu Oct 9 12:29:43 2020
 #%% Sessions corresponding to project and stage below will be used in svm_images analysis
 
 project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
-session_numbers = [4]
+session_numbers = [1]
 
 
 #%%
@@ -36,7 +36,7 @@ dir_svm = os.path.join(dir_server_me, 'SVM')
 a = '_'.join(project_codes)
 b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
 filen = os.path.join(dir_svm, f'metadata_basic_{a}_{b}')
-
+print(filen)
 
 
 pkl = open(filen, 'rb')

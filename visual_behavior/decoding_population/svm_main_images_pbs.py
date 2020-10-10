@@ -678,21 +678,26 @@ filen = str(sys.argv[2])
 #%% Set SVM vars
 
 same_num_neuron_all_planes = 0 # if 1, use the same number of neurons for all planes to train svm
-numSamples = 2 # 50 # 10
+numSamples = 50 # 10
 saveResults = 1 # 0 #
 
 time_win = [0, .5] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 
 
 #%% Set the project and stage for sessions to be loaded # Note: it would be nice to pass the following two vars as python args in the python job (pbs tools); except I'm not sure how to pass an array as an argument.
+# we need these to set "stim_response_data" and "stim_presentations" dataframes
 
-project_codes = ['VisualBehaviorMultiscope']
-session_numbers = [4]
+project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
+
+# Set session_numbers from filen; NOTE: below will work only if a single element exists in session_numbers
+sn = os.path.basename(filen)[len('metadata_basic_'):].find('_'); 
+session_numbers = [int(os.path.basename(filen)[len('metadata_basic_'):][sn+1:])]
+
+print(f'The following sessions will be analyzed: {project_codes}, {session_numbers}')
 
 # r1 = filen.find('metadata_basic_'); r2 = filen.find(']_'); 
 # project_codes = [filen[r1+3:r2-1]]
 # session_numbers = [int(filen[filen.rfind('_[')+2:-1])] # may not work if multiple sessions are being passed as session_numbers
-# print(f'The following sessions will be analyzed: {project_codes}, {session_numbers}')
 
 
 
@@ -728,7 +733,7 @@ else:
                 
         
 
-#%% Load the pickle file that includes the list of sessions and experiments
+#%% Load the pickle file that includes the list of sessions and metadata
 
 pkl = open(filen, 'rb')
 dict_se = pickle.load(pkl)

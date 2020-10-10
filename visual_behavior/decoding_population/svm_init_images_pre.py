@@ -12,7 +12,7 @@ Created on Thu Oct 9 12:19:43 2020
 #%% Stimulus response data from the project and stage below will be loaded to set list of sessions
 # this is to be used for svm_images analysis.
 project_codes = ['VisualBehaviorMultiscope']
-session_numbers = [1] #4
+session_numbers = [6] #4
 
 
 #%%
