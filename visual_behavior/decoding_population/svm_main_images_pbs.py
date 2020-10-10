@@ -671,8 +671,8 @@ import visual_behavior.data_access.loading as loading
 
 #%% Get the input arguments passed here from pbstools (in svm_init_images script)
 
-filen = int(sys.argv[2])
 isess = int(sys.argv[1])
+filen = str(sys.argv[2])
 
 
 #%% Set SVM vars
@@ -684,16 +684,16 @@ saveResults = 1 # 0 #
 time_win = [0, .5] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 
 
-#%% Set the project and stage for sessions to be loaded
+#%% Set the project and stage for sessions to be loaded # Note: it would be nice to pass the following two vars as python args in the python job (pbs tools); except I'm not sure how to pass an array as an argument.
 
-r1 = filen.find('_['); r2 = filen.find(']_'); 
-project_codes = [filen[r1+3:r2-1]]
-session_numbers = [int(filen[filen.rfind('_[')+2:-1])] # may not work if multiple sessions are being passed as session_numbers
-print(f'The following sessions will be analyzed: {project_codes}, {session_numbers}')
+project_codes = ['VisualBehaviorMultiscope']
+session_numbers = [4]
 
-# Note: it would be nice to pass the following two vars as python args in the python job (pbs tools); except I'm not sure how to pass an array as an argument.
-# project_codes = ['VisualBehaviorMultiscope']
-# session_numbers = [4]
+# r1 = filen.find('metadata_basic_'); r2 = filen.find(']_'); 
+# project_codes = [filen[r1+3:r2-1]]
+# session_numbers = [int(filen[filen.rfind('_[')+2:-1])] # may not work if multiple sessions are being passed as session_numbers
+# print(f'The following sessions will be analyzed: {project_codes}, {session_numbers}')
+
 
 
 
