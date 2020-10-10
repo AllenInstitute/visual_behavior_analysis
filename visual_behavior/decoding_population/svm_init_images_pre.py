@@ -12,7 +12,7 @@ Created on Thu Oct 9 12:19:43 2020
 #%% Stimulus response data from the project and stage below will be loaded to set list of sessions
 # this is to be used for svm_images analysis.
 project_codes = ['VisualBehaviorMultiscope']
-session_numbers = [4]
+session_numbers = [1] #4
 
 
 #%%
@@ -99,7 +99,7 @@ dict_se = {'list_all_sessions_valid': list_all_sessions_valid, 'list_all_experim
 #%% Set metadata_basic, a df that includes basic metadata for all the 8 experiments of all sessions in list_all_sessions_valid; metadata include: 'session_id', 'experiment_id', 'area', 'depth', 'valid'
 
 metadata_basic = set_metadata_basic(list_all_sessions_valid)
-metadata_basic
+print(metadata_basic)
 
 
 
@@ -109,8 +109,13 @@ metadata_basic
 dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
 
 dir_svm = os.path.join(dir_server_me, 'SVM')
-filen = os.path.join(dir_svm, f'sessions_experiments_{project_codes}_{session_numbers}')
-    
+# filen = os.path.join(dir_svm, f'sessions_experiments_{project_codes}_{session_numbers}')
+a = '_'.join(project_codes)
+b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
+filen = os.path.join(dir_svm, f'metadata_basic_{a}_{b}')
+print(filen)
+
+# save to a pickle file
 f = open(filen, 'wb')
 pickle.dump(dict_se, f)   
 pickle.dump(metadata_basic, f)   

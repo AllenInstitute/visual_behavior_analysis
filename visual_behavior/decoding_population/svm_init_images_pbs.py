@@ -12,7 +12,7 @@ Created on Thu Oct 9 12:29:43 2020
 
 #%% Sessions corresponding to project and stage below will be used in svm_images analysis
 
-project_codes = ['VisualBehaviorMultiscope']
+project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 session_numbers = [4]
 
 
@@ -66,7 +66,7 @@ python_file = r"/home/farzaneh.najafi/analysis_codes/visual_behavior_analysis/vi
 
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/ClusterJobs/SVMJobs'
 job_settings = {'queue': 'braintv',
-                'mem': '4g', #24g
+                'mem': '24g', #24g
                 'walltime': '48:00:00',
                 'ppn': 4} #,
 #                'jobdir': jobdir,
@@ -85,7 +85,7 @@ job_settings.update({
 
 cnt_sess = -1     
 
-for isess in [0,1]: # range(len(list_all_sessions_valid)): # isess = -5 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
+for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
     
     session_id = int(list_all_sessions_valid[isess])
 

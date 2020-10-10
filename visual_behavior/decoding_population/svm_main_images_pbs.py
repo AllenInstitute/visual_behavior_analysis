@@ -35,7 +35,7 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
 #    numSamples = 3 #10 #50
 #    saveResults = 1    
     
-    svmn = 'svm_gray_omit'
+    svmn = 'svm_images' # 'svm_gray_omit'
         
     kfold = 10
     regType = 'l2'
