@@ -3,6 +3,7 @@ from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 # from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
+from visual_behavior.ophys.response_analysis import response_processing as rp
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import processing
@@ -370,7 +371,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def events(self):
         self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
-                                    'filtered_events': [x for x in rp.filter_events_array(events_array)]},
+                                    'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
                                     index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
 
