@@ -62,7 +62,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
         except Exception as e:  # flake8: noqa: E722
             print(e)
             print('problem for', experiment_id)
-        
+
     if use_events:
         suffix = '_events'
     else:

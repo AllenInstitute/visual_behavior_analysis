@@ -90,6 +90,9 @@ def get_behavior_model_outputs_dir():
 def get_decoding_analysis_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
 
+def get_ophys_glm_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
+
 
 # LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
 
