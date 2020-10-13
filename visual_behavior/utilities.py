@@ -654,6 +654,6 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
     elif output_format == 'tidy':
         df = pd.DataFrame(_d)
         melted = df.melt(id_vars='time')
-        melted['event_number'] = melted['variable'].map(lambda s:s.split('event_')[1].split('_')[0])
-        melted['event_time'] = melted['variable'].map(lambda s:s.split('t=')[1])
-        return melted.drop(columns=['variable']).rename(columns={'value':parameter})
+        melted['event_number'] = melted['variable'].map(lambda s: s.split('event_')[1].split('_')[0])
+        melted['event_time'] = melted['variable'].map(lambda s: s.split('t=')[1])
+        return melted.drop(columns=['variable']).rename(columns={'value': parameter})
