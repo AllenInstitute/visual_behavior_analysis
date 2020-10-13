@@ -605,7 +605,7 @@ def convert_to_fraction(df_in, baseline_conditional=None):
     return df
 
 
-def event_triggered_response(df, parameter, event_times, time_key=None, t_before=10, t_after=10, sampling_rate=60):
+def event_triggered_response(df, parameter, event_times, time_key=None, t_before=10, t_after=10, sampling_rate=60, output_format='tidy'):
     '''
     build event triggered response around a given set of events
     required inputs:
@@ -617,8 +617,16 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
       t_before: time before each of event of interest
       t_after: time after each event of interest
       sampling_rate: desired sampling rate of output (input data will be interpolated)
+      output_format: 'wide' or 'tidy' (default = 'tidy')
     output:
-      dataframe with one time column ('t') and one column of data for each event
+      if output_format == 'wide':
+        dataframe with one time column ('t') and one column of data for each event
+      if output_format == 'tidy':
+        dataframe with columns representing:
+            time
+            output value
+            event number
+            event time
     '''
     if time_key is None:
         if 't' in df.columns:
@@ -641,4 +649,11 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
         y = df_local[parameter]
 
         _d.update({'event_{}_t={}'.format(ii, event_time): np.interp(_d['time'], t, y)})
-    return pd.DataFrame(_d)
+    if output_format == 'wide':
+        return pd.DataFrame(_d)
+    elif output_format == 'tidy':
+        df = pd.DataFrame(_d)
+        melted = df.melt(id_vars='time')
+        melted['event_number'] = melted['variable'].map(lambda s: s.split('event_')[1].split('_')[0])
+        melted['event_time'] = melted['variable'].map(lambda s: s.split('t=')[1])
+        return melted.drop(columns=['variable']).rename(columns={'value': parameter})
