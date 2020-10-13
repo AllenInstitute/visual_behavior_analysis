@@ -353,7 +353,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         '''
         dff_dfs = []
         for csid in self.cell_specimen_ids:
-            pass
             dff_dfs.append(
                 pd.DataFrame({
                     'timestamps': self.ophys_timestamps,
