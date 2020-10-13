@@ -251,14 +251,24 @@ def physio_timestamps_df(ophys_experiment_id):
     return df
 
 
-def lick_timestamps_df(ophys_experiment_id):
+def lick_timestamps_df(ophys_experiment_id, stage_name=False):
     ophys_session_id = loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
     sync_timestamps = len(lick_timestamps_from_sync(ophys_experiment_id))
     pkl_timestamps = len(lick_timestamps_from_pkl(ophys_session_id))
     sdk_timestamps = len(lick_timestamps_from_SDK(ophys_experiment_id))
-    df = pd.DataFrame({"ophys_session_id": ophys_session_id,
-                       "ophys_experiment_id": ophys_experiment_id,
-                       "sync": sync_timestamps,
-                       "pkl": pkl_timestamps,
-                       "SDK": sdk_timestamps}, index=[0])
+    if stage_name == True:
+        stage_name = loading.get_lims_experiment_info(ophys_experiment_id)["stage_name_lims"][0]
+
+        df = pd.DataFrame({"ophys_session_id": ophys_session_id,
+                           "ophys_experiment_id": ophys_experiment_id,
+                           "stage_name": stage_name,
+                           "sync": sync_timestamps,
+                           "pkl": pkl_timestamps,
+                           "SDK": sdk_timestamps}, index=[0])
+    else:
+        df = pd.DataFrame({"ophys_session_id": ophys_session_id,
+                           "ophys_experiment_id": ophys_experiment_id,
+                           "sync": sync_timestamps,
+                           "pkl": pkl_timestamps,
+                           "SDK": sdk_timestamps}, index=[0])
     return df
