@@ -346,6 +346,23 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             self._dff_traces = super().dff_traces
         return self._dff_traces
 
+    @property
+    def dff_dataframe(self):
+        '''
+        build a tidy dataframe of dff values
+        '''
+        dff_dfs = []
+        for csid in self.cell_specimen_ids:
+            pass
+            dff_dfs.append(
+                pd.DataFrame({
+                    'timestamps': self.ophys_timestamps,
+                    'cell_specimen_id': [csid] * len(self.ophys_timestamps),
+                    'dff': self.dff_traces.loc[csid]['dff'],
+                })
+            )
+        return pd.concat(dff_dfs)
+
     def get_events_array(self):
         events_folder = os.path.join(get_analysis_cache_dir(), 'events')
         if os.path.exists(events_folder):
