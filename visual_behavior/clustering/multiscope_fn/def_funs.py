@@ -3686,9 +3686,10 @@ def map_inds(train_data_inds, len_win, inds_final_all, neuron_y, doPlots=0):
 def set_frame_window_flash_omit(time_win, samps_bef, frame_dur):
     # Convert a time window (relative to image/omission onset) to frames units. 
     # samps_bef: number of frames before image/omission
+    # time_win = [0, .75]
     
     frames_win = samps_bef + np.round(time_win / frame_dur).astype(int) # convert peak_win to frames (new way to code list_times)
-    frames_win[-1] = frames_win[0] + np.round(np.diff(peak_win) / frame_dur).astype(int) # we redefine the upper limit of the window, otherwise the same window duration can lead to different upper limit values due to the division and flooring, and turning into int.
+    frames_win[-1] = frames_win[0] + np.round(np.diff(time_win) / frame_dur).astype(int) # we redefine the upper limit of the window, otherwise the same window duration can lead to different upper limit values due to the division and flooring, and turning into int.
     list_times = np.arange(frames_win[0], frames_win[-1]) #+1) # [40, 41, 42, 43, 44, 45, 46, 47, 48]
     # for omit-evoked peak timing, compute it relative to samps_bef (which is the index of omission)
         
@@ -3697,12 +3698,26 @@ def set_frame_window_flash_omit(time_win, samps_bef, frame_dur):
 
 
 #%
+# h5
 '''
 f = h5py.File(np_corr_file, 'w')
 dset = f.create_dataset("data", data=neuropil_correction_man) 
 f.close()
 '''
 
+'''
+f = h5py.File(dir_ica_sess, 'r') 
+dff_traces0 = np.asarray(f.get('data')) # neurons x frames            
+'''
+
+
+# pandas
+'''
+all_sess = pd.read_hdf(allSessName, key='all_sess')
+'''
+
+
+# pickle
 '''
 f = open(np_corr_file, 'wb')
 pickle.dump(df_grid, f)        

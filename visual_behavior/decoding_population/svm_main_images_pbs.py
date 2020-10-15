@@ -59,10 +59,9 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
     useEqualTrNums = np.nan
     cbestKnown = 0 #cbest = np.nan
     
-    
         
     #%% Set initial vars
-    
+
 #     #### set frames_svm
 #     trace_time = stim_response_data.iloc[0]['trace_timestamps']
 #     r1 = np.argwhere((trace_time-time_win[0])>=0)[0][0]
@@ -80,14 +79,33 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
 #     # samps_aft - 1 (=39) frames after omission ; index: 41:79
 
     
-        
     svm_total_frs = len(frames_svm)    
     now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")    
     cols = cols_basic
 #    num_planes = 8           
         
+
     
-#     #%% Load some important variables from the experiment
+    
+    
+    #%% If stimulus_response_df_allexp is given as input:
+    #%% Set cell responses and trial types, using dataframe stimulus_response_df_allexp
+    
+#     session_data = stimulus_response_df_allexp
+    
+    image_data = stimulus_response_df_allexp[stimulus_response_df_allexp['image_name']!='omitted']
+
+    #%% set the vector of image indices for each trial (flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
+    u, u_i = np.unique(image_data['stimulus_presentations_id'].values, return_index=True)
+    itrs = image_data.iloc[u_i,:] # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
+    image_indices = itrs['image_index'].values
+    
+    
+    
+    
+    #%% If session_data and session_trials are given given as input:
+    '''
+#     #%% Set cell responses and trial types, using dataframes stim_response_data and stim_presentations
 
 #     # get cell response data for this session
 #     session_data = stim_response_data[stim_response_data['ophys_session_id']==session_id].copy()
@@ -96,22 +114,26 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
 #     session_trials = stim_presentations[stim_presentations['ophys_session_id']==session_id].copy()
 #     # these two dataframes are linked by stimulus_presentations_id and ophys_session_id
     
-    
-    
-
     # get image trials
-    image_trials = session_trials[session_trials.omitted==False]
+    image_trials = session_trials[session_trials['omitted']==False]
 #     image_trials.shape
 
     # get cell response data for those trials
     image_stimulus_presentation_ids = image_trials.stimulus_presentations_id.values
-    image_data = session_data[session_data.stimulus_presentations_id.isin(image_stimulus_presentation_ids)]
+    image_data = session_data[session_data.stimulus_presentations_id.isin(image_stimulus_presentation_ids)] # n_trials
 #     image_data.shape
 
-    ########### NOTE: sorting happens here! ###########
+    # NOTE: no need to sort image_data below! because we loop through experiments in data_list which is already sorted; also we find the corresponding experiment in image_data by finding the right experiment id 
     # sort image_data by area and depth; this is mainly for consistency with my previous codes; also so that we analyze experiments in a good order, instead of randomly.
-    image_data = image_data.sort_values(by=['targeted_structure', 'imaging_depth'])
+#     image_data = image_data.sort_values(by=['targeted_structure', 'imaging_depth'])
 
+    
+    # set the vector of image indices for each trial (flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
+    image_indices = image_trials['image_index'].values
+#     image_indices.shape
+    '''
+    
+    
     
         
     #%%
@@ -188,7 +210,7 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
     
     for index, lims_id in enumerate(exp_ids): 
 
-        print(f'\n\n=========== Analyzing experiment_id: {lims_id} ===========\n\n')
+        print(f'\n\n=========== Analyzing {cre[:3]}, experiment_id: {lims_id} ===========\n\n')
 
         '''
         for il in [5]: #range(num_planes):
@@ -222,6 +244,15 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
 
             this_sess.at[index, cols[range(8)]] = session_id, lims_id, mouse, date, cre, stage, area, depth
             '''
+        
+            #%% Compute frame duration
+            trace_time = image_data_this_exp['trace_timestamps'].iloc[0]
+            frame_dur = np.mean(np.diff(trace_time)) # difference in sec between frames
+            print(f'Frame duration {frame_dur:.3f} ms')
+            
+            # for mesoscope data:
+        #     if np.logical_or(frame_dur < .09, frame_dur > .1):
+        #         print(f'\n\nWARNING:Frame duration is unexpected!! {frame_dur}ms\n\n')
 
 
             #%% Set image-aligned traces in the format: frames x units x trials
@@ -252,11 +283,6 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
             np.equal(traces_fut[:,-2,102], c_all[102,-2,:]).sum()
             '''
 
-
-            # for traces_fut, set the vector of image indices shown on each trial (at time 0 of trial_data.iloc[0]['trace_timestamps'])
-            image_indices = image_trials['image_index'].values
-    #         image_indices.shape
-
             # image_indices = []
             # for itr in image_data_this_exp['stimulus_presentations_id'].unique():
             #     image_index = image_trials[image_trials['stimulus_presentations_id']==itr]['image_index'].values[0]
@@ -267,8 +293,8 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
                 this_sess.at[index, 'valid'] = False
                 print('0 neurons! skipping invalid experiment %d, index %d' %(int(lims_id), index))
 
-            elif len(image_trials)>0: # only run the analysis if there are omissions in the session. #else: # 
-                this_sess.at[index, ['n_trials', 'n_neurons']] = n_trials, n_neurons
+            elif len(image_indices)>0: # only run the analysis if there are omissions in the session. #else: # 
+                this_sess.at[index, ['n_trials', 'n_neurons', 'frame_dur']] = n_trials, n_neurons, frame_dur
                 print('===== plane %d: %d neurons; %d trials =====' %(index, n_neurons, n_trials))
 
 
@@ -359,6 +385,7 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
                 cbest_allFrs = np.full(svm_total_frs, np.nan)
 
 
+                
             numTrials = traces_fut.shape[2]  # numDataPoints = X_svm.shape[1] # trials             
             len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   
             numDataPoints = numTrials
@@ -375,7 +402,7 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
             #%% Use SVM to classify population activity on the gray-screen frame right before the omission vs. the activity on frame + nAftOmit after omission 
 
             ifr = -1
-            for nAftOmit in frames_svm: # nAftOmit = frames_svm[4]; ifr = 3
+            for nAftOmit in frames_svm: # nAftOmit=frames_svm[0]; ifr = 3
                 ifr = ifr+1
                 print('\n================ Running SVM on frame %d relative to trial onset ================\n' %nAftOmit)
 
@@ -393,7 +420,9 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
 
 
                 #%% Z score (make each neuron have mean 0 and std 1 across all trials)
-
+                
+                print('Z scoring acitivity traces!')
+                
                 # mean and std of each neuron across all trials (trials here mean both gray screen frames and omission frames)
                 m = np.mean(X_svm, axis=1)
                 s = np.std(X_svm, axis=1)
@@ -403,6 +432,7 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
 
                 # soft normalziation : neurons with sd<thAct wont have too large values after normalization                    
                 if softNorm==1:
+                    print(f'Using soft normalization. {thAct} will be added to std!')
                     s = s + thAct     
 
                 X_svm = ((X_svm.T - m) / s).T # units x trials
@@ -538,7 +568,7 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
 
 
 
-
+            ####################################################################################################################################                
             #%% Save SVM vars (for each experiment separately)
             ####################################################################################################################################                
 
@@ -581,7 +611,7 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
                 svm_vars.to_hdf(svmName, key='svm_vars', mode='w')
 
 
-    #%%                    
+                #%%                    
                 '''
                 # save arrays to h5:
                 with h5py.File(svmName, 'w') as f:                        
@@ -664,41 +694,21 @@ plt.xlabel('Frame after trial onset')
 
 import os
 import numpy as np
+import pandas as pd
 import pickle
 import sys
 import visual_behavior.data_access.loading as loading
 
 
-#%% Get the input arguments passed here from pbstools (in svm_init_images script)
-
-isess = int(sys.argv[1])
-filen = str(sys.argv[2])
-
-
 #%% Set SVM vars
 
 same_num_neuron_all_planes = 0 # if 1, use the same number of neurons for all planes to train svm
-numSamples = 50 # 10
+numSamples = 50 # 2
 saveResults = 1 # 0 #
 
 time_win = [0, .5] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 
-
-#%% Set the project and stage for sessions to be loaded # Note: it would be nice to pass the following two vars as python args in the python job (pbs tools); except I'm not sure how to pass an array as an argument.
-# we need these to set "stim_response_data" and "stim_presentations" dataframes
-
 project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
-
-# Set session_numbers from filen; NOTE: below will work only if a single element exists in session_numbers
-sn = os.path.basename(filen)[len('metadata_basic_'):].find('_'); 
-session_numbers = [int(os.path.basename(filen)[len('metadata_basic_'):][sn+1:])]
-
-print(f'The following sessions will be analyzed: {project_codes}, {session_numbers}')
-
-# r1 = filen.find('metadata_basic_'); r2 = filen.find(']_'); 
-# project_codes = [filen[r1+3:r2-1]]
-# session_numbers = [int(filen[filen.rfind('_[')+2:-1])] # may not work if multiple sessions are being passed as session_numbers
-
 
 
 
@@ -713,25 +723,48 @@ if not os.path.exists(dir_svm):
     os.makedirs(dir_svm)
 
 
+    
+    
+    
+#%% Get the input arguments passed here from pbstools (in svm_init_images script)
 
-#%%
-cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons']) #, 'frame_dur', 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
-if same_num_neuron_all_planes:        
-    cols_svm = ['frames_svm', 'thAct', 'numSamples', 'softNorm', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
-           'cbest_allFrs', 'w_data_allFrs', 'b_data_allFrs',
-           'perClassErrorTrain_data_allFrs', 'perClassErrorTest_data_allFrs',
-           'perClassErrorTest_shfl_allFrs', 'perClassErrorTest_chance_allFrs',
-           'inds_subselected_neurons_all', 'population_sizes_to_try', 'numShufflesN']
+isess = int(sys.argv[1])
+filen = str(sys.argv[2])
 
-else:    
-    cols_svm = ['frames_svm', 'thAct', 'numSamples', 'softNorm', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
-           'cbest_allFrs', 'w_data_allFrs', 'b_data_allFrs',
-           'perClassErrorTrain_data_allFrs', 'perClassErrorTest_data_allFrs',
-           'perClassErrorTest_shfl_allFrs', 'perClassErrorTest_chance_allFrs',
-           'testTrInds_allSamps_allFrs', 'Ytest_allSamps_allFrs', 'Ytest_hat_allSampsFrs_allFrs']
 
-                
-        
+
+
+#%% Use below for VIP and SST, since concatenated_stimulus_response_dfs exists for them.
+'''
+#%% Set session_numbers from filen; NOTE: below will work only if a single element exists in session_numbers
+
+sn = os.path.basename(filen)[len('metadata_basic_'):].find('_'); 
+session_numbers = [int(os.path.basename(filen)[len('metadata_basic_'):][sn+1:])]
+
+print(f'The following sessions will be analyzed: {project_codes}, {session_numbers}')
+
+#%% Set the project and stage for sessions to be loaded # Note: it would be nice to pass the following two vars as python args in the python job (pbs tools); except I'm not sure how to pass an array as an argument.
+# we need these to set "stim_response_data" and "stim_presentations" dataframes
+# r1 = filen.find('metadata_basic_'); r2 = filen.find(']_'); 
+# project_codes = [filen[r1+3:r2-1]]
+# session_numbers = [int(filen[filen.rfind('_[')+2:-1])] # may not work if multiple sessions are being passed as session_numbers
+
+
+
+#%% Set "stim_response_data" and "stim_presentations" dataframes
+
+stim_response_dfs = loading.get_concatenated_stimulus_response_dfs(project_codes, session_numbers) # stim_response_data has cell response data and all experiment metadata
+experiments_table = loading.get_filtered_ophys_experiment_table() # functions to load cell response data and stimulus presentations metadata for a set of sessions
+
+# merge stim_response_dfs with experiments_table
+stim_response_data = stim_response_dfs.merge(experiments_table, on=['ophys_experiment_id', 'ophys_session_id'])
+# stim_response_data.keys()
+
+stim_presentations = loading.get_concatenated_stimulus_presentations(project_codes, session_numbers) # stim_presentations has stimulus presentations metadata for the same set of experiments
+# stim_presentations.keys()
+
+
+
 
 #%% Load the pickle file that includes the list of sessions and metadata
 
@@ -745,34 +778,105 @@ list_all_experiments_valid = dict_se['list_all_experiments_valid']
 
 
 
-#%% Set the current session to be analyzed, and its metada
+#%% Set the session to be analyzed, and its metada
 
 session_id = int(list_all_sessions_valid[isess])
 data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
 
 
-
-
-
-#%% Set "stim_response_data" and "stim_presentations" dataframes
-
-stim_response_dfs = loading.get_concatenated_stimulus_response_dfs(project_codes, session_numbers) # stim_response_data has cell response data and all experiment metadata
-
-# merge stim_response_dfs with experiments_table
-experiments_table = loading.get_filtered_ophys_experiment_table() # functions to load cell response data and stimulus presentations metadata for a set of sessions
-stim_response_data = stim_response_dfs.merge(experiments_table, on=['ophys_experiment_id', 'ophys_session_id'])
-# stim_response_data.keys()
-
-stim_presentations = loading.get_concatenated_stimulus_presentations(project_codes, session_numbers) # stim_presentations has stimulus presentations metadata for the same set of experiments
-# stim_presentations.keys()
-
-
-
-
-#%% Set session_data and session_trials; # these two dataframes are linked by stimulus_presentations_id and ophys_session_id
+#%% Set session_data and session_trials for the current session. # these two dataframes are linked by stimulus_presentations_id and ophys_session_id
 
 session_data = stim_response_data[stim_response_data['ophys_session_id']==session_id].copy() # get cell response data for this session
 session_trials = stim_presentations[stim_presentations['ophys_session_id']==session_id].copy() # get stimulus presentations data for this session
+
+df_data = session_data
+'''
+        
+
+
+
+#%% We need below for slc, because stim_response_dfs could not be saved for it!
+
+#%% Load metadata_basic, and use it to set list_all_sessions_valid
+# note metadata is set in code: svm_init_images_pre
+'''
+dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
+dir_svm = os.path.join(dir_server_me, 'SVM')
+a = '_'.join(project_codes)
+filen = os.path.join(dir_svm, f'metadata_basic_{a}_slc')
+print(filen)
+'''
+pkl = open(filen, 'rb')
+metadata_basic = pickle.load(pkl)
+metadata_basic
+
+
+#%% Reset list_all_sessions_valid using metadata_basic
+# note for some sessions we cant set metadata_basic because the following code fails: Session_obj = LimsOphysSession(lims_id=session_id)
+# so, we use metadata_basic to reset list_all_sessions_valid
+
+list_all_sessions_valid_now = metadata_basic[metadata_basic['valid']]['session_id'].unique()
+# list_all_sessions_valid_now.shape, list_all_sessions_valid.shape
+list_all_sessions_valid = list_all_sessions_valid_now
+print(list_all_sessions_valid.shape)
+
+
+
+#%% Set the session to be analyzed, and its metada
+
+# isess = 0
+session_id = int(list_all_sessions_valid[isess])
+data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
+
+
+
+#%% Set stimulus_response_df_allexp, which includes stimulus_response_df (plus some metadata columns) for all experiments of a session
+
+from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+
+experiments_table = loading.get_filtered_ophys_experiment_table()
+experiment_ids_this_session = data_list['experiment_id'].values
+
+stimulus_response_df_allexp = pd.DataFrame()
+for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = experiment_ids_this_session[1]
+
+    if data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['valid']:
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
+        analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=False) # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True
+        stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
+        stim_response_df0 = stim_response_df
+    #     stim_response_df.keys()
+        c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name']
+        stim_response_df = stim_response_df0.loc[:,c]
+    else:
+        stim_response_df = pd.DataFrame([[np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]], columns=['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name']) 
+        
+    stim_response_df['ophys_session_id'] = data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['session_id']
+    stim_response_df['ophys_experiment_id'] = ophys_experiment_id # data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['experiment_id']
+    stim_response_df['area'] = data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['area']
+    stim_response_df['depth'] = data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['depth']
+    stim_response_df['valid'] = data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['valid']    
+    
+    
+    #### set the final stim_response_data_this_exp
+    
+    # add to stim_response_df columns with info on cre, date, etc 
+    e = experiments_table.reset_index('ophys_experiment_id')
+    # only keep certain columns of experiments_table, before merging it with stim_response_df
+    e = e.loc[:, ['ophys_experiment_id', 'ophys_session_id', 'cre_line', 'session_name', 'date_of_acquisition', 'session_type']]
+    stim_response_data_this_exp = stim_response_df.merge(e, on=['ophys_experiment_id', 'ophys_session_id'])    
+    # reorder columns
+    stim_response_data_this_exp = stim_response_data_this_exp.iloc[:, np.concatenate((np.arange(len(c), stim_response_data_this_exp.shape[-1]), np.arange(0, len(c))))]
+        
+    #### keep data from all experiments    
+    stimulus_response_df_allexp = pd.concat([stimulus_response_df_allexp, stim_response_data_this_exp])
+    
+stimulus_response_df_allexp
+stimulus_response_df_allexp.keys()
+
+df_data = stimulus_response_df_allexp
+session_trials = np.nan # we need it as an input to the function
+
 
 
 
@@ -780,7 +884,7 @@ session_trials = stim_presentations[stim_presentations['ophys_session_id']==sess
 
 #%% Set frames_svm
 
-trace_time = session_data.iloc[0]['trace_timestamps']
+trace_time = df_data.iloc[0]['trace_timestamps']
 r1 = np.argwhere((trace_time-time_win[0])>=0)[0][0]
 r2 = np.argwhere((trace_time-time_win[1])>=0)[0][0]
 
@@ -799,45 +903,38 @@ frames_svm = range(r1, r2)-samps_bef # range(-10, 30) # range(-1,1) # run svm on
 
 
 
+#%%
+cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'frame_dur']) #, 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
+if same_num_neuron_all_planes:        
+    cols_svm = ['frames_svm', 'thAct', 'numSamples', 'softNorm', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
+           'cbest_allFrs', 'w_data_allFrs', 'b_data_allFrs',
+           'perClassErrorTrain_data_allFrs', 'perClassErrorTest_data_allFrs',
+           'perClassErrorTest_shfl_allFrs', 'perClassErrorTest_chance_allFrs',
+           'inds_subselected_neurons_all', 'population_sizes_to_try', 'numShufflesN']
 
-#%% Run the function
+else:    
+    cols_svm = ['frames_svm', 'thAct', 'numSamples', 'softNorm', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
+           'cbest_allFrs', 'w_data_allFrs', 'b_data_allFrs',
+           'perClassErrorTrain_data_allFrs', 'perClassErrorTest_data_allFrs',
+           'perClassErrorTest_shfl_allFrs', 'perClassErrorTest_chance_allFrs',
+           'testTrInds_allSamps_allFrs', 'Ytest_allSamps_allFrs', 'Ytest_hat_allSampsFrs_allFrs']
+
+    
+    
+
+
+#%% Run the SVM function
 
 print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess+1, len(list_all_sessions_valid)))
 
-svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0)
+# Use below if you set session_data and session_trials above: for VIP and SST
+svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0)
+
+# Use below if you set stimulus_response_df_allexp above: for Slc (can be also used for other cell types too; but we need it for Slc, as the concatenated dfs could not be set for it)
+# svm_main_images_pbs(data_list, stimulus_response_df_allexp, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0)
 
 
 
 
 
-
-# below is all correct, but in terms of speed it didnt make much of a difference compared to loading the huge concatenated stim_response_dfs.
-'''
-#%% Set stimulus_response_df_allexp, which includes stimulus_response_df (plus some metadata columns) for all experiments of a session
-
-from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
-
-# %time
-stimulus_response_df_allexp = pd.DataFrame()
-for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = experiment_ids_this_session[1]
-    if data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['valid']:
-        dataset = loading.get_ophys_dataset(ophys_experiment_id)
-        analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=False) # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True
-        stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
-    #     stim_response_df.keys()
-
-        stim_response_df = stim_response_df.loc[:,['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name']]
-    else:
-        stim_response_df = pd.DataFrame([[np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]], columns=['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name']) 
-        
-    stim_response_df['session_id'] = data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['session_id']
-    stim_response_df['experiment_id'] = ophys_experiment_id # data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['experiment_id']
-    stim_response_df['area'] = data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['area']
-    stim_response_df['depth'] = data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['depth']
-    stim_response_df['valid'] = data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['valid']    
-    
-    stimulus_response_df_allexp = pd.concat([stimulus_response_df_allexp, stim_response_df])
-    
-stimulus_response_df_allexp
-'''
 

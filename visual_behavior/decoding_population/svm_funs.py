@@ -136,7 +136,7 @@ def crossValidateModel(X, Y, modelFn, **options):
     ## %%%%%
     cls = [0]
     num_classes = len(np.unique(Y)) # 2
-    while len(cls) < num_classes: # make sure both classes exist in YTrain    
+    while len(cls) < num_classes: # make sure all classes exist in YTrain    
         if shflTrs==1: # shuffle trials to break any dependencies on the sequence of trails; Also since we take the first 90% of trials as training and the last 10% as testing, for each run of this code we want to make sure we use different sets of trials as testing and training.
             print('shuffling trials in crossValidateModel')
             shfl = rng.permutation(np.arange(0, numObservations))
@@ -160,6 +160,10 @@ def crossValidateModel(X, Y, modelFn, **options):
         XTrain = Xs[np.arange(0, int((kfold-1.)/kfold*numObservations)), :]
         XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :]
     
+    
+#         print(f'YTrain: n_trials of each class: {[sum(YTrain==irng) for irng in range(num_classes)]}')
+#         print(f'YTest: n_trials of each class: {[sum(YTest==irng) for irng in range(num_classes)]}')
+        
     
         # Fit the classifier
         results = modelFn(XTrain, YTrain, XTest, YTest, **options)
@@ -208,8 +212,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
         return perClassEr
     '''
 
-    #%%    
-    # set range of c (regularization parameters) to check    
+    #%% set range of c (regularization parameters) to check    
     if np.isnan(cbest).all(): # we need to set cbest
         bestcProvided = False        
         if regType == 'l1':
@@ -218,7 +221,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
             cvect = 10**(np.arange(-4, 6, 0.2)) / numDataPoints
         elif regType == 'l2':
             print('\n-------------- Running l2 svm classification --------------\r') 
-            cvect = 10**(np.arange(-6, 6, 0.2)) / numDataPoints          
+            cvect = 10**(np.arange(-6, 6, 0.999)) / numDataPoints          
         nCvals = len(cvect)
 #        print('try the following regularization values: \n', cvect
         # formattedList = ['%.2f' % member for member in cvect]
@@ -259,8 +262,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
 #            numTrials = X.shape[2]
     
     
-    #%%
-    
+    #%%    
     num_classes = len(np.unique(Y))
     
     numTrials = X.shape[1]
@@ -271,8 +273,10 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     X0 = X + 0 # units x trials
     Y0 = Y + 0
     
+    print(f'Y: n_trials of each class: {[sum(Y0==irng) for irng in range(num_classes)]}')
+
     
-    #%%    
+    #%% Initiate vars   
     ########################################################################################################################################################################
     ########################################################################################################################################################################
 #    nFrs = np.shape(X)[0]

@@ -13,20 +13,12 @@ Created on Thu Oct 9 12:29:43 2020
 #%% Sessions corresponding to project and stage below will be used in svm_images analysis
 
 project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
-session_numbers = [1]
+session_numbers = [-10] #[4] # for slc, set to a value <0 (because for slc the concatenated stim response dfs could not be saved, so we have to load a different metadata file below)
 
 
 #%%
 import os
 import pickle
-
-# import itertools
-# import numpy as np
-# import pandas as pd
-# import scipy as sp
-# import matplotlib.pyplot as plt
-# import seaborn as sns
-
 
 
 #%% Load the pickle file which includes session and metadata information.
@@ -34,16 +26,25 @@ import pickle
 dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
 dir_svm = os.path.join(dir_server_me, 'SVM')
 a = '_'.join(project_codes)
-b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
+if session_numbers[0]<0:
+    b = 'slc'
+else:
+    b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
 filen = os.path.join(dir_svm, f'metadata_basic_{a}_{b}')
 print(filen)
 
 
-pkl = open(filen, 'rb')
-dict_se = pickle.load(pkl)
-# metadata_basic = pickle.load(pkl)
+### load the pickle file
+if session_numbers[0]>0:
+    pkl = open(filen, 'rb')
+    dict_se = pickle.load(pkl)
+    # metadata_basic = pickle.load(pkl)
 
-list_all_sessions_valid = dict_se['list_all_sessions_valid']
+    list_all_sessions_valid = dict_se['list_all_sessions_valid']
+else:
+    pkl = open(filen, 'rb')
+    metadata_basic = pickle.load(pkl)
+    list_all_sessions_valid = metadata_basic[metadata_basic['valid']]['session_id'].unique()
 
 
 
@@ -144,11 +145,18 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # sessio
 #%% save the dataframe to mongo (make every row a 'document' or entry)¶
 # This might be slow for a big table, but you only need to do it once
 
+project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+session_numbers = [4]
+
+import numpy as np
+import visual_behavior.data_access.loading as loading
+stim_response_dfs = loading.get_concatenated_stimulus_response_dfs(project_codes, session_numbers) # stim_response_data has cell response data and all experiment metadata
+
 df = stim_response_dfs
 print(df.shape)
 
-from visual_behavior import database
 
+from visual_behavior import database
 
 conn = database.Database('visual_behavior_data')
 collection_name = f'{project_codes}_{session_numbers}' # 'test_table'
@@ -158,10 +166,15 @@ print(collection_name)
 
 
 # if kernel stops, use below to find the last entry (or 1 to the last just to be safe), and resume running the code below to save the remaining data to mongo
-# alle = collection.find({}); alle[alle.count()-2]
+# alle = collection.find({})
+# print(alle.count())
+# print(alle.count() / df.shape[0])
+# alle[alle.count()-2]
+
+# 1202985
 
 # for idx,row in df.iterrows():
-for idx in np.arange(323266, len(df)):  
+for idx in np.arange(alle.count()-2, len(df)):  
     row = df.iloc[idx]
     # run every document through the 'clean_and_timestamp' function.
     # this function ensures that all datatypes are good for mongo, then adds an additional field with the current timestamp
