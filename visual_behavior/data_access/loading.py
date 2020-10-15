@@ -10,6 +10,7 @@ from visual_behavior.data_access import utilities
 import visual_behavior.database as db
 
 import os
+import glob
 import h5py  # for loading motion corrected movie
 import numpy as np
 import pandas as pd
@@ -504,7 +505,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         cache = get_visual_behavior_cache()
         ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
         movie_predictions = get_behavior_movie_predictions_for_session(ophys_session_id)
-        movie_predictions = pd.DataFrame(movie_predictions)
         movie_predictions.index.name = 'frame_index'
         movie_predictions['timestamps'] = self.behavior_movie_timestamps[:len(
             movie_predictions)]  # length check will trim off spurious timestamps at the end
@@ -713,15 +713,10 @@ def get_behavior_movie_predictions_for_session(ophys_session_id):
     :param ophys_session_id: ophys_session_id
     :return: dictionary of behavior prediction values
     """
-    model_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/lick_detection_validation/models/six_class_model'
-    session_file = [file for file in os.listdir(model_output_dir) if
-                    (str(ophys_session_id) in file) and ('predictions' in file)]
+    model_output_dir = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/lick_detection_validation/model_predictions'
+    predictions_path = glob.glob(os.path.join(model_output_dir, 'predictions*osid={}*'.format(ophys_session_id)))[0]
     try:
-        data = np.load(os.path.join(model_output_dir, session_file[0]))
-        keys = ['groom_reach_with_contact', 'groom_reach_without_contact', 'lick_with_contact',
-                'lick_without_contact', 'no_contact', 'paw_contact']
-        values = data['all_preds'].T
-        movie_predictions = dict(zip(keys, values))
+        movie_predictions = pd.read_csv(predictions_path)
     except Exception as e:
         print('could not behavior movie model predictions for ophys_session_id', ophys_session_id)
         print(e)
