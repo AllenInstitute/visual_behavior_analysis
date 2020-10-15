@@ -836,6 +836,7 @@ from visual_behavior.ophys.response_analysis.response_analysis import ResponseAn
 
 experiments_table = loading.get_filtered_ophys_experiment_table()
 experiment_ids_this_session = data_list['experiment_id'].values
+c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name']
 
 stimulus_response_df_allexp = pd.DataFrame()
 for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = experiment_ids_this_session[1]
@@ -845,8 +846,7 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
         analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=False) # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True
         stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
         stim_response_df0 = stim_response_df
-    #     stim_response_df.keys()
-        c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name']
+    #     stim_response_df.keys()        
         stim_response_df = stim_response_df0.loc[:,c]
     else:
         stim_response_df = pd.DataFrame([[np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]], columns=['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name']) 
