@@ -23,7 +23,7 @@ from svm_funs import *
 
 
 #%%
-def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0):
+def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, labels2ana=0, same_num_neuron_all_planes=0):
 
     
     #%% Set SVM vars
@@ -61,23 +61,6 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
     
         
     #%% Set initial vars
-
-#     #### set frames_svm
-#     trace_time = stim_response_data.iloc[0]['trace_timestamps']
-#     r1 = np.argwhere((trace_time-time_win[0])>=0)[0][0]
-#     r2 = np.argwhere((trace_time-time_win[1])>=0)[0][0]
-
-#     # set samps_bef and samps_aft: on the image-aligned traces, samps_bef frames were before the image, and samps_aft-1 frames were after the image
-#     samps_bef = r1
-#     samps_aft = len(trace_time)-r1
-
-#     frames_svm = range(r1, r2)-samps_bef # range(-10, 30) # range(-1,1) # run svm on these frames relative to trial (image/omission) onset.
-#     print(frames_svm)
-
-#     # samps_bef (=40) frames before omission ; index: 0:39
-#     # omission frame ; index: 40
-#     # samps_aft - 1 (=39) frames after omission ; index: 41:79
-
     
     svm_total_frs = len(frames_svm)    
     now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")    
@@ -97,11 +80,19 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
 
     #%% set the vector of image indices for each trial (flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
     u, u_i = np.unique(image_data['stimulus_presentations_id'].values, return_index=True)
-    itrs = image_data.iloc[u_i,:] # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
-    image_indices = itrs['image_index'].values
+    image_trials = image_data.iloc[u_i,:] # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
+    image_indices = image_trials['image_index'].values
+    # set image_index of the previous flash (image_indices is the image index of the flash that occurred at time 0; image_indices_previous_flash is the image index of the flash that occurred 750ms before.)
+    image_indices_previous_flash = np.concatenate(([np.nan], image_indices))[:-1]
+#     image_indices.shape, image_indices_previous_flash.shape
+#     np.equal(image_indices[:-1], image_indices_previous_flash[1:]).sum()
     
-    
-    
+    if labels2ana == 0:
+        image_labels = image_indices
+    elif labels2ana == -1:
+        image_labels = image_indices_previous_flash
+        
+        
     
     #%% If session_data and session_trials are given given as input:
     '''
@@ -247,6 +238,8 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
         
             #%% Compute frame duration
             trace_time = image_data_this_exp['trace_timestamps'].iloc[0]
+            samps_bef = np.argwhere(trace_time==0)[0][0]
+            
             frame_dur = np.mean(np.diff(trace_time)) # difference in sec between frames
             print(f'Frame duration {frame_dur:.3f} ms')
             
@@ -267,6 +260,18 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
             traces_fut = np.reshape(traces, (n_frames,  n_neurons, n_trials), order='F')
     #         traces_fut.shape # frames x neurons x trials
 
+    
+        
+            #%% Take care of nan values in image_labels (it happens if we are decoding the previous or next image), and remove them frome traces and image_labels
+            if labels2ana != 0:
+                masknan = ~np.isnan(image_labels)
+                # remove the nan from labels and traces
+                image_labels = image_labels[masknan]
+                traces_fut = traces_fut[:,:,masknan]
+                # reset n_trials
+                n_trials = traces_fut.shape[2] 
+                
+        
 
             # double check reshape above worked fine.
             '''
@@ -293,7 +298,7 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
                 this_sess.at[index, 'valid'] = False
                 print('0 neurons! skipping invalid experiment %d, index %d' %(int(lims_id), index))
 
-            elif len(image_indices)>0: # only run the analysis if there are omissions in the session. #else: # 
+            elif len(image_labels)>0: # only run the analysis if there are omissions in the session. #else: # 
                 this_sess.at[index, ['n_trials', 'n_neurons', 'frame_dur']] = n_trials, n_neurons, frame_dur
                 print('===== plane %d: %d neurons; %d trials =====' %(index, n_neurons, n_trials))
 
@@ -410,7 +415,7 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
                 m = traces_fut[samps_bef + nAftOmit,:,:] # units x trials ; neural activity on the frame of omission
 
                 # y
-                m_y = image_indices
+                m_y = image_labels
 
                 # now set the x matrix for svm
                 X_svm = m # units x trials
@@ -599,10 +604,12 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
             cre_now = cre[:cre.find('-')]
             # mouse, session, experiment: m, s, e
             if same_num_neuron_all_planes:
-                name = '%s_m-%d_s-%d_e-%s_%s_sameNumNeuronsAllPlanes_%s' %(cre_now, mouse, session_id, lims_id, svmn, now)
+#                 name = '%s_m-%d_s-%d_e-%s_%s_sameNumNeuronsAllPlanes_%s' %(cre_now, mouse, session_id, lims_id, svmn, now)
+                name = '%s_m-%d_s-%d_e-%s_%s_frames%dto%d_sameNumNeuronsAllPlanes_%s' %(cre_now, mouse, session_id, lims_id, svmn, frames_svm[0], frames_svm[-1], now) 
             else:
-                name = '%s_m-%d_s-%d_e-%s_%s_%s' %(cre_now, mouse, session_id, lims_id, svmn, now) 
-
+#                 name = '%s_m-%d_s-%d_e-%s_%s_%s' %(cre_now, mouse, session_id, lims_id, svmn, now) 
+                name = '%s_m-%d_s-%d_e-%s_%s_frames%dto%d_%s' %(cre_now, mouse, session_id, lims_id, svmn, frames_svm[0], frames_svm[-1], now) 
+                
             if saveResults:
                 print('Saving .h5 file')
                 svmName = os.path.join(dir_svm, name + '.h5') # os.path.join(d, svmn+os.path.basename(pnevFileName))
@@ -702,11 +709,12 @@ import visual_behavior.data_access.loading as loading
 
 #%% Set SVM vars
 
+labels2ana = 0 # 0 (default): decode current image.    -1: decode previous image.    1: decode next image.
 same_num_neuron_all_planes = 0 # if 1, use the same number of neurons for all planes to train svm
 numSamples = 50 # 2
 saveResults = 1 # 0 #
 
-time_win = [0, .5] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
+time_win = [-.3, 0] #[0, .5] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 
 project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
 
@@ -889,8 +897,8 @@ r1 = np.argwhere((trace_time-time_win[0])>=0)[0][0]
 r2 = np.argwhere((trace_time-time_win[1])>=0)[0][0]
 
 # set samps_bef and samps_aft: on the image-aligned traces, samps_bef frames were before the image, and samps_aft-1 frames were after the image
-samps_bef = r1
-samps_aft = len(trace_time)-r1
+samps_bef = np.argwhere(trace_time==0)[0][0] #r1
+samps_aft = len(trace_time)-samps_bef 
 
 frames_svm = range(r1, r2)-samps_bef # range(-10, 30) # range(-1,1) # run svm on these frames relative to trial (image/omission) onset.
 # print(frames_svm)
@@ -928,7 +936,7 @@ else:
 print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess+1, len(list_all_sessions_valid)))
 
 # Use below if you set session_data and session_trials above: for VIP and SST
-svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0)
+svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, labels2ana=0, same_num_neuron_all_planes=0)
 
 # Use below if you set stimulus_response_df_allexp above: for Slc (can be also used for other cell types too; but we need it for Slc, as the concatenated dfs could not be set for it)
 # svm_main_images_pbs(data_list, stimulus_response_df_allexp, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0)

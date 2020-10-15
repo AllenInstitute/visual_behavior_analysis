@@ -14,6 +14,7 @@ Created on Thu Oct 9 12:29:43 2020
 
 project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 session_numbers = [-10] #[4] # for slc, set to a value <0 (because for slc the concatenated stim response dfs could not be saved, so we have to load a different metadata file below)
+cre2ana = 'slc' # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
 
 
 #%%
@@ -27,7 +28,7 @@ dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
 dir_svm = os.path.join(dir_server_me, 'SVM')
 a = '_'.join(project_codes)
 if session_numbers[0]<0:
-    b = 'slc'
+    b = cre2ana
 else:
     b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
 filen = os.path.join(dir_svm, f'metadata_basic_{a}_{b}')

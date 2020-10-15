@@ -9,12 +9,6 @@ Created on Thu Oct 9 12:19:43 2020
 @author: farzaneh
 """
 
-#%% Stimulus response data from the project and stage below will be loaded to set list of sessions
-# this is to be used for svm_images analysis.
-project_codes = ['VisualBehaviorMultiscope']
-session_numbers = [6] #4
-
-
 #%%
 import os
 import numpy as np
@@ -25,11 +19,23 @@ import visual_behavior.data_access.loading as loading
 from set_metadata_basic import *
 
 
-#%% functions to load cell response data and stimulus presentations metadata for a set of sessions
-# experiments_table = loading.get_filtered_ophys_experiment_table()
+
+####################################################################################################
+####################################################################################################
+####################################################################################################
+#%% Set list of sessions for a given session stage, using concatenated stimulus_response_dfs.
+####################################################################################################
+####################################################################################################
+####################################################################################################
+
+#%% Stimulus response data from the project and stage below will be loaded to set list of sessions
+# this is to be used for svm_images analysis.
+project_codes = ['VisualBehaviorMultiscope']
+session_numbers = [6] #4
 
 
 #%% Set "stimulus_response_data" and "stim_presentations" dataframes   #this can be slow for larger amounts of data. limiting to non-mesoscope production codes is faster.
+
 #%time 
 stim_response_dfs = loading.get_concatenated_stimulus_response_dfs(project_codes, session_numbers) # stimulus_response_data has cell response data and all experiment metadata
 
@@ -80,10 +86,16 @@ f.close()
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
-#%% We need below for slc, because stim_response_dfs could not be saved for it!
+#%% Set list of sessions out of experiments_table, for a given cre line
+# We need below for slc, because stim_response_dfs could not be saved for it!
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
+
+cre_full = 'Vip-IRES-Cre' # 'Slc17a7-IRES2-Cre' # 'Sst-IRES-Cre' # 
+
+cre2ana = cre_full[:3].lower() #'slc' 
+
 
 #%% Set metadata_basic, and use it to set list_all_sessions_valid
 
@@ -92,7 +104,7 @@ experiments_table.shape
 
 ##### get experiments_table for Slc mice, mesoscope data
 a = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope']
-experiments_table_slc = a[a['cre_line']=='Slc17a7-IRES2-Cre']
+experiments_table_slc = a[a['cre_line']==cre_full]
 experiments_table_slc = experiments_table_slc.reset_index('ophys_experiment_id')
 experiments_table_slc.shape
 
@@ -111,6 +123,7 @@ metadata_basic = set_metadata_basic(list_all_sessions_valid, list_all_experiment
 print(metadata_basic)
 
 
+
 #%% save metadata in a pkl file
 
 dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
@@ -118,7 +131,7 @@ dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
 dir_svm = os.path.join(dir_server_me, 'SVM')
 # filen = os.path.join(dir_svm, f'sessions_experiments_{project_codes}_{session_numbers}')
 a = '_'.join(project_codes)
-b = 'slc'
+b = cre2ana
 filen = os.path.join(dir_svm, f'metadata_basic_{a}_{b}')
 print(filen)
 
