@@ -387,7 +387,23 @@ def add_epoch_times(df, time_column='start_time', epoch_duration_mins=10):
     return df
 
 
+def get_tidy_dff_traces(dataset):
+    '''
+    returns a tidy formatted version of the dff_traces dataframe
+    '''
+    dff_dfs = []
+    for csid in dataset.cell_specimen_ids:
+        dff_dfs.append(
+            pd.DataFrame({
+                'timestamps': dataset.ophys_timestamps,
+                'cell_specimen_id': [csid] * len(dataset.ophys_timestamps),
+                'dff': dataset.dff_traces.loc[csid]['dff'],
+            })
+        )
+    return pd.concat(dff_dfs)
+
 # INPLACE VERSIONS ###
+
 
 def convert_licks_inplace(licks_df):
     '''

@@ -404,7 +404,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def metadata(self):
         metadata = super().metadata
         # reset ophys frame rate for accuracy & to account for mesoscope resampling
-        # metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean() # causes recursion error
+        # causes recursion error
+        # metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
         if 'donor_id' not in metadata.keys():
             metadata['donor_id'] = metadata.pop('LabTracks_ID')
             metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
@@ -541,7 +542,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
     dataset = BehaviorOphysDataset(api, include_invalid_rois)
-    print(dataset.analysis_folder)
+    print('extracting cached data from {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
