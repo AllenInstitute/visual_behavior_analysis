@@ -274,7 +274,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
                                                                                     analysis_cache_dir))
             print('creating new analysis folder')
-            m = self.dataset.metadata
+            m = self.metadata
             date = m['experiment_datetime']
             date = str(date)[:10]
             date = date[2:4] + date[5:7] + date[8:10]
@@ -380,10 +380,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def ophys_timestamps(self):
-        if super().metadata['rig_name'] == 'MESO.1':
-            self._ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
-        else:
-            self._ophys_timestamps = super().ophys_timestamps
+        self._ophys_timestamps = super().ophys_timestamps
         return self._ophys_timestamps
 
     @property
