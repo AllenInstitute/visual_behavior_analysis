@@ -23,7 +23,7 @@ from general_funs import *
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 
-def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, same_num_neuron_all_planes, time_win, cols, analysis_dates, doPlots=0):
+def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0):
     
     num_classes = 8 # decoding 8 images
     num_planes = 8
@@ -35,6 +35,7 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, same_num_ne
     exp_ids = data_list['experiment_id'].values
 #     frame_dur = np.array([0.093]) # sec (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)    
     
+    frames_svm = np.array(frames_svm)
     numFrames = len(frames_svm)
     
     
@@ -78,9 +79,9 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, same_num_ne
 
             # mouse, session, experiment: m, s, e
             if analysis_dates[0] == '':
-                name = '(.*)_s-%d_e-%s_%s_.' %(session_id, lims_id, svmn)
+                name = '(.*)_s-%d_e-%s_%s_frames%dto%d_.' %(session_id, lims_id, svmn, frames_svm[0], frames_svm[-1])
             else:
-                name = '(.*)_s-%d_e-%s_%s_%s_.' %(session_id, lims_id, svmn, analysis_dates[0])
+                name = '(.*)_s-%d_e-%s_%s_frames%dto%d_%s_.' %(session_id, lims_id, svmn, frames_svm[0], frames_svm[-1], analysis_dates[0])
             
             svmName ,_ = all_sess_set_h5_fileName(name, dir_svm, all_files=0)
             
@@ -131,6 +132,7 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, same_num_ne
             if np.in1d(svm_vars.keys(), 'frame_dur').any(): # svm code was run without setting frame_dur at first.
                 frame_dur = svm_vars.iloc[0]['frame_dur']                
                 print(f'Frame duration {frame_dur} ms')
+                frame_dur = np.round(frame_dur, 3)
 #                 if np.logical_or(frame_dur < .089, frame_dur > .1):
 #                     sys.exit(f'\n\nFrame duration is unexpected!! {frame_dur}ms\n\n')
             else: # for mesoscope data
@@ -235,54 +237,32 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, same_num_ne
             # in the svm code used for flash/omission vs. gray, we would compute the baseline and subtract it out.
             # here, we are just taking the average of the 750ms time points after the image
 
-            # Note: if you end up using events in the decoding analysis, you should add the baseline parts back. 
-
-            samps_bef = -frames_svm[0] 
-            samps_aft = frames_svm[-1]+1 
-
-            list_times = set_frame_window_flash_omit(time_win, samps_bef, frame_dur)
-            list_times[np.in1d(list_times, frames_svm)]                
-#                 list_times = frames_svm
+            # NOTE: if you end up using events in the decoding analysis, you should add the baseline parts of the code back. 
+            
+            if np.in1d([-1,1], np.sign(frames_svm)).all(): # frames_svm includes both negative and positive values; ie svm was trained on some frames before and some frames after the trial onset.
+                samps_bef_here = -frames_svm[0] # relative to svm output traces (eg av_train_data)
+            else:
+                samps_bef_here = 0
+            if type(time_win)==str: # time_win = 'frames_svm' means : use frames_svm to quantify image signal
+                time_win_frames = frames_svm + samps_bef_here # these indices will be applied to svm trace outputs.
+            else:                                
+                time_win_frames = set_frame_window_flash_omit(time_win, samps_bef_here, frame_dur)
+                time_win_frames[np.in1d(time_win_frames, frames_svm)]                
+            
+            print(f'frames_svm: {frames_svm}')
+            print(f'time_win_frames for quantification: {time_win_frames}')
+            
 
             # concatenate CA traces for training, testing, shfl, and chance data, each a column in the matrix below; to compute their peaks all at once.
             CA_traces = np.vstack((av_train_data, av_test_data, av_test_shfl, av_test_chance)).T # times x 4
+#             print(CA_traces.shape)
 
-
-            peak_amp_trainTestShflChance = np.nanmean(CA_traces[list_times], axis=0)
+            peak_amp_trainTestShflChance = np.nanmean(CA_traces[time_win_frames], axis=0)
 
 
             this_sess.at[index, ['peak_amp_trainTestShflChance']] = [peak_amp_trainTestShflChance] # 4
 
 
-
-
-
-            #%% Interpolate the class accur traces every 3ms (instead of the original one that is 93ms)
-            '''
-            kind = 'linear' #'quadratic' # 
-
-            av_train_data_new, xnew, x = interp_imaging(av_train_data, samps_bef, samps_aft, kind) # x and x_new: time (sec) 
-            av_test_data_new, _, _ = interp_imaging(av_test_data, samps_bef, samps_aft, kind)
-            av_test_shfl_new, _, _ = interp_imaging(av_test_shfl, samps_bef, samps_aft, kind)
-            av_test_chance_new, _, _ = interp_imaging(av_test_chance, samps_bef, samps_aft, kind)
-
-            sd_train_data_new, xnew, x = interp_imaging(sd_train_data, samps_bef, samps_aft, kind)
-            sd_test_data_new, _, _ = interp_imaging(sd_test_data, samps_bef, samps_aft, kind)
-            sd_test_shfl_new, _, _ = interp_imaging(sd_test_shfl, samps_bef, samps_aft, kind)
-            sd_test_chance_new, _, _ = interp_imaging(sd_test_chance, samps_bef, samps_aft, kind)
-
-            av_w_data_new, _, _ = interp_imaging(av_w_data, samps_bef, samps_aft, kind)
-            av_b_data_new, _, _ = interp_imaging(av_b_data, samps_bef, samps_aft, kind)
-
-            meanX_allFrs_new = np.full((len(xnew), n_neurons), np.nan)
-            stdX_allFrs_new = np.full((len(xnew), n_neurons), np.nan)
-            for ine in range(meanX_allFrs.shape[1]):
-                meanX_allFrs_new[:, ine], _, _ = interp_imaging(meanX_allFrs[:,ine], samps_bef, samps_aft, kind)
-                stdX_allFrs_new[:, ine], _, _ = interp_imaging(stdX_allFrs[:,ine], samps_bef, samps_aft, kind)
-            '''
-
-
-#                this_sess.at[index, ['n_trials', 'n_neurons', 'meanX_allFrs', 'stdX_allFrs']] = [n_trials, n_neurons, meanX_allFrs, stdX_allFrs] 
             this_sess.at[index, ['n_trials', 'n_neurons', 'frame_dur', 'meanX_allFrs', 'stdX_allFrs']] = [n_trials, n_neurons, frame_dur, meanX_allFrs, stdX_allFrs] 
             this_sess.at[index, ['av_train_data', 'av_test_data', 'av_test_shfl', 'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl', 'sd_test_chance']] = [av_train_data, av_test_data, av_test_shfl, av_test_chance, sd_train_data, sd_test_data, sd_test_shfl, sd_test_chance]
 
@@ -353,20 +333,27 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, same_num_ne
 
             if 1: #doPlots:
 
-                samps_bef_time = (samps_bef+1) * frame_dur # 1 is added bc below we do np.arange(0,-samps_bef), so we get upto one value below samps_bef
-                samps_aft_time = samps_aft * frame_dur # frames_after_omission in svm_main # we trained the classifier until 30 frames after omission                    
-                x = np.unique(np.concatenate((np.arange(0, -samps_bef_time, -frame_dur)[0:samps_bef+1], np.arange(0, samps_aft_time, frame_dur)[0:samps_aft])))
+                if (np.sign(frames_svm)==-1).all(): # when frames_svm is all negative
+                    x = np.arange(frames_svm[0] * frame_dur, frames_svm[-1] * frame_dur, frame_dur)
+                else: 
+#                     samps_bef_here = -frames_svm[0] # relative to svm output traces (eg av_train_data)
+                    samps_aft_here = frames_svm[-1]+1 
 
+                    samps_bef_time = (samps_bef_here+1) * frame_dur # 1 is added bc below we do np.arange(0,-samps_bef), so we get upto one value below samps_bef
+                    samps_aft_time = samps_aft_here * frame_dur # frames_after_omission in svm_main # we trained the classifier until 30 frames after omission                    
+                    
+                    x = np.unique(np.concatenate((np.arange(0, -samps_bef_time, -frame_dur)[0:samps_bef_here+1], np.arange(0, samps_aft_time, frame_dur)[0:samps_aft_here])))
+                                    
                 import seaborn
                 import matplotlib.ticker as ticker                    
 
                 ###
                 plt.figure()  
 
-                h0 = plt.plot(x, av_train_data,'ko', x, av_train_data,'k-', label='train', markersize=3.5);
-                h1 = plt.plot(x, av_test_data,'ro', x, av_test_data,'r-', label='test', markersize=3.5);
-                h2 = plt.plot(x, av_test_shfl,'yo', x, av_test_shfl,'y-', label='shfl', markersize=3.5);
-                h3 = plt.plot(x, av_test_chance,'bo', x, av_test_chance,'b-',  label='chance', markersize=3.5);
+                h0 = plt.plot(x, av_train_data,'ko-', label='train', markersize=3.5);
+                h1 = plt.plot(x, av_test_data,'ro-', label='test', markersize=3.5);
+                h2 = plt.plot(x, av_test_shfl,'yo-', label='shfl', markersize=3.5);
+                h3 = plt.plot(x, av_test_chance,'bo-',  label='chance', markersize=3.5);
 
                 # errorbars (standard error across cv samples)   
                 alph = .3
@@ -386,19 +373,19 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, same_num_ne
 
 
                 ax = plt.gca()
-                xmj = np.arange(0, x[-1], .2)
+                xmj = np.round(np.arange(x[0], x[-1], .1), 3)
                 ax.set_xticks(xmj); # plt.xticks(np.arange(0,x[-1],.25)); #, fontsize=10)
                 ax.set_xticklabels(xmj, rotation=45)       
-                xmn = np.arange(.1, x[-1], .2)
+                xmn = np.round(np.arange(x[0]+.5, x[-1], .1), 3)
                 ax.xaxis.set_minor_locator(ticker.FixedLocator(xmn))
                 ax.tick_params(labelsize=10, length=6, width=2, which='major')
                 ax.tick_params(labelsize=10, length=5, width=1, which='minor')
             #    plt.xticklabels(np.arange(0,x[-1],.25))
 
 
-                plt.legend(handles=[h0[1],h1[1],h2[1],h3[1]], loc='center left', bbox_to_anchor=(1, .7), frameon=False, handlelength=.5, fontsize=12)
+                plt.legend(handles=[h0[0],h1[0],h2[0],h3[0]], loc='center left', bbox_to_anchor=(1, .7), frameon=False, handlelength=.5, fontsize=12)
                 plt.ylabel('% Classification accuracy', fontsize=12)
-                plt.xlabel('Time after image onset (sec)', fontsize=12)  
+                plt.xlabel('Time rel. image onset (sec)', fontsize=12)  
                 plt.title(f'{cre[:3]}, {area}, {depth}')
 
                 plt.grid(False) #    plt.box(on=None) #    plt.axis(True)

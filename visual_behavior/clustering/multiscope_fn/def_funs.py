@@ -350,6 +350,7 @@ def set_timetrace_flashesind_allmice_areas(samps_bef, samps_aft, frame_dur, doCo
 
 
 #%% Set time windows, in frame units, for computing flash and omission evoked responese
+# the output includes frame indices that are relative to "trace" begining; i.e. index on the trace whose time 0 is trace[samps_bef]. 
 
 def set_frame_window_flash_omit(peak_win, flash_win, flash_win_timing, samps_bef, frame_dur):
     

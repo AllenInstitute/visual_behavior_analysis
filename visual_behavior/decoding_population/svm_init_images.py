@@ -11,6 +11,22 @@ Created on Tue Oct 13 20:48:43 2020
 @author: farzaneh
 """
 
+#%% Set vars for the analysis
+
+# frames_svm = [0,1,2,3,4,5] # which svm files to load (this will be used to set svm file name) # (frames_svm also gets saved in svm_vars if svm could be run successfully on a session)
+frames_svm = [-3,-2,-1] # 
+cre2ana = 'slc'
+same_num_neuron_all_planes = 0
+saveResults = 1
+# session_numbers = [6] # ophys session stage corresponding to project_codes that we will load.
+
+# time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
+# set time_win to a string (any string) to use frames_svm as the window of quantification.
+time_win = 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # time_win = [-.25, 0] # [-0.279, -0.186, -0.093]
+
+
+
+#%%
 import os
 import pickle
 import numpy as np
@@ -20,28 +36,19 @@ import datetime
 
 from svm_main_images_post import *
 
-
-#%% ignore some warnings!
 import warnings
-warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning) # ignore some warnings!
+
 
 
 #%%
-cre2ana = 'slc'
-# session_numbers = [6] # ophys session stage corresponding to project_codes that we will load.
-same_num_neuron_all_planes = 0
-saveResults = 1
-
-time_win = [0, .6] # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
-frames_svm = np.array([0,1,2,3,4,5]) # this must match the value set in svm_main_images_pbs. (it gets saved in svm_vars if svm could be run successfully on a session; but we set it here too since svm_main_images_post needs to set the values of invalid experimetns to nan, and for that it needs to know the number of frames (which is len(frames_svm))
-
-
 project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
-
-
-#%%
 num_planes = 8
 analysis_dates = [''] # ['2020507'] #set to [''] if you want to load the latest file. # the date on which the svm files were saved.
+frame_dur = np.array([.093])
+# samps_bef = 5 #np.argwhere(trace_time==0)[0][0] # 
+# samps_aft = 8 #len(trace_time)-samps_bef #
+
 
 
 #%% Load the pickle file which includes session and metadata information.
@@ -87,7 +94,7 @@ for isess in np.arange(0, len(list_all_sessions_valid)):  # isess = 0
     session_id = int(list_all_sessions_valid[isess])
     data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
 
-    this_sess = svm_main_images_post(session_id, data_list, dir_svm, frames_svm, same_num_neuron_all_planes, time_win, cols, analysis_dates, doPlots=0)
+    this_sess = svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0)
 
     all_sess = all_sess.append(this_sess) 
     
@@ -95,10 +102,10 @@ print(len(all_sess))
 all_sess
 
     
-    
-##################################################################    
+       
 ##################################################################
 #%% Save all_sess
+################################################################## 
 
 # set this so you know what input vars you ran the script with
 cols = np.array(['time_win', 'same_num_neuron_all_planes', 'project_codes', 'session_numbers'])

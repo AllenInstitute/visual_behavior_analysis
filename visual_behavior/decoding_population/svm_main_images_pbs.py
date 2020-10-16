@@ -895,12 +895,17 @@ session_trials = np.nan # we need it as an input to the function
 #%% Set frames_svm
 
 trace_time = df_data.iloc[0]['trace_timestamps']
+
+# trace_time = np.array([-0.46631438, -0.3730515 , -0.27978863, -0.18652575, -0.09326288,
+#         0.        ,  0.09326288,  0.18652575,  0.27978863,  0.3730515 ,
+#         0.46631438,  0.55957726,  0.65284013])
+
 r1 = np.argwhere((trace_time-time_win[0])>=0)[0][0]
 r2 = np.argwhere((trace_time-time_win[1])>=0)[0][0]
 
 # set samps_bef and samps_aft: on the image-aligned traces, samps_bef frames were before the image, and samps_aft-1 frames were after the image
-samps_bef = np.argwhere(trace_time==0)[0][0] #r1
-samps_aft = len(trace_time)-samps_bef 
+samps_bef = np.argwhere(trace_time==0)[0][0] # 5
+samps_aft = len(trace_time)-samps_bef #8 
 
 frames_svm = range(r1, r2)-samps_bef # range(-10, 30) # range(-1,1) # run svm on these frames relative to trial (image/omission) onset.
 # print(frames_svm)
