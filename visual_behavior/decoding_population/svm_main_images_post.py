@@ -34,6 +34,7 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, same_num_ne
         
     exp_ids = data_list['experiment_id'].values
 #     frame_dur = np.array([0.093]) # sec (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)    
+    
     numFrames = len(frames_svm)
     
     

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Run this script to set the vars for making plots for the svm (images) analysis.
+Run this script to create all_sess, in which the svm results of all sessions are concatenated. We need this to make plots for the svm (images) analysis.
 
 SVM files are already saved (by running the svm_main_image_pbs) code.
 
@@ -27,12 +27,14 @@ warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 
 #%%
-session_numbers = [6] # ophys session stage corresponding to project_codes that we will load.
+cre2ana = 'slc'
+# session_numbers = [6] # ophys session stage corresponding to project_codes that we will load.
+same_num_neuron_all_planes = 0
+saveResults = 1
 
 time_win = [0, .6] # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
-same_num_neuron_all_planes = 0
 frames_svm = np.array([0,1,2,3,4,5]) # this must match the value set in svm_main_images_pbs. (it gets saved in svm_vars if svm could be run successfully on a session; but we set it here too since svm_main_images_post needs to set the values of invalid experimetns to nan, and for that it needs to know the number of frames (which is len(frames_svm))
-saveResults = 1
+
 
 project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
@@ -47,7 +49,7 @@ analysis_dates = [''] # ['2020507'] #set to [''] if you want to load the latest 
 dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
 dir_svm = os.path.join(dir_server_me, 'SVM')
 a = '_'.join(project_codes)
-b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
+b = cre2ana  # b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
 filen = os.path.join(dir_svm, f'metadata_basic_{a}_{b}')
 print(filen)
 
@@ -56,16 +58,19 @@ print(filen)
 #%% Load the pickle file that includes the list of sessions and metadata
 
 pkl = open(filen, 'rb')
-dict_se = pickle.load(pkl)
+# dict_se = pickle.load(pkl)
 metadata_basic = pickle.load(pkl)
 
-list_all_sessions_valid = dict_se['list_all_sessions_valid']
-list_all_experiments_valid = dict_se['list_all_experiments_valid']
-print(f'number of sessions: {len(list_all_sessions_valid)}')
+list_all_sessions_valid = metadata_basic[metadata_basic['valid']]['session_id'].unique()
+print(f'number of {cre2ana} sessions: {list_all_sessions_valid.shape[0]}')
+# list_all_sessions_valid = dict_se['list_all_sessions_valid']
+# list_all_experiments_valid = dict_se['list_all_experiments_valid']
+# print(f'number of sessions: {len(list_all_sessions_valid)}')
 
 
 
 #%% Set the columns in dataframe all_sess
+
 cols0 = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'frame_dur', 'meanX_allFrs', 'stdX_allFrs', 'av_train_data', 'av_test_data', 'av_test_shfl', 'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl', 'sd_test_chance', 'peak_amp_trainTestShflChance'])
 if same_num_neuron_all_planes:
     cols = np.concatenate((cols0, ['population_sizes_to_try'])) 
@@ -127,3 +132,22 @@ if saveResults:
     input_vars.to_hdf(allSessName, key='input_vars', mode='a')
     
                   
+        
+        
+        
+#%% rename svm files to add frames_svm to the file name
+'''
+name = '(.*)_%s_2020.' %(svmn)
+svmName ,_ = all_sess_set_h5_fileName(name, dir_svm, all_files=1)
+            
+for i in range(len(svmName)):
+    
+    oldname = svmName[i]
+    b = os.path.basename(oldname)
+    ind = b.find('_2020')
+    newname = os.path.join(dir_svm, f'{b[:ind]}_frames0to5{b[ind:]}')
+    print(newname)
+    print(oldname)
+    
+    os.rename(oldname, newname)
+'''    

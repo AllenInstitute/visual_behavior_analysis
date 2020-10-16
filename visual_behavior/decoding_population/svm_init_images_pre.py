@@ -18,6 +18,7 @@ import pickle
 import visual_behavior.data_access.loading as loading
 from set_metadata_basic import *
 
+project_codes = ['VisualBehaviorMultiscope']
 
 
 ####################################################################################################
@@ -30,7 +31,6 @@ from set_metadata_basic import *
 
 #%% Stimulus response data from the project and stage below will be loaded to set list of sessions
 # this is to be used for svm_images analysis.
-project_codes = ['VisualBehaviorMultiscope']
 session_numbers = [6] #4
 
 
@@ -92,7 +92,7 @@ f.close()
 ####################################################################################################
 ####################################################################################################
 
-cre_full = 'Vip-IRES-Cre' # 'Slc17a7-IRES2-Cre' # 'Sst-IRES-Cre' # 
+cre_full = 'Sst-IRES-Cre' # 'Vip-IRES-Cre' # 'Slc17a7-IRES2-Cre' # 
 
 cre2ana = cre_full[:3].lower() #'slc' 
 
@@ -116,6 +116,7 @@ list_all_experiments_valid = [experiments_table_slc[experiments_table_slc['ophys
 list_all_experiments_valid = np.array(list_all_experiments_valid, dtype=object)
 # [list_all_experiments_valid[i].shape for i in range(len(list_all_experiments_valid))]
 print(list_all_sessions_valid.shape)
+
 
 ##### set metadata_basic
 from set_metadata_basic import *

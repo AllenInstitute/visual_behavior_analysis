@@ -814,9 +814,11 @@ a = '_'.join(project_codes)
 filen = os.path.join(dir_svm, f'metadata_basic_{a}_slc')
 print(filen)
 '''
+
 pkl = open(filen, 'rb')
 metadata_basic = pickle.load(pkl)
 metadata_basic
+
 
 
 #%% Reset list_all_sessions_valid using metadata_basic
@@ -835,6 +837,7 @@ print(list_all_sessions_valid.shape)
 # isess = 0
 session_id = int(list_all_sessions_valid[isess])
 data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
+experiment_ids_this_session = data_list['experiment_id'].values
 
 
 
@@ -843,7 +846,6 @@ data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
 experiments_table = loading.get_filtered_ophys_experiment_table()
-experiment_ids_this_session = data_list['experiment_id'].values
 c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name']
 
 stimulus_response_df_allexp = pd.DataFrame()
