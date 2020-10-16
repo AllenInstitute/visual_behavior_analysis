@@ -274,7 +274,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
                                                                                     analysis_cache_dir))
             print('creating new analysis folder')
-            m = self.metadata
+            m = self.metadata.copy()
             date = m['experiment_datetime']
             date = str(date)[:10]
             date = date[2:4] + date[5:7] + date[8:10]
@@ -380,7 +380,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def ophys_timestamps(self):
-        self._ophys_timestamps = super().ophys_timestamps
+        if super().metadata['rig_name'] == 'MESO.1':
+            ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
+            self._ophys_timestamps = ophys_timestamps
+            # correct metadata frame rate
+            self._metadata['ophys_frame_rate'] = 1 / np.diff(ophys_timestamps).mean()
+        else:
+            self._ophys_timestamps = super().ophys_timestamps
         return self._ophys_timestamps
 
     @property
@@ -393,7 +399,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def metadata(self):
         metadata = super().metadata
         # reset ophys frame rate for accuracy & to account for mesoscope resampling
-        metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
+        # causes recursion error
+        # metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
         if 'donor_id' not in metadata.keys():
             metadata['donor_id'] = metadata.pop('LabTracks_ID')
             metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
@@ -530,6 +537,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
     dataset = BehaviorOphysDataset(api, include_invalid_rois)
+    print(dataset.analysis_folder) # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
