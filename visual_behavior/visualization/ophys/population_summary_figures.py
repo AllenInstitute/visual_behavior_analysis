@@ -419,19 +419,12 @@ def plot_mean_change_responses(df, vmax=0.3, colorbar=False, ax=None, save_dir=N
                     'change_response_matrix_' + cre_line + '_' + image_set + '_' + suffix)
 
 
-def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, folder=None, use_events=False,
-                              colorbar=True):
-    image_set = df.image_set.unique()[0]
-    cre_line = df.cre_line.unique()[0]
-    # trial_type = df.trial_type.unique()[0]
-    #     detectability = get_detectability()
-    #     d = detectability[detectability.image_set==image_set]
-    #     order = np.argsort(d.detectability.values)
-    #     images = d.image_name.values[order]
+def plot_tuning_curve_heatmap(df, vmax=0.3, sup_title=None, title=None, ax=None, save_dir=None, folder=None, use_events=False,
+                              colorbar=True, include_omitted=False):
     if 'image_name' in df.keys():
         image_name = 'image_name'
         suffix = '_flashes'
-        if 'omitted' in df.image_name.unique():
+        if ('omitted' in df.image_name.unique()) and (include_omitted is False):
             df = df[df.image_name != 'omitted']
     else:
         image_name = 'change_image_name'
@@ -465,16 +458,16 @@ def plot_tuning_curve_heatmap(df, vmax=0.3, title=None, ax=None, save_dir=None, 
                      vmin=0, vmax=vmax, robust=True, cbar=colorbar,
                      cbar_kws={"drawedges": False, "shrink": 1, "label": label}, ax=ax)
 
-    ax.set_title(cre_line, va='bottom', ha='center')
+    ax.set_title(title, va='bottom', ha='center')
     ax.set_xticklabels(images, rotation=90)
     ax.set_ylabel('cells')
     ax.set_yticks((0, response_matrix.shape[0]))
     ax.set_yticklabels((0, response_matrix.shape[0]), fontsize=14)
     if save_dir:
-        plt.suptitle('image set ' + image_set, x=0.46, y=0.99, fontsize=18)
+        plt.suptitle(sup_title, x=0.46, y=0.99, fontsize=18)
         fig.tight_layout()
         plt.gcf().subplots_adjust(top=0.9)
-        save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmap_' + cre_line + '_' + image_set)
+        save_figure(fig, figsize, save_dir, folder, 'tuning_curve_heatmap_' + sup_title + '_' + title)
     return ax
 
 
