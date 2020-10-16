@@ -226,7 +226,7 @@ class ResponseAnalysis(object):
                         how='left',
                         suffixes=('', '_duplicate')
                     ).drop(columns=['start_time_duplicate'])
-                except: #if it cant merge them in, make empty columns
+                except KeyError:  # if it cant merge them in, make empty columns
                     for column in columns_to_keep:
                         df[column] = None
         elif ('stimulus' in df_name) or ('omission' in df_name):

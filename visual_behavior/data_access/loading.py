@@ -92,6 +92,7 @@ def get_behavior_model_outputs_dir():
 def get_decoding_analysis_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
 
+
 def get_ophys_glm_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
@@ -372,7 +373,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def events(self):
         self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
-                                    'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
+                                     'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
                                     index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
 
@@ -1692,18 +1693,18 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
     else:
         suffix = ''
     if len(conditions) == 6:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] +'_'+ conditions[3] +'_'+ conditions[4] +'_'+ conditions[5] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + suffix + '.h5'
     elif len(conditions) == 5:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] +'_'+ conditions[3] +'_'+ conditions[4] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
             3] + suffix + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] +'_'+ conditions[2] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
     elif len(conditions) == 2:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[1] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
     elif len(conditions) == 1:
-        filename = 'mean_' + df_name +'_'+ project_code +'_'+ session_type +'_'+ conditions[0] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[0] + suffix + '.h5'
 
     return filename
 
