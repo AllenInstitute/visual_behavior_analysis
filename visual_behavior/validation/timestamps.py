@@ -52,15 +52,18 @@ def lick_timestamps_from_sync(ophys_experiment_id):
 
 def sync_timestamp_df(ophys_experiment_id):
     timestamps = get_sync_timestamps(ophys_experiment_id)
-    sync_timestamp_df = pd.DataFrame({'ophys_frames': len(timestamps['ophys_frames'].timestamps),
-                                      'stimulus_frames': len(timestamps['stimulus_frames'].timestamps),
-                                      'eye_tracking': len(timestamps['eye_tracking'].timestamps),
-                                      'behavior_mon': len(timestamps['behavior_monitoring'].timestamps),
-                                      'lick_times': len(timestamps['lick_times'].timestamps),
-                                      'stim_photodiode': len(timestamps['stim_photodiode'].timestamps),
-                                      'ophys_trigger': len(timestamps['ophys_trigger'].timestamps)},
-                                     index=[0])
-    return sync_timestamp_df
+    df = pd.DataFrame({'ophys_experiment_id': ophys_experiment_id,
+                       'ophys_session_id': loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id),
+                       'source' : 'sync',
+                       'ophys_frames': len(timestamps['ophys_frames'].timestamps),
+                       'stimulus_frames': len(timestamps['stimulus_frames'].timestamps),
+                       'eye_tracking': len(timestamps['eye_tracking'].timestamps),
+                       'behavior_mon': len(timestamps['behavior_monitoring'].timestamps),
+                       'lick_times': len(timestamps['lick_times'].timestamps),
+                       'stim_photodiode': len(timestamps['stim_photodiode'].timestamps),
+                       'ophys_trigger': len(timestamps['ophys_trigger'].timestamps)},
+                       index=[0])
+    return df
 
 
 def stim_timestamps_from_pkl(ophys_session_id):
@@ -83,10 +86,14 @@ def running_timestamps_from_pkl(ophys_session_id):
 
 def pkl_timestamps_df(ophys_session_id):
     pkl_data = loading.load_session_pkl_coredata(ophys_session_id)
-    pkl_timestamp_df = pd.DataFrame({"visual_stim_timestamps": len(pkl_data["time"]),
-                                     "running_timestamps": len(pkl_data["time"]),
-                                     "licks": len(pkl_data["licks"])}, index=[0])
-    return pkl_timestamp_df
+    df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                       "ophys_session_id": loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id),
+                       "source": "pkl",
+                       "visual_stim_timestamps": len(pkl_data["time"]),
+                       "running_timestamps": len(pkl_data["time"]),
+                       "licks": len(pkl_data["licks"])},
+                       index=[0])
+    return df
 
 
 def framecount_from_avi(avi_filepath):
@@ -123,6 +130,17 @@ def eye_tracking_timestamps_from_VBAdataset(ophys_experiment_id):
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     timestamps = np.asarray(dataset.eye_tracking["time"])
     return timestamps
+
+
+def VBA_timestamps_df(ophys_experiment_id):
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                       "ophys_session_id":loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id),
+                       "source": "VBA",
+                       "eye_tracking": len(np.asarray(dataset.eye_tracking["time"])),
+                       "behavior_mon": len(dataset.behavior_movie_timestamps)}, index=[0])
+    return df
+
 
 
 def physio_timestamps_from_SDK(ophys_experiment_id):
@@ -162,113 +180,109 @@ def eye_tracking_timestamps_from_SDK(ophys_experiment_id):
 
 
 def SDK_timestamps_df(ophys_experiment_id):
-    ophys_session_id = loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
     SDK_dataset = BehaviorOphysSession.from_lims(ophys_experiment_id)
-    physio = len(SDK_dataset.ophys_timestamps)
-    dff_trace = len(SDK_dataset.dff_traces.dff.values[0])
-    stim = len(SDK_dataset.stimulus_timestamps)
-    running = len(SDK_dataset.running_speed[0])
-    eye = len(SDK_dataset.eye_tracking["time"])
-    licks = len(SDK_dataset.licks)
-    df = pd.DataFrame({"ophys_session_id": ophys_session_id,
-                       "ophys_experiment_id": ophys_experiment_id,
-                       "physio": physio,
-                       "dff": dff_trace,
-                       "stimulus": stim,
-                       "running": running,
-                       "eye_tracking": eye,
-                       "licks": licks}, index=[0])
+    df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                       "ophys_session_id": loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id),
+                       "source": "SDK",
+                       "physio": len(SDK_dataset.ophys_timestamps),
+                       "dff": len(SDK_dataset.dff_traces.dff.values[0]),
+                       "stimulus": len(SDK_dataset.stimulus_timestamps),
+                       "running": len(SDK_dataset.running_speed[0]),
+                       "eye_tracking": len(SDK_dataset.eye_tracking["time"]),
+                       "licks": len(SDK_dataset.licks)}, index=[0])
     return df
 
 
 def running_timestamps_df(ophys_experiment_id):
     ophys_session_id = loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
-    sync_timestamps = len(stim_timestamps_from_sync(ophys_experiment_id))
-    pkl_timestamps = len(running_timestamps_from_pkl(ophys_session_id))
-    SDK_timestamps = len(running_timestamps_from_SDK(ophys_experiment_id))
-    df = pd.DataFrame({"ophys_session_id": ophys_session_id,
-                       "ophys_experiment_id": ophys_experiment_id,
-                       "sync": sync_timestamps,
-                       "pkl": pkl_timestamps,
-                       "SDK": SDK_timestamps}, index=[0])
+    df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                       "ophys_session_id": loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id),
+                       "sync": len(stim_timestamps_from_sync(ophys_experiment_id)),
+                       "pkl": len(running_timestamps_from_pkl(ophys_session_id)),
+                       "SDK": len(running_timestamps_from_SDK(ophys_experiment_id))}, index=[0])
     return df
 
 
 def eye_tracking_timestamps_df(ophys_experiment_id):
     ophys_session_id = loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
-    sync_timestamps = len(eye_tracking_timestamps_from_sync(ophys_experiment_id))
-    avi_framecount = eye_tracking_framecount_from_avi(ophys_session_id)
-    sdk_timestamps = len(eye_tracking_timestamps_from_SDK(ophys_experiment_id))
-    VBA = len(eye_tracking_timestamps_from_VBAdataset(ophys_experiment_id))
-    df = pd.DataFrame({"ophys_session_id": ophys_session_id,
-                       "ophys_experiment_id": ophys_experiment_id,
-                       "sync": sync_timestamps,
-                       "avi": avi_framecount,
-                       "SDK": sdk_timestamps,
-                       "VBA": VBA}, index=[0])
+    df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                       "ophys_session_id": ophys_session_id,
+                       "sync": len(eye_tracking_timestamps_from_sync(ophys_experiment_id)),
+                       "avi": eye_tracking_framecount_from_avi(ophys_session_id),
+                       "SDK": len(eye_tracking_timestamps_from_SDK(ophys_experiment_id)),
+                       "VBA": len(eye_tracking_timestamps_from_VBAdataset(ophys_experiment_id))}, index=[0])
     return df
 
 
 def behavior_monitoring_timestamps_df(ophys_experiment_id):
     ophys_session_id = loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
-    sync_timestamps = len(behaviormon_timestamps_from_sync(ophys_experiment_id))
-    avi_framecount = behavior_mon_framecount_from_avi(ophys_session_id)
-    VBA = len(behavior_mon_timestamps_from_VBAdataset(ophys_experiment_id))
-    df = pd.DataFrame({"ophys_session_id": ophys_session_id,
-                       "ophys_experiment_id": ophys_experiment_id,
-                       "sync": sync_timestamps,
-                       "avi": avi_framecount,
-                       "VBA": VBA}, index=[0])
+    df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                       "ophys_session_id": ophys_session_id,
+                       "sync": len(behaviormon_timestamps_from_sync(ophys_experiment_id)),
+                       "avi": behavior_mon_framecount_from_avi(ophys_session_id),
+                       "VBA": len(behavior_mon_timestamps_from_VBAdataset(ophys_experiment_id))}, index=[0])
     return df
 
 
 def stimulus_timestamps_df(ophys_experiment_id):
     ophys_session_id = loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
-    sync_timestamps = len(stim_timestamps_from_sync(ophys_experiment_id))
-    pkl_timestamps = len(stim_timestamps_from_pkl(ophys_session_id))
-    sdk_timestamps = len(stim_timestamps_from_SDK(ophys_experiment_id))
-    df = pd.DataFrame({"ophys_session_id": ophys_session_id,
-                       "ophys_experiment_id": ophys_experiment_id,
-                       "sync": sync_timestamps,
-                       "pkl": pkl_timestamps,
-                       "SDK": sdk_timestamps}, index=[0])
+    df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                       "ophys_session_id": ophys_session_id,
+                       "sync": len(stim_timestamps_from_sync(ophys_experiment_id)),
+                       "pkl": len(stim_timestamps_from_pkl(ophys_session_id)),
+                       "SDK": len(stim_timestamps_from_SDK(ophys_experiment_id))}, index=[0])
     return df
 
 
 def physio_timestamps_df(ophys_experiment_id):
-    ophys_session_id = loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
-    sync_timestamps = len(physio_timestamps_from_sync(ophys_experiment_id))
-    sdk_timestamps = len(physio_timestamps_from_SDK(ophys_experiment_id))
-    sdk_dff_timestamps = dff_trace_length_from_SDK(ophys_experiment_id)
-    mcm_timestamps = physio_frames_from_motion_corrected_movie(ophys_experiment_id)
-
-    df = pd.DataFrame({"ophys_session_id": ophys_session_id,
-                       "ophys_experiment_id": ophys_experiment_id,
-                       "sync": sync_timestamps,
-                       "SDK": sdk_timestamps,
-                       "SDK_dff": sdk_dff_timestamps,
-                       "mcm": mcm_timestamps}, index=[0])
+    df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                       "ophys_session_id": loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id),
+                       "sync": len(physio_timestamps_from_sync(ophys_experiment_id)),
+                       "SDK": len(physio_timestamps_from_SDK(ophys_experiment_id)),
+                       "SDK_dff": dff_trace_length_from_SDK(ophys_experiment_id),
+                       "mcm": physio_frames_from_motion_corrected_movie(ophys_experiment_id)}, index=[0])
     return df
 
 
 def lick_timestamps_df(ophys_experiment_id, stage_name=False):
     ophys_session_id = loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id)
-    sync_timestamps = len(lick_timestamps_from_sync(ophys_experiment_id))
-    pkl_timestamps = len(lick_timestamps_from_pkl(ophys_session_id))
-    sdk_timestamps = len(lick_timestamps_from_SDK(ophys_experiment_id))
     if stage_name == True:
-        stage_name = loading.get_lims_experiment_info(ophys_experiment_id)["stage_name_lims"][0]
-
-        df = pd.DataFrame({"ophys_session_id": ophys_session_id,
-                           "ophys_experiment_id": ophys_experiment_id,
-                           "stage_name": stage_name,
-                           "sync": sync_timestamps,
-                           "pkl": pkl_timestamps,
-                           "SDK": sdk_timestamps}, index=[0])
+        df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                           "ophys_session_id": ophys_session_id,
+                           "stage_name": loading.get_lims_experiment_info(ophys_experiment_id)["stage_name_lims"][0],
+                           "sync": len(lick_timestamps_from_sync(ophys_experiment_id)),
+                           "pkl": len(lick_timestamps_from_pkl(ophys_session_id)),
+                           "SDK": len(lick_timestamps_from_SDK(ophys_experiment_id))}, index=[0])
     else:
-        df = pd.DataFrame({"ophys_session_id": ophys_session_id,
-                           "ophys_experiment_id": ophys_experiment_id,
-                           "sync": sync_timestamps,
-                           "pkl": pkl_timestamps,
-                           "SDK": sdk_timestamps}, index=[0])
+        df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
+                           "ophys_session_id": ophys_session_id,
+                           "sync": len(lick_timestamps_from_sync(ophys_experiment_id)),
+                           "pkl": len(lick_timestamps_from_pkl(ophys_session_id)),
+                           "SDK": len(lick_timestamps_from_SDK(ophys_experiment_id))}, index=[0])
     return df
+
+
+timestamp_columns_dict = {"physio": ["sync", "SDK", "SDK_dff", "mcm"],
+                          "stimulus": ["sync", "pkl", "SDK"],
+                          "running": ["sync", "pkl", "SDK"],
+                          "eye_tracking": ["sync", "avi", "SDK", "VBA"],
+                          "behavior_monitoring": ["sync", "avi", "VBA"],
+                          "lick": ["sync", "pkl", "SDK"]}
+
+
+timestamp_groundtruth_dict = {"physio": "mcm",
+                              "stimulus": "pkl",
+                              "running": "pkl",
+                              "eye_tracking": "avi",
+                              "behavior_monitoring": "avi",
+                              "lick": ["sync", "pkl", "SDK"]}
+
+
+def timestamp_mismatch_row(dataframe, timestamp_columns_list):
+    timestamp_col_df = dataframe[timestamp_columns_list]
+    unique_timestamp_numbers = timestamp_col_df.nunique(axis=1)[0]
+    if unique_timestamp_numbers == 1:
+        dataframe["mismatch_present"] = False
+    else:
+        dataframe["mismatch_present"] = True
+    return dataframe
