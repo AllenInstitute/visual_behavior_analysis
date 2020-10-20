@@ -3,6 +3,7 @@ from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 # from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
+from visual_behavior.ophys.response_analysis import response_processing as rp
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import processing
@@ -90,6 +91,10 @@ def get_behavior_model_outputs_dir():
 
 def get_decoding_analysis_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
+
+
+def get_ophys_glm_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
 # LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
@@ -274,7 +279,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
                                                                                     analysis_cache_dir))
             print('creating new analysis folder')
-            m = self.dataset.metadata
+            m = self.metadata.copy()
             date = m['experiment_datetime']
             date = str(date)[:10]
             date = date[2:4] + date[5:7] + date[8:10]
@@ -367,7 +372,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def events(self):
-        self._events = pd.DataFrame({'events': [x for x in self.get_events_array()]},
+        self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
+                                     'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
                                     index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
 
@@ -381,7 +387,10 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def ophys_timestamps(self):
         if super().metadata['rig_name'] == 'MESO.1':
-            self._ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
+            ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
+            self._ophys_timestamps = ophys_timestamps
+            # correct metadata frame rate
+            self._metadata['ophys_frame_rate'] = 1 / np.diff(ophys_timestamps).mean()
         else:
             self._ophys_timestamps = super().ophys_timestamps
         return self._ophys_timestamps
@@ -396,7 +405,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def metadata(self):
         metadata = super().metadata
         # reset ophys frame rate for accuracy & to account for mesoscope resampling
-        metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
+        # causes recursion error
+        # metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
         if 'donor_id' not in metadata.keys():
             metadata['donor_id'] = metadata.pop('LabTracks_ID')
             metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
@@ -533,6 +543,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
     dataset = BehaviorOphysDataset(api, include_invalid_rois)
+    print('extracting cached data from {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
@@ -1689,16 +1700,15 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
         suffix = '_events'
     else:
         suffix = ''
-
-    if len(conditions) == 5:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
-            2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
+    if len(conditions) == 6:
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + suffix + '.h5'
+    elif len(conditions) == 5:
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
     elif len(conditions) == 4:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
-            2] + '_' + conditions[3] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
+            3] + suffix + '.h5'
     elif len(conditions) == 3:
-        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[
-            2] + suffix + '.h5'
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + suffix + '.h5'
     elif len(conditions) == 2:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + suffix + '.h5'
     elif len(conditions) == 1:
