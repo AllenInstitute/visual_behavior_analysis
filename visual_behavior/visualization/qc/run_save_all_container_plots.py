@@ -24,7 +24,8 @@ container_ids = data_loading.get_ophys_container_ids()
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    python_executable = "{}/.conda/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
+    # python_executable = "{}/.conda/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
+    python_executable = "{}/anaconda2/envs/{}/bin/python".format(os.path.expanduser('~'), args.env)
     python_file = os.path.join(os.getcwd(), args.scriptname)
 
     for ii, container_id in enumerate(container_ids):
