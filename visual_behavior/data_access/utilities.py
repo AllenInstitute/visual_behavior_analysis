@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 import json
 import shutil
@@ -211,6 +212,22 @@ def model_outputs_available_for_behavior_session(behavior_session_id):
         return True
     else:
         return False
+
+
+def get_cell_matching_output_dir_for_container(container_id, experiments_table):
+    container_expts = experiments_table[experiments_table.container_id==container_id]
+    ophys_experiment_id = container_expts.index[0]
+    lims_data = get_lims_data(ophys_experiment_id)
+    session_dir = lims_data.ophys_session_dir.values[0]
+    cell_matching_dir = os.path.join(session_dir[:-23], 'experiment_container_'+str(container_id), 'OphysNwayCellMatchingStrategy')
+    cell_matching_output_dir = os.path.join(cell_matching_dir, np.sort(os.listdir(cell_matching_dir))[-1])
+    return cell_matching_output_dir
+
+
+def get_ssim(img0, img1):
+    from skimage.measure import compare_ssim as ssim
+    ssim_pair = ssim(img0, img1, gaussian_weights=True)
+    return ssim_pair
 
 
 def get_lims_data(lims_id):

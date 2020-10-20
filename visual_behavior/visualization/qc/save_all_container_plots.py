@@ -14,6 +14,8 @@ def main():
         "motion_correction_xy_shift": cp.plot_motion_correction_xy_shift_for_container,
         "number_matched_cells": cp.plot_number_matched_cells_for_container,
         "fraction_matched_cells": cp.plot_fraction_matched_cells_for_container,
+        "cell_matching_registration_overlay_grid": cp.plot_cell_matching_registration_overlay_grid,
+        "cell_matching_registration_output": cp.plot_cell_matching_registration_output,
         "eye_tracking_sample_frames": cp.plot_eye_tracking_sample_frames,
         "segmented_rois_by_experiment": cp.plot_number_segmented_rois_for_container,
         "segmentation_masks": cp.plot_segmentation_masks_for_container,

@@ -1,5 +1,5 @@
 import os
-from visual_behavior.data import loading as data_loading
+from visual_behavior.data_access import loading as data_loading
 import argparse
 import sys
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')
@@ -20,7 +20,7 @@ job_settings = {'queue': 'braintv',
                 }
 
 
-container_ids = data_loading.get_filtered_ophys_container_ids()
+container_ids = data_loading.get_ophys_container_ids()
 
 if __name__ == "__main__":
     args = parser.parse_args()

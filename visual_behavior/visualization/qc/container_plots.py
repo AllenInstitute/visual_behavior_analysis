@@ -539,6 +539,122 @@ def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True
                        'container_' + str(ophys_container_id))
 
 
+def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure=True):
+    import tifffile
+    import visual_behavior.data_access.utilities as utilities
+
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    container_expts = experiments_table[experiments_table.container_id == ophys_container_id]
+    ophys_experiment_ids = container_expts.index.values
+
+    dataset_dict = {}
+    for ophys_experiment_id in container_expts.index.values:
+        dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+        dataset_dict[ophys_experiment_id] = dataset
+
+    cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_container_id, experiments_table)
+    registration_images = [file for file in os.listdir(cell_matching_output_dir) if 'register' in file]
+
+    figsize = (25, 25)
+    fig, ax = plt.subplots(len(ophys_experiment_ids), len(ophys_experiment_ids), figsize=figsize)
+    ax = ax.ravel()
+    i = 0
+    for k, exp1 in enumerate(ophys_experiment_ids):
+        for j, exp2 in enumerate(ophys_experiment_ids):
+            if exp1 == exp2:
+                ax[i].axis('off')
+                i += 1
+            else:
+                reg_file = [file for file in registration_images if ((str(exp1) in file) and (str(exp2) in file))]
+                if len(reg_file) > 0:
+                    registration_image = reg_file[0]
+                    registered_expt = int(registration_image.split('_')[1].split('.')[0])
+                    target_expt = int(registration_image.split('_')[3].split('.')[0])
+                    dataset = dataset_dict[int(target_expt)]
+                    avg_image = dataset.average_projection.data
+                    avg_im_target = avg_image / float(np.amax(avg_image))
+
+                    reg = tifffile.imread(os.path.join(cell_matching_output_dir, registration_image))
+                    reg = reg / float(np.amax(reg))
+                    reg = reg.astype('float32')
+
+                    image = np.empty((reg.shape[0], reg.shape[1], 3))
+                    image[:, :, 0] = avg_im_target
+                    image[:, :, 1] = reg
+
+                    ssim = utilities.get_ssim(avg_im_target, reg)
+
+                    ax[i].imshow(image)
+                    ax[i].set_title('exp1: ' + str(exp1) + '\nexp2: ' + str(exp2) + '\nssim:' + str(np.round(ssim, 3)),
+                                    fontsize=16)
+                    ax[i].axis('off')
+                    i += 1
+        fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'cell_matching_registration_overlay_grid',
+                          'container_' + str(ophys_container_id))
+
+
+def plot_cell_matching_registration_output(ophys_container_id, save_figure=True):
+    import tifffile
+    import visual_behavior.data_access.utilities as utilities
+
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    container_expts = experiments_table[experiments_table.container_id == ophys_container_id]
+    ophys_experiment_ids = container_expts.index.values
+
+    dataset_dict = {}
+    for ophys_experiment_id in container_expts.index.values:
+        dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+        dataset_dict[ophys_experiment_id] = dataset
+
+    cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_container_id, experiments_table)
+    registration_images = [file for file in os.listdir(cell_matching_output_dir) if 'register' in file]
+
+    n_images = len(registration_images)
+    n_per_plot = 8
+    intervals = np.arange(0, n_images + n_per_plot, n_per_plot)
+    for x, interval in enumerate(intervals):
+        figsize = (20, 15)
+        fig, ax = plt.subplots(4, n_per_plot, figsize=figsize)
+        ax = ax.ravel()
+        i = 0
+        if x < len(intervals) - 1:
+            for y, registration_image in enumerate(registration_images[intervals[x]:intervals[x + 1]]):
+                registered_expt = registration_image.split('_')[1]
+                if int(registered_expt) in ophys_experiment_ids:
+                    target_expt = registration_image.split('_')[3].split('.')[0]
+                    if int(target_expt) in ophys_experiment_ids:
+                        reg = tifffile.imread(os.path.join(cell_matching_output_dir, registration_image))
+                        reg = reg / float(np.amax(reg))
+                        reg = reg.astype('float32')
+                        data = dataset_dict[int(target_expt)]
+                        avg_image = data.average_projection.data
+                        avg_im_target = avg_image / float(np.amax(avg_image))
+                        data = dataset_dict[int(registered_expt)]
+                        avg_image = data.average_projection.data
+                        avg_im_candidate = avg_image / float(np.amax(avg_image))
+                        image = np.empty((reg.shape[0], reg.shape[1], 3))
+                        image[:, :, 0] = avg_im_target
+                        image[:, :, 1] = reg
+                        ax[i].imshow(avg_im_candidate, cmap='gray')
+                        ax[i].set_title('candidate\n' + registered_expt)
+                        ax[i + n_per_plot].imshow(avg_im_target, cmap='gray')
+                        ax[i + n_per_plot].set_title('target\n' + target_expt)
+                        ax[i + 2 * n_per_plot].imshow(reg, cmap='gray')
+                        ax[i + 2 * n_per_plot].set_title('registered\n' + registered_expt)
+                        ssim = utilities.get_ssim(avg_im_target, reg)
+                        ax[i + 3 * n_per_plot].imshow(image)
+                        ax[i + 3 * n_per_plot].set_title('ssim:' + str(np.round(ssim, 3)))
+                        for xx in range(len(ax)):
+                            ax[xx].axis('off')
+                        i += 1
+
+            if save_figure:
+                ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'cell_matching_registration_output',
+                                  'container_' + str(ophys_container_id) + '_' + str(x))
+
+
 def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=True):
     df = dp.container_cell_matching_percent_heatmap_df(ophys_container_id)
 
