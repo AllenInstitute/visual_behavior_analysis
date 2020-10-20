@@ -25,7 +25,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
     experiments_table = loading.get_filtered_ophys_experiment_table()
     experiments = experiments_table[(experiments_table.project_code == project_code) &
                                     (experiments_table.session_number == session_number)].copy()
-    print('session_types:',experiments.session_type.unique(),' - there should only be one!')
+    print('session_types:', experiments.session_type.unique(), ' - there should only be one!')
     session_type = experiments.session_type.unique()[0]
 
     mega_mdf = pd.DataFrame()
@@ -63,10 +63,11 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
             print(e)
             print('problem for', experiment_id)
 
-    if use_events:
-        suffix = '_events'
-    else:
-        suffix = ''
+    # suffix is unused. Commenting out for now
+    # if use_events:
+    #     suffix = '_events'
+    # else:
+    #     suffix = ''
     if 'level_0' in mega_mdf.keys():
         mega_mdf = mega_mdf.drop(columns='level_0')
     if 'index' in mega_mdf.keys():
@@ -78,5 +79,3 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
     mega_mdf.to_hdf(os.path.join(mega_mdf_write_dir, filename), key='df')
     print('saved')
     return mega_mdf
-
-
