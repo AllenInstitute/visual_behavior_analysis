@@ -23,7 +23,7 @@ from svm_funs import *
 
 
 #%%
-def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, labels2ana=0, same_num_neuron_all_planes=0):
+def svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, labels2ana=0, same_num_neuron_all_planes=0):
 
     
     #%% Set SVM vars
@@ -76,7 +76,7 @@ def svm_main_images_pbs(data_list, session_data, session_trials, dir_svm, frames
     
 #     session_data = stimulus_response_df_allexp
     
-    image_data = stimulus_response_df_allexp[stimulus_response_df_allexp['image_name']!='omitted']
+    image_data = df_data[df_data['image_name']!='omitted']
 
     #%% set the vector of image indices for each trial (flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
     u, u_i = np.unique(image_data['stimulus_presentations_id'].values, return_index=True)
@@ -843,6 +843,11 @@ experiment_ids_this_session = data_list['experiment_id'].values
 
 #%% Set stimulus_response_df_allexp, which includes stimulus_response_df (plus some metadata columns) for all experiments of a session
 
+CHECK THIS:
+NOTE: below you added exposure_number, make sure it appears as a column in stim_response_data_this_exp
+(exposure_number is in experiments_table)
+
+# import visual_behavior.data_access.loading as loading
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
 experiments_table = loading.get_filtered_ophys_experiment_table()
@@ -873,7 +878,7 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
     # add to stim_response_df columns with info on cre, date, etc 
     e = experiments_table.reset_index('ophys_experiment_id')
     # only keep certain columns of experiments_table, before merging it with stim_response_df
-    e = e.loc[:, ['ophys_experiment_id', 'ophys_session_id', 'cre_line', 'session_name', 'date_of_acquisition', 'session_type']]
+    e = e.loc[:, ['ophys_experiment_id', 'ophys_session_id', 'cre_line', 'session_name', 'date_of_acquisition', 'session_type', 'exposure_number']]
     stim_response_data_this_exp = stim_response_df.merge(e, on=['ophys_experiment_id', 'ophys_session_id'])    
     # reorder columns
     stim_response_data_this_exp = stim_response_data_this_exp.iloc[:, np.concatenate((np.arange(len(c), stim_response_data_this_exp.shape[-1]), np.arange(0, len(c))))]

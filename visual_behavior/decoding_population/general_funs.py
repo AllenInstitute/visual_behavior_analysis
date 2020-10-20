@@ -29,7 +29,7 @@ def all_sess_set_h5_fileName(name, dir_now, all_files=0):
     
     import re
     import os
-    
+    import numpy as np
     
     regex = re.compile(name) # + '.h5')
 #    regex = re.compile(aname + '(.*).hdf5') # note: "aname" does not include the directory path; it's just the file name.
@@ -72,3 +72,28 @@ def all_sess_set_h5_fileName(name, dir_now, all_files=0):
 #    input_vars = pd.read_hdf(allSessName, key='input_vars')     ## Load input_vars dataframe
 
     return allSessName, h5_files
+
+
+
+
+def colorOrder(nlines=30):
+    # change color order of lines in matplotlib to a given colormap
+    
+    from numpy import linspace
+    from matplotlib import cm
+    cmtype = cm.jet # jet; what kind of colormap?
+    
+    start = 0.0
+    stop = 1.0
+    number_of_lines = nlines #len(days)
+    cm_subsection = linspace(start, stop, number_of_lines) 
+    colorsm = [ cmtype(x) for x in cm_subsection ]
+    
+    #% Change color order to jet 
+#    from cycler import cycler
+#    plt.rcParams['axes.prop_cycle'] = cycler(color=colors)
+    
+#    a = plt.scatter(y, y2, c=np.arange(len(y)), cmap=cm.jet, edgecolors='face')#, label='class accuracy (% correct testing trials)')
+            
+    return colorsm
+

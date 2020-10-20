@@ -6,7 +6,7 @@ This function is called in svm_init_images.
 It loads the svm file that was saved for each experiment, and returns a pandas dataframe (this_sess), which includes a number of columns, including average and st error of class accuracies across CV samples; also quantification of the image signal.
 svm_init combines this_sess for all sessions into a single pandas table (all_sess), and saves it at /allen/programs/braintv/workgroups/nc-ophys/Farzaneh/SVM/same_num_neurons_all_planes/all_sess_svm_images*
 
-Follow this function by svm_plots_setVars.py to make plots.
+Follow this function by svm_images_plots_setVars.py to make plots.
 
 Created on Tue Oct  13 20:53:49 2019
 @author: farzaneh
@@ -331,7 +331,7 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, s
             ### different planes have different number of neurons... so we cannot directly compare svm performance across planes!!!
             # unless we subselect neurons!!
 
-            if 1: #doPlots:
+            if doPlots:
 
                 if (np.sign(frames_svm)==-1).all(): # when frames_svm is all negative
                     x = np.arange(frames_svm[0] * frame_dur, frames_svm[-1] * frame_dur, frame_dur)
