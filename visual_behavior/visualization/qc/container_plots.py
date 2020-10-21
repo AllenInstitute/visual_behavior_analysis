@@ -539,6 +539,28 @@ def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True
                        'container_' + str(ophys_container_id))
 
 
+
+def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=True):
+    df = dp.container_cell_matching_percent_heatmap_df(ophys_container_id)
+
+    matrix = df.values
+    labels = df.index
+
+    figsize = (10, 10)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax = sns.heatmap(matrix, square=True, cmap='magma', ax=ax, cbar_kws={'shrink': 0.7, 'label': '% matched cells'},
+                     annot=True, vmin=0, vmax=1, fmt='.3g')
+    bottom, top = ax.get_ylim()
+    ax.set_ylim(bottom + 0.5, top - 0.5)
+    ax.set_xticklabels(labels, rotation=90)
+    ax.set_yticklabels(labels, rotation=0)
+    ax.set_title('fraction matched cells across sessions')
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'fraction_matched_cells',
+                       'container_' + str(ophys_container_id))
+
+
 def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure=True):
     import tifffile
     import visual_behavior.data_access.utilities as utilities
@@ -581,6 +603,7 @@ def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure
                     image = np.empty((reg.shape[0], reg.shape[1], 3))
                     image[:, :, 0] = avg_im_target
                     image[:, :, 1] = reg
+                    image[:, :, 2] = np.nan
 
                     ssim = utilities.get_ssim(avg_im_target, reg)
 
@@ -590,6 +613,7 @@ def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure
                     ax[i].axis('off')
                     i += 1
         fig.tight_layout()
+        fig.suptitle(get_metadata_string(ophys_container_id), x=0.5, y=1.02, horizontalalignment='center', fontsize=14)
     if save_figure:
         ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'cell_matching_registration_overlay_grid',
                           'container_' + str(ophys_container_id))
@@ -637,6 +661,7 @@ def plot_cell_matching_registration_output(ophys_container_id, save_figure=True)
                         image = np.empty((reg.shape[0], reg.shape[1], 3))
                         image[:, :, 0] = avg_im_target
                         image[:, :, 1] = reg
+                        image[:, :, 2] = np.nan
                         ax[i].imshow(avg_im_candidate, cmap='gray')
                         ax[i].set_title('candidate\n' + registered_expt)
                         ax[i + n_per_plot].imshow(avg_im_target, cmap='gray')
@@ -655,27 +680,6 @@ def plot_cell_matching_registration_output(ophys_container_id, save_figure=True)
                                   'container_' + str(ophys_container_id) + '_' + str(x))
 
 
-def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=True):
-    df = dp.container_cell_matching_percent_heatmap_df(ophys_container_id)
-
-    matrix = df.values
-    labels = df.index
-
-    figsize = (10, 10)
-    fig, ax = plt.subplots(figsize=figsize)
-    ax = sns.heatmap(matrix, square=True, cmap='magma', ax=ax, cbar_kws={'shrink': 0.7, 'label': '% matched cells'},
-                     annot=True, vmin=0, vmax=1, fmt='.3g')
-    bottom, top = ax.get_ylim()
-    ax.set_ylim(bottom + 0.5, top - 0.5)
-    ax.set_xticklabels(labels, rotation=90)
-    ax.set_yticklabels(labels, rotation=0)
-    ax.set_title('fraction matched cells across sessions')
-    fig.tight_layout()
-    if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'fraction_matched_cells',
-                       'container_' + str(ophys_container_id))
-
-
 def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figure=True):
     ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
@@ -691,6 +695,124 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
     if save_figure:
         ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'motion_correction_xy_shift',
                        'container_' + str(ophys_container_id))
+
+
+def plot_flashes_on_trace(ax, timestamps, ophys_frame_rate, trial_type=None, omitted=False, alpha=0.15, facecolor='gray'):
+    """
+    plot stimulus flash durations on the given axis according to the provided timestamps
+    """
+    frame_rate = ophys_frame_rate
+    stim_duration = 0.25
+    blank_duration = 0.5
+    change_time = 0
+    start_time = timestamps[0]
+    end_time = timestamps[-1]
+    interval = (blank_duration + stim_duration)
+    # after time 0
+    if omitted:
+        array = np.arange((change_time + interval), end_time, interval)
+    else:
+        array = np.arange(change_time, end_time, interval)
+    for i, vals in enumerate(array):
+        amin = array[i]
+        amax = array[i] + stim_duration
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    if trial_type == 'go':
+        alpha = alpha * 3
+    else:
+        alpha
+    # before time 0
+    array = np.arange(change_time, start_time - interval, -interval)
+    array = array[1:]
+    for i, vals in enumerate(array):
+        amin = array[i]
+        amax = array[i] + stim_duration
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    return ax
+
+
+def get_metadata_string(container_id):
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(container_id)
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_ids[0])
+    title = dataset.analysis_folder
+    m = title.split('_')  # dataset.analysis_folder.split('_')
+    metadata_string = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
+    return metadata_string
+
+
+def plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=False, save_figure=True):
+    dataset = data_loading.get_ophys_dataset(container_df.ophys_experiment_id.unique()[0])
+    title = dataset.analysis_folder
+    frame_rate = dataset.metadata['ophys_frame_rate']
+    if omitted:
+        figsize = (12, 5)
+        m = title.split('_') #dataset.analysis_folder.split('_')
+        title = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
+    elif trials:
+        figsize = (12, 5)
+        container_df = container_df[container_df.go == True]
+        m = title.split('_') #dataset.analysis_folder.split('_')
+        title = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
+    else:
+        figsize = (6, 4)
+        container_df = container_df[container_df.image_name != 'omitted']
+        title = str(container_id)
+    fig, ax = plt.subplots(figsize=figsize)
+    colors = ut.get_colors_for_session_numbers()
+
+    for i, ophys_experiment_id in enumerate(container_df.ophys_experiment_id.unique()):
+        df = container_df[container_df.ophys_experiment_id == ophys_experiment_id].copy()
+        session_number = df.session_number.unique()[0]
+        traces = df.trace.values
+        mean_trace = df.trace.mean()
+        timestamps = df.trace_timestamps.mean()
+        ax.plot(timestamps, mean_trace, color=colors[session_number - 1], label=session_number)
+        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        ax.fill_between(timestamps, mean_trace + sem, mean_trace - sem, alpha=0.5, color=colors[session_number - 1])
+    if omitted:
+        ax = plot_flashes_on_trace(ax, timestamps, frame_rate, trial_type=None, omitted=True, alpha=0.2,
+                                   facecolor='gray')
+        ax.axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
+        ax.set_xlabel('time relative to omission (sec)')
+    elif trials:
+        ax = plot_flashes_on_trace(ax, timestamps, frame_rate, trial_type='go', omitted=False, alpha=0.2,
+                                   facecolor='gray')
+        ax.set_xlabel('time relative to change (sec)')
+    else:
+        ax = plot_flashes_on_trace(ax, timestamps, frame_rate, trial_type=None, omitted=False, alpha=0.2,
+                                   facecolor='gray')
+        ax.set_xlabel('time (sec)')
+    ax.set_ylabel('dF/F')
+    ax.set_xlim(timestamps[0], timestamps[-1])
+    ax.set_title(title)
+    ax.legend(bbox_to_anchor=(1, 1), title='session_number', fontsize='small', title_fontsize='x-small')
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(),
+                          'population_average_by_session_'+df_name.split('_')[0],
+                          'container_' + str(container_id))
+
+
+def plot_omission_population_average_across_sessions(container_id, save_figure=True):
+    df_name = 'omission_response_df'
+    container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
+    plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=True,
+                                                    save_figure=save_figure)
+
+
+def plot_trials_population_average_across_sessions(container_id, save_figure=True):
+    df_name = 'trials_response_df'
+    container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
+    plot_population_average_across_sessions(container_df, container_id, df_name, trials=True, omitted=False,
+                                                    save_figure=save_figure)
+
+
+def plot_stimulus_population_average_across_sessions(container_id, save_figure=True):
+    df_name = 'stimulus_response_df'
+    container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
+    plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=False,
+                                                    save_figure=save_figure)
 
 
 # def plot_average_intensity_by_pmt_for_experiments(ophys_container_id, save_figure=True):

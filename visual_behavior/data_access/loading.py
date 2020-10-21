@@ -543,7 +543,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
     dataset = BehaviorOphysDataset(api, include_invalid_rois)
-    print('extracting cached data from {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
+    print('loading data for {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
@@ -1916,3 +1916,21 @@ def get_stimulus_response_data_across_sessions(project_codes=None, session_numbe
     stimulus_response_data = stimulus_response_data.merge(experiments_table,
                                                           on=['ophys_experiment_id', 'ophys_session_id'])
     return stimulus_response_data
+
+
+def get_container_response_df(container_id, df_name='omission_response_df', use_events=False):
+    """
+    get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container
+    """
+    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+    experiments_table = get_filtered_ophys_experiment_table()
+    container_expts = experiments_table[experiments_table.container_id==container_id]
+    container_df = pd.DataFrame()
+    for ophys_experiment_id in container_expts.index.values:
+        dataset = get_ophys_dataset(ophys_experiment_id)
+        analysis = ResponseAnalysis(dataset, use_events)
+        odf = analysis.get_response_df(df_name=df_name)
+        odf['ophys_experiment_id'] = ophys_experiment_id
+        odf['session_number'] = experiments_table.loc[ophys_experiment_id].session_number
+        container_df = pd.concat([container_df, odf])
+    return container_df
