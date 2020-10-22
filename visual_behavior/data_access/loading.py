@@ -1626,20 +1626,23 @@ def get_annotated_experiments_table():
     #                                   experiments_table.loc[expt].depth for expt in experiments_table.index]
 
     experiments_table['layer'] = None
-    indices = experiments_table[(experiments_table.imaging_depth < 125)].index.values
-    experiments_table.at[indices, 'layer'] = 'L3'
+    indices = experiments_table[(experiments_table.imaging_depth < 100)].index.values
+    experiments_table.at[indices, 'layer'] = 'L1'
+    indices = experiments_table[(experiments_table.imaging_depth < 270) &
+                                (experiments_table.imaging_depth >= 100)].index.values
+    experiments_table.at[indices, 'layer'] = 'L2/3'
+    # indices = experiments_table[
+    #     (experiments_table.imaging_depth >= 125) & (experiments_table.imaging_depth < 200)].index.values
+    # experiments_table.at[indices, 'layer'] = 'L3'
     indices = experiments_table[
-        (experiments_table.imaging_depth >= 125) & (experiments_table.imaging_depth < 200)].index.values
-    experiments_table.at[indices, 'layer'] = 'L3'
-    indices = experiments_table[
-        (experiments_table.imaging_depth >= 200) & (experiments_table.imaging_depth < 250)].index.values
+        (experiments_table.imaging_depth >= 270) & (experiments_table.imaging_depth < 350)].index.values
     experiments_table.at[indices, 'layer'] = 'L4'
     indices = experiments_table[
-        (experiments_table.imaging_depth >= 250) & (experiments_table.imaging_depth < 345)].index.values
-    experiments_table.at[indices, 'layer'] = 'L5a'
-    indices = experiments_table[
-        (experiments_table.imaging_depth >= 345) & (experiments_table.imaging_depth < 500)].index.values
-    experiments_table.at[indices, 'layer'] = 'L5b'
+        (experiments_table.imaging_depth >= 350) & (experiments_table.imaging_depth < 550)].index.values
+    experiments_table.at[indices, 'layer'] = 'L5'
+    # indices = experiments_table[
+    #     (experiments_table.imaging_depth >= 345) & (experiments_table.imaging_depth < 500)].index.values
+    # experiments_table.at[indices, 'layer'] = 'L5b'
     experiments_table['location_layer'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                            experiments_table.loc[expt].targeted_structure + '_' +
                                            experiments_table.loc[expt].layer for expt in experiments_table.index]
@@ -1770,7 +1773,7 @@ def remove_first_novel_session_retakes_from_multi_session_df(multi_session_df):
 
 def remove_problematic_data_from_multi_session_df(multi_session_df):
     # notes on containers, experiments & mice #####
-    # experiments too exclude
+    # experiments to exclude
     # another Slc mouse with large familiar passive 840542948, also ramping in some familiar sessions, generally noisy
     # all mouse 920877188 remove & investiate later - weirdness
     # slc superficial very high novel 2 container 1018027834
