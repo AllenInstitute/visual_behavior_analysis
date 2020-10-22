@@ -8,8 +8,10 @@ It sets all_sess_2an, which is a subset of all_sess that only includes desired s
 
 Its output is a pandas table "svm_this_plane_allsess" which includes svm variables for each mouse, (for each plane, for each area, and for each depth) and will be used for plotting.
 
-Follow this script by "svm_plots_eachMouse" to make plots for each mouse.
-Or, by "svm_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
+Follow this script by "svm_images_plots_eachMouse" to make plots for each mouse.
+Or, by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
+
+
 
 Note, this script is similar to part of omissions_traces_peaks_plots_setVars_ave.py.
     The variable svm_this_plane_allsess here is basically a combination of the following 2 vars in omissions_traces_peaks_plots_setVars_ave.py:
@@ -41,10 +43,11 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
 #%%
-frames_svm = [-3,-2,-1] # [0,1,2,3,4,5] #30 #frames_after_omission = 30 # 5 # run svm on how many frames after omission
-session_numbers = [1] # ophys session stage corresponding to project_codes that we will load.
+frames_svm = [0,1,2,3,4,5] #[-3,-2,-1] # 30 #frames_after_omission = 30 # 5 # run svm on how many frames after omission
+session_numbers = [4] # ophys session stage corresponding to project_codes that we will load.
 
 same_num_neuron_all_planes = 0 #1 # if 1, use the same number of neurons for all planes to train svm
+time_win = 'frames_svm' # if string, frames_svm were used for quantification of class accuracy # set the window that was used for quantifying svm results
 
 # all_ABtransit_AbefB_Aall = 3 # 1 # 0: analyze all sessions;  1: analyze AB transitions;  2: analyze only A sessions (before any B);  3: analyze all A sessions (before or after B)    
 # only_1st_transit = 1 # relevant only if all_ABtransit_AbefB_Aall=1 # if 1, only include data from the 1st A-->B transition even if a mouse has more than one (safer, since in the subsequent transitions, B has been already introduced, so they are not like the 1st A-->B transition)
@@ -60,7 +63,7 @@ num_planes = 8
 
 
 #%% If analyzing novel sessions, only take sessions that include the 1st presentation of the novel session (ie the ones without a retake of session ophys-3)
-if np.in1d(3, session_numbers): # novel sessions
+if np.in1d(4, session_numbers): # novel sessions
     exposure_number_2an = 0 # # only take those rows of all_sess that are the 1st exposure of the mouse to the novel session
 else:
     exposure_number_2an = np.nan
@@ -265,14 +268,22 @@ cols_area = ['b', 'k']    # first plot V1 (in black, index 1) then LM (in blue, 
 cols_depth = ['b', 'c', 'g', 'r'] #colorOrder(num_depth) #a.shape[0]) # depth1_area2    
 alph = .3 # for plots, transparency of errorbars
 bb = (.92, .7) # (.9, .7)
-xlim = [-.5, .7] #[-1.2, 2.25] # [-13, 24]
-
-fgn = 'ClassAccur'
-if same_num_neuron_all_planes:
-    fgn = fgn + '_sameNumNeursAllPlanes'
-fgn = fgn + f'_frames{frames_svm[0]}to{frames_svm[-1]}'
 
 ylabel = '% Classification accuracy'
+
+# set figure name
+snn = [str(sn) for sn in session_numbers]
+snn = '_'.join(snn)
+whatSess = f'_ophys{snn}'
+
+fgn = f'_frames{frames_svm[0]}to{frames_svm[-1]}{whatSess}'
+if same_num_neuron_all_planes:
+    fgn = fgn + '_sameNumNeursAllPlanes'
+fgn = fgn + '_ClassAccur'
+
+
+
+
 
 
 ######################################################################################################
@@ -282,15 +293,29 @@ ylabel = '% Classification accuracy'
 frame_dur = all_sess['frame_dur'].mode().values[0]
 print(f'frame duration: {frame_dur}')
 
+if type(time_win)==str:
+    time_win = (frames_svm*frame_dur)[[0,-1]]
+
+# set the entire time_trace for the flash-aligned traces, on which we applied frames_svm to get svm results.
 samps_bef_time = (samps_bef+1) * frame_dur # 1 is added bc below we do np.arange(0,-samps_bef), so we get upto one value below samps_bef
 samps_aft_time = samps_aft * frame_dur # frames_after_omission in svm_main # we trained the classifier until 30 frames after omission    
-time_trace = np.unique(np.concatenate((np.arange(0, -samps_bef_time, -frame_dur)[0:samps_bef+1], np.arange(0, samps_aft_time, frame_dur)[0:samps_aft])))
+time_trace0 = np.unique(np.concatenate((np.arange(0, -samps_bef_time, -frame_dur)[0:samps_bef+1], np.arange(0, samps_aft_time, frame_dur)[0:samps_aft])))
 
-# set x tick marks                
-xmj = np.unique(np.concatenate((np.arange(0, time_trace[0], -.25), np.arange(0, time_trace[-1], .25))))
+# set trace_time corresponding to svm traces
+time_trace = time_trace0[samps_bef+frames_svm]
+
+xlim = [time_trace[0], time_trace[-1]] #[-1.2, 2.25] # [-13, 24]
+
+
+# set x tick marks
+xmj = np.round(np.unique(np.concatenate((np.arange(0, time_trace[0], -.1), np.arange(0, time_trace[-1], .1)))), 2)
 xmn = [] #np.arange(-.5, time_trace[-1], 1)
 xmjn = [xmj, xmn]
 
+
+# set the time of flashes and grays for the imaging traces ### note: you should remove 0 from flashes_win_trace_index_unq_time,  because at time 0, there is no flash, there is omission!!
+flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, flashes_win_trace_index_unq, grays_win_trace_index_unq = \
+    flash_gray_onset_relOmit(samps_bef, samps_aft, frame_dur)
 
 
 #%%
@@ -299,7 +324,7 @@ all_mice_id = np.sort(all_sess['mouse_id'].unique())
 all_mice_id = all_mice_id[[~np.isnan(all_mice_id[i]) for i in range(len(all_mice_id))]]
 len(all_mice_id)
 
-
+'''
 mouse_trainHist_all = pd.DataFrame([], columns=['mouse_id', 'date', 'session_id', 'stage']) # total number of sessions x 3
 for cnt, i in enumerate(all_mice_id):
     m = all_sess[all_sess.mouse_id==i].mouse_id.values
@@ -315,7 +340,7 @@ for cnt, i in enumerate(all_mice_id):
     mouse_trainHist_all = mouse_trainHist_all.append(mouse_trainHist)
 
 print(mouse_trainHist_all)
-
+'''
 
 
 #%% Set plane indeces for each area (V1 and LM)
@@ -339,19 +364,10 @@ print('LM plane indeces: ', inds_lm) # [0, 1, 2, 3]
 #inds_v1 = np.arange(num_depth, num_planes)
 
 
-    
-    
-#%% Set whatSess for the figure name to be saved
-
-snn = [str(sn) for sn in session_numbers]
-snn = '_'.join(snn)
-whatSess = f'_stage{snn}'
-
 
 #####################################################################
 #####################################################################
-
-#%% Functions for plotting
+#%% Functions to set vars needed for plotting
 
 
 def set_y_this_plane_allsess(y, num_sessions, takeAve=0): # set takeAve to 1 for meanX_allFrs (so we average across neurons)
@@ -451,7 +467,7 @@ def pool_sesss_areas_eachDepth(planes_allsess, y, num_depth=4):
 
 #%% Set svm vars for each plane across all sessions (for each mouse)
 
-columns0 = ['mouse_id', 'cre', 'cre_exp', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
+columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
             'area', 'depth', 'plane', \
             'n_neurons_this_plane_allsess_allp', 'n_trials_this_plane_allsess_allp', \
             'av_meanX_avSess_eachP', 'sd_meanX_avSess_eachP', \
@@ -504,14 +520,20 @@ for im in range(len(all_mice_id)): # im=0
     #    session_beg_inds = np.concatenate(([0], np.cumsum(num_trs_each_sess[:-1])+1))
         session_labs = []
         for ibeg in range(num_sessions):
-            a = str(session_stages[ibeg]); 
-            en = np.argwhere([a[ich]=='_' for ich in range(len(a))])[-1].squeeze() + 6
+            a = str(session_stages[ibeg])
+            us = np.argwhere([a[ich]=='_' for ich in range(len(a))]).flatten() # index of underscores
+            en = us[-1].squeeze() + 6
             txt = str(session_stages[ibeg][15:]) # session_stages[ibeg][8:en]
             txt = txt[0:min(3, len(txt))]
+            
+            sn = a[us[0]+1: us[1]+1] # stage number
+            txt = sn + txt            
             session_labs.append(txt)
+            
                     
         #### replicate cre to the number of sessions ####
         cre_exp = np.full((num_planes*num_sessions), cre)
+        mouse_id_exp = np.full((num_planes*num_sessions), mouse_id)
 
         areas = all_sess_2an_this_mouse['area'] # pooled: (8*num_sessions)
         depths = all_sess_2an_this_mouse['depth'] # pooled: (8*num_sessions)
@@ -773,7 +795,7 @@ for im in range(len(all_mice_id)): # im=0
         ###############################################################
         # areas.values, depth.values, plane, 
         svm_this_plane_allsess.at[im, columns0] = \
-                   mouse_id, cre, cre_exp, session_stages, session_labs, num_sessions_valid, area_this_plane_allsess_allp, depth_this_plane_allsess_allp, \
+                   mouse_id, cre, mouse_id_exp, cre_exp, session_stages, session_labs, num_sessions_valid, area_this_plane_allsess_allp, depth_this_plane_allsess_allp, \
                    areas.values, depths.values, planes, \
                    n_neurons_this_plane_allsess_allp, n_trials_this_plane_allsess_allp, \
                    av_meanX_avSess_eachP, sd_meanX_avSess_eachP, \
@@ -804,9 +826,15 @@ svm_this_plane_allsess
 ####################################### PLOTS #######################################
 #####################################################################################
 
-# Follow this script by "svm_plots_eachMouse" to make plots for each mouse.
+# Follow this script by "svm_images_plots_eachMouse" to make plots for each mouse.
+exec(open('svm_images_plots_eachMouse.py').read())
 
-# Follow this script by "svm_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
-
+# Follow this script by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
+exec(open('svm_images_plots_setVars_sumMice.py').read())
+exec(open('svm_images_plots_sumMice.py').read())
 
                 
+
+    
+    
+    
