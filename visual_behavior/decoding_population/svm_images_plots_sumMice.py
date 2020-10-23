@@ -368,7 +368,7 @@ for icre in range(len(cre_lines)): # icre=0
 
     #%%
     if dosavefig:
-        nam = f'{cre}_aveMice_aveSessPooled{fgn}_{now}'
+        nam = f'{cre[:3]}_aveMice_aveSessPooled{fgn}_{now}'
         fign = os.path.join(dir0, dir_now, nam+fmt)
         plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
 

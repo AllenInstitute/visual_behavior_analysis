@@ -422,7 +422,7 @@ for im in range(len(svm_this_plane_allsess)): # im=0
     #%% Save the figure for each mouse
     
     if dosavefig:
-        nam = f'{cre}_mouse{mouse_id}{fgn}_{now}'
+        nam = f'{cre[:3]}_mouse{mouse_id}{fgn}_{now}'
         fign = os.path.join(dir0, dir_now, nam+fmt)        
         plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)        
 
