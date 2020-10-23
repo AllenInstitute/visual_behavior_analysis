@@ -789,7 +789,7 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
     ax.legend(bbox_to_anchor=(1, 1), title='session_number', fontsize='small', title_fontsize='x-small')
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(),
+        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(),
                           'population_average_by_session_'+df_name.split('_')[0],
                           'container_' + str(container_id))
 
