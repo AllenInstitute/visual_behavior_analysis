@@ -23,7 +23,7 @@ from svm_funs import *
 
 
 #%%
-def svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, labels2ana=0, same_num_neuron_all_planes=0):
+def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', same_num_neuron_all_planes=0):
 
     
     #%% Set SVM vars
@@ -35,12 +35,12 @@ def svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm,
 #    numSamples = 3 #10 #50
 #    saveResults = 1    
     
-    svmn = 'svm_images' # 'svm_gray_omit'
+    svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
         
     kfold = 10
     regType = 'l2'
     
-    norm_to_max_svm = 1 # normalize each neuron trace by its max
+    norm_to_max_svm = 1 # normalize each neuron trace by its max # NOTE: no need to do this as we are z scoring neurons!
     doPlots = 0 # svm regularization plots
     
     softNorm = 1 # soft normalziation : neurons with sd<thAct wont have too large values after normalization
@@ -70,14 +70,20 @@ def svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm,
 
     
     
-    
-    #%% If stimulus_response_df_allexp is given as input:
     #%% Set cell responses and trial types, using dataframe stimulus_response_df_allexp
-    
 #     session_data = stimulus_response_df_allexp
+        
     
-    image_data = df_data[df_data['image_name']!='omitted']
+    #%% What trials to use for analysis
+        
+    if trial_type=='omissions': # omissions:
+        image_data = df_data[df_data['image_name']=='omitted']
+    elif trial_type=='images': # all images excluding omissions:
+        image_data = df_data[df_data['image_name']!='omitted']
+    if trial_type=='changes': # image changes:
+        image_data = df_data[df_data['change']==True]
 
+    
     #%% set the vector of image indices for each trial (flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
     u, u_i = np.unique(image_data['stimulus_presentations_id'].values, return_index=True)
     image_trials = image_data.iloc[u_i,:] # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
@@ -87,9 +93,9 @@ def svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm,
 #     image_indices.shape, image_indices_previous_flash.shape
 #     np.equal(image_indices[:-1], image_indices_previous_flash[1:]).sum()
     
-    if labels2ana == 0:
+    if to_decode == 'current':
         image_labels = image_indices
-    elif labels2ana == -1:
+    elif to_decode == 'previous':
         image_labels = image_indices_previous_flash
         
         
@@ -135,7 +141,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm,
     cre = image_data.iloc[0]['cre_line']    
     stage = image_data.iloc[0]['session_type']
     
-    
+    # set mouse_id ('external_donor_name')
     session_name = str(image_data.iloc[0]['session_name'])
     uind = [m.start() for m in re.finditer('_', session_name)]
     mid = session_name[uind[0]+1 : uind[1]]
@@ -263,7 +269,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm,
     
         
             #%% Take care of nan values in image_labels (it happens if we are decoding the previous or next image), and remove them frome traces and image_labels
-            if labels2ana != 0:
+            if to_decode != 'current':
                 masknan = ~np.isnan(image_labels)
                 # remove the nan from labels and traces
                 image_labels = image_labels[masknan]
@@ -338,7 +344,8 @@ def svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm,
             #%% Starting to set variables for the SVM analysis                
 
             num_classes = len(np.unique(image_indices)) # number of classes to be classified by the svm
-
+            print(f'Number of classes in SVM: {num_classes}')
+            
             meanX_allFrs = np.full((svm_total_frs, n_neurons), np.nan)
             stdX_allFrs = np.full((svm_total_frs, n_neurons), np.nan)        
 
@@ -585,14 +592,14 @@ def svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm,
 
             # svm output
             if same_num_neuron_all_planes:
-                svm_vars.at[index, cols_svm] = frames_svm, thAct, numSamples, softNorm, regType, cvect, meanX_allFrs, stdX_allFrs, \
+                svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, regType, cvect, meanX_allFrs, stdX_allFrs, \
                     cbest_allFrs, w_data_allFrs, b_data_allFrs, \
                     perClassErrorTrain_data_allFrs, perClassErrorTest_data_allFrs, \
                     perClassErrorTest_shfl_allFrs, perClassErrorTest_chance_allFrs, \
                     inds_subselected_neurons_all, population_sizes_to_try, numShufflesN
 
             else:
-                svm_vars.at[index, cols_svm] = frames_svm, thAct, numSamples, softNorm, regType, cvect, meanX_allFrs, stdX_allFrs, \
+                svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, regType, cvect, meanX_allFrs, stdX_allFrs, \
                     cbest_allFrs, w_data_allFrs, b_data_allFrs, \
                     perClassErrorTrain_data_allFrs, perClassErrorTest_data_allFrs, \
                     perClassErrorTest_shfl_allFrs, perClassErrorTest_chance_allFrs, \
@@ -604,16 +611,14 @@ def svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm,
             cre_now = cre[:cre.find('-')]
             # mouse, session, experiment: m, s, e
             if same_num_neuron_all_planes:
-#                 name = '%s_m-%d_s-%d_e-%s_%s_sameNumNeuronsAllPlanes_%s' %(cre_now, mouse, session_id, lims_id, svmn, now)
-                name = '%s_m-%d_s-%d_e-%s_%s_frames%dto%d_sameNumNeuronsAllPlanes_%s' %(cre_now, mouse, session_id, lims_id, svmn, frames_svm[0], frames_svm[-1], now) 
-            else:
-#                 name = '%s_m-%d_s-%d_e-%s_%s_%s' %(cre_now, mouse, session_id, lims_id, svmn, now) 
-                name = '%s_m-%d_s-%d_e-%s_%s_frames%dto%d_%s' %(cre_now, mouse, session_id, lims_id, svmn, frames_svm[0], frames_svm[-1], now) 
-                
+                now = 'sameNumNeuronsAllPlanes_' + now
+            name = f'{cre_now}_m-{mouse}_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{now}'
+        
             if saveResults:
                 print('Saving .h5 file')
                 svmName = os.path.join(dir_svm, name + '.h5') # os.path.join(d, svmn+os.path.basename(pnevFileName))
                 print(svmName)
+
                 # Save to a h5 file                    
                 svm_vars.to_hdf(svmName, key='svm_vars', mode='w')
 
@@ -709,15 +714,21 @@ import visual_behavior.data_access.loading as loading
 
 #%% Set SVM vars
 
-labels2ana = 0 # 0 (default): decode current image.    -1: decode previous image.    1: decode next image.
+# NOTE: Pay special attention to the following vars before running the SVM:
+
+trial_type = 'changes' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis
+to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
+# time_trace goes from -.5 to .65sec in the image-aligned traces.
+
 same_num_neuron_all_planes = 0 # if 1, use the same number of neurons for all planes to train svm
 numSamples = 50 # 2
 saveResults = 1 # 0 #
 
-time_win = [-.3, 0] #[0, .5] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
-
 project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
 
+print(f'Decoding *{to_decode}* image from *{trial_type}* activity at {time_win}ms rel. image!')
+    
 
 
 #%%
@@ -843,18 +854,25 @@ experiment_ids_this_session = data_list['experiment_id'].values
 
 #%% Set stimulus_response_df_allexp, which includes stimulus_response_df (plus some metadata columns) for all experiments of a session
 
-CHECK THIS:
-NOTE: below you added exposure_number, make sure it appears as a column in stim_response_data_this_exp
-(exposure_number is in experiments_table)
-
 # import visual_behavior.data_access.loading as loading
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
 
 experiments_table = loading.get_filtered_ophys_experiment_table()
-c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name']
+
+# only keep certain columns of experiments_table, before merging it with stim_response_df
+e = experiments_table.reset_index('ophys_experiment_id')
+e = e.loc[:, ['ophys_experiment_id', 'ophys_session_id', 'cre_line', 'session_name', 'date_of_acquisition', 'session_type', 'exposure_number']]
+
+# make sure all experiments in metadata exist in experiment_table
+# es = experiments_table.index
+# esmeta = metadata_basic[metadata_basic['valid']]['experiment_id'].unique()
+# np.in1d(es, esmeta).sum() == len(esmeta)
+
+c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name', 'change'] # columns of stim_response_df to keep
 
 stimulus_response_df_allexp = pd.DataFrame()
-for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = experiment_ids_this_session[1]
+
+for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = experiment_ids_this_session[0]
 
     if data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['valid']:
         dataset = loading.get_ophys_dataset(ophys_experiment_id)
@@ -864,7 +882,7 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
     #     stim_response_df.keys()        
         stim_response_df = stim_response_df0.loc[:,c]
     else:
-        stim_response_df = pd.DataFrame([[np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]], columns=['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name']) 
+        stim_response_df = pd.DataFrame([np.full((len(c)), np.nan)], columns=c) 
         
     stim_response_df['ophys_session_id'] = data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['session_id']
     stim_response_df['ophys_experiment_id'] = ophys_experiment_id # data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['experiment_id']
@@ -875,12 +893,8 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
     
     #### set the final stim_response_data_this_exp
     
-    # add to stim_response_df columns with info on cre, date, etc 
-    e = experiments_table.reset_index('ophys_experiment_id')
-    # only keep certain columns of experiments_table, before merging it with stim_response_df
-    e = e.loc[:, ['ophys_experiment_id', 'ophys_session_id', 'cre_line', 'session_name', 'date_of_acquisition', 'session_type', 'exposure_number']]
-    stim_response_data_this_exp = stim_response_df.merge(e, on=['ophys_experiment_id', 'ophys_session_id'])    
-    # reorder columns
+    stim_response_data_this_exp = stim_response_df.merge(e, on=['ophys_experiment_id', 'ophys_session_id']) # add to stim_response_df columns with info on cre, date, etc        
+    # reorder columns, so metadata columns come first then stimulus and cell data
     stim_response_data_this_exp = stim_response_data_this_exp.iloc[:, np.concatenate((np.arange(len(c), stim_response_data_this_exp.shape[-1]), np.arange(0, len(c))))]
         
     #### keep data from all experiments    
@@ -899,21 +913,25 @@ session_trials = np.nan # we need it as an input to the function
 
 #%% Set frames_svm
 
-trace_time = df_data.iloc[0]['trace_timestamps']
-
 # trace_time = np.array([-0.46631438, -0.3730515 , -0.27978863, -0.18652575, -0.09326288,
 #         0.        ,  0.09326288,  0.18652575,  0.27978863,  0.3730515 ,
 #         0.46631438,  0.55957726,  0.65284013])
 
-r1 = np.argwhere((trace_time-time_win[0])>=0)[0][0]
-r2 = np.argwhere((trace_time-time_win[1])>=0)[0][0]
-
+trace_time = df_data.iloc[0]['trace_timestamps']
 # set samps_bef and samps_aft: on the image-aligned traces, samps_bef frames were before the image, and samps_aft-1 frames were after the image
 samps_bef = np.argwhere(trace_time==0)[0][0] # 5
 samps_aft = len(trace_time)-samps_bef #8 
 
+
+r1 = np.argwhere((trace_time-time_win[0])>=0)[0][0]
+r2 = np.argwhere((trace_time-time_win[1])>=0)
+if len(r2)>0:
+    r2 = r2[0][0]
+else:
+    r2 = len(trace_time)
+             
 frames_svm = range(r1, r2)-samps_bef # range(-10, 30) # range(-1,1) # run svm on these frames relative to trial (image/omission) onset.
-# print(frames_svm)
+# print(frames_svm, samps_bef, samps_aft)
 
 # samps_bef (=40) frames before omission ; index: 0:39
 # omission frame ; index: 40
@@ -926,14 +944,14 @@ frames_svm = range(r1, r2)-samps_bef # range(-10, 30) # range(-1,1) # run svm on
 #%%
 cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'frame_dur']) #, 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
 if same_num_neuron_all_planes:        
-    cols_svm = ['frames_svm', 'thAct', 'numSamples', 'softNorm', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
+    cols_svm = ['frames_svm', 'to_decode', 'thAct', 'numSamples', 'softNorm', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
            'cbest_allFrs', 'w_data_allFrs', 'b_data_allFrs',
            'perClassErrorTrain_data_allFrs', 'perClassErrorTest_data_allFrs',
            'perClassErrorTest_shfl_allFrs', 'perClassErrorTest_chance_allFrs',
            'inds_subselected_neurons_all', 'population_sizes_to_try', 'numShufflesN']
 
 else:    
-    cols_svm = ['frames_svm', 'thAct', 'numSamples', 'softNorm', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
+    cols_svm = ['frames_svm', 'to_decode', 'thAct', 'numSamples', 'softNorm', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
            'cbest_allFrs', 'w_data_allFrs', 'b_data_allFrs',
            'perClassErrorTrain_data_allFrs', 'perClassErrorTest_data_allFrs',
            'perClassErrorTest_shfl_allFrs', 'perClassErrorTest_chance_allFrs',
@@ -948,7 +966,7 @@ else:
 print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess+1, len(list_all_sessions_valid)))
 
 # Use below if you set session_data and session_trials above: for VIP and SST
-svm_main_images_pbs(data_list, df_data, session_trials, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, labels2ana=0, same_num_neuron_all_planes=0)
+svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', same_num_neuron_all_planes=0)
 
 # Use below if you set stimulus_response_df_allexp above: for Slc (can be also used for other cell types too; but we need it for Slc, as the concatenated dfs could not be set for it)
 # svm_main_images_pbs(data_list, stimulus_response_df_allexp, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0)

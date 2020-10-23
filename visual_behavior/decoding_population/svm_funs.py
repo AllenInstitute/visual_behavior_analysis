@@ -221,11 +221,12 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
             cvect = 10**(np.arange(-4, 6, 0.2)) / numDataPoints
         elif regType == 'l2':
             print('\n-------------- Running l2 svm classification --------------\r') 
-            cvect = 10**(np.arange(-6, 6, 0.999)) / numDataPoints          
+            cvect = 10**(np.arange(-6, 6, 0.2)) / numDataPoints          
         nCvals = len(cvect)
-#        print('try the following regularization values: \n', cvect
-        # formattedList = ['%.2f' % member for member in cvect]
-        # print('try the following regularization values = \n', formattedList        
+        print(f'Trying {nCvals} regularization values.')
+#         print('try the following regularization values: \n', cvect
+#         formattedList = ['%.2f' % member for member in cvect]
+#         print('try the following regularization values = \n', formattedList        
     else: # bestc is provided and we want to fit svm on shuffled trial labels
         bestcProvided = True           
         nCvals = 1 # cbest is already provided
@@ -355,12 +356,18 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
  
 
         ## set Y_chance (works for any number of classes)
-        a = np.arange(0, len_test, np.floor(len_test/float(num_classes)).astype(int))
+        a = np.arange(0, len_test, np.round(len_test/float(num_classes)).astype(int))
         if len(a)-1 == num_classes:
             divis = a
             divis[-1] = len_test
-        else:    
+        elif len(a)-1 < num_classes:
             divis = np.concatenate((a, [len_test]))
+        else:
+            sys.exit('error: "a" has too many elements; check how you are setting it above!')
+
+        if len(divis)!=num_classes+1:
+            sys.exit('error: "divis" has too many elements; check how you are setting it above!')
+    
 #         print(divis)
 #         print(divis.shape)
         

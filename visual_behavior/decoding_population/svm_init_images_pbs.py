@@ -13,7 +13,6 @@ Created on Thu Oct 9 12:29:43 2020
 #%% Sessions corresponding to project and stage below will be used in svm_images analysis
 
 project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
-session_numbers = [-10] #[4] # for slc, set to a value <0 (because for slc the concatenated stim response dfs could not be saved, so we have to load a different metadata file below)
 cre2ana = 'slc' # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
 
 
@@ -21,6 +20,8 @@ cre2ana = 'slc' # will be used if session_numbers[0]<0 (we will use dataset and 
 import os
 import pickle
 
+# below is not needed anymore; just set session_numbers to negative value so we load stim response df for cre lines (not the concat version that does not exist for all mice)
+session_numbers = [-10] #[4] # for slc, set to a value <0 (because for slc the concatenated stim response dfs could not be saved, so we have to load a different metadata file below)
 
 #%% Load the pickle file which includes session and metadata information.
 
