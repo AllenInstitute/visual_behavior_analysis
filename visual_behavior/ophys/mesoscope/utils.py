@@ -1220,3 +1220,33 @@ def plot_rois_from_plane(ica_obj, pkey, plot_interval='all', roi_id=None):
         else:
             continue
     return roi_names_valid_ct
+
+def back_up_session(session):
+    """
+    Fun ot create ica_old directory insinde session directory and copy old ica results there
+    """
+    ica_o = ica.MesoscopeICA(session_id=session, cache=cache_ica)
+    for pair in pairs: # let's loop over all pairs:
+        ica_o.set_exp_ids(pair) # setting exp IDs for this pair
+        for pkey in ica_o.pkeys:
+            exp_id = ica_o.exp_ids[pkey] # getting first exp id form the apri and initializing ICA object for it
+            ica_o.set_ica_dirs()
+            for tkey in ica_o.tkeys:
+                dirct = ica_o.dirs[tkey]
+                os.chdir(dirct)
+                old_ica_dir = os.path.join(dirct, 'old_ica')
+                if not os.path.isdir(old_ica_dir):
+                    os.mkdir(os.path.join(dirct, 'old_ica'))
+                # backing up inputs to ICA
+                sc.runcommand(f'cp *_in.h5 {old_ica_dir}')
+                sc.runcommand('rm -rf *_in.h5')
+                sc.runcommand(f'cp *_in_at.h5 {old_ica_dir}')
+                sc.runcommand(f'rm -rf *_in_at.h5')
+                # bakcing up ICA outputs
+                sc.runcommand(f'cp *_out.h5 {old_ica_dir}')
+                sc.runcommand('rm -rf *_out.h5')
+                sc.runcommand(f'cp *_out_at.h5 {old_ica_dir}')
+                sc.runcommand(f'rm -rf *_out_at.h5')
+                # backing up jsons:
+                sc.runcommand(f'cp *.json {old_ica_dir}')
+                sc.runcommand('rm -rf *.json')
