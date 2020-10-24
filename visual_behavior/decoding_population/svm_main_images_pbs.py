@@ -227,8 +227,10 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 
         this_sess.at[index, cols[range(8)]] = session_id, lims_id, mouse, date, cre, stage, area, depth #, valid
         
-        
-        if valid: # do the analysis only if the experiment is valid
+        if valid==False:
+            print('This experiment is not valid; skipping analysis...')
+            
+        elif valid: # do the analysis only if the experiment is valid
 
             # get data for a single experiment
             image_data_this_exp = image_data[image_data['ophys_experiment_id']==lims_id]
@@ -584,11 +586,10 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
             #%% Save SVM vars (for each experiment separately)
             ####################################################################################################################################                
 
-            #%%
+            #%% Set svm dataframe
+            
             svm_vars = pd.DataFrame([], columns = np.concatenate((cols_basic, cols_svm)))
-
-            # experiment info
-            svm_vars.at[index, cols_basic] = this_sess.iloc[index, :] 
+            svm_vars.at[index, cols_basic] = this_sess.iloc[index, :] # experiment info
 
             # svm output
             if same_num_neuron_all_planes:

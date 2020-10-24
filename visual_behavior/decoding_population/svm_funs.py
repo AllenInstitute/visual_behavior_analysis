@@ -199,7 +199,8 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
             
 #    import numpy as np
     import numpy.random as rng
-
+    import sys
+    
 #    from imaging_decisionMaking_exc_inh.utils.lassoClassifier.crossValidateModel import crossValidateModel
 #    from imaging_decisionMaking_exc_inh.utils.lassoClassifier.linearSVM import linearSVM
 #    from crossValidateModel import crossValidateModel
@@ -356,21 +357,25 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
  
 
         ## set Y_chance (works for any number of classes)
+        ## NOTE: this was so not easy to do: to divide trials in a fair way among each class ... 
+        
         a = np.arange(0, len_test, np.round(len_test/float(num_classes)).astype(int))
+        
         if len(a)-1 == num_classes:
             divis = a
             divis[-1] = len_test
-        elif len(a)-1 < num_classes:
+        elif len(a) == num_classes:
             divis = np.concatenate((a, [len_test]))
         else:
-            sys.exit('error: "a" has too many elements; check how you are setting it above!')
+            a = np.arange(0, len_test, np.floor(len_test/float(num_classes)).astype(int))
+            divis = a[:num_classes+1]
+            divis[-1] = len_test            
 
-        if len(divis)!=num_classes+1:
-            sys.exit('error: "divis" has too many elements; check how you are setting it above!')
+#         if len(divis)!=num_classes+1:
+#             print(divis)
+#             sys.exit('error: "divis" has too many elements; check how you are setting it above!')
     
-#         print(divis)
-#         print(divis.shape)
-        
+        ########
         Y_chance = np.zeros(len_test)
         for irng in range(num_classes):
             Y_chance[divis[irng]: divis[irng+1]] = irng
@@ -712,6 +717,7 @@ def set_best_c_diffNumNeurons(X,Y,regType,kfold,numDataPoints,numSamples,populat
     #%%            
 #    import numpy as np
     import numpy.random as rng
+    import sys
     
     def perClassError(Y, Yhat):
         perClassEr = np.sum(abs(np.squeeze(Yhat).astype(float)-np.squeeze(Y).astype(float)))/len(Y)*100
