@@ -115,7 +115,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
         image_labels = image_indices_previous_flash
      
     #len(image_labels)
-    #np.unique(image_labels)
+    print(f'Unique image labels: {np.unique(image_labels)}')
     
         
     
@@ -971,7 +971,7 @@ else:
 print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess+1, len(list_all_sessions_valid)))
 
 # Use below if you set session_data and session_trials above: for VIP and SST
-svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', same_num_neuron_all_planes=0)
+svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, same_num_neuron_all_planes=0)
 
 # Use below if you set stimulus_response_df_allexp above: for Slc (can be also used for other cell types too; but we need it for Slc, as the concatenated dfs could not be set for it)
 # svm_main_images_pbs(data_list, stimulus_response_df_allexp, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0)
