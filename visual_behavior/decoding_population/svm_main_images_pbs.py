@@ -345,6 +345,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
             num_classes = len(np.unique(image_labels)) # number of classes to be classified by the svm
             print(f'Number of classes in SVM: {num_classes}')
             
+            
             meanX_allFrs = np.full((svm_total_frs, n_neurons), np.nan)
             stdX_allFrs = np.full((svm_total_frs, n_neurons), np.nan)        
 
@@ -716,7 +717,7 @@ import visual_behavior.data_access.loading as loading
 
 # NOTE: Pay special attention to the following vars before running the SVM:
 
-trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis
+trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 to_decode = 'previous' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
 
 time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
