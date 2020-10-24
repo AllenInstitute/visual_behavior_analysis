@@ -3,8 +3,10 @@
 """
 #%% Function to set metadata_basic, a df that includes basic metadata for all the 8 experiments of all sessions in list_all_sessions_valid; metadata include: 'session_id', 'experiment_id', 'area', 'depth', 'valid'
 
-Created on Wed Oct 14 23:07:43 2020
+This function gets called in svm_init_images_pre.py.
 
+
+Created on Wed Oct 14 23:07:43 2020
 @author: farzaneh
 """
 

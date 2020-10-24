@@ -71,34 +71,54 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
     
     
     #%% Set cell responses and trial types, using dataframe stimulus_response_df_allexp
-#     session_data = stimulus_response_df_allexp
-        
-    
-    #%% What trials to use for analysis
-        
+
+    #%% Set image_indices of the current and previous flash (including all stimuli in the session) (image_indices is the image index of the flash that occurred at time 0; all_stim_indices_previous_flash is the image index of the flash that occurred 750ms before.)    
+    # note: we do this on df_data which includes all images and omissions. We cannot do this after we exclude some trials (eg omissions), because then image index of the previous flash wont be simply a shift of image index of the current flash (becasue image index of the current flash doesnt have some stimuli anymore)!
+    u, u_i = np.unique(df_data['stimulus_presentations_id'].values, return_index=True)
+    all_stim_trials = df_data.iloc[u_i,:] # images and omissions # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
+    all_stim_indices = all_stim_trials['image_index'].values
+
+    # shift all_stim_indices, and add nan to the begining of it
+    all_stim_indices_previous_flash = np.concatenate(([np.nan], all_stim_indices))[:-1]
+#     all_stim_indices.shape, all_stim_indices_previous_flash.shape
+#     np.equal(all_stim_indices[:-1], all_stim_indices_previous_flash[1:]).sum(), all_stim_indices[:-1].shape
+
+
+
+    #%% Set data only including trials that will be used for analysis. Also set image index of the previous flash
     if trial_type=='omissions': # omissions:
         image_data = df_data[df_data['image_name']=='omitted']
+        image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices==8]
+        do = sum(image_indices_previous_flash==8)
+        if do>0:
+            print(f'Number of double omissions: {do}')
+        
     elif trial_type=='images': # all images excluding omissions:
         image_data = df_data[df_data['image_name']!='omitted']
+        image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices!=8]
+        
     if trial_type=='changes': # image changes:
         image_data = df_data[df_data['change']==True]
+        image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_trials['change']==True]
+
+        
+    #%% Set the vector of image indices for each trial (flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
+    u, u_i = np.unique(image_data['stimulus_presentations_id'].values, return_index=True) # u_i is the index of the first occurrence of unique values in image_data['stimulus_presentations_id']
+    image_trials = image_data.iloc[u_i,:] # image_trials is the same as image_data, except in includes only data from one neuron (yet all trials) # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
+    image_indices = image_trials['image_index'].values
 
     
-    #%% set the vector of image indices for each trial (flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
-    u, u_i = np.unique(image_data['stimulus_presentations_id'].values, return_index=True)
-    image_trials = image_data.iloc[u_i,:] # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
-    image_indices = image_trials['image_index'].values
-    # set image_index of the previous flash (image_indices is the image index of the flash that occurred at time 0; image_indices_previous_flash is the image index of the flash that occurred 750ms before.)
-    image_indices_previous_flash = np.concatenate(([np.nan], image_indices))[:-1]
-#     image_indices.shape, image_indices_previous_flash.shape
-#     np.equal(image_indices[:-1], image_indices_previous_flash[1:]).sum()
-    
+    #%% Set the vector of image labels which will be used for decoding
     if to_decode == 'current':
         image_labels = image_indices
     elif to_decode == 'previous':
         image_labels = image_indices_previous_flash
+     
+    #len(image_labels)
+    #np.unique(image_labels)
+    
         
-        
+    
     
     #%% If session_data and session_trials are given given as input:
     '''
@@ -191,19 +211,6 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
     
     # initiate the pandas tabledatetime.datetime.fromtimestamp(1548449865.568)
     this_sess = pd.DataFrame([], columns = cols)
-
-    '''
-    # plot the entire trace for each session
-    
-    get_ipython().magic(u'matplotlib inline') # %matplotlib inline
-    
-    dir_now = 'traces_entire_session'
-    if not os.path.exists(os.path.join(dir0, dir_now)):
-        os.makedirs(os.path.join(dir0, dir_now))
-    nam = '%s_mouse%d_sess%d_traceAveNs_allFrs' %(cre, mouse, session_id)
-    
-    plt.figure(figsize=(8,11)) # show all traces of all neurons for each plane individually, to see how the activity changes in a session!
-    '''
     
     for index, lims_id in enumerate(exp_ids): 
 
@@ -261,7 +268,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
             n_frames = image_data_this_exp['trace'].values[0].shape[0]
             n_neurons = image_data_this_exp['cell_specimen_id'].unique().shape[0]
             n_trials = image_data_this_exp['stimulus_presentations_id'].unique().shape[0]
-            print(n_frames, n_neurons, n_trials)
+            print(f'n_frames, n_neurons, n_trials: {n_frames, n_neurons, n_trials}')
 
             # image_data_this_exp['trace'].values.shape # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc
             traces = np.concatenate((image_data_this_exp['trace'].values)) # (frames x neurons x trials)
@@ -270,7 +277,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 
     
         
-            #%% Take care of nan values in image_labels (it happens if we are decoding the previous or next image), and remove them frome traces and image_labels
+            #%% Take care of nan values in image_labels (it happens if we are decoding the previous or next image and trial_type is images), and remove them frome traces and image_labels
             if to_decode != 'current':
                 masknan = ~np.isnan(image_labels)
                 # remove the nan from labels and traces
@@ -311,17 +318,6 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
                 print('===== plane %d: %d neurons; %d trials =====' %(index, n_neurons, n_trials))
 
 
-
-            #%%#############################################################
-            ###### The following two variables are the key variables: ######
-            ###### (they are ready to be used)                        ######
-            ###### calcium traces aligned on trials:                  ######
-            ###### traces_fut  (frames x units x trials)              ######
-            ###### and their time traces:                             ######
-            ###### local_time_allOmitt  (frames x trials)             ######
-            ################################################################
-
-
             #%%
             if n_trials < 10:
                 sys.exit('Too few trials to do SVM training! omissions=%d' %(n_trials))
@@ -331,7 +327,8 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 
 
             #%% Normalize each neuron trace by its max (so if on a day a neuron has low FR in general, it will not be read as non responsive!)
-
+            # we dont need this because we are z scoring the traces.
+            
             if norm_to_max_svm==1:
                 print('Normalizing each neuron trace by its max.')
                 # compute max on the entire trace of the session:
@@ -345,7 +342,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 
             #%% Starting to set variables for the SVM analysis                
 
-            num_classes = len(np.unique(image_indices)) # number of classes to be classified by the svm
+            num_classes = len(np.unique(image_labels)) # number of classes to be classified by the svm
             print(f'Number of classes in SVM: {num_classes}')
             
             meanX_allFrs = np.full((svm_total_frs, n_neurons), np.nan)
@@ -403,7 +400,8 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
             numTrials = traces_fut.shape[2]  # numDataPoints = X_svm.shape[1] # trials             
             len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   
             numDataPoints = numTrials
-
+            print(f'\n{len_test} testing trials in SVM. {numTrials} total number of trials.\n')
+            
             if len_test==1:
                 Ytest_hat_allSampsFrs_allFrs = np.full((numSamples, len_test, svm_total_frs), np.nan).squeeze() # squeeze helps if len_test=1
             else:
@@ -562,6 +560,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
                     a_shfl = np.mean(perClassErrorTestShfl, axis=0)
                     a_chance = np.mean(perClassErrorTestChance, axis=0)
 
+                    import matplotlib.pyplot as plt
                     plt.figure()
                     plt.plot(a_train, color='k', label='train') 
                     plt.plot(a_test, color='r', label='test') 
@@ -717,18 +716,19 @@ import visual_behavior.data_access.loading as loading
 
 # NOTE: Pay special attention to the following vars before running the SVM:
 
-trial_type = 'changes' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis
-to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis
+to_decode = 'previous' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+
 time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 # time_trace goes from -.5 to .65sec in the image-aligned traces.
 
 same_num_neuron_all_planes = 0 # if 1, use the same number of neurons for all planes to train svm
-numSamples = 50 # 2
+numSamples = 50 # numSamples = 2
 saveResults = 1 # 0 #
 
 project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
 
-print(f'Decoding *{to_decode}* image from *{trial_type}* activity at {time_win}ms rel. image!')
+print(f'Decoding *{to_decode}* image from *{trial_type}* activity at {time_win}ms!')
     
 
 
@@ -865,9 +865,12 @@ e = experiments_table.reset_index('ophys_experiment_id')
 e = e.loc[:, ['ophys_experiment_id', 'ophys_session_id', 'cre_line', 'session_name', 'date_of_acquisition', 'session_type', 'exposure_number']]
 
 # make sure all experiments in metadata exist in experiment_table
-# es = experiments_table.index
-# esmeta = metadata_basic[metadata_basic['valid']]['experiment_id'].unique()
-# np.in1d(es, esmeta).sum() == len(esmeta)
+es = experiments_table.index
+esmeta = metadata_basic[metadata_basic['valid']]['experiment_id'].unique()
+if np.in1d(es, esmeta).sum() == len(esmeta):
+    print(f'All experiments in metadata df exist in experiment_table, as expected')
+else:
+    print(f'Some experiments in metadata df do NOT exist in experiment_table; very uncanny!')
 
 c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name', 'change'] # columns of stim_response_df to keep
 

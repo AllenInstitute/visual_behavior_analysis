@@ -217,11 +217,11 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     if np.isnan(cbest).all(): # we need to set cbest
         bestcProvided = False        
         if regType == 'l1':
-            print('\n-------------- Running l1 svm classification --------------\r') 
+            print('\n----- Running l1 svm classification -----\r') 
             # cvect = 10**(np.arange(-4, 6,0.2))/numTrials;
             cvect = 10**(np.arange(-4, 6, 0.2)) / numDataPoints
         elif regType == 'l2':
-            print('\n-------------- Running l2 svm classification --------------\r') 
+            print('\n----- Running l2 svm classification -----\r') 
             cvect = 10**(np.arange(-6, 6, 0.2)) / numDataPoints          
         nCvals = len(cvect)
         print(f'Trying {nCvals} regularization values.')
@@ -384,8 +384,8 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
         Y_chance = Y_chance[rng.permutation(len_test)]        
 #         Y_chance.shape, Y_chance
         
-        # sanity check
-        print(f'Y_chance: n_trials of each class: {[sum(Y_chance==irng) for irng in range(num_classes)]}')
+        if s==0: # sanity check
+            print(f'Y_chance: n_trials of each class: {[sum(Y_chance==irng) for irng in range(num_classes)]}')
         
     
         ## old code: setting Y_chance; only works if there are 2 classes.
@@ -563,7 +563,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
         cbestFrs = cbest
         
     else:
-        print('--------------- Identifying best c ---------------')
+        print('----- Identifying best c -----')
 #        cbestFrs = np.full((X.shape[0]), np.nan)  
 #        cbestAllFrs = np.full((X.shape[0]), np.nan)  
         
