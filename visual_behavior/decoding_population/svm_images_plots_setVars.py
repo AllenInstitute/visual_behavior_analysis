@@ -3,7 +3,9 @@
 """
 The 1st script to run to make plots (assuming the analysis is done and files are saved.)
 
-This script loads all_sess that is set by function svm_main_post (called in svm_init).
+Before this script, "svm_images_init" must be run to save all_sess dataframe.
+
+This script loads all_sess that is set by function svm_main_post (called in svm_images_init).
 It sets all_sess_2an, which is a subset of all_sess that only includes desired sessions for analysis (A, or B, etc).
 
 Its output is a pandas table "svm_this_plane_allsess" which includes svm variables for each mouse, (for each plane, for each area, and for each depth) and will be used for plotting.
@@ -43,25 +45,25 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
 #%%
-frames_svm = [-3,-2,-1] # [0,1,2,3,4,5] # svm was run on how what frames relative to image onset
+trial_type = 'changes' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
 
-for session_numbers in [[1]]: #[[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage corresponding to project_codes that we will load.
+time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
+frames_svm = np.arange(-5,8) #[-3,-2,-1] # [0,1,2,3,4,5] # svm was run on how what frames relative to image onset
+
+same_num_neuron_all_planes = 0 #1 # if 1, use the same number of neurons for all planes to train svm
+dosavefig = 1
+
+samps_bef = 5
+samps_aft = 8
+
+num_planes = 8
+svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images'
+
+
+#%%
+for session_numbers in [[1]]: #[[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage corresponding to project_codes that we will make plots for.
 #     session_numbers = [4]
-    same_num_neuron_all_planes = 0 #1 # if 1, use the same number of neurons for all planes to train svm
-    time_win = 'frames_svm' # if string, frames_svm were used for quantification of class accuracy # set the window that was used for quantifying svm results
-
-    # all_ABtransit_AbefB_Aall = 3 # 1 # 0: analyze all sessions;  1: analyze AB transitions;  2: analyze only A sessions (before any B);  3: analyze all A sessions (before or after B)    
-    # only_1st_transit = 1 # relevant only if all_ABtransit_AbefB_Aall=1 # if 1, only include data from the 1st A-->B transition even if a mouse has more than one (safer, since in the subsequent transitions, B has been already introduced, so they are not like the 1st A-->B transition)
-
-    dosavefig = 1
-
-    samps_bef = 5
-    samps_aft = 8
-
-    svmn = 'svm_images'
-    num_planes = 8
-    # doCorrs = 0
-
 
     #%% If analyzing novel sessions, only take sessions that include the 1st presentation of the novel session (ie the ones without a retake of session ophys-3)
     if np.in1d(4, session_numbers): # novel sessions

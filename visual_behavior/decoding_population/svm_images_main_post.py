@@ -23,14 +23,14 @@ from general_funs import *
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 
-def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0):
+def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0):
     
     num_classes = 8 # decoding 8 images
     num_planes = 8
-    svmn = 'svm_images' # 'svm_gray_omit'
+    svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # 'svm_gray_omit'
     
-    if same_num_neuron_all_planes:
-        svmn = svmn + '_sameNumNeuronsAllPlanes'
+#     if same_num_neuron_all_planes:
+#         svmn = svmn + '_sameNumNeuronsAllPlanes'
         
     exp_ids = data_list['experiment_id'].values
 #     frame_dur = np.array([0.093]) # sec (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)    
@@ -79,9 +79,15 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, s
 
             # mouse, session, experiment: m, s, e
             if analysis_dates[0] == '':
-                name = '(.*)_s-%d_e-%s_%s_frames%dto%d_.' %(session_id, lims_id, svmn, frames_svm[0], frames_svm[-1])
+                nown = '.'
+#                 name = '(.*)_s-%d_e-%s_%s_frames%dto%d_.' %(session_id, lims_id, svmn, frames_svm[0], frames_svm[-1])
             else:
-                name = '(.*)_s-%d_e-%s_%s_frames%dto%d_%s_.' %(session_id, lims_id, svmn, frames_svm[0], frames_svm[-1], analysis_dates[0])
+                nown = f'{analysis_dates[0]}_.'
+#                 name = '(.*)_s-%d_e-%s_%s_frames%dto%d_%s_.' %(session_id, lims_id, svmn, frames_svm[0], frames_svm[-1], analysis_dates[0])
+            
+            if same_num_neuron_all_planes:
+                nown = 'sameNumNeuronsAllPlanes_' + nown
+            name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{nown}'
             
             svmName ,_ = all_sess_set_h5_fileName(name, dir_svm, all_files=0)
             
@@ -243,11 +249,12 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, s
                 samps_bef_here = -frames_svm[0] # relative to svm output traces (eg av_train_data)
             else:
                 samps_bef_here = 0
+                
             if type(time_win)==str: # time_win = 'frames_svm' means : use frames_svm to quantify image signal
                 time_win_frames = frames_svm + samps_bef_here # these indices will be applied to svm trace outputs.
-            else:                                
+            else:
                 time_win_frames = set_frame_window_flash_omit(time_win, samps_bef_here, frame_dur)
-                time_win_frames[np.in1d(time_win_frames, frames_svm)]                
+                time_win_frames[np.in1d(time_win_frames, frames_svm + samps_bef_here)]                
             
             print(f'frames_svm: {frames_svm}')
             print(f'time_win_frames for quantification: {time_win_frames}')

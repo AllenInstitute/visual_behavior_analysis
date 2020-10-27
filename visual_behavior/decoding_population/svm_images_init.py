@@ -29,28 +29,26 @@ from svm_main_images_post import *
         
 #%% Get SVM output for each cell type, and each frames_svm.
 
-cre2ana_all = 'slc', 'sst', 'vip'
-frames_svm_all = [[-3,-2,-1], [0,1,2,3,4,5]]
+trial_type = 'changes' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
 
-for icre in np.arange(0, len(cre2ana_all)):
+time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
+frames_svm_all = [np.arange(-5,8)] #[[-3,-2,-1], [0,1,2,3,4,5]]
+
+same_num_neuron_all_planes = 0
+saveResults = 1
+cre2ana_all = 'slc', 'sst', 'vip'
+# session_numbers = [6] # ophys session stage corresponding to project_codes that we will load.
+    
+for icre in np.arange(0, len(cre2ana_all)): # icre=0
 
     #%% Set vars for the analysis
     cre2ana = cre2ana_all[icre]
     
-    for ifs in range(len(frames_svm_all)):
+    for ifs in range(len(frames_svm_all)): # ifs=0
 
         frames_svm = frames_svm_all[ifs] #[-3,-2,-1] # [0,1,2,3,4,5] #  which svm files to load (this will be used to set svm file name) # (frames_svm also gets saved in svm_vars if svm could be run successfully on a session)
         print(f'Analyzing: {cre2ana}, {frames_svm}')
-
-        
-        #%%
-        same_num_neuron_all_planes = 0
-        saveResults = 1
-        # session_numbers = [6] # ophys session stage corresponding to project_codes that we will load.
-
-        # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
-        # set time_win to a string (any string) to use frames_svm as the window of quantification.
-        time_win = 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # time_win = [-.25, 0] # [-0.279, -0.186, -0.093]
 
                 
         #%%
@@ -106,7 +104,7 @@ for icre in np.arange(0, len(cre2ana_all)):
             session_id = int(list_all_sessions_valid[isess])
             data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
 
-            this_sess = svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0)
+            this_sess = svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0)
 
             all_sess = all_sess.append(this_sess) 
 
@@ -120,13 +118,13 @@ for icre in np.arange(0, len(cre2ana_all)):
         ################################################################## 
 
         # Set input_vars dataframe so you know what vars were used in your analysis
-        cols = np.array(['frames_svm', 'cre2ana', 'time_win', 'same_num_neuron_all_planes', 'project_codes'])
+        cols = np.array(['frames_svm', 'cre2ana', 'time_win', 'trial_type', 'to_decode', 'same_num_neuron_all_planes', 'project_codes'])
         input_vars = pd.DataFrame([], columns=cols)
-        input_vars.at[0, cols] =  frames_svm, cre2ana, time_win, same_num_neuron_all_planes, project_codes
+        input_vars.at[0, cols] =  frames_svm, cre2ana, time_win, trial_type, to_decode, same_num_neuron_all_planes, project_codes
 
 
         # Set the name of the h5 file for saving all_sess
-        svmn = 'svm_images'
+        svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images'
         now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
 
         if same_num_neuron_all_planes:
