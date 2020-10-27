@@ -730,8 +730,8 @@ import visual_behavior.data_access.loading as loading
 
 # NOTE: Pay special attention to the following vars before running the SVM:
 
-trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
-to_decode = 'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'images' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+to_decode = 'previous' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
 # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
 time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 # time_trace goes from -.5 to .65sec in the image-aligned traces.
