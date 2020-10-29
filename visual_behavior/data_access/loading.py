@@ -1727,6 +1727,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_
                                                               use_events)
                 filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
                 df = pd.read_hdf(filepath, key='df')
+                print(df.head())
                 df = df.merge(expts, on='ophys_experiment_id')
                 outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
                 df = df[df.cell_specimen_id.isin(outlier_cells) == False]
