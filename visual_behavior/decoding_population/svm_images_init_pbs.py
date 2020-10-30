@@ -5,22 +5,24 @@ Run svm_init_images_pre.py to save the pickle file which includes session and me
 
 
 Created on Thu Oct 9 12:29:43 2020
-
 @author: farzaneh
 """
 
 
-#%% Sessions corresponding to project and stage below will be used in svm_images analysis
+#%% Define vars for svm_images analysis
+
+cre2ana = 'vip' # slc, sst, vip # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
+to_decode = 'previous' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image. # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
+trial_type = 'images' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
 project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
-cre2ana = 'slc' # slc, sst, vip # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
 
 
 #%%
 import os
 import pickle
 
-# below is not needed anymore; just set session_numbers to negative value so we load stim response df for cre lines (not the concat version that does not exist for all mice)
+# below is not needed anymore; just set session_numbers to a negative value so we load stim response df for cre lines (not the concat version that does not exist for all mice)
 session_numbers = [-10] #[4] # for slc, set to a value <0 (because for slc the concatenated stim response dfs could not be saved, so we have to load a different metadata file below)
 
 #%% Load the pickle file which includes session and metadata information.
@@ -113,7 +115,9 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # sessio
 
     python_arg1 = '%s ' %isess
     python_arg2 = '%s' %filen
-
+    python_arg3 = '%s' %to_decode
+    python_arg4 = '%s' %trial_type
+    
     
     #%%    
     jobname = 'SVM'
@@ -123,7 +127,7 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # sessio
     PythonJob(
         python_file,
         python_executable = '/home/farzaneh.najafi/anaconda3/envs/visbeh/bin/python',
-        python_args = python_arg1+python_arg2,
+        python_args = python_arg1 + python_arg2 + python_arg3 + python_arg4,
 #         python_args = str(session_data) + str(session_trials), # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
 #         python_args = isess, # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
         conda_env = None,

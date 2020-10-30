@@ -431,7 +431,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
             #%% Use SVM to classify population activity on the gray-screen frame right before the omission vs. the activity on frame + nAftOmit after omission 
 
             ifr = -1
-            for nAftOmit in frames_svm: # nAftOmit=frames_svm[0]; ifr = 3
+            for nAftOmit in frames_svm: # nAftOmit = frames_svm[0]
                 ifr = ifr+1
                 print('\n================ Running SVM on frame %d relative to trial onset ================\n' %nAftOmit)
 
@@ -726,13 +726,22 @@ import sys
 import visual_behavior.data_access.loading as loading
 
 
-#%% Set SVM vars
+    
+    
+#%% Get the input arguments passed here from pbstools (in svm_init_images script)
 
-# NOTE: Pay special attention to the following vars before running the SVM:
+isess = int(sys.argv[1])
+filen = str(sys.argv[2])
+to_decode = str(sys.argv[3])
+trial_type = str(sys.argv[4])
 
-trial_type = 'images' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
-to_decode = 'previous' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-# remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
+# trial_type = 'images' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+# to_decode = 'previous' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image. # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
+
+
+
+#%% Set SVM vars # NOTE: Pay special attention to the following vars before running the SVM:
+
 time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 # time_trace goes from -.5 to .65sec in the image-aligned traces.
 
@@ -758,15 +767,6 @@ if not os.path.exists(dir_svm):
 
 
     
-    
-    
-#%% Get the input arguments passed here from pbstools (in svm_init_images script)
-
-isess = int(sys.argv[1])
-filen = str(sys.argv[2])
-
-
-
 
 #%% Use below for VIP and SST, since concatenated_stimulus_response_dfs exists for them.
 '''
