@@ -211,7 +211,10 @@ def SDK_timestamps_df(ophys_experiment_id):
     physio_dff = len(SDK_dataset.dff_traces.dff.values[0])
     stimulus = len(SDK_dataset.stimulus_timestamps)
     running = len(SDK_dataset.running_speed[0])
-    licks = len(SDK_dataset.licks)
+    try:
+        licks = len(SDK_dataset.licks)
+    except ValueError:
+        licks = np.nan
     try:
         eye_tracking = len(SDK_dataset.eye_tracking["time"])
     except RuntimeError:
