@@ -230,7 +230,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
             lims_id = exp_ids[il]
         '''            
         '''
-        ll = list(enumerate(exp_ids)); 
+        ll = list(enumerate(exp_ids))
         l = ll[0]; # first plane
         index = l[0]; # plane index
         lims_id = l[1] # experiment id 
@@ -737,6 +737,8 @@ trial_type = str(sys.argv[4])
 
 # trial_type = 'images' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 # to_decode = 'previous' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image. # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
+
+print('\n\n======== Analyzing session index %d ========\n' %(isess))
 
 
 
