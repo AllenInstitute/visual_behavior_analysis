@@ -57,6 +57,7 @@ def sync_timestamps_df(ophys_experiment_id):
                        'source': 'sync',
                        'physio': len(timestamps['ophys_frames'].timestamps),
                        'stimulus': len(timestamps['stimulus_frames'].timestamps),
+                       'running': len(timestamps['stimulus_frames'].timestamps),
                        'eye_tracking': len(timestamps['eye_tracking'].timestamps),
                        'behavior_mon': len(timestamps['behavior_monitoring'].timestamps),
                        'licks': len(timestamps['lick_times'].timestamps),
@@ -152,11 +153,19 @@ def eye_tracking_timestamps_from_VBAdataset(ophys_experiment_id):
 
 def VBA_timestamps_df(ophys_experiment_id):
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    try:
+        eye_tracking = len(np.asarray(dataset.eye_tracking["time"]))
+    except RuntimeError:
+        eye_tracking = np.nan
+    try:
+        behavior_mon = len(dataset.behavior_movie_timestamps)
+    except RuntimeError:
+        behavior_mon = np.nan
     df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
                        "ophys_session_id": loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id),
                        "source": "VBA",
-                       "eye_tracking": len(np.asarray(dataset.eye_tracking["time"])),
-                       "behavior_mon": len(dataset.behavior_movie_timestamps)}, index=[0])
+                       "eye_tracking": eye_tracking,
+                       "behavior_mon": behavior_mon}, index=[0])
     return df
 
 
@@ -198,15 +207,24 @@ def eye_tracking_timestamps_from_SDK(ophys_experiment_id):
 
 def SDK_timestamps_df(ophys_experiment_id):
     SDK_dataset = BehaviorOphysSession.from_lims(ophys_experiment_id)
+    physio = len(SDK_dataset.ophys_timestamps)
+    physio_dff = len(SDK_dataset.dff_traces.dff.values[0])
+    stimulus = len(SDK_dataset.stimulus_timestamps)
+    running = len(SDK_dataset.running_speed[0])
+    licks = len(SDK_dataset.licks)
+    try:
+        eye_tracking = len(SDK_dataset.eye_tracking["time"])
+    except RuntimeError:
+        eye_tracking = np.nan
     df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
                        "ophys_session_id": loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id),
                        "source": "SDK",
-                       "physio": len(SDK_dataset.ophys_timestamps),
-                       "physio_dff": len(SDK_dataset.dff_traces.dff.values[0]),
-                       "stimulus": len(SDK_dataset.stimulus_timestamps),
-                       "running": len(SDK_dataset.running_speed[0]),
-                       "eye_tracking": len(SDK_dataset.eye_tracking["time"]),
-                       "licks": len(SDK_dataset.licks)}, index=[0])
+                       "physio": physio,
+                       "physio_dff": physio_dff,
+                       "stimulus": stimulus,
+                       "running": running,
+                       "eye_tracking": eye_tracking,
+                       "licks": licks}, index=[0])
     return df
 
 
@@ -218,7 +236,7 @@ def running_timestamps_df(ophys_experiment_id):
                        "sync": len(stim_timestamps_from_sync(ophys_experiment_id)),
                        "pkl": len(running_timestamps_from_pkl(ophys_session_id)),
                        "SDK": len(running_timestamps_from_SDK(ophys_experiment_id))}, index=[0])
-    df = timestamp_mismatch_row(df, timestamp_columns_dict["running"])
+    df = datastream_mismatch_row(df, timestamp_columns_dict["running"])
     return df
 
 
@@ -231,7 +249,7 @@ def eye_tracking_timestamps_df(ophys_experiment_id):
                        "avi": eye_tracking_framecount_from_avi(ophys_session_id),
                        "SDK": len(eye_tracking_timestamps_from_SDK(ophys_experiment_id)),
                        "VBA": len(eye_tracking_timestamps_from_VBAdataset(ophys_experiment_id))}, index=[0])
-    df = timestamp_mismatch_row(df, timestamp_columns_dict["eye_tracking"])
+    df = datastream_mismatch_row(df, timestamp_columns_dict["eye_tracking"])
     return df
 
 
@@ -243,7 +261,7 @@ def behavior_monitoring_timestamps_df(ophys_experiment_id):
                        "sync": len(behaviormon_timestamps_from_sync(ophys_experiment_id)),
                        "avi": behavior_mon_framecount_from_avi(ophys_session_id),
                        "VBA": len(behavior_mon_timestamps_from_VBAdataset(ophys_experiment_id))}, index=[0])
-    df = timestamp_mismatch_row(df, timestamp_columns_dict["behavior_monitoring"])
+    df = datastream_mismatch_row(df, timestamp_columns_dict["behavior_monitoring"])
     return df
 
 
@@ -255,7 +273,7 @@ def stimulus_timestamps_df(ophys_experiment_id):
                        "sync": len(stim_timestamps_from_sync(ophys_experiment_id)),
                        "pkl": len(stim_timestamps_from_pkl(ophys_session_id)),
                        "SDK": len(stim_timestamps_from_SDK(ophys_experiment_id))}, index=[0])
-    df = timestamp_mismatch_row(df, timestamp_columns_dict["stimulus"])
+    df = datastream_mismatch_row(df, timestamp_columns_dict["stimulus"])
     return df
 
 
@@ -267,7 +285,7 @@ def physio_timestamps_df(ophys_experiment_id):
                        "SDK": len(physio_timestamps_from_SDK(ophys_experiment_id)),
                        "SDK_dff": dff_trace_length_from_SDK(ophys_experiment_id),
                        "mcm": physio_frames_from_motion_corrected_movie(ophys_experiment_id)}, index=[0])
-    df = timestamp_mismatch_row(df, timestamp_columns_dict["physio"])
+    df = datastream_mismatch_row(df, timestamp_columns_dict["physio"])
     return df
 
 
@@ -288,7 +306,7 @@ def lick_timestamps_df(ophys_experiment_id, stage_name=False):
                            "sync": len(lick_timestamps_from_sync(ophys_experiment_id)),
                            "pkl": len(lick_timestamps_from_pkl(ophys_session_id)),
                            "SDK": len(lick_timestamps_from_SDK(ophys_experiment_id))}, index=[0])
-    df = timestamp_mismatch_row(df, timestamp_columns_dict["running"])
+    df = datastream_mismatch_row(df, timestamp_columns_dict["running"])
     return df
 
 
@@ -302,7 +320,8 @@ def experiment_timestamps_df(ophys_experiment_id):
     df = df.sort_values("datastream").reset_index(drop=True)
     df.loc[df["datastream"] == "physio_dff", ["source"]] = "SDK_dff"
     df.loc[df["datastream"] == "physio_dff", ["datastream"]] = "physio"
-    df = timestamp_mismatch_column(df)
+    df = diff_from_rawdata_column(df)
+    df = datastream_mismatch_column(df)
     return df
 
 
@@ -314,15 +333,7 @@ timestamp_columns_dict = {"physio": ["sync", "SDK", "SDK_dff", "mcm"],
                           "lick": ["sync", "pkl", "SDK"]}
 
 
-timestamp_groundtruth_dict = {"physio": "mcm",
-                              "stimulus": "pkl",
-                              "running": "pkl",
-                              "eye_tracking": "avi",
-                              "behavior_monitoring": "avi",
-                              "lick": ["sync", "pkl", "SDK"]}
-
-
-def timestamp_mismatch_row(dataframe, timestamp_columns_list):
+def datastream_mismatch_row(dataframe, timestamp_columns_list):
     timestamp_col_df = dataframe[timestamp_columns_list]
     unique_timestamp_numbers = timestamp_col_df.nunique(axis=1)[0]
     if unique_timestamp_numbers == 1:
@@ -332,10 +343,8 @@ def timestamp_mismatch_row(dataframe, timestamp_columns_list):
     return dataframe
 
 
-def timestamp_mismatch_column(dataframe):
-    dataframe["unique_ts"] = dataframe["num_timestamps"].groupby(dataframe["datastream"]).transform("nunique")
-    dataframe["mismatch_present"] = dataframe["unique_ts"].apply(lambda x: False if x == 1 else True)
-    dataframe = dataframe.drop(columns=["unique_ts"])
+def datastream_mismatch_column(dataframe):
+    dataframe["mismatch_present"] = dataframe["diff_from_rawdata"].apply(lambda x: False if x == 0.0 else True)
     return dataframe
 
 
@@ -355,4 +364,42 @@ def melt_datastream_timestamp_df(dataframe):
     return melted_df
 
 
+def diff_from_rawdata_column(dataframe):
+    rawdata_ts = get_datastream_rawdata_ts(dataframe)
+    dataframe = pd.merge(dataframe, rawdata_ts, how="left", on="datastream")
+    dataframe["diff_from_rawdata"] = dataframe["rawdata_timestamps"] - dataframe["num_timestamps"]
+    dataframe = dataframe.drop(columns=["rawdata_timestamps"])
+    return dataframe
 
+
+def unify_source_rawdata_column_values(dataframe):
+    dataframe.loc[dataframe["source"].isin(["avi", "pkl", "mcm"]), ["source"]] = "raw_data"
+    return dataframe
+
+
+def get_datastream_rawdata_ts(dataframe):
+    rawdata_timestamps = dataframe.loc[dataframe["source"].isin(["avi", "pkl", "mcm"]), ["datastream", "num_timestamps"]]
+    rawdata_timestamps = rawdata_timestamps.rename(columns={"num_timestamps": "rawdata_timestamps"})
+    return rawdata_timestamps
+
+
+def pivot_experiment_timestamp_df(dataframe):
+    dataframe["datastream_source"] = dataframe["datastream"] + "_" + dataframe["source"]
+    dataframe = dataframe.drop(columns=["ophys_session_id", "source", "datastream",
+                                        "num_timestamps", "mismatch_present"])
+    pivot = dataframe.pivot(index="ophys_experiment_id", columns="datastream_source", values="diff_from_rawdata").reset_index().rename_axis(None, axis=1)
+    return pivot
+
+
+def dataframe_for_mismatch_present_heatmap_plot(dataframe):
+    dataframe["datastream_source"] = dataframe["datastream"] + "_" + dataframe["source"]
+    dataframe = dataframe.drop(columns=["ophys_session_id", "source", "datastream",
+                                        "num_timestamps", "diff_from_rawdata"])
+    dataframe["mismatch_present"] = dataframe["mismatch_present"].apply(lambda x: 0 if x == False else 1)
+    dataframe = dataframe.pivot(index="ophys_experiment_id", columns="datastream_source")
+    return dataframe
+
+
+def identify_sync_line_mislabel(pivoted_dataframe):
+    pivoted_dataframe["sync_line_mislabel"] = (pivoted_dataframe["behavior_mon_sync"] != 0) & (pivoted_dataframe["eye_tracking_sync"] != 0) & (pivoted_dataframe["behavior_mon_sync"] == -(pivoted_dataframe["eye_tracking_sync"]))
+    return pivoted_dataframe
