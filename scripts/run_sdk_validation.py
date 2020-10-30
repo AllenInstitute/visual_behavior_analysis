@@ -5,9 +5,10 @@ import time
 import pandas as pd
 import numpy as  np
 import visual_behavior.validation.sdk as sdk_validation
-import visual_behavior.visualization.qc.data_loading as dl
+import visual_behavior.data_access.loading as loading
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')
 from pbstools import pbstools  # NOQA E402
+import visual_behavior.database as db
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -32,6 +33,15 @@ job_settings = {'queue': 'braintv',
                 'ppn': 1,
                 }
 
+def get_donor_from_specimen_id(specimen_id):
+    res = db.lims_query('select * from specimens where id = {}'.format(specimen_id))
+    if len(res['donor_id']) == 1:
+        return res['donor_id'].iloc[0]
+    elif len(res['donor_id']) == 0:
+        return None
+    elif len(res['donor_id']) > 1:
+        print('found more than one donor ID for specimen ID {}'.format(specimen_id))
+        return res['donor_id'].iloc[0]
 
 if __name__ == "__main__":
     args = parser.parse_args()
@@ -39,9 +49,42 @@ if __name__ == "__main__":
     print('python executable = {}'.format(python_executable))
     python_file = "{}/code/visual_behavior_analysis/visual_behavior/validation/sdk.py".format(os.path.expanduser('~'))
 
-    cache = sdk_validation.get_cache()
+    cache = loading.get_visual_behavior_cache()
     behavior_session_table = cache.get_behavior_session_table()
-    filtered_ophys_session_table = dl.get_filtered_ophys_sessions_table()
+    filtered_ophys_experiment_table = loading.get_filtered_ophys_experiment_table()
+
+    # get donor id for experiment_table
+    filtered_ophys_experiment_table['donor_id'] = filtered_ophys_experiment_table['specimen_id'].map(
+        lambda sid: get_donor_from_specimen_id(sid)
+    )
+
+    # get behavior donor dataframe - all mice in behavior table
+    behavior_donors = pd.DataFrame({'donor_id':behavior_session_table['donor_id'].unique()})
+    # add a flag identifying which donors have associated ophys sessions
+    behavior_donors['has_ophys'] = behavior_donors['donor_id'].map(
+        lambda did: did in list(filtered_ophys_experiment_table['donor_id'].unique())
+    )
+
+    # merge back in behavior donors to determine which behavior sessions have associated ophys
+    behavior_session_table = behavior_session_table.merge(
+        behavior_donors,
+        left_on='donor_id',
+        right_on='donor_id',
+        how='left',
+    )
+
+    # get behavior session IDs from foraging IDs
+    fid_list = behavior_session_table['foraging_id'].to_list()
+    fid_tuple = tuple(f for f in fid_list if f is not None)
+
+    # merge foraging IDS into behavior session_table
+    foraging_id_df = db.lims_query("select id from behavior_sessions where foraging_id in {}".format(fid_tuple)).rename(columns={'id':'behavior_session_id'})
+    foraging_id_df['foraging_id'] = list(fid_tuple)
+    behavior_session_table = behavior_session_table.merge(
+        foraging_id_df,
+        left_on='foraging_id',
+        right_on='foraging_id'
+    )
 
     validation_results = sdk_validation.get_validation_results().sort_index()
     # find sessions with failures (by applying all function after setting null values to True)
@@ -53,7 +96,7 @@ if __name__ == "__main__":
         sessions_to_validate = sessions_with_failures.index.values
     else:
         # validate everything in the behavior session table
-        sessions_to_validate = behavior_session_table.index.values
+        sessions_to_validate = behavior_session_table.query('has_ophys')['behavior_session_id'].values
 
     for ii, behavior_session_id in enumerate(sessions_to_validate):
 
