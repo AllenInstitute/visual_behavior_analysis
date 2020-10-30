@@ -29,7 +29,7 @@ job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_
 
 job_settings = {'queue': 'braintv',
                 'mem': '10g',
-                'walltime': '0:10:00',
+                'walltime': '0:30:00',
                 'ppn': 1,
                 }
 
