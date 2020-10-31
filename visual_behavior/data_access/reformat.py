@@ -17,7 +17,7 @@ import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
 def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
     mouse_seeks_report_file_base = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
-    report_file = 'ophys_session_log_031820.xlsx'
+    report_file = 'ophys_session_log_100120.xlsx'
     vb_report_path = os.path.join(mouse_seeks_report_file_base, report_file)
     vb_report_df = pd.read_excel(vb_report_path)
 
@@ -387,7 +387,23 @@ def add_epoch_times(df, time_column='start_time', epoch_duration_mins=10):
     return df
 
 
+def get_tidy_dff_traces(dataset):
+    '''
+    returns a tidy formatted version of the dff_traces dataframe
+    '''
+    dff_dfs = []
+    for csid in dataset.cell_specimen_ids:
+        dff_dfs.append(
+            pd.DataFrame({
+                'timestamps': dataset.ophys_timestamps,
+                'cell_specimen_id': [csid] * len(dataset.ophys_timestamps),
+                'dff': dataset.dff_traces.loc[csid]['dff'],
+            })
+        )
+    return pd.concat(dff_dfs)
+
 # INPLACE VERSIONS ###
+
 
 def convert_licks_inplace(licks_df):
     '''
