@@ -1488,18 +1488,56 @@ def adjust_mixing(a_mix, obs):
     return a_mix
 
 
+def correlate_ica_in_to_out(signal_in, signal_out):  # correlation of out 0 with input 0
+    cor_0_0 = np.correlate(signal_in[0], signal_out[0])[0]
+    cor_0_1 = np.correlate(signal_in[0], signal_out[1])[0]
+    cor_1_1 = np.correlate(signal_in[1], signal_out[1])[0]
+    cor_1_0 = np.correlate(signal_in[1], signal_out[0])[0]
+    return [cor_0_0, cor_0_1, cor_1_1, cor_1_0]
+
+
+def fix_source_assignment(ica_input, ica_output):
+    corrs = correlate_ica_in_to_out(ica_input.T, ica_output.T)
+    swapped_flag = False
+    if abs(corrs[0]) > abs(corrs[1]) and abs(corrs[2]) > abs(corrs[3]):  # sources are not inverted
+        print("Sources are not inverted")
+        ica_output_corrected = ica_output
+    else:  # sources are inverted, reassign:
+        print("Sources are inverted")
+        swapped_flag = True
+        a = copy.deepcopy(ica_output)
+        b = copy.deepcopy(a[:, 0])
+        a[:, 0] = a[:, 1]
+        a[:, 1] = b
+        ica_out_swapped = copy.deepcopy(a)
+        ica_output_corrected = ica_out_swapped
+    return [ica_output_corrected, corrs, swapped_flag]
+
+
+def whiten_data(X):
+    m = np.mean(X, axis=0)
+    x = X - m
+    n = np.sqrt(x.shape[0])
+    u, s, v = np.linalg.svd(x, full_matrices=False)
+    w = np.dot(v.T/s, v)*n
+    return np.dot(u, v)*n, w, m
+
+
 def run_ica(sig, ct):
     traces = np.array([sig, ct]).T
-    f_ica = FastICA(n_components=2, max_iter=50)
-    _ = f_ica.fit_transform(traces)  # Reconstruct signals
-    mix = f_ica.mixing_  # Get estimated mixing matrix
-    # make sure no negative coeffs (inversion of traces)
-    a_mix = mix
-    a_mix = adjust_mixing(a_mix, traces)
-    a_unmix = np.linalg.pinv(a_mix)
-    # recontructing signals: dot product of unmixing matrix and input traces
-    r_source = np.dot(a_unmix, traces.T).T
-    return mix, a_mix, a_unmix, r_source
+    # Unmixing
+    fast_ica = FastICA(n_components=2, max_iter=50)
+    ica_output_0 = fast_ica.fit_transform(traces)  # Reconstruct sources
+    unmix = fast_ica.components_
+    whitening = fast_ica.whitening_
+    # fixing sign and source assignment:
+    ica_input = traces
+    ica_output_1, corrs, _, _, _ = fix_sign_and_source_assignment(ica_input, ica_output_0)
+    # fixing scale using whitening matrix
+    ica_output_1_0 = ica_output_1.T[0]/np.abs(whitening[0, 0])
+    ica_output_1_1 = ica_output_1.T[1]/np.abs(whitening[1, 1])
+    ica_output = np.array([ica_output_1_0, ica_output_1_1])
+    return unmix, whitening, ica_output
 
 
 def validate_active_traces(evs_ind):
@@ -1542,4 +1580,87 @@ def add_suffix_to_path(abs_path, suffix):
     file_name = os.path.splitext(abs_path)[0]
     new_file_name = f"{file_name}{suffix}{file_ext}"
     return new_file_name
+
+
+def unmix_plane(self, ica_in, traces_in_active, unmixing = None, whitening = None):
+    """
+    fn to run unmixing on all valid rois in a plane
+    :param ica_in: input traces for signal and crosstalk planes, numpy array 2 X num_rois X frames
+    :param traces_in_active: active parts of the traces for crosstalk and signal planes, dict of
+            {"roi_id" : 2 x timestamps numpy array}
+    :param mixing: list of mixing ROI matrices to use if unmixing neuropil
+    :return:
+        ica_plane_out: numpy array of demixed traces, numpy array 2 X num_rois X frames
+        plane_crosstalk: list of crosstalk values for each ROI
+        plane_mixing: list of 2x2 raw mixing matrices for each ROI. a raw mixing matrix is an output of the ICA, it has scaling, sign and output assignment issues.
+        plane_a_mixing: list of 2x2 adjusted mixing matrices for each ROI
+    """
+    # get list of valid roi ids
+    rois = list(traces_in_active.keys())
+
+    # get trace to demix (whole)
+    traces_sig = ica_in[0, :, :]
+    traces_ct = ica_in[1, :, :]
+
+    # initialize outputs
+    plane_unmixing = np.zeros((ica_in.shape[1], 2, 2))
+    ica_plane_out = np.empty(ica_in.shape)
+
+    if unmixing is not None:  # this is indicative that traces are from neuropil, use provided mixing to unmix them
+        for i, roi in enumerate(rois):
+            unmixing_roi = unmixing[i]
+            whitening_roi = unmixing[i]
+            if not np.any(np.isnan(traces_in_active[roi])) and not np.any(np.isnan(unmixing_roi)):
+                trace_sig = traces_sig[i]
+                trace_ct = traces_ct[i]
+                traces = np.array([trace_sig, trace_ct]).T
+                # recontructing sources using unmixing matrix from corresponding ROI
+
+                ica_outputs_0 = np.dot(unmixing_roi, traces.T).T
+                plane_unmixing[i, :, :] = unmixing_roi
+                # fix source assignment and sign
+                ica_outputs_1, _, _, _, _ = fix_sign_and_source_assignment(traces, ica_outputs_0)
+                # fix scale:
+                trace_sig_out = ica_outputs_1.T[0] / np.abs(whitening_roi[0, 0])
+                trace_ct_out = ica_outputs_1.T[1] / np.abs(whitening_roi[1, 1])
+                ica_plane_out[0, i, :] = trace_sig_out
+                ica_plane_out[1, i, :] = trace_ct_out
+            else:
+                # skip unmixing, write input traces to output
+                ica_plane_out[0, i, :] = traces_sig[i]
+                ica_plane_out[1, i, :] = traces_ct[i]
+                plane_unmixing[i, :, :] = np.nan
+
+    else:  # traces are rois, do full unmixing.
+        # run ica on active traces, apply unmixing matrix to the entire trace
+        # perform unmixing separately on each ROI:
+        for i, roi in enumerate(rois):
+            # get events traces
+            if not np.all(np.isnan(traces_in_active[
+                                       roi])):  # if active trace exists, use it to unmix, else - skip unmixing for this roi
+                trace_sig_evs = traces_in_active[roi][0]
+                trace_ct_evs = traces_in_active[roi][1]
+
+                unmixing, whitening, ica_outputs_events = run_ica(trace_sig_evs, trace_ct_evs)
+
+                # applying unmixing matrix to the entire trace
+                trace_sig = traces_sig[i]
+                trace_ct = traces_ct[i]
+                traces = np.array([trace_sig, trace_ct]).T
+                ica_outputs_0 = np.dot(unmixing, traces.T).T
+                plane_unmixing[i, :, :] = unmixing
+                # fix source assignment and sign
+                ica_outputs_1, _, _, _, _ = fix_sign_and_source_assignment(traces, ica_outputs_0)
+                # fix scale:
+                trace_sig_out = ica_outputs_1.T[0] / np.abs(whitening[0, 0])
+                trace_ct_out = ica_outputs_1.T[1] / np.abs(whitening[1, 1])
+                ica_plane_out[0, i, :] = trace_sig_out
+                ica_plane_out[1, i, :] = trace_ct_out
+            else:  # trace did not have events, skipping unmixing, adding original trace to the output
+                ica_plane_out[0, i, :] = traces_sig[i]
+                ica_plane_out[1, i, :] = traces_ct[i]
+                # plane_crosstalk[:, i] = np.nan
+                plane_unmixing[i, :, :] = np.nan
+
+    return ica_plane_out, plane_unmixing
 
