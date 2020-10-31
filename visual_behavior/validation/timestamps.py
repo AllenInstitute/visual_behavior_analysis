@@ -347,7 +347,7 @@ def datastream_mismatch_row(dataframe, timestamp_columns_list):
 
 
 def datastream_mismatch_column(dataframe):
-    dataframe["mismatch_present"] = dataframe["diff_from_rawdata"].apply(lambda x: False if x ==0.0 else (np.nan if  pd.isnull(x) else True))
+    dataframe["mismatch_present"] = dataframe["diff_from_rawdata"].apply(lambda x: False if x == 0.0 else (np.nan if pd.isnull(x) else True))
     return dataframe
 
 
