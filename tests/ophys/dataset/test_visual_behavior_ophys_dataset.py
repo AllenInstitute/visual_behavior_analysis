@@ -8,7 +8,7 @@ import h5py
 
 from visual_behavior.ophys.dataset.visual_behavior_ophys_dataset import VisualBehaviorOphysDataset
 
-
+# important note: test fixtures are generated in ../conftest.py
 
 def safe_makedirs(path):
     # exist_ok is not a thing in Python 2
