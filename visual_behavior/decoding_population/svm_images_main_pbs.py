@@ -72,7 +72,8 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
     
     
     #%% Set cell responses and trial types, using dataframe stimulus_response_df_allexp
-
+    # NOTE: image_index indicates the image identity. It's NOT about the index of elements in an array!
+    
     #%% Set image_indices of the current and previous flash (including all stimuli in the session) (image_indices is the image index of the flash that occurred at time 0; all_stim_indices_previous_flash is the image index of the flash that occurred 750ms before.)    
     # note: we do this on df_data which includes all images and omissions. We cannot do this after we exclude some trials (eg omissions), because then image index of the previous flash wont be simply a shift of image index of the current flash (becasue image index of the current flash doesnt have some stimuli anymore)!
     u, u_i = np.unique(df_data['stimulus_presentations_id'].values, return_index=True)
@@ -88,7 +89,12 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 
 
     #%% Set data only including trials that will be used for analysis. Also set image index of the previous flash
-    if trial_type=='omissions': # omissions:
+    if trial_type=='images_omissions': # all images and omissions:
+        image_data = df_data
+        image_indices_previous_flash = all_stim_indices_previous_flash
+        image_indices_next_flash = all_stim_indices_next_flash
+    
+    elif trial_type=='omissions': # omissions:
         image_data = df_data[df_data['image_name']=='omitted']
         image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices==8]
         image_indices_next_flash = all_stim_indices_next_flash[all_stim_indices==8]
@@ -101,13 +107,13 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
         image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices!=8]
         image_indices_next_flash = all_stim_indices_next_flash[all_stim_indices!=8]
         
-    if trial_type=='changes': # image changes:
+    elif trial_type=='changes': # image changes:
         image_data = df_data[df_data['change']==True]
         image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_trials['change']==True]
         image_indices_next_flash = all_stim_indices_next_flash[all_stim_trials['change']==True]
         
         
-    #%% Set the vector of image indices for each trial (flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
+    #%% Set the vector of image indices for each trial (current flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
     u, u_i = np.unique(image_data['stimulus_presentations_id'].values, return_index=True) # u_i is the index of the first occurrence of unique values in image_data['stimulus_presentations_id']
     image_trials = image_data.iloc[u_i,:] # image_trials is the same as image_data, except in includes only data from one neuron (yet all trials) # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
     image_indices = image_trials['image_index'].values
@@ -125,8 +131,18 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
     #len(image_labels0)
     print(f'Unique image labels: {np.unique(image_labels0)}')
     
-        
+
     
+    #### NOTE: codes above will result in decoding 9 classes (8 images + omissions) when to_decode='previous' and trial_type='images'. (it wont happen when to_decode='current' because above we only include images for trial_type='images'; it also wont happen when trial_type='omissions' or 'changes', because changes and omissions are not preceded by omissions (although rarely we do see double omissions))
+    # if you want to also decode omissions (in addition to the 8 images) when to_decode='current', you should change trial_type='images' to trial_type='images_omissions'
+    
+
+    if trial_type=='changes': # image changes:
+        no_change = np.argwhere((image_indices_previous_flash - image_indices)==0)
+        if len(no_change)>0:
+            sys.exit('Supposed to be an image change, but actually no image change occurred!')
+
+            
     
     #%% If session_data and session_trials are given given as input:
     '''
@@ -327,359 +343,366 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 
             
             
-            #%% Exit the experiment if neurons or trials are too few, or if there are not enough unique classes in the data            
-
+            #%% Do not continue the analysis if neurons or trials are too few, or if there are not enough unique classes in the data            
+            
+            continue_analysis = True
+            
             if n_neurons==0: # some of the de-crosstalked planes don't have any neurons.
                 this_sess.at[index, 'valid'] = False
+                continue_analysis = False
                 print('0 neurons! skipping invalid experiment %d, index %d' %(int(lims_id), index))
-
+    
             if n_trials < 10:
-                sys.exit('Too few trials to do SVM training! omissions=%d' %(n_trials))
+                continue_analysis = False
+                print('Skipping; too few trials to do SVM training! omissions=%d' %(n_trials))
 
             if n_neurons < svm_min_neurs: #np.logical_and(same_num_neuron_all_planes , n_neurons < svm_min_neurs):
-                sys.exit('Too few neurons to do SVM training! neurons=%d' %(n_neurons))
-                
+                continue_analysis = False
+                print('Skipping; too few neurons to do SVM training! neurons=%d' %(n_neurons))
+
             if num_classes < 2:
-                sys.exit('Too few classes to do SVM training! number of classes=%d' %(num_classes))
-                
+                continue_analysis = False
+                print('Skipping; too few classes to do SVM training! number of classes=%d' %(num_classes))
+
 
                 
             ######################## If everything is fine, continue with the SVM analysis ########################
+            
+            if continue_analysis:
+                #%% Normalize each neuron trace by its max (so if on a day a neuron has low FR in general, it will not be read as non responsive!)
+                # we dont need this because we are z scoring the traces.
 
-            #%% Normalize each neuron trace by its max (so if on a day a neuron has low FR in general, it will not be read as non responsive!)
-            # we dont need this because we are z scoring the traces.
+                if norm_to_max_svm==1:
+                    print('Normalizing each neuron trace by its max.')
+                    # compute max on the entire trace of the session:
+                    aa_mx = [np.max(traces_fut[:,i,:].flatten()) for i in range(n_neurons)] # neurons
 
-            if norm_to_max_svm==1:
-                print('Normalizing each neuron trace by its max.')
-                # compute max on the entire trace of the session:
-                aa_mx = [np.max(traces_fut[:,i,:].flatten()) for i in range(n_neurons)] # neurons
-
-                a = np.transpose(traces_fut, (0,2,1)) # frames x trials x units
-                b = a / aa_mx
-                traces_fut = np.transpose(b, (0,2,1)) # frames x units x trials
-
-                
-
-            #%% Starting to set variables for the SVM analysis                
-
-            meanX_allFrs = np.full((svm_total_frs, n_neurons), np.nan)
-            stdX_allFrs = np.full((svm_total_frs, n_neurons), np.nan)        
-
-            if same_num_neuron_all_planes:
-                nnt = n_neurons #X_svm[0]
-                numShufflesN = np.ceil(nnt/float(nN_trainSVM)).astype(int) # if you are selecting only 1 neuron out of 500 neurons, you will do this 500 times to get a selection of all neurons. On the other hand if you are selecting 400 neurons out of 500 neurons, you will do this only twice.
-
-                perClassErrorTrain_data_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, svm_total_frs), np.nan)        
-                perClassErrorTest_data_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, svm_total_frs), np.nan)
-                perClassErrorTest_shfl_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, svm_total_frs), np.nan)
-                perClassErrorTest_chance_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, svm_total_frs), np.nan)
-                if nN_trainSVM==1:
-                    if num_classes==2:
-                        w_data_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, nN_trainSVM, svm_total_frs), np.nan).squeeze() # squeeze helps if n_neurons=1 
-    #                 else:                    
-                else:
-                    if num_classes==2:
-                        w_data_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, nN_trainSVM, svm_total_frs), np.nan) # squeeze helps if n_neurons=1 
-    #                 else:                    
-                if num_classes==2:
-                    b_data_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, svm_total_frs), np.nan)
-    #             else:                
-
-                cbest_allFrs = np.full((len(population_sizes_to_try), numShufflesN, svm_total_frs), np.nan)
+                    a = np.transpose(traces_fut, (0,2,1)) # frames x trials x units
+                    b = a / aa_mx
+                    traces_fut = np.transpose(b, (0,2,1)) # frames x units x trials
 
 
-            ##########################
-            else:
-                perClassErrorTrain_data_allFrs = np.full((numSamples, svm_total_frs), np.nan)        
-                perClassErrorTest_data_allFrs = np.full((numSamples, svm_total_frs), np.nan)
-                perClassErrorTest_shfl_allFrs = np.full((numSamples, svm_total_frs), np.nan)
-                perClassErrorTest_chance_allFrs = np.full((numSamples, svm_total_frs), np.nan)
-                if n_neurons==1:
-                    if num_classes==2:
-                        w_data_allFrs = np.full((numSamples, n_neurons, svm_total_frs), np.nan).squeeze() # squeeze helps if n_neurons=1 
-                    else: 
-                        w_data_allFrs = np.full((numSamples, num_classes, n_neurons, svm_total_frs), np.nan).squeeze()
-                else:
-                    if num_classes==2:
-                        w_data_allFrs = np.full((numSamples, n_neurons, svm_total_frs), np.nan) # squeeze helps if n_neurons=1 
+
+                #%% Starting to set variables for the SVM analysis                
+
+                meanX_allFrs = np.full((svm_total_frs, n_neurons), np.nan)
+                stdX_allFrs = np.full((svm_total_frs, n_neurons), np.nan)        
+
+                if same_num_neuron_all_planes:
+                    nnt = n_neurons #X_svm[0]
+                    numShufflesN = np.ceil(nnt/float(nN_trainSVM)).astype(int) # if you are selecting only 1 neuron out of 500 neurons, you will do this 500 times to get a selection of all neurons. On the other hand if you are selecting 400 neurons out of 500 neurons, you will do this only twice.
+
+                    perClassErrorTrain_data_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, svm_total_frs), np.nan)        
+                    perClassErrorTest_data_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, svm_total_frs), np.nan)
+                    perClassErrorTest_shfl_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, svm_total_frs), np.nan)
+                    perClassErrorTest_chance_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, svm_total_frs), np.nan)
+                    if nN_trainSVM==1:
+                        if num_classes==2:
+                            w_data_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, nN_trainSVM, svm_total_frs), np.nan).squeeze() # squeeze helps if n_neurons=1 
+        #                 else:                    
                     else:
-                        w_data_allFrs = np.full((numSamples, num_classes, n_neurons, svm_total_frs), np.nan)
+                        if num_classes==2:
+                            w_data_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, nN_trainSVM, svm_total_frs), np.nan) # squeeze helps if n_neurons=1 
+        #                 else:                    
+                    if num_classes==2:
+                        b_data_allFrs = np.full((len(population_sizes_to_try), numShufflesN, numSamples, svm_total_frs), np.nan)
+        #             else:                
 
-                if num_classes==2:
-                    b_data_allFrs = np.full((numSamples, svm_total_frs), np.nan)
+                    cbest_allFrs = np.full((len(population_sizes_to_try), numShufflesN, svm_total_frs), np.nan)
+
+
+                ##########################
                 else:
-                    b_data_allFrs = np.full((numSamples, num_classes, svm_total_frs), np.nan)
-
-                cbest_allFrs = np.full(svm_total_frs, np.nan)
-
-
-
-            numTrials = traces_fut.shape[2]  # numDataPoints = X_svm.shape[1] # trials             
-            len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   
-            numDataPoints = numTrials
-            print(f'\n{len_test} testing trials in SVM. {numTrials} total number of trials.\n')
-
-            if len_test==1:
-                Ytest_hat_allSampsFrs_allFrs = np.full((numSamples, len_test, svm_total_frs), np.nan).squeeze() # squeeze helps if len_test=1
-            else:
-                Ytest_hat_allSampsFrs_allFrs = np.full((numSamples, len_test, svm_total_frs), np.nan)
-            Ytest_allSamps_allFrs = np.full((numSamples, len_test, svm_total_frs), np.nan)         
-            testTrInds_allSamps_allFrs = np.full((numSamples, len_test, svm_total_frs), np.nan)
-
-
-
-            #%% Use SVM to classify population activity on the gray-screen frame right before the omission vs. the activity on frame + nAftOmit after omission 
-
-            ifr = -1
-            for nAftOmit in frames_svm: # nAftOmit = frames_svm[0]
-                ifr = ifr+1
-                print('\n================ Running SVM on frame %d relative to trial onset ================\n' %nAftOmit)
-
-                # x
-                m = traces_fut[samps_bef + nAftOmit,:,:] # units x trials ; neural activity on the frame of omission
-
-                # y
-                m_y = image_labels
-
-                # now set the x matrix for svm
-                X_svm = m # units x trials
-                Y_svm = m_y # trials
-
-                print(X_svm.shape, Y_svm.shape)
-
-
-                #%% Z score (make each neuron have mean 0 and std 1 across all trials)
-
-                print('Z scoring acitivity traces!')
-
-                # mean and std of each neuron across all trials (trials here mean both gray screen frames and omission frames)
-                m = np.mean(X_svm, axis=1)
-                s = np.std(X_svm, axis=1)
-
-                meanX_allFrs[ifr,:] = m # frs x neurons
-                stdX_allFrs[ifr,:] = s     
-
-                # soft normalziation : neurons with sd<thAct wont have too large values after normalization                    
-                if softNorm==1:
-                    print(f'Using soft normalization. {thAct} will be added to std!')
-                    s = s + thAct     
-
-                X_svm = ((X_svm.T - m) / s).T # units x trials
-
-
-                #%% ############################ Run SVM analysis #############################
-
-                if same_num_neuron_all_planes:
-                    perClassErrorTrain_nN_all, perClassErrorTest_nN_all, wAllC_nN_all, bAllC_nN_all, cbestAllFrs_nN_all, cvect, \
-                            perClassErrorTest_shfl_nN_all, perClassErrorTest_chance_nN_all, inds_subselected_neurons_all, numShufflesN \
-                    = set_best_c_diffNumNeurons(X_svm,Y_svm,regType,kfold,numDataPoints,numSamples,population_sizes_to_try,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest0,\
-                                 fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=np.nan)
-
-                else:
-                    perClassErrorTrain, perClassErrorTest, wAllC, bAllC, cbestAll, cbest, cvect,\
-                            perClassErrorTestShfl, perClassErrorTestChance, testTrInds_allSamps, Ytest_allSamps, Ytest_hat_allSampsFrs0, trsnow_allSamps \
-                    = set_best_c(X_svm,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest0,\
-                                 fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=np.nan) # outputs have size the number of shuffles in setbestc (shuffles per c value)
-
-
-
-                ########## Set the SVM output at best C (for all samples) and keep SVM vars for all frames
-
-                if same_num_neuron_all_planes:
-                    for i_pop_size in range(len(population_sizes_to_try)):
-
-                        for inN in range(numShufflesN):
-                            # each element of perClassErrorTrain_nN_all is for a neural population of a given size. 
-                            # perClassErrorTrain_nN_all[0] has size: # numShufflesN x nSamples x nCvals
-                            perClassErrorTrain = perClassErrorTrain_nN_all[i_pop_size][inN] 
-                            perClassErrorTest = perClassErrorTest_nN_all[i_pop_size][inN]
-                            perClassErrorTestShfl = perClassErrorTest_shfl_nN_all[i_pop_size][inN]
-                            perClassErrorTestChance = perClassErrorTest_chance_nN_all[i_pop_size][inN]
-                            wAllC = wAllC_nN_all[i_pop_size][inN] # each element of wAllC_nN_all has size: numShufflesN x nSamples x nCvals x nNerons_used_for_training
-                            bAllC = bAllC_nN_all[i_pop_size][inN]
-                            cbest = cbestAllFrs_nN_all[i_pop_size][inN]
-
-                            indBestC = np.squeeze([0 if cbestKnown else np.in1d(cvect, cbest)])
-
-                            perClassErrorTrain_data = perClassErrorTrain[:,indBestC].squeeze()
-                            perClassErrorTest_data = perClassErrorTest[:,indBestC].squeeze()
-                            perClassErrorTest_shfl = perClassErrorTestShfl[:,indBestC].squeeze()
-                            perClassErrorTest_chance = perClassErrorTestChance[:,indBestC].squeeze()
-                            w_data = wAllC[:,indBestC,:].squeeze() # samps x neurons
-                            b_data = bAllC[:,indBestC].squeeze()
-
-
-                            ########## keep SVM vars for all frames after omission 
-                            cbest_allFrs[i_pop_size,inN,ifr] = cbest
-
-                            perClassErrorTrain_data_allFrs[i_pop_size,inN,:,ifr] = perClassErrorTrain_data # numSamps        
-                            perClassErrorTest_data_allFrs[i_pop_size,inN,:,ifr] = perClassErrorTest_data
-                            perClassErrorTest_shfl_allFrs[i_pop_size,inN,:,ifr] = perClassErrorTest_shfl
-                            perClassErrorTest_chance_allFrs[i_pop_size,inN,:,ifr] = perClassErrorTest_chance
-                            if n_neurons==1:
-                                w_data_allFrs[i_pop_size,inN,:,ifr] = w_data # numSamps x neurons
-                            else:
-                                w_data_allFrs[i_pop_size,inN,:,:,ifr] = w_data # numSamps x neurons
-                            b_data_allFrs[i_pop_size,inN,:,ifr] = b_data            
-
-
-                ################################################
-                else:   
-
-                    indBestC = np.squeeze([0 if cbestKnown else np.in1d(cvect, cbest)])
-        #                for ifr in range(nFrs):   
-    #                if cbestKnown:
-    #                    indBestC = 0
-    #                else:
-    #                    indBestC = np.in1d(cvect, cbest)
-
-                    perClassErrorTrain_data = perClassErrorTrain[:,indBestC].squeeze() # samps
-                    perClassErrorTest_data = perClassErrorTest[:,indBestC].squeeze()
-                    perClassErrorTest_shfl = perClassErrorTestShfl[:,indBestC].squeeze()
-                    perClassErrorTest_chance = perClassErrorTestChance[:,indBestC].squeeze()
-                    w_data = wAllC[:,indBestC].squeeze() # samps x neurons, if n_classes=2; # samps x classes x neurons, if n_classes>2
-                    b_data = bAllC[:,indBestC].squeeze() # samps, if n_classes=2; # samps x classes, if n_classes>2
-                    Ytest_hat_allSampsFrs = Ytest_hat_allSampsFrs0[:,indBestC,:].squeeze()
-
-
-                    ########## keep SVM vars for all frames after omission 
-                    cbest_allFrs[ifr] = cbest
-
-                    perClassErrorTrain_data_allFrs[:,ifr] = perClassErrorTrain_data # numSamps        
-                    perClassErrorTest_data_allFrs[:,ifr] = perClassErrorTest_data
-                    perClassErrorTest_shfl_allFrs[:,ifr] = perClassErrorTest_shfl
-                    perClassErrorTest_chance_allFrs[:,ifr] = perClassErrorTest_chance
+                    perClassErrorTrain_data_allFrs = np.full((numSamples, svm_total_frs), np.nan)        
+                    perClassErrorTest_data_allFrs = np.full((numSamples, svm_total_frs), np.nan)
+                    perClassErrorTest_shfl_allFrs = np.full((numSamples, svm_total_frs), np.nan)
+                    perClassErrorTest_chance_allFrs = np.full((numSamples, svm_total_frs), np.nan)
                     if n_neurons==1:
                         if num_classes==2:
-                            w_data_allFrs[:,ifr] = w_data # numSamps x neurons, if n_classes=2; # samps x classes x neurons, if n_classes>2
-                        else:
-                            w_data_allFrs[:,:,ifr] = w_data
+                            w_data_allFrs = np.full((numSamples, n_neurons, svm_total_frs), np.nan).squeeze() # squeeze helps if n_neurons=1 
+                        else: 
+                            w_data_allFrs = np.full((numSamples, num_classes, n_neurons, svm_total_frs), np.nan).squeeze()
                     else:
                         if num_classes==2:
-                            w_data_allFrs[:,:,ifr] = w_data # numSamps x neurons, if n_classes=2; # samps x classes x neurons, if n_classes>2
+                            w_data_allFrs = np.full((numSamples, n_neurons, svm_total_frs), np.nan) # squeeze helps if n_neurons=1 
                         else:
-                            w_data_allFrs[:,:,:,ifr] = w_data
+                            w_data_allFrs = np.full((numSamples, num_classes, n_neurons, svm_total_frs), np.nan)
 
                     if num_classes==2:
-                        b_data_allFrs[:,ifr] = b_data
+                        b_data_allFrs = np.full((numSamples, svm_total_frs), np.nan)
                     else:
-                        b_data_allFrs[:,:,ifr] = b_data
+                        b_data_allFrs = np.full((numSamples, num_classes, svm_total_frs), np.nan)
 
-                    Ytest_hat_allSampsFrs_allFrs[:,:,ifr] = Ytest_hat_allSampsFrs # numSamps x numTestTrs
+                    cbest_allFrs = np.full(svm_total_frs, np.nan)
 
-                    Ytest_allSamps_allFrs[:,:,ifr] = Ytest_allSamps # numSamps x numTestTrs                                        
-                    testTrInds_allSamps_allFrs[:,:,ifr] = testTrInds_allSamps  # numSamps x numTestTrs
-        #                    trsnow_allSamps_allFrs = trsnow_allSamps                    
 
+
+                numTrials = traces_fut.shape[2]  # numDataPoints = X_svm.shape[1] # trials             
+                len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   
+                numDataPoints = numTrials
+                print(f'\n{len_test} testing trials in SVM. {numTrials} total number of trials.\n')
+
+                if len_test==1:
+                    Ytest_hat_allSampsFrs_allFrs = np.full((numSamples, len_test, svm_total_frs), np.nan).squeeze() # squeeze helps if len_test=1
+                else:
+                    Ytest_hat_allSampsFrs_allFrs = np.full((numSamples, len_test, svm_total_frs), np.nan)
+                Ytest_allSamps_allFrs = np.full((numSamples, len_test, svm_total_frs), np.nan)         
+                testTrInds_allSamps_allFrs = np.full((numSamples, len_test, svm_total_frs), np.nan)
+
+
+
+                #%% Use SVM to classify population activity on the gray-screen frame right before the omission vs. the activity on frame + nAftOmit after omission 
+
+                ifr = -1
+                for nAftOmit in frames_svm: # nAftOmit = frames_svm[0]
+                    ifr = ifr+1
+                    print('\n================ Running SVM on frame %d relative to trial onset ================\n' %nAftOmit)
+
+                    # x
+                    m = traces_fut[samps_bef + nAftOmit,:,:] # units x trials ; neural activity on the frame of omission
+
+                    # y
+                    m_y = image_labels
+
+                    # now set the x matrix for svm
+                    X_svm = m # units x trials
+                    Y_svm = m_y # trials
+
+                    print(X_svm.shape, Y_svm.shape)
+
+
+                    #%% Z score (make each neuron have mean 0 and std 1 across all trials)
+
+                    print('Z scoring acitivity traces!')
+
+                    # mean and std of each neuron across all trials (trials here mean both gray screen frames and omission frames)
+                    m = np.mean(X_svm, axis=1)
+                    s = np.std(X_svm, axis=1)
+
+                    meanX_allFrs[ifr,:] = m # frs x neurons
+                    stdX_allFrs[ifr,:] = s     
+
+                    # soft normalziation : neurons with sd<thAct wont have too large values after normalization                    
+                    if softNorm==1:
+                        print(f'Using soft normalization. {thAct} will be added to std!')
+                        s = s + thAct     
+
+                    X_svm = ((X_svm.T - m) / s).T # units x trials
+
+
+                    #%% ############################ Run SVM analysis #############################
+
+                    if same_num_neuron_all_planes:
+                        perClassErrorTrain_nN_all, perClassErrorTest_nN_all, wAllC_nN_all, bAllC_nN_all, cbestAllFrs_nN_all, cvect, \
+                                perClassErrorTest_shfl_nN_all, perClassErrorTest_chance_nN_all, inds_subselected_neurons_all, numShufflesN \
+                        = set_best_c_diffNumNeurons(X_svm,Y_svm,regType,kfold,numDataPoints,numSamples,population_sizes_to_try,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest0,\
+                                     fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=np.nan)
+
+                    else:
+                        perClassErrorTrain, perClassErrorTest, wAllC, bAllC, cbestAll, cbest, cvect,\
+                                perClassErrorTestShfl, perClassErrorTestChance, testTrInds_allSamps, Ytest_allSamps, Ytest_hat_allSampsFrs0, trsnow_allSamps \
+                        = set_best_c(X_svm,Y_svm,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums,smallestC,shuffleTrs,cbest0,\
+                                     fr2an=np.nan, shflTrLabs=0, X_svm_incorr=0, Y_svm_incorr=0, mnHRLR_acrossDays=np.nan) # outputs have size the number of shuffles in setbestc (shuffles per c value)
+
+
+
+                    ########## Set the SVM output at best C (for all samples) and keep SVM vars for all frames
+
+                    if same_num_neuron_all_planes:
+                        for i_pop_size in range(len(population_sizes_to_try)):
+
+                            for inN in range(numShufflesN):
+                                # each element of perClassErrorTrain_nN_all is for a neural population of a given size. 
+                                # perClassErrorTrain_nN_all[0] has size: # numShufflesN x nSamples x nCvals
+                                perClassErrorTrain = perClassErrorTrain_nN_all[i_pop_size][inN] 
+                                perClassErrorTest = perClassErrorTest_nN_all[i_pop_size][inN]
+                                perClassErrorTestShfl = perClassErrorTest_shfl_nN_all[i_pop_size][inN]
+                                perClassErrorTestChance = perClassErrorTest_chance_nN_all[i_pop_size][inN]
+                                wAllC = wAllC_nN_all[i_pop_size][inN] # each element of wAllC_nN_all has size: numShufflesN x nSamples x nCvals x nNerons_used_for_training
+                                bAllC = bAllC_nN_all[i_pop_size][inN]
+                                cbest = cbestAllFrs_nN_all[i_pop_size][inN]
+
+                                indBestC = np.squeeze([0 if cbestKnown else np.in1d(cvect, cbest)])
+
+                                perClassErrorTrain_data = perClassErrorTrain[:,indBestC].squeeze()
+                                perClassErrorTest_data = perClassErrorTest[:,indBestC].squeeze()
+                                perClassErrorTest_shfl = perClassErrorTestShfl[:,indBestC].squeeze()
+                                perClassErrorTest_chance = perClassErrorTestChance[:,indBestC].squeeze()
+                                w_data = wAllC[:,indBestC,:].squeeze() # samps x neurons
+                                b_data = bAllC[:,indBestC].squeeze()
+
+
+                                ########## keep SVM vars for all frames after omission 
+                                cbest_allFrs[i_pop_size,inN,ifr] = cbest
+
+                                perClassErrorTrain_data_allFrs[i_pop_size,inN,:,ifr] = perClassErrorTrain_data # numSamps        
+                                perClassErrorTest_data_allFrs[i_pop_size,inN,:,ifr] = perClassErrorTest_data
+                                perClassErrorTest_shfl_allFrs[i_pop_size,inN,:,ifr] = perClassErrorTest_shfl
+                                perClassErrorTest_chance_allFrs[i_pop_size,inN,:,ifr] = perClassErrorTest_chance
+                                if n_neurons==1:
+                                    w_data_allFrs[i_pop_size,inN,:,ifr] = w_data # numSamps x neurons
+                                else:
+                                    w_data_allFrs[i_pop_size,inN,:,:,ifr] = w_data # numSamps x neurons
+                                b_data_allFrs[i_pop_size,inN,:,ifr] = b_data            
+
+
+                    ################################################
+                    else:   
+
+                        indBestC = np.squeeze([0 if cbestKnown else np.in1d(cvect, cbest)])
+            #                for ifr in range(nFrs):   
+        #                if cbestKnown:
+        #                    indBestC = 0
+        #                else:
+        #                    indBestC = np.in1d(cvect, cbest)
+
+                        perClassErrorTrain_data = perClassErrorTrain[:,indBestC].squeeze() # samps
+                        perClassErrorTest_data = perClassErrorTest[:,indBestC].squeeze()
+                        perClassErrorTest_shfl = perClassErrorTestShfl[:,indBestC].squeeze()
+                        perClassErrorTest_chance = perClassErrorTestChance[:,indBestC].squeeze()
+                        w_data = wAllC[:,indBestC].squeeze() # samps x neurons, if n_classes=2; # samps x classes x neurons, if n_classes>2
+                        b_data = bAllC[:,indBestC].squeeze() # samps, if n_classes=2; # samps x classes, if n_classes>2
+                        Ytest_hat_allSampsFrs = Ytest_hat_allSampsFrs0[:,indBestC,:].squeeze()
+
+
+                        ########## keep SVM vars for all frames after omission 
+                        cbest_allFrs[ifr] = cbest
+
+                        perClassErrorTrain_data_allFrs[:,ifr] = perClassErrorTrain_data # numSamps        
+                        perClassErrorTest_data_allFrs[:,ifr] = perClassErrorTest_data
+                        perClassErrorTest_shfl_allFrs[:,ifr] = perClassErrorTest_shfl
+                        perClassErrorTest_chance_allFrs[:,ifr] = perClassErrorTest_chance
+                        if n_neurons==1:
+                            if num_classes==2:
+                                w_data_allFrs[:,ifr] = w_data # numSamps x neurons, if n_classes=2; # samps x classes x neurons, if n_classes>2
+                            else:
+                                w_data_allFrs[:,:,ifr] = w_data
+                        else:
+                            if num_classes==2:
+                                w_data_allFrs[:,:,ifr] = w_data # numSamps x neurons, if n_classes=2; # samps x classes x neurons, if n_classes>2
+                            else:
+                                w_data_allFrs[:,:,:,ifr] = w_data
+
+                        if num_classes==2:
+                            b_data_allFrs[:,ifr] = b_data
+                        else:
+                            b_data_allFrs[:,:,ifr] = b_data
+
+                        Ytest_hat_allSampsFrs_allFrs[:,:,ifr] = Ytest_hat_allSampsFrs # numSamps x numTestTrs
+
+                        Ytest_allSamps_allFrs[:,:,ifr] = Ytest_allSamps # numSamps x numTestTrs                                        
+                        testTrInds_allSamps_allFrs[:,:,ifr] = testTrInds_allSamps  # numSamps x numTestTrs
+            #                    trsnow_allSamps_allFrs = trsnow_allSamps                    
+
+                        '''
+                        a_train = np.mean(perClassErrorTrain, axis=0)
+                        a_test = np.mean(perClassErrorTest, axis=0)
+                        a_shfl = np.mean(perClassErrorTestShfl, axis=0)
+                        a_chance = np.mean(perClassErrorTestChance, axis=0)
+
+                        import matplotlib.pyplot as plt
+                        plt.figure()
+                        plt.plot(a_train, color='k', label='train') 
+                        plt.plot(a_test, color='r', label='test') 
+                        plt.plot(a_shfl, color='y', label='shfl')
+                        plt.plot(a_chance, color='b', label='chance')
+                        plt.legend(loc='center left', bbox_to_anchor=(1, .7))
+                        plt.ylabel('% Classification error')
+                        plt.xlabel('C values')
+                        '''                       
+                        #### Sanity checks ####
+                        # the following two are the same:
+            #                (abs(Ytest_hat_allSampsFrs[0] - Y_svm[testTrInds_allSamps[0].astype(int)])).mean()
+            #                perClassErrorTest_data[0]
+
+                        # the following two are the same:
+            #                Ytest_allSamps[2]
+            #                Y_svm[testTrInds_allSamps[2].astype(int)]
+
+
+
+                ####################################################################################################################################                
+                #%% Save SVM vars (for each experiment separately)
+                ####################################################################################################################################                
+
+                #%% Set svm dataframe
+
+                svm_vars = pd.DataFrame([], columns = np.concatenate((cols_basic, cols_svm)))
+                svm_vars.at[index, cols_basic] = this_sess.iloc[index, :] # experiment info
+
+                # svm output
+                if same_num_neuron_all_planes:
+                    svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, regType, cvect, meanX_allFrs, stdX_allFrs, \
+                        num_classes, cbest_allFrs, w_data_allFrs, b_data_allFrs, \
+                        perClassErrorTrain_data_allFrs, perClassErrorTest_data_allFrs, \
+                        perClassErrorTest_shfl_allFrs, perClassErrorTest_chance_allFrs, \
+                        inds_subselected_neurons_all, population_sizes_to_try, numShufflesN
+
+                else:
+                    svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, regType, cvect, meanX_allFrs, stdX_allFrs, \
+                        num_classes, cbest_allFrs, w_data_allFrs, b_data_allFrs, \
+                        perClassErrorTrain_data_allFrs, perClassErrorTest_data_allFrs, \
+                        perClassErrorTest_shfl_allFrs, perClassErrorTest_chance_allFrs, \
+                        testTrInds_allSamps_allFrs, Ytest_allSamps_allFrs, Ytest_hat_allSampsFrs_allFrs
+
+
+                #%% Save SVM results
+
+                cre_now = cre[:cre.find('-')]
+                # mouse, session, experiment: m, s, e
+                if same_num_neuron_all_planes:
+                    now = 'sameNumNeuronsAllPlanes_' + now
+                name = f'{cre_now}_m-{mouse}_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{now}'
+
+                if saveResults:
+                    svmName = os.path.join(dir_svm, name + '.h5') # os.path.join(d, svmn+os.path.basename(pnevFileName))
+                    print(svmName)
+
+                    print('Saving .h5 file')                
+                    svm_vars.to_hdf(svmName, key='svm_vars', mode='w')
+
+
+                    #%%                    
                     '''
-                    a_train = np.mean(perClassErrorTrain, axis=0)
-                    a_test = np.mean(perClassErrorTest, axis=0)
-                    a_shfl = np.mean(perClassErrorTestShfl, axis=0)
-                    a_chance = np.mean(perClassErrorTestChance, axis=0)
+                    # save arrays to h5:
+                    with h5py.File(svmName, 'w') as f:                        
+                        f.create_dataset('svm_vars', data=svm_vars)
+        #                    for k, v in svm_vars.items(): # a = list(svm_vars.items()); k = a[0][0]; v = a[0][1]
+        #                        f.create_dataset(k, data=v)                      
+                    f.close()
+                    '''
+                    # read h5 file                    
+        #                    svm_vars = pd.read_hdf(svmName, key='svm_vars')                    
+                    '''
+                    f = h5py.File(svmName, 'r')                    
+                    for k, v in f.items(): # a = list(f.items()); k = a[0][0]; v = np.asarray(a[0][1])
+                        exec(k + ' = np.asarray(v)')                        
+                    f.close()
+                    '''                                         
+        #                    scio.savemat(svmName, save_dict)
 
-                    import matplotlib.pyplot as plt
-                    plt.figure()
-                    plt.plot(a_train, color='k', label='train') 
-                    plt.plot(a_test, color='r', label='test') 
-                    plt.plot(a_shfl, color='y', label='shfl')
-                    plt.plot(a_chance, color='b', label='chance')
-                    plt.legend(loc='center left', bbox_to_anchor=(1, .7))
-                    plt.ylabel('% Classification error')
-                    plt.xlabel('C values')
-                    '''                       
-                    #### Sanity checks ####
-                    # the following two are the same:
-        #                (abs(Ytest_hat_allSampsFrs[0] - Y_svm[testTrInds_allSamps[0].astype(int)])).mean()
-        #                perClassErrorTest_data[0]
-
-                    # the following two are the same:
-        #                Ytest_allSamps[2]
-        #                Y_svm[testTrInds_allSamps[2].astype(int)]
-
-
-
-            ####################################################################################################################################                
-            #%% Save SVM vars (for each experiment separately)
-            ####################################################################################################################################                
-
-            #%% Set svm dataframe
-
-            svm_vars = pd.DataFrame([], columns = np.concatenate((cols_basic, cols_svm)))
-            svm_vars.at[index, cols_basic] = this_sess.iloc[index, :] # experiment info
-
-            # svm output
-            if same_num_neuron_all_planes:
-                svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, regType, cvect, meanX_allFrs, stdX_allFrs, \
-                    num_classes, cbest_allFrs, w_data_allFrs, b_data_allFrs, \
-                    perClassErrorTrain_data_allFrs, perClassErrorTest_data_allFrs, \
-                    perClassErrorTest_shfl_allFrs, perClassErrorTest_chance_allFrs, \
-                    inds_subselected_neurons_all, population_sizes_to_try, numShufflesN
-
-            else:
-                svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, regType, cvect, meanX_allFrs, stdX_allFrs, \
-                    num_classes, cbest_allFrs, w_data_allFrs, b_data_allFrs, \
-                    perClassErrorTrain_data_allFrs, perClassErrorTest_data_allFrs, \
-                    perClassErrorTest_shfl_allFrs, perClassErrorTest_chance_allFrs, \
-                    testTrInds_allSamps_allFrs, Ytest_allSamps_allFrs, Ytest_hat_allSampsFrs_allFrs
-
-
-            #%% Save SVM results
-
-            cre_now = cre[:cre.find('-')]
-            # mouse, session, experiment: m, s, e
-            if same_num_neuron_all_planes:
-                now = 'sameNumNeuronsAllPlanes_' + now
-            name = f'{cre_now}_m-{mouse}_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{now}'
-
-            if saveResults:
-                svmName = os.path.join(dir_svm, name + '.h5') # os.path.join(d, svmn+os.path.basename(pnevFileName))
-                print(svmName)
-               
-                print('Saving .h5 file')                
-                svm_vars.to_hdf(svmName, key='svm_vars', mode='w')
-
-
-                #%%                    
+                ## Make dictionaries ... (I couldnt save them as h5 file)
                 '''
-                # save arrays to h5:
-                with h5py.File(svmName, 'w') as f:                        
-                    f.create_dataset('svm_vars', data=svm_vars)
-    #                    for k, v in svm_vars.items(): # a = list(svm_vars.items()); k = a[0][0]; v = a[0][1]
-    #                        f.create_dataset(k, data=v)                      
-                f.close()
-                '''
-                # read h5 file                    
-    #                    svm_vars = pd.read_hdf(svmName, key='svm_vars')                    
-                '''
-                f = h5py.File(svmName, 'r')                    
-                for k, v in f.items(): # a = list(f.items()); k = a[0][0]; v = np.asarray(a[0][1])
-                    exec(k + ' = np.asarray(v)')                        
-                f.close()
-                '''                                         
-    #                    scio.savemat(svmName, save_dict)
+                # define sess_info (similar to this_sess but as a dict ... to save it with other SVM vars below:
 
-            ## Make dictionaries ... (I couldnt save them as h5 file)
-            '''
-            # define sess_info (similar to this_sess but as a dict ... to save it with other SVM vars below:
+                k = this_sess.columns
+                v = this_sess.iloc[index,:]                
+                sess_info = dict()                
+                for i in range(10):                
+                    sess_info[k[i]] = v[i]
 
-            k = this_sess.columns
-            v = this_sess.iloc[index,:]                
-            sess_info = dict()                
-            for i in range(10):                
-                sess_info[k[i]] = v[i]
-
-            # define SVM vars as a dictionary
-            svm_vars = {'thAct':thAct, 'numSamples':numSamples, 'softNorm':softNorm, 'regType':regType, 'cvect':cvect, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
-                   'meanX_allFrs':meanX_allFrs, 'stdX_allFrs':stdX_allFrs, #'eventI_ds':eventI_ds, 
-                   'cbest_allFrs':cbest_allFrs, 'w_data_allFrs':w_data_allFrs, 'b_data_allFrs':b_data_allFrs,
-                   'perClassErrorTrain_data_allFrs':perClassErrorTrain_data_allFrs,
-                   'perClassErrorTest_data_allFrs':perClassErrorTest_data_allFrs,
-                   'perClassErrorTest_shfl_allFrs':perClassErrorTest_shfl_allFrs,
-                   'perClassErrorTest_chance_allFrs':perClassErrorTest_chance_allFrs,
-                   'testTrInds_allSamps_allFrs':testTrInds_allSamps_allFrs, 
-                   'Ytest_allSamps_allFrs':Ytest_allSamps_allFrs,
-                   'Ytest_hat_allSampsFrs_allFrs':Ytest_hat_allSampsFrs_allFrs}
-            '''                        
+                # define SVM vars as a dictionary
+                svm_vars = {'thAct':thAct, 'numSamples':numSamples, 'softNorm':softNorm, 'regType':regType, 'cvect':cvect, #'smallestC':smallestC, 'cbestAll':cbestAll, 'cbest':cbest,
+                       'meanX_allFrs':meanX_allFrs, 'stdX_allFrs':stdX_allFrs, #'eventI_ds':eventI_ds, 
+                       'cbest_allFrs':cbest_allFrs, 'w_data_allFrs':w_data_allFrs, 'b_data_allFrs':b_data_allFrs,
+                       'perClassErrorTrain_data_allFrs':perClassErrorTrain_data_allFrs,
+                       'perClassErrorTest_data_allFrs':perClassErrorTest_data_allFrs,
+                       'perClassErrorTest_shfl_allFrs':perClassErrorTest_shfl_allFrs,
+                       'perClassErrorTest_chance_allFrs':perClassErrorTest_chance_allFrs,
+                       'testTrInds_allSamps_allFrs':testTrInds_allSamps_allFrs, 
+                       'Ytest_allSamps_allFrs':Ytest_allSamps_allFrs,
+                       'Ytest_hat_allSampsFrs_allFrs':Ytest_hat_allSampsFrs_allFrs}
+                '''                        
 
             
 #%% Plot classification error for each frame of frames_svm
@@ -882,6 +905,8 @@ else:
 
     
 
+    
+    
 ####################### Set vars for the sessions to be analyzed #######################
 
 #%% Set the session to be analyzed, and its metada
@@ -904,9 +929,11 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
     if data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['valid']:
         dataset = loading.get_ophys_dataset(ophys_experiment_id)
         analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=False) # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True
+#         trials_response_df = analysis.get_response_df(df_name='trials_response_df')
         stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
+        
         stim_response_df0 = stim_response_df
-    #     stim_response_df.keys()        
+#         stim_response_df.keys()        
         stim_response_df = stim_response_df0.loc[:,c]
     else:
         stim_response_df = pd.DataFrame([np.full((len(c)), np.nan)], columns=c) 
@@ -935,6 +962,54 @@ session_trials = np.nan # we need it as an input to the function
 
 
 
+
+
+HERE:
+    
+from set_trialsdf_existing_in_stimdf import *
+
+# set a subset of trials df that includes only those rows (flashes) in trials df that also exist in stim df
+trialsdf_existing_in_stimdf = set_trialsdf_existing_in_stimdf(stim_response_df, trials_response_df)
+
+scdf = stim_response_df[stim_response_df['change']==True]
+# only get those stimulus df rows that are not aborted, and not auto_rewarded
+a = np.logical_and((trialsdf_existing_in_stimdf['auto_rewarded']==False), (trialsdf_existing_in_stimdf['aborted']==False))
+scdf.iloc[a.values]
+
+
+
+now how do you want to use it in the function above
+
+
+##### only include those 
+    
+# trials_response_df[~np.in1d(range(len(trials_response_df)), stimdf_ind_in_trdf)]['trial_type'].unique()
+# trials_response_df[~np.in1d(range(len(trials_response_df)), stimdf_ind_in_trdf)]['catch'].unique()
+
+# trials_response_df.keys()  # 'hit', 'false_alarm', 'miss', 'correct_reject', 'stimulus_change', 'aborted', 'go', 'catch', 'auto_rewarded'
+# stimdf_ind_in_trdf.shape
+
+
+# (trialsdf_existing_in_stimdf['catch']==True).sum()
+# a = trialsdf_existing_in_stimdf[trialsdf_existing_in_stimdf['go']==False]
+# a['stimulus_change']
+# a['lick_times']
+# a['auto_rewarded']
+
+# b = scdf[(trialsdf_existing_in_stimdf['go']==False).values]
+# b['licked']
+# b['rewarded']
+# b['start_time']
+
+'''
+trials_response_df[trials_response_df['auto_rewarded']==True]['catch'] # all autorewarded are marked as neither catch or go.
+
+# find the change cases where animal licked but no reward is delivered and see if they are catch or not, if not whats wrong? (seems like stim df does not have catches, but has one of these weird cases)
+d = np.logical_and(np.logical_and((stim_response_df['licked']==1) , (stim_response_df['rewarded']==0)) , (stim_response_df['change']==True))
+dd = np.argwhere(d).flatten()
+stim_response_df.iloc[dd]
+stim_response_df[dd[1]]
+'''
 
 
 

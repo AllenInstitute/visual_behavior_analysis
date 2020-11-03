@@ -28,9 +28,6 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, t
     num_classes = 8 # decoding 8 images
     num_planes = 8
     svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # 'svm_gray_omit'
-    
-#     if same_num_neuron_all_planes:
-#         svmn = svmn + '_sameNumNeuronsAllPlanes'
         
     exp_ids = data_list['experiment_id'].values
 #     frame_dur = np.array([0.093]) # sec (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)    
@@ -57,7 +54,7 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, t
         lims_id = l[1] # experiment id 
         '''
         
-        print('\n======================== Analyzing experiment %s, plane %d/%d ========================\n' %(lims_id, index, num_planes))
+        print('\n=============== Analyzing experiment %s, plane %d/%d ===============\n' %(lims_id, index, num_planes))
         
         area = data_list.iloc[index]['area']
         depth = int(data_list.iloc[index]['depth'])

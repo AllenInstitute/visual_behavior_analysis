@@ -27,41 +27,56 @@ from svm_images_main_post import *
 # warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning) # ignore some warnings!
 
         
+    
 #%% Get SVM output for each cell type, and each frames_svm.
 
-trial_type = 'changes' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 to_decode = 'previous' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
-time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
+time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
+
 frames_svm_all = [np.arange(-5,8)] #[[-3,-2,-1], [0,1,2,3,4,5]]
-
 same_num_neuron_all_planes = 0
+
 saveResults = 1
 cre2ana_all = 'slc', 'sst', 'vip'
 # session_numbers = [6] # ophys session stage corresponding to project_codes that we will load.
-    
-for icre in np.arange(0, len(cre2ana_all)): # icre=0
 
+
+#%%
+project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+num_planes = 8
+analysis_dates = [''] # ['2020507'] #set to [''] if you want to load the latest file. # the date on which the svm files were saved.
+frame_dur = np.array([.093])
+# trace_time = np.array([-0.46631438, -0.3730515 , -0.27978863, -0.18652575, -0.09326288, 0.,  0.09326288,  0.18652575,  0.27978863,  0.3730515 , 0.46631438,  0.55957726,  0.65284013])
+# samps_bef = 5 #np.argwhere(trace_time==0)[0][0] # 
+# samps_aft = 8 #len(trace_time)-samps_bef #
+
+
+
+#%% Set the columns in dataframe all_sess
+cols0 = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'frame_dur', 'meanX_allFrs', 'stdX_allFrs', 'av_train_data', 'av_test_data', 'av_test_shfl', 'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl', 'sd_test_chance', 'peak_amp_trainTestShflChance'])
+if same_num_neuron_all_planes:
+    cols = np.concatenate((cols0, ['population_sizes_to_try'])) 
+else:
+    cols = np.concatenate((cols0, ['av_w_data', 'av_b_data']))
+
+
+
+for icre in np.arange(0, len(cre2ana_all)): # icre=0
+    
     #%% Set vars for the analysis
     cre2ana = cre2ana_all[icre]
+    
+    print(f'\n=============== Setting all_sess for {cre2ana} ===============\n')
     
     for ifs in range(len(frames_svm_all)): # ifs=0
 
         frames_svm = frames_svm_all[ifs] #[-3,-2,-1] # [0,1,2,3,4,5] #  which svm files to load (this will be used to set svm file name) # (frames_svm also gets saved in svm_vars if svm could be run successfully on a session)
         print(f'Analyzing: {cre2ana}, {frames_svm}')
 
-                
-        #%%
-        project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
-        num_planes = 8
-        analysis_dates = [''] # ['2020507'] #set to [''] if you want to load the latest file. # the date on which the svm files were saved.
-        frame_dur = np.array([.093])
-        # trace_time = np.array([-0.46631438, -0.3730515 , -0.27978863, -0.18652575, -0.09326288, 0.        ,  0.09326288,  0.18652575,  0.27978863,  0.3730515 , 0.46631438,  0.55957726,  0.65284013])
-        # samps_bef = 5 #np.argwhere(trace_time==0)[0][0] # 
-        # samps_aft = 8 #len(trace_time)-samps_bef #
-
-
-        #%% Set the pickle file name which includes session and metadata information.
+                        
+        #%% Set the pickle file name for this cre line; it includes session and metadata information.
 
         dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
         dir_svm = os.path.join(dir_server_me, 'SVM')
@@ -86,21 +101,11 @@ for icre in np.arange(0, len(cre2ana_all)): # icre=0
 
 
 
-        #%% Set the columns in dataframe all_sess
-
-        cols0 = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'frame_dur', 'meanX_allFrs', 'stdX_allFrs', 'av_train_data', 'av_test_data', 'av_test_shfl', 'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl', 'sd_test_chance', 'peak_amp_trainTestShflChance'])
-        if same_num_neuron_all_planes:
-            cols = np.concatenate((cols0, ['population_sizes_to_try'])) 
-        else:
-            cols = np.concatenate((cols0, ['av_w_data', 'av_b_data']))
-
-
-
-        #%% Set the current session to be analyzed, and its metada
+        #%% Set all_sess: includes svm results from all sessions of a given cre line, all concatenated
 
         all_sess = pd.DataFrame([], columns=cols)
 
-        for isess in np.arange(0, len(list_all_sessions_valid)):  # isess = 0
+        for isess in np.arange(0, len(list_all_sessions_valid)):  # isess=0
             session_id = int(list_all_sessions_valid[isess])
             data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
 
@@ -118,9 +123,9 @@ for icre in np.arange(0, len(cre2ana_all)): # icre=0
         ################################################################## 
 
         # Set input_vars dataframe so you know what vars were used in your analysis
-        cols = np.array(['frames_svm', 'cre2ana', 'time_win', 'trial_type', 'to_decode', 'same_num_neuron_all_planes', 'project_codes'])
-        input_vars = pd.DataFrame([], columns=cols)
-        input_vars.at[0, cols] =  frames_svm, cre2ana, time_win, trial_type, to_decode, same_num_neuron_all_planes, project_codes
+        cols2 = np.array(['frames_svm', 'cre2ana', 'time_win', 'trial_type', 'to_decode', 'same_num_neuron_all_planes', 'project_codes'])
+        input_vars = pd.DataFrame([], columns=cols2)
+        input_vars.at[0, cols2] =  frames_svm, cre2ana, time_win, trial_type, to_decode, same_num_neuron_all_planes, project_codes
 
 
         # Set the name of the h5 file for saving all_sess

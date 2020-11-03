@@ -10,8 +10,9 @@ It sets all_sess_2an, which is a subset of all_sess that only includes desired s
 
 Its output is a pandas table "svm_this_plane_allsess" which includes svm variables for each mouse, (for each plane, for each area, and for each depth) and will be used for plotting.
 
-Follow this script by "svm_images_plots_eachMouse" to make plots for each mouse.
-Or, by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
+This script will call the following 2 scripts to make all the plots related to svm analysis:
+"svm_images_plots_eachMouse" to make plots for each mouse.
+"svm_images_plots_setVars_sumMice.py" and "svm_images_plots_sumMice.py" which set vars and make average plots across mice (for each cre line).
 
 
 
@@ -46,8 +47,8 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
 #%%
-to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'changes' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+to_decode = 'previous' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
 time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 frames_svm = np.arange(-5,8) #[-3,-2,-1] # [0,1,2,3,4,5] # svm was run on how what frames relative to image onset
@@ -59,8 +60,7 @@ samps_bef = 5
 samps_aft = 8
 
 num_planes = 8
-# a folder named by the var svmn will be created and figures will be saved inside it
-svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images'
+svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # folder named svmn will be created and figures will be saved inside it
 
 
 
@@ -89,7 +89,9 @@ allSessName, h5_files = all_sess_set_h5_fileName(name, dir_svm, all_files=1)
 print(f'\n{len(allSessName)} all_sess files found!\n')
 
 
-## Load all_sess dataframe for all cre lines
+
+#%% Load all_sess dataframe for all cre lines
+
 all_sess = pd.DataFrame()
 for ia in range(len(allSessName)):
     print(f'Loading: {allSessName[ia]}')
@@ -99,7 +101,7 @@ for ia in range(len(allSessName)):
 all_sess0 = copy.deepcopy(all_sess)
 
 session_ids = all_sess0['session_id'].unique()
-print(session_ids.shape)
+print(f'\n {session_ids.shape[0]} sessions found!')
 
 
 
@@ -210,7 +212,7 @@ else:
 ##############################################################################
 #%%
 for session_numbers in [[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage corresponding to project_codes that we will make plots for.
-#     session_numbers = [4]
+#     session_numbers = [1]
 
     #%% If analyzing novel sessions, only take sessions that include the 1st presentation of the novel session (ie the ones without a retake of session ophys-3)
     if np.in1d(4, session_numbers): # novel sessions
@@ -232,7 +234,7 @@ for session_numbers in [[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage
     print(all_sess.shape)
     '''
     print(f'\nFor now including all sessions with any exposure_number!\n')
-    all_sess = copy.deepcopy(all_sess0)
+#     all_sess = copy.deepcopy(all_sess0)
 
 
 
@@ -264,8 +266,8 @@ for session_numbers in [[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage
 
     #%% Set all_sess only for a given stage
 
-    # print(all_sess.shape)
-    all_sess = all_sess[np.in1d(all_sess['session_id'], session_ids_this_stage)]
+    # print(all_sess0.shape)
+    all_sess = all_sess0[np.in1d(all_sess0['session_id'], session_ids_this_stage)]
 
     print(f'Final size of all_sess: {all_sess.shape}')
     print(f"Existing cre lines: {all_sess['cre'].unique()}")
