@@ -70,17 +70,13 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, t
             set_to_nan = 1  # set svm vars to nan      
     
         else:
-            #%% Set the h5 filename containing SVM vars
-            
-#             cre_now = cre[:cre.find('-')]
 
+            #%% Set the h5 filename containing SVM vars
             # mouse, session, experiment: m, s, e
             if analysis_dates[0] == '':
                 nown = '.'
-#                 name = '(.*)_s-%d_e-%s_%s_frames%dto%d_.' %(session_id, lims_id, svmn, frames_svm[0], frames_svm[-1])
             else:
                 nown = f'{analysis_dates[0]}_.'
-#                 name = '(.*)_s-%d_e-%s_%s_frames%dto%d_%s_.' %(session_id, lims_id, svmn, frames_svm[0], frames_svm[-1], analysis_dates[0])
             
             if same_num_neuron_all_planes:
                 nown = 'sameNumNeuronsAllPlanes_' + nown
@@ -93,7 +89,6 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, t
                 print(name)
                 print('\nSVM h5 file does not exist! uncanny! (most likely due to either too few neurons or absence of omissions!)')
                 set_to_nan = 1
-#                 sys.exit()
             else:
                 set_to_nan = 0
                             
@@ -165,6 +160,42 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, t
         #    plt.plot(sorted(cbest_allFrs)[:-2])
 
 
+            num_classes = svm_vars.iloc[0]['num_classes']
+            
+            Ytest_allSamps_allFrs = svm_vars.iloc[0]['Ytest_allSamps_allFrs'] # numSamples x len_test x nFrames
+            Ytest_hat_allSampsFrs_allFrs = svm_vars.iloc[0]['Ytest_hat_allSampsFrs_allFrs'] # numSamples x len_test x nFrames
+                
+
+            class_accur_each_class = np.full((numSamples, numFrames, num_classes), np.nan)
+            len_test_each_class = np.full((numSamples, numFrames, num_classes), np.nan)
+            for si in range(numSamples):
+                for fi in range(numFrames):
+                    a = Ytest_allSamps_allFrs[si,:,fi] # actual test trial labels of sample 10 and frame 0 
+                    p = Ytest_hat_allSampsFrs_allFrs[si,:,fi] # predicted test trial labels of sample 10 and frame 0 
+#                     d.append(np.mean(a==p)*100 - (100-perClassErrorTest_data_allFrs[si,fi])) # sanity check; should be 0.
+            
+                    for iclass in range(num_classes): # iclass=0 # 9 classes in case omissions were also classified
+                        inds = (a==iclass)
+                        acc = np.mean(a[inds]==p[inds])
+                        l = sum(inds)
+                        class_accur_each_class[si,fi,iclass] = acc
+                        len_test_each_class[si,fi,iclass] = l
+
+            np.shape(len_test_each_class), np.shape(class_accur_each_class) # 50*13*8
+            
+            # average across samples
+            a = np.nanmean(class_accur_each_class, axis=0) # 13*8
+            b = np.mean(len_test_each_class, axis=0)
+
+            plt.plot(a);
+            plt.plot(b);
+
+#             HERE:
+#             use image inds insted of looping over the index of classes ... look at your notebook notes.
+#             do the above averaging right (perhaps move it to the section down); also keep sd across samps
+
+            
+            
             ########################################################################################################
             ########################################################################################################                                
             #%% Average and st error of class accuracies across cross-validation samples

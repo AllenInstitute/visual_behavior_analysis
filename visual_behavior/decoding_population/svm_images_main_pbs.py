@@ -89,7 +89,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 
 
     #%% Set data only including trials that will be used for analysis. Also set image index of the previous flash
-    if trial_type=='images_omissions': # all images and omissions:
+    if trial_type=='images_omissions': # all images and omissions # i dont think it's a good idea to mix image and omission aligned traces because omission aligned traces may have prediction/error signal, so it wont be easy to interpret the results bc we wont know if the decoding reflects image-evoked or image-prediciton/error related signals.
         image_data = df_data
         image_indices_previous_flash = all_stim_indices_previous_flash
         image_indices_next_flash = all_stim_indices_next_flash
@@ -101,7 +101,9 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
         do = sum(image_indices_previous_flash==8)
         if do>0:
             print(f'Number of double omissions: {do}')
-        
+        if (image_indices_previous_flash - image_indices_next_flash).any():
+            print(f'UNEXPECTED: the images before and after the omission are different!!')
+            
     elif trial_type=='images': # all images excluding omissions:
         image_data = df_data[df_data['image_name']!='omitted']
         image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices!=8]
@@ -629,10 +631,12 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 
                 svm_vars = pd.DataFrame([], columns = np.concatenate((cols_basic, cols_svm)))
                 svm_vars.at[index, cols_basic] = this_sess.iloc[index, :] # experiment info
-
+#                 svm_vars.at[index, cols_basic] = this_sess.loc[index, :]
+                
                 # svm output
                 if same_num_neuron_all_planes:
                     svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, regType, cvect, meanX_allFrs, stdX_allFrs, \
+                        image_labels, image_indices, image_indices_previous_flash, image_indices_next_flash, \
                         num_classes, cbest_allFrs, w_data_allFrs, b_data_allFrs, \
                         perClassErrorTrain_data_allFrs, perClassErrorTest_data_allFrs, \
                         perClassErrorTest_shfl_allFrs, perClassErrorTest_chance_allFrs, \
@@ -640,11 +644,13 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 
                 else:
                     svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, regType, cvect, meanX_allFrs, stdX_allFrs, \
+                        image_labels, image_indices, image_indices_previous_flash, image_indices_next_flash, \
                         num_classes, cbest_allFrs, w_data_allFrs, b_data_allFrs, \
                         perClassErrorTrain_data_allFrs, perClassErrorTest_data_allFrs, \
                         perClassErrorTest_shfl_allFrs, perClassErrorTest_chance_allFrs, \
                         testTrInds_allSamps_allFrs, Ytest_allSamps_allFrs, Ytest_hat_allSampsFrs_allFrs
 
+                    
 
                 #%% Save SVM results
 
@@ -919,7 +925,8 @@ experiment_ids_this_session = data_list['experiment_id'].values
 
     
 #%% Set stimulus_response_df_allexp, which includes stimulus_response_df (plus some metadata columns) for all experiments of a session
-    
+
+from set_trialsdf_existing_in_stimdf import *
 c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name', 'change'] # columns of stim_response_df to keep
 
 stimulus_response_df_allexp = pd.DataFrame()
@@ -928,12 +935,37 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
 
     if data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['valid']:
         dataset = loading.get_ophys_dataset(ophys_experiment_id)
-        analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=False) # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True
-#         trials_response_df = analysis.get_response_df(df_name='trials_response_df')
+        analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True) # False # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True
         stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
         
-        stim_response_df0 = stim_response_df
-#         stim_response_df.keys()        
+        ########### 
+        if 0: #trial_type == 'changes':
+            # if desired, set a subset of stimulus df that only includes image changes with a given trial condition (hit, autorewarded, etc)
+            # trials_response_df.keys()  # 'hit', 'false_alarm', 'miss', 'correct_reject', 'aborted', 'go', 'catch', 'auto_rewarded', 'stimulus_change'
+    
+            scdf = stim_response_df[stim_response_df['change']==True]
+#             trials_response_df = analysis.get_response_df(df_name='trials_response_df')
+
+            # get a subset of trials df that includes only those rows (flashes) in trials df that also exist in stim df # note: you need to set use_extended_stimulus_presentations=True so stim_response_df has start_time as a column.
+            trialsdf_existing_in_stimdf = set_trialsdf_existing_in_stimdf(stim_response_df, trials_response_df) # trialsdf_existing_in_stimdf has the same size as scdf, and so can be used to link trials df and stimulus df, hence to get certain rows out of scdf (eg hit or aborted trials, etc)
+            # trialsdf_existing_in_stimdf.shape, scdf.shape, trials_response_df.shape
+
+            # only get those stimulus df rows that are go trials; seems like all stim df rows are go trials.
+#             stim_response_df_new = scdf[(trialsdf_existing_in_stimdf['go']==True).values]
+            
+            # only get those stimulus df rows that are not aborted and not auto_rewarded (we use trialsdf_existing_in_stimdf to get this information)
+            a = np.logical_and((trialsdf_existing_in_stimdf['auto_rewarded']==False), (trialsdf_existing_in_stimdf['aborted']==False))
+            stim_response_df_new = scdf.iloc[a.values]
+            stim_response_df_new.shape
+
+            # only get those stimulus df rows that are hit trials
+#             stim_response_df_new = scdf[(trialsdf_existing_in_stimdf['hit']==True).values]
+
+            # reset stim_response_df
+            stim_response_df = stim_response_df_new    
+        ###########    
+            
+        stim_response_df0 = stim_response_df # stim_response_df.keys()        
         stim_response_df = stim_response_df0.loc[:,c]
     else:
         stim_response_df = pd.DataFrame([np.full((len(c)), np.nan)], columns=c) 
@@ -961,32 +993,11 @@ df_data = stimulus_response_df_allexp
 session_trials = np.nan # we need it as an input to the function
 
 
-
-
-
-HERE:
-    
-from set_trialsdf_existing_in_stimdf import *
-
-# set a subset of trials df that includes only those rows (flashes) in trials df that also exist in stim df
-trialsdf_existing_in_stimdf = set_trialsdf_existing_in_stimdf(stim_response_df, trials_response_df)
-
-scdf = stim_response_df[stim_response_df['change']==True]
-# only get those stimulus df rows that are not aborted, and not auto_rewarded
-a = np.logical_and((trialsdf_existing_in_stimdf['auto_rewarded']==False), (trialsdf_existing_in_stimdf['aborted']==False))
-scdf.iloc[a.values]
-
-
-
-now how do you want to use it in the function above
-
-
-##### only include those 
-    
+### some tests related to images changes in stim df vs. trials df  
 # trials_response_df[~np.in1d(range(len(trials_response_df)), stimdf_ind_in_trdf)]['trial_type'].unique()
 # trials_response_df[~np.in1d(range(len(trials_response_df)), stimdf_ind_in_trdf)]['catch'].unique()
 
-# trials_response_df.keys()  # 'hit', 'false_alarm', 'miss', 'correct_reject', 'stimulus_change', 'aborted', 'go', 'catch', 'auto_rewarded'
+# trials_response_df.keys()  # 'hit', 'false_alarm', 'miss', 'correct_reject', 'aborted', 'go', 'catch', 'auto_rewarded', 'stimulus_change'
 # stimdf_ind_in_trdf.shape
 
 
@@ -1047,6 +1058,7 @@ frames_svm = range(r1, r2)-samps_bef # range(-10, 30) # range(-1,1) # run svm on
 cols_basic = np.array(['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_trials', 'n_neurons', 'frame_dur', 'samps_bef', 'samps_aft']) #, 'flash_omit_dur_all', 'flash_omit_dur_fr_all'])
 if same_num_neuron_all_planes:        
     cols_svm = ['frames_svm', 'to_decode', 'thAct', 'numSamples', 'softNorm', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
+           'image_labels', 'image_indices', 'image_indices_previous_flash', 'image_indices_next_flash',
            'num_classes', 'cbest_allFrs', 'w_data_allFrs', 'b_data_allFrs',
            'perClassErrorTrain_data_allFrs', 'perClassErrorTest_data_allFrs',
            'perClassErrorTest_shfl_allFrs', 'perClassErrorTest_chance_allFrs',
@@ -1054,12 +1066,12 @@ if same_num_neuron_all_planes:
 
 else:    
     cols_svm = ['frames_svm', 'to_decode', 'thAct', 'numSamples', 'softNorm', 'regType', 'cvect', 'meanX_allFrs', 'stdX_allFrs', 
+           'image_labels', 'image_indices', 'image_indices_previous_flash', 'image_indices_next_flash',
            'num_classes', 'cbest_allFrs', 'w_data_allFrs', 'b_data_allFrs',
            'perClassErrorTrain_data_allFrs', 'perClassErrorTest_data_allFrs',
            'perClassErrorTest_shfl_allFrs', 'perClassErrorTest_chance_allFrs',
            'testTrInds_allSamps_allFrs', 'Ytest_allSamps_allFrs', 'Ytest_hat_allSampsFrs_allFrs']
 
-    
     
 
 

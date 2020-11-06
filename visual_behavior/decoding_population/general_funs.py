@@ -134,7 +134,7 @@ def flash_gray_onset_relOmit(samps_bef, samps_aft, frame_dur, flash_dur=.25, gra
 
 
 
-def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, x='', xmjn='', bbox_to_anchor=(1, .7), ylab='% Classification accuracy', xlab='Time rel. image onset (sec)'):
+def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, x='', xmjn='', bbox_to_anchor=(1, .7), ylab='% Classification accuracy', xlab='Time rel. trial onset (sec)'):
     #%% Add to the plots the following: flash/ gray screen lines , proper tick marks, and legend
 #     h1 = plt.plot()
 #     plot_flashLines_ticks_legend([], h1, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, bbox_to_anchor=bb, ylab=ylabel, xmjn=xmjn)        
