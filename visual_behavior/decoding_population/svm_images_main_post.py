@@ -160,21 +160,72 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, t
         #    plt.plot(sorted(cbest_allFrs)[:-2])
 
 
-            num_classes = svm_vars.iloc[0]['num_classes']
+            num_classes = svm_vars.iloc[0]['num_classes']    
             
+            '''
             Ytest_allSamps_allFrs = svm_vars.iloc[0]['Ytest_allSamps_allFrs'] # numSamples x len_test x nFrames
             Ytest_hat_allSampsFrs_allFrs = svm_vars.iloc[0]['Ytest_hat_allSampsFrs_allFrs'] # numSamples x len_test x nFrames
-                
+            testTrInds_allSamps_allFrs = svm_vars.iloc[0]['testTrInds_allSamps_allFrs'] # numSamples x len_test x nFrames
+            
+            image_labels = svm_vars.iloc[0]['image_labels'] # number of trials (training and testing) # this is Y_svm; the trial labels that were used for decoding.
+            image_indices = svm_vars.iloc[0]['image_indices'] # number of trials (training and testing) # image identities of the current flash
+            image_indices_previous_flash = svm_vars.iloc[0]['image_indices_previous_flash'] # number of trials (training and testing) # image identities of the previous flash
+            image_indices_next_flash = svm_vars.iloc[0]['image_indices_next_flash'] # number of trials (training and testing) # image identities of the next flash
 
+            unique_image_labels = np.unique(image_labels)
+            
+            # all possible previous-current image labels
+            all_labs = np.arange(1,10) # unique_image_labels+1 # 1 to 9; including also 9 in case omissions are also among image labels.
+            firstSecondAll = np.array([a*10+b for a in all_labs for b in all_labs]) # length: 81
+            
+            
+            ##################### for image changes, where we need to compute classification accuracy for each transition
+            for si in range(numSamples): # si=0
+                for fi in range(numFrames): # fi=0
+
+                    #### set the image label for test trials; also for the following flashes on image-aligned traces that were used as testing data: current flash, previous flash, next flash; (note: one of these 3 types of flashes was used as Y_svm for testing data)
+                    Ytest_allSamps_allFrs[si,:,fi].astype(int) # image_labels[testTrInds_allSamps_allFrs[si,:,fi].astype(int)]  # these 2 are equal # note, it could be the image label of the previous, or current, or next flash according to to_decode 
+                    image_indices[testTrInds_allSamps_allFrs[si,:,fi].astype(int)]
+                    image_indices_previous_flash[testTrInds_allSamps_allFrs[si,:,fi].astype(int)]
+                    image_indices_next_flash[testTrInds_allSamps_allFrs[si,:,fi].astype(int)]            
+
+                    # also set the predicted image label
+                    Ytest_hat_allSampsFrs_allFrs[si,:,fi].astype(int)
+
+
+
+                    first = image_indices_previous_flash[testTrInds_allSamps_allFrs[si,:,fi].astype(int)] # image index of the previous flash
+                    second = image_indices[testTrInds_allSamps_allFrs[si,:,fi].astype(int)] # image index of the current flash
+
+                    # create a double digit number to indicate the previous-current flash image labels.
+                    firstSecond = np.array([(1+first[i])*10 + (1+second[i]) for i in range(len(first))]) #len_test # adding 1 to each index; so image index 0 is now 1, and the image labels range from 1 to 8 (instead of 0 to 7)
+
+
+                    # how many data points exist for each possible previous-current image label
+                    num_datapoint_each_flashpair = np.sum([firstSecond==firstSecondAll[i] for i in range(len(firstSecondAll))], axis=1) # length: 81
+
+
+
+                    # now for each value of firstSecondAll, compute classification accuracy
+                    for li in range(len(firstSecondAll)): # image label of previous-current flashes
+                        if num_datapoint_each_flashpair[li]>0:
+                            
+#                            Continue HERE: think about what you want; and continue here. (you want the confusion matrix; ie for each transition, you want to get the actual and the predicted labels, to compute the accuracy)
+                        
+                        
+                        
+            ############ for omissions: where the pre and post images are the same; so we can only compute 8 classification accuracies.
+            
             class_accur_each_class = np.full((numSamples, numFrames, num_classes), np.nan)
             len_test_each_class = np.full((numSamples, numFrames, num_classes), np.nan)
-            for si in range(numSamples):
-                for fi in range(numFrames):
+            for si in range(numSamples): # si=0
+                for fi in range(numFrames): # fi=0
                     a = Ytest_allSamps_allFrs[si,:,fi] # actual test trial labels of sample 10 and frame 0 
                     p = Ytest_hat_allSampsFrs_allFrs[si,:,fi] # predicted test trial labels of sample 10 and frame 0 
 #                     d.append(np.mean(a==p)*100 - (100-perClassErrorTest_data_allFrs[si,fi])) # sanity check; should be 0.
             
-                    for iclass in range(num_classes): # iclass=0 # 9 classes in case omissions were also classified
+#                     for iclass in range(num_classes): # iclass=0 # 9 classes in case omissions were also classified
+                    for iclass in range(unique_image_labels): 
                         inds = (a==iclass)
                         acc = np.mean(a[inds]==p[inds])
                         l = sum(inds)
@@ -190,10 +241,8 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, t
             plt.plot(a);
             plt.plot(b);
 
-#             HERE:
-#             use image inds insted of looping over the index of classes ... look at your notebook notes.
-#             do the above averaging right (perhaps move it to the section down); also keep sd across samps
-
+#             move the above averaging to the section below; also keep sd across samps
+            '''
             
             
             ########################################################################################################
