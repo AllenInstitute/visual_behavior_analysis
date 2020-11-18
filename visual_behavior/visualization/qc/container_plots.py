@@ -633,7 +633,8 @@ def plot_cell_matching_registration_output(ophys_container_id, save_figure=True)
         dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
         dataset_dict[ophys_experiment_id] = dataset
 
-    cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_container_id, experiments_table)
+    # cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_container_id, experiments_table)
+    cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_experiment_id)
     registration_images = [file for file in os.listdir(cell_matching_output_dir) if 'register' in file]
 
     n_images = len(registration_images)
