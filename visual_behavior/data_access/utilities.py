@@ -214,16 +214,44 @@ def model_outputs_available_for_behavior_session(behavior_session_id):
         return False
 
 
-def get_cell_matching_output_dir_for_container(container_id, experiments_table):
-    container_expts = experiments_table[experiments_table.container_id==container_id]
-    ophys_experiment_id = container_expts.index[0]
-    lims_data = get_lims_data(ophys_experiment_id)
-    session_dir = lims_data.ophys_session_dir.values[0]
-    cell_matching_dir = os.path.join(session_dir[:-23], 'experiment_container_'+str(container_id), 'OphysNwayCellMatchingStrategy')
-    cell_matching_output_dir = os.path.join(cell_matching_dir, np.sort(os.listdir(cell_matching_dir))[-1])
-    return cell_matching_output_dir
+# def get_cell_matching_output_dir_for_container(container_id, experiments_table):
+#     container_expts = experiments_table[experiments_table.container_id==container_id]
+#     ophys_experiment_id = container_expts.index[0]
+#     lims_data = get_lims_data(ophys_experiment_id)
+#     session_dir = lims_data.ophys_session_dir.values[0]
+#     cell_matching_dir = os.path.join(session_dir[:-23], 'experiment_container_'+str(container_id), 'OphysNwayCellMatchingStrategy')
+#     cell_matching_output_dir = os.path.join(cell_matching_dir, np.sort(os.listdir(cell_matching_dir))[-1])
+#     return cell_matching_output_dir
+#
 
 
+def get_cell_matching_output_dir_for_container(experiment_id):
+    from allensdk.internal.api import PostgresQueryMixin
+
+    lims_dbname = os.environ["LIMS_DBNAME"]
+    lims_user = os.environ["LIMS_USER"]
+    lims_host = os.environ["LIMS_HOST"]
+    lims_password = os.environ["LIMS_PASSWORD"]
+    lims_port = os.environ["LIMS_PORT"]
+    api = PostgresQueryMixin(dbname=lims_dbname, user=lims_user, host=lims_host, password=lims_password, port=lims_port)
+
+    query = '''
+            SELECT DISTINCT sp.external_specimen_name, sp.name, vbec.id AS vbec_id, vbec.workflow_state AS vbec_state, vbcr.run_number, vbcr.storage_directory AS matching_dir
+            FROM ophys_experiments_visual_behavior_experiment_containers oevbec
+            JOIN visual_behavior_experiment_containers vbec ON vbec.id=oevbec.visual_behavior_experiment_container_id
+            JOIN ophys_experiments oe ON oe.id=oevbec.ophys_experiment_id
+            JOIN ophys_sessions os ON os.id=oe.ophys_session_id JOIN specimens sp ON sp.id=os.specimen_id
+            JOIN projects p ON p.id=vbec.project_id
+            LEFT JOIN visual_behavior_container_runs vbcr ON vbcr.visual_behavior_experiment_container_id=vbec.id AND vbcr.current = 't' 
+            WHERE 
+            --sp.external_specimen_name NOT IN ('398691')
+            oe.id = {};
+            '''.format(experiment_id)
+
+    lims_df = pd.read_sql(query, api.get_connection())
+    return lims_df.matching_dir.values[0]
+
+ 
 def get_ssim(img0, img1):
     from skimage.measure import compare_ssim as ssim
     ssim_pair = ssim(img0, img1, gaussian_weights=True)
