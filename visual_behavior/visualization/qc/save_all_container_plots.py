@@ -5,8 +5,8 @@ import argparse
 def main():
     possible_plots = {
         "ophys_session_sequence": cp.plot_container_session_sequence,
-        # "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
-        # "average_images": cp.plot_sdk_average_images_for_container,
+        "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
+        "average_images": cp.plot_sdk_average_images_for_container,
         # "dff_traces_heatmaps": cp.plot_dff_traces_heatmaps_for_container,
         # "running_speed": cp.plot_running_speed_for_container,
         # "lick_rasters": cp.plot_lick_rasters_for_container,
@@ -21,8 +21,8 @@ def main():
         "population_average_across_sessions_stimulus": cp.plot_stimulus_population_average_across_sessions,
         # "eye_tracking_sample_frames": cp.plot_eye_tracking_sample_frames,
         # "segmented_rois_by_experiment": cp.plot_number_segmented_rois_for_container,
-        # "segmentation_masks": cp.plot_segmentation_masks_for_container,
-        # "segmentation_mask_overlays": cp.plot_segmentation_mask_overlays_for_container,
+        "segmentation_masks": cp.plot_segmentation_masks_for_container,
+        "segmentation_mask_overlays": cp.plot_segmentation_mask_overlays_for_container,
         # "max_projection_images_movies": cp.plot_movie_max_projection_images_for_container,
         # "average_images_movies": cp.plot_movie_average_images_for_container,
         # "cell_snr_by_experiment": cp.plot_cell_snr_for_container,
