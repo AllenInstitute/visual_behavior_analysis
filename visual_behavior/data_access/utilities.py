@@ -251,7 +251,7 @@ def get_cell_matching_output_dir_for_container(experiment_id):
     lims_df = pd.read_sql(query, api.get_connection())
     return lims_df.matching_dir.values[0]
 
- 
+
 def get_ssim(img0, img1):
     from skimage.measure import compare_ssim as ssim
     ssim_pair = ssim(img0, img1, gaussian_weights=True)
