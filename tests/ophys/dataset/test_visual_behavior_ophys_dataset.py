@@ -198,7 +198,7 @@ def ophys_data_dir(tmpdir_factory,
     
     # stim template
     stimulus_template_path = os.path.join(analysis_folder_path, 'stimulus_template.h5')
-    with h5py.File(stimulus_template_path) as stimulus_template_file:
+    with h5py.File(stimulus_template_path, 'w') as stimulus_template_file:
         stimulus_template_file.create_dataset('data', data=stimulus_template)
         
     # stim metadata
@@ -223,7 +223,7 @@ def ophys_data_dir(tmpdir_factory,
     
     # max projection
     max_projection_path = os.path.join(analysis_folder_path, 'max_projection.h5')
-    with h5py.File(max_projection_path) as max_projection_file:
+    with h5py.File(max_projection_path, 'w') as max_projection_file:
         max_projection_file.create_dataset('data', data=max_projection)
         
     # motion correction
