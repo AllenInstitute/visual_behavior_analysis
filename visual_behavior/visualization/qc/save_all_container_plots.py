@@ -4,7 +4,7 @@ import argparse
 
 def main():
     possible_plots = {
-        "event_detection": cp.plot_event_detection_for_container
+        "event_detection": cp.plot_event_detection_for_container,
         "ophys_session_sequence": cp.plot_container_session_sequence,
         "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
         "average_images": cp.plot_sdk_average_images_for_container,
