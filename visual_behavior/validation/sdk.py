@@ -77,13 +77,13 @@ def build_error_df(behavior_session_table):
 
     error_list = []
     # check ophys sessions
-    sessions_with_failures = behavior_session_table[~behavior_session_table[attributes_to_check].fillna(1).apply(all,axis=1)]
+    sessions_with_failures = behavior_session_table[~behavior_session_table[attributes_to_check].fillna(1).apply(all, axis=1)]
     sessions_to_check = sessions_with_failures.reset_index()
     for idx, session in sessions_to_check.iterrows():
         for attribute in attributes_to_check:
             if session[attribute] == 0:
                 error_list.append((session['behavior_session_id'], attribute))
-                
+
     with Pool(32) as pool:
         ans = pool.starmap(error_query, error_list)
 
@@ -148,7 +148,7 @@ def get_behavior_session_table():
     )
 
     # get behavior donor dataframe - all mice in behavior table
-    behavior_donors = pd.DataFrame({'donor_id':behavior_session_table['donor_id'].unique()})
+    behavior_donors = pd.DataFrame({'donor_id': behavior_session_table['donor_id'].unique()})
     # add a flag identifying which donors have associated ophys sessions
     behavior_donors['donor_in_ophys'] = behavior_donors['donor_id'].map(
         lambda did: did in list(filtered_ophys_experiment_table['donor_id'].unique())
@@ -167,12 +167,12 @@ def get_behavior_session_table():
     query = '''SELECT behavior_sessions.id, specimens.project_id FROM specimens
     JOIN donors ON specimens.donor_id=donors.id
     JOIN behavior_sessions ON donors.id=behavior_sessions.donor_id'''
-    behavior_id_project_id_map = db.lims_query(query).rename(columns={'id':'behavior_session_id'}).merge(
+    behavior_id_project_id_map = db.lims_query(query).rename(columns={'id': 'behavior_session_id'}).merge(
         project_table,
         left_on='project_id',
         right_on='id',
         how='left',
-    ).drop(columns=['id']).rename(columns={'code':'project_code'}).drop_duplicates('behavior_session_id').set_index('behavior_session_id')
+    ).drop(columns=['id']).rename(columns={'code': 'project_code'}).drop_duplicates('behavior_session_id').set_index('behavior_session_id')
 
     # merge project table with behavior sessions
     behavior_session_table = behavior_session_table.merge(
@@ -189,7 +189,7 @@ def get_behavior_session_table():
         else:
             return True
     behavior_session_table['in_filtered_experiments'] = behavior_session_table['ophys_session_id'].apply(osid_in_filtered_experiments)
-    
+
     # add missing session types (I have no idea why some are missing!)
     def get_session_type(osid):
         if osid in filtered_ophys_experiment_table['ophys_session_id'].unique().tolist():
@@ -199,7 +199,7 @@ def get_behavior_session_table():
 
     # drop sessions for mice with no ophys AND sessions that aren't in the filtered list
     behavior_session_table = behavior_session_table.set_index('behavior_session_id').query('donor_in_ophys and in_filtered_experiments').copy()
-    for idx,row in behavior_session_table.iterrows():
+    for idx, row in behavior_session_table.iterrows():
         if pd.isnull(row['session_type']):
             behavior_session_table.at[idx, 'session_type'] = get_session_type(row['ophys_session_id'])
 
