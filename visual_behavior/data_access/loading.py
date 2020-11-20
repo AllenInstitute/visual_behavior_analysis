@@ -450,6 +450,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         if 'orientation' in stimulus_presentations.columns:
             stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
+        stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
+        stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
+        stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._stimulus_presentations = stimulus_presentations
         return self._stimulus_presentations
@@ -459,10 +462,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = super().stimulus_presentations.copy()
         if 'orientation' in stimulus_presentations.columns:
             stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
-        stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
-        stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
-        stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
-        stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
@@ -688,6 +687,10 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     else:
         print('no model outputs saved for behavior_session_id:', behavior_session_id)
     return stimulus_presentations
+
+
+
+
 
 
 def get_behavior_model_summary_table():
