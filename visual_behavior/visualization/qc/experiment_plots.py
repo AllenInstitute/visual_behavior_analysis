@@ -235,7 +235,7 @@ def plot_event_detection_for_experiment(ophys_experiment_id):
         ax = ax.ravel()
         x = 5
         for i in range(n_rows):
-            ax[i].plot(dataset.ophys_timestamps, dataset.traces.loc[cell_specimen_id].dff, color=colors[0], label='dff_trace')
+            ax[i].plot(dataset.ophys_timestamps, dataset.dff_traces.loc[cell_specimen_id].dff, color=colors[0], label='dff_trace')
             ax[i].plot(dataset.ophys_timestamps, dataset.events.loc[cell_specimen_id].events, color=colors[3], label='events')
             ax[i].set_xlim(60 * 10, (60 * 10) + x)
             x = x * 5
