@@ -38,10 +38,10 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
     fail_tags = []
     for expt_ind, expt_id in enumerate(experiment_ids):
         this_expt = expts.loc[expt_id]
-        img[expt_ind, 0, :] = session_type_color_map[this_expt['session_type'].values[0]]
-        if this_expt['experiment_workflow_state'].values[0] == 'failed':
+        img[expt_ind, 0, :] = session_type_color_map[this_expt['session_type']]
+        if this_expt['experiment_workflow_state'] == 'failed':
             fail_x.append(expt_ind)
-            fail_tags.append(this_expt['failure_tags'].values[0])
+            fail_tags.append(this_expt['failure_tags'])
 
     # create plot with expt colors image
     figsize = (20, n_expts)
@@ -52,9 +52,9 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
     # plot text for acquisition date and session type
     for i, expt_id in enumerate(experiment_ids):
         this_expt = expts.loc[expt_id]
-        ax.text(x=0.75, y=i, s=str(this_expt['date_of_acquisition'].values[0]).split(' ')[0],
+        ax.text(x=0.75, y=i, s=str(this_expt['date_of_acquisition']).split(' ')[0],
                 ha='left', va='center', fontsize=20)
-        ax.text(x=3, y=i, s=this_expt['session_type'].values[0], ha='left', va='center', fontsize=20)
+        ax.text(x=3, y=i, s=this_expt['session_type'], ha='left', va='center', fontsize=20)
         ax.text(x=20, y=i, s=' ')
 
     # add X for fails and list fail tags
@@ -1051,8 +1051,9 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
 
 
 def plot_event_detection_for_container(ophys_container_id):
-    table = data_loading.get_filtered_ophys_experiment_table()
-    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id==ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiment_ids = ophys_experiments.index.values
 
     for ophys_experiment_id in ophys_experiment_ids:
         ep.plot_event_detection_for_experiment(ophys_experiment_id)
