@@ -2,7 +2,10 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+import visual_behavior.visualization.utils as utils
+
 import visual_behavior.visualization.qc.plotting_utils as pu
+
 from visual_behavior.data_access import loading as data_loading
 from visual_behavior.data_access import processing as data_processing
 

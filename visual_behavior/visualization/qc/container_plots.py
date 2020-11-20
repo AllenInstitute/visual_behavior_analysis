@@ -924,3 +924,11 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
             os.mkdir(save_folder)
         savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
         fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
+
+
+def plot_event_detection_for_container(ophys_container_id):
+    table = data_loading.get_filtered_ophys_experiment_table()
+    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+
+    for ophys_experiment_id in ophys_experiment_ids:
+        ep.plot_event_detection_for_experiment(ophys_experiment_id)

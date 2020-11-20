@@ -85,6 +85,10 @@ def get_analysis_cache_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
 
+def get_events_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
+
+
 def get_behavior_model_outputs_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
 
@@ -352,7 +356,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         return self._dff_traces
 
     def get_events_array(self):
-        events_folder = os.path.join(get_analysis_cache_dir(), 'events')
+        events_folder = get_events_dir()
         if os.path.exists(events_folder):
             events_file = [file for file in os.listdir(events_folder) if
                            str(self.ophys_experiment_id) in file]
@@ -372,9 +376,24 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def events(self):
-        self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
-                                     'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
-                                    index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        events_folder = get_events_dir()
+        if os.path.exists(events_folder):
+            events_file = [file for file in os.listdir(events_folder) if str(self.ophys_experiment_id) in file]
+            if len(events_file) > 0:
+                print('getting L0 events')
+                f = np.load(os.path.join(events_folder, events_file[0]), allow_pickle=True)
+
+                event_dict = f['event_dict'].item()
+                cell_roi_ids = list(event_dict.keys())
+                events_array = np.asarray([event_dict[cell_roi_id]['event_trace'] for cell_roi_id in cell_roi_ids])
+                cell_specimen_ids = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in cell_roi_ids]
+                self._events = pd.DataFrame({'events': [x for x in events_array],
+                                        'filtered_events': [x for x in rp.filter_events_array(events_array)]},
+                                         index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+        #
+        # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
+        #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
+        #                             index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
 
     @property
@@ -527,6 +546,10 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
         cell_index = self.cell_specimen_table[self.cell_specimen_table.index == cell_specimen_id].cell_index.values[0]
         return cell_index
+
+    def get_cell_specimen_id_for_cell_roi_id(self, cell_roi_id):
+        cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_roi_id == cell_roi_id].index.values[0]
+        return cell_specimen_id
 
 
 def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
@@ -702,7 +725,8 @@ def get_behavior_model_summary_table():
 
 
 def check_for_events_file(ophys_experiment_id):
-    events_folder = os.path.join(get_analysis_cache_dir(), 'events')
+    # events_folder = os.path.join(get_analysis_cache_dir(), 'events')
+    events_folder = os.path.join(get_events_dir())
     if os.path.exists(events_folder):
         events_file = [file for file in os.listdir(events_folder) if
                        str(ophys_experiment_id) in file]
