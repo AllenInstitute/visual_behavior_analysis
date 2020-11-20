@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 
 def get_cache_dir():
-    cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
+    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\cell_matching_validation'
+    # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
     return cache_dir
 
 
@@ -466,7 +467,7 @@ def plot_cell_matching_validation(container_id, cell_matching_dataset_dict):
     df = get_cell_matching_results_cell_specimen_ids(container_id)
 
     dataset = cell_matching_dataset_dict[lims_ids[0]]
-    cell_mask = dataset.roi_mask_array[0]
+    cell_mask = dataset.roi_masks[dataset.cell_specimen_ids[0]]
     mask = np.empty(cell_mask.shape)
     mask[cell_mask == 0] = np.nan
     mask[cell_mask == 1] = 1
@@ -481,7 +482,7 @@ def plot_cell_matching_validation(container_id, cell_matching_dataset_dict):
             dataset = cell_matching_dataset_dict[lims_id]
             cell_specimen_id = tmp[lims_id].values[0]
 
-            background_image = dataset.max_projection
+            background_image = dataset.max_projection.data
             if cell_specimen_id != -1:
                 ax[i], mask = plot_cell_zoom(dataset, cell_specimen_id, unique_cell_id, background_image, spacex=space,
                                              spacey=space, show_mask=True, save=False, ax=ax[i])
@@ -490,7 +491,7 @@ def plot_cell_matching_validation(container_id, cell_matching_dataset_dict):
                                                               background_image, space, ax=ax[i])
                 ax[i].set_title('lims_id: ' + str(lims_id), fontsize=10)
 
-            background_image = dataset.average_image
+            background_image = dataset.average_projection.data
             if cell_specimen_id != -1:
                 ax[i + x], mask = plot_cell_zoom(dataset, cell_specimen_id, unique_cell_id, background_image,
                                                  spacex=space, spacey=space, show_mask=True, save=False, ax=ax[i + x])
