@@ -81,7 +81,7 @@ def build_error_df(behavior_session_table):
     sessions_to_check = sessions_with_failures.reset_index()
     for idx, session in sessions_to_check.iterrows():
         for attribute in attributes_to_check:
-            if int(session[attribute]) == 0:
+            if session[attribute] == 0:
                 error_list.append((session['behavior_session_id'], attribute))
                 
     with Pool(32) as pool:
