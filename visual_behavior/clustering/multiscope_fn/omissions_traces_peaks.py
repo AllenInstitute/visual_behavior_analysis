@@ -18,7 +18,7 @@ Created on Wed May  8 15:25:18 2019
 
 # %load_ext autoreload
 # %autoreload 2
-
+ 
 
 from def_funs import *
 from def_funs_general import *
@@ -26,7 +26,7 @@ from omissions_traces_peaks_quantify import *
 from omissions_traces_peaks_quantify_flashAl import *
                 
 #%%
-def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1, doPlots=0, doROC=0):    
+def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1, controlSingleBeam_oddFrPlanes=[0], doPlots=0, doROC=0):    
     
     '''
     doCorrs = 1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm 
@@ -586,7 +586,9 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                 this_sess.at[index, ['n_omissions', 'n_neurons', 'frame_dur', 'flash_omit_dur_all', 'flash_omit_dur_fr_all']] = num_omissions, num_neurons, frame_dur, flash_omit_dur_all, flash_omit_dur_fr_all
                 print('===== plane %d: %d neurons; %d trials =====' %(index, num_neurons, num_omissions))
 
-
+#                 this_sess_l.at[index, 'local_fluo_allOmitt'] = local_fluo_allOmitt                
+#                 this_sess_l.at[index, 'local_fluo_flashBefOmitt'] = local_fluo_flashBefOmitt
+                
                 #%%#############################################################
                 ###### The following two variables are the key variables: ######
                 ###### (they are ready to be used; unless you want to shift and scale them below) 
@@ -595,6 +597,41 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                 ################################################################
 
 
+                
+                
+
+                ################################################################################
+                ##############################################################
+                ##############################################################                
+                #### Make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes)
+                # by resampling [the dual-beam mesoscope] data to resemble the single-beam mesoscope data in the following way:
+                # for each plane, we take either odd or even frame indices of the original df/f. Going through 4 uncoupled planes first, and the other 4 uncoupled planes next. As if the 8 planes are imaged consecutively (as opposed to 2 planes simultaneously.)
+                # remember: one of the planes in the coupled plane group must take even frame indices, and the other plane must take odd frame indices; because we want to remove the simultaneous aspect of dual beam mesoscope.
+                ##############################################################
+                ##############################################################
+                ################################################################################
+                
+                if controlSingleBeam_oddFrPlanes[0]==1:
+                    ### Decide for which planes you are going to take even (or odd) frame indices of df/f    # index:0-3: LM depths; index: 4-7: V1 depths
+                    # remember: one of the planes in the coupled plane group takes even frame indices, and the other plane takes odd frame indices; because we want to remove the simultaneous aspect of dual beam mesoscope.
+                    # coupled planes: 0-3 ; 1-2 ; 4-7 ; 5-6
+#                     odd_fr_planes = np.array([0,2,5,7]) # if the index is among these, we will take df/f from odd frame indices         
+                    odd_fr_planes = np.array(controlSingleBeam_oddFrPlanes[1])
+                                             
+                    even_fr_planes = np.arange(0,8)[~np.in1d(np.arange(0,8), even_fr_planes)]
+                    num_frs = local_fluo_allOmitt.shape[0]
+                    even_inds = np.arange(0,num_frs,2)
+                    odd_inds = np.arange(1,num_frs,2)
+
+
+                    if np.in1d(index, odd_fr_planes): # if the index is among these, we will take df/f from odd frame indices                                
+                        local_fluo_allOmitt_resamp = local_fluo_allOmitt[odd_inds] # take df/f from odd frame indices
+                    else:
+                        local_fluo_allOmitt_resamp = local_fluo_allOmitt[even_inds] # take df/f from even frame indices
+                
+                    local_fluo_allOmitt = local_fluo_allOmitt_resamp
+
+                
                 ################################################################################
                 ##############################################################
                 ##############################################################
@@ -1539,10 +1576,10 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
             ### set this so you know what input vars you ran the script with
             cols = np.array(['norm_to_max', 'mean_notPeak', 'peak_win', 'flash_win', 'flash_win_timing', 'flash_win_vip', 'bl_percentile', 'num_shfl_corr', 'trace_median',
-                         'samps_bef', 'samps_aft', 'doScale', 'doShift', 'doShift_again', 'bl_gray_screen', 'subtractSigCorrs'])
+                         'samps_bef', 'samps_aft', 'doScale', 'doShift', 'doShift_again', 'bl_gray_screen', 'subtractSigCorrs', 'controlSingleBeam_oddFrPlanes'])
 
             input_vars = pd.DataFrame([], columns=cols)
-            input_vars.at[0, cols] = norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, samps_bef, samps_aft, doScale, doShift, doShift_again, bl_gray_screen, subtractSigCorrs
+            input_vars.at[0, cols] = norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, samps_bef, samps_aft, doScale, doShift, doShift_again, bl_gray_screen, subtractSigCorrs, controlSingleBeam_oddFrPlanes
             #input_vars.iloc[0]
 
 
@@ -1558,6 +1595,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
             #### Set the analysis file name
             if doCorrs==1:
                 namespec = '_corr'
+                if controlSingleBeam_oddFrPlanes[0]==1:
+                    namespec = namespec + '_controlSingleBeam'
             else:
                 namespec = ''
 

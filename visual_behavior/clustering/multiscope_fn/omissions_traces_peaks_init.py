@@ -30,14 +30,16 @@ import pickle
 import os
 import socket
 
+controlSingleBeam_oddFrPlanes = [1, [0,2,5,7]] # if 1st element is 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope # 2nd element: odd_fr_planes = [0,2,5,7] # if the plane index is among these, we will take df/f from odd frame indices         
+
 use_ct_traces = 1 #1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
 use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 
 saveResults = 1 # save the all_sess pandas at the end
 
-doCorrs = 0 # -1 #0 #1 # if -1, only get the traces (entire session, also omission-aligned), dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
+doCorrs = 1 # -1 #0 #1 # if -1, only get the traces (entire session, also omission-aligned), dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
 # note: when doCorrs=1, run this code on the cluster: omissions_traces_peaks_init_pbs.py (this will call omissions_traces_peaks_pbs.py) 
-num_shfl_corr = 2 #50 # set to 0 if you dont want to compute corrs for shuffled data # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
+num_shfl_corr = 0 #2 #50 # set to 0 if you dont want to compute corrs for shuffled data # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
 subtractSigCorrs = 1 # if 1, compute average response to each image, and subtract it out from all trials of that image. Then compute correlations; ie remove signal correlations.
 
 # To align on omissions, get 40 frames before omission and 39 frames after omission
@@ -241,7 +243,7 @@ elif doCorrs==-1:
     
 cols = np.concatenate((cols_basic, colsa))
 
-cols_this_sess_l = np.array(['valid', 'local_fluo_traces', 'local_time_traces', 'roi_ids', 'local_fluo_allOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
+cols_this_sess_l = np.array(['valid', 'local_fluo_traces', 'local_time_traces', 'roi_ids', 'local_fluo_allOmitt', 'local_fluo_flashBefOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
 
 #%% problematic sessions: (5/16/20) ... related to segmentation.
 # 923469780 experiment 924211430
@@ -282,7 +284,7 @@ for isess in np.arange(0, len(list_all_sessions_valid)): # isess=0 #
 
     #%% Run the function
     this_sess = omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median,
-       doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces, use_np_corr, use_common_vb_roi, doPlots, doROC)
+       doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces, use_np_corr, use_common_vb_roi, controlSingleBeam_oddFrPlanes, doPlots, doROC)
 
 #     mouse_all.append(this_sess)
     all_sess = all_sess.append(this_sess)
@@ -302,10 +304,10 @@ if 1:
     #%% Set pandas dataframe input_vars, to save it below
     # set this so you know what input vars you ran the script with
     cols = np.array(['list_all_sessions_valid', 'list_all_experiments', 'norm_to_max', 'mean_notPeak', 'peak_win', 'flash_win', 'flash_win_timing', 'flash_win_vip', 'bl_percentile', 'num_shfl_corr', 'trace_median',
-                     'samps_bef', 'samps_aft', 'doScale', 'doShift', 'doShift_again', 'bl_gray_screen', 'subtractSigCorrs'])
+                     'samps_bef', 'samps_aft', 'doScale', 'doShift', 'doShift_again', 'bl_gray_screen', 'subtractSigCorrs', 'controlSingleBeam_oddFrPlanes'])
     input_vars = pd.DataFrame([], columns=cols)
 
-    input_vars.at[0, cols] = list_all_sessions_valid, list_all_experiments, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, samps_bef, samps_aft, doScale, doShift, doShift_again, bl_gray_screen, subtractSigCorrs
+    input_vars.at[0, cols] = list_all_sessions_valid, list_all_experiments, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, samps_bef, samps_aft, doScale, doShift, doShift_again, bl_gray_screen, subtractSigCorrs, controlSingleBeam_oddFrPlanes
     # input_vars.iloc[0]
 
     

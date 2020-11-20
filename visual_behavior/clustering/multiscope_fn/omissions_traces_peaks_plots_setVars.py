@@ -54,7 +54,7 @@ th_neurons = 3 # 5 #minimum number of neurons (for a plane), in order to use tha
     
 doShift_again = 0 #1 #0 # whether the all_sess_omit_traces_peaks file was saved for doShift_again or not; # this is a second shift just to make sure the pre-omit activity has baseline at 0. (it is after we normalize the traces by baseline ave and sd... but because the traces are median of trials (or computed from the initial gray screen activity), and the baseline is mean of trials, the traces wont end up at baseline of 0)                                      
 
-dosavefig = 1 #1
+dosavefig = 0 #1
 #bl_gray_screen = 1 # this should be saved in all_sess, if not set it here. if 1, we used the initial gray screen at the beginning of the session to compute baseline
 plot_flash = 1 # if 1, plot the amplitude of flash-evoked responses; if 0, plot the timing of omission-evoked responses. (in either case peak amp of omissions would be plotted!)
 plot_eachSess_trAve_neurAve = 0 #1 # 0# if 1, for each session plot trial-averaged and neuron-averaged traces for every individual plane 

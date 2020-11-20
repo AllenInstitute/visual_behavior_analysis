@@ -26,7 +26,7 @@ from omissions_traces_peaks_quantify import *
 from omissions_traces_peaks_quantify_flashAl import *
                 
 #%%
-def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1, doPlots=0, doROC=0):    
+def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1, controlSingleBeam_oddFrPlanes=[0], doPlots=0, doROC=0):    
     
     '''
     doCorrs = 1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm 
@@ -482,14 +482,14 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                         
     #                     if len(image_names_surr_omit) < 3:
     #                         print(f'There are two alternating omissions: {image_names_surr_omit0}')
-                        if len(image_names_surr_omit)>1 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
+                        if len(image_names_surr_omit)>0 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
                             print('image after omission is different from image before omission! uncanny!') # sys.exit
 
                         # set to nan the omission trace if it was not preceded by another image in the repetitive structure that we expect to see.
                         if len(image_names_surr_omit) == 0: # session_id: 839514418; there is a last omission after 5.23sec of previous image
                             print(f'Omission {iomit} is uncanny! no images around it! so removing it!')
                             local_fluo_allOmitt[:,:, iomit] = np.nan
-
+                            
                         if len(image_names_surr_omit) == 1: # session_id: 47758278; there is a last omission after 1.48sec of previous image and no images after that!
                             print(f'Omission {iomit} is uncanny! no images after it! so removing it!')
                             local_fluo_allOmitt[:,:, iomit] = np.nan
@@ -544,7 +544,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
                     except Exception as e:
                         print(f'Omission alignment failed; omission index: {iomit}, omission frame: {local_index}, starting and ending frames: {be, af}') # indiv_time, 
-#                         print(e)
+    #                     print(e)
 
 
                 flash_omit_dur_all = np.array(flash_omit_dur_all)
@@ -586,7 +586,9 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                 this_sess.at[index, ['n_omissions', 'n_neurons', 'frame_dur', 'flash_omit_dur_all', 'flash_omit_dur_fr_all']] = num_omissions, num_neurons, frame_dur, flash_omit_dur_all, flash_omit_dur_fr_all
                 print('===== plane %d: %d neurons; %d trials =====' %(index, num_neurons, num_omissions))
 
-
+#                 this_sess_l.at[index, 'local_fluo_allOmitt'] = local_fluo_allOmitt                
+#                 this_sess_l.at[index, 'local_fluo_flashBefOmitt'] = local_fluo_flashBefOmitt
+                
                 #%%#############################################################
                 ###### The following two variables are the key variables: ######
                 ###### (they are ready to be used; unless you want to shift and scale them below) 
@@ -595,6 +597,41 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                 ################################################################
 
 
+                
+                
+
+                ################################################################################
+                ##############################################################
+                ##############################################################                
+                #### Make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes)
+                # by resampling [the dual-beam mesoscope] data to resemble the single-beam mesoscope data in the following way:
+                # for each plane, we take either odd or even frame indices of the original df/f. Going through 4 uncoupled planes first, and the other 4 uncoupled planes next. As if the 8 planes are imaged consecutively (as opposed to 2 planes simultaneously.)
+                # remember: one of the planes in the coupled plane group must take even frame indices, and the other plane must take odd frame indices; because we want to remove the simultaneous aspect of dual beam mesoscope.
+                ##############################################################
+                ##############################################################
+                ################################################################################
+                
+                if controlSingleBeam_oddFrPlanes[0]==1:
+                    ### Decide for which planes you are going to take even (or odd) frame indices of df/f    # index:0-3: LM depths; index: 4-7: V1 depths
+                    # remember: one of the planes in the coupled plane group takes even frame indices, and the other plane takes odd frame indices; because we want to remove the simultaneous aspect of dual beam mesoscope.
+                    # coupled planes: 0-3 ; 1-2 ; 4-7 ; 5-6
+#                     odd_fr_planes = np.array([0,2,5,7]) # if the index is among these, we will take df/f from odd frame indices         
+                    odd_fr_planes = np.array(controlSingleBeam_oddFrPlanes[1])
+                                             
+                    even_fr_planes = np.arange(0,8)[~np.in1d(np.arange(0,8), even_fr_planes)]
+                    num_frs = local_fluo_allOmitt.shape[0]
+                    even_inds = np.arange(0,num_frs,2)
+                    odd_inds = np.arange(1,num_frs,2)
+
+
+                    if np.in1d(index, odd_fr_planes): # if the index is among these, we will take df/f from odd frame indices                                
+                        local_fluo_allOmitt_resamp = local_fluo_allOmitt[odd_inds] # take df/f from odd frame indices
+                    else:
+                        local_fluo_allOmitt_resamp = local_fluo_allOmitt[even_inds] # take df/f from even frame indices
+                
+                    local_fluo_allOmitt = local_fluo_allOmitt_resamp
+
+                
                 ################################################################################
                 ##############################################################
                 ##############################################################
@@ -847,12 +884,15 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
     #                 traces_aveTrs_time_ns0 = np.median(local_fluo_allOmitt0_orig, axis=2)
 
+                    ### UPDATED NOTE: 08/06/2020: I decided to go with mean (across trials, neurons) instead of median: it actually revealed that in the 3rd plane of LM (especially in LM) the mean response of Slc is slightly going up after omissions (we know some neurons are like this among slc).
+                    # Also, when we plot summary mice data, we take average across sessions of mice, so it makes sense that we also take average across trials and neurons (and not mean).    
+                    #
                     ### NOTE: tested on Slc mouse 451787, session_id 885557130:
                     ### There is a big difference between mean and median ... median seems to be a quite better measure!!
                     ### So I am going with median and iqr!
 
-                    traces_aveTrs_time_ns = np.median(local_fluo_allOmitt, axis=2) # time x neurons # Median across trials            
-                    traces_aveNs_time_trs = np.median(local_fluo_allOmitt, axis=1) # time x trials  # Median across neurons
+                    traces_aveTrs_time_ns = np.nanmean(local_fluo_allOmitt, axis=2) # time x neurons # Median across trials            
+                    traces_aveNs_time_trs = np.nanmean(local_fluo_allOmitt, axis=1) # time x trials  # Median across neurons
                     traces_aveTrs_time_ns0 = traces_aveTrs_time_ns + 0
                     # currently not saving the following ...             
                     #            traces_sdTrs_time_ns = st.iqr(local_fluo_allOmitt, axis=2) # time x neurons # Std across trials            
@@ -860,8 +900,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
 
                     ######### flash-aligned traces  
-                    traces_aveTrs_time_ns_f = np.median(local_fluo_flashBefOmitt, axis=2) # time x neurons # Median across trials
-                    traces_aveNs_time_trs_f = np.median(local_fluo_flashBefOmitt, axis=1) # time x trials  # Median across neurons
+                    traces_aveTrs_time_ns_f = np.nanmean(local_fluo_flashBefOmitt, axis=2) # time x neurons # Median across trials
+                    traces_aveNs_time_trs_f = np.nanmean(local_fluo_flashBefOmitt, axis=1) # time x trials  # Median across neurons
                     traces_aveTrs_time_ns0_f = traces_aveTrs_time_ns_f + 0
 
                     #%% Compute baseline of (normalized) traces (as 10th percentile pre-omit activity)
@@ -876,12 +916,45 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                     # even if you have shifted it to 0... because baseline is computed on the mean of each trial during bl_index_pre_omit!
                     # so to compute peak on aveTrs traces, we will again shift the traces below so their baseline is at 0.
 
-                    # try 10th or 20th percentile
+                    # defined in line 658
+#                     bl_index_pre_omit = np.arange(0,samps_bef) # you will need for response amplitude quantification, even if you dont use it below.
+#                     bl_index_pre_flash = np.arange(0,samps_bef) # we are computing flash responses on flash aligned traces.
+                    
+                    '''
+                    ### the 2 methods below lower the baseline value by a lot.
+                    
+                    # try 10th or 20th percentile                    
                     bl_preOmit = np.percentile(traces_aveTrs_time_ns[bl_index_pre_omit,:], bl_percentile, axis=0) # neurons # use the 10th percentile
                     bl_preFlash = np.percentile(traces_aveTrs_time_ns_f[bl_index_pre_flash,:], bl_percentile, axis=0) # neurons
                     # below was used when we were computing flash-evoked responses from omission aligned traces, and bl_index_pre_flash was defined differently.
     #                 bl_preFlash = np.percentile(traces_aveTrs_time_ns[bl_index_pre_flash,:], bl_percentile, axis=0) # neurons
     #                 bl_preOmit = np.mean(traces_aveTrs_time_ns[bl_index_pre_omit,:], axis=0) # use average                   
+                    print(np.mean(bl_preOmit))
+                    
+                    # new method
+                    # get the lowest 10 percentile values of the median trace preceding omission and then compute their mean and sd
+                    baseline_trace0 = traces_aveTrs_time_ns[bl_index_pre_omit] # frames x neurons
+                    n_p = int(samps_bef*.5) # take 20% of baseline frames
+                    # sort baseline frames, and then take the lowest 20% of them... this will define baseline frames
+                    baseline_trace = np.sort(baseline_trace0, axis=0)[:n_p] # baseline_frames x neurons 
+                    # compute mean and sd across frames of baseline_trace                    
+                    bl_preOmit = np.mean(baseline_trace, axis=0) # neurons
+                    bl_preFlash = bl_preOmit
+                    print(np.mean(bl_preOmit))
+                    '''
+                    
+                    # newest method: take frames right before the flash onset (or shifted by .25sec in case of VIP, familiar) and average them
+                    b0_relOmit = np.round((flash_win_final[0]) / frame_dur).astype(int)
+                    stp = np.round(-.75 / frame_dur).astype(int)
+                    bl_index_pre_omit = np.sort(np.arange(samps_bef-1 + b0_relOmit , 0 , stp))
+                    # Note below might be better (according to corr analysis): image and omission frames than image-1 and omission-1.
+#                     bl_index_pre_omit = np.sort(np.arange(samps_bef + b0_relOmit , 0 , stp))                    
+#                     bl_index_pre_omit
+                    
+                    bl_preOmit = np.mean(traces_aveTrs_time_ns[bl_index_pre_omit,:], axis=0) # neurons # use the 10th percentile
+                    bl_preFlash = bl_preOmit
+#                     print(np.mean(bl_preOmit))
+    
 
                     # I think I should only use the following for the computation of the peak
                     # because for peak amplitude I want to see how much the trace changed... but 
@@ -891,7 +964,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                     if doShift_again: # this is a second shift just to make sure the pre-omit activity has baseline at 0.                                       
                     #                    traces_aveTrs_time_ns = traces_aveTrs_time_ns0 + 0                    
                         traces_aveTrs_time_ns = traces_aveTrs_time_ns0 - bl_preOmit
-                        traces_aveTrs_time_ns_f = traces_aveTrs_time_ns0_f - bl_preOmit                    
+                        traces_aveTrs_time_ns_f = traces_aveTrs_time_ns0_f - bl_preFlash #bl_preOmit                    
 
 
                     #%%                    
@@ -1489,208 +1562,211 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
             this_sess = this_sess_allExp
 
 
-        
-    #%% Save the output of the analysis (for each session)
-    #####################################################################################
-    #####################################################################################
-    #####################################################################################
-    
-    if doCorrs: # if doCorrs, we save values for each session (because we run it on the cluster), otherwise, we keep values of each session, append them, and them save "all_sess" var.
-        
-        save1file = 1 # for large files, set to 0, so different vars are saved in different h5 files.
-        
-        #%% Set pandas dataframe input_vars, to save it below
-        
-        ### set this so you know what input vars you ran the script with
-        cols = np.array(['norm_to_max', 'mean_notPeak', 'peak_win', 'flash_win', 'flash_win_timing', 'flash_win_vip', 'bl_percentile', 'num_shfl_corr', 'trace_median',
-                     'samps_bef', 'samps_aft', 'doScale', 'doShift', 'doShift_again', 'bl_gray_screen', 'subtractSigCorrs'])
 
-        input_vars = pd.DataFrame([], columns=cols)
-        input_vars.at[0, cols] = norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, samps_bef, samps_aft, doScale, doShift, doShift_again, bl_gray_screen, subtractSigCorrs
-        #input_vars.iloc[0]
-        
-        
-        #%% Save this_sess
-        # directory: /allen/programs/braintv/workgroups/nc-ophys/Farzaneh/omit_traces_peaks
-        
-        analysis_name = 'omit_traces_peaks'
-        dir_now = os.path.join(dir_server_me, analysis_name)
-        # create a folder: omit_traces_peaks
-        if not os.path.exists(dir_now):
-            os.makedirs(dir_now)
-        
-        #### Set the analysis file name
-        if doCorrs==1:
-            namespec = '_corr'
-        else:
-            namespec = ''
-        
-        if subtractSigCorrs==0:
-            namespec = namespec + '_withSigCorrs'
-            
-        if doShift_again==1:
-            namespec = namespec + '_blShiftAgain'
-        else:
-            namespec = namespec + ''
-            
-        now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
-        
-        
-        #cre_now = cre[:cre.find('-')]
-        #name_this_sess = '%s_m-%d_s-%d' %(cre_now, mouse, session_id) # mouse, session: m, s
-        name_this_sess = 'm-%d_s-%d' %(mouse, session_id) # mouse, session: m, s
-        name = 'this_sess_%s%s_%s_%s' %(analysis_name, namespec, name_this_sess, now) 
-        
-            
-        if saveResults:
-            print('Saving .pkl file')
-            if save1file:                
-                '''
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-            
-                # Save to a h5 file                    
-                this_sess.to_hdf(allSessName, key='this_sess', mode='w')
-                # save input_vars
-                input_vars.to_hdf(allSessName, key='input_vars', mode='a')    
-                '''
+        #%% Save the output of the analysis (for each session)
+        #####################################################################################
+        #####################################################################################
+        #####################################################################################
 
-                # save to a pickle file
-                allSessName = os.path.join(dir_now , name + '.pkl') 
-                print(allSessName)
-                
-                f = open(allSessName, 'wb')
-                pickle.dump(this_sess, f)    
-                pickle.dump(input_vars, f)
-                f.close()
-    
-            else: # with large dataset we need to do this! create a folder for each session and save multiple h5 files in it (each file contains some vars of this_sess dataframe)
-                
-                #### create a folder for each session ####
-                named = 'this_sess_%s%s_s-%d' %(analysis_name, namespec, session_id)
-                dir_now = os.path.join(dir_server_me, analysis_name, named)
-                # create a folder: omit_traces_peaks
-                if not os.path.exists(dir_now):
-                    os.makedirs(dir_now)
-                
-                #### save vars in a h5 file ####                                                  
-                nn = '_info'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_omissions', 'n_neurons', 'cc_cols_area12', 'cc_cols_areaSame']]
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    #            print(a.shape)
-                input_vars.to_hdf(allSessName, key='input_vars', mode='a') # save input_vars to the h5 file            
-    
-                nn = '_c12'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['cc_a12']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-                nn = '_p12'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['p_a12']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-                nn = '_c11'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['cc_a11']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-                nn = '_p11'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['p_a11']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-                nn = '_c22'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['cc_a22']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-                nn = '_p22'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['p_a22']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-    
-                ##### shfl vars #####
-                
-                nn = '_c12_shfl'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['cc_a12_shfl']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-                nn = '_p12_shfl'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['p_a12_shfl']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-                nn = '_c11_shfl'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['cc_a11_shfl']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-                nn = '_p11_shfl'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['p_a11_shfl']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-                nn = '_c22_shfl'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['cc_a22_shfl']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
-    
-                nn = '_p22_shfl'
-                name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
-                allSessName = os.path.join(dir_now , name + '.h5') 
-                print(allSessName)
-                a = this_sess.loc[:,['p_a22_shfl']]
-    #            print(a.shape)
-                a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file                
-                
-                
-    #%% Return the output after we go through all experiments
-    # ie after the following for loop is done: for index, lims_id in enumerate(data_list['lims_id'])
-    # so we will have this_sess as long as a session has omissions, but even if some of its experiments are not valid.
-    
-#    if doCorrs==0:
-    return this_sess
-#    else:
-#        return this_sess_allExp, cc_a1_a2, cc_a1_a1, cc_a2_a2, p_a1_a2, p_a1_a1, p_a2_a2
+        if doCorrs==1: # if doCorrs, we save values for each session (because we run it on the cluster), otherwise, we keep values of each session, append them, and them save "all_sess" var.
+
+            save1file = 1 # for large files, set to 0, so different vars are saved in different h5 files.
+
+            #%% Set pandas dataframe input_vars, to save it below
+
+            ### set this so you know what input vars you ran the script with
+            cols = np.array(['norm_to_max', 'mean_notPeak', 'peak_win', 'flash_win', 'flash_win_timing', 'flash_win_vip', 'bl_percentile', 'num_shfl_corr', 'trace_median',
+                         'samps_bef', 'samps_aft', 'doScale', 'doShift', 'doShift_again', 'bl_gray_screen', 'subtractSigCorrs', 'controlSingleBeam_oddFrPlanes'])
+
+            input_vars = pd.DataFrame([], columns=cols)
+            input_vars.at[0, cols] = norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, samps_bef, samps_aft, doScale, doShift, doShift_again, bl_gray_screen, subtractSigCorrs, controlSingleBeam_oddFrPlanes
+            #input_vars.iloc[0]
+
+
+            #%% Save this_sess
+            # directory: /allen/programs/braintv/workgroups/nc-ophys/Farzaneh/omit_traces_peaks
+
+            analysis_name = 'omit_traces_peaks'
+            dir_now = os.path.join(dir_server_me, analysis_name)
+            # create a folder: omit_traces_peaks
+            if not os.path.exists(dir_now):
+                os.makedirs(dir_now)
+
+            #### Set the analysis file name
+            if doCorrs==1:
+                namespec = '_corr'
+                if controlSingleBeam_oddFrPlanes[0]==1:
+                    namespec = namespec + '_controlSingleBeam'
+            else:
+                namespec = ''
+
+            if subtractSigCorrs==0:
+                namespec = namespec + '_withSigCorrs'                
+
+            if doShift_again==1:
+                namespec = namespec + '_blShiftAgain'
+            else:
+                namespec = namespec + ''
+
+            now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
+
+
+            #cre_now = cre[:cre.find('-')]
+            #name_this_sess = '%s_m-%d_s-%d' %(cre_now, mouse, session_id) # mouse, session: m, s
+            name_this_sess = 'm-%d_s-%d' %(mouse, session_id) # mouse, session: m, s
+            name = 'this_sess_%s%s_%s_%s' %(analysis_name, namespec, name_this_sess, now) 
+
+
+            if saveResults:
+                print('Saving .pkl file')
+                if save1file:                
+                    '''
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+
+                    # Save to a h5 file                    
+                    this_sess.to_hdf(allSessName, key='this_sess', mode='w')
+                    # save input_vars
+                    input_vars.to_hdf(allSessName, key='input_vars', mode='a')    
+                    '''
+
+                    # save to a pickle file
+                    allSessName = os.path.join(dir_now , name + '.pkl') 
+                    print(allSessName)
+
+                    f = open(allSessName, 'wb')
+                    pickle.dump(this_sess, f)    
+                    pickle.dump(input_vars, f)
+                    f.close()
+
+                else: # with large dataset we need to do this! create a folder for each session and save multiple h5 files in it (each file contains some vars of this_sess dataframe)
+
+                    #### create a folder for each session ####
+                    named = 'this_sess_%s%s_s-%d' %(analysis_name, namespec, session_id)
+                    dir_now = os.path.join(dir_server_me, analysis_name, named)
+                    # create a folder: omit_traces_peaks
+                    if not os.path.exists(dir_now):
+                        os.makedirs(dir_now)
+
+                    #### save vars in a h5 file ####                                                  
+                    nn = '_info'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['session_id', 'experiment_id', 'mouse_id', 'date', 'cre', 'stage', 'area', 'depth', 'n_omissions', 'n_neurons', 'cc_cols_area12', 'cc_cols_areaSame']]
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+        #            print(a.shape)
+                    input_vars.to_hdf(allSessName, key='input_vars', mode='a') # save input_vars to the h5 file            
+
+                    nn = '_c12'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['cc_a12']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+                    nn = '_p12'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['p_a12']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+                    nn = '_c11'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['cc_a11']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+                    nn = '_p11'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['p_a11']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+                    nn = '_c22'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['cc_a22']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+                    nn = '_p22'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['p_a22']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+
+                    ##### shfl vars #####
+
+                    nn = '_c12_shfl'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['cc_a12_shfl']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+                    nn = '_p12_shfl'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['p_a12_shfl']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+                    nn = '_c11_shfl'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['cc_a11_shfl']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+                    nn = '_p11_shfl'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['p_a11_shfl']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+                    nn = '_c22_shfl'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['cc_a22_shfl']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file
+
+                    nn = '_p22_shfl'
+                    name = 'this_sess_%s%s%s_%s_%s' %(analysis_name, namespec, nn, name_this_sess, now) 
+                    allSessName = os.path.join(dir_now , name + '.h5') 
+                    print(allSessName)
+                    a = this_sess.loc[:,['p_a22_shfl']]
+        #            print(a.shape)
+                    a.to_hdf(allSessName, key='this_sess', mode='w') # save this_sess to the h5 file                
+
+
+        #%% Return the output after we go through all experiments
+        # ie after the following for loop is done: for index, lims_id in enumerate(data_list['lims_id'])
+        # so we will have this_sess as long as a session has omissions, but even if some of its experiments are not valid.
+
+    #    if doCorrs==0:
+        return this_sess
+    #    else:
+    #        return this_sess_allExp, cc_a1_a2, cc_a1_a1, cc_a2_a2, p_a1_a2, p_a1_a1, p_a2_a2
+
         
         
         
@@ -1709,6 +1785,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 ###########################################################################################
 
 #%%
+controlSingleBeam_oddFrPlanes = [1, [0,2,5,7]] # if 1st element is 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope # 2nd element: odd_fr_planes = [0,2,5,7] # if the plane index is among these, we will take df/f from odd frame indices         
+
 use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
 use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 
@@ -1927,7 +2005,7 @@ print('\n\n======================== Analyzing session %d, %d/%d ================
 # call the main function
 
 this_sess = omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median,
-   doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces, use_np_corr, use_common_vb_roi, doPlots, doROC)
+   doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces, use_np_corr, use_common_vb_roi, controlSingleBeam_oddFrPlanes, doPlots, doROC)
 
 # this_sess = omissions_traces_peaks_pbs(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median,
 #        doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, use_ct_traces, doPlots, doROC)
