@@ -618,7 +618,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 #                     odd_fr_planes = np.array([0,2,5,7]) # if the index is among these, we will take df/f from odd frame indices         
                     odd_fr_planes = np.array(controlSingleBeam_oddFrPlanes[1])
                                              
-                    even_fr_planes = np.arange(0,8)[~np.in1d(np.arange(0,8), even_fr_planes)]
+                    even_fr_planes = np.arange(0,8)[~np.in1d(np.arange(0,8), odd_fr_planes)]
                     num_frs = local_fluo_allOmitt.shape[0]
                     even_inds = np.arange(0,num_frs,2)
                     odd_inds = np.arange(1,num_frs,2)
