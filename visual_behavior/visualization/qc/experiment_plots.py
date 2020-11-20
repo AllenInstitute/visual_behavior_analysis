@@ -227,6 +227,9 @@ def plot_event_detection_for_experiment(ophys_experiment_id):
     dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
     metadata_string = dataset.metadata_string
     colors = sns.color_palette()
+    ophys_timestamps = dataset.ophys_timestamps.copy()
+    dff_traces = dataset.dff_traces.copy()
+    events = dataset.events.copy()
 
     for cell_specimen_id in dataset.cell_specimen_ids:
         n_rows = 5
@@ -235,8 +238,8 @@ def plot_event_detection_for_experiment(ophys_experiment_id):
         ax = ax.ravel()
         x = 5
         for i in range(n_rows):
-            ax[i].plot(dataset.ophys_timestamps, dataset.dff_traces.loc[cell_specimen_id].dff, color=colors[0], label='dff_trace')
-            ax[i].plot(dataset.ophys_timestamps, dataset.events.loc[cell_specimen_id].events, color=colors[3], label='events')
+            ax[i].plot(ophys_timestamps, dff_traces.loc[cell_specimen_id].dff, color=colors[0], label='dff_trace')
+            ax[i].plot(ophys_timestamps, events.loc[cell_specimen_id].events, color=colors[3], label='events')
             ax[i].set_xlim(60 * 10, (60 * 10) + x)
             x = x * 5
         ax[0].set_title('oeid: ' + str(ophys_experiment_id) + ', csid: ' + str(cell_specimen_id))
