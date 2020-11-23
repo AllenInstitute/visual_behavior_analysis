@@ -1916,3 +1916,62 @@ def get_stimulus_response_data_across_sessions(project_codes=None, session_numbe
     stimulus_response_data = stimulus_response_data.merge(experiments_table,
                                                           on=['ophys_experiment_id', 'ophys_session_id'])
     return stimulus_response_data
+
+
+def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
+    '''
+    returns a table of info about each unique cell ROI
+    input:
+        list, array, or series of cell_specimen_ids or a single cell_specimen_id
+        list, array, or series of ophys_experiment_ids or a single ophys_experiment_id
+    returns:
+        a dataframe with columns:
+            cell_roid: unique ID in LIMS
+            cell_specimen_id: unique ID for each matched cell across planes
+            cell_specimen_id_created_at: date cell_specimen_id created
+            cell_specimen_id_updated_at: date cell_specimen_id updated
+            ophys_session_id
+            ophys_experiment_id
+            experiment_container_id
+            supercontainer_id
+
+    examples:
+    >> cell_info = get_cell_info(cell_specimen_ids = [1018032458, 1018032468, 1063351131])
+
+    >> cell_info = get_cell_info(ophys_experiment_ids = [850517344, 953659749])
+    '''
+    if isinstance(cell_specimen_ids, int):
+        search_vals = (cell_specimen_ids)
+        search_key = 'cell_specimen_id'
+    elif isinstance(cell_specimen_ids, (list, np.ndarray, pd.Series)):
+        search_vals = tuple(cell_specimen_ids)
+        search_key = 'cell_specimen_id'
+    elif isinstance(ophys_experiment_ids, int):
+        search_vals = (ophys_experiment_ids)
+        search_key = 'oe.id'
+    elif isinstance(ophys_experiment_ids, (list, np.ndarray, pd.Series)):
+        search_vals = tuple(ophys_experiment_ids)
+        search_key = 'oe.id'
+
+    print(search_key)
+    # print(search_vals)
+
+    query = '''
+    select 
+        cell_rois.id as cell_roi_id, 
+        cell_rois.cell_specimen_id, 
+        specimens.created_at as cell_specimen_id_created_at,
+        specimens.updated_at as cell_specimen_id_upated_at,
+        oe.ophys_session_id,
+        oe.id as ophys_experiment_id, 
+        vbec.id as experiment_container_id,
+        visual_behavior_supercontainers.id as supercontainer_id
+    from cell_rois
+    join ophys_experiments as oe on cell_rois.ophys_experiment_id = oe.id
+    join specimens on cell_rois.cell_specimen_id = specimens.id
+    join ophys_experiments_visual_behavior_experiment_containers as oevbec on oe.id = oevbec.ophys_experiment_id
+    join visual_behavior_experiment_containers as vbec on vbec.id = oevbec.visual_behavior_experiment_container_id
+    join visual_behavior_supercontainers on visual_behavior_supercontainers.specimen_id = vbec.specimen_id
+    where {} in {}
+    '''
+    return db.lims_query(query.format(search_key, search_vals))
