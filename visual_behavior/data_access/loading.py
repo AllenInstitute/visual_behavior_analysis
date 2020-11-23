@@ -1957,13 +1957,13 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
     # print(search_vals)
 
     query = '''
-    select 
-        cell_rois.id as cell_roi_id, 
-        cell_rois.cell_specimen_id, 
+    select
+        cell_rois.id as cell_roi_id,
+        cell_rois.cell_specimen_id,
         specimens.created_at as cell_specimen_id_created_at,
         specimens.updated_at as cell_specimen_id_upated_at,
         oe.ophys_session_id,
-        oe.id as ophys_experiment_id, 
+        oe.id as ophys_experiment_id,
         vbec.id as experiment_container_id,
         visual_behavior_supercontainers.id as supercontainer_id
     from cell_rois
@@ -1975,3 +1975,4 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
     where {} in {}
     '''
     return db.lims_query(query.format(search_key, search_vals))
+    
