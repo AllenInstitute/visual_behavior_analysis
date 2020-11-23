@@ -15,7 +15,7 @@ if __name__ == '__main__':
     print(project_code, session_number)
 
     df_name = 'stimulus_response_df'
-    conditions = ['cell_specimen_id', 'change', 'image_name']
+    conditions = ['cell_specimen_id', 'image_name', 'running']
 
-    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True)
+    df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False)
     print('done')
