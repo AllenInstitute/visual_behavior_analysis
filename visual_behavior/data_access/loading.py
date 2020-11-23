@@ -1953,9 +1953,6 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
         search_vals = tuple(ophys_experiment_ids)
         search_key = 'oe.id'
 
-    print(search_key)
-    # print(search_vals)
-
     query = '''
     select
         cell_rois.id as cell_roi_id,
@@ -1975,4 +1972,3 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
     where {} in {}
     '''
     return db.lims_query(query.format(search_key, search_vals))
-    
