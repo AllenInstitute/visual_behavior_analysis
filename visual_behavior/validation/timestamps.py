@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 from visual_behavior.utilities import Movie
 from visual_behavior.data_access import loading
@@ -207,18 +208,33 @@ def eye_tracking_timestamps_from_SDK(ophys_experiment_id):
 
 def SDK_timestamps_df(ophys_experiment_id):
     SDK_dataset = BehaviorOphysSession.from_lims(ophys_experiment_id)
-    physio = len(SDK_dataset.ophys_timestamps)
+    try:
+        physio = len(SDK_dataset.ophys_timestamps)
+    except MemoryError:
+        physio = np.nan
+
     physio_dff = len(SDK_dataset.dff_traces.dff.values[0])
-    stimulus = len(SDK_dataset.stimulus_timestamps)
-    running = len(SDK_dataset.running_speed[0])
+
+    try:
+        stimulus = len(SDK_dataset.stimulus_timestamps)
+    except ValueError:
+        stimulus = np.nan
+
+    try:
+        running = len(SDK_dataset.running_speed[0])
+    except ValueError:
+        running = np.nan
+
     try:
         licks = len(SDK_dataset.licks)
-    except ValueError:
+    except (ValueError, IndexError, KeyError):
         licks = np.nan
+
     try:
         eye_tracking = len(SDK_dataset.eye_tracking["time"])
     except RuntimeError:
         eye_tracking = np.nan
+
     df = pd.DataFrame({"ophys_experiment_id": ophys_experiment_id,
                        "ophys_session_id": loading.get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id),
                        "source": "SDK",
@@ -370,7 +386,7 @@ def melt_datastream_timestamp_df(dataframe):
 def diff_from_rawdata_column(dataframe):
     rawdata_ts = get_datastream_rawdata_ts(dataframe)
     dataframe = pd.merge(dataframe, rawdata_ts, how="left", on="datastream")
-    dataframe["diff_from_rawdata"] = dataframe["rawdata_timestamps"] - dataframe["num_timestamps"]
+    dataframe["diff_from_rawdata"] = dataframe["num_timestamps"] - dataframe["rawdata_timestamps"]
     dataframe = dataframe.drop(columns=["rawdata_timestamps"])
     return dataframe
 
@@ -394,12 +410,11 @@ def pivot_experiment_timestamp_df(dataframe):
     return pivot
 
 
-def dataframe_for_mismatch_present_heatmap_plot(dataframe):
+def binary_mismatch_present_dataframe(dataframe):
     dataframe["datastream_source"] = dataframe["datastream"] + "_" + dataframe["source"]
-    dataframe = dataframe.drop(columns=["ophys_session_id", "source", "datastream",
-                                        "num_timestamps", "diff_from_rawdata"])
-    dataframe["mismatch_present"] = dataframe["mismatch_present"].apply(lambda x: 0 if x == False else 1)
-    dataframe = dataframe.pivot(index="ophys_experiment_id", columns="datastream_source")
+    dataframe = dataframe[["ophys_experiment_id", "datastream_source", "mismatch_present"]].copy()
+    dataframe["mismatch_present"] = dataframe["mismatch_present"].apply(lambda x: 0 if x == False else (np.nan if pd.isnull(x) else 1))
+    dataframe = dataframe.pivot(index="ophys_experiment_id", columns="datastream_source", values="mismatch_present").reset_index().rename_axis(None, axis=1)
     return dataframe
 
 
