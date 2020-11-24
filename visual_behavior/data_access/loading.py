@@ -1941,13 +1941,13 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
     >> cell_info = get_cell_info(ophys_experiment_ids = [850517344, 953659749])
     '''
     if isinstance(cell_specimen_ids, int):
-        search_vals = (cell_specimen_ids)
+        search_vals = "({})".format(cell_specimen_ids)
         search_key = 'cell_specimen_id'
     elif isinstance(cell_specimen_ids, (list, np.ndarray, pd.Series)):
         search_vals = tuple(cell_specimen_ids)
         search_key = 'cell_specimen_id'
     elif isinstance(ophys_experiment_ids, int):
-        search_vals = (ophys_experiment_ids)
+        search_vals = "({})".format(ophys_experiment_ids)
         search_key = 'oe.id'
     elif isinstance(ophys_experiment_ids, (list, np.ndarray, pd.Series)):
         search_vals = tuple(ophys_experiment_ids)
@@ -1964,11 +1964,11 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
         vbec.id as experiment_container_id,
         visual_behavior_supercontainers.id as supercontainer_id
     from cell_rois
-    join ophys_experiments as oe on cell_rois.ophys_experiment_id = oe.id
-    join specimens on cell_rois.cell_specimen_id = specimens.id
-    join ophys_experiments_visual_behavior_experiment_containers as oevbec on oe.id = oevbec.ophys_experiment_id
-    join visual_behavior_experiment_containers as vbec on vbec.id = oevbec.visual_behavior_experiment_container_id
-    join visual_behavior_supercontainers on visual_behavior_supercontainers.specimen_id = vbec.specimen_id
+    left join ophys_experiments as oe on cell_rois.ophys_experiment_id = oe.id
+    left join specimens on cell_rois.cell_specimen_id = specimens.id
+    left join ophys_experiments_visual_behavior_experiment_containers as oevbec on oe.id = oevbec.ophys_experiment_id
+    left join visual_behavior_experiment_containers as vbec on vbec.id = oevbec.visual_behavior_experiment_container_id
+    left join visual_behavior_supercontainers on visual_behavior_supercontainers.specimen_id = vbec.specimen_id
     where {} in {}
     '''
     return db.lims_query(query.format(search_key, search_vals))
