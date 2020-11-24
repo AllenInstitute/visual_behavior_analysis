@@ -39,8 +39,9 @@ Created on Mon Aug 26 12:23:25 2019
     
 #%%
 doCorrs = 1 #1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
-analysis_dates = ['20200731'] #(subtractSigCorrs=1) #['20200804'] #(subtractSigCorrs=0) #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
+analysis_dates = ['20201119'] #['20200731'] #(subtractSigCorrs=1) #['20200804'] #(subtractSigCorrs=0) #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
 # note: analysis_dates must not include the entire date_time (eg '20200508_233842'), because the code below assumes it is followed by some wildcard characters.
+control_single_beam = 1 #1 # if 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope 
 
 subtractSigCorrs = 1 # only applicable to doCorrs=1; # if 1, the corr files were saved for the case that signal correlations were subtracted.
 
@@ -93,6 +94,8 @@ analysis_name = 'omit_traces_peaks'
 
 if doCorrs==1:
     namespec = '_corr'
+    if control_single_beam==1:
+        namespec = namespec + '_controlSingleBeam'
 elif doCorrs == -1:
     namespec = '_allTraces'
 else:
@@ -242,11 +245,17 @@ if useSDK==1:
 
     
 else:
+
+    samps_bef = input_vars['samps_bef'].iloc[0]
+    samps_aft = input_vars['samps_aft'].iloc[0]
+    
+    if (doCorrs==1) and (control_single_beam==1): # to resemble single-beam data, we took alternating frames, so samps_bef and samps_aft are now half the original values.
+        samps_bef = int(samps_bef/2)
+        samps_aft = int(samps_aft/2)
+
     norm_to_max = input_vars['norm_to_max'].iloc[0]
     mean_notPeak = input_vars['mean_notPeak'].iloc[0]
     trace_median = input_vars['trace_median'].iloc[0]
-    samps_bef = input_vars['samps_bef'].iloc[0]
-    samps_aft = input_vars['samps_aft'].iloc[0]
     doScale = input_vars['doScale'].iloc[0]
     doShift = input_vars['doShift'].iloc[0]
     bl_gray_screen = input_vars['bl_gray_screen'].iloc[0] # it may not exist if it is one of the older runs
@@ -327,6 +336,8 @@ fgn, ylabel, ylab_short, lab_peakMean, lab_med = set_figname_labels(peak_win, fl
 # Path for saving figures
 if doCorrs==1:
     dir_now = 'corr_omit_flash'
+    if control_single_beam==1:
+        dir_now = os.path.join(dir_now, 'control_single_beam')
 elif doCorrs==0:
     dir_now = 'omit_across_sess'
 elif doCorrs==-1:

@@ -110,6 +110,8 @@ Defines functions needed in omissions_traces_peaks_plots_setVars_corrs.py and ot
 # import matplotlib.gridspec as gridspec
 # from def_funs import * 
 
+plt.rcParams["axes.grid"] = False
+
 #%% Define flash_win_final (depending on cre and sessions stage)
 
 def set_flash_win_final(cre, session_novel, flash_win, flash_win_vip):
@@ -644,7 +646,7 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
 def plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2, fgn, areas, depths, title, mouseid=np.nan, dosavefig=0):
     
     num_depth = int(len(depths)/len(areas))
-
+    
     def plot_colorbar_set_xy_ticks(ax1, im, lims0_fo, yl, depths, num_depth):
         plt.clim(lims0_fo[0], lims0_fo[1])
         cb = plt.colorbar(im, fraction=.046)#
@@ -691,14 +693,15 @@ def plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2
 
     yl = 'cc amplitude'
     lims0_fo = np.squeeze([np.nanmin([f_top0, o_top0]) , np.nanmax([f_top0, o_top0])])
-
+#     lims0_fo = [-.01, .035] # [-.012, .035] # use a customized range of colors (colorbar axis)
 
     ###### Flash ######
     ax1 = plt.subplot(gs[0])    
 
     im = plt.imshow(f_top0);
-    plt.title('Flash', y=1, fontsize=13)
+    plt.title('Image', y=1, fontsize=13)
     plot_colorbar_set_xy_ticks(ax1, im, lims0_fo, yl, depths, num_depth)
+    plt.rcParams["axes.grid"] = False
     
 
     ###### Omission ######
@@ -707,7 +710,8 @@ def plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2
     im = plt.imshow(o_top0);
     plt.title('Omission', y=1, fontsize=13)
     plot_colorbar_set_xy_ticks(ax1, im, lims0_fo, yl, depths, num_depth)
-
+    plt.rcParams["axes.grid"] = False
+    
 
 
     ##################################
@@ -720,7 +724,7 @@ def plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2
 
     ###### Flash ######
     ax1 = plt.subplot(gs2[0])    
-    plt.title('Flash', y=1, fontsize=13)
+    plt.title('Image', y=1, fontsize=13)
 
     im = plt.imshow(f_top1);
     plot_colorbar_set_xy_ticks(ax1, im, lims0_fo, yl, depths, num_depth)
@@ -744,7 +748,7 @@ def plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2
 
     ###### Flash ######
     ax1 = plt.subplot(gs3[0])    
-    plt.title('Flash', y=1, fontsize=13)
+    plt.title('Image', y=1, fontsize=13)
 
     im = plt.imshow(f_top2);
     plot_colorbar_set_xy_ticks(ax1, im, lims0_fo, yl, depths, num_depth)
@@ -2766,7 +2770,7 @@ for im in range(len(all_mice_id)): # im=0
         
 #%%        
 print(len(corr_trace_peak_allMice))
-corr_trace_peak_allMice.iloc[:2]
+corr_trace_peak_allMice #.iloc[:2]
 #corr_trace_peak_allMice.iloc[0]['cc12_sessSd_44'].shape
 
 

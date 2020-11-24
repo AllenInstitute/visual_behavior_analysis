@@ -11,9 +11,10 @@ import numpy as np
 frame_dur = np.array([0.093]) # sec # mesoscope time resolution (4 depth, 2 areas) (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)
 flash_dur = .25
 gray_dur = .5
-
 num_planes = 8
 
+if 'control_single_beam' in locals() and control_single_beam==1: # data resampled as if it was recorded with single beam scope
+    frame_dur = frame_dur*2
 
 #%% Use below to stop matplotlib.font_manager debug messages in log file
 # https://stackoverflow.com/questions/58320567/matplotlib-font-manager-debug-messages-in-log-file
