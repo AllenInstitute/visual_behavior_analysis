@@ -216,14 +216,19 @@ class ResponseAnalysis(object):
                     'licked',
                     'lick_on_next_flash',
                     'lick_on_previous_flash',
+                    'mean_running_speed'
                 ]
-                df = df.merge(
-                    stimulus_presentations[columns_to_keep],
-                    left_on='change_time',
-                    right_on='start_time',
-                    how='left',
-                    suffixes=('', '_duplicate')
-                ).drop(columns=['start_time_duplicate'])
+                try:
+                    df = df.merge(
+                        stimulus_presentations[columns_to_keep],
+                        left_on='change_time',
+                        right_on='start_time',
+                        how='left',
+                        suffixes=('', '_duplicate')
+                    ).drop(columns=['start_time_duplicate'])
+                except KeyError:  # if it cant merge them in, make empty columns
+                    for column in columns_to_keep:
+                        df[column] = None
         elif ('stimulus' in df_name) or ('omission' in df_name):
             if self.use_extended_stimulus_presentations:
                 stimulus_presentations = self.dataset.extended_stimulus_presentations.copy()
@@ -304,4 +309,3 @@ class ResponseAnalysis(object):
         return self._stimulus_pupil_area_df
 
     stimulus_pupil_area_df = LazyLoadable('_stimulus_pupil_area_df', get_stimulus_pupil_area_df)
-

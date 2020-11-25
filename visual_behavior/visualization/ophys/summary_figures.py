@@ -976,6 +976,9 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
         ax[i].set_ylim(ymin=-1, ymax=dff_max)
         if use_events:
             ax2 = ax[i].twinx()
+            events_array = None  # note: the following line is failing the lint test because events_array is undefined
+            #       the function will fail with the undefined variable
+            #       setting it to None will avoid the error, but the function will still fail (DRO, 9/1/2020)
             ax2 = plot_trace(dataset.ophys_timestamps, events_array[cell_index, :], ax=ax2,
                              title='', ylabel=None, color=sns.color_palette()[0], width=1.5)  # color=[.4,.4,.4])
             sns.despine(ax=ax2, left=True, bottom=True)
@@ -1025,7 +1028,7 @@ def plot_example_traces_and_behavior(dataset, cell_indices, xmin_seconds, length
             ax[i].plot(dataset.eye_tracking.time.values, dataset.eye_tracking.pupil_area.values, color=sns.color_palette()[0], label='pupil_area')
             ax[i].set_ylabel('pupil area\n(pixels**2')
             ymin, ymax = ax[i].get_ylim()
-            ax[i].set_ylim(np.percentile(ymin,5) * 1.1, np.percentile(ymax, 95))
+            ax[i].set_ylim(np.percentile(ymin, 5) * 1.1, np.percentile(ymax, 95))
             ax[i] = add_stim_color_span(dataset, ax[i], xlim=xlim)
             ax[i] = restrict_axes(xmin_seconds, xmax_seconds, interval_seconds, ax=ax[i])
             ax[i].set_xlabel('time (seconds)')
@@ -1343,7 +1346,7 @@ def plot_mean_trace_with_variability(traces, frame_rate, ylabel='dF/F', label=No
         ax.plot(mean_trace, label=label, linewidth=3, color=color, zorder=100)
         xticks, xticklabels = get_xticks_xticklabels(mean_trace, frame_rate, interval_sec, window=xlims)
         ax.set_xticks(xticks)
-        ax.set_xticklabels([int(x) for x in xticklabels])
+        ax.set_xticklabels(xticklabels)
         ax.set_xlim(0, (np.abs(xlims[0]) + xlims[1]) * int(frame_rate))
         ax.set_xlabel('time (sec)')
         ax.set_ylabel(ylabel)

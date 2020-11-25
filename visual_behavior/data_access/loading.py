@@ -3,6 +3,7 @@ from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 # from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
+from visual_behavior.ophys.response_analysis import response_processing as rp
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import processing
@@ -10,34 +11,47 @@ from visual_behavior.data_access import utilities
 import visual_behavior.database as db
 
 import os
+import glob
 import h5py  # for loading motion corrected movie
 import numpy as np
 import pandas as pd
 import configparser as configp  # for parsing scientifica ini files
 
-lims_dbname = os.environ["LIMS_DBNAME"]
-lims_user = os.environ["LIMS_USER"]
-lims_host = os.environ["LIMS_HOST"]
-lims_password = os.environ["LIMS_PASSWORD"]
-lims_port = os.environ["LIMS_PORT"]
+import warnings
 
-mtrain_dbname = os.environ["MTRAIN_DBNAME"]
-mtrain_user = os.environ["MTRAIN_USER"]
-mtrain_host = os.environ["MTRAIN_HOST"]
-mtrain_password = os.environ["MTRAIN_PASSWORD"]
-mtrain_port = os.environ["MTRAIN_PORT"]
+try:
+    lims_dbname = os.environ["LIMS_DBNAME"]
+    lims_user = os.environ["LIMS_USER"]
+    lims_host = os.environ["LIMS_HOST"]
+    lims_password = os.environ["LIMS_PASSWORD"]
+    lims_port = os.environ["LIMS_PORT"]
 
-lims_engine = PostgresQueryMixin(dbname=lims_dbname,
-                                 user=lims_user,
-                                 host=lims_host,
-                                 password=lims_password,
-                                 port=lims_port)
+    mtrain_dbname = os.environ["MTRAIN_DBNAME"]
+    mtrain_user = os.environ["MTRAIN_USER"]
+    mtrain_host = os.environ["MTRAIN_HOST"]
+    mtrain_password = os.environ["MTRAIN_PASSWORD"]
+    mtrain_port = os.environ["MTRAIN_PORT"]
 
-mtrain_engine = PostgresQueryMixin(dbname=mtrain_dbname,
-                                   user=mtrain_user,
-                                   host=mtrain_host,
-                                   password=mtrain_password,
-                                   port=mtrain_port)
+    lims_engine = PostgresQueryMixin(
+        dbname=lims_dbname,
+        user=lims_user,
+        host=lims_host,
+        password=lims_password,
+        port=lims_port
+    )
+
+    mtrain_engine = PostgresQueryMixin(
+        dbname=mtrain_dbname,
+        user=mtrain_user,
+        host=mtrain_host,
+        password=mtrain_password,
+        port=mtrain_port
+    )
+
+except Exception as e:
+    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately\nfunctions requiring database access will fail'.format(
+        e)
+    warnings.warn(warn_string)
 
 config = configp.ConfigParser()
 
@@ -73,6 +87,14 @@ def get_analysis_cache_dir():
 
 def get_behavior_model_outputs_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
+
+
+def get_decoding_analysis_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
+
+
+def get_ophys_glm_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
 # LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
@@ -130,6 +152,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
                     "container_workflow_state":
                     "experiment_workflow_state":
                     "session_name":
+                    "session_number":
                     "equipment_name":
                     "date_of_acquisition":
                     "isi_experiment_id":
@@ -156,6 +179,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
         experiments = filtering.limit_to_production_project_codes(experiments)
+        experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in
+                                     experiments.index.values]
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
         experiments = experiments.reset_index()
@@ -166,6 +191,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
+    experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
+                                     experiments.session_type.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
     return experiments
@@ -207,8 +234,8 @@ def get_filtered_ophys_session_table():
     cache = get_visual_behavior_cache()
     sessions = cache.get_session_table()
     sessions = filtering.limit_to_production_project_codes(sessions)
-    sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
+    sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
     sessions = reformat.add_model_outputs_availability_to_table(sessions)
@@ -222,7 +249,6 @@ def get_filtered_ophys_session_table():
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
-
 class BehaviorOphysDataset(BehaviorOphysSession):
     """Takes SDK ophys session object attributes and filters/reformats to compensate for bugs and missing SDK features.
         This class should eventually be entirely replaced by the BehaviorOphysSession SDK class when all requested features have been implemented.
@@ -232,15 +258,16 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                                                 associated with an ophys_experiment_id (single imaging plane)
         """
 
-    def __init__(self, api, include_invalid_rois=False):
+    def __init__(self, api, include_invalid_rois=False,
+                 eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2):
         """
         :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
-        :param include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
+        :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
         """
-        super().__init__(api)
-        self.include_invalid_rois = include_invalid_rois
-        # set pupil area and events to None for now
-        # self.pupil_area = None
+        super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold,
+                         eye_tracking_dilation_frames=eye_tracking_dilation_frames)
+
+        self._include_invalid_rois = include_invalid_rois
 
     @property
     def analysis_folder(self):
@@ -252,7 +279,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
                                                                                     analysis_cache_dir))
             print('creating new analysis folder')
-            m = self.dataset.metadata
+            m = self.metadata.copy()
             date = m['experiment_datetime']
             date = str(date)[:10]
             date = date[2:4] + date[5:7] + date[8:10]
@@ -272,15 +299,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table
-        if self.include_invalid_rois == False:
-            cell_specimen_table = cell_specimen_table.query('valid_roi')
+        if self._include_invalid_rois == False:
+            cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
         cell_specimen_table = cell_specimen_table.copy()
         # add cell index corresponding to the index of the cell in dff_traces_array
         cell_specimen_ids = np.sort(cell_specimen_table.index.values)
         if 'cell_index' not in cell_specimen_table.columns:
             cell_specimen_table['cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
                                                  cell_specimen_id in cell_specimen_table.index.values]
-            cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
+        cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
 
@@ -303,7 +330,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def corrected_fluorescence_traces(self):
-        if self.include_invalid_rois == False:
+        if self._include_invalid_rois == False:
             corrected_fluorescence_traces = super().corrected_fluorescence_traces
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
@@ -315,7 +342,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def dff_traces(self):
-        if self.include_invalid_rois == False:
+        if self._include_invalid_rois == False:
             dff_traces = super().dff_traces
             cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
             valid_cells = cell_specimen_table.cell_roi_id.values
@@ -345,7 +372,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def events(self):
-        self._events = pd.DataFrame({'events': [x for x in self.get_events_array()]},
+        self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
+                                     'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
                                     index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
 
@@ -359,16 +387,26 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def ophys_timestamps(self):
         if super().metadata['rig_name'] == 'MESO.1':
-            self._ophys_timestamps = self.timestamps['ophys_frames']['timestamps']
+            ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
+            self._ophys_timestamps = ophys_timestamps
+            # correct metadata frame rate
+            self._metadata['ophys_frame_rate'] = 1 / np.diff(ophys_timestamps).mean()
         else:
             self._ophys_timestamps = super().ophys_timestamps
         return self._ophys_timestamps
 
     @property
+    def behavior_movie_timestamps(self):
+        # note that due to sync line label issues, 'eye_tracking' timestamps are loaded here instead of 'behavior_movie' timestamps
+        self._behavior_movie_timestamps = self.timestamps['eye_tracking']['timestamps'].copy()
+        return self._behavior_movie_timestamps
+
+    @property
     def metadata(self):
         metadata = super().metadata
         # reset ophys frame rate for accuracy & to account for mesoscope resampling
-        metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
+        # causes recursion error
+        # metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
         if 'donor_id' not in metadata.keys():
             metadata['donor_id'] = metadata.pop('LabTracks_ID')
             metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
@@ -382,8 +420,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         m = self.metadata
         rig_name = m['rig_name'].split('.')[0] + m['rig_name'].split('.')[1]
         self._metadata_string = str(m['donor_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['driver_line'][
-            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m[
-            'session_type'] + '_' + rig_name
+            0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type'] + '_' + rig_name
         return self._metadata_string
 
     @property
@@ -430,8 +467,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_omission(stimulus_presentations)
-        stimulus_presentations['flash_after_omitted'] = np.hstack((False, stimulus_presentations.omitted.values[:-1]))
-        stimulus_presentations['flash_after_change'] = np.hstack((False, stimulus_presentations.change.values[:-1]))
+        stimulus_presentations['flash_after_omitted'] = stimulus_presentations['omitted'].shift(1)
+        stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
+        stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
+        stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
+        stimulus_presentations['image_name_previous_flash'] = stimulus_presentations['image_name'].shift(1)
+        stimulus_presentations['image_index_previous_flash'] = stimulus_presentations['image_index'].shift(1)
+        stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
         if check_if_model_output_available(self.metadata['behavior_session_id']):
             stimulus_presentations = add_model_outputs_to_stimulus_presentations(
                 stimulus_presentations, self.metadata['behavior_session_id'])
@@ -440,7 +482,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
             stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         else:
-            stimulus_presentations['licked'] = [True if len(licks)>0 else False for licks in stimulus_presentations.licks.values]
+            stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
+                                                stimulus_presentations.licks.values]
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
@@ -452,6 +495,31 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         trials = reformat.add_trial_type_to_trials_table(trials)
         self._trials = trials
         return self._trials
+
+    @property
+    def behavior_movie_pc_masks(self):
+        cache = get_visual_behavior_cache()
+        ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
+        self._behavior_movie_pc_masks = get_pc_masks_for_session(ophys_session_id)
+        return self._behavior_movie_pc_masks
+
+    @property
+    def behavior_movie_pc_activations(self):
+        cache = get_visual_behavior_cache()
+        ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
+        self._behavior_movie_pc_activations = get_pc_activations_for_session(ophys_session_id)
+        return self._behavior_movie_pc_activations
+
+    @property
+    def behavior_movie_predictions(self):
+        cache = get_visual_behavior_cache()
+        ophys_session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(self.ophys_experiment_id, cache)
+        movie_predictions = get_behavior_movie_predictions_for_session(ophys_session_id)
+        movie_predictions.index.name = 'frame_index'
+        movie_predictions['timestamps'] = self.behavior_movie_timestamps[:len(
+            movie_predictions)]  # length check will trim off spurious timestamps at the end
+        self._behavior_movie_predictions = movie_predictions
+        return self._behavior_movie_predictions
 
     def get_cell_specimen_id_for_cell_index(self, cell_index):
         cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_index == cell_index].index.values[0]
@@ -475,6 +543,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
     dataset = BehaviorOphysDataset(api, include_invalid_rois)
+    print('extracting cached data from {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
@@ -538,6 +607,32 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     return ophys_session_id
 
 
+def get_pc_masks_for_session(ophys_session_id):
+    facemap_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/facemap_results'
+    session_file = [file for file in os.listdir(facemap_output_dir) if
+                    (str(ophys_session_id) in file) and ('motMask' in file)]
+    try:
+        pc_masks = np.load(os.path.join(facemap_output_dir, session_file[0]))
+    except Exception as e:
+        print('could not load PC masks for ophys_session_id', ophys_session_id)
+        print(e)
+        pc_masks = []
+    return pc_masks
+
+
+def get_pc_activations_for_session(ophys_session_id):
+    facemap_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/facemap_results'
+    session_file = [file for file in os.listdir(facemap_output_dir) if
+                    (str(ophys_session_id) in file) and ('motSVD' in file)]
+    try:
+        pc_activations = np.load(os.path.join(facemap_output_dir, session_file[0]))
+    except Exception as e:
+        print('could not load PC activations for ophys_session_id', ophys_session_id)
+        print(e)
+        pc_activations = []
+    return pc_activations
+
+
 def get_extended_stimulus_presentations(session):
     '''
     Calculates additional information for each stimulus presentation
@@ -578,7 +673,8 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     '''
 
     if check_if_model_output_available(behavior_session_id):
-        model_outputs = pd.read_csv(os.path.join(get_behavior_model_outputs_dir(), get_model_output_file(behavior_session_id)[0]))
+        model_outputs = pd.read_csv(
+            os.path.join(get_behavior_model_outputs_dir(), get_model_output_file(behavior_session_id)[0]))
         model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change'], inplace=True)
         stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id',
                                                               left_on='stimulus_presentations_id').set_index(
@@ -592,6 +688,43 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     else:
         print('no model outputs saved for behavior_session_id:', behavior_session_id)
     return stimulus_presentations
+
+
+def get_behavior_model_summary_table():
+    data_dir = get_behavior_model_outputs_dir()
+    data = pd.read_csv(os.path.join(data_dir, '_summary_table.csv'))
+    data2 = pd.read_csv(os.path.join(data_dir, '_meso_summary_table.csv'))
+    data = data.append(data2)
+    return data
+
+
+def check_for_events_file(ophys_experiment_id):
+    events_folder = os.path.join(get_analysis_cache_dir(), 'events')
+    if os.path.exists(events_folder):
+        events_file = [file for file in os.listdir(events_folder) if
+                       str(ophys_experiment_id) in file]
+        if len(events_file) > 0:
+            return True
+        else:
+            return False
+
+
+def get_behavior_movie_predictions_for_session(ophys_session_id):
+    """
+    Loads model predictions from behavior movie classifier and returns a dictionary with keys =
+    ['groom_reach_with_contact', 'groom_reach_without_contact', 'lick_with_contact', 'lick_without_contact', 'no_contact', 'paw_contact']
+    :param ophys_session_id: ophys_session_id
+    :return: dictionary of behavior prediction values
+    """
+    model_output_dir = '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/lick_detection_validation/model_predictions'
+    predictions_path = glob.glob(os.path.join(model_output_dir, 'predictions*osid={}*'.format(ophys_session_id)))[0]
+    try:
+        movie_predictions = pd.read_csv(predictions_path)
+    except Exception as e:
+        print('could not behavior movie model predictions for ophys_session_id', ophys_session_id)
+        print(e)
+        movie_predictions = []
+    return movie_predictions
 
 
 def get_sdk_max_projection(ophys_experiment_id):
@@ -657,7 +790,7 @@ def get_sdk_roi_masks(cell_specimen_table):
 
     roi_masks = {}
     for cell_specimen_id in cell_specimen_table.index:
-        mask = cell_specimen_table.at[cell_specimen_id, 'image_mask']
+        mask = cell_specimen_table.at[cell_specimen_id, 'roi_mask']
         binary_mask = np.zeros(mask.shape)
         binary_mask[mask == True] = 1
         roi_masks[cell_specimen_id] = binary_mask
@@ -1108,7 +1241,6 @@ def get_wkf_dff_h5_location(ophys_experiment_id):
     return dff_h5_path
 
 
-
 def get_wkf_roi_trace_h5_location(ophys_experiment_id):
     """uses well known file system to query lims
         and get the directory and filename for the
@@ -1234,6 +1366,54 @@ def get_wkf_extracted_trace_h5_location(ophys_experiment_id):
     trace_h5_path = trace_h5_location_info[0]['?column?']  # idk why it's ?column? but it is :(
     trace_h5_path = trace_h5_path.replace('/allen', '//allen')  # works with windows and linux filepaths
     return trace_h5_path
+
+
+def get_wkf_demixed_traces_h5_location(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        roi_traces.h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the roi_traces.h5 file
+                    for the given ophys_experiment_id
+    """
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 820011707 AND
+    attachable_id = {0}
+
+    '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    trace_h5_location_info = (lims_cursor.fetchall())
+
+    trace_h5_path = trace_h5_location_info[0]['?column?']  # idk why it's ?column? but it is :(
+    trace_h5_path = trace_h5_path.replace('/allen', '//allen')  # works with windows and linux filepaths
+    return trace_h5_path
+
+
+def get_demixed_traces_array(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to find and load
+            "demixed_traces.h5" then return the traces as an array
+
+        Arguments:
+            ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+        Returns:
+            demixed_traces_array -- mxn array where m = rois and n = time
+        """
+    filepath = get_wkf_demixed_traces_h5_location(ophys_experiment_id)
+    f = h5py.File(filepath, 'r')
+    demixed_traces_array = np.asarray(f['data'])
+    f.close()
+    return demixed_traces_array
 
 
 def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
@@ -1477,6 +1657,10 @@ def get_annotated_experiments_table():
     indices = experiments_table[experiments_table.location == 'Sst_deep'].index.values
     experiments_table.at[indices, 'location'] = 'Sst'
 
+    experiments_table['session_number'] = [int(session_type[6]) for session_type in
+                                           experiments_table.session_type.values]
+    experiments_table['cre'] = [cre.split('-')[0] for cre in experiments_table.cre_line.values]
+
     return experiments_table
 
 
@@ -1508,8 +1692,9 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
         suffix = '_events'
     else:
         suffix = ''
-
-    if len(conditions) == 5:
+    if len(conditions) == 6:
+        filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + '_' + conditions[5] + suffix + '.h5'
+    elif len(conditions) == 5:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[3] + '_' + conditions[4] + suffix + '.h5'
     elif len(conditions) == 4:
         filename = 'mean_' + df_name + '_' + project_code + '_' + session_type + '_' + conditions[1] + '_' + conditions[2] + '_' + conditions[
@@ -1535,13 +1720,11 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_
         expts = annotated_experiments_table.reset_index()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
-                filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions, use_events)
+                filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
+                                                              use_events)
                 filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
                 df = pd.read_hdf(filepath, key='df')
-                df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
-                                     'layer', 'ophys_session_id', 'project_code',
-                                     'specimen_id', 'depth', 'exposure_number', 'container_id']],
-                              on='ophys_experiment_id')
+                df = df.merge(expts, on='ophys_experiment_id')
                 outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
                 df = df[df.cell_specimen_id.isin(outlier_cells) == False]
                 multi_session_df = pd.concat([multi_session_df, df])
@@ -1550,7 +1733,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
             df = pd.read_hdf(filepath, key='df')
             df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
-                                 'layer', 'ophys_session_id', 'project_code', 'location2',
+                                 'layer', 'ophys_session_id', 'project_code', 'session_type',
                                  'specimen_id', 'depth', 'exposure_number', 'container_id']], on='ophys_experiment_id')
             outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
             df = df[df.cell_specimen_id.isin(outlier_cells) == False]
@@ -1642,3 +1825,150 @@ def annotate_and_clean_multi_session_df(multi_session_df):
     # multi_session_df = remove_problematic_data_from_multi_session_df(multi_session_df)
 
     return multi_session_df
+
+
+def get_concatenated_stimulus_presentations(project_codes=None, session_numbers=None):
+    """
+    loads stimulus presentation table data for multiple sessions from cached files.
+    dataframe contains stimulus information including image_name, change, licked, omitted, etc for every stimulus presentation.
+    can be merged with stimulus_response_dfs to get cell responses for all stimulus presentations.
+
+    if desired project codes and session numbers are not specified, all data will be loaded.
+    project_codes and session_numbers should be provided as lists,
+    ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
+    """
+
+    save_dir = os.path.join(get_decoding_analysis_dir(), 'data')
+    experiments_table = get_filtered_ophys_experiment_table()
+    if project_codes is None:
+        project_codes = experiments_table.project_code.unique()
+    if session_numbers is None:
+        session_numbers = experiments_table.session_number.unique()
+
+    concatenated_stimulus_presentations = pd.DataFrame()
+    for project_code in project_codes:
+        for session_number in session_numbers:
+            try:
+                df = pd.read_hdf(os.path.join(save_dir, 'stimulus_presentations_' + project_code + '_session_' + str(
+                    session_number) + '.h5'), key='df')
+                concatenated_stimulus_presentations = pd.concat([concatenated_stimulus_presentations, df])
+            except Exception as e:
+                print('problem for', project_code, session_number)
+                print(e)
+    return concatenated_stimulus_presentations
+
+
+def get_concatenated_stimulus_response_dfs(project_codes=None, session_numbers=None):
+    """
+    loads stimulus response dataframes for multiple sessions from cached files.
+    dataframe contains the response of each cell for each stimulus presentation across sessions,
+    including the trace in a [0, 0.75] second window, the mean response in that window, etc.
+    can be merged with stimulus presentations to get the stimulus conditions for each cell response.
+
+    if desired project codes and session numbers are not specified, all data will be loaded.
+    project_codes and session_numbers should be provided as lists,
+    ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
+    """
+
+    save_dir = os.path.join(get_decoding_analysis_dir(), 'data')
+    experiments_table = get_filtered_ophys_experiment_table()
+    if project_codes is None:
+        project_codes = experiments_table.project_code.unique()
+    if session_numbers is None:
+        session_numbers = experiments_table.session_number.unique()
+    cre_lines = experiments_table.cre_line.unique()
+
+    concatenated_stimulus_response_dfs = pd.DataFrame()
+    for project_code in project_codes:
+        for session_number in session_numbers:
+            for cre_line in cre_lines:
+                try:
+                    df = pd.read_hdf(os.path.join(save_dir,
+                                                  'stimulus_response_dfs_' + project_code + '_' + cre_line + '_session_' + str(
+                                                      session_number) + '.h5'), key='df')
+                    concatenated_stimulus_response_dfs = pd.concat([concatenated_stimulus_response_dfs, df])
+                except Exception as e:
+                    print('problem for', project_code, cre_line, session_number)
+                    print(e)
+    return concatenated_stimulus_response_dfs
+
+
+def get_stimulus_response_data_across_sessions(project_codes=None, session_numbers=None):
+    """
+    loads and merges stimulus_response_dfs, stimulus_presentations data, and experiments_table metadata
+    across sessions for a given set of project_codes and session_numbers.
+    returns all cell responses for all image flashes for that set of sessions.
+
+    if desired project codes and session numbers are not specified, all data will be loaded (slow).
+    project_codes and session_numbers should be provided as lists,
+    ex: project_codes = ['VisualBehaviorTask1B', 'VisualBehaviorMultiscope], session_numbers = [3, 4]
+    """
+
+    experiments_table = get_filtered_ophys_experiment_table()
+    if project_codes is None:
+        project_codes = experiments_table.project_code.unique()
+    if session_numbers is None:
+        session_numbers = experiments_table.session_number.unique()
+
+    stim_presentations = get_concatenated_stimulus_presentations(project_codes, session_numbers)
+    stim_response_dfs = get_concatenated_stimulus_response_dfs(project_codes, session_numbers)
+    stimulus_response_data = stim_response_dfs.merge(stim_presentations, on='ophys_session_id')
+    stimulus_response_data = stimulus_response_data.merge(experiments_table,
+                                                          on=['ophys_experiment_id', 'ophys_session_id'])
+    return stimulus_response_data
+
+
+def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
+    '''
+    returns a table of info about each unique cell ROI
+    input:
+        list, array, or series of cell_specimen_ids or a single cell_specimen_id
+        list, array, or series of ophys_experiment_ids or a single ophys_experiment_id
+    returns:
+        a dataframe with columns:
+            cell_roid: unique ID in LIMS
+            cell_specimen_id: unique ID for each matched cell across planes
+            cell_specimen_id_created_at: date cell_specimen_id created
+            cell_specimen_id_updated_at: date cell_specimen_id updated
+            ophys_session_id
+            ophys_experiment_id
+            experiment_container_id
+            supercontainer_id
+
+    examples:
+    >> cell_info = get_cell_info(cell_specimen_ids = [1018032458, 1018032468, 1063351131])
+
+    >> cell_info = get_cell_info(ophys_experiment_ids = [850517344, 953659749])
+    '''
+    if isinstance(cell_specimen_ids, int):
+        search_vals = "({})".format(cell_specimen_ids)
+        search_key = 'cell_specimen_id'
+    elif isinstance(cell_specimen_ids, (list, np.ndarray, pd.Series)):
+        search_vals = tuple(cell_specimen_ids)
+        search_key = 'cell_specimen_id'
+    elif isinstance(ophys_experiment_ids, int):
+        search_vals = "({})".format(ophys_experiment_ids)
+        search_key = 'oe.id'
+    elif isinstance(ophys_experiment_ids, (list, np.ndarray, pd.Series)):
+        search_vals = tuple(ophys_experiment_ids)
+        search_key = 'oe.id'
+
+    query = '''
+    select
+        cell_rois.id as cell_roi_id,
+        cell_rois.cell_specimen_id,
+        specimens.created_at as cell_specimen_id_created_at,
+        specimens.updated_at as cell_specimen_id_updated_at,
+        oe.ophys_session_id,
+        oe.id as ophys_experiment_id,
+        vbec.id as experiment_container_id,
+        visual_behavior_supercontainers.id as supercontainer_id
+    from cell_rois
+    left join ophys_experiments as oe on cell_rois.ophys_experiment_id = oe.id
+    left join specimens on cell_rois.cell_specimen_id = specimens.id
+    left join ophys_experiments_visual_behavior_experiment_containers as oevbec on oe.id = oevbec.ophys_experiment_id
+    left join visual_behavior_experiment_containers as vbec on vbec.id = oevbec.visual_behavior_experiment_container_id
+    left join visual_behavior_supercontainers on visual_behavior_supercontainers.specimen_id = vbec.specimen_id
+    where {} in {}
+    '''
+    return db.lims_query(query.format(search_key, search_vals))
