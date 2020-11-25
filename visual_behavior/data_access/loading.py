@@ -469,18 +469,31 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         if 'orientation' in stimulus_presentations.columns:
             stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
+        stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+        stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
+        stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
         stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
+        stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
+                                            stimulus_presentations.licks.values]
+        stimulus_presentations['lick_rate'] = stimulus_presentations['licked'].rolling(window=320, min_periods=1,
+                                                                                       win_type='triang').mean() / .75
+        stimulus_presentations['rewarded'] = [True if len(rewards) > 0 else False for rewards in
+                                              stimulus_presentations.rewards.values]
+        stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
+                                                                                           win_type='triang').mean() / .75
+        stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._stimulus_presentations = stimulus_presentations
         return self._stimulus_presentations
 
     @property
     def extended_stimulus_presentations(self):
-        stimulus_presentations = super().stimulus_presentations.copy()
+        stimulus_presentations = self.stimulus_presentations.copy()
         if 'orientation' in stimulus_presentations.columns:
-            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
+            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
+                                                                          'phase', 'spatial_frequency'])
         stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
@@ -491,18 +504,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
         stimulus_presentations['image_name_previous_flash'] = stimulus_presentations['image_name'].shift(1)
         stimulus_presentations['image_index_previous_flash'] = stimulus_presentations['image_index'].shift(1)
-        stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+        stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
+        stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
+        stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
+        stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         if check_if_model_output_available(self.metadata['behavior_session_id']):
             stimulus_presentations = add_model_outputs_to_stimulus_presentations(
                 stimulus_presentations, self.metadata['behavior_session_id'])
-            stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
-            stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
-            stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
-            stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         else:
-            stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
-                                                stimulus_presentations.licks.values]
-        stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
+            print('model outputs not available')
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
 
@@ -668,7 +678,7 @@ def get_extended_stimulus_presentations(session):
         licks=session.licks,
         rewards=session.rewards,
         change_times=change_times,
-        running_speed_df=session.running_speed_df,
+        running_speed_df=session.running_data_df,
         pupil_area=session.pupil_area
     )
     return extended_stimulus_presentations

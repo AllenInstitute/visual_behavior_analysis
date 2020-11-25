@@ -582,3 +582,15 @@ def filter_invalid_rois_inplace(session):
     session.dff_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.corrected_fluorescence_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.cell_specimen_table.drop(index=invalid_cell_specimen_ids, inplace=True)
+
+def add_response_latency(stimulus_presentations):
+    st = stimulus_presentations.copy()
+    st['response_latency'] = st['licks'] - st['start_time']
+    # st = st[st.response_latency.isnull()==False] #get rid of random NaN values
+    st['response_latency'] = [response_latency[0] if len(response_latency) > 0 else np.nan for response_latency in
+                              st['response_latency'].values]
+    st['response_binary'] = [True if np.isnan(response_latency) == False else False for response_latency in
+                             st.response_latency.values]
+    st['early_lick'] = [True if response_latency < 0.15 else False for response_latency in
+                        st['response_latency'].values]
+    return st
