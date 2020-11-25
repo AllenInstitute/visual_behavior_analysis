@@ -582,3 +582,226 @@ def filter_invalid_rois_inplace(session):
     session.dff_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.corrected_fluorescence_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.cell_specimen_table.drop(index=invalid_cell_specimen_ids, inplace=True)
+
+
+def annotate_licks(licks, rewards, bout_threshold=0.7):
+    '''
+        Appends several columns to dataset.licks. Calculates licking bouts based on a
+        interlick interval (ILI) of bout_threshold. Default of 700ms based on examining
+        histograms of ILI distributions
+        Adds to dataset.licks
+            pre_ili,        (seconds)
+            post_ili,       (seconds)
+            rewarded,       (boolean)
+            bout_start,     (boolean)
+            bout_end,       (boolean)
+            bout_number,    (int)
+            bout_rewarded,  (boolean)
+    '''
+
+    # Computing ILI for each lick
+    licks['pre_ili'] = np.concatenate([[np.nan], np.diff(licks.timestamps.values)])
+    licks['post_ili'] = np.concatenate([np.diff(licks.timestamps.values), [np.nan]])
+    licks['rewarded'] = False
+    for index, row in rewards.iterrows():
+        if len(np.where(licks.timestamps <= row.timestamps)[0]) == 0:
+            if (row.autorewarded) & (row.timestamps <= licks.timestamps.values[0]):
+                # mouse hadn't licked before first auto-reward
+                mylick = 0
+            else:
+                print(
+                    'First lick was after first reward, but it wasnt an auto-reward. This is very strange, but Im annotating the first lick as rewarded.')
+                mylick = 0
+        else:
+            mylick = np.where(licks.timestamps <= row.timestamps)[0][-1]
+        licks.at[mylick, 'rewarded'] = True
+
+    # Segment licking bouts
+    licks['bout_start'] = licks['pre_ili'] > bout_threshold
+    licks['bout_end'] = licks['post_ili'] > bout_threshold
+    licks.at[licks['pre_ili'].apply(np.isnan), 'bout_start'] = True
+    licks.at[licks['post_ili'].apply(np.isnan), 'bout_end'] = True
+
+    # Annotate bouts by number, and reward
+    licks['bout_number'] = np.cumsum(licks['bout_start'])
+    x = licks.groupby('bout_number').any('rewarded').rename(columns={'rewarded': 'bout_rewarded'})
+    licks['bout_rewarded'] = False
+    temp = licks.reset_index().set_index('bout_number')
+    temp.update(x)
+    temp = temp.reset_index().set_index('index')
+    licks['bout_rewarded'] = temp['bout_rewarded']
+    return licks
+
+
+def annotate_bouts(stimulus_presentations, licks):
+    '''
+        Uses the bout annotations in licks to annotate stimulus_presentations
+        Adds to stimulus_presentations
+            bout_start,     (boolean)
+            bout_end,       (boolean)
+    '''
+    # Annotate Bout Starts
+    bout_starts = licks[licks['bout_start']]
+    stimulus_presentations['bout_start'] = False
+    stimulus_presentations['num_bout_start'] = 0
+    for index, x in bout_starts.iterrows():
+        filter_start = stimulus_presentations[stimulus_presentations['start_time'].gt(x.timestamps)]
+        if (x.timestamps > stimulus_presentations.iloc[0].start_time) & (len(filter_start) > 0):
+            stimulus_presentations.at[
+                stimulus_presentations[stimulus_presentations['start_time'].gt(x.timestamps)].index[
+                    0] - 1, 'bout_start'] = True
+            stimulus_presentations.at[
+                stimulus_presentations[stimulus_presentations['start_time'].gt(x.timestamps)].index[
+                    0] - 1, 'num_bout_start'] += 1
+    # Annotate Bout Ends
+    bout_ends = licks[licks['bout_end']]
+    stimulus_presentations['bout_end'] = False
+    stimulus_presentations['num_bout_end'] = 0
+    for index, x in bout_ends.iterrows():
+        filter_start = stimulus_presentations[stimulus_presentations['start_time'].gt(x.timestamps)]
+        if (x.timestamps > stimulus_presentations.iloc[0].start_time) & (len(filter_start) > 0):
+            stimulus_presentations.at[
+                stimulus_presentations[stimulus_presentations['start_time'].gt(x.timestamps)].index[
+                    0] - 1, 'bout_end'] = True
+            stimulus_presentations.at[
+                stimulus_presentations[stimulus_presentations['start_time'].gt(x.timestamps)].index[
+                    0] - 1, 'num_bout_end'] += 1
+            # Check to see if bout started before stimulus, if so, make first flash as bout_starts
+            bout_start_time = \
+                licks.query('bout_number == @x.bout_number').query('bout_start').timestamps.values[0]
+            bout_end_time = x.timestamps
+            if (bout_start_time < stimulus_presentations.iloc[0].start_time) & (
+                bout_end_time > stimulus_presentations.iloc[0].start_time):
+                stimulus_presentations.at[0, 'bout_start'] = True
+                stimulus_presentations.at[0, 'num_bout_start'] += 1
+    # Clean Up
+    stimulus_presentations.drop(-1, inplace=True, errors='ignore')
+
+    return stimulus_presentations
+
+
+def annotate_bout_start_time(stimulus_presentations):
+    stimulus_presentations['bout_start_time'] = np.nan
+    stimulus_presentations.at[stimulus_presentations['bout_start'] == True, 'bout_start_time'] = \
+        stimulus_presentations[stimulus_presentations['bout_start'] == True].licks.str[0]
+    return stimulus_presentations
+
+
+def add_rolling_metrics_to_stimulus_presentations(stimulus_presentations, licks, rewards, win_dur=320, win_type='triang'):
+    '''
+        Get rolling flash level metrics for lick rate, reward rate, and bout_rate
+        Computes over a rolling window of win_dur (s) duration, with a window type given by win_type
+        Adds to stimulus_presentations
+            licked,         (boolean)
+            lick_rate,      (licks/flash)
+            rewarded,       (boolean)
+            reward_rate,    (rewards/flash)
+            running_rate,   (cm/s)
+            bout_rate,      (bouts/flash)
+    '''
+    from scipy.stats import norm
+
+    # Annotate licks & add lick bout info to stimulus presentatinos
+    # licks = annotate_licks(licks, rewards, bout_threshold=0.7)
+    # stimulus_presentations = annotate_bouts(stimulus_presentations, licks)
+    # stimulus_presentations = annotate_bout_start_time(stimulus_presentations)
+
+    # # Get Lick Rate / second
+    # stimulus_presentations['licked'] = [1 if len(this_lick) > 0 else 0 for this_lick in
+    #                                             stimulus_presentations['licks']]
+    # stimulus_presentations['lick_rate'] = stimulus_presentations['licked'].rolling(win_dur, min_periods=1, win_type=win_type).mean() / .75
+    #
+    # # Get Reward Rate / second
+    # stimulus_presentations['rewarded'] = [1 if len(this_reward) > 0 else 0 for this_reward in
+    #                                               stimulus_presentations['rewards']]
+    # stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(win_dur, min_periods=1, win_type=win_type).mean() / .75
+
+#     # Get Running / Second
+#     stimulus_presentations['running_rate'] = stimulus_presentations['mean_running_speed'].rolling(
+#             win_dur, min_periods=1, win_type=win_type).mean() / .75
+#
+#     # Get Bout Rate / second
+#     stimulus_presentations['bout_rate'] = stimulus_presentations['bout_start'].rolling(win_dur, min_periods=1, win_type=win_type).mean() / .75
+#
+#     # Get Hit Fraction. % of licks that are rewarded
+#     stimulus_presentations['hit_bout'] = [np.nan if (not x[0]) else 1 if (x[1] == 1) else 0 for x in
+#                                                   zip(stimulus_presentations['bout_start'],
+#                                                       stimulus_presentations['rewarded'])]
+#     stimulus_presentations['hit_fraction'] = stimulus_presentations['hit_bout'].rolling(win_dur, min_periods=1, win_type=win_type).mean().fillna( 0)
+#
+#     # Get Hit Rate, % of change flashes with licks
+#     stimulus_presentations['change_with_lick'] = [np.nan if (not x[0]) else 1 if (x[1]) else 0 for x in
+#                                                           zip(stimulus_presentations['change'],
+#                                                               stimulus_presentations['bout_start'])]
+#     stimulus_presentations['hit_rate'] = stimulus_presentations['change_with_lick'].rolling(win_dur, min_periods=1, win_type=win_type).mean().fillna(0)
+#
+#     # Get Miss Rate, % of change flashes without licks
+#     stimulus_presentations['change_without_lick'] = [np.nan if (not x[0]) else 0 if (x[1]) else 1 for x in
+#                                                              zip(stimulus_presentations['change'],
+#                                                                  stimulus_presentations['bout_start'])]
+#     stimulus_presentations['miss_rate'] = stimulus_presentations['change_without_lick'].rolling(win_dur, min_periods=1, win_type=win_type).mean().fillna(0)
+#
+#     # Get False Alarm Rate, % of non-change flashes with licks
+#     stimulus_presentations['non_change_with_lick'] = [np.nan if (x[0]) else 1 if (x[1]) else 0 for x in
+#                                                               zip(stimulus_presentations['change'],
+#                                                                   stimulus_presentations['bout_start'])]
+#     stimulus_presentations['false_alarm_rate'] = stimulus_presentations['non_change_with_lick'].rolling(
+#         win_dur, min_periods=1, win_type=win_type).mean().fillna(0)
+#
+#     # Get Correct Reject Rate, % of non-change flashes without licks
+#     stimulus_presentations['non_change_without_lick'] = [np.nan if (x[0]) else 0 if (x[1]) else 1 for x in
+#                                                                  zip(stimulus_presentations['change'],
+#                                                                      stimulus_presentations['bout_start'])]
+#     stimulus_presentations['correct_reject_rate'] = stimulus_presentations[
+#         'non_change_without_lick'].rolling(win_dur, min_periods=1, win_type=win_type).mean().fillna(0)
+#
+#     # Get dPrime and Criterion metrics on a flash level
+#     Z = norm.ppf
+#     stimulus_presentations['d_prime'] = Z(np.clip(stimulus_presentations['hit_rate'], 0.01, 0.99)) - Z(
+#         np.clip(stimulus_presentations['false_alarm_rate'], 0.01, 0.99))
+#     stimulus_presentations['criterion'] = 0.5 * (Z(np.clip(stimulus_presentations['hit_rate'], 0.01, 0.99)) + Z(
+#         np.clip(stimulus_presentations['false_alarm_rate'], 0.01, 0.99)))
+#     # Computing the criterion to be negative
+#
+#     return stimulus_presentations
+#
+#
+# def classify_rolling_metrics(stimulus_presentations, lick_threshold=0.1, reward_threshold=2 / 80, use_bouts=True):
+#     '''
+#         Use the flash level rolling metrics to classify into three states based on the thresholds
+#         lick_threshold is the licking rate / flash that divides high and low licking states
+#         reward_threshold is the rewards/flash that divides high and low reward states (2/80 is equivalent to 2 rewards/minute).
+#     '''
+#     if use_bouts:
+#         stimulus_presentations['high_lick'] = [True if x > lick_threshold else False for x in
+#                                                        stimulus_presentations['bout_rate']]
+#     else:
+#         stimulus_presentations['high_lick'] = [True if x > lick_threshold else False for x in
+#                                                        stimulus_presentations['lick_rate']]
+#     stimulus_presentations['high_reward'] = [True if x > reward_threshold else False for x in
+#                                                      stimulus_presentations['reward_rate']]
+#     stimulus_presentations['flash_metrics_epochs'] = [0 if (not x[0]) & (not x[1]) else 1 if x[1] else 2 for x
+#                                                               in zip(stimulus_presentations['high_lick'],
+#                                                                      stimulus_presentations['high_reward'])]
+#     stimulus_presentations['flash_metrics_labels'] = [
+#         'low-lick,low-reward' if x == 0  else 'high-lick,high-reward' if x == 1 else 'high-lick,low-reward' for x in
+#         stimulus_presentations['flash_metrics_epochs']]
+
+    return stimulus_presentations
+
+
+def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior_session_id):
+    '''
+       Adds additional columns to stimulus table for model weights and related metrics
+    '''
+
+    if loading.check_if_model_output_available(behavior_session_id):
+        model_outputs = pd.read_csv(
+            os.path.join(loading.get_behavior_model_outputs_dir(), loading.get_model_output_file(behavior_session_id)[0]))
+        model_outputs = model_outputs[['stimulus_presentations_id', 'omissions1', 'task0', 'timing1D', 'bias']]
+        stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id',
+            left_on='stimulus_presentations_id').set_index('stimulus_presentations_id')
+        return stimulus_presentations
+    else:
+        print('no model outputs saved for behavior_session_id:', behavior_session_id)
+    return stimulus_presentations
