@@ -136,7 +136,13 @@ def crossValidateModel(X, Y, modelFn, **options):
     ## %%%%%
     cls = [0]
     num_classes = len(np.unique(Y)) # 2
+    attempt = 0
     while len(cls) < num_classes: # make sure all classes exist in YTrain    
+        attempt = attempt+1
+        if attempt==101:
+            print(f'NOTE: reached {attempt} attempts but failed to have all classes in the training data! Only {len(cls)}/{num_classes} classes exist in the training data!')
+            # NOTE: ideally you want to set a red flag variable here so later you can exclude these data from analysis!
+            break
         if shflTrs==1: # shuffle trials to break any dependencies on the sequence of trails; Also since we take the first 90% of trials as training and the last 10% as testing, for each run of this code we want to make sure we use different sets of trials as testing and training.
             print('shuffling trials in crossValidateModel')
             shfl = rng.permutation(np.arange(0, numObservations))
@@ -270,7 +276,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     numTrials = X.shape[1]
     print('FINAL: %d trials; %d neurons' %(numTrials, X.shape[0]))
     
-    len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   
+    len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   # numTrials - int((100-kfold)/100 * numTrials) 
             
     X0 = X + 0 # units x trials
     Y0 = Y + 0
@@ -312,7 +318,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     
     #%%    
     ########################################## Train SVM numSamples times to get numSamples cross-validated datasets.    
-    for s in range(numSamples): # s = 0
+    for s in range(numSamples): # s=0
         print('Iteration %d' %(s))
         
         ############ Make sure both classes have the same number of trials when training the classifier
