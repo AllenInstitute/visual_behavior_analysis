@@ -707,7 +707,8 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     if check_if_model_output_available(behavior_session_id):
         model_outputs = pd.read_csv(
             os.path.join(get_behavior_model_outputs_dir(), get_model_output_file(behavior_session_id)[0]))
-        model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change'], inplace=True)
+        model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change',
+                                    'licked', 'lick_rate', 'rewarded', 'reward_rate'], inplace=True)
         stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id',
                                                               left_on='stimulus_presentations_id').set_index(
             'stimulus_presentations_id')
