@@ -179,6 +179,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
     if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
         experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     else:
+        print('generating filtered_ophys_experiment_table')
         cache = get_visual_behavior_cache()
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
@@ -302,15 +303,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def cell_specimen_table(self):
-        cell_specimen_table = super().cell_specimen_table
+        cell_specimen_table = super().cell_specimen_table.copy()
+        # cell_specimen_table = cell_specimen_table.copy()
         if self._include_invalid_rois == False:
             cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
-        cell_specimen_table = cell_specimen_table.copy()
         # add cell index corresponding to the index of the cell in dff_traces_array
-        cell_specimen_ids = np.sort(cell_specimen_table.index.values)
-        if 'cell_index' not in cell_specimen_table.columns:
-            cell_specimen_table['cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
-                                                 cell_specimen_id in cell_specimen_table.index.values]
+        # cell_specimen_ids = np.sort(cell_specimen_table.index.values)
+        # if 'cell_index' not in cell_specimen_table.columns:
+        #     cell_specimen_table['cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
+        #                                          cell_specimen_id in cell_specimen_table.index.values]
         cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
@@ -380,16 +381,18 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         if os.path.exists(events_folder):
             events_file = [file for file in os.listdir(events_folder) if str(self.ophys_experiment_id) in file]
             if len(events_file) > 0:
-                print('getting L0 events')
                 f = np.load(os.path.join(events_folder, events_file[0]), allow_pickle=True)
-
                 event_dict = f['event_dict'].item()
                 cell_roi_ids = list(event_dict.keys())
                 events_array = np.asarray([event_dict[cell_roi_id]['event_trace'] for cell_roi_id in cell_roi_ids])
                 cell_specimen_ids = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in cell_roi_ids]
+                if len(cell_specimen_ids) == 0:
+                    cell_specimen_ids = np.zeros(len(cell_roi_ids))
+                    cell_specimen_ids[:] = np.nan
                 self._events = pd.DataFrame({'events': [x for x in events_array],
                                         'filtered_events': [x for x in rp.filter_events_array(events_array)]},
                                          index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+                self._events.insert(0, 'cell_roi_id', cell_roi_ids)
         #
         # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
         #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
@@ -550,15 +553,18 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         return self._behavior_movie_predictions
 
     def get_cell_specimen_id_for_cell_index(self, cell_index):
-        cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_index == cell_index].index.values[0]
+        cell_specimen_table = self.cell_specimen_table.copy()
+        cell_specimen_id = cell_specimen_table[cell_specimen_table.cell_index == cell_index].index.values[0]
         return cell_specimen_id
 
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
-        cell_index = self.cell_specimen_table[self.cell_specimen_table.index == cell_specimen_id].cell_index.values[0]
+        cell_specimen_table = self.cell_specimen_table.copy()
+        cell_index = cell_specimen_table[cell_specimen_table.index == cell_specimen_id].cell_index.values[0]
         return cell_index
 
     def get_cell_specimen_id_for_cell_roi_id(self, cell_roi_id):
-        cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_roi_id == cell_roi_id].index.values[0]
+        cell_specimen_table = self.cell_specimen_table.copy()
+        cell_specimen_id = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].index.values[0]
         return cell_specimen_id
 
 
