@@ -1596,6 +1596,21 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
     return rigid_motion_transform_df
 
 
+# CONTAINER LEVEL INFO
+
+def get_unique_cell_specimen_ids_for_container(container_id):
+    experiments_table = get_filtered_ophys_experiment_table()
+    container_expts = experiments_table[experiments_table.container_id==container_id]
+    experiment_ids = np.sort(container_expts.index.values)
+    cell_specimen_table = pd.DataFrame()
+    for experiment_id in experiment_ids:
+        dataset = get_ophys_dataset(experiment_id)
+        ct = dataset.cell_specimen_table.copy()
+        cell_specimen_table = pd.concat([cell_specimen_table, ct])
+    cell_specimen_ids = cell_specimen_table.index.unique()
+    return cell_specimen_ids
+
+
 # FROM MTRAIN DATABASE
 
 

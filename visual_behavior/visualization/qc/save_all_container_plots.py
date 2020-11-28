@@ -4,8 +4,7 @@ import argparse
 
 def main():
     possible_plots = {
-        "event_detection": cp.plot_event_detection_for_container,
-        "ophys_session_sequence": cp.plot_container_session_sequence,
+        # "ophys_session_sequence": cp.plot_container_session_sequence,
         # "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
         # "average_images": cp.plot_sdk_average_images_for_container,
         # "dff_traces_heatmaps": cp.plot_dff_traces_heatmaps_for_container,
@@ -34,6 +33,9 @@ def main():
         # "snr_by_pmt": cp.plot_snr_by_pmt_for_container,
         # "snr_by_pmt_and_intensity": cp.plot_snr_by_pmt_gain_and_intensity_for_container,
         # "behavior_summary": cp.plot_behavior_summary,
+        "event_detection": cp.plot_event_detection_for_container,
+        "single_cell_response_plots": cp.plot_single_cell_response_plots_for_container,
+        "traces_and_behavior": cp.plot_dff_trace_and_behavior_for_container,
     }
 
     parser = argparse.ArgumentParser()
