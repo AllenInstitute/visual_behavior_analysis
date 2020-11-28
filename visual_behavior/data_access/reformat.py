@@ -62,6 +62,20 @@ def add_model_outputs_availability_to_table(table):
     return table
 
 
+def add_has_cell_matching_to_table(table):
+    """
+    Evaluates wither a given experiment_id is in a saved list of experiments where cell matching failed.
+    :param table: table of experiment level metadata
+    :return: table with added column 'has_cell_matching', values are Boolean
+    """
+    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\summary_plots'
+    df = pd.read_csv(os.path.join(save_dir, 'experiments_with_missing_cell_specimen_ids_201124.csv'))
+    no_cell_matching = list(df.ophys_experiment_id.values)
+    print(len(no_cell_matching))
+    table['has_cell_matching'] = [False if expt in no_cell_matching else True for expt in table.ophys_experiment_id.values]
+    return table
+
+
 def reformat_experiments_table(experiments):
     experiments = experiments.reset_index()
     experiments['super_container_id'] = experiments['specimen_id'].values
@@ -74,6 +88,7 @@ def reformat_experiments_table(experiments):
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
     experiments = add_exposure_number_to_experiments_table(experiments)
     experiments = add_model_outputs_availability_to_table(experiments)
+    experiments = add_has_cell_matching_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
     if 'index' in experiments.columns:
