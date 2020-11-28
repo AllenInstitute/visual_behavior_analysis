@@ -1057,7 +1057,7 @@ def plot_event_detection_for_container(ophys_container_id, save_figure=True):
     ophys_experiment_ids = ophys_experiments.index.values
 
     for ophys_experiment_id in ophys_experiment_ids:
-        ep.plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True)
+        ep.plot_event_detection_for_experiment(ophys_experiment_id, save_figure=save_figure)
 
 
 def plot_single_cell_response_plots_for_container(ophys_container_id, save_figure=True):

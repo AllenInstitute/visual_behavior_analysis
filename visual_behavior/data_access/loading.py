@@ -389,11 +389,12 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                 if len(cell_specimen_ids) == 0:
                     cell_specimen_ids = np.zeros(len(cell_roi_ids))
                     cell_specimen_ids[:] = np.nan
-                self._events = pd.DataFrame({'events': [x for x in events_array],
+
+                self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
+                                        'events': [x for x in events_array],
                                         'filtered_events': [x for x in rp.filter_events_array(events_array)]},
                                          index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
-                self._events.insert(0, 'cell_roi_id', cell_roi_ids)
-        #
+
         # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
         #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
         #                             index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
