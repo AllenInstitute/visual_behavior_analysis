@@ -2,7 +2,10 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+import visual_behavior.visualization.utils as utils
+
 import visual_behavior.visualization.qc.plotting_utils as pu
+
 from visual_behavior.data_access import loading as data_loading
 from visual_behavior.data_access import processing as data_processing
 
@@ -218,3 +221,31 @@ def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
         error_text = 'could not generate pupil position plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
         ax.set_title(error_text, ha='left')
     return ax
+
+
+def plot_event_detection_for_experiment(ophys_experiment_id):
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+    metadata_string = dataset.metadata_string
+    colors = sns.color_palette()
+    ophys_timestamps = dataset.ophys_timestamps.copy()
+    dff_traces = dataset.dff_traces.copy()
+    events = dataset.events.copy()
+
+    for cell_specimen_id in dataset.cell_specimen_ids:
+        n_rows = 5
+        figsize = (15, 10)
+        fig, ax = plt.subplots(n_rows, 1, figsize=figsize)
+        ax = ax.ravel()
+        x = 5
+        for i in range(n_rows):
+            ax[i].plot(ophys_timestamps, dff_traces.loc[cell_specimen_id].dff, color=colors[0], label='dff_trace')
+            ax[i].plot(ophys_timestamps, events.loc[cell_specimen_id].events, color=colors[3], label='events')
+            ax[i].set_xlim(60 * 10, (60 * 10) + x)
+            x = x * 5
+        ax[0].set_title('oeid: ' + str(ophys_experiment_id) + ', csid: ' + str(cell_specimen_id))
+        ax[i].legend(loc='upper left')
+        ax[i].set_xlabel('time (seconds)')
+        fig.tight_layout()
+
+        utils.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'event_detection',
+                       'container_' + metadata_string +'_'+ str(cell_specimen_id))
