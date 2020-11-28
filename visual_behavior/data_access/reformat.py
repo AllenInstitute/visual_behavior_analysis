@@ -68,8 +68,8 @@ def add_has_cell_matching_to_table(table):
     :param table: table of experiment level metadata
     :return: table with added column 'has_cell_matching', values are Boolean
     """
-    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\summary_plots'
-    df = pd.read_csv(os.path.join(save_dir, 'experiments_with_missing_cell_specimen_ids_201124.csv'))
+    save_dir = loading.get_cache_dir()
+    df = pd.read_csv(os.path.join(save_dir, 'experiments_with_missing_cell_specimen_ids.csv'))
     no_cell_matching = list(df.ophys_experiment_id.values)
     print(len(no_cell_matching))
     table['has_cell_matching'] = [False if expt in no_cell_matching else True for expt in table.ophys_experiment_id.values]
