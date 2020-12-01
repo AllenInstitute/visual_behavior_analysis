@@ -36,7 +36,7 @@ mtrain_engine = PostgresQueryMixin(dbname=mtrain_dbname,
                                    password=mtrain_password,
                                    port=mtrain_port)
 
-get_psql_dict_cursor = convert.get_psql_dict_cursor  # to load well-known files
+# get_psql_dict_cursor = convert.get_psql_dict_cursor  # to load well-known files
 config = configp.ConfigParser()
 
 # function inputs
