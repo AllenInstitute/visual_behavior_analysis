@@ -8,7 +8,7 @@ import numpy as np
 import plotly.graph_objs as go
 import dash_bootstrap_components as dbc
 
-
+import time
 import functions
 import components
 
@@ -19,20 +19,25 @@ app.title = 'Visual Behavior Data QC'
 # app.config['suppress_callback_exceptions'] = True
 
 # FUNCTION CALLS
+print('setting up table')
+t0 = time.time()
 container_table = functions.load_data().sort_values('first_acquistion_date')
 container_plot_options = functions.load_container_plot_options()
 container_overview_plot_options = functions.load_container_overview_plot_options()
 plot_inventory = functions.generate_plot_inventory()
 plot_inventory_fig = functions.make_plot_inventory_heatmap(plot_inventory)
+print('done setting up table, it took {} seconds'.format(time.time()- t0))
 
 # COMPONENT SETUP
+print('setting up components')
+t0 = time.time()
 components.plot_selection_dropdown.options = container_plot_options
-components.components.container_overview_dropdown.options = container_overview_plot_options
+components.container_overview_dropdown.options = container_overview_plot_options
 components.container_overview_iframe.src = app.get_asset_url('qc_plots/overview_plots/d_prime_container_overview.html')
 components.plot_inventory_iframe.src = 'https://dougollerenshaw.github.io/figures_to_share/container_plot_inventory.html'  # app.get_asset_url('qc_plots/container_plot_inventory.html')
 components.container_data_table.columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
 components.container_data_table.data = container_table.to_dict('records')
-
+print('done setting up components, it took {} seconds'.format(time.time()- t0))
 
 # APP LAYOUT
 app.layout = html.Div(
@@ -52,6 +57,9 @@ app.layout = html.Div(
         # data table
         components.container_data_table,
         # dropdown for plot selection
+        components.previous_button,
+        components.next_button,
+        html.Div(id='stored_value', style={'display': 'none'}),
         html.H4(''),
         html.H4('Select plots to generate from the dropdown (max 10)'),
         components.plot_selection_dropdown,
@@ -107,6 +115,65 @@ app.layout = html.Div(
     },
 )
 
+# ensure that the table page is set to show the current selection
+@app.callback(
+    Output("data_table", "page_current"),
+    [Input('data_table', 'selected_rows')],
+    [
+        State('data_table', 'derived_virtual_indices'),
+        State('data_table', 'page_current'),
+        State('data_table', 'page_size'),
+    ]
+)
+def get_on_correct_page(selected_rows, derived_virtual_indices, page_current, page_size):
+    print('in get_on_correct_page')
+    print(selected_rows)
+    print(derived_virtual_indices)
+    print(type(derived_virtual_indices))
+    print('current_page = {}'.format(page_current))
+    print('page_size = {}'.format(page_size))
+    print('')
+    current_selection = selected_rows[0]
+    current_index = derived_virtual_indices.index(current_selection)
+    current_page = int(current_index/page_size)
+    print(current_index)
+    print(current_page)
+    return current_page
+
+
+# go to previous selection in table
+@app.callback(
+    Output("data_table", "selected_rows"),
+    [
+        Input("next_button", "n_clicks"),
+        Input("previous_button", "n_clicks")
+    ],
+    [
+        State("data_table", "selected_rows"), 
+        State('data_table', 'derived_virtual_indices'),
+    ]
+)
+def select_next(next_button_n_clicks, prev_button_n_clicks, selected_rows, derived_virtual_indices):
+    changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
+    if 'previous_button' in changed_id:
+        print('previous_button was clicked')
+        advance_index = -1
+    elif 'next_button' in changed_id:
+        print('next_button was clicked')
+        advance_index = 1
+    else:
+        advance_index = 0
+    if derived_virtual_indices is not None:
+        current_selection = selected_rows[0]
+        current_index = derived_virtual_indices.index(current_selection)
+        next_index = current_index + advance_index
+        if next_index >= 0:
+            next_selection = derived_virtual_indices[next_index]
+        else:
+            next_selection = derived_virtual_indices[current_index]
+        return [int(next_selection)]
+    else:
+        return [0]
 
 @app.callback(
     Output("plot_qc_popup", "is_open"),

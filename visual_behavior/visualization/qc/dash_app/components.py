@@ -57,6 +57,11 @@ table_row_selection = dcc.Input(
     value=5,
 )
 
+# next/previous buttons
+next_button = html.Button('Next', id='next_button')
+previous_button = html.Button('Previous', id='previous_button')
+
+# data table
 container_data_table = dash_table.DataTable(
     id='data_table',
     columns=None,
