@@ -5,6 +5,8 @@ from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 
+import visual_behavior.data_access.loading as loading
+
 import os
 import h5py  # for loading motion corrected movie
 import numpy as np

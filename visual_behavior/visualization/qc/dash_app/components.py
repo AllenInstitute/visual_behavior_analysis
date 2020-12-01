@@ -105,15 +105,25 @@ plot_inventory_graph_div = html.Div(
     ]
 )
 
-feeback_button = html.Div(
+feedback_button = html.Div(
     [
-        dbc.Button("Provide Feedback", id="open"),
+        dbc.Button("Provide Feedback", id="open_feedback_popup"),
         dbc.Modal(
             [
                 dbc.ModalHeader("Plot Feedback"),
-                dbc.ModalBody("This is a prototype popup for plot QC"),
+                dbc.ModalBody(
+                    [
+                        dbc.Label("Timestamp:"),
+                        dbc.Input(id="feedback_popup_datetime", type="text", disabled=True),
+                        dbc.Label("Input text:"),
+                        dbc.Input(id="feedback_popup_text", type="text", debounce=True),
+                    ]
+                ),
                 dbc.ModalFooter(
-                    dbc.Button("Close", id="close", className="ml-auto")
+                    [
+                        dbc.Button("OK", color="primary", id="feedback_popup_ok"),
+                        dbc.Button("Cancel", id="feedback_popup_cancel"),
+                    ]
                 ),
             ],
             id="plot_qc_popup",

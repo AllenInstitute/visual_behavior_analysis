@@ -9,6 +9,7 @@ import plotly.graph_objs as go
 import dash_bootstrap_components as dbc
 
 import time
+import datetime
 import functions
 import components
 
@@ -63,7 +64,7 @@ app.layout = html.Div(
         html.H4(''),
         html.H4('Select plots to generate from the dropdown (max 10)'),
         components.plot_selection_dropdown,
-        components.feeback_button,
+        components.feedback_button,
         components.plot_titles[0],
         components.plot_frames[0],
         components.plot_titles[1],
@@ -175,15 +176,43 @@ def select_next(next_button_n_clicks, prev_button_n_clicks, selected_rows, deriv
     else:
         return [0]
 
+# toggle popup open/close state
 @app.callback(
     Output("plot_qc_popup", "is_open"),
-    [Input("open", "n_clicks"), Input("close", "n_clicks")],
+    [
+        Input("open_feedback_popup", "n_clicks"), 
+        Input("feedback_popup_cancel", "n_clicks"),
+        Input("feedback_popup_ok", "n_clicks"),
+    ],
     [State("plot_qc_popup", "is_open")],
 )
-def toggle_modal(n1, n2, is_open):
+def toggle_modal(n1, n2, n3, is_open):
+    print('modal is open? {}'.format(is_open))
     if n1 or n2:
         return not is_open
     return is_open
+
+# clear popup text
+@app.callback(
+    Output("feedback_popup_text", "value"),
+    [
+        Input("open_feedback_popup", "n_clicks"), 
+    ],
+    [State("plot_qc_popup", "is_open")],
+)
+def clear_popup_text(n1, is_open):
+    return ''
+
+
+#populate datetime in feedback popup
+@app.callback(
+    Output("feedback_popup_datetime", "value"),
+    [
+        Input("open_feedback_popup", "n_clicks"), 
+    ],
+)
+def populate_popup_datetime(n_clicks):
+    return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 @app.callback(Output('data_table', 'page_size'), [Input('entries_per_page_input', 'value')])
