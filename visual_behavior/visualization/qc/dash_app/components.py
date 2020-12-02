@@ -115,6 +115,30 @@ feedback_button = html.Div(
                     [
                         dbc.Label("Timestamp:"),
                         dbc.Input(id="feedback_popup_datetime", type="text", disabled=True),
+                        dbc.Label("Username:"),
+                        dbc.Input(id="feedback_popup_username", type="text", debounce=True),
+                        dbc.Label("Container ID:"),
+                        dbc.Input(id="feedback_popup_container_id", type="text", disabled=True),
+                        dbc.Label("Experiment ID:"),
+                        dbc.Checklist(
+                            options=[
+                                {"label": "exp0 ", "value": 1},
+                            ],
+                            value=[],
+                            id="radioitems-experiments",
+                        ),
+                        dbc.Label("Attribute being QC'd:"),
+                        dbc.Input(id="feedback_popup_qc_attribute", type="text", debounce=True),
+                        dbc.Label("QC Label:"),
+                        dbc.RadioItems(
+                            options=[
+                                {"label": "major problem ", "value": "major problem"},
+                                {"label": "possible data issue - follow up", "value": "possible data issue - follow up"},
+                                {"label": "possible processing issue - follow up", "value": "possible processing issue - follow up"},
+                            ],
+                            value=1,
+                            id="radioitems-qc_labels",
+                        ),
                         dbc.Label("Input text:"),
                         dbc.Input(id="feedback_popup_text", type="text", debounce=True),
                     ]

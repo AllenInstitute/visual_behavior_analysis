@@ -127,18 +127,9 @@ app.layout = html.Div(
     ]
 )
 def get_on_correct_page(selected_rows, derived_virtual_indices, page_current, page_size):
-    print('in get_on_correct_page')
-    print(selected_rows)
-    print(derived_virtual_indices)
-    print(type(derived_virtual_indices))
-    print('current_page = {}'.format(page_current))
-    print('page_size = {}'.format(page_size))
-    print('')
     current_selection = selected_rows[0]
     current_index = derived_virtual_indices.index(current_selection)
     current_page = int(current_index/page_size)
-    print(current_index)
-    print(current_page)
     return current_page
 
 
@@ -191,6 +182,33 @@ def toggle_modal(n1, n2, n3, is_open):
     if n1 or n2:
         return not is_open
     return is_open
+
+# fill popup with currently selected container ID
+@app.callback(
+    Output("feedback_popup_container_id", "value"),
+    [
+        Input('data_table', 'selected_rows'), 
+    ],
+)
+def fill_container_id(selected_rows):
+    idx = selected_rows[0]
+    return container_table.iloc[idx]['container_id']
+
+# label radio buttons in popup with currently selected experiment_ids
+@app.callback(
+    Output('radioitems-experiments', 'options'),
+    [
+        Input('data_table', 'selected_rows'), 
+    ],
+    [State('radioitems-experiments', 'options')]
+)
+def radio_button_0(selected_rows, options):
+    print('radio options')
+    print(options)
+    idx = selected_rows[0]
+    options = [{'label': container_table.iloc[idx]['session_{}'.format(i)], 'value': i} for i in range(7)]
+    print(options)
+    return options
 
 # clear popup text
 @app.callback(
@@ -299,7 +317,6 @@ def show_container_dropdown(checkbox_values):
                Input('data_table', 'derived_viewport_indices')
                ])
 def highlight_row(row_index, page_current, derived_viewport_indices):
-    print('clicked')
     # row index is None on the very first call. This avoids an error:
     if row_index is None or derived_viewport_indices is None:
         index_to_highlight = 0
@@ -407,7 +424,6 @@ def update_frame_9(plot_types):
                Input('container_plot_dropdown', 'value'),
                ])
 def update_frame_10(row_index, plot_types):
-    print('new row selected')
     if len(plot_types) >= 1:
         plot_type = plot_types[0]
         container_id = container_table.iloc[row_index[0]]['container_id']
