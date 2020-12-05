@@ -249,6 +249,7 @@ for icre in range(len(cre_lines)): # icre=0
     plot_flashLines_ticks_legend(lims, h1, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel)
 #    plt.ylabel('')
     plt.xlim(xlim);
+#     plt.ylim([10, 55]); # use the same y axis scale for all cell types
     # mark time_win: the window over which the response quantification (peak or mean) was computed 
     plt.hlines(lims[1], time_win[0], time_win[1], color='gray')
 #         plt.hlines(lims[1], flash_win[0], flash_win[1], color='green')

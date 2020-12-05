@@ -47,15 +47,17 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
 #%%
-to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'images' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+to_decode = 'next' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
 time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 frames_svm = np.arange(-5,8) #[-3,-2,-1] # [0,1,2,3,4,5] # svm was run on how what frames relative to image onset
 
 same_num_neuron_all_planes = 0 #1 # if 1, use the same number of neurons for all planes to train svm
-dosavefig = 1
 
+dosavefig = 1 # 0
+fmt = '.pdf' # '.png' # '.svg'
+    
 samps_bef = 5
 samps_aft = 8
 
@@ -315,7 +317,7 @@ for session_numbers in [[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage
     frames_svm = np.array(frames_svm)
 
     dir_now = svmn #'omit_across_sess'
-    fmt = '.png' #'.pdf' #'.svg'
+#     fmt = '.pdf' # '.png' # '.svg'
     if not os.path.exists(os.path.join(dir0, dir_now)):
         os.makedirs(os.path.join(dir0, dir_now))
 
@@ -892,7 +894,7 @@ for session_numbers in [[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage
     #####################################################################################
 
     # Follow this script by "svm_images_plots_eachMouse" to make plots for each mouse.
-    exec(open('svm_images_plots_eachMouse.py').read())
+#     exec(open('svm_images_plots_eachMouse.py').read())
 
     # Follow this script by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
     exec(open('svm_images_plots_setVars_sumMice.py').read())
