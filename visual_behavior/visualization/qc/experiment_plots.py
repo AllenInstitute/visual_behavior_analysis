@@ -2,7 +2,10 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+import visual_behavior.visualization.utils as utils
 import visual_behavior.visualization.qc.plotting_utils as pu
+import visual_behavior.visualization.qc.single_cell_plots as scp
+
 from visual_behavior.data_access import loading as data_loading
 from visual_behavior.data_access import processing as data_processing
 
@@ -218,3 +221,89 @@ def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
         error_text = 'could not generate pupil position plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
         ax.set_title(error_text, ha='left')
     return ax
+
+
+def plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True):
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+    metadata_string = dataset.metadata_string
+    colors = sns.color_palette()
+    ophys_timestamps = dataset.ophys_timestamps.copy()
+    dff_traces = dataset.dff_traces.copy()
+    events = dataset.events.copy()
+
+    for cell_specimen_id in dataset.cell_specimen_ids:
+        n_rows = 5
+        figsize = (15, 10)
+        fig, ax = plt.subplots(n_rows, 1, figsize=figsize)
+        ax = ax.ravel()
+        x = 5
+        for i in range(n_rows):
+            ax[i].plot(ophys_timestamps, dff_traces.loc[cell_specimen_id].dff, color=colors[0], label='dff_trace')
+            ax[i].plot(ophys_timestamps, events.loc[cell_specimen_id].events, color=colors[3], label='events')
+            ax[i].set_xlim(60 * 10, (60 * 10) + x)
+            x = x * 5
+        ax[0].set_title('oeid: ' + str(ophys_experiment_id) + ', csid: ' + str(cell_specimen_id))
+        ax[i].legend(loc='upper left')
+        ax[i].set_xlabel('time (seconds)')
+        fig.tight_layout()
+
+        if save_figure:
+            utils.save_figure(fig, figsize, data_loading.get_single_cell_plots_dir(), 'event_detection',
+                       str(cell_specimen_id) +'_'+ metadata_string +'_events_validation')
+
+
+def plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=True):
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+    metadata_string = dataset.metadata_string
+
+    for cell_specimen_id in dataset.cell_specimen_ids:
+        scp.plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figure=save_figure)
+
+
+def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, save_figure=True):
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+    traces = dataset.dff_traces.copy()
+    trace_timestamps = dataset.ophys_timestamps
+
+    lick_timestamps = dataset.licks.timestamps.values
+    licks = np.ones(len(lick_timestamps))
+
+    running_speed = dataset.running_speed.speed.values
+    running_timestamps = dataset.running_speed.timestamps.values
+
+    pupil_area = dataset.eye_tracking.pupil_area.values
+    pupil_timestamps = dataset.eye_tracking.time.values
+
+    face_motion = dataset.behavior_movie_pc_activations[:, 0]
+    face_timestamps = dataset.timestamps['eye_tracking'].timestamps
+
+    figsize = (20, 10)
+    fig, ax = plt.subplots(5, 1, figsize=figsize, sharex=True)
+    colors = sns.color_palette()
+
+    trace = np.nanmean(np.vstack(traces.dff.values), axis=0)
+    ax[0].plot(trace_timestamps, trace, label='mean_trace', color=colors[0])
+    ax[0].set_ylabel('dF/F')
+    ax[1].plot(lick_timestamps, licks, '|', label='licks', color=colors[3])
+    ax[1].set_ylabel('licks')
+    ax[1].set_yticklabels([])
+    ax[2].plot(running_timestamps, running_speed, label='running_speed', color=colors[4])
+    ax[2].set_ylabel('run speed\n(cm/s)')
+    ax[3].plot(pupil_timestamps, pupil_area, label='pupil_area', color=colors[9])
+    ax[3].set_ylabel('pupil area\n pixels**2')
+    ax[3].set_ylim(-50, 20000)
+    ax[4].plot(face_timestamps, face_motion, label='face_motion_PC0', color=colors[2])
+    ax[4].set_ylabel('face motion\n PC0 activation')
+
+    for x in range(5):
+        ax[x].tick_params(which='both', bottom=False, top=False, right=False, left=True,
+                          labelbottom=False, labeltop=False, labelright=False, labelleft=True)
+    ax[4].tick_params(which='both', bottom=False, top=False, right=False, left=True,
+                      labelbottom=True, labeltop=False, labelright=False, labelleft=True)
+    #     ax[x].legend(loc='upper left', fontsize='x-small')
+    plt.subplots_adjust(wspace=0, hspace=0.1)
+    ax[0].set_title(dataset.metadata_string)
+    if save_figure:
+        utils.save_figure(fig, figsize, utils.get_experiment_plots_dir(), 'population_activity_and_behavior',
+                          dataset.metadata_string+'_population_activity_and_behavior')
+        plt.close()

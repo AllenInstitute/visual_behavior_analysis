@@ -62,6 +62,20 @@ def add_model_outputs_availability_to_table(table):
     return table
 
 
+def add_has_cell_matching_to_table(table):
+    """
+    Evaluates wither a given experiment_id is in a saved list of experiments where cell matching failed.
+    :param table: table of experiment level metadata
+    :return: table with added column 'has_cell_matching', values are Boolean
+    """
+    save_dir = loading.get_cache_dir()
+    df = pd.read_csv(os.path.join(save_dir, 'experiments_with_missing_cell_specimen_ids.csv'))
+    no_cell_matching = list(df.ophys_experiment_id.values)
+    print(len(no_cell_matching))
+    table['has_cell_matching'] = [False if expt in no_cell_matching else True for expt in table.ophys_experiment_id.values]
+    return table
+
+
 def reformat_experiments_table(experiments):
     experiments = experiments.reset_index()
     experiments['super_container_id'] = experiments['specimen_id'].values
@@ -74,6 +88,7 @@ def reformat_experiments_table(experiments):
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
     experiments = add_exposure_number_to_experiments_table(experiments)
     experiments = add_model_outputs_availability_to_table(experiments)
+    experiments = add_has_cell_matching_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
     if 'index' in experiments.columns:
@@ -140,6 +155,10 @@ def add_trial_type_to_trials_table(trials):
     trials.loc[trials[trials.false_alarm].index, 'trial_type'] = 'false_alarm'
     return trials
 
+def add_reward_rate_to_trials_table(trials):
+    trials['rewarded'] = [1 if np.isnan(reward_time)==False else 0 for reward_time in trials.reward_time.values]
+    trials['reward_rate'] = trials['rewarded'].rolling(window=100, min_periods=1, win_type='triang').mean()
+    return trials
 
 def convert_metadata_to_dataframe(original_metadata):
     metadata = original_metadata.copy()
@@ -582,3 +601,15 @@ def filter_invalid_rois_inplace(session):
     session.dff_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.corrected_fluorescence_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.cell_specimen_table.drop(index=invalid_cell_specimen_ids, inplace=True)
+
+def add_response_latency(stimulus_presentations):
+    st = stimulus_presentations.copy()
+    st['response_latency'] = st['licks'] - st['start_time']
+    # st = st[st.response_latency.isnull()==False] #get rid of random NaN values
+    st['response_latency'] = [response_latency[0] if len(response_latency) > 0 else np.nan for response_latency in
+                              st['response_latency'].values]
+    st['response_binary'] = [True if np.isnan(response_latency) == False else False for response_latency in
+                             st.response_latency.values]
+    st['early_lick'] = [True if response_latency < 0.15 else False for response_latency in
+                        st['response_latency'].values]
+    return st
