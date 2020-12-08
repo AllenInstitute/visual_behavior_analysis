@@ -377,6 +377,25 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def events(self):
+        """
+        events file is an .npz with the following files within it:
+        dff: array of n_cells x n_timepoints with recalculated dF/F values(at original frame rate)
+        ts: timestamps corresponding to timepoints in dff (at original frame rate)
+        events: array of n_cells x n_timepoints with event magnitudes(at original frame rate)
+        noise stds: array of length(n_cells) giving the value for standard deviation of the noise for all ROIs
+        lambdas: array of length(n_cells) giving the lambda value for all ROIs
+        upsampling_factor: factor used to resample mesoscope data into 30Hz time frame
+        event_dict: event_dict contains one item per cell_roi_id, where each item is a dictionary with 4 keys:
+            mag: event magnitude, sampled at 30Hz
+            idx: (i think) indices into original timestamps before resampling
+            ts: timestamps of events, sampled at 30Hz
+            event_trace: trace of event magnitudes, at original frame rate (11Hz for mesoscope)
+
+        procedure for resampling and generating these outputs is in l0_ms.py
+        The upsampling factor is the integer nearest the ratio of 30.9/(actual sampling rate), which for mesoscope is 3 and for scientifica is 1
+
+        :return: dataframe with all above information for each cell
+        """
         events_folder = get_events_dir()
         if os.path.exists(events_folder):
             events_file = [file for file in os.listdir(events_folder) if str(self.ophys_experiment_id) in file]
@@ -385,15 +404,38 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                 event_dict = f['event_dict'].item()
                 cell_roi_ids = list(event_dict.keys())
                 events_array = np.asarray([event_dict[cell_roi_id]['event_trace'] for cell_roi_id in cell_roi_ids])
-                cell_specimen_ids = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in cell_roi_ids]
+                cell_specimen_ids = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in
+                                     cell_roi_ids]
                 if len(cell_specimen_ids) == 0:
                     cell_specimen_ids = np.zeros(len(cell_roi_ids))
                     cell_specimen_ids[:] = np.nan
+                # get all the extra stuff from the file
+                ts = np.asarray(f['ts'])
+                timestamps = np.zeros((len(cell_specimen_ids), len(ts)))
+                timestamps[:] = ts
+                dff_traces = f['dff']
+                noise_std = np.asarray(f['noise_stds'])
+                lambdas = np.asarray(f['lambdas'])
+                upsampling_factor = np.zeros(len(cell_specimen_ids))
+                upsampling_factor[:] = f['upsampling_factor']
+                upsampled_event_magnitude = np.asarray([event_dict[cell_roi_id]['mag'] for cell_roi_id in cell_roi_ids])
+                upsampled_event_timestamps = np.asarray([event_dict[cell_roi_id]['ts'] for cell_roi_id in cell_roi_ids])
+                upsampled_event_indices = np.asarray([event_dict[cell_roi_id]['idx'] for cell_roi_id in cell_roi_ids])
+                f.close()
 
                 self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
-                                        'events': [x for x in events_array],
-                                        'filtered_events': [x for x in rp.filter_events_array(events_array)]},
-                                         index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+                        'events': [x for x in events_array],
+                        'filtered_events': [x for x in rp.filter_events_array(events_array)],
+                        'timestamps': [x for x in timestamps],
+                        'dff_traces': [x for x in dff_traces],
+                        'noise_std': [x for x in noise_std],
+                        'lambda': [x for x in lambdas],
+                        'upsampling_factor': [x for x in upsampling_factor],
+                        'upsampled_event_magnitude': [x for x in dff_traces],
+                        'upsampled_event_timestamps': [x for x in dff_traces],
+                        'upsampled_event_indices': [x for x in dff_traces]},
+                         index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+
 
         # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
         #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
@@ -486,7 +528,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['rewarded'] = [True if len(rewards) > 0 else False for rewards in
                                               stimulus_presentations.rewards.values]
         stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
-                                                                                           win_type='triang').mean() / .75
+                                                                                           win_type='triang').mean()
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._stimulus_presentations = stimulus_presentations
@@ -1773,7 +1815,8 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
     return filename
 
 
-def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_session_type=True, use_events=False):
+def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=True, use_session_type=True,
+                         use_events=False):
     experiments_table = get_annotated_experiments_table()
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
@@ -1789,8 +1832,9 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_
                 filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
                 df = pd.read_hdf(filepath, key='df')
                 df = df.merge(expts, on='ophys_experiment_id')
-                outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
-                df = df[df.cell_specimen_id.isin(outlier_cells) == False]
+                if remove_outliers:
+                    outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
+                    df = df[df.cell_specimen_id.isin(outlier_cells) == False]
                 multi_session_df = pd.concat([multi_session_df, df])
         else:
             filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events)
@@ -1799,7 +1843,8 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_
             df = df.merge(expts[['ophys_experiment_id', 'cre_line', 'location', 'location_layer',
                                  'layer', 'ophys_session_id', 'project_code', 'session_type',
                                  'specimen_id', 'depth', 'exposure_number', 'container_id']], on='ophys_experiment_id')
-            outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
+            if remove_outliers:
+                outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
             df = df[df.cell_specimen_id.isin(outlier_cells) == False]
     return multi_session_df
 
