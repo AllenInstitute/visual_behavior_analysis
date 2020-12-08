@@ -431,9 +431,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                         'noise_std': [x for x in noise_std],
                         'lambda': [x for x in lambdas],
                         'upsampling_factor': [x for x in upsampling_factor],
-                        'upsampled_event_magnitude': [x for x in dff_traces],
-                        'upsampled_event_timestamps': [x for x in dff_traces],
-                        'upsampled_event_indices': [x for x in dff_traces]},
+                        'upsampled_event_magnitude': [x for x in upsampled_event_magnitude],
+                        'upsampled_event_timestamps': [x for x in upsampled_event_timestamps],
+                        'upsampled_event_indices': [x for x in upsampled_event_indices]},
                          index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
 
 
@@ -1830,8 +1830,9 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
                 filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
                                                               use_events)
                 filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
+                print(filepath)
                 df = pd.read_hdf(filepath, key='df')
-                print(df.head())
+                print(df.info())
                 df = df.merge(expts, on='ophys_experiment_id')
                 if remove_outliers:
                     outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
