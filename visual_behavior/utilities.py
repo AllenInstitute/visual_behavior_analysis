@@ -667,7 +667,7 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
             y='noisy_sinusoid',
             ax=ax
         )
-        
+
     '''
     if time_key is None:
         if 't' in df.columns:
