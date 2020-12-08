@@ -1830,9 +1830,7 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
                 filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
                                                               use_events)
                 filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
-                print(filepath)
                 df = pd.read_hdf(filepath, key='df')
-                print(df.info())
                 df = df.merge(expts, on='ophys_experiment_id')
                 if remove_outliers:
                     outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
