@@ -79,13 +79,15 @@ class ResponseAnalysis(object):
                  use_extended_stimulus_presentations=False, overwrite_analysis_files=False, dataframe_format='wide'):
         self.dataset = dataset
         # promote ophys timestamps up to the top level
-        self.ophys_timestamps = self.dataset.ophys_timestamps  # THROWS WARNING
+        self.ophys_timestamps = self.dataset.ophys_timestamps.copy()  # THROWS WARNING
         # promote stimulus_presentations to the top level
-        self.stimulus_presentations = self.dataset.stimulus_presentations
+        self.stimulus_presentations = self.dataset.stimulus_presentations.copy()
         # promote dff_traces to the top level
-        self.dff_traces = self.dataset.dff_traces
+        self.dff_traces = self.dataset.dff_traces.copy()
         # promote cell_specimen_table to the top level
-        self.cell_specimen_table = self.dataset.cell_specimen_table
+        self.cell_specimen_table = self.dataset.cell_specimen_table.copy()
+        # promote metadata to the top level
+        self.metadata = self.dataset.metadata.copy()
         self.use_events = use_events
         if analysis_cache_dir is None:
             self.analysis_cache_dir = loading.get_analysis_cache_dir()
@@ -101,12 +103,13 @@ class ResponseAnalysis(object):
             'window_around_timepoint_seconds']
         self.omissions_window = rp.get_default_omission_response_params()['window_around_timepoint_seconds']
         self.stimulus_duration = 0.25  # self.dataset.task_parameters['stimulus_duration'].values[0]
-        self.ophys_frame_rate = self.dataset.metadata['ophys_frame_rate']
-        self.stimulus_frame_rate = self.dataset.metadata['stimulus_frame_rate']
-        if 'blank_duration_sec' in self.dataset.task_parameters.keys():
-            self.blank_duration = self.dataset.task_parameters['blank_duration_sec'][0]
+        self.ophys_frame_rate = self.metadata['ophys_frame_rate']
+        self.stimulus_frame_rate = self.metadata['stimulus_frame_rate']
+        task_parameters = self.dataset.task_parameters.copy()
+        if 'blank_duration_sec' in task_parameters.keys():
+            self.blank_duration = task_parameters['blank_duration_sec'][0]
         else:
-            self.blank_duration = self.dataset.task_parameters['blank_duration'][0]
+            self.blank_duration = task_parameters['blank_duration'][0]
 
     def get_analysis_folder(self):
         candidates = [file for file in os.listdir(self.analysis_cache_dir) if str(self.ophys_experiment_id) in file]
@@ -116,7 +119,7 @@ class ResponseAnalysis(object):
             print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
                                                                                     self.analysis_cache_dir))
             print('creating new analysis folder')
-            m = self.dataset.metadata
+            m = self.metadata
             date = m['experiment_datetime']
             date = str(date)[:10]
             date = date[2:4] + date[5:7] + date[8:10]

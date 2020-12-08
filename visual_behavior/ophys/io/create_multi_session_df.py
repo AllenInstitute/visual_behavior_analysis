@@ -7,20 +7,22 @@ from visual_behavior.data_access import loading
 
 
 def get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False):
-    if df_name == 'stimulus_response_df':
+    if 'stimulus' in df_name:
         flashes = True
         omitted = False
         get_pref_stim = True
-    elif df_name == 'omission_response_df':
+    elif 'omission' in df_name:
         flashes = False
         omitted = True
         get_pref_stim = False
-    elif df_name == 'trials_response_df':
+    elif 'trials' in df_name:
         flashes = False
         omitted = False
         get_pref_stim = True
     else:
-        print('multi_session_df not yet supported for', df_name)
+        print('unable to set params for', df_name)
+    if ('run_speed' in df_name) or ('pupil_area' in df_name):
+        get_pref_stim = False
 
     experiments_table = loading.get_filtered_ophys_experiment_table()
     experiments = experiments_table[(experiments_table.project_code == project_code) &
@@ -35,12 +37,12 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
             dataset = loading.get_ophys_dataset(experiment_id)
             analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=True)
             df = analysis.get_response_df(df_name)
+            df['ophys_experiment_id'] = experiment_id
             if 'passive' in dataset.metadata['session_type']:
                 df['lick_on_next_flash'] = False
                 df['engagement_state'] = 'disengaged'
-            df['ophys_experiment_id'] = experiment_id
-            if 'engaged' in conditions:
-                df['engaged'] = [True if reward_rate > 2 else False for reward_rate in df.reward_rate.values]
+            if ('engagement_state' in conditions) and ('passive' not in dataset.metadata['session_type']):
+                df['engagement_state'] = ['engaged' if reward_rate > 2 else 'disengaged' for reward_rate in df.reward_rate.values]
             if 'running' in conditions:
                 df['running'] = [True if mean_running_speed > 2 else False for mean_running_speed in df.mean_running_speed.values]
             if 'large_pupil' in conditions:

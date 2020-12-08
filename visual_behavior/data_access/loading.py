@@ -85,6 +85,10 @@ def get_analysis_cache_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
 
+def get_events_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
+
+
 def get_behavior_model_outputs_dir():
     return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
 
@@ -175,6 +179,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
     if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
         experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     else:
+        print('generating filtered_ophys_experiment_table')
         cache = get_visual_behavior_cache()
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
@@ -298,15 +303,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def cell_specimen_table(self):
-        cell_specimen_table = super().cell_specimen_table
+        cell_specimen_table = super().cell_specimen_table.copy()
+        # cell_specimen_table = cell_specimen_table.copy()
         if self._include_invalid_rois == False:
             cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
-        cell_specimen_table = cell_specimen_table.copy()
         # add cell index corresponding to the index of the cell in dff_traces_array
-        cell_specimen_ids = np.sort(cell_specimen_table.index.values)
-        if 'cell_index' not in cell_specimen_table.columns:
-            cell_specimen_table['cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
-                                                 cell_specimen_id in cell_specimen_table.index.values]
+        # cell_specimen_ids = np.sort(cell_specimen_table.index.values)
+        # if 'cell_index' not in cell_specimen_table.columns:
+        #     cell_specimen_table['cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
+        #                                          cell_specimen_id in cell_specimen_table.index.values]
         cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
@@ -352,7 +357,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         return self._dff_traces
 
     def get_events_array(self):
-        events_folder = os.path.join(get_analysis_cache_dir(), 'events')
+        events_folder = get_events_dir()
         if os.path.exists(events_folder):
             events_file = [file for file in os.listdir(events_folder) if
                            str(self.ophys_experiment_id) in file]
@@ -372,9 +377,27 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def events(self):
-        self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
-                                     'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
-                                    index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
+        events_folder = get_events_dir()
+        if os.path.exists(events_folder):
+            events_file = [file for file in os.listdir(events_folder) if str(self.ophys_experiment_id) in file]
+            if len(events_file) > 0:
+                f = np.load(os.path.join(events_folder, events_file[0]), allow_pickle=True)
+                event_dict = f['event_dict'].item()
+                cell_roi_ids = list(event_dict.keys())
+                events_array = np.asarray([event_dict[cell_roi_id]['event_trace'] for cell_roi_id in cell_roi_ids])
+                cell_specimen_ids = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in cell_roi_ids]
+                if len(cell_specimen_ids) == 0:
+                    cell_specimen_ids = np.zeros(len(cell_roi_ids))
+                    cell_specimen_ids[:] = np.nan
+
+                self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
+                                        'events': [x for x in events_array],
+                                        'filtered_events': [x for x in rp.filter_events_array(events_array)]},
+                                         index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+
+        # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
+        #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
+        #                             index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
 
     @property
@@ -450,19 +473,31 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         if 'orientation' in stimulus_presentations.columns:
             stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
+        stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+        stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
+        stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
+        stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
+        stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
+        stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
+        stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
+                                            stimulus_presentations.licks.values]
+        stimulus_presentations['lick_rate'] = stimulus_presentations['licked'].rolling(window=320, min_periods=1,
+                                                                                       win_type='triang').mean() / .75
+        stimulus_presentations['rewarded'] = [True if len(rewards) > 0 else False for rewards in
+                                              stimulus_presentations.rewards.values]
+        stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
+                                                                                           win_type='triang').mean() / .75
+        stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         self._stimulus_presentations = stimulus_presentations
         return self._stimulus_presentations
 
     @property
     def extended_stimulus_presentations(self):
-        stimulus_presentations = super().stimulus_presentations.copy()
+        stimulus_presentations = self.stimulus_presentations.copy()
         if 'orientation' in stimulus_presentations.columns:
-            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
-        stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
-        stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
-        stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
-        stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
+            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
+                                                                          'phase', 'spatial_frequency'])
         stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
@@ -473,18 +508,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
         stimulus_presentations['image_name_previous_flash'] = stimulus_presentations['image_name'].shift(1)
         stimulus_presentations['image_index_previous_flash'] = stimulus_presentations['image_index'].shift(1)
-        stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+        stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
+        stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
+        stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
+        stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         if check_if_model_output_available(self.metadata['behavior_session_id']):
             stimulus_presentations = add_model_outputs_to_stimulus_presentations(
                 stimulus_presentations, self.metadata['behavior_session_id'])
-            stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
-            stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
-            stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
-            stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
         else:
-            stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
-                                                stimulus_presentations.licks.values]
-        stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
+            print('model outputs not available')
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
 
@@ -493,6 +525,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         trials = super().trials.copy()
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
+        trials = reformat.add_reward_rate_to_trials_table(trials)
         self._trials = trials
         return self._trials
 
@@ -522,12 +555,19 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         return self._behavior_movie_predictions
 
     def get_cell_specimen_id_for_cell_index(self, cell_index):
-        cell_specimen_id = self.cell_specimen_table[self.cell_specimen_table.cell_index == cell_index].index.values[0]
+        cell_specimen_table = self.cell_specimen_table.copy()
+        cell_specimen_id = cell_specimen_table[cell_specimen_table.cell_index == cell_index].index.values[0]
         return cell_specimen_id
 
     def get_cell_index_for_cell_specimen_id(self, cell_specimen_id):
-        cell_index = self.cell_specimen_table[self.cell_specimen_table.index == cell_specimen_id].cell_index.values[0]
+        cell_specimen_table = self.cell_specimen_table.copy()
+        cell_index = cell_specimen_table[cell_specimen_table.index == cell_specimen_id].cell_index.values[0]
         return cell_index
+
+    def get_cell_specimen_id_for_cell_roi_id(self, cell_roi_id):
+        cell_specimen_table = self.cell_specimen_table.copy()
+        cell_specimen_id = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].index.values[0]
+        return cell_specimen_id
 
 
 def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
@@ -543,7 +583,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
     dataset = BehaviorOphysDataset(api, include_invalid_rois)
-    print('extracting cached data from {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
+    print('loading data for {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
@@ -646,7 +686,7 @@ def get_extended_stimulus_presentations(session):
         licks=session.licks,
         rewards=session.rewards,
         change_times=change_times,
-        running_speed_df=session.running_speed_df,
+        running_speed_df=session.running_data_df,
         pupil_area=session.pupil_area
     )
     return extended_stimulus_presentations
@@ -675,7 +715,8 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     if check_if_model_output_available(behavior_session_id):
         model_outputs = pd.read_csv(
             os.path.join(get_behavior_model_outputs_dir(), get_model_output_file(behavior_session_id)[0]))
-        model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change'], inplace=True)
+        model_outputs.drop(columns=['image_index', 'image_name', 'omitted', 'change',
+                                    'licked', 'lick_rate', 'rewarded', 'reward_rate'], inplace=True)
         stimulus_presentations = stimulus_presentations.merge(model_outputs, right_on='stimulus_presentations_id',
                                                               left_on='stimulus_presentations_id').set_index(
             'stimulus_presentations_id')
@@ -690,6 +731,10 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     return stimulus_presentations
 
 
+
+
+
+
 def get_behavior_model_summary_table():
     data_dir = get_behavior_model_outputs_dir()
     data = pd.read_csv(os.path.join(data_dir, '_summary_table.csv'))
@@ -699,7 +744,8 @@ def get_behavior_model_summary_table():
 
 
 def check_for_events_file(ophys_experiment_id):
-    events_folder = os.path.join(get_analysis_cache_dir(), 'events')
+    # events_folder = os.path.join(get_analysis_cache_dir(), 'events')
+    events_folder = os.path.join(get_events_dir())
     if os.path.exists(events_folder):
         events_file = [file for file in os.listdir(events_folder) if
                        str(ophys_experiment_id) in file]
@@ -1551,6 +1597,21 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
     return rigid_motion_transform_df
 
 
+# CONTAINER LEVEL INFO
+
+def get_unique_cell_specimen_ids_for_container(container_id):
+    experiments_table = get_filtered_ophys_experiment_table()
+    container_expts = experiments_table[experiments_table.container_id==container_id]
+    experiment_ids = np.sort(container_expts.index.values)
+    cell_specimen_table = pd.DataFrame()
+    for experiment_id in experiment_ids:
+        dataset = get_ophys_dataset(experiment_id)
+        ct = dataset.cell_specimen_table.copy()
+        cell_specimen_table = pd.concat([cell_specimen_table, ct])
+    cell_specimen_ids = cell_specimen_table.index.unique()
+    return cell_specimen_ids
+
+
 # FROM MTRAIN DATABASE
 
 
@@ -1626,20 +1687,23 @@ def get_annotated_experiments_table():
     #                                   experiments_table.loc[expt].depth for expt in experiments_table.index]
 
     experiments_table['layer'] = None
-    indices = experiments_table[(experiments_table.imaging_depth < 125)].index.values
-    experiments_table.at[indices, 'layer'] = 'L3'
+    indices = experiments_table[(experiments_table.imaging_depth < 100)].index.values
+    experiments_table.at[indices, 'layer'] = 'L1'
+    indices = experiments_table[(experiments_table.imaging_depth < 270) &
+                                (experiments_table.imaging_depth >= 100)].index.values
+    experiments_table.at[indices, 'layer'] = 'L2/3'
+    # indices = experiments_table[
+    #     (experiments_table.imaging_depth >= 125) & (experiments_table.imaging_depth < 200)].index.values
+    # experiments_table.at[indices, 'layer'] = 'L3'
     indices = experiments_table[
-        (experiments_table.imaging_depth >= 125) & (experiments_table.imaging_depth < 200)].index.values
-    experiments_table.at[indices, 'layer'] = 'L3'
-    indices = experiments_table[
-        (experiments_table.imaging_depth >= 200) & (experiments_table.imaging_depth < 250)].index.values
+        (experiments_table.imaging_depth >= 270) & (experiments_table.imaging_depth < 350)].index.values
     experiments_table.at[indices, 'layer'] = 'L4'
     indices = experiments_table[
-        (experiments_table.imaging_depth >= 250) & (experiments_table.imaging_depth < 345)].index.values
-    experiments_table.at[indices, 'layer'] = 'L5a'
-    indices = experiments_table[
-        (experiments_table.imaging_depth >= 345) & (experiments_table.imaging_depth < 500)].index.values
-    experiments_table.at[indices, 'layer'] = 'L5b'
+        (experiments_table.imaging_depth >= 350) & (experiments_table.imaging_depth < 550)].index.values
+    experiments_table.at[indices, 'layer'] = 'L5'
+    # indices = experiments_table[
+    #     (experiments_table.imaging_depth >= 345) & (experiments_table.imaging_depth < 500)].index.values
+    # experiments_table.at[indices, 'layer'] = 'L5b'
     experiments_table['location_layer'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                            experiments_table.loc[expt].targeted_structure + '_' +
                                            experiments_table.loc[expt].layer for expt in experiments_table.index]
@@ -1710,14 +1774,14 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
 
 
 def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, use_session_type=True, use_events=False):
-    annotated_experiments_table = get_annotated_experiments_table()
+    experiments_table = get_annotated_experiments_table()
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
     for project_code in project_codes:
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        expts = annotated_experiments_table.reset_index()
+        expts = experiments_table.reset_index()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
                 filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
@@ -1770,7 +1834,7 @@ def remove_first_novel_session_retakes_from_multi_session_df(multi_session_df):
 
 def remove_problematic_data_from_multi_session_df(multi_session_df):
     # notes on containers, experiments & mice #####
-    # experiments too exclude
+    # experiments to exclude
     # another Slc mouse with large familiar passive 840542948, also ramping in some familiar sessions, generally noisy
     # all mouse 920877188 remove & investiate later - weirdness
     # slc superficial very high novel 2 container 1018027834
@@ -1972,3 +2036,21 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
     where {} in {}
     '''
     return db.lims_query(query.format(search_key, search_vals))
+
+
+def get_container_response_df(container_id, df_name='omission_response_df', use_events=False):
+    """
+    get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container
+    """
+    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+    experiments_table = get_filtered_ophys_experiment_table()
+    container_expts = experiments_table[experiments_table.container_id==container_id]
+    container_df = pd.DataFrame()
+    for ophys_experiment_id in container_expts.index.values:
+        dataset = get_ophys_dataset(ophys_experiment_id)
+        analysis = ResponseAnalysis(dataset, use_events)
+        odf = analysis.get_response_df(df_name=df_name)
+        odf['ophys_experiment_id'] = ophys_experiment_id
+        odf['session_number'] = experiments_table.loc[ophys_experiment_id].session_number
+        container_df = pd.concat([container_df, odf])
+    return container_df
