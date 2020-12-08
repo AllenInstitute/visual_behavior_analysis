@@ -627,6 +627,47 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
             output value
             event number
             event time
+
+    An example use case, recover a sinousoid from noise:
+        (also see https://gist.github.com/dougollerenshaw/628c63375cc68f869a28933bd5e2cbe5)
+        import pandas as pd
+        import numpy as np
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+
+        # generate some sample data¶
+        # a sinousoid corrupted by noise
+        # make a time vector
+        # go from -10 to 110 so we have a 10 second overage if we analyze from 0 to 100 seconds
+        t = np.arange(-10,110,0.001)
+
+        # now build a dataframe
+        df = pd.DataFrame({
+            'time': t,
+            'noisy_sinusoid': np.sin(2*np.pi*t) + np.random.randn(len(t))*3
+        })
+
+        # use the event_triggered_response function to get a tidy dataframe of the signal around every event
+        # events will simply be generated as every 1 second interval starting at 0.5, since our period here is 1
+        etr = event_triggered_response(
+            df,
+            parameter = 'noisy_sinusoid',
+            event_times = [C+0.5 for C in range(0,99)],
+            t_before = 1,
+            t_after = 1,
+            sampling_rate = 100
+        )
+
+        # use seaborn to view the result
+        # We're able to recover the sinusoid through averaging
+        fig, ax = plt.subplots()
+        sns.lineplot(
+            data = etr,
+            x='time',
+            y='noisy_sinusoid',
+            ax=ax
+        )
+        
     '''
     if time_key is None:
         if 't' in df.columns:
