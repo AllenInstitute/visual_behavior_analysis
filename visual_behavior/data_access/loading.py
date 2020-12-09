@@ -417,7 +417,10 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                 noise_std = np.asarray(f['noise_stds'])
                 lambdas = np.asarray(f['lambdas'])
                 upsampling_factor = np.zeros(len(cell_specimen_ids))
-                upsampling_factor[:] = f['upsampling_factor']
+                try:
+                    upsampling_factor[:] = f['upsampling_factor']
+                except:
+                    print('\nKeyError: upsampling_factor is not a file in the archive')
                 upsampled_event_magnitude = np.asarray([event_dict[cell_roi_id]['mag'] for cell_roi_id in cell_roi_ids])
                 upsampled_event_timestamps = np.asarray([event_dict[cell_roi_id]['ts'] for cell_roi_id in cell_roi_ids])
                 upsampled_event_indices = np.asarray([event_dict[cell_roi_id]['idx'] for cell_roi_id in cell_roi_ids])
