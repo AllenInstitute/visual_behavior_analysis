@@ -7,11 +7,13 @@ import argparse
 import numpy as np
 import plotly.graph_objs as go
 import dash_bootstrap_components as dbc
+import dash_core_components as dcc
 
 import time
 import datetime
 import functions
 import components
+import base64
 
 # APP SETUP
 # app = dash.Dash(__name__,)
@@ -29,6 +31,8 @@ plot_inventory = functions.generate_plot_inventory()
 plot_inventory_fig = functions.make_plot_inventory_heatmap(plot_inventory)
 print('done setting up table, it took {} seconds'.format(time.time()- t0))
 
+QC_ATTRIBUTES = functions.load_container_qc_definitions()
+
 # COMPONENT SETUP
 print('setting up components')
 t0 = time.time()
@@ -40,15 +44,25 @@ components.container_data_table.columns = [{"name": i.replace('_', ' '), "id": i
 components.container_data_table.data = container_table.to_dict('records')
 print('done setting up components, it took {} seconds'.format(time.time()- t0))
 
+app.layout = html.Video(src='/static/my-video.webm')
+
+server = app.server
+
+@server.route('/static/<path:path>')
+def serve_static(path):
+    root_dir = os.getcwd()
+    return flask.send_from_directory(os.path.join(root_dir, 'static'), path)
+
+
 # APP LAYOUT
 app.layout = html.Div(
     [
-        html.H3('Visual Behavior Data'),
+        html.H3('Visual Behavior Data QC Viewer'),
         # checklist for components to show
-        components.show_overview_checklist,
-        components.plot_inventory_graph_div,
+        # components.show_overview_checklist,
+        # components.plot_inventory_graph_div,
         # container level dropdown
-        components.container_overview_dropdown,
+        # components.container_overview_dropdown,
         # frame with container level plots
         components.container_overview_iframe,
         components.plot_inventory_iframe,
@@ -60,11 +74,29 @@ app.layout = html.Div(
         # dropdown for plot selection
         components.previous_button,
         components.next_button,
-        html.Div(id='stored_value', style={'display': 'none'}),
+        html.H4('Links to motion corrected movies for this container'),
+        dcc.Link(id='link_0',children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
+        dcc.Link(id='link_1',children='', href='', style={'display': True}, target="_blank"),
+        html.H4(''),
+        dcc.Link(id='link_2',children='', href='', style={'display': True}, target="_blank"),
+        html.H4(''),
+        dcc.Link(id='link_3',children='', href='', style={'display': True}, target="_blank"),
+        html.H4(''),
+        dcc.Link(id='link_4',children='', href='', style={'display': True}, target="_blank"),
+        html.H4(''),
+        dcc.Link(id='link_5',children='', href='', style={'display': True}, target="_blank"),
+        html.H4(''),
+        dcc.Link(id='link_6',children='', href='', style={'display': True}, target="_blank"),
+        html.H4(''),
+        dcc.Link(id='link_7',children='', href='', style={'display': True}, target="_blank"),
+        html.H4(''),
+        dcc.Link(id='link_8',children='', href='', style={'display': True}, target="_blank"),
+        html.H4(''),
+        dcc.Link(id='link_9',children='', href='', style={'display': True}, target="_blank"),
+        components.feedback_button,
         html.H4('Select plots to generate from the dropdown (max 10)'),
         components.plot_selection_dropdown,
-        components.feedback_button,
         components.plot_titles[0],
         components.plot_frames[0],
         components.plot_titles[1],
@@ -210,6 +242,19 @@ def radio_button_0(selected_rows, options):
     print(options)
     return options
 
+# populate feedback popup qc options
+@app.callback(
+    Output('feedback_popup_qc_labels', 'options'),
+    [
+        Input('feedback_popup_qc_dropdown', 'value'), 
+    ],
+)
+def populate_qc_options(attribute_to_qc):
+    try:
+        return [{'label':v, 'value':v} for v in QC_ATTRIBUTES[attribute_to_qc]['qc_attributes']]
+    except KeyError:
+        return []
+
 # clear popup text
 @app.callback(
     Output("feedback_popup_text", "value"),
@@ -240,7 +285,13 @@ def change_entries_per_page(entries_per_page):
 
 @app.callback(Output('container_overview_iframe', 'src'), [Input('container_overview_dropdown', 'value')])
 def embed_iframe(value):
-    return app.get_asset_url('qc_plots/overview_plots/{}'.format(value))
+    print('getting a new iframe')
+    print('value: {}'.format(value))
+    if value == 'motion_corrected_movies':
+        print("going to show URLs!!!!")
+        return None
+    else:
+        return app.get_asset_url('qc_plots/overview_plots/{}'.format(value))
 
 
 # update container overview options when container checklist state is changed
@@ -309,8 +360,6 @@ def show_container_dropdown(checkbox_values):
 
 
 # highlight row in data table
-
-
 @app.callback(Output('data_table', 'style_data_conditional'),
               [Input('data_table', 'selected_rows'),
                Input('data_table', 'page_current'),
@@ -334,209 +383,93 @@ def highlight_row(row_index, page_current, derived_viewport_indices):
 
 # set plot titles
 # this is just text above the actual plot frame
-
-
-@app.callback(Output('plot_title_0', 'children'),
-              [Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_0(plot_types):
-    if len(plot_types) >= 1:
-        return plot_types[0]
-
-
-@app.callback(Output('plot_title_1', 'children'),
-              [Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_1(plot_types):
-    if len(plot_types) >= 2:
-        return plot_types[1]
-
-
-@app.callback(Output('plot_title_2', 'children'),
-              [Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_2(plot_types):
-    if len(plot_types) >= 3:
-        return plot_types[2]
-
-
-@app.callback(Output('plot_title_3', 'children'),
-              [Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_3(plot_types):
-    if len(plot_types) >= 4:
-        return plot_types[3]
-
-
-@app.callback(Output('plot_title_4', 'children'),
-              [Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_4(plot_types):
-    if len(plot_types) >= 5:
-        return plot_types[4]
-
-
-@app.callback(Output('plot_title_5', 'children'),
-              [Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_5(plot_types):
-    if len(plot_types) >= 6:
-        return plot_types[5]
-
-
-@app.callback(Output('plot_title_6', 'children'),
-              [Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_6(plot_types):
-    if len(plot_types) >= 7:
-        return plot_types[6]
-
-
-@app.callback(Output('plot_title_7', 'children'),
-              [Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_7(plot_types):
-    if len(plot_types) >= 8:
-        return plot_types[7]
-
-
-@app.callback(Output('plot_title_8', 'children'),
-              [Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_8(plot_types):
-    if len(plot_types) >= 9:
-        return plot_types[8]
-
-
-@app.callback(Output('plot_title_9', 'children'),
-              [Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_9(plot_types):
-    if len(plot_types) >= 10:
-        return plot_types[9]
+# Use this loop to determine the correct title to update
+def update_plot_title(plot_types, input_id):
+    '''a function to update plot titles'''
+    idx = int(input_id.split('plot_title_')[1])
+    try:
+        return plot_types[idx]
+    except IndexError:
+        return ''
+for i in range(10):
+    app.callback(
+        Output(f"plot_title_{i}", "children"), 
+        [Input(f"container_plot_dropdown", "value"), Input(f"plot_title_{i}", "id")]
+    )(update_plot_title)
 
 # image frames callbacks
-# (I can't figure out how to make these in a loop!)
-
-
-@app.callback(Output('image_frame_0', 'src'),
-              [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_10(row_index, plot_types):
-    if len(plot_types) >= 1:
-        plot_type = plot_types[0]
+# generated in a loop
+def update_frame_N(row_index, plot_types, input_id):
+    '''
+    a function to fill the image frames
+    '''
+    idx = int(input_id.split('image_frame_')[1])
+    try:
+        plot_type = plot_types[idx]
         container_id = container_table.iloc[row_index[0]]['container_id']
         encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
+    except IndexError:
+        return None
+for i in range(10):
+    app.callback(
+        Output(f"image_frame_{i}", "src"), 
+        [
+            Input('data_table', 'selected_rows'), 
+            Input('container_plot_dropdown', 'value'), 
+            Input(f"image_frame_{i}", "id")
+        ]
+    )(update_frame_N)
 
+# update_links
 
-@app.callback(Output('image_frame_1', 'src'),
-              [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_11(row_index, plot_types):
-    if len(plot_types) >= 2:
-        plot_type = plot_types[1]
-        container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
-        return 'data:image/png;base64,{}'.format(encoded_image.decode())
+def update_link_text_N(row_index, input_id):
+    '''a function to update plot titles'''
+    idx = int(input_id.split('link_')[1])
+    container_id = container_table.iloc[row_index[0]]['container_id']
+    link_list = functions.get_motion_corrected_movie_paths(container_id)
+    try:
+        return link_list[idx].replace('/','\\')
+    except IndexError:
+        return 'INVALID LINK'
+for i in range(10):
+    app.callback(
+        Output(f"link_{i}", "children"), 
+        [Input('data_table', 'selected_rows'), Input(f"link_{i}", "id")]
+    )(update_link_text_N)
 
+def update_link_destination_N(row_index, input_id):
+    '''a function to update plot titles'''
+    idx = int(input_id.split('link_')[1])
+    container_id = container_table.iloc[row_index[0]]['container_id']
+    link_list = functions.get_motion_corrected_movie_paths(container_id)
+    try:
+        return 'file:{}'.format(link_list[idx])
+    except IndexError:
+        return 'https://www.google.com/'
+for i in range(10):
+    app.callback(
+        Output(f"link_{i}", "href"), 
+        [Input('data_table', 'selected_rows'), Input(f"link_{i}", "id")]
+    )(update_link_destination_N)
 
-@app.callback(Output('image_frame_2', 'src'),
-              [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_12(row_index, plot_types):
-    if len(plot_types) >= 3:
-        plot_type = plot_types[2]
-        container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
-        return 'data:image/png;base64,{}'.format(encoded_image.decode())
-
-
-@app.callback(Output('image_frame_3', 'src'),
-              [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_13(row_index, plot_types):
-    if len(plot_types) >= 4:
-        plot_type = plot_types[3]
-        container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
-        return 'data:image/png;base64,{}'.format(encoded_image.decode())
-
-
-@app.callback(Output('image_frame_4', 'src'),
-              [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_14(row_index, plot_types):
-    if len(plot_types) >= 5:
-        plot_type = plot_types[4]
-        container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
-        return 'data:image/png;base64,{}'.format(encoded_image.decode())
-
-
-@app.callback(Output('image_frame_5', 'src'),
-              [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_15(row_index, plot_types):
-    if len(plot_types) >= 6:
-        plot_type = plot_types[5]
-        container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
-        return 'data:image/png;base64,{}'.format(encoded_image.decode())
-
-
-@app.callback(Output('image_frame_6', 'src'),
-              [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_16(row_index, plot_types):
-    if len(plot_types) >= 7:
-        plot_type = plot_types[6]
-        container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
-        return 'data:image/png;base64,{}'.format(encoded_image.decode())
-
-
-@app.callback(Output('image_frame_7', 'src'),
-              [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_17(row_index, plot_types):
-    if len(plot_types) >= 8:
-        plot_type = plot_types[7]
-        container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
-        return 'data:image/png;base64,{}'.format(encoded_image.decode())
-
-
-@app.callback(Output('image_frame_8', 'src'),
-              [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_18(row_index, plot_types):
-    if len(plot_types) >= 9:
-        plot_type = plot_types[8]
-        container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
-        return 'data:image/png;base64,{}'.format(encoded_image.decode())
-
-
-@app.callback(Output('image_frame_9', 'src'),
-              [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
-               ])
-def update_frame_19(row_index, plot_types):
-    if len(plot_types) >= 10:
-        plot_type = plot_types[9]
-        container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
-        return 'data:image/png;base64,{}'.format(encoded_image.decode())
+def update_link_visibility_N(row_index, input_id):
+    '''a function to update plot titles'''
+    idx = int(input_id.split('link_')[1])
+    container_id = container_table.iloc[row_index[0]]['container_id']
+    link_list = functions.get_motion_corrected_movie_paths(container_id)
+    try:
+        link = link_list[idx]
+        print("Returning True, idx = {}".format(idx))
+        return {'display': True}
+    except IndexError:
+        print("Returning None, idx = {}".format(idx))
+        return {'display': 'none'}
+for i in range(10):
+    app.callback(
+        Output(f"link_{i}", "style"), 
+        [Input('data_table', 'selected_rows'), Input(f"link_{i}", "id")]
+    )(update_link_visibility_N)
 
 
 if __name__ == '__main__':
@@ -557,3 +490,15 @@ if __name__ == '__main__':
     print("PORT = {}".format(args.port))
     print("DEBUG MODE = {}".format(args.debug))
     app.run_server(debug=args.debug, port=args.port, host='0.0.0.0')
+
+
+@app.callback(Output('link_0', 'children'),
+              [Input('data_table', 'selected_rows'),
+               Input('container_plot_dropdown', 'value'),
+               ])
+def print_movie_paths(row_index, plot_types):
+    plot_type = plot_types[0]
+    container_id = container_table.iloc[row_index[0]]['container_id']
+    output_text = functions.print_motion_corrected_movie_paths(container_id)
+    print(output_text)
+    return output_text

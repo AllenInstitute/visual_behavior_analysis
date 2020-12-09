@@ -3,11 +3,13 @@
 import base64
 import os
 import yaml
+import json
 import pandas as pd
 import plotly.graph_objs as go
 import datetime
 
 import visual_behavior.visualization.qc.data_loading as dl
+from visual_behavior.data_access import loading
 
 
 def load_data():
@@ -28,9 +30,23 @@ def load_yaml(yaml_path):
     return options
 
 
+def get_plot_list(container_qc_definitions):
+    plot_list = []
+    for plot_title, attributes in container_qc_definitions.items():
+        if attributes['show_plots']:
+            plot_list.append({'label': plot_title, 'value': attributes['plot_folder_name']})
+    return plot_list
+
+
+def load_container_qc_definitions():
+    container_qc_definition_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots/qc_definitions.json"
+    return json.load(open(container_qc_definition_path))
+
+
 def load_container_plot_options():
-    plot_definition_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots/plot_definitions.yml"
-    container_options = load_yaml(plot_definition_path)
+    container_options = get_plot_list(load_container_qc_definitions())
+    print('container_options:')
+    print(container_options)
     return container_options
 
 
@@ -123,3 +139,28 @@ def make_plot_inventory_heatmap(plot_inventory):
     fig.update_xaxes(dtick=1)
 
     return fig
+
+def get_motion_corrected_movie_paths(container_id):
+    et = loading.get_filtered_ophys_experiment_table().reset_index()
+    paths = []
+    for oeid in et.query('container_id == @container_id')['ophys_experiment_id']:
+        paths.append(
+            loading.get_motion_corrected_movie_h5_location(oeid).replace(
+                'motion_corrected_video.h5',
+                'motion_preview.10x.mp4'
+            )
+        )
+    return paths
+
+def print_motion_corrected_movie_paths(container_id):
+    et = loading.get_filtered_ophys_experiment_table().reset_index()
+    lines = []
+    for oeid in et.query('container_id == @container_id')['ophys_experiment_id']:
+        movie_path = loading.get_motion_corrected_movie_h5_location(oeid).replace('motion_corrected_video.h5','motion_preview.10x.mp4')
+        lines.append('ophys experiment ID = {}\n'.format(oeid))
+        lines.append("LINUX PATH:")
+        lines.append('\t<a href="url">{}</a>'.format(movie_path))
+        lines.append('WINDOWS PATH')
+        lines.append('\t{}'.format(movie_path.replace('/','\\')))
+        lines.append('')
+    return '\n'.join(lines)

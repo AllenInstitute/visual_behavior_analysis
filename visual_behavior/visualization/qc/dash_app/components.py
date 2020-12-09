@@ -5,14 +5,14 @@ import dash_html_components as html
 import dash_table
 import dash_bootstrap_components as dbc
 
-from functions import generate_plot_inventory, make_plot_inventory_heatmap
+from functions import generate_plot_inventory, make_plot_inventory_heatmap, load_container_qc_definitions
 
 
 # dropdown for selecting plots to display
 plot_selection_dropdown = dcc.Dropdown(
     id='container_plot_dropdown',
     options=None,
-    value=['ophys_session_sequence'],
+    value=[],
     multi=True
 )
 
@@ -29,7 +29,7 @@ show_overview_checklist = dcc.Checklist(
 # dropdown to select which overview plot to show in iframe
 container_overview_dropdown = dcc.Dropdown(
     id='container_overview_dropdown',
-    style={'display': 'none'},
+    # style={'display': 'none'},
     options=None,
     value='VisualBehavior_containers_chronological.png'
 )
@@ -105,6 +105,8 @@ plot_inventory_graph_div = html.Div(
     ]
 )
 
+QC_ATTRIBUTES = load_container_qc_definitions()
+QC_OPTIONS = [{'label':key, 'value':key} for key in list(QC_ATTRIBUTES.keys())]
 feedback_button = html.Div(
     [
         dbc.Button("Provide Feedback", id="open_feedback_popup"),
@@ -128,16 +130,16 @@ feedback_button = html.Div(
                             id="radioitems-experiments",
                         ),
                         dbc.Label("Attribute being QC'd:"),
-                        dbc.Input(id="feedback_popup_qc_attribute", type="text", debounce=True),
+                        dcc.Dropdown(
+                            id='feedback_popup_qc_dropdown',
+                            options=QC_OPTIONS,
+                            value=''
+                        ),
                         dbc.Label("QC Label:"),
-                        dbc.RadioItems(
-                            options=[
-                                {"label": "major problem ", "value": "major problem"},
-                                {"label": "possible data issue - follow up", "value": "possible data issue - follow up"},
-                                {"label": "possible processing issue - follow up", "value": "possible processing issue - follow up"},
-                            ],
-                            value=1,
-                            id="radioitems-qc_labels",
+                        dbc.Checklist(
+                            options=[],
+                            value=[],
+                            id="feedback_popup_qc_labels",
                         ),
                         dbc.Label("Input text:"),
                         dbc.Input(id="feedback_popup_text", type="text", debounce=True),
