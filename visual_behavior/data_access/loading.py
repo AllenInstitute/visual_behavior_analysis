@@ -1641,14 +1641,14 @@ def build_container_df():
     container_ids = table['container_id'].unique()
     list_of_dicts = []
     for container_id in container_ids:
-        subset = table.query('container_id == @container_id').sort_values(by='date_of_acquisition',
-                                                                          ascending=True).drop_duplicates(
-            'ophys_session_id').reset_index()
+        subset = table.query('container_id == @container_id').sort_values(
+            by='date_of_acquisition',
+            ascending=True
+        ).drop_duplicates('ophys_session_id').reset_index()
         temp_dict = {
             'container_id': container_id,
-            'container_workflow_state':
-                table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
-            'first_acquistion_date': subset['date_of_acquisition'].min().split(' ')[0],
+            'container_workflow_state':table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
+            'first_acquisition_date': subset['date_of_acquisition'].min().split(' ')[0],
             'project_code': subset['project_code'].unique()[0],
             'driver_line': subset['driver_line'][0],
             'cre_line': subset['cre_line'][0],

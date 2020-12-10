@@ -8,6 +8,7 @@ import numpy as np
 import plotly.graph_objs as go
 import dash_bootstrap_components as dbc
 import dash_core_components as dcc
+from visual_behavior.data_access import loading
 
 import time
 import datetime
@@ -29,6 +30,7 @@ container_plot_options = functions.load_container_plot_options()
 container_overview_plot_options = functions.load_container_overview_plot_options()
 plot_inventory = functions.generate_plot_inventory()
 plot_inventory_fig = functions.make_plot_inventory_heatmap(plot_inventory)
+experiment_table = loading.get_filtered_ophys_experiment_table().reset_index()
 print('done setting up table, it took {} seconds'.format(time.time()- t0))
 
 QC_ATTRIBUTES = functions.load_container_qc_definitions()
@@ -59,13 +61,18 @@ app.layout = html.Div(
     [
         html.H3('Visual Behavior Data QC Viewer'),
         # checklist for components to show
-        # components.show_overview_checklist,
-        # components.plot_inventory_graph_div,
+        components.show_overview_checklist,
+        components.plot_inventory_graph_div,
         # container level dropdown
-        # components.container_overview_dropdown,
+        components.container_overview_dropdown,
         # frame with container level plots
         components.container_overview_iframe,
         components.plot_inventory_iframe,
+        html.H4('Find container from experiment ID:'),
+        html.Label('Enter experiment ID:'),
+        dcc.Input(id='experiment_id_entry', placeholder=''),
+        html.Label('|  Corresponding Container ID:  '),
+        html.Output(id='container_id_output', children=''),
         html.H4('Container Summary Data Table:'),
         html.I('Adjust number of rows to display in the data table:'),
         components.table_row_selection,
@@ -74,6 +81,7 @@ app.layout = html.Div(
         # dropdown for plot selection
         components.previous_button,
         components.next_button,
+        html.Div(id='stored_feedback', style={'display': 'none'}),
         html.H4('Links to motion corrected movies for this container'),
         dcc.Link(id='link_0',children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
@@ -165,6 +173,21 @@ def get_on_correct_page(selected_rows, derived_virtual_indices, page_current, pa
     return current_page
 
 
+@app.callback(
+    Output("container_id_output", "children"),
+    [Input("experiment_id_entry", "value")],
+)
+def look_up_container(oeid):
+    try:
+        res = experiment_table.query('ophys_experiment_id == @oeid')
+        if len(res) == 0:
+            return 'Not Found'
+        else:
+            return res.iloc[0]['container_id']
+    except ValueError:
+        return ''
+
+
 # go to previous selection in table
 @app.callback(
     Output("data_table", "selected_rows"),
@@ -199,6 +222,40 @@ def select_next(next_button_n_clicks, prev_button_n_clicks, selected_rows, deriv
     else:
         return [0]
 
+
+# feedback qc data log
+@app.callback(
+    Output("stored_feedback", "children"),
+    [
+        Input("feedback_popup_ok", "n_clicks"),
+    ],
+    [
+        State("feedback_popup_datetime", "value"),
+        State("feedback_popup_username", "value"),
+        State("feedback_popup_container_id", "value"),
+        State("feedback_popup_experiments", "value"),
+        State("feedback_popup_qc_dropdown", "value"),
+        State("feedback_popup_qc_labels", "value"),
+        State("feedback_popup_text", "value")
+    ]
+)
+def log_feedback(n1, timestamp, username, container_id, experiment_ids, qc_attribute, qc_labels, input_text):
+    print('LOGGING FEEDBACK')
+    feedback = {
+        'timestamp': timestamp,
+        'username': username,
+        'container_id': container_id,
+        'experiment_ids': experiment_ids,
+        'qc_attribute': qc_attribute,
+        'qc_labels': qc_labels,
+        'input_text': input_text,
+    }
+    print(feedback)
+    functions.log_feedback(feedback)
+    functions.set_qc_complete_flags(feedback)
+    print('logging feedback at {}'.format(time.time()))
+    return 'TEMP'
+
 # toggle popup open/close state
 @app.callback(
     Output("plot_qc_popup", "is_open"),
@@ -228,18 +285,16 @@ def fill_container_id(selected_rows):
 
 # label radio buttons in popup with currently selected experiment_ids
 @app.callback(
-    Output('radioitems-experiments', 'options'),
+    Output('feedback_popup_experiments', 'options'),
     [
         Input('data_table', 'selected_rows'), 
     ],
-    [State('radioitems-experiments', 'options')]
+    [State('feedback_popup_experiments', 'options')]
 )
-def radio_button_0(selected_rows, options):
-    print('radio options')
-    print(options)
-    idx = selected_rows[0]
-    options = [{'label': container_table.iloc[idx]['session_{}'.format(i)], 'value': i} for i in range(7)]
-    print(options)
+def experiment_id_checklist(row_index, options):
+    container_id = container_table.iloc[row_index[0]]['container_id']
+    subset = experiment_table.query('container_id == @container_id').sort_values(by='date_of_acquisition')[['session_type','ophys_experiment_id']].reset_index(drop=True)
+    options = [{'label': '{} {}'.format(subset.loc[i]['session_type'], subset.loc[i]['ophys_experiment_id']), 'value': subset.loc[i]['ophys_experiment_id']} for i in range(len(subset))]
     return options
 
 # populate feedback popup qc options
@@ -265,6 +320,30 @@ def populate_qc_options(attribute_to_qc):
 )
 def clear_popup_text(n1, is_open):
     return ''
+
+
+# clear experiment selections
+@app.callback(
+    Output("feedback_popup_experiments", "value"),
+    [
+        Input("open_feedback_popup", "n_clicks"), 
+    ],
+    [State("plot_qc_popup", "is_open")],
+)
+def clear_experiment_labels(n1, is_open):
+    return []
+
+
+# clear qc label selections
+@app.callback(
+    Output("feedback_popup_qc_labels", "value"),
+    [
+        Input("open_feedback_popup", "n_clicks"), 
+    ],
+    [State("plot_qc_popup", "is_open")],
+)
+def clear_qc_labels(n1, is_open):
+    return []
 
 
 #populate datetime in feedback popup
@@ -358,6 +437,20 @@ def show_container_dropdown(checkbox_values):
         # return hidden = True
         return {'display': 'none'}
 
+
+# highlight row in data table
+@app.callback(Output('data_table', 'data'),
+              [
+                  Input('data_table', 'selected_rows'),
+                  Input('feedback_popup_ok', 'n_clicks'),
+                  Input("stored_feedback", "children")
+               ]
+)
+def update_data(selected_rows, n_clicks, stored_feedback):
+    print('updating data table at {}'.format(time.time()))
+    container_table = functions.load_data().sort_values('first_acquistion_date')
+    data = container_table.to_dict('records')
+    return data
 
 # highlight row in data table
 @app.callback(Output('data_table', 'style_data_conditional'),

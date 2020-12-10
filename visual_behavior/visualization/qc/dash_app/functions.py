@@ -7,6 +7,8 @@ import json
 import pandas as pd
 import plotly.graph_objs as go
 import datetime
+import uuid
+from visual_behavior import database as db
 
 import visual_behavior.visualization.qc.data_loading as dl
 from visual_behavior.data_access import loading
@@ -14,11 +16,7 @@ from visual_behavior.data_access import loading
 
 def load_data():
     container_df = dl.build_container_df()
-    filtered_container_list = dl.get_filtered_ophys_container_ids()  # NOQA F841
-    container_subsets = pd.read_csv('/home/dougo/spreadsheet_map.csv')
-    res = container_df.query('container_id in @filtered_container_list')
-    return res.merge(container_subsets, left_on='container_id', right_on='container_id', how='left')
-
+    return container_df
 
 def load_yaml(yaml_path):
     with open(yaml_path, 'r') as stream:
@@ -164,3 +162,89 @@ def print_motion_corrected_movie_paths(container_id):
         lines.append('\t{}'.format(movie_path.replace('/','\\')))
         lines.append('')
     return '\n'.join(lines)
+
+def to_json(data_to_log):
+    '''log data to filesystem'''
+    saveloc = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_records'
+    filename = os.path.join(saveloc, '{}.json'.format(data_to_log['_id']))
+    json.dump(data_to_log, open(filename, 'w' ))
+
+def to_mongo(data_to_log):
+    '''log data to mongo'''
+    conn = db.Database('visual_behavior_data')
+    collection = conn['ophys_qc']['container_qc_records']
+    collection.insert_one(db.clean_and_timestamp(data_to_log))
+    conn.close()
+
+def log_feedback(feedback):
+    '''logs feedback from app to mongo and filesystem'''
+    if pd.notnull(feedback['timestamp']):
+        random_id = uuid.uuid4().hex
+        feedback.update({'_id':random_id})
+        to_json(feedback)
+        to_mongo(feedback)
+
+def update_qc_status(feedback):
+    '''
+    updates:
+        motion_correction_has_qc to True if feedback['qc_attribute'] == 'Motion Correction'
+        cell_matching_has_qc to True if feedback['qc_attribute'] == 'Nway Production Warp Summary'
+    '''
+    if feedback['qc_attribute'] == 'Motion Correction':
+        conn = db.Database('visual_behavior_data')
+        collection = conn['ophys_qc']['container_qc_records']
+        collection.update_or_create(db.clean_and_timestamp({}))
+        conn.close()
+
+def get_qcd_oeids(container_id, qc_attribute):
+    '''
+    get all experiment IDS that have been QC'd for a given container_id and attribute
+    '''
+    conn = db.Database('visual_behavior_data')
+    collection = conn['ophys_qc']['container_qc_records']
+    res = pd.DataFrame(list(collection.find({'container_id':container_id, 'qc_attribute':qc_attribute})))
+    conn.close
+
+    if len(res) > 0:
+        oeids = [item for sublist in res['experiment_ids'] for item in sublist]
+        return oeids
+    else:
+        return []
+
+
+def qc_for_all_experiments(container_id, qc_attribute):
+    '''check to see that all experiments for a given container have been QCd'''
+    oeids_with_qc = set(get_qcd_oeids(container_id, qc_attribute = qc_attribute))
+    oeids = set(loading.get_filtered_ophys_experiment_table().query('container_id == @container_id').reset_index()['ophys_experiment_id'].values)
+    
+    # symmetric_difference is an empty set if all oeids are in oeids_with_qc
+    return len(oeids.symmetric_difference(oeids_with_qc)) == 0
+
+
+def set_qc_complete_flags(feedback):
+    container_id = feedback['container_id']
+    qc_attribute = feedback['qc_attribute']
+    
+    entry = None
+    try:
+        if qc_for_all_experiments(container_id, qc_attribute):
+            if qc_attribute == 'Motion Correction':
+                entry = {
+                        'container_id':container_id,
+                        'motion_correction_has_qc':True
+                }
+            elif qc_attribute == 'Nway Production Warp Summary':
+                entry = {
+                        'container_id':container_id,
+                        'cell_matching_has_qc':True
+                }
+    except ValueError:
+        pass
+
+    if entry:
+        conn = db.Database('visual_behavior_data')
+        collection = conn['ophys_qc']['container_qc']
+        db.update_or_create(collection, db.clean_and_timestamp(entry), keys_to_check=['container_id'])
+        conn.close()
+
+        print('Updating qc state for {}'.format(qc_attribute))

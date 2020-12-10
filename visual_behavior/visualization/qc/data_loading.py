@@ -6,6 +6,7 @@ from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorO
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 
 import visual_behavior.data_access.loading as loading
+from visual_behavior import database as db
 
 import os
 import h5py  # for loading motion corrected movie
@@ -899,7 +900,7 @@ def get_mtrain_stage_name(dataframe):
     return dataframe
 
 
-def build_container_df():
+def build_container_df_OLD():
     '''
     build dataframe with one row per container
     '''
@@ -930,3 +931,75 @@ def build_container_df():
         list_of_dicts.append(temp_dict)
 
     return pd.DataFrame(list_of_dicts).sort_values(by='container_id', ascending=False)
+
+def build_container_df():
+    et = loading.get_filtered_ophys_experiment_table().reset_index()
+    cols_to_keep = [
+        'container_id',
+        'project_code',
+        'container_workflow_state',
+        'equipment_name',
+        'date_of_acquisition',
+        'specimen_id',
+        'cre_line',
+        'equipment_name',
+        'targeted_structure',
+        'imaging_depth',
+        'super_container_id',
+    ]
+    container_table_vb = et.sort_values(by='date_of_acquisition').drop_duplicates(subset=['container_id'])[cols_to_keep].merge(
+        et.groupby('container_id')[['ophys_experiment_id']].count().rename(columns={'ophys_experiment_id':'experiment_count'}).reset_index(),
+        left_on = 'container_id',
+        right_on= 'container_id',
+        how='left'
+    ).rename(columns={'date_of_acquisition':'first_acquistion_date'})
+    
+#     container_table_vb = loading.build_container_df().sort_values(by='first_acquistion_date')
+
+    conn = db.Database('visual_behavior_data')
+    # get existing container table from database
+    database = 'ophys_qc'
+    collection = 'container_qc'
+    container_table_db = pd.DataFrame(list(conn[database][collection].find({})))
+
+    # get container attributes to qc
+    database = 'ophys_qc'
+    collection = 'container_qc_attributes'
+    container_qc_attributes = pd.DataFrame(list(conn[database][collection].find({})))
+
+    conn.close()
+
+    # merge them together
+    container_table = container_table_vb.merge(
+        container_table_db,
+        left_on='container_id',
+        right_on='container_id',
+        how='left',
+        suffixes=['','_duplicated']
+    )
+
+    duplicated_colummns = [col for col in container_table.columns if col.endswith('_duplicated')]
+    container_table.drop(columns=duplicated_colummns, inplace=True)
+
+    for qc_attribute in container_qc_attributes['attribute'].tolist():
+        col_name = qc_attribute + '_has_qc'
+        if col_name not in container_table.columns:
+            container_table[col_name] = False
+        else:
+            container_table[col_name] = container_table[col_name].astype(bool)
+
+    col_order = [
+        'container_id',
+        'motion_correction_has_qc',
+        'cell_matching_has_qc',
+        'container_group',
+        'cre_line',
+        'equipment_name',
+        'first_acquistion_date',
+        'targeted_structure',
+        'imaging_depth',
+        'project_code',
+    ]
+    remaining_cols = [col for col in container_table.columns if col not in col_order]
+    
+    return container_table[col_order + remaining_cols].drop(columns=['_id','entry_time_utc'])

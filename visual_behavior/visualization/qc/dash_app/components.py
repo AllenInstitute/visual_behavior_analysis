@@ -22,6 +22,7 @@ show_overview_checklist = dcc.Checklist(
     options=[
         {'label': 'Show Container Level Summary Plots   |', 'value': 'show_container_plots'},
         {'label': 'Show Plot Inventory   ', 'value': 'show_plot_inventory'},
+    # style={'display': 'none'},
     ],
     value=[]
 )
@@ -127,7 +128,7 @@ feedback_button = html.Div(
                                 {"label": "exp0 ", "value": 1},
                             ],
                             value=[],
-                            id="radioitems-experiments",
+                            id="feedback_popup_experiments",
                         ),
                         dbc.Label("Attribute being QC'd:"),
                         dcc.Dropdown(
@@ -156,39 +157,3 @@ feedback_button = html.Div(
         ),
     ]
 )
-
-
-class FeebackButton(object):
-    def __init__(self, plot_number, plot_name, body_text=None):
-        self.plot_number = plot_number
-        self.plot_name = plot_name
-        if body_text is not None:
-            self.body_text = body_text
-        else:
-            self.body_text = 'this is the popup body'
-
-        self.popup = self.make_popup()
-
-    def make_popup(self):
-        feedback_button = html.Div(
-            [
-                dbc.Button(
-                    "{} - Provide Feedback".format(self.plot_name),
-                    id="open_feedback_{}".format(self.plot_number)
-                ),
-                dbc.Modal(
-                    [
-                        dbc.ModalHeader("Provide feedback for {}".format(self.plot_name)),
-                        dbc.ModalBody(self.body_text),
-                        dbc.ModalFooter(
-                            dbc.Button("Close", id="close", className="ml-auto")
-                        ),
-                    ],
-                    id="plot_qc_popup_{}".format(self.plot_number),
-                ),
-            ]
-        )
-        return feedback_button
-
-    def update_info(self, plot_number, plot_name):
-        self.popup
