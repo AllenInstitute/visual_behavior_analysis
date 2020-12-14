@@ -31,7 +31,7 @@ container_overview_plot_options = functions.load_container_overview_plot_options
 plot_inventory = functions.generate_plot_inventory()
 plot_inventory_fig = functions.make_plot_inventory_heatmap(plot_inventory)
 experiment_table = loading.get_filtered_ophys_experiment_table().reset_index()
-print('done setting up table, it took {} seconds'.format(time.time()- t0))
+print('done setting up table, it took {} seconds'.format(time.time() - t0))
 
 QC_ATTRIBUTES = functions.load_container_qc_definitions()
 
@@ -44,11 +44,12 @@ components.container_overview_iframe.src = app.get_asset_url('qc_plots/overview_
 components.plot_inventory_iframe.src = 'https://dougollerenshaw.github.io/figures_to_share/container_plot_inventory.html'  # app.get_asset_url('qc_plots/container_plot_inventory.html')
 components.container_data_table.columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
 components.container_data_table.data = container_table.to_dict('records')
-print('done setting up components, it took {} seconds'.format(time.time()- t0))
+print('done setting up components, it took {} seconds'.format(time.time() - t0))
 
 app.layout = html.Video(src='/static/my-video.webm')
 
 server = app.server
+
 
 @server.route('/static/<path:path>')
 def serve_static(path):
@@ -83,25 +84,25 @@ app.layout = html.Div(
         components.next_button,
         html.Div(id='stored_feedback', style={'display': 'none'}),
         html.H4('Links to motion corrected movies for this container'),
-        dcc.Link(id='link_0',children='', href='', style={'display': True}, target="_blank"),
+        dcc.Link(id='link_0', children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
-        dcc.Link(id='link_1',children='', href='', style={'display': True}, target="_blank"),
+        dcc.Link(id='link_1', children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
-        dcc.Link(id='link_2',children='', href='', style={'display': True}, target="_blank"),
+        dcc.Link(id='link_2', children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
-        dcc.Link(id='link_3',children='', href='', style={'display': True}, target="_blank"),
+        dcc.Link(id='link_3', children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
-        dcc.Link(id='link_4',children='', href='', style={'display': True}, target="_blank"),
+        dcc.Link(id='link_4', children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
-        dcc.Link(id='link_5',children='', href='', style={'display': True}, target="_blank"),
+        dcc.Link(id='link_5', children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
-        dcc.Link(id='link_6',children='', href='', style={'display': True}, target="_blank"),
+        dcc.Link(id='link_6', children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
-        dcc.Link(id='link_7',children='', href='', style={'display': True}, target="_blank"),
+        dcc.Link(id='link_7', children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
-        dcc.Link(id='link_8',children='', href='', style={'display': True}, target="_blank"),
+        dcc.Link(id='link_8', children='', href='', style={'display': True}, target="_blank"),
         html.H4(''),
-        dcc.Link(id='link_9',children='', href='', style={'display': True}, target="_blank"),
+        dcc.Link(id='link_9', children='', href='', style={'display': True}, target="_blank"),
         components.feedback_button,
         html.H4('Select plots to generate from the dropdown (max 10)'),
         components.plot_selection_dropdown,
@@ -157,6 +158,8 @@ app.layout = html.Div(
 )
 
 # ensure that the table page is set to show the current selection
+
+
 @app.callback(
     Output("data_table", "page_current"),
     [Input('data_table', 'selected_rows')],
@@ -169,7 +172,7 @@ app.layout = html.Div(
 def get_on_correct_page(selected_rows, derived_virtual_indices, page_current, page_size):
     current_selection = selected_rows[0]
     current_index = derived_virtual_indices.index(current_selection)
-    current_page = int(current_index/page_size)
+    current_page = int(current_index / page_size)
     return current_page
 
 
@@ -196,7 +199,7 @@ def look_up_container(oeid):
         Input("previous_button", "n_clicks")
     ],
     [
-        State("data_table", "selected_rows"), 
+        State("data_table", "selected_rows"),
         State('data_table', 'derived_virtual_indices'),
     ]
 )
@@ -257,10 +260,12 @@ def log_feedback(n1, timestamp, username, container_id, experiment_ids, qc_attri
     return 'TEMP'
 
 # toggle popup open/close state
+
+
 @app.callback(
     Output("plot_qc_popup", "is_open"),
     [
-        Input("open_feedback_popup", "n_clicks"), 
+        Input("open_feedback_popup", "n_clicks"),
         Input("feedback_popup_cancel", "n_clicks"),
         Input("feedback_popup_ok", "n_clicks"),
     ],
@@ -273,10 +278,12 @@ def toggle_modal(n1, n2, n3, is_open):
     return is_open
 
 # fill popup with currently selected container ID
+
+
 @app.callback(
     Output("feedback_popup_container_id", "value"),
     [
-        Input('data_table', 'selected_rows'), 
+        Input('data_table', 'selected_rows'),
     ],
 )
 def fill_container_id(selected_rows):
@@ -284,37 +291,68 @@ def fill_container_id(selected_rows):
     return container_table.iloc[idx]['container_id']
 
 # label radio buttons in popup with currently selected experiment_ids
+
+
 @app.callback(
     Output('feedback_popup_experiments', 'options'),
     [
-        Input('data_table', 'selected_rows'), 
+        Input('data_table', 'selected_rows'),
     ],
     [State('feedback_popup_experiments', 'options')]
 )
 def experiment_id_checklist(row_index, options):
     container_id = container_table.iloc[row_index[0]]['container_id']
-    subset = experiment_table.query('container_id == @container_id').sort_values(by='date_of_acquisition')[['session_type','ophys_experiment_id']].reset_index(drop=True)
+    subset = experiment_table.query('container_id == @container_id').sort_values(by='date_of_acquisition')[['session_type', 'ophys_experiment_id']].reset_index(drop=True)
     options = [{'label': '{} {}'.format(subset.loc[i]['session_type'], subset.loc[i]['ophys_experiment_id']), 'value': subset.loc[i]['ophys_experiment_id']} for i in range(len(subset))]
     return options
 
+# select all experiments
+
+
+@app.callback(
+    Output('feedback_popup_experiments', 'value'),
+    [
+        Input('feedback_popup_select_all_experiments', 'n_clicks_timestamp'),
+        Input('feedback_popup_unselect_all_experiments', 'n_clicks_timestamp'),
+        Input("open_feedback_popup", "n_clicks_timestamp")
+    ],
+    [State('feedback_popup_experiments', 'options')]
+)
+def select_all_experiments(select_all_timestamp, unselect_all_timestamp, open_feedback_timestamp, options):
+    # value = [v for k,v in options.items()]
+    if select_all_timestamp is None:
+        select_all_timestamp = 0
+    if unselect_all_timestamp is None:
+        unselect_all_timestamp = 0
+    if open_feedback_timestamp is None:
+        open_feedback_timestamp = 0
+    if select_all_timestamp > unselect_all_timestamp and select_all_timestamp > open_feedback_timestamp:
+        return [d['value'] for d in options]
+    else:
+        return []
+
 # populate feedback popup qc options
+
+
 @app.callback(
     Output('feedback_popup_qc_labels', 'options'),
     [
-        Input('feedback_popup_qc_dropdown', 'value'), 
+        Input('feedback_popup_qc_dropdown', 'value'),
     ],
 )
 def populate_qc_options(attribute_to_qc):
     try:
-        return [{'label':v, 'value':v} for v in QC_ATTRIBUTES[attribute_to_qc]['qc_attributes']]
+        return [{'label': v, 'value': v} for v in QC_ATTRIBUTES[attribute_to_qc]['qc_attributes']]
     except KeyError:
         return []
 
 # clear popup text
+
+
 @app.callback(
     Output("feedback_popup_text", "value"),
     [
-        Input("open_feedback_popup", "n_clicks"), 
+        Input("open_feedback_popup", "n_clicks"),
     ],
     [State("plot_qc_popup", "is_open")],
 )
@@ -322,23 +360,23 @@ def clear_popup_text(n1, is_open):
     return ''
 
 
-# clear experiment selections
-@app.callback(
-    Output("feedback_popup_experiments", "value"),
-    [
-        Input("open_feedback_popup", "n_clicks"), 
-    ],
-    [State("plot_qc_popup", "is_open")],
-)
-def clear_experiment_labels(n1, is_open):
-    return []
+# # clear experiment selections
+# @app.callback(
+#     Output('feedback_popup_experiments', 'value'),
+#     [
+#         Input("open_feedback_popup", "n_clicks"),
+#     ],
+#     [State("plot_qc_popup", "is_open")],
+# )
+# def clear_experiment_labels(n1, is_open):
+#     return []
 
 
 # clear qc label selections
 @app.callback(
     Output("feedback_popup_qc_labels", "value"),
     [
-        Input("open_feedback_popup", "n_clicks"), 
+        Input("open_feedback_popup", "n_clicks"),
     ],
     [State("plot_qc_popup", "is_open")],
 )
@@ -346,11 +384,11 @@ def clear_qc_labels(n1, is_open):
     return []
 
 
-#populate datetime in feedback popup
+# populate datetime in feedback popup
 @app.callback(
     Output("feedback_popup_datetime", "value"),
     [
-        Input("open_feedback_popup", "n_clicks"), 
+        Input("open_feedback_popup", "n_clicks"),
     ],
 )
 def populate_popup_datetime(n_clicks):
@@ -444,7 +482,7 @@ def show_container_dropdown(checkbox_values):
                   Input('data_table', 'selected_rows'),
                   Input('feedback_popup_ok', 'n_clicks'),
                   Input("stored_feedback", "children")
-               ]
+]
 )
 def update_data(selected_rows, n_clicks, stored_feedback):
     print('updating data table at {}'.format(time.time()))
@@ -453,6 +491,8 @@ def update_data(selected_rows, n_clicks, stored_feedback):
     return data
 
 # highlight row in data table
+
+
 @app.callback(Output('data_table', 'style_data_conditional'),
               [Input('data_table', 'selected_rows'),
                Input('data_table', 'page_current'),
@@ -477,6 +517,8 @@ def highlight_row(row_index, page_current, derived_viewport_indices):
 # set plot titles
 # this is just text above the actual plot frame
 # Use this loop to determine the correct title to update
+
+
 def update_plot_title(plot_types, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('plot_title_')[1])
@@ -484,14 +526,18 @@ def update_plot_title(plot_types, input_id):
         return plot_types[idx]
     except IndexError:
         return ''
+
+
 for i in range(10):
     app.callback(
-        Output(f"plot_title_{i}", "children"), 
+        Output(f"plot_title_{i}", "children"),
         [Input(f"container_plot_dropdown", "value"), Input(f"plot_title_{i}", "id")]
     )(update_plot_title)
 
 # image frames callbacks
 # generated in a loop
+
+
 def update_frame_N(row_index, plot_types, input_id):
     '''
     a function to fill the image frames
@@ -504,17 +550,20 @@ def update_frame_N(row_index, plot_types, input_id):
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
     except IndexError:
         return None
+
+
 for i in range(10):
     app.callback(
-        Output(f"image_frame_{i}", "src"), 
+        Output(f"image_frame_{i}", "src"),
         [
-            Input('data_table', 'selected_rows'), 
-            Input('container_plot_dropdown', 'value'), 
+            Input('data_table', 'selected_rows'),
+            Input('container_plot_dropdown', 'value'),
             Input(f"image_frame_{i}", "id")
         ]
     )(update_frame_N)
 
 # update_links
+
 
 def update_link_text_N(row_index, input_id):
     '''a function to update plot titles'''
@@ -522,14 +571,17 @@ def update_link_text_N(row_index, input_id):
     container_id = container_table.iloc[row_index[0]]['container_id']
     link_list = functions.get_motion_corrected_movie_paths(container_id)
     try:
-        return link_list[idx].replace('/','\\')
+        return link_list[idx].replace('/', '\\')
     except IndexError:
         return 'INVALID LINK'
+
+
 for i in range(10):
     app.callback(
-        Output(f"link_{i}", "children"), 
+        Output(f"link_{i}", "children"),
         [Input('data_table', 'selected_rows'), Input(f"link_{i}", "id")]
     )(update_link_text_N)
+
 
 def update_link_destination_N(row_index, input_id):
     '''a function to update plot titles'''
@@ -540,11 +592,14 @@ def update_link_destination_N(row_index, input_id):
         return 'file:{}'.format(link_list[idx])
     except IndexError:
         return 'https://www.google.com/'
+
+
 for i in range(10):
     app.callback(
-        Output(f"link_{i}", "href"), 
+        Output(f"link_{i}", "href"),
         [Input('data_table', 'selected_rows'), Input(f"link_{i}", "id")]
     )(update_link_destination_N)
+
 
 def update_link_visibility_N(row_index, input_id):
     '''a function to update plot titles'''
@@ -558,9 +613,11 @@ def update_link_visibility_N(row_index, input_id):
     except IndexError:
         print("Returning None, idx = {}".format(idx))
         return {'display': 'none'}
+
+
 for i in range(10):
     app.callback(
-        Output(f"link_{i}", "style"), 
+        Output(f"link_{i}", "style"),
         [Input('data_table', 'selected_rows'), Input(f"link_{i}", "id")]
     )(update_link_visibility_N)
 

@@ -21,26 +21,27 @@ app.layout = html.Div([
     html.H4(),
     dcc.Input(
         id="input_0",
-        type="text", 
+        type="text",
         placeholder=""
     ),
     html.H4(),
     dcc.Input(
         id="input_1",
-        type="text", 
+        type="text",
         placeholder=""
     ),
     html.Button('Next', id='next_button'),
     html.Div(id='text_output', children='SOME TEST TEXT'),
-    dcc.Link(id='link_0',children='', href='', style={'display': True}),
+    dcc.Link(id='link_0', children='', href='', style={'display': True}),
     html.H4(),
-    dcc.Link(id='link_1',children='', href='', style={'display': True}),
+    dcc.Link(id='link_1', children='', href='', style={'display': True}),
 ], className='container')
 
 
 def pass_text(text, input_id):
     i = input_id.split('_')[1]
     return '{} - {}'.format(text, i)
+
 
 for i in range(2):
     app.callback(

@@ -22,7 +22,7 @@ show_overview_checklist = dcc.Checklist(
     options=[
         {'label': 'Show Container Level Summary Plots   |', 'value': 'show_container_plots'},
         {'label': 'Show Plot Inventory   ', 'value': 'show_plot_inventory'},
-    # style={'display': 'none'},
+        # style={'display': 'none'},
     ],
     value=[]
 )
@@ -107,7 +107,7 @@ plot_inventory_graph_div = html.Div(
 )
 
 QC_ATTRIBUTES = load_container_qc_definitions()
-QC_OPTIONS = [{'label':key, 'value':key} for key in list(QC_ATTRIBUTES.keys())]
+QC_OPTIONS = [{'label': key, 'value': key} for key in list(QC_ATTRIBUTES.keys())]
 feedback_button = html.Div(
     [
         dbc.Button("Provide Feedback", id="open_feedback_popup"),
@@ -123,6 +123,9 @@ feedback_button = html.Div(
                         dbc.Label("Container ID:"),
                         dbc.Input(id="feedback_popup_container_id", type="text", disabled=True),
                         dbc.Label("Experiment ID:"),
+                        html.H4(''),
+                        html.Button('Select All Experiments', id='feedback_popup_select_all_experiments'),
+                        html.Button('Unselect All Experiments', id='feedback_popup_unselect_all_experiments'),
                         dbc.Checklist(
                             options=[
                                 {"label": "exp0 ", "value": 1},
@@ -142,7 +145,7 @@ feedback_button = html.Div(
                             value=[],
                             id="feedback_popup_qc_labels",
                         ),
-                        dbc.Label("Input text:"),
+                        dbc.Label("Notes/observations:"),
                         dbc.Input(id="feedback_popup_text", type="text", debounce=True),
                     ]
                 ),

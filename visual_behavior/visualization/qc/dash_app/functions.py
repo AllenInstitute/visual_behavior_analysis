@@ -18,6 +18,7 @@ def load_data():
     container_df = dl.build_container_df()
     return container_df
 
+
 def load_yaml(yaml_path):
     with open(yaml_path, 'r') as stream:
         yaml_contents = yaml.safe_load(stream)
@@ -123,7 +124,7 @@ def make_plot_inventory_heatmap(plot_inventory):
         width=1000,
         height=3000,
         margin=dict(
-            l=0, # NOQA E741
+            l=0,  # NOQA E741
             r=0,
             b=0,
             t=50,
@@ -138,6 +139,7 @@ def make_plot_inventory_heatmap(plot_inventory):
 
     return fig
 
+
 def get_motion_corrected_movie_paths(container_id):
     et = loading.get_filtered_ophys_experiment_table().reset_index()
     paths = []
@@ -150,24 +152,27 @@ def get_motion_corrected_movie_paths(container_id):
         )
     return paths
 
+
 def print_motion_corrected_movie_paths(container_id):
     et = loading.get_filtered_ophys_experiment_table().reset_index()
     lines = []
     for oeid in et.query('container_id == @container_id')['ophys_experiment_id']:
-        movie_path = loading.get_motion_corrected_movie_h5_location(oeid).replace('motion_corrected_video.h5','motion_preview.10x.mp4')
+        movie_path = loading.get_motion_corrected_movie_h5_location(oeid).replace('motion_corrected_video.h5', 'motion_preview.10x.mp4')
         lines.append('ophys experiment ID = {}\n'.format(oeid))
         lines.append("LINUX PATH:")
         lines.append('\t<a href="url">{}</a>'.format(movie_path))
         lines.append('WINDOWS PATH')
-        lines.append('\t{}'.format(movie_path.replace('/','\\')))
+        lines.append('\t{}'.format(movie_path.replace('/', '\\')))
         lines.append('')
     return '\n'.join(lines)
+
 
 def to_json(data_to_log):
     '''log data to filesystem'''
     saveloc = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_records'
     filename = os.path.join(saveloc, '{}.json'.format(data_to_log['_id']))
     json.dump(data_to_log, open(filename, 'w' ))
+
 
 def to_mongo(data_to_log):
     '''log data to mongo'''
@@ -176,13 +181,15 @@ def to_mongo(data_to_log):
     collection.insert_one(db.clean_and_timestamp(data_to_log))
     conn.close()
 
+
 def log_feedback(feedback):
     '''logs feedback from app to mongo and filesystem'''
     if pd.notnull(feedback['timestamp']):
         random_id = uuid.uuid4().hex
-        feedback.update({'_id':random_id})
+        feedback.update({'_id': random_id})
         to_json(feedback)
         to_mongo(feedback)
+
 
 def update_qc_status(feedback):
     '''
@@ -196,13 +203,14 @@ def update_qc_status(feedback):
         collection.update_or_create(db.clean_and_timestamp({}))
         conn.close()
 
+
 def get_qcd_oeids(container_id, qc_attribute):
     '''
     get all experiment IDS that have been QC'd for a given container_id and attribute
     '''
     conn = db.Database('visual_behavior_data')
     collection = conn['ophys_qc']['container_qc_records']
-    res = pd.DataFrame(list(collection.find({'container_id':container_id, 'qc_attribute':qc_attribute})))
+    res = pd.DataFrame(list(collection.find({'container_id': container_id, 'qc_attribute': qc_attribute})))
     conn.close
 
     if len(res) > 0:
@@ -214,9 +222,9 @@ def get_qcd_oeids(container_id, qc_attribute):
 
 def qc_for_all_experiments(container_id, qc_attribute):
     '''check to see that all experiments for a given container have been QCd'''
-    oeids_with_qc = set(get_qcd_oeids(container_id, qc_attribute = qc_attribute))
+    oeids_with_qc = set(get_qcd_oeids(container_id, qc_attribute=qc_attribute))
     oeids = set(loading.get_filtered_ophys_experiment_table().query('container_id == @container_id').reset_index()['ophys_experiment_id'].values)
-    
+
     # symmetric_difference is an empty set if all oeids are in oeids_with_qc
     return len(oeids.symmetric_difference(oeids_with_qc)) == 0
 
@@ -224,19 +232,19 @@ def qc_for_all_experiments(container_id, qc_attribute):
 def set_qc_complete_flags(feedback):
     container_id = feedback['container_id']
     qc_attribute = feedback['qc_attribute']
-    
+
     entry = None
     try:
         if qc_for_all_experiments(container_id, qc_attribute):
             if qc_attribute == 'Motion Correction':
                 entry = {
-                        'container_id':container_id,
-                        'motion_correction_has_qc':True
+                    'container_id': container_id,
+                    'motion_correction_has_qc': True
                 }
             elif qc_attribute == 'Nway Production Warp Summary':
                 entry = {
-                        'container_id':container_id,
-                        'cell_matching_has_qc':True
+                    'container_id': container_id,
+                    'cell_matching_has_qc': True
                 }
     except ValueError:
         pass
