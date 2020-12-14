@@ -1,11 +1,8 @@
-import os
 import numpy as np
-import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 from visual_behavior.data_access import loading as data_loading
-from visual_behavior.data_access import processing as dp
 from visual_behavior.visualization import utils as utils
 import visual_behavior.visualization.ophys.summary_figures as sf
 
@@ -39,74 +36,71 @@ def plot_across_session_responses(container_id, cell_specimen_id, use_events=Fal
             if cell_specimen_id in dataset.dff_traces.index:
                 analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=False)
                 sdf = ut.get_mean_df(analysis.get_response_df(df_name='stimulus_response_df'), analysis=analysis,
-                            conditions=['cell_specimen_id', 'change','image_name'], flashes=True, omitted=False,
-                            get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
+                                     conditions=['cell_specimen_id', 'change', 'image_name'], flashes=True, omitted=False,
+                                     get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
                 odf = ut.get_mean_df(analysis.get_response_df(df_name='omission_response_df'), analysis=analysis,
-                            conditions=['cell_specimen_id'], flashes=False, omitted=True,
-                            get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=False)
+                                     conditions=['cell_specimen_id'], flashes=False, omitted=True,
+                                     get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=False)
                 tdf = ut.get_mean_df(analysis.get_response_df(df_name='trials_response_df'), analysis=analysis,
-                            conditions=['cell_specimen_id', 'go', 'hit', 'change_image_name'], flashes=False, omitted=False,
-                            get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
-
+                                     conditions=['cell_specimen_id', 'go', 'hit', 'change_image_name'], flashes=False, omitted=False,
+                                     get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
 
                 ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_specimen_id,
                                           spacex=20, spacey=20, show_mask=True, ax=ax[i])
                 ax[i].set_title(container_expts.loc[ophys_experiment_id].session_type[6:])
 
-                colors = sns.color_palette('hls', 8)+[(0.5, 0.5, 0.5)]
+                colors = sns.color_palette('hls', 8) + [(0.5, 0.5, 0.5)]
 
                 window = rp.get_default_stimulus_response_params()["window_around_timepoint_seconds"]
-                cell_data = sdf[(sdf.cell_specimen_id==cell_specimen_id)&(sdf.change==False)]
+                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.change == False)]
                 for c, image_name in enumerate(np.sort(cell_data.image_name.unique())):
-                    ax[i+n] = sf.plot_mean_trace_from_mean_df(cell_data[cell_data.image_name==image_name],
-                                                        frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
-                                                        legend_label=image_name, color=colors[c], interval_sec=0.5,
-                                                        xlims=window, ax=ax[i+n])
-                ax[i+n] = sf.plot_flashes_on_trace(ax[i+n], analysis, window=window, trial_type=None, omitted=False, alpha=0.15, facecolor='gray')
-                ax[i+n].set_title(container_expts.loc[ophys_experiment_id].session_type[6:]+'\n image response')
+                    ax[i + n] = sf.plot_mean_trace_from_mean_df(cell_data[cell_data.image_name == image_name],
+                                                                frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
+                                                                legend_label=image_name, color=colors[c], interval_sec=0.5,
+                                                                xlims=window, ax=ax[i + n])
+                ax[i + n] = sf.plot_flashes_on_trace(ax[i + n], analysis, window=window, trial_type=None, omitted=False, alpha=0.15, facecolor='gray')
+                ax[i + n].set_title(container_expts.loc[ophys_experiment_id].session_type[6:] + '\n image response')
 
                 analysis = ResponseAnalysis(dataset, use_events=False, use_extended_stimulus_presentations=True)
                 tmp = analysis.get_response_df(df_name='stimulus_response_df')
-                tmp['running'] = [True if run_speed>2 else False for run_speed in tmp.mean_running_speed.values]
+                tmp['running'] = [True if run_speed > 2 else False for run_speed in tmp.mean_running_speed.values]
                 sdf = ut.get_mean_df(tmp, analysis=analysis,
-                            conditions=['cell_specimen_id', 'change','image_name', 'running'], flashes=True, omitted=False,
-                            get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=False)
+                                     conditions=['cell_specimen_id', 'change', 'image_name', 'running'], flashes=True, omitted=False,
+                                     get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=False)
 
-                cell_data = sdf[(sdf.cell_specimen_id==cell_specimen_id)&(sdf.change==False)&(sdf.pref_stim==True)]
+                cell_data = sdf[(sdf.cell_specimen_id == cell_specimen_id) & (sdf.change == False) & (sdf.pref_stim == True)]
                 run_colors = [sns.color_palette()[3], sns.color_palette()[2]]
                 for c, running in enumerate(np.sort(cell_data.running.unique())):
-                    if len(cell_data[cell_data.running==running])>0:
-                        ax[i+(n*2)] = sf.plot_mean_trace_from_mean_df(cell_data[cell_data.running==running],
-                                                            frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
-                                                            legend_label=running, color=run_colors[c], interval_sec=0.5,
-                                                            xlims=window, ax=ax[i+(n*2)])
-                ax[i+(n*2)].legend(fontsize='xx-small', title='running', title_fontsize='xx-small')
-                ax[i+(n*2)] = sf.plot_flashes_on_trace(ax[i+(n*2)], analysis, window=window, trial_type=None, omitted=False, alpha=0.15, facecolor='gray')
-                ax[i+(n*2)].set_title(container_expts.loc[ophys_experiment_id].session_type[6:]+'\n image response')
-
+                    if len(cell_data[cell_data.running == running]) > 0:
+                        ax[i + (n * 2)] = sf.plot_mean_trace_from_mean_df(cell_data[cell_data.running == running],
+                                                                          frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
+                                                                          legend_label=running, color=run_colors[c], interval_sec=0.5,
+                                                                          xlims=window, ax=ax[i + (n * 2)])
+                ax[i + (n * 2)].legend(fontsize='xx-small', title='running', title_fontsize='xx-small')
+                ax[i + (n * 2)] = sf.plot_flashes_on_trace(ax[i + (n * 2)], analysis, window=window, trial_type=None, omitted=False, alpha=0.15, facecolor='gray')
+                ax[i + (n * 2)].set_title(container_expts.loc[ophys_experiment_id].session_type[6:] + '\n image response')
 
                 window = rp.get_default_omission_response_params()["window_around_timepoint_seconds"]
-                cell_data = odf[(odf.cell_specimen_id==cell_specimen_id)]
-                ax[i+(n*3)] = sf.plot_mean_trace_from_mean_df(cell_data,
-                                                    frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
-                                                    legend_label=image_name, color='gray', interval_sec=1,
-                                                    xlims=window, ax=ax[i+(n*3)])
-                ax[i+(n*3)] = sf.plot_flashes_on_trace(ax[i+(n*3)], analysis, window=window, trial_type=None, omitted=True, alpha=0.15, facecolor='gray')
-                ax[i+(n*3)].set_title(container_expts.loc[ophys_experiment_id].session_type[6:]+'\n omission response')
-
+                cell_data = odf[(odf.cell_specimen_id == cell_specimen_id)]
+                ax[i + (n * 3)] = sf.plot_mean_trace_from_mean_df(cell_data,
+                                                                  frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
+                                                                  legend_label=image_name, color='gray', interval_sec=1,
+                                                                  xlims=window, ax=ax[i + (n * 3)])
+                ax[i + (n * 3)] = sf.plot_flashes_on_trace(ax[i + (n * 3)], analysis, window=window, trial_type=None, omitted=True, alpha=0.15, facecolor='gray')
+                ax[i + (n * 3)].set_title(container_expts.loc[ophys_experiment_id].session_type[6:] + '\n omission response')
 
                 window = rp.get_default_trial_response_params()["window_around_timepoint_seconds"]
-                cell_data = tdf[(tdf.cell_specimen_id==cell_specimen_id)&(tdf.go==True)&(tdf.pref_stim==True)]
+                cell_data = tdf[(tdf.cell_specimen_id == cell_specimen_id) & (tdf.go == True) & (tdf.pref_stim == True)]
                 hit_colors = [sns.color_palette()[2], sns.color_palette()[3]]
                 for c, hit in enumerate([True, False]):
-                    if len(cell_data[cell_data.hit==hit])>0:
-                        ax[i+(n*4)] = sf.plot_mean_trace_from_mean_df(cell_data[cell_data.hit==hit],
-                                                            frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
-                                                            legend_label=hit, color=hit_colors[c], interval_sec=1,
-                                                            xlims=window, ax=ax[i+(n*4)])
-                ax[i+(n*4)].legend(fontsize='xx-small', title='hit', title_fontsize='xx-small')
-                ax[i+(n*4)] = sf.plot_flashes_on_trace(ax[i+(n*4)], analysis, window=window, trial_type='go', omitted=False, alpha=0.15, facecolor='gray')
-                ax[i+(n*4)].set_title(container_expts.loc[ophys_experiment_id].session_type[6:]+'\n change response')
+                    if len(cell_data[cell_data.hit == hit]) > 0:
+                        ax[i + (n * 4)] = sf.plot_mean_trace_from_mean_df(cell_data[cell_data.hit == hit],
+                                                                          frame_rate=analysis.ophys_frame_rate, ylabel=ylabel,
+                                                                          legend_label=hit, color=hit_colors[c], interval_sec=1,
+                                                                          xlims=window, ax=ax[i + (n * 4)])
+                ax[i + (n * 4)].legend(fontsize='xx-small', title='hit', title_fontsize='xx-small')
+                ax[i + (n * 4)] = sf.plot_flashes_on_trace(ax[i + (n * 4)], analysis, window=window, trial_type='go', omitted=False, alpha=0.15, facecolor='gray')
+                ax[i + (n * 4)].set_title(container_expts.loc[ophys_experiment_id].session_type[6:] + '\n change response')
 
                 fig.tight_layout()
                 fig.suptitle(str(cell_specimen_id) + '_' + dataset.metadata_string, x=0.5, y=1.01,
@@ -119,8 +113,6 @@ def plot_across_session_responses(container_id, cell_specimen_id, use_events=Fal
         utils.save_figure(fig, figsize, save_dir, 'across_session_responses', str(
             cell_specimen_id) + '_' + dataset.metadata_string + '_across_session_responses' + suffix)
         plt.close()
-
-
 
 
 # def plot_across_session_responses(container_id, cell_specimen_id, use_events=False, save_figure=True):
@@ -230,7 +222,7 @@ def plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figur
         pupil_area = dataset.eye_tracking.pupil_area.values
         pupil_timestamps = dataset.eye_tracking.time.values
         ax[3].plot(pupil_timestamps, pupil_area, label='pupil_area', color=colors[9])
-    except:
+    except Exception:
         print('no pupil for', dataset.ophys_experiment_id)
     ax[3].set_ylabel('pupil area\n pixels**2')
     ax[3].set_ylim(-50, 30000)
@@ -239,7 +231,7 @@ def plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figur
         face_motion = dataset.behavior_movie_pc_activations[:, 0]
         face_timestamps = dataset.timestamps['eye_tracking'].timestamps
         ax[4].plot(face_timestamps, face_motion, label='face_motion_PC0', color=colors[2])
-    except:
+    except Exception:
         print('no face motion for', dataset.ophys_experiment_id)
     ax[4].set_ylabel('face motion\n PC0 activation')
 

@@ -540,7 +540,6 @@ def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True
                        'container_' + str(ophys_container_id))
 
 
-
 def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=True):
     df = dp.container_cell_matching_percent_heatmap_df(ophys_container_id)
 
@@ -592,7 +591,7 @@ def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure
                 reg_file = [file for file in registration_images if ((str(exp1) in file) and (str(exp2) in file))]
                 if len(reg_file) > 0:
                     registration_image = reg_file[0]
-                    registered_expt = int(registration_image.split('_')[1].split('.')[0])
+                    # registered_expt = int(registration_image.split('_')[1].split('.')[0])
                     target_expt = int(registration_image.split('_')[3].split('.')[0])
                     dataset = dataset_dict[int(target_expt)]
                     avg_image = dataset.average_projection.data
@@ -618,7 +617,7 @@ def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure
         fig.suptitle(get_metadata_string(ophys_container_id), x=0.5, y=1.02, horizontalalignment='center', fontsize=14)
     if save_figure:
         ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'cell_matching_registration_overlay_grid',
-                          'container_' + str(ophys_container_id))
+                       'container_' + str(ophys_container_id))
 
 
 def plot_cell_matching_registration_output(ophys_container_id, save_figure=True):
@@ -680,7 +679,7 @@ def plot_cell_matching_registration_output(ophys_container_id, save_figure=True)
 
             if save_figure:
                 ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'cell_matching_registration_output',
-                                  'container_' + str(ophys_container_id) + '_' + str(x))
+                               'container_' + str(ophys_container_id) + '_' + str(x))
 
 
 def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figure=True):
@@ -704,7 +703,6 @@ def plot_flashes_on_trace(ax, timestamps, ophys_frame_rate, trial_type=None, omi
     """
     plot stimulus flash durations on the given axis according to the provided timestamps
     """
-    frame_rate = ophys_frame_rate
     stim_duration = 0.25
     blank_duration = 0.5
     change_time = 0
@@ -735,7 +733,6 @@ def plot_flashes_on_trace(ax, timestamps, ophys_frame_rate, trial_type=None, omi
 
 
 def get_metadata_string(container_id):
-    experiments_table = data_loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(container_id)
     dataset = data_loading.get_ophys_dataset(ophys_experiment_ids[0])
     title = dataset.analysis_folder
@@ -750,12 +747,12 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
     frame_rate = dataset.metadata['ophys_frame_rate']
     if omitted:
         figsize = (12, 5)
-        m = title.split('_') #dataset.analysis_folder.split('_')
+        m = title.split('_')  # dataset.analysis_folder.split('_')
         title = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
     elif trials:
         figsize = (12, 5)
         container_df = container_df[container_df.go == True]
-        m = title.split('_') #dataset.analysis_folder.split('_')
+        m = title.split('_')  # dataset.analysis_folder.split('_')
         title = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
     else:
         figsize = (6, 4)
@@ -793,29 +790,29 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(),
-                          'population_average_by_session_'+df_name.split('_')[0],
-                          'container_' + str(container_id))
+                       'population_average_by_session_' + df_name.split('_')[0],
+                       'container_' + str(container_id))
 
 
 def plot_omission_population_average_across_sessions(container_id, save_figure=True):
     df_name = 'omission_response_df'
     container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
     plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=True,
-                                                    save_figure=save_figure)
+                                            save_figure=save_figure)
 
 
 def plot_trials_population_average_across_sessions(container_id, save_figure=True):
     df_name = 'trials_response_df'
     container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
     plot_population_average_across_sessions(container_df, container_id, df_name, trials=True, omitted=False,
-                                                    save_figure=save_figure)
+                                            save_figure=save_figure)
 
 
 def plot_stimulus_population_average_across_sessions(container_id, save_figure=True):
     df_name = 'stimulus_response_df'
     container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
     plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=False,
-                                                    save_figure=save_figure)
+                                            save_figure=save_figure)
 
 
 # def plot_average_intensity_by_pmt_for_experiments(ophys_container_id, save_figure=True):
@@ -1053,7 +1050,7 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
 
 def plot_event_detection_for_container(ophys_container_id, save_figure=True):
     experiments_table = data_loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id==ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
 
     for ophys_experiment_id in ophys_experiment_ids:
@@ -1061,9 +1058,6 @@ def plot_event_detection_for_container(ophys_container_id, save_figure=True):
 
 
 def plot_single_cell_response_plots_for_container(ophys_container_id, save_figure=True):
-    experiments_table = data_loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id==ophys_container_id].sort_values(by='date_of_acquisition')
-    ophys_experiment_ids = ophys_experiments.index.values
     cell_specimen_ids = data_loading.get_unique_cell_specimen_ids_for_container(ophys_container_id)
 
     for cell_specimen_id in cell_specimen_ids:
@@ -1072,10 +1066,9 @@ def plot_single_cell_response_plots_for_container(ophys_container_id, save_figur
 
 def plot_dff_trace_and_behavior_for_container(ophys_container_id, save_figure=True):
     experiments_table = data_loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id==ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
 
     for ophys_experiment_id in ophys_experiment_ids:
         ep.plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
         ep.plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
-

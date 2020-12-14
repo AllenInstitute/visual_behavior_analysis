@@ -391,9 +391,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                     cell_specimen_ids[:] = np.nan
 
                 self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
-                                        'events': [x for x in events_array],
-                                        'filtered_events': [x for x in rp.filter_events_array(events_array)]},
-                                         index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+                                             'events': [x for x in events_array],
+                                             'filtered_events': [x for x in rp.filter_events_array(events_array)]},
+                                            index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
 
         # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
         #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
@@ -729,10 +729,6 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     else:
         print('no model outputs saved for behavior_session_id:', behavior_session_id)
     return stimulus_presentations
-
-
-
-
 
 
 def get_behavior_model_summary_table():
@@ -1601,7 +1597,7 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
 
 def get_unique_cell_specimen_ids_for_container(container_id):
     experiments_table = get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id==container_id]
+    container_expts = experiments_table[experiments_table.container_id == container_id]
     experiment_ids = np.sort(container_expts.index.values)
     cell_specimen_table = pd.DataFrame()
     for experiment_id in experiment_ids:
@@ -1647,7 +1643,7 @@ def build_container_df():
         ).drop_duplicates('ophys_session_id').reset_index()
         temp_dict = {
             'container_id': container_id,
-            'container_workflow_state':table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
+            'container_workflow_state': table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
             'first_acquisition_date': subset['date_of_acquisition'].min().split(' ')[0],
             'project_code': subset['project_code'].unique()[0],
             'driver_line': subset['driver_line'][0],
@@ -2044,7 +2040,7 @@ def get_container_response_df(container_id, df_name='omission_response_df', use_
     """
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     experiments_table = get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id==container_id]
+    container_expts = experiments_table[experiments_table.container_id == container_id]
     container_df = pd.DataFrame()
     for ophys_experiment_id in container_expts.index.values:
         dataset = get_ophys_dataset(ophys_experiment_id)
