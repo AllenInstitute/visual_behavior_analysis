@@ -776,10 +776,6 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     return stimulus_presentations
 
 
-
-
-
-
 def get_behavior_model_summary_table():
     data_dir = get_behavior_model_outputs_dir()
     data = pd.read_csv(os.path.join(data_dir, '_summary_table.csv'))
@@ -1646,7 +1642,7 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
 
 def get_unique_cell_specimen_ids_for_container(container_id):
     experiments_table = get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id==container_id]
+    container_expts = experiments_table[experiments_table.container_id == container_id]
     experiment_ids = np.sort(container_expts.index.values)
     cell_specimen_table = pd.DataFrame()
     for experiment_id in experiment_ids:
@@ -1691,9 +1687,8 @@ def build_container_df():
             'ophys_session_id').reset_index()
         temp_dict = {
             'container_id': container_id,
-            'container_workflow_state':
-                table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
-            'first_acquistion_date': subset['date_of_acquisition'].min().split(' ')[0],
+            'container_workflow_state':table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
+            'first_acquisition_date': subset['date_of_acquisition'].min().split(' ')[0],
             'project_code': subset['project_code'].unique()[0],
             'driver_line': subset['driver_line'][0],
             'cre_line': subset['cre_line'][0],
@@ -2092,7 +2087,7 @@ def get_container_response_df(container_id, df_name='omission_response_df', use_
     """
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     experiments_table = get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id==container_id]
+    container_expts = experiments_table[experiments_table.container_id == container_id]
     container_df = pd.DataFrame()
     for ophys_experiment_id in container_expts.index.values:
         dataset = get_ophys_dataset(ophys_experiment_id)

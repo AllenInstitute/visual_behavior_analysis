@@ -155,10 +155,12 @@ def add_trial_type_to_trials_table(trials):
     trials.loc[trials[trials.false_alarm].index, 'trial_type'] = 'false_alarm'
     return trials
 
+
 def add_reward_rate_to_trials_table(trials):
-    trials['rewarded'] = [1 if np.isnan(reward_time)==False else 0 for reward_time in trials.reward_time.values]
+    trials['rewarded'] = [1 if np.isnan(reward_time) == False else 0 for reward_time in trials.reward_time.values]
     trials['reward_rate'] = trials['rewarded'].rolling(window=100, min_periods=1, win_type='triang').mean()
     return trials
+
 
 def convert_metadata_to_dataframe(original_metadata):
     metadata = original_metadata.copy()
@@ -601,6 +603,7 @@ def filter_invalid_rois_inplace(session):
     session.dff_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.corrected_fluorescence_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.cell_specimen_table.drop(index=invalid_cell_specimen_ids, inplace=True)
+
 
 def add_response_latency(stimulus_presentations):
     st = stimulus_presentations.copy()
