@@ -241,8 +241,8 @@ def get_cell_matching_output_dir_for_container(experiment_id):
             JOIN ophys_experiments oe ON oe.id=oevbec.ophys_experiment_id
             JOIN ophys_sessions os ON os.id=oe.ophys_session_id JOIN specimens sp ON sp.id=os.specimen_id
             JOIN projects p ON p.id=vbec.project_id
-            LEFT JOIN visual_behavior_container_runs vbcr ON vbcr.visual_behavior_experiment_container_id=vbec.id AND vbcr.current = 't' 
-            WHERE 
+            LEFT JOIN visual_behavior_container_runs vbcr ON vbcr.visual_behavior_experiment_container_id=vbec.id AND vbcr.current = 't'
+            WHERE
             --sp.external_specimen_name NOT IN ('398691')
             oe.id = {};
             '''.format(experiment_id)
