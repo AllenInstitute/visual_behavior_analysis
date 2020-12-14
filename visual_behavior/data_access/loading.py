@@ -419,7 +419,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                 upsampling_factor = np.zeros(len(cell_specimen_ids))
                 try:
                     upsampling_factor[:] = f['upsampling_factor']
-                except:
+                except Exception:
                     print('\nKeyError: upsampling_factor is not a file in the archive')
                 upsampled_event_magnitude = np.asarray([event_dict[cell_roi_id]['mag'] for cell_roi_id in cell_roi_ids])
                 upsampled_event_timestamps = np.asarray([event_dict[cell_roi_id]['ts'] for cell_roi_id in cell_roi_ids])
@@ -427,18 +427,17 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                 f.close()
 
                 self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
-                        'events': [x for x in events_array],
-                        'filtered_events': [x for x in rp.filter_events_array(events_array)],
-                        'timestamps': [x for x in timestamps],
-                        'dff_traces': [x for x in dff_traces],
-                        'noise_std': [x for x in noise_std],
-                        'lambda': [x for x in lambdas],
-                        'upsampling_factor': [x for x in upsampling_factor],
-                        'upsampled_event_magnitude': [x for x in upsampled_event_magnitude],
-                        'upsampled_event_timestamps': [x for x in upsampled_event_timestamps],
-                        'upsampled_event_indices': [x for x in upsampled_event_indices]},
-                         index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
-
+                                             'events': [x for x in events_array],
+                                             'filtered_events': [x for x in rp.filter_events_array(events_array)],
+                                             'timestamps': [x for x in timestamps],
+                                             'dff_traces': [x for x in dff_traces],
+                                             'noise_std': [x for x in noise_std],
+                                             'lambda': [x for x in lambdas],
+                                             'upsampling_factor': [x for x in upsampling_factor],
+                                             'upsampled_event_magnitude': [x for x in upsampled_event_magnitude],
+                                             'upsampled_event_timestamps': [x for x in upsampled_event_timestamps],
+                                             'upsampled_event_indices': [x for x in upsampled_event_indices]},
+                                            index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
 
         # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
         #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
@@ -1687,7 +1686,7 @@ def build_container_df():
             'ophys_session_id').reset_index()
         temp_dict = {
             'container_id': container_id,
-            'container_workflow_state':table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
+            'container_workflow_state': table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
             'first_acquisition_date': subset['date_of_acquisition'].min().split(' ')[0],
             'project_code': subset['project_code'].unique()[0],
             'driver_line': subset['driver_line'][0],
