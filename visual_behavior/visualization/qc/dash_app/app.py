@@ -597,8 +597,6 @@ for i in range(10):
 def update_link_visibility_N(row_index, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('link_')[1])
-    container_id = container_table.iloc[row_index[0]]['container_id']
-    link_list = functions.get_motion_corrected_movie_paths(container_id)
     try:
         print("Returning True, idx = {}".format(idx))
         return {'display': True}
