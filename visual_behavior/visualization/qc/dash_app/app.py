@@ -14,7 +14,6 @@ import time
 import datetime
 import functions
 import components
-import base64
 
 # APP SETUP
 # app = dash.Dash(__name__,)
@@ -49,12 +48,6 @@ print('done setting up components, it took {} seconds'.format(time.time() - t0))
 app.layout = html.Video(src='/static/my-video.webm')
 
 server = app.server
-
-
-@server.route('/static/<path:path>')
-def serve_static(path):
-    root_dir = os.getcwd()
-    return flask.send_from_directory(os.path.join(root_dir, 'static'), path)
 
 
 # APP LAYOUT
@@ -301,7 +294,7 @@ def fill_container_id(selected_rows):
     [State('feedback_popup_experiments', 'options')]
 )
 def experiment_id_checklist(row_index, options):
-    container_id = container_table.iloc[row_index[0]]['container_id']
+    container_id = container_table.iloc[row_index[0]]['container_id']  # noqa: F841 - Flake8 doesn't recognize the variable being used below
     subset = experiment_table.query('container_id == @container_id').sort_values(by='date_of_acquisition')[['session_type', 'ophys_experiment_id']].reset_index(drop=True)
     options = [{'label': '{} {}'.format(subset.loc[i]['session_type'], subset.loc[i]['ophys_experiment_id']), 'value': subset.loc[i]['ophys_experiment_id']} for i in range(len(subset))]
     return options
@@ -531,7 +524,7 @@ def update_plot_title(plot_types, input_id):
 for i in range(10):
     app.callback(
         Output(f"plot_title_{i}", "children"),
-        [Input(f"container_plot_dropdown", "value"), Input(f"plot_title_{i}", "id")]
+        [Input(f"container_plot_dropdown", "value"), Input(f"plot_title_{i}", "id")]  # noqa: F541
     )(update_plot_title)
 
 # image frames callbacks
@@ -607,7 +600,6 @@ def update_link_visibility_N(row_index, input_id):
     container_id = container_table.iloc[row_index[0]]['container_id']
     link_list = functions.get_motion_corrected_movie_paths(container_id)
     try:
-        link = link_list[idx]
         print("Returning True, idx = {}".format(idx))
         return {'display': True}
     except IndexError:
@@ -647,7 +639,6 @@ if __name__ == '__main__':
                Input('container_plot_dropdown', 'value'),
                ])
 def print_movie_paths(row_index, plot_types):
-    plot_type = plot_types[0]
     container_id = container_table.iloc[row_index[0]]['container_id']
     output_text = functions.print_motion_corrected_movie_paths(container_id)
     print(output_text)

@@ -1,6 +1,5 @@
 from allensdk.internal.api import PostgresQueryMixin
 from visual_behavior.translator.allensdk_sessions import sdk_utils
-import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
@@ -39,7 +38,7 @@ mtrain_engine = PostgresQueryMixin(dbname=mtrain_dbname,
                                    password=mtrain_password,
                                    port=mtrain_port)
 
-# get_psql_dict_cursor = convert.get_psql_dict_cursor  # to load well-known files
+get_psql_dict_cursor = None  # NOTE: this fails, so setting to None. convert.get_psql_dict_cursor  # to load well-known files
 config = configp.ConfigParser()
 
 # function inputs
@@ -932,6 +931,7 @@ def build_container_df_OLD():
 
     return pd.DataFrame(list_of_dicts).sort_values(by='container_id', ascending=False)
 
+
 def build_container_df():
     et = loading.get_filtered_ophys_experiment_table().reset_index()
     cols_to_keep = [
@@ -948,12 +948,12 @@ def build_container_df():
         'super_container_id',
     ]
     container_table_vb = et.sort_values(by='date_of_acquisition').drop_duplicates(subset=['container_id'])[cols_to_keep].merge(
-        et.groupby('container_id')[['ophys_experiment_id']].count().rename(columns={'ophys_experiment_id':'experiment_count'}).reset_index(),
-        left_on = 'container_id',
-        right_on= 'container_id',
+        et.groupby('container_id')[['ophys_experiment_id']].count().rename(columns={'ophys_experiment_id': 'experiment_count'}).reset_index(),
+        left_on='container_id',
+        right_on='container_id',
         how='left'
-    ).rename(columns={'date_of_acquisition':'first_acquistion_date'})
-    
+    ).rename(columns={'date_of_acquisition': 'first_acquistion_date'})
+
 #     container_table_vb = loading.build_container_df().sort_values(by='first_acquistion_date')
 
     conn = db.Database('visual_behavior_data')
@@ -975,7 +975,7 @@ def build_container_df():
         left_on='container_id',
         right_on='container_id',
         how='left',
-        suffixes=['','_duplicated']
+        suffixes=['', '_duplicated']
     )
 
     duplicated_colummns = [col for col in container_table.columns if col.endswith('_duplicated')]
@@ -1001,5 +1001,5 @@ def build_container_df():
         'project_code',
     ]
     remaining_cols = [col for col in container_table.columns if col not in col_order]
-    
-    return container_table[col_order + remaining_cols].drop(columns=['_id','entry_time_utc'])
+
+    return container_table[col_order + remaining_cols].drop(columns=['_id', 'entry_time_utc'])
