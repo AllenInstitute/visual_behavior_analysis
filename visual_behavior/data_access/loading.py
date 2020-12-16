@@ -417,25 +417,27 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                 noise_std = np.asarray(f['noise_stds'])
                 lambdas = np.asarray(f['lambdas'])
                 upsampling_factor = np.zeros(len(cell_specimen_ids))
-                upsampling_factor[:] = f['upsampling_factor']
+                try:
+                    upsampling_factor[:] = f['upsampling_factor']
+                except Exception:
+                    print('\nKeyError: upsampling_factor is not a file in the archive')
                 upsampled_event_magnitude = np.asarray([event_dict[cell_roi_id]['mag'] for cell_roi_id in cell_roi_ids])
                 upsampled_event_timestamps = np.asarray([event_dict[cell_roi_id]['ts'] for cell_roi_id in cell_roi_ids])
                 upsampled_event_indices = np.asarray([event_dict[cell_roi_id]['idx'] for cell_roi_id in cell_roi_ids])
                 f.close()
 
                 self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
-                        'events': [x for x in events_array],
-                        'filtered_events': [x for x in rp.filter_events_array(events_array)],
-                        'timestamps': [x for x in timestamps],
-                        'dff_traces': [x for x in dff_traces],
-                        'noise_std': [x for x in noise_std],
-                        'lambda': [x for x in lambdas],
-                        'upsampling_factor': [x for x in upsampling_factor],
-                        'upsampled_event_magnitude': [x for x in dff_traces],
-                        'upsampled_event_timestamps': [x for x in dff_traces],
-                        'upsampled_event_indices': [x for x in dff_traces]},
-                         index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
-
+                                             'events': [x for x in events_array],
+                                             'filtered_events': [x for x in rp.filter_events_array(events_array)],
+                                             'timestamps': [x for x in timestamps],
+                                             'dff_traces': [x for x in dff_traces],
+                                             'noise_std': [x for x in noise_std],
+                                             'lambda': [x for x in lambdas],
+                                             'upsampling_factor': [x for x in upsampling_factor],
+                                             'upsampled_event_magnitude': [x for x in upsampled_event_magnitude],
+                                             'upsampled_event_timestamps': [x for x in upsampled_event_timestamps],
+                                             'upsampled_event_indices': [x for x in upsampled_event_indices]},
+                                            index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
 
         # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
         #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
@@ -771,10 +773,6 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
     else:
         print('no model outputs saved for behavior_session_id:', behavior_session_id)
     return stimulus_presentations
-
-
-
-
 
 
 def get_behavior_model_summary_table():
@@ -1643,7 +1641,7 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
 
 def get_unique_cell_specimen_ids_for_container(container_id):
     experiments_table = get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id==container_id]
+    container_expts = experiments_table[experiments_table.container_id == container_id]
     experiment_ids = np.sort(container_expts.index.values)
     cell_specimen_table = pd.DataFrame()
     for experiment_id in experiment_ids:
@@ -1688,9 +1686,8 @@ def build_container_df():
             'ophys_session_id').reset_index()
         temp_dict = {
             'container_id': container_id,
-            'container_workflow_state':
-                table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
-            'first_acquistion_date': subset['date_of_acquisition'].min().split(' ')[0],
+            'container_workflow_state': table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
+            'first_acquisition_date': subset['date_of_acquisition'].min().split(' ')[0],
             'project_code': subset['project_code'].unique()[0],
             'driver_line': subset['driver_line'][0],
             'cre_line': subset['cre_line'][0],
@@ -2027,13 +2024,69 @@ def get_stimulus_response_data_across_sessions(project_codes=None, session_numbe
     return stimulus_response_data
 
 
+def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
+    '''
+    returns a table of info about each unique cell ROI
+    input:
+        list, array, or series of cell_specimen_ids or a single cell_specimen_id
+        list, array, or series of ophys_experiment_ids or a single ophys_experiment_id
+    returns:
+        a dataframe with columns:
+            cell_roid: unique ID in LIMS
+            cell_specimen_id: unique ID for each matched cell across planes
+            cell_specimen_id_created_at: date cell_specimen_id created
+            cell_specimen_id_updated_at: date cell_specimen_id updated
+            ophys_session_id
+            ophys_experiment_id
+            experiment_container_id
+            supercontainer_id
+
+    examples:
+    >> cell_info = get_cell_info(cell_specimen_ids = [1018032458, 1018032468, 1063351131])
+
+    >> cell_info = get_cell_info(ophys_experiment_ids = [850517344, 953659749])
+    '''
+    if isinstance(cell_specimen_ids, int):
+        search_vals = "({})".format(cell_specimen_ids)
+        search_key = 'cell_specimen_id'
+    elif isinstance(cell_specimen_ids, (list, np.ndarray, pd.Series)):
+        search_vals = tuple(cell_specimen_ids)
+        search_key = 'cell_specimen_id'
+    elif isinstance(ophys_experiment_ids, int):
+        search_vals = "({})".format(ophys_experiment_ids)
+        search_key = 'oe.id'
+    elif isinstance(ophys_experiment_ids, (list, np.ndarray, pd.Series)):
+        search_vals = tuple(ophys_experiment_ids)
+        search_key = 'oe.id'
+
+    query = '''
+    select
+        cell_rois.id as cell_roi_id,
+        cell_rois.cell_specimen_id,
+        specimens.created_at as cell_specimen_id_created_at,
+        specimens.updated_at as cell_specimen_id_updated_at,
+        oe.ophys_session_id,
+        oe.id as ophys_experiment_id,
+        vbec.id as experiment_container_id,
+        visual_behavior_supercontainers.id as supercontainer_id
+    from cell_rois
+    left join ophys_experiments as oe on cell_rois.ophys_experiment_id = oe.id
+    left join specimens on cell_rois.cell_specimen_id = specimens.id
+    left join ophys_experiments_visual_behavior_experiment_containers as oevbec on oe.id = oevbec.ophys_experiment_id
+    left join visual_behavior_experiment_containers as vbec on vbec.id = oevbec.visual_behavior_experiment_container_id
+    left join visual_behavior_supercontainers on visual_behavior_supercontainers.specimen_id = vbec.specimen_id
+    where {} in {}
+    '''
+    return db.lims_query(query.format(search_key, search_vals))
+
+
 def get_container_response_df(container_id, df_name='omission_response_df', use_events=False):
     """
     get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container
     """
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     experiments_table = get_filtered_ophys_experiment_table()
-    container_expts = experiments_table[experiments_table.container_id==container_id]
+    container_expts = experiments_table[experiments_table.container_id == container_id]
     container_df = pd.DataFrame()
     for ophys_experiment_id in container_expts.index.values:
         dataset = get_ophys_dataset(ophys_experiment_id)

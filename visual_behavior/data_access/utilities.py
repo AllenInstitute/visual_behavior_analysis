@@ -1,5 +1,4 @@
 import os
-import numpy as np
 import pandas as pd
 import json
 import shutil
@@ -242,8 +241,8 @@ def get_cell_matching_output_dir_for_container(experiment_id):
             JOIN ophys_experiments oe ON oe.id=oevbec.ophys_experiment_id
             JOIN ophys_sessions os ON os.id=oe.ophys_session_id JOIN specimens sp ON sp.id=os.specimen_id
             JOIN projects p ON p.id=vbec.project_id
-            LEFT JOIN visual_behavior_container_runs vbcr ON vbcr.visual_behavior_experiment_container_id=vbec.id AND vbcr.current = 't' 
-            WHERE 
+            LEFT JOIN visual_behavior_container_runs vbcr ON vbcr.visual_behavior_experiment_container_id=vbec.id AND vbcr.current = 't'
+            WHERE
             --sp.external_specimen_name NOT IN ('398691')
             oe.id = {};
             '''.format(experiment_id)
@@ -360,16 +359,16 @@ def get_sync_data(lims_data, analysis_dir, use_acq_trigger):
         stim_photodiode = sync_dataset.get_rising_edges('stim_photodiode') / sample_freq
     elif 'photodiode' in meta_data['line_labels']:
         stim_photodiode = sync_dataset.get_rising_edges('photodiode') / sample_freq
-    if 'cam1_exposure' in meta_data['line_labels']:
-        eye_tracking = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
-    elif 'cam1' in meta_data['line_labels']:
-        eye_tracking = sync_dataset.get_rising_edges('cam1') / sample_freq
+    if 'cam2_exposure' in meta_data['line_labels']:
+        eye_tracking = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
+    elif 'cam2' in meta_data['line_labels']:
+        eye_tracking = sync_dataset.get_rising_edges('cam2') / sample_freq
     elif 'eye_tracking' in meta_data['line_labels']:
         eye_tracking = sync_dataset.get_rising_edges('eye_tracking') / sample_freq
-    if 'cam2_exposure' in meta_data['line_labels']:
-        behavior_monitoring = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
-    elif 'cam2' in meta_data['line_labels']:
-        behavior_monitoring = sync_dataset.get_rising_edges('cam2') / sample_freq
+    if 'cam1_exposure' in meta_data['line_labels']:
+        behavior_monitoring = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
+    elif 'cam1' in meta_data['line_labels']:
+        behavior_monitoring = sync_dataset.get_rising_edges('cam1') / sample_freq
     elif 'behavior_monitoring' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('behavior_monitoring') / sample_freq
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only

@@ -249,12 +249,11 @@ def plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True):
 
         if save_figure:
             utils.save_figure(fig, figsize, data_loading.get_single_cell_plots_dir(), 'event_detection',
-                       str(cell_specimen_id) +'_'+ metadata_string +'_events_validation')
+                              str(cell_specimen_id) + '_' + metadata_string + '_events_validation')
 
 
 def plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=True):
     dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
-    metadata_string = dataset.metadata_string
 
     for cell_specimen_id in dataset.cell_specimen_ids:
         scp.plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figure=save_figure)
@@ -305,7 +304,7 @@ def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, sa
     ax[0].set_title(dataset.metadata_string)
     if save_figure:
         utils.save_figure(fig, figsize, utils.get_experiment_plots_dir(), 'population_activity_and_behavior',
-                          dataset.metadata_string+'_population_activity_and_behavior')
+                          dataset.metadata_string + '_population_activity_and_behavior')
         plt.close()
 
 
