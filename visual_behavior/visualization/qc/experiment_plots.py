@@ -332,7 +332,7 @@ def place_masks_in_full_image(cell_table, max_projection):
         mask = np.asarray(mask)
         image[0:mask.shape[0], 0:mask.shape[1]] = mask
         cell_table.at[index, 'image_mask'] = image
-    cell_table = processing.shift_image_masks(cell_table)
+    cell_table = data_processing.shift_image_masks(cell_table)
     return cell_table
 
 def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=True):
@@ -408,7 +408,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
             masks_to_plot = np.empty(masks_array.shape)
             masks_to_plot[:] = np.nan
             masks_to_plot[masks_array == True] = 1
-            #     masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
+            #     masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
             ax0.imshow(max_projection, cmap='gray')
             ax0.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
             ax0.set_title('production roi mask')
@@ -421,13 +421,13 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
         else:
             folder = 'dev_only'
             masks_array = ct[ct.valid_roi == True]['roi_mask'].values
-            masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
+            masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
             ax0.imshow(max_projection, cmap='gray')
             ax0.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
             ax0.set_title('valid production roi masks')
 
             masks_array = ct[ct.valid_roi == False]['roi_mask'].values
-            masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
+            masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
             ax1.imshow(max_projection, cmap='gray')
             ax1.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
             ax1.set_title('invalid production roi masks')
@@ -461,14 +461,14 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
         else:
             folder = 'prod_only'
             masks_array = cell_table[cell_table.valid_roi == True]['roi_mask'].values
-            masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
+            masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
             masks_to_plot = np.sum(masks_array, 0)
             #         ax2.imshow(max_projection, cmap='gray')
             ax2.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
             ax2.set_title('valid suite2p roi masks')
 
             masks_array = cell_table[cell_table.valid_roi == False]['roi_mask'].values
-            #         masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
+            #         masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
             masks_to_plot = np.sum(masks_array, 0)
             ax3.imshow(max_projection, cmap='gray')
             ax3.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
