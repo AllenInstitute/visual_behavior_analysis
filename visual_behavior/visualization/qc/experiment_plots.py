@@ -319,7 +319,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
 
     expt = ophys_experiment_id
     # get new classifier output
-    data = pd.read_csv(r"//allen/aibs/informatics/danielk/dev_LIMS/inference_with_production_ids_annotated.csv",
+    data = pd.read_csv(r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/inference_with_production_ids_annotated.csv",
                        dtype={'production-id': 'Int64'})
     # get suite2P segmentation output
     output_dir = r'//allen/aibs/informatics/danielk/dev_LIMS/new_labeling'
