@@ -308,6 +308,29 @@ def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, sa
         plt.close()
 
 
+def get_suite2p_rois(fname):
+    with open(fname, "r") as f:
+        j = json.load(f)
+    cell_table = pd.DataFrame(j)
+    return cell_table
+
+def get_matching_output(fname):
+    with open(fname, "r") as f:
+        j = json.load(f)
+    return j
+
+def place_masks_in_full_image(cell_table, max_projection):
+    cell_table['image_mask'] = None
+    for index in cell_table.index:
+        mask = cell_table.loc[index, 'mask_matrix']
+        dims = max_projection.shape
+        image = np.zeros(dims)
+        mask = np.asarray(mask)
+        image[0:mask.shape[0], 0:mask.shape[1]] = mask
+        cell_table.at[index, 'image_mask'] = image
+    cell_table = processing.shift_image_masks(cell_table)
+    return cell_table
+
 def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=True):
     """This is a quick and dirty function to get plots needed for a rapid decision to be made"""
 
