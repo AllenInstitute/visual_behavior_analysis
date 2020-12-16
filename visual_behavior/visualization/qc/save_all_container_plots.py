@@ -33,9 +33,10 @@ def main():
         # "snr_by_pmt": cp.plot_snr_by_pmt_for_container,
         # "snr_by_pmt_and_intensity": cp.plot_snr_by_pmt_gain_and_intensity_for_container,
         # "behavior_summary": cp.plot_behavior_summary,
-        "event_detection": cp.plot_event_detection_for_container,
-        "single_cell_response_plots": cp.plot_single_cell_response_plots_for_container,
-        "traces_and_behavior": cp.plot_dff_trace_and_behavior_for_container,
+        # "event_detection": cp.plot_event_detection_for_container,
+        # "single_cell_response_plots": cp.plot_single_cell_response_plots_for_container,
+        # "traces_and_behavior": cp.plot_dff_trace_and_behavior_for_container,
+        "classifier_validation": cp.plot_classifier_validation_for_container,
     }
 
     parser = argparse.ArgumentParser()
