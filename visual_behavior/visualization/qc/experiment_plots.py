@@ -315,6 +315,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     from matplotlib.gridspec import GridSpec
     import matplotlib.pyplot as plt
+    import pandas as pd
 
     expt = ophys_experiment_id
     # get new classifier output
