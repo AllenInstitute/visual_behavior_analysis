@@ -316,6 +316,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     from matplotlib.gridspec import GridSpec
     import matplotlib.pyplot as plt
     import pandas as pd
+    import os
 
     expt = ophys_experiment_id
     # get new classifier output
