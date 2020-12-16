@@ -309,12 +309,14 @@ def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, sa
 
 
 def get_suite2p_rois(fname):
+    import json
     with open(fname, "r") as f:
         j = json.load(f)
     cell_table = pd.DataFrame(j)
     return cell_table
 
 def get_matching_output(fname):
+    import json
     with open(fname, "r") as f:
         j = json.load(f)
     return j
