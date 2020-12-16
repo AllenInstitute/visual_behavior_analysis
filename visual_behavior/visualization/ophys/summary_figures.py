@@ -48,11 +48,11 @@ def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, s
     mask[y, x] = 1
     if ax is None:
         fig, ax = plt.subplots()
-    ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection)/3.)
+    ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection)/2.)
     if show_mask:
         ax.imshow(mask, cmap='jet', alpha=0.3, vmin=0, vmax=1)
     ax.set_xlim(xmin - spacex, xmax + spacex)
-    ax.set_ylim(ymin - spacey, ymax + spacey)
+    ax.set_ylim(ymin + spacey, ymax - spacey)
     ax.set_title('cell ' + str(cell_specimen_id))
     ax.grid(False)
     ax.axis('off')

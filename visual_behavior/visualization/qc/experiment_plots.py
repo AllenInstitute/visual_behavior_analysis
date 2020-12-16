@@ -307,3 +307,162 @@ def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, sa
         utils.save_figure(fig, figsize, utils.get_experiment_plots_dir(), 'population_activity_and_behavior',
                           dataset.metadata_string+'_population_activity_and_behavior')
         plt.close()
+
+
+def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=True):
+    """This is a quick and dirty function to get plots needed for a rapid decision to be made"""
+
+    import visual_behavior.visualization.ophys.summary_figures as sf
+    from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
+    from matplotlib.gridspec import GridSpec
+    import matplotlib.pyplot as plt
+
+    expt = ophys_experiment_id
+    # get new classifier output
+    data = pd.read_csv(r"//allen/aibs/informatics/danielk/dev_LIMS/inference_with_production_ids_annotated.csv",
+                       dtype={'production-id': 'Int64'})
+    # get suite2P segmentation output
+    output_dir = r'//allen/aibs/informatics/danielk/dev_LIMS/new_labeling'
+    folder = [folder for folder in os.listdir(output_dir) if str(expt) in folder]
+    segmentation_output_file = os.path.join(output_dir, folder[0], 'binarize_output.json')
+    cell_table = get_suite2p_rois(segmentation_output_file)
+    cell_table['experiment_id'] = expt
+    # move suite2P masks to the proper place
+    dataset = loading.get_ophys_dataset(expt, include_invalid_rois=True)
+    cell_table = place_masks_in_full_image(cell_table, dataset.max_projection.data)
+    # merge with classifier results
+    cell_table = cell_table.merge(data, on=['experiment_id', 'id'])
+    cell_table['roi_id'] = cell_table['id']
+    # make a mask dictionary for suite2P outputs
+    cell_table_roi_masks = {}
+    for roi_id in cell_table.roi_id.values:
+        cell_table_roi_masks[str(roi_id)] = cell_table[cell_table.roi_id == roi_id].roi_mask.values[0]
+    # limit to classifier results for this experiment
+    expt_data = data[data.experiment_id == expt].copy()
+    # get production segmentation & classification from SDK
+    dataset = loading.get_ophys_dataset(expt, include_invalid_rois=True)
+    ct = dataset.cell_specimen_table.copy()
+    roi_masks = dataset.roi_masks.copy()
+    max_projection = dataset.max_projection.data
+    dff_traces = dataset.dff_traces.copy()
+    ophys_timestamps = dataset.ophys_timestamps
+    metadata_string = dataset.metadata_string
+    # get average response df
+    analysis = ResponseAnalysis(dataset)
+    sdf = analysis.get_response_df(df_name='stimulus_response_df')
+
+    # plots for all ROIs in experiment
+    for roi_id in expt_data.roi_id.unique():
+        present_in = expt_data[expt_data.roi_id == roi_id].roi_present_in.values[0]
+        if present_in == 'both':
+            cell_roi_id = expt_data[expt_data.roi_id == roi_id].cell_roi_id.values[0]
+            cell_specimen_id = ct[ct.cell_roi_id == cell_roi_id].index.values[0]
+        if present_in == 'prod':
+            cell_roi_id = expt_data[expt_data.roi_id == roi_id].cell_roi_id.values[0]
+            cell_specimen_id = ct[ct.cell_roi_id == cell_roi_id].index.values[0]
+        if present_in == 'dev':
+            cell_roi_id = roi_id
+            cell_specimen_id = roi_id
+        folder = present_in
+
+        figsize = (20, 10)
+        fig = plt.figure(figsize=figsize)
+        gs = GridSpec(2, 4)
+        ax0 = fig.add_subplot(gs[0, 0])
+        ax1 = fig.add_subplot(gs[0, 1])
+        ax2 = fig.add_subplot(gs[0, 2])
+        ax3 = fig.add_subplot(gs[0, 3])
+        ax4 = fig.add_subplot(gs[1, :3])
+        ax5 = fig.add_subplot(gs[1, 3])
+
+        if (present_in == 'prod') or (present_in == 'both'):
+            masks_array = ct.loc[cell_specimen_id]['roi_mask'].copy()
+            masks_to_plot = np.empty(masks_array.shape)
+            masks_to_plot[:] = np.nan
+            masks_to_plot[masks_array == True] = 1
+            #     masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
+            ax0.imshow(max_projection, cmap='gray')
+            ax0.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
+            ax0.set_title('production roi mask')
+            ax0.axis(False)
+
+            valid = ct.loc[cell_specimen_id].valid_roi
+            ax1 = sf.plot_cell_zoom(roi_masks, max_projection, cell_specimen_id, spacex=40, spacey=60, show_mask=True,
+                                    ax=ax1)
+            ax1.set_title('production roi mask, valid: ' + str(valid))
+        else:
+            folder = 'dev_only'
+            masks_array = ct[ct.valid_roi == True]['roi_mask'].values
+            masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
+            ax0.imshow(max_projection, cmap='gray')
+            ax0.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
+            ax0.set_title('valid production roi masks')
+
+            masks_array = ct[ct.valid_roi == False]['roi_mask'].values
+            masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
+            ax1.imshow(max_projection, cmap='gray')
+            ax1.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
+            ax1.set_title('invalid production roi masks')
+
+        if (present_in == 'dev') or (present_in == 'both'):
+            valid_CNN = expt_data[expt_data.roi_id == roi_id].valid_CNN.values[0]
+            masks_array = cell_table[cell_table.roi_id == roi_id]['roi_mask'].values[0]
+            masks_array[masks_array == 0] = np.nan
+            ax2.imshow(max_projection, cmap='gray')
+            ax2.imshow(masks_array, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
+            ax2.set_title('suite2p roi mask')
+
+            valid_CNN = expt_data[expt_data.roi_id == roi_id].valid_CNN.values[0]
+            ax3 = sf.plot_cell_zoom(cell_table_roi_masks, max_projection, roi_id, spacex=40, spacey=60, show_mask=True,
+                                    ax=ax3)
+            ax3.set_title('suite2p roi mask, valid: ' + str(valid_CNN))
+            if present_in == 'both':
+                if (valid_CNN == True) and (valid == True):
+                    folder = 'dev_valid_prod_valid'
+                elif (valid_CNN == True) and (valid == False):
+                    folder = 'dev_valid_prod_invalid'
+                elif (valid_CNN == False) and (valid == True):
+                    folder = 'dev_invalid_prod_valid'
+                elif (valid_CNN == False) and (valid == False):
+                    folder = 'dev_invalid_prod_invalid'
+            elif present_in == 'dev':
+                if valid_CNN == True:
+                    folder = 'dev_valid_not_in_prod'
+                elif valid_CNN == False:
+                    folder = 'dev_invalid_not_in_prod'
+        else:
+            folder = 'prod_only'
+            masks_array = cell_table[cell_table.valid_roi == True]['roi_mask'].values
+            masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
+            masks_to_plot = np.sum(masks_array, 0)
+            #         ax2.imshow(max_projection, cmap='gray')
+            ax2.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
+            ax2.set_title('valid suite2p roi masks')
+
+            masks_array = cell_table[cell_table.valid_roi == False]['roi_mask'].values
+            #         masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
+            masks_to_plot = np.sum(masks_array, 0)
+            ax3.imshow(max_projection, cmap='gray')
+            ax3.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
+            ax3.set_title('invalid suite2p roi masks')
+
+        if (present_in == 'prod') or (present_in == 'both'):
+            ax5 = sf.plot_mean_trace(sdf[sdf.cell_specimen_id == cell_specimen_id].trace.values,
+                                     frame_rate=analysis.ophys_frame_rate,
+                                     xlims=[-0.5, 0.75], interval_sec=0.5, ax=ax5)
+            ax5 = sf.plot_flashes_on_trace(ax5, analysis, window=[-0.5, 0.75])
+            ax5.set_title('mean image response')
+
+            ax4.plot(ophys_timestamps, dff_traces.loc[cell_specimen_id].dff)
+            ax4.set_xlim(ophys_timestamps[0], ophys_timestamps[-1])
+            ax4.set_xlabel('time (seconds)')
+            ax4.set_ylabel('dF/F')
+        ax4.set_title(metadata_string)
+
+        s = 'present_in: ' + present_in + ', roi_id: ' + str(roi_id) + ', cell_roi_id: ' + str(
+            cell_roi_id) + ', cell_specimen_id: ' + str(cell_specimen_id)
+        plt.suptitle(s, x=0.5, y=1.02)
+
+        fig.tight_layout()
+        save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/CNN_rois'
+        utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string)
