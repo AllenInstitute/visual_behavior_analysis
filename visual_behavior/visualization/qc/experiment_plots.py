@@ -356,7 +356,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     cell_table = get_suite2p_rois(segmentation_output_file)
     cell_table['experiment_id'] = expt
     # move suite2P masks to the proper place
-    dataset = loading.get_ophys_dataset(expt, include_invalid_rois=True)
+    dataset = data_loading.get_ophys_dataset(expt, include_invalid_rois=True)
     cell_table = place_masks_in_full_image(cell_table, dataset.max_projection.data)
     # merge with classifier results
     cell_table = cell_table.merge(data, on=['experiment_id', 'id'])
@@ -368,7 +368,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     # limit to classifier results for this experiment
     expt_data = data[data.experiment_id == expt].copy()
     # get production segmentation & classification from SDK
-    dataset = loading.get_ophys_dataset(expt, include_invalid_rois=True)
+    dataset = data_loading.get_ophys_dataset(expt, include_invalid_rois=True)
     ct = dataset.cell_specimen_table.copy()
     roi_masks = dataset.roi_masks.copy()
     max_projection = dataset.max_projection.data
