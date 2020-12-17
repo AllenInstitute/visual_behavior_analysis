@@ -370,7 +370,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     # limit to classifier results for this experiment
     expt_data = data[data.experiment_id == expt].copy()
     # get production segmentation & classification from SDK
-    dataset = data_loading.get_ophys_dataset(expt, include_invalid_rois=True)
+    # dataset = data_loading.get_ophys_dataset(expt, include_invalid_rois=True)
     ct = dataset.cell_specimen_table.copy()
     roi_masks = dataset.roi_masks.copy()
     max_projection = dataset.max_projection.data
@@ -503,4 +503,4 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
         # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\classifier_validation\CNN_rois'
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/last_ditch_effort_annotation/classification_threshold_' + str(
             classification_threshold)
-        utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string)
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' +str(cell_roi_id)+'_'+str(roi_id))
