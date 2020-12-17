@@ -349,7 +349,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
 
     expt = ophys_experiment_id
     # get new classifier output
-    data = pd.read_csv(r"\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\classifier_validation\inference_annotated_threshold_" + str(
+    data = pd.read_csv(r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/inference_annotated_threshold_" + str(
             classification_threshold) + ".csv", dtype={'production_id': 'Int64', 'cell_roi_id': 'Int64'})
     # get suite2P segmentation output
     output_dir = r'//allen/aibs/informatics/danielk/dev_LIMS/new_labeling'
@@ -501,6 +501,6 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
 
         fig.tight_layout()
         # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\classifier_validation\CNN_rois'
-        save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\classifier_validation\last_ditch_effort_annotation\classification_threshold_' + str(
+        save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/last_ditch_effort_annotation/classification_threshold_' + str(
             classification_threshold)
         utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string)
