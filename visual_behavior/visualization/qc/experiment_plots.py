@@ -345,7 +345,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     import pandas as pd
     import os
 
-    classifier_threshold = 0.3
+    classification_threshold = 0.3
 
     expt = ophys_experiment_id
     # get new classifier output
