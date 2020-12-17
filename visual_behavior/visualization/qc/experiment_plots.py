@@ -345,10 +345,12 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     import pandas as pd
     import os
 
+    classifier_threshold = 0.3
+
     expt = ophys_experiment_id
     # get new classifier output
-    data = pd.read_csv(r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/inference_with_production_ids_annotated.csv",
-                       dtype={'production-id': 'Int64'})
+    data = pd.read_csv(r"\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\classifier_validation\inference_annotated_threshold_" + str(
+            classification_threshold) + ".csv", dtype={'production_id': 'Int64', 'cell_roi_id': 'Int64'})
     # get suite2P segmentation output
     output_dir = r'//allen/aibs/informatics/danielk/dev_LIMS/new_labeling'
     folder = [folder for folder in os.listdir(output_dir) if str(expt) in folder]
@@ -380,7 +382,10 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     sdf = analysis.get_response_df(df_name='stimulus_response_df')
 
     # plots for all ROIs in experiment
+    expt_data = data[data.experiment_id == expt].copy()
+
     for roi_id in expt_data.roi_id.unique():
+
         present_in = expt_data[expt_data.roi_id == roi_id].roi_present_in.values[0]
         if present_in == 'both':
             cell_roi_id = expt_data[expt_data.roi_id == roi_id].cell_roi_id.values[0]
@@ -408,7 +413,6 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
             masks_to_plot = np.empty(masks_array.shape)
             masks_to_plot[:] = np.nan
             masks_to_plot[masks_array == True] = 1
-            #     masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
             ax0.imshow(max_projection, cmap='gray')
             ax0.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
             ax0.set_title('production roi mask')
@@ -418,6 +422,11 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
             ax1 = sf.plot_cell_zoom(roi_masks, max_projection, cell_specimen_id, spacex=40, spacey=60, show_mask=True,
                                     ax=ax1)
             ax1.set_title('production roi mask, valid: ' + str(valid))
+            if present_in == 'prod':
+                if valid == True:
+                    folder = 'prod_valid_not_in_dev'
+                elif valid == False:
+                    folder = 'prod_invalid_not_in_dev'
         else:
             folder = 'dev_only'
             masks_array = ct[ct.valid_roi == True]['roi_mask'].values
@@ -434,11 +443,13 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
 
         if (present_in == 'dev') or (present_in == 'both'):
             valid_CNN = expt_data[expt_data.roi_id == roi_id].valid_CNN.values[0]
+            y_score = np.round(expt_data[expt_data.roi_id == roi_id].y_score.values[0], 3)
             masks_array = cell_table[cell_table.roi_id == roi_id]['roi_mask'].values[0]
             masks_array[masks_array == 0] = np.nan
             ax2.imshow(max_projection, cmap='gray')
             ax2.imshow(masks_array, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
-            ax2.set_title('suite2p roi mask')
+            ax2.set_title('suite2p roi mask\nprediction_score = ' + str(y_score))
+            ax2.axis('off')
 
             valid_CNN = expt_data[expt_data.roi_id == roi_id].valid_CNN.values[0]
             ax3 = sf.plot_cell_zoom(cell_table_roi_masks, max_projection, roi_id, spacex=40, spacey=60, show_mask=True,
@@ -459,16 +470,13 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
                 elif valid_CNN == False:
                     folder = 'dev_invalid_not_in_prod'
         else:
-            folder = 'prod_only'
             masks_array = cell_table[cell_table.valid_roi == True]['roi_mask'].values
             masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
             masks_to_plot = np.sum(masks_array, 0)
-            #         ax2.imshow(max_projection, cmap='gray')
             ax2.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
             ax2.set_title('valid suite2p roi masks')
 
             masks_array = cell_table[cell_table.valid_roi == False]['roi_mask'].values
-            #         masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
             masks_to_plot = np.sum(masks_array, 0)
             ax3.imshow(max_projection, cmap='gray')
             ax3.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
@@ -492,5 +500,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
         plt.suptitle(s, x=0.5, y=1.02)
 
         fig.tight_layout()
-        save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/CNN_rois'
+        # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\classifier_validation\CNN_rois'
+        save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\classifier_validation\last_ditch_effort_annotation\classification_threshold_' + str(
+            classification_threshold)
         utils.save_figure(fig, figsize, save_dir, folder, str(cell_specimen_id) + '_' + metadata_string)
