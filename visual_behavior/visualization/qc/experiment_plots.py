@@ -1,4 +1,3 @@
-import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -317,11 +316,13 @@ def get_suite2p_rois(fname):
     cell_table = pd.DataFrame(j)
     return cell_table
 
+
 def get_matching_output(fname):
     import json
     with open(fname, "r") as f:
         j = json.load(f)
     return j
+
 
 def place_masks_in_full_image(cell_table, max_projection):
     cell_table['image_mask'] = None
@@ -334,6 +335,7 @@ def place_masks_in_full_image(cell_table, max_projection):
         cell_table.at[index, 'image_mask'] = image
     cell_table = data_processing.shift_image_masks(cell_table)
     return cell_table
+
 
 def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=True):
     """This is a quick and dirty function to get plots needed for a rapid decision to be made"""
@@ -350,7 +352,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     expt = ophys_experiment_id
     # get new classifier output
     data = pd.read_csv(r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/inference_annotated_threshold_" + str(
-            classification_threshold) + ".csv", dtype={'production_id': 'Int64', 'cell_roi_id': 'Int64'})
+        classification_threshold) + ".csv", dtype={'production_id': 'Int64', 'cell_roi_id': 'Int64'})
     # get suite2P segmentation output
     output_dir = r'//allen/aibs/informatics/danielk/dev_LIMS/new_labeling'
     folder = [folder for folder in os.listdir(output_dir) if str(expt) in folder]
@@ -503,4 +505,4 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
         # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\classifier_validation\CNN_rois'
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/last_ditch_effort_annotation/classification_threshold_' + str(
             classification_threshold)
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' +str(cell_roi_id)+'_'+str(roi_id))
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(cell_roi_id) + '_' + str(roi_id))
