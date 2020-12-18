@@ -2,6 +2,7 @@ from allensdk.internal.api import PostgresQueryMixin
 from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadable
 # from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
 from visual_behavior.ophys.response_analysis import response_processing as rp
 from visual_behavior.data_access import filtering
@@ -375,8 +376,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self.events_array = events
         return self.events_array
 
-    @property
-    def events(self):
+    def _get_events(self):
         """
         events file is an .npz with the following files within it:
         dff: array of n_cells x n_timepoints with recalculated dF/F values(at original frame rate)
@@ -443,6 +443,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
         #                             index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
+
+    events = LazyLoadable('_events', _get_events)
 
     @property
     def timestamps(self):
