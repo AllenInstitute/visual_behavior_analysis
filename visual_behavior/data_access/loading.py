@@ -427,23 +427,23 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                 f.close()
 
                 meta_string = self.metadata_string
-                if 'MESO' in meta_string: # change time scale for filtering events for meso
-                    t_scale = round(20/3)
+                if 'MESO' in meta_string:  # change time scale for filtering events for meso
+                    t_scale = round(20 / 3)
                 else:
                     t_scale = 20
 
                 self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
-                        'events': [x for x in events_array],
-                        'filtered_events': [x for x in rp.filter_events_array(events_array, t_scale = t_scale)],
-                        'timestamps': [x for x in timestamps],
-                        'dff_traces': [x for x in dff_traces],
-                        'noise_std': [x for x in noise_std],
-                        'lambda': [x for x in lambdas],
-                        'upsampling_factor': [x for x in upsampling_factor],
-                        'upsampled_event_magnitude': [x for x in upsampled_event_magnitude],
-                        'upsampled_event_timestamps': [x for x in upsampled_event_timestamps],
-                        'upsampled_event_indices': [x for x in upsampled_event_indices]},
-                         index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+                                             'events': [x for x in events_array],
+                                             'filtered_events': [x for x in rp.filter_events_array(events_array, t_scale=t_scale)],
+                                             'timestamps': [x for x in timestamps],
+                                             'dff_traces': [x for x in dff_traces],
+                                             'noise_std': [x for x in noise_std],
+                                             'lambda': [x for x in lambdas],
+                                             'upsampling_factor': [x for x in upsampling_factor],
+                                             'upsampled_event_magnitude': [x for x in upsampled_event_magnitude],
+                                             'upsampled_event_timestamps': [x for x in upsampled_event_timestamps],
+                                             'upsampled_event_indices': [x for x in upsampled_event_indices]},
+                                            index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
 
         # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
         #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
