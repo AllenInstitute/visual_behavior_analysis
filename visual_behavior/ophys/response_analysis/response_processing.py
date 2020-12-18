@@ -413,9 +413,9 @@ def response_df(response_xr):
     return df
 
 
-def filter_events_array(trace_arr, scale=2):
+def filter_events_array(trace_arr, t_scale, scale=2):
     from scipy import stats
-    filt = stats.halfnorm(loc=0, scale=scale).pdf(np.arange(20))
+    filt = stats.halfnorm(loc=0, scale=scale).pdf(np.arange(t_scale))
     filtered_arr = np.empty(trace_arr.shape)
     for ind_cell in range(trace_arr.shape[0]):
         this_trace = trace_arr[ind_cell, :]
