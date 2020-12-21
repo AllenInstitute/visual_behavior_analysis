@@ -1073,9 +1073,10 @@ def plot_dff_trace_and_behavior_for_container(ophys_container_id, save_figure=Tr
         ep.plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
         ep.plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
 
+
 def plot_classifier_validation_for_container(ophys_container_id, save_figure=True):
     experiments_table = data_loading.get_filtered_ophys_experiment_table()
-    ophys_experiments = experiments_table[experiments_table.container_id==ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
 
     for ophys_experiment_id in ophys_experiment_ids:
