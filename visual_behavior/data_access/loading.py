@@ -426,11 +426,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                 upsampled_event_indices = np.asarray([event_dict[cell_roi_id]['idx'] for cell_roi_id in cell_roi_ids])
                 f.close()
 
-                meta_string = self.metadata_string
-                if 'MESO' in meta_string:  # change time scale for filtering events for meso
-                    scale = 2 / 3
-                else:
-                    scale = 2
+                scale = 0.06666 * self.metadata['ophys_frame_rate']
 
                 self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
                                              'events': [x for x in events_array],
