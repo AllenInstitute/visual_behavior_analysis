@@ -428,7 +428,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
                 meta_string = self.metadata_string
                 if 'MESO' in meta_string:  # change time scale for filtering events for meso
-                    scale = 2/3
+                    scale = 2 / 3
                 else:
                     scale = 2
 
