@@ -504,3 +504,37 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/last_ditch_effort_annotation/classification_threshold_' + str(
             classification_threshold)
         utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' +str(cell_roi_id)+'_'+str(roi_id))
+
+
+def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=None, vmin=-1, vmax=1, cmap='RdBu',
+                      ax=None, save_dir=None, folder=None, colorbar=False):
+    """
+    roi_mask_dict: dictionary with keys as cell_specimen_id or cell_roi_id and values as the ROI masks,
+                    placed within the full 512x512 image
+    metrics_dict: dictionary with keys as cell_specimen_id or cell_roi_id and corresponding metric value for each ROI
+    metric_name: name of metric provided to be used for colorbar label and filename of saved figure
+    max_projection: maximum intensity projection. If None, only ROI masks will be shown, without max projection overlay.
+    vmin: min value of metric to scale image by
+    vmax: max value of metric to scale image by
+    cmap: colormap to use
+    ax: if axis is provided, image will be plotted on that axis. If None, a figure and axis will be created.
+    save_dir: top level directory to save figure in. save_dir must be provided for figure to save.
+    folder: folder within save_dir to save figure in
+    colorbar: Boolean to indicate whether colorbar is displayed
+    """
+    if ax is None:
+        figsize = (10, 10)
+        fig, ax = plt.subplots(figsize=figsize)
+    if max_projection is not None:
+        ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection))
+    for roi_id in list(roi_mask_dict.keys()):
+        roi_mask_dict[roi_id][roi_mask_dict[roi_id]==1] = metrics_dict[roi_id]
+    mask = np.sum(np.asarray(list(roi_mask_dict.values())), axis=0)
+    cax = ax.imshow(mask, cmap=cmap, alpha=0.5, vmin=vmin, vmax=vmax)
+    if colorbar:
+        cbar = plt.colorbar(cax, ax=ax, use_gridspec=True)
+        cbar.set_label(metric_name)
+    if save_dir:
+        plt.tight_layout()
+        utils.save_figure(fig, figsize, save_dir, folder, fig_title=metric_name)
+    return ax
