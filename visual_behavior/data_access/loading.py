@@ -428,13 +428,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
                 meta_string = self.metadata_string
                 if 'MESO' in meta_string:  # change time scale for filtering events for meso
-                    t_scale = round(20 / 3)
+                    scale = 2/3
                 else:
-                    t_scale = 20
+                    scale = 2
 
                 self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
                                              'events': [x for x in events_array],
-                                             'filtered_events': [x for x in rp.filter_events_array(events_array, t_scale=t_scale)],
+                                             'filtered_events': [x for x in rp.filter_events_array(events_array, scale=scale)],
                                              'timestamps': [x for x in timestamps],
                                              'dff_traces': [x for x in dff_traces],
                                              'noise_std': [x for x in noise_std],
