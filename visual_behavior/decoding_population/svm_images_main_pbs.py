@@ -814,6 +814,7 @@ dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
 
 # make svm dir to save analysis results
 dir_svm = os.path.join(dir_server_me, 'SVM')
+
 if same_num_neuron_all_planes:
     dir_svm = os.path.join(dir_svm, 'same_n_neurons_all_planes')
 

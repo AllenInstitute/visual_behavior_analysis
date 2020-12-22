@@ -47,10 +47,11 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
 #%%
+plot_single_mouse = 0 # if 1, make plots for each mouse
 svm_blocks = 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 
-to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'changes' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+to_decode = 'next' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
 time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 frames_svm = np.arange(-5,8) #[-3,-2,-1] # [0,1,2,3,4,5] # svm was run on how what frames relative to image onset
@@ -67,6 +68,39 @@ num_planes = 8
 svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # folder named svmn will be created and figures will be saved inside it
 
 
+
+#%% Initialize variables
+
+# numFrames = samps_bef + samps_aft
+frames_svm = np.array(frames_svm)
+
+dir_now = svmn #'omit_across_sess'
+if ~np.isnan(svm_blocks):
+    dir_now = os.path.join(dir_now, f'trial_blocks')
+
+#     fmt = '.pdf' # '.png' # '.svg'
+if not os.path.exists(os.path.join(dir0, dir_now)):
+    os.makedirs(os.path.join(dir0, dir_now))
+
+now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
+
+
+
+#%% Set vars related to plotting
+
+get_ipython().magic(u'matplotlib inline') # %matplotlib inline
+num_depth = 4
+
+cols_each = colorOrder(num_planes)
+cols_area = ['b', 'k']    # first plot V1 (in black, index 1) then LM (in blue, index 0)   
+cols_depth = ['b', 'c', 'g', 'r'] #colorOrder(num_depth) #a.shape[0]) # depth1_area2    
+alph = .3 # for plots, transparency of errorbars
+bb = (.92, .7) # (.9, .7)
+
+ylabel = '% Classification accuracy'
+
+    
+    
 ##############################################################################
 ##############################################################################
 ##############################################################################
@@ -83,31 +117,70 @@ if ~np.isnan(svm_blocks):
     dir_svm = os.path.join(dir_svm, f'trial_blocks')
 
 
+    
 
-#%% Read all_see h5 file made in svm_main_post (by calling svm_init)
+#%%
+#%% Set svm vars for each plane across all sessions (for each mouse)
 
-# all cre lines, a given frames_svm
-a = f'(.*)_frames{frames_svm[0]}to{frames_svm[-1]}'    # {cre2ana}
-name = f'all_sess_{svmn}_{a}_.'
-# print(name)
-allSessName, h5_files = all_sess_set_h5_fileName(name, dir_svm, all_files=1)
-print(f'\n{len(allSessName)} all_sess files found!\n')
+columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
+            'area', 'depth', 'plane', \
+            'n_neurons_this_plane_allsess_allp', 'n_trials_this_plane_allsess_allp', \
+            'av_meanX_avSess_eachP', 'sd_meanX_avSess_eachP', \
+            'av_test_data_this_plane_allsess_allp', 'av_test_shfl_this_plane_allsess_allp', \
+            'av_test_data_avSess_eachP', 'sd_test_data_avSess_eachP', 'av_test_shfl_avSess_eachP', 'sd_test_shfl_avSess_eachP', \
+            'av_train_data_avSess_eachP', 'sd_train_data_avSess_eachP', \
+            'av_n_neurons_avSess_eachP', 'sd_n_neurons_avSess_eachP', 'av_n_trials_avSess_eachP', 'sd_n_trials_avSess_eachP', \
+            'av_test_data_pooled_sesss_planes_eachArea', 'av_test_shfl_pooled_sesss_planes_eachArea', 'meanX_pooled_sesss_planes_eachArea', \
+            'num_sessions_valid_eachArea', 'distinct_areas', 'cre_pooled_sesss_planes_eachArea', \
+            'av_test_data_pooled_sesss_areas_eachDepth', 'av_test_shfl_pooled_sesss_areas_eachDepth', 'meanX_pooled_sesss_areas_eachDepth', \
+            'cre_pooled_sesss_areas_eachDepth', 'depth_pooled_sesss_areas_eachDepth', \
+            'peak_amp_trTsShCh_this_plane_allsess_allp', \
+            'av_peak_amp_trTsShCh_avSess_eachP', 'sd_peak_amp_trTsShCh_avSess_eachP', \
+            'peak_amp_trTsShCh_pooled_sesss_planes_eachArea', \
+            'peak_amp_trTsShCh_pooled_sesss_areas_eachDepth', \
+            ]
+
+if same_num_neuron_all_planes:
+    columns = np.concatenate((columns0, ['n_neurons_svm_trained_this_plane_allsess_allp', 'av_n_neurons_svm_trained_avSess_eachP', 'sd_n_neurons_svm_trained_avSess_eachP'])) 
+else:
+    columns = columns0
+
+svm_this_plane_allsess = pd.DataFrame([], columns=columns)
+cntall = 0
+
+for iblock in range(svm_blocks): # iblock = 0
+    
+    svm_allMice_sessPooled_block_name = f'svm_allMice_sessPooled_block{iblock}'
+    svm_allMice_sessAvSd_block_name = f'svm_allMice_sessAvSd_block{iblock}'
+
+    allSessName_block_name = f'allSessName_block{iblock}'
+    
+    #%% Read all_see h5 file made in svm_main_post (by calling svm_init)
+    
+    # all cre lines, a given frames_svm
+    a = f'(.*)_frames{frames_svm[0]}to{frames_svm[-1]}'    # {cre2ana}
+    a = f'{a}_block{iblock}'
+
+    name = f'all_sess_{svmn}_{a}_.'
+    # print(name)
+    allSessName, h5_files = all_sess_set_h5_fileName(name, dir_svm, all_files=1)
+    print(f'\n{len(allSessName)} all_sess files found!\n')
+    
+    exec(allSessName_block_name + " = allSessName")
+
+    
+    #%% Set block number, use the last allsess file ... this needs work.
+
+    # a = h5_files[0].find('block')
+    # if a!=-1:
+    #     iblock = h5_files[0][a+5]
+    #     print(f'Analyzing block {iblock}')
+    # else:
+    #     iblock = np.nan
 
 
 
-#%% Set block number, use the last allsess file ... this needs work.
-
-# a = h5_files[0].find('block')
-# if a!=-1:
-#     iblock = h5_files[0][a+5]
-#     print(f'Analyzing block {iblock}')
-# else:
-#     iblock = np.nan
-
-
-for iblock in range(svm_blocks):
-
-    #%% Load all_sess dataframe for all cre lines
+    #%% Load all_sess dataframe for all cre lines, for a given block
 
     all_sess = pd.DataFrame()
     for ia in range(len(allSessName)):
@@ -325,54 +398,7 @@ for iblock in range(svm_blocks):
         # bl_percentile = input_vars['bl_percentile'].iloc[0]
         '''
 
-
-        #%% Initialize variables
-
-        # numFrames = samps_bef + samps_aft
-        frames_svm = np.array(frames_svm)
-
-        dir_now = svmn #'omit_across_sess'
-        if ~np.isnan(svm_blocks):
-            dir_now = os.path.join(dir_now, f'trial_blocks')
         
-    #     fmt = '.pdf' # '.png' # '.svg'
-        if not os.path.exists(os.path.join(dir0, dir_now)):
-            os.makedirs(os.path.join(dir0, dir_now))
-
-        now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
-
-
-
-        #%% Set vars related to plotting
-
-        get_ipython().magic(u'matplotlib inline') # %matplotlib inline
-        num_depth = 4
-
-        cols_each = colorOrder(num_planes)
-        cols_area = ['b', 'k']    # first plot V1 (in black, index 1) then LM (in blue, index 0)   
-        cols_depth = ['b', 'c', 'g', 'r'] #colorOrder(num_depth) #a.shape[0]) # depth1_area2    
-        alph = .3 # for plots, transparency of errorbars
-        bb = (.92, .7) # (.9, .7)
-
-        ylabel = '% Classification accuracy'
-
-        # set figure name
-        snn = [str(sn) for sn in session_numbers]
-        snn = '_'.join(snn)
-        whatSess = f'_ophys{snn}'
-
-        fgn = f'_frames{frames_svm[0]}to{frames_svm[-1]}{whatSess}'
-        if same_num_neuron_all_planes:
-            fgn = fgn + '_sameNumNeursAllPlanes'
-        if ~np.isnan(svm_blocks):
-            fgn = fgn + f'_block{iblock}'
-
-        fgn = fgn + '_ClassAccur'
-
-
-
-
-
 
         ######################################################################################################
         #%% Set a number of useful variables
@@ -548,14 +574,17 @@ for iblock in range(svm_blocks):
             return y_pooled_sesss_areas_eachDepth
 
 
-        #####################################################################
-        #####################################################################
-
+        ##############################################################################################
+        ##############################################################################################
+        ##############################################################################################
+        ##############################################################################################
+        ##############################################################################################
+        ##############################################################################################
 
 
         #%% Set svm vars for each plane across all sessions (for each mouse)
-
-        columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
+        '''
+        columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
                     'area', 'depth', 'plane', \
                     'n_neurons_this_plane_allsess_allp', 'n_trials_this_plane_allsess_allp', \
                     'av_meanX_avSess_eachP', 'sd_meanX_avSess_eachP', \
@@ -579,12 +608,13 @@ for iblock in range(svm_blocks):
             columns = columns0
 
         svm_this_plane_allsess = pd.DataFrame([], columns=columns)
-
+        '''
 
         # loop over mice based on the order in all_mice_id
         # Note: if you want to use all sessions (not just those in all_sess_2n), replace all_sess_2n with all_sess below, also uncomment the currerntly commented out defintion of session_stages
         for im in range(len(all_mice_id)): # im=0
 
+            cntall = cntall+1
             mouse_id = all_mice_id[im]
 
             if sum((all_sess_2an['mouse_id']==mouse_id).values) <= 0:
@@ -593,6 +623,12 @@ for iblock in range(svm_blocks):
             else: #sum((all_sess_2an['mouse_id']==mouse_id).values) > 0: # make sure there is data for this mouse, for the specific session: A, B, etc that you care about
                 print(f'there is data for mouse {im}')
 
+                
+#                 svm_this_plane_allsess.at[cntall, 'block'] = iblock
+                
+                
+                ################################################
+                
                 all_sess_2an_this_mouse = all_sess_2an[all_sess_2an['mouse_id']==mouse_id]
         #         cre = all_sess_2an_this_mouse['cre'].iloc[0]
 
@@ -882,8 +918,8 @@ for iblock in range(svm_blocks):
 
                 ###############################################################
                 # areas.values, depth.values, plane, 
-                svm_this_plane_allsess.at[im, columns0] = \
-                           mouse_id, cre, mouse_id_exp, cre_exp, session_stages, session_labs, num_sessions_valid, area_this_plane_allsess_allp, depth_this_plane_allsess_allp, \
+                svm_this_plane_allsess.at[cntall, columns0] = \
+                           mouse_id, cre, mouse_id_exp, cre_exp, iblock, session_stages, session_labs, num_sessions_valid, area_this_plane_allsess_allp, depth_this_plane_allsess_allp, \
                            areas.values, depths.values, planes, \
                            n_neurons_this_plane_allsess_allp, n_trials_this_plane_allsess_allp, \
                            av_meanX_avSess_eachP, sd_meanX_avSess_eachP, \
@@ -901,26 +937,57 @@ for iblock in range(svm_blocks):
 
 
                 if same_num_neuron_all_planes:
-                    svm_this_plane_allsess.at[im, ['n_neurons_svm_trained_this_plane_allsess_allp']] = [n_neurons_svm_trained_this_plane_allsess_allp]
-                    svm_this_plane_allsess.at[im, ['av_n_neurons_svm_trained_avSess_eachP']] = [av_n_neurons_svm_trained_avSess_eachP]
-                    svm_this_plane_allsess.at[im, ['sd_n_neurons_svm_trained_avSess_eachP']] = [sd_n_neurons_svm_trained_avSess_eachP]
+                    svm_this_plane_allsess.at[cntall, ['n_neurons_svm_trained_this_plane_allsess_allp']] = [n_neurons_svm_trained_this_plane_allsess_allp]
+                    svm_this_plane_allsess.at[cntall, ['av_n_neurons_svm_trained_avSess_eachP']] = [av_n_neurons_svm_trained_avSess_eachP]
+                    svm_this_plane_allsess.at[cntall, ['sd_n_neurons_svm_trained_avSess_eachP']] = [sd_n_neurons_svm_trained_avSess_eachP]
 
 
-        print(svm_this_plane_allsess.shape)
-        svm_this_plane_allsess
+        # done with setting svm_this_plane_allsess for all mice of a given ophys session and a given block (for iblock; for isession; for imouse)
+        print(svm_this_plane_allsess.shape) 
+#         svm_this_plane_allsess
 
+            
+            
         #%%
         #####################################################################################
         ####################################### PLOTS #######################################
         #####################################################################################
-
+        '''
         # Follow this script by "svm_images_plots_eachMouse" to make plots for each mouse.
-        exec(open('svm_images_plots_eachMouse.py').read())
+        if plot_single_mouse:
+            exec(open('svm_images_plots_eachMouse.py').read())
 
         # Follow this script by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
         exec(open('svm_images_plots_setVars_sumMice.py').read())
-        exec(open('svm_images_plots_sumMice.py').read())
 
+        # assign the vars sessPooled and sessAvSd to var names specific to each block
+        exec(svm_allMice_sessPooled_block_name + " = svm_allMice_sessPooled")
+        exec(svm_allMice_sessAvSd_block_name + " = svm_allMice_sessAvSd")
+        '''
+#         svm_allMice_sessPooled = eval(f'svm_allMice_sessPooled_block{iblock}')
+    
+        # svm_allMice_sessPooled_block0
+        # svm_allMice_sessAvSd_block0
+        
+        
+#     exec(open('svm_images_plots_sumMice.py').read())
+
+
+    
+#####################################################################################
+
+print(svm_this_plane_allsess.shape)
+svm_this_plane_allsess
+
+
+#%% Follow this script by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
+
+svm_this_plane_allsess0 = copy.deepcopy(svm_this_plane_allsess)
+exec(open('svm_images_plots_setVars_sumMice_blocks.py').read()) # here we set svm_allMice_sessPooled and svm_allMice_sessAvSd
+
+svm_allMice_sessPooled0 = copy.deepcopy(svm_allMice_sessPooled)
+svm_allMice_sessAvSd0 = copy.deepcopy(svm_allMice_sessAvSd)
+exec(open('svm_images_plots_sumMice_blocks.py').read()) # make mouse-averaged plots
 
 
 

@@ -2,11 +2,23 @@
 Vars needed here are set in "svm_images_plots_setVars_sumMice.py"
 Make summary plots across mice (each cre line) for the svm analysis.
 
-
 Created on Wed Oct 21 15:22:05 2020
 @author: farzaneh
 
 """
+
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+import matplotlib.ticker as ticker
+from matplotlib.ticker import (MultipleLocator, FormatStrFormatter, AutoMinorLocator)
+import seaborn
+
+from general_funs import *
+
+import warnings
+import matplotlib.cbook
+warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)        
+
 
 #%% SUMMARY ACROSS MICE 
 ##########################################################################################

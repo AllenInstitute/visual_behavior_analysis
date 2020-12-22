@@ -18,7 +18,7 @@ from def_funs import *
 from omissions_traces_peaks_quantify import *
 # import re
 
-def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_svm, all_sess, same_num_neuron_all_planes, use_ct_traces, use_np_corr, use_common_vb_roi, mean_notPeak, peak_win, flash_win, flash_win_vip, flash_win_timing, bl_percentile, cols, doShift_again, analysis_dates, doPlots=0):
+def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_svm, all_sess, same_num_neuron_all_planes, use_ct_traces, use_np_corr, use_common_vb_roi, mean_notPeak, peak_win, flash_win, flash_win_vip, flash_win_timing, bl_percentile, cols, doShift_again, analysis_dates, use_spont_omitFrMinus1, doPlots=0):
     
     #%%    
     if type(frames_svm)==int: # First type you ran svm analysis: SVM was run on 30 frames after omission and 0 frames before omission (each frame after omission was compared with a gray frame (frame -1 relative to omission))
@@ -34,6 +34,9 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
     
     #%%
     svmn = 'svm_gray_omit'
+    
+    if use_spont_omitFrMinus1==0:
+        svmn = svmn + '_spontFrs'    
     if same_num_neuron_all_planes:
         svmn = svmn + '_sameNumNeuronsAllPlanes'
         
@@ -172,7 +175,7 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
                 frame_dur = svm_vars.iloc[0]['frame_dur']                
                 print(f'Frame duration {frame_dur} ms')
                 if np.logical_or(frame_dur < .089, frame_dur > .1):
-                    sys.exit(f'\n\nFrame duration is unexpected!! {frame_dur}ms\n\n')
+                    print(f'\n\nFrame duration is unexpected!! {frame_dur}ms\n\n')
 
                 flash_omit_dur_all = svm_vars.iloc[0]['flash_omit_dur_all']
                 flash_omit_dur_fr_all = svm_vars.iloc[0]['flash_omit_dur_fr_all']
@@ -246,7 +249,15 @@ def svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_
                     sd_test_shfl = np.std(av_test_shfl_all, axis=1).squeeze() / np.sqrt(numShufflesN)
                     av_test_chance = np.mean(av_test_chance_all, axis=1).squeeze() # numFrames
                     sd_test_chance = np.std(av_test_chance_all, axis=1).squeeze() / np.sqrt(numShufflesN)
-                            
+
+                    # average across trials and neuron subsamples
+                    av_w_data = np.nanmean(w_data_allFrs, axis=(0,1,2)) # nN_trainSVM x nFrames
+                    av_b_data = np.nanmean(b_data_allFrs, axis=(0,1,2)) # nFrames
+                
+                    if np.ndim(av_w_data)==1: #n_neurons==1: # make sure all experiments have dimensions nNeurons x nFrames
+                        av_w_data = av_w_data[np.newaxis,:]
+                    
+                    
                 else: # average across cv samples # size perClassErrorTrain_data_allFrs: nSamples x nFrames
 
                     av_train_data = 100-np.nanmean(perClassErrorTrain_data_allFrs, axis=0) # numFrames

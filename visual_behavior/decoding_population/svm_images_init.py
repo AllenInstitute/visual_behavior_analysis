@@ -26,12 +26,14 @@ from svm_images_main_post import *
 # import warnings
 # warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning) # ignore some warnings!
 
-        
+
     
 #%% Get SVM output for each cell type, and each frames_svm.
 
+svm_blocks = 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+
 to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'images' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+trial_type = 'changes' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
 time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 
@@ -62,97 +64,110 @@ else:
     cols = np.concatenate((cols0, ['av_w_data', 'av_b_data']))
 
 
-
-for icre in np.arange(0, len(cre2ana_all)): # icre=0
     
-    #%% Set vars for the analysis
-    cre2ana = cre2ana_all[icre]
-    
-    print(f'\n=============== Setting all_sess for {cre2ana} ===============\n')
-    
-    for ifs in range(len(frames_svm_all)): # ifs=0
+for iblock in range(svm_blocks): # iblock = 0 
+    for icre in np.arange(0, len(cre2ana_all)): # icre=0
 
-        frames_svm = frames_svm_all[ifs] #[-3,-2,-1] # [0,1,2,3,4,5] #  which svm files to load (this will be used to set svm file name) # (frames_svm also gets saved in svm_vars if svm could be run successfully on a session)
-        print(f'Analyzing: {cre2ana}, {frames_svm}')
+        #%% Set vars for the analysis
+        cre2ana = cre2ana_all[icre]
 
-                        
-        #%% Set the pickle file name for this cre line; it includes session and metadata information.
+        print(f'\n=============== Setting all_sess for {cre2ana} ===============\n')
 
-        dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
-        dir_svm = os.path.join(dir_server_me, 'SVM')
-        a = '_'.join(project_codes)
-        b = cre2ana  # b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
-        filen = os.path.join(dir_svm, f'metadata_basic_{a}_{b}')
-        print(filen)
+        for ifs in range(len(frames_svm_all)): # ifs=0
+
+            frames_svm = frames_svm_all[ifs] #[-3,-2,-1] # [0,1,2,3,4,5] #  which svm files to load (this will be used to set svm file name) # (frames_svm also gets saved in svm_vars if svm could be run successfully on a session)
+            print(f'Analyzing: {cre2ana}, {frames_svm}')
 
 
+            #%% Set the pickle file name for this cre line; it includes session and metadata information.
 
-        #%% Load the pickle file that includes the list of sessions and metadata
+            dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
+            dir_svm = os.path.join(dir_server_me, 'SVM')
 
-        pkl = open(filen, 'rb')
-        # dict_se = pickle.load(pkl)
-        metadata_basic = pickle.load(pkl)
+            a = '_'.join(project_codes)
+            b = cre2ana  # b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
+            filen = os.path.join(dir_svm, f'metadata_basic_{a}_{b}')
+            print(filen)
 
-        list_all_sessions_valid = metadata_basic[metadata_basic['valid']]['session_id'].unique()
-        print(f'number of {cre2ana} sessions: {list_all_sessions_valid.shape[0]}')
-        # list_all_sessions_valid = dict_se['list_all_sessions_valid']
-        # list_all_experiments_valid = dict_se['list_all_experiments_valid']
-        # print(f'number of sessions: {len(list_all_sessions_valid)}')
+            if same_num_neuron_all_planes:
+                dir_svm = os.path.join(dir_svm, 'same_n_neurons_all_planes')
+
+            if ~np.isnan(svm_blocks):
+                dir_svm = os.path.join(dir_svm, f'trial_blocks')
 
 
+            #%% Load the pickle file that includes the list of sessions and metadata
 
-        #%% Set all_sess: includes svm results from all sessions of a given cre line, all concatenated
+            pkl = open(filen, 'rb')
+            # dict_se = pickle.load(pkl)
+            metadata_basic = pickle.load(pkl)
 
-        all_sess = pd.DataFrame([], columns=cols)
-
-        for isess in np.arange(0, len(list_all_sessions_valid)):  # isess=0
-            session_id = int(list_all_sessions_valid[isess])
-            data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
-
-            this_sess = svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0)
-
-            all_sess = all_sess.append(this_sess) 
-
-        print(len(all_sess))    
-        all_sess
+            list_all_sessions_valid = metadata_basic[metadata_basic['valid']]['session_id'].unique()
+            print(f'number of {cre2ana} sessions: {list_all_sessions_valid.shape[0]}')
+            # list_all_sessions_valid = dict_se['list_all_sessions_valid']
+            # list_all_experiments_valid = dict_se['list_all_experiments_valid']
+            # print(f'number of sessions: {len(list_all_sessions_valid)}')
 
 
 
-        ##################################################################
-        #%% Save all_sess
-        ################################################################## 
+            #%% Set all_sess: includes svm results from all sessions of a given cre line, all concatenated
 
-        # Set input_vars dataframe so you know what vars were used in your analysis
-        cols2 = np.array(['frames_svm', 'cre2ana', 'time_win', 'trial_type', 'to_decode', 'same_num_neuron_all_planes', 'project_codes'])
-        input_vars = pd.DataFrame([], columns=cols2)
-        input_vars.at[0, cols2] =  frames_svm, cre2ana, time_win, trial_type, to_decode, same_num_neuron_all_planes, project_codes
+            all_sess = pd.DataFrame([], columns=cols)
 
+            for isess in np.arange(0, len(list_all_sessions_valid)):  # isess=0
+                session_id = int(list_all_sessions_valid[isess])
+                data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
 
-        # Set the name of the h5 file for saving all_sess
-        svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images'
-        now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
+                this_sess = svm_images_main_post(session_id, data_list, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0)
 
-        if same_num_neuron_all_planes:
-            name = 'all_sess_%s_sameNumNeuronsAllPlanes' %(svmn) 
-        else:
-            name = 'all_sess_%s' %(svmn) 
+                all_sess = all_sess.append(this_sess) 
 
-        b = '_'.join(project_codes)
-        a = f'{cre2ana}_frames{frames_svm[0]}to{frames_svm[-1]}'  # b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
-        name = f'{name}_{a}_{b}_{now}'
-        # print(name)
+            print(len(all_sess))    
+            all_sess
 
 
-        if saveResults:
-            print('\n\nSaving all_sess.h5 file')
-            allSessName = os.path.join(dir_svm, name + '.h5') # os.path.join(d, svmn+os.path.basename(pnevFileName))
-            print(allSessName)
 
-            # save to a h5 file                    
-            all_sess.to_hdf(allSessName, key='all_sess', mode='w')    
+            ##################################################################
+            #%% Save all_sess
+            ################################################################## 
 
-            # save input_vars to the h5 file
-            input_vars.to_hdf(allSessName, key='input_vars', mode='a')
+            # Set input_vars dataframe so you know what vars were used in your analysis
+            cols2 = np.array(['frames_svm', 'cre2ana', 'time_win', 'trial_type', 'to_decode', 'same_num_neuron_all_planes', 'project_codes'])
+            input_vars = pd.DataFrame([], columns=cols2)
+            input_vars.at[0, cols2] =  frames_svm, cre2ana, time_win, trial_type, to_decode, same_num_neuron_all_planes, project_codes
+
+    #         cols2 = np.array(['iblock', 'frames_svm', 'cre2ana', 'time_win', 'trial_type', 'to_decode', 'same_num_neuron_all_planes', 'project_codes'])
+    #         input_vars = pd.DataFrame([], columns=cols2)
+    #         input_vars.at[0, cols2] =  iblock, frames_svm, cre2ana, time_win, trial_type, to_decode, same_num_neuron_all_planes, project_codes
+
+
+            # Set the name of the h5 file for saving all_sess
+            svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images'
+            now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
+
+            if same_num_neuron_all_planes:
+                name = 'all_sess_%s_sameNumNeuronsAllPlanes' %(svmn) 
+            else:
+                name = 'all_sess_%s' %(svmn) 
+
+            b = '_'.join(project_codes)
+            a = f'{cre2ana}_frames{frames_svm[0]}to{frames_svm[-1]}'  # b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
+            if ~np.isnan(svm_blocks):
+                a = f'{a}_block{iblock}'
+            name = f'{name}_{a}_{b}_{now}'
+            # print(name)
+
+
+            if saveResults:
+                print('\n\nSaving all_sess.h5 file')
+                allSessName = os.path.join(dir_svm, name + '.h5') # os.path.join(d, svmn+os.path.basename(pnevFileName))
+                print(allSessName)
+
+                # save to a h5 file                    
+                all_sess.to_hdf(allSessName, key='all_sess', mode='w')    
+
+                # save input_vars to the h5 file
+                input_vars.to_hdf(allSessName, key='input_vars', mode='a')
 
 
 

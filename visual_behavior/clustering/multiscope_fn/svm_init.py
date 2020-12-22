@@ -14,12 +14,14 @@ Created on Wed Jul 31 13:24:19 2019
 @author: farzaneh
 """
 
+use_spont_omitFrMinus1 = 0 # if 0, classify omissions against randomly picked spontanoues frames (the initial gray screen); if 1, classify omissions against the frame right before the omission
+
 use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
 use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 use_common_vb_roi = 1 # only those ct dff ROIs that exist in vb rois will be used.
 
 #%% Set SVM vars
-same_num_neuron_all_planes = 0 # if 1, use the same number of neurons for all planes to train svm
+same_num_neuron_all_planes = 1 #0 # if 1, use the same number of neurons for all planes to train svm
 
 frames_svm = range(-16, 24) # range(-10, 30) # range(-1,1) # frames_after_omission = 30 # 5 # run svm on how many frames after omission
 numSamples = 50 # 2 #10 #
@@ -204,7 +206,7 @@ for isess in range(len(list_all_sessions_valid)):   # session_id = list_all_sess
     
     experiment_ids = list_all_experiments[isess] # we want to have the list of all experiments for each session regardless of whethere they were valid or not... this way we can find the same plane across all sessions.
     
-    this_sess = svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_svm, all_sess, same_num_neuron_all_planes, use_ct_traces, use_np_corr, use_common_vb_roi, mean_notPeak, peak_win, flash_win, flash_win_vip, flash_win_timing, bl_percentile, cols, doShift_again, analysis_dates, doPlots=0)
+    this_sess = svm_main_post(session_id, experiment_ids, validity_log_all, dir_svm, frames_svm, all_sess, same_num_neuron_all_planes, use_ct_traces, use_np_corr, use_common_vb_roi, mean_notPeak, peak_win, flash_win, flash_win_vip, flash_win_timing, bl_percentile, cols, doShift_again, analysis_dates, use_spont_omitFrMinus1, doPlots=0)
     
     all_sess = all_sess.append(this_sess) 
     
@@ -223,6 +225,9 @@ input_vars = pd.DataFrame([], columns=cols)
 input_vars.at[0, cols] =  samps_bef, samps_aft, same_num_neuron_all_planes, use_ct_traces, mean_notPeak, peak_win, flash_win, flash_win_timing, bl_percentile, doShift_again
 
 svmn = 'svm_gray_omit'
+if use_spont_omitFrMinus1==0:
+    svmn = svmn + '_spontFrs'    
+
 now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
 
 if same_num_neuron_all_planes:

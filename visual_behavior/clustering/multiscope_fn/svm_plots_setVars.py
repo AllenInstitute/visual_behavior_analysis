@@ -25,6 +25,7 @@ Created on Fri Aug  9 19:12:00 2019
 """
 
 #%%
+use_spont_omitFrMinus1 = 0 # if 0, classify omissions against randomly picked spontanoues frames (the initial gray screen); if 1, classify omissions against the frame right before the omission
 
 frames_svm = range(-16, 24) # 30 #frames_after_omission = 30 # 5 # run svm on how many frames after omission
 same_num_neuron_all_planes = 1 # if 1, use the same number of neurons for all planes to train svm
@@ -34,6 +35,9 @@ only_1st_transit = 1 # relevant only if all_ABtransit_AbefB_Aall=1 # if 1, only 
 dosavefig = 1
 
 svmn = 'svm_gray_omit'
+if use_spont_omitFrMinus1==0:
+    svmn = svmn + '_spontFrs'    
+
 doCorrs = 0
 
 

@@ -23,7 +23,7 @@ from general_funs import *
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 
-def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0):
+def svm_images_main_post(session_id, data_list, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0):
     
     num_classes = 8 # decoding 8 images
     num_planes = 8
@@ -78,10 +78,19 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, t
             else:
                 nown = f'{analysis_dates[0]}_.'
             
+#             if same_num_neuron_all_planes:
+#                 nown = 'sameNumNeuronsAllPlanes_' + nown
+#             name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{nown}'
+
+            ending = ''
             if same_num_neuron_all_planes:
-                nown = 'sameNumNeuronsAllPlanes_' + nown
-            name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{nown}'
-            
+                ending = 'sameNumNeuronsAllPlanes_'
+
+            if ~np.isnan(iblock): # svm ran on the trial blocks
+                ending = f'{ending}block{iblock}_'
+
+            name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}{nown}'
+        
             svmName ,_ = all_sess_set_h5_fileName(name, dir_svm, all_files=0)
             
                         
@@ -160,7 +169,7 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, t
         #    plt.plot(sorted(cbest_allFrs)[:-2])
 
 
-            num_classes = svm_vars.iloc[0]['num_classes']    
+            num_classes = svm_vars.iloc[0]['num_classes']
             
             '''
             Ytest_allSamps_allFrs = svm_vars.iloc[0]['Ytest_allSamps_allFrs'] # numSamples x len_test x nFrames
@@ -416,7 +425,6 @@ def svm_main_images_post(session_id, data_list, dir_svm, frames_svm, time_win, t
             # unless we subselect neurons!!
 
             if doPlots:
-
                 if (np.sign(frames_svm)==-1).all(): # when frames_svm is all negative
                     x = np.arange(frames_svm[0] * frame_dur, frames_svm[-1] * frame_dur, frame_dur)
                 else: 

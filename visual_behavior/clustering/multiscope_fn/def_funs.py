@@ -972,7 +972,7 @@ def all_sess_set_h5_fileName(name, dir_now, all_files=0):
         
         
         if len(h5_files)==0:
-            print('all_see h5 file does not exist! (run svm_init to call svm_plots_init and save all_sess)')
+            print('h5 file does not exist! (run svm_init to call svm_plots_init and save all_sess)')
         elif len(h5_files)>1:
             print('More than 1 h5 file exists! Loading the latest file')
             allSessName = os.path.join(dir_now, h5_files[-1])            
@@ -3731,3 +3731,19 @@ f = np_corr_file
 pkl = open(f, 'rb')
 this_sess = pickle.load(pkl)
 '''
+
+
+
+############
+#%% Example uses of exec and eval
+'''
+svm_allMice_sessPooled_block_name = f'svm_allMice_sessPooled_block{iblock}'
+
+exec(svm_allMice_sessPooled_block_name + " = svm_allMice_sessPooled")
+
+svm_allMice_sessPooled = eval(f'svm_allMice_sessPooled_block{iblock}')
+'''
+
+
+
+
