@@ -245,7 +245,6 @@ def get_filtered_ophys_session_table():
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
     sessions = reformat.add_model_outputs_availability_to_table(sessions)
-    # sessions = sessions.reset_index()
 
     return sessions
 
@@ -305,14 +304,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table.copy()
-        # cell_specimen_table = cell_specimen_table.copy()
         if self._include_invalid_rois == False:
             cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
-        # add cell index corresponding to the index of the cell in dff_traces_array
-        # cell_specimen_ids = np.sort(cell_specimen_table.index.values)
-        # if 'cell_index' not in cell_specimen_table.columns:
-        #     cell_specimen_table['cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
-        #                                          cell_specimen_id in cell_specimen_table.index.values]
         cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
@@ -441,9 +434,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                                              'upsampled_event_indices': [x for x in upsampled_event_indices]},
                                             index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
 
-        # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
-        #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
-        #                             index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
 
     events = LazyLoadable('_events', _get_events)
@@ -475,9 +465,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        # reset ophys frame rate for accuracy & to account for mesoscope resampling
-        # causes recursion error
-        # metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
+        metadata = super().metadata
         if 'donor_id' not in metadata.keys():
             metadata['donor_id'] = metadata.pop('LabTracks_ID')
             metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
@@ -1732,27 +1720,20 @@ def get_annotated_experiments_table():
     experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                      experiments_table.loc[expt].depth for expt in experiments_table.index]
 
-    # experiments_table['location2'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
-    #                                   experiments_table.loc[expt].depth for expt in experiments_table.index]
-
     experiments_table['layer'] = None
     indices = experiments_table[(experiments_table.imaging_depth < 100)].index.values
     experiments_table.at[indices, 'layer'] = 'L1'
     indices = experiments_table[(experiments_table.imaging_depth < 270) &
                                 (experiments_table.imaging_depth >= 100)].index.values
     experiments_table.at[indices, 'layer'] = 'L2/3'
-    # indices = experiments_table[
-    #     (experiments_table.imaging_depth >= 125) & (experiments_table.imaging_depth < 200)].index.values
-    # experiments_table.at[indices, 'layer'] = 'L3'
+
     indices = experiments_table[
         (experiments_table.imaging_depth >= 270) & (experiments_table.imaging_depth < 350)].index.values
     experiments_table.at[indices, 'layer'] = 'L4'
     indices = experiments_table[
         (experiments_table.imaging_depth >= 350) & (experiments_table.imaging_depth < 550)].index.values
     experiments_table.at[indices, 'layer'] = 'L5'
-    # indices = experiments_table[
-    #     (experiments_table.imaging_depth >= 345) & (experiments_table.imaging_depth < 500)].index.values
-    # experiments_table.at[indices, 'layer'] = 'L5b'
+
     experiments_table['location_layer'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                            experiments_table.loc[expt].targeted_structure + '_' +
                                            experiments_table.loc[expt].layer for expt in experiments_table.index]
@@ -1824,6 +1805,23 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
 
 def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=True, use_session_type=True,
                          use_events=False):
+    """
+    Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
+    creates a mean response dataframe for a given set of conditions, and concatenates across all experiments to create
+    one large multi session dataframe with trial averaged responses and other relevant metrics. Saves multi_session_df
+    to the cache dir as a separate .h5 file per project_code and session_type combination present in the provided
+    experiments_table.
+    :param cache_dir: to level directory directory to save resulting dataframes, must contain folder called 'multi_session_summary_dfs'
+    :param df_name: the name of the response dataframe to be created using the ResponseAnalysis class, such as 'stimulus_response_df'
+    :param conditions: the set of conditions over which to group and average cell responses using the get_mean_df()
+                        function in response_analysis.utilities, such as ['cell_specimen_id', 'engagement_state', 'image_name']
+    :param experiments_table: full or subset of experiments_table from loading.get_filtered_ophys_experiments_table()
+    :param remove_outliers: Boolean, whether to remove cells with a max average dF/F > 5 (not a principled way of doing this)
+    :param use_session_type: Boolean for whether or not to save resulting dataframes by session type or to aggregate across session types.
+                        Grouping and saving by session type is typically necessary given the large size of these dataframes.
+    :param use_events: Boolean, whether to use events instead of dF/F when creating response dataframes
+    :return: multi_session_df for conditions specified above
+    """
     experiments_table = get_annotated_experiments_table()
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()

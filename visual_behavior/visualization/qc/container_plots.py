@@ -562,6 +562,15 @@ def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=Tr
 
 
 def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure=True):
+    """
+    Creates a plot of average intensity images for pairs of experiments that are registered during cell matching,
+    using the output of the cell matching algorithm directly to obtain images to plot. Plots registered images as
+    a red-green overlay, in a grid for all registration pairs. The structural similarity index metric (SSIM) for the pair
+    of registered images is shown in the plot title.
+    :param ophys_container_id:
+    :param save_figure:
+    :return:
+    """
     import tifffile
     import visual_behavior.data_access.utilities as utilities
 
@@ -621,6 +630,15 @@ def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure
 
 
 def plot_cell_matching_registration_output(ophys_container_id, save_figure=True):
+    """
+        Creates a plot of average intensity images for pairs of experiments that are registered during cell matching,
+        using the output of the cell matching algorithm directly to obtain images to plot. Target registered images are
+        shown column-wise for each experiment pair with a red-green overlay of the post-registration images in the bottom row.
+        Multiple figures are created and saved as .pngs when the number of experiment pairs is large.
+        :param ophys_container_id:
+        :param save_figure:
+        :return:
+        """
     import tifffile
     import visual_behavior.data_access.utilities as utilities
 
