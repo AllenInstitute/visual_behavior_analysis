@@ -50,6 +50,39 @@ def add_exposure_number_to_experiments_table(experiments):
     return experiments
 
 
+def get_image_set_exposures_for_behavior_session_id(behavior_session_id):
+    """
+    Gets the number of sessions an image set has been presented in prior to the date of the given behavior_session_id
+    :param behavior_session_id:
+    :return:
+    """
+    cache = loading.get_visual_behavior_cache()
+    sessions = cache.get_behavior_session_table()
+    sessions = sessions[sessions.session_type.isnull()==False] ## FIX THIS - SHOULD NOT BE ANY NaNs!
+    donor_id = sessions.loc[behavior_session_id].donor_id
+    session_type = sessions.loc[behavior_session_id].session_type
+    image_set = session_type.split('_')[3]
+    date = sessions.loc[behavior_session_id].date_of_acquisition
+    # check how many behavior sessions prior to this date had the same image set
+    cdf = sessions[(sessions.donor_id==donor_id)].copy()
+    pre_expts = cdf[(cdf.date_of_acquisition<date)]
+    image_set_exposures = int(len([session_type for session_type in pre_expts.session_type if 'images_'+image_set in session_type]))
+    return image_set_exposures
+
+
+def add_image_set_exposure_number_to_experiments_table(experiments):
+    exposures = []
+    for row in range(len(experiments)):
+        try:
+            behavior_session_id = experiments.iloc[row].behavior_session_id
+            image_set_exposures = get_image_set_exposures_for_behavior_session_id(behavior_session_id)
+            exposures.append(image_set_exposures)
+        except:
+            exposures.append(np.nan)
+    experiments['image_set_exposures'] = exposures
+    return experiments
+
+
 def add_model_outputs_availability_to_table(table):
     """
     Evaluates whether model output files are available for each experiment/session in the table
