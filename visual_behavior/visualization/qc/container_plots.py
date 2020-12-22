@@ -12,6 +12,7 @@ from visual_behavior.visualization import utils as ut
 from visual_behavior.visualization.qc import session_plots as sp
 from visual_behavior.visualization.qc import plotting_utils as pu
 from visual_behavior.visualization.qc import experiment_plots as ep
+from visual_behavior.visualization.qc import single_cell_plots as scp
 
 
 def ax_to_array(ax):
@@ -29,7 +30,7 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
     experiments_table = data_loading.get_filtered_ophys_experiment_table(include_failed_data=True)
     expts = experiments_table[experiments_table.container_id == ophys_container_id].sort_values('date_of_acquisition')
     specimen_id = expts.specimen_id.unique()[0]
-    experiment_ids = expts.ophys_experiment_id.values
+    experiment_ids = expts.index.values
     session_type_color_map = ut.get_session_type_color_map()
 
     n_expts = len(expts)
@@ -37,11 +38,11 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
     fail_x = []
     fail_tags = []
     for expt_ind, expt_id in enumerate(experiment_ids):
-        this_expt = expts[expts.ophys_experiment_id == expt_id]
-        img[expt_ind, 0, :] = session_type_color_map[this_expt['session_type'].values[0]]
-        if this_expt['experiment_workflow_state'].values[0] == 'failed':
+        this_expt = expts.loc[expt_id]
+        img[expt_ind, 0, :] = session_type_color_map[this_expt['session_type']]
+        if this_expt['experiment_workflow_state'] == 'failed':
             fail_x.append(expt_ind)
-            fail_tags.append(this_expt['failure_tags'].values[0])
+            fail_tags.append(this_expt['failure_tags'])
 
     # create plot with expt colors image
     figsize = (20, n_expts)
@@ -51,10 +52,10 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
 
     # plot text for acquisition date and session type
     for i, expt_id in enumerate(experiment_ids):
-        this_expt = expts[expts.ophys_experiment_id == expt_id]
-        ax.text(x=0.75, y=i, s=str(this_expt['date_of_acquisition'].values[0]).split(' ')[0],
+        this_expt = expts.loc[expt_id]
+        ax.text(x=0.75, y=i, s=str(this_expt['date_of_acquisition']).split(' ')[0],
                 ha='left', va='center', fontsize=20)
-        ax.text(x=3, y=i, s=this_expt['session_type'].values[0], ha='left', va='center', fontsize=20)
+        ax.text(x=3, y=i, s=this_expt['session_type'], ha='left', va='center', fontsize=20)
         ax.text(x=20, y=i, s=' ')
 
     # add X for fails and list fail tags
@@ -560,6 +561,145 @@ def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=Tr
                        'container_' + str(ophys_container_id))
 
 
+def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure=True):
+    """
+    Creates a plot of average intensity images for pairs of experiments that are registered during cell matching,
+    using the output of the cell matching algorithm directly to obtain images to plot. Plots registered images as
+    a red-green overlay, in a grid for all registration pairs. The structural similarity index metric (SSIM) for the pair
+    of registered images is shown in the plot title.
+    :param ophys_container_id:
+    :param save_figure:
+    :return:
+    """
+    import tifffile
+    import visual_behavior.data_access.utilities as utilities
+
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    container_expts = experiments_table[experiments_table.container_id == ophys_container_id]
+    ophys_experiment_ids = container_expts.index.values
+
+    dataset_dict = {}
+    for ophys_experiment_id in container_expts.index.values:
+        dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+        dataset_dict[ophys_experiment_id] = dataset
+
+    # cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_container_id, experiments_table)
+    cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_experiment_id)
+    registration_images = [file for file in os.listdir(cell_matching_output_dir) if 'register' in file]
+
+    figsize = (25, 25)
+    fig, ax = plt.subplots(len(ophys_experiment_ids), len(ophys_experiment_ids), figsize=figsize)
+    ax = ax.ravel()
+    i = 0
+    for k, exp1 in enumerate(ophys_experiment_ids):
+        for j, exp2 in enumerate(ophys_experiment_ids):
+            if exp1 == exp2:
+                ax[i].axis('off')
+                i += 1
+            else:
+                reg_file = [file for file in registration_images if ((str(exp1) in file) and (str(exp2) in file))]
+                if len(reg_file) > 0:
+                    registration_image = reg_file[0]
+                    # registered_expt = int(registration_image.split('_')[1].split('.')[0])
+                    target_expt = int(registration_image.split('_')[3].split('.')[0])
+                    dataset = dataset_dict[int(target_expt)]
+                    avg_image = dataset.average_projection.data
+                    avg_im_target = avg_image / float(np.amax(avg_image))
+
+                    reg = tifffile.imread(os.path.join(cell_matching_output_dir, registration_image))
+                    reg = reg / float(np.amax(reg))
+                    reg = reg.astype('float32')
+
+                    image = np.empty((reg.shape[0], reg.shape[1], 3))
+                    image[:, :, 0] = avg_im_target
+                    image[:, :, 1] = reg
+                    image[:, :, 2] = np.nan
+
+                    ssim = utilities.get_ssim(avg_im_target, reg)
+
+                    ax[i].imshow(image)
+                    ax[i].set_title('exp1: ' + str(exp1) + '\nexp2: ' + str(exp2) + '\nssim:' + str(np.round(ssim, 3)),
+                                    fontsize=16)
+                    ax[i].axis('off')
+                    i += 1
+        fig.tight_layout()
+        fig.suptitle(get_metadata_string(ophys_container_id), x=0.5, y=1.02, horizontalalignment='center', fontsize=14)
+    if save_figure:
+        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'cell_matching_registration_overlay_grid',
+                       'container_' + str(ophys_container_id))
+
+
+def plot_cell_matching_registration_output(ophys_container_id, save_figure=True):
+    """
+        Creates a plot of average intensity images for pairs of experiments that are registered during cell matching,
+        using the output of the cell matching algorithm directly to obtain images to plot. Target registered images are
+        shown column-wise for each experiment pair with a red-green overlay of the post-registration images in the bottom row.
+        Multiple figures are created and saved as .pngs when the number of experiment pairs is large.
+        :param ophys_container_id:
+        :param save_figure:
+        :return:
+        """
+    import tifffile
+    import visual_behavior.data_access.utilities as utilities
+
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    container_expts = experiments_table[experiments_table.container_id == ophys_container_id]
+    ophys_experiment_ids = container_expts.index.values
+
+    dataset_dict = {}
+    for ophys_experiment_id in container_expts.index.values:
+        dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+        dataset_dict[ophys_experiment_id] = dataset
+
+    # cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_container_id, experiments_table)
+    cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_experiment_id)
+    registration_images = [file for file in os.listdir(cell_matching_output_dir) if 'register' in file]
+
+    n_images = len(registration_images)
+    n_per_plot = 8
+    intervals = np.arange(0, n_images + n_per_plot, n_per_plot)
+    for x, interval in enumerate(intervals):
+        figsize = (20, 15)
+        fig, ax = plt.subplots(4, n_per_plot, figsize=figsize)
+        ax = ax.ravel()
+        i = 0
+        if x < len(intervals) - 1:
+            for y, registration_image in enumerate(registration_images[intervals[x]:intervals[x + 1]]):
+                registered_expt = registration_image.split('_')[1]
+                if int(registered_expt) in ophys_experiment_ids:
+                    target_expt = registration_image.split('_')[3].split('.')[0]
+                    if int(target_expt) in ophys_experiment_ids:
+                        reg = tifffile.imread(os.path.join(cell_matching_output_dir, registration_image))
+                        reg = reg / float(np.amax(reg))
+                        reg = reg.astype('float32')
+                        data = dataset_dict[int(target_expt)]
+                        avg_image = data.average_projection.data
+                        avg_im_target = avg_image / float(np.amax(avg_image))
+                        data = dataset_dict[int(registered_expt)]
+                        avg_image = data.average_projection.data
+                        avg_im_candidate = avg_image / float(np.amax(avg_image))
+                        image = np.empty((reg.shape[0], reg.shape[1], 3))
+                        image[:, :, 0] = avg_im_target
+                        image[:, :, 1] = reg
+                        image[:, :, 2] = np.nan
+                        ax[i].imshow(avg_im_candidate, cmap='gray')
+                        ax[i].set_title('candidate\n' + registered_expt)
+                        ax[i + n_per_plot].imshow(avg_im_target, cmap='gray')
+                        ax[i + n_per_plot].set_title('target\n' + target_expt)
+                        ax[i + 2 * n_per_plot].imshow(reg, cmap='gray')
+                        ax[i + 2 * n_per_plot].set_title('registered\n' + registered_expt)
+                        ssim = utilities.get_ssim(avg_im_target, reg)
+                        ax[i + 3 * n_per_plot].imshow(image)
+                        ax[i + 3 * n_per_plot].set_title('ssim:' + str(np.round(ssim, 3)))
+                        for xx in range(len(ax)):
+                            ax[xx].axis('off')
+                        i += 1
+
+            if save_figure:
+                ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'cell_matching_registration_output',
+                               'container_' + str(ophys_container_id) + '_' + str(x))
+
+
 def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figure=True):
     ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
@@ -575,6 +715,122 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
     if save_figure:
         ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'motion_correction_xy_shift',
                        'container_' + str(ophys_container_id))
+
+
+def plot_flashes_on_trace(ax, timestamps, ophys_frame_rate, trial_type=None, omitted=False, alpha=0.15, facecolor='gray'):
+    """
+    plot stimulus flash durations on the given axis according to the provided timestamps
+    """
+    stim_duration = 0.25
+    blank_duration = 0.5
+    change_time = 0
+    start_time = timestamps[0]
+    end_time = timestamps[-1]
+    interval = (blank_duration + stim_duration)
+    # after time 0
+    if omitted:
+        array = np.arange((change_time + interval), end_time, interval)
+    else:
+        array = np.arange(change_time, end_time, interval)
+    for i, vals in enumerate(array):
+        amin = array[i]
+        amax = array[i] + stim_duration
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    if trial_type == 'go':
+        alpha = alpha * 3
+    else:
+        alpha
+    # before time 0
+    array = np.arange(change_time, start_time - interval, -interval)
+    array = array[1:]
+    for i, vals in enumerate(array):
+        amin = array[i]
+        amax = array[i] + stim_duration
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    return ax
+
+
+def get_metadata_string(container_id):
+    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(container_id)
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_ids[0])
+    title = dataset.analysis_folder
+    m = title.split('_')  # dataset.analysis_folder.split('_')
+    metadata_string = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
+    return metadata_string
+
+
+def plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=False, save_figure=True):
+    dataset = data_loading.get_ophys_dataset(container_df.ophys_experiment_id.unique()[0])
+    title = dataset.analysis_folder
+    frame_rate = dataset.metadata['ophys_frame_rate']
+    if omitted:
+        figsize = (12, 5)
+        m = title.split('_')  # dataset.analysis_folder.split('_')
+        title = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
+    elif trials:
+        figsize = (12, 5)
+        container_df = container_df[container_df.go == True]
+        m = title.split('_')  # dataset.analysis_folder.split('_')
+        title = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
+    else:
+        figsize = (6, 4)
+        container_df = container_df[container_df.image_name != 'omitted']
+        title = str(container_id)
+    fig, ax = plt.subplots(figsize=figsize)
+    colors = ut.get_colors_for_session_numbers()
+
+    for i, ophys_experiment_id in enumerate(container_df.ophys_experiment_id.unique()):
+        df = container_df[container_df.ophys_experiment_id == ophys_experiment_id].copy()
+        session_number = df.session_number.unique()[0]
+        traces = df.trace.values
+        mean_trace = df.trace.mean()
+        timestamps = df.trace_timestamps.mean()
+        ax.plot(timestamps, mean_trace, color=colors[session_number - 1], label=session_number)
+        sem = (traces.std()) / np.sqrt(float(len(traces)))
+        ax.fill_between(timestamps, mean_trace + sem, mean_trace - sem, alpha=0.5, color=colors[session_number - 1])
+    if omitted:
+        ax = plot_flashes_on_trace(ax, timestamps, frame_rate, trial_type=None, omitted=True, alpha=0.2,
+                                   facecolor='gray')
+        ax.axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
+        ax.set_xlabel('time relative to omission (sec)')
+    elif trials:
+        ax = plot_flashes_on_trace(ax, timestamps, frame_rate, trial_type='go', omitted=False, alpha=0.2,
+                                   facecolor='gray')
+        ax.set_xlabel('time relative to change (sec)')
+    else:
+        ax = plot_flashes_on_trace(ax, timestamps, frame_rate, trial_type=None, omitted=False, alpha=0.2,
+                                   facecolor='gray')
+        ax.set_xlabel('time (sec)')
+    ax.set_ylabel('dF/F')
+    ax.set_xlim(timestamps[0], timestamps[-1])
+    ax.set_title(title)
+    ax.legend(bbox_to_anchor=(1, 1), title='session_number', fontsize='small', title_fontsize='x-small')
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(),
+                       'population_average_by_session_' + df_name.split('_')[0],
+                       'container_' + str(container_id))
+
+
+def plot_omission_population_average_across_sessions(container_id, save_figure=True):
+    df_name = 'omission_response_df'
+    container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
+    plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=True,
+                                            save_figure=save_figure)
+
+
+def plot_trials_population_average_across_sessions(container_id, save_figure=True):
+    df_name = 'trials_response_df'
+    container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
+    plot_population_average_across_sessions(container_df, container_id, df_name, trials=True, omitted=False,
+                                            save_figure=save_figure)
+
+
+def plot_stimulus_population_average_across_sessions(container_id, save_figure=True):
+    df_name = 'stimulus_response_df'
+    container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
+    plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=False,
+                                            save_figure=save_figure)
 
 
 # def plot_average_intensity_by_pmt_for_experiments(ophys_container_id, save_figure=True):
@@ -808,3 +1064,38 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
             os.mkdir(save_folder)
         savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
         fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
+
+
+def plot_event_detection_for_container(ophys_container_id, save_figure=True):
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiment_ids = ophys_experiments.index.values
+
+    for ophys_experiment_id in ophys_experiment_ids:
+        ep.plot_event_detection_for_experiment(ophys_experiment_id, save_figure=save_figure)
+
+
+def plot_single_cell_response_plots_for_container(ophys_container_id, save_figure=True):
+    cell_specimen_ids = data_loading.get_unique_cell_specimen_ids_for_container(ophys_container_id)
+
+    for cell_specimen_id in cell_specimen_ids:
+        scp.plot_across_session_responses(ophys_container_id, cell_specimen_id, use_events=False, save_figure=save_figure)
+
+
+def plot_dff_trace_and_behavior_for_container(ophys_container_id, save_figure=True):
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiment_ids = ophys_experiments.index.values
+
+    for ophys_experiment_id in ophys_experiment_ids:
+        ep.plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
+        ep.plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
+
+
+def plot_classifier_validation_for_container(ophys_container_id, save_figure=True):
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiment_ids = ophys_experiments.index.values
+
+    for ophys_experiment_id in ophys_experiment_ids:
+        ep.plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=save_figure)

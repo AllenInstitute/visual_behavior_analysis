@@ -213,6 +213,50 @@ def model_outputs_available_for_behavior_session(behavior_session_id):
         return False
 
 
+# def get_cell_matching_output_dir_for_container(container_id, experiments_table):
+#     container_expts = experiments_table[experiments_table.container_id==container_id]
+#     ophys_experiment_id = container_expts.index[0]
+#     lims_data = get_lims_data(ophys_experiment_id)
+#     session_dir = lims_data.ophys_session_dir.values[0]
+#     cell_matching_dir = os.path.join(session_dir[:-23], 'experiment_container_'+str(container_id), 'OphysNwayCellMatchingStrategy')
+#     cell_matching_output_dir = os.path.join(cell_matching_dir, np.sort(os.listdir(cell_matching_dir))[-1])
+#     return cell_matching_output_dir
+#
+
+
+def get_cell_matching_output_dir_for_container(experiment_id):
+    from allensdk.internal.api import PostgresQueryMixin
+
+    lims_dbname = os.environ["LIMS_DBNAME"]
+    lims_user = os.environ["LIMS_USER"]
+    lims_host = os.environ["LIMS_HOST"]
+    lims_password = os.environ["LIMS_PASSWORD"]
+    lims_port = os.environ["LIMS_PORT"]
+    api = PostgresQueryMixin(dbname=lims_dbname, user=lims_user, host=lims_host, password=lims_password, port=lims_port)
+
+    query = '''
+            SELECT DISTINCT sp.external_specimen_name, sp.name, vbec.id AS vbec_id, vbec.workflow_state AS vbec_state, vbcr.run_number, vbcr.storage_directory AS matching_dir
+            FROM ophys_experiments_visual_behavior_experiment_containers oevbec
+            JOIN visual_behavior_experiment_containers vbec ON vbec.id=oevbec.visual_behavior_experiment_container_id
+            JOIN ophys_experiments oe ON oe.id=oevbec.ophys_experiment_id
+            JOIN ophys_sessions os ON os.id=oe.ophys_session_id JOIN specimens sp ON sp.id=os.specimen_id
+            JOIN projects p ON p.id=vbec.project_id
+            LEFT JOIN visual_behavior_container_runs vbcr ON vbcr.visual_behavior_experiment_container_id=vbec.id AND vbcr.current = 't'
+            WHERE
+            --sp.external_specimen_name NOT IN ('398691')
+            oe.id = {};
+            '''.format(experiment_id)
+
+    lims_df = pd.read_sql(query, api.get_connection())
+    return lims_df.matching_dir.values[0]
+
+
+def get_ssim(img0, img1):
+    from skimage.measure import compare_ssim as ssim
+    ssim_pair = ssim(img0, img1, gaussian_weights=True)
+    return ssim_pair
+
+
 def get_lims_data(lims_id):
     ld = LimsDatabase(lims_id)
     lims_data = ld.get_qc_param()
@@ -315,16 +359,16 @@ def get_sync_data(lims_data, analysis_dir, use_acq_trigger):
         stim_photodiode = sync_dataset.get_rising_edges('stim_photodiode') / sample_freq
     elif 'photodiode' in meta_data['line_labels']:
         stim_photodiode = sync_dataset.get_rising_edges('photodiode') / sample_freq
-    if 'cam1_exposure' in meta_data['line_labels']:
-        eye_tracking = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
-    elif 'cam1' in meta_data['line_labels']:
-        eye_tracking = sync_dataset.get_rising_edges('cam1') / sample_freq
+    if 'cam2_exposure' in meta_data['line_labels']:
+        eye_tracking = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
+    elif 'cam2' in meta_data['line_labels']:
+        eye_tracking = sync_dataset.get_rising_edges('cam2') / sample_freq
     elif 'eye_tracking' in meta_data['line_labels']:
         eye_tracking = sync_dataset.get_rising_edges('eye_tracking') / sample_freq
-    if 'cam2_exposure' in meta_data['line_labels']:
-        behavior_monitoring = sync_dataset.get_rising_edges('cam2_exposure') / sample_freq
-    elif 'cam2' in meta_data['line_labels']:
-        behavior_monitoring = sync_dataset.get_rising_edges('cam2') / sample_freq
+    if 'cam1_exposure' in meta_data['line_labels']:
+        behavior_monitoring = sync_dataset.get_rising_edges('cam1_exposure') / sample_freq
+    elif 'cam1' in meta_data['line_labels']:
+        behavior_monitoring = sync_dataset.get_rising_edges('cam1') / sample_freq
     elif 'behavior_monitoring' in meta_data['line_labels']:
         behavior_monitoring = sync_dataset.get_rising_edges('behavior_monitoring') / sample_freq
     # some experiments have 2P frames prior to stimulus start - restrict to timestamps after trigger for 2P6 only
