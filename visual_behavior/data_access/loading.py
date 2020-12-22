@@ -1644,6 +1644,12 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
 # CONTAINER LEVEL INFO
 
 def get_unique_cell_specimen_ids_for_container(container_id):
+    """
+    Retrieves and concatenates the cell_specimen_table for all experiments within a container,
+    then returns a list of unique cell_specimen_ids for the container.
+    :param container_id: container ID
+    :return: list of cell_specimen_ids for a given container
+    """
     experiments_table = get_filtered_ophys_experiment_table()
     container_expts = experiments_table[experiments_table.container_id == container_id]
     experiment_ids = np.sort(container_expts.index.values)
