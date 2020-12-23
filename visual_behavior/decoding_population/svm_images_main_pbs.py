@@ -24,9 +24,15 @@ from svm_funs import *
 
 
 #%%
-def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', svm_blocks= np.nan, same_num_neuron_all_planes=0):
+def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', svm_blocks= np.nan, use_events=False, same_num_neuron_all_planes=0):
     
     def svm_run_save(traces_fut, image_labels, iblock_trials_blocks, now): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
+        '''
+        traces_fut = traces_fut_0
+        image_labels = image_labels_0
+        iblock_trials_blocks = [np.nan, []]
+        iblock_trials_blocks = [iblock, trials_blocks]
+        '''
         
         iblock = iblock_trials_blocks[0]
         trials_blocks = iblock_trials_blocks[1]
@@ -352,7 +358,8 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 #    numSamples = 3 #10 #50
 #    saveResults = 1    
     
-    svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
+    e = 'events_' if use_events else ''  
+    svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
         
 #     kfold = 5 #2 #10 # KFold divides all the samples in  groups of samples, called folds (if , this is equivalent to the Leave One Out strategy), of equal sizes (if possible). The prediction function is learned using  folds, and the fold left out is used for test.
     regType = 'l2'
@@ -695,12 +702,12 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
                 
                 
                 #### run svm analysis on the whole session
-                if np.isnan(svm_blocks):                     
+                if np.isnan(svm_blocks):
                     svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], now) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
                     
                 #### do the block-by-block analysis: train SVM on blocks of trials
-                else:                     
+                else:
                     # divide the trials into a given number of blocks and take care of the last trial in the last block
                     a = np.arange(0, n_trials, int(n_trials/svm_blocks))
                     if len(a) < svm_blocks+1:
@@ -794,7 +801,8 @@ print('\n\n======== Analyzing session index %d ========\n' %(isess))
 
 #%% Set SVM vars # NOTE: Pay special attention to the following vars before running the SVM:
 
-svm_blocks = 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+use_events = True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
+svm_blocks = np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 # time_trace goes from -.5 to .65sec in the image-aligned traces.
 
@@ -963,7 +971,8 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
 
     if data_list[data_list['experiment_id']==ophys_experiment_id].iloc[0]['valid']:
         dataset = loading.get_ophys_dataset(ophys_experiment_id)
-        analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True) # False # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True
+#         analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True) # False # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True        
+        analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events)        
         stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
         
         ########### 
@@ -1051,7 +1060,6 @@ stim_response_df[dd[1]]
 '''
 
 
-
 #%% Set frames_svm
 
 # trace_time = np.array([-0.46631438, -0.3730515 , -0.27978863, -0.18652575, -0.09326288,
@@ -1103,7 +1111,7 @@ else:
 print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess+1, len(list_all_sessions_valid)))
 
 # Use below if you set session_data and session_trials above: for VIP and SST
-svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, same_num_neuron_all_planes)
+svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, use_events, same_num_neuron_all_planes)
 
 # Use below if you set stimulus_response_df_allexp above: for Slc (can be also used for other cell types too; but we need it for Slc, as the concatenated dfs could not be set for it)
 # svm_main_images_pbs(data_list, stimulus_response_df_allexp, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0)

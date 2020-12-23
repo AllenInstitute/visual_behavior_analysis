@@ -464,6 +464,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
 #            print('\tFrame %d' %(ifr)  
         #%%######################## Loop over different values of regularization
         for i in range(nCvals): # i = 0 # train SVM using different values of regularization parameter
+            print(f'Trying regularization value {cvect[i]}')
             if regType == 'l1':                               
                 summary,_ =  crossValidateModel(X.transpose(), Y, linearSVM, kfold = kfold, l1 = cvect[i], shflTrs = shuffleTrs)
                 

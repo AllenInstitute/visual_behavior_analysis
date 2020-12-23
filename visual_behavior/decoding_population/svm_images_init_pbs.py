@@ -3,7 +3,6 @@
 """
 Run svm_init_images_pre.py to save the pickle file which includes session and metadata information. This pickle file will be loaded here.
 
-
 Created on Thu Oct 9 12:29:43 2020
 @author: farzaneh
 """
