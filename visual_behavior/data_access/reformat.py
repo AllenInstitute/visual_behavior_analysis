@@ -342,6 +342,28 @@ def add_mean_running_speed(stimulus_presentations, running_speed, range_relative
     return stimulus_presentations
 
 
+def add_mean_pupil_area(stimulus_presentations, eye_tracking, range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the mean pupil area (in pixels^2) in the window provided.
+
+    Args:
+        stimulus_presentations(pd.DataFrame): dataframe of stimulus presentations.
+                Must contain: 'start_time'
+        eye_tracking (pd.DataFrame): dataframe of eye tracking data.
+            Must contain: 'pupil_area', 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the pupil area.
+    Returns:
+        nothing, modifies session in place. Same as the input, but with 'mean_pupil_area' column added
+    '''
+    mean_pupil_area_df = esp.mean_pupil_area(stimulus_presentations,
+                                                   eye_tracking,
+                                                   range_relative_to_stimulus_start)
+
+    stimulus_presentations["mean_pupil_area"] = mean_pupil_area_df
+    return stimulus_presentations
+
+
 def add_licks_each_flash(stimulus_presentations, licks, range_relative_to_stimulus_start=[0, 0.75]):
     '''
     Append a column to stimulus_presentations which contains the timestamps of licks that occur
