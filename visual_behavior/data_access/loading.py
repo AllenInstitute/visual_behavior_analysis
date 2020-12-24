@@ -2090,7 +2090,8 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
 
 def get_container_response_df(container_id, df_name='omission_response_df', use_events=False):
     """
-    get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container
+    get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container,
+    using the ResponseAnalysis class to build event locked response dataframes
     """
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     experiments_table = get_filtered_ophys_experiment_table()
