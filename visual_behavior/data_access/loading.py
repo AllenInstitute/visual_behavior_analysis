@@ -504,6 +504,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         return self._running_speed
 
     @property
+    def eye_tracking(self):
+        eye_tracking = super().eye_tracking.copy()
+        eye_tracking = eye_tracking.rename(columns={'time':'timestamps'})
+        self._eye_tracking = eye_tracking
+        return self._eye_tracking
+
+    @property
     def stimulus_presentations(self):
         stimulus_presentations = super().stimulus_presentations.copy()
         if 'orientation' in stimulus_presentations.columns:
@@ -512,6 +519,10 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
+        try: # if eye tracking data is not present or cant be loaded
+            stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, self.eye_tracking)
+        except: # set to NaN
+            stimulus_presentations['mean_pupil_area'] = np.nan
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
         stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
@@ -2098,7 +2109,8 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
 
 def get_container_response_df(container_id, df_name='omission_response_df', use_events=False):
     """
-    get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container
+    get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container,
+    using the ResponseAnalysis class to build event locked response dataframes
     """
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     experiments_table = get_filtered_ophys_experiment_table()

@@ -225,14 +225,7 @@ def model_outputs_available_for_behavior_session(behavior_session_id):
 
 
 def get_cell_matching_output_dir_for_container(experiment_id):
-    from allensdk.internal.api import PostgresQueryMixin
-
-    lims_dbname = os.environ["LIMS_DBNAME"]
-    lims_user = os.environ["LIMS_USER"]
-    lims_host = os.environ["LIMS_HOST"]
-    lims_password = os.environ["LIMS_PASSWORD"]
-    lims_port = os.environ["LIMS_PORT"]
-    api = PostgresQueryMixin(dbname=lims_dbname, user=lims_user, host=lims_host, password=lims_password, port=lims_port)
+    from visual_behavior import database
 
     query = '''
             SELECT DISTINCT sp.external_specimen_name, sp.name, vbec.id AS vbec_id, vbec.workflow_state AS vbec_state, vbcr.run_number, vbcr.storage_directory AS matching_dir
@@ -247,7 +240,7 @@ def get_cell_matching_output_dir_for_container(experiment_id):
             oe.id = {};
             '''.format(experiment_id)
 
-    lims_df = pd.read_sql(query, api.get_connection())
+    lims_df = database.lims_query(query)
     return lims_df.matching_dir.values[0]
 
 

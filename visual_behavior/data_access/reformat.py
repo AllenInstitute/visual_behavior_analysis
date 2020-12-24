@@ -79,7 +79,54 @@ def add_image_set_exposure_number_to_experiments_table(experiments):
             exposures.append(image_set_exposures)
         except:
             exposures.append(np.nan)
-    experiments['image_set_exposures'] = exposures
+    experiments['prior_exposures_to_image_set'] = exposures
+    return experiments
+
+
+def get_omissions_exposures_for_behavior_session_id(behavior_session_id):
+    """
+    Gets the number of sessions that had omitted stimuli prior to the date of the given behavior_session_id
+    Note: Omitted flashes were accidentally included in OPHYS_0_images_X_habituation prior to Feb 14, 2019
+    This commit to mtrain_regiments removed omissions from habituation sessions:
+        https://github.com/AllenInstitute/mtrain_regimens/commits/7ee1da717a4445cc6418fc91dda4623b9958e7a0
+    A fix was pushed to the ophys rigs to implement this change sometime around Feb 14, 2019 but it is unknown exactly when.
+    *** TO DO: determine exact mtrain commit / version date for each session to determine whether omissions
+        were incuded in OPHYS_0_images_X_habituation) ***
+    :param behavior_session_id:
+    :return: The number of behavior sessions where omitted flashes were present, prior to the current session
+    """
+    cache = loading.get_visual_behavior_cache()
+    sessions = cache.get_behavior_session_table()
+    sessions = sessions[sessions.session_type.isnull()==False] ## FIX THIS - SHOULD NOT BE ANY NaNs!
+    donor_id = sessions.loc[behavior_session_id].donor_id
+    session_type = sessions.loc[behavior_session_id].session_type
+    image_set = session_type.split('_')[3]
+    date = sessions.loc[behavior_session_id].date_of_acquisition
+    # check how many behavior sessions prior to this date had the same image set
+    cdf = sessions[(sessions.donor_id==donor_id)].copy()
+    pre_expts = cdf[(cdf.date_of_acquisition<date)]
+    # check how many behavior sessions prior to this date had omissions
+    import datetime
+    date_of_change = 'Feb 15 2019 12:00AM'
+    date_of_change = datetime.datetime.strptime(date_of_change, '%b %d %Y %I:%M%p')
+    if date < str(date_of_change):
+        omission_exposures = len([session_type for session_type in pre_expts.session_type if 'OPHYS' in session_type])
+    else:
+        omission_exposures = len([session_type for session_type in pre_expts.session_type if
+                                  ('OPHYS' in session_type) and ('habituation' not in session_type)])
+    return omission_exposures
+
+
+def add_omission_exposure_number_to_experiments_table(experiments):
+    exposures = []
+    for row in range(len(experiments)):
+        try:
+            behavior_session_id = experiments.iloc[row].behavior_session_id
+            omission_exposures = get_omission_exposures_for_behavior_session_id(behavior_session_id)
+            exposures.append(omission_exposures)
+        except:
+            exposures.append(np.nan)
+    experiments['prior_exposures_to_omissions'] = exposures
     return experiments
 
 
@@ -121,6 +168,7 @@ def reformat_experiments_table(experiments):
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
     experiments = add_exposure_number_to_experiments_table(experiments)
     experiments = add_image_set_exposure_number_to_experiments_table(experiments)
+    experiments = add_omission_exposure_number_to_experiments_table(experiments)
     experiments = add_model_outputs_availability_to_table(experiments)
     experiments = add_has_cell_matching_to_table(experiments)
     if 'level_0' in experiments.columns:
@@ -291,6 +339,28 @@ def add_mean_running_speed(stimulus_presentations, running_speed, range_relative
                                                        range_relative_to_stimulus_start)
 
     stimulus_presentations["mean_running_speed"] = mean_running_speed_df
+    return stimulus_presentations
+
+
+def add_mean_pupil_area(stimulus_presentations, eye_tracking, range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the mean pupil area (in pixels^2) in the window provided.
+
+    Args:
+        stimulus_presentations(pd.DataFrame): dataframe of stimulus presentations.
+                Must contain: 'start_time'
+        eye_tracking (pd.DataFrame): dataframe of eye tracking data.
+            Must contain: 'pupil_area', 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the pupil area.
+    Returns:
+        nothing, modifies session in place. Same as the input, but with 'mean_pupil_area' column added
+    '''
+    mean_pupil_area_df = esp.mean_pupil_area(stimulus_presentations,
+                                                   eye_tracking,
+                                                   range_relative_to_stimulus_start)
+
+    stimulus_presentations["mean_pupil_area"] = mean_pupil_area_df
     return stimulus_presentations
 
 

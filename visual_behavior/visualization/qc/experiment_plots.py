@@ -225,6 +225,13 @@ def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
 
 
 def plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True):
+    """
+    Generates plots of dFF traces and events for each cell in an experiment, for different segments of time.
+    Useful to validate whether detected events line up with dFF transients.
+    :param ophys_experiment_id:
+    :param save_figure:
+    :return:
+    """
     dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
     metadata_string = dataset.metadata_string
     colors = sns.color_palette()
@@ -254,6 +261,10 @@ def plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True):
 
 
 def plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=True):
+    """
+    Plots the full dFF trace for each cell, along with licking behavior, rewards, running speed, pupil area, and face motion.
+    Useful to visualize whether the dFF trace tracks the behavior variables
+    """
     dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
 
     for cell_specimen_id in dataset.cell_specimen_ids:
@@ -261,6 +272,10 @@ def plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=
 
 
 def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, save_figure=True):
+    """
+    Plots the population average dFF trace for an experiment, along with licking behavior, rewards, running speed, pupil area, and face motion.
+    Useful to visualize whether the overal activity tracks the behavior variables
+    """
     dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
     traces = dataset.dff_traces.copy()
     trace_timestamps = dataset.ophys_timestamps
@@ -338,8 +353,11 @@ def place_masks_in_full_image(cell_table, max_projection):
 
 
 def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=True):
-    """This is a quick and dirty function to get plots needed for a rapid decision to be made"""
+    """
+    Creates a plot showing ROI masks matched between production and development versions of segmentation classifier.
 
+    This is a quick and dirty function to get plots needed for a rapid decision to be made
+    """
     import visual_behavior.visualization.ophys.summary_figures as sf
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     from matplotlib.gridspec import GridSpec
