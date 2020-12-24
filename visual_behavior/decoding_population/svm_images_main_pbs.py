@@ -373,7 +373,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
     # Set NsExcluded : Identify neurons that did not fire in any of the trials (during ep) and then exclude them. Otherwise they cause problem for feature normalization.
     
     smallestC = 0   
-    shuffleTrs = False # set to 0 so for each iteration of numSamples, all frames are trained and tested on the same trials# If 1 shuffle trials to break any dependencies on the sequence of trails 
+    shuffleTrs = False # set to 0 so for each iteration of numSamples, all frames are trained and tested on the same trials# If 1 shuffle trials to break any dependencies on the sequence of trials 
     # note about shuffleTrs: if you wanted to actually take effect, you should copy the relevant part from the svm code (svm_omissions) to
     # here before you go through nAftOmit frames ALSO do it for numSamples so for each sample different set of testing and training 
     # trials are used, however, still all nAftOmit frames use the same set ... 
@@ -802,7 +802,7 @@ print('\n\n======== Analyzing session index %d ========\n' %(isess))
 #%% Set SVM vars # NOTE: Pay special attention to the following vars before running the SVM:
 
 use_events = True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
-svm_blocks = np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = 2 #np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 # time_trace goes from -.5 to .65sec in the image-aligned traces.
 
@@ -1115,6 +1115,8 @@ svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfo
 
 # Use below if you set stimulus_response_df_allexp above: for Slc (can be also used for other cell types too; but we need it for Slc, as the concatenated dfs could not be set for it)
 # svm_main_images_pbs(data_list, stimulus_response_df_allexp, dir_svm, frames_svm, numSamples, saveResults, cols_basic, cols_svm, same_num_neuron_all_planes=0)
+
+
 
 
 

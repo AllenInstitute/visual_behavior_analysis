@@ -139,7 +139,7 @@ def crossValidateModel(X, Y, modelFn, **options):
     attempt = 0
     while len(cls) < num_classes: # make sure all classes exist in YTrain    
         attempt = attempt+1
-        if attempt==101:
+        if attempt==1001:
             print(f'NOTE: reached {attempt} attempts but failed to have all classes in the training data! Only {len(cls)}/{num_classes} classes exist in the training data!')
             # NOTE: ideally you want to set a red flag variable here so later you can exclude these data from analysis!
             break
@@ -181,6 +181,7 @@ def crossValidateModel(X, Y, modelFn, **options):
 
 
 #%% Function to run SVM  (when X is frames x units x trials)
+# below cannot be true; because set_best_c gets called inside the frames loop; so different frames will get different training/testing dataset but it doesnt matter at all!
 # Remember each numSamples will have a different set of training and testing dataset, however for each numSamples, the same set of testing/training dataset
 # will be used for all frames and all values of c (unless shuffleTrs is 1, in which case different frames and c values will have different training/testing datasets.)
 
@@ -202,6 +203,9 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     # regType = 'l1'
     # kfold = 10;
 
+    # shuffleTrs = False 
+    # if 1 shuffle trials inside crossValidateModel to break any dependencies on the sequence of trials 
+    # if 0, shuffle trials here (instead of inside crossValidateModel) 
             
 #    import numpy as np
     import numpy.random as rng
@@ -229,6 +233,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
         elif regType == 'l2':
             print('\n----- Running l2 svm classification -----\r') 
             cvect = 10**(np.arange(-6, 6, 0.2)) / numDataPoints          
+#             cvect = cvect[[0,1]]
         nCvals = len(cvect)
         print(f'Trying {nCvals} regularization values.')
 #         print('try the following regularization values: \n', cvect
@@ -428,13 +433,29 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
         ######################## REMEMBER : YOU ARE CHANGING THE ORDER OF TRIALS HERE!!!
         ########################
         ########################
-        if shuffleTrs==0: # shuffle trials here (instead of inside crossValidateModel) to break any dependencies on the sequence of trails 
+        if shuffleTrs==0: # shuffle trials here (instead of inside crossValidateModel) to break any dependencies on the sequence of trails             
+#            Ybefshfl = Y
+
+            cls = [0]
+            attempt = 0
+            while len(cls) < num_classes: # make sure all classes exist in YTrain    
+                attempt = attempt+1
+                if attempt==1001:
+                    print(f'NOTE: reached {attempt} attempts but failed to have all classes in the training data! Only {len(cls)}/{num_classes} classes exist in the training data!')
+                    # NOTE: ideally you want to set a red flag variable here so later you can exclude these data from analysis!
+                    break
             
-#            Ybefshfl = Y            
-            shfl = rng.permutation(np.arange(0, numTrials)) # shfl: new order of trials ... shuffled indeces of Y... the last 1/10th indeces will be testing trials.
+                shfl = rng.permutation(np.arange(0, numTrials)) # shfl: new order of trials ... shuffled indeces of Y... the last 1/10th indeces will be testing trials.
+
+                Ys = Y[shfl] 
+                Xs = X[:,shfl]             
             
-            Y = Y[shfl] 
-            X = X[:,shfl]             
+                ## %%%%% divide data to training and testing sets
+                YTrain = Ys[np.arange(0, int((kfold-1.) / kfold * numTrials))] # Take the first 90% of trials as training set       
+                cls = np.unique(YTrain)   
+        
+            Y = Ys
+            X = Xs
             
             # Ytest_allSamps[s,:] : Y that will be used as testing trials in this sample
             Ytest_allSamps[s,:] = Y[np.arange(numTrials-len_test, numTrials)] # the last 1/10th of Y (after applying shfl labels to it)
@@ -464,7 +485,8 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
 #            print('\tFrame %d' %(ifr)  
         #%%######################## Loop over different values of regularization
         for i in range(nCvals): # i = 0 # train SVM using different values of regularization parameter
-            print(f'Trying regularization value {cvect[i]}')
+            print(f'\tc = {cvect[i]}')
+            
             if regType == 'l1':                               
                 summary,_ =  crossValidateModel(X.transpose(), Y, linearSVM, kfold = kfold, l1 = cvect[i], shflTrs = shuffleTrs)
                 
@@ -709,7 +731,7 @@ def set_best_c_diffNumNeurons(X,Y,regType,kfold,numDataPoints,numSamples,populat
     Y = Y_svm
     cbest = np.nan
     fr2an = np.nan
-    shflTrLabs = 0
+    shflTrLabs = 0 # shuffle trial classes in Y
     X_svm_incorr = 0
     Y_svm_incorr = 0
     mnHRLR_acrossDays = np.nan
@@ -719,6 +741,8 @@ def set_best_c_diffNumNeurons(X,Y,regType,kfold,numDataPoints,numSamples,populat
     # cbest = 10**6    
     # regType = 'l1'
     # kfold = 10;
+
+    # shuffleTrs = False # if 1 shuffle trials to break any dependencies on the sequence of trials 
 
 
     #%%            
