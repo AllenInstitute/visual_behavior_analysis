@@ -149,7 +149,7 @@ def crossValidateModel(X, Y, modelFn, **options):
             Ys = Y[shfl]
             Xs = X[shfl, :]
             testTrInds = shfl[np.arange(int((kfold-1.)/kfold*numObservations), numObservations)] # index of testing trials (that will be used in svm below)
-        else:
+        else: # here, while is meaningless bc shfl is not changing from one loop to the other. but. we have already checked for the existence of all classes in Ytrain in set_bestc
             shfl = np.arange(0, numObservations)
             Ys = Y
             Xs = X
