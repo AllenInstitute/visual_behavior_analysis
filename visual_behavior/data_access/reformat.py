@@ -99,7 +99,6 @@ def get_omissions_exposures_for_behavior_session_id(behavior_session_id):
     sessions = cache.get_behavior_session_table()
     sessions = sessions[sessions.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
     donor_id = sessions.loc[behavior_session_id].donor_id
-    session_type = sessions.loc[behavior_session_id].session_type
     date = sessions.loc[behavior_session_id].date_of_acquisition
     # check how many behavior sessions prior to this date had the same image set
     cdf = sessions[(sessions.donor_id == donor_id)].copy()

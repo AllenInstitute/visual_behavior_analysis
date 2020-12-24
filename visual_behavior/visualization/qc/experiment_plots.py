@@ -523,7 +523,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
         # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\classifier_validation\CNN_rois'
         save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/classifier_validation/last_ditch_effort_annotation/classification_threshold_' + str(
             classification_threshold)
-        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' +str(cell_roi_id)+'_'+str(roi_id))
+        utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(cell_roi_id) + '_' + str(roi_id))
 
 
 def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=None, vmin=-1, vmax=1, cmap='RdBu',
@@ -548,7 +548,7 @@ def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=N
     if max_projection is not None:
         ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection))
     for roi_id in list(roi_mask_dict.keys()):
-        roi_mask_dict[roi_id][roi_mask_dict[roi_id]==1] = metrics_dict[roi_id]
+        roi_mask_dict[roi_id][roi_mask_dict[roi_id] == 1] = metrics_dict[roi_id]
     mask = np.sum(np.asarray(list(roi_mask_dict.values())), axis=0)
     cax = ax.imshow(mask, cmap=cmap, alpha=0.5, vmin=vmin, vmax=vmax)
     if colorbar:
