@@ -58,15 +58,15 @@ def get_image_set_exposures_for_behavior_session_id(behavior_session_id):
     """
     cache = loading.get_visual_behavior_cache()
     sessions = cache.get_behavior_session_table()
-    sessions = sessions[sessions.session_type.isnull()==False] ## FIX THIS - SHOULD NOT BE ANY NaNs!
+    sessions = sessions[sessions.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
     donor_id = sessions.loc[behavior_session_id].donor_id
     session_type = sessions.loc[behavior_session_id].session_type
     image_set = session_type.split('_')[3]
     date = sessions.loc[behavior_session_id].date_of_acquisition
     # check how many behavior sessions prior to this date had the same image set
-    cdf = sessions[(sessions.donor_id==donor_id)].copy()
-    pre_expts = cdf[(cdf.date_of_acquisition<date)]
-    image_set_exposures = int(len([session_type for session_type in pre_expts.session_type if 'images_'+image_set in session_type]))
+    cdf = sessions[(sessions.donor_id == donor_id)].copy()
+    pre_expts = cdf[(cdf.date_of_acquisition < date)]
+    image_set_exposures = int(len([session_type for session_type in pre_expts.session_type if 'images_' + image_set in session_type]))
     return image_set_exposures
 
 
@@ -77,7 +77,7 @@ def add_image_set_exposure_number_to_experiments_table(experiments):
             behavior_session_id = experiments.iloc[row].behavior_session_id
             image_set_exposures = get_image_set_exposures_for_behavior_session_id(behavior_session_id)
             exposures.append(image_set_exposures)
-        except:
+        except Exception:
             exposures.append(np.nan)
     experiments['prior_exposures_to_image_set'] = exposures
     return experiments
@@ -97,14 +97,13 @@ def get_omissions_exposures_for_behavior_session_id(behavior_session_id):
     """
     cache = loading.get_visual_behavior_cache()
     sessions = cache.get_behavior_session_table()
-    sessions = sessions[sessions.session_type.isnull()==False] ## FIX THIS - SHOULD NOT BE ANY NaNs!
+    sessions = sessions[sessions.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
     donor_id = sessions.loc[behavior_session_id].donor_id
     session_type = sessions.loc[behavior_session_id].session_type
-    image_set = session_type.split('_')[3]
     date = sessions.loc[behavior_session_id].date_of_acquisition
     # check how many behavior sessions prior to this date had the same image set
-    cdf = sessions[(sessions.donor_id==donor_id)].copy()
-    pre_expts = cdf[(cdf.date_of_acquisition<date)]
+    cdf = sessions[(sessions.donor_id == donor_id)].copy()
+    pre_expts = cdf[(cdf.date_of_acquisition < date)]
     # check how many behavior sessions prior to this date had omissions
     import datetime
     date_of_change = 'Feb 15 2019 12:00AM'
@@ -124,7 +123,7 @@ def add_omission_exposure_number_to_experiments_table(experiments):
             behavior_session_id = experiments.iloc[row].behavior_session_id
             omission_exposures = get_omission_exposures_for_behavior_session_id(behavior_session_id)
             exposures.append(omission_exposures)
-        except:
+        except Exception:
             exposures.append(np.nan)
     experiments['prior_exposures_to_omissions'] = exposures
     return experiments
@@ -357,8 +356,8 @@ def add_mean_pupil_area(stimulus_presentations, eye_tracking, range_relative_to_
         nothing, modifies session in place. Same as the input, but with 'mean_pupil_area' column added
     '''
     mean_pupil_area_df = esp.mean_pupil_area(stimulus_presentations,
-                                                   eye_tracking,
-                                                   range_relative_to_stimulus_start)
+                                             eye_tracking,
+                                             range_relative_to_stimulus_start)
 
     stimulus_presentations["mean_pupil_area"] = mean_pupil_area_df
     return stimulus_presentations

@@ -117,7 +117,7 @@ def mean_running_speed(stimulus_presentations_df, running_speed_df,
 
 
 def mean_pupil_area(stimulus_presentations_df, eye_tracking,
-                       range_relative_to_stimulus_start=[0, 0.25]):
+                    range_relative_to_stimulus_start=[0, 0.25]):
     '''
     Append a column to stimulus_presentations which contains the mean pupil area in a range relative to
     the stimulus start time.
