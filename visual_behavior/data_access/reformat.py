@@ -77,7 +77,7 @@ def add_image_set_exposure_number_to_experiments_table(experiments):
             behavior_session_id = experiments.iloc[row].behavior_session_id
             image_set_exposures = get_image_set_exposures_for_behavior_session_id(behavior_session_id)
             exposures.append(image_set_exposures)
-        except BaseException:
+        except Exception:
             exposures.append(np.nan)
     experiments['prior_exposures_to_image_set'] = exposures
     return experiments
@@ -99,8 +99,6 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id):
     sessions = cache.get_behavior_session_table()
     sessions = sessions[sessions.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
     donor_id = sessions.loc[behavior_session_id].donor_id
-    session_type = sessions.loc[behavior_session_id].session_type
-    image_set = session_type.split('_')[3]
     date = sessions.loc[behavior_session_id].date_of_acquisition
     # check how many behavior sessions prior to this date had the same image set
     cdf = sessions[(sessions.donor_id == donor_id)].copy()
@@ -124,7 +122,7 @@ def add_omission_exposure_number_to_experiments_table(experiments):
             behavior_session_id = experiments.iloc[row].behavior_session_id
             omission_exposures = get_omission_exposures_for_behavior_session_id(behavior_session_id)
             exposures.append(omission_exposures)
-        except BaseException:
+        except Exception:
             exposures.append(np.nan)
     experiments['prior_exposures_to_omissions'] = exposures
     return experiments

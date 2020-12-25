@@ -506,7 +506,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def eye_tracking(self):
         eye_tracking = super().eye_tracking.copy()
-        eye_tracking = eye_tracking.rename(columns={'time':'timestamps'})
+        eye_tracking = eye_tracking.rename(columns={'time': 'timestamps'})
         self._eye_tracking = eye_tracking
         return self._eye_tracking
 
@@ -519,9 +519,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
-        try: # if eye tracking data is not present or cant be loaded
+        try:  # if eye tracking data is not present or cant be loaded
             stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, self.eye_tracking)
-        except: # set to NaN
+        except:  # set to NaN
             stimulus_presentations['mean_pupil_area'] = np.nan
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
