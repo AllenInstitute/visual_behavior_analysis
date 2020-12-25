@@ -720,3 +720,20 @@ def add_response_latency(stimulus_presentations):
     st['early_lick'] = [True if response_latency < 0.15 else False for response_latency in
                         st['response_latency'].values]
     return st
+
+def add_image_contrast_to_stimulus_presentations(stimulus_presentations):
+    cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
+    df = pd.read_hdf(os.path.join(cache_dir, 'image_metrics_df.h5'), key='df')
+    st = stimulus_presentations.copy()
+    st = st.reset_index()
+    st = st.merge(df[['image_name', 'cropped_image_std', 'warped_image_std']], on='image_name', how='left')
+    st = st.set_index('stimulus_presentations_id')
+    st.at[st[st.image_name == 'omitted'].index, 'warped_image_std'] = 0.
+    st.at[st[st.image_name == 'omitted'].index, 'cropped_image_std'] = 0.
+    st['warped_image_std'] = [float(w) for w in st.warped_image_std.values]
+    st['cropped_image_std'] = [float(w) for w in st.cropped_image_std.values]
+    return st
+
+
+
+

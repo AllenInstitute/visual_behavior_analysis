@@ -545,6 +545,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         if 'orientation' in stimulus_presentations.columns:
             stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
                                                                           'phase', 'spatial_frequency'])
+
+        stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
