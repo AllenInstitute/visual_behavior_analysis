@@ -40,11 +40,11 @@ def add_location_to_expts(expts):
 
 def get_exposure_number_for_group(group):
     order = np.argsort(group['date_of_acquisition'].values)
-    group['exposure_number'] = order
+    group['stimulus_type_exposure_number'] = order
     return group
 
 
-def add_exposure_number_to_experiments_table(experiments):
+def add_stimulus_type_exposure_number_to_experiments_table(experiments):
     experiments = experiments.groupby(['super_container_id', 'container_id', 'session_type']).apply(
         get_exposure_number_for_group)
     return experiments
