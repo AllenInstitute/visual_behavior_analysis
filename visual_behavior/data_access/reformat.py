@@ -720,6 +720,9 @@ def add_response_latency(stimulus_presentations):
     return st
 
 def add_image_contrast_to_stimulus_presentations(stimulus_presentations):
+    """
+    Get image contrast values from saved file and merge with stimulus presentations table using image_name column to merge.
+    """
     cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
     df = pd.read_hdf(os.path.join(cache_dir, 'image_metrics_df.h5'), key='df')
     st = stimulus_presentations.copy()
@@ -732,6 +735,16 @@ def add_image_contrast_to_stimulus_presentations(stimulus_presentations):
     st['cropped_image_std'] = [float(w) for w in st.cropped_image_std.values]
     return st
 
+
+def add_behavior_performance_metrics_to_experiment_table(experiment_table):
+    """
+    Get behavior performance metrics from saved file and merge with experiment_table on ophys_experiment_id.
+    Performance metrics were obtained from the SDK method .get_performance_metrics() on the dataset object for each experiment.
+    """
+    save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache'
+    performance_df = pd.read_csv(os.path.join(save_dir, 'behavior_performance_table.csv'), index_col=0)
+    experiment_table = experiment_table.join(performance_df, on='ophys_experiment_id')
+    return experiment_table
 
 
 
