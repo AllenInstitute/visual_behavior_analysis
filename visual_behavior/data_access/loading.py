@@ -499,7 +499,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def running_speed(self):
         self._running_speed = super().running_speed
-        if type(self._running_speed) != pd.core.frame.DataFrame:
+        if not isinstance(self._running_speed, pd.core.frame.DataFrame):
             self._running_speed = reformat.convert_running_speed(self._running_speed)
         return self._running_speed
 
@@ -521,7 +521,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
         try:  # if eye tracking data is not present or cant be loaded
             stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, self.eye_tracking)
-        except:  # set to NaN
+        except BaseException:  # set to NaN
             stimulus_presentations['mean_pupil_area'] = np.nan
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
