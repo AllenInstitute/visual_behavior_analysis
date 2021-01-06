@@ -1,5 +1,5 @@
 --extra-index-url https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple
-allensdk<=2.3.2; python_version >= '3.0'
+allensdk
 six>=1.11.0
 numpy>=1.15.4
 pandas==0.25.3
