@@ -708,9 +708,8 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=ax[i])
-
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
-        ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
+        # session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        # ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'motion_correction_xy_shift',
