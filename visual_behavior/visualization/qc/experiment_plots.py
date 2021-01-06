@@ -145,7 +145,7 @@ def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None)
     # get metrics from saved file and add to plot title
     save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/motion_correction'
     # motion_df = pd.read_csv(os.path.join(save_dir, 'motion_correction_values_passing_experiments.csv'))
-    motion_df = pd.read_hdf(os.path.join(save_dir, 'motion_correction_values_passing_experiments.h5'), key='df')
+    motion_df = pd.read_hdf(os.path.join(save_dir, 'motion_correction_values_all_experiments.h5'), key='df')
     motion_df = motion_df.set_index('ophys_experiment_id')
     cols_to_plot = ['x_mean', 'x_min', 'x_max', 'x_range', 'x_std',
                     'y_mean', 'y_min', 'y_max', 'y_range', 'y_std']
