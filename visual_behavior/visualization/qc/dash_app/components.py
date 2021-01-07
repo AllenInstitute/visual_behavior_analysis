@@ -124,13 +124,13 @@ feedback_button = html.Div(
                         dbc.Input(id="feedback_popup_container_id", type="text", disabled=True),
                         dbc.Label("Experiment ID:"),
                         html.H4(''),
-                        html.Button('Select All Experiments', id='feedback_popup_select_all_experiments'),
-                        html.Button('Unselect All Experiments', id='feedback_popup_unselect_all_experiments'),
-                        dbc.Checklist(
+                        html.Button('Select All Experiments', id='feedback_popup_select_all_experiments', style = dict(display='none')),
+                        html.Button('Unselect All Experiments', id='feedback_popup_unselect_all_experiments', style = dict(display='none')),
+                        dbc.RadioItems(
                             options=[
                                 {"label": "exp0 ", "value": 1},
                             ],
-                            value=[],
+                            value=None,
                             id="feedback_popup_experiments",
                         ),
                         dbc.Label("Attribute being QC'd:"),
@@ -139,10 +139,16 @@ feedback_button = html.Div(
                             options=QC_OPTIONS,
                             value=''
                         ),
+                        html.Label(children="Is residual motion present in the video:", id='feedback_popup_motion_present_label'),
+                        dbc.RadioItems(
+                            options=[{'label':'yes', 'value':'yes_motion'}, {'label':'no', 'value':'no_motion'}],
+                            value='yes',
+                            id="feedback_popup_motion_present",
+                        ),
                         dbc.Label("QC Label:"),
-                        dbc.Checklist(
+                        dbc.RadioItems(
                             options=[],
-                            value=[],
+                            value=None,
                             id="feedback_popup_qc_labels",
                         ),
                         dbc.Label("Notes/observations:"),

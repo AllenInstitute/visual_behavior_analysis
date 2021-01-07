@@ -231,11 +231,12 @@ def select_next(next_button_n_clicks, prev_button_n_clicks, selected_rows, deriv
         State("feedback_popup_container_id", "value"),
         State("feedback_popup_experiments", "value"),
         State("feedback_popup_qc_dropdown", "value"),
+        State("feedback_popup_motion_present", "value"),
         State("feedback_popup_qc_labels", "value"),
         State("feedback_popup_text", "value")
     ]
 )
-def log_feedback(n1, timestamp, username, container_id, experiment_ids, qc_attribute, qc_labels, input_text):
+def log_feedback(n1, timestamp, username, container_id, experiment_ids, qc_attribute, motion_present, qc_labels, input_text):
     print('LOGGING FEEDBACK')
     feedback = {
         'timestamp': timestamp,
@@ -243,6 +244,7 @@ def log_feedback(n1, timestamp, username, container_id, experiment_ids, qc_attri
         'container_id': container_id,
         'experiment_ids': experiment_ids,
         'qc_attribute': qc_attribute,
+        'motion_present': motion_present, 
         'qc_labels': qc_labels,
         'input_text': input_text,
     }
@@ -453,6 +455,25 @@ def show_plot_inventory(checkbox_values):
         # retun hidden = False
         print('making plot visible!!')
         return {'display': 'block'}
+    else:
+        # return hidden = True
+        return {'display': 'none'}
+
+
+# show/hide motion label based on attribute being qc'd
+@app.callback(Output('feedback_popup_motion_present', 'style'), [Input('feedback_popup_qc_dropdown', 'value')])
+def show_plot_inventory(attribute_to_qc):
+    if attribute_to_qc == "Motion Correction":
+        return {'display': True}
+    else:
+        # return hidden = True
+        return {'display': 'none'}
+
+# show/hide motion label based on attribute being qc'd
+@app.callback(Output('feedback_popup_motion_present_label', 'style'), [Input('feedback_popup_qc_dropdown', 'value')])
+def show_plot_inventory(attribute_to_qc):
+    if attribute_to_qc == "Motion Correction":
+        return {'display': True}
     else:
         # return hidden = True
         return {'display': 'none'}
