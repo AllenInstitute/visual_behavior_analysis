@@ -17,7 +17,7 @@ import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
 def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
     mouse_seeks_report_file_base = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
-    report_file = 'ophys_session_log_100120.xlsx'
+    report_file = 'ophys_session_log_011221.xlsx'
     vb_report_path = os.path.join(mouse_seeks_report_file_base, report_file)
     vb_report_df = pd.read_excel(vb_report_path)
 
