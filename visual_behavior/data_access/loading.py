@@ -1133,6 +1133,35 @@ def get_lims_cell_rois_table(ophys_experiment_id):
     return lims_cell_rois_table
 
 
+def get_average_depth_image(experiment_id):
+    """
+    quick and dirty function to load 16x depth image from lims
+    file path location depends on whether it is scientifica or mesoscope, and which version of the pipeline was run
+    function iterates through all possible options of file locations
+    """
+    import visual_behavior.data_access.utilities as utilities
+    import matplotlib.pyplot as plt
+
+    expt_dir = utilities.get_ophys_experiment_dir(utilities.get_lims_data(experiment_id))
+    session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
+    session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(experiment_id)
+
+    # try all combinations of potential file path locations...
+    if os.path.isfile(os.path.join(session_dir, str(experiment_id) + '_averaged_depth.tif')):
+        im = plt.imread(os.path.join(session_dir, str(experiment_id) + '_averaged_depth.tif'))
+    elif os.path.isfile(os.path.join(session_dir, str(experiment_id) + '_depth.tif')):
+        im = plt.imread(os.path.join(session_dir, str(experiment_id) + '_depth.tif'))
+    elif os.path.isfile(os.path.join(session_dir, str(session_id) + '_averaged_depth.tif')):
+        im = plt.imread(os.path.join(session_dir, str(session_id) + '_averaged_depth.tif'))
+    elif os.path.isfile(os.path.join(expt_dir, str(experiment_id) + '_averaged_depth.tif')):
+        im = plt.imread(os.path.join(expt_dir, str(experiment_id) + '_averaged_depth.tif'))
+    elif os.path.isfile(os.path.join(expt_dir, str(experiment_id) + '_depth.tif')):
+        im = plt.imread(os.path.join(expt_dir, str(experiment_id) + '_depth.tif'))
+    else:
+        print('problem for', experiment_id)
+        print(session_dir)
+    return im
+
 # CONTAINER  LEVEL
 
 
