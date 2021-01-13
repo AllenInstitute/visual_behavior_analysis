@@ -40,11 +40,11 @@ def add_location_to_expts(expts):
 
 def get_exposure_number_for_group(group):
     order = np.argsort(group['date_of_acquisition'].values)
-    group['stimulus_type_exposure_number'] = order
+    group['session_type_exposure_number'] = order
     return group
 
 
-def add_stimulus_type_exposure_number_to_experiments_table(experiments):
+def add_session_type_exposure_number_to_experiments_table(experiments):
     experiments = experiments.groupby(['super_container_id', 'container_id', 'session_type']).apply(
         get_exposure_number_for_group)
     return experiments
@@ -164,7 +164,7 @@ def reformat_experiments_table(experiments):
     # replace session types that are NaN with string None
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
-    experiments = add_stimulus_type_exposure_number_to_experiments_table(experiments)
+    experiments = add_session_type_exposure_number_to_experiments_table(experiments)
     experiments = add_image_set_exposure_number_to_experiments_table(experiments)
     experiments = add_omission_exposure_number_to_experiments_table(experiments)
     experiments = add_model_outputs_availability_to_table(experiments)
