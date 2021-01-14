@@ -1,5 +1,5 @@
 from allensdk.internal.api import PostgresQueryMixin
-from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
+from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadable

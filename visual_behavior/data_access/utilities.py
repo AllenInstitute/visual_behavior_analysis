@@ -9,7 +9,7 @@ from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_de
 from visual_behavior import database as db
 
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
-from allensdk.brain_observatory.behavior.behavior_data_session import BehaviorDataSession
+from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 
 import logging
@@ -469,4 +469,4 @@ def get_sdk_session(behavior_session_id, is_ophys):
         ophys_experiment_id = bsid_to_oeid(behavior_session_id)
         return BehaviorOphysSession.from_lims(ophys_experiment_id)
     else:
-        return BehaviorDataSession.from_lims(behavior_session_id)
+        return BehaviorSession.from_lims(behavior_session_id)
