@@ -705,9 +705,8 @@ def get_cell_index_for_cell_specimen_id(cell_specimen_id, cell_specimen_ids):
 
 
 def get_fov_dims(experiment_id):
-    from allensdk.internal.api.ophys_lims_api import OphysLimsApi
-    api = OphysLimsApi(experiment_id)
-    #    print(api.get_metadata())
+    from allensdk.brain_observatory.behavior.session_apis.data_io.behavior_ophys_lims_api import BehaviorOphysLimsApi
+    api = BehaviorOphysLimsApi(experiment_id)
     image_metadata = api.get_metadata()
     return image_metadata
 

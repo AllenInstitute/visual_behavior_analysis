@@ -17,7 +17,7 @@ import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
 def add_mouse_seeks_fail_tags_to_experiments_table(experiments):
     mouse_seeks_report_file_base = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
-    report_file = 'ophys_session_log_100120.xlsx'
+    report_file = 'ophys_session_log_011221.xlsx'
     vb_report_path = os.path.join(mouse_seeks_report_file_base, report_file)
     vb_report_df = pd.read_excel(vb_report_path)
 
@@ -40,13 +40,91 @@ def add_location_to_expts(expts):
 
 def get_exposure_number_for_group(group):
     order = np.argsort(group['date_of_acquisition'].values)
-    group['exposure_number'] = order
+    group['session_type_exposure_number'] = order
     return group
 
 
-def add_exposure_number_to_experiments_table(experiments):
+def add_session_type_exposure_number_to_experiments_table(experiments):
     experiments = experiments.groupby(['super_container_id', 'container_id', 'session_type']).apply(
         get_exposure_number_for_group)
+    return experiments
+
+
+def get_image_set_exposures_for_behavior_session_id(behavior_session_id):
+    """
+    Gets the number of sessions an image set has been presented in prior to the date of the given behavior_session_id
+    :param behavior_session_id:
+    :return:
+    """
+    cache = loading.get_visual_behavior_cache()
+    sessions = cache.get_behavior_session_table()
+    sessions = sessions[sessions.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
+    donor_id = sessions.loc[behavior_session_id].donor_id
+    session_type = sessions.loc[behavior_session_id].session_type
+    image_set = session_type.split('_')[3]
+    date = sessions.loc[behavior_session_id].date_of_acquisition
+    # check how many behavior sessions prior to this date had the same image set
+    cdf = sessions[(sessions.donor_id == donor_id)].copy()
+    pre_expts = cdf[(cdf.date_of_acquisition < date)]
+    image_set_exposures = int(len([session_type for session_type in pre_expts.session_type if 'images_' + image_set in session_type]))
+    return image_set_exposures
+
+
+def add_image_set_exposure_number_to_experiments_table(experiments):
+    exposures = []
+    for row in range(len(experiments)):
+        try:
+            behavior_session_id = experiments.iloc[row].behavior_session_id
+            image_set_exposures = get_image_set_exposures_for_behavior_session_id(behavior_session_id)
+            exposures.append(image_set_exposures)
+        except Exception:
+            exposures.append(np.nan)
+    experiments['prior_exposures_to_image_set'] = exposures
+    return experiments
+
+
+def get_omission_exposures_for_behavior_session_id(behavior_session_id):
+    """
+    Gets the number of sessions that had omitted stimuli prior to the date of the given behavior_session_id
+    Note: Omitted flashes were accidentally included in OPHYS_0_images_X_habituation prior to Feb 14, 2019
+    This commit to mtrain_regiments removed omissions from habituation sessions:
+        https://github.com/AllenInstitute/mtrain_regimens/commits/7ee1da717a4445cc6418fc91dda4623b9958e7a0
+    A fix was pushed to the ophys rigs to implement this change sometime around Feb 14, 2019 but it is unknown exactly when.
+    *** TO DO: determine exact mtrain commit / version date for each session to determine whether omissions
+        were incuded in OPHYS_0_images_X_habituation) ***
+    :param behavior_session_id:
+    :return: The number of behavior sessions where omitted flashes were present, prior to the current session
+    """
+    cache = loading.get_visual_behavior_cache()
+    sessions = cache.get_behavior_session_table()
+    sessions = sessions[sessions.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
+    donor_id = sessions.loc[behavior_session_id].donor_id
+    date = sessions.loc[behavior_session_id].date_of_acquisition
+    # check how many behavior sessions prior to this date had the same image set
+    cdf = sessions[(sessions.donor_id == donor_id)].copy()
+    pre_expts = cdf[(cdf.date_of_acquisition < date)]
+    # check how many behavior sessions prior to this date had omissions
+    import datetime
+    date_of_change = 'Feb 15 2019 12:00AM'
+    date_of_change = datetime.datetime.strptime(date_of_change, '%b %d %Y %I:%M%p')
+    if date < str(date_of_change):
+        omission_exposures = len([session_type for session_type in pre_expts.session_type if 'OPHYS' in session_type])
+    else:
+        omission_exposures = len([session_type for session_type in pre_expts.session_type if
+                                  ('OPHYS' in session_type) and ('habituation' not in session_type)])
+    return omission_exposures
+
+
+def add_omission_exposure_number_to_experiments_table(experiments):
+    exposures = []
+    for row in range(len(experiments)):
+        try:
+            behavior_session_id = experiments.iloc[row].behavior_session_id
+            omission_exposures = get_omission_exposures_for_behavior_session_id(behavior_session_id)
+            exposures.append(omission_exposures)
+        except Exception:
+            exposures.append(np.nan)
+    experiments['prior_exposures_to_omissions'] = exposures
     return experiments
 
 
@@ -68,8 +146,8 @@ def add_has_cell_matching_to_table(table):
     :param table: table of experiment level metadata
     :return: table with added column 'has_cell_matching', values are Boolean
     """
-    save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\summary_plots'
-    df = pd.read_csv(os.path.join(save_dir, 'experiments_with_missing_cell_specimen_ids_201124.csv'))
+    save_dir = loading.get_cache_dir()
+    df = pd.read_csv(os.path.join(save_dir, 'experiments_with_missing_cell_specimen_ids.csv'))
     no_cell_matching = list(df.ophys_experiment_id.values)
     print(len(no_cell_matching))
     table['has_cell_matching'] = [False if expt in no_cell_matching else True for expt in table.ophys_experiment_id.values]
@@ -86,7 +164,9 @@ def reformat_experiments_table(experiments):
     # replace session types that are NaN with string None
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
-    experiments = add_exposure_number_to_experiments_table(experiments)
+    experiments = add_session_type_exposure_number_to_experiments_table(experiments)
+    experiments = add_image_set_exposure_number_to_experiments_table(experiments)
+    experiments = add_omission_exposure_number_to_experiments_table(experiments)
     experiments = add_model_outputs_availability_to_table(experiments)
     experiments = add_has_cell_matching_to_table(experiments)
     if 'level_0' in experiments.columns:
@@ -155,10 +235,12 @@ def add_trial_type_to_trials_table(trials):
     trials.loc[trials[trials.false_alarm].index, 'trial_type'] = 'false_alarm'
     return trials
 
+
 def add_reward_rate_to_trials_table(trials):
-    trials['rewarded'] = [1 if np.isnan(reward_time)==False else 0 for reward_time in trials.reward_time.values]
+    trials['rewarded'] = [1 if np.isnan(reward_time) == False else 0 for reward_time in trials.reward_time.values]
     trials['reward_rate'] = trials['rewarded'].rolling(window=100, min_periods=1, win_type='triang').mean()
     return trials
+
 
 def convert_metadata_to_dataframe(original_metadata):
     metadata = original_metadata.copy()
@@ -255,6 +337,28 @@ def add_mean_running_speed(stimulus_presentations, running_speed, range_relative
                                                        range_relative_to_stimulus_start)
 
     stimulus_presentations["mean_running_speed"] = mean_running_speed_df
+    return stimulus_presentations
+
+
+def add_mean_pupil_area(stimulus_presentations, eye_tracking, range_relative_to_stimulus_start=[0, 0.75]):
+    '''
+    Append a column to stimulus_presentations which contains the mean pupil area (in pixels^2) in the window provided.
+
+    Args:
+        stimulus_presentations(pd.DataFrame): dataframe of stimulus presentations.
+                Must contain: 'start_time'
+        eye_tracking (pd.DataFrame): dataframe of eye tracking data.
+            Must contain: 'pupil_area', 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the pupil area.
+    Returns:
+        nothing, modifies session in place. Same as the input, but with 'mean_pupil_area' column added
+    '''
+    mean_pupil_area_df = esp.mean_pupil_area(stimulus_presentations,
+                                             eye_tracking,
+                                             range_relative_to_stimulus_start)
+
+    stimulus_presentations["mean_pupil_area"] = mean_pupil_area_df
     return stimulus_presentations
 
 
@@ -602,6 +706,7 @@ def filter_invalid_rois_inplace(session):
     session.corrected_fluorescence_traces.drop(index=invalid_cell_specimen_ids, inplace=True)
     session.cell_specimen_table.drop(index=invalid_cell_specimen_ids, inplace=True)
 
+
 def add_response_latency(stimulus_presentations):
     st = stimulus_presentations.copy()
     st['response_latency'] = st['licks'] - st['start_time']
@@ -613,3 +718,31 @@ def add_response_latency(stimulus_presentations):
     st['early_lick'] = [True if response_latency < 0.15 else False for response_latency in
                         st['response_latency'].values]
     return st
+
+
+def add_image_contrast_to_stimulus_presentations(stimulus_presentations):
+    """
+    Get image contrast values from saved file and merge with stimulus presentations table using image_name column to merge.
+    """
+    cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
+    df = pd.read_hdf(os.path.join(cache_dir, 'image_metrics_df.h5'), key='df')
+    st = stimulus_presentations.copy()
+    st = st.reset_index()
+    st = st.merge(df[['image_name', 'cropped_image_std', 'warped_image_std']], on='image_name', how='left')
+    st = st.set_index('stimulus_presentations_id')
+    st.at[st[st.image_name == 'omitted'].index, 'warped_image_std'] = 0.
+    st.at[st[st.image_name == 'omitted'].index, 'cropped_image_std'] = 0.
+    st['warped_image_std'] = [float(w) for w in st.warped_image_std.values]
+    st['cropped_image_std'] = [float(w) for w in st.cropped_image_std.values]
+    return st
+
+
+def add_behavior_performance_metrics_to_experiment_table(experiment_table):
+    """
+    Get behavior performance metrics from saved file and merge with experiment_table on ophys_experiment_id.
+    Performance metrics were obtained from the SDK method .get_performance_metrics() on the dataset object for each experiment.
+    """
+    save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache'
+    performance_df = pd.read_csv(os.path.join(save_dir, 'behavior_performance_table.csv'), index_col=0)
+    experiment_table = experiment_table.join(performance_df, on='ophys_experiment_id')
+    return experiment_table

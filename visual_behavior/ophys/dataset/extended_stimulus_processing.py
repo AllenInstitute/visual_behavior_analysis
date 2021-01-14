@@ -116,6 +116,34 @@ def mean_running_speed(stimulus_presentations_df, running_speed_df,
     return flash_running_speed
 
 
+def mean_pupil_area(stimulus_presentations_df, eye_tracking,
+                    range_relative_to_stimulus_start=[0, 0.25]):
+    '''
+    Append a column to stimulus_presentations which contains the mean pupil area in a range relative to
+    the stimulus start time.
+
+    Args:
+        stimulus_presentations_df (pd.DataFrame): dataframe of stimulus presentations.
+            Must contain: 'start_time'
+        eye_tracking (pd.DataFrame): dataframe of eye tracking data.
+            Must contain: 'pupil_area', 'timestamps'
+        range_relative_to_stimulus_start (list with 2 elements): start and end of the range
+            relative to the start of each stimulus to average the pupil area.
+    Returns:
+        flash_running_speed (pd.Series): mean running speed for each stimulus presentation.
+    '''
+    flash_pupil_area = stimulus_presentations_df.apply(
+        lambda row: trace_average(
+            eye_tracking['pupil_area'].values,
+            eye_tracking['timestamps'].values,
+            row["start_time"] + range_relative_to_stimulus_start[0],
+            row["start_time"] + range_relative_to_stimulus_start[1],
+        ),
+        axis=1,
+    )
+    return flash_pupil_area
+
+
 def licks_each_flash(stimulus_presentations_df, licks_df,
                      range_relative_to_stimulus_start=[0, 0.75]):
     '''
