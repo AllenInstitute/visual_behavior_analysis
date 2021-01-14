@@ -162,7 +162,7 @@ def get_behavior_session_id_from_ophys_experiment_id(ophys_experiment_id, cache)
     return ophys_experiments.loc[ophys_experiment_id].behavior_session_id
 
 
-def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
+def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id):
     """finds the ophys_session_id associated with an ophys_experiment_id
 
     Arguments:
