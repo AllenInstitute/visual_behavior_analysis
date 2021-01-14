@@ -5,6 +5,19 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
+def get_container_plots_dir():
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
+
+def get_session_plots_dir():
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
+
+def get_experiment_plots_dir():
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+
+def get_single_cell_plots_dir():
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
+
+
 def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
@@ -156,3 +169,4 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
 
     inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
     return inner_ax
+

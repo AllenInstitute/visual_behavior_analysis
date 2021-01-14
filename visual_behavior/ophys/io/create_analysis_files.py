@@ -12,21 +12,16 @@ import visual_behavior.data_access.loading as loading
 # from visual_behavior.visualization.ophys import summary_figures as sf
 
 
-# import logging
-
-# logger = logging.getLogger(__name__)
-
-
 def create_analysis_files(experiment_id, cache_dir, overwrite_analysis_files=True):
     use_events = False
     print(experiment_id)
-    analysis_dir = loading.get_analysis_dir(cache_dir, experiment_id)
+    dataset = loading.get_ophys_dataset(experiment_id)
+    analysis_dir = dataset.analysis_dir
     if len(analysis_dir) == 0:
         try:
             _ = convert_level_1_to_level_2(experiment_id, cache_dir, plot_roi_validation=False)
         except:  # NOQA E722
             print('could not convert', experiment_id)
-    dataset = loading.get_ophys_dataset(experiment_id, cache_dir)
     analysis = ResponseAnalysis(dataset, use_events=use_events, overwrite_analysis_files=overwrite_analysis_files)
 
     _ = analysis.trials_response_df
