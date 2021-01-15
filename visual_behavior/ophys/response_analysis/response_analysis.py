@@ -7,7 +7,7 @@ Created on Sunday July 15 2018
 
 import os
 import pandas as pd
-import visual_behavior.data_access.loading as loading
+from visual_behavior.data_access.loading import get_analysis_cache_dir
 import visual_behavior.ophys.response_analysis.response_processing as rp
 
 
