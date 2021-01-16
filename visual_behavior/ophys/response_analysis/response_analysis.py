@@ -7,7 +7,7 @@ Created on Sunday July 15 2018
 
 import os
 import pandas as pd
-import visual_behavior.data_access.loading as loading
+# import visual_behavior.data_access.loading as loading
 import visual_behavior.ophys.response_analysis.response_processing as rp
 
 
@@ -33,6 +33,10 @@ class LazyLoadable(object):
         if not hasattr(obj, self.name):
             setattr(obj, self.name, self.calculate(obj))
         return getattr(obj, self.name)
+
+
+def get_analysis_cache_dir():
+    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
 
 class ResponseAnalysis(object):
@@ -90,7 +94,7 @@ class ResponseAnalysis(object):
         self.metadata = self.dataset.metadata.copy()
         self.use_events = use_events
         if analysis_cache_dir is None:
-            self.analysis_cache_dir = loading.get_analysis_cache_dir()
+            self.analysis_cache_dir = get_analysis_cache_dir()
         else:
             self.analysis_cache_dir = analysis_cache_dir
         self.ophys_experiment_id = self.dataset.ophys_experiment_id
