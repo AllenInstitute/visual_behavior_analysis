@@ -67,39 +67,39 @@ config = configp.ConfigParser()
 #  RELEVANT DIRECTORIES
 
 def get_super_container_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
 
 
 def get_container_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
 
 
 def get_session_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
 
 
 def get_experiment_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 
 def get_analysis_cache_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
 
 def get_events_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
 
 
 def get_behavior_model_outputs_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
 
 
 def get_decoding_analysis_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
 
 
 def get_ophys_glm_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
 # LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
