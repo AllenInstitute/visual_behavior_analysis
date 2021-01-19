@@ -23,11 +23,13 @@ from general_funs import *
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 
-def svm_images_main_post(session_id, data_list, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0):
+def svm_images_main_post(session_id, data_list, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, use_events=False, doPlots=0):
     
     num_classes = 8 # decoding 8 images
     num_planes = 8
-    svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # 'svm_gray_omit'
+    
+    e = 'events_' if use_events else ''
+    svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # 'svm_gray_omit'
         
     exp_ids = data_list['experiment_id'].values
 #     frame_dur = np.array([0.093]) # sec (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)    

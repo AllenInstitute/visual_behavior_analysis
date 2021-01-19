@@ -18,7 +18,6 @@ Created on Wed Oct 21 15:14:05 2020
     
 """
 
-
 stages_all = (np.array([svm_this_plane_allsess0['session_labs'].values[i][0][0] for i in range(svm_this_plane_allsess0.shape[0])])).astype(int)
 blocks_all = svm_this_plane_allsess0['block'].values # weird: 70 block 0s, and 69 block 1s ... you need to figure out why some experiments have failed!
 
@@ -49,14 +48,24 @@ else:
 svm_allMice_sessAvSd = pd.DataFrame([], columns=cols)
 
 
+if ~np.isnan(svm_blocks):
+    br = np.unique(blocks_all)
+else:
+    br = [np.nan]
+    
+
 cntall = 0
 cntall2 = 0
 
 for istage in np.unique(stages_all): # istage=1
-    for iblock in np.unique(blocks_all): # iblock=0
+    for iblock in br: # iblock=0 ; iblock=np.nan
         
-        svm_this_plane_allsess = svm_this_plane_allsess0[np.logical_and(stages_all==istage , blocks_all==iblock)]
-    
+        if ~np.isnan(svm_blocks):
+            svm_this_plane_allsess = svm_this_plane_allsess0[np.logical_and(stages_all==istage , blocks_all==iblock)]
+        else:
+            svm_this_plane_allsess = svm_this_plane_allsess0[stages_all==istage]
+            
+            
         cntall = cntall + 1
         
         #%% ##########################################################################################

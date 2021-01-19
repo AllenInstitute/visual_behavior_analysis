@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+NOTE: This code is the new version that replaced "svm_images_plots_setVars.py". It works for both when the svm was run on the whole session or when it was run on multiple blocks during the session.
+It will create plots for each stage (ophy1, 2, etc). If you want average plots across stages, you need to modify line 60 of code "svm_images_plots_setVars_sumMice_blocks.py" so we dont get only a given stage out of svm_this_plane_allsess0
+
+
 The 1st script to run to make plots (assuming the analysis is done and files are saved.)
 
 Before this script, "svm_images_init" must be run to save all_sess dataframe.
@@ -13,7 +17,6 @@ Its output is a pandas table "svm_this_plane_allsess" which includes svm variabl
 This script will call the following 2 scripts to make all the plots related to svm analysis:
 "svm_images_plots_eachMouse" to make plots for each mouse.
 "svm_images_plots_setVars_sumMice.py" and "svm_images_plots_sumMice.py" which set vars and make average plots across mice (for each cre line).
-
 
 
 Note, this script is similar to part of omissions_traces_peaks_plots_setVars_ave.py.
@@ -47,11 +50,14 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
 #%%
+
+svm_blocks = np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+use_events = True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 plot_single_mouse = 0 # if 1, make plots for each mouse
-svm_blocks = 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 
 to_decode = 'next' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
 trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+
 
 time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 frames_svm = np.arange(-5,8) #[-3,-2,-1] # [0,1,2,3,4,5] # svm was run on how what frames relative to image onset
@@ -65,8 +71,7 @@ samps_bef = 5
 samps_aft = 8
 
 num_planes = 8
-svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # folder named svmn will be created and figures will be saved inside it
-
+cre2ana_all = 'slc', 'sst', 'vip'
 
 
 #%% Initialize variables
@@ -74,7 +79,13 @@ svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # folder
 # numFrames = samps_bef + samps_aft
 frames_svm = np.array(frames_svm)
 
+
+e = 'events_' if use_events else ''
+svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # 'svm_gray_omit'
+
 dir_now = svmn #'omit_across_sess'
+if use_events:
+    dir_now = 'svm_events_' + svmn[len('events_svm_'):] # so all the folders start with svm
 if ~np.isnan(svm_blocks):
     dir_now = os.path.join(dir_now, f'trial_blocks')
 
@@ -148,22 +159,40 @@ else:
 svm_this_plane_allsess = pd.DataFrame([], columns=columns)
 cntall = 0
 
-for iblock in range(svm_blocks): # iblock = 0
+if ~np.isnan(svm_blocks):
+    br = range(svm_blocks)
+else:
+    br = [np.nan]
+
+
+for iblock in br: # iblock=0 ; iblock=np.nan
     
     svm_allMice_sessPooled_block_name = f'svm_allMice_sessPooled_block{iblock}'
     svm_allMice_sessAvSd_block_name = f'svm_allMice_sessAvSd_block{iblock}'
 
-    allSessName_block_name = f'allSessName_block{iblock}'
+    allSessName_block_name = f'allSessName_block{iblock}' # not sure if we need this anymore
     
-    #%% Read all_see h5 file made in svm_main_post (by calling svm_init)
     
-    # all cre lines, a given frames_svm
-    a = f'(.*)_frames{frames_svm[0]}to{frames_svm[-1]}'    # {cre2ana}
-    a = f'{a}_block{iblock}'
+    #%% Read all_see h5 file made in svm_main_post (by calling svm_init)    
+    # all cre lines, a given frames_svm; latest files saved
+    
+#     a = f'(.*)_frames{frames_svm[0]}to{frames_svm[-1]}'    # {cre2ana}
+    allSessName = []
+    for cre2ana in cre2ana_all: # cre2ana = cre2ana_all[0]
+        
+        a = f'{cre2ana}_frames{frames_svm[0]}to{frames_svm[-1]}'
+        
+        if ~np.isnan(svm_blocks):
+            a = f'{a}_block{iblock}'
 
-    name = f'all_sess_{svmn}_{a}_.'
-    # print(name)
-    allSessName, h5_files = all_sess_set_h5_fileName(name, dir_svm, all_files=1)
+        name = f'all_sess_{svmn}_{a}_.'
+    #     name = f'all_sess_{svmn}_{a}_(.*){analysis_date}_.' # analysis_date = 20210108
+        # print(name)
+    
+        allSessName_thisCre, h5_files = all_sess_set_h5_fileName(name, dir_svm, all_files=0) # all_files=1
+        allSessName.append(allSessName_thisCre)
+        
+        
     print(f'\n{len(allSessName)} all_sess files found!\n')
     
     exec(allSessName_block_name + " = allSessName")
@@ -256,10 +285,13 @@ for iblock in range(svm_blocks): # iblock = 0
     estbl = experiments_table.index
     es = all_sess0['experiment_id'].values
 
-    exposure_number = experiments_table[np.in1d(estbl, es)]['exposure_number'].values
-    # print(f'exposure numbers: {np.unique(exposure_number)}')
-
-
+    try:
+        exposure_number = experiments_table[np.in1d(estbl, es)]['session_type_exposure_number'].values
+        # print(f'exposure numbers: {np.unique(exposure_number)}')
+    except Exception as E:
+        print('exposure_number does not exist in experiments_table!! For now it is fine because we are not really using exposure_number')
+        print(E)
+        
 
     #%% Are all experiments in all_sess also in experiment_table; this should always be the case, unless experiment_table changes later bc of some qc related thing!
 
@@ -302,7 +334,7 @@ for iblock in range(svm_blocks): # iblock = 0
     ##############################################################################
     #%%
     for session_numbers in [[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage corresponding to project_codes that we will make plots for.
-    #     session_numbers = [4]
+    #     session_numbers = [1]
 
         #%% If analyzing novel sessions, only take sessions that include the 1st presentation of the novel session (ie the ones without a retake of session ophys-3)
         if np.in1d(4, session_numbers): # novel sessions
@@ -323,6 +355,7 @@ for iblock in range(svm_blocks): # iblock = 0
             print(f'Not analyzing novel session 1, so including all sessions with any exposure_number!')
         print(all_sess.shape)
         '''
+
         print(f'\nFor now including all sessions with any exposure_number!\n')
     #     all_sess = copy.deepcopy(all_sess0)
 
@@ -953,34 +986,37 @@ for iblock in range(svm_blocks): # iblock = 0
         ####################################### PLOTS #######################################
         #####################################################################################
         '''
-        # Follow this script by "svm_images_plots_eachMouse" to make plots for each mouse.
-        if plot_single_mouse:
-            exec(open('svm_images_plots_eachMouse.py').read())
+        if np.isnan(svm_blocks):
+            
+            # Follow this script by "svm_images_plots_eachMouse" to make plots for each mouse.
+            if plot_single_mouse:
+                exec(open('svm_images_plots_eachMouse.py').read())
 
-        # Follow this script by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
-        exec(open('svm_images_plots_setVars_sumMice.py').read())
+            # Follow this script by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
+            exec(open('svm_images_plots_setVars_sumMice.py').read())
+            exec(open('svm_images_plots_sumMice.py').read())
+            
+            # assign the vars sessPooled and sessAvSd to var names specific to each block
+#             exec(svm_allMice_sessPooled_block_name + " = svm_allMice_sessPooled")
+#             exec(svm_allMice_sessAvSd_block_name + " = svm_allMice_sessAvSd")
 
-        # assign the vars sessPooled and sessAvSd to var names specific to each block
-        exec(svm_allMice_sessPooled_block_name + " = svm_allMice_sessPooled")
-        exec(svm_allMice_sessAvSd_block_name + " = svm_allMice_sessAvSd")
+    #         svm_allMice_sessPooled = eval(f'svm_allMice_sessPooled_block{iblock}')
+
+            # svm_allMice_sessPooled_block0
+            # svm_allMice_sessAvSd_block0
         '''
-#         svm_allMice_sessPooled = eval(f'svm_allMice_sessPooled_block{iblock}')
-    
-        # svm_allMice_sessPooled_block0
-        # svm_allMice_sessAvSd_block0
-        
-        
-#     exec(open('svm_images_plots_sumMice.py').read())
+
 
 
     
 #####################################################################################
 
+#%% Follow this script by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
+
+# if ~np.isnan(svm_blocks):
+
 print(svm_this_plane_allsess.shape)
 svm_this_plane_allsess
-
-
-#%% Follow this script by "svm_images_plots_setVars_sumMice.py" to set vars for making average plots across mice (for each cre line).
 
 svm_this_plane_allsess0 = copy.deepcopy(svm_this_plane_allsess)
 exec(open('svm_images_plots_setVars_sumMice_blocks.py').read()) # here we set svm_allMice_sessPooled and svm_allMice_sessAvSd

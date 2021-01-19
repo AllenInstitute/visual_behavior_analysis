@@ -12,6 +12,7 @@ import matplotlib.gridspec as gridspec
 import matplotlib.ticker as ticker
 from matplotlib.ticker import (MultipleLocator, FormatStrFormatter, AutoMinorLocator)
 import seaborn
+import sys
 
 from general_funs import *
 
@@ -20,9 +21,14 @@ import matplotlib.cbook
 warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)        
 
 
+#%%
 stages_allp = (np.array([svm_allMice_sessPooled0['session_labs'].values[i][0][0] for i in range(svm_allMice_sessPooled0.shape[0])])).astype(int)
-blocks_allp = (np.array([svm_allMice_sessPooled0['block_all'].values[i][0] for i in range(svm_allMice_sessPooled0.shape[0])])).astype(int)
-
+if ~np.isnan(svm_blocks):
+    blocks_allp = (np.array([svm_allMice_sessPooled0['block_all'].values[i][0] for i in range(svm_allMice_sessPooled0.shape[0])])).astype(int)
+else:
+    blocks_allp = (np.array([svm_allMice_sessPooled0['block_all'].values[i][0] for i in range(svm_allMice_sessPooled0.shape[0])]))
+    
+    
 stages_alla = (np.array([svm_allMice_sessAvSd0['session_labs'].values[i][0][0] for i in range(svm_allMice_sessAvSd0.shape[0])])).astype(int)
 blocks_alla = svm_allMice_sessAvSd0['block'].values
 
@@ -31,33 +37,43 @@ cre_lines = np.unique(cre_all)
 cre_lineso = copy.deepcopy(cre_lines)
 
 
-
+if ~np.isnan(svm_blocks):
+    br = np.unique(blocks_all)
+else:
+    br = [np.nan]
+    
 
 #%% Make sure for each mouse we have data from both blocks
-
-# NOTE: BELOW NEEDS WORK
-
+'''
 for istage in np.unique(stages_all): # istage=1
-    for iblock in np.unique(blocks_all): # iblock=0
-        svm_allMice_sessPooled = svm_allMice_sessPooled0[np.logical_and(stages_allp==istage , blocks_allp==iblock)]
-#         svm_allMice_sessAvSd = svm_allMice_sessAvSd0[np.logical_and(stages_alla==istage , blocks_alla==iblock)]
+    for iblock in br: # iblock=0 ; iblock=np.nan
+        if ~np.isnan(svm_blocks):
+            svm_this_plane_allsess = svm_this_plane_allsess0[np.logical_and(stages_all==istage , blocks_all==iblock)]
+        else:
+            svm_this_plane_allsess = svm_this_plane_allsess0[stages_all==istage]
+'''
 
-        
-for istage in np.unique(stages_all): # istage=1
-    a = svm_allMice_sessPooled0[stages_allp==istage]
-    if len(a) != svm_blocks:
-        sys.exit('data from both blocks dont exist for this stage!')
-    else:
-        mice_blocks = []
-        for iblock in range(svm_blocks):
-            b = np.unique(a[a['block_all']==iblock]['mouse_id_allPlanes'].values[0])
-            mice_blocks.append(b)
-            
-        mice_blocks = np.array(mice_blocks)
-        if len(mice_blocks[0]) != len(mice_blocks[1]): # np.sort(mice_blocks[0]) == np.sort(mice_blocks[1])
-            print(f'stage {istage}: data from both blocks dont exist for some mice!')
+if ~np.isnan(svm_blocks):
 
-            
+    for istage in np.unique(stages_all): # istage=1
+        a = svm_allMice_sessPooled0[stages_allp==istage]
+        if len(a) != svm_blocks:
+            sys.exit('data from both blocks dont exist for this stage!')
+
+        else:
+            mice_blocks = []
+            for iblock in range(svm_blocks):
+                b = np.unique(a[a['block_all']==iblock]['mouse_id_allPlanes'].values[0])
+                mice_blocks.append(b)
+
+            mice_blocks = np.array(mice_blocks)
+            if ~np.equal(mice_blocks[0], mice_blocks[1]).all():
+                sys.exit('Some mice are missing from some blocks!')
+
+            if len(mice_blocks[0]) != len(mice_blocks[1]): # np.sort(mice_blocks[0]) == np.sort(mice_blocks[1])
+                print(f'stage {istage}: data from both blocks dont exist for some mice!')
+
+
             
             
             
@@ -77,7 +93,7 @@ for istage in np.unique(stages_all): # istage=1
 
     #%% Plot averages of all mice in each cell line
 
-    for cre in ['Slc17a7', 'Sst', 'Vip']:
+    for cre in ['Slc17a7', 'Sst', 'Vip']: # cre = 'Slc17a7'
 #     for icre in range(len(cre_lines)): # icre=0
         
         ###############################         
@@ -110,13 +126,26 @@ for istage in np.unique(stages_all): # istage=1
         h1d = []
         lims_v1lm = []
         
-        for iblock in np.unique(blocks_all): # iblock=0
+        for iblock in br: # np.unique(blocks_all): # iblock=0 ; iblock=np.nan
 
-            svm_allMice_sessPooled = svm_allMice_sessPooled0[np.logical_and(stages_allp==istage , blocks_allp==iblock)]
-            svm_allMice_sessAvSd = svm_allMice_sessAvSd0[np.logical_and(stages_alla==istage , blocks_alla==iblock)]
-#             svm_allMice_sessPooled = eval(f'svm_allMice_sessPooled_block{iblock}')
-#             svm_allMice_sessAvSd = eval(f'svm_allMice_sessAvSd_block{iblock}')
-
+            if ~np.isnan(svm_blocks):
+                svm_allMice_sessPooled = svm_allMice_sessPooled0[np.logical_and(stages_allp==istage , blocks_allp==iblock)]
+                svm_allMice_sessAvSd = svm_allMice_sessAvSd0[np.logical_and(stages_alla==istage , blocks_alla==iblock)]
+    #             svm_allMice_sessPooled = eval(f'svm_allMice_sessPooled_block{iblock}')
+    #             svm_allMice_sessAvSd = eval(f'svm_allMice_sessAvSd_block{iblock}')
+    
+                linestyle_now = linestyle_all[iblock]
+                cols_area_now = cols_area_all[iblock]
+                fmt_now = fmt_all[iblock]
+                
+            else:
+                svm_allMice_sessPooled = svm_allMice_sessPooled0[stages_allp==istage]
+                svm_allMice_sessAvSd = svm_allMice_sessAvSd0[stages_alla==istage]
+                
+                linestyle_now = linestyle_all[0]
+                cols_area_now = cols_area_all[0]
+                fmt_now = fmt_all[0]
+                
 
             ###############################
             cre_all = svm_allMice_sessPooled['cre_allPlanes'].values[0]
@@ -129,7 +158,7 @@ for istage in np.unique(stages_all): # istage=1
             thisCre_mice_num = len(np.unique(thisCre_mice))
 
     
-            if thisCre_pooledSessNum>0:
+            if thisCre_pooledSessNum > 0:
                 ###############################
                 #%% Set vars
                 a_all = svm_allMice_sessPooled['area_allPlanes'].values[0]  # 8 x pooledSessNum 
@@ -188,7 +217,7 @@ for istage in np.unique(stages_all): # istage=1
                     lab = '%dum' %(np.mean(depth))
                     lab = f'{lab},b{iblock}'
 
-                    h1_0 = plt.plot(time_trace, av_ts_eachPlane[iplane], color=cols_depth[iplane-num_planes], label=(lab), markersize=3.5, linestyle=linestyle_all[iblock])[0]
+                    h1_0 = plt.plot(time_trace, av_ts_eachPlane[iplane], color=cols_depth[iplane-num_planes], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]
                     h2 = plt.plot(time_trace, av_sh_eachPlane[iplane], color='gray', label='shfl', markersize=3.5)[0]
 
                     # errorbars (standard error across cv samples)   
@@ -211,7 +240,7 @@ for istage in np.unique(stages_all): # istage=1
                     lab = '%dum' %(np.mean(depth))
                     lab = f'{lab},b{iblock}'
 
-                    h1_0 = plt.plot(time_trace, av_ts_eachPlane[iplane], color=cols_depth[iplane], label=(lab), markersize=3.5, linestyle=linestyle_all[iblock])[0]            
+                    h1_0 = plt.plot(time_trace, av_ts_eachPlane[iplane], color=cols_depth[iplane], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]            
                     h2 = plt.plot(time_trace, av_sh_eachPlane[iplane], color='gray', label='shfl', markersize=3.5)[0]            
 
                     # errorbars (standard error across cv samples)   
@@ -247,12 +276,12 @@ for istage in np.unique(stages_all): # istage=1
                     lab = '%s' %(distinct_areas[iarea])
                     lab = f'{lab},b{iblock}'
 
-                    h1_0 = plt.plot(time_trace, av_ts_pooled_eachArea[iarea], color = cols_area_all[iblock][iarea], label=(lab), markersize=3.5, linestyle=linestyle_all[iblock])[0]        
+                    h1_0 = plt.plot(time_trace, av_ts_pooled_eachArea[iarea], color = cols_area_now[iarea], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]        
                     h2 = plt.plot(time_trace, av_sh_pooled_eachArea[iarea], color='gray', label='shfl', markersize=3.5)[0]
 
                     '''
                     plt.fill_between(time_trace, av_ts_pooled_eachArea[iarea] - sd_ts_pooled_eachArea[iarea] , \
-                                     av_ts_pooled_eachArea[iarea] + sd_ts_pooled_eachArea[iarea], alpha=alph, edgecolor=cols_area_all[iblock][iarea], facecolor=cols_area_all[iblock][iarea])
+                                     av_ts_pooled_eachArea[iarea] + sd_ts_pooled_eachArea[iarea], alpha=alph, edgecolor=cols_area_now[iarea], facecolor=cols_area_now[iarea])
                     plt.fill_between(time_trace, av_sh_pooled_eachArea[iarea] - sd_sh_pooled_eachArea[iarea] , \
                                      av_sh_pooled_eachArea[iarea] + sd_sh_pooled_eachArea[iarea], alpha=alph, edgecolor='gray', facecolor='gray')
                     '''
@@ -293,7 +322,7 @@ for istage in np.unique(stages_all): # istage=1
                     lab = '%d um' %(depth_ave[idepth])
                     lab = f'{lab},b{iblock}'
 
-                    h1_0 = plt.plot(time_trace, av_ts_pooled_eachDepth[idepth], color = cols_depth[idepth], label=(lab), markersize=3.5, linestyle=linestyle_all[iblock])[0]        
+                    h1_0 = plt.plot(time_trace, av_ts_pooled_eachDepth[idepth], color = cols_depth[idepth], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]        
                     h2 = plt.plot(time_trace, av_sh_pooled_eachDepth[idepth], color='gray', label='shfl', markersize=3.5)[0] # gray
                     '''
                     plt.fill_between(time_trace, av_ts_pooled_eachDepth[idepth] - sd_ts_pooled_eachDepth[idepth] , \
@@ -344,12 +373,12 @@ for istage in np.unique(stages_all): # istage=1
                 ax1 = plt.subplot(gs3[0])
 
                 # testing data
-                ax1.errorbar(x, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_all[iblock], markersize=3, capsize=3, label=lab1, color=cols_area_all[iblock][1])
-                ax1.errorbar(x + xgap_areas, top[inds_lm, 1], yerr=top_sd[inds_lm, 1], fmt=fmt_all[iblock], markersize=3, capsize=3, label=lab2, color=cols_area_all[iblock][0])
+                ax1.errorbar(x, top[inds_v1, 1], yerr=top_sd[inds_v1, 1], fmt=fmt_now, markersize=3, capsize=3, label=lab1, color=cols_area_now[1])
+                ax1.errorbar(x + xgap_areas, top[inds_lm, 1], yerr=top_sd[inds_lm, 1], fmt=fmt_now, markersize=3, capsize=3, label=lab2, color=cols_area_now[0])
 
                 # shuffled data
-                ax1.errorbar(x, top[inds_v1, 2], yerr=top_sd[inds_v1, 2], fmt=fmt_all[iblock], markersize=3, capsize=3, color='gainsboro') # label='V1',  # gray
-                ax1.errorbar(x + xgap_areas, top[inds_lm, 2], yerr=top_sd[inds_lm, 2], fmt=fmt_all[iblock], markersize=3, capsize=3, color='gainsboro') # label='LM', # skyblue
+                ax1.errorbar(x, top[inds_v1, 2], yerr=top_sd[inds_v1, 2], fmt=fmt_now, markersize=3, capsize=3, color='gainsboro') # label='V1',  # gray
+                ax1.errorbar(x + xgap_areas, top[inds_lm, 2], yerr=top_sd[inds_lm, 2], fmt=fmt_now, markersize=3, capsize=3, color='gainsboro') # label='LM', # skyblue
 
                 plt.hlines(0, 0, len(x)-1, linestyle=':')
                 ax1.set_xticks(x)
@@ -405,10 +434,10 @@ for istage in np.unique(stages_all): # istage=1
                 ax1 = plt.subplot(gs5[0])  
 
                 # testing data
-                ax1.errorbar(x, top[:,1], yerr=top_sd[:,1], fmt=fmt_all[iblock], markersize=3, capsize=3, color=cols_area_all[iblock][1], label=lab)
+                ax1.errorbar(x, top[:,1], yerr=top_sd[:,1], fmt=fmt_now, markersize=3, capsize=3, color=cols_area_now[1], label=lab)
 
                 # shuffled data
-                ax1.errorbar(x, top[:,2], yerr=top_sd[:,2], fmt=fmt_all[iblock], markersize=3, capsize=3, color='gainsboro') # gray  # , label='shfl'
+                ax1.errorbar(x, top[:,2], yerr=top_sd[:,2], fmt=fmt_now, markersize=3, capsize=3, color='gainsboro') # gray  # , label='shfl'
 
                 plt.hlines(0, 0, len(x)-1, linestyle=':')
                 ax1.set_xticks(x)

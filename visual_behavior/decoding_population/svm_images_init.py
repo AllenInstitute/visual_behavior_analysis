@@ -4,9 +4,10 @@
 Run this script to create all_sess, a dataframe in which the svm results of all sessions are concatenated. We need this to make plots for the svm (images) analysis.
 This script calls the function: svm_main_images_post
 
-SVM files are already saved (by running the svm_main_image_pbs code).
+SVM files are already saved (by running the svm_image_main_pbs code).
 
 Follow this script by svm_images_plots_setVars.py to make plots.
+If making plots for the block-block analysis, follow it by svm_images_plots_setVars_blocks.py to make plots.
 
 
 Created on Tue Oct 13 20:48:43 2020
@@ -30,10 +31,11 @@ from svm_images_main_post import *
     
 #%% Get SVM output for each cell type, and each frames_svm.
 
-svm_blocks = 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = np.nan #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+use_events = True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
-to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'changes' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+to_decode = 'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
 time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 
@@ -63,12 +65,17 @@ if same_num_neuron_all_planes:
 else:
     cols = np.concatenate((cols0, ['av_w_data', 'av_b_data']))
 
+if ~np.isnan(svm_blocks):
+    br = range(svm_blocks)
+else:
+    br = [np.nan]
 
     
-for iblock in range(svm_blocks): # iblock = 0 
+for iblock in br: # iblock=0 ; iblock=np.nan
     for icre in np.arange(0, len(cre2ana_all)): # icre=0
 
         #%% Set vars for the analysis
+        
         cre2ana = cre2ana_all[icre]
 
         print(f'\n=============== Setting all_sess for {cre2ana} ===============\n')
@@ -118,7 +125,7 @@ for iblock in range(svm_blocks): # iblock = 0
                 session_id = int(list_all_sessions_valid[isess])
                 data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
 
-                this_sess = svm_images_main_post(session_id, data_list, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, doPlots=0)
+                this_sess = svm_images_main_post(session_id, data_list, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, use_events, doPlots=0)
 
                 all_sess = all_sess.append(this_sess) 
 
@@ -142,7 +149,8 @@ for iblock in range(svm_blocks): # iblock = 0
 
 
             # Set the name of the h5 file for saving all_sess
-            svmn = f'svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images'
+            e = 'events_' if use_events else ''
+            svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images'
             now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
 
             if same_num_neuron_all_planes:
