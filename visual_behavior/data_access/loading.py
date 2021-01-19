@@ -1733,7 +1733,7 @@ def build_container_df():
             'cre_line': subset['cre_line'][0],
             'targeted_structure': subset['targeted_structure'].unique()[0],
             'imaging_depth': subset['imaging_depth'].unique()[0],
-            'exposure_number': subset['exposure_number'][0],
+            'session_type_exposure_number': subset['session_type_exposure_number'][0],
             'equipment_name': subset['equipment_name'].unique(),
             'specimen_id': subset['specimen_id'].unique()[0],
             'sex': subset['sex'].unique()[0],
