@@ -215,7 +215,8 @@ for istage in np.unique(stages_all): # istage=1
                     area = areas[iplane] # num_sess 
                     depth = depths[iplane] # num_sess
                     lab = '%dum' %(np.mean(depth))
-                    lab = f'{lab},b{iblock}'
+                    if ~np.isnan(svm_blocks):
+                        lab = f'{lab},b{iblock}'
 
                     h1_0 = plt.plot(time_trace, av_ts_eachPlane[iplane], color=cols_depth[iplane-num_planes], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]
                     h2 = plt.plot(time_trace, av_sh_eachPlane[iplane], color='gray', label='shfl', markersize=3.5)[0]
@@ -238,7 +239,8 @@ for istage in np.unique(stages_all): # istage=1
                     area = areas[iplane] # num_sess 
                     depth = depths[iplane] # num_sess             
                     lab = '%dum' %(np.mean(depth))
-                    lab = f'{lab},b{iblock}'
+                    if ~np.isnan(svm_blocks):
+                        lab = f'{lab},b{iblock}'
 
                     h1_0 = plt.plot(time_trace, av_ts_eachPlane[iplane], color=cols_depth[iplane], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]            
                     h2 = plt.plot(time_trace, av_sh_eachPlane[iplane], color='gray', label='shfl', markersize=3.5)[0]            
@@ -274,7 +276,8 @@ for istage in np.unique(stages_all): # istage=1
     #             h1a = []
                 for iarea in [1,0]: # first plot V1 then LM  #range(a.shape[0]):
                     lab = '%s' %(distinct_areas[iarea])
-                    lab = f'{lab},b{iblock}'
+                    if ~np.isnan(svm_blocks):
+                        lab = f'{lab},b{iblock}'
 
                     h1_0 = plt.plot(time_trace, av_ts_pooled_eachArea[iarea], color = cols_area_now[iarea], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]        
                     h2 = plt.plot(time_trace, av_sh_pooled_eachArea[iarea], color='gray', label='shfl', markersize=3.5)[0]
@@ -320,7 +323,8 @@ for istage in np.unique(stages_all): # istage=1
     #             h1d = []
                 for idepth in range(a.shape[0]):
                     lab = '%d um' %(depth_ave[idepth])
-                    lab = f'{lab},b{iblock}'
+                    if ~np.isnan(svm_blocks):
+                        lab = f'{lab},b{iblock}'
 
                     h1_0 = plt.plot(time_trace, av_ts_pooled_eachDepth[idepth], color = cols_depth[idepth], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]        
                     h2 = plt.plot(time_trace, av_sh_pooled_eachDepth[idepth], color='gray', label='shfl', markersize=3.5)[0] # gray
