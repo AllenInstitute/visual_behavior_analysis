@@ -1,5 +1,5 @@
 from allensdk.internal.api import PostgresQueryMixin
-from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
+from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadable
@@ -499,14 +499,14 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def running_speed(self):
         self._running_speed = super().running_speed
-        if type(self._running_speed) != pd.core.frame.DataFrame:
+        if not isinstance(self._running_speed, pd.core.frame.DataFrame):
             self._running_speed = reformat.convert_running_speed(self._running_speed)
         return self._running_speed
 
     @property
     def eye_tracking(self):
         eye_tracking = super().eye_tracking.copy()
-        eye_tracking = eye_tracking.rename(columns={'time':'timestamps'})
+        eye_tracking = eye_tracking.rename(columns={'time': 'timestamps'})
         self._eye_tracking = eye_tracking
         return self._eye_tracking
 
@@ -519,9 +519,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
-        try: # if eye tracking data is not present or cant be loaded
+        try:  # if eye tracking data is not present or cant be loaded
             stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, self.eye_tracking)
-        except: # set to NaN
+        except BaseException:  # set to NaN
             stimulus_presentations['mean_pupil_area'] = np.nan
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
@@ -545,6 +545,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         if 'orientation' in stimulus_presentations.columns:
             stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
                                                                           'phase', 'spatial_frequency'])
+
+        stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
@@ -1138,6 +1140,35 @@ def get_lims_cell_rois_table(ophys_experiment_id):
     lims_cell_rois_table = mixin.select(query)
     return lims_cell_rois_table
 
+
+def get_average_depth_image(experiment_id):
+    """
+    quick and dirty function to load 16x depth image from lims
+    file path location depends on whether it is scientifica or mesoscope, and which version of the pipeline was run
+    function iterates through all possible options of file locations
+    """
+    import visual_behavior.data_access.utilities as utilities
+    import matplotlib.pyplot as plt
+
+    expt_dir = utilities.get_ophys_experiment_dir(utilities.get_lims_data(experiment_id))
+    session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
+    session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(experiment_id)
+
+    # try all combinations of potential file path locations...
+    if os.path.isfile(os.path.join(session_dir, str(experiment_id) + '_averaged_depth.tif')):
+        im = plt.imread(os.path.join(session_dir, str(experiment_id) + '_averaged_depth.tif'))
+    elif os.path.isfile(os.path.join(session_dir, str(experiment_id) + '_depth.tif')):
+        im = plt.imread(os.path.join(session_dir, str(experiment_id) + '_depth.tif'))
+    elif os.path.isfile(os.path.join(session_dir, str(session_id) + '_averaged_depth.tif')):
+        im = plt.imread(os.path.join(session_dir, str(session_id) + '_averaged_depth.tif'))
+    elif os.path.isfile(os.path.join(expt_dir, str(experiment_id) + '_averaged_depth.tif')):
+        im = plt.imread(os.path.join(expt_dir, str(experiment_id) + '_averaged_depth.tif'))
+    elif os.path.isfile(os.path.join(expt_dir, str(experiment_id) + '_depth.tif')):
+        im = plt.imread(os.path.join(expt_dir, str(experiment_id) + '_depth.tif'))
+    else:
+        print('problem for', experiment_id)
+        print(session_dir)
+    return im
 
 # CONTAINER  LEVEL
 
