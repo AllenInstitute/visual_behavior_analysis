@@ -143,7 +143,7 @@ def make_plot_inventory_heatmap(plot_inventory):
 def get_motion_corrected_movie_paths(container_id):
     et = loading.get_filtered_ophys_experiment_table().reset_index()
     paths = []
-    for oeid in et.query('container_id == @container_id')['ophys_experiment_id']:
+    for oeid in et.query('container_id == @container_id').sort_values(by='ophys_experiment_id')['ophys_experiment_id']:
         paths.append(
             loading.get_motion_corrected_movie_h5_location(oeid).replace(
                 'motion_corrected_video.h5',
@@ -212,9 +212,25 @@ def get_qcd_oeids(container_id, qc_attribute):
     collection = conn['ophys_qc']['container_qc_records']
     res = pd.DataFrame(list(collection.find({'container_id': container_id, 'qc_attribute': qc_attribute})))
     conn.close
-
+    
     if len(res) > 0:
-        oeids = [item for sublist in res['experiment_ids'] for item in sublist]
+        oeids = []
+        if 'experiment_id' in res.keys():
+            for entry in res['experiment_id']:
+                print(entry)
+                if isinstance(entry, (int, float)) and pd.notnull(entry):
+                    oeids.append(int(entry))
+        elif 'experiment_ids' in res.keys():
+            for entry in res['experiment_ids']:
+                if isinstance(entry, int):
+                    # if entry is int, append to list
+                    oeids.append(entry)
+                elif isinstance(entry, list):
+                    # if entry is list, iterate over it and append each entry to list
+                    for subentry in entry:
+                        oeids.append(subentry)
+        
+
         return oeids
     else:
         return []
@@ -222,11 +238,14 @@ def get_qcd_oeids(container_id, qc_attribute):
 
 def qc_for_all_experiments(container_id, qc_attribute):
     '''check to see that all experiments for a given container have been QCd'''
-    oeids_with_qc = set(get_qcd_oeids(container_id, qc_attribute=qc_attribute))
-    oeids = set(loading.get_filtered_ophys_experiment_table().query('container_id == @container_id').reset_index()['ophys_experiment_id'].values)
+    try:
+        oeids_with_qc = set(get_qcd_oeids(container_id, qc_attribute=qc_attribute))
+        oeids = set(loading.get_filtered_ophys_experiment_table().query('container_id == @container_id').reset_index()['ophys_experiment_id'].values)
 
-    # symmetric_difference is an empty set if all oeids are in oeids_with_qc
-    return len(oeids.symmetric_difference(oeids_with_qc)) == 0
+        # symmetric_difference is an empty set if all oeids are in oeids_with_qc
+        return len(oeids.symmetric_difference(oeids_with_qc)) == 0
+    except TypeError:
+        pass
 
 
 def set_qc_complete_flags(feedback):

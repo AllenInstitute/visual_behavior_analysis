@@ -30,6 +30,7 @@ container_overview_plot_options = functions.load_container_overview_plot_options
 plot_inventory = functions.generate_plot_inventory()
 plot_inventory_fig = functions.make_plot_inventory_heatmap(plot_inventory)
 experiment_table = loading.get_filtered_ophys_experiment_table().reset_index()
+session_table = loading.get_filtered_ophys_session_table().reset_index()
 print('done setting up table, it took {} seconds'.format(time.time() - t0))
 
 QC_ATTRIBUTES = functions.load_container_qc_definitions()
@@ -41,8 +42,8 @@ components.plot_selection_dropdown.options = container_plot_options
 components.container_overview_dropdown.options = container_overview_plot_options
 components.container_overview_iframe.src = app.get_asset_url('qc_plots/overview_plots/d_prime_container_overview.html')
 components.plot_inventory_iframe.src = 'https://dougollerenshaw.github.io/figures_to_share/container_plot_inventory.html'  # app.get_asset_url('qc_plots/container_plot_inventory.html')
-components.container_data_table.columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
-components.container_data_table.data = container_table.to_dict('records')
+components.data_table.columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
+components.data_table.data = container_table.to_dict('records')
 print('done setting up components, it took {} seconds'.format(time.time() - t0))
 
 app.layout = html.Video(src='/static/my-video.webm')
@@ -55,7 +56,7 @@ app.layout = html.Div(
     [
         html.H3('Visual Behavior Data QC Viewer'),
         # checklist for components to show
-        components.show_overview_checklist,
+        html.Div([components.show_overview_checklist], style= {'display': 'none'}),
         components.plot_inventory_graph_div,
         # container level dropdown
         components.container_overview_dropdown,
@@ -67,11 +68,13 @@ app.layout = html.Div(
         dcc.Input(id='experiment_id_entry', placeholder=''),
         html.Label('|  Corresponding Container ID:  '),
         html.Output(id='container_id_output', children=''),
-        html.H4('Container Summary Data Table:'),
+        html.H4('Choose how to organize data:'),
+        components.display_level_selection,
+        html.H4('Data Table:'),
         html.I('Adjust number of rows to display in the data table:'),
         components.table_row_selection,
         # data table
-        components.container_data_table,
+        components.data_table,
         # dropdown for plot selection
         components.previous_button,
         components.next_button,
@@ -242,7 +245,7 @@ def log_feedback(n1, timestamp, username, container_id, experiment_ids, qc_attri
         'timestamp': timestamp,
         'username': username,
         'container_id': container_id,
-        'experiment_ids': experiment_ids,
+        'experiment_id': experiment_ids,
         'qc_attribute': qc_attribute,
         'motion_present': motion_present, 
         'qc_labels': qc_labels,
@@ -297,7 +300,7 @@ def fill_container_id(selected_rows):
 )
 def experiment_id_checklist(row_index, options):
     container_id = container_table.iloc[row_index[0]]['container_id']  # noqa: F841 - Flake8 doesn't recognize the variable being used below
-    subset = experiment_table.query('container_id == @container_id').sort_values(by='date_of_acquisition')[['session_type', 'ophys_experiment_id']].reset_index(drop=True)
+    subset = experiment_table.query('container_id == @container_id').sort_values(by='ophys_experiment_id')[['session_type', 'ophys_experiment_id']].reset_index(drop=True)
     options = [{'label': '{} {}'.format(subset.loc[i]['session_type'], subset.loc[i]['ophys_experiment_id']), 'value': subset.loc[i]['ophys_experiment_id']} for i in range(len(subset))]
     return options
 
@@ -328,6 +331,40 @@ def select_all_experiments(select_all_timestamp, unselect_all_timestamp, open_fe
 
 # populate feedback popup qc options
 
+# only enable OK button when all fields are populated
+@app.callback(
+    Output('feedback_popup_ok', 'disabled'),
+    [
+        Input('feedback_popup_username', 'value'),
+        Input('feedback_popup_experiments', 'value'),
+        Input('feedback_popup_qc_dropdown', 'value'),
+        Input('feedback_popup_qc_labels', 'value'),
+        Input('feedback_popup_motion_present', 'value')
+    ],
+)
+def enable_popup_ok(username, selected_experiments, qc_attribute, qc_label, motion_present):
+    # we need a special case for the motion_present flag in "Motion Correction"
+    if qc_attribute == 'Motion Correction':
+        binary_choice_selected = motion_present is not None
+    else:
+        binary_choice_selected = True
+
+    anything_missing = (
+        username == '' 
+        or username is None 
+        or selected_experiments is None 
+        or qc_attribute == '' 
+        or qc_attribute is None
+        or qc_label is None
+        or binary_choice_selected == False
+    )
+    if anything_missing:
+        # return disabled = True if anything is missing
+        return True
+    else:
+        # else return disabled = False
+        return False
+    
 
 @app.callback(
     Output('feedback_popup_qc_labels', 'options'),
@@ -364,8 +401,20 @@ def clear_popup_text(n1, is_open):
 #     [State("plot_qc_popup", "is_open")],
 # )
 # def clear_experiment_labels(n1, is_open):
-#     return []
+#     return None
 
+
+
+# clear motion selection
+@app.callback(
+    Output("feedback_popup_motion_present", "value"),
+    [
+        Input("open_feedback_popup", "n_clicks"),
+    ],
+    [State("plot_qc_popup", "is_open")],
+)
+def clear_motion_label(n1, is_open):
+    return None
 
 # clear qc label selections
 @app.callback(
@@ -376,7 +425,7 @@ def clear_popup_text(n1, is_open):
     [State("plot_qc_popup", "is_open")],
 )
 def clear_qc_labels(n1, is_open):
-    return []
+    return None
 
 
 # populate datetime in feedback popup

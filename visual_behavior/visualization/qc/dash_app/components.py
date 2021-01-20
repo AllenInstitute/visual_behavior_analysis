@@ -22,10 +22,19 @@ show_overview_checklist = dcc.Checklist(
     options=[
         {'label': 'Show Container Level Summary Plots   |', 'value': 'show_container_plots'},
         {'label': 'Show Plot Inventory   ', 'value': 'show_plot_inventory'},
-        # style={'display': 'none'},
     ],
     value=[]
 )
+
+display_level_selection = dcc.RadioItems(
+    id='display_level_selection',
+    options=[
+        {'label': 'Container Level  ', 'value': 'container'},
+        {'label': 'Session Level  ', 'value': 'session'},
+    ],
+    value='container',
+    inputStyle={"margin-left": "20px"},
+)  
 
 # dropdown to select which overview plot to show in iframe
 container_overview_dropdown = dcc.Dropdown(
@@ -63,7 +72,7 @@ next_button = html.Button('Next', id='next_button')
 previous_button = html.Button('Previous', id='previous_button')
 
 # data table
-container_data_table = dash_table.DataTable(
+data_table = dash_table.DataTable(
     id='data_table',
     columns=None,
     data=None,
@@ -141,7 +150,13 @@ feedback_button = html.Div(
                         ),
                         html.Label(children="Is residual motion present in the video:", id='feedback_popup_motion_present_label'),
                         dbc.RadioItems(
-                            options=[{'label':'yes', 'value':'yes_motion'}, {'label':'no', 'value':'no_motion'}],
+                            options=[
+                                {'label':'yes', 'value':"yes_motion"}, 
+                                {'label':'no', 'value':"no_motion"},
+                                {'label':'movie_too_dim_to_tell', 'value':'movie_too_dim_to_tell'},
+                                {'label':"movie_too_noisy_to_tell", 'value':"movie_too_noisy_to_tell"},
+                                {'label':"missing_movie", 'value':"missing_movie"},
+                            ],
                             value='yes',
                             id="feedback_popup_motion_present",
                         ),
@@ -157,7 +172,7 @@ feedback_button = html.Div(
                 ),
                 dbc.ModalFooter(
                     [
-                        dbc.Button("OK", color="primary", id="feedback_popup_ok"),
+                        dbc.Button("OK", color="primary", id="feedback_popup_ok", disabled=True),
                         dbc.Button("Cancel", id="feedback_popup_cancel"),
                     ]
                 ),
