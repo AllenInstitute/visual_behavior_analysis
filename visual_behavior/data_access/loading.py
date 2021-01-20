@@ -277,32 +277,32 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
         self._include_invalid_rois = include_invalid_rois
 
-    @property
-    def analysis_folder(self):
-        analysis_cache_dir = get_analysis_cache_dir()
-        candidates = [file for file in os.listdir(analysis_cache_dir) if str(self.ophys_experiment_id) in file]
-        if len(candidates) == 1:
-            self._analysis_folder = candidates[0]
-        elif len(candidates) == 0:
-            print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
-                                                                                    analysis_cache_dir))
-            print('creating new analysis folder')
-            m = self.metadata.copy()
-            date = m['experiment_datetime']
-            date = str(date)[:10]
-            date = date[2:4] + date[5:7] + date[8:10]
-            self._analysis_folder = str(m['ophys_experiment_id']) + '_' + str(m['donor_id']) + '_' + date + '_' + m[
-                'targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['driver_line'][0] + '_' + m[
-                                        'rig_name'] + '_' + m['session_type']
-            os.mkdir(os.path.join(analysis_cache_dir, self._analysis_folder))
-        elif len(candidates) > 1:
-            raise OSError('{} contains multiple possible analysis folders: {}'.format(analysis_cache_dir, candidates))
-        return self._analysis_folder
+    # @property
+    # def analysis_folder(self):
+    #     analysis_cache_dir = get_analysis_cache_dir()
+    #     candidates = [file for file in os.listdir(analysis_cache_dir) if str(self.ophys_experiment_id) in file]
+    #     if len(candidates) == 1:
+    #         self._analysis_folder = candidates[0]
+    #     elif len(candidates) == 0:
+    #         print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
+    #                                                                                 analysis_cache_dir))
+    #         print('creating new analysis folder')
+    #         m = self.metadata.copy()
+    #         date = m['experiment_datetime']
+    #         date = str(date)[:10]
+    #         date = date[2:4] + date[5:7] + date[8:10]
+    #         self._analysis_folder = str(m['ophys_experiment_id']) + '_' + str(m['donor_id']) + '_' + date + '_' + m[
+    #             'targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['driver_line'][0] + '_' + m[
+    #                                     'rig_name'] + '_' + m['session_type']
+    #         os.mkdir(os.path.join(analysis_cache_dir, self._analysis_folder))
+    #     elif len(candidates) > 1:
+    #         raise OSError('{} contains multiple possible analysis folders: {}'.format(analysis_cache_dir, candidates))
+    #     return self._analysis_folder
 
-    @property
-    def analysis_dir(self):
-        self._analysis_dir = os.path.join(get_analysis_cache_dir(), self.analysis_folder)
-        return self._analysis_dir
+    # @property
+    # def analysis_dir(self):
+    #     self._analysis_dir = os.path.join(get_analysis_cache_dir(), self.analysis_folder)
+    #     return self._analysis_dir
 
     @property
     def cell_specimen_table(self):
@@ -440,22 +440,22 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     events = LazyLoadable('_events', _get_events)
 
-    @property
-    def timestamps(self):
-        # need to get full set of timestamps because SDK only provides stimulus and ophys timestamps (not eye tracking for example)
-        lims_data = utilities.get_lims_data(self.ophys_experiment_id)
-        self._timestamps = utilities.get_timestamps(lims_data, self.analysis_dir)
-        return self._timestamps
+    # @property
+    # def timestamps(self):
+    #     # need to get full set of timestamps because SDK only provides stimulus and ophys timestamps (not eye tracking for example)
+    #     lims_data = utilities.get_lims_data(self.ophys_experiment_id)
+    #     self._timestamps = utilities.get_timestamps(lims_data, self.analysis_dir)
+    #     return self._timestamps
 
     @property
     def ophys_timestamps(self):
-        if super().metadata['rig_name'] == 'MESO.1':
-            ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
-            self._ophys_timestamps = ophys_timestamps
-            # correct metadata frame rate
-            self._metadata['ophys_frame_rate'] = 1 / np.diff(ophys_timestamps).mean()
-        else:
-            self._ophys_timestamps = super().ophys_timestamps
+        # if super().metadata['rig_name'] == 'MESO.1':
+        #     ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
+        #     self._ophys_timestamps = ophys_timestamps
+        #     # correct metadata frame rate
+        #     self._metadata['ophys_frame_rate'] = 1 / np.diff(ophys_timestamps).mean()
+        # else:
+        self._ophys_timestamps = super().ophys_timestamps
         return self._ophys_timestamps
 
     @property
@@ -634,7 +634,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
     dataset = BehaviorOphysDataset(api, include_invalid_rois)
-    print('loading data for {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
+    # print('loading data for {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
