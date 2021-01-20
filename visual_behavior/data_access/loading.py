@@ -306,7 +306,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         cell_specimen_table = super().cell_specimen_table.copy()
         if self._include_invalid_rois == False:
             cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
-        cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
 
