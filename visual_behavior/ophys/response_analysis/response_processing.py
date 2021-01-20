@@ -590,7 +590,7 @@ def get_trials_pupil_area_df(dataset, frame_rate=None, df_format='wide'):
     pupil_area = dataset.eye_tracking.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
-    timestamps = dataset.eye_tracking.time.values
+    timestamps = dataset.eye_tracking.timestamps.values
     change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])][:-1]  # last trial can get cut off
     event_times = change_trials['change_time'].values
     event_ids = change_trials.index.values
@@ -623,7 +623,7 @@ def get_stimulus_pupil_area_df(dataset, frame_rate=None, df_format='wide'):
     pupil_area = dataset.eye_tracking.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
-    timestamps = dataset.eye_tracking.time.values
+    timestamps = dataset.eye_tracking.timestamps.values
     event_times = dataset.stimulus_presentations['start_time'].values[:-1]  # last one can get truncated
     event_ids = dataset.stimulus_presentations.index.values[:-1]
     response_analysis_params = get_default_stimulus_response_params()
@@ -655,7 +655,7 @@ def get_omission_pupil_area_df(dataset, frame_rate=30, df_format='wide'):
     pupil_area = dataset.eye_tracking.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
-    timestamps = dataset.eye_tracking.time.values
+    timestamps = dataset.eye_tracking.timestamps.values
     stimuli = dataset.stimulus_presentations
     omission_presentations = stimuli[stimuli.image_name == 'omitted']
     event_times = omission_presentations['start_time'].values[:-1]  # last omission can get truncated
