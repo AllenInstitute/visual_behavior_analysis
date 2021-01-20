@@ -22,8 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_cache_dir():
-    cache_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\cell_matching_validation'
-    # cache_dir = r'\\allen\programs\braintv\workgroups\ophysdev\OPhysCore\Analysis\2018-08 - Behavior Integration test'
+    cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/cell_matching_validation'
     return cache_dir
 
 

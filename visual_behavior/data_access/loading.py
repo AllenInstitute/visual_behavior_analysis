@@ -1,7 +1,8 @@
 from allensdk.internal.api import PostgresQueryMixin
-from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
+from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadable
 # from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
 from visual_behavior.ophys.response_analysis import response_processing as rp
 from visual_behavior.data_access import filtering
@@ -244,7 +245,6 @@ def get_filtered_ophys_session_table():
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
     sessions = reformat.add_model_outputs_availability_to_table(sessions)
-    # sessions = sessions.reset_index()
 
     return sessions
 
@@ -304,14 +304,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def cell_specimen_table(self):
         cell_specimen_table = super().cell_specimen_table.copy()
-        # cell_specimen_table = cell_specimen_table.copy()
         if self._include_invalid_rois == False:
             cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
-        # add cell index corresponding to the index of the cell in dff_traces_array
-        # cell_specimen_ids = np.sort(cell_specimen_table.index.values)
-        # if 'cell_index' not in cell_specimen_table.columns:
-        #     cell_specimen_table['cell_index'] = [np.where(cell_specimen_ids == cell_specimen_id)[0][0] for
-        #                                          cell_specimen_id in cell_specimen_table.index.values]
         cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
@@ -375,8 +369,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self.events_array = events
         return self.events_array
 
-    @property
-    def events(self):
+    def _get_events(self):
         """
         events file is an .npz with the following files within it:
         dff: array of n_cells x n_timepoints with recalculated dF/F values(at original frame rate)
@@ -426,9 +419,11 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                 upsampled_event_indices = np.asarray([event_dict[cell_roi_id]['idx'] for cell_roi_id in cell_roi_ids])
                 f.close()
 
+                scale = 0.06666 * self.metadata['ophys_frame_rate']
+
                 self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
                                              'events': [x for x in events_array],
-                                             'filtered_events': [x for x in rp.filter_events_array(events_array)],
+                                             'filtered_events': [x for x in rp.filter_events_array(events_array, scale=scale)],
                                              'timestamps': [x for x in timestamps],
                                              'dff_traces': [x for x in dff_traces],
                                              'noise_std': [x for x in noise_std],
@@ -439,10 +434,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                                              'upsampled_event_indices': [x for x in upsampled_event_indices]},
                                             index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
 
-        # self._events = pd.DataFrame({'events': [x for x in self.get_events_array()],
-        #                              'filtered_events': [x for x in rp.filter_events_array(self.get_events_array())]},
-        #                             index=pd.Index(self.cell_specimen_ids, name='cell_specimen_id'))
         return self._events
+
+    events = LazyLoadable('_events', _get_events)
 
     @property
     def timestamps(self):
@@ -471,9 +465,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        # reset ophys frame rate for accuracy & to account for mesoscope resampling
-        # causes recursion error
-        # metadata['ophys_frame_rate'] = 1 / np.diff(self.ophys_timestamps).mean()
+        metadata = super().metadata
         if 'donor_id' not in metadata.keys():
             metadata['donor_id'] = metadata.pop('LabTracks_ID')
             metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
@@ -507,9 +499,16 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def running_speed(self):
         self._running_speed = super().running_speed
-        if type(self._running_speed) != pd.core.frame.DataFrame:
+        if not isinstance(self._running_speed, pd.core.frame.DataFrame):
             self._running_speed = reformat.convert_running_speed(self._running_speed)
         return self._running_speed
+
+    @property
+    def eye_tracking(self):
+        eye_tracking = super().eye_tracking.copy()
+        eye_tracking = eye_tracking.rename(columns={'time': 'timestamps'})
+        self._eye_tracking = eye_tracking
+        return self._eye_tracking
 
     @property
     def stimulus_presentations(self):
@@ -520,6 +519,10 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
         stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
+        try:  # if eye tracking data is not present or cant be loaded
+            stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, self.eye_tracking)
+        except BaseException:  # set to NaN
+            stimulus_presentations['mean_pupil_area'] = np.nan
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
         stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
@@ -542,6 +545,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         if 'orientation' in stimulus_presentations.columns:
             stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
                                                                           'phase', 'spatial_frequency'])
+
+        stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
         stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
@@ -1128,6 +1133,35 @@ def get_lims_cell_rois_table(ophys_experiment_id):
     return lims_cell_rois_table
 
 
+def get_average_depth_image(experiment_id):
+    """
+    quick and dirty function to load 16x depth image from lims
+    file path location depends on whether it is scientifica or mesoscope, and which version of the pipeline was run
+    function iterates through all possible options of file locations
+    """
+    import visual_behavior.data_access.utilities as utilities
+    import matplotlib.pyplot as plt
+
+    expt_dir = utilities.get_ophys_experiment_dir(utilities.get_lims_data(experiment_id))
+    session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
+    session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(experiment_id)
+
+    # try all combinations of potential file path locations...
+    if os.path.isfile(os.path.join(session_dir, str(experiment_id) + '_averaged_depth.tif')):
+        im = plt.imread(os.path.join(session_dir, str(experiment_id) + '_averaged_depth.tif'))
+    elif os.path.isfile(os.path.join(session_dir, str(experiment_id) + '_depth.tif')):
+        im = plt.imread(os.path.join(session_dir, str(experiment_id) + '_depth.tif'))
+    elif os.path.isfile(os.path.join(session_dir, str(session_id) + '_averaged_depth.tif')):
+        im = plt.imread(os.path.join(session_dir, str(session_id) + '_averaged_depth.tif'))
+    elif os.path.isfile(os.path.join(expt_dir, str(experiment_id) + '_averaged_depth.tif')):
+        im = plt.imread(os.path.join(expt_dir, str(experiment_id) + '_averaged_depth.tif'))
+    elif os.path.isfile(os.path.join(expt_dir, str(experiment_id) + '_depth.tif')):
+        im = plt.imread(os.path.join(expt_dir, str(experiment_id) + '_depth.tif'))
+    else:
+        print('problem for', experiment_id)
+        print(session_dir)
+    return im
+
 # CONTAINER  LEVEL
 
 
@@ -1640,6 +1674,12 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
 # CONTAINER LEVEL INFO
 
 def get_unique_cell_specimen_ids_for_container(container_id):
+    """
+    Retrieves and concatenates the cell_specimen_table for all experiments within a container,
+    then returns a list of unique cell_specimen_ids for the container.
+    :param container_id: container ID
+    :return: list of cell_specimen_ids for a given container
+    """
     experiments_table = get_filtered_ophys_experiment_table()
     container_expts = experiments_table[experiments_table.container_id == container_id]
     experiment_ids = np.sort(container_expts.index.values)
@@ -1723,27 +1763,20 @@ def get_annotated_experiments_table():
     experiments_table['location'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                      experiments_table.loc[expt].depth for expt in experiments_table.index]
 
-    # experiments_table['location2'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
-    #                                   experiments_table.loc[expt].depth for expt in experiments_table.index]
-
     experiments_table['layer'] = None
     indices = experiments_table[(experiments_table.imaging_depth < 100)].index.values
     experiments_table.at[indices, 'layer'] = 'L1'
     indices = experiments_table[(experiments_table.imaging_depth < 270) &
                                 (experiments_table.imaging_depth >= 100)].index.values
     experiments_table.at[indices, 'layer'] = 'L2/3'
-    # indices = experiments_table[
-    #     (experiments_table.imaging_depth >= 125) & (experiments_table.imaging_depth < 200)].index.values
-    # experiments_table.at[indices, 'layer'] = 'L3'
+
     indices = experiments_table[
         (experiments_table.imaging_depth >= 270) & (experiments_table.imaging_depth < 350)].index.values
     experiments_table.at[indices, 'layer'] = 'L4'
     indices = experiments_table[
         (experiments_table.imaging_depth >= 350) & (experiments_table.imaging_depth < 550)].index.values
     experiments_table.at[indices, 'layer'] = 'L5'
-    # indices = experiments_table[
-    #     (experiments_table.imaging_depth >= 345) & (experiments_table.imaging_depth < 500)].index.values
-    # experiments_table.at[indices, 'layer'] = 'L5b'
+
     experiments_table['location_layer'] = [experiments_table.loc[expt].cre_line.split('-')[0] + '_' +
                                            experiments_table.loc[expt].targeted_structure + '_' +
                                            experiments_table.loc[expt].layer for expt in experiments_table.index]
@@ -1815,6 +1848,23 @@ def get_file_name_for_multi_session_df(df_name, project_code, session_type, cond
 
 def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remove_outliers=True, use_session_type=True,
                          use_events=False):
+    """
+    Loops through all experiments in the provided experiments_table, creates a response dataframe indicated by df_name,
+    creates a mean response dataframe for a given set of conditions, and concatenates across all experiments to create
+    one large multi session dataframe with trial averaged responses and other relevant metrics. Saves multi_session_df
+    to the cache dir as a separate .h5 file per project_code and session_type combination present in the provided
+    experiments_table.
+    :param cache_dir: to level directory directory to save resulting dataframes, must contain folder called 'multi_session_summary_dfs'
+    :param df_name: the name of the response dataframe to be created using the ResponseAnalysis class, such as 'stimulus_response_df'
+    :param conditions: the set of conditions over which to group and average cell responses using the get_mean_df()
+                        function in response_analysis.utilities, such as ['cell_specimen_id', 'engagement_state', 'image_name']
+    :param experiments_table: full or subset of experiments_table from loading.get_filtered_ophys_experiments_table()
+    :param remove_outliers: Boolean, whether to remove cells with a max average dF/F > 5 (not a principled way of doing this)
+    :param use_session_type: Boolean for whether or not to save resulting dataframes by session type or to aggregate across session types.
+                        Grouping and saving by session type is typically necessary given the large size of these dataframes.
+    :param use_events: Boolean, whether to use events instead of dF/F when creating response dataframes
+    :return: multi_session_df for conditions specified above
+    """
     experiments_table = get_annotated_experiments_table()
     project_codes = experiments_table.project_code.unique()
     multi_session_df = pd.DataFrame()
@@ -2083,7 +2133,8 @@ def get_cell_info(cell_specimen_ids=None, ophys_experiment_ids=None):
 
 def get_container_response_df(container_id, df_name='omission_response_df', use_events=False):
     """
-    get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container
+    get concatenated dataframe of response_df type specificied by df_name, across all experiments from a container,
+    using the ResponseAnalysis class to build event locked response dataframes
     """
     from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
     experiments_table = get_filtered_ophys_experiment_table()

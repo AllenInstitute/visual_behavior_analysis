@@ -9,7 +9,7 @@ from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_de
 from visual_behavior import database as db
 
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
-from allensdk.brain_observatory.behavior.behavior_data_session import BehaviorDataSession
+from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 
 import logging
@@ -161,7 +161,7 @@ def get_behavior_session_id_from_ophys_experiment_id(ophys_experiment_id, cache)
     return ophys_experiments.loc[ophys_experiment_id].behavior_session_id
 
 
-def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
+def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id):
     """finds the ophys_session_id associated with an ophys_experiment_id
 
     Arguments:
@@ -174,6 +174,7 @@ def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
     Returns:
         int -- ophys_session_id: 9 digit, unique identifier for an ophys_session
     """
+    cache = loading.get_visual_behavior_cache()
     ophys_experiments = cache.get_experiment_table()
     if ophys_experiment_id not in ophys_experiments.index:
         raise Exception('ophys_experiment_id not in experiment table')
@@ -225,14 +226,7 @@ def model_outputs_available_for_behavior_session(behavior_session_id):
 
 
 def get_cell_matching_output_dir_for_container(experiment_id):
-    from allensdk.internal.api import PostgresQueryMixin
-
-    lims_dbname = os.environ["LIMS_DBNAME"]
-    lims_user = os.environ["LIMS_USER"]
-    lims_host = os.environ["LIMS_HOST"]
-    lims_password = os.environ["LIMS_PASSWORD"]
-    lims_port = os.environ["LIMS_PORT"]
-    api = PostgresQueryMixin(dbname=lims_dbname, user=lims_user, host=lims_host, password=lims_password, port=lims_port)
+    from visual_behavior import database
 
     query = '''
             SELECT DISTINCT sp.external_specimen_name, sp.name, vbec.id AS vbec_id, vbec.workflow_state AS vbec_state, vbcr.run_number, vbcr.storage_directory AS matching_dir
@@ -247,7 +241,7 @@ def get_cell_matching_output_dir_for_container(experiment_id):
             oe.id = {};
             '''.format(experiment_id)
 
-    lims_df = pd.read_sql(query, api.get_connection())
+    lims_df = database.lims_query(query)
     return lims_df.matching_dir.values[0]
 
 
@@ -475,4 +469,4 @@ def get_sdk_session(behavior_session_id, is_ophys):
         ophys_experiment_id = bsid_to_oeid(behavior_session_id)
         return BehaviorOphysSession.from_lims(ophys_experiment_id)
     else:
-        return BehaviorDataSession.from_lims(behavior_session_id)
+        return BehaviorSession.from_lims(behavior_session_id)

@@ -562,6 +562,15 @@ def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=Tr
 
 
 def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure=True):
+    """
+    Creates a plot of average intensity images for pairs of experiments that are registered during cell matching,
+    using the output of the cell matching algorithm directly to obtain images to plot. Plots registered images as
+    a red-green overlay, in a grid for all registration pairs. The structural similarity index metric (SSIM) for the pair
+    of registered images is shown in the plot title.
+    :param ophys_container_id:
+    :param save_figure:
+    :return:
+    """
     import tifffile
     import visual_behavior.data_access.utilities as utilities
 
@@ -621,6 +630,15 @@ def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure
 
 
 def plot_cell_matching_registration_output(ophys_container_id, save_figure=True):
+    """
+        Creates a plot of average intensity images for pairs of experiments that are registered during cell matching,
+        using the output of the cell matching algorithm directly to obtain images to plot. Target registered images are
+        shown column-wise for each experiment pair with a red-green overlay of the post-registration images in the bottom row.
+        Multiple figures are created and saved as .pngs when the number of experiment pairs is large.
+        :param ophys_container_id:
+        :param save_figure:
+        :return:
+        """
     import tifffile
     import visual_behavior.data_access.utilities as utilities
 
@@ -733,6 +751,12 @@ def plot_flashes_on_trace(ax, timestamps, ophys_frame_rate, trial_type=None, omi
 
 
 def get_metadata_string(container_id):
+    """
+    Create a string of metadata information to be used in filenames and figure titles.
+    Includes information such as experiment_id, cre_line, acquisition_date, rig_id, etc
+    :param container_id:
+    :return:
+    """
     ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(container_id)
     dataset = data_loading.get_ophys_dataset(ophys_experiment_ids[0])
     title = dataset.analysis_folder
@@ -742,6 +766,16 @@ def get_metadata_string(container_id):
 
 
 def plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=False, save_figure=True):
+    """
+    Plots population average response across all sessions within a container
+    :param container_df: response dataframe for all sessions in a container, can be stimulus_response_df, omission_response_df, etc
+    :param container_id: ID of container being analyzed
+    :param df_name: name of response dataframe, ex: 'stimulus_response_df', 'omission_response_df', etc
+    :param trials: Boolean, whether or not a trial_response_df is being used, determines how image & change times are shaded in plot
+    :param omitted: Boolean, whether or not an omission_response_df is being used, determines how image & change times are shaded in plot
+    :param save_figure: Boolean, whether or not to save figure to default QC plots directory
+    :return:
+    """
     dataset = data_loading.get_ophys_dataset(container_df.ophys_experiment_id.unique()[0])
     title = dataset.analysis_folder
     frame_rate = dataset.metadata['ophys_frame_rate']
@@ -795,6 +829,12 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
 
 
 def plot_omission_population_average_across_sessions(container_id, save_figure=True):
+    """
+    Plot population average response to omissions, across all cells in a session, for each session type in the container
+    :param container_id:
+    :param save_figure:
+    :return:
+    """
     df_name = 'omission_response_df'
     container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
     plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=True,
@@ -802,6 +842,12 @@ def plot_omission_population_average_across_sessions(container_id, save_figure=T
 
 
 def plot_trials_population_average_across_sessions(container_id, save_figure=True):
+    """
+    Plot population average response to change trials, across all cells in a session, for each session type in the container
+    :param container_id:
+    :param save_figure:
+    :return:
+    """
     df_name = 'trials_response_df'
     container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
     plot_population_average_across_sessions(container_df, container_id, df_name, trials=True, omitted=False,
@@ -809,6 +855,12 @@ def plot_trials_population_average_across_sessions(container_id, save_figure=Tru
 
 
 def plot_stimulus_population_average_across_sessions(container_id, save_figure=True):
+    """
+    Plot population average response across all stimuli, for all cells in a session, for each session type in the container
+    :param container_id:
+    :param save_figure:
+    :return:
+    """
     df_name = 'stimulus_response_df'
     container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
     plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=False,
@@ -1049,6 +1101,13 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
 
 
 def plot_event_detection_for_container(ophys_container_id, save_figure=True):
+    """
+    Generates plots of dFF traces and events for each cell in each experiment of a container.
+    Useful to validate whether detected events line up with dFF transients.
+    :param ophys_container_id:
+    :param save_figure:
+    :return:
+    """
     experiments_table = data_loading.get_filtered_ophys_experiment_table()
     ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
@@ -1058,6 +1117,11 @@ def plot_event_detection_for_container(ophys_container_id, save_figure=True):
 
 
 def plot_single_cell_response_plots_for_container(ophys_container_id, save_figure=True):
+    """
+    Generates plots characterizing single cell activity in response to stimulus, omissions, and changes.
+    Compares across all sessions in a container for each cell, including the ROI mask across days.
+    Useful to validate cell matching as well as examine changes in activity profiles over days.
+    """
     cell_specimen_ids = data_loading.get_unique_cell_specimen_ids_for_container(ophys_container_id)
 
     for cell_specimen_id in cell_specimen_ids:
@@ -1065,6 +1129,10 @@ def plot_single_cell_response_plots_for_container(ophys_container_id, save_figur
 
 
 def plot_dff_trace_and_behavior_for_container(ophys_container_id, save_figure=True):
+    """
+    Plots the full dFF trace for each cell, along with licking behavior, rewards, running speed, pupil area, and face motion.
+    Useful to visualize whether the dFF trace tracks the behavior variables
+    """
     experiments_table = data_loading.get_filtered_ophys_experiment_table()
     ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
@@ -1072,3 +1140,19 @@ def plot_dff_trace_and_behavior_for_container(ophys_container_id, save_figure=Tr
     for ophys_experiment_id in ophys_experiment_ids:
         ep.plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
         ep.plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=save_figure)
+
+
+def plot_classifier_validation_for_container(ophys_container_id, save_figure=True):
+    """
+    Creates a plot showing ROI masks matched between production and development versions of segmentation classifier.
+    This is a one off validation figure and will be removed in future versions of the code
+    :param ophys_container_id:
+    :param save_figure:
+    :return:
+    """
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiment_ids = ophys_experiments.index.values
+
+    for ophys_experiment_id in ophys_experiment_ids:
+        ep.plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=save_figure)
