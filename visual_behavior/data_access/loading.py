@@ -20,10 +20,13 @@ import configparser as configp  # for parsing scientifica ini files
 
 import warnings
 
+
 try:
-    lims_dbname = os.environ["LIMS_DBNAME"]
+    # lims_dbname = os.environ["LIMS_DBNAME"]
+    lims_dbname = 'lims2_waynew'
     lims_user = os.environ["LIMS_USER"]
-    lims_host = os.environ["LIMS_HOST"]
+    # lims_host = os.environ["LIMS_HOST"]
+    lims_host = 'aibsdc-dev-db1'
     lims_password = os.environ["LIMS_PASSWORD"]
     lims_port = os.environ["LIMS_PORT"]
 
