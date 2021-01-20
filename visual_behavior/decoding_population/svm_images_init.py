@@ -32,7 +32,7 @@ from svm_images_main_post import *
 #%% Get SVM output for each cell type, and each frames_svm.
 
 svm_blocks = np.nan #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
-use_events = True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
+use_events = True #True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 to_decode = 'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
 trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').

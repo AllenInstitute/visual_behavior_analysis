@@ -53,9 +53,9 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 #%%
 
 svm_blocks = np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
-use_events = True #True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
+use_events = False #True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
-use_same_experiments_dff_events = True # use the same set of experiments for both events and dff analysis (Note: for this to work you need to get both ea_evs and ev_dff; for this run the code until line ~300 twice once setting use_events to True and once to False.)
+use_same_experiments_dff_events = False #True # use the same set of experiments for both events and dff analysis (Note: for this to work you need to get both ea_evs and ev_dff; for this run the code until line ~300 twice once setting use_events to True and once to False.)
 
 to_decode = 'next' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
 trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
@@ -434,7 +434,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     ############################################################################################################################################################
     #%%
     for session_numbers in [[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage corresponding to project_codes that we will make plots for.
-    #     session_numbers = [1]
+#         session_numbers = [1]
 
         #%% If analyzing novel sessions, only take sessions that include the 1st presentation of the novel session (ie the ones without a retake of session ophys-3)
         if np.in1d(4, session_numbers): # novel sessions

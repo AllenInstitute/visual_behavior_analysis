@@ -802,7 +802,7 @@ print('\n\n======== Analyzing session index %d ========\n' %(isess))
 #%% Set SVM vars # NOTE: Pay special attention to the following vars before running the SVM:
 
 use_events = False # True # whether to run the analysis on detected events (inferred spikes) or dff traces.
-svm_blocks = 2 #np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = np.nan # 2 #np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 # time_trace goes from -.5 to .65sec in the image-aligned traces.
 
@@ -815,6 +815,10 @@ project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
 
 print(f'Decoding *{to_decode}* image from *{trial_type}* activity at {time_win}ms!')
 print(f'kfold = {kfold}')    
+if use_events:
+    print(f'Using events')
+else:
+    print(f'Using DF/F')
 if np.isnan(svm_blocks):
     print(f'Running SVM on the whole session.')
 else:    
