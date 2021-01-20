@@ -366,10 +366,11 @@ for istage in np.unique(stages_all): # istage=1
                 ylabs = '%Classification accuracy' #'Amplitude'
             #        x = np.arange(num_depth)
                 lab1 = 'V1'
-                lab1 = f'{lab1},b{iblock}'
-
+                if ~np.isnan(svm_blocks):
+                    lab1 = f'{lab1},b{iblock}'
                 lab2 = 'LM'
-                lab2 = f'{lab2},b{iblock}'
+                if ~np.isnan(svm_blocks):
+                    lab2 = f'{lab2},b{iblock}'
 
                 top = np.nanmean(pa_all[:, cre_all[0,:]==cre], axis=1)
                 top_sd = np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))        
@@ -428,9 +429,10 @@ for istage in np.unique(stages_all): # istage=1
             #        xlabs = 'Area'
             #        x = np.arange(len(distinct_areas))
             #        xticklabs = xticklabs
-    #             lab = 'data'
+                lab = 'data'
     #             lab = f'{lab},b{iblock}'
-                lab = f'b{iblock}'
+                if ~np.isnan(svm_blocks):
+                    lab = f'b{iblock}'
 
                 top = np.nanmean(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
                 top_sd = np.nanstd(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))   

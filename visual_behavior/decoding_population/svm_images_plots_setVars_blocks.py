@@ -38,6 +38,7 @@ import pandas as pd
 import re
 import datetime
 import copy
+import sys
 
 from general_funs import *
 
@@ -52,12 +53,12 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 #%%
 
 svm_blocks = np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
-use_events = True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
-plot_single_mouse = 0 # if 1, make plots for each mouse
+use_events = True #True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
+
+use_same_experiments_dff_events = True # use the same set of experiments for both events and dff analysis (Note: for this to work you need to get both ea_evs and ev_dff; for this run the code until line ~300 twice once setting use_events to True and once to False.)
 
 to_decode = 'next' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
 trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
-
 
 time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 frames_svm = np.arange(-5,8) #[-3,-2,-1] # [0,1,2,3,4,5] # svm was run on how what frames relative to image onset
@@ -65,6 +66,7 @@ frames_svm = np.arange(-5,8) #[-3,-2,-1] # [0,1,2,3,4,5] # svm was run on how wh
 same_num_neuron_all_planes = 0 #1 # if 1, use the same number of neurons for all planes to train svm
 
 dosavefig = 1 # 0
+plot_single_mouse = 0 # if 1, make plots for each mouse
 fmt = '.pdf' # '.png' # '.svg'
     
 samps_bef = 5
@@ -170,12 +172,15 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     svm_allMice_sessPooled_block_name = f'svm_allMice_sessPooled_block{iblock}'
     svm_allMice_sessAvSd_block_name = f'svm_allMice_sessAvSd_block{iblock}'
 
-    allSessName_block_name = f'allSessName_block{iblock}' # not sure if we need this anymore
+#     allSessName_block_name = f'allSessName_block{iblock}' # not sure if we need this anymore
     
-    
+    ##############################################################################
+    ##############################################################################    
     #%% Read all_see h5 file made in svm_main_post (by calling svm_init)    
     # all cre lines, a given frames_svm; latest files saved
-    
+    ##############################################################################
+    ##############################################################################
+
 #     a = f'(.*)_frames{frames_svm[0]}to{frames_svm[-1]}'    # {cre2ana}
     allSessName = []
     for cre2ana in cre2ana_all: # cre2ana = cre2ana_all[0]
@@ -195,7 +200,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
         
     print(f'\n{len(allSessName)} all_sess files found!\n')
     
-    exec(allSessName_block_name + " = allSessName")
+#     exec(allSessName_block_name + " = allSessName") 
 
     
     #%% Set block number, use the last allsess file ... this needs work.
@@ -273,11 +278,98 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 
     stages_all_sess = np.array(stages_all_sess)    
 
-    print(f"{sum(stages_all_sess=='')} sessions have all experiments as NaN! These need further evaluation for why their svm results dont exist!")    
+    
+    
+    #%% Number of invalid sessions
+    
+    a = sum(stages_all_sess=='')    
+    print(f"{a} sessions ({a*8} experiments) have all experiments as NaN! These need further evaluation for why their svm results dont exist!")    
+
+
+    
+    #%% Number of invalid experiments
+    
+    ea = [all_sess0['av_test_data'].values[i][0] for i in range(len(all_sess0))] # the 1st element of av_test_data for each experiment; if nan, then invalid experiment.
+    en_ids = all_sess0['experiment_id'][np.isnan(ea)] # experiment id of invalid experiments
+#     valid_exps = ~np.isnan(ea)
+    
+    print(f"{sum(np.isnan(ea))} / {len(all_sess0)} experiments are NaN!\nTheir experiment ids:\n{en_ids}")
+
+    if use_events:
+        ea_evs = copy.deepcopy(ea)
+    else:
+        ea_dff = copy.deepcopy(ea)
+        
+        
+    if use_same_experiments_dff_events:
+        if ('ea_evs' in locals() and 'ea_dff' in locals())==False:
+            sys.exit('Set both ea_evs and ea_dff before proceeding!')
+
+            
+            
+    ##############################################################################
+    ##############################################################################
+    # Run this part after both ea_evs and ea_dff are set.
+    
+    all_sess00 = copy.deepcopy(all_sess0)
+    
+    #%% Use the same set of experiments for both events and dff analysis
+
+    if use_same_experiments_dff_events:
+        
+        ea_ids = all_sess00['experiment_id'].values    
+
+        #### set valid exps in both dff and events analyses
+        # valid exps in dff
+        valid_exps_dff = ~np.isnan(ea_dff)
+        # valid exps in events
+        valid_exps_evs = ~np.isnan(ea_evs)
+        # get the common valid exps
+        valid_exps_dff_evs = np.logical_and(valid_exps_dff, valid_exps_evs)
+        # get the common valid exps ids
+        ea_ids_valid_common = ea_ids[valid_exps_dff_evs]
+
+
+        #%% Add a valid column to all_sess00, and only set those rows to valid that are valid in both dff and events analysis
+
+        all_sess00['valid'] = False
+
+        all_sess00.loc[valid_exps_dff_evs, 'valid'] = True
+    #     all_sess00.loc[valid_exps, 'valid'] = True
+    #     all_sess00.loc[valid_exps_dff, 'valid'] = True
+    #     all_sess00.loc[valid_exps_evs, 'valid'] = True
 
 
 
+        #%% Set svm class accuracy vars to nan for all invalid experiments; then run it on both events and dff ; and comapre the figures; also add stuff to the code to take care of common exp finding.
 
+        c = ['av_train_data', 'av_test_data', 'av_test_shfl',
+            'av_test_chance', 'sd_train_data', 'sd_test_data', 'sd_test_shfl',
+            'sd_test_chance']
+
+        a = all_sess00[all_sess00['valid']==False][c]
+        for i in range(len(a)):
+            a.iloc[i] = [np.full((len(frames_svm)), np.nan)] 
+        
+        
+        #%% IMPORTANT: resetting the value of all_sess0
+        
+        all_sess0.loc[all_sess00['valid']==False, c] = a
+
+
+        ### the new number of invalid experiments
+        ea = [all_sess0['av_test_data'].values[i][0] for i in range(len(all_sess0))] # the 1st element of av_test_data for each experiment; if nan, then invalid experiment.
+        en_ids = all_sess0['experiment_id'][np.isnan(ea)] # experiment id of invalid experiments
+    #     valid_exps = ~np.isnan(ea)
+
+        print(f"{sum(np.isnan(ea))} / {len(all_sess0)} experiments are NaN!\nTheir experiment ids:\n{en_ids}")
+
+
+        
+    
+    
+    ##############################################################################
+    ##############################################################################
     #%% Set the exposure_number (or better to call "retake_number") for each experiment
 
     experiments_table = loading.get_filtered_ophys_experiment_table()
@@ -301,6 +393,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     else:
         print(f'\n{a} experiments in all_sess do NOT exist in experiment_table; uncanny!')
 
+        
         ### make exposure_number the same size as all_sess and use some large value for the missing experiments so they will get filtered out below. 
         # turn exposure_number to a df so we know which element belongs to which experiment, add additional rows for the experiments in all_sess that are not in exposure_number, and set their value to a ridiculus value like 100.
 
@@ -323,15 +416,22 @@ for iblock in br: # iblock=0 ; iblock=np.nan
         all_sess0.at[~np.in1d(es, estbl), 'peak_amp_trainTestShflChance'] = [np.full((all_sess0.iloc[0]['peak_amp_trainTestShflChance'].shape), np.nan)]    
         all_sess0.at[~np.in1d(es, estbl), 'meanX_allFrs'] = [np.full((all_sess0.iloc[0]['meanX_allFrs'].shape), np.nan)]        
         '''
+    ##############################################################################
+    ##############################################################################
+    
+    
 
-
-    ##############################################################################
-    ##############################################################################
-    ##############################################################################
+    
+    
+    
+    
+    ############################################################################################################################################################
+    ############################################################################################################################################################
+    ############################################################################################################################################################
     # Now get those experiments that belong to a given ophys stage, and make plots for them.
-    ##############################################################################
-    ##############################################################################
-    ##############################################################################
+    ############################################################################################################################################################
+    ############################################################################################################################################################
+    ############################################################################################################################################################
     #%%
     for session_numbers in [[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage corresponding to project_codes that we will make plots for.
     #     session_numbers = [1]
@@ -360,9 +460,12 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     #     all_sess = copy.deepcopy(all_sess0)
 
 
-
-        #%% Get those session ids that belong to a given stage (eg. ophys 1, identified by session_numbers)
-
+        ##############################################################################
+        ##############################################################################
+        #%% Get those session ids (those rows of all_sess) that belong to a given stage (eg. ophys 1, identified by session_numbers)
+        ##############################################################################
+        ##############################################################################
+    
         l = stages_all_sess
         stage_inds_all = []
         for ise in range(len(session_numbers)):
@@ -390,7 +493,10 @@ for iblock in br: # iblock=0 ; iblock=np.nan
         #%% Set all_sess only for a given stage
 
         # print(all_sess0.shape)
-        all_sess = all_sess0[np.in1d(all_sess0['session_id'], session_ids_this_stage)]
+#         a = np.logical_and(all_sess0['valid'], np.in1d(all_sess0['session_id'], session_ids_this_stage))
+        a = np.in1d(all_sess0['session_id'], session_ids_this_stage)
+
+        all_sess = all_sess0[a]
 
         print(f'Final size of all_sess: {all_sess.shape}')
         print(f"Existing cre lines: {all_sess['cre'].unique()}")
