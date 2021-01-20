@@ -1871,7 +1871,8 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        expts = experiments_table.reset_index()
+        # expts = experiments_table.reset_index()
+        expts = experiments_table.copy()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
                 filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,

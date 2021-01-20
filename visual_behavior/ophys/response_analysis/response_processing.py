@@ -680,7 +680,7 @@ def get_omission_pupil_area_df(dataset, frame_rate=30, df_format='wide'):
 
 
 def get_lick_binary(dataset):
-    licks = dataset.licks.time.values.copy()
+    licks = dataset.licks.timestamps.values.copy()
     times = dataset.stimulus_timestamps.copy()
     lick_binary = np.asarray([1 if time in licks else 0 for time in times])
     return lick_binary
