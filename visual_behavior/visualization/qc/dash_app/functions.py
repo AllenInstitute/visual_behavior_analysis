@@ -14,9 +14,28 @@ import visual_behavior.visualization.qc.data_loading as dl
 from visual_behavior.data_access import loading
 
 
-def load_data():
+def load_container_data():
     container_df = dl.build_container_df()
     return container_df
+
+
+def load_session_data():
+    meso_table = refactor_sessions_table_mesoscope_for_qc()
+    meso_table['container_id'] = meso_table['container_id'].astype(int)
+    meso_table = meso_table.reset_index().rename(columns={'index':'ophys_session_id'})
+
+    columms_to_show = [
+        'ophys_session_id',
+        'ophys_experiment_ids, paired',
+        'date_of_acquisition', 
+        'driver_line',
+        'equipment_name', 
+        'mouse_id',
+        'project_code', 
+        'session_type',
+    ]
+    
+    return meso_table[columms_to_show]
 
 
 def load_yaml(yaml_path):
@@ -85,7 +104,7 @@ def get_container_plot(container_id, plot_type):
     return encoded_image
 
 
-CONTAINER_TABLE = load_data().sort_values('first_acquistion_date')
+CONTAINER_TABLE = load_container_data().sort_values('first_acquistion_date')
 
 
 def generate_plot_inventory():
@@ -275,3 +294,60 @@ def set_qc_complete_flags(feedback):
         conn.close()
 
         print('Updating qc state for {}'.format(qc_attribute))
+
+
+def get_paired_planes(session_id):
+        ''' 
+        Get paired experiments for given session. 
+        This function will first query LIMS. (Query provided by Wayne)
+        But since LIMS does not have this information for a lot of older mesoscope sesions, if the query returns nothing, 
+        it will try and parce cell extraction input json to get paired planes
+        :param ophys_session_id
+        :return: list of two elememnt list, where each sublist is two experiment IDs of a pair of coupled planes. In order of acquisition. 
+        '''
+        pairs = []
+        try:
+            query = (f"""SELECT
+            os.id as session_id,
+            oe.id as exp_id,
+            oe.ophys_imaging_plane_group_id as pair_id,
+            oipg.group_order
+            FROM ophys_sessions os
+            JOIN ophys_experiments oe ON oe.ophys_session_id=os.id
+            JOIN ophys_imaging_plane_groups oipg ON oipg.id=oe.ophys_imaging_plane_group_id
+            WHERE os.id = {session_id}
+            ORDER BY exp_id
+            """)
+            
+            pairs_df = db.lims_query(query)
+            
+        except Exception as e:
+            print("Unable to query LIMS database: {}".format(e))
+        if len(pairs_df) > 0:
+            num_groups = pairs_df['group_order'].drop_duplicates().values
+            for i in num_groups:
+                pair = [exp_id for exp_id in pairs_df.loc[pairs_df['group_order'] == i].exp_id]
+                pairs.append(pair)
+        else:
+            print(f"Lims returned no group information about session {self.session_id}, using hardcoded splitting json filename")
+            splitting_json = self.get_splitting_json()
+            with open(splitting_json, "r") as f:
+                data = json.load(f)
+            for pg in data.get("plane_groups", []):
+                pairs.append([p["experiment_id"] for p in pg.get("ophys_experiments", [])])
+        return pairs
+    
+def refactor_sessions_table_mesoscope_for_qc():
+    '''
+    Refactor the sessions table for emoscope decrosstalking QC.
+    :param 
+    :return: pandas DataFrame, refactored table
+    '''
+    session_table = loading.get_filtered_ophys_session_table()
+    meso_only_sessions = session_table.loc[session_table.equipment_name == 'MESO.1']
+    meso_only_sessions_filtered = meso_only_sessions #.drop(columns=['ophys_experiment_id', 'at_least_one_experiment_passed', 'age_in_days', 'at_least_one_experiment_passed', 'behavior_session_id', 'donor_id', 'full_genotype', 'model_outputs_available', 'reporter_line', 'session_name', 'sex', 'specimen_id'])
+    meso_table = pd.concat([meso_only_sessions_filtered, pd.DataFrame(columns=['ophys_experiment_ids, paired'])])
+    for session in meso_table.index:
+        paired_planes = get_paired_planes(session)
+        meso_table.at[session,'ophys_experiment_ids, paired'] = paired_planes
+    return meso_table

@@ -24,7 +24,7 @@ app.title = 'Visual Behavior Data QC'
 # FUNCTION CALLS
 print('setting up table')
 t0 = time.time()
-container_table = functions.load_data().sort_values('first_acquistion_date')
+container_table = functions.load_container_data().sort_values('first_acquistion_date')
 container_plot_options = functions.load_container_plot_options()
 container_overview_plot_options = functions.load_container_overview_plot_options()
 plot_inventory = functions.generate_plot_inventory()
@@ -153,9 +153,28 @@ app.layout = html.Div(
     },
 )
 
+# update data table
+@app.callback(Output('data_table', 'data'),
+              [
+                  Input('display_level_selection', 'value'),
+                  Input('data_table', 'selected_rows'),
+                  Input('feedback_popup_ok', 'n_clicks'),
+                  Input("stored_feedback", "children")
+]
+)
+def update_data(data_display_level, selected_rows, n_clicks, stored_feedback):
+    print('updating data table at {}'.format(time.time()))
+    print('data_display_level = {}'.format(data_display_level))
+    if data_display_level == 'container':
+        container_table = functions.load_container_data().sort_values('first_acquistion_date')
+        data = container_table.to_dict('records')
+    elif data_display_level == 'session':
+        session_table = functions.load_session_data()
+        data = session_table.to_dict('records')
+    return data
+
+
 # ensure that the table page is set to show the current selection
-
-
 @app.callback(
     Output("data_table", "page_current"),
     [Input('data_table', 'selected_rows')],
@@ -540,22 +559,6 @@ def show_container_dropdown(checkbox_values):
 
 
 # highlight row in data table
-@app.callback(Output('data_table', 'data'),
-              [
-                  Input('data_table', 'selected_rows'),
-                  Input('feedback_popup_ok', 'n_clicks'),
-                  Input("stored_feedback", "children")
-]
-)
-def update_data(selected_rows, n_clicks, stored_feedback):
-    print('updating data table at {}'.format(time.time()))
-    container_table = functions.load_data().sort_values('first_acquistion_date')
-    data = container_table.to_dict('records')
-    return data
-
-# highlight row in data table
-
-
 @app.callback(Output('data_table', 'style_data_conditional'),
               [Input('data_table', 'selected_rows'),
                Input('data_table', 'page_current'),
