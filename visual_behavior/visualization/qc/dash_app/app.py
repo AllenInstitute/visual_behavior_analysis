@@ -26,14 +26,13 @@ print('setting up table')
 t0 = time.time()
 container_table = functions.load_container_data().sort_values('first_acquistion_date')
 container_plot_options = functions.load_container_plot_options()
+session_plot_options = functions.load_session_plot_options()
 container_overview_plot_options = functions.load_container_overview_plot_options()
 plot_inventory = functions.generate_plot_inventory()
 plot_inventory_fig = functions.make_plot_inventory_heatmap(plot_inventory)
 experiment_table = loading.get_filtered_ophys_experiment_table().reset_index()
-session_table = loading.get_filtered_ophys_session_table().reset_index()
+session_table = functions.load_session_data()
 print('done setting up table, it took {} seconds'.format(time.time() - t0))
-
-QC_ATTRIBUTES = functions.load_container_qc_definitions()
 
 # COMPONENT SETUP
 print('setting up components')
@@ -70,6 +69,8 @@ app.layout = html.Div(
         html.Output(id='container_id_output', children=''),
         html.H4('Choose how to organize data:'),
         components.display_level_selection,
+        html.H4('Choose preferred path style:'),
+        components.path_style,
         html.H4('Data Table:'),
         html.I('Adjust number of rows to display in the data table:'),
         components.table_row_selection,
@@ -79,26 +80,47 @@ app.layout = html.Div(
         components.previous_button,
         components.next_button,
         html.Div(id='stored_feedback', style={'display': 'none'}),
-        html.H4('Links to motion corrected movies for this container'),
-        dcc.Link(id='link_0', children='', href='', style={'display': True}, target="_blank"),
-        html.H4(''),
-        dcc.Link(id='link_1', children='', href='', style={'display': True}, target="_blank"),
-        html.H4(''),
-        dcc.Link(id='link_2', children='', href='', style={'display': True}, target="_blank"),
-        html.H4(''),
-        dcc.Link(id='link_3', children='', href='', style={'display': True}, target="_blank"),
-        html.H4(''),
-        dcc.Link(id='link_4', children='', href='', style={'display': True}, target="_blank"),
-        html.H4(''),
-        dcc.Link(id='link_5', children='', href='', style={'display': True}, target="_blank"),
-        html.H4(''),
-        dcc.Link(id='link_6', children='', href='', style={'display': True}, target="_blank"),
-        html.H4(''),
-        dcc.Link(id='link_7', children='', href='', style={'display': True}, target="_blank"),
-        html.H4(''),
-        dcc.Link(id='link_8', children='', href='', style={'display': True}, target="_blank"),
-        html.H4(''),
-        dcc.Link(id='link_9', children='', href='', style={'display': True}, target="_blank"),
+        html.Div(
+            [
+                html.H4('Links to motion corrected movies for this container'),
+                dcc.Link(id='link_0', children='', href='', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='link_1', children='', href='', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='link_2', children='', href='', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='link_3', children='', href='', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='link_4', children='', href='', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='link_5', children='', href='', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='link_6', children='', href='', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='link_7', children='', href='', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='link_8', children='', href='', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='link_9', children='', href='', style={'display': True}, target="_blank"),
+            ],
+            id = 'motion_correction_links',
+            style={'display': True}
+        ),
+        html.Div(
+            [
+                html.H4('Links to ROI overlap plots'),
+                dcc.Link(id='roi_link_0', children='', href='www.google.com', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='roi_link_1', children='', href='www.google.com', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='roi_link_2', children='', href='www.google.com', style={'display': True}, target="_blank"),
+                html.H4(''),
+                dcc.Link(id='roi_link_3', children='', href='www.google.com', style={'display': True}, target="_blank"),
+                html.H4(''),
+            ],
+            id = 'roi_overlap_links',
+            style={'display': 'none'}
+        ),
         components.feedback_button,
         html.H4('Select plots to generate from the dropdown (max 10)'),
         components.plot_selection_dropdown,
@@ -166,12 +188,45 @@ def update_data(data_display_level, selected_rows, n_clicks, stored_feedback):
     print('updating data table at {}'.format(time.time()))
     print('data_display_level = {}'.format(data_display_level))
     if data_display_level == 'container':
-        container_table = functions.load_container_data().sort_values('first_acquistion_date')
+        # container_table = functions.load_container_data().sort_values('first_acquistion_date')
         data = container_table.to_dict('records')
     elif data_display_level == 'session':
-        session_table = functions.load_session_data()
-        data = session_table.to_dict('records')
+        # session_table = functions.load_session_data()
+        data_to_display = session_table.copy()
+        data_to_display['ophys_experiment_ids, paired'] = data_to_display['ophys_experiment_ids, paired'].astype(str)
+        data = data_to_display.to_dict('records')
     return data
+
+# update data table columns
+@app.callback(Output('data_table', 'columns'),
+              [Input('display_level_selection', 'value'),]
+)
+def update_data_columns(data_display_level):
+    if data_display_level == 'container':
+        columns = [{"name": i.replace('_', ' '), "id": i} for i in container_table.columns]
+    elif data_display_level == 'session':
+        columns = [{"name": i.replace('_', ' '), "id": i} for i in session_table.columns]
+    return columns
+
+# toggle motion correction link visibility
+@app.callback(Output('motion_correction_links', 'style'),
+              [Input('display_level_selection', 'value'),]
+)
+def display_motion_correction_links(data_display_level):
+    if data_display_level == 'container':
+        return {'display': True}
+    elif data_display_level == 'session':
+        return {'display': 'none'}
+
+# toggle roi_overlap link visibility
+@app.callback(Output('roi_overlap_links', 'style'),
+              [Input('display_level_selection', 'value'),]
+)
+def display_motion_correction_links(data_display_level):
+    if data_display_level == 'container':
+        return {'display': 'none'}
+    elif data_display_level == 'session':
+        return {'display': True}
 
 
 # ensure that the table page is set to show the current selection
@@ -211,14 +266,15 @@ def look_up_container(oeid):
     Output("data_table", "selected_rows"),
     [
         Input("next_button", "n_clicks"),
-        Input("previous_button", "n_clicks")
+        Input("previous_button", "n_clicks"),
+        Input('display_level_selection', 'value'),
     ],
     [
         State("data_table", "selected_rows"),
         State('data_table', 'derived_virtual_indices'),
     ]
 )
-def select_next(next_button_n_clicks, prev_button_n_clicks, selected_rows, derived_virtual_indices):
+def select_next(next_button_n_clicks, prev_button_n_clicks, display_level_selection, selected_rows, derived_virtual_indices):
     changed_id = [p['prop_id'] for p in dash.callback_context.triggered][0]
     if 'previous_button' in changed_id:
         print('previous_button was clicked')
@@ -226,9 +282,14 @@ def select_next(next_button_n_clicks, prev_button_n_clicks, selected_rows, deriv
     elif 'next_button' in changed_id:
         print('next_button was clicked')
         advance_index = 1
+    elif 'display_level_selection' in changed_id:
+        advance_index = 0
     else:
         advance_index = 0
-    if derived_virtual_indices is not None:
+
+    if advance_index == 0:
+        return [0]
+    elif derived_virtual_indices is not None:
         current_selection = selected_rows[0]
         current_index = derived_virtual_indices.index(current_selection)
         next_index = current_index + advance_index
@@ -250,20 +311,21 @@ def select_next(next_button_n_clicks, prev_button_n_clicks, selected_rows, deriv
     [
         State("feedback_popup_datetime", "value"),
         State("feedback_popup_username", "value"),
-        State("feedback_popup_container_id", "value"),
+        State("feedback_popup_id", "value"),
         State("feedback_popup_experiments", "value"),
         State("feedback_popup_qc_dropdown", "value"),
         State("feedback_popup_motion_present", "value"),
         State("feedback_popup_qc_labels", "value"),
-        State("feedback_popup_text", "value")
+        State("feedback_popup_text", "value"),
+        State('display_level_selection', 'value'),
     ]
 )
-def log_feedback(n1, timestamp, username, container_id, experiment_ids, qc_attribute, motion_present, qc_labels, input_text):
+def log_feedback(n1, timestamp, username, _id, experiment_ids, qc_attribute, motion_present, qc_labels, input_text, display_level):
     print('LOGGING FEEDBACK')
     feedback = {
         'timestamp': timestamp,
         'username': username,
-        'container_id': container_id,
+        '{}_id'.format(display_level): _id,
         'experiment_id': experiment_ids,
         'qc_attribute': qc_attribute,
         'motion_present': motion_present, 
@@ -271,8 +333,10 @@ def log_feedback(n1, timestamp, username, container_id, experiment_ids, qc_attri
         'input_text': input_text,
     }
     print(feedback)
-    functions.log_feedback(feedback)
-    functions.set_qc_complete_flags(feedback)
+    functions.log_feedback(feedback, display_level)
+    if display_level == 'container':
+        print('trying to update set_qc_complete_flags')
+        functions.set_qc_complete_flags(feedback)
     print('logging feedback at {}'.format(time.time()))
     return 'TEMP'
 
@@ -298,34 +362,55 @@ def toggle_modal(n1, n2, n3, is_open):
 
 
 @app.callback(
-    Output("feedback_popup_container_id", "value"),
+    Output("feedback_popup_id", "value"),
     [
         Input('data_table', 'selected_rows'),
+        Input('display_level_selection', 'value')
     ],
 )
-def fill_container_id(selected_rows):
+def fill_container_id(selected_rows, display_level):
     idx = selected_rows[0]
-    return container_table.iloc[idx]['container_id']
+    if display_level == 'container':
+        return container_table.iloc[idx]['container_id']
+    elif display_level == 'session':
+        return session_table.iloc[idx]['ophys_session_id']
+
+# populate qc attributes in popup when selecting new display level
+@app.callback(
+    Output('feedback_popup_qc_dropdown', 'options'),
+    [
+        Input('display_level_selection', 'value'),
+    ],
+)
+def update_qc_attributes(display_level):
+    if display_level == 'container':
+        qc_attributes = functions.load_container_qc_definitions()
+    elif display_level == 'session':
+        qc_attributes = functions.load_session_qc_definitions()
+    qc_options = [{'label': key, 'value': key} for key in list(qc_attributes.keys())]
+    return qc_options
 
 # label radio buttons in popup with currently selected experiment_ids
-
-
 @app.callback(
     Output('feedback_popup_experiments', 'options'),
     [
         Input('data_table', 'selected_rows'),
+        Input('display_level_selection', 'value')
     ],
-    [State('feedback_popup_experiments', 'options')]
 )
-def experiment_id_checklist(row_index, options):
-    container_id = container_table.iloc[row_index[0]]['container_id']  # noqa: F841 - Flake8 doesn't recognize the variable being used below
-    subset = experiment_table.query('container_id == @container_id').sort_values(by='ophys_experiment_id')[['session_type', 'ophys_experiment_id']].reset_index(drop=True)
-    options = [{'label': '{} {}'.format(subset.loc[i]['session_type'], subset.loc[i]['ophys_experiment_id']), 'value': subset.loc[i]['ophys_experiment_id']} for i in range(len(subset))]
+def experiment_id_checklist(row_index, display_level):
+    if display_level == 'container':
+        container_id = container_table.iloc[row_index[0]]['container_id']  # noqa: F841 - Flake8 doesn't recognize the variable being used below
+        subset = experiment_table.query('container_id == @container_id').sort_values(by='ophys_experiment_id')[['session_type', 'ophys_experiment_id']].reset_index(drop=True)
+        options = [{'label': '{} {}'.format(subset.loc[i]['session_type'], subset.loc[i]['ophys_experiment_id']), 'value': subset.loc[i]['ophys_experiment_id']} for i in range(len(subset))]
+    elif display_level == 'session':
+        experiments = list(np.array(session_table.iloc[row_index[0]]['ophys_experiment_ids, paired']).flatten())
+        options = [{'label': oeid, 'value': oeid} for oeid in experiments]
+    else:
+        options = [{'label':'NONE', 'value':None}]
     return options
 
 # select all experiments
-
-
 @app.callback(
     Output('feedback_popup_experiments', 'value'),
     [
@@ -389,11 +474,16 @@ def enable_popup_ok(username, selected_experiments, qc_attribute, qc_label, moti
     Output('feedback_popup_qc_labels', 'options'),
     [
         Input('feedback_popup_qc_dropdown', 'value'),
+        Input('display_level_selection', 'value'),
     ],
 )
-def populate_qc_options(attribute_to_qc):
+def populate_qc_options(attribute_to_qc, display_level):
+    if display_level == 'container':
+        qc_attributes = functions.load_container_qc_definitions()
+    elif display_level == 'session':
+        qc_attributes = functions.load_session_qc_definitions()
     try:
-        return [{'label': v, 'value': v} for v in QC_ATTRIBUTES[attribute_to_qc]['qc_attributes']]
+        return [{'label': v, 'value': v} for v in qc_attributes[attribute_to_qc]['qc_attributes']]
     except KeyError:
         return []
 
@@ -483,11 +573,19 @@ def update_container_overview_options(checkbox_values):
 
 
 # update container plot options when container checklist state is changed
-@app.callback(Output('container_plot_dropdown', 'options'), [Input('container_checklist', 'value')])
-def update_container_plot_options(checkbox_values):
-    global container_plot_options
-    container_plot_options = functions.load_container_plot_options()
-    return container_plot_options
+@app.callback(
+    Output('plot_selection_dropdown', 'options'), 
+    [
+        Input('container_checklist', 'value'),
+        Input('display_level_selection', 'value')
+    ]
+)
+def update_container_plot_options(checkbox_values, display_level_selection):
+    if display_level_selection == 'container':
+        plot_options = functions.load_container_plot_options()
+    elif display_level_selection == 'session':
+        plot_options = functions.load_session_plot_options()
+    return plot_options
 
 
 # show/hide container view frame based on 'container_checklist'
@@ -583,69 +681,72 @@ def highlight_row(row_index, page_current, derived_viewport_indices):
 # set plot titles
 # this is just text above the actual plot frame
 # Use this loop to determine the correct title to update
-
-
-def update_plot_title(plot_types, input_id):
+def update_plot_title(plot_types, display_level, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('plot_title_')[1])
     try:
         return plot_types[idx]
     except IndexError:
         return ''
-
-
 for i in range(10):
     app.callback(
         Output(f"plot_title_{i}", "children"),
-        [Input(f"container_plot_dropdown", "value"), Input(f"plot_title_{i}", "id")]  # noqa: F541
+        [
+            Input(f"plot_selection_dropdown", "value"), 
+            Input('display_level_selection', 'value'),
+            Input(f"plot_title_{i}", "id")
+        ]  # noqa: F541
     )(update_plot_title)
 
 # image frames callbacks
 # generated in a loop
-
-
-def update_frame_N(row_index, plot_types, input_id):
+def update_frame_N(row_index, plot_types, display_level, input_id):
     '''
     a function to fill the image frames
     '''
     idx = int(input_id.split('image_frame_')[1])
     try:
         plot_type = plot_types[idx]
-        container_id = container_table.iloc[row_index[0]]['container_id']
-        encoded_image = functions.get_container_plot(container_id, plot_type=plot_type)
+        if display_level == 'container':
+            _id = container_table.iloc[row_index[0]]['container_id']
+        elif display_level == 'session':
+            _id = session_table.iloc[row_index[0]]['ophys_session_id']
+
+        encoded_image = functions.get_plot(_id, plot_type=plot_type, display_level=display_level)
         return 'data:image/png;base64,{}'.format(encoded_image.decode())
     except IndexError:
         return None
-
-
 for i in range(10):
     app.callback(
         Output(f"image_frame_{i}", "src"),
         [
             Input('data_table', 'selected_rows'),
-            Input('container_plot_dropdown', 'value'),
+            Input('plot_selection_dropdown', 'value'),
+            Input('display_level_selection', 'value'),
             Input(f"image_frame_{i}", "id")
         ]
     )(update_frame_N)
 
 # update_links
-
-
-def update_link_text_N(row_index, input_id):
+def update_link_text_N(row_index, path_style, input_id):
     '''a function to update plot titles'''
     idx = int(input_id.split('link_')[1])
     container_id = container_table.iloc[row_index[0]]['container_id']
     link_list = functions.get_motion_corrected_movie_paths(container_id)
+    if path_style == 'windows':
+        link_list = [v.replace('/','\\') for v in link_list]
     try:
-        return link_list[idx].replace('/', '\\')
+        return link_list[idx]
     except IndexError:
         return 'INVALID LINK'
-
-
 for i in range(10):
     app.callback(
         Output(f"link_{i}", "children"),
-        [Input('data_table', 'selected_rows'), Input(f"link_{i}", "id")]
+        [
+            Input('data_table', 'selected_rows'), 
+            Input('path_style', 'value'),
+            Input(f"link_{i}", "id")
+        ]
     )(update_link_text_N)
 
 
@@ -658,8 +759,6 @@ def update_link_destination_N(row_index, input_id):
         return 'file:{}'.format(link_list[idx])
     except IndexError:
         return 'https://www.google.com/'
-
-
 for i in range(10):
     app.callback(
         Output(f"link_{i}", "href"),
@@ -679,13 +778,38 @@ def update_link_visibility_N(row_index, input_id):
     except IndexError:
         print("Returning None, idx = {}".format(idx))
         return {'display': 'none'}
-
-
 for i in range(10):
     app.callback(
         Output(f"link_{i}", "style"),
         [Input('data_table', 'selected_rows'), Input(f"link_{i}", "id")]
     )(update_link_visibility_N)
+
+
+def update_roi_overlap_link_text_N(row_index, display_level_selection, path_style, input_id):
+    '''a function to update plot titles'''
+    if display_level_selection == 'session':
+        idx = int(input_id.split('roi_link_')[1])
+        session_id = session_table.iloc[row_index[0]]['ophys_session_id']
+        link_list = ['/'+v for k,v in functions.get_roi_overlap_plots_links(session_id).items()]
+        if path_style == 'windows':
+            link_list = [v.replace('/','\\') for v in link_list]
+        try:
+            return link_list[idx]
+        except IndexError:
+            return 'INVALID LINK'
+    else:
+        return "NOT APPLICABLE"
+
+for i in range(4):
+    app.callback(
+        Output(f"roi_link_{i}", "children"),
+        [
+            Input('data_table', 'selected_rows'), 
+            Input('display_level_selection', 'value'), 
+            Input('path_style', 'value'),
+            Input(f"roi_link_{i}", "id")
+        ]
+    )(update_roi_overlap_link_text_N)
 
 
 if __name__ == '__main__':
@@ -710,7 +834,7 @@ if __name__ == '__main__':
 
 @app.callback(Output('link_0', 'children'),
               [Input('data_table', 'selected_rows'),
-               Input('container_plot_dropdown', 'value'),
+               Input('plot_selection_dropdown', 'value'),
                ])
 def print_movie_paths(row_index, plot_types):
     container_id = container_table.iloc[row_index[0]]['container_id']

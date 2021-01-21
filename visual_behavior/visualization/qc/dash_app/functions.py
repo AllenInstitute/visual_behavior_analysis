@@ -20,9 +20,9 @@ def load_container_data():
 
 
 def load_session_data():
-    meso_table = refactor_sessions_table_mesoscope_for_qc()
-    meso_table['container_id'] = meso_table['container_id'].astype(int)
-    meso_table = meso_table.reset_index().rename(columns={'index':'ophys_session_id'})
+    session_table = refactor_sessions_table_mesoscope_for_qc()
+    session_table['container_id'] = session_table['container_id'].astype(int)
+    session_table = session_table.reset_index().rename(columns={'index':'ophys_session_id'})
 
     columms_to_show = [
         'ophys_session_id',
@@ -34,8 +34,17 @@ def load_session_data():
         'project_code', 
         'session_type',
     ]
-    
-    return meso_table[columms_to_show]
+
+    try:
+        included_session_list = pd.read_csv('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots/session_list.csv')
+    except FileNotFoundError:
+        pass
+
+    session_table_to_return = session_table[
+        session_table['ophys_session_id'].isin(included_session_list['ophys_session_id'])
+    ][columms_to_show]
+
+    return session_table_to_return
 
 
 def load_yaml(yaml_path):
@@ -48,9 +57,9 @@ def load_yaml(yaml_path):
     return options
 
 
-def get_plot_list(container_qc_definitions):
+def get_plot_list(qc_definitions):
     plot_list = []
-    for plot_title, attributes in container_qc_definitions.items():
+    for plot_title, attributes in qc_definitions.items():
         if attributes['show_plots']:
             plot_list.append({'label': plot_title, 'value': attributes['plot_folder_name']})
     return plot_list
@@ -61,11 +70,21 @@ def load_container_qc_definitions():
     return json.load(open(container_qc_definition_path))
 
 
+def load_session_qc_definitions():
+    container_qc_definition_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots/qc_definitions.json"
+    return json.load(open(container_qc_definition_path))
+
+
 def load_container_plot_options():
     container_options = get_plot_list(load_container_qc_definitions())
     print('container_options:')
     print(container_options)
     return container_options
+
+
+def load_session_plot_options():
+    session_options = get_plot_list(load_session_qc_definitions())
+    return session_options
 
 
 def load_container_overview_plot_options():
@@ -74,28 +93,28 @@ def load_container_overview_plot_options():
     return container_overview_options
 
 
-def get_container_plot_path(container_id, plot_type):
+def get_plot_path(_id, plot_type, display_level):
     qc_plot_folder = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
-    container_plot_folder = os.path.join(qc_plot_folder, 'container_plots')
+    plot_folder = os.path.join(qc_plot_folder, '{}_plots'.format(display_level))
 
     plot_image_path = os.path.join(
-        container_plot_folder,
-        plot_type, 'container_{}.png'.format(container_id)
+        plot_folder,
+        plot_type, '{}_{}.png'.format(display_level, _id)
     )
     return plot_image_path
 
 
-def get_container_plot(container_id, plot_type):
-    plot_image_path = get_container_plot_path(container_id, plot_type)
+def get_plot(_id, plot_type, display_level):
+    plot_image_path = get_plot_path(_id, plot_type, display_level)
     try:
         encoded_image = base64.b64encode(open(plot_image_path, 'rb').read())
     except FileNotFoundError:
-        print('not found, container_id = {}, plot_type = {}'.format(container_id, plot_type))
+        print('not found, container_id = {}, plot_type = {}'.format(_id, plot_type))
         qc_plot_folder = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
-        container_plot_folder = os.path.join(qc_plot_folder, 'container_plots')
+        plot_folder = os.path.join(qc_plot_folder, '{}_plots'.format(display_level))
 
         plot_not_found_path = os.path.join(
-            container_plot_folder,
+            plot_folder,
             'no_cached_plot_small.png'
         )
         encoded_image = base64.b64encode(
@@ -116,7 +135,7 @@ def generate_plot_inventory():
         d = {'container_id': container_id}
         for entry in plots:
             plot_type = entry['value']
-            d.update({plot_type: os.path.exists(get_container_plot_path(container_id, plot_type))})
+            d.update({plot_type: os.path.exists(get_plot_path(container_id, plot_type, 'container'))})
         list_of_dicts.append(d)
     return pd.DataFrame(list_of_dicts).set_index('container_id').sort_index()
 
@@ -186,28 +205,28 @@ def print_motion_corrected_movie_paths(container_id):
     return '\n'.join(lines)
 
 
-def to_json(data_to_log):
+def to_json(data_to_log, display_level):
     '''log data to filesystem'''
-    saveloc = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_records'
+    saveloc = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_records/{}_level'.format(display_level)
     filename = os.path.join(saveloc, '{}.json'.format(data_to_log['_id']))
     json.dump(data_to_log, open(filename, 'w' ))
 
 
-def to_mongo(data_to_log):
+def to_mongo(data_to_log, display_level):
     '''log data to mongo'''
     conn = db.Database('visual_behavior_data')
-    collection = conn['ophys_qc']['container_qc_records']
+    collection = conn['ophys_qc']['{}_qc_records'.format(display_level)]
     collection.insert_one(db.clean_and_timestamp(data_to_log))
     conn.close()
 
 
-def log_feedback(feedback):
+def log_feedback(feedback, display_level):
     '''logs feedback from app to mongo and filesystem'''
     if pd.notnull(feedback['timestamp']):
         random_id = uuid.uuid4().hex
         feedback.update({'_id': random_id})
-        to_json(feedback)
-        to_mongo(feedback)
+        to_json(feedback, display_level)
+        to_mongo(feedback, display_level)
 
 
 def update_qc_status(feedback):
@@ -351,3 +370,22 @@ def refactor_sessions_table_mesoscope_for_qc():
         paired_planes = get_paired_planes(session)
         meso_table.at[session,'ophys_experiment_ids, paired'] = paired_planes
     return meso_table
+
+
+def get_roi_overlap_plots_links(session_id, plots_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots/mesoscope_decrosstalk'):
+    """
+    function to build links ot the roi-level plots given session_id
+    session_id : int, session ID form lims
+    plots_dir: str, path to outer directory 
+    returns dict, where {'pair_0_overlaps' : "path_to_roi_level_dir"}
+    """
+    session_path = os.path.join(plots_dir, f"session_{session_id}")
+    roi_links = {}
+    pairs = get_paired_planes(session_id)
+    for i, pair in enumerate(pairs):
+        pair_dir_path = os.path.join(session_path, f"pair_{i}_overlaps")
+        if os.path.isdir(pair_dir_path):
+            roi_links[f'pair_{i}'] = pair_dir_path
+        else:
+            roi_links[f'pair_{i}']  = "roi level plots don't exist"        
+    return roi_links

@@ -10,7 +10,7 @@ from functions import generate_plot_inventory, make_plot_inventory_heatmap, load
 
 # dropdown for selecting plots to display
 plot_selection_dropdown = dcc.Dropdown(
-    id='container_plot_dropdown',
+    id='plot_selection_dropdown',
     options=None,
     value=[],
     multi=True
@@ -25,6 +25,16 @@ show_overview_checklist = dcc.Checklist(
     ],
     value=[]
 )
+
+path_style = dcc.RadioItems(
+    id='path_style',
+    options=[
+        {'label': 'Unix  ', 'value': 'unix'},
+        {'label': 'Windows  ', 'value': 'windows'},
+    ],
+    value='unix',
+    inputStyle={"margin-left": "20px"},
+) 
 
 display_level_selection = dcc.RadioItems(
     id='display_level_selection',
@@ -115,8 +125,6 @@ plot_inventory_graph_div = html.Div(
     ]
 )
 
-QC_ATTRIBUTES = load_container_qc_definitions()
-QC_OPTIONS = [{'label': key, 'value': key} for key in list(QC_ATTRIBUTES.keys())]
 feedback_button = html.Div(
     [
         dbc.Button("Provide Feedback", id="open_feedback_popup"),
@@ -129,23 +137,22 @@ feedback_button = html.Div(
                         dbc.Input(id="feedback_popup_datetime", type="text", disabled=True),
                         dbc.Label("Username:"),
                         dbc.Input(id="feedback_popup_username", type="text", debounce=True),
-                        dbc.Label("Container ID:"),
-                        dbc.Input(id="feedback_popup_container_id", type="text", disabled=True),
+                        dbc.Label("Container/Session ID:"),
+                        dbc.Input(id="feedback_popup_id", type="text", disabled=True),
                         dbc.Label("Experiment ID:"),
                         html.H4(''),
                         html.Button('Select All Experiments', id='feedback_popup_select_all_experiments', style = dict(display='none')),
                         html.Button('Unselect All Experiments', id='feedback_popup_unselect_all_experiments', style = dict(display='none')),
                         dbc.RadioItems(
-                            options=[
-                                {"label": "exp0 ", "value": 1},
-                            ],
+                            options=[{"label": "exp0 ", "value": 1},],
                             value=None,
                             id="feedback_popup_experiments",
                         ),
                         dbc.Label("Attribute being QC'd:"),
                         dcc.Dropdown(
                             id='feedback_popup_qc_dropdown',
-                            options=QC_OPTIONS,
+                            # options=QC_OPTIONS,
+                            options = [{"label": "exp0 ", "value": 1},],
                             value=''
                         ),
                         html.Label(children="Is residual motion present in the video:", id='feedback_popup_motion_present_label'),
