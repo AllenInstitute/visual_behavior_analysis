@@ -24,6 +24,8 @@ def load_session_data():
     session_table['container_id'] = session_table['container_id'].astype(int)
     session_table = session_table.reset_index().rename(columns={'index':'ophys_session_id'})
 
+    session_table['has_decrosstalk_qc'] = False
+
     columms_to_show = [
         'ophys_session_id',
         'ophys_experiment_ids, paired',
@@ -33,6 +35,7 @@ def load_session_data():
         'mouse_id',
         'project_code', 
         'session_type',
+        'has_decrosstalk_qc',
     ]
 
     try:
@@ -287,32 +290,46 @@ def qc_for_all_experiments(container_id, qc_attribute):
 
 
 def set_qc_complete_flags(feedback):
-    container_id = feedback['container_id']
+    if 'container_id' in feedback.keys():
+        container_id = feedback['container_id']
+        session_id = None
+        feedback_type = 'container'
+    elif 'session_id' in feedback.keys():
+        session_id = feedback['session_id']
+        container_id = None
+        feedback_type = 'session'
+
     qc_attribute = feedback['qc_attribute']
 
     entry = None
-    try:
-        if qc_for_all_experiments(container_id, qc_attribute):
-            if qc_attribute == 'Motion Correction':
-                entry = {
-                    'container_id': container_id,
-                    'motion_correction_has_qc': True
-                }
-            elif qc_attribute == 'Nway Production Warp Summary':
-                entry = {
-                    'container_id': container_id,
-                    'cell_matching_has_qc': True
-                }
-    except ValueError:
-        pass
+    if feedback_type == 'container':
+        ## check to see if every experiment for this container has a qc entry. mark as done if so
+        try:
+            if qc_for_all_experiments(container_id, qc_attribute):
+                if qc_attribute == 'Motion Correction':
+                    entry = {
+                        'container_id': container_id,
+                        'motion_correction_has_qc': True
+                    }
+                elif qc_attribute == 'Nway Production Warp Summary':
+                    entry = {
+                        'container_id': container_id,
+                        'cell_matching_has_qc': True
+                    }
+        except ValueError:
+            pass
 
-    if entry:
-        conn = db.Database('visual_behavior_data')
-        collection = conn['ophys_qc']['container_qc']
-        db.update_or_create(collection, db.clean_and_timestamp(entry), keys_to_check=['container_id'])
-        conn.close()
+        if entry:
+            conn = db.Database('visual_behavior_data')
+            collection = conn['ophys_qc']['container_qc']
+            db.update_or_create(collection, db.clean_and_timestamp(entry), keys_to_check=['container_id'])
+            conn.close()
 
-        print('Updating qc state for {}'.format(qc_attribute))
+            print('Updating qc state for {}'.format(qc_attribute))
+
+    # elif feedback_type == 'session':
+    #     if qc_attribute == 'Decrosstalking - Session Level':
+
 
 
 def get_paired_planes(session_id):
@@ -389,3 +406,39 @@ def get_roi_overlap_plots_links(session_id, plots_dir = '/allen/programs/braintv
         else:
             roi_links[f'pair_{i}']  = "roi level plots don't exist"        
     return roi_links
+
+
+def does_session_have_qc(session_id, attribute):
+    
+    conn = db.Database('visual_behavior_data')
+    collection = conn['ophys_qc']['session_qc_records']
+    res = list(collection.find({'session_id':session_id, 'qc_attribute':attribute}))
+    conn.close()
+    
+    return len(res) > 0
+
+
+def mark_session_as_qcd(session_id, attribute):
+    entry = {
+        'session_id':session_id,
+        attribute:True
+    }
+    
+    conn = db.Database('visual_behavior_data')
+    collection = conn['ophys_qc']['session_qc']
+    db.update_or_create(collection, db.clean_and_timestamp(entry), keys_to_check=['session_id'])
+    conn.close()
+
+
+def update_session_table(session_table):
+    '''
+    updates session table with flag to mark 'has_decrosstalk_qc' is True
+    '''
+    print('UPDATING SESSION LEVEL TABLE')
+    for idx,row in session_table.iterrows():
+        osid = row['ophys_session_id']
+        attribute = 'Decrosstalking - Session Level'
+        if does_session_have_qc(osid, attribute):
+            session_table.at[idx,'has_decrosstalk_qc'] = True
+            print('osid {} is already done'.format(osid))
+    return session_table

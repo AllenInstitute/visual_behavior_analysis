@@ -1,6 +1,6 @@
 from allensdk.internal.api import PostgresQueryMixin
 from visual_behavior.translator.allensdk_sessions import sdk_utils
-from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
+from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
 

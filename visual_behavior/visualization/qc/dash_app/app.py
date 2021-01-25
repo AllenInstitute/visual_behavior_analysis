@@ -193,6 +193,8 @@ def update_data(data_display_level, selected_rows, n_clicks, stored_feedback):
     elif data_display_level == 'session':
         # session_table = functions.load_session_data()
         data_to_display = session_table.copy()
+        data_to_display = functions.update_session_table(data_to_display)
+        
         data_to_display['ophys_experiment_ids, paired'] = data_to_display['ophys_experiment_ids, paired'].astype(str)
         data = data_to_display.to_dict('records')
     return data
