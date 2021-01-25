@@ -23,10 +23,12 @@ import warnings
 
 try:
     # lims_dbname = os.environ["LIMS_DBNAME"]
-    lims_dbname = os.environ["LIMS2_WAYNEW"]
+    # lims_dbname = os.environ["LIMS2_WAYNEW"]
+    lims_dbname = os.environ["lims2_wayne2"]
     lims_user = os.environ["LIMS_USER"]
     # lims_host = os.environ["LIMS_HOST"]
-    lims_host = os.environ["AIBSDC-DEV-DB1"]
+    # lims_host = os.environ["AIBSDC-DEV-DB1"]
+    lims_host = os.environ["aibsdc-dev-db1"]
     lims_password = os.environ["LIMS_PASSWORD"]
     lims_port = os.environ["LIMS_PORT"]
 
