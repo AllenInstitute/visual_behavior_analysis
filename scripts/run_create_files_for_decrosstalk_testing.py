@@ -9,7 +9,7 @@ from pbstools import PythonJob # flake8: noqa: E999
 
 
 import visual_behavior.data_access.loading as loading
-filapth = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/decrosstalk_validation/20210125_decrosstalk_runthrough.csv"
+filepath = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/decrosstalk_validation/20210125_decrosstalk_runthrough.csv"
 dev_sessions = pd.read_csv(filepath)
 experiment_ids = dev_sessions.oe_id.values
 
