@@ -735,3 +735,47 @@ def lims_query(query):
     else:
         # otherwise return in dataframe format
         return df
+
+
+def log_cell_dff_data(record):
+    '''
+    writes a cell record to 'dff_summary' collection in 'ophys_data' mongo database
+    record should contain stats about the cell's deltaF/F trace
+    references cell by cell_roi_id
+    if record exists for roi_id and cell_specimen_id has changed, will add old cell_specimen_id to list 'previous_cell_specimen_ids'
+    returns None
+    '''
+    db_conn = Database('visual_behavior_data')
+    collection = db_conn['ophys_data']['dff_summary']
+    existing_record = collection.find_one({'cell_roi_id': record['cell_roi_id']})
+
+    # if the cell specimen_id doesn't match what was in the record, log old ID to a list called 'previous_cell_specimen_ids'
+    if existing_record and record['cell_specimen_id'] != existing_record['cell_specimen_id']:
+        if 'previous_cell_specimen_ids' in existing_record.keys():
+            previous_cell_specimen_ids = existing_record['previous_cell_specimen_ids']
+            previous_cell_specimen_ids.append(existing_record['cell_specimen_id'])
+        else:
+            previous_cell_specimen_ids = [existing_record['cell_specimen_id']]
+    else:
+        previous_cell_specimen_ids = []
+
+    # write record to database
+    record['previous_cell_specimen_ids'] = previous_cell_specimen_ids
+    update_or_create(collection, record, keys_to_check=['cell_roi_id'])
+    db_conn.close()
+
+
+def get_cell_dff_data(search_dict={}):
+    '''
+    retrieve information from the 'dff_summary' collection in 'ophys_data' mongo database
+    pass in a `search_dict` to constrain the search
+    passing an empty dict (default) returns the full collection
+    Note that the query itself is fast (tens of ms), but returning a large table can be slow (~30 seconds for the full collection)
+    returns: pandas dataframe
+    '''
+    db_conn = Database('visual_behavior_data')
+    collection = db_conn['ophys_data']['dff_summary']
+    res = pd.DataFrame(list(collection.find(search_dict)))
+    db_conn.close()
+
+    return res
