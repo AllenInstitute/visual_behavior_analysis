@@ -23,7 +23,8 @@ if __name__ == '__main__':
     analysis = ResponseAnalysis(dataset, overwrite_analysis_files=True)
     # save full set of traces
     dff_traces = dataset.dff_traces.copy()
-    dff_traces.to_hdf(os.path.join(analysis.analysis_dir, 'dff_traces_post_decrosstalk.h5'), key='df')
+    # dff_traces.to_hdf(os.path.join(analysis.analysis_dir, 'dff_traces_post_decrosstalk.h5'), key='df')
+    dff_traces.to_hdf(os.path.join(analysis.analysis_dir, 'dff_traces_without_decrosstalk.h5'), key='df')
     # identify NaN traces before response_df creation
     dff_traces = dataset.dff_traces.copy()
     non_nan_inds = [row for row in range(len(dff_traces)) if np.isnan(dff_traces.iloc[row].dff[0]) == False]

@@ -149,7 +149,9 @@ class ResponseAnalysis(object):
             if 'response' in df_name:
                 path = os.path.join(self.dataset.analysis_dir, df_name + '_events.h5')
             else:
-                path = os.path.join(self.dataset.analysis_dir, df_name + '_post_decrosstalk.h5')
+                # path = os.path.join(self.dataset.analysis_dir, df_name + '_post_decrosstalk.h5')
+                path = os.path.join(self.dataset.analysis_dir, df_name + '_without_decrosstalk.h5')
+                # path = os.path.join(self.dataset.analysis_dir, df_name + '.h5')
         else:
             path = os.path.join(self.dataset.analysis_dir, df_name + '.h5')
         return path
