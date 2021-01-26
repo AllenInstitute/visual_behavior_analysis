@@ -12,7 +12,7 @@ from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_de
 from visual_behavior import database as db
 
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
-from allensdk.brain_observatory.behavior.behavior_data_session import BehaviorDataSession
+from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 
 import warnings
@@ -202,7 +202,7 @@ def get_behavior_session_id_from_ophys_experiment_id(ophys_experiment_id, cache)
     return ophys_experiments.loc[ophys_experiment_id].behavior_session_id
 
 
-def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
+def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id):
     """finds the ophys_session_id associated with an ophys_experiment_id
 
     Arguments:
@@ -215,6 +215,7 @@ def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
     Returns:
         int -- ophys_session_id: 9 digit, unique identifier for an ophys_session
     """
+    cache = loading.get_visual_behavior_cache()
     ophys_experiments = cache.get_experiment_table()
     if ophys_experiment_id not in ophys_experiments.index:
         raise Exception('ophys_experiment_id not in experiment table')
@@ -252,6 +253,43 @@ def model_outputs_available_for_behavior_session(behavior_session_id):
         return True
     else:
         return False
+
+
+# def get_cell_matching_output_dir_for_container(container_id, experiments_table):
+#     container_expts = experiments_table[experiments_table.container_id==container_id]
+#     ophys_experiment_id = container_expts.index[0]
+#     lims_data = get_lims_data(ophys_experiment_id)
+#     session_dir = lims_data.ophys_session_dir.values[0]
+#     cell_matching_dir = os.path.join(session_dir[:-23], 'experiment_container_'+str(container_id), 'OphysNwayCellMatchingStrategy')
+#     cell_matching_output_dir = os.path.join(cell_matching_dir, np.sort(os.listdir(cell_matching_dir))[-1])
+#     return cell_matching_output_dir
+#
+
+
+def get_cell_matching_output_dir_for_container(experiment_id):
+    from visual_behavior import database
+
+    query = '''
+            SELECT DISTINCT sp.external_specimen_name, sp.name, vbec.id AS vbec_id, vbec.workflow_state AS vbec_state, vbcr.run_number, vbcr.storage_directory AS matching_dir
+            FROM ophys_experiments_visual_behavior_experiment_containers oevbec
+            JOIN visual_behavior_experiment_containers vbec ON vbec.id=oevbec.visual_behavior_experiment_container_id
+            JOIN ophys_experiments oe ON oe.id=oevbec.ophys_experiment_id
+            JOIN ophys_sessions os ON os.id=oe.ophys_session_id JOIN specimens sp ON sp.id=os.specimen_id
+            JOIN projects p ON p.id=vbec.project_id
+            LEFT JOIN visual_behavior_container_runs vbcr ON vbcr.visual_behavior_experiment_container_id=vbec.id AND vbcr.current = 't'
+            WHERE
+            --sp.external_specimen_name NOT IN ('398691')
+            oe.id = {};
+            '''.format(experiment_id)
+
+    lims_df = database.lims_query(query)
+    return lims_df.matching_dir.values[0]
+
+
+def get_ssim(img0, img1):
+    from skimage.measure import compare_ssim as ssim
+    ssim_pair = ssim(img0, img1, gaussian_weights=True)
+    return ssim_pair
 
 
 def get_lims_data(lims_id):
@@ -472,7 +510,7 @@ def get_sdk_session(behavior_session_id, is_ophys):
         ophys_experiment_id = bsid_to_oeid(behavior_session_id)
         return BehaviorOphysSession.from_lims(ophys_experiment_id)
     else:
-        return BehaviorDataSession.from_lims(behavior_session_id)
+        return BehaviorSession.from_lims(behavior_session_id)
 
 
 #getting filepaths for well known files from LIMS

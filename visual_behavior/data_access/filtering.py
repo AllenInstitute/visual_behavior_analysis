@@ -18,7 +18,7 @@ def limit_to_experiments_with_final_qc_state(table):
         :return: table with rows where experiment_workflow_state is 'passed' or 'failed'.
                 Excludes experiment_workflow_state = 'created' or 'qc',
         """
-    table = table[table.experiment_workflow_state.isin(['passed', 'failled'])]
+    table = table[table.experiment_workflow_state.isin(['passed', 'failed'])]
     return table
 
 

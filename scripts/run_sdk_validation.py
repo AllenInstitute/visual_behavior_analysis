@@ -5,7 +5,6 @@ import time
 import pandas as pd
 import numpy as  np
 import visual_behavior.validation.sdk as sdk_validation
-import visual_behavior.visualization.qc.data_loading as dl
 sys.path.append('/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/src/')
 from pbstools import pbstools  # NOQA E402
 
@@ -27,8 +26,8 @@ parser.add_argument("--validate-only-failed", type=str2bool, default=False, meta
 job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/sdk_validation"
 
 job_settings = {'queue': 'braintv',
-                'mem': '10g',
-                'walltime': '0:10:00',
+                'mem': '32g',
+                'walltime': '0:30:00',
                 'ppn': 1,
                 }
 
@@ -39,13 +38,29 @@ if __name__ == "__main__":
     print('python executable = {}'.format(python_executable))
     python_file = "{}/code/visual_behavior_analysis/visual_behavior/validation/sdk.py".format(os.path.expanduser('~'))
 
-    cache = sdk_validation.get_cache()
-    behavior_session_table = cache.get_behavior_session_table()
-    filtered_ophys_session_table = dl.get_filtered_ophys_sessions_table()
-
-    validation_results = sdk_validation.get_validation_results().sort_index()
-    # find sessions with failures (by applying all function after setting null values to True)
-    sessions_with_failures = validation_results[~validation_results.drop(columns=['timestamp','is_ophys']).fillna(1).apply(all,axis=1)]
+    expected_attributes = [
+        'average_projection',
+        'cell_specimen_table',
+        'corrected_fluorescence_traces',
+        'dff_traces',
+        'eye_tracking',
+        'licks',
+        'max_projection',
+        'metadata',
+        'motion_correction',
+        'ophys_timestamps',
+        'rewards',
+        'running_data_df',
+        'running_speed',
+        'segmentation_mask_image',
+        'stimulus_presentations',
+        'stimulus_templates',
+        'stimulus_timestamps',
+        'task_parameters',
+        'trials'
+    ]
+    behavior_session_table = sdk_validation.get_behavior_session_table()
+    sessions_with_failures = behavior_session_table[~behavior_session_table[expected_attributes].fillna(1).apply(all,axis=1)]
 
     validate_only_failed = args.validate_only_failed
 
