@@ -84,11 +84,11 @@ def get_session_plots_dir():
 
 
 def get_experiment_plots_dir():
-    return r'\allen\programs\braintv\workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+    return r'\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\experiment_plots'
 
 
 def get_analysis_cache_dir():
-    return r'\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
+    return '\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\visual_behavior_production_analysis'
 
 
 def get_events_dir():
