@@ -88,23 +88,23 @@ def get_experiment_plots_dir():
 
 
 def get_analysis_cache_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
 
 def get_events_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
 
 
 def get_behavior_model_outputs_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
 
 
 def get_decoding_analysis_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
 
 
 def get_ophys_glm_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
 # LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
@@ -112,7 +112,7 @@ def get_ophys_glm_dir():
 
 def get_cache_dir():
     """Get directory of data cache for analysis - this should be the standard cache location"""
-    cache_dir = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
+    cache_dir = r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
     return cache_dir
 
 
@@ -470,11 +470,10 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        metadata = super().metadata
-        if 'donor_id' not in metadata.keys():
-            metadata['donor_id'] = metadata.pop('LabTracks_ID')
-            metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
-                self.ophys_experiment_id, get_visual_behavior_cache())
+        # if 'donor_id' not in metadata.keys():
+        #     metadata['donor_id'] = metadata.pop('LabTracks_ID')
+        #     metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
+        #         self.ophys_experiment_id, get_visual_behavior_cache())
         self._metadata = metadata
         return self._metadata
 
