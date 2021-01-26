@@ -24,7 +24,7 @@ import warnings
 try:
     # lims_dbname = os.environ["LIMS_DBNAME"]
     # lims_dbname = os.environ["LIMS2_WAYNEW"]
-    lims_dbname = os.environ["lims2_wayne2"]
+    lims_dbname = os.environ["lims2_waynew"]
     lims_user = os.environ["LIMS_USER"]
     # lims_host = os.environ["LIMS_HOST"]
     # lims_host = os.environ["AIBSDC-DEV-DB1"]
@@ -470,6 +470,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def metadata(self):
         metadata = super().metadata
+        # hack
+        metadata['donor_id'] = metadata['LabTracks_ID']
         # if 'donor_id' not in metadata.keys():
         #     metadata['donor_id'] = metadata.pop('LabTracks_ID')
         #     metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
