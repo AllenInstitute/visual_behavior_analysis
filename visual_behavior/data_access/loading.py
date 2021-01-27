@@ -277,7 +277,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def analysis_folder(self):
         analysis_cache_dir = get_analysis_cache_dir()
-        candidates = glob.glob(os.path.join(analysis_cache_dir, '{}_*'.format(int(ophys_experiment_id))))
+        candidates = glob.glob(os.path.join(analysis_cache_dir, '{}_*'.format(int(self.ophys_experiment_id))))
         if len(candidates) == 1:
             self._analysis_folder = candidates[0]
         elif len(candidates) == 0:
@@ -638,7 +638,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, sdk_only=
     else:
         api = BehaviorOphysLimsApi(ophys_experiment_id)
         dataset = BehaviorOphysDataset(api, include_invalid_rois)
-        print('loading data for {}'.format(dataset.analysis_folder)) if verbose else None # required to ensure analysis folder is created before other methods are called
+        print('loading data for {}'.format(dataset.analysis_folder)) if verbose else None  # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
