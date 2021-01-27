@@ -2147,3 +2147,24 @@ def get_container_response_df(container_id, df_name='omission_response_df', use_
         odf['session_number'] = experiments_table.loc[ophys_experiment_id].session_number
         container_df = pd.concat([container_df, odf])
     return container_df
+
+
+def get_cell_summary(search_dict={}):
+    '''
+    gets summary stats for all cells
+    relies on cache of summary stats in internal mongo database
+    merges in filtered_ophys_experiment_table for convenience
+    input:
+        search_dict -- dictionary of key/value pairs to constrain search (empty dict returns all cells)
+    returns:
+        pandas dataframe with one row per cell
+        see database.get_cell_dff_data for description of columns
+    '''
+    cell_table = db.get_cell_dff_data(search_dict = search_dict)
+    experiment_table = get_filtered_ophys_experiment_table().reset_index()
+    cell_table = cell_table.merge(
+        experiment_table,
+        left_on = 'ophys_experiment_id',
+        right_on = 'ophys_experiment_id'
+    )
+    return cell_table
