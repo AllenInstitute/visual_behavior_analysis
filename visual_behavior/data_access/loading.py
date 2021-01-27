@@ -2160,11 +2160,11 @@ def get_cell_summary(search_dict={}):
         pandas dataframe with one row per cell
         see database.get_cell_dff_data for description of columns
     '''
-    cell_table = db.get_cell_dff_data(search_dict = search_dict)
+    cell_table = db.get_cell_dff_data(search_dict=search_dict)
     experiment_table = get_filtered_ophys_experiment_table().reset_index()
     cell_table = cell_table.merge(
         experiment_table,
-        left_on = 'ophys_experiment_id',
-        right_on = 'ophys_experiment_id'
+        left_on='ophys_experiment_id',
+        right_on='ophys_experiment_id'
     )
     return cell_table
