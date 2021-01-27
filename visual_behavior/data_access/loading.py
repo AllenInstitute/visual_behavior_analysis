@@ -277,7 +277,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def analysis_folder(self):
         analysis_cache_dir = get_analysis_cache_dir()
-        candidates = [file for file in os.listdir(analysis_cache_dir) if str(self.ophys_experiment_id) in file]
+        candidates = glob.glob(os.path.join(analysis_cache_dir, '{}_*'.format(int(ophys_experiment_id))))
         if len(candidates) == 1:
             self._analysis_folder = candidates[0]
         elif len(candidates) == 0:
@@ -619,20 +619,26 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         return cell_specimen_id
 
 
-def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
+def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, sdk_only=False, verbose=False):
     """Gets behavior + ophys data for one experiment (single imaging plane), using the SDK LIMS API, then reformats & filters to compensate for bugs and missing SDK features.
         This functionality should eventually be entirely replaced by the SDK when all requested features have been implemented.
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
         include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
+        sdk_only -- if True, skips additional reformatting and returns data directly from LIMS using only SDK functionality (default = False)
+        verbose -- if True, prints info about session being loaded
 
     Returns:
         BehaviorOphysDataset {object} -- BehaviorOphysDataset instance, inherits attributes & methods from SDK BehaviorOphysSession class
     """
-    api = BehaviorOphysLimsApi(ophys_experiment_id)
-    dataset = BehaviorOphysDataset(api, include_invalid_rois)
-    print('loading data for {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
+    if sdk_only:
+        api = BehaviorOphysSession
+        dataset = api.from_lims(ophys_experiment_id)
+    else:
+        api = BehaviorOphysLimsApi(ophys_experiment_id)
+        dataset = BehaviorOphysDataset(api, include_invalid_rois)
+        print('loading data for {}'.format(dataset.analysis_folder)) if verbose else None # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
