@@ -288,7 +288,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             date = m['experiment_datetime']
             date = str(date)[:10]
             date = date[2:4] + date[5:7] + date[8:10]
-            self._analysis_folder = str(m['ophys_experiment_id']) + '_' + str(m['donor_id']) + '_' + date + '_' + m[
+            self._analysis_folder = str(int(m['ophys_experiment_id'])) + '_' + str(int(m['donor_id'])) + '_' + date + '_' + m[
                 'targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['driver_line'][0] + '_' + m[
                                         'rig_name'] + '_' + m['session_type']
             os.mkdir(os.path.join(analysis_cache_dir, self._analysis_folder))
