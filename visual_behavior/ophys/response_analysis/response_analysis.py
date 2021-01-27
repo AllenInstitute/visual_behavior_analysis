@@ -152,7 +152,7 @@ class ResponseAnalysis(object):
                 path = os.path.join(self.dataset.analysis_dir, df_name + '.h5')
         else:
             # path = os.path.join(self.dataset.analysis_dir, df_name + '.h5')
-            path = os.path.join(self.dataset.analysis_dir, df_name + '_posts_decrosstalk.h5')
+            path = os.path.join(self.dataset.analysis_dir, df_name + '_post_decrosstalk.h5')
         return path
 
     def save_response_df(self, df, df_name):
