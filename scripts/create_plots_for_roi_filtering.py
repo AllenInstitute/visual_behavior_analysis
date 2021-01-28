@@ -130,17 +130,20 @@ def plot_roi_metrics_for_cell(dataset, metrics_df, cell_specimen_id, title):
     figsize = (15, 8)
     fig, ax = plt.subplots(figsize=figsize, nrows=2, ncols=4)
 
-    ax[0, 0] = sf.plot_cell_zoom(roi_masks, dataset.max_projection.data, cell_specimen_id,
-                                 spacex=40, spacey=40, show_mask=True, ax=ax[0, 0])
-
     # get flattened segmentation mask and binarize
     boolean_mask = cell_table.loc[cell_specimen_id].roi_mask
     binary_mask = np.zeros(boolean_mask.shape)
     binary_mask[:] = np.nan
     binary_mask[boolean_mask == True] = 1
 
-    ax[0, 1].imshow(dataset.max_projection.data, cmap='gray')
-    ax[0, 1].imshow(binary_mask, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
+    ax[0, 0].imshow(dataset.max_projection.data, cmap='gray')
+    ax[0, 0].imshow(binary_mask, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
+
+    ax[0, 1] = sf.plot_cell_zoom(roi_masks, dataset.max_projection.data, cell_specimen_id,
+                                 spacex=40, spacey=40, show_mask=True, ax=ax[0, 1])
+
+    ax[0, 2] = sf.plot_cell_zoom(roi_masks, dataset.max_projection.data, cell_specimen_id,
+                                 spacex=40, spacey=40, show_mask=False, ax=ax[0, 1])
 
     metrics = ['area', 'ellipseness', 'compactness', 'mean_intensity', 'max_intensity', 'intensity_ratio',
                'soma_minus_np_mean', 'soma_minus_np_std', 'sig_active_frames_2_5', 'sig_active_frames_4']
@@ -179,7 +182,7 @@ if __name__ == '__main__':
     # metrics_df = metrics_df[metrics_df.valid_roi==True] #only filter valid ROIs
 
     metric = 'area'
-    thresholds = [50, 100, 150, 200, 250, 300]
+    thresholds = [50, 75, 100, 150, 200, 250]
     plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
     plot_metrics_distribution(metrics_df, title, metric)
 
@@ -205,6 +208,11 @@ if __name__ == '__main__':
 
     metric = 'mean_intensity'
     thresholds = [20, 40, 60, 80, 100, 120]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
+    plot_metrics_distribution(metrics_df, title, metric)
+
+    metric = 'max_intensity'
+    thresholds = [10, 20, 30, 40, 50, 60]
     plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
     plot_metrics_distribution(metrics_df, title, metric)
 
