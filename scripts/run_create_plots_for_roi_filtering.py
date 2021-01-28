@@ -9,7 +9,7 @@ from pbstools import PythonJob # flake8: noqa: E999
 
 
 import visual_behavior.data_access.loading as loading
-experiments_table = loading.get_filtered_ophys_experiments_table()
+experiments_table = loading.get_filtered_ophys_experiment_table()
 experiment_ids = experiments_table.index.values
 
 python_file = r"/home/marinag/visual_behavior_analysis/scripts/create_plots_for_roi_filtering.py"
