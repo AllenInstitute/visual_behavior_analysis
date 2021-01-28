@@ -142,6 +142,8 @@ def plot_roi_metrics_for_cell(dataset, metrics_df, cell_specimen_id, title):
     ax[0, 1].imshow(dataset.max_projection.data, cmap='gray')
     ax[0, 1].imshow(binary_mask, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
 
+    metrics = ['area', 'ellipseness', 'compactness', 'mean_intensity', 'max_intensity', 'intensity_ratio',
+               'soma_minus_np_mean', 'soma_minus_np_std', 'sig_active_frames_2_5', 'sig_active_frames_4']
     cell_metrics = metrics_df[metrics_df.cell_specimen_id == cell_specimen_id]
     string = ''
     for metric in metrics[:6]:
@@ -176,7 +178,7 @@ if __name__ == '__main__':
     metrics_df = get_metrics_df(experiment_id)
     # metrics_df = metrics_df[metrics_df.valid_roi==True] #only filter valid ROIs
 
-    metric = 'compactness'
+    metric = 'area'
     thresholds = [50, 100, 150, 200, 250, 300]
     plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
     plot_metrics_distribution(metrics_df, title, metric)
@@ -185,6 +187,11 @@ if __name__ == '__main__':
     thresholds = [6, 8, 10, 12, 14, 16]
     plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
     plot_metrics_distribution(metrics_df, title, metric)
+
+    metric = 'compactness'
+    thresholds = [20, 18, 16, 14, 12, 10]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=True)
+    plot_metrics_distribution(metrics_df, title+'_less_than', metric)
 
     metric = 'ellipseness'
     thresholds = [0, 0.2, 0.4, 0.6, 0.8, 1]
