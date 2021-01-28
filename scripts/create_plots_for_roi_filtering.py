@@ -69,7 +69,7 @@ def plot_metrics_distribution(metrics_df, title, folder):
 
     fig.tight_layout()
     fig.suptitle(title, x=0.5, y=1.01, fontsize=16)
-    save_dir = r'/allen/programsbraintv/workgroups/nc-ophys/visual_behavior/qc_plots/roi_filtering_validation'
+    save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/roi_filtering_validation'
     utils.save_figure(fig, figsize, save_dir, folder, title + '_metric_distributions')
 
 
@@ -116,7 +116,7 @@ def plot_metric_range_dataset(dataset, cell_specimen_table, max_projection, metr
 
     fig.tight_layout()
     plt.suptitle(title, x=0.5, y=1.01, fontsize=18)
-    save_dir = r'/allen/programsbraintv/workgroups/nc-ophys/visual_behavior/qc_plots/roi_filtering_validation'
+    save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/roi_filtering_validation'
     utils.save_figure(fig, figsize, save_dir, metric, title + '_' + metric)
 
 
@@ -160,7 +160,7 @@ def plot_roi_metrics_for_cell(dataset, metrics_df, cell_specimen_id, title):
     fig.tight_layout()
     title = title + '_' + str(cell_specimen_id)
     plt.suptitle(title, x=0.5, y=1.01, fontsize=18)
-    save_dir = r'/allen/programsbraintv/workgroups/nc-ophys/visual_behavior/qc_plots/roi_filtering_validation'
+    save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/roi_filtering_validation'
     utils.save_figure(fig, figsize, save_dir, 'single_cell_metrics', title)
 
 
@@ -175,6 +175,11 @@ if __name__ == '__main__':
     title = dataset.metadata_string
     metrics_df = get_metrics_df(experiment_id)
     # metrics_df = metrics_df[metrics_df.valid_roi==True] #only filter valid ROIs
+
+    metric = 'compactness'
+    thresholds = [50, 100, 150, 200, 250, 300]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
+    plot_metrics_distribution(metrics_df, title, metric)
 
     metric = 'compactness'
     thresholds = [6, 8, 10, 12, 14, 16]
