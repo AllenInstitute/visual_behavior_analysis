@@ -151,7 +151,7 @@ def plot_roi_metrics_for_cell(dataset, metrics_df, cell_specimen_id, title):
     string = ''
     for metric in metrics[:6]:
         string = string + metric + ': ' + str(cell_metrics[metric].values[0]) + '\n'
-    ax[0, 2].text(x=0, y=0, s=string)
+    ax[0, 3].text(x=0, y=0, s=string)
 
     for i in range(1, 4):
         ax[0, i].axis('off')
