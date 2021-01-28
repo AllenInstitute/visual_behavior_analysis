@@ -194,17 +194,17 @@ if __name__ == '__main__':
     plot_metrics_distribution(metrics_df, title+'_less_than', metric)
 
     metric = 'ellipseness'
-    thresholds = [0, 0.2, 0.4, 0.6, 0.8, 1]
+    thresholds = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
     plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
     plot_metrics_distribution(metrics_df, title, metric)
 
     metric = 'intensity_ratio'
-    thresholds = [0, 1, 2, 3, 4, 5]
-    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
+    thresholds = [5, 4, 3, 2, 1, 0.5]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=True)
     plot_metrics_distribution(metrics_df, title, metric)
 
     metric = 'mean_intensity'
-    thresholds = [25, 50, 100, 150, 200, 250]
+    thresholds = [20, 40, 60, 80, 100, 120]
     plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
     plot_metrics_distribution(metrics_df, title, metric)
 
