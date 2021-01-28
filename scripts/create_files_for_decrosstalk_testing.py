@@ -57,8 +57,6 @@ if __name__ == '__main__':
 
     for cell_roi_id in dff_traces_pre_decrosstalk.cell_roi_id.values:
 
-        cell_roi_id = dff_traces_pre_decrosstalk.cell_roi_id.values[0]
-
         figsize = (20, 15)
         fig, ax = plt.subplots(3, 1, figsize=figsize)
         ax[0].plot(dff_traces_post_decrosstalk[dff_traces_post_decrosstalk.cell_roi_id == cell_roi_id].dff.values[0],
