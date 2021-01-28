@@ -196,5 +196,5 @@ if __name__ == '__main__':
     plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
     plot_metrics_distribution(metrics_df, title, metric)
 
-    for cell_specimen_id in dataset.cell_specimen_ids[:
+    for cell_specimen_id in dataset.cell_specimen_ids:
         plot_roi_metrics_for_cell(dataset, metrics_df, cell_specimen_id, title)
