@@ -256,7 +256,7 @@ def clean_roi_locations_column_labels(roi_locations_dataframe):
 
 ###########
 
-def get_failed_roi_exclusion_labels(experiment_id):
+def get_failed_roi_exclusion_labels(ophys_experiment_id):
     """Queries LIMS  roi_exclusion_labels table via AllenSDK PostgresQuery
        function to retrieve and build a table of all failed ROIS for a
        particular experiment, and their exclusion labels.
@@ -276,7 +276,7 @@ def get_failed_roi_exclusion_labels(experiment_id):
             exclusion_label_name: label/tag for why the roi was deemed invalid
     """
     # query from AllenSDK
-    experiment_id = int(experiment_id)
+    ophys_experiment_id = int(ophys_experiment_id)
     mixin = PostgresQueryMixin()
     # build query
     query = '''
@@ -295,13 +295,13 @@ def get_failed_roi_exclusion_labels(experiment_id):
     join cell_rois_roi_exclusion_labels crel on crel.cell_roi_id = cell_rois.id
     join roi_exclusion_labels el on el.id = crel.roi_exclusion_label_id
 
-    where oe.id = {}'''.format(experiment_id)
+    where oe.id = {}'''.format(ophys_experiment_id)
 
     failed_roi_exclusion_labels = mixin.select(query)
     return failed_roi_exclusion_labels
 
 
-def gen_roi_exclusion_labels_lists(experiment_id):
+def gen_roi_exclusion_labels_lists(ophys_experiment_id):
     """[summary]
 
     Arguments:
@@ -310,7 +310,7 @@ def gen_roi_exclusion_labels_lists(experiment_id):
     Returns:
         [type] -- [description]
     """
-    roi_exclusion_table = get_failed_roi_exclusion_labels(experiment_id)
+    roi_exclusion_table = get_failed_roi_exclusion_labels(ophys_experiment_id)
     roi_exclusion_table = roi_exclusion_table[["cell_roi_id", "exclusion_label_name"]]
     exclusion_list_per_invalid_roi = roi_exclusion_table.groupby(["cell_roi_id"]).agg(lambda x: tuple(x)).applymap(list).reset_index()
     return exclusion_list_per_invalid_roi
@@ -344,7 +344,7 @@ def get_objectlisttxt_location(segmentation_run_id):
     return objecttxt_info
 
 
-def load_current_objectlisttxt_file(experiment_id):
+def load_current_objectlisttxt_file(ophys_experiment_id):
     """loads the objectlist.txt file for the current segmentation run, then "cleans" the column names and returns a dataframe
 
     Arguments:
@@ -386,7 +386,7 @@ def load_current_objectlisttxt_file(experiment_id):
             soma_obj0_overlap_trace_corr: trace correlation coefficient between soma and overlap soma0  (-1.0:  excluded cell,  0.0 : NA)
             soma_obj1_overlap_trace_corr: trace correlation coefficient between soma and overlap soma1
     """
-    current_segmentation_run_id = get_current_segmentation_run_id(experiment_id)
+    current_segmentation_run_id = get_current_segmentation_run_id(ophys_experiment_id)
     objectlist_location_info = get_objectlisttxt_location(current_segmentation_run_id)
     objectlist_path = objectlist_location_info[0]['storage_directory']
     objectlist_file = objectlist_location_info[0]["filename"]
