@@ -1,9 +1,23 @@
-Visual Behavior
+Allen Institute Visual Behavior Analysis package
 ==============================
 
-Package for analyzing behavioral data from the BrainTV Visual Behavior Project.
+This repository contains code for analyzing behavioral data from the Allen Institute BrainTV Visual Behavior Project.
+
+This code is an important part of the internal Allen Institute code base and we are actively using and maintaining it. Issues are encouraged, but because this tool is so central to our mission pull requests might not be accepted if they conflict with our existing plans.
+
+## Before installing, it's recommended to set up a new Python environment:
+
+For example, using Conda:
+
+    conda create -n visual_behavior_analysis python=3.7
+
+Then activate the environment:
+
+    conda activate visual_behavior_analysis
 
 ## Quickstart
+
+and install with pip (Allen Institute internal users only):
 
     pip install git+http://stash.corp.alleninstitute.org/scm/vb/visual_behavior_analysis.git
 
@@ -26,6 +40,21 @@ This ensures that Python uses the current, active files in the folder (even whil
 To install from with in the AIBS local network from a whl using pip:
    
    pip install -i http://aibs-artifactory/artifactory/api/pypi/pypi-local/simple --trusted-host aibs-artifactory --extra-index-url https://pypi.org/simple visual_behavior==0.5.0.dev5
+
+
+## To ensure that the newly created environment is visible in Jupyter:
+
+Activate the environment:
+
+    conda activate visual_behavior_analysis
+
+Install ipykernel:
+
+    pip install ipykernel
+
+Register the environment with Jupyter:
+
+    python -m ipykernel install --user --name visual_behavior_analysis
 
 ## Use
 
@@ -65,20 +94,30 @@ Pull requests are welcome.
 2. Create a feature branch
 3. Commit your changes
 4. Create a pull request
-5. Tag `justink` to review
+5. Tag `@dougollerenshaw`, `@matchings` to review
 
 ## Contributors:
 
-- Christopher Mochizuki - chrim@alleninstitute.org
-- Doug Ollerenshaw - dougo@alleninstitute.org
-- Justin Kiggins - justink@alleninstitute.org
-- Sahar Manavi - saharm@alleninstitute.org
-- Nicholas Cain - nicholasc@alleninstitute.org
-- Ryan Valenza - ryanv@alleninstitute.org
-- Marina Garrett - marinag@alleninstitute.org
-
+- Nicholas Cain - @nicain
+- Marina Garrett - marinag@alleninstitute.org, @matchings
+- Nile Graddis - nileg@alleninstitute.org, @nilegraddis
+- Justin Kiggins - @neuromusic
+- Jerome Lecoq - jeromel@alleninstitute.org, @jeromelecoq
+- Sahar Manavi - saharm@alleninstitute.org, @saharmanavi
+- Nicholas Mei - nicholas.mei@alleninstitute.org, @njmei
+- Christopher Mochizuki - chrism@alleninstitute.org, @mochic
+- Doug Ollerenshaw - dougo@alleninstitute.org, @dougollerenshaw
+- Natalia Orlova - nataliao@alleninstitute.org, @nataliaorlova
+- Jed Perkins - @jfperkins
+- Alex Piet - alex.piet@alleninstitute.org, @alexpiet
+- Nick Ponvert - @nickponvert
+- Kate Roll - kater@alleninstitute.org, @downtoncrabby
+- Ryan Valenza - @ryval
 
 ## Additional Links
 
+- [AllenSDK](https://github.com/AllenInstitute/AllenSDK)
 - [BrainTV Visual Behavior Project Page](http://confluence.corp.alleninstitute.org/display/CP/Brain+Observatory%3A+Visual+Behavior)
 - [Details on Cohort Training](http://confluence.corp.alleninstitute.org/display/CP/_EXPERIMENTS)
+
+

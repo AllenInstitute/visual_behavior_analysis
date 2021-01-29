@@ -27,7 +27,7 @@ def plot_notebook_figures(experiment_id, save_dir):
     x += 1
 
     cell_index = 8
-    ax[x].plot(dataset.timestamps_ophys, dataset.dff_traces[cell_index])
+    ax[x].plot(dataset.ophys_timestamps, dataset.dff_traces[cell_index])
     ax[x].set_xlabel('seconds')
     ax[x].set_ylabel('dF/F')
     x += 1
@@ -37,12 +37,12 @@ def plot_notebook_figures(experiment_id, save_dir):
     ax[x].grid('off')
     x += 1
 
-    ax[x].plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values)
+    ax[x].plot(dataset.stimulus_timestamps, dataset.running_speed.running_speed.values)
     ax[x].set_xlabel('time (sec)')
     ax[x].set_ylabel('running speed (cm/s)')
     x += 1
 
-    ax[x].plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values)
+    ax[x].plot(dataset.stimulus_timestamps, dataset.running_speed.running_speed.values)
     ax[x].set_xlim(600, 660)
     # plot licks
     lick_y_vals = np.repeat(-10, repeats=len(dataset.licks.time.values))
@@ -56,7 +56,7 @@ def plot_notebook_figures(experiment_id, save_dir):
     x += 1
 
     # plot running
-    ax[x].plot(dataset.timestamps_stimulus, dataset.running_speed.running_speed.values)
+    ax[x].plot(dataset.stimulus_timestamps, dataset.running_speed.running_speed.values)
     ax[x].set_xlim(600, 660)
     # plot licks
     lick_y_vals = np.repeat(-10, repeats=len(dataset.licks.time.values))

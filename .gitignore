@@ -62,8 +62,6 @@ docs/_build/
 # PyBuilder
 target/
 
-# data & analysis
-data/
 # notebooks/
 notebooks/.ipynb_checkpoints/
 figures/

@@ -4,7 +4,6 @@ import pickle
 
 from ...utilities import local_time, ListHandler, DoubleColonFormatter
 
-from ...devices import get_rig_id
 from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     annotate_licks, annotate_rewards, annotate_optogenetics, annotate_responses, \
     annotate_schedule_time, annotate_stimuli, get_user_id, get_mouse_id, \
@@ -16,11 +15,12 @@ from .extract import get_trial_log, get_stimuli, get_pre_change_time, \
     get_stimulus_window, get_volume_limit, get_failure_repeats, \
     get_catch_frequency, get_free_reward_trials, get_min_no_lick_time, \
     get_max_session_duration, get_abort_on_early_response, get_session_id, \
-    get_even_sampling, get_auto_reward_delay, get_periodic_flash, get_platform_info
-
+    get_even_sampling, get_auto_reward_delay, get_periodic_flash, get_platform_info, \
+    get_rig_id
 
 from .extract_stimuli import get_visual_stimuli, check_for_omitted_flashes
 from .extract_images import get_image_metadata
+from .extract_movies import get_movie_image_epochs, get_movie_metadata
 from ..foraging.extract_images import get_image_data
 
 import logging
@@ -159,7 +159,6 @@ def data_to_metadata(data):
 
     behavior_session_uuid = get_session_id(data, create_if_missing=True)
 
-    device_name = get_device_name(data)
     params = get_params(data)  # this joins both params and commandline params
 
     stim_tables = data["items"]["behavior"]["stimuli"]
@@ -176,8 +175,8 @@ def data_to_metadata(data):
 
     metadata = {
         "startdatetime": start_time_datetime_local,
-        "rig_id": get_rig_id(device_name),
-        "computer_name": device_name,
+        "rig_id": get_rig_id(data),
+        "computer_name": get_device_name(data),
         "reward_vol": get_reward_volume(data),
         "rewardvol": get_reward_volume(data),  # for compatibility with legacy code
         "auto_reward_vol": get_auto_reward_volume(data),
@@ -300,30 +299,6 @@ def data_to_time(data):
     return get_time(data)
 
 
-def rebase_trials_inplace(trials, time):
-
-    trials['starttime'] = time[trials['startframe']]
-    trials['endtime'] = time[trials['endframe']]
-    trials['change_time'] = trials['change_frame'].map(lambda x: x if pd.isnull(x) else time[int(x)])
-
-    if 'lick_frames' in trials.columns:
-        trials['lick_times'] = trials['lick_frames'].map(lambda x: time[x])
-    else:
-        logger.warning('cannot rebase `lick_times` column in trials without a `lick_frames` column')
-        trials['lick_times'] = trials['lick_times'].map(lambda x: ['REBASING NOT SUPPORTED', ])
-
-    if 'response_frame' in trials.columns:
-        trials['response_time'] = trials['response_frame'].map(lambda x: time[x])
-    else:
-        logger.warning('cannot rebase `response_time` column in trials without a `response_frame` column')
-        trials['response_time'] = trials['response_time'].map(lambda x: ['REBASING NOT SUPPORTED', ])
-
-    def get_times(frames):
-        return [time[fr] for fr in frames]
-
-    trials['reward_times'] = trials['reward_frames'].map(get_times)
-
-
 def data_to_trials(data, time=None):
     """Generate a trial structure that very closely mirrors the original trials
     structure output by foraging legacy code
@@ -382,23 +357,30 @@ def data_to_trials(data, time=None):
         }
     ).reset_index()
 
-    if time is not None:
-        logger.warning('rebasing time of trials dataframe')
-        rebase_trials_inplace(trials, time)
-
     return trials
 
 
 def data_to_visual_stimuli(data, time=None):
+    MAYBE_A_MOVIE = [
+        'countdown',
+        'fingerprint',
+    ]
+
     if time is None:
         time = get_time(data)
 
-    stimuli = data['items']['behavior']['stimuli']
-
-    return pd.DataFrame(data=get_visual_stimuli(
-        stimuli,
+    static_image_epochs = get_visual_stimuli(
+        data['items']['behavior']['stimuli'],
         time,
-    ))
+    )
+
+    for name, stim_item in data['items']['behavior'].get('items', {}).items():
+        if name.lower() in MAYBE_A_MOVIE:
+            static_image_epochs.extend(
+                get_movie_image_epochs(name, stim_item, time, )
+            )
+
+    return pd.DataFrame(data=static_image_epochs)
 
 
 def data_to_omitted_stimuli(data, time=None):
@@ -414,36 +396,55 @@ def data_to_omitted_stimuli(data, time=None):
 
 
 def data_to_images(data):
-
+    MAYBE_A_MOVIE = [
+        'countdown',
+        'fingerprint',
+    ]
     if 'images' in data["items"]["behavior"]["stimuli"]:
 
         # Sometimes the source is a zipped pickle:
         metadata = get_image_metadata(data)
         try:
             image_set = load_pickle(open(metadata['image_set'], 'rb'))
+            images, images_meta = get_image_data(image_set)
+            image_table = dict(
+                metadata=metadata,
+                images=images,
+                image_attributes=images_meta,
+            )
         except (AttributeError, UnicodeDecodeError, pickle.UnpicklingError):
             zfile = zipfile.ZipFile(metadata['image_set'])
             finfo = zfile.infolist()[0]
             ifile = zfile.open(finfo)
             image_set = load_pickle(ifile)
+            images, images_meta = get_image_data(image_set)
+            image_table = dict(
+                metadata=metadata,
+                images=images,
+                image_attributes=images_meta,
+            )
         except FileNotFoundError:
             logger.critical('Image file not found: {0}'.format(metadata['image_set']))
-            return dict(
+            image_table = dict(
                 metadata={},
                 images=[],
                 image_attributes=[],
             )
-
-        images, images_meta = get_image_data(image_set)
-
-        return dict(
-            metadata=metadata,
-            images=images,
-            image_attributes=images_meta,
-        )
     else:
-        return dict(
+        image_table = dict(
             metadata={},
             images=[],
             image_attributes=[],
         )
+
+    # TODO: make this better, all we need to know is if there's at least one key...
+    static_stimuli_names = [
+        k
+        for k in data['items']['behavior'].get('items', {}).keys()
+        if k in MAYBE_A_MOVIE
+    ]
+    if len(static_stimuli_names) > 0:  # has static stimuli
+        for name, meta in get_movie_metadata(data).items():
+            image_table['metadata']['movie:%s' % name] = meta  # prefix each name with 'movie:' maybe this is good?
+
+    return image_table

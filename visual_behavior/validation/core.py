@@ -3,6 +3,8 @@ import warnings
 import numpy as np
 import pandas as pd
 from .extended_trials import get_first_lick_relative_to_scheduled_change
+from visual_behavior.change_detection.running.metrics import count_wraps
+from scipy.signal import medfilt
 
 
 def parse_log(log_record):
@@ -115,6 +117,48 @@ def validate_running_data(core_data):
     return length_correct and not all_same
 
 
+def validate_encoder_voltage(core_data, range_threshold=3, wrap_threshold=2):
+    '''
+    check for potentially anomolous encoder voltage traces
+
+    Two failure modes we're checking here:
+    1) voltage range is less than the range_threshold.
+        A single rotation of the encoder will give a voltage range of ~5V, so a small range indicates
+        that the encoder makes less than 1 full rotation.
+
+    2) The ratio of forward wraps to backward wraps is less than the wrap_threshold:
+        When the encoder spinning clockwise (rotation direction for forward motion by the mouse),
+        the encoder transitions (wraps) from 5V to 0V once per rotation. If the encoder spinning CCW,
+        the transition will be from 0V to 5V. So assuming that the mouse is walking forward, there should be
+        far more forward wraps (5V-to-0V) than backward wraps (0V-to-5V). If the ratio is close to 1, this likely indicates
+        an encoder that is oscillating back and forth across the zero-point due to noise
+
+    Note that both failure modes can result from a stationary mouse (or a test session with no mouse).
+    '''
+    running = core_data['running']
+
+    # filter out voltage artifacts
+    filtered_vsig = medfilt(running['v_sig'], kernel_size=5)
+
+    v_sig_range = filtered_vsig.max() - filtered_vsig.min()
+
+    def get_wrap_ratio(forward_wraps, backward_wraps):
+        if backward_wraps == 0:
+            return np.inf
+        else:
+            return forward_wraps / backward_wraps
+
+    wrap_ratio = get_wrap_ratio(
+        count_wraps(running, 'forward'),
+        count_wraps(running, 'backward')
+    )
+
+    if v_sig_range < range_threshold or wrap_ratio < wrap_threshold:
+        return False
+    else:
+        return True
+
+
 def validate_licks(core_data, lick_spout_present):
     """
     Validates that licks exist
@@ -194,5 +238,66 @@ def validate_omitted_flashes_are_omitted(core_data):
         for offset in range(-3, 4, 1):
             if frame + offset in core_data['visual_stimuli']['frame'].tolist():
                 return False
+    else:
+        return True
+
+
+def get_licks_in_response_window(row, response_window=[0, 0], response_window_threshold=1 / 60 / 2):
+    '''
+    get all licks in the response window
+    adds response windows_threshold to start of window and subtracts same from end of window:
+        threshold is 1/2 frame width by defaul
+        this gives a 1/2 frame buffer on timing
+    '''
+    if len(row['lick_times']) > 0 and not pd.isnull(row['change_time']):
+        lick_times = np.array(row['lick_times'])
+        in_window_indices = np.where(
+            (lick_times - row['change_time'] >= response_window[0] + response_window_threshold)
+            & (lick_times - row['change_time'] <= response_window[1] - response_window_threshold)
+        )
+        licks_in_window = np.array(row['lick_times'])[in_window_indices]
+    else:
+        licks_in_window = np.array([])
+    return licks_in_window
+
+
+def get_first_lick_reward_latency(row):
+    if len(row['licks_in_response_window']) > 0:
+        if len(row['reward_times']) == 0:
+            return np.inf
+        else:
+            return row['reward_times'][0] - row['licks_in_response_window'][0]
+
+
+def validate_reward_follows_first_lick_in_window(core_data, reward_latency_threshold=0.001):
+    '''
+    on non-autorewarded go trials, the first lick in the response window should have
+    a reward that follows it by a short latency (reward_latency_threshold, default = 1 ms)
+    '''
+    tr = core_data['trials']
+
+    # add some columns for convenience
+    tr['licks_in_response_window'] = tr.apply(get_licks_in_response_window, axis=1, response_window=core_data['metadata']['response_window'])
+    tr['number_of_licks_in_response_window'] = tr['licks_in_response_window'].map(lambda x: len(x))
+    tr['lick_reward_latency'] = tr.apply(get_first_lick_reward_latency, axis=1)
+
+    # find errant trials
+    errant_trials = tr[
+        (tr['number_of_licks_in_response_window'] > 0)  # trials with licks
+        & (tr['rewarded'] == True)  # go trials (rewarded means reward was available, not necessarily delivered)
+        & (tr['auto_rewarded'] == False)  # not autorewarded trials
+        & (tr['lick_reward_latency'] > reward_latency_threshold)  # trials that exceed threshold
+    ]
+
+    # fail if there were any errant trials
+    if len(errant_trials) > 0:
+        for idx, trial in errant_trials.iterrows():
+            # print out the reason for the failure
+            print('trial {} had a latency of {:.5f} seconds between the first lick and the reward, the maximum allowable latency is {}'.format(
+                idx,
+                trial['lick_reward_latency'],
+                reward_latency_threshold
+            ))
+        return False
     else:
         return True

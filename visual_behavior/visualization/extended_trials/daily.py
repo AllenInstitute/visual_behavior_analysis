@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from visual_behavior.plotting import placeAxesOnGrid
 from visual_behavior.utilities import flatten_list, get_response_rates
 from visual_behavior.translator.core.annotate import check_responses
-from visual_behavior.translator.core.annotate import colormap, trial_translator
+from visual_behavior.translator.core.annotate import colormap, trial_translator, assign_trial_description
 from visual_behavior.change_detection.trials import session_metrics
 
 
@@ -83,30 +83,37 @@ def make_info_table(extended_trials, ax):
             cell_dict[cell].set_width(0.5)
 
 
-def make_session_timeline_plot(extended_trials, ax, palette='trial_types'):
+def make_session_timeline_plot(extended_trials, ax, palette='trial_types', demarcate_trials=False):
     licks = list(extended_trials['lick_times'])
     rewards = list(extended_trials['reward_times'])
     stimuli = list(extended_trials['change_time'])
+
+    # make a local copy of the extended trial dataframe containing only the columns necessary to make this plot:
+    local_df = extended_trials[['trial_type', 'auto_rewarded', 'response', 'starttime', 'trial_length']].copy()
+    local_df['trial_outcome'] = local_df.apply(assign_trial_description, axis=1)
 
     # This plots a vertical span of a defined color for every trial type
     # to save time, I'm only plotting a span when the trial type changes
     spanstart = 0
     trial = 0
-    for trial in range(1, len(extended_trials)):
-        if extended_trials.iloc[trial]['trial_type'] != extended_trials.iloc[trial - 1]['trial_type']:
-            trial_type = trial_translator(extended_trials.iloc[trial - 1]['trial_type'], extended_trials.iloc[trial - 1]['response'])
+    for trial in range(1, len(local_df)):
+        if demarcate_trials:
+            ax.axvline(local_df.iloc[trial]['starttime'], color='k', linewidth=0.5, alpha=0.75)
+        if local_df.iloc[trial]['trial_outcome'] != local_df.iloc[trial - 1]['trial_outcome']:
+            # if the trial_outcome is different on this trial than the last, end the previous span at the start of this trial
+            #  then start another at the start of this trial that will continue until the trial type changes again
             ax.axvspan(
                 spanstart,
-                extended_trials.iloc[trial]['starttime'],
-                color=colormap(trial_type, palette),
+                local_df.iloc[trial]['starttime'],
+                color=colormap(local_df.iloc[trial - 1]['trial_outcome'], palette),
                 alpha=0.75
             )
-            spanstart = extended_trials.iloc[trial]['starttime']
+            spanstart = local_df.iloc[trial]['starttime']
     # plot a span for the final trial(s)
-    trial_type = trial_translator(extended_trials.iloc[trial - 1]['trial_type'], extended_trials.iloc[trial - 1]['response'])
+    trial_type = trial_translator(local_df.iloc[trial - 1]['trial_type'], local_df.iloc[trial - 1]['response'])
     ax.axvspan(
         spanstart,
-        extended_trials.iloc[trial]['starttime'] + extended_trials.iloc[trial]['trial_length'],
+        local_df.iloc[trial]['starttime'] + local_df.iloc[trial]['trial_length'],
         color=colormap(trial_type, palette),
         alpha=0.75
     )
@@ -198,21 +205,32 @@ def make_rolling_response_probability_plot(hit_rate, fa_rate, ax, palette='trial
     ax.set_xlim(-0.1, 1.1)
 
 
-def make_rolling_dprime_plot(d_prime, ax, format='vertical', peak_dprime=None):
+def make_rolling_dprime_plot(d_prime, ax, format='vertical', peak_dprime=None, color='black', append_ticks=False, line_label=None):
+    # if d_prime is a scalar, make it an array to avoid issues below
+    if not hasattr(d_prime, '__len__'):
+        d_prime = np.array([d_prime])
     if format == 'vertical':
-        ax.plot(d_prime, np.arange(len(d_prime)), color='black', linewidth=2)
+        line, = ax.plot(d_prime, np.arange(len(d_prime)), color=color, linewidth=2)
         ax.set_xlabel("d'", fontsize=14)
         if peak_dprime is not None:
-            ax.axvline(peak_dprime, linestyle='--', color='grey')  # peak dprime line
+            ax.axvline(peak_dprime, linestyle='--', color=color)  # peak dprime line
     elif format == 'horizontal':
-        ax.plot(np.arange(len(d_prime)), d_prime, color='black', linewidth=2)
+        line, = ax.plot(np.arange(len(d_prime)), d_prime, color=color, linewidth=2)
         ax.set_ylabel("d'", fontsize=14)
         if peak_dprime is not None:
-            ax.axhline(peak_dprime, linestyle='--', color='grey')  # peak dprime line
+            ax.axhline(peak_dprime, linestyle='--', color=color)  # peak dprime line
     ax.set_title("Rolling d'", fontsize=16)
 
+    if line_label is not None:
+        line.set_label(line_label)
+
     if peak_dprime is not None:
-        ax.set_xticks([0, peak_dprime, 5.0, ])  # this is more readable?
+        if append_ticks:
+            current_xticks = ax.get_xticks()
+            new_xticks = np.append(current_xticks, round(peak_dprime, ndigits=2))
+            ax.set_xticks(new_xticks)
+        else:
+            ax.set_xticks([0, round(peak_dprime, ndigits=2), 5, ])  # this is more readable?
     else:  # ticks from original implementatin
         ax.set_xlim(0, 5)
 
@@ -309,18 +327,25 @@ def make_daily_figure(
     hit_rate, fa_rate, d_prime = get_response_rates(
         df_nonaborted,
         sliding_window=sliding_window,
-        reward_window=reward_window
     )
     make_rolling_response_probability_plot(hit_rate, fa_rate, ax[2], palette=palette)
     mean_rate = np.mean(check_responses(df_nonaborted, reward_window=reward_window) == 1.0)
     ax[2].axvline(mean_rate, color='0.5', linestyle=':')
 
-    peak_dprime = session_metrics.peak_dprime(extended_trials)
-    if not np.isnan(peak_dprime):
-        make_rolling_dprime_plot(d_prime, ax[3], peak_dprime=peak_dprime)
-    else:
-        make_rolling_dprime_plot(d_prime, ax[3])
-
+    # CB added to display both the trial adjusted and legacy dprime metric on same plot
+    for apply_trial_number_limit, first_valid_trial, append_ticks, line_label, color \
+            in zip([False, True], [50, 100], [False, True], ['raw', 'adjusted'], ['black', 'grey']):
+        hit_rate, fa_rate, d_prime = get_response_rates(
+            df_nonaborted,
+            sliding_window=sliding_window,
+            apply_trial_number_limit=apply_trial_number_limit
+        )
+        peak_dprime = session_metrics.peak_dprime(extended_trials, first_valid_trial=first_valid_trial, apply_trial_number_limit=apply_trial_number_limit)
+        if not np.isnan(peak_dprime):
+            make_rolling_dprime_plot(d_prime, ax[3], peak_dprime=peak_dprime, append_ticks=append_ticks, line_label=line_label, color=color)
+        else:
+            make_rolling_dprime_plot(d_prime, ax[3], append_ticks=append_ticks, line_label=line_label, color=color)
+    ax[3].legend(loc=0)
     plt.subplots_adjust(top=0.9)
     fig.suptitle('mouse = ' + mouse_id + ', ' + date, fontsize=20)
 

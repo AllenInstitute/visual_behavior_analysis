@@ -51,6 +51,18 @@ class CellMatchingDataset(object):
         return self.cache_dir
 
     def get_lims_data(self):
+        # if self.from_processed_data is True:
+        #     lims_data = pd.read_hdf(os.path.join(self.analysis_dir, 'metadata.h5'), key='df', )
+        #     self.experiment_id = lims_data.ophys_experiment_id.values[0]
+        #     self.session_name = lims_data.session_type.values[0].split('_')[-1]
+        #     self.structure = lims_data.targeted_structure.values[0]
+        #     self.specimen_driver_line = lims_data.cre_line.values[0]
+        #     self.depth = lims_data.imaging_depth.values[0]
+        #     self.experiment_date = str(lims_data.experiment_date.values[0])[:10]
+        #     self.experiment_name = lims_data.session_type.values[0]
+        #     mouse_id = lims_data.specimen_id.values[0]
+        #     self.mouse_id = np.int(mouse_id)
+        # else:
         ld = LimsDatabase(self.lims_id)
         lims_data = ld.get_qc_param()
         lims_data.insert(loc=2, column='experiment_id', value=lims_data.lims_id.values[0])

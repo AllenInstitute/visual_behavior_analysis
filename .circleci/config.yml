@@ -19,25 +19,6 @@ jobs:
             . venv/bin/activate
             flake8 visual_behavior
 
-  test-27:
-    docker:
-      - image: circleci/python:2.7.13
-    steps:
-      - checkout
-      - run:
-          name: setup virtualenv
-          command: virtualenv venv
-      - run:
-          name: install dependencies
-          command: |
-            . venv/bin/activate
-            pip install -U pip tox
-      - run:
-          name: tox it up
-          command: |
-            . venv/bin/activate
-            tox -e py27
-
   test-36:
     docker:
       - image: circleci/python:3.6.1
@@ -55,12 +36,51 @@ jobs:
           name: tox it up
           command: |
             . venv/bin/activate
-            tox -e py36
+            tox --recreate -e py36
+
+  test-37:
+    docker:
+      - image: circleci/python:3.7.3
+    steps:
+      - checkout
+      - run:
+          name: setup virtualenv
+          command: python3 -m venv venv
+      - run:
+          name: install dependencies
+          command: |
+            . venv/bin/activate
+            pip install -U pip tox
+      - run:
+          name: tox it up
+          command: |
+            . venv/bin/activate
+            tox --recreate -e py37
+
+  test-allensdk_head:
+    docker:
+      - image: circleci/python:3.7.9
+    steps:
+      - checkout
+      - run:
+          name: setup virtualenv
+          command: python3 -m venv venv
+      - run:
+          name: install dependencies
+          command: |
+            . venv/bin/activate
+            pip install -U pip tox
+      - run:
+          name: tox it up
+          command: |
+            . venv/bin/activate
+            tox --recreate -e allensdk_head
 
 workflows:
   version: 2
   basic:
     jobs:
       - lint
-      - test-27
       - test-36
+      - test-37
+      - test-allensdk_head

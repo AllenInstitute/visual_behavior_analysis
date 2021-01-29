@@ -1,19 +1,25 @@
 --extra-index-url https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple
-allensdk==1.0.0.dev7; python_version >= '3.0'
+allensdk>=2.4.0
 six>=1.11.0
-numpy==1.15.0
-pandas==0.23.4
+numpy>=1.15.4
+pandas==0.25.3
 scipy>=1.0.0
 matplotlib>=2.1.1
 scikit-learn==0.19.2; python_version < '3.5'
-scikit-learn>=0.19.2; python_version >= '3.5'
-tables==3.4.2
+scikit-learn==0.20.4; python_version >= '3.5'
+tables>=3.5.1
 deepdish>=0.3.6
 python-dateutil>=2.6.1
-marshmallow==3.0.0b11
+marshmallow==3.0.0rc6
 h5py>=2.7.1
-psycopg2
+psycopg2-binary
 seaborn
 zipfile2; python_version < '3.5'
 zipfile36; python_version >= '3.5'
-
+pymongo
+pyyaml
+opencv-python==4.2.0.34; python_version <= "3.6"
+opencv-python; python_version > "3.6"
+dash
+xarray
+plotly

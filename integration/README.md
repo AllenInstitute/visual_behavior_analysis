@@ -1,0 +1,1 @@
+just a bunch of tests to run that kinda require network access at the institute and aren't meant to be run all the time, maybe they can be migrated to the main testing suite if they are deemed important enough
