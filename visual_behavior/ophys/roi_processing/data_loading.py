@@ -1,12 +1,45 @@
-from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
-from allensdk.internal.api.behavior_ophys_api import BehaviorOphysLimsApi
-import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
 from allensdk.internal.api import PostgresQueryMixin
+import configparser as configp
 import pandas as pd
 import os
 
-get_psql_dict_cursor = convert.get_psql_dict_cursor
-get_lims_data = convert.get_lims_data
+import warnings
+
+try:
+    lims_dbname = os.environ["LIMS_DBNAME"]
+    lims_user = os.environ["LIMS_USER"]
+    lims_host = os.environ["LIMS_HOST"]
+    lims_password = os.environ["LIMS_PASSWORD"]
+    lims_port = os.environ["LIMS_PORT"]
+
+    mtrain_dbname = os.environ["MTRAIN_DBNAME"]
+    mtrain_user = os.environ["MTRAIN_USER"]
+    mtrain_host = os.environ["MTRAIN_HOST"]
+    mtrain_password = os.environ["MTRAIN_PASSWORD"]
+    mtrain_port = os.environ["MTRAIN_PORT"]
+
+    lims_engine = PostgresQueryMixin(
+        dbname=lims_dbname,
+        user=lims_user,
+        host=lims_host,
+        password=lims_password,
+        port=lims_port
+    )
+
+    mtrain_engine = PostgresQueryMixin(
+        dbname=mtrain_dbname,
+        user=mtrain_user,
+        host=mtrain_host,
+        password=mtrain_password,
+        port=mtrain_port
+    )
+
+except Exception as e:
+    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately\nfunctions requiring database access will fail'.format(
+        e)
+    warnings.warn(warn_string)
+
+config = configp.ConfigParser()
 
 
 ######################## Data Loading #########################################################################
@@ -38,7 +71,7 @@ def get_lims_experiment_info(ophys_experiment_id):
 
     """
     ophys_experiment_id = int(ophys_experiment_id)
-    mixin = PostgresQueryMixin()
+    mixin = lims_engine
     # build query
     query = '''
     select
@@ -97,7 +130,7 @@ def get_lims_container_info(ophys_container_id):
     """
     ophys_container_id = int(ophys_container_id)
 
-    mixin = PostgresQueryMixin()
+    mixin = lims_engine
     # build query
     query = '''
     SELECT
@@ -162,7 +195,7 @@ def get_lims_cell_segmentation_run_info(ophys_experiment_id):
             created_at{timestamp}:
             updated_at{timestamp}:
     """
-    mixin = PostgresQueryMixin()
+    mixin = lims_engine
     query = '''
     select *
     FROM ophys_cell_segmentation_runs
@@ -200,7 +233,7 @@ def get_lims_cell_rois_table(ophys_experiment_id):
     """
     # query from AllenSDK
 
-    mixin = PostgresQueryMixin()
+    mixin = lims_engine
     query = '''select cell_rois.*
 
     from
@@ -277,7 +310,7 @@ def get_failed_roi_exclusion_labels(ophys_experiment_id):
     """
     # query from AllenSDK
     ophys_experiment_id = int(ophys_experiment_id)
-    mixin = PostgresQueryMixin()
+    mixin = lims_engine
     # build query
     query = '''
     select
