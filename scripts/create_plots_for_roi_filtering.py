@@ -145,11 +145,11 @@ def plot_roi_metrics_for_cell(dataset, metrics_df, cell_specimen_id, title):
     ax[0, 2] = sf.plot_cell_zoom(roi_masks, dataset.max_projection.data, cell_specimen_id,
                                  spacex=40, spacey=40, show_mask=False, ax=ax[0, 2])
 
-    metrics = ['area', 'ellipseness', 'compactness', 'mean_intensity', 'max_intensity', 'intensity_ratio',
+    metrics = ['valid_roi', 'area', 'ellipseness', 'compactness', 'mean_intensity', 'max_intensity', 'intensity_ratio',
                'soma_minus_np_mean', 'soma_minus_np_std', 'sig_active_frames_2_5', 'sig_active_frames_4']
     cell_metrics = metrics_df[metrics_df.cell_specimen_id == cell_specimen_id]
     string = ''
-    for metric in metrics[:6]:
+    for metric in metrics[:7]:
         string = string + metric + ': ' + str(cell_metrics[metric].values[0]) + '\n'
     ax[0, 3].text(x=0, y=0, s=string)
 
