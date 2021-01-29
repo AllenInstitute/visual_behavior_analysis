@@ -120,12 +120,17 @@ def plot_metric_range_dataset(dataset, cell_specimen_table, max_projection, metr
     utils.save_figure(fig, figsize, save_dir, metric, title + '_' + metric)
 
 
-def plot_roi_metrics_for_cell(dataset, metrics_df, cell_specimen_id, title):
-    # make roi masks dict
+def get_roi_masks_dict(cell_table):
     roi_masks = {}
-    cell_table = dataset.cell_specimen_table.copy()
     for cell_specimen_id in cell_table.index:
         roi_masks[cell_specimen_id] = cell_table.loc[cell_specimen_id].roi_mask
+    return roi_masks
+
+
+def plot_roi_metrics_for_cell(dataset, metrics_df, cell_specimen_id, title):
+    # make roi masks dict
+    cell_table = dataset.cell_specimen_table.copy()
+    roi_masks = get_roi_masks_dict(cell_table)
 
     figsize = (15, 8)
     fig, ax = plt.subplots(figsize=figsize, nrows=2, ncols=4)
