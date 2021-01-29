@@ -16,11 +16,11 @@ get_lims_data = convert.get_lims_data
 ######### EXPERIMENT & CONTAINER BASICS
 
 
-def get_lims_experiment_info(experiment_id):
+def get_lims_experiment_info(ophys_experiment_id):
     """uses an sqlite query to retrieve data from the lims2 database
 
     Arguments:
-        experiment_id {[type]} -- [description]
+        ophys_experiment_id {[type]} -- [description]
 
     Returns:
         table -- table with the following columns:
@@ -37,7 +37,7 @@ def get_lims_experiment_info(experiment_id):
                     "rig":
 
     """
-    experiment_id = int(experiment_id)
+    ophys_experiment_id = int(ophys_experiment_id)
     mixin = PostgresQueryMixin()
     # build query
     query = '''
@@ -68,14 +68,14 @@ def get_lims_experiment_info(experiment_id):
     join imaging_depths on imaging_depths.id = oe.imaging_depth_id
     join equipment on equipment.id = os.equipment_id
 
-    where oe.id = {}'''.format(experiment_id)
+    where oe.id = {}'''.format(ophys_experiment_id)
 
     lims_experiment_info = mixin.select(query)
 
     return lims_experiment_info
 
 
-def get_lims_container_info(container_id):
+def get_lims_container_info(ophys_container_id):
     """"uses an sqlite query to retrieve data from the lims2 database
 
     Arguments:
@@ -95,7 +95,7 @@ def get_lims_container_info(container_id):
                     "rig":
                     "date_of_acquisition":
     """
-    container_id = int(container_id)
+    ophys_container_id = int(ophys_container_id)
 
     mixin = PostgresQueryMixin()
     # build query
@@ -123,7 +123,7 @@ def get_lims_container_info(container_id):
     join equipment on equipment.id = os.equipment_id
 
     where
-    container.visual_behavior_experiment_container_id ={}'''.format(container_id)
+    container.visual_behavior_experiment_container_id ={}'''.format(ophys_container_id)
 
     lims_container_info = mixin.select(query)
     return lims_container_info
@@ -132,23 +132,23 @@ def get_lims_container_info(container_id):
 ######### SEGMENTATION AND CELL SPECIMENS ####################
 
 
-def get_current_segmentation_run_id(experiment_id):
+def get_current_segmentation_run_id(ophys_experiment_id):
     """gets the id for the current cell segmentation run for a given experiment.
         Queries LIMS via AllenSDK PostgresQuery function.
 
     Arguments:
-        experiment_id {int} -- 9 digit experiment id
+        ophys_experiment_id {int} -- 9 digit experiment id
 
     Returns:
         int -- current cell segmentation run id
     """
 
-    segmentation_run_table = get_lims_cell_segmentation_run_info(experiment_id)
+    segmentation_run_table = get_lims_cell_segmentation_run_info(ophys_experiment_id)
     current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"] == True, ["id"][0]][0]
     return current_segmentation_run_id
 
 
-def get_lims_cell_segmentation_run_info(experiment_id):
+def get_lims_cell_segmentation_run_info(ophys_experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve
        information on all segmentations run in the ophys_cell_segmenatation_runs
        table for a given experiment
@@ -166,18 +166,18 @@ def get_lims_cell_segmentation_run_info(experiment_id):
     query = '''
     select *
     FROM ophys_cell_segmentation_runs
-    WHERE ophys_experiment_id = {} '''.format(experiment_id)
+    WHERE ophys_experiment_id = {} '''.format(ophys_experiment_id)
     return mixin.select(query)
 
 ###########
 
 
-def get_lims_cell_rois_table(experiment_id):
+def get_lims_cell_rois_table(ophys_experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve
        everything in the cell_rois table for a given experiment
 
     Arguments:
-        experiment_id {int} -- 9 digit unique identifier for an ophys experiment
+        ophys_experiment_id {int} -- 9 digit unique identifier for an ophys experiment
 
     Returns:
         dataframe -- returns dataframe with the following columns:
@@ -208,12 +208,12 @@ def get_lims_cell_rois_table(experiment_id):
     ophys_experiments oe
     join cell_rois on oe.id = cell_rois.ophys_experiment_id
 
-    where oe.id = {}'''.format(experiment_id)
+    where oe.id = {}'''.format(ophys_experiment_id)
     lims_cell_rois_table = mixin.select(query)
     return lims_cell_rois_table
 
 
-def roi_locations_from_cell_rois_table(experiment_id):
+def roi_locations_from_cell_rois_table(ophys_experiment_id):
     """takes the lims_cell_rois_table and pares it down to just what's
        relevent to join with the objectlist.txt table. Renames columns
        to maintain continuity between the tables.
@@ -225,7 +225,7 @@ def roi_locations_from_cell_rois_table(experiment_id):
         dataframe -- pared down dataframe
     """
     # get the cell_rois_table for that experiment
-    lims_data = get_lims_data(experiment_id)
+    lims_data = get_lims_data(ophys_experiment_id)
     exp_cell_rois_table = get_lims_cell_rois_table(lims_data['lims_id'].values[0])
 
     # select only the relevent columns
