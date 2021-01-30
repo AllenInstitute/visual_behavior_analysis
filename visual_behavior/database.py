@@ -765,17 +765,47 @@ def log_cell_dff_data(record):
     db_conn.close()
 
 
-def get_cell_dff_data(search_dict={}):
+def get_cell_dff_data(search_dict={}, return_id=False):
     '''
     retrieve information from the 'dff_summary' collection in 'ophys_data' mongo database
     pass in a `search_dict` to constrain the search
     passing an empty dict (default) returns the full collection
     Note that the query itself is fast (tens of ms), but returning a large table can be slow (~30 seconds for the full collection)
+    inputs:
+        search_dict: a dictionary of key/value pairs to constrain the search (columns must be one of those available as an output - see below)
+        return_id: If True, returns a column containing the internal mongo index has of each entry (default = False)
     returns: pandas dataframe
+        columns:
+            The following come directly from the `cell_specimen_table` in the AllenSDK
+                cell_specimen_id: ID of each cell to facilitate cell matching. ID will be shared across ROIs from unique sessions that are identified as matches
+                cell_roi_id: Unique ID for each cell
+                height: height, in pixels, of ROI mask
+                width: width, in pixels, of ROI mask
+                x: x-position of mask, in pixels
+                y: y-position of mask, in pixels
+                mask_image_plane: image plane of corresponding mask. Integer ranging from 0 to 7
+                max_correction_{up, down, left, right}: the maximum translation, in pixels, of this ROI during motion correction
+                valid_roi: boolean denoting whether the ROI was deemed valid after ROI filtering
+            The following are appended and come from the pandas.describe() method on the deltaF/F (`dff`) trace for the cell
+                ophys_experiment_id: the associated ophys_experiment_id
+                previous_cell_specimen_ids: a list of cell_specimen_ids associated with this ROI in previous cell_matchting runs (not exhaustive)
+                count: length of dff vector
+                mean: mean of dff vector
+                std: standard devitation of dff vector
+                min: min of dff vector
+                max: max of dff vector
+                25%, 50%, 75%: lower, middle (median) and upper quartile values
     '''
     db_conn = Database('visual_behavior_data')
     collection = db_conn['ophys_data']['dff_summary']
     res = pd.DataFrame(list(collection.find(search_dict)))
     db_conn.close()
+
+    if not return_id:
+        res = res.drop(columns=['_id'])
+
+    # drop `index` column if it exists
+    if 'index' in res.columns:
+        res = res.drop(columns=['index'])
 
     return res
