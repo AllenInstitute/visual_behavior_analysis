@@ -82,7 +82,7 @@ app.layout = html.Div(
         html.Div(id='stored_feedback', style={'display': 'none'}),
         html.Div(
             [
-                html.H4('Links to motion corrected movies for this container'),
+                html.H4(children='Links to motion corrected movies for this container'),
                 dcc.Link(id='link_0', children='', href='', style={'display': True}, target="_blank"),
                 html.H4(''),
                 dcc.Link(id='link_1', children='', href='', style={'display': True}, target="_blank"),
@@ -108,17 +108,17 @@ app.layout = html.Div(
         ),
         html.Div(
             [
-                html.H4('Links to ROI overlap plots'),
-                dcc.Link(id='roi_link_0', children='', href='www.google.com', style={'display': True}, target="_blank"),
-                html.H4(''),
-                dcc.Link(id='roi_link_1', children='', href='www.google.com', style={'display': True}, target="_blank"),
-                html.H4(''),
-                dcc.Link(id='roi_link_2', children='', href='www.google.com', style={'display': True}, target="_blank"),
-                html.H4(''),
-                dcc.Link(id='roi_link_3', children='', href='www.google.com', style={'display': True}, target="_blank"),
-                html.H4(''),
+                html.H4(id='session_header', children='Associated Experiment IDs'),
+                html.P(id = 'exp_link_0', children = ''),
+                html.P(id = 'exp_link_1', children = ''),
+                html.P(id = 'exp_link_2', children = ''),
+                html.P(id = 'exp_link_3', children = ''),
+                html.P(id = 'exp_link_4', children = ''),
+                html.P(id = 'exp_link_5', children = ''),
+                html.P(id = 'exp_link_6', children = ''),
+                html.P(id = 'exp_link_7', children = ''),
             ],
-            id = 'roi_overlap_links',
+            id = 'experiment_links',
             style={'display': 'none'}
         ),
         components.feedback_button,
@@ -220,11 +220,11 @@ def display_motion_correction_links(data_display_level):
     elif data_display_level == 'session':
         return {'display': 'none'}
 
-# toggle roi_overlap link visibility
-@app.callback(Output('roi_overlap_links', 'style'),
+# toggle experiment ID link visibility
+@app.callback(Output('experiment_links', 'style'),
               [Input('display_level_selection', 'value'),]
 )
-def display_motion_correction_links(data_display_level):
+def display_experiment_id_links(data_display_level):
     if data_display_level == 'container':
         return {'display': 'none'}
     elif data_display_level == 'session':
@@ -786,32 +786,41 @@ for i in range(10):
         [Input('data_table', 'selected_rows'), Input(f"link_{i}", "id")]
     )(update_link_visibility_N)
 
-
-def update_roi_overlap_link_text_N(row_index, display_level_selection, path_style, input_id):
-    '''a function to update plot titles'''
+# update session header
+@app.callback(
+    Output('session_header', 'children'),
+    [
+        Input('data_table', 'selected_rows'),
+        Input('display_level_selection', 'value'),
+    ]
+)
+def update_session_id_header(row_index, display_level_selection):
     if display_level_selection == 'session':
-        idx = int(input_id.split('roi_link_')[1])
+        return 'Experiments associated with Session ID {}'.format(session_table.iloc[row_index[0]]['ophys_session_id'])
+
+
+def update_exp_link_text_N(row_index, display_level_selection, path_style, input_id):
+    if display_level_selection == 'session':
+        idx = int(input_id.split('exp_link_')[1])
         session_id = session_table.iloc[row_index[0]]['ophys_session_id']
-        link_list = ['/'+v for k,v in functions.get_roi_overlap_plots_links(session_id).items()]
-        if path_style == 'windows':
-            link_list = [v.replace('/','\\') for v in link_list]
+        exp_list = functions.get_experiment_ids_for_session_id(session_id)
         try:
-            return link_list[idx]
+            return exp_list[idx]
         except IndexError:
             return 'INVALID LINK'
     else:
         return "NOT APPLICABLE"
 
-for i in range(4):
+for i in range(8):
     app.callback(
-        Output(f"roi_link_{i}", "children"),
+        Output(f"exp_link_{i}", "children"),
         [
             Input('data_table', 'selected_rows'), 
             Input('display_level_selection', 'value'), 
             Input('path_style', 'value'),
-            Input(f"roi_link_{i}", "id")
+            Input(f"exp_link_{i}", "id")
         ]
-    )(update_roi_overlap_link_text_N)
+    )(update_exp_link_text_N)
 
 
 if __name__ == '__main__':

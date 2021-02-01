@@ -5,6 +5,7 @@ import os
 import yaml
 import json
 import pandas as pd
+import numpy as np
 import plotly.graph_objs as go
 import datetime
 import uuid
@@ -28,6 +29,7 @@ def load_session_data():
 
     columms_to_show = [
         'ophys_session_id',
+        'has_decrosstalk_qc',
         'ophys_experiment_ids, paired',
         'date_of_acquisition', 
         'driver_line',
@@ -35,7 +37,6 @@ def load_session_data():
         'mouse_id',
         'project_code', 
         'session_type',
-        'has_decrosstalk_qc',
     ]
 
     try:
@@ -442,3 +443,9 @@ def update_session_table(session_table):
             session_table.at[idx,'has_decrosstalk_qc'] = True
             print('osid {} is already done'.format(osid))
     return session_table
+
+
+def get_experiment_ids_for_session_id(ophys_session_id):
+    query = 'select * from ophys_experiments where ophys_session_id = {}'
+    experiments_table = db.lims_query(query.format(ophys_session_id))
+    return np.sort(experiments_table['id'].tolist())
