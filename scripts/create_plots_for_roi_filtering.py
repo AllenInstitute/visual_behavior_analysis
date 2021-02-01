@@ -186,40 +186,41 @@ if __name__ == '__main__':
     metrics_df = get_metrics_df(experiment_id)
     # metrics_df = metrics_df[metrics_df.valid_roi==True] #only filter valid ROIs
 
-    # metric = 'area'
-    # thresholds = [50, 75, 100, 150, 200, 250]
-    # plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
-    # plot_metrics_distribution(metrics_df, title, metric)
-    #
-    # metric = 'compactness'
-    # thresholds = [6, 8, 10, 12, 14, 16]
-    # plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
-    # plot_metrics_distribution(metrics_df, title, metric)
-    #
-    # metric = 'compactness'
-    # thresholds = [20, 18, 16, 14, 12, 10]
-    # plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=True)
-    # plot_metrics_distribution(metrics_df, title+'_less_than', metric)
-    #
-    # metric = 'ellipseness'
-    # thresholds = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-    # plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
-    # plot_metrics_distribution(metrics_df, title, metric)
-    #
-    # metric = 'intensity_ratio'
-    # thresholds = [5, 4, 3, 2, 1, 0.5]
-    # plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=True)
-    # plot_metrics_distribution(metrics_df, title, metric)
-    #
-    # metric = 'mean_intensity'
-    # thresholds = [20, 40, 60, 80, 100, 120]
-    # plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
-    # plot_metrics_distribution(metrics_df, title, metric)
-    #
-    # metric = 'max_intensity'
-    # thresholds = [10, 20, 30, 40, 50, 60]
-    # plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
-    # plot_metrics_distribution(metrics_df, title, metric)
-
     for cell_specimen_id in dataset.cell_specimen_ids:
         plot_roi_metrics_for_cell(dataset, metrics_df, cell_specimen_id, title)
+
+    metric = 'area'
+    thresholds = [50, 75, 100, 150, 200, 250]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
+    plot_metrics_distribution(metrics_df, title, metric)
+
+    metric = 'compactness'
+    thresholds = [6, 8, 10, 12, 14, 16]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
+    plot_metrics_distribution(metrics_df, title, metric)
+
+    metric = 'compactness'
+    thresholds = [20, 18, 16, 14, 12, 10]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=True)
+    plot_metrics_distribution(metrics_df, title+'_less_than', metric)
+
+    metric = 'ellipseness'
+    thresholds = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
+    plot_metrics_distribution(metrics_df, title, metric)
+
+    metric = 'intensity_ratio'
+    thresholds = [5, 4, 3, 2, 1, 0.5]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=True)
+    plot_metrics_distribution(metrics_df, title, metric)
+
+    metric = 'mean_intensity'
+    thresholds = [20, 40, 60, 80, 100, 120]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
+    plot_metrics_distribution(metrics_df, title, metric)
+
+    metric = 'max_intensity'
+    thresholds = [10, 20, 30, 40, 50, 60]
+    plot_metric_range_dataset(dataset, ct, max_projection, metrics_df, metric, thresholds, title, less_than=False)
+    plot_metrics_distribution(metrics_df, title, metric)
+
