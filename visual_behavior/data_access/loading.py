@@ -886,21 +886,20 @@ def get_sdk_roi_masks(cell_specimen_table):
     """
 
     roi_masks = {}
-    for cell_specimen_id in cell_specimen_table.index:
-        mask = cell_specimen_table.at[cell_specimen_id, 'roi_mask']
+    for cell_roi_id in cell_specimen_table.cell_roi_id.values:
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id==cell_roi_id]['roi_mask'].values[0]
         binary_mask = np.zeros(mask.shape)
         binary_mask[mask == True] = 1
-        roi_masks[cell_specimen_id] = binary_mask
+        roi_masks[cell_roi_id] = binary_mask
     return roi_masks
 
 
 def get_valid_segmentation_mask(ophys_experiment_id):
-    session = get_ophys_dataset(ophys_experiment_id)
-    ct = session.cell_specimen_table
-    valid_cell_specimen_ids = ct[ct.valid_roi == True].index.values
-    roi_masks = session.get_roi_masks()
-    valid_roi_masks = roi_masks[roi_masks.cell_specimen_id.isin(valid_cell_specimen_ids)].data
-    valid_segmentation_mask = np.sum(valid_roi_masks, axis=0)
+    dataset = get_ophys_dataset(ophys_experiment_id)
+    cell_specimen_table = dataset.cell_specimen_table.copy()
+    roi_masks = get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==True])
+    # valid_cell_roi_ids = cell_specimen_table[cell_specimen_table.valid_roi == True]['cell_roi_id'].values
+    valid_segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
     valid_segmentation_mask[valid_segmentation_mask > 0] = 1
     return valid_segmentation_mask
 
