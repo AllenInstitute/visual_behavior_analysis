@@ -89,6 +89,27 @@ def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=No
     return ax
 
 
+def plot_valid_and_invalid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
+    cell_specimen_table = dataset.cell_specimen_table.copy()
+
+    roi_masks = data_loading.get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==True])
+    segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
+    mask = np.zeros(segmentation_mask.shape)
+    mask[:] = np.nan
+    mask[segmentation_mask > 0] = 1
+
+    roi_masks = data_loading.get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==False])
+    segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
+    mask[segmentation_mask > 0] = 0.7
+
+    ax.imshow(mask, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
+    ax.axis('off')
+    return ax
+
 def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
@@ -99,6 +120,20 @@ def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax
     ax.contour(mask, levels=0, colors=['red'], linewidths=[1])
     ax.axis('off')
     return ax
+
+
+def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+    cell_specimen_table = dataset.cell_specimen_table.copy()
+    for cell_roi_id in cell_specimen_table.cell_roi_id.values:
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id==cell_roi_id].roi_mask.values[0]
+        ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+    ax.axis('off')
+    return ax
+
 
 def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
     dff_traces = data_loading.get_sdk_dff_traces_array(ophys_experiment_id)
