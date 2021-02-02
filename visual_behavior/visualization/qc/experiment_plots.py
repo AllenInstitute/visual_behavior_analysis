@@ -658,13 +658,15 @@ def plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invali
     roi_mask_dict, metrics_dict = data_loading.get_roi_mask_and_metrics_dict(cell_table, metrics_df, metric)
 
     if metric == 'area':
-        cmap_range = [100, 400]
+        cmap_range = [20, 300]
     elif metric == 'mean_intensity':
-        cmap_range = [25, 200]
+        cmap_range = [0, 200]
     elif metric == 'ellipseness':
         cmap_range = [0.1, 0.9]
     elif metric == 'compactness':
         cmap_range = [8, 22]
+    elif metric == 'filtered_masks':
+        cmap_range = [0, 1]
     else:
         cmap_range = [np.min(list(metrics_dict.values())), np.max(list(metrics_dict.values()))]
 
@@ -673,4 +675,26 @@ def plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invali
 
     ax = plot_metrics_mask(roi_mask_dict, metrics_dict, metric, max_projection=dataset.max_projection.data,
                            title=metric, cmap_range=cmap_range, cmap='viridis', ax=ax, colorbar=True)
+    return ax
+
+
+def plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois=True, ax=None):
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=include_invalid_rois)
+    cell_table = dataset.cell_specimen_table.copy()
+    metrics_df = data_loading.get_metrics_df(ophys_experiment_id)
+
+    filtered_metrics = metrics_df[
+        (metrics_df.area > 40) | (metrics_df.ellipseness > 0.2) | (metrics_df.compactness < 18)]
+    filtered_metrics['filtered_masks'] = 1
+    cell_table = cell_table[cell_table.cell_roi_id.isin(filtered_metrics.cell_roi_id.unique())]
+    metric = 'filtered_masks'
+    roi_mask_dict, metrics_dict = data_loading.get_roi_mask_and_metrics_dict(cell_table, filtered_metrics, metric)
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    cmap_range = [0, 1]
+    ax = plot_metrics_mask(roi_mask_dict, metrics_dict, metric, max_projection=dataset.max_projection.data,
+                              title=metric, cmap_range=cmap_range, cmap='hsv', ax=ax, colorbar=False)
+    ax.set_title('area > 40\nellipseness > 0.2\ncompactness < 18')
     return ax
