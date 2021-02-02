@@ -207,7 +207,8 @@ def get_lims_cell_segmentation_run_info(ophys_experiment_id):
 
 def get_lims_cell_rois_table(ophys_experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve
-       everything in the cell_rois table for a given experiment
+       everything in the cell_rois table for the most recent
+       cell segmentation run for  given experiment
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit unique identifier for an ophys experiment
@@ -232,16 +233,13 @@ def get_lims_cell_rois_table(ophys_experiment_id):
 
     """
     # query from AllenSDK
-
+ 
+    segmentation_run_id = int(get_current_segmentation_run_id(ophys_experiment_id))
     mixin = lims_engine
-    query = '''select cell_rois.*
-
-    from
-
-    ophys_experiments oe
-    join cell_rois on oe.id = cell_rois.ophys_experiment_id
-
-    where oe.id = {}'''.format(ophys_experiment_id)
+    query = '''
+    SELECT *  
+    FROM cell_rois
+    where ophys_cell_segmentation_run_id = {}'''.format(segmentation_run_id)
     lims_cell_rois_table = mixin.select(query)
     return lims_cell_rois_table
 
