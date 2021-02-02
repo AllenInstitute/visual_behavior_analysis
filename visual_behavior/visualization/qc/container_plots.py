@@ -265,7 +265,6 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         ax[i+(n*3)] = ep.plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i+(n*3)])
         ax[i+(n*3)].set_title('all segmented ROIs')
 
-    fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'segmentation_mask_overlays',
                        'container_' + str(ophys_container_id))

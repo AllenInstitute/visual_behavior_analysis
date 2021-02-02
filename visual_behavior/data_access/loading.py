@@ -895,9 +895,9 @@ def get_sdk_roi_masks(cell_specimen_table):
 
 
 def get_segmentation_mask(ophys_experiment_id, valid_only=True):
-    dataset = get_ophys_dataset(ophys_experiment_id)
+    dataset = get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
     cell_specimen_table = dataset.cell_specimen_table.copy()
-    if valid_only:
+    if valid_only == True:
         roi_masks = get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==True])
     else:
         roi_masks = get_sdk_roi_masks(cell_specimen_table)
