@@ -333,6 +333,21 @@ def set_qc_complete_flags(feedback):
 
 
 
+def get_splitting_json(session_id):
+    ''' Return the JSON which is the output of the splitting queue '''
+    try:
+        query = (f"""SELECT storage_directory || 'MESOSCOPE_FILE_SPLITTING_QUEUE_{session_id}_input.json'
+            FROM ophys_sessions WHERE id = {session_id}""")
+        splitting_json_path = db.lims_query(query)
+        splitting_json_present = True
+    except Exception as e:
+        logger.error("Unable to query LIMS database: {}".format(e))
+        splitting_json_present = False
+    if not os.path.isfile(splitting_json_path):
+        logger.error("Unable to find splitting json")
+    return splitting_json_path
+
+
 def get_paired_planes(session_id):
         ''' 
         Get paired experiments for given session. 
@@ -355,9 +370,7 @@ def get_paired_planes(session_id):
             WHERE os.id = {session_id}
             ORDER BY exp_id
             """)
-            
             pairs_df = db.lims_query(query)
-            
         except Exception as e:
             print("Unable to query LIMS database: {}".format(e))
         if len(pairs_df) > 0:
@@ -366,8 +379,8 @@ def get_paired_planes(session_id):
                 pair = [exp_id for exp_id in pairs_df.loc[pairs_df['group_order'] == i].exp_id]
                 pairs.append(pair)
         else:
-            print(f"Lims returned no group information about session {self.session_id}, using hardcoded splitting json filename")
-            splitting_json = self.get_splitting_json()
+            print(f"Lims returned no group information about session {session_id}, using hardcoded splitting json filename")
+            splitting_json = get_splitting_json(session_id)
             with open(splitting_json, "r") as f:
                 data = json.load(f)
             for pg in data.get("plane_groups", []):
@@ -409,26 +422,22 @@ def get_roi_overlap_plots_links(session_id, plots_dir = '/allen/programs/braintv
     return roi_links
 
 
-def does_session_have_qc(session_id, attribute):
+def does_session_have_qc(session_id, attribute, first_date = '2021-01-31'):
     
     conn = db.Database('visual_behavior_data')
     collection = conn['ophys_qc']['session_qc_records']
-    res = list(collection.find({'session_id':session_id, 'qc_attribute':attribute}))
+    res = pd.DataFrame(list(collection.find({'session_id':session_id, 'qc_attribute':attribute})))
     conn.close()
-    
-    return len(res) > 0
 
-
-def mark_session_as_qcd(session_id, attribute):
-    entry = {
-        'session_id':session_id,
-        attribute:True
-    }
+    try:
+        if 'timestamp' in res.columns:
+            res['timestamp'] = pd.to_datetime(res['timestamp'])
+            res = res[res['timestamp'].gt(pd.to_datetime(first_date))] > 0
+    except TypeError:
+        res = []
     
-    conn = db.Database('visual_behavior_data')
-    collection = conn['ophys_qc']['session_qc']
-    db.update_or_create(collection, db.clean_and_timestamp(entry), keys_to_check=['session_id'])
-    conn.close()
+    return len(res)
+
 
 
 def update_session_table(session_table):
