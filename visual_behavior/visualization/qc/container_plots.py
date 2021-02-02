@@ -218,7 +218,7 @@ def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        ax[i] = ep.plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=ax[i])
+        ax[i] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
@@ -257,7 +257,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
         ax[i+n] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i+n])
-        ax[i+n].set_title('valid ROI outlines')
+        # ax[i+n].set_title('valid ROI outlines')
 
         ax[i+(n*2)] = ep.plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i+(n*2)])
         ax[i+(n*2)].set_title('valid ROI masks')
