@@ -252,17 +252,17 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
     ax = ax.ravel()
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
 
-        ax[i] = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
+        ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
-        ax[i+n] = plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i+n])
+        ax[i+n] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i+n])
         ax[i+n].set_title('valid ROI outlines')
 
-        ax[i+(n*2)] = plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i+(n*2)])
+        ax[i+(n*2)] = ep.plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i+(n*2)])
         ax[i+(n*2)].set_title('valid ROI masks')
 
-        ax[i+(n*3)] = plot_valid_and_invalid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i+(n*3)])
+        ax[i+(n*3)] = ep.plot_valid_and_invalid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i+(n*3)])
         ax[i+(n*3)].set_title('all segmented ROIs\nred = valid, blue = invalid')
 
     save_figure=True

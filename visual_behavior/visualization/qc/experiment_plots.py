@@ -57,7 +57,7 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
 def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    segmentation_mask = data_loading.get_valid_segmentation_mask(ophys_experiment_id)
+    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
     return ax
