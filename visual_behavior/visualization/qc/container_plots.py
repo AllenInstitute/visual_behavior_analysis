@@ -357,7 +357,7 @@ def plot_filtered_roi_masks_for_container(ophys_container_id, save_figure=True):
                                                               ax=ax[i + (n * 4)])
     # fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'segmentation_mask_test_metrics',
+        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'filtered_roi_masks',
                        'container_' + str(ophys_container_id))
 
 def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True):

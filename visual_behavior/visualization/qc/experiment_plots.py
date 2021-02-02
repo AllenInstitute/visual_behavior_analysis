@@ -99,16 +99,19 @@ def plot_valid_and_invalid_segmentation_mask_overlay_for_experiment(ophys_experi
     roi_masks = data_loading.get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==True])
     segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
     mask = np.zeros(segmentation_mask.shape)
-    mask[:] = np.nan
+    # mask[:] = np.nan
     mask[segmentation_mask > 0] = 1
+    ax.contour(mask, levels=0, colors=['red'], linewidths=[1])
 
     roi_masks = data_loading.get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==False])
     segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
-    mask[segmentation_mask > 0] = 0.7
-
-    ax.imshow(mask, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
+    mask = np.zeros(segmentation_mask.shape)
+    mask[segmentation_mask > 0] = 1
+    ax.contour(mask, levels=0, colors=['blue'], linewidths=[1])
+    # ax.imshow(mask, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
     ax.axis('off')
     return ax
+
 
 def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
@@ -617,7 +620,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
 #     return ax
 
 
-def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=None, title=None,
+def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=None, title=None, outlines=False,
                       cmap='RdBu', cmap_range=[0,1], ax=None, colorbar=False):
     """
         roi_mask_dict: dictionary with keys as cell_specimen_id or cell_roi_id and values as the ROI masks,
@@ -658,7 +661,7 @@ def plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invali
     roi_mask_dict, metrics_dict = data_loading.get_roi_mask_and_metrics_dict(cell_table, metrics_df, metric)
 
     if metric == 'area':
-        cmap_range = [20, 300]
+        cmap_range = [20, 400]
     elif metric == 'mean_intensity':
         cmap_range = [0, 200]
     elif metric == 'ellipseness':
@@ -680,6 +683,7 @@ def plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invali
 
 def plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois=True, ax=None):
     dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=include_invalid_rois)
+    max_projection = dataset.max_projection.data
     cell_table = dataset.cell_specimen_table.copy()
     metrics_df = data_loading.get_metrics_df(ophys_experiment_id)
 
@@ -693,8 +697,16 @@ def plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois
     if ax is None:
         fig, ax = plt.subplots()
 
-    cmap_range = [0, 1]
-    ax = plot_metrics_mask(roi_mask_dict, metrics_dict, metric, max_projection=dataset.max_projection.data,
-                              title=metric, cmap_range=cmap_range, cmap='hsv', ax=ax, colorbar=False)
+    ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.percentile(max_projection, 99))
+
+    for cell_roi_id in list(roi_mask_dict.keys()):
+        mask = roi_mask_dict[cell_roi_id]
+        mask[np.isnan(mask) == True] = 0
+        ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+    ax.axis('off')
+
+    # cmap_range = [0, 1]
+    # ax = plot_metrics_mask(roi_mask_dict, metrics_dict, metric, max_projection=dataset.max_projection.data,
+    #                           title=metric, cmap_range=cmap_range, cmap='hsv', ax=ax, colorbar=False)
     ax.set_title('area > 40\nellipseness > 0.2\ncompactness < 18')
     return ax
