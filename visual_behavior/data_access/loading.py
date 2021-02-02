@@ -907,6 +907,31 @@ def get_segmentation_mask(ophys_experiment_id, valid_only=True):
     return segmentation_mask
 
 
+def get_metrics_df(experiment_id):
+    metrics_df = load_current_objectlisttxt_file(experiment_id)
+    # ROI locations from lims, including cell_roi_id
+    roi_loc = roi_locations_from_cell_rois_table(experiment_id)
+    # limit to current segmentation run, otherwise gives old ROIs
+    run_id = get_current_segmentation_run_id(experiment_id)
+    roi_loc = roi_loc[roi_loc.ophys_cell_segmentation_run_id==run_id]
+    # link ROI metrics with cell_roi_id from ROI locations dict using ROI location
+    metrics_df = metrics_df.merge(roi_loc, on=['bbox_min_x','bbox_min_y'])
+    return metrics_df
+
+
+def get_roi_mask_and_metrics_dict(cell_table, metrics_df, metric):
+    roi_mask_dict = {}
+    metrics_dict = {}
+    for cell_roi_id in cell_table.cell_roi_id.values:
+        metrics_dict[cell_roi_id] = metrics_df[metrics_df.cell_roi_id==cell_roi_id][metric].values[0]
+        roi_mask = cell_table[cell_table.cell_roi_id==cell_roi_id].roi_mask.values[0]
+        mask = np.zeros(roi_mask.shape)
+        mask[:] = np.nan
+        mask[roi_mask==True] = 1
+        roi_mask_dict[cell_roi_id] =  mask
+    return roi_mask_dict, metrics_dict
+
+
 def get_sdk_cell_specimen_table(ophys_experiment_id):
     """[summary]
 

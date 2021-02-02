@@ -613,7 +613,8 @@ def container_cell_matching_count_heatmap_df(ophys_container_id):
     """
     container_exp_pair_matching_df = container_experiment_pairs_valid_cell_matching(ophys_container_id)
     valid_container_csid_df = get_valid_csids_from_lims_for_container(ophys_container_id)
-    stage_order = stage_name_ordered_list(valid_container_csid_df, stage_name_column="stage_name_lims")
+    # stage_order = stage_name_ordered_list(valid_container_csid_df, stage_name_column="stage_name_lims")
+    expt_order = np.sort(valid_container_csid_df.ophys_experiment_id.unique())
     # pivot_count = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="matched_count")
     # pivot_count = pivot_count.reindex(stage_order, axis=1)
     # pivot_count = pivot_count.reindex(stage_order)

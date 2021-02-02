@@ -270,6 +270,67 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'segmentation_mask_overlays', 'container_' + str(ophys_container_id))
 
 
+def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, save_figure=True):
+    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+
+    figsize = (25, 22)
+    n = len(ophys_experiment_ids)
+    fig, ax = plt.subplots(5, n, figsize=figsize)
+    ax = ax.ravel()
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+
+        ax[i] = ep.plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i])
+        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
+
+        metric = 'area'
+        ax[i+n] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=True, ax=ax[i+n])
+
+        metric = 'mean_intensity'
+        ax[i+(n*2)] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=True, ax=ax[i+(n*2)])
+
+        metric = 'ellipseness'
+        ax[i+(n*3)] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=True, ax=ax[i+(n*3)])
+
+        metric = 'compactness'
+        ax[i+(n*4)] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=True, ax=ax[i+(n*4)])
+
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'roi_filtering_metrics_all_rois',
+                       'container_' + str(ophys_container_id))
+
+
+def plot_roi_filtering_metrics_for_valid_rois_for_container(ophys_container_id, save_figure=True):
+    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+
+    figsize = (25, 22)
+    n = len(ophys_experiment_ids)
+    fig, ax = plt.subplots(5, n, figsize=figsize)
+    ax = ax.ravel()
+    for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
+
+        ax[i] = ep.plot_valid_and_invalid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i])
+        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type + '\nred = valid, blue = invalid')
+
+        metric = 'area'
+        ax[i+n] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=False, ax=ax[i+n])
+
+        metric = 'mean_intensity'
+        ax[i+(n*2)] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=False, ax=ax[i+(n*2)])
+
+        metric = 'ellipseness'
+        ax[i+(n*3)] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=False, ax=ax[i+(n*3)])
+
+        metric = 'compactness'
+        ax[i+(n*4)] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=False, ax=ax[i+(n*4)])
+
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'roi_filtering_metrics_valid_rois',
+                       'container_' + str(ophys_container_id))
+
 
 def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True):
     ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
