@@ -57,19 +57,17 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
 def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    # segmentation_mask = data_loading.get_sdk_segmentation_mask_image(ophys_experiment_id)
     segmentation_mask = data_loading.get_valid_segmentation_mask(ophys_experiment_id)
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
     return ax
 
 
-def plot_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
+def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    # segmentation_mask = data_loading.get_sdk_segmentation_mask_image(ophys_experiment_id)
-    segmentation_mask = data_loading.get_valid_segmentation_mask(ophys_experiment_id)
+    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
     mask = np.zeros(segmentation_mask.shape)
     mask[:] = np.nan
     mask[segmentation_mask == 1] = 1
@@ -77,6 +75,30 @@ def plot_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
     ax.axis('off')
     return ax
 
+
+def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=False)
+    mask = np.zeros(segmentation_mask.shape)
+    mask[:] = np.nan
+    mask[segmentation_mask == 1] = 1
+    ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
+    ax.axis('off')
+    return ax
+
+
+def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
+    mask = np.zeros(segmentation_mask.shape)
+    mask[segmentation_mask == 1] = 1
+    ax.contour(mask, levels=0, colors=['red'], linewidths=[1])
+    ax.axis('off')
+    return ax
 
 def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
     dff_traces = data_loading.get_sdk_dff_traces_array(ophys_experiment_id)

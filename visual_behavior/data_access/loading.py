@@ -894,14 +894,17 @@ def get_sdk_roi_masks(cell_specimen_table):
     return roi_masks
 
 
-def get_valid_segmentation_mask(ophys_experiment_id):
+def get_segmentation_mask(ophys_experiment_id, valid_only=True):
     dataset = get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
-    roi_masks = get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==True])
-    # valid_cell_roi_ids = cell_specimen_table[cell_specimen_table.valid_roi == True]['cell_roi_id'].values
-    valid_segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
-    valid_segmentation_mask[valid_segmentation_mask > 0] = 1
-    return valid_segmentation_mask
+    if valid_only:
+        roi_masks = get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==True])
+    else:
+        roi_masks = get_sdk_roi_masks(cell_specimen_table)
+    # flatten
+    segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
+    segmentation_mask[segmentation_mask > 0] = 1
+    return segmentation_mask
 
 
 def get_sdk_cell_specimen_table(ophys_experiment_id):
