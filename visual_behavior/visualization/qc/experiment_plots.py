@@ -688,7 +688,7 @@ def plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois
     metrics_df = data_loading.get_metrics_df(ophys_experiment_id)
 
     filtered_metrics = metrics_df[
-        (metrics_df.area > 40) | (metrics_df.ellipseness > 0.2) | (metrics_df.compactness < 18)]
+        (metrics_df.area > 40) & (metrics_df.ellipseness > 0.2) & (metrics_df.compactness < 18)]
     filtered_metrics['filtered_masks'] = 1
     cell_table = cell_table[cell_table.cell_roi_id.isin(filtered_metrics.cell_roi_id.unique())]
     metric = 'filtered_masks'
