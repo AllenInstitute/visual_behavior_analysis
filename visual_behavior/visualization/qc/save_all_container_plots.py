@@ -23,7 +23,6 @@ def main():
         "segmented_rois_by_experiment": cp.plot_number_segmented_rois_for_container,
         "segmentation_masks": cp.plot_segmentation_masks_for_container,
         "segmentation_mask_overlays": cp.plot_segmentation_mask_overlays_for_container,
-        "segmentation_mask_overlay_metrics": cp.plot_segmentation_mask_overlay_metrics_for_container,
         "roi_filtering_metrics_all_cells": cp.plot_roi_filtering_metrics_for_all_rois_for_container,
         "roi_filtering_metrics_valid_cells": cp.plot_roi_filtering_metrics_for_valid_rois_for_container,
         # "max_projection_images_movies": cp.plot_movie_max_projection_images_for_container,
