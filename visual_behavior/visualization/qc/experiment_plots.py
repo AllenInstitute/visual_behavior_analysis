@@ -57,23 +57,78 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
 def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    # segmentation_mask = data_loading.get_sdk_segmentation_mask_image(ophys_experiment_id)
-    segmentation_mask = data_loading.get_valid_segmentation_mask(ophys_experiment_id)
+    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
     return ax
 
 
-def plot_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
+def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    # segmentation_mask = data_loading.get_sdk_segmentation_mask_image(ophys_experiment_id)
-    segmentation_mask = data_loading.get_valid_segmentation_mask(ophys_experiment_id)
+    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
     mask = np.zeros(segmentation_mask.shape)
     mask[:] = np.nan
     mask[segmentation_mask == 1] = 1
     ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
+    ax.axis('off')
+    return ax
+
+
+def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=False)
+    mask = np.zeros(segmentation_mask.shape)
+    mask[:] = np.nan
+    mask[segmentation_mask == 1] = 1
+    ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
+    ax.axis('off')
+    return ax
+
+
+def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
+    cell_specimen_table = dataset.cell_specimen_table.copy()
+
+    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == True].cell_roi_id.values:
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+        ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+
+    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == False].cell_roi_id.values:
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+        ax.contour(mask, levels=0, colors=['blue'], linewidths=[0.6])
+    ax.axis('off')
+    return ax
+
+
+def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
+    mask = np.zeros(segmentation_mask.shape)
+    mask[segmentation_mask == 1] = 1
+    ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+    ax.axis('off')
+    return ax
+
+
+def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+    cell_specimen_table = dataset.cell_specimen_table.copy()
+    for cell_roi_id in cell_specimen_table.cell_roi_id.values:
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+        ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+    ax.set_title('valid ROI outlines\n n = ' + str(len(cell_specimen_table.cell_roi_id.values)))
     ax.axis('off')
     return ax
 
@@ -525,36 +580,128 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
             classification_threshold)
         utils.save_figure(fig, figsize, save_dir, folder, metadata_string + '_' + str(cell_roi_id) + '_' + str(roi_id))
 
+#
+# def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=None, vmin=-1, vmax=1, cmap='RdBu',
+#                       ax=None, save_dir=None, folder=None, colorbar=False):
+#     """
+#     roi_mask_dict: dictionary with keys as cell_specimen_id or cell_roi_id and values as the ROI masks,
+#                     placed within the full 512x512 image
+#     metrics_dict: dictionary with keys as cell_specimen_id or cell_roi_id and corresponding metric value for each ROI
+#     metric_name: name of metric provided to be used for colorbar label and filename of saved figure
+#     max_projection: maximum intensity projection. If None, only ROI masks will be shown, without max projection overlay.
+#     vmin: min value of metric to scale image by
+#     vmax: max value of metric to scale image by
+#     cmap: colormap to use
+#     ax: if axis is provided, image will be plotted on that axis. If None, a figure and axis will be created.
+#     save_dir: top level directory to save figure in. save_dir must be provided for figure to save.
+#     folder: folder within save_dir to save figure in
+#     colorbar: Boolean to indicate whether colorbar is displayed
+#     """
+#     if ax is None:
+#         figsize = (10, 10)
+#         fig, ax = plt.subplots(figsize=figsize)
+#     if max_projection is not None:
+#         ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection))
+#     for roi_id in list(roi_mask_dict.keys()):
+#         roi_mask_dict[roi_id][roi_mask_dict[roi_id] == 1] = metrics_dict[roi_id]
+#     mask = np.sum(np.asarray(list(roi_mask_dict.values())), axis=0)
+#     cax = ax.imshow(mask, cmap=cmap, alpha=0.5, vmin=vmin, vmax=vmax)
+#     if colorbar:
+#         cbar = plt.colorbar(cax, ax=ax, use_gridspec=True)
+#         cbar.set_label(metric_name)
+#     if save_dir:
+#         plt.tight_layout()
+#         utils.save_figure(fig, figsize, save_dir, folder, fig_title=metric_name)
+#     return ax
 
-def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=None, vmin=-1, vmax=1, cmap='RdBu',
-                      ax=None, save_dir=None, folder=None, colorbar=False):
+
+def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=None, title=None, outlines=False,
+                      cmap='RdBu', cmap_range=[0, 1], ax=None, colorbar=False):
     """
-    roi_mask_dict: dictionary with keys as cell_specimen_id or cell_roi_id and values as the ROI masks,
-                    placed within the full 512x512 image
-    metrics_dict: dictionary with keys as cell_specimen_id or cell_roi_id and corresponding metric value for each ROI
-    metric_name: name of metric provided to be used for colorbar label and filename of saved figure
-    max_projection: maximum intensity projection. If None, only ROI masks will be shown, without max projection overlay.
-    vmin: min value of metric to scale image by
-    vmax: max value of metric to scale image by
-    cmap: colormap to use
-    ax: if axis is provided, image will be plotted on that axis. If None, a figure and axis will be created.
-    save_dir: top level directory to save figure in. save_dir must be provided for figure to save.
-    folder: folder within save_dir to save figure in
-    colorbar: Boolean to indicate whether colorbar is displayed
-    """
+        roi_mask_dict: dictionary with keys as cell_specimen_id or cell_roi_id and values as the ROI masks,
+                        placed within the full 512x512 image
+        metrics_dict: dictionary with keys as cell_specimen_id or cell_roi_id and corresponding metric value for each ROI
+        metric_name: name of metric provided to be used for colorbar label and filename of saved figure
+        max_projection: maximum intensity projection. If None, only ROI masks will be shown, without max projection overlay.
+        cmap_range: min and max value of metric to scale image by
+        cmap: colormap to use
+        ax: if axis is provided, image will be plotted on that axis. If None, a figure and axis will be created.
+        colorbar: Boolean to indicate whether colorbar is displayed
+        """
     if ax is None:
-        figsize = (10, 10)
+        figsize = (6, 6)
         fig, ax = plt.subplots(figsize=figsize)
     if max_projection is not None:
-        ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.amax(max_projection))
-    for roi_id in list(roi_mask_dict.keys()):
-        roi_mask_dict[roi_id][roi_mask_dict[roi_id] == 1] = metrics_dict[roi_id]
-    mask = np.sum(np.asarray(list(roi_mask_dict.values())), axis=0)
-    cax = ax.imshow(mask, cmap=cmap, alpha=0.5, vmin=vmin, vmax=vmax)
+        ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.percentile(max_projection, 99))
+    for i, roi_id in enumerate(list(roi_mask_dict.keys())):
+        tmp = roi_mask_dict[roi_id]
+        mask = np.empty(tmp.shape, dtype=np.float)
+        mask[:] = np.nan
+        mask[tmp == 1] = metrics_dict[roi_id]
+        cax = ax.imshow(mask, cmap=cmap, alpha=0.5, vmin=cmap_range[0], vmax=cmap_range[1])
+        ax.set_title(title)
+        ax.grid(False)
+        ax.axis('off')
     if colorbar:
-        cbar = plt.colorbar(cax, ax=ax, use_gridspec=True)
+        cbar = plt.colorbar(cax, ax=ax, use_gridspec=True, fraction=0.046, pad=0.04)
         cbar.set_label(metric_name)
-    if save_dir:
-        plt.tight_layout()
-        utils.save_figure(fig, figsize, save_dir, folder, fig_title=metric_name)
+    return ax
+
+
+def plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=True, ax=None):
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=include_invalid_rois)
+    cell_table = dataset.cell_specimen_table.copy()
+    metrics_df = data_loading.get_metrics_df(ophys_experiment_id)
+
+    roi_mask_dict, metrics_dict = data_loading.get_roi_mask_and_metrics_dict(cell_table, metrics_df, metric)
+
+    if metric == 'area':
+        cmap_range = [20, 400]
+    elif metric == 'mean_intensity':
+        cmap_range = [0, 200]
+    elif metric == 'ellipseness':
+        cmap_range = [0.1, 0.9]
+    elif metric == 'compactness':
+        cmap_range = [8, 22]
+    elif metric == 'filtered_masks':
+        cmap_range = [0, 1]
+    else:
+        cmap_range = [np.min(list(metrics_dict.values())), np.max(list(metrics_dict.values()))]
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    ax = plot_metrics_mask(roi_mask_dict, metrics_dict, metric, max_projection=dataset.max_projection.data,
+                           title=metric, cmap_range=cmap_range, cmap='viridis', ax=ax, colorbar=True)
+    return ax
+
+
+def plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois=True, ax=None):
+    dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=include_invalid_rois)
+    max_projection = dataset.max_projection.data
+    cell_table = dataset.cell_specimen_table.copy()
+    metrics_df = data_loading.get_metrics_df(ophys_experiment_id)
+
+    filtered_metrics = metrics_df[
+        (metrics_df.area > 40) & (metrics_df.ellipseness > 0.2) & (metrics_df.compactness < 18)]
+    filtered_metrics['filtered_masks'] = 1
+    cell_table = cell_table[cell_table.cell_roi_id.isin(filtered_metrics.cell_roi_id.unique())]
+    metric = 'filtered_masks'
+    roi_mask_dict, metrics_dict = data_loading.get_roi_mask_and_metrics_dict(cell_table, filtered_metrics, metric)
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.percentile(max_projection, 99))
+
+    for cell_roi_id in list(roi_mask_dict.keys()):
+        mask = roi_mask_dict[cell_roi_id]
+        mask[np.isnan(mask) == True] = 0
+        ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+    ax.axis('off')
+
+    # cmap_range = [0, 1]
+    # ax = plot_metrics_mask(roi_mask_dict, metrics_dict, metric, max_projection=dataset.max_projection.data,
+    #                           title=metric, cmap_range=cmap_range, cmap='hsv', ax=ax, colorbar=False)
+    ax.set_title('area > 40\nellipseness > 0.2\ncompactness < 18')
     return ax

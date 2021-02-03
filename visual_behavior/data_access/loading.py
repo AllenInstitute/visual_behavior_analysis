@@ -20,10 +20,15 @@ import configparser as configp  # for parsing scientifica ini files
 
 import warnings
 
+
 try:
     lims_dbname = os.environ["LIMS_DBNAME"]
+    # lims_dbname = os.environ["LIMS2_WAYNEW"]
+    # lims_dbname = os.environ["lims2_waynew"]
     lims_user = os.environ["LIMS_USER"]
     lims_host = os.environ["LIMS_HOST"]
+    # lims_host = os.environ["AIBSDC-DEV-DB1"]
+    # lims_host = os.environ["aibsdc-dev-db1"]
     lims_password = os.environ["LIMS_PASSWORD"]
     lims_port = os.environ["LIMS_PORT"]
 
@@ -67,19 +72,19 @@ config = configp.ConfigParser()
 #  RELEVANT DIRECTORIES
 
 def get_super_container_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
 
 
 def get_container_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
 
 
 def get_session_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
 
 
 def get_experiment_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 
 def get_analysis_cache_dir():
@@ -107,7 +112,7 @@ def get_ophys_glm_dir():
 
 def get_cache_dir():
     """Get directory of data cache for analysis - this should be the standard cache location"""
-    cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
+    cache_dir = r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
     return cache_dir
 
 
@@ -201,6 +206,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
                                      experiments.session_type.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
+    ### filter one more time on load to restrict to data release experiments ###
+    experiments = filtering.limit_to_production_project_codes(experiments)
     return experiments
 
 
@@ -447,13 +454,13 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def ophys_timestamps(self):
-        if super().metadata['rig_name'] == 'MESO.1':
-            ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
-            self._ophys_timestamps = ophys_timestamps
-            # correct metadata frame rate
-            self._metadata['ophys_frame_rate'] = 1 / np.diff(ophys_timestamps).mean()
-        else:
-            self._ophys_timestamps = super().ophys_timestamps
+        # if super().metadata['rig_name'] == 'MESO.1':
+        #     ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
+        #     self._ophys_timestamps = ophys_timestamps
+        #     # correct metadata frame rate
+        #     self._metadata['ophys_frame_rate'] = 1 / np.diff(ophys_timestamps).mean()
+        # else:
+        self._ophys_timestamps = super().ophys_timestamps
         return self._ophys_timestamps
 
     @property
@@ -465,11 +472,12 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        metadata = super().metadata
-        if 'donor_id' not in metadata.keys():
-            metadata['donor_id'] = metadata.pop('LabTracks_ID')
-            metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
-                self.ophys_experiment_id, get_visual_behavior_cache())
+        # hack
+        metadata['donor_id'] = metadata['LabTracks_ID']
+        # if 'donor_id' not in metadata.keys():
+        #     metadata['donor_id'] = metadata.pop('LabTracks_ID')
+        #     metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
+        #         self.ophys_experiment_id, get_visual_behavior_cache())
         self._metadata = metadata
         return self._metadata
 
@@ -632,7 +640,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False):
     """
     api = BehaviorOphysLimsApi(ophys_experiment_id)
     dataset = BehaviorOphysDataset(api, include_invalid_rois)
-    print('loading data for {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
+    # print('loading data for {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
@@ -880,23 +888,50 @@ def get_sdk_roi_masks(cell_specimen_table):
     """
 
     roi_masks = {}
-    for cell_specimen_id in cell_specimen_table.index:
-        mask = cell_specimen_table.at[cell_specimen_id, 'roi_mask']
+    for cell_roi_id in cell_specimen_table.cell_roi_id.values:
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id]['roi_mask'].values[0]
         binary_mask = np.zeros(mask.shape)
         binary_mask[mask == True] = 1
-        roi_masks[cell_specimen_id] = binary_mask
+        roi_masks[cell_roi_id] = binary_mask
     return roi_masks
 
 
-def get_valid_segmentation_mask(ophys_experiment_id):
-    session = get_ophys_dataset(ophys_experiment_id)
-    ct = session.cell_specimen_table
-    valid_cell_specimen_ids = ct[ct.valid_roi == True].index.values
-    roi_masks = session.get_roi_masks()
-    valid_roi_masks = roi_masks[roi_masks.cell_specimen_id.isin(valid_cell_specimen_ids)].data
-    valid_segmentation_mask = np.sum(valid_roi_masks, axis=0)
-    valid_segmentation_mask[valid_segmentation_mask > 0] = 1
-    return valid_segmentation_mask
+def get_segmentation_mask(ophys_experiment_id, valid_only=True):
+    dataset = get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
+    cell_specimen_table = dataset.cell_specimen_table.copy()
+    if valid_only == True:
+        roi_masks = get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi == True])
+    else:
+        roi_masks = get_sdk_roi_masks(cell_specimen_table)
+    # flatten
+    segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
+    segmentation_mask[segmentation_mask > 0] = 1
+    return segmentation_mask
+
+
+def get_metrics_df(experiment_id):
+    metrics_df = load_current_objectlisttxt_file(experiment_id)
+    # ROI locations from lims, including cell_roi_id
+    roi_loc = roi_locations_from_cell_rois_table(experiment_id)
+    # limit to current segmentation run, otherwise gives old ROIs
+    run_id = get_current_segmentation_run_id(experiment_id)
+    roi_loc = roi_loc[roi_loc.ophys_cell_segmentation_run_id == run_id]
+    # link ROI metrics with cell_roi_id from ROI locations dict using ROI location
+    metrics_df = metrics_df.merge(roi_loc, on=['bbox_min_x', 'bbox_min_y'])
+    return metrics_df
+
+
+def get_roi_mask_and_metrics_dict(cell_table, metrics_df, metric):
+    roi_mask_dict = {}
+    metrics_dict = {}
+    for cell_roi_id in cell_table.cell_roi_id.values:
+        metrics_dict[cell_roi_id] = metrics_df[metrics_df.cell_roi_id == cell_roi_id][metric].values[0]
+        roi_mask = cell_table[cell_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+        mask = np.zeros(roi_mask.shape)
+        mask[:] = np.nan
+        mask[roi_mask == True] = 1
+        roi_mask_dict[cell_roi_id] = mask
+    return roi_mask_dict, metrics_dict
 
 
 def get_sdk_cell_specimen_table(ophys_experiment_id):
@@ -1055,35 +1090,28 @@ def get_current_segmentation_run_id(ophys_experiment_id):
     """
 
     segmentation_run_table = get_lims_cell_segmentation_run_info(ophys_experiment_id)
-    current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"] == True, ["id"][0]][0]
+    current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"] == True, ["id"][0]].values[0]
     return current_segmentation_run_id
 
 
-def get_lims_cell_segmentation_run_info(ophys_experiment_id):
-    """Queries LIMS via AllenSDK PostgresQuery function to retrieve
-        information on all segmentations run in the
+def get_lims_cell_segmentation_run_info(experiment_id):
+    """Queries LIMS via AllenSDK PostgresQuery function to retrieve information on all segmentations run in the
         ophys_cell_segmenatation_runs table for a given experiment
 
-    Arguments:
-         ophys_experiment_id {int} -- 9 digit ophys experiment ID
-
     Returns:
-        dataframe --  dataframe with the following columns:
-                        id {int}:  9 digit segmentation run id
-                        run_number {int}: segmentation run number
-                        ophys_experiment_id{int}: 9 digit ophys experiment id
-                        current{boolean}: True/False
-                                    True: most current segmentation run
-                                    False: not the most current segmentation run
-                        created_at{timestamp}:
-                        updated_at{timestamp}:
+        dataframe -- dataframe with the following columns:
+            id {int}:  9 digit segmentation run id
+            run_number {int}: segmentation run number
+            ophys_experiment_id{int}: 9 digit ophys experiment id
+            current{boolean}: True/False True: most current segmentation run; False: not the most current segmentation run
+            created_at{timestamp}:
+            updated_at{timestamp}:
     """
-
     mixin = lims_engine
     query = '''
     select *
     FROM ophys_cell_segmentation_runs
-    WHERE ophys_experiment_id = {} '''.format(ophys_experiment_id)
+    WHERE ophys_experiment_id = {} '''.format(experiment_id)
     return mixin.select(query)
 
 
@@ -1131,6 +1159,233 @@ def get_lims_cell_rois_table(ophys_experiment_id):
     where oe.id = {}'''.format(ophys_experiment_id)
     lims_cell_rois_table = mixin.select(query)
     return lims_cell_rois_table
+
+
+def roi_locations_from_cell_rois_table(experiment_id):
+    """takes the lims_cell_rois_table and pares it down to just what's relevent to join with the objectlist.txt table.
+       Renames columns to maintain continuity between the tables.
+
+    Arguments:
+        lims_cell_rois_table {dataframe} -- dataframe from LIMS with roi location information
+
+    Returns:
+        dataframe -- pared down dataframe
+    """
+    import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
+    # get_lims_data = convert.get_lims_data
+    # get the cell_rois_table for that experiment
+    lims_data = convert.get_lims_data(experiment_id)
+    exp_cell_rois_table = get_lims_cell_rois_table(lims_data['lims_id'].values[0])
+
+    # select only the relevent columns
+    # roi_locations = exp_cell_rois_table[["id", "x", "y", "width", "height", "valid_roi", "mask_matrix"]]
+    roi_locations = exp_cell_rois_table
+    # rename columns
+    roi_locations = clean_roi_locations_column_labels(roi_locations)
+    return roi_locations
+
+
+###########
+
+def get_failed_roi_exclusion_labels(experiment_id):
+    """Queries LIMS  roi_exclusion_labels table via AllenSDK PostgresQuery function to retrieve and build a
+         table of all failed ROIS for a particular experiment, and their exclusion labels.
+
+         Failed rois will be listed multiple times/in multiple rows depending upon how many exclusion
+         labels they have.
+
+    Arguments:
+        experiment_id {int} -- [9 digit unique identifier for the experiment]
+
+    Returns:
+        dataframe -- returns a dataframe with the following columns:
+            ophys_experiment_id: 9 digit unique identifier for the experiment
+            cell_roi_id:unique identifier for each roi (created after segmentation, before cell matching)
+            cell_specimen_id: unique identifier for each roi (created after cell matching, so could be blank for some experiments/rois depending on processing step)
+            valid_roi: boolean true/false, should be false for all entries, since dataframe should only list failed/invalid rois
+            exclusion_label_name: label/tag for why the roi was deemed invalid
+    """
+    # query from AllenSDK
+    experiment_id = int(experiment_id)
+    mixin = lims_engine
+    # build query
+    query = '''
+    select
+
+    oe.id as ophys_experiment_id,
+    cell_rois.id as cell_roi_id,
+    cell_rois.valid_roi,
+    cell_rois.cell_specimen_id,
+    el.name as exclusion_label_name
+
+    from
+
+    ophys_experiments oe
+    join cell_rois on oe.id = cell_rois.ophys_experiment_id
+    join cell_rois_roi_exclusion_labels crel on crel.cell_roi_id = cell_rois.id
+    join roi_exclusion_labels el on el.id = crel.roi_exclusion_label_id
+
+    where oe.id = {}'''.format(experiment_id)
+
+    failed_roi_exclusion_labels = mixin.select(query)
+    return failed_roi_exclusion_labels
+
+
+def gen_roi_exclusion_labels_lists(experiment_id):
+    """[summary]
+
+    Arguments:
+        experiment_id {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+    roi_exclusion_table = get_failed_roi_exclusion_labels(experiment_id)
+    roi_exclusion_table = roi_exclusion_table[["cell_roi_id", "exclusion_label_name"]]
+    exclusion_list_per_invalid_roi = roi_exclusion_table.groupby(["cell_roi_id"]).agg(lambda x: tuple(x)).applymap(
+        list).reset_index()
+    return exclusion_list_per_invalid_roi
+
+
+def clean_roi_locations_column_labels(roi_locations_dataframe):
+    """takes some column labels from the roi_locations dataframe and  renames them to be more explicit and descriptive, and to match the column labels
+        from the objectlist dataframe.
+
+    Arguments:
+        roi_locations_dataframe {dataframe} -- dataframe with roi id and location information
+
+    Returns:
+        dataframe -- [description]
+    """
+    roi_locations_dataframe = roi_locations_dataframe.rename(columns={"id": "cell_roi_id",
+                                                                      "mask_matrix": "roi_mask",
+                                                                      "x": "bbox_min_x",
+                                                                      "y": "bbox_min_y"})
+    return roi_locations_dataframe
+
+
+def get_objectlisttxt_location(segmentation_run_id):
+    """use SQL and the LIMS well known file system to get the location information for the objectlist.txt file
+        for a given cell segmentation run
+
+    Arguments:
+        segmentation_run_id {int} -- 9 digit segmentation run id
+
+    Returns:
+        list -- list with storage directory and filename
+    """
+
+    QUERY = '''
+    SELECT wkf.storage_directory, wkf.filename
+    FROM well_known_files wkf
+    JOIN well_known_file_types wkft on wkf.well_known_file_type_id = wkft.id
+    JOIN ophys_cell_segmentation_runs ocsr on wkf.attachable_id = ocsr.id
+    WHERE wkft.name = 'OphysSegmentationObjects'
+    AND wkf.attachable_type = 'OphysCellSegmentationRun'
+    AND ocsr.id = {0}
+    '''
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY.format(segmentation_run_id))
+    objecttxt_info = (lims_cursor.fetchall())
+    return objecttxt_info
+
+
+def load_current_objectlisttxt_file(experiment_id):
+    """loads the objectlist.txt file for the current segmentation run, then "cleans" the column names and returns a dataframe
+
+    Arguments:
+        experiment_id {[int]} -- 9 digit unique identifier for the experiment
+
+    Returns:
+        dataframe -- dataframe with the following columns: (from http://confluence.corp.alleninstitute.org/display/IT/Ophys+Segmentation)
+            trace_index:The index to the corresponding trace plot computed  (order of the computed traces in file _somaneuropiltraces.h5)
+            center_x: The x coordinate of the centroid of the object in image pixels
+            center_y:The y coordinate of the centroid of the object in image pixels
+            frame_of_max_intensity_masks_file: The frame the object mask is in maxInt_masks2.tif
+            frame_of_enhanced_movie: The frame in the movie enhimgseq.tif that best shows the object
+            layer_of_max_intensity_file: The layer of the maxInt file where the object can be seen
+            bbox_min_x: coordinates delineating a bounding box that contains the object, in image pixels (upper left corner)
+            bbox_min_y: coordinates delineating a bounding box that contains the object, in image pixels (upper left corner)
+            bbox_max_x: coordinates delineating a bounding box that contains the object, in image pixels (bottom right corner)
+            bbox_max_y: coordinates delineating a bounding box that contains the object, in image pixels (bottom right corner)
+            area: Total area of the segmented object
+            ellipseness: The "ellipticalness" of the object, i.e. length of long axis divided by length of short axis
+            compactness: Compactness :  perimeter^2 divided by area
+            exclude_code: A non-zero value indicates the object should be excluded from further analysis.  Based on measurements in objectlist.txt
+                        0 = not excluded
+                        1 = doublet cell
+                        2 = boundary cell
+                        Others = classified as not complete soma, apical dendrite, ....
+            mean_intensity: Correlates with delta F/F.  Mean brightness of the object
+            mean_enhanced_intensity: Mean enhanced brightness of the object
+            max_intensity: Max brightness of the object
+            max_enhanced_intensity: Max enhanced brightness of the object
+            intensity_ratio: (max_enhanced_intensity - mean_enhanced_intensity) / mean_enhanced_intensity, for detecting dendrite objects
+            soma_minus_np_mean: mean of (soma trace – its neuropil trace)
+            soma_minus_np_std: 1-sided stdv of (soma trace – its neuropil trace)
+            sig_active_frames_2_5:# frames with significant detected activity (spiking)   : Sum ( soma_trace > (np_trace + Snpoffsetmean+ 2.5 * Snpoffsetstdv)   trace_38_soma.png  See example traces attached.
+            sig_active_frames_4: # frames with significant detected activity (spiking)   : Sum ( soma_trace > (np_trace + Snpoffsetmean+ 4.0 * Snpoffsetstdv)
+            overlap_count: 	Number of other objects the object overlaps with
+            percent_area_overlap: the percentage of total object area that overlaps with other objects
+            overlap_obj0_index: The index of the first object with which this object overlaps
+            overlap_obj1_index: The index of the second object with which this object overlaps
+            soma_obj0_overlap_trace_corr: trace correlation coefficient between soma and overlap soma0  (-1.0:  excluded cell,  0.0 : NA)
+            soma_obj1_overlap_trace_corr: trace correlation coefficient between soma and overlap soma1
+    """
+    current_segmentation_run_id = get_current_segmentation_run_id(experiment_id)
+    objectlist_location_info = get_objectlisttxt_location(current_segmentation_run_id)
+    objectlist_path = objectlist_location_info[0]['storage_directory']
+    objectlist_file = objectlist_location_info[0]["filename"]
+    full_name = os.path.join(objectlist_path, objectlist_file).replace('/allen',
+                                                                       '//allen')  # works with windows and linux filepaths
+    objectlist_dataframe = pd.read_csv(full_name)
+    objectlist_dataframe = clean_objectlist_col_labels(objectlist_dataframe)  # "clean" columns names to be more meaningful
+    return objectlist_dataframe
+
+
+def clean_objectlist_col_labels(objectlist_dataframe):
+    """take the roi metrics from the objectlist.txt file and renames them to be more explicit and descriptive.
+        -removes single blank space at the beginning of column names
+        -enforced naming scheme(no capitolization, added _)
+        -renamed columns to be more descriptive/reflect contents of column
+
+    Arguments:
+        objectlist_dataframe {pandas dataframe} -- [roi metrics dataframe or dataframe generated from the objectlist.txt file]
+
+    Returns:
+        [pandas dataframe] -- [same dataframe with same information but with more informative column names
+    """
+
+    objectlist_dataframe = objectlist_dataframe.rename(index=str, columns={' traceindex': "trace_index",
+                                                                           ' cx': 'center_x',
+                                                                           ' cy': 'center_y',
+                                                                           ' mask2Frame': 'frame_of_max_intensity_masks_file',
+                                                                           ' frame': 'frame_of_enhanced_movie',
+                                                                           ' object': 'layer_of_max_intensity_file',
+                                                                           ' minx': 'bbox_min_x',
+                                                                           ' miny': 'bbox_min_y',
+                                                                           ' maxx': 'bbox_max_x',
+                                                                           ' maxy': 'bbox_max_y',
+                                                                           ' area': 'area',
+                                                                           ' shape0': 'ellipseness',
+                                                                           ' shape1': "compactness",
+                                                                           ' eXcluded': "exclude_code",
+                                                                           ' meanInt0': "mean_intensity",
+                                                                           ' meanInt1': "mean_enhanced_intensity",
+                                                                           ' maxInt0': "max_intensity",
+                                                                           ' maxInt1': "max_enhanced_intensity",
+                                                                           ' maxMeanRatio': "intensity_ratio",
+                                                                           ' snpoffsetmean': "soma_minus_np_mean",
+                                                                           ' snpoffsetstdv': "soma_minus_np_std",
+                                                                           ' act2': "sig_active_frames_2_5",
+                                                                           ' act3': "sig_active_frames_4",
+                                                                           ' OvlpCount': "overlap_count",
+                                                                           ' OvlpAreaPer': "percent_area_overlap",
+                                                                           ' OvlpObj0': "overlap_obj0_index",
+                                                                           ' OvlpObj1': "overlap_obj1_index",
+                                                                           ' corcoef0': "soma_obj0_overlap_trace_corr",
+                                                                           ' corcoef1': "soma_obj1_overlap_trace_corr"})
+    return objectlist_dataframe
 
 
 def get_average_depth_image(experiment_id):

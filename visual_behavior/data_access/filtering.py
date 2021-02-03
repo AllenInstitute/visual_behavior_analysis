@@ -52,8 +52,10 @@ def limit_to_passed_ophys_sessions(session_table):
 
 def limit_to_production_project_codes(table):
     """ filter out data where the value of 'project_code' column does not belong to the list of production project codes"""
+    # table = table[table.project_code.isin(['VisualBehavior', 'VisualBehaviorTask1B',
+    #                                        'VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d'])]
     table = table[table.project_code.isin(['VisualBehavior', 'VisualBehaviorTask1B',
-                                           'VisualBehaviorMultiscope', 'VisualBehaviorMultiscope4areasx2d'])]
+                                           'VisualBehaviorMultiscope'])]
     return table
 
 
