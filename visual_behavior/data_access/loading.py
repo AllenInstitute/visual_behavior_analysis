@@ -206,6 +206,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
                                      experiments.session_type.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
+    ### filter one more time on load to restrict to data release experiments ###
+    experiments = filtering.limit_to_production_project_codes(experiments)
     return experiments
 
 
@@ -1181,6 +1183,68 @@ def roi_locations_from_cell_rois_table(experiment_id):
     # rename columns
     roi_locations = clean_roi_locations_column_labels(roi_locations)
     return roi_locations
+
+
+###########
+
+def get_failed_roi_exclusion_labels(experiment_id):
+    """Queries LIMS  roi_exclusion_labels table via AllenSDK PostgresQuery function to retrieve and build a
+         table of all failed ROIS for a particular experiment, and their exclusion labels.
+
+         Failed rois will be listed multiple times/in multiple rows depending upon how many exclusion
+         labels they have.
+
+    Arguments:
+        experiment_id {int} -- [9 digit unique identifier for the experiment]
+
+    Returns:
+        dataframe -- returns a dataframe with the following columns:
+            ophys_experiment_id: 9 digit unique identifier for the experiment
+            cell_roi_id:unique identifier for each roi (created after segmentation, before cell matching)
+            cell_specimen_id: unique identifier for each roi (created after cell matching, so could be blank for some experiments/rois depending on processing step)
+            valid_roi: boolean true/false, should be false for all entries, since dataframe should only list failed/invalid rois
+            exclusion_label_name: label/tag for why the roi was deemed invalid
+    """
+    # query from AllenSDK
+    experiment_id = int(experiment_id)
+    mixin = lims_engine
+    # build query
+    query = '''
+    select 
+
+    oe.id as ophys_experiment_id,
+    cell_rois.id as cell_roi_id,
+    cell_rois.valid_roi,
+    cell_rois.cell_specimen_id,
+    el.name as exclusion_label_name
+
+    from 
+
+    ophys_experiments oe
+    join cell_rois on oe.id = cell_rois.ophys_experiment_id
+    join cell_rois_roi_exclusion_labels crel on crel.cell_roi_id = cell_rois.id
+    join roi_exclusion_labels el on el.id = crel.roi_exclusion_label_id 
+
+    where oe.id = {}'''.format(experiment_id)
+
+    failed_roi_exclusion_labels = mixin.select(query)
+    return failed_roi_exclusion_labels
+
+
+def gen_roi_exclusion_labels_lists(experiment_id):
+    """[summary]
+
+    Arguments:
+        experiment_id {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+    roi_exclusion_table = get_failed_roi_exclusion_labels(experiment_id)
+    roi_exclusion_table = roi_exclusion_table[["cell_roi_id", "exclusion_label_name"]]
+    exclusion_list_per_invalid_roi = roi_exclusion_table.groupby(["cell_roi_id"]).agg(lambda x: tuple(x)).applymap(
+        list).reset_index()
+    return exclusion_list_per_invalid_roi
 
 
 def clean_roi_locations_column_labels(roi_locations_dataframe):
