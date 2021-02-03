@@ -262,7 +262,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         ax[i+(n*2)] = ep.plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i+(n*2)])
         ax[i+(n*2)].set_title('valid ROI masks')
 
-        ax[i+(n*3)] = ep.plot_valid_and_invalid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i+(n*3)])
+        ax[i+(n*3)] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i+(n*3)])
         ax[i+(n*3)].set_title('all segmented ROIs\nred = valid, blue = invalid')
 
     save_figure=True
@@ -279,7 +279,7 @@ def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, sa
     ax = ax.ravel()
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
 
-        ax[i] = ep.plot_valid_and_invalid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i])
+        ax[i] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type + '\nred = valid, blue = invalid')
 
@@ -340,7 +340,7 @@ def plot_filtered_roi_masks_for_container(ophys_container_id, save_figure=True):
     fig, ax = plt.subplots(5, n, figsize=figsize)
     ax = ax.ravel()
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
-        ax[i] = ep.plot_valid_and_invalid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i])
+        ax[i] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
         session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type + '\nred = valid, blue = invalid')
 
