@@ -96,8 +96,7 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
     cell_specimen_table = dataset.cell_specimen_table.copy()
 
-    roi_masks = data_loading.get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==True])
-    for cell_roi_id in cell_specimen_table.cell_roi_id.values:
+    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi==True].cell_roi_id.values:
         mask = cell_specimen_table[cell_specimen_table.cell_roi_id==cell_roi_id].roi_mask.values[0]
         ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
     # segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
@@ -106,8 +105,7 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     # mask[segmentation_mask > 0] = 1
     # ax.contour(mask, levels=0, colors=['red'], linewidths=[1])
 
-    roi_masks = data_loading.get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==False])
-    for cell_roi_id in cell_specimen_table.cell_roi_id.values:
+    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi==False].cell_roi_id.values:
         mask = cell_specimen_table[cell_specimen_table.cell_roi_id==cell_roi_id].roi_mask.values[0]
         ax.contour(mask, levels=0, colors=['blue'], linewidths=[0.6])
     # segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
