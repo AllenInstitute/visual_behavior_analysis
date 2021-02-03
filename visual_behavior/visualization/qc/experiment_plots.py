@@ -96,23 +96,13 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
     cell_specimen_table = dataset.cell_specimen_table.copy()
 
-    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi==True].cell_roi_id.values:
-        mask = cell_specimen_table[cell_specimen_table.cell_roi_id==cell_roi_id].roi_mask.values[0]
+    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == True].cell_roi_id.values:
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
         ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
-    # segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
-    # mask = np.zeros(segmentation_mask.shape)
-    # # mask[:] = np.nan
-    # mask[segmentation_mask > 0] = 1
-    # ax.contour(mask, levels=0, colors=['red'], linewidths=[1])
 
-    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi==False].cell_roi_id.values:
-        mask = cell_specimen_table[cell_specimen_table.cell_roi_id==cell_roi_id].roi_mask.values[0]
+    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == False].cell_roi_id.values:
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
         ax.contour(mask, levels=0, colors=['blue'], linewidths=[0.6])
-    # segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
-    # mask = np.zeros(segmentation_mask.shape)
-    # mask[segmentation_mask > 0] = 1
-    # ax.contour(mask, levels=0, colors=['blue'], linewidths=[1])
-    # ax.imshow(mask, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
     ax.axis('off')
     return ax
 
@@ -136,9 +126,9 @@ def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experime
     dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
     for cell_roi_id in cell_specimen_table.cell_roi_id.values:
-        mask = cell_specimen_table[cell_specimen_table.cell_roi_id==cell_roi_id].roi_mask.values[0]
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
         ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
-    ax.set_title('valid ROI outlines\n n = '+str(len(cell_specimen_table.cell_roi_id.values)))
+    ax.set_title('valid ROI outlines\n n = ' + str(len(cell_specimen_table.cell_roi_id.values)))
     ax.axis('off')
     return ax
 
@@ -626,7 +616,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
 
 
 def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=None, title=None, outlines=False,
-                      cmap='RdBu', cmap_range=[0,1], ax=None, colorbar=False):
+                      cmap='RdBu', cmap_range=[0, 1], ax=None, colorbar=False):
     """
         roi_mask_dict: dictionary with keys as cell_specimen_id or cell_roi_id and values as the ROI masks,
                         placed within the full 512x512 image
@@ -643,7 +633,7 @@ def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=N
         fig, ax = plt.subplots(figsize=figsize)
     if max_projection is not None:
         ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.percentile(max_projection, 99))
-    for i,roi_id in enumerate(list(roi_mask_dict.keys())):
+    for i, roi_id in enumerate(list(roi_mask_dict.keys())):
         tmp = roi_mask_dict[roi_id]
         mask = np.empty(tmp.shape, dtype=np.float)
         mask[:] = np.nan

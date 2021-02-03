@@ -889,7 +889,7 @@ def get_sdk_roi_masks(cell_specimen_table):
 
     roi_masks = {}
     for cell_roi_id in cell_specimen_table.cell_roi_id.values:
-        mask = cell_specimen_table[cell_specimen_table.cell_roi_id==cell_roi_id]['roi_mask'].values[0]
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id]['roi_mask'].values[0]
         binary_mask = np.zeros(mask.shape)
         binary_mask[mask == True] = 1
         roi_masks[cell_roi_id] = binary_mask
@@ -900,7 +900,7 @@ def get_segmentation_mask(ophys_experiment_id, valid_only=True):
     dataset = get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
     cell_specimen_table = dataset.cell_specimen_table.copy()
     if valid_only == True:
-        roi_masks = get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi==True])
+        roi_masks = get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi == True])
     else:
         roi_masks = get_sdk_roi_masks(cell_specimen_table)
     # flatten
@@ -915,9 +915,9 @@ def get_metrics_df(experiment_id):
     roi_loc = roi_locations_from_cell_rois_table(experiment_id)
     # limit to current segmentation run, otherwise gives old ROIs
     run_id = get_current_segmentation_run_id(experiment_id)
-    roi_loc = roi_loc[roi_loc.ophys_cell_segmentation_run_id==run_id]
+    roi_loc = roi_loc[roi_loc.ophys_cell_segmentation_run_id == run_id]
     # link ROI metrics with cell_roi_id from ROI locations dict using ROI location
-    metrics_df = metrics_df.merge(roi_loc, on=['bbox_min_x','bbox_min_y'])
+    metrics_df = metrics_df.merge(roi_loc, on=['bbox_min_x', 'bbox_min_y'])
     return metrics_df
 
 
@@ -925,12 +925,12 @@ def get_roi_mask_and_metrics_dict(cell_table, metrics_df, metric):
     roi_mask_dict = {}
     metrics_dict = {}
     for cell_roi_id in cell_table.cell_roi_id.values:
-        metrics_dict[cell_roi_id] = metrics_df[metrics_df.cell_roi_id==cell_roi_id][metric].values[0]
-        roi_mask = cell_table[cell_table.cell_roi_id==cell_roi_id].roi_mask.values[0]
+        metrics_dict[cell_roi_id] = metrics_df[metrics_df.cell_roi_id == cell_roi_id][metric].values[0]
+        roi_mask = cell_table[cell_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
         mask = np.zeros(roi_mask.shape)
         mask[:] = np.nan
-        mask[roi_mask==True] = 1
-        roi_mask_dict[cell_roi_id] =  mask
+        mask[roi_mask == True] = 1
+        roi_mask_dict[cell_roi_id] = mask
     return roi_mask_dict, metrics_dict
 
 
@@ -1210,7 +1210,7 @@ def get_failed_roi_exclusion_labels(experiment_id):
     mixin = lims_engine
     # build query
     query = '''
-    select 
+    select
 
     oe.id as ophys_experiment_id,
     cell_rois.id as cell_roi_id,
@@ -1218,12 +1218,12 @@ def get_failed_roi_exclusion_labels(experiment_id):
     cell_rois.cell_specimen_id,
     el.name as exclusion_label_name
 
-    from 
+    from
 
     ophys_experiments oe
     join cell_rois on oe.id = cell_rois.ophys_experiment_id
     join cell_rois_roi_exclusion_labels crel on crel.cell_roi_id = cell_rois.id
-    join roi_exclusion_labels el on el.id = crel.roi_exclusion_label_id 
+    join roi_exclusion_labels el on el.id = crel.roi_exclusion_label_id
 
     where oe.id = {}'''.format(experiment_id)
 
@@ -1276,7 +1276,7 @@ def get_objectlisttxt_location(segmentation_run_id):
     """
 
     QUERY = '''
-    SELECT wkf.storage_directory, wkf.filename 
+    SELECT wkf.storage_directory, wkf.filename
     FROM well_known_files wkf
     JOIN well_known_file_types wkft on wkf.well_known_file_type_id = wkft.id
     JOIN ophys_cell_segmentation_runs ocsr on wkf.attachable_id = ocsr.id
