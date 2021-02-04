@@ -2,15 +2,15 @@
 
 ## To run the QC app:
 at the command line, run:  
-'''
-python ~/visual_behavior/visualization/qc/dash_app/app.py
-'''
+
+    python ~/visual_behavior/visualization/qc/dash_app/app.py
+
 The app will then be visible at `{COMPUTER NAME}.corp.alleninstitute.org:{PORT NUMBER}`  
 Optional command line arguments:  
-'''
---port {PORT NUMBER} # default = 3389
---debug # boolean, puts app in debug mode if flag is passed
-'''
+
+    --port {PORT NUMBER} # default = 3389
+    --debug # boolean, puts app in debug mode if flag is passed
+
 Port argument: port 3389, the default port, is the remote desktop port used by Windows computers. The institute lets this port pass through VPN.  
 Debug argument: if passed, puts the app into debug mode. This makes the app refresh whenever the underlying source code is updated. This is good to get quick feedback on changes (including knowing if syntax errors break the app). But it is undesirable if users are actively accessing the app.
 
