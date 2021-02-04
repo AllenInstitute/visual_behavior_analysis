@@ -1162,3 +1162,29 @@ def container_FOV_information(ophys_container_id):
     dfs = [pmt_settings, intensity_info, snr_summary]
     merged_df = reduce(lambda left, right: pd.merge(left, right, on=["ophys_experiment_id", "ophys_container_id"]), dfs)
     return merged_df
+
+
+def add_dff_stats_to_specimen_table(session):
+    '''
+    merges statistics about df/f to the cell specimen table
+    input is session object
+    returns the cell_specimen_table with additional columns describing dff trace stats
+    '''
+    dff_stats = []
+    for idx, row in session.cell_specimen_table.reset_index().iterrows():
+        roi_id = row['cell_roi_id']
+        dff = session.dff_traces.query('cell_roi_id == @roi_id')['dff'].iloc[0]
+        dff_stats_single = pd.Series(dff).describe().to_dict()
+        dff_stats_single.update({
+            'cell_roi_id': roi_id
+        })
+        dff_stats.append(dff_stats_single)
+    dff_stats = pd.DataFrame(dff_stats)
+    df = session.cell_specimen_table.reset_index().merge(
+        dff_stats,
+        left_on='cell_roi_id',
+        right_on='cell_roi_id'
+    )
+    if 'cell_specimen_id' not in df.columns:
+        df['cell_specimen_id'] = None
+    return df
