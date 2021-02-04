@@ -11,8 +11,8 @@ import imageio
 from pathlib import PureWindowsPath
 import platform
 
-from visual_behavior.data_access import loading as data_loading
-from visual_behavior.data_access import processing as dp
+from visual_behavior.data_access import loading as loading
+from visual_behavior.data_access import processing as processing
 from visual_behavior.visualization import utils as ut
 from visual_behavior.visualization.qc import session_plots as sp
 from visual_behavior.visualization.qc import plotting_utils as pu
@@ -32,7 +32,7 @@ def ax_to_array(ax):
 
 
 def plot_container_session_sequence(ophys_container_id, save_figure=True):
-    experiments_table = data_loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+    experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
     expts = experiments_table[experiments_table.container_id == ophys_container_id].sort_values('date_of_acquisition')
     specimen_id = expts.specimen_id.unique()[0]
     experiment_ids = expts.index.values
@@ -75,7 +75,7 @@ def plot_container_session_sequence(ophys_container_id, save_figure=True):
     fig.subplots_adjust(right=0.1)
     fig.subplots_adjust(top=0.9)
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'ophys_session_sequence',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'ophys_session_sequence',
                        'container_' + str(ophys_container_id))
 
 
@@ -92,21 +92,21 @@ def plot_sdk_max_projection_images_for_container(ophys_container_id, save_figure
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    # exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    # exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     # ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'max_intensity_projection',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'max_intensity_projection',
                        'container_' + str(ophys_container_id))
 
 
@@ -121,21 +121,21 @@ def plot_movie_max_projection_images_for_container(ophys_container_id, save_figu
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    # exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    # exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     # ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'max_intensity_projection_movies',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'max_intensity_projection_movies',
                        'container_' + str(ophys_container_id))
 
 
@@ -150,21 +150,21 @@ def plot_sdk_average_images_for_container(ophys_container_id, save_figure=True):
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    # exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    # exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     # ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'average_images',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'average_images',
                        'container_' + str(ophys_container_id))
 
 
@@ -179,26 +179,26 @@ def plot_movie_average_images_for_container(ophys_container_id, save_figure=True
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    # exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    # exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     # ophys_experiment_ids = list(exp_order_and_stage["ophys_experiment_id"])
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         # exp_stage_name = exp_order_and_stage.loc[exp_order_and_stage["ophys_experiment_id"]== ophys_experiment_id, "stage_name_lims"].reset_index(drop=True)[0]
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'average_images_movies',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'average_images_movies',
                        'container_' + str(ophys_container_id))
 
 
 def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
-    table = data_loading.get_filtered_ophys_experiment_table()
+    table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     fig = plt.figure(figsize=(16, 5 * len(ophys_experiment_ids)))
@@ -210,30 +210,30 @@ def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
         axes.append(vbp.placeAxesOnGrid(fig, dim=(3, 10), xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
         axes[-1] = ep.make_eye_matrix_plot(ophys_experiment_id, axes[-1])
 
-    savepath = os.path.join(data_loading.get_container_plots_dir(), 'eyetracking_sample_frames', 'container_{}.png'.format(ophys_container_id))
+    savepath = os.path.join(loading.get_container_plots_dir(), 'eyetracking_sample_frames', 'container_{}.png'.format(ophys_container_id))
     fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
 
     return fig, axes
 
 
 def plot_segmentation_masks_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 5)
     fig, ax = plt.subplots(1, len(ophys_experiment_ids), figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'segmentation_masks',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmentation_masks',
                        'container_' + str(ophys_container_id))
 
 
 def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 18)
     n = len(ophys_experiment_ids)
@@ -242,7 +242,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
 
         ax[i] = ep.plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
         ax[i + n] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i + n])
@@ -255,11 +255,11 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
 
     save_figure = True
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'segmentation_mask_overlays', 'container_' + str(ophys_container_id))
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmentation_mask_overlays', 'container_' + str(ophys_container_id))
 
 
 def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 22)
     n = len(ophys_experiment_ids)
@@ -268,7 +268,7 @@ def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, sa
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
 
         ax[i] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type + '\nred = valid, blue = invalid')
 
         metric = 'area'
@@ -284,12 +284,12 @@ def plot_roi_filtering_metrics_for_all_rois_for_container(ophys_container_id, sa
         ax[i + (n * 4)] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=True, ax=ax[i + (n * 4)])
 
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'roi_filtering_metrics_all_rois',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'roi_filtering_metrics_all_rois',
                        'container_' + str(ophys_container_id))
 
 
 def plot_roi_filtering_metrics_for_valid_rois_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 22)
     n = len(ophys_experiment_ids)
@@ -298,7 +298,7 @@ def plot_roi_filtering_metrics_for_valid_rois_for_container(ophys_container_id, 
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
 
         ax[i] = ep.plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
         metric = 'area'
@@ -314,12 +314,12 @@ def plot_roi_filtering_metrics_for_valid_rois_for_container(ophys_container_id, 
         ax[i + (n * 4)] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=False, ax=ax[i + (n * 4)])
 
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'roi_filtering_metrics_valid_rois',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'roi_filtering_metrics_valid_rois',
                        'container_' + str(ophys_container_id))
 
 
 def plot_filtered_roi_masks_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 20)
     n = len(ophys_experiment_ids)
@@ -327,7 +327,7 @@ def plot_filtered_roi_masks_for_container(ophys_container_id, save_figure=True):
     ax = ax.ravel()
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type + '\nred = valid, blue = invalid')
 
         ax[i + n] = ep.plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois=True, ax=ax[i + n])
@@ -342,24 +342,24 @@ def plot_filtered_roi_masks_for_container(ophys_container_id, save_figure=True):
         ax[i + (n * 4)] = ep.plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=True,
                                                               ax=ax[i + (n * 4)])
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'filtered_roi_masks',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'filtered_roi_masks',
                        'container_' + str(ophys_container_id))
 
 
 def plot_dff_traces_heatmaps_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 20)
     fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + ' - ' + session_type)
 
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'dff_traces_heatmaps',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'dff_traces_heatmaps',
                        'container_' + str(ophys_container_id))
 
 
@@ -375,8 +375,8 @@ def plot_average_intensity_timeseries_for_container(ophys_container_id, save_fig
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    container_df = (dp.passed_experiment_info_for_container(ophys_container_id)).sort_values('date_of_acquisition').reset_index(drop=True)
-    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    container_df = (processing.passed_experiment_info_for_container(ophys_container_id)).sort_values('date_of_acquisition').reset_index(drop=True)
+    exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     figsize = (9, 5)
     fig, ax = plt.subplots(figsize=figsize)
     for i, ophys_experiment_id in enumerate(container_df["ophys_experiment_id"].unique()):
@@ -386,7 +386,7 @@ def plot_average_intensity_timeseries_for_container(ophys_container_id, save_fig
     ax.set_title('full field average fluorescence intensity over time')
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'average_intensity_timeseries',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'average_intensity_timeseries',
                        'container_' + str(ophys_container_id))
 
 
@@ -400,8 +400,8 @@ def plot_pmt_for_container(ophys_container_id, save_figure=True):
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    pmt_settings = dp.container_pmt_settings(ophys_container_id)
-    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    pmt_settings = processing.container_pmt_settings(ophys_container_id)
+    exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     df = pd.merge(pmt_settings, exp_order_and_stage, how="left", on="ophys_experiment_id")
 
     stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
@@ -415,7 +415,7 @@ def plot_pmt_for_container(ophys_container_id, save_figure=True):
     plt.ylabel('pmt gain')
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'pmt_settings',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pmt_settings',
                        'container_' + str(ophys_container_id))
 
 
@@ -429,8 +429,8 @@ def plot_average_intensity_for_container(ophys_container_id, save_figure=True):
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    FOV_intensities = dp.container_intensity_mean_and_std(ophys_container_id)
-    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    FOV_intensities = processing.container_intensity_mean_and_std(ophys_container_id)
+    exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     df = pd.merge(FOV_intensities, exp_order_and_stage, how="left", on="ophys_experiment_id")
 
     stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
@@ -449,7 +449,7 @@ def plot_average_intensity_for_container(ophys_container_id, save_figure=True):
     plt.title("FOV mean intensity for container")
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'FOV_average_intensity',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'FOV_average_intensity',
                        'container_' + str(ophys_container_id))
 
 
@@ -466,9 +466,9 @@ def plot_average_intensity_by_pmt_for_container(ophys_container_id, save_figure=
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    pmt_settings = dp.container_pmt_settings(ophys_container_id)
-    FOV_intensities = dp.container_intensity_mean_and_std(ophys_container_id)
-    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    pmt_settings = processing.container_pmt_settings(ophys_container_id)
+    FOV_intensities = processing.container_intensity_mean_and_std(ophys_container_id)
+    exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     df = pd.merge(pmt_settings, FOV_intensities, how="left", on=["ophys_experiment_id", "ophys_container_id"])
     df = pd.merge(df, exp_order_and_stage, how="left", on="ophys_experiment_id")
 
@@ -485,12 +485,12 @@ def plot_average_intensity_by_pmt_for_container(ophys_container_id, save_figure=
     plt.title("FOV mean intensity for experiments by pmt gain")
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'average_intensity_by_pmt',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'average_intensity_by_pmt',
                        'container_' + str(ophys_container_id))
 
 
 def plot_snr_by_pmt_gain_and_intensity_for_container(ophys_container_id, save_figure=True):
-    df = dp.container_FOV_information(ophys_container_id)
+    df = processing.container_FOV_information(ophys_container_id)
     figsize = (7, 5.5)
     fig, ax = plt.subplots(figsize=figsize)
     ax = plt.scatter(df["pmt_gain"], df["median_rsnr_all_csids"],
@@ -504,7 +504,7 @@ def plot_snr_by_pmt_gain_and_intensity_for_container(ophys_container_id, save_fi
     plt.suptitle("median robust snr across cells by pmt gain")
     plt.title("container: " + str(ophys_container_id))
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'snr_by_pmt_and_intensity',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'snr_by_pmt_and_intensity',
                        'container_' + str(ophys_container_id))
 
 
@@ -521,9 +521,9 @@ def plot_snr_by_pmt_for_container(ophys_container_id, save_figure=True):
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    pmt_settings = dp.container_pmt_settings(ophys_container_id)
-    snr_summary = dp.container_snr_summary_table(ophys_container_id)
-    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    pmt_settings = processing.container_pmt_settings(ophys_container_id)
+    snr_summary = processing.container_snr_summary_table(ophys_container_id)
+    exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     df = pd.merge(pmt_settings, snr_summary, how="left", on=["ophys_experiment_id", "ophys_container_id"])
     df = pd.merge(df, exp_order_and_stage, how="left", on="ophys_experiment_id")
     stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
@@ -540,7 +540,7 @@ def plot_snr_by_pmt_for_container(ophys_container_id, save_figure=True):
     plt.title("robust snr for experiments by pmt gain")
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'snr_by_pmt',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'snr_by_pmt',
                        'container_' + str(ophys_container_id))
 
 
@@ -557,8 +557,8 @@ def plot_cell_snr_for_container(ophys_container_id, save_figure=True):
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
-    container_snr_table = dp.container_csid_snr_table(ophys_container_id)
+    exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
+    container_snr_table = processing.container_csid_snr_table(ophys_container_id)
     container_snr_table = pd.merge(container_snr_table, exp_order_and_stage, how="left", on="ophys_experiment_id")
     stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
     figsize = (6, 8)
@@ -573,7 +573,7 @@ def plot_cell_snr_for_container(ophys_container_id, save_figure=True):
     plt.title("distribution of cell signal to noise ratio", pad=5 )
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'cell_snr_by_experiment',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'cell_snr_by_experiment',
                        'container_' + str(ophys_container_id))
 
 
@@ -594,8 +594,8 @@ def plot_number_segmented_rois_for_container(ophys_container_id, save_figure=Tru
     Keyword Arguments:
         save_figure {bool} -- [description] (default: {True})
     """
-    seg_count_df = dp.segmentation_validity_count_for_container(ophys_container_id)
-    exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+    seg_count_df = processing.segmentation_validity_count_for_container(ophys_container_id)
+    exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
     plotting_df = pd.merge(seg_count_df, exp_order_and_stage, how="left", on="ophys_experiment_id")
     validity_palette = ['steelblue', 'lightgreen', 'tomato']
 
@@ -618,12 +618,12 @@ def plot_number_segmented_rois_for_container(ophys_container_id, save_figure=Tru
     plt.xticks(rotation=90)
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'segmented_rois_by_experiment',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmented_rois_by_experiment',
                        'container_' + str(ophys_container_id))
 
 
 def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True):
-    df = dp.container_cell_matching_count_heatmap_df(ophys_container_id)
+    df = processing.container_cell_matching_count_heatmap_df(ophys_container_id)
 
     matrix = df.values
     labels = df.index
@@ -639,12 +639,12 @@ def plot_number_matched_cells_for_container(ophys_container_id, save_figure=True
     ax.set_title('number of matched cells across sessions')
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'number_matched_cells',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'number_matched_cells',
                        'container_' + str(ophys_container_id))
 
 
 def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=True):
-    df = dp.container_cell_matching_percent_heatmap_df(ophys_container_id)
+    df = processing.container_cell_matching_percent_heatmap_df(ophys_container_id)
 
     matrix = df.values
     labels = df.index
@@ -660,7 +660,7 @@ def plot_fraction_matched_cells_for_container(ophys_container_id, save_figure=Tr
     ax.set_title('fraction matched cells across sessions')
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'fraction_matched_cells',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'fraction_matched_cells',
                        'container_' + str(ophys_container_id))
 
 
@@ -677,13 +677,13 @@ def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure
     import tifffile
     import visual_behavior.data_access.utilities as utilities
 
-    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    experiments_table = loading.get_filtered_ophys_experiment_table()
     container_expts = experiments_table[experiments_table.container_id == ophys_container_id]
     ophys_experiment_ids = container_expts.index.values
 
     dataset_dict = {}
     for ophys_experiment_id in container_expts.index.values:
-        dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
         dataset_dict[ophys_experiment_id] = dataset
 
     # cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_container_id, experiments_table)
@@ -728,7 +728,7 @@ def plot_cell_matching_registration_overlay_grid(ophys_container_id, save_figure
         fig.tight_layout()
         fig.suptitle(get_metadata_string(ophys_container_id), x=0.5, y=1.02, horizontalalignment='center', fontsize=14)
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'cell_matching_registration_overlay_grid',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'cell_matching_registration_overlay_grid',
                        'container_' + str(ophys_container_id))
 
 
@@ -745,13 +745,13 @@ def plot_cell_matching_registration_output(ophys_container_id, save_figure=True)
     import tifffile
     import visual_behavior.data_access.utilities as utilities
 
-    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    experiments_table = loading.get_filtered_ophys_experiment_table()
     container_expts = experiments_table[experiments_table.container_id == ophys_container_id]
     ophys_experiment_ids = container_expts.index.values
 
     dataset_dict = {}
     for ophys_experiment_id in container_expts.index.values:
-        dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
         dataset_dict[ophys_experiment_id] = dataset
 
     # cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_container_id, experiments_table)
@@ -799,12 +799,12 @@ def plot_cell_matching_registration_output(ophys_container_id, save_figure=True)
                         i += 1
 
             if save_figure:
-                ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'cell_matching_registration_output',
+                ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'cell_matching_registration_output',
                                'container_' + str(ophys_container_id) + '_' + str(x))
 
 
 def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figure=True):
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 20)
     fig, ax = plt.subplots(len(ophys_experiment_ids), 1, figsize=figsize)
@@ -812,11 +812,11 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
     for i, ophys_experiment_id in enumerate(ophys_experiment_ids):
         ax[i] = ep.plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=ax[i])
 
-        session_type = data_loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
+        session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'motion_correction_xy_shift',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'motion_correction_xy_shift',
                        'container_' + str(ophys_container_id))
 
 
@@ -860,8 +860,8 @@ def get_metadata_string(container_id):
     :param container_id:
     :return:
     """
-    ophys_experiment_ids = data_loading.get_ophys_experiment_ids_for_ophys_container_id(container_id)
-    dataset = data_loading.get_ophys_dataset(ophys_experiment_ids[0])
+    ophys_experiment_ids = loading.get_ophys_experiment_ids_for_ophys_container_id(container_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_ids[0])
     title = dataset.analysis_folder
     m = title.split('_')  # dataset.analysis_folder.split('_')
     metadata_string = str(container_id) + '_' + m[1] + '_' + m[2] + '_' + m[3] + '_' + m[4] + '_' + m[5] + '_' + m[6]
@@ -879,7 +879,7 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
     :param save_figure: Boolean, whether or not to save figure to default QC plots directory
     :return:
     """
-    dataset = data_loading.get_ophys_dataset(container_df.ophys_experiment_id.unique()[0])
+    dataset = loading.get_ophys_dataset(container_df.ophys_experiment_id.unique()[0])
     title = dataset.analysis_folder
     frame_rate = dataset.metadata['ophys_frame_rate']
     if omitted:
@@ -926,7 +926,7 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
     ax.legend(bbox_to_anchor=(1, 1), title='session_number', fontsize='small', title_fontsize='x-small')
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(),
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(),
                        'population_average_by_session_' + df_name.split('_')[0],
                        'container_' + str(container_id))
 
@@ -939,7 +939,7 @@ def plot_omission_population_average_across_sessions(container_id, save_figure=T
     :return:
     """
     df_name = 'omission_response_df'
-    container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
+    container_df = loading.get_container_response_df(container_id, df_name, use_events=False)
     plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=True,
                                             save_figure=save_figure)
 
@@ -952,7 +952,7 @@ def plot_trials_population_average_across_sessions(container_id, save_figure=Tru
     :return:
     """
     df_name = 'trials_response_df'
-    container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
+    container_df = loading.get_container_response_df(container_id, df_name, use_events=False)
     plot_population_average_across_sessions(container_df, container_id, df_name, trials=True, omitted=False,
                                             save_figure=save_figure)
 
@@ -965,7 +965,7 @@ def plot_stimulus_population_average_across_sessions(container_id, save_figure=T
     :return:
     """
     df_name = 'stimulus_response_df'
-    container_df = data_loading.get_container_response_df(container_id, df_name, use_events=False)
+    container_df = loading.get_container_response_df(container_id, df_name, use_events=False)
     plot_population_average_across_sessions(container_df, container_id, df_name, trials=False, omitted=False,
                                             save_figure=save_figure)
 
@@ -982,10 +982,10 @@ def plot_stimulus_population_average_across_sessions(container_id, save_figure=T
 #     Keyword Arguments:
 #         save_figure {bool} -- [description] (default: {True})
 #     """
-#     container_pmt_settings = dp.container_pmt_settings(ophys_container_id)
-#     container_intensity_info = dp.container_intensity_mean_and_std(ophys_container_id)
+#     container_pmt_settings = processing.container_pmt_settings(ophys_container_id)
+#     container_intensity_info = processing.container_intensity_mean_and_std(ophys_container_id)
 #     df = pd.merge(container_pmt_settings, container_intensity_info, how="left", on=["ophys_experiment_id", "ophys_container_id"])
-#     exp_order_and_stage = dp.experiment_order_and_stage_for_container(ophys_container_id)
+#     exp_order_and_stage = processing.experiment_order_and_stage_for_container(ophys_container_id)
 #     df = pd.merge(df, exp_order_and_stage, how="left", on="ophys_experiment_id")
 #     stage_color_dict = pu.gen_ophys_stage_name_colors_dict()
 
@@ -1000,30 +1000,30 @@ def plot_stimulus_population_average_across_sessions(container_id, save_figure=T
 #     plt.title("fov intensity mean by pmt gain")
 #     fig.tight_layout()
 #     if save_figure:
-#         ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'fov_ave_intensity_by_pmt',
+#         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'fov_ave_intensity_by_pmt',
 #                        'container_' + str(ophys_container_id))
 
 
 # BEHAVIOR
 
 def plot_running_speed_for_container(ophys_container_id, save_figure=True):
-    ophys_session_ids = data_loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
+    ophys_session_ids = loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 15)
     fig, ax = plt.subplots(len(ophys_session_ids), 1, figsize=figsize)
     ax = ax_to_array(ax)
     for i, ophys_session_id in enumerate(ophys_session_ids):
         ax[i] = sp.plot_running_speed(ophys_session_id, ax=ax[i])
-        session_type = data_loading.get_session_type_for_ophys_session_id(ophys_session_id)
+        session_type = loading.get_session_type_for_ophys_session_id(ophys_session_id)
         ax[i].set_title(str(ophys_session_id) + '\n' + session_type)
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'running_speed',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'running_speed',
                        'container_' + str(ophys_container_id))
 
 
 def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
-    ophys_session_ids = data_loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
+    ophys_session_ids = loading.get_ophys_session_ids_for_ophys_container_id(ophys_container_id)
 
     figsize = (25, 7)
     fig, ax = plt.subplots(1, len(ophys_session_ids), figsize=figsize)
@@ -1031,17 +1031,17 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
     for i, ophys_session_id in enumerate(ophys_session_ids):
         ax[i] = sp.plot_lick_raster(ophys_session_id, ax=ax[i])
         ax[i].invert_yaxis()
-        session_type = data_loading.get_session_type_for_ophys_session_id(ophys_session_id)
+        session_type = loading.get_session_type_for_ophys_session_id(ophys_session_id)
         ax[i].set_title(str(ophys_session_id) + '\n' + session_type)
     # plt.gca().invert_yaxis()
 
     if save_figure:
-        ut.save_figure(fig, figsize, data_loading.get_container_plots_dir(), 'lick_rasters',
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'lick_rasters',
                        'container_' + str(ophys_container_id))
 
 
 def plot_pupil_area(ophys_container_id, save_figure=True):
-    table = data_loading.get_filtered_ophys_experiment_table()
+    table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     fig = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
@@ -1059,7 +1059,7 @@ def plot_pupil_area(ophys_container_id, save_figure=True):
 
     if save_figure:
         print('saving')
-        save_folder = os.path.join(data_loading.get_container_plots_dir(), 'pupil_area_vs_time')
+        save_folder = os.path.join(loading.get_container_plots_dir(), 'pupil_area_vs_time')
         if os.path.exists(save_folder) == False:
             os.mkdir(save_folder)
         savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
@@ -1069,7 +1069,7 @@ def plot_pupil_area(ophys_container_id, save_figure=True):
 
 
 def plot_pupil_position(ophys_container_id, save_figure=True):
-    table = data_loading.get_filtered_ophys_experiment_table()
+    table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     fig = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
@@ -1087,7 +1087,7 @@ def plot_pupil_position(ophys_container_id, save_figure=True):
 
     if save_figure:
         print('saving')
-        save_folder = os.path.join(data_loading.get_container_plots_dir(), 'pupil_position_vs_time')
+        save_folder = os.path.join(loading.get_container_plots_dir(), 'pupil_position_vs_time')
         if os.path.exists(save_folder) == False:
             os.mkdir(save_folder)
         savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
@@ -1119,7 +1119,7 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
     '''
     plots a handful of behavior session metrics for every experiment in the container
     '''
-    table = data_loading.get_filtered_ophys_experiment_table()
+    table = loading.get_filtered_ophys_experiment_table()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     vals_to_plot = {
@@ -1196,7 +1196,7 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
 
     if save_figure:
         print('saving')
-        save_folder = os.path.join(data_loading.get_container_plots_dir(), 'behavior_metric_summary')
+        save_folder = os.path.join(loading.get_container_plots_dir(), 'behavior_metric_summary')
         if os.path.exists(save_folder) == False:
             os.mkdir(save_folder)
         savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
@@ -1211,7 +1211,7 @@ def plot_event_detection_for_container(ophys_container_id, save_figure=True):
     :param save_figure:
     :return:
     """
-    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
 
@@ -1225,7 +1225,7 @@ def plot_single_cell_response_plots_for_container(ophys_container_id, save_figur
     Compares across all sessions in a container for each cell, including the ROI mask across days.
     Useful to validate cell matching as well as examine changes in activity profiles over days.
     """
-    cell_specimen_ids = data_loading.get_unique_cell_specimen_ids_for_container(ophys_container_id)
+    cell_specimen_ids = loading.get_unique_cell_specimen_ids_for_container(ophys_container_id)
 
     for cell_specimen_id in cell_specimen_ids:
         scp.plot_across_session_responses(ophys_container_id, cell_specimen_id, use_events=False, save_figure=save_figure)
@@ -1236,7 +1236,7 @@ def plot_dff_trace_and_behavior_for_container(ophys_container_id, save_figure=Tr
     Plots the full dFF trace for each cell, along with licking behavior, rewards, running speed, pupil area, and face motion.
     Useful to visualize whether the dFF trace tracks the behavior variables
     """
-    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
 
@@ -1253,7 +1253,7 @@ def plot_classifier_validation_for_container(ophys_container_id, save_figure=Tru
     :param save_figure:
     :return:
     """
-    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     ophys_experiment_ids = ophys_experiments.index.values
 
@@ -1288,7 +1288,7 @@ def system_friendly_filename(fname: str) -> str:
 
 
 def plot_OphysRegistrationSummaryImage(ophys_container_id, save_figure=True):
-    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    experiments_table = loading.get_filtered_ophys_experiment_table()
     ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     oeids = ophys_experiments.index.values
 
@@ -1301,5 +1301,5 @@ def plot_OphysRegistrationSummaryImage(ophys_container_id, save_figure=True):
         ax[ii].set_title('ophys_experiment_id = {}'.format(oeid))
     fig.tight_layout()
     if save_figure:
-        save_loc = os.path.join(data_loading.get_container_plots_dir(), 'OphysRegistrationSummaryImage')
+        save_loc = os.path.join(loading.get_container_plots_dir(), 'OphysRegistrationSummaryImage')
         fig.savefig(os.path.join(save_loc, 'container_{}'.format(ophys_container_id)))

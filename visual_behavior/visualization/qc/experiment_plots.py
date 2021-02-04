@@ -7,8 +7,8 @@ import visual_behavior.visualization.utils as utils
 import visual_behavior.visualization.qc.plotting_utils as pu
 import visual_behavior.visualization.qc.single_cell_plots as scp
 
-from visual_behavior.data_access import loading as data_loading
-from visual_behavior.data_access import processing as data_processing
+from visual_behavior.data_access import loading as loading
+from visual_behavior.data_access import processing as processing
 
 import visual_behavior.database as db
 from visual_behavior.utilities import EyeTrackingData
@@ -21,7 +21,7 @@ bitdepth_16 = 65536
 def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    max_projection = data_loading.get_sdk_max_projection(ophys_experiment_id)
+    max_projection = loading.get_sdk_max_projection(ophys_experiment_id)
     ax.imshow(max_projection, cmap='gray', vmax=np.percentile(max_projection, 99))
     ax.axis('off')
     return ax
@@ -30,7 +30,7 @@ def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
 def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    average_image = data_loading.get_sdk_ave_projection(ophys_experiment_id)
+    average_image = loading.get_sdk_ave_projection(ophys_experiment_id)
     ax.imshow(average_image, cmap='gray', vmax=np.amax(average_image))
     ax.axis('off')
     return ax
@@ -39,7 +39,7 @@ def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
 def plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    average_image = data_processing.experiment_average_FOV_from_motion_corrected_movie(ophys_experiment_id)
+    average_image = processing.experiment_average_FOV_from_motion_corrected_movie(ophys_experiment_id)
     ax.imshow(average_image, cmap='gray', vmin=0, vmax=8000)
     ax.axis('off')
     return ax
@@ -48,7 +48,7 @@ def plot_motion_correction_average_image_for_experiment(ophys_experiment_id, ax=
 def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    max_image = data_processing.experiment_max_FOV_from_motion_corrected_movie(ophys_experiment_id)
+    max_image = processing.experiment_max_FOV_from_motion_corrected_movie(ophys_experiment_id)
     ax.imshow(max_image, cmap='gray', vmin=0, vmax=8000)
     ax.axis('off')
     return ax
@@ -57,7 +57,7 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
 def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
+    segmentation_mask = loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
     return ax
@@ -67,7 +67,7 @@ def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
+    segmentation_mask = loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
     mask = np.zeros(segmentation_mask.shape)
     mask[:] = np.nan
     mask[segmentation_mask == 1] = 1
@@ -80,7 +80,7 @@ def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=No
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=False)
+    segmentation_mask = loading.get_segmentation_mask(ophys_experiment_id, valid_only=False)
     mask = np.zeros(segmentation_mask.shape)
     mask[:] = np.nan
     mask[segmentation_mask == 1] = 1
@@ -89,11 +89,37 @@ def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=No
     return ax
 
 
+def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    segmentation_mask = loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
+    mask = np.zeros(segmentation_mask.shape)
+    mask[segmentation_mask == 1] = 1
+    ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+    ax.axis('off')
+    return ax
+
+
+def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    cell_specimen_table = dataset.cell_specimen_table.copy()
+    for cell_roi_id in cell_specimen_table.cell_roi_id.values:
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+        ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+    ax.set_title('valid ROI outlines\n n = ' + str(len(cell_specimen_table.cell_roi_id.values)))
+    ax.axis('off')
+    return ax
+
+
 def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
     cell_specimen_table = dataset.cell_specimen_table.copy()
 
     for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == True].cell_roi_id.values:
@@ -107,46 +133,24 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     return ax
 
 
-def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax=None):
-    if ax is None:
-        fig, ax = plt.subplots()
-    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    segmentation_mask = data_loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
-    mask = np.zeros(segmentation_mask.shape)
-    mask[segmentation_mask == 1] = 1
-    ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
-    ax.axis('off')
-    return ax
-
-
-def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=None):
-    if ax is None:
-        fig, ax = plt.subplots()
-    ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
-    cell_specimen_table = dataset.cell_specimen_table.copy()
-    for cell_roi_id in cell_specimen_table.cell_roi_id.values:
-        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
-        ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
-    ax.set_title('valid ROI outlines\n n = ' + str(len(cell_specimen_table.cell_roi_id.values)))
-    ax.axis('off')
-    return ax
-
-
 def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
-    dff_traces = data_loading.get_sdk_dff_traces_array(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    dff_traces = dataset.dff_traces.dff.values
+    dff_traces = np.vstack(dff_traces)
     if ax is None:
         figsize = (14, 5)
         fig, ax = plt.subplots(figsize=figsize)
-    ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=0.5)
+    # ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=0.5)
+    ax = sns.heatmap(dff_traces, cmap='magma', vmin=0, vmax=0.5, cbar_kws={'label': 'dF/F'}, ax=ax)
+    ax.set_ylim(-0.5, dff_traces.shape[0]+0.5)
     ax.set_ylabel('cells')
     ax.set_xlabel('2P frames')
     return ax
 
 
 def plot_csid_snr_for_experiment(ophys_experiment_id, ax=None):
-    experiment_df = data_processing.ophys_experiment_info_df(ophys_experiment_id)
-    exp_snr = data_processing.experiment_cell_specimen_id_snr_table(ophys_experiment_id)
+    experiment_df = processing.ophys_experiment_info_df(ophys_experiment_id)
+    exp_snr = processing.experiment_cell_specimen_id_snr_table(ophys_experiment_id)
     exp_snr["stage_name_lims"] = experiment_df["stage_name_lims"][0]
     exp_stage_color_dict = pu.experiment_id_stage_color_dict_for_experiment(ophys_experiment_id)
     if ax is None:
@@ -173,9 +177,9 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
     Returns:
         plot -- x: frame number, y: fluroescence value
     """
-    experiment_df = data_processing.ophys_experiment_info_df(ophys_experiment_id)
+    experiment_df = processing.ophys_experiment_info_df(ophys_experiment_id)
     exp_stage_color_dict = pu.map_stage_name_colors_to_ophys_experiment_ids(experiment_df)
-    average_intensity, frame_numbers = data_processing.get_experiment_average_intensity_timeseries(ophys_experiment_id)
+    average_intensity, frame_numbers = processing.get_experiment_average_intensity_timeseries(ophys_experiment_id)
     if ax is None:
         fig, ax = plt.subplots()
     ax.plot(frame_numbers, average_intensity,
@@ -187,7 +191,7 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
 
 
 def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None):
-    df = data_loading.load_rigid_motion_transform_csv(ophys_experiment_id)
+    df = loading.load_rigid_motion_transform_csv(ophys_experiment_id)
     if ax is None:
         fig, ax = plt.subplots(figsize=(20, 4))
     ax.plot(df.framenumber.values, df.x.values, color='red', label='x_shift')
@@ -287,7 +291,7 @@ def plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True):
     :param save_figure:
     :return:
     """
-    dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     metadata_string = dataset.metadata_string
     colors = sns.color_palette()
     ophys_timestamps = dataset.ophys_timestamps.copy()
@@ -311,7 +315,7 @@ def plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True):
         fig.tight_layout()
 
         if save_figure:
-            utils.save_figure(fig, figsize, data_loading.get_single_cell_plots_dir(), 'event_detection',
+            utils.save_figure(fig, figsize, loading.get_single_cell_plots_dir(), 'event_detection',
                               str(cell_specimen_id) + '_' + metadata_string + '_events_validation')
 
 
@@ -320,7 +324,7 @@ def plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=
     Plots the full dFF trace for each cell, along with licking behavior, rewards, running speed, pupil area, and face motion.
     Useful to visualize whether the dFF trace tracks the behavior variables
     """
-    dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     for cell_specimen_id in dataset.cell_specimen_ids:
         scp.plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figure=save_figure)
@@ -331,7 +335,7 @@ def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, sa
     Plots the population average dFF trace for an experiment, along with licking behavior, rewards, running speed, pupil area, and face motion.
     Useful to visualize whether the overal activity tracks the behavior variables
     """
-    dataset = data_loading.get_ophys_dataset(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     traces = dataset.dff_traces.copy()
     trace_timestamps = dataset.ophys_timestamps
 
@@ -403,7 +407,7 @@ def place_masks_in_full_image(cell_table, max_projection):
         mask = np.asarray(mask)
         image[0:mask.shape[0], 0:mask.shape[1]] = mask
         cell_table.at[index, 'image_mask'] = image
-    cell_table = data_processing.shift_image_masks(cell_table)
+    cell_table = processing.shift_image_masks(cell_table)
     return cell_table
 
 
@@ -433,7 +437,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     cell_table = get_suite2p_rois(segmentation_output_file)
     cell_table['experiment_id'] = expt
     # move suite2P masks to the proper place
-    dataset = data_loading.get_ophys_dataset(expt, include_invalid_rois=True)
+    dataset = loading.get_ophys_dataset(expt, include_invalid_rois=True)
     cell_table = place_masks_in_full_image(cell_table, dataset.max_projection.data)
     # merge with classifier results
     cell_table = cell_table.merge(data, on=['experiment_id', 'id'])
@@ -445,7 +449,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     # limit to classifier results for this experiment
     expt_data = data[data.experiment_id == expt].copy()
     # get production segmentation & classification from SDK
-    # dataset = data_loading.get_ophys_dataset(expt, include_invalid_rois=True)
+    # dataset = loading.get_ophys_dataset(expt, include_invalid_rois=True)
     ct = dataset.cell_specimen_table.copy()
     roi_masks = dataset.roi_masks.copy()
     max_projection = dataset.max_projection.data
@@ -505,13 +509,13 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
         else:
             folder = 'dev_only'
             masks_array = ct[ct.valid_roi == True]['roi_mask'].values
-            masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
+            masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
             ax0.imshow(max_projection, cmap='gray')
             ax0.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
             ax0.set_title('valid production roi masks')
 
             masks_array = ct[ct.valid_roi == False]['roi_mask'].values
-            masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
+            masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
             ax1.imshow(max_projection, cmap='gray')
             ax1.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
             ax1.set_title('invalid production roi masks')
@@ -546,7 +550,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
                     folder = 'dev_invalid_not_in_prod'
         else:
             masks_array = cell_table[cell_table.valid_roi == True]['roi_mask'].values
-            masks_to_plot = data_processing.gen_transparent_multi_roi_mask(masks_array)
+            masks_to_plot = processing.gen_transparent_multi_roi_mask(masks_array)
             masks_to_plot = np.sum(masks_array, 0)
             ax2.imshow(masks_to_plot, cmap='hsv', vmin=0, vmax=1, alpha=0.5)
             ax2.set_title('valid suite2p roi masks')
@@ -649,11 +653,11 @@ def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=N
 
 
 def plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invalid_rois=True, ax=None):
-    dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=include_invalid_rois)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=include_invalid_rois)
     cell_table = dataset.cell_specimen_table.copy()
-    metrics_df = data_loading.get_metrics_df(ophys_experiment_id)
+    metrics_df = loading.get_metrics_df(ophys_experiment_id)
 
-    roi_mask_dict, metrics_dict = data_loading.get_roi_mask_and_metrics_dict(cell_table, metrics_df, metric)
+    roi_mask_dict, metrics_dict = loading.get_roi_mask_and_metrics_dict(cell_table, metrics_df, metric)
 
     if metric == 'area':
         cmap_range = [20, 400]
@@ -677,17 +681,17 @@ def plot_metrics_mask_for_experiment(ophys_experiment_id, metric, include_invali
 
 
 def plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois=True, ax=None):
-    dataset = data_loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=include_invalid_rois)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=include_invalid_rois)
     max_projection = dataset.max_projection.data
     cell_table = dataset.cell_specimen_table.copy()
-    metrics_df = data_loading.get_metrics_df(ophys_experiment_id)
+    metrics_df = loading.get_metrics_df(ophys_experiment_id)
 
     filtered_metrics = metrics_df[
         (metrics_df.area > 40) & (metrics_df.ellipseness > 0.2) & (metrics_df.compactness < 18)]
     filtered_metrics['filtered_masks'] = 1
     cell_table = cell_table[cell_table.cell_roi_id.isin(filtered_metrics.cell_roi_id.unique())]
     metric = 'filtered_masks'
-    roi_mask_dict, metrics_dict = data_loading.get_roi_mask_and_metrics_dict(cell_table, filtered_metrics, metric)
+    roi_mask_dict, metrics_dict = loading.get_roi_mask_and_metrics_dict(cell_table, filtered_metrics, metric)
 
     if ax is None:
         fig, ax = plt.subplots()
