@@ -622,7 +622,7 @@ def container_cell_matching_count_heatmap_df(ophys_container_id):
                                                             values="matched_count")
     pivot_perc = pivot_perc.reindex(expt_order, axis=1)
     pivot_perc = pivot_perc.reindex(expt_order)
-    return pivot_count
+    return pivot_perc
 
 
 # ROI PROCESSING (EXP AND CONTAINER, SEG & CELL MATCHING, DFF)

@@ -206,7 +206,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
                                      experiments.session_type.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
-    ### filter one more time on load to restrict to data release experiments ###
+    # filter one more time on load to restrict to data release experiments ###
     experiments = filtering.limit_to_production_project_codes(experiments)
     return experiments
 
