@@ -148,14 +148,14 @@ def behavior_mon_timestamps_from_VBAdataset(ophys_experiment_id):
 
 def eye_tracking_timestamps_from_VBAdataset(ophys_experiment_id):
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
-    timestamps = np.asarray(dataset.eye_tracking["time"])
+    timestamps = np.asarray(dataset.eye_tracking["timestamps"])
     return timestamps
 
 
 def VBA_timestamps_df(ophys_experiment_id):
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     try:
-        eye_tracking = len(np.asarray(dataset.eye_tracking["time"]))
+        eye_tracking = len(np.asarray(dataset.eye_tracking["timestamps"]))
     except RuntimeError:
         eye_tracking = np.nan
     try:
