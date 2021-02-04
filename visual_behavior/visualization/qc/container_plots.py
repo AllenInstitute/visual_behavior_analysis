@@ -1293,12 +1293,17 @@ def plot_OphysRegistrationSummaryImage(ophys_container_id, save_figure=True):
     oeids = ophys_experiments.index.values
 
     fig, ax = plt.subplots(len(oeids), 1, figsize=(15, 10 * len(oeids)))
-    for ii, oeid in enumerate(np.sort(oeids)):
+    for ii,oeid in enumerate(np.sort(oeids)):
         image_path = motion_correction_artifacts(oeid).set_index('name').loc['OphysRegistrationSummaryImage']['path']
         image = imageio.imread(image_path)
-        ax[ii].imshow(image)
-        ax[ii].axis('off')
-        ax[ii].set_title('ophys_experiment_id = {}'.format(oeid))
+        ax.flatten()[ii].imshow(image)
+        ax.flatten()[ii].axis('off')
+        ax.flatten()[ii].set_title('ophys_experiment_id = {}'.format(oeid))
+    try:
+        # remove the last axis unless there is an index error
+        ax.flatten()[ii + 1].axis('off')
+    except IndexError:
+        pass
     fig.tight_layout()
     if save_figure:
         save_loc = os.path.join(loading.get_container_plots_dir(), 'OphysRegistrationSummaryImage')
