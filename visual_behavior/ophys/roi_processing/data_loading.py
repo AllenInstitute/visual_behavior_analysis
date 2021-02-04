@@ -1,6 +1,7 @@
 from allensdk.internal.api import PostgresQueryMixin
 import configparser as configp
 import pandas as pd
+import numpy as np
 import os
 
 import warnings
@@ -169,38 +170,31 @@ def get_current_segmentation_run_id(ophys_experiment_id):
     """gets the id for the current cell segmentation run for a given experiment.
         Queries LIMS via AllenSDK PostgresQuery function.
 
-    Arguments:
-        ophys_experiment_id {int} -- 9 digit experiment id
+    Parameters
+    ----------
+    ophys_experiment_id : int
+        9 digit ophys experiment id
 
-    Returns:
-        int -- current cell segmentation run id
+    Returns
+    -------
+    int
+        current cell segmentation run id
     """
-
-    segmentation_run_table = get_lims_cell_segmentation_run_info(ophys_experiment_id)
-    current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"] == True, ["id"][0]][0]
-    return current_segmentation_run_id
-
-
-def get_lims_cell_segmentation_run_info(ophys_experiment_id):
-    """Queries LIMS via AllenSDK PostgresQuery function to retrieve
-       information on all segmentations run in the ophys_cell_segmenatation_runs
-       table for a given experiment
-
-    Returns:
-        dataframe -- dataframe with the following columns:
-            id {int}:  9 digit segmentation run id
-            run_number {int}: segmentation run number
-            ophys_experiment_id{int}: 9 digit ophys experiment id
-            current{boolean}: True/False True: most current segmentation run; False: not the most current segmentation run
-            created_at{timestamp}:
-            updated_at{timestamp}:
-    """
+    ophys_experiment_id = int(ophys_experiment_id)
     mixin = lims_engine
     query = '''
-    select *
+    SELECT id
     FROM ophys_cell_segmentation_runs
-    WHERE ophys_experiment_id = {} '''.format(ophys_experiment_id)
-    return mixin.select(query)
+    WHERE current = true
+    AND ophys_experiment_id = {}'''.format(ophys_experiment_id)  
+    current_run_id = mixin.select(query)
+    try:
+        current_run_id = int(current_run_id["id"][0])
+    except KeyError:
+        print("No CURRENT cell_segmentation_run_id for ophys experiment id:", ophys_experiment_id)
+        return np.nan
+    return current_run_id
+
 
 ###########
 
@@ -233,11 +227,11 @@ def get_lims_cell_rois_table(ophys_experiment_id):
 
     """
     # query from AllenSDK
- 
+
     segmentation_run_id = int(get_current_segmentation_run_id(ophys_experiment_id))
     mixin = lims_engine
     query = '''
-    SELECT *  
+    SELECT *
     FROM cell_rois
     where ophys_cell_segmentation_run_id = {}'''.format(segmentation_run_id)
     lims_cell_rois_table = mixin.select(query)
