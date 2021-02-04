@@ -161,7 +161,7 @@ def get_behavior_session_id_from_ophys_experiment_id(ophys_experiment_id, cache)
     return ophys_experiments.loc[ophys_experiment_id].behavior_session_id
 
 
-def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id):
+def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
     """finds the ophys_session_id associated with an ophys_experiment_id
 
     Arguments:
@@ -174,7 +174,7 @@ def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id):
     Returns:
         int -- ophys_session_id: 9 digit, unique identifier for an ophys_session
     """
-    cache = loading.get_visual_behavior_cache()
+    # cache = loading.get_visual_behavior_cache()
     ophys_experiments = cache.get_experiment_table()
     if ophys_experiment_id not in ophys_experiments.index:
         raise Exception('ophys_experiment_id not in experiment table')
