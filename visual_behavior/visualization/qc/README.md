@@ -1,12 +1,12 @@
 # Overview of qc visualization
 
 ## To run the QC app:
-at the command line, run:
+at the command line, run:  
 '''
-> python ~/visual_behavior/visualization/qc/dash_app/app.py
+python ~/visual_behavior/visualization/qc/dash_app/app.py
 '''
-The app will then be visible at `{COMPUTER NAME}.corp.alleninstitute.org:{PORT NUMBER}`
-Optional command line arguments:
+The app will then be visible at `{COMPUTER NAME}.corp.alleninstitute.org:{PORT NUMBER}`  
+Optional command line arguments:  
 '''
 --port {PORT NUMBER} # default = 3389
 --debug # boolean, puts app in debug mode if flag is passed
