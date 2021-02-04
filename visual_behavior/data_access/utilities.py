@@ -681,6 +681,35 @@ def get_wkf_demixed_traces_h5_filepath(ophys_experiment_id):
     return filepath
 
 
+def get_wkf_events_h5_filepath(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        _event.h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the event.h5 file
+                    for the given ophys_experiment_id
+    """ 
+    QUERY = '''
+        SELECT storage_directory || filename
+        FROM well_known_files
+        WHERE well_known_file_type_id = 1074961818 AND
+        attachable_id = {0}
+
+        '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
 def get_wkf_motion_corrected_movie_h5_filepath(ophys_experiment_id):
     """use SQL and the LIMS well known file system to get the
         "motion_corrected_movie.h5" information for a given

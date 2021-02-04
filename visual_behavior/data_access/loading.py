@@ -357,90 +357,28 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             self._dff_traces = super().dff_traces
         return self._dff_traces
 
-    def get_events_array(self):
-        events_folder = get_events_dir()
-        if os.path.exists(events_folder):
-            events_file = [file for file in os.listdir(events_folder) if
-                           str(self.ophys_experiment_id) in file]
-            if len(events_file) > 0:
-                print('getting L0 events')
-                f = np.load(os.path.join(events_folder, events_file[0]))
-                events = np.asarray(f['events'])
-                f.close()
-            else:
-                print('no events for this experiment')
-                events = None
-        else:
-            print('no events for this experiment')
-            events = None
-        self.events_array = events
-        return self.events_array
-
     def _get_events(self):
         """
-        events file is an .npz with the following files within it:
-        dff: array of n_cells x n_timepoints with recalculated dF/F values(at original frame rate)
-        ts: timestamps corresponding to timepoints in dff (at original frame rate)
-        events: array of n_cells x n_timepoints with event magnitudes(at original frame rate)
-        noise stds: array of length(n_cells) giving the value for standard deviation of the noise for all ROIs
-        lambdas: array of length(n_cells) giving the lambda value for all ROIs
-        upsampling_factor: factor used to resample mesoscope data into 30Hz time frame
-        event_dict: event_dict contains one item per cell_roi_id, where each item is a dictionary with 4 keys:
-            mag: event magnitude, sampled at 30Hz
-            idx: (i think) indices into original timestamps before resampling
-            ts: timestamps of events, sampled at 30Hz
-            event_trace: trace of event magnitudes, at original frame rate (11Hz for mesoscope)
-
-        procedure for resampling and generating these outputs is in l0_ms.py
-        The upsampling factor is the integer nearest the ratio of 30.9/(actual sampling rate), which for mesoscope is 3 and for scientifica is 1
-
-        :return: dataframe with all above information for each cell
+        Get events data from _event.h5 well known file location. Temporary until SDK support is added
+        :return:
         """
-        events_folder = get_events_dir()
-        if os.path.exists(events_folder):
-            events_file = [file for file in os.listdir(events_folder) if str(self.ophys_experiment_id) in file]
-            if len(events_file) > 0:
-                f = np.load(os.path.join(events_folder, events_file[0]), allow_pickle=True)
-                event_dict = f['event_dict'].item()
-                cell_roi_ids = list(event_dict.keys())
-                events_array = np.asarray([event_dict[cell_roi_id]['event_trace'] for cell_roi_id in cell_roi_ids])
-                cell_specimen_ids = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in
-                                     cell_roi_ids]
-                if len(cell_specimen_ids) == 0:
-                    cell_specimen_ids = np.zeros(len(cell_roi_ids))
-                    cell_specimen_ids[:] = np.nan
-                # get all the extra stuff from the file
-                ts = np.asarray(f['ts'])
-                timestamps = np.zeros((len(cell_specimen_ids), len(ts)))
-                timestamps[:] = ts
-                dff_traces = f['dff']
-                noise_std = np.asarray(f['noise_stds'])
-                lambdas = np.asarray(f['lambdas'])
-                upsampling_factor = np.zeros(len(cell_specimen_ids))
-                try:
-                    upsampling_factor[:] = f['upsampling_factor']
-                except Exception:
-                    print('\nKeyError: upsampling_factor is not a file in the archive')
-                upsampled_event_magnitude = np.asarray([event_dict[cell_roi_id]['mag'] for cell_roi_id in cell_roi_ids])
-                upsampled_event_timestamps = np.asarray([event_dict[cell_roi_id]['ts'] for cell_roi_id in cell_roi_ids])
-                upsampled_event_indices = np.asarray([event_dict[cell_roi_id]['idx'] for cell_roi_id in cell_roi_ids])
-                f.close()
+        filepath = utilities.get_wkf_events_h5_filepath(self.ophys_experiment_id)
+        f = h5py.File(filepath, 'r')
 
-                scale = 0.06666 * self.metadata['ophys_frame_rate']
+        events = np.asarray(f['events'])
+        cell_roi_ids = np.asarray(f['roi_names'])
+        lambdas = np.asarray(f['lambdas'])
+        noise_stds = np.asarray(f['noise_stds'])
+        cell_specimen_ids = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in cell_roi_ids]
 
-                self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
-                                             'events': [x for x in events_array],
-                                             'filtered_events': [x for x in rp.filter_events_array(events_array, scale=scale)],
-                                             'timestamps': [x for x in timestamps],
-                                             'dff_traces': [x for x in dff_traces],
-                                             'noise_std': [x for x in noise_std],
-                                             'lambda': [x for x in lambdas],
-                                             'upsampling_factor': [x for x in upsampling_factor],
-                                             'upsampled_event_magnitude': [x for x in upsampled_event_magnitude],
-                                             'upsampled_event_timestamps': [x for x in upsampled_event_timestamps],
-                                             'upsampled_event_indices': [x for x in upsampled_event_indices]},
-                                            index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+        scale = 0.06666 * self.metadata['ophys_frame_rate']
 
+        self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
+                               'events': [x for x in events],
+                               'filtered_events': [x for x in rp.filter_events_array(events, scale=scale)],
+                               'noise_std': [x for x in noise_stds],
+                               'lambda': [x for x in lambdas]},
+                              index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
         return self._events
 
     events = LazyLoadable('_events', _get_events)
@@ -472,12 +410,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        # hack
         metadata['donor_id'] = metadata['LabTracks_ID']
-        # if 'donor_id' not in metadata.keys():
-        #     metadata['donor_id'] = metadata.pop('LabTracks_ID')
-        #     metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
-        #         self.ophys_experiment_id, get_visual_behavior_cache())
         self._metadata = metadata
         return self._metadata
 
