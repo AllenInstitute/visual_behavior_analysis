@@ -1254,3 +1254,38 @@ def plot_classifier_validation_for_container(ophys_container_id, save_figure=Tru
 
     for ophys_experiment_id in ophys_experiment_ids:
         ep.plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=save_figure)
+
+def motion_correction_artifacts(experiment_id: int) -> pd.DataFrame:
+    result = lims_query(
+    f"""
+    SELECT wkft.name, wkf.storage_directory || wkf.filename as path
+    FROM well_known_files AS wkf
+    JOIN well_known_file_types AS wkft on wkft.id=wkf.well_known_file_type_id
+    JOIN ophys_experiments AS oe on wkf.attachable_id=oe.id
+    WHERE wkft.name IN (
+        'OphysMotionPreview',
+        'OphysMotionXyOffsetData',
+        'MotionCorrectedImageStack',
+        'OphysRegistrationSummaryImage')
+    AND oe.id={experiment_id}""")
+    for i in range(result.shape[0]):
+        result.loc[i, 'path'] = system_friendly_filename(
+                result.loc[i, 'path'])
+    return result
+
+def plot_OphysRegistrationSummaryImage(container_id, save_figure=True):
+    experiments_table = data_loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    oeids = ophys_experiments.index.values
+
+    fig,ax = plt.subplots(len(oeids), 1, figsize=(15, 10*len(oeids)))
+    for ii,oeid in enumerate(np.sort(oeids)):
+        image_path = motion_correction_artifacts(oeid).set_index('name').loc['OphysRegistrationSummaryImage']['path']
+        image = imageio.imread(image_path)
+        ax[ii].imshow(image)
+        ax[ii].axis('off')
+        ax[ii].set_title('ophys_experiment_id = {}'.format(oeid))
+    fig.tight_layout()
+    if save_figure:
+        save_loc = os.path.join(data_loading.get_container_plots_dir(), 'OphysRegistrationSummaryImage')
+        fig.savefig(os.path.join(save_loc, 'container_{}'.format(container_id)))

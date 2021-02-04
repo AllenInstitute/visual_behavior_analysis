@@ -39,6 +39,7 @@ def main():
         "event_detection": cp.plot_event_detection_for_container,
         "single_cell_response_plots": cp.plot_single_cell_response_plots_for_container,
         "traces_and_behavior": cp.plot_dff_trace_and_behavior_for_container,
+        "OphysRegistrationSummaryImage": cp.plot_OphysRegistrationSummaryImage,
         # "classifier_validation": cp.plot_classifier_validation_for_container,
     }
 
