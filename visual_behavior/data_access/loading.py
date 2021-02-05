@@ -23,12 +23,8 @@ import warnings
 
 try:
     lims_dbname = os.environ["LIMS_DBNAME"]
-    # lims_dbname = os.environ["LIMS2_WAYNEW"]
-    # lims_dbname = os.environ["lims2_waynew"]
     lims_user = os.environ["LIMS_USER"]
     lims_host = os.environ["LIMS_HOST"]
-    # lims_host = os.environ["AIBSDC-DEV-DB1"]
-    # lims_host = os.environ["aibsdc-dev-db1"]
     lims_password = os.environ["LIMS_PASSWORD"]
     lims_port = os.environ["LIMS_PORT"]
 
@@ -85,6 +81,10 @@ def get_session_plots_dir():
 
 def get_experiment_plots_dir():
     return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+
+
+def get_single_cell_plots_dir():
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
 def get_analysis_cache_dir():

@@ -881,7 +881,7 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
     :return:
     """
     dataset = loading.get_ophys_dataset(container_df.ophys_experiment_id.unique()[0])
-    title = dataset.analysis_folder
+    title = dataset.metadata_string
     frame_rate = dataset.metadata['ophys_frame_rate']
     if omitted:
         figsize = (12, 5)
@@ -1043,6 +1043,7 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
 
 def plot_pupil_area(ophys_container_id, save_figure=True):
     table = loading.get_filtered_ophys_experiment_table()
+    table = table.reset_index()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     fig = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
@@ -1071,6 +1072,7 @@ def plot_pupil_area(ophys_container_id, save_figure=True):
 
 def plot_pupil_position(ophys_container_id, save_figure=True):
     table = loading.get_filtered_ophys_experiment_table()
+    table = table.reset_index()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     fig = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
@@ -1121,6 +1123,7 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
     plots a handful of behavior session metrics for every experiment in the container
     '''
     table = loading.get_filtered_ophys_experiment_table()
+    table = table.reset_index()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     vals_to_plot = {

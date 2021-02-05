@@ -146,7 +146,7 @@ def plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figur
 
     try:
         pupil_area = dataset.eye_tracking.pupil_area.values
-        pupil_timestamps = dataset.eye_tracking.time.values
+        pupil_timestamps = dataset.eye_tracking.timestamps.values
         ax[3].plot(pupil_timestamps, pupil_area, label='pupil_area', color=colors[9])
     except Exception:
         print('no pupil for', dataset.ophys_experiment_id)
