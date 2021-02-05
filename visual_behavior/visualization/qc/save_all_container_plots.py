@@ -40,6 +40,9 @@ def main():
         "single_cell_response_plots": cp.plot_single_cell_response_plots_for_container,
         "traces_and_behavior": cp.plot_dff_trace_and_behavior_for_container,
         "OphysRegistrationSummaryImage": cp.plot_OphysRegistrationSummaryImage,
+        "nway_match_fraction":cp.plot_nway_match_fraction,
+        "nway_warp_overlay": cp.plot_nway_warp_overlay,
+        "nway_warp_summary": cp.plot_nway_warp_summary,
         # "classifier_validation": cp.plot_classifier_validation_for_container,
     }
 

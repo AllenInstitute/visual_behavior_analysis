@@ -12,6 +12,7 @@ from pathlib import PureWindowsPath
 import platform
 
 from visual_behavior.data_access import loading as loading
+from visual_behavior.data_access import utilities as utilities
 from visual_behavior.data_access import processing as processing
 from visual_behavior.visualization import utils as ut
 from visual_behavior.visualization.qc import session_plots as sp
@@ -1308,3 +1309,60 @@ def plot_OphysRegistrationSummaryImage(ophys_container_id, save_figure=True):
     if save_figure:
         save_loc = os.path.join(loading.get_container_plots_dir(), 'OphysRegistrationSummaryImage')
         fig.savefig(os.path.join(save_loc, 'container_{}'.format(ophys_container_id)))
+
+
+def plot_nway_match_fraction(ophys_container_id, save_figure=True):
+    experiments_table = loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiment_id = ophys_experiments.index.values[0]
+    cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_experiment_id)
+    file_to_plot = [file for file in os.listdir(cell_matching_output_dir) if 'nway_match_fraction' in file]
+
+    figsize = (20, 20)
+    fig, ax = plt.subplots(figsize=figsize)
+    image_path = os.path.join(cell_matching_output_dir, file_to_plot[0])
+    image = imageio.imread(image_path)
+    ax.imshow(image)
+    ax.axis('off')
+
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_match_fraction', 'container_'+str(ophys_container_id))
+
+
+def plot_nway_warp_overlay(ophys_container_id, save_figure=True):
+    experiments_table = loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiment_id = ophys_experiments.index.values[0]
+    cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_experiment_id)
+    file_to_plot = [file for file in os.listdir(cell_matching_output_dir) if 'nway_warp_overlay_plot' in file]
+
+    figsize = (20, 20)
+    fig, ax = plt.subplots(figsize=figsize)
+    image_path = os.path.join(cell_matching_output_dir, file_to_plot[0])
+    image = imageio.imread(image_path)
+    ax.imshow(image)
+    ax.axis('off')
+
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_overlay', 'container_'+str(ophys_container_id))
+
+
+def plot_nway_warp_summary(ophys_container_id, save_figure=True):
+    experiments_table = loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
+    ophys_experiment_id = ophys_experiments.index.values[0]
+    cell_matching_output_dir = utilities.get_cell_matching_output_dir_for_container(ophys_experiment_id)
+    file_to_plot = [file for file in os.listdir(cell_matching_output_dir) if 'nway_warp_summary_plot' in file]
+
+    figsize = (25, 15)
+    fig, ax = plt.subplots(figsize=figsize)
+    image_path = os.path.join(cell_matching_output_dir, file_to_plot[0])
+    image = imageio.imread(image_path)
+    ax.imshow(image)
+    ax.axis('off')
+
+    fig.tight_layout()
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_summary', 'container_'+str(ophys_container_id))
