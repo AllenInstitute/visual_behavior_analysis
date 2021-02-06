@@ -212,8 +212,9 @@ def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
         axes.append(vbp.placeAxesOnGrid(fig, dim=(3, 10), xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
         axes[-1] = ep.make_eye_matrix_plot(ophys_experiment_id, axes[-1])
 
-    savepath = os.path.join(loading.get_container_plots_dir(), 'eyetracking_sample_frames', 'container_{}.png'.format(ophys_container_id))
-    fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
+    if save_figure:
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'eyetracking_sample_frames',
+                       'container_' + str(ophys_container_id))
 
     return fig, axes
 
@@ -1062,11 +1063,8 @@ def plot_pupil_area(ophys_container_id, save_figure=True):
 
     if save_figure:
         print('saving')
-        save_folder = os.path.join(loading.get_container_plots_dir(), 'pupil_area_vs_time')
-        if os.path.exists(save_folder) == False:
-            os.mkdir(save_folder)
-        savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
-        fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
+        if save_figure:
+            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pupil_area_vs_time', 'container_' + str(ophys_container_id))
 
     return fig, axes
 
@@ -1090,13 +1088,8 @@ def plot_pupil_position(ophys_container_id, save_figure=True):
         axes[-1] = ep.make_pupil_position_plot(ophys_experiment_id, axes[-1], label_x=label_x)
 
     if save_figure:
-        print('saving')
-        save_folder = os.path.join(loading.get_container_plots_dir(), 'pupil_position_vs_time')
-        if os.path.exists(save_folder) == False:
-            os.mkdir(save_folder)
-        savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
-        fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
-
+        if save_figure:
+            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pupil_position_vs_time', 'container_' + str(ophys_container_id))
     return fig, axes
 
 
@@ -1200,12 +1193,9 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
             ax[col].axhspan(row - 0.5, row + 0.5, color=color, alpha=0.5)
 
     if save_figure:
-        print('saving')
-        save_folder = os.path.join(loading.get_container_plots_dir(), 'behavior_metric_summary')
-        if os.path.exists(save_folder) == False:
-            os.mkdir(save_folder)
-        savepath = os.path.join(save_folder, 'container_{}.png'.format(ophys_container_id))
-        fig.savefig(savepath, dpi=300, pad_inches=0.0, bbox_inches='tight')
+        if save_figure:
+            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'behavior_metric_summary',
+                           'container_' + str(ophys_container_id))
 
 
 def plot_event_detection_for_container(ophys_container_id, save_figure=True):
@@ -1311,8 +1301,9 @@ def plot_OphysRegistrationSummaryImage(ophys_container_id, save_figure=True):
         pass
     fig.tight_layout()
     if save_figure:
-        save_loc = os.path.join(loading.get_container_plots_dir(), 'OphysRegistrationSummaryImage')
-        fig.savefig(os.path.join(save_loc, 'container_{}'.format(ophys_container_id)))
+        if save_figure:
+            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'OphysRegistrationSummaryImage',
+                           'container_' + str(ophys_container_id))
 
 
 def plot_nway_match_fraction(ophys_container_id, save_figure=True):

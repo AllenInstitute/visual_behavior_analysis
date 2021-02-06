@@ -447,7 +447,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def eye_tracking(self):
         eye_tracking = super().eye_tracking.copy()
-        eye_tracking = eye_tracking.rename(columns={'time': 'timestamps'})
+        if 'timestamps' not in eye_tracking.columns:
+            eye_tracking = eye_tracking.rename(columns={'time': 'timestamps'})
         self._eye_tracking = eye_tracking
         return self._eye_tracking
 
