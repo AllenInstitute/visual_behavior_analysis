@@ -200,6 +200,7 @@ def plot_movie_average_images_for_container(ophys_container_id, save_figure=True
 
 def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
     table = loading.get_filtered_ophys_experiment_table()
+    table = table.reset_index()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
     fig = plt.figure(figsize=(16, 5 * len(ophys_experiment_ids)))
