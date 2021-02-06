@@ -313,7 +313,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         cell_specimen_table = super().cell_specimen_table.copy()
         if self._include_invalid_rois == False:
             cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
-        cell_specimen_table['roi_mask'] = cell_specimen_table.image_mask.values
+        # cell_specimen_table['roi_mask'] = cell_specimen_table.image_mask.values
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
 
@@ -330,7 +330,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def roi_masks(self):
         cell_specimen_table = super().cell_specimen_table
-        cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
+        # cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._roi_masks = get_sdk_roi_masks(cell_specimen_table)
         return self._roi_masks
 

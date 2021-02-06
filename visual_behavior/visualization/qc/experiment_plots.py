@@ -438,7 +438,7 @@ def plot_classifier_validation_for_experiment(ophys_experiment_id, save_figure=T
     cell_table['experiment_id'] = expt
     # move suite2P masks to the proper place
     dataset = loading.get_ophys_dataset(expt, include_invalid_rois=True)
-    cell_table = place_masks_in_full_image(cell_table, dataset.max_projection.data)
+    # cell_table = place_masks_in_full_image(cell_table, dataset.max_projection.data)
     # merge with classifier results
     cell_table = cell_table.merge(data, on=['experiment_id', 'id'])
     cell_table['roi_id'] = cell_table['id']
