@@ -303,12 +303,12 @@ def plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True):
         figsize = (15, 10)
         fig, ax = plt.subplots(n_rows, 1, figsize=figsize)
         ax = ax.ravel()
-        x = 5
+        x = 0
         for i in range(n_rows):
             ax[i].plot(ophys_timestamps, dff_traces.loc[cell_specimen_id].dff, color=colors[0], label='dff_trace')
             ax[i].plot(ophys_timestamps, events.loc[cell_specimen_id].events, color=colors[3], label='events')
-            ax[i].set_xlim(60 * 10, (60 * 10) + x)
-            x = x * 5
+            ax[i].set_xlim((60 * 10) + (x * 60), (60 * 10) + 90 + (x * 60))
+            x = x+5
         ax[0].set_title('oeid: ' + str(ophys_experiment_id) + ', csid: ' + str(cell_specimen_id))
         ax[i].legend(loc='upper left')
         ax[i].set_xlabel('time (seconds)')
