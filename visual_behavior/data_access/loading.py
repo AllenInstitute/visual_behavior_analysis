@@ -411,6 +411,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def metadata(self):
         metadata = super().metadata
         metadata['donor_id'] = metadata['LabTracks_ID']
+        metadata['behavior_session_id'] = get_behavior_session_id_for_ophys_experiment_id(self.ophys_experiment_id)
         self._metadata = metadata
         return self._metadata
 
@@ -465,6 +466,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, self.eye_tracking)
         except BaseException:  # set to NaN
             stimulus_presentations['mean_pupil_area'] = np.nan
+        self._stimulus_presentations = stimulus_presentations
+        return self._stimulus_presentations
+
+    @property
+    def extended_stimulus_presentations(self):
+        stimulus_presentations = self.stimulus_presentations.copy()
+        if 'orientation' in stimulus_presentations.columns:
+            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
+                                                                          'phase', 'spatial_frequency'])
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
         stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
@@ -477,17 +487,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
                                                                                            win_type='triang').mean()
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
-        stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
-        self._stimulus_presentations = stimulus_presentations
-        return self._stimulus_presentations
-
-    @property
-    def extended_stimulus_presentations(self):
-        stimulus_presentations = self.stimulus_presentations.copy()
-        if 'orientation' in stimulus_presentations.columns:
-            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
-                                                                          'phase', 'spatial_frequency'])
-
         stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
@@ -646,6 +645,10 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
 
+def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
+    experiments = get_filtered_ophys_experiment_table()
+    behavior_session_id = experiments.loc[ophys_experiment_id].behavior_session_id
+    return behavior_session_id
 
 def get_pc_masks_for_session(ophys_session_id):
     facemap_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/facemap_results'
