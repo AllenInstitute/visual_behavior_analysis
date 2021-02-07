@@ -823,7 +823,7 @@ def plot_motion_correction_xy_shift_for_container(ophys_container_id, save_figur
                        'container_' + str(ophys_container_id))
 
 
-def plot_flashes_on_trace(ax, timestamps, ophys_frame_rate, trial_type=None, omitted=False, alpha=0.15, facecolor='gray'):
+def plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=False, alpha=0.15, facecolor='gray'):
     """
     plot stimulus flash durations on the given axis according to the provided timestamps
     """
@@ -1041,6 +1041,32 @@ def plot_lick_rasters_for_container(ophys_container_id, save_figure=True):
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'lick_rasters',
                        'container_' + str(ophys_container_id))
+
+
+def plot_pupil_area_sdk(ophys_container_id, save_figure=True):
+    table = loading.get_filtered_ophys_experiment_table()
+    table = table.reset_index()
+    ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
+
+    fig = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
+    axes = []
+    nplots = len(ophys_experiment_ids)
+    buffer = 0.075
+    for ii, ophys_experiment_id in enumerate(ophys_experiment_ids):
+        print('on ophys_experiment_id {}, #{} of {}'.format(ophys_experiment_id, ii + 1, nplots))
+        axes.append(vbp.placeAxesOnGrid(fig, xspan=(0, 1), yspan=(ii / nplots + buffer, (ii + 1) / nplots)))
+        if ii + 1 == len(ophys_experiment_ids):
+            label_x = True
+        else:
+            label_x = False
+        axes[-1] = ep.make_pupil_area_plot_sdk(ophys_experiment_id, axes[-1], label_x=label_x)
+
+    if save_figure:
+        print('saving')
+        if save_figure:
+            ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'pupil_area_vs_time_sdk', 'container_' + str(ophys_container_id))
+
+    return fig, axes
 
 
 def plot_pupil_area(ophys_container_id, save_figure=True):

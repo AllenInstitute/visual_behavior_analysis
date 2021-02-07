@@ -14,8 +14,8 @@ parser.add_argument("--plots", type=str, default=None, metavar='plot name to gen
 job_dir = r"/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/cluster_jobs/vba_qc_plots"
 
 job_settings = {'queue': 'braintv',
-                'mem': '30g',
-                'walltime': '2:00:00',
+                'mem': '60g',
+                'walltime': '3:00:00',
                 'ppn': 1,
                 }
 

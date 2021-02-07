@@ -191,14 +191,17 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
 
 
 def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None):
-    df = loading.load_rigid_motion_transform_csv(ophys_experiment_id)
+    # df = loading.load_rigid_motion_transform_csv(ophys_experiment_id)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    df = dataset.motion_correction.copy()
+    timestamps = dataset.ophys_timestamps
     if ax is None:
         fig, ax = plt.subplots(figsize=(20, 4))
-    ax.plot(df.framenumber.values, df.x.values, color='red', label='x_shift')
-    ax.plot(df.framenumber.values, df.y.values, color='blue', label='y_shift')
-    ax.set_xlim(df.framenumber.values[0], df.framenumber.values[-1])
-    ax.legend(fontsize='small', loc='upper right')
-    ax.set_xlabel('2P frames')
+    ax.plot(timestamps, df.x.values, color=sns.color_palette()[3], label='x_shift')
+    ax.plot(timestamps, df.y.values, color=sns.color_palette()[2], label='y_shift')
+    ax.set_xlim(timestamps[0], timestamps[-1])
+    ax.legend(fontsize='x-small', loc='upper right')
+    ax.set_xlabel('time (sec)')
     ax.set_ylabel('pixels')
     return ax
 
@@ -253,6 +256,28 @@ def make_pupil_area_plot(ophys_experiment_id, ax, label_x=True):
         ax.set_title(error_text, ha='left')
     return ax
 
+
+def make_pupil_area_plot_sdk(ophys_experiment_id, ax, label_x=True):
+    '''plot pupil area vs time'''
+    try:
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
+
+        time = dataset.eye_tracking.timestamps.values
+        area = dataset.eye_tracking.pupil_area.values
+        ax.plot(time, area)
+        if label_x:
+            ax.set_xlabel('time (seconds)')
+        ax.set_ylabel('pupil diameter\n(pixels$^2$)')
+        ax.set_xlim(min(time), max(time))
+
+        ax.set_title('ophys_experiment_id = {}, pupil area vs. time'.format(ophys_experiment_id), ha='center')
+
+    except Exception as e:
+        ax.axis('off')
+
+        error_text = 'could not generate pupil area plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
+        ax.set_title(error_text, ha='left')
+    return ax
 
 def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
     '''plot pupil position vs time'''
