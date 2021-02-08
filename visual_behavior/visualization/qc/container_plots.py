@@ -827,8 +827,8 @@ def plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=False, alpha=
     """
     plot stimulus flash durations on the given axis according to the provided timestamps
     """
-    stim_duration = 0.25
-    blank_duration = 0.5
+    stim_duration = 0.2502
+    blank_duration = 0.5004
     change_time = 0
     start_time = timestamps[0]
     end_time = timestamps[-1]
