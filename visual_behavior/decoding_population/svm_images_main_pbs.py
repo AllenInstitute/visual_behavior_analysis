@@ -26,7 +26,7 @@ from svm_funs import *
 #%%
 def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', svm_blocks= np.nan, use_events=False, same_num_neuron_all_planes=0):
     
-    def svm_run_save(traces_fut, image_labels, iblock_trials_blocks, now): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
+    def svm_run_save(traces_fut, image_labels, iblock_trials_blocks, svm_blocks, now): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
         '''
         traces_fut = traces_fut_0
         image_labels = image_labels_0
@@ -332,7 +332,11 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
             ending = 'sameNumNeuronsAllPlanes_'
 
         if ~np.isnan(iblock): # svm ran on the trial blocks
-            ending = f'{ending}block{iblock}_'
+            if svm_blocks==-1: # divide trials into blocks based on the engagement state
+                word = 'engaged'
+            else:
+                word = 'block'
+            ending = f'{ending}{word}{iblock}_'
             
         name = f'{cre_now}_m-{mouse}_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}{now}'
                     
@@ -591,7 +595,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
             # get data for a single experiment
             image_data_this_exp = image_data[image_data['ophys_experiment_id']==lims_id]
     #         image_data_this_exp.shape # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc
-
+        
             '''
             area = image_data_this_exp.iloc[0]['targeted_structure']
             depth = int(image_data_this_exp.iloc[0]['imaging_depth'])
@@ -703,10 +707,37 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
                 
                 #### run svm analysis on the whole session
                 if np.isnan(svm_blocks):
-                    svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], now) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                    svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
                     
-                #### do the block-by-block analysis: train SVM on blocks of trials
+                    
+                #### divide trials based on engagement
+                elif svm_blocks==-1:
+                    engaged = image_trials['engagement_state'].values
+                    engaged[engaged=='engaged'] = 1
+                    engaged[engaged=='disengaged'] = 0
+#                     import matplotlib.pyplot as plt
+#                     plt.plot(engaged)
+                    
+                    ### set trial_blocks: block0 is engaged0, block1 is engaged1
+                    trials_blocks = []
+                    for iblock in np.unique(engaged): 
+                        trials_blocks.append(np.argwhere(engaged==iblock).flatten())
+#                     print(trials_blocks)    
+                    
+                    ############## Loop through each trial block to run the SVM analysis ##############
+                    
+                    for iblock in range(len(a)-1): # iblock=0        
+                            
+                        traces_fut = traces_fut_0[:,:,trials_blocks[iblock]]
+                        image_labels = image_labels_0[trials_blocks[iblock]]
+                        print(traces_fut.shape , image_labels.shape)
+                        
+                        svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], svm_blocks, now) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                        
+        
+        
+                #### do the block-by-block analysis: train SVM on blocks of trials; block 0: 1st half of the session; block 1: 2nd half of the session.
                 else:
                     # divide the trials into a given number of blocks and take care of the last trial in the last block
                     a = np.arange(0, n_trials, int(n_trials/svm_blocks))
@@ -732,7 +763,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
                         image_labels = image_labels_0[trials_blocks[iblock]]
                         print(traces_fut.shape , image_labels.shape)
                         
-                        svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], now) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                        svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], svm_blocks, now) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
                 
                 
@@ -802,7 +833,7 @@ print('\n\n======== Analyzing session index %d ========\n' %(isess))
 #%% Set SVM vars # NOTE: Pay special attention to the following vars before running the SVM:
 
 use_events = False # True # whether to run the analysis on detected events (inferred spikes) or dff traces.
-svm_blocks = np.nan # 2 #np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = -1 #np.nan # 2 #np.nan # -1: divide trials based on engagement # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 time_win = [-.5, .75] # [-.3, 0] # timewindow (relative to trial onset) to run svm; this will be used to set frames_svm # analyze image-evoked responses
 # time_trace goes from -.5 to .65sec in the image-aligned traces.
 
@@ -972,7 +1003,9 @@ experiment_ids_this_session = data_list['experiment_id'].values
 #%% Set stimulus_response_df_allexp, which includes stimulus_response_df (plus some metadata columns) for all experiments of a session
 
 from set_trialsdf_existing_in_stimdf import *
-c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name', 'change'] # columns of stim_response_df to keep
+
+# set columns of stim_response_df to keep
+c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name', 'change', 'engagement_state'] 
 
 stimulus_response_df_allexp = pd.DataFrame()
 

@@ -104,6 +104,11 @@ using XTrain, and returns percent class loss for XTrain and XTest.
 # summary,_ =  crossValidateModel(X[ifr,:,:].transpose(), Y, linearSVM, kfold = kfold, l1 = cvect[i], shflTrs = shuffleTrs)
 def crossValidateModel(X, Y, modelFn, **options):
     
+#     modelFn = linearSVM
+#     shflTrs = shuffleTrs    
+#     l2 = cvect[i]
+#     l1 = cvect[i]
+    
     # X: trials x neurons
 #     X = X.T
     
@@ -197,7 +202,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     mnHRLR_acrossDays=np.nan
     '''
 
-    # numSamples = 10; # number of iterations for finding the best c (inverse of regularization parameter)
+    # numSamples = 10; # number of iterations for finding the results = modelFn(XTrain, YTrain, XTest, YTest, **options)best c (inverse of regularization parameter)
     # if you don't want to regularize, go with a very high cbest and don't run the section below.
     # cbest = 10**6    
     # regType = 'l1'

@@ -55,7 +55,7 @@ for istage in np.unique(stages_all): # istage=1
 
 if ~np.isnan(svm_blocks):
 
-    for istage in np.unique(stages_all): # istage=1
+    for istage in np.unique(stages_all): # istage=4
         a = svm_allMice_sessPooled0[stages_allp==istage]
         if len(a) != svm_blocks:
             sys.exit('data from both blocks dont exist for this stage!')
@@ -67,16 +67,46 @@ if ~np.isnan(svm_blocks):
                 mice_blocks.append(b)
 
             mice_blocks = np.array(mice_blocks)
-            if ~np.equal(mice_blocks[0], mice_blocks[1]).all():
-                sys.exit('Some mice are missing from some blocks!')
-
-            if len(mice_blocks[0]) != len(mice_blocks[1]): # np.sort(mice_blocks[0]) == np.sort(mice_blocks[1])
-                print(f'stage {istage}: data from both blocks dont exist for some mice!')
-
-
             
+            d0 = np.setdiff1d(mice_blocks[0], mice_blocks[1]) # mouse exists in block0 but not block1
+            d1 = np.setdiff1d(mice_blocks[1], mice_blocks[0]) # mouse exists in block1 but not block0
             
-            
+            if len(d0)>0: # ~np.equal(mice_blocks[0], mice_blocks[1]).all()
+                print(f'Stage {istage}, mouse {d0} is missing from block 1!')                
+                print('\tsetting this mouse values in block0 to nan')
+                this_stage_this_block = a.iloc[0] # block 0
+                this_mouse_ind = this_stage_this_block['mouse_id_allPlanes'][0,:]==d0 # mouse_id for each session (of plane 0)
+
+#                 aa = this_stage_this_block['av_test_data_allPlanes'] # num_planes x num_sessions x num_frames
+#                 aa[:, this_mouse_ind,:] = np.nan
+#                 aa = this_stage_this_block['av_test_shfl_allPlanes'] # num_planes x num_sessions x num_frames
+#                 aa[:, this_mouse_ind,:] = np.nan
+                
+                svm_allMice_sessPooled0[stages_allp==istage].iloc[0]['av_test_data_allPlanes'][:, this_mouse_ind,:] = np.nan
+                svm_allMice_sessPooled0[stages_allp==istage].iloc[0]['av_test_shfl_allPlanes'][:, this_mouse_ind,:] = np.nan
+                
+                # remember you also need to do the same thing for svm_allMice_sessAvSd0, but we are not using it below so i'll pass for now!
+                
+            if len(d1)>0:
+                print(f'Stage {istage}, mouse {d1} is missing from block 0!')
+                print('\tsetting this mouse values in block1 to nan')
+                this_stage_this_block = a.iloc[1] # block 1
+                this_mouse_ind = this_stage_this_block['mouse_id_allPlanes'][0,:]==d0 # mouse_id for each session (of plane 0)
+
+#                 aa = this_stage_this_block['av_test_data_allPlanes'] # num_planes x num_sessions x num_frames
+#                 aa[:, this_mouse_ind,:] = np.nan
+#                 aa = this_stage_this_block['av_test_shfl_allPlanes'] # num_planes x num_sessions x num_frames
+#                 aa[:, this_mouse_ind,:] = np.nan
+
+                svm_allMice_sessPooled0[stages_allp==istage].iloc[1]['av_test_data_allPlanes'][:, this_mouse_ind,:] = np.nan
+                svm_allMice_sessPooled0[stages_allp==istage].iloc[1]['av_test_shfl_allPlanes'][:, this_mouse_ind,:] = np.nan
+                
+            if svm_blocks>2:
+                sys.exit('above needs work; setdiff1d works on 2 arrays; perhaps loop through arrays!')
+
+
+                
+
 #%% SUMMARY ACROSS MICE 
 ##########################################################################################
 ##########################################################################################
@@ -474,14 +504,15 @@ for istage in np.unique(stages_all): # istage=1
             plt.suptitle('%s, %d mice, %d total sessions: %s' %(cre, thisCre_mice_num, thisCre_pooledSessNum, session_labs_all), fontsize=14)
 
 
-            #%% add to plots flash lines, ticks and legend
-
+            #%% Add title, lines, ticks and legend to all plots
+            
             plt.subplot(gs1[0])
+            a = areas[[inds_v1[0], inds_lm[0]], 0]
     #         lims = lims_v1lm
             lims = [np.min(np.min(lims_v1lm, axis=1)), np.max(np.max(lims_v1lm, axis=1))]
             plot_flashLines_ticks_legend(lims, h1v1, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, bbox_to_anchor=bb, ylab=ylabel)
             plt.xlim(xlim);
-            plt.title(np.unique(area)[0], fontsize=13, y=1);
+            plt.title(a[0], fontsize=13, y=1); # np.unique(area)
             # mark time_win: the window over which the response quantification (peak or mean) was computed 
             lims = plt.gca().get_ylim();
             plt.hlines(lims[1], time_win[0], time_win[1], color='gray')
@@ -493,7 +524,7 @@ for istage in np.unique(stages_all): # istage=1
             plot_flashLines_ticks_legend(lims, h1lm, flashes_win_trace_index_unq_time, grays_win_trace_index_unq_time, time_trace, xmjn=xmjn, ylab=ylabel)
         #    plt.ylabel('')
             plt.xlim(xlim);
-            plt.title(np.unique(area)[0], fontsize=13, y=1)
+            plt.title(a[1], fontsize=13, y=1)
             # mark time_win: the window over which the response quantification (peak or mean) was computed 
             lims = plt.gca().get_ylim();
             plt.hlines(lims[1], time_win[0], time_win[1], color='gray')

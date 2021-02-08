@@ -5,9 +5,7 @@ NOTE: This code is the new version that replaced "svm_images_plots_setVars.py". 
 It will create plots for each stage (ophy1, 2, etc). If you want average plots across stages, you need to modify line 60 of code "svm_images_plots_setVars_sumMice_blocks.py" so we dont get only a given stage out of svm_this_plane_allsess0
 
 
-The 1st script to run to make plots (assuming the analysis is done and files are saved.)
-
-Before this script, "svm_images_init" must be run to save all_sess dataframe.
+The 1st script to run to make plots. Before this script, "svm_images_init" must be run to save all_sess dataframe.
 
 This script loads all_sess that is set by function svm_main_post (called in svm_images_init).
 It sets all_sess_2an, which is a subset of all_sess that only includes desired sessions for analysis (A, or B, etc).
@@ -52,7 +50,7 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 #%%
 
-svm_blocks = np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = 2 # np.nan # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = False #True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 use_same_experiments_dff_events = False #True # use the same set of experiments for both events and dff analysis (Note: for this to work you need to get both ea_evs and ev_dff; for this run the code until line ~300 twice once setting use_events to True and once to False.)
@@ -135,7 +133,7 @@ if ~np.isnan(svm_blocks):
 #%%
 #%% Set svm vars for each plane across all sessions (for each mouse)
 
-columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
+columns0 = ['mouse_id', 'cre', 'mouse_id_exp', 'cre_exp', 'block', 'session_ids', 'session_stages', 'session_labs', 'num_sessions_valid', 'area_this_plane_allsess_allp', 'depth_this_plane_allsess_allp', \
             'area', 'depth', 'plane', \
             'n_neurons_this_plane_allsess_allp', 'n_trials_this_plane_allsess_allp', \
             'av_meanX_avSess_eachP', 'sd_meanX_avSess_eachP', \
@@ -169,19 +167,20 @@ else:
 
 for iblock in br: # iblock=0 ; iblock=np.nan
     
-    svm_allMice_sessPooled_block_name = f'svm_allMice_sessPooled_block{iblock}'
-    svm_allMice_sessAvSd_block_name = f'svm_allMice_sessAvSd_block{iblock}'
+#     svm_allMice_sessPooled_block_name = f'svm_allMice_sessPooled_block{iblock}'
+#     svm_allMice_sessAvSd_block_name = f'svm_allMice_sessAvSd_block{iblock}'
 
 #     allSessName_block_name = f'allSessName_block{iblock}' # not sure if we need this anymore
     
     ##############################################################################
     ##############################################################################    
     #%% Read all_see h5 file made in svm_main_post (by calling svm_init)    
-    # all cre lines, a given frames_svm; latest files saved
+    # all cre lines, a given block; (a given frames_svm; latest files saved)
     ##############################################################################
     ##############################################################################
 
 #     a = f'(.*)_frames{frames_svm[0]}to{frames_svm[-1]}'    # {cre2ana}
+
     allSessName = []
     for cre2ana in cre2ana_all: # cre2ana = cre2ana_all[0]
         
@@ -434,7 +433,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     ############################################################################################################################################################
     #%%
     for session_numbers in [[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage corresponding to project_codes that we will make plots for.
-#         session_numbers = [1]
+#         session_numbers = [4]
 
         #%% If analyzing novel sessions, only take sessions that include the 1st presentation of the novel session (ie the ones without a retake of session ophys-3)
         if np.in1d(4, session_numbers): # novel sessions
@@ -751,6 +750,9 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 
         # loop over mice based on the order in all_mice_id
         # Note: if you want to use all sessions (not just those in all_sess_2n), replace all_sess_2n with all_sess below, also uncomment the currerntly commented out defintion of session_stages
+        
+        ### in svm_this_plane_allsess, each row is for one stage, includes data from all sessions that belong to that stage, also from all planes; in the following format: 1st session of that given stage: all planes; then 2nd session of that given stage: all planes; and so on. 
+        
         for im in range(len(all_mice_id)): # im=0
 
             cntall = cntall+1
@@ -774,6 +776,8 @@ for iblock in br: # iblock=0 ; iblock=np.nan
                 cre = all_sess_2an[all_sess_2an['mouse_id']==mouse_id]['cre'].iloc[0]
                 cre = cre[:cre.find('-')] # remove the IRES-Cre part
 
+                session_ids_now = all_sess_2an_this_mouse['session_id'].values
+                
                 session_stages = all_sess_2an_this_mouse['stage'].values[np.arange(0, all_sess_2an_this_mouse.shape[0], num_planes)]
         #         session_stages = mouse_trainHist_all[mouse_trainHist_all['mouse_id']==mouse_id]['stage'].values
                 num_sessions = len(session_stages)     # some planes for some sessions could be nan (because they had fewer neurons than 3 (svm_min_neurs)), so below we will get the accurate number of sessions for each plane separately
@@ -1058,7 +1062,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
                 ###############################################################
                 # areas.values, depth.values, plane, 
                 svm_this_plane_allsess.at[cntall, columns0] = \
-                           mouse_id, cre, mouse_id_exp, cre_exp, iblock, session_stages, session_labs, num_sessions_valid, area_this_plane_allsess_allp, depth_this_plane_allsess_allp, \
+                           mouse_id, cre, mouse_id_exp, cre_exp, iblock, session_ids_now, session_stages, session_labs, num_sessions_valid, area_this_plane_allsess_allp, depth_this_plane_allsess_allp, \
                            areas.values, depths.values, planes, \
                            n_neurons_this_plane_allsess_allp, n_trials_this_plane_allsess_allp, \
                            av_meanX_avSess_eachP, sd_meanX_avSess_eachP, \
