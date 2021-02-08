@@ -1048,7 +1048,8 @@ def plot_pupil_area_sdk(ophys_container_id, save_figure=True):
     table = table.reset_index()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
-    fig = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
+    figsize = (16, 4 * len(ophys_experiment_ids))
+    fig = plt.figure(figsize=figsize)
     axes = []
     nplots = len(ophys_experiment_ids)
     buffer = 0.075
@@ -1074,7 +1075,8 @@ def plot_pupil_area(ophys_container_id, save_figure=True):
     table = table.reset_index()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
-    fig = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
+    figsize = (16, 4 * len(ophys_experiment_ids))
+    fig = plt.figure(figsize=figsize)
     axes = []
     nplots = len(ophys_experiment_ids)
     buffer = 0.075
@@ -1100,7 +1102,8 @@ def plot_pupil_position(ophys_container_id, save_figure=True):
     table = table.reset_index()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
-    fig = plt.figure(figsize=(16, 4 * len(ophys_experiment_ids)))
+    figsize = (16, 4 * len(ophys_experiment_ids))
+    fig = plt.figure(figsize=figsize)
     axes = []
     nplots = len(ophys_experiment_ids)
     buffer = 0.075
