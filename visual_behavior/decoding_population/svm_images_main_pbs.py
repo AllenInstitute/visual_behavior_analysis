@@ -711,7 +711,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
                     
                     
                     
-                #### divide trials based on engagement
+                #### divide trials based on the engagement state
                 elif svm_blocks==-1:
                     engaged = image_trials['engagement_state'].values
                     engaged[engaged=='engaged'] = 1
@@ -736,7 +736,7 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
                     
                     ############## Loop through each trial block to run the SVM analysis ##############
                     
-                    for iblock in range(len(a)-1): # iblock=0        
+                    for iblock in np.unique(engaged): # iblock=0
                             
                         traces_fut = traces_fut_0[:,:,trials_blocks[iblock]]
                         image_labels = image_labels_0[trials_blocks[iblock]]
@@ -999,8 +999,9 @@ else:
     
 
     
-    
+############################################################################################    
 ####################### Set vars for the sessions to be analyzed #######################
+############################################################################################
 
 #%% Set the session to be analyzed, and its metada
 
