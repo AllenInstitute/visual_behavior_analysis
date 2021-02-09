@@ -640,7 +640,7 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     return ophys_session_id
 
 def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
-    experiments = get_filtered_ophys_experiment_table()
+    experiments = get_filtered_ophys_experiment_table(include_failed_data=True)
     behavior_session_id = experiments.loc[ophys_experiment_id].behavior_session_id
     return behavior_session_id
 
