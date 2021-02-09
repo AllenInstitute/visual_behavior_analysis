@@ -260,10 +260,12 @@ def make_pupil_area_plot(ophys_experiment_id, ax, label_x=True):
 def make_pupil_area_plot_sdk(ophys_experiment_id, ax, label_x=True):
     '''plot pupil area vs time'''
     try:
-        dataset = loading.get_ophys_dataset(ophys_experiment_id)
+        dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
 
-        time = dataset.eye_tracking.timestamps.values
-        area = dataset.eye_tracking.pupil_area.values
+        et = dataset.eye_tracking.copy()
+        filtered = et[et.likely_blink==False]
+        time = filtered.time.values
+        area = filtered.pupil_area.values
         ax.plot(time, area)
         if label_x:
             ax.set_xlabel('time (seconds)')

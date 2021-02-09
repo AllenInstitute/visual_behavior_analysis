@@ -392,12 +392,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def ophys_timestamps(self):
-        # if super().metadata['rig_name'] == 'MESO.1':
-        #     ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
-        #     self._ophys_timestamps = ophys_timestamps
-        #     # correct metadata frame rate
-        #     self._metadata['ophys_frame_rate'] = 1 / np.diff(ophys_timestamps).mean()
-        # else:
         self._ophys_timestamps = super().ophys_timestamps
         return self._ophys_timestamps
 
