@@ -719,6 +719,15 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
 #                     import matplotlib.pyplot as plt
 #                     plt.plot(engaged)
                     
+                    # make sure there is enough trials in each engagement state
+                    if sum(engaged==1)<10:
+                        sys.exit(f'Aborting the analysis; too few ({sum(engaged==1)}) engaged trials!')
+                        
+                    if sum(engaged==0)<10:
+                        sys.exit(f'Aborting the analysis; too few ({sum(engaged==0)}) disengaged trials!')
+                        
+                        
+            
                     ### set trial_blocks: block0 is engaged0, block1 is engaged1
                     trials_blocks = []
                     for iblock in np.unique(engaged): 
@@ -852,6 +861,8 @@ else:
     print(f'Using DF/F')
 if np.isnan(svm_blocks):
     print(f'Running SVM on the whole session.')
+elif svm_blocks==-1:
+    print(f'Dividing trials based on engagement state.')
 else:    
     print(f'Doing block-by-block analysis.')
     
@@ -1016,7 +1027,11 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
 #         analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True) # False # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True        
         analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events)        
         stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
-        
+
+        # work on this
+#         if svm_blocks==-1 and np.isnan(np.unique(stim_response_df['engagement_state'].values)):
+#             sys.exit(f'Session {session_id} does not have engagement state!')
+            
         ########### 
         if 0: #trial_type == 'changes':
             # if desired, set a subset of stimulus df that only includes image changes with a given trial condition (hit, autorewarded, etc)
