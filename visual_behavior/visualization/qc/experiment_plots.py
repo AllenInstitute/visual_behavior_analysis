@@ -73,7 +73,7 @@ def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=
         mask[:] = np.nan
         mask[segmentation_mask == 1] = 1
         ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
-    except:
+    except BaseException:
         pass
     ax.axis('off')
     return ax
@@ -110,7 +110,7 @@ def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experime
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
-    if len(cell_specimen_table)>0:
+    if len(cell_specimen_table) > 0:
         for cell_roi_id in cell_specimen_table.cell_roi_id.values:
             mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
             ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
@@ -129,13 +129,13 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
         for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == True].cell_roi_id.values:
             mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
             ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
-    except:
+    except BaseException:
         pass
     try:
         for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == False].cell_roi_id.values:
             mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
             ax.contour(mask, levels=0, colors=['blue'], linewidths=[0.6])
-    except:
+    except BaseException:
         pass
     ax.axis('off')
     return ax
@@ -150,7 +150,7 @@ def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
         fig, ax = plt.subplots(figsize=figsize)
     # ax.pcolormesh(dff_traces, cmap='magma', vmin=0, vmax=0.5)
     ax = sns.heatmap(dff_traces, cmap='magma', vmin=0, vmax=0.5, cbar_kws={'label': 'dF/F'}, ax=ax)
-    ax.set_ylim(-0.5, dff_traces.shape[0]+0.5)
+    ax.set_ylim(-0.5, dff_traces.shape[0] + 0.5)
     ax.set_ylabel('cells')
     ax.set_xlabel('2P frames')
     return ax
@@ -271,7 +271,7 @@ def make_pupil_area_plot_sdk(ophys_experiment_id, ax, label_x=True):
         dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
 
         et = dataset.eye_tracking.copy()
-        filtered = et[et.likely_blink==False]
+        filtered = et[et.likely_blink == False]
         time = filtered.time.values
         area = filtered.pupil_area.values
         ax.plot(time, area)
@@ -288,6 +288,7 @@ def make_pupil_area_plot_sdk(ophys_experiment_id, ax, label_x=True):
         error_text = 'could not generate pupil area plot for ophys_experiment_id {}\n{}'.format(ophys_experiment_id, e)
         ax.set_title(error_text, ha='left')
     return ax
+
 
 def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
     '''plot pupil position vs time'''
@@ -441,7 +442,7 @@ def plot_high_low_snr_trace_examples(experiment_id, xlim_seconds=None, plot_stim
 
         frame_range = [int(time * dataset.metadata['ophys_frame_rate']) for time in xlim_seconds]
         ymin = np.min(dff_trace[frame_range[0]:frame_range[1]]) - (
-        np.min(dff_trace[frame_range[0]:frame_range[1]]) * .05)
+            np.min(dff_trace[frame_range[0]:frame_range[1]]) * .05)
         ymax = np.max(dff_trace[frame_range[0]:frame_range[1]]) * 1.2
         ax[i].set_ylim(ymin, ymax)
         #         ax[i].set_title(str(cell_roi_id))
@@ -486,6 +487,7 @@ def plot_motion_correction_and_population_average(experiment_id, ax=None):
 
     return ax
 
+
 def plot_remaining_decrosstalk_masks_for_experiment(experiment_id, ax=None):
     dataset = loading.get_ophys_dataset(experiment_id, include_invalid_rois=True)
     remaining_crosstalk_dict = loading.get_remaining_crosstalk_amount_dict(experiment_id)
@@ -497,7 +499,7 @@ def plot_remaining_decrosstalk_masks_for_experiment(experiment_id, ax=None):
     if cmap_range[1] > 100:
         cmap_range[0] = 100
     ax = plot_metrics_mask(roi_masks, remaining_crosstalk_dict, 'remaining_crosstalk', dataset.max_projection.data, title=None, outlines=False,
-                      cmap='viridis', cmap_range=cmap_range, ax=ax, colorbar=True)
+                           cmap='viridis', cmap_range=cmap_range, ax=ax, colorbar=True)
     return ax
 
 
@@ -526,7 +528,7 @@ def plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True):
             ax[i].plot(ophys_timestamps, dff_traces.loc[cell_specimen_id].dff, color=colors[0], label='dff_trace')
             ax[i].plot(ophys_timestamps, events.loc[cell_specimen_id].events, color=colors[3], label='events')
             ax[i].set_xlim((60 * 10) + (x * 60), (60 * 10) + 90 + (x * 60))
-            x = x+5
+            x = x + 5
         ax[0].set_title('oeid: ' + str(ophys_experiment_id) + ', csid: ' + str(cell_specimen_id))
         ax[i].legend(loc='upper left')
         ax[i].set_xlabel('time (seconds)')
@@ -569,7 +571,7 @@ def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, sa
     try:
         face_motion = dataset.behavior_movie_pc_activations[:, 0]
         face_timestamps = dataset.timestamps['eye_tracking'].timestamps
-    except:
+    except BaseException:
         pass
 
     figsize = (20, 10)
@@ -590,7 +592,7 @@ def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, sa
     try:
         ax[4].plot(face_timestamps, face_motion, label='face_motion_PC0', color=colors[2])
         ax[4].set_ylabel('face motion\n PC0 activation')
-    except:
+    except BaseException:
         pass
 
     for x in range(5):
@@ -985,4 +987,3 @@ def plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois
     #                           title=metric, cmap_range=cmap_range, cmap='hsv', ax=ax, colorbar=False)
     ax.set_title('area > 40\nellipseness > 0.2\ncompactness < 18')
     return ax
-
