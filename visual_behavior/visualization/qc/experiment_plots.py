@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import visual_behavior.visualization.utils as utils
 import visual_behavior.visualization.qc.plotting_utils as pu
 import visual_behavior.visualization.qc.single_cell_plots as scp
+import visual_behavior.visualization.ophys.summary_figures as sf
+
 
 from visual_behavior.data_access import loading as loading
 from visual_behavior.data_access import processing as processing
@@ -412,10 +414,10 @@ def plot_high_low_snr_trace_examples(experiment_id, xlim_seconds=None, plot_stim
     dataset = loading.get_ophys_dataset(experiment_id, include_invalid_rois=False)
     if xlim_seconds is None:
         xlim_seconds = [dataset.ophys_timestamps[0], dataset.ophys_timestamps[-1]]
-        inds = [0, len(dataset.ophys_timestamps) - 1]
-    else:
-        inds = [int(xlim_seconds[0] * dataset.metadata['ophys_frame_rate']),
-                int(xlim_seconds[-1] * dataset.metadata['ophys_frame_rate'])]
+    #     inds = [0, len(dataset.ophys_timestamps) - 1]
+    # else:
+    #     inds = [int(xlim_seconds[0] * dataset.metadata['ophys_frame_rate']),
+    #             int(xlim_seconds[-1] * dataset.metadata['ophys_frame_rate'])]
 
     dff_traces = dataset.dff_traces.copy()
     dff_traces = processing.compute_robust_snr_on_dataframe(dff_traces)
@@ -616,21 +618,15 @@ def plot_population_average_for_experiment(experiment_id, response_df, mean_df, 
     import visual_behavior.visualization.qc.container_plots as cp
 
     if 'trials' in df_name:
-        trials = True
         omitted = False
-        flashes = False
         trial_type = 'go'
         xlabel = 'time relative to change (sec)'
     elif 'omission' in df_name:
-        trials = False
         omitted = True
-        flashes = False
         trial_type = None
         xlabel = 'time relative to omission (sec)'
     elif 'stimulus' in df_name:
-        trials = False
         omitted = False
-        flashes = True
         trial_type = None
         xlabel = 'time (sec)'
 

@@ -471,7 +471,7 @@ def get_sdk_session(behavior_session_id, is_ophys):
     else:
         return BehaviorSession.from_lims(behavior_session_id)
 
-#getting filepaths for well known files from LIMS
+# getting filepaths for well known files from LIMS
 
 
 def get_filepath_from_wkf_info(wkf_info):
@@ -519,20 +519,21 @@ def get_wkf_timeseries_ini_filepath(ophys_session_id):
     filepath = get_filepath_from_wkf_info(wkf_storage_info)
     return filepath
 
+#
+# def pmt_gain_from_timeseries_ini(timeseries_ini_path):
+#     """parses the timeseries ini file (scientifica experiments only)
+#         and extracts the pmt gain setting
+#
+#     Arguments:
+#         timeseries_ini_path {[type]} -- [description]
+#
+#     Returns:
+#         int -- int of the pmt gain
+#     """
+#     config.read(timeseries_ini_path)
+#     pmt_gain = int(float(config['_']['PMT.2']))
+#     return pmt_gain
 
-def pmt_gain_from_timeseries_ini(timeseries_ini_path):
-    """parses the timeseries ini file (scientifica experiments only)
-        and extracts the pmt gain setting
-
-    Arguments:
-        timeseries_ini_path {[type]} -- [description]
-
-    Returns:
-        int -- int of the pmt gain
-    """
-    config.read(timeseries_ini_path)
-    pmt_gain = int(float(config['_']['PMT.2']))
-    return pmt_gain
 
 def get_wkf_dff_h5_filepath(ophys_experiment_id):
     """uses well known file system to query lims
@@ -692,7 +693,7 @@ def get_wkf_events_h5_filepath(ophys_experiment_id):
 
     Returns:
         string -- filepath (directory and filename) for the event.h5 file
-                    for the given ophys_experiment_id
+        for the given ophys_experiment_id
     """ 
     QUERY = '''
         SELECT storage_directory || filename

@@ -1318,7 +1318,8 @@ def plot_OphysRegistrationSummaryImage(ophys_container_id, save_figure=True):
     ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     oeids = ophys_experiments.index.values
 
-    fig, ax = plt.subplots(len(oeids), 1, figsize=(15, 10 * len(oeids)))
+    figsize = (15, 10 * len(oeids))
+    fig, ax = plt.subplots(len(oeids), 1, figsize=figsize)
     for ii, oeid in enumerate(np.sort(oeids)):
         image_path = motion_correction_artifacts(oeid).set_index('name').loc['OphysRegistrationSummaryImage']['path']
         image = imageio.imread(image_path)

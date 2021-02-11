@@ -4,8 +4,6 @@ import visual_behavior.ophys.response_analysis.response_analysis as ra
 import visual_behavior.ophys.response_analysis.utilities as ut
 import visual_behavior.data_access.loading as loading
 import mpl_figure_formatter as ff
-import os
-import pandas as pd
 import matplotlib.pyplot as plt
 
 import seaborn as sns

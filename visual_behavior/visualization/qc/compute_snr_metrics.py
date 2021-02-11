@@ -8,7 +8,6 @@ import os
 import numpy as np
 import pandas as pd
 
-import visual_behavior.data_access.utilities as utilities
 import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.processing as processing
 
@@ -57,11 +56,6 @@ import visual_behavior.data_access.processing as processing
 #
 # traces = processing.compute_robust_snr_on_dataframe(traces)
 #
-
-
-def compute_basic_snr_for_frame(frame):
-    basic_snr = np.std(frame) / np.mean(frame)
-    return basic_snr
 
 
 def compute_basic_snr_for_frame(frame):
