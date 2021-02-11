@@ -181,7 +181,9 @@ if __name__ == '__main__':
     experiment_ids = experiments.index.values
     metrics_df, problems_list = get_snr_metrics_df_for_experiments(experiment_ids)
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/snr_metrics'
+    # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\snr_metrics'
     metrics_df.to_csv(os.path.join(save_dir, 'snr_metrics_Slc.csv'))
+    problems_list = pd.DataFrame(problems_list)
     problems_list.to_csv(os.path.join(save_dir, 'problems_list_Slc.csv'))
 
 
