@@ -190,8 +190,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
         experiments = filtering.limit_to_production_project_codes(experiments)
-        experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in
-                                     experiments.index.values]
+        # experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in
+        #                              experiments.index.values]
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
         experiments = experiments.reset_index()
@@ -369,16 +369,21 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         cell_roi_ids = np.asarray(f['roi_names'])
         lambdas = np.asarray(f['lambdas'])
         noise_stds = np.asarray(f['noise_stds'])
-        cell_specimen_ids = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in cell_roi_ids]
 
         scale = 0.06666 * self.metadata['ophys_frame_rate']
 
-        self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
+        events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
                                'events': [x for x in events],
                                'filtered_events': [x for x in rp.filter_events_array(events, scale=scale)],
                                'noise_std': [x for x in noise_stds],
-                               'lambda': [x for x in lambdas]},
-                              index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+                               'lambda': [x for x in lambdas]})
+        # limit to valid cell_roi_ids
+        valid_cell_roi_ids = self.cell_specimen_table.cell_roi_id.values
+        events = events[events.cell_roi_id.isin(valid_cell_roi_ids)]
+        events['cell_specimen_id'] = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in events.cell_roi_id.values]
+        events = events.set_index('cell_specimen_id')
+
+        self._events = events
         return self._events
 
     events = LazyLoadable('_events', _get_events)
