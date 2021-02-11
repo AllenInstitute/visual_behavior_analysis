@@ -190,8 +190,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
         experiments = filtering.limit_to_production_project_codes(experiments)
-        experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in
-                                     experiments.index.values]
+        # experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in
+        #                              experiments.index.values]
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
         experiments = experiments.reset_index()
@@ -369,16 +369,21 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         cell_roi_ids = np.asarray(f['roi_names'])
         lambdas = np.asarray(f['lambdas'])
         noise_stds = np.asarray(f['noise_stds'])
-        cell_specimen_ids = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in cell_roi_ids]
 
         scale = 0.06666 * self.metadata['ophys_frame_rate']
 
-        self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
+        events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
                                'events': [x for x in events],
                                'filtered_events': [x for x in rp.filter_events_array(events, scale=scale)],
                                'noise_std': [x for x in noise_stds],
-                               'lambda': [x for x in lambdas]},
-                              index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+                               'lambda': [x for x in lambdas]})
+        # limit to valid cell_roi_ids
+        valid_cell_roi_ids = self.cell_specimen_table.cell_roi_id.values
+        events = events[events.cell_roi_id.isin(valid_cell_roi_ids)]
+        events['cell_specimen_id'] = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in events.cell_roi_id.values]
+        events = events.set_index('cell_specimen_id')
+
+        self._events = events
         return self._events
 
     events = LazyLoadable('_events', _get_events)
@@ -1345,9 +1350,12 @@ def get_average_depth_image(experiment_id):
     import visual_behavior.data_access.utilities as utilities
     import matplotlib.pyplot as plt
 
+    cache = get_visual_behavior_cache()
     expt_dir = utilities.get_ophys_experiment_dir(utilities.get_lims_data(experiment_id))
     session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
-    session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(experiment_id)
+    experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
+    session_id = experiment_table.loc[experiment_id].ophys_session_id
+    # session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(experiment_id, cache)
 
     # try all combinations of potential file path locations...
     if os.path.isfile(os.path.join(session_dir, str(experiment_id) + '_averaged_depth.tif')):
@@ -2372,3 +2380,23 @@ def get_cell_summary(search_dict={}):
         right_on='ophys_experiment_id'
     )
     return cell_table
+
+
+def get_remaining_crosstalk_amount_dict(experiment_id):
+    import allensdk.core.json_utilities as ju
+    import visual_behavior.data_access.utilities as utilities
+
+    dataset = get_ophys_dataset(experiment_id, include_invalid_rois=True)
+
+    session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
+    candidate_folders = [folder for folder in os.listdir(os.path.join(session_dir, 'crosstalk')) if 'roi' in folder]
+    folder = [folder for folder in candidate_folders if str(experiment_id) in folder]
+    folder = [folder for folder in candidate_folders if str(experiment_id) in folder]
+    json_path = os.path.join(session_dir, 'crosstalk', folder[0], str(experiment_id) + '_crosstalk.json')
+    crosstalk_dict = ju.read(json_path)
+
+    remaining_crosstalk_dict = {}
+    for key in list(crosstalk_dict.keys()):
+        remaining_crosstalk_dict[int(key)] = crosstalk_dict[key][1]
+
+    return remaining_crosstalk_dict
