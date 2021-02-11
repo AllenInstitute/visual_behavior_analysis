@@ -1405,3 +1405,15 @@ def plot_experiment_summary_figure_for_container(ophys_container_id, save_figure
         except:
             print('could not plot experiment summary for', ophys_experiment_id)
 
+
+def generate_snr_metrics_df_for_container(ophys_container_id):
+    import visual_behavior.visualization.qc.compute_snr_metrics as snr_metrics
+    experiments_table = loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(
+        by='date_of_acquisition')
+    metrics_df, problems_list = snr_metrics.get_snr_metrics_df_for_experiments(ophys_experiments.index.values)
+    save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/snr_metrics'
+    # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\snr_metrics'
+    metrics_df.to_csv(os.path.join(save_dir, str(ophys_container_id)+'_snr_metrics.csv'))
+    problems_list = pd.DataFrame(problems_list)
+    problems_list.to_csv(os.path.join(save_dir, str(ophys_container_id)+'_problem_expts.csv'))

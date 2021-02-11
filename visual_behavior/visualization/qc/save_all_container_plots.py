@@ -46,6 +46,7 @@ def main():
         # "filtered_roi_masks": cp.plot_filtered_roi_masks_for_container,
         # "classifier_validation": cp.plot_classifier_validation_for_container,
         "experiment_summary": cp.plot_experiment_summary_figure_for_container,
+        "snr_metrics_df": cp.generate_snr_metrics_df_for_container,
     }
 
     parser = argparse.ArgumentParser()
