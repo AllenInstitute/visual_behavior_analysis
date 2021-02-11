@@ -318,6 +318,189 @@ def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
     return ax
 
 
+def plot_cell_snr_distribution_for_experiment(ophys_experiment_id, ax=None):
+    import visual_behavior.data_access.processing as processing
+    if ax is None:
+        fig, ax = plt.subplots()
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+    dff_traces = processing.compute_robust_snr_on_dataframe(dataset.dff_traces.copy())
+    ax.hist(dff_traces.robust_snr.values)
+    ax.set_xlabel('robust_snr')
+    ax.set_ylabel('n_cells')
+    return ax
+
+
+def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=None, plot_stimuli=False,
+                                            plot_face_motion_energy=False, save_figure=False, ax=None):
+    """
+    Plots the population average dFF trace for an experiment, along with licking behavior, rewards, running speed, pupil area, and face motion.
+    Useful to visualize whether the overal activity tracks the behavior variables
+    """
+    import visual_behavior.visualization.ophys.summary_figures as sf
+
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
+
+    if xlim_seconds is None:
+        xlim_seconds = [dataset.stimulus_timestamps[0], dataset.stimulus_timestamps[-1]]
+
+    lick_timestamps = dataset.licks.timestamps.values
+    licks = np.ones(len(lick_timestamps))
+
+    reward_timestamps = dataset.rewards.timestamps.values
+    rewards = np.zeros(len(reward_timestamps))
+
+    running_speed = dataset.running_speed.speed.values
+    running_timestamps = dataset.running_speed.timestamps.values
+
+    pupil_area = dataset.eye_tracking.pupil_area.values
+    pupil_timestamps = dataset.eye_tracking.timestamps.values
+
+    face_motion = dataset.behavior_movie_pc_activations[:, 0]
+    face_timestamps = dataset.timestamps['behavior_monitoring'].timestamps
+
+    if ax is None:
+        if plot_face_motion_energy:
+            figsize = (20, 8)
+            fig, ax = plt.subplots(4, 1, figsize=figsize, sharex=True)
+        else:
+            figsize = (20, 6)
+            fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+    colors = sns.color_palette()
+    ax[2].plot(lick_timestamps, licks, '|', label='licks', color='gray')
+    ax[2].plot(reward_timestamps, rewards, 'o', label='rewards', color=colors[9])
+    ax[2].set_ylim(-2, 3)
+    ax[2].legend(fontsize='x-small')
+    ax[2].set_yticklabels([])
+    ax[0].plot(running_timestamps, running_speed, label='running_speed', color=colors[4])
+    ax[0].set_ylabel('run speed\n(cm/s)')
+    ax[1].plot(pupil_timestamps, pupil_area, label='pupil_area', color=colors[1])
+    ax[1].set_ylabel('pupil area\n(pixels**2)')
+    ax[1].set_ylim(-100, 30000)
+    ax[1].set_xlim(pupil_timestamps[0], pupil_timestamps[-1])
+    if plot_face_motion_energy:
+        try:
+            ax[3].plot(face_timestamps, face_motion, label='face_motion_PC0', color=colors[3])
+            ax[3].set_ylabel('face motion\n PC0 activation')
+            i = 3
+        except Exception as e:
+            print(ophys_experiment_id)
+            print(e)
+    else:
+        i = 2
+
+    for x in range(i + 1):
+        ax[x].set_xlim(xlim_seconds)
+        if plot_stimuli:
+            ax[x] = sf.add_stim_color_span(dataset, ax[x], xlim=xlim_seconds)
+        ax[x].tick_params(which='both', bottom=False, top=False, right=False, left=True,
+                          labelbottom=False, labeltop=False, labelright=False, labelleft=True)
+    ax[i].tick_params(which='both', bottom=False, top=False, right=False, left=True,
+                      labelbottom=True, labeltop=False, labelright=False, labelleft=True)
+    ax[i].set_xlabel('time (sec)')
+    #     ax[x].legend(loc='upper left', fontsize='x-small')
+    plt.subplots_adjust(wspace=0, hspace=0.1)
+    #     ax[0].set_title(dataset.metadata_string)
+    if save_figure:
+        utils.save_figure(fig, figsize, utils.get_experiment_plots_dir(), 'population_activity_and_behavior',
+                          dataset.metadata_string + '_population_activity_and_behavior')
+        plt.close()
+    return ax
+
+
+def plot_high_low_snr_trace_examples(experiment_id, xlim_seconds=None, plot_stimuli=False, ax=None):
+    dataset = loading.get_ophys_dataset(experiment_id, include_invalid_rois=False)
+    if xlim_seconds is None:
+        xlim_seconds = [dataset.ophys_timestamps[0], dataset.ophys_timestamps[-1]]
+        inds = [0, len(dataset.ophys_timestamps) - 1]
+    else:
+        inds = [int(xlim_seconds[0] * dataset.metadata['ophys_frame_rate']),
+                int(xlim_seconds[-1] * dataset.metadata['ophys_frame_rate'])]
+
+    dff_traces = dataset.dff_traces.copy()
+    dff_traces = processing.compute_robust_snr_on_dataframe(dff_traces)
+    events = dataset.events.copy()
+
+    lowest_snr = np.argsort(dff_traces[dff_traces.robust_snr.isnull() == False].robust_snr.values)[:2]
+    lowest_cells = dff_traces[dff_traces.robust_snr.isnull() == False].cell_roi_id.values[lowest_snr]
+    highest_snr = np.argsort(dff_traces[dff_traces.robust_snr.isnull() == False].robust_snr.values)[-4:]
+    highest_cells = dff_traces[dff_traces.robust_snr.isnull() == False].cell_roi_id.values[highest_snr]
+
+    cell_roi_ids = np.hstack((highest_cells, lowest_cells))
+
+    colors = sns.color_palette()
+    if ax is None:
+        figsize = (15, 10)
+        fig, ax = plt.subplots(len(cell_roi_ids), 1, figsize=figsize, sharex=True)
+        ax = ax.ravel()
+    for i, cell_roi_id in enumerate(cell_roi_ids):
+        dff_trace = dff_traces[dff_traces.cell_roi_id == cell_roi_id].dff.values[0]
+        ax[i].plot(dataset.ophys_timestamps, dff_trace, color=colors[0], label='dff_trace')
+        ax[i].plot(dataset.ophys_timestamps, events[events.cell_roi_id == cell_roi_id].events.values[0],
+                   color=colors[3], label='events')
+        ax[i].set_xlim(xlim_seconds)
+
+        frame_range = [int(time * dataset.metadata['ophys_frame_rate']) for time in xlim_seconds]
+        ymin = np.min(dff_trace[frame_range[0]:frame_range[1]]) - (
+        np.min(dff_trace[frame_range[0]:frame_range[1]]) * .05)
+        ymax = np.max(dff_trace[frame_range[0]:frame_range[1]]) * 1.2
+        ax[i].set_ylim(ymin, ymax)
+        #         ax[i].set_title(str(cell_roi_id))
+        if plot_stimuli:
+            ax[i] = sf.add_stim_color_span(dataset, ax[i], xlim=xlim_seconds)
+    ax[i].legend(loc='upper left', fontsize='x-small')
+    ax[i].set_xlabel('time (seconds)')
+    return ax
+
+
+def plot_motion_correction_and_population_average(experiment_id, ax=None):
+    if ax is None:
+        figsize = (20, 10)
+        fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+
+    dataset = loading.get_ophys_dataset(experiment_id)
+    timestamps = dataset.ophys_timestamps
+    corrected_traces = dataset.corrected_fluorescence_traces.corrected_fluorescence.values
+    corrected_traces = np.vstack(corrected_traces)
+    population_average_np = np.nanmean(corrected_traces, axis=0)
+    ax[0].plot(timestamps, population_average_np)
+    ax[0].set_ylabel('fluorescence')
+    ax[0].set_xlabel('time (sec)')
+    ax[0].set_xlim(timestamps[0], timestamps[-1])
+
+    dff_traces = dataset.dff_traces.dff.values
+    dff_traces = np.vstack(dff_traces)
+    population_average_dff = np.nanmean(dff_traces, axis=0)
+    ax[1].plot(timestamps, population_average_dff)
+    ax[1].set_ylabel('dF/F')
+    ax[1].set_xlabel('time (sec)')
+    ax[1].set_xlim(timestamps[0], timestamps[-1])
+
+    ax[2] = plot_motion_correction_xy_shift_for_experiment(experiment_id, ax=ax[2])
+
+    #     running_speed = dataset.running_speed.speed.values
+    #     running_timestamps = dataset.running_speed.timestamps.values
+    #     ax[1].plot(running_timestamps, running_speed, label='running_speed', color=sns.color_palette()[4])
+    #     ax[1].set_ylabel('run speed\n(cm/s)')
+    #     ax[1].set_xlim(running_timestamps[0], running_timestamps[-1])
+    #     ax[1].set_xlabel('time (sec)')
+
+    return ax
+
+def plot_remaining_decrosstalk_masks_for_experiment(experiment_id, ax=None):
+    dataset = loading.get_ophys_dataset(experiment_id, include_invalid_rois=True)
+    remaining_crosstalk_dict = loading.get_remaining_crosstalk_amount_dict(experiment_id)
+    decrosstalk_rois = [int(cell_roi_id) for cell_roi_id in list(remaining_crosstalk_dict.keys())]
+    roi_masks = {k: dataset.roi_masks[k] for k in decrosstalk_rois}
+    cmap_range = [np.nanmin(np.asarray(list(remaining_crosstalk_dict.values()))), np.nanmax(np.asarray(list(remaining_crosstalk_dict.values())))]
+    if cmap_range[0] < -50:
+        cmap_range[0] = 50
+    if cmap_range[1] > 100:
+        cmap_range[0] = 100
+    ax = plot_metrics_mask(roi_masks, remaining_crosstalk_dict, 'remaining_crosstalk', dataset.max_projection.data, title=None, outlines=False,
+                      cmap='viridis', cmap_range=cmap_range, ax=ax, colorbar=True)
+    return ax
+
+
 def plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True):
     """
     Generates plots of dFF traces and events for each cell in an experiment, for different segments of time.
@@ -381,10 +564,13 @@ def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, sa
     running_timestamps = dataset.running_speed.timestamps.values
 
     pupil_area = dataset.eye_tracking.pupil_area.values
-    pupil_timestamps = dataset.eye_tracking.time.values
+    pupil_timestamps = dataset.eye_tracking.timestamps.values
 
-    face_motion = dataset.behavior_movie_pc_activations[:, 0]
-    face_timestamps = dataset.timestamps['eye_tracking'].timestamps
+    try:
+        face_motion = dataset.behavior_movie_pc_activations[:, 0]
+        face_timestamps = dataset.timestamps['eye_tracking'].timestamps
+    except:
+        pass
 
     figsize = (20, 10)
     fig, ax = plt.subplots(5, 1, figsize=figsize, sharex=True)
@@ -401,8 +587,11 @@ def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, sa
     ax[3].plot(pupil_timestamps, pupil_area, label='pupil_area', color=colors[9])
     ax[3].set_ylabel('pupil area\n pixels**2')
     ax[3].set_ylim(-50, 20000)
-    ax[4].plot(face_timestamps, face_motion, label='face_motion_PC0', color=colors[2])
-    ax[4].set_ylabel('face motion\n PC0 activation')
+    try:
+        ax[4].plot(face_timestamps, face_motion, label='face_motion_PC0', color=colors[2])
+        ax[4].set_ylabel('face motion\n PC0 activation')
+    except:
+        pass
 
     for x in range(5):
         ax[x].tick_params(which='both', bottom=False, top=False, right=False, left=True,
@@ -416,6 +605,56 @@ def plot_population_activity_and_behavior_for_experiment(ophys_experiment_id, sa
         utils.save_figure(fig, figsize, utils.get_experiment_plots_dir(), 'population_activity_and_behavior',
                           dataset.metadata_string + '_population_activity_and_behavior')
         plt.close()
+
+
+def plot_population_average_for_experiment(experiment_id, response_df, mean_df, df_name, trace_type='mean_trace', color=None,
+                                           label=None, ax=None):
+    """
+    """
+    import visual_behavior.visualization.qc.container_plots as cp
+
+    if 'trials' in df_name:
+        trials = True
+        omitted = False
+        flashes = False
+        trial_type = 'go'
+        xlabel = 'time relative to change (sec)'
+    elif 'omission' in df_name:
+        trials = False
+        omitted = True
+        flashes = False
+        trial_type = None
+        xlabel = 'time relative to omission (sec)'
+    elif 'stimulus' in df_name:
+        trials = False
+        omitted = False
+        flashes = True
+        trial_type = None
+        xlabel = 'time (sec)'
+
+    if color is None:
+        color = sns.color_palette()[0]
+    if label is None:
+        label = ''
+
+    if ax is None:
+        figsize = (6, 5)
+        fig, ax = plt.subplots(figsize=figsize)
+
+    timestamps = response_df.trace_timestamps.mean()
+
+    traces = mean_df[trace_type].values
+    mean_trace = mean_df[trace_type].mean()
+    ax.plot(timestamps, mean_trace, color=color, label=label)
+    sem = (traces.std()) / np.sqrt(float(len(traces)))
+    ax.fill_between(timestamps, mean_trace + sem, mean_trace - sem, alpha=0.5, color=color)
+    ax = cp.plot_flashes_on_trace(ax, timestamps, trial_type=trial_type, omitted=omitted, alpha=0.2, facecolor='gray')
+    ax.set_xlabel(xlabel)
+    if omitted:
+        ax.axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
+    ax.set_ylabel('dF/F')
+    ax.set_xlim(timestamps[0], timestamps[-1])
+    return ax
 
 
 def get_suite2p_rois(fname):
@@ -670,6 +909,8 @@ def plot_metrics_mask(roi_mask_dict, metrics_dict, metric_name, max_projection=N
     if ax is None:
         figsize = (6, 6)
         fig, ax = plt.subplots(figsize=figsize)
+    if cmap_range is None:
+        cmap_range = [np.nanmin(np.asarray(list(metrics_dict.values()))), np.nanmax(np.asarray(list(metrics_dict.values())))]
     if max_projection is not None:
         ax.imshow(max_projection, cmap='gray', vmin=0, vmax=np.percentile(max_projection, 99))
     for i, roi_id in enumerate(list(roi_mask_dict.keys())):
@@ -744,3 +985,4 @@ def plot_filtered_masks_for_experiment(ophys_experiment_id, include_invalid_rois
     #                           title=metric, cmap_range=cmap_range, cmap='hsv', ax=ax, colorbar=False)
     ax.set_title('area > 40\nellipseness > 0.2\ncompactness < 18')
     return ax
+

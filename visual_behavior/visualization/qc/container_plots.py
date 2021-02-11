@@ -203,7 +203,8 @@ def plot_eye_tracking_sample_frames(ophys_container_id, save_figure=True):
     table = table.reset_index()
     ophys_experiment_ids = table.query('container_id == {}'.format(ophys_container_id)).sort_values(by='date_of_acquisition')['ophys_experiment_id']
 
-    fig = plt.figure(figsize=(16, 5 * len(ophys_experiment_ids)))
+    figsize = (16, 5 * len(ophys_experiment_ids))
+    fig = plt.figure(figsize=figsize)
     axes = []
     nplots = len(ophys_experiment_ids)
     buffer = 0.05
@@ -884,7 +885,7 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
     """
     dataset = loading.get_ophys_dataset(container_df.ophys_experiment_id.unique()[0])
     title = dataset.metadata_string
-    frame_rate = dataset.metadata['ophys_frame_rate']
+    # frame_rate = dataset.metadata['ophys_frame_rate']
     if omitted:
         figsize = (12, 5)
         m = title.split('_')  # dataset.analysis_folder.split('_')
@@ -911,16 +912,16 @@ def plot_population_average_across_sessions(container_df, container_id, df_name,
         sem = (traces.std()) / np.sqrt(float(len(traces)))
         ax.fill_between(timestamps, mean_trace + sem, mean_trace - sem, alpha=0.5, color=colors[session_number - 1])
     if omitted:
-        ax = plot_flashes_on_trace(ax, timestamps, frame_rate, trial_type=None, omitted=True, alpha=0.2,
+        ax = plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=True, alpha=0.2,
                                    facecolor='gray')
         ax.axvline(x=0, ymin=0, ymax=1, linestyle='--', color='gray')
         ax.set_xlabel('time relative to omission (sec)')
     elif trials:
-        ax = plot_flashes_on_trace(ax, timestamps, frame_rate, trial_type='go', omitted=False, alpha=0.2,
+        ax = plot_flashes_on_trace(ax, timestamps, trial_type='go', omitted=False, alpha=0.2,
                                    facecolor='gray')
         ax.set_xlabel('time relative to change (sec)')
     else:
-        ax = plot_flashes_on_trace(ax, timestamps, frame_rate, trial_type=None, omitted=False, alpha=0.2,
+        ax = plot_flashes_on_trace(ax, timestamps, trial_type=None, omitted=False, alpha=0.2,
                                    facecolor='gray')
         ax.set_xlabel('time (sec)')
     ax.set_ylabel('dF/F')
@@ -1162,7 +1163,8 @@ def plot_behavior_summary(ophys_container_id, save_figure=True):
         'num_contingent_trials': [],
     }
 
-    fig, ax = plt.subplots(1, 7, figsize=(16, 5), sharey=True)
+    figsize = (16, 5)
+    fig, ax = plt.subplots(1, 7, figsize=figsize, sharey=True)
     y_labels = []
 
     for ii, oeid in enumerate(ophys_experiment_ids):
@@ -1390,3 +1392,16 @@ def plot_nway_warp_summary(ophys_container_id, save_figure=True):
     fig.tight_layout()
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_summary', 'container_'+str(ophys_container_id))
+
+
+def plot_experiment_summary_figure_for_container(ophys_container_id, save_figure=True):
+    import visual_behavior.visualization.qc.experiment_summary as es
+    experiments_table = loading.get_filtered_ophys_experiment_table()
+    ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(
+        by='date_of_acquisition')
+    for ophys_experiment_id in ophys_experiments.index.values:
+        try:
+            es.plot_experiment_summary_figure(ophys_experiment_id, save_figure=save_figure)
+        except:
+            print('could not plot experiment summary for', ophys_experiment_id)
+

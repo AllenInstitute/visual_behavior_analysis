@@ -2372,3 +2372,23 @@ def get_cell_summary(search_dict={}):
         right_on='ophys_experiment_id'
     )
     return cell_table
+
+
+def get_remaining_crosstalk_amount_dict(experiment_id):
+    import allensdk.core.json_utilities as ju
+    import visual_behavior.data_access.utilities as utilities
+
+    dataset = get_ophys_dataset(experiment_id, include_invalid_rois=True)
+
+    session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
+    candidate_folders = [folder for folder in os.listdir(os.path.join(session_dir, 'crosstalk')) if 'roi' in folder]
+    folder = [folder for folder in candidate_folders if str(experiment_id) in folder]
+    folder = [folder for folder in candidate_folders if str(experiment_id) in folder]
+    json_path = os.path.join(session_dir, 'crosstalk', folder[0], str(experiment_id) + '_crosstalk.json')
+    crosstalk_dict = ju.read(json_path)
+
+    remaining_crosstalk_dict = {}
+    for key in list(crosstalk_dict.keys()):
+        remaining_crosstalk_dict[int(key)] = crosstalk_dict[key][1]
+
+    return remaining_crosstalk_dict
