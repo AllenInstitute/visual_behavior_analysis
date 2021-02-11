@@ -94,60 +94,64 @@ def get_best_snr(dataset):
 
 def get_snr_metrics_df_for_experiments(experiment_ids):
     metrics_list = []
-
+    problems_list = []
     for experiment_id in experiment_ids:
-        dataset = loading.get_ophys_dataset(experiment_id)
+        try:
+            dataset = loading.get_ophys_dataset(experiment_id)
 
-        movie = loading.load_motion_corrected_movie(experiment_id)
-        movie_frame = movie[20000, :, :]
-        depth_image = loading.get_average_depth_image(experiment_id)
-        average_image = dataset.average_projection.data.copy()
-        max_projection_image = dataset.max_projection.data.copy()
-        traces = dataset.dff_traces.copy()
-        # fingerprint avg and max
-        frame_rate = dataset.metadata['ophys_frame_rate']
-        n_frames = int(3 * 60 * frame_rate)
-        segment = movie[-n_frames:, :, :]
-        fingerprint_avg_image = np.nanmean(segment, axis=0)
-        fingerprint_max_image = np.nanmax(segment, axis=0)
+            movie = loading.load_motion_corrected_movie(experiment_id)
+            movie_frame = movie[20000, :, :]
+            depth_image = loading.get_average_depth_image(experiment_id)
+            average_image = dataset.average_projection.data.copy()
+            max_projection_image = dataset.max_projection.data.copy()
+            traces = dataset.dff_traces.copy()
+            # fingerprint avg and max
+            frame_rate = dataset.metadata['ophys_frame_rate']
+            n_frames = int(3 * 60 * frame_rate)
+            segment = movie[-n_frames:, :, :]
+            fingerprint_avg_image = np.nanmean(segment, axis=0)
+            fingerprint_max_image = np.nanmax(segment, axis=0)
 
-        # basic SNR for movie frame
-        basic_snr_movie_frame = compute_basic_snr_for_frame(movie_frame)
+            # basic SNR for movie frame
+            basic_snr_movie_frame = compute_basic_snr_for_frame(movie_frame)
 
-        # basic SNR for depth image
-        basic_snr_depth_image = compute_basic_snr_for_frame(depth_image)
+            # basic SNR for depth image
+            basic_snr_depth_image = compute_basic_snr_for_frame(depth_image)
 
-        # basic SNR for average image
-        basic_snr_average_image = compute_basic_snr_for_frame(average_image)
+            # basic SNR for average image
+            basic_snr_average_image = compute_basic_snr_for_frame(average_image)
 
-        # basic SNR for max image
-        basic_snr_max_image = compute_basic_snr_for_frame(max_projection_image)
+            # basic SNR for max image
+            basic_snr_max_image = compute_basic_snr_for_frame(max_projection_image)
 
-        # basic SNR for fingerprint avg image
-        basic_snr_fingerprint_avg_image = compute_basic_snr_for_frame(fingerprint_avg_image)
+            # basic SNR for fingerprint avg image
+            basic_snr_fingerprint_avg_image = compute_basic_snr_for_frame(fingerprint_avg_image)
 
-        # basic SNR for fingerprint max image
-        basic_snr_fingerprint_max_image = compute_basic_snr_for_frame(fingerprint_max_image)
+            # basic SNR for fingerprint max image
+            basic_snr_fingerprint_max_image = compute_basic_snr_for_frame(fingerprint_max_image)
 
-        # STD of fingerprint avg image aka contrast
-        std_fingerprint_avg_image = np.std(fingerprint_avg_image)
+            # STD of fingerprint avg image aka contrast
+            std_fingerprint_avg_image = np.std(fingerprint_avg_image)
 
-        # STD of fingerprint max image aka contrast
-        std_fingerprint_max_image = np.std(fingerprint_max_image)
+            # STD of fingerprint max image aka contrast
+            std_fingerprint_max_image = np.std(fingerprint_max_image)
 
-        # robust SNR on traces
-        traces = processing.compute_robust_snr_on_dataframe(traces)
-        median_robust_snr_traces = traces.robust_snr.median()
-        max_robust_snr_traces = traces.robust_snr.max()
+            # robust SNR on traces
+            traces = processing.compute_robust_snr_on_dataframe(traces)
+            median_robust_snr_traces = traces.robust_snr.median()
+            max_robust_snr_traces = traces.robust_snr.max()
 
-        # Doug SNR on traces
-        peak_over_std_max = get_best_snr(dataset)
+            # Doug SNR on traces
+            peak_over_std_max = get_best_snr(dataset)
 
 
-        metrics_list.append([experiment_id, basic_snr_movie_frame, basic_snr_depth_image, basic_snr_average_image,
-                             basic_snr_max_image, basic_snr_fingerprint_avg_image, basic_snr_fingerprint_max_image,
-                             std_fingerprint_avg_image, std_fingerprint_max_image,
-                             median_robust_snr_traces, max_robust_snr_traces, peak_over_std_max])
+            metrics_list.append([experiment_id, basic_snr_movie_frame, basic_snr_depth_image, basic_snr_average_image,
+                                 basic_snr_max_image, basic_snr_fingerprint_avg_image, basic_snr_fingerprint_max_image,
+                                 std_fingerprint_avg_image, std_fingerprint_max_image,
+                                 median_robust_snr_traces, max_robust_snr_traces, peak_over_std_max])
+        except:
+            problems_list.append(experiment_id)
+
 
     columns = ['experiment_id', 'basic_snr_movie_frame', 'basic_snr_depth_image', 'basic_snr_average_image',
                'basic_snr_max_image', 'basic_snr_fingerprint_avg_image', 'basic_snr_fingerprint_max_image',
@@ -156,7 +160,7 @@ def get_snr_metrics_df_for_experiments(experiment_ids):
 
     metrics_df = pd.DataFrame(metrics_list, columns=columns)
 
-    return metrics_df
+    return metrics_df, problems_list
 
 
 
@@ -167,9 +171,11 @@ if __name__ == '__main__':
                                     (experiments_table.imaging_depth < 250) &
                                     (experiments_table.imaging_depth > 150)]
     experiment_ids = experiments.index.values
-    metrics_df = get_snr_metrics_df_for_experiments(experiment_ids)
+    metrics_df, problems_list = get_snr_metrics_df_for_experiments(experiment_ids)
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/snr_metrics'
     metrics_df.to_csv(os.path.join(save_dir, 'snr_metrics_Slc.csv'))
+    problems_list.to_csv(os.path.join(save_dir, 'problems_list_Slc.csv'))
+
 
 
 
