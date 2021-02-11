@@ -694,7 +694,7 @@ def get_wkf_events_h5_filepath(ophys_experiment_id):
     Returns:
         string -- filepath (directory and filename) for the event.h5 file
         for the given ophys_experiment_id
-    """ 
+    """
     QUERY = '''
         SELECT storage_directory || filename
         FROM well_known_files
