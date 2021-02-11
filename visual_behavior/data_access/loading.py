@@ -1337,9 +1337,10 @@ def get_average_depth_image(experiment_id):
     import visual_behavior.data_access.utilities as utilities
     import matplotlib.pyplot as plt
 
+    cache = get_visual_behavior_cache()
     expt_dir = utilities.get_ophys_experiment_dir(utilities.get_lims_data(experiment_id))
     session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
-    session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(experiment_id)
+    session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(experiment_id, cache)
 
     # try all combinations of potential file path locations...
     if os.path.isfile(os.path.join(session_dir, str(experiment_id) + '_averaged_depth.tif')):
