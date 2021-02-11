@@ -1795,6 +1795,9 @@ def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1, use_n
 
             
         try:
+            ##### NOTE: instead of getting metadata from vb dataset, use below:
+#             experiment_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+            
             dataset = VisualBehaviorOphysDataset(indiv_id, cache_dir=cache_dir) # vb            
             local_meta = dataset.get_metadata() # vb
             # note: we cant use metadata from allensdk because it doesnt include all experiments of a session, it only includes the valid experiments, so it wont allow us to set the metadata for all experiments.
