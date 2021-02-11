@@ -123,8 +123,8 @@ def plot_experiment_summary_figure(experiment_id, save_figure=True):
     title = dataset.metadata_string
     plt.suptitle(title, x=0.5, y=.91, fontsize=20)
     if save_figure:
-        save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\experiment_plots'
-        # save_dir = loading.get_experiment_plots_dir()
+        # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\experiment_plots'
+        save_dir = loading.get_experiment_plots_dir()
         utils.save_figure(fig, figsize, save_dir, 'experiment_summary_figure', title)
 
 

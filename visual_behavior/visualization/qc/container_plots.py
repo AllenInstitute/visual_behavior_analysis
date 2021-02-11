@@ -1400,10 +1400,10 @@ def plot_experiment_summary_figure_for_container(ophys_container_id, save_figure
     ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(
         by='date_of_acquisition')
     for ophys_experiment_id in ophys_experiments.index.values:
-        try:
-            es.plot_experiment_summary_figure(ophys_experiment_id, save_figure=save_figure)
-        except:
-            print('could not plot experiment summary for', ophys_experiment_id)
+        # try:
+        es.plot_experiment_summary_figure(ophys_experiment_id, save_figure=save_figure)
+        # except:
+        #     print('could not plot experiment summary for', ophys_experiment_id)
 
 
 def generate_snr_metrics_df_for_container(ophys_container_id):
