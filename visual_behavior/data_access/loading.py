@@ -7,7 +7,6 @@ from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadab
 from visual_behavior.ophys.response_analysis import response_processing as rp
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
-from visual_behavior.data_access import processing
 from visual_behavior.data_access import utilities
 import visual_behavior.database as db
 
@@ -644,10 +643,12 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
 
+
 def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
     experiments = get_filtered_ophys_experiment_table(include_failed_data=True)
     behavior_session_id = experiments.loc[ophys_experiment_id].behavior_session_id
     return behavior_session_id
+
 
 def get_pc_masks_for_session(ophys_session_id):
     facemap_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/facemap_results'
@@ -1342,7 +1343,6 @@ def get_average_depth_image(experiment_id):
     import visual_behavior.data_access.utilities as utilities
     import matplotlib.pyplot as plt
 
-    cache = get_visual_behavior_cache()
     expt_dir = utilities.get_ophys_experiment_dir(utilities.get_lims_data(experiment_id))
     session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
     experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
@@ -2377,8 +2377,6 @@ def get_cell_summary(search_dict={}):
 def get_remaining_crosstalk_amount_dict(experiment_id):
     import allensdk.core.json_utilities as ju
     import visual_behavior.data_access.utilities as utilities
-
-    dataset = get_ophys_dataset(experiment_id, include_invalid_rois=True)
 
     session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
     candidate_folders = [folder for folder in os.listdir(os.path.join(session_dir, 'crosstalk')) if 'roi' in folder]

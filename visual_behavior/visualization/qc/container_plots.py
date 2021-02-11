@@ -1318,8 +1318,9 @@ def plot_OphysRegistrationSummaryImage(ophys_container_id, save_figure=True):
     ophys_experiments = experiments_table[experiments_table.container_id == ophys_container_id].sort_values(by='date_of_acquisition')
     oeids = ophys_experiments.index.values
 
-    fig, ax = plt.subplots(len(oeids), 1, figsize=(15, 10 * len(oeids)))
-    for ii,oeid in enumerate(np.sort(oeids)):
+    figsize = (15, 10 * len(oeids))
+    fig, ax = plt.subplots(len(oeids), 1, figsize=figsize)
+    for ii, oeid in enumerate(np.sort(oeids)):
         image_path = motion_correction_artifacts(oeid).set_index('name').loc['OphysRegistrationSummaryImage']['path']
         image = imageio.imread(image_path)
         ax.flatten()[ii].imshow(image)
@@ -1353,7 +1354,7 @@ def plot_nway_match_fraction(ophys_container_id, save_figure=True):
 
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_match_fraction', 'container_'+str(ophys_container_id))
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_match_fraction', 'container_' + str(ophys_container_id))
 
 
 def plot_nway_warp_overlay(ophys_container_id, save_figure=True):
@@ -1372,7 +1373,7 @@ def plot_nway_warp_overlay(ophys_container_id, save_figure=True):
 
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_overlay', 'container_'+str(ophys_container_id))
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_overlay', 'container_' + str(ophys_container_id))
 
 
 def plot_nway_warp_summary(ophys_container_id, save_figure=True):
@@ -1391,7 +1392,7 @@ def plot_nway_warp_summary(ophys_container_id, save_figure=True):
 
     fig.tight_layout()
     if save_figure:
-        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_summary', 'container_'+str(ophys_container_id))
+        ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'nway_warp_summary', 'container_' + str(ophys_container_id))
 
 
 def plot_experiment_summary_figure_for_container(ophys_container_id, save_figure=True):
@@ -1414,6 +1415,6 @@ def generate_snr_metrics_df_for_container(ophys_container_id):
     metrics_df, problems_list = snr_metrics.get_snr_metrics_df_for_experiments(ophys_experiments.index.values)
     save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/snr_metrics'
     # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\snr_metrics'
-    metrics_df.to_csv(os.path.join(save_dir, str(ophys_container_id)+'_snr_metrics.csv'))
+    metrics_df.to_csv(os.path.join(save_dir, str(ophys_container_id) + '_snr_metrics.csv'))
     problems_list = pd.DataFrame(problems_list)
-    problems_list.to_csv(os.path.join(save_dir, str(ophys_container_id)+'_problem_expts.csv'))
+    problems_list.to_csv(os.path.join(save_dir, str(ophys_container_id) + '_problem_expts.csv'))
