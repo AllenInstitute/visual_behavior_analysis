@@ -174,18 +174,20 @@ def get_snr_metrics_df_for_experiments(experiment_ids):
 
 if __name__ == '__main__':
 
-    experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
-    experiments = experiments_table[(experiments_table.cre_line == 'Slc17a7-IRES2-Cre') &
-                                    (experiments_table.imaging_depth < 250) &
-                                    (experiments_table.imaging_depth > 150)]
-    experiment_ids = experiments.index.values
-    metrics_df, problems_list = get_snr_metrics_df_for_experiments(experiment_ids)
-    save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/snr_metrics'
-    # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\snr_metrics'
-    metrics_df.to_csv(os.path.join(save_dir, 'snr_metrics_Slc.csv'))
-    problems_list = pd.DataFrame(problems_list)
-    problems_list.to_csv(os.path.join(save_dir, 'problems_list_Slc.csv'))
-
+    try:
+        experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+        experiments = experiments_table[(experiments_table.cre_line == 'Slc17a7-IRES2-Cre') &
+                                        (experiments_table.imaging_depth < 250) &
+                                        (experiments_table.imaging_depth > 150)]
+        experiment_ids = experiments.index.values
+        metrics_df, problems_list = get_snr_metrics_df_for_experiments(experiment_ids)
+        save_dir = r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/snr_metrics'
+        # save_dir = r'\\allen\programs\braintv\workgroups\nc-ophys\visual_behavior\qc_plots\snr_metrics'
+        metrics_df.to_csv(os.path.join(save_dir, 'snr_metrics_Slc.csv'))
+        problems_list = pd.DataFrame(problems_list)
+        problems_list.to_csv(os.path.join(save_dir, 'problems_list_Slc.csv'))
+    except Exception as e:
+        print(e)
 
 
 
