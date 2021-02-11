@@ -68,7 +68,10 @@ def plot_experiment_summary_figure(experiment_id, save_figure=True):
 
     ax['1_0'] = ep.plot_average_image_for_experiment(experiment_id, ax=ax['1_0'])
     ax['1_1'] =  ep.plot_average_image_for_experiment(experiment_id, ax=ax['1_1'])
-    ax['1_2'] =  ep.plot_remaining_decrosstalk_masks_for_experiment(experiment_id, ax=ax['1_2'])
+    try:
+        ax['1_2'] =  ep.plot_remaining_decrosstalk_masks_for_experiment(experiment_id, ax=ax['1_2'])
+    except:
+        print('no decrosstalk for experiment', experiment_id)
     ax['1_3:'] = ep.plot_behavior_timeseries_for_experiment(experiment_id, ax=ax['1_3:'])
 
     # ax['2_0'] = population_image_selectivity(experiment_id, ax=ax['2_0'])
