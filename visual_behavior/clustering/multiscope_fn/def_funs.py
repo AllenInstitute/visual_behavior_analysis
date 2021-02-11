@@ -1648,16 +1648,20 @@ def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1, use_n
         
         indiv_id = int(indiv_id)
         
-        ##### Siet whole_data #### 
+        ##### Set whole_data #### 
         indiv_data = {}
         indiv_data['session_id'] = session_id
         
         try: 
-            dataset = VisualBehaviorOphysDataset(indiv_id, cache_dir=cache_dir)            
+#             dataset = VisualBehaviorOphysDataset(indiv_id, cache_dir=cache_dir) # vb            
+#             roi_ids_vb = dataset.cell_specimen_table['cell_roi_id'].values
+
+            dataset = loading.get_ophys_dataset(indiv_id, include_invalid_rois=False) # allen sdk
+    
             indiv_id_with_dataset = indiv_id
             
             ###
-            if use_ct_traces: 
+            if 0: #use_ct_traces: # now (2/10/2021 decrosstalked traces are part of lims; so we get them from dataset object)
                 print('Using crosstalk-corrected dff traces.')
                 ######## read the crosstalk-corrected dff traces ########
                 dir_ica = f'/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/ICA_crossTalk/session_{session_id}'
@@ -1760,8 +1764,13 @@ def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1, use_n
                 
     #             plt.figure(figsize=(15,10)); plt.subplot(211); plt.plot(dff_traces.T); plt.subplot(212); plt.plot(dataset.dff_traces.T);
 
+    
+            ###########################################################################
+            ############### use dff traces in lims; get them from dataset object ###############
             else:
-                indiv_data['fluo_traces'] = dataset.dff_traces
+#                 indiv_data['fluo_traces'] = dataset.dff_traces
+                indiv_data['fluo_traces'] = dataset.dff_traces['dff'].values
+                indiv_data['roi_ids'] = dataset.dff_traces['cell_roi_id'].values
                 
                 
         except Exception as e:
@@ -1786,7 +1795,11 @@ def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1, use_n
 
             
         try:
-            local_meta = dataset.get_metadata()
+            dataset = VisualBehaviorOphysDataset(indiv_id, cache_dir=cache_dir) # vb            
+            local_meta = dataset.get_metadata() # vb
+            # note: we cant use metadata from allensdk because it doesnt include all experiments of a session, it only includes the valid experiments, so it wont allow us to set the metadata for all experiments.
+#             metadata_multiscope[metadata_multiscope['ophys_experiment_id']==indiv_id] # allen sdk
+            
             indiv_data['targeted_structure'] = local_meta['targeted_structure'].values[0]
             indiv_data['mouse'] = local_meta['donor_id'].values[0]        
             # You can also get stage from mongo: 

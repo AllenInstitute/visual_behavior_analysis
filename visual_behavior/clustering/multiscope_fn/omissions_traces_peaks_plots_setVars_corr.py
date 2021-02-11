@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Run "omissions_traces_peaks_plots_setVars.py" to set var "all_sess_2an" needed here.
+Run "omissions_traces_peaks_plots_setVars.py" to set the variable "all_sess_2an" needed here.
 
 Follow this code by "omissions_traces_peaks_plots_setVars_corr_eachCre.py"
 
