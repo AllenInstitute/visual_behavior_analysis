@@ -67,11 +67,14 @@ def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    segmentation_mask = loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
-    mask = np.zeros(segmentation_mask.shape)
-    mask[:] = np.nan
-    mask[segmentation_mask == 1] = 1
-    ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
+    try:
+        segmentation_mask = loading.get_segmentation_mask(ophys_experiment_id, valid_only=True)
+        mask = np.zeros(segmentation_mask.shape)
+        mask[:] = np.nan
+        mask[segmentation_mask == 1] = 1
+        ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
+    except:
+        pass
     ax.axis('off')
     return ax
 
@@ -107,9 +110,10 @@ def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experime
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
-    for cell_roi_id in cell_specimen_table.cell_roi_id.values:
-        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
-        ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+    if len(cell_specimen_table)>0:
+        for cell_roi_id in cell_specimen_table.cell_roi_id.values:
+            mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+            ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
     ax.set_title('valid ROI outlines\n n = ' + str(len(cell_specimen_table.cell_roi_id.values)))
     ax.axis('off')
     return ax
@@ -121,14 +125,18 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
     cell_specimen_table = dataset.cell_specimen_table.copy()
-
-    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == True].cell_roi_id.values:
-        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
-        ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
-
-    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == False].cell_roi_id.values:
-        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
-        ax.contour(mask, levels=0, colors=['blue'], linewidths=[0.6])
+    try:
+        for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == True].cell_roi_id.values:
+            mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+            ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+    except:
+        pass
+    try:
+        for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == False].cell_roi_id.values:
+            mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+            ax.contour(mask, levels=0, colors=['blue'], linewidths=[0.6])
+    except:
+        pass
     ax.axis('off')
     return ax
 
