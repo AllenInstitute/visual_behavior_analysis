@@ -428,9 +428,9 @@ def filter_events_array(trace_arr, scale=2, t_scale=20):
 def get_trials_response_xr(dataset, use_events=False, filter_events=False, frame_rate=None):
     if use_events:
         if filter_events:
-        	traces = np.stack(dataset.events['filtered_events'].values)
+            traces = np.stack(dataset.events['filtered_events'].values)
         else:
-        	traces = np.stack(dataset.events['events'].values)
+            traces = np.stack(dataset.events['events'].values)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
     trace_ids = dataset.dff_traces.index.values
@@ -460,9 +460,9 @@ def get_trials_response_df(dataset, use_events=False, filter_events=False, frame
 def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, frame_rate=None):
     if use_events:
         if filter_events:
-        	traces = np.stack(dataset.events['filtered_events'].values)
+            traces = np.stack(dataset.events['filtered_events'].values)
         else:
-        	traces = np.stack(dataset.events['events'].values)
+            traces = np.stack(dataset.events['events'].values)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
     trace_ids = dataset.dff_traces.index.values
@@ -491,9 +491,9 @@ def get_stimulus_response_df(dataset, use_events=False, filter_events=False, fra
 def get_omission_response_xr(dataset, use_events=False, filter_events=False, frame_rate=None):
     if use_events:
         if filter_events:
-        	traces = np.stack(dataset.events['filtered_events'].values)
+            traces = np.stack(dataset.events['filtered_events'].values)
         else:
-        	traces = np.stack(dataset.events['events'].values)
+            traces = np.stack(dataset.events['events'].values)
     else:
         traces = np.stack(dataset.dff_traces['dff'].values)
     trace_ids = dataset.dff_traces.index.values
@@ -710,6 +710,7 @@ def get_omission_licks_df(dataset, frame_rate=None):
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
     df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
     return df
+
 
 if __name__ == "__main__":
     from allensdk.brain_observatory.behavior import behavior_project_cache as bpc
