@@ -121,11 +121,14 @@ elif socket.gethostname() == 'hpc-login.corp.alleninstitute.org': # hpc server
 # os.chdir(dirMs)
 
 
+# below is not needed anymore since we are using data release sessions
+
 #%% Load vars related to list_all_sessions_valid 
 # (read the pickle file saved in the script: set_valid_sessions.py)
 
 dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
 
+'''
 # validSessName = os.path.join(dir_valid_sess, 'valid_sessions' + '.pkl')
 dir_valid_sess = os.path.join(dir_server_me, 'ValidSessions')
 
@@ -155,7 +158,7 @@ pkl.close()
 # 'list_all_sessions_valid',
 # 'list_all_experiments_valid',
 # 'list_all_experiments']  
-    
+'''
 
 
 #%% crosstalk-corrected sessions
