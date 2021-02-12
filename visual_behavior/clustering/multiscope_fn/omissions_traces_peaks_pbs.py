@@ -1909,7 +1909,7 @@ for k in list(dictNow.keys()):
 # 'list_all_experiments_valid',
 # 'list_all_experiments']  
 '''
-
+validity_log_all = [] # defining it here because we commented above. The right thing is to just remove it from the function input, but for now leaving it...
     
     
 ###############################################

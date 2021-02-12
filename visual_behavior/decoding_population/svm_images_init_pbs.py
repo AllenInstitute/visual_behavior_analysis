@@ -73,7 +73,7 @@ python_file = r"/home/farzaneh.najafi/analysis_codes/visual_behavior_analysis/vi
 jobdir = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/ClusterJobs/SVMJobs'
 job_settings = {'queue': 'braintv',
                 'mem': '24g', #24g
-                'walltime': '48:00:00',
+                'walltime': '120:00:00', # 48
                 'ppn': 4} #,
 #                'jobdir': jobdir,
 #                }
