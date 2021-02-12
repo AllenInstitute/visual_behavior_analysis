@@ -565,7 +565,10 @@ def svm_main_images_pbs(data_list, df_data, session_trials, trial_type, dir_svm,
     # initiate the pandas tabledatetime.datetime.fromtimestamp(1548449865.568)
     this_sess = pd.DataFrame([], columns = cols)
     
-    for index, lims_id in enumerate(exp_ids): 
+#     for index, lims_id in enumerate(exp_ids[-2:]):  # for now; 
+    for il in [6,7]: #range(num_planes):
+        index = il
+        lims_id = exp_ids[il]
 
         print(f'\n\n=========== Analyzing {cre[:3]}, experiment_id: {lims_id} ===========\n\n')
 
