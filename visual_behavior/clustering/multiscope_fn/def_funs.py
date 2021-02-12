@@ -1618,13 +1618,14 @@ def set_roiIds_manDff(dir_ica, indiv_id):
 
     
 #%%
-def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1):
+def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1):
     
     # if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
     # if use_common_vb_roi=1, only those ct dff ROIs that exist in vb rois will be used.    
     # list_mesoscope_exp = experiment_ids
     
     import visual_behavior.data_access.loading as loading
+    from datetime import datetime
     
     cache_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
@@ -1795,22 +1796,36 @@ def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1, use_n
 
             
         try:
-            ##### NOTE: instead of getting metadata from vb dataset, use below:
+            # set metadata using allensdk
 #             experiment_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
-            
-            dataset = VisualBehaviorOphysDataset(indiv_id, cache_dir=cache_dir) # vb            
-            local_meta = dataset.get_metadata() # vb
-            # note: we cant use metadata from allensdk because it doesnt include all experiments of a session, it only includes the valid experiments, so it wont allow us to set the metadata for all experiments.
-#             metadata_multiscope[metadata_multiscope['ophys_experiment_id']==indiv_id] # allen sdk
+    
+            local_meta = metadata_all[metadata_all['ophys_experiment_id']==indiv_id]
             
             indiv_data['targeted_structure'] = local_meta['targeted_structure'].values[0]
-            indiv_data['mouse'] = local_meta['donor_id'].values[0]        
+            indiv_data['mouse'] = local_meta['mouse_id'].values[0]      
+            indiv_data['stage'] = local_meta['session_type'].values[0]         
+            indiv_data['cre'] = local_meta['cre_line'].values[0]
+            
+            oldformat = local_meta['date_of_acquisition'].values[0]
+            datetimeobject = datetime.strptime(oldformat,'%Y-%m-%d %H:%M:%S.%f')
+            indiv_data['experiment_date'] = datetimeobject.strftime('%Y-%m-%d')
+            
+            
+            # set metadata using vb dataset object
+            '''
+            dataset = VisualBehaviorOphysDataset(indiv_id, cache_dir=cache_dir) # vb            
+            local_meta = dataset.get_metadata() # vb
+            
+            indiv_data['targeted_structure'] = local_meta['targeted_structure'].values[0]
+            indiv_data['mouse'] = local_meta['donor_id'].values[0]      # mouse_id  
             # You can also get stage from mongo: 
             # db_cursor = DB.find({"lims_id":session_id})
             # db_cursor[0]['change_detection']['stage']
-            indiv_data['stage'] = local_meta['stage'].values[0]         
+            indiv_data['stage'] = local_meta['stage'].values[0]   # session_type      
             indiv_data['cre'] = local_meta['cre_line'].values[0]
             indiv_data['experiment_date'] = local_meta['experiment_date'].values[0]
+            '''
+            
         except Exception as e:
             print('session: %d' %session_id)
             print('experiment: %d' %indiv_id)
@@ -1858,6 +1873,9 @@ def load_session_data_new(session_id, list_mesoscope_exp, use_ct_traces=1, use_n
     ########################################################################    
     #### Set table_stim & behavioral parameters; these are all at the session level ####
     ########################################################################    
+    
+    #### NOTE: you should use allensdk for below as well!!!
+    
     # we dont need to reset dataset, we can just go with the dataset from the last experiment, generated above!
     experiment_id = indiv_id_with_dataset # indiv_id_with_dataset for sure has dataset. some experiments may have failed. 
     dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)

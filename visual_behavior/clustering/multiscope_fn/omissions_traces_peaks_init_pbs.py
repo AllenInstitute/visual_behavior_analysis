@@ -6,14 +6,18 @@ Created on Wed Jul 31 13:24:19 2019
 @author: farzaneh
 """
 
+import pandas as pd
+import numpy as np
 
 # Use the new list of sessions that are de-crosstalked and will be released in March 2021
 metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
 
-import pandas as pd
-metadata_multiscope = pd.read_csv(metadata_meso_dir)
-# aa = metadata_multiscope['ophys_session_id'].unique()
+metadata_valid = pd.read_csv(metadata_meso_dir)
+aa = metadata_valid['ophys_session_id'].unique()
 # aa.shape
+
+sessions_ctDone = aa
+
 # [ 951410079,  952430817,  954954402,  955775716,  957020350,
 #         958105827,  958772311,  959458018,  985609503,  988768058,
 #         989267296,  990139534,  990464099,  991639544, 1048122684,
@@ -42,7 +46,7 @@ metadata_multiscope = pd.read_csv(metadata_meso_dir)
 #         904418381,  906299056,  906968227,  907753304,  908441202,
 #         911719666,  913564409,  914161594,  914639324,  915306390]
 
-# common sessions between the list above and below:
+# common sessions between the list above and previously used (see the part use_ct_traces):
 # cc = sessions_ctDone[np.in1d(sessions_ctDone, aa)]
 # cc.shape
 # [846871218, 847758278, 848401585, 849304162, 850667270, 850894918,
@@ -67,8 +71,28 @@ metadata_multiscope = pd.read_csv(metadata_meso_dir)
 
 # sessions_ctDone = cc
 
+import visual_behavior.data_access.loading as loading
+experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
 
+
+#%%
+print(sessions_ctDone.shape)
+
+
+list_all_sessions_valid = sessions_ctDone
+
+i = np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)
+metadata_all = experiments_table[i]
+list_all_experiments = np.reshape(experiments_table[i]['ophys_experiment_id'].values, (8, len(sessions_ctDone)), order='F').T    
+list_all_experiments = np.sort(list_all_experiments)
+
+print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
+
+
+
+#########################################################################################################
 #%%
 use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
 
@@ -135,7 +159,7 @@ pkl.close()
 
 
 #%% crosstalk-corrected sessions
-if use_ct_traces:
+if 0: #use_ct_traces: # lims now contains the decrosstalked traces (2/11/2021)
     '''
     # Later when we call load_session_data_new, it will load the ct traces if use_ct_traces is 1; otherwise it will seet dataset which loads the original dff traces using vb codes.
 
@@ -171,37 +195,21 @@ if use_ct_traces:
 #                                880498009, 882674040, 884451806, 885303356, 886806800, 888009781,
 #                                889944877, 906299056, 906521029])
 
-    
-    # march 2021 data release
-#     sessions_ctDone = np.array([846871218, 847758278, 848401585, 849304162, 850667270, 850894918,
-#            852794141, 853416532, 854060305, 855711263, 866197765, 867027875,
-#            868688430, 870352564, 870762788, 871526950, 872592724, 873247524,
-#            874616920, 875259383, 876303107, 880498009, 880709154, 882674040,
-#            884451806, 886130638, 886806800, 888009781, 889944877, 902884228,
-#            903621170, 903813946, 904418381, 904771513, 906299056, 906521029,
-#            906968227, 907177554, 907753304, 907991198, 908441202, 911719666,
-#            913564409, 914161594, 914639324, 915306390, 916650386, 917498735,
-#            919041767, 919888953, 920695792, 921922878, 923705570, 925478114,
-#            927787876, 929686773, 933439847, 935559843, 937162622, 937682841,
-#            938140092, 938898514, 939526443, 940145217, 940775208, 941676716,
-#            946015345, 947199653, 948042811, 948252173, 949217880, 950031363,
-#            951410079, 952430817, 954954402, 955775716, 957020350, 958105827,
-#            959458018, 971632311, 971922380, 973384292, 973701907, 974167263,
-#            974486549, 975452945, 976167513, 976382032, 977760370, 978201478,
-#            980062339, 981845703, 985609503, 986130604, 988768058, 989267296,
-#            990139534, 990464099, 991639544, 991958444, 992393325, 993253587,
-#            993420347, 993738515, 993962221])
-    
-    
-    sessions_ctDone = np.array([ 958772311, 1048122684, 1048363441, 1049240847, 1050231786,
-       1050597678, 1051107431, 1051319542,  945124131,  931326814,
-       1052096166, 1052330675, 1052512524, 1056065360, 1056238781,
-        882386411,  883619540,  884613038,  885557130,  886367984,
-        887031077,  888171877,  848983781,  853177377,  881094781,
-        882060185,  944888114,  873720614,  983913570,  857040020])
 
     print(sessions_ctDone.shape)
 
+    
+    list_all_sessions_valid = sessions_ctDone
+    
+    i = np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)
+    metadata_all = experiments_table[i]
+    list_all_experiments = np.reshape(experiments_table[i]['ophys_experiment_id'].values, (8, len(sessions_ctDone)), order='F').T    
+    list_all_experiments = np.sort(list_all_experiments)
+    
+    print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
+    
+    
+    
     # Copy ct folders to allen server (nc-ophys/Farzaneh):
     # ssh to the analysis computer by running: ssh -L 8888:ibs-is-analysis-ux1.corp.alleninstitute.org:8889 farzaneh.najafi@ibs-is-analysis-ux1.corp.alleninstitute.org
     # then on the analysis computer, in your folder (Farzaneh), run the notebook below
@@ -211,12 +219,9 @@ if use_ct_traces:
     # cp -rv /media/rd-storage/Z/MesoscopeAnalysis/session_839208243 /allen/programs/braintv/workgroups/nc-ophys/Farzaneh/ICA_crossTalk;
 
     # now take those valid sessions that are ct-corrected
-    list_all_sessions_valid_ct = list_all_sessions_valid[np.in1d(
-        list_all_sessions_valid, sessions_ctDone)]
-    list_all_experiments_valid_ct = np.array(list_all_experiments_valid)[
-        np.in1d(list_all_sessions_valid, sessions_ctDone)]
-    list_all_experiments_ct = np.array(list_all_experiments)[
-        np.in1d(list_all_sessions_valid, sessions_ctDone)]
+    list_all_sessions_valid_ct = list_all_sessions_valid[np.in1d(list_all_sessions_valid, sessions_ctDone)]
+    list_all_experiments_valid_ct = np.array(list_all_experiments_valid)[np.in1d(list_all_sessions_valid, sessions_ctDone)]
+    list_all_experiments_ct = np.array(list_all_experiments)[np.in1d(list_all_sessions_valid, sessions_ctDone)]
 
     print(f'{len(list_all_sessions_valid_ct)}: Number of de-crosstalked sessions for analysis')
     list_all_experiments_valid_ct.shape
@@ -226,7 +231,7 @@ if use_ct_traces:
     list_all_sessions_valid = list_all_sessions_valid_ct
     list_all_experiments_valid = list_all_experiments_valid_ct
     list_all_experiments = list_all_experiments_ct
-
+    
 
 
 
