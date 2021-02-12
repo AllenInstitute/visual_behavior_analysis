@@ -1919,6 +1919,7 @@ for k in list(dictNow.keys()):
 # Use the new list of sessions that are de-crosstalked and will be released in March 2021
 import pandas as pd
 import numpy as np
+import visual_behavior.data_access.loading as loading
 
 metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
 metadata_valid = pd.read_csv(metadata_meso_dir)
@@ -1927,6 +1928,9 @@ print(sessions_ctDone.shape)
 
 
 list_all_sessions_valid = sessions_ctDone
+
+experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
 i = np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)
 metadata_all = experiments_table[i]

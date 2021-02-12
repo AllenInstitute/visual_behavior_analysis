@@ -71,9 +71,6 @@ sessions_ctDone = aa
 
 # sessions_ctDone = cc
 
-import visual_behavior.data_access.loading as loading
-experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
-experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
 
 
@@ -82,6 +79,10 @@ print(sessions_ctDone.shape)
 
 
 list_all_sessions_valid = sessions_ctDone
+
+import visual_behavior.data_access.loading as loading
+experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
 i = np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)
 metadata_all = experiments_table[i]
