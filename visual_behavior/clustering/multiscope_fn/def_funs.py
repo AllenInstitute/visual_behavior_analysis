@@ -1877,8 +1877,7 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
     #### NOTE: you should use allensdk for below as well!!!
     
     # we dont need to reset dataset, we can just go with the dataset from the last experiment, generated above!
-    experiment_id = indiv_id_with_dataset # indiv_id_with_dataset for sure has dataset. some experiments may have failed. 
-    dataset = VisualBehaviorOphysDataset(experiment_id, cache_dir=cache_dir)
+    dataset = VisualBehaviorOphysDataset(indiv_id_with_dataset, cache_dir=cache_dir) # indiv_id_with_dataset for sure has dataset. some experiments may have failed. 
 
     ### stimulus parameters
     table_stim = dataset.stimulus_table

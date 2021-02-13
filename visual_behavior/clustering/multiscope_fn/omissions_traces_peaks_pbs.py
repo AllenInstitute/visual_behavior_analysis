@@ -99,7 +99,10 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
 
     # load the traces, behavioral and metadata for the session
     [whole_data, data_list, table_stim, behav_data] = load_session_data_new(metadata_all, session_id, experiment_ids, use_ct_traces, use_np_corr, use_common_vb_roi)    
+
 #    [whole_data, data_list, table_stim] = load_session_data(session_id) # data_list is similar to whole_data but sorted by area and depth
+
+
 
     if any(np.isnan(data_list['depth'].values.astype(float))):
         session_exclude = 1
@@ -308,7 +311,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
                 # Get traces of all neurons for the entire session
                 local_fluo_traces = whole_data[lims_id]['fluo_traces'] # neurons x frames
                 # added below after using data release sessions; the traces that we get from allensdk dataset object are 1 dimensional, so we make them 2 dim
-                if np.ndim(local_fluo_traces)==1:
+                if np.ndim(local_fluo_traces)==1 and local_fluo_traces.shape[0]>0:
                     local_fluo_traces = np.vstack(whole_data[lims_id]['fluo_traces'])
                     
                 local_time_traces = whole_data[lims_id]['time_trace']  # frame times in sec. Volume rate is 10 Hz. Are these the time of frame onsets?? (I think yes... double checking with Jerome/ Marina.) # dataset.timestamps['ophys_frames'][0]             
@@ -338,6 +341,8 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
                     num_omissions = 0
                     this_sess.at[index, ['n_omissions', 'n_neurons', 'frame_dur']] = num_omissions, num_neurons, frame_dur
                              
+                    
+                    
                     
             if doCorrs==-1: # in case an experiment is invalid or there are no omissions we make sure we set this_sess
                 this_sess = this_sess.iloc[:,range(len(cols_basic))].join(this_sess_l) # len(cols_basic) = 13
@@ -491,18 +496,19 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
                         
     #                     if len(image_names_surr_omit) < 3:
     #                         print(f'There are two alternating omissions: {image_names_surr_omit0}')
-                        if len(image_names_surr_omit)>0 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
-                            print('image after omission is different from image before omission! uncanny!') # sys.exit
 
                         # set to nan the omission trace if it was not preceded by another image in the repetitive structure that we expect to see.
                         if len(image_names_surr_omit) == 0: # session_id: 839514418; there is a last omission after 5.23sec of previous image
                             print(f'Omission {iomit} is uncanny! no images around it! so removing it!')
                             local_fluo_allOmitt[:,:, iomit] = np.nan
                             
-                        if len(image_names_surr_omit) == 1: # session_id: 47758278; there is a last omission after 1.48sec of previous image and no images after that!
+                        elif len(image_names_surr_omit) == 1: # session_id: 47758278; there is a last omission after 1.48sec of previous image and no images after that!
                             print(f'Omission {iomit} is uncanny! no images after it! so removing it!')
                             local_fluo_allOmitt[:,:, iomit] = np.nan
-                            
+                          
+                        elif len(image_names_surr_omit)>0 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
+                            print('image after omission is different from image before omission! uncanny!') # sys.exit
+                        
                         else:
                             
                             '''
@@ -553,7 +559,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
 
                     except Exception as e:
                         print(f'Omission alignment failed; omission index: {iomit}, omission frame: {local_index}, starting and ending frames: {be, af}') # indiv_time, 
-    #                     print(e)
+                        print(e)
 
 
                 flash_omit_dur_all = np.array(flash_omit_dur_all)
