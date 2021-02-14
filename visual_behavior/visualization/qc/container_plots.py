@@ -249,10 +249,15 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         session_type = loading.get_session_type_for_ophys_experiment_id(ophys_experiment_id)
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
-        ax[i + n] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i + n])
-
-        ax[i + (n * 2)] = ep.plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i + (n * 2)])
-        ax[i + (n * 2)].set_title('valid ROI masks')
+        try:
+         ax[i + n] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i + n])
+        except:
+            print('cant plot valid masks for', ophys_experiment_id)
+        try:
+            ax[i + (n * 2)] = ep.plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i + (n * 2)])
+            ax[i + (n * 2)].set_title('valid ROI masks')
+        except:
+            print('cant plot valid masks for', ophys_experiment_id)
 
         ax[i + (n * 3)] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i + (n * 3)])
         ax[i + (n * 3)].set_title('all segmented ROIs\nred = valid, blue = invalid')

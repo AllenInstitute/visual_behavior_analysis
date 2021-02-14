@@ -1489,6 +1489,8 @@ def pmt_gain_from_timeseries_ini(timeseries_ini_path):
     Returns:
         int -- int of the pmt gain
     """
+    config = configp.ConfigParser()
+
     config.read(timeseries_ini_path)
     pmt_gain = int(float(config['_']['PMT.2']))
     return pmt_gain

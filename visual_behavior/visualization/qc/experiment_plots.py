@@ -428,7 +428,7 @@ def plot_high_low_snr_trace_examples(experiment_id, xlim_seconds=None, plot_stim
     highest_snr = np.argsort(dff_traces[dff_traces.robust_snr.isnull() == False].robust_snr.values)[-4:]
     highest_cells = dff_traces[dff_traces.robust_snr.isnull() == False].cell_roi_id.values[highest_snr]
 
-    cell_roi_ids = np.hstack((highest_cells, lowest_cells))
+    cell_roi_ids = np.hstack((lowest_cells, highest_cells))
 
     colors = sns.color_palette()
     if ax is None:
@@ -447,6 +447,7 @@ def plot_high_low_snr_trace_examples(experiment_id, xlim_seconds=None, plot_stim
             np.min(dff_trace[frame_range[0]:frame_range[1]]) * .05)
         ymax = np.max(dff_trace[frame_range[0]:frame_range[1]]) * 1.2
         ax[i].set_ylim(ymin, ymax)
+        ax[i].set_ylabel('dF/F')
         #         ax[i].set_title(str(cell_roi_id))
         if plot_stimuli:
             ax[i] = sf.add_stim_color_span(dataset, ax[i], xlim=xlim_seconds)
