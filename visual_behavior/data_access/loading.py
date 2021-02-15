@@ -129,7 +129,7 @@ def get_visual_behavior_cache(manifest_path=None):
     return cache
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False):
+def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False):
     """get ophys experiments table from cache, filters based on a number of criteria
         and adds additional useful columns to the table
         Saves a reformatted version of the table with additional columns
