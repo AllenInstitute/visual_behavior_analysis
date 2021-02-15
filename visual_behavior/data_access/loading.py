@@ -201,6 +201,12 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
+    if release_data_only:
+        experiments = experiments[experiments.project_code.isin(['VisualBehavior',
+                                                                   'VisualBehaviorTask1B',
+                                                                   'VisualBehaviorMultiscope'])]
+        experiments = experiments[experiments.container_workflow_state=='published']
+        experiments = experiments[experiments.experiment_workflow_state == 'passed']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
                                      experiments.session_type.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
