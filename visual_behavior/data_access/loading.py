@@ -209,6 +209,9 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = experiments[experiments.experiment_workflow_state == 'passed']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
                                      experiments.session_type.values]
+    # ensure cre_line includes Ai94 to prevent inclusion of GCaMP6s in anaysis
+    experiments['cre_line'] = [full_genotype.split('/')[0] if 'Ai94' not in full_genotype else full_genotype.split('/')[0] + ';Ai94'
+                               for full_genotype in experiments.full_genotype.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
     # filter one more time on load to restrict to data release experiments ###
