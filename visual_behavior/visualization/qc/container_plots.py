@@ -260,7 +260,7 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         #     print('cant plot valid masks for', ophys_experiment_id)
 
         ax[i + (n * 2)] = ep.plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(ophys_experiment_id, ax=ax[i + (n * 2)])
-        ax[i + (n * 2)].set_title('all segmented ROIs\nred = valid, blue = invalid')
+        ax[i + (n * 2)].set_title('red=valid, blue=invalid, \ngreen=crosstalk, cyan=both')
 
         try:
             ax[i + (n * 3)] = ep.plot_remaining_decrosstalk_masks_for_experiment(ophys_experiment_id, ax=ax[i + (n * 3)])

@@ -1061,6 +1061,18 @@ def get_lims_cell_segmentation_run_info(experiment_id):
     return mixin.select(query)
 
 
+def get_lims_cell_exclusion_labels(experiment_id):
+    mixin = lims_engine
+    query = '''
+    SELECT oe.id AS oe_id, cr.id AS cr_id , rel.name AS excl_label 
+    FROM ophys_experiments oe 
+    JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id=oe.id AND ocsr.current = 't'
+    JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id 
+    JOIN cell_rois_roi_exclusion_labels crrel ON crrel.cell_roi_id=cr.id 
+    JOIN roi_exclusion_labels rel ON rel.id=crrel.roi_exclusion_label_id 
+    WHERE oe.id = {} '''.format(experiment_id)
+    return mixin.select(query)
+
 def get_lims_cell_rois_table(ophys_experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve
         everything in the cell_rois table for a given experiment
