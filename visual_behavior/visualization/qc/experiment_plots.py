@@ -496,13 +496,18 @@ def plot_remaining_decrosstalk_masks_for_experiment(experiment_id, ax=None):
     remaining_crosstalk_dict = loading.get_remaining_crosstalk_amount_dict(experiment_id)
     decrosstalk_rois = [int(cell_roi_id) for cell_roi_id in list(remaining_crosstalk_dict.keys())]
     roi_masks = {k: dataset.roi_masks[k] for k in decrosstalk_rois}
-    cmap_range = [np.nanmin(np.asarray(list(remaining_crosstalk_dict.values()))), np.nanmax(np.asarray(list(remaining_crosstalk_dict.values())))]
-    if cmap_range[0] < -50:
-        cmap_range[0] = 50
-    if cmap_range[1] > 100:
-        cmap_range[0] = 100
+    # cmap_range = [np.nanmin(np.asarray(list(remaining_crosstalk_dict.values()))), np.nanmax(np.asarray(list(remaining_crosstalk_dict.values())))]
+    cmap_range = [0, 50]
+    # if cmap_range[0] < -50:
+    #     cmap_range[0] = 50
+    # if cmap_range[1] > 100:
+    #     cmap_range[1] = 100
     ax = plot_metrics_mask(roi_masks, remaining_crosstalk_dict, 'remaining_crosstalk', dataset.max_projection.data, title=None, outlines=False,
                            cmap='viridis', cmap_range=cmap_range, ax=ax, colorbar=True)
+    cell_specimen_table = dataset.cell_specimen_table.copy()
+    for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == True].cell_roi_id.values:
+            mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+            ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
     return ax
 
 

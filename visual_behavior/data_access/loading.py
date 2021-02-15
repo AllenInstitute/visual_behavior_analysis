@@ -2383,7 +2383,6 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
     session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
     candidate_folders = [folder for folder in os.listdir(os.path.join(session_dir, 'crosstalk')) if 'roi' in folder]
     folder = [folder for folder in candidate_folders if str(experiment_id) in folder]
-    folder = [folder for folder in candidate_folders if str(experiment_id) in folder]
     json_path = os.path.join(session_dir, 'crosstalk', folder[0], str(experiment_id) + '_crosstalk.json')
     crosstalk_dict = ju.read(json_path)
 
