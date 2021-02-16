@@ -78,7 +78,7 @@ class ResponseAnalysis(object):
 
     """
 
-    def __init__(self, dataset, analysis_cache_dir=None, load_from_cache=False, use_events=False,
+    def __init__(self, dataset, analysis_cache_dir=None, load_from_cache=False, use_events=False, filter_events=False,
                  use_extended_stimulus_presentations=False, overwrite_analysis_files=False, dataframe_format='wide'):
         self.dataset = dataset
         # promote ophys timestamps up to the top level
@@ -92,6 +92,7 @@ class ResponseAnalysis(object):
         # promote metadata to the top level
         self.metadata = self.dataset.metadata.copy()
         self.use_events = use_events
+        self.filter_events = filter_events
         if analysis_cache_dir is None:
             self.analysis_cache_dir = get_analysis_cache_dir()
         else:
@@ -160,11 +161,11 @@ class ResponseAnalysis(object):
 
     def get_df_for_df_name(self, df_name, df_format):
         if df_name == 'trials_response_df':
-            df = rp.get_trials_response_df(self.dataset, self.use_events, df_format=df_format)
+            df = rp.get_trials_response_df(self.dataset, self.use_events, self.filter_events, df_format=df_format)
         elif df_name == 'stimulus_response_df':
-            df = rp.get_stimulus_response_df(self.dataset, self.use_events, df_format=df_format)
+            df = rp.get_stimulus_response_df(self.dataset, self.use_events, self.filter_events, df_format=df_format)
         elif df_name == 'omission_response_df':
-            df = rp.get_omission_response_df(self.dataset, self.use_events, df_format=df_format)
+            df = rp.get_omission_response_df(self.dataset, self.use_events, self.filter_events, df_format=df_format)
         elif df_name == 'trials_run_speed_df':
             df = rp.get_trials_run_speed_df(self.dataset, df_format=df_format)
         elif df_name == 'stimulus_run_speed_df':

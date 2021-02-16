@@ -40,7 +40,7 @@ def add_location_to_expts(expts):
 
 def get_exposure_number_for_group(group):
     order = np.argsort(group['date_of_acquisition'].values)
-    group['session_type_exposure_number'] = order
+    group['prior_exposures_to_session_type'] = order
     return group
 
 
@@ -162,8 +162,12 @@ def reformat_experiments_table(experiments):
     experiments = experiments.reset_index()
     experiments['super_container_id'] = experiments['specimen_id'].values
     # clean up cre_line naming
-    experiments['cre_line'] = [driver_line[1] if driver_line[0] == 'Camk2a-tTA' else driver_line[0] for driver_line in
-                               experiments.driver_line.values]
+    # experiments['cre_line'] = [driver_line[1] if driver_line[0] == 'Camk2a-tTA' else driver_line[0] for driver_line in
+    #                            experiments.driver_line.values]
+    experiments['cre_line'] = [
+        full_genotype.split('/')[0] if 'Ai94' not in full_genotype else full_genotype.split('/')[0] + ';Ai94' for
+        full_genotype in
+        experiments.full_genotype.values]
     experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']  # why is this here?
     # replace session types that are NaN with string None
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'

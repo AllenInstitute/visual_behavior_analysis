@@ -1,18 +1,13 @@
-import os
-import pandas as pd
+import visual_behavior.visualization.utils as utils
+import visual_behavior.visualization.qc.experiment_plots as ep
+import visual_behavior.ophys.response_analysis.response_analysis as ra
+import visual_behavior.ophys.response_analysis.utilities as ut
+import visual_behavior.data_access.loading as loading
+import mpl_figure_formatter as ff
 import matplotlib.pyplot as plt
 
 import seaborn as sns
 sns.set_context('notebook', font_scale=1.5, rc={'lines.markeredgewidth': 2})
-
-import mpl_figure_formatter as ff
-import visual_behavior.data_access.loading as loading
-
-import visual_behavior.ophys.response_analysis.utilities as ut
-import visual_behavior.ophys.response_analysis.response_analysis as ra
-
-import visual_behavior.visualization.qc.experiment_plots as ep
-import visual_behavior.visualization.utils as utils
 
 
 def make_fig_ax():
@@ -67,10 +62,10 @@ def plot_experiment_summary_figure(experiment_id, save_figure=True):
     ax['0_3:'] = ep.plot_motion_correction_and_population_average(experiment_id, ax=ax['0_3:'])
 
     ax['1_0'] = ep.plot_average_image_for_experiment(experiment_id, ax=ax['1_0'])
-    ax['1_1'] =  ep.plot_average_image_for_experiment(experiment_id, ax=ax['1_1'])
+    ax['1_1'] = ep.plot_average_image_for_experiment(experiment_id, ax=ax['1_1'])
     try:
-        ax['1_2'] =  ep.plot_remaining_decrosstalk_masks_for_experiment(experiment_id, ax=ax['1_2'])
-    except:
+        ax['1_2'] = ep.plot_remaining_decrosstalk_masks_for_experiment(experiment_id, ax=ax['1_2'])
+    except BaseException:
         print('no decrosstalk for experiment', experiment_id)
     ax['1_3:'] = ep.plot_behavior_timeseries_for_experiment(experiment_id, ax=ax['1_3:'])
 
@@ -80,44 +75,41 @@ def plot_experiment_summary_figure(experiment_id, save_figure=True):
     ax['2_2'] = ep.plot_cell_snr_distribution_for_experiment(experiment_id, ax=ax['2_2'])
     ax['2_3:'] = ep.plot_traces_heatmap_for_experiment(experiment_id, ax=ax['2_3:'])
 
-
-    df_name='trials_response_df'
+    df_name = 'trials_response_df'
     df = analysis.get_response_df(df_name)
     mean_df = ut.get_mean_df(df, analysis=analysis, conditions=['cell_specimen_id', 'go'], flashes=False, omitted=False,
-                         get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=True)
+                             get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=True)
     ax['3_0'] = ep.plot_population_average_for_experiment(experiment_id, df, mean_df, df_name, color=None, label=None, ax=ax['3_0'])
-    ax['3_0'].set_xlim(-2.5,2.8)
+    ax['3_0'].set_xlim(-2.5, 2.8)
 
-    df_name='omission_response_df'
+    df_name = 'omission_response_df'
     df = analysis.get_response_df(df_name)
     mean_df = ut.get_mean_df(df, analysis=analysis, conditions=['cell_specimen_id'], flashes=False, omitted=True,
-                         get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=False)
+                             get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=False)
     ax['3_1'] = ep.plot_population_average_for_experiment(experiment_id, df, mean_df, df_name, color=None, label=None, ax=ax['3_1'])
-    ax['3_1'].set_xlim(-2.5,2.8)
+    ax['3_1'].set_xlim(-2.5, 2.8)
 
-
-    df_name='trials_run_speed_df'
+    df_name = 'trials_run_speed_df'
     df = analysis.get_response_df(df_name)
     df['condition'] = True
     mean_df = ut.get_mean_df(df, analysis=analysis, conditions=['condition', 'go'], flashes=False, omitted=True,
-                         get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=False)
+                             get_reliability=False, get_pref_stim=False, exclude_omitted_from_pref_stim=False)
     ax['4_0'] = ep.plot_population_average_for_experiment(experiment_id, df, df, df_name, trace_type='trace',
-                                                   color=sns.color_palette()[4], label=None, ax=ax['4_0'])
+                                                          color=sns.color_palette()[4], label=None, ax=ax['4_0'])
     ax['4_0'].set_ylabel('run speed (cm/s)')
-    ax['4_0'].set_xlim(-2.5,2.8)
+    ax['4_0'].set_xlim(-2.5, 2.8)
 
-    df_name='omission_run_speed_df'
+    df_name = 'omission_run_speed_df'
     df = analysis.get_response_df(df_name)
     df['condition'] = True
     mean_df = ut.get_mean_df(df, analysis=analysis, conditions=['condition'], flashes=False, omitted=False,
-                         get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
+                             get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
     ax['4_1'] = ep.plot_population_average_for_experiment(experiment_id, df, df, df_name, trace_type='trace',
-                                                       color=sns.color_palette()[4], label=None, ax=ax['4_1'])
+                                                          color=sns.color_palette()[4], label=None, ax=ax['4_1'])
     ax['4_1'].set_ylabel('run speed (cm/s)')
-    ax['4_1'].set_xlim(-2.5,2.8)
+    ax['4_1'].set_xlim(-2.5, 2.8)
 
-
-    xlim_seconds=[int(10*60), int(15*60)]
+    xlim_seconds = [int(10 * 60), int(15 * 60)]
     ax['3_3:'] = ep.plot_high_low_snr_trace_examples(experiment_id, xlim_seconds=xlim_seconds, ax=ax['3_3:'])
 
     ax['4_3:'] = ep.plot_behavior_timeseries_for_experiment(experiment_id, xlim_seconds=xlim_seconds, ax=ax['4_3:'])
@@ -131,11 +123,8 @@ def plot_experiment_summary_figure(experiment_id, save_figure=True):
         utils.save_figure(fig, figsize, save_dir, 'experiment_summary_figure', title)
 
 
-
-
 if __name__ == '__main__':
 
     experiments_table = loading.get_filtered_ophys_experiment_table()
     experiment_id = experiments_table.index[60]
     plot_experiment_summary_figure(experiment_id, save_figure=True)
-

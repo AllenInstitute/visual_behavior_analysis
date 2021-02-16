@@ -8,7 +8,6 @@ import os
 import numpy as np
 import pandas as pd
 
-import visual_behavior.data_access.utilities as utilities
 import visual_behavior.data_access.loading as loading
 import visual_behavior.data_access.processing as processing
 
@@ -63,16 +62,12 @@ def compute_basic_snr_for_frame(frame):
     basic_snr = np.std(frame) / np.mean(frame)
     return basic_snr
 
-def compute_basic_snr_for_frame(frame):
-    basic_snr = np.std(frame) / np.mean(frame)
-    return basic_snr
-
 
 # ### Doug's metric
 def assign_snr(dataset):
     for idx, row in dataset.dff_traces.iterrows():
         dff = row['dff'][
-              1000:-1000]  # avoid first/last 100 datapoints to avoid spurious dff data at start/finish of recording
+            1000:-1000]  # avoid first/last 100 datapoints to avoid spurious dff data at start/finish of recording
         dataset.dff_traces.at[idx, 'snr_99p_over_std'] = np.percentile(dff, 99) / np.std(dff)
         dataset.dff_traces.at[idx, 'peak_over_std'] = np.max(dff) / np.std(dff)
         dataset.dff_traces.at[idx, 'snr_mu_over_std'] = np.mean(dff) / np.std(dff)
@@ -87,6 +82,7 @@ def get_best_snr(dataset):
 
 # http://stash.corp.alleninstitute.org/projects/SSCI/repos/ophysextractor/browse/ophysextractor/datasets/motion_corr_physio.py
 # get_snr_metrics()
+
 
 def get_snr_metrics_df_for_experiments(experiment_ids):
     metrics_list = []
@@ -149,16 +145,14 @@ def get_snr_metrics_df_for_experiments(experiment_ids):
             # Doug SNR on traces
             peak_over_std_max = get_best_snr(dataset)
 
-
             metrics_list.append([experiment_id, basic_snr_depth_image, basic_snr_average_image, basic_snr_max_image,
                                  std_avg_image, std_max_image, mean_avg_image, mean_max_image,
                                  # basic_snr_fingerprint_avg_image, basic_snr_fingerprint_max_image,
                                  # std_fingerprint_avg_image, std_fingerprint_max_image, basic_snr_movie_frame,
                                  median_robust_snr_traces, max_robust_snr_traces, peak_over_std_max])
-        except:
+        except BaseException:
             problems_list.append(experiment_id)
-            print('problem for',experiment_id)
-
+            print('problem for', experiment_id)
 
     columns = ['experiment_id', 'basic_snr_depth_image', 'basic_snr_average_image', 'basic_snr_max_image',
                'std_avg_image', 'std_max_image', 'mean_avg_image', 'mean_max_image',
@@ -169,7 +163,6 @@ def get_snr_metrics_df_for_experiments(experiment_ids):
     metrics_df = pd.DataFrame(metrics_list, columns=columns)
 
     return metrics_df, problems_list
-
 
 
 if __name__ == '__main__':
@@ -188,6 +181,3 @@ if __name__ == '__main__':
         problems_list.to_csv(os.path.join(save_dir, 'problems_list_Slc.csv'))
     except Exception as e:
         print(e)
-
-
-

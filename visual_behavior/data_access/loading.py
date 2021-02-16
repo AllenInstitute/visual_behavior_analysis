@@ -7,7 +7,6 @@ from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadab
 from visual_behavior.ophys.response_analysis import response_processing as rp
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
-from visual_behavior.data_access import processing
 from visual_behavior.data_access import utilities
 import visual_behavior.database as db
 
@@ -130,7 +129,7 @@ def get_visual_behavior_cache(manifest_path=None):
     return cache
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False):
+def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False):
     """get ophys experiments table from cache, filters based on a number of criteria
         and adds additional useful columns to the table
         Saves a reformatted version of the table with additional columns
@@ -202,8 +201,17 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
+    if release_data_only:
+        experiments = experiments[experiments.project_code.isin(['VisualBehavior',
+                                                                   'VisualBehaviorTask1B',
+                                                                   'VisualBehaviorMultiscope'])]
+        experiments = experiments[experiments.container_workflow_state=='published']
+        experiments = experiments[experiments.experiment_workflow_state == 'passed']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
                                      experiments.session_type.values]
+    # ensure cre_line includes Ai94 to prevent inclusion of GCaMP6s in anaysis
+    experiments['cre_line'] = [full_genotype.split('/')[0] if 'Ai94' not in full_genotype else full_genotype.split('/')[0] + ';Ai94'
+                               for full_genotype in experiments.full_genotype.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
     # filter one more time on load to restrict to data release experiments ###
@@ -644,10 +652,12 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
 
+
 def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
     experiments = get_filtered_ophys_experiment_table(include_failed_data=True)
     behavior_session_id = experiments.loc[ophys_experiment_id].behavior_session_id
     return behavior_session_id
+
 
 def get_pc_masks_for_session(ophys_session_id):
     facemap_output_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/facemap_results'
@@ -1068,6 +1078,18 @@ def get_lims_cell_segmentation_run_info(experiment_id):
     return mixin.select(query)
 
 
+def get_lims_cell_exclusion_labels(experiment_id):
+    mixin = lims_engine
+    query = '''
+    SELECT oe.id AS oe_id, cr.id AS cr_id , rel.name AS excl_label 
+    FROM ophys_experiments oe 
+    JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id=oe.id AND ocsr.current = 't'
+    JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id 
+    JOIN cell_rois_roi_exclusion_labels crrel ON crrel.cell_roi_id=cr.id 
+    JOIN roi_exclusion_labels rel ON rel.id=crrel.roi_exclusion_label_id 
+    WHERE oe.id = {} '''.format(experiment_id)
+    return mixin.select(query)
+
 def get_lims_cell_rois_table(ophys_experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve
         everything in the cell_rois table for a given experiment
@@ -1350,7 +1372,6 @@ def get_average_depth_image(experiment_id):
     import visual_behavior.data_access.utilities as utilities
     import matplotlib.pyplot as plt
 
-    cache = get_visual_behavior_cache()
     expt_dir = utilities.get_ophys_experiment_dir(utilities.get_lims_data(experiment_id))
     session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
     experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
@@ -1497,6 +1518,8 @@ def pmt_gain_from_timeseries_ini(timeseries_ini_path):
     Returns:
         int -- int of the pmt gain
     """
+    config = configp.ConfigParser()
+
     config.read(timeseries_ini_path)
     pmt_gain = int(float(config['_']['PMT.2']))
     return pmt_gain
@@ -2386,11 +2409,8 @@ def get_remaining_crosstalk_amount_dict(experiment_id):
     import allensdk.core.json_utilities as ju
     import visual_behavior.data_access.utilities as utilities
 
-    dataset = get_ophys_dataset(experiment_id, include_invalid_rois=True)
-
     session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
     candidate_folders = [folder for folder in os.listdir(os.path.join(session_dir, 'crosstalk')) if 'roi' in folder]
-    folder = [folder for folder in candidate_folders if str(experiment_id) in folder]
     folder = [folder for folder in candidate_folders if str(experiment_id) in folder]
     json_path = os.path.join(session_dir, 'crosstalk', folder[0], str(experiment_id) + '_crosstalk.json')
     crosstalk_dict = ju.read(json_path)
