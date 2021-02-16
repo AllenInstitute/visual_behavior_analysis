@@ -12,9 +12,11 @@ doCorrs=-1, eg. for umap analysis.
 
 The main thing this script does is that it sets all_sess_2an which includes sessions to be analyzed given their imageset (A,B)
 
-It loads mouse_trainHist_all2.h5 file, which shows the entire training history of a mouse
+############## NOTE ##############
+This script loads mouse_trainHist_all2.h5 file, which shows the entire training history of a mouse
 We have to fist save this file by running, on the cluster, set_mouse_trainHist_init_pbs.py which calls set_mouse_trainHist_all2.py 
 Remember to fist update the list of mice in all_mice_id on set_mouse_trainHist_all2.py.
+##################################
 
 Follow this script by either of the following two to set vars for plotting.
 if doCorrs:
@@ -39,7 +41,7 @@ Created on Mon Aug 26 12:23:25 2019
     
 #%%
 doCorrs = 1 #1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
-analysis_dates = ['20210211'] #['20201119'] #['20200731'] #(subtractSigCorrs=1) #['20200804'] #(subtractSigCorrs=0) #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
+analysis_dates = ['20210215'] #['20210211'] #['20201119'] #['20200731'] #(subtractSigCorrs=1) #['20200804'] #(subtractSigCorrs=0) #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
 # note: analysis_dates must not include the entire date_time (eg '20200508_233842'), because the code below assumes it is followed by some wildcard characters.
 control_single_beam = 0 #1 # if 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope 
 
@@ -204,10 +206,11 @@ if doCorrs==1:
     
 rmv = np.logical_or(frame_durs < .093, frame_durs > .094)
 if sum(rmv)>0:
-    print(f'{sum(rmv)} experiments have unusual frame duration. Take a look at these sessions, and add them to set_sessions_valid, line 178 to be excluded.')
-    print(frame_durs[rmv])
+    print(f'{sum(rmv)} sessions have unusual frame duration. Take a look at these sessions, and add them to set_sessions_valid, line 178 to be excluded.')
+    print(f"session ids: {all_sess['session_id'].values[rmv]}")
+    print(f'frame durations: {frame_durs[rmv]}')
 
-#     sys.exit(f'\n\nRemoving {sum(rmv)} sessions with unexpected frame duration!!\n\n')
+    print(f'\n\nRemoving {sum(rmv)} sessions with unexpected frame duration!!\n\n')
     all_sess = all_sess[~rmv]
 
         
@@ -217,6 +220,8 @@ all_sess
 
 #len(input_vars), input_vars.iloc[0]
 
+a = np.hstack(all_sess['n_neurons'].values); aa = sum(~np.isnan(a.astype(float)))
+print(f'Final number of valid experiments (with >0 neurons): {aa}/{len(a)}')
 
 
 ##############################################################################    

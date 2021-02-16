@@ -1077,6 +1077,8 @@ def all_sess_sum_stages_trainHist(all_sess):
         ss = all_sess[all_sess.mouse_id==i].session_id.values
     
         # take data from the 1st experiment of each session (because date and stage are common across all experiments of each session)
+        # NOTE: below doesnt work when docorr=1, because each row of all_sess is for a session and includes all the 8 experiments 
+        
         mouse_trainHist = pd.DataFrame([], columns=['mouse_id', 'date', 'session_id', 'stage'])
         for ii in np.arange(0,len(m),8):
             mouse_trainHist.at[ii, ['mouse_id', 'date', 'session_id', 'stage']] = m[ii] , d[ii] , ss[ii] , s[ii]  # m.iloc[np.arange(0,len(m),8)].values , d.iloc[np.arange(0,len(d),8)].values , s.iloc[np.arange(0,len(s),8)].values
