@@ -5,7 +5,7 @@ from def_funs import *
 def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id, all_ABtransit_AbefB_Aall, only_1st_transit):
 
     #%% Load mouse_trainHist_all2.h5 file, which shows the entire training history of a mouse
-    # we get the var by running, on the cluster, set_mouse_trainHist_all2_pbs.py which calls set_mouse_trainHist_all2.py 
+    # we get the var by running, on the cluster, set_mouse_trainHist_init_pbs.py which calls set_mouse_trainHist_all2.py 
 
     # Remember: 
     # mouse_trainHist_all2 may have multiple rows per day! and it seems some sessions may lack "stage" name.... this is
