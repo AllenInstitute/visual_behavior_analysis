@@ -1876,15 +1876,25 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
     
     #### NOTE: you should use allensdk for below as well!!!
     
+    ####### vb
+    '''
     # we dont need to reset dataset, we can just go with the dataset from the last experiment, generated above!
     dataset = VisualBehaviorOphysDataset(indiv_id_with_dataset, cache_dir=cache_dir) # indiv_id_with_dataset for sure has dataset. some experiments may have failed. 
 
     ### stimulus parameters
     table_stim = dataset.stimulus_table
+    '''
+    
+    ####### use allensdk instead of above
+    dataset = loading.get_ophys_dataset(indiv_id_with_dataset, include_invalid_rois=False)
+    table_stim = dataset.stimulus_presentations
+    
     
     
     ### behavioral parameters
+    ### vb
     behav_data = {}
+    '''
     behav_data['running_speed'] = dataset.running_speed
     behav_data['licks'] = dataset.licks
     behav_data['rewards'] = dataset.rewards
@@ -1894,9 +1904,21 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
     behav_data['d_prime'] = d_prime
     behav_data['hit_rate'] = hit_rate
     behav_data['catch_rate'] = catch_rate            
-
+    '''
+    
+    ### allensdk
+    behav_data['running_speed'] = dataset.running_speed['speed']
+    behav_data['licks'] = dataset.rewards['timestamps']
+    behav_data['rewards'] = dataset.licks['timestamps']    
+    
+    # below needs work
+#     behavior_data = dataset.get_rolling_performance_df()
+#     behavior_data['rolling_dprime']
+#     behavior_data['hit_rate']
+    
     
     return [whole_data, data_list, table_stim, behav_data]
+
 
 
 

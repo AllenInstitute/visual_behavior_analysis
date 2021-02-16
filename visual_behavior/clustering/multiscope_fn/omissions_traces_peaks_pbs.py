@@ -508,7 +508,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
                           
                         elif len(image_names_surr_omit)>0 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
                             print('image after omission is different from image before omission! uncanny!') # sys.exit
-                        
+                            local_fluo_allOmitt[:,:, iomit] = np.nan
                         else:
                             
                             '''
@@ -1190,7 +1190,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
             valid_a1 = this_sess_l.iloc[inds_lm]['valid'].values # 4
             valid_a2 = this_sess_l.iloc[inds_v1]['valid'].values # 4
 
-            nfrs = local_fluo_allOmitt_a1[0].shape[0]
+            nfrs = samps_bef + samps_aft #local_fluo_allOmitt_a1[0].shape[0]
     #         n_neurs_a1 = [local_fluo_allOmitt_a1[iexp].shape[1] for iexp in range(len(local_fluo_allOmitt_a1))] # number of neurons for each depth of area 1
     #         n_neurs_a2 = [local_fluo_allOmitt_a2[iexp].shape[1] for iexp in range(len(local_fluo_allOmitt_a2))] # number of neurons for each depth of area 2
             # since de-crosstalking may give planes with 0 neurons, we need to run the following instead of above:
@@ -1213,8 +1213,8 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
 
             # in cols_a1a2: rows are area1 (LM) layers; colums are area2 (V1) layers
             '''
-    #            cols = cc_a1_a2.columns.values
-    #            cols_a1a2 = np.reshape(cols, (4,4), order='C')
+#            cols = cc_a1_a2.columns.values
+#            cols_a1a2 = np.reshape(cols, (4,4), order='C')
             cols_a1a2 = [['l00', 'l01', 'l02', 'l03'],
                         ['l10', 'l11', 'l12', 'l13'],
                         ['l20', 'l21', 'l22', 'l23'],
@@ -2069,6 +2069,8 @@ print(f'\n{sum(np.in1d(experiment_ids, experiment_ids_valid)==False)} of the exp
 #cnt_sess = cnt_sess + 1
 print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
 #print('%d: session %d out of %d sessions' %(session_id, cnt_sess+1, len(list_all_sessions_valid)))
+
+
 
 
 # call the main function
