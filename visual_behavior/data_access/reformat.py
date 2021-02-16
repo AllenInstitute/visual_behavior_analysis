@@ -40,7 +40,7 @@ def add_location_to_expts(expts):
 
 def get_exposure_number_for_group(group):
     order = np.argsort(group['date_of_acquisition'].values)
-    group['session_type_exposure_number'] = order
+    group['prior_exposures_to_session_type'] = order
     return group
 
 
