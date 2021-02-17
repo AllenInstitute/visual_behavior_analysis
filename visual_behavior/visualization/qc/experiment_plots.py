@@ -127,16 +127,24 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
     cell_specimen_table = dataset.cell_specimen_table.copy()
+    exclusion_labels = loading.get_lims_cell_exclusion_labels(ophys_experiment_id)
     try:
         for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == True].cell_roi_id.values:
             mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
-            ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
+            ax.contour(mask, levels=0, colors=['red'], linewidths=[1])
     except BaseException:
         pass
     try:
         for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == False].cell_roi_id.values:
             mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
-            ax.contour(mask, levels=0, colors=['blue'], linewidths=[0.6])
+            excl_labels = exclusion_labels[exclusion_labels.cr_id==cell_roi_id].excl_label.values
+            decrosstalk_in_labels = ['decrosstalk' in excl_label for excl_label in excl_labels]
+            if (True in decrosstalk_in_labels) and (len(excl_labels)==1):
+                ax.contour(mask, levels=0, colors=['green'], linewidths=[2])
+            elif (True in decrosstalk_in_labels) and (len(excl_labels)>1):
+                ax.contour(mask, levels=0, colors=['cyan'], linewidths=[1])
+            else:
+                ax.contour(mask, levels=0, colors=['blue'], linewidths=[1])
     except BaseException:
         pass
     ax.axis('off')
@@ -428,7 +436,7 @@ def plot_high_low_snr_trace_examples(experiment_id, xlim_seconds=None, plot_stim
     highest_snr = np.argsort(dff_traces[dff_traces.robust_snr.isnull() == False].robust_snr.values)[-4:]
     highest_cells = dff_traces[dff_traces.robust_snr.isnull() == False].cell_roi_id.values[highest_snr]
 
-    cell_roi_ids = np.hstack((highest_cells, lowest_cells))
+    cell_roi_ids = np.hstack((lowest_cells, highest_cells))
 
     colors = sns.color_palette()
     if ax is None:
@@ -447,6 +455,7 @@ def plot_high_low_snr_trace_examples(experiment_id, xlim_seconds=None, plot_stim
             np.min(dff_trace[frame_range[0]:frame_range[1]]) * .05)
         ymax = np.max(dff_trace[frame_range[0]:frame_range[1]]) * 1.2
         ax[i].set_ylim(ymin, ymax)
+        ax[i].set_ylabel('dF/F')
         #         ax[i].set_title(str(cell_roi_id))
         if plot_stimuli:
             ax[i] = sf.add_stim_color_span(dataset, ax[i], xlim=xlim_seconds)
@@ -495,13 +504,18 @@ def plot_remaining_decrosstalk_masks_for_experiment(experiment_id, ax=None):
     remaining_crosstalk_dict = loading.get_remaining_crosstalk_amount_dict(experiment_id)
     decrosstalk_rois = [int(cell_roi_id) for cell_roi_id in list(remaining_crosstalk_dict.keys())]
     roi_masks = {k: dataset.roi_masks[k] for k in decrosstalk_rois}
-    cmap_range = [np.nanmin(np.asarray(list(remaining_crosstalk_dict.values()))), np.nanmax(np.asarray(list(remaining_crosstalk_dict.values())))]
-    if cmap_range[0] < -50:
-        cmap_range[0] = 50
-    if cmap_range[1] > 100:
-        cmap_range[0] = 100
+    # cmap_range = [np.nanmin(np.asarray(list(remaining_crosstalk_dict.values()))), np.nanmax(np.asarray(list(remaining_crosstalk_dict.values())))]
+    cmap_range = [0, 50]
+    # if cmap_range[0] < -50:
+    #     cmap_range[0] = 50
+    # if cmap_range[1] > 100:
+    #     cmap_range[1] = 100
     ax = plot_metrics_mask(roi_masks, remaining_crosstalk_dict, 'remaining_crosstalk', dataset.max_projection.data, title=None, outlines=False,
                            cmap='viridis', cmap_range=cmap_range, ax=ax, colorbar=True)
+    # cell_specimen_table = dataset.cell_specimen_table.copy()
+    # for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == True].cell_roi_id.values:
+    #     mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+    #     ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
     return ax
 
 

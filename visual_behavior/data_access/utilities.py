@@ -884,6 +884,12 @@ def get_wkf_eye_tracking_avi_filepath(ophys_session_id):
     return filepath
 
 
+def get_eye_tracking_h5_filepath(ophys_session_id):
+    avi_filepath = get_wkf_eye_tracking_avi_filepath(ophys_session_id)
+    h5_filepath = avi_filepath[:-3] + "h5"
+    return h5_filepath
+
+
 def get_wkf_ellipse_h5_filepath(ophys_session_id):
     """use SQL and the LIMS well known file system to get the
         ellipse.h5 file information for a given
