@@ -3,6 +3,12 @@
 """
 First script that we need to run (for post analysis) after omissions_traces_peaks.py is run and the main vars are saved. 
 
+############## NOTE ##############
+This script loads mouse_trainHist_all2.h5 file, which shows the entire training history of a mouse
+We have to fist save this file by running, on the cluster, set_mouse_trainHist_init_pbs.py which calls set_mouse_trainHist_all2.py 
+Remember to fist update the list of mice in all_mice_id on set_mouse_trainHist_all2.py.
+##################################
+
 Vars needed here are loaded from the already saved h5 files (created by the function omissions_traces_peaks.py) 
 (if doCorrs=0, the h5 filename is "all_sess_omit_traces_peaks")
 
@@ -11,12 +17,6 @@ If doCorrs=1, we load vars for each session from the server (this_sess), and the
 doCorrs=-1, eg. for umap analysis.
 
 The main thing this script does is that it sets all_sess_2an which includes sessions to be analyzed given their imageset (A,B)
-
-############## NOTE ##############
-This script loads mouse_trainHist_all2.h5 file, which shows the entire training history of a mouse
-We have to fist save this file by running, on the cluster, set_mouse_trainHist_init_pbs.py which calls set_mouse_trainHist_all2.py 
-Remember to fist update the list of mice in all_mice_id on set_mouse_trainHist_all2.py.
-##################################
 
 Follow this script by either of the following two to set vars for plotting.
 if doCorrs:
@@ -302,10 +302,21 @@ time_trace, time_trace_new, xmjn, flashes_win_trace_index_unq_time, grays_win_tr
         set_timetrace_flashesind_allmice_areas(samps_bef, samps_aft, frame_dur, doCorrs, all_sess)
 
 
-# Set sessions for analysis based on the desired stage (A, B, transition, etc)
-#### note: make sure 'mouse_trainHist_all2' file is up to date; To do so, set_mouse_trainHist_all2.py needs to have the updated list of all_mice_id, and set_mouse_trainHist_init_pbs.py (which calls the xxxall2 function) needs to be run on the cluster.
+#%% Set sessions for analysis based on the desired stage (A, B, transition, etc)
+
+print(f"\n\nIMPORTANT NOTE: make sure 'mouse_trainHist_all2' file is up to date; To do so, set_mouse_trainHist_all2.py needs to have the updated list of all_mice_id, and set_mouse_trainHist_init_pbs.py (which calls the xxxall2 function) needs to be run on the cluster.")
 all_sess_2an, whatSess = set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id, all_ABtransit_AbefB_Aall, only_1st_transit)
 
+print(f'\n')
+if all_ABtransit_AbefB_Aall==0:
+    print(f'Analyze all sessions')  
+elif all_ABtransit_AbefB_Aall==1: 
+    print(f'Analyze only A-->B transitions (ie consecutive A,B sessions)')
+elif all_ABtransit_AbefB_Aall==2: 
+    print(f'Analyze A sessions before B')  
+elif all_ABtransit_AbefB_Aall==3: 
+    print(f'Analyze all A sessions before or after B sessions')
+        
 if type(all_sess.iloc[0]['experiment_id'])=='str' or type(all_sess.iloc[0]['experiment_id'])==str: # svm analysis: each row of all_sess is one experiment, so we divide the numbers below by 8 to reflect number of sessions.
     print(f'\nFinal number of sessions for analysis: {len(all_sess_2an)/num_planes}')
 else:

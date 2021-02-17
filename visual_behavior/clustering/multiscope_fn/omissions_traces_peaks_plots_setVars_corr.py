@@ -152,7 +152,18 @@ def quant_cc(cc_sessAv, fo_dur, list_times, list_times_flash, samps_bef, flash_w
         bl_preFlash = np.percentile(cc_sessAv[bl_index_pre_flash], bl_percentile, axis=0) # 16 (layer combinations of the two areas)
         '''
         
+        # average all values below the 50th percentile of the entire trace
+        '''
+        th = np.percentile(cc_sessAv, 50, axis=0)
+        if np.ndim(cc_sessAv)>1:
+            bl_preOmit = [np.mean(cc_sessAv[cc_sessAv[:, l] <= th[l] , l]) for l in range(len(th))]
+        else:
+            bl_preOmit = np.mean(cc_sessAv[cc_sessAv <= th])
+        bl_preFlash = bl_preOmit
+        '''
+        
         # newest method: take frames right before the flash onset (or shifted by .25sec in case of VIP, familiar) and average them
+        
         b0_relOmit = np.round((flash_win_final0) / frame_dur).astype(int)
         stp = np.round(-.75 / frame_dur).astype(int)
         # below is better: image and omission frames than the commented one down here, which is image-1 and omission-1.

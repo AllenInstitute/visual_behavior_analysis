@@ -317,7 +317,7 @@ def set_timetrace_flashesind_allmice_areas(samps_bef, samps_aft, frame_dur, doCo
     #%% Set some useful vars which you will need for most subsequent analaysis:
     # all_mice_id, stages_sessionN, mouse_trainHist_all, mouseCre_numSess
 
-    all_mice_id, stages_sessionN, mouse_trainHist_all, mouseCre_numSess = all_sess_sum_stages_trainHist(all_sess)
+    all_mice_id, stages_sessionN, mouse_trainHist_all, mouseCre_numSess = all_sess_sum_stages_trainHist(all_sess, doCorrs)
 
 
     #%% Set plane indeces for each area (V1 and LM)
@@ -1048,7 +1048,7 @@ def set_mouse_trainHist_all2(all_mice_id, saveResults=1):
 #%% After all_sess is set, run this function to set the following useful vars which you will need for most subsequent analaysis
 # all_mice_id, stages_sessionN, mouse_trainHist_all, mouseCre_numSess
 
-def all_sess_sum_stages_trainHist(all_sess):    
+def all_sess_sum_stages_trainHist(all_sess, doCorrs):    
     #%% Show the number of sessions for each stage 
      
     # all_sess[all_sess.stage == 'OPHYS_5_images_A_passive']
@@ -1078,9 +1078,15 @@ def all_sess_sum_stages_trainHist(all_sess):
     
         # take data from the 1st experiment of each session (because date and stage are common across all experiments of each session)
         # NOTE: below doesnt work when docorr=1, because each row of all_sess is for a session and includes all the 8 experiments 
-        
+
         mouse_trainHist = pd.DataFrame([], columns=['mouse_id', 'date', 'session_id', 'stage'])
-        for ii in np.arange(0,len(m),8):
+
+        if doCorrs==0:
+            r = np.arange(0,len(m),8)
+        else:
+            r = np.arange(0,len(m))
+            
+        for ii in r:
             mouse_trainHist.at[ii, ['mouse_id', 'date', 'session_id', 'stage']] = m[ii] , d[ii] , ss[ii] , s[ii]  # m.iloc[np.arange(0,len(m),8)].values , d.iloc[np.arange(0,len(d),8)].values , s.iloc[np.arange(0,len(s),8)].values
         
         mouse_trainHist_all = mouse_trainHist_all.append(mouse_trainHist)
@@ -1104,8 +1110,11 @@ def all_sess_sum_stages_trainHist(all_sess):
     
     #%% For each mouse_id, show the cre line and the number of sessions
     
-    num_sessions_per_mouse = np.ceil(np.array([sum(all_sess.mouse_id == all_mice_id[i]) for i in range(len(all_mice_id))]) / 8.)
-    
+    if doCorrs==0:
+        num_sessions_per_mouse = np.ceil(np.array([sum(all_sess.mouse_id == all_mice_id[i]) for i in range(len(all_mice_id))]) / 8.)
+    else:
+        num_sessions_per_mouse = np.ceil(np.array([sum(all_sess.mouse_id == all_mice_id[i]) for i in range(len(all_mice_id))]))
+        
     mouseCre_numSess = pd.DataFrame([], columns=['cre', 'num_sessions'])
     for i in range(len(all_mice_id)):
         mouse_id = all_mice_id[i]
