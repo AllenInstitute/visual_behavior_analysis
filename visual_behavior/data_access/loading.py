@@ -289,32 +289,32 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
         self._include_invalid_rois = include_invalid_rois
 
-    @property
-    def analysis_folder(self):
-        analysis_cache_dir = get_analysis_cache_dir()
-        candidates = glob.glob(os.path.join(analysis_cache_dir, '{}_*'.format(int(self.ophys_experiment_id))))
-        if len(candidates) == 1:
-            self._analysis_folder = candidates[0]
-        elif len(candidates) == 0:
-            print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
-                                                                                    analysis_cache_dir))
-            print('creating new analysis folder')
-            m = self.metadata.copy()
-            date = m['experiment_datetime']
-            date = str(date)[:10]
-            date = date[2:4] + date[5:7] + date[8:10]
-            self._analysis_folder = str(int(m['ophys_experiment_id'])) + '_' + str(int(m['donor_id'])) + '_' + date + '_' + m[
-                'targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['driver_line'][0] + '_' + m[
-                                        'rig_name'] + '_' + m['session_type']
-            os.mkdir(os.path.join(analysis_cache_dir, self._analysis_folder))
-        elif len(candidates) > 1:
-            raise OSError('{} contains multiple possible analysis folders: {}'.format(analysis_cache_dir, candidates))
-        return self._analysis_folder
+    # @property
+    # def analysis_folder(self):
+    #     analysis_cache_dir = get_analysis_cache_dir()
+    #     candidates = glob.glob(os.path.join(analysis_cache_dir, '{}_*'.format(int(self.ophys_experiment_id))))
+    #     if len(candidates) == 1:
+    #         self._analysis_folder = candidates[0]
+    #     elif len(candidates) == 0:
+    #         print('unable to locate analysis folder for experiment {} in {}'.format(self.ophys_experiment_id,
+    #                                                                                 analysis_cache_dir))
+    #         print('creating new analysis folder')
+    #         m = self.metadata.copy()
+    #         date = m['experiment_datetime']
+    #         date = str(date)[:10]
+    #         date = date[2:4] + date[5:7] + date[8:10]
+    #         self._analysis_folder = str(int(m['ophys_experiment_id'])) + '_' + str(int(m['donor_id'])) + '_' + date + '_' + m[
+    #             'targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['driver_line'][0] + '_' + m[
+    #                                     'rig_name'] + '_' + m['session_type']
+    #         os.mkdir(os.path.join(analysis_cache_dir, self._analysis_folder))
+    #     elif len(candidates) > 1:
+    #         raise OSError('{} contains multiple possible analysis folders: {}'.format(analysis_cache_dir, candidates))
+    #     return self._analysis_folder
 
-    @property
-    def analysis_dir(self):
-        self._analysis_dir = os.path.join(get_analysis_cache_dir(), self.analysis_folder)
-        return self._analysis_dir
+    # @property
+    # def analysis_dir(self):
+    #     self._analysis_dir = os.path.join(get_analysis_cache_dir(), self.analysis_folder)
+    #     return self._analysis_dir
 
     @property
     def cell_specimen_table(self):
@@ -335,12 +335,12 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self._cell_specimen_ids = np.sort(self.cell_specimen_table.index.values)
         return self._cell_specimen_ids
 
-    @property
-    def roi_masks(self):
-        cell_specimen_table = super().cell_specimen_table
-        # cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
-        self._roi_masks = get_sdk_roi_masks(cell_specimen_table)
-        return self._roi_masks
+    # @property
+    # def roi_masks(self):
+    #     cell_specimen_table = super().cell_specimen_table
+    #     # cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
+    #     self._roi_masks = get_sdk_roi_masks(cell_specimen_table)
+    #     return self._roi_masks
 
     @property
     def corrected_fluorescence_traces(self):
@@ -365,106 +365,134 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             self._dff_traces = super().dff_traces
         return self._dff_traces
 
-    def _get_events(self):
-        """
-        Get events data from _event.h5 well known file location. Temporary until SDK support is added
-        :return:
-        """
-        filepath = utilities.get_wkf_events_h5_filepath(self.ophys_experiment_id)
-        f = h5py.File(filepath, 'r')
-
-        events = np.asarray(f['events'])
-        cell_roi_ids = np.asarray(f['roi_names'])
-        lambdas = np.asarray(f['lambdas'])
-        noise_stds = np.asarray(f['noise_stds'])
-
-        scale = 0.06666 * self.metadata['ophys_frame_rate']
-
-        events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
-                               'events': [x for x in events],
-                               'filtered_events': [x for x in rp.filter_events_array(events, scale=scale)],
-                               'noise_std': [x for x in noise_stds],
-                               'lambda': [x for x in lambdas]})
-        # limit to valid cell_roi_ids
-        valid_cell_roi_ids = self.cell_specimen_table.cell_roi_id.values
-        events = events[events.cell_roi_id.isin(valid_cell_roi_ids)]
-        events['cell_specimen_id'] = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in events.cell_roi_id.values]
-        events = events.set_index('cell_specimen_id')
-
-        self._events = events
-        return self._events
-
-    events = LazyLoadable('_events', _get_events)
-
     @property
-    def timestamps(self):
-        # need to get full set of timestamps because SDK only provides stimulus and ophys timestamps (not eye tracking for example)
-        lims_data = utilities.get_lims_data(self.ophys_experiment_id)
-        self._timestamps = utilities.get_timestamps(lims_data, self.analysis_dir)
-        return self._timestamps
+    def events(self):
+        if self._include_invalid_rois == False:
+            events = super().events
+            cell_specimen_table = super().cell_specimen_table[super().cell_specimen_table.valid_roi == True]
+            valid_cells = cell_specimen_table.cell_roi_id.values
+            self._events = events[events.cell_roi_id.isin(valid_cells)]
+        else:
+            self.events = super().events
+        return self.events
 
-    @property
-    def ophys_timestamps(self):
-        self._ophys_timestamps = super().ophys_timestamps
-        return self._ophys_timestamps
+    # def _get_events(self):
+    #     """
+    #     Get events data from _event.h5 well known file location. Temporary until SDK support is added
+    #     :return:
+    #     """
+    #     filepath = utilities.get_wkf_events_h5_filepath(self.ophys_experiment_id)
+    #     f = h5py.File(filepath, 'r')
+    #
+    #     events = np.asarray(f['events'])
+    #     cell_roi_ids = np.asarray(f['roi_names'])
+    #     lambdas = np.asarray(f['lambdas'])
+    #     noise_stds = np.asarray(f['noise_stds'])
+    #
+    #     scale = 0.06666 * self.metadata['ophys_frame_rate']
+    #
+    #     events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
+    #                            'events': [x for x in events],
+    #                            'filtered_events': [x for x in rp.filter_events_array(events, scale=scale)],
+    #                            'noise_std': [x for x in noise_stds],
+    #                            'lambda': [x for x in lambdas]})
+    #     # limit to valid cell_roi_ids
+    #     valid_cell_roi_ids = self.cell_specimen_table.cell_roi_id.values
+    #     events = events[events.cell_roi_id.isin(valid_cell_roi_ids)]
+    #     events['cell_specimen_id'] = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in events.cell_roi_id.values]
+    #     events = events.set_index('cell_specimen_id')
+    #
+    #     self._events = events
+    #     return self._events
+    #
+    # events = LazyLoadable('_events', _get_events)
 
-    @property
-    def behavior_movie_timestamps(self):
-        # note that due to sync line label issues, 'eye_tracking' timestamps are loaded here instead of 'behavior_movie' timestamps
-        self._behavior_movie_timestamps = self.timestamps['eye_tracking']['timestamps'].copy()
-        return self._behavior_movie_timestamps
+    # @property
+    # def timestamps(self):
+    #     # need to get full set of timestamps because SDK only provides stimulus and ophys timestamps (not eye tracking for example)
+    #     lims_data = utilities.get_lims_data(self.ophys_experiment_id)
+    #     self._timestamps = utilities.get_timestamps(lims_data, self.analysis_dir)
+    #     return self._timestamps
 
-    @property
-    def metadata(self):
-        metadata = super().metadata
-        metadata['donor_id'] = metadata['LabTracks_ID']
-        metadata['behavior_session_id'] = get_behavior_session_id_for_ophys_experiment_id(self.ophys_experiment_id)
-        self._metadata = metadata
-        return self._metadata
+    # @property
+    # def ophys_timestamps(self):
+    #     self._ophys_timestamps = super().ophys_timestamps
+    #     return self._ophys_timestamps
+
+    # @property
+    # def behavior_movie_timestamps(self):
+    #     # note that due to sync line label issues, 'eye_tracking' timestamps are loaded here instead of 'behavior_movie' timestamps
+    #     self._behavior_movie_timestamps = self.timestamps['eye_tracking']['timestamps'].copy()
+    #     return self._behavior_movie_timestamps
+
+    # @property
+    # def metadata(self):
+    #     metadata = super().metadata
+    #     metadata['donor_id'] = metadata['LabTracks_ID']
+    #     metadata['behavior_session_id'] = get_behavior_session_id_for_ophys_experiment_id(self.ophys_experiment_id)
+    #     self._metadata = metadata
+    #     return self._metadata
 
     @property
     def metadata_string(self):
         # for figure titles & filenames
-        m = self.metadata
+        m = super().metadata
         rig_name = m['rig_name'].split('.')[0] + m['rig_name'].split('.')[1]
         self._metadata_string = str(m['donor_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['driver_line'][
             0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type'] + '_' + rig_name
         return self._metadata_string
 
-    @property
-    def licks(self):
-        self._licks = super().licks
-        if 'timestamps' not in self._licks.columns:
-            self._licks = reformat.convert_licks(self._licks)
-        return self._licks
+    # @property
+    # def licks(self):
+    #     self._licks = super().licks
+    #     if 'timestamps' not in self._licks.columns:
+    #         self._licks = reformat.convert_licks(self._licks)
+    #     return self._licks
+
+    # @property
+    # def rewards(self):
+    #     self._rewards = super().rewards
+    #     if 'timestamps' not in self._rewards.columns:
+    #         self._rewards = reformat.convert_rewards(super().rewards)
+    #     return self._rewards
+
+    # @property
+    # def running_speed(self):
+    #     self._running_speed = super().running_speed
+    #     if not isinstance(self._running_speed, pd.core.frame.DataFrame):
+    #         self._running_speed = reformat.convert_running_speed(self._running_speed)
+    #     return self._running_speed
+
+    # @property
+    # def eye_tracking(self):
+    #     eye_tracking = super().eye_tracking.copy()
+    #     if 'timestamps' not in eye_tracking.columns:
+    #         eye_tracking = eye_tracking.rename(columns={'time': 'timestamps'})
+    #     self._eye_tracking = eye_tracking
+    #     return self._eye_tracking
+
+    # @property
+    # def stimulus_presentations(self):
+    #     stimulus_presentations = super().stimulus_presentations.copy()
+    #     if 'orientation' in stimulus_presentations.columns:
+    #         stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
+    #     stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
+    #     stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+    #     stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
+    #     stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
+    #     try:  # if eye tracking data is not present or cant be loaded
+    #         stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, self.eye_tracking)
+    #     except BaseException:  # set to NaN
+    #         stimulus_presentations['mean_pupil_area'] = np.nan
+    #     self._stimulus_presentations = stimulus_presentations
+    #     return self._stimulus_presentations
 
     @property
-    def rewards(self):
-        self._rewards = super().rewards
-        if 'timestamps' not in self._rewards.columns:
-            self._rewards = reformat.convert_rewards(super().rewards)
-        return self._rewards
-
-    @property
-    def running_speed(self):
-        self._running_speed = super().running_speed
-        if not isinstance(self._running_speed, pd.core.frame.DataFrame):
-            self._running_speed = reformat.convert_running_speed(self._running_speed)
-        return self._running_speed
-
-    @property
-    def eye_tracking(self):
-        eye_tracking = super().eye_tracking.copy()
-        if 'timestamps' not in eye_tracking.columns:
-            eye_tracking = eye_tracking.rename(columns={'time': 'timestamps'})
-        self._eye_tracking = eye_tracking
-        return self._eye_tracking
-
-    @property
-    def stimulus_presentations(self):
-        stimulus_presentations = super().stimulus_presentations.copy()
+    def extended_stimulus_presentations(self):
+        stimulus_presentations = self.stimulus_presentations.copy()
         if 'orientation' in stimulus_presentations.columns:
-            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index'])
+            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
+                                                                          'phase', 'spatial_frequency'])
         stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
         stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
         stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
@@ -473,15 +501,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, self.eye_tracking)
         except BaseException:  # set to NaN
             stimulus_presentations['mean_pupil_area'] = np.nan
-        self._stimulus_presentations = stimulus_presentations
-        return self._stimulus_presentations
-
-    @property
-    def extended_stimulus_presentations(self):
-        stimulus_presentations = self.stimulus_presentations.copy()
-        if 'orientation' in stimulus_presentations.columns:
-            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
-                                                                          'phase', 'spatial_frequency'])
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
         stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
@@ -517,14 +536,14 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         self._extended_stimulus_presentations = stimulus_presentations
         return self._extended_stimulus_presentations
 
-    @property
-    def trials(self):
-        trials = super().trials.copy()
-        trials = reformat.add_epoch_times(trials)
-        trials = reformat.add_trial_type_to_trials_table(trials)
-        trials = reformat.add_reward_rate_to_trials_table(trials)
-        self._trials = trials
-        return self._trials
+    # @property
+    # def trials(self):
+    #     trials = super().trials.copy()
+    #     trials = reformat.add_epoch_times(trials)
+    #     trials = reformat.add_trial_type_to_trials_table(trials)
+    #     trials = reformat.add_reward_rate_to_trials_table(trials)
+    #     self._trials = trials
+    #     return self._trials
 
     @property
     def behavior_movie_pc_masks(self):
@@ -580,16 +599,12 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, sdk_only=
     Returns:
         BehaviorOphysDataset {object} -- BehaviorOphysDataset instance, inherits attributes & methods from SDK BehaviorOphysSession class
     """
-    api = BehaviorOphysLimsApi(ophys_experiment_id)
-    dataset = BehaviorOphysDataset(api, include_invalid_rois)
-    # print('loading data for {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
     if sdk_only:
-        api = BehaviorOphysSession
-        dataset = api.from_lims(ophys_experiment_id)
+        dataset = BehaviorOphysSession.from_lims(ophys_experiment_id)
     else:
         api = BehaviorOphysLimsApi(ophys_experiment_id)
         dataset = BehaviorOphysDataset(api, include_invalid_rois)
-        print('loading data for {}'.format(dataset.analysis_folder)) if verbose else None  # required to ensure analysis folder is created before other methods are called
+        # print('loading data for {}'.format(dataset.analysis_folder)) if verbose else None  # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
