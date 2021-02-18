@@ -593,9 +593,9 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, sdk_only=
     return dataset
 
 
-def get_ophys_container_ids():
+def get_ophys_container_ids(release_data_only=False):
     """Get container_ids that meet the criteria in get_filtered_ophys_experiment_table(). """
-    experiments = get_filtered_ophys_experiment_table()
+    experiments = get_filtered_ophys_experiment_table(release_data_only=release_data_only)
     container_ids = np.sort(experiments.container_id.unique())
     return container_ids
 

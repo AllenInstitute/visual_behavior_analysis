@@ -20,7 +20,7 @@ job_settings = {'queue': 'braintv',
                 }
 
 
-container_ids = data_loading.get_ophys_container_ids()
+container_ids = data_loading.get_ophys_container_ids(release_data_only=True)
 
 if __name__ == "__main__":
     args = parser.parse_args()
