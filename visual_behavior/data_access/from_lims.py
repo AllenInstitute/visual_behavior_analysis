@@ -43,7 +43,8 @@ def get_donor_id_for_specimen_id(specimen_id):
     donor_ids = mixin.select(query)
     return donor_ids
 
-def get_specimen_id_for_donor_id(donor_id)
+
+def get_specimen_id_for_donor_id(donor_id):
     donor_id = int(donor_id)
     query = '''
     SELECT id
@@ -123,7 +124,7 @@ def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
     oe.id = {}
     '''.format(ophys_experiment_id)
     behavior_session_id = mixin.select(query)
-    return behavior_session_ids
+    return behavior_session_id
 
 
 def get_ophys_container_id_for_ophys_experiment_id(ophys_experiment_id):
@@ -240,6 +241,8 @@ def get_supercontainer_id_for_ophys_session_id(ophys_session_id):
 
     WHERE id = {}
     '''.format(ophys_session_id)
+    supercontainer_id = mixin.select(query)
+    return supercontainer_id
 
 
 # def get_all_ids_for_ophys_session_id(ophys_session_id):
@@ -261,8 +264,8 @@ def get_ophys_experiment_ids_for_behavior_session_id(behavior_session_id):
     WHERE
     behavior.id = {}
     '''.format(behavior_session_id)
-    behavior_session_id = mixin.select(query)
-    return behavior_session_ids
+    ophys_experiment_ids = mixin.select(query)
+    return ophys_experiment_ids
 
 
 def get_ophys_session_id_for_behavior_session_id(behavior_session_id):
