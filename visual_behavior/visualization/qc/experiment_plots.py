@@ -35,7 +35,7 @@ def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
         fig, ax = plt.subplots()
     dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
     average_projection = dataset.average_projection.data
-    ax.imshow(average_image, cmap='gray', vmax=np.amax(average_image))
+    ax.imshow(average_projection, cmap='gray', vmax=np.amax(average_projection))
     ax.axis('off')
     return ax
 
