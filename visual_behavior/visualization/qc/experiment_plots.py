@@ -312,9 +312,9 @@ def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
         dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
         ed = dataset.eye_tracking.copy()
 
-        time = ed.['timestamps'].values / 60. # could still be 'time'
-        x = ed.['center_x'].values # i actually have no idea what these are called
-        y = ed.['center_y'].values # need to check eye_tracking table in SDK and replace with proper names
+        time = ed['timestamps'].values / 60. # could still be 'time'
+        x = ed['center_x'].values # i actually have no idea what these are called
+        y = ed['center_y'].values # need to check eye_tracking table in SDK and replace with proper names
 
         ax.plot(time, x, color='darkorange')
         ax.plot(time, y, color='olive')
