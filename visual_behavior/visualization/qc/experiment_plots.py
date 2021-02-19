@@ -75,7 +75,7 @@ def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=
     try:
         dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
         segmentation_mask = dataset.segmentation_mask_image # i am not sure if this is correct, check relevant SDK issue to see what they did
-        mask = np.zeros(segmentation_mask.shape)
+        mask = np.zeros(segmentation_mask[0].shape)
         mask[:] = np.nan
         mask[segmentation_mask == 1] = 1
         ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
@@ -91,7 +91,7 @@ def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=No
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
     segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
-    mask = np.zeros(segmentation_mask.shape)
+    mask = np.zeros(segmentation_mask[0].shape)
     mask[:] = np.nan
     mask[segmentation_mask == 1] = 1
     ax.imshow(mask, cmap='hsv', vmax=1, alpha=0.5)
@@ -105,7 +105,7 @@ def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
     segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
-    mask = np.zeros(segmentation_mask.shape)
+    mask = np.zeros(segmentation_mask[0].shape)
     mask[segmentation_mask == 1] = 1
     ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
     ax.axis('off')
@@ -158,7 +158,7 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
 
 
 def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True) # this means it will have invalid traces
+    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)  # this means it will have invalid traces
     dff_traces = dataset.dff_traces.dff.values
     dff_traces = np.vstack(dff_traces)
     if ax is None:
