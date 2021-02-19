@@ -264,8 +264,8 @@ def make_pupil_area_plot(ophys_experiment_id, ax, label_x=True):
         # ed = EyeTrackingData(ophys_session_id)
         dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
         ed = dataset.eye_tracking.copy()
-        time = ed['timestamps'].values #this might still be 'time'
-        area = ed['pupil_area'].values #this should be blink corrected - no giant spikes
+        time = ed['timestamps'].values  # this might still be 'time'
+        area = ed['pupil_area'].values  # this should be blink corrected - no giant spikes
         ax.plot(time, area)
         if label_x:
             ax.set_xlabel('time (minutes)')
@@ -288,8 +288,8 @@ def make_pupil_area_plot_sdk(ophys_experiment_id, ax, label_x=True):
         dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
         et = dataset.eye_tracking.copy()
         # filtered = et[et.likely_blink == False]
-        time = et['timestamps'].values / 60. #this might still be 'time'
-        area = et['pupil_area_raw'].values #this will have blink artifacts in it
+        time = et['timestamps'].values / 60.  # this might still be 'time'
+        area = et['pupil_area_raw'].values  # this will have blink artifacts in it
         ax.plot(time, area)
         if label_x:
             ax.set_xlabel('time (seconds)')
@@ -312,9 +312,9 @@ def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
         dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
         ed = dataset.eye_tracking.copy()
 
-        time = ed['timestamps'].values / 60. # could still be 'time'
-        x = ed['center_x'].values # i actually have no idea what these are called
-        y = ed['center_y'].values # need to check eye_tracking table in SDK and replace with proper names
+        time = ed['timestamps'].values / 60.  # could still be 'time'
+        x = ed['center_x'].values  # i actually have no idea what these are called
+        y = ed['center_y'].values  # need to check eye_tracking table in SDK and replace with proper names
 
         ax.plot(time, x, color='darkorange')
         ax.plot(time, y, color='olive')
