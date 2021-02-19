@@ -62,7 +62,7 @@ def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
-    segmentation_mask = dataset.segmentation_masks # i am not sure if this is correct, check relevant SDK issue to see what they did
+    segmentation_mask = dataset.segmentation_mask_image # i am not sure if this is correct, check relevant SDK issue to see what they did
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
     return ax
@@ -74,7 +74,7 @@ def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     try:
         dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
-        segmentation_mask = dataset.segmentation_masks  # i am not sure if this is correct, check relevant SDK issue to see what they did
+        segmentation_mask = dataset.segmentation_mask_image # i am not sure if this is correct, check relevant SDK issue to see what they did
         mask = np.zeros(segmentation_mask.shape)
         mask[:] = np.nan
         mask[segmentation_mask == 1] = 1
@@ -90,7 +90,7 @@ def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=No
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
-    segmentation_mask = dataset.segmentation_masks  # i am not sure if this is correct, check relevant SDK issue to see what they did
+    segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
     mask = np.zeros(segmentation_mask.shape)
     mask[:] = np.nan
     mask[segmentation_mask == 1] = 1
@@ -104,7 +104,7 @@ def plot_valid_segmentation_mask_outlines_for_experiment(ophys_experiment_id, ax
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
-    segmentation_mask = dataset.segmentation_masks  # i am not sure if this is correct, check relevant SDK issue to see what they did
+    segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
     mask = np.zeros(segmentation_mask.shape)
     mask[segmentation_mask == 1] = 1
     ax.contour(mask, levels=0, colors=['red'], linewidths=[0.6])
@@ -143,11 +143,11 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     try:
         for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == False].cell_roi_id.values:
             mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
-            excl_labels = exclusion_labels[exclusion_labels.cr_id==cell_roi_id].excl_label.values
+            excl_labels = exclusion_labels[exclusion_labels.cr_id == cell_roi_id].excl_label.values
             decrosstalk_in_labels = ['decrosstalk' in excl_label for excl_label in excl_labels]
-            if (True in decrosstalk_in_labels) and (len(excl_labels)==1):
+            if (True in decrosstalk_in_labels) and (len(excl_labels) == 1):
                 ax.contour(mask, levels=0, colors=['green'], linewidths=[2])
-            elif (True in decrosstalk_in_labels) and (len(excl_labels)>1):
+            elif (True in decrosstalk_in_labels) and (len(excl_labels) > 1):
                 ax.contour(mask, levels=0, colors=['cyan'], linewidths=[1])
             else:
                 ax.contour(mask, levels=0, colors=['blue'], linewidths=[1])
