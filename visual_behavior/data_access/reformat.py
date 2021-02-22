@@ -109,7 +109,7 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id, behavior
     import datetime
     date_of_change = 'Feb 15 2019 12:00AM'
     date_of_change = datetime.datetime.strptime(date_of_change, '%b %d %Y %I:%M%p')
-    if date < str(date_of_change):
+    if date < date_of_change:
         omission_exposures = len([session_type for session_type in pre_expts.session_type if 'OPHYS' in session_type])
     else:
         omission_exposures = len([session_type for session_type in pre_expts.session_type if
