@@ -2,7 +2,7 @@
 
 from def_funs import *
 
-def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id, all_ABtransit_AbefB_Aall, only_1st_transit):
+def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id, all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1, only_1st_transit):
 
     #%% Load mouse_trainHist_all2.h5 file, which shows the entire training history of a mouse
     # we get the var by running, on the cluster, set_mouse_trainHist_init_pbs.py which calls set_mouse_trainHist_all2.py 
@@ -188,7 +188,10 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
     all_sess_transit_AB = pd.DataFrame([]) # similar to all_sess, except it only includes data for consecutive A-B transitions
     all_sess_A_befB = pd.DataFrame([]) # only A sessions (A, Ap) that happened before a B session.
     all_sess_A_all = pd.DataFrame([]) # all A (A, Ap), regardless of whethere they happened before or after B sessions.
-
+    all_sess_B_all = pd.DataFrame([]) # all B (B, Bp), regardless of whethere they happened before or after A sessions.
+    all_sess_B_first = pd.DataFrame([]) # first B (B or Bp)
+    all_sess_AB_all_NotB1 = pd.DataFrame([]) # all A and B (A, Ap, B, Bp), except for the 1st B session.
+    
     for im in range(len(all_mice_id)): # im=7
 
         print(f'\n===========================================================\n')
@@ -202,28 +205,33 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
 
         # make a single number by putting next together all stage indeces 
         a = trainHist_this_mouse['stage_index'].values   
-        aa = ''.join(a.astype(str)) # eg : '999999999999999999999999999999999111121112145491'
+        train_hist_code = ''.join(a.astype(str)) # eg : '999999999999999999999999999999999111121112145491'
+
         print(f'Mouse {mouse_id} training history (0:Ah , 1:A , 2:Ap , 4:B , 5:Bp , 9:rest):')
-        print(f'{aa}\n')
+        print(f'{train_hist_code}\n')
+        
+#         print(f'Training:\n')
+#         print(trainHist_this_mouse)
         
         print(f'Imaging data:\n')
         iso = np.argsort(all_sess_this_mouse['date'].values)
         print(f"{all_sess_this_mouse[['stage', 'date']].iloc[iso]}\n")
+        
         
         ########################## Set all_sess for all A sessions ##########################    
         ########## (A, Ap, before and after B sessions would be fine, as long as it is A!) ########
         ##########################################################################################
         print('----------- All A sessions -------------')
     #    A_Ap_inds = [1,2]    
-    #    all_0 = [m.start() for m in re.finditer('0', aa)]
-        all_1 = [m.start() for m in re.finditer('1', aa)]
-        all_2 = [m.start() for m in re.finditer('2', aa)]
+    #    all_0 = [m.start() for m in re.finditer('0', train_hist_code)]
+        all_1 = [m.start() for m in re.finditer('1', train_hist_code)]
+        all_2 = [m.start() for m in re.finditer('2', train_hist_code)]
 
         all_A_inds = np.sort(np.concatenate(([all_1, all_2])))
     #    if len(all_A_inds)==0:
     #        print(trainHist_this_mouse['stage'].values)
-    #        print(aa)
-    #        print(aa[all_A_inds]) # should be all 1 or 2
+    #        print(train_hist_code)
+    #        print(train_hist_code[all_A_inds]) # should be all 1 or 2
     #        print('mouse %d does not have any A sessions!!' %mouse_id)
         # get all stages between first A and first B (should include A, Ap)
     #    trainHist_this_mouse['stage'].values[firstA:firstB] # should be all A (including habit and passive sessions)
@@ -238,18 +246,117 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
 
 
 
+        ########################## Set all_sess for all B sessions ##########################    
+        ########## (B, Bp, before and after A sessions would be fine, as long as it is B!) ########
+        ##########################################################################################
+        print('----------- All B sessions -------------')
+    #    A_Ap_inds = [1,2]    
+    #    all_0 = [m.start() for m in re.finditer('0', train_hist_code)]
+        all_1 = [m.start() for m in re.finditer('4', train_hist_code)]
+        all_2 = [m.start() for m in re.finditer('5', train_hist_code)]
+
+        all_B_inds = np.sort(np.concatenate(([all_1, all_2])))
+    #    if len(all_A_inds)==0:
+    #        print(trainHist_this_mouse['stage'].values)
+    #        print(train_hist_code)
+    #        print(train_hist_code[all_A_inds]) # should be all 1 or 2
+    #        print('mouse %d does not have any A sessions!!' %mouse_id)
+        # get all stages between first A and first B (should include A, Ap)
+    #    trainHist_this_mouse['stage'].values[firstA:firstB] # should be all A (including habit and passive sessions)
+    #    trainHist_this_mouse['stage'].values[A_inds]
+        print(trainHist_this_mouse.iloc[all_B_inds])
+
+        strs = trainHist_this_mouse.iloc[all_B_inds]['date'].values
+        a = np.in1d(strm, strs) # rows in all_sess_this_mouse that have the desired stage transitions 
+        # remember strs may not exist in all_sess ... either because convert code is not run yet, or because the session is not valid
+        print(f'\nImaging data includes {sum(a)} total B sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        all_sess_B_all = all_sess_B_all.append(all_sess_this_mouse[a])
+
+
+        
+        ########################## Set all_sess for the 1st B session ##########################    
+        ########## (B or Bp ########
+        ##########################################################################################
+        print('----------- 1st B session -------------')
+#         first_b = train_hist_code.find('4')
+        all_1 = [m.start() for m in re.finditer('4', train_hist_code)]
+        all_2 = [m.start() for m in re.finditer('5', train_hist_code)]
+
+        all_B_inds = np.sort(np.concatenate(([all_1, all_2])))
+        first_b = all_B_inds[0]
+        
+        all_B_inds = [first_b]
+    #    if len(all_A_inds)==0:
+    #        print(trainHist_this_mouse['stage'].values)
+    #        print(train_hist_code)
+    #        print(train_hist_code[all_A_inds]) # should be all 1 or 2
+    #        print('mouse %d does not have any A sessions!!' %mouse_id)
+        # get all stages between first A and first B (should include A, Ap)
+    #    trainHist_this_mouse['stage'].values[firstA:firstB] # should be all A (including habit and passive sessions)
+    #    trainHist_this_mouse['stage'].values[A_inds]
+        print(trainHist_this_mouse.iloc[all_B_inds])
+
+        strs = trainHist_this_mouse.iloc[all_B_inds]['date'].values
+        a = np.in1d(strm, strs) # rows in all_sess_this_mouse that have the desired stage transitions 
+        # remember strs may not exist in all_sess ... either because convert code is not run yet, or because the session is not valid
+        print(f'\nImaging data includes {sum(a)} B1 sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        all_sess_B_first = all_sess_B_first.append(all_sess_this_mouse[a])
+        
+        
+
+        
+        ########################## Set all_sess for all A and B sessions except the 1st B session ##########################    
+        ########## (A, Ap, B, Bp, except B1) ########
+        ##########################################################################################
+        print('----------- All A and B sessions except the 1st B session -------------')
+
+        # A
+        all_1 = [m.start() for m in re.finditer('1', train_hist_code)]
+        all_2 = [m.start() for m in re.finditer('2', train_hist_code)]
+
+        all_A_inds = np.sort(np.concatenate(([all_1, all_2])))
+
+        # B
+        all_1 = [m.start() for m in re.finditer('4', train_hist_code)]
+        all_2 = [m.start() for m in re.finditer('5', train_hist_code)]
+
+        all_B_inds = np.sort(np.concatenate(([all_1, all_2])))        
+        all_B_inds = all_B_inds[1:] # exclude the first B session
+        
+        # all A and B
+        all_B_inds = np.sort(np.concatenate(([all_A_inds, all_B_inds])))
+        
+    #    if len(all_A_inds)==0:
+    #        print(trainHist_this_mouse['stage'].values)
+    #        print(train_hist_code)
+    #        print(train_hist_code[all_A_inds]) # should be all 1 or 2
+    #        print('mouse %d does not have any A sessions!!' %mouse_id)
+        # get all stages between first A and first B (should include A, Ap)
+    #    trainHist_this_mouse['stage'].values[firstA:firstB] # should be all A (including habit and passive sessions)
+    #    trainHist_this_mouse['stage'].values[A_inds]
+        print(trainHist_this_mouse.iloc[all_B_inds])
+
+        strs = trainHist_this_mouse.iloc[all_B_inds]['date'].values
+        a = np.in1d(strm, strs) # rows in all_sess_this_mouse that have the desired stage transitions 
+        # remember strs may not exist in all_sess ... either because convert code is not run yet, or because the session is not valid
+        print(f'\nImaging data includes {sum(a)} total A & B sessions excluding B1.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        all_sess_AB_all_NotB1 = all_sess_AB_all_NotB1.append(all_sess_this_mouse[a])
+
+        
+        
+        
         ################## Set all_sess for all A sessions before any B session ##################    
         ##########################################################################################
         print('----------- A sessions before any B -------------')
         # find the first "4", take all 1 and 2 before it.
         # note: sometimes multiple A-B transitions exists, below you are just taking only those A that preced the first B! 
-        firstA = aa.find('1')
-        firstB = aa.find('4')
+        firstA = train_hist_code.find('1')
+        firstB = train_hist_code.find('4')
         if firstB==-1: # there was no B session, so we take all sessions after firstA
-            firstB = len(aa)
+            firstB = len(train_hist_code)
         A_inds = np.arange(firstA, firstB)
         # get all stages between first A and first B (should include A, Ap ... in a weird case (like mouse 453911) it may include Ah too!)
-    #    aa[firstA:firstB] # should be all 1 or 2
+    #    train_hist_code[firstA:firstB] # should be all 1 or 2
     #    trainHist_this_mouse['stage'].values[firstA:firstB] # should be all A (including habit and passive sessions)
     #    trainHist_this_mouse['stage'].values[A_inds]
         print(trainHist_this_mouse.iloc[A_inds])
@@ -266,13 +373,13 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
         ##########################################################################################
         print('----------- A-->B transitions -------------')
         # all A to all B (1/2 to 4/5)
-        # look up aa for 14, 15, 24, 25
+        # look up train_hist_code for 14, 15, 24, 25
         # 1 : A    # 2 : Ap    # 4 : B    # 5 : Bp
-        # find indeces of a given transition in "aa"    
-        t_14 = [m.start() for m in re.finditer('14', aa)]
-        t_15 = [m.start() for m in re.finditer('15', aa)]
-        t_24 = [m.start() for m in re.finditer('24', aa)]
-        t_25 = [m.start() for m in re.finditer('25', aa)]
+        # find indeces of a given transition in "train_hist_code"    
+        t_14 = [m.start() for m in re.finditer('14', train_hist_code)]
+        t_15 = [m.start() for m in re.finditer('15', train_hist_code)]
+        t_24 = [m.start() for m in re.finditer('24', train_hist_code)]
+        t_25 = [m.start() for m in re.finditer('25', train_hist_code)]
         print(f'Number of AB, ABp, ApB, ApBp transitions:')
         print(len(t_14), len(t_15), len(t_24), len(t_25))
 
@@ -314,51 +421,74 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
                 
     if type(all_sess.iloc[0]['experiment_id'])=='str' or type(all_sess.iloc[0]['experiment_id'])==str: # svm analysis: each row of all_sess is one experiment, so we divide the numbers below by 8 to reflect number of sessions.
         print('\nnumber of all A sessions (before or after B): %d' %(len(all_sess_A_all)/num_planes))
+        print('number of all B sessions (before or after A): %d' %(len(all_sess_B_all)/num_planes))        
+        print('number of first B sessions: %d' %(len(all_sess_B_first)/num_planes))        
+        print('number of all A and B sessions, except for B1: %d' %(len(all_sess_AB_all_NotB1)/num_planes))                
         print('number of A sessions (before any B): %d' %(len(all_sess_A_befB)/num_planes))
         print('number of A-B sessions: %d' %(len(all_sess_transit_AB)/num_planes))
         
     else: # each row of all_sess includes all 8 experiments; omissions_peak analysis.
         print('\nnumber of all A sessions (before or after B): %d' %len(all_sess_A_all))
+        print('number of all B sessions (before or after A): %d' %len(all_sess_B_all))        
+        print('number of first B sessions: %d' %len(all_sess_B_first))        
+        print('number of all A and B sessions, except for B1: %d' %len(all_sess_AB_all_NotB1))
         print('number of A sessions (before any B): %d' %len(all_sess_A_befB))
         print('number of A-B sessions: %d' %len(all_sess_transit_AB))
 
         
     #### sanity check:
     a = all_sess['stage'].values
+
     aa = np.array([a[i].find('_A') for i in range(len(a))])
     aaa = sum(aa!=-1) == len(all_sess_A_all)
     if aaa==False:
-        sys.exit("Something doesn't make sense! number of A sessions dont match up between all_sess_A_all computed above, and simply getting it from all_sess['stage']")
+        sys.exit("Something doesn't make sense! number of A sessions dont match up between all_sess_A_all computed above, and all_sess['stage']")
         
+    aa = np.array([a[i].find('_B') for i in range(len(a))])
+    aaa = sum(aa!=-1) == len(all_sess_B_all)
+    if aaa==False:
+        sys.exit("Something doesn't make sense! number of B sessions dont match up between all_sess_B_all computed above, and all_sess['stage']")
         
         
 
     #%% Decide which all_sess you want to plot below
 
-    # all_ABtransit_AbefB_Aall = 2 #1
+    # all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1 = 2 #1
 
-    if all_ABtransit_AbefB_Aall==0:
+    if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==0:
         all_sess_2an = all_sess # includes all sessions  
-    elif all_ABtransit_AbefB_Aall==1: 
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==1: 
         all_sess_2an = all_sess_transit_AB # includes only A-->B transitions (ie consecutive A,B sessions)
-    elif all_ABtransit_AbefB_Aall==2: 
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==2: 
         all_sess_2an = all_sess_A_befB # includes A sessions before B  
-    elif all_ABtransit_AbefB_Aall==3: 
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==3: 
         all_sess_2an = all_sess_A_all # includes all A sessions before or after B
-
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==4: 
+        all_sess_2an = all_sess_B_all # includes all B sessions before or after A
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==5: 
+        all_sess_2an = all_sess_B_first # includes the 1st B session
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==6: 
+        all_sess_2an = all_sess_AB_all_NotB1 # includes all A and B sessions except for B1
+        
 
     # figure name to be saved
-    if all_ABtransit_AbefB_Aall==1:
+    if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==0:       
+        whatSess = '_AallBall'
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==1:
         if only_1st_transit==1:
             whatSess = '_ABtransFirst'  
         elif only_1st_transit==0:
             whatSess = '_ABtransAll'
-    elif all_ABtransit_AbefB_Aall==2:       
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==2:       
         whatSess = '_AbefB'
-    elif all_ABtransit_AbefB_Aall==3:       
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==3:       
         whatSess = '_Aall'
-    elif all_ABtransit_AbefB_Aall==0:       
-        whatSess = '_AallBall'
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==4:       
+        whatSess = '_Ball'
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==5:       
+        whatSess = '_Bfirst'
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==6:       
+        whatSess = '_ABallButB1'
     
     
     return all_sess_2an, whatSess

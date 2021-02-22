@@ -49,8 +49,8 @@ subtractSigCorrs = 1 # only applicable to doCorrs=1; # if 1, the corr files were
 
 use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 
-all_ABtransit_AbefB_Aall = 3 # 3 # 1 0: analyze all sessions;  1: analyze AB transitions;  2: analyze only A sessions (before any B);  3: analyze all A sessions (before or after B)    
-only_1st_transit = 1 # relevant only if all_ABtransit_AbefB_Aall=1 # if 1, only include data from the 1st A-->B transition even if a mouse has more than one (safer, since in the subsequent transitions, B has been already introduced, so they are not like the 1st A-->B transition)
+all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1 = 3 # a number between 0 to 6 # 0: analyze all sessions;  1: analyze AB transitions;  2: analyze only A sessions (before any B);  3: analyze all A sessions (before or after B);   4: analyze all B sessions (before or after A)    ;   5: analyze the first B session;   6: analyze all A and B sessions except for B1
+only_1st_transit = 1 # relevant only if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1=1 # if 1, only include data from the 1st A-->B transition even if a mouse has more than one (safer, since in the subsequent transitions, B has been already introduced, so they are not like the 1st A-->B transition)
 
 same_y_fo = 1 # in summary mice plots, use the same ylim for image- and omission-evoked responses.
 th_neurons = 3 # 5 #minimum number of neurons (for a plane), in order to use that plane in analysis. (for all cre lines)
@@ -305,17 +305,25 @@ time_trace, time_trace_new, xmjn, flashes_win_trace_index_unq_time, grays_win_tr
 #%% Set sessions for analysis based on the desired stage (A, B, transition, etc)
 
 print(f"\n\nIMPORTANT NOTE: make sure 'mouse_trainHist_all2' file is up to date; To do so, set_mouse_trainHist_all2.py needs to have the updated list of all_mice_id, and set_mouse_trainHist_init_pbs.py (which calls the xxxall2 function) needs to be run on the cluster.")
-all_sess_2an, whatSess = set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id, all_ABtransit_AbefB_Aall, only_1st_transit)
+all_sess_2an, whatSess = set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id, all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1, only_1st_transit)
+
 
 print(f'\n')
-if all_ABtransit_AbefB_Aall==0:
+if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==0:
     print(f'Analyze all sessions')  
-elif all_ABtransit_AbefB_Aall==1: 
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==1: 
     print(f'Analyze only A-->B transitions (ie consecutive A,B sessions)')
-elif all_ABtransit_AbefB_Aall==2: 
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==2: 
     print(f'Analyze A sessions before B')  
-elif all_ABtransit_AbefB_Aall==3: 
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==3: 
     print(f'Analyze all A sessions before or after B sessions')
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==4:       
+    print(f'Analyze all B sessions before or after A sessions')
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==5:       
+    print(f'Analyze the first B sessions')
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==6:       
+    print(f'Analyze all A and B sessions except for the first B session')
+        
         
 if type(all_sess.iloc[0]['experiment_id'])=='str' or type(all_sess.iloc[0]['experiment_id'])==str: # svm analysis: each row of all_sess is one experiment, so we divide the numbers below by 8 to reflect number of sessions.
     print(f'\nFinal number of sessions for analysis: {len(all_sess_2an)/num_planes}')
@@ -354,6 +362,23 @@ if doCorrs==1:
     dir_now = 'corr_omit_flash'
     if control_single_beam==1:
         dir_now = os.path.join(dir_now, 'control_single_beam')
+        
+    if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==0:
+        dir_now = os.path.join(dir_now, 'A_B_all')
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==1: 
+        dir_now = os.path.join(dir_now, 'AB_transit')
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==2: 
+        dir_now = os.path.join(dir_now, 'A_beforeB')
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==3: 
+        dir_now = os.path.join(dir_now, 'A_all')
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==4:       
+        dir_now = os.path.join(dir_now, 'B_all')
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==5:       
+        dir_now = os.path.join(dir_now, 'B_first')
+    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==6:       
+        dir_now = os.path.join(dir_now, 'A_B_all_notB1')
+        
+        
 elif doCorrs==0:
     dir_now = 'omit_across_sess'
 elif doCorrs==-1:

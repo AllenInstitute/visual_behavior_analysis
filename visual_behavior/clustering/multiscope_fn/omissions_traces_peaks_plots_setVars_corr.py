@@ -28,7 +28,7 @@ Created on Mon Sep 23 15:58:29 2019
 #%%
 sameBl_allLayerPairs = 1 #1 # if 1, when quantifying cc, shift the baseline of cc trace of all 16 area1-area2 layer combinations so their baseline is at 0. Remember: baselines are not subtracted from the traces; but when we quantify the peak we subtract the baseline if sameBl_allLayerPairs is set to 1. # note: it makese sense to set it to 1 bc there is this difference in baseline of correlation plots which i dont understand why.
 use_spearman_p = 1 # if 1, we use spearman p to show fraction of significant neuron pairs, if 0, we use the manually computed p (one-sample ttest between cc_shlf distribution and the actual cc) to quantify fraction of neuron pairs with significant cc values.
-do_single_mouse_plots = 0 # make cc traces and peaks plots of session-averaged data, for each mouse
+do_single_mouse_plots = 0 #1 # make cc traces and peaks plots of session-averaged data, for each mouse
 
 peak_win = [0, .75] #[0, .5] #[0, .75] # this should be named omit_win
 flash_win = np.array([0, .5])-.75 #np.array([0, .35])-.75 #[0, .75] # now using flash-aligned traces; previously flash responses were computed on omission-aligned traces; problem: not all flashes happen every .75sec # [-.75, 0] # previous value: # [-.75, -.25] # 
@@ -116,7 +116,7 @@ plt.rcParams["axes.grid"] = False
 
 def set_flash_win_final(cre, session_novel, flash_win, flash_win_vip):
     
-    if np.logical_and(cre.find('Vip')==1 , session_novel) or cre.find('Vip')==-1: # VIP B1, SST, SLC: window after images (response follows the image)
+    if np.logical_and(cre.find('Vip')==0 , session_novel) or cre.find('Vip')==-1: # VIP B1, SST, SLC: window after images (response follows the image)
         flash_win_final = flash_win # [0, .75]
 
     else: # VIP (non B1,familiar sessions): window precedes the image (pre-stimulus ramping activity)
@@ -426,7 +426,8 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
         ax1.tick_params(labelsize=10)
         plt.xlim([-.5, len(x)-.5])
         plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-        plt.ylim(lims0_f)
+        if ~np.isnan(lims0_f).any():
+            plt.ylim(lims0_f)
         if i2==0:
             plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
         ylim0 = lims0_f #plt.gca().get_ylim()
@@ -458,7 +459,8 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
         ax1.tick_params(labelsize=10)
         plt.xlim([-.5, len(x)-.5])
 #        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-        plt.ylim(lims0_o)        
+        if ~np.isnan(lims0_o).any():
+            plt.ylim(lims0_o)        
         if i2==0:    
             plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
         ylim0 = lims0_o #plt.gca().get_ylim()        
@@ -509,8 +511,9 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
         ax1.set_xticklabels(xticklabs, rotation=45)
         ax1.tick_params(labelsize=10)
         plt.xlim([-.5, len(x)-.5])
-        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-        plt.ylim(lims0_f)
+        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)     
+        if ~np.isnan(lims0_f).any():
+            plt.ylim(lims0_f)
 #         if i2==0:    
 #             plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
         ylim0 = lims0_f #plt.gca().get_ylim()
@@ -542,8 +545,9 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
         ax1.set_xticklabels(xticklabs, rotation=45)
         ax1.tick_params(labelsize=10)
         plt.xlim([-.5, len(x)-.5])
-#        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-        plt.ylim(lims0_o)        
+#        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)      
+        if ~np.isnan(lims0_o).any():
+            plt.ylim(lims0_o)        
 #         if i2==0:    
 #             plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
         ylim0 = lims0_o #plt.gca().get_ylim()        
@@ -589,8 +593,9 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
         ax1.set_xticklabels(xticklabs, rotation=45)
         ax1.tick_params(labelsize=10)
         plt.xlim([-.5, len(x)-.5])
-        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-        plt.ylim(lims0_f)
+        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)          
+        if ~np.isnan(lims0_f).any():
+            plt.ylim(lims0_f)
         if i2==0:    
             plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
         ylim0 = lims0_f #plt.gca().get_ylim()
@@ -622,7 +627,8 @@ def plot_peak_cc_ccShfl_p(f_top0, f_top_sd0, o_top0, o_top_sd0, f_top1, f_top_sd
         ax1.tick_params(labelsize=10)
         plt.xlim([-.5, len(x)-.5])
 #        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-        plt.ylim(lims0_o)       
+        if ~np.isnan(lims0_o).any():
+            plt.ylim(lims0_o)       
         if i2==0:    
             plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
         ylim0 = lims0_o #plt.gca().get_ylim()        
@@ -969,7 +975,8 @@ def plot_traces_peak_pooled_cc_ccShfl_p(time_trace, top0, top_sd0, top1, top_sd1
     ax1.tick_params(labelsize=10)
     plt.xlim([-.5, len(x)-.5])
 #    plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-    plt.gca().set_ylim(lims0_fo)
+    if ~np.isnan(lims0_fo).any():
+        plt.gca().set_ylim(lims0_fo)
 #    plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
     ylim0 = lims0_fo #plt.gca().get_ylim()
     text_y = ylim0[1] + np.diff(ylim0)/10
@@ -995,8 +1002,9 @@ def plot_traces_peak_pooled_cc_ccShfl_p(time_trace, top0, top_sd0, top1, top_sd1
     ax1.set_yticklabels('')#, rotation=45)
     ax1.tick_params(labelsize=10)
     plt.xlim([-.7, len(x)-.5])
-#        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-    plt.gca().set_ylim(lims0_fo)        
+#        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)      
+    if ~np.isnan(lims0_fo).any():
+        plt.gca().set_ylim(lims0_fo)        
 #        plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
     ylim0 = lims0_fo #plt.gca().get_ylim()        
     text_y = ylim0[1] + np.diff(ylim0)/10
@@ -1026,7 +1034,8 @@ def plot_traces_peak_pooled_cc_ccShfl_p(time_trace, top0, top_sd0, top1, top_sd1
     ax1.tick_params(labelsize=10)
     plt.xlim([-.5, len(x)-.5])
 #    plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-    plt.gca().set_ylim(lims0_fo)
+    if ~np.isnan(lims0_fo).any():
+        plt.gca().set_ylim(lims0_fo)
 #    plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
     ylim0 = lims0_fo #plt.gca().get_ylim()
     text_y = ylim0[1] + np.diff(ylim0)/10
@@ -1067,7 +1076,8 @@ def plot_traces_peak_pooled_cc_ccShfl_p(time_trace, top0, top_sd0, top1, top_sd1
     ax1.tick_params(labelsize=10)
     plt.xlim([-.5, len(x)-.5])
 #    plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-    plt.gca().set_ylim(lims0_fo)
+    if ~np.isnan(lims0_fo).any():
+        plt.gca().set_ylim(lims0_fo)
 #    plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
     ylim0 = lims0_fo #plt.gca().get_ylim()
     text_y = ylim0[1] + np.diff(ylim0)/10
@@ -1094,7 +1104,8 @@ def plot_traces_peak_pooled_cc_ccShfl_p(time_trace, top0, top_sd0, top1, top_sd1
     ax1.tick_params(labelsize=10)
     plt.xlim([-.7, len(x)-.5])
 #        plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-    plt.gca().set_ylim(lims0_fo)        
+    if ~np.isnan(lims0_fo).any():
+        plt.gca().set_ylim(lims0_fo)        
 #        plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
     ylim0 = lims0_fo #plt.gca().get_ylim()        
     text_y = ylim0[1] + np.diff(ylim0)/10
@@ -1125,7 +1136,8 @@ def plot_traces_peak_pooled_cc_ccShfl_p(time_trace, top0, top_sd0, top1, top_sd1
     ax1.tick_params(labelsize=10)
     plt.xlim([-.5, len(x)-.5])
 #    plt.title('%s, %d um' %(areas[1], depths[i2+num_depth]), y=1, fontsize=13)            
-    plt.gca().set_ylim(lims0_fo)
+    if ~np.isnan(lims0_fo).any():
+        plt.gca().set_ylim(lims0_fo)
 #    plt.ylabel(yl, fontsize=12)#, rotation=0, labelpad=35)
     ylim0 = lims0_fo #plt.gca().get_ylim()
     text_y = ylim0[1] + np.diff(ylim0)/10

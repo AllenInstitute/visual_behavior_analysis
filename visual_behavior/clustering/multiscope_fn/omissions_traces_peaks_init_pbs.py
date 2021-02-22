@@ -9,16 +9,25 @@ Created on Wed Jul 31 13:24:19 2019
 import pandas as pd
 import numpy as np
 
-# Use the new list of sessions that are de-crosstalked and will be released in March 2021
-metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
+import visual_behavior.data_access.loading as loading
 
-metadata_valid = pd.read_csv(metadata_meso_dir)
+# data release sessions
+# experiments_table = loading.get_filtered_ophys_experiment_table()
+experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+# multiscope sessions
+metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope']
+
+
+# Use the new list of sessions that are de-crosstalked and will be released in March 2021
+# metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
+# metadata_valid = pd.read_csv(metadata_meso_dir)
+
 aa = metadata_valid['ophys_session_id'].unique()
 # aa.shape
 
 sessions_ctDone = aa
 
-# [ 951410079,  952430817,  954954402,  955775716,  957020350,
+# aa = [951410079,  952430817,  954954402,  955775716,  957020350,
 #         958105827,  958772311,  959458018,  985609503,  988768058,
 #         989267296,  990139534,  990464099,  991639544, 1048122684,
 #        1048363441, 1049240847, 1050231786, 1050597678, 1051107431,
@@ -75,24 +84,39 @@ sessions_ctDone = aa
 
 
 #%%
-print(sessions_ctDone.shape)
+# print(sessions_ctDone.shape)
 
 
 list_all_sessions_valid = sessions_ctDone
-
-import visual_behavior.data_access.loading as loading
-experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
-experiments_table = experiments_table.reset_index('ophys_experiment_id')
-
-i = np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)
-metadata_all = experiments_table[i]
-list_all_experiments = np.reshape(experiments_table[i]['ophys_experiment_id'].values, (8, len(sessions_ctDone)), order='F').T    
-list_all_experiments = np.sort(list_all_experiments)
-
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
 
 
+experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
+metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
+
+# set the list of experiments for each session
+list_all_experiments = np.reshape(experiments_table[i]['ophys_experiment_id'].values, (8, len(sessions_ctDone)), order='F').T    
+list_all_experiments = np.sort(list_all_experiments)
+
+
+
+list_all_experiments = []
+for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
+    es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
+    list_all_experiments.append(es)
+list_all_experiments = np.array(list_all_experiments)
+
+b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
+no8 = list_all_sessions_valid[b!=8]
+if len(no8)>0:
+    print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
+
+    
+    
+    
+    
 #########################################################################################################
 #%%
 use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage

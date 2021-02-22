@@ -933,7 +933,8 @@ def plot_flashLines_ticks_legend(lims, H, flashes_win_trace_index_unq_time, gray
     plt.ylabel(ylab, fontsize=12)
     plt.xlabel(xlab, fontsize=12)  
     if len(lims)!=0:
-        plt.ylim(lims)
+        if ~np.isnan(lims).any():
+            plt.ylim(lims)
 #    plt.legend(handles=[h1[0], h1[1], h1[2], h1[3], h1[4], h1[5], h1[6], h1[7], h2], loc='center left', bbox_to_anchor=(1, .7), frameon=False, handlelength=1, fontsize=12)
     
     plt.grid(False) #    plt.box(on=None) #    plt.axis(True)
