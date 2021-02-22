@@ -7,7 +7,6 @@ from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadab
 from visual_behavior.ophys.response_analysis import response_processing as rp
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
-from visual_behavior.data_access import processing
 from visual_behavior.data_access import utilities
 import visual_behavior.database as db
 
@@ -19,6 +18,7 @@ import pandas as pd
 import configparser as configp  # for parsing scientifica ini files
 
 import warnings
+
 
 try:
     lims_dbname = os.environ["LIMS_DBNAME"]
@@ -67,39 +67,43 @@ config = configp.ConfigParser()
 #  RELEVANT DIRECTORIES
 
 def get_super_container_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
 
 
 def get_container_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
 
 
 def get_session_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
 
 
 def get_experiment_plots_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+
+
+def get_single_cell_plots_dir():
+    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
 def get_analysis_cache_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/visual_behavior_production_analysis'
 
 
 def get_events_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/event_detection'
 
 
 def get_behavior_model_outputs_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output'
 
 
 def get_decoding_analysis_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/decoding'
 
 
 def get_ophys_glm_dir():
-    return '//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/ophys_glm'
 
 
 # LOAD MANIFEST FILES (TABLES CONTAINING METADATA FOR BEHAVIOR & OPHYS DATASETS) FROM SDK CACHE (RECORD OF AVAILABLE DATASETS)
@@ -107,7 +111,7 @@ def get_ophys_glm_dir():
 
 def get_cache_dir():
     """Get directory of data cache for analysis - this should be the standard cache location"""
-    cache_dir = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
+    cache_dir = r"//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/2020_cache/production_cache"
     return cache_dir
 
 
@@ -125,7 +129,7 @@ def get_visual_behavior_cache(manifest_path=None):
     return cache
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False):
+def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False):
     """get ophys experiments table from cache, filters based on a number of criteria
         and adds additional useful columns to the table
         Saves a reformatted version of the table with additional columns
@@ -185,8 +189,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
         experiments = filtering.limit_to_production_project_codes(experiments)
-        experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in
-                                     experiments.index.values]
+        # experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in
+        #                              experiments.index.values]
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
         experiments = experiments.reset_index()
@@ -197,10 +201,21 @@ def get_filtered_ophys_experiment_table(include_failed_data=False):
         experiments = filtering.limit_to_passed_experiments(experiments)
         experiments = filtering.limit_to_valid_ophys_session_types(experiments)
         experiments = filtering.remove_failed_containers(experiments)
+    if release_data_only:
+        experiments = experiments[experiments.project_code.isin(['VisualBehavior',
+                                                                   'VisualBehaviorTask1B',
+                                                                   'VisualBehaviorMultiscope'])]
+        experiments = experiments[experiments.container_workflow_state=='published']
+        experiments = experiments[experiments.experiment_workflow_state == 'passed']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
                                      experiments.session_type.values]
+    # ensure cre_line includes Ai94 to prevent inclusion of GCaMP6s in anaysis
+    experiments['cre_line'] = [full_genotype.split('/')[0] if 'Ai94' not in full_genotype else full_genotype.split('/')[0] + ';Ai94'
+                               for full_genotype in experiments.full_genotype.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
+    # filter one more time on load to restrict to data release experiments ###
+    experiments = filtering.limit_to_production_project_codes(experiments)
     return experiments
 
 
@@ -306,7 +321,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         cell_specimen_table = super().cell_specimen_table.copy()
         if self._include_invalid_rois == False:
             cell_specimen_table = cell_specimen_table[cell_specimen_table.valid_roi == True]
-        cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
+        # cell_specimen_table['roi_mask'] = cell_specimen_table.image_mask.values
         self._cell_specimen_table = cell_specimen_table
         return self._cell_specimen_table
 
@@ -323,7 +338,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def roi_masks(self):
         cell_specimen_table = super().cell_specimen_table
-        cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
+        # cell_specimen_table = processing.shift_image_masks(cell_specimen_table)
         self._roi_masks = get_sdk_roi_masks(cell_specimen_table)
         return self._roi_masks
 
@@ -350,90 +365,33 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             self._dff_traces = super().dff_traces
         return self._dff_traces
 
-    def get_events_array(self):
-        events_folder = get_events_dir()
-        if os.path.exists(events_folder):
-            events_file = [file for file in os.listdir(events_folder) if
-                           str(self.ophys_experiment_id) in file]
-            if len(events_file) > 0:
-                print('getting L0 events')
-                f = np.load(os.path.join(events_folder, events_file[0]))
-                events = np.asarray(f['events'])
-                f.close()
-            else:
-                print('no events for this experiment')
-                events = None
-        else:
-            print('no events for this experiment')
-            events = None
-        self.events_array = events
-        return self.events_array
-
     def _get_events(self):
         """
-        events file is an .npz with the following files within it:
-        dff: array of n_cells x n_timepoints with recalculated dF/F values(at original frame rate)
-        ts: timestamps corresponding to timepoints in dff (at original frame rate)
-        events: array of n_cells x n_timepoints with event magnitudes(at original frame rate)
-        noise stds: array of length(n_cells) giving the value for standard deviation of the noise for all ROIs
-        lambdas: array of length(n_cells) giving the lambda value for all ROIs
-        upsampling_factor: factor used to resample mesoscope data into 30Hz time frame
-        event_dict: event_dict contains one item per cell_roi_id, where each item is a dictionary with 4 keys:
-            mag: event magnitude, sampled at 30Hz
-            idx: (i think) indices into original timestamps before resampling
-            ts: timestamps of events, sampled at 30Hz
-            event_trace: trace of event magnitudes, at original frame rate (11Hz for mesoscope)
-
-        procedure for resampling and generating these outputs is in l0_ms.py
-        The upsampling factor is the integer nearest the ratio of 30.9/(actual sampling rate), which for mesoscope is 3 and for scientifica is 1
-
-        :return: dataframe with all above information for each cell
+        Get events data from _event.h5 well known file location. Temporary until SDK support is added
+        :return:
         """
-        events_folder = get_events_dir()
-        if os.path.exists(events_folder):
-            events_file = [file for file in os.listdir(events_folder) if str(self.ophys_experiment_id) in file]
-            if len(events_file) > 0:
-                f = np.load(os.path.join(events_folder, events_file[0]), allow_pickle=True)
-                event_dict = f['event_dict'].item()
-                cell_roi_ids = list(event_dict.keys())
-                events_array = np.asarray([event_dict[cell_roi_id]['event_trace'] for cell_roi_id in cell_roi_ids])
-                cell_specimen_ids = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in
-                                     cell_roi_ids]
-                if len(cell_specimen_ids) == 0:
-                    cell_specimen_ids = np.zeros(len(cell_roi_ids))
-                    cell_specimen_ids[:] = np.nan
-                # get all the extra stuff from the file
-                ts = np.asarray(f['ts'])
-                timestamps = np.zeros((len(cell_specimen_ids), len(ts)))
-                timestamps[:] = ts
-                dff_traces = f['dff']
-                noise_std = np.asarray(f['noise_stds'])
-                lambdas = np.asarray(f['lambdas'])
-                upsampling_factor = np.zeros(len(cell_specimen_ids))
-                try:
-                    upsampling_factor[:] = f['upsampling_factor']
-                except Exception:
-                    print('\nKeyError: upsampling_factor is not a file in the archive')
-                upsampled_event_magnitude = np.asarray([event_dict[cell_roi_id]['mag'] for cell_roi_id in cell_roi_ids])
-                upsampled_event_timestamps = np.asarray([event_dict[cell_roi_id]['ts'] for cell_roi_id in cell_roi_ids])
-                upsampled_event_indices = np.asarray([event_dict[cell_roi_id]['idx'] for cell_roi_id in cell_roi_ids])
-                f.close()
+        filepath = utilities.get_wkf_events_h5_filepath(self.ophys_experiment_id)
+        f = h5py.File(filepath, 'r')
 
-                scale = 0.06666 * self.metadata['ophys_frame_rate']
+        events = np.asarray(f['events'])
+        cell_roi_ids = np.asarray(f['roi_names'])
+        lambdas = np.asarray(f['lambdas'])
+        noise_stds = np.asarray(f['noise_stds'])
 
-                self._events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
-                                             'events': [x for x in events_array],
-                                             'filtered_events': [x for x in rp.filter_events_array(events_array, scale=scale)],
-                                             'timestamps': [x for x in timestamps],
-                                             'dff_traces': [x for x in dff_traces],
-                                             'noise_std': [x for x in noise_std],
-                                             'lambda': [x for x in lambdas],
-                                             'upsampling_factor': [x for x in upsampling_factor],
-                                             'upsampled_event_magnitude': [x for x in upsampled_event_magnitude],
-                                             'upsampled_event_timestamps': [x for x in upsampled_event_timestamps],
-                                             'upsampled_event_indices': [x for x in upsampled_event_indices]},
-                                            index=pd.Index(cell_specimen_ids, name='cell_specimen_id'))
+        scale = 0.06666 * self.metadata['ophys_frame_rate']
 
+        events = pd.DataFrame({'cell_roi_id': [x for x in cell_roi_ids],
+                               'events': [x for x in events],
+                               'filtered_events': [x for x in rp.filter_events_array(events, scale=scale)],
+                               'noise_std': [x for x in noise_stds],
+                               'lambda': [x for x in lambdas]})
+        # limit to valid cell_roi_ids
+        valid_cell_roi_ids = self.cell_specimen_table.cell_roi_id.values
+        events = events[events.cell_roi_id.isin(valid_cell_roi_ids)]
+        events['cell_specimen_id'] = [self.get_cell_specimen_id_for_cell_roi_id(cell_roi_id) for cell_roi_id in events.cell_roi_id.values]
+        events = events.set_index('cell_specimen_id')
+
+        self._events = events
         return self._events
 
     events = LazyLoadable('_events', _get_events)
@@ -447,13 +405,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
     @property
     def ophys_timestamps(self):
-        if super().metadata['rig_name'] == 'MESO.1':
-            ophys_timestamps = self.timestamps['ophys_frames']['timestamps'].copy()
-            self._ophys_timestamps = ophys_timestamps
-            # correct metadata frame rate
-            self._metadata['ophys_frame_rate'] = 1 / np.diff(ophys_timestamps).mean()
-        else:
-            self._ophys_timestamps = super().ophys_timestamps
+        self._ophys_timestamps = super().ophys_timestamps
         return self._ophys_timestamps
 
     @property
@@ -465,11 +417,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        metadata = super().metadata
-        if 'donor_id' not in metadata.keys():
-            metadata['donor_id'] = metadata.pop('LabTracks_ID')
-            metadata['behavior_session_id'] = utilities.get_behavior_session_id_from_ophys_experiment_id(
-                self.ophys_experiment_id, get_visual_behavior_cache())
+        metadata['donor_id'] = metadata['LabTracks_ID']
+        metadata['behavior_session_id'] = get_behavior_session_id_for_ophys_experiment_id(self.ophys_experiment_id)
         self._metadata = metadata
         return self._metadata
 
@@ -506,7 +455,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def eye_tracking(self):
         eye_tracking = super().eye_tracking.copy()
-        eye_tracking = eye_tracking.rename(columns={'time': 'timestamps'})
+        if 'timestamps' not in eye_tracking.columns:
+            eye_tracking = eye_tracking.rename(columns={'time': 'timestamps'})
         self._eye_tracking = eye_tracking
         return self._eye_tracking
 
@@ -523,6 +473,15 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             stimulus_presentations = reformat.add_mean_pupil_area(stimulus_presentations, self.eye_tracking)
         except BaseException:  # set to NaN
             stimulus_presentations['mean_pupil_area'] = np.nan
+        self._stimulus_presentations = stimulus_presentations
+        return self._stimulus_presentations
+
+    @property
+    def extended_stimulus_presentations(self):
+        stimulus_presentations = self.stimulus_presentations.copy()
+        if 'orientation' in stimulus_presentations.columns:
+            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
+                                                                          'phase', 'spatial_frequency'])
         stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
         stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
@@ -535,17 +494,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
                                                                                            win_type='triang').mean()
         stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
-        stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
-        self._stimulus_presentations = stimulus_presentations
-        return self._stimulus_presentations
-
-    @property
-    def extended_stimulus_presentations(self):
-        stimulus_presentations = self.stimulus_presentations.copy()
-        if 'orientation' in stimulus_presentations.columns:
-            stimulus_presentations = stimulus_presentations.drop(columns=['orientation', 'image_set', 'index',
-                                                                          'phase', 'spatial_frequency'])
-
         stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
         stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
         stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
@@ -632,6 +580,9 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, sdk_only=
     Returns:
         BehaviorOphysDataset {object} -- BehaviorOphysDataset instance, inherits attributes & methods from SDK BehaviorOphysSession class
     """
+    api = BehaviorOphysLimsApi(ophys_experiment_id)
+    dataset = BehaviorOphysDataset(api, include_invalid_rois)
+    # print('loading data for {}'.format(dataset.analysis_folder))  # required to ensure analysis folder is created before other methods are called
     if sdk_only:
         api = BehaviorOphysSession
         dataset = api.from_lims(ophys_experiment_id)
@@ -642,9 +593,9 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, sdk_only=
     return dataset
 
 
-def get_ophys_container_ids():
+def get_ophys_container_ids(release_data_only=False):
     """Get container_ids that meet the criteria in get_filtered_ophys_experiment_table(). """
-    experiments = get_filtered_ophys_experiment_table()
+    experiments = get_filtered_ophys_experiment_table(release_data_only=release_data_only)
     container_ids = np.sort(experiments.container_id.unique())
     return container_ids
 
@@ -700,6 +651,12 @@ def get_ophys_session_id_for_ophys_experiment_id(ophys_experiment_id):
     experiments = get_filtered_ophys_experiment_table()
     ophys_session_id = experiments.loc[ophys_experiment_id].ophys_session_id
     return ophys_session_id
+
+
+def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
+    experiments = get_filtered_ophys_experiment_table(include_failed_data=True)
+    behavior_session_id = experiments.loc[ophys_experiment_id].behavior_session_id
+    return behavior_session_id
 
 
 def get_pc_masks_for_session(ophys_session_id):
@@ -886,23 +843,50 @@ def get_sdk_roi_masks(cell_specimen_table):
     """
 
     roi_masks = {}
-    for cell_specimen_id in cell_specimen_table.index:
-        mask = cell_specimen_table.at[cell_specimen_id, 'roi_mask']
+    for cell_roi_id in cell_specimen_table.cell_roi_id.values:
+        mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id]['roi_mask'].values[0]
         binary_mask = np.zeros(mask.shape)
         binary_mask[mask == True] = 1
-        roi_masks[cell_specimen_id] = binary_mask
+        roi_masks[cell_roi_id] = binary_mask
     return roi_masks
 
 
-def get_valid_segmentation_mask(ophys_experiment_id):
-    session = get_ophys_dataset(ophys_experiment_id)
-    ct = session.cell_specimen_table
-    valid_cell_specimen_ids = ct[ct.valid_roi == True].index.values
-    roi_masks = session.get_roi_masks()
-    valid_roi_masks = roi_masks[roi_masks.cell_specimen_id.isin(valid_cell_specimen_ids)].data
-    valid_segmentation_mask = np.sum(valid_roi_masks, axis=0)
-    valid_segmentation_mask[valid_segmentation_mask > 0] = 1
-    return valid_segmentation_mask
+def get_segmentation_mask(ophys_experiment_id, valid_only=True):
+    dataset = get_ophys_dataset(ophys_experiment_id, include_invalid_rois=True)
+    cell_specimen_table = dataset.cell_specimen_table.copy()
+    if valid_only == True:
+        roi_masks = get_sdk_roi_masks(cell_specimen_table[cell_specimen_table.valid_roi == True])
+    else:
+        roi_masks = get_sdk_roi_masks(cell_specimen_table)
+    # flatten
+    segmentation_mask = np.sum(np.asarray(list(roi_masks.values())), axis=0)
+    segmentation_mask[segmentation_mask > 0] = 1
+    return segmentation_mask
+
+
+def get_metrics_df(experiment_id):
+    metrics_df = load_current_objectlisttxt_file(experiment_id)
+    # ROI locations from lims, including cell_roi_id
+    roi_loc = roi_locations_from_cell_rois_table(experiment_id)
+    # limit to current segmentation run, otherwise gives old ROIs
+    run_id = get_current_segmentation_run_id(experiment_id)
+    roi_loc = roi_loc[roi_loc.ophys_cell_segmentation_run_id == run_id]
+    # link ROI metrics with cell_roi_id from ROI locations dict using ROI location
+    metrics_df = metrics_df.merge(roi_loc, on=['bbox_min_x', 'bbox_min_y'])
+    return metrics_df
+
+
+def get_roi_mask_and_metrics_dict(cell_table, metrics_df, metric):
+    roi_mask_dict = {}
+    metrics_dict = {}
+    for cell_roi_id in cell_table.cell_roi_id.values:
+        metrics_dict[cell_roi_id] = metrics_df[metrics_df.cell_roi_id == cell_roi_id][metric].values[0]
+        roi_mask = cell_table[cell_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
+        mask = np.zeros(roi_mask.shape)
+        mask[:] = np.nan
+        mask[roi_mask == True] = 1
+        roi_mask_dict[cell_roi_id] = mask
+    return roi_mask_dict, metrics_dict
 
 
 def get_sdk_cell_specimen_table(ophys_experiment_id):
@@ -1061,37 +1045,42 @@ def get_current_segmentation_run_id(ophys_experiment_id):
     """
 
     segmentation_run_table = get_lims_cell_segmentation_run_info(ophys_experiment_id)
-    current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"] == True, ["id"][0]][0]
+    current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"] == True, ["id"][0]].values[0]
     return current_segmentation_run_id
 
 
-def get_lims_cell_segmentation_run_info(ophys_experiment_id):
-    """Queries LIMS via AllenSDK PostgresQuery function to retrieve
-        information on all segmentations run in the
+def get_lims_cell_segmentation_run_info(experiment_id):
+    """Queries LIMS via AllenSDK PostgresQuery function to retrieve information on all segmentations run in the
         ophys_cell_segmenatation_runs table for a given experiment
 
-    Arguments:
-         ophys_experiment_id {int} -- 9 digit ophys experiment ID
-
     Returns:
-        dataframe --  dataframe with the following columns:
-                        id {int}:  9 digit segmentation run id
-                        run_number {int}: segmentation run number
-                        ophys_experiment_id{int}: 9 digit ophys experiment id
-                        current{boolean}: True/False
-                                    True: most current segmentation run
-                                    False: not the most current segmentation run
-                        created_at{timestamp}:
-                        updated_at{timestamp}:
+        dataframe -- dataframe with the following columns:
+            id {int}:  9 digit segmentation run id
+            run_number {int}: segmentation run number
+            ophys_experiment_id{int}: 9 digit ophys experiment id
+            current{boolean}: True/False True: most current segmentation run; False: not the most current segmentation run
+            created_at{timestamp}:
+            updated_at{timestamp}:
     """
-
     mixin = lims_engine
     query = '''
     select *
     FROM ophys_cell_segmentation_runs
-    WHERE ophys_experiment_id = {} '''.format(ophys_experiment_id)
+    WHERE ophys_experiment_id = {} '''.format(experiment_id)
     return mixin.select(query)
 
+
+def get_lims_cell_exclusion_labels(experiment_id):
+    mixin = lims_engine
+    query = '''
+    SELECT oe.id AS oe_id, cr.id AS cr_id , rel.name AS excl_label 
+    FROM ophys_experiments oe 
+    JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id=oe.id AND ocsr.current = 't'
+    JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id 
+    JOIN cell_rois_roi_exclusion_labels crrel ON crrel.cell_roi_id=cr.id 
+    JOIN roi_exclusion_labels rel ON rel.id=crrel.roi_exclusion_label_id 
+    WHERE oe.id = {} '''.format(experiment_id)
+    return mixin.select(query)
 
 def get_lims_cell_rois_table(ophys_experiment_id):
     """Queries LIMS via AllenSDK PostgresQuery function to retrieve
@@ -1139,6 +1128,233 @@ def get_lims_cell_rois_table(ophys_experiment_id):
     return lims_cell_rois_table
 
 
+def roi_locations_from_cell_rois_table(experiment_id):
+    """takes the lims_cell_rois_table and pares it down to just what's relevent to join with the objectlist.txt table.
+       Renames columns to maintain continuity between the tables.
+
+    Arguments:
+        lims_cell_rois_table {dataframe} -- dataframe from LIMS with roi location information
+
+    Returns:
+        dataframe -- pared down dataframe
+    """
+    import visual_behavior.ophys.io.convert_level_1_to_level_2 as convert
+    # get_lims_data = convert.get_lims_data
+    # get the cell_rois_table for that experiment
+    lims_data = convert.get_lims_data(experiment_id)
+    exp_cell_rois_table = get_lims_cell_rois_table(lims_data['lims_id'].values[0])
+
+    # select only the relevent columns
+    # roi_locations = exp_cell_rois_table[["id", "x", "y", "width", "height", "valid_roi", "mask_matrix"]]
+    roi_locations = exp_cell_rois_table
+    # rename columns
+    roi_locations = clean_roi_locations_column_labels(roi_locations)
+    return roi_locations
+
+
+###########
+
+def get_failed_roi_exclusion_labels(experiment_id):
+    """Queries LIMS  roi_exclusion_labels table via AllenSDK PostgresQuery function to retrieve and build a
+         table of all failed ROIS for a particular experiment, and their exclusion labels.
+
+         Failed rois will be listed multiple times/in multiple rows depending upon how many exclusion
+         labels they have.
+
+    Arguments:
+        experiment_id {int} -- [9 digit unique identifier for the experiment]
+
+    Returns:
+        dataframe -- returns a dataframe with the following columns:
+            ophys_experiment_id: 9 digit unique identifier for the experiment
+            cell_roi_id:unique identifier for each roi (created after segmentation, before cell matching)
+            cell_specimen_id: unique identifier for each roi (created after cell matching, so could be blank for some experiments/rois depending on processing step)
+            valid_roi: boolean true/false, should be false for all entries, since dataframe should only list failed/invalid rois
+            exclusion_label_name: label/tag for why the roi was deemed invalid
+    """
+    # query from AllenSDK
+    experiment_id = int(experiment_id)
+    mixin = lims_engine
+    # build query
+    query = '''
+    select
+
+    oe.id as ophys_experiment_id,
+    cell_rois.id as cell_roi_id,
+    cell_rois.valid_roi,
+    cell_rois.cell_specimen_id,
+    el.name as exclusion_label_name
+
+    from
+
+    ophys_experiments oe
+    join cell_rois on oe.id = cell_rois.ophys_experiment_id
+    join cell_rois_roi_exclusion_labels crel on crel.cell_roi_id = cell_rois.id
+    join roi_exclusion_labels el on el.id = crel.roi_exclusion_label_id
+
+    where oe.id = {}'''.format(experiment_id)
+
+    failed_roi_exclusion_labels = mixin.select(query)
+    return failed_roi_exclusion_labels
+
+
+def gen_roi_exclusion_labels_lists(experiment_id):
+    """[summary]
+
+    Arguments:
+        experiment_id {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+    roi_exclusion_table = get_failed_roi_exclusion_labels(experiment_id)
+    roi_exclusion_table = roi_exclusion_table[["cell_roi_id", "exclusion_label_name"]]
+    exclusion_list_per_invalid_roi = roi_exclusion_table.groupby(["cell_roi_id"]).agg(lambda x: tuple(x)).applymap(
+        list).reset_index()
+    return exclusion_list_per_invalid_roi
+
+
+def clean_roi_locations_column_labels(roi_locations_dataframe):
+    """takes some column labels from the roi_locations dataframe and  renames them to be more explicit and descriptive, and to match the column labels
+        from the objectlist dataframe.
+
+    Arguments:
+        roi_locations_dataframe {dataframe} -- dataframe with roi id and location information
+
+    Returns:
+        dataframe -- [description]
+    """
+    roi_locations_dataframe = roi_locations_dataframe.rename(columns={"id": "cell_roi_id",
+                                                                      "mask_matrix": "roi_mask",
+                                                                      "x": "bbox_min_x",
+                                                                      "y": "bbox_min_y"})
+    return roi_locations_dataframe
+
+
+def get_objectlisttxt_location(segmentation_run_id):
+    """use SQL and the LIMS well known file system to get the location information for the objectlist.txt file
+        for a given cell segmentation run
+
+    Arguments:
+        segmentation_run_id {int} -- 9 digit segmentation run id
+
+    Returns:
+        list -- list with storage directory and filename
+    """
+
+    QUERY = '''
+    SELECT wkf.storage_directory, wkf.filename
+    FROM well_known_files wkf
+    JOIN well_known_file_types wkft on wkf.well_known_file_type_id = wkft.id
+    JOIN ophys_cell_segmentation_runs ocsr on wkf.attachable_id = ocsr.id
+    WHERE wkft.name = 'OphysSegmentationObjects'
+    AND wkf.attachable_type = 'OphysCellSegmentationRun'
+    AND ocsr.id = {0}
+    '''
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY.format(segmentation_run_id))
+    objecttxt_info = (lims_cursor.fetchall())
+    return objecttxt_info
+
+
+def load_current_objectlisttxt_file(experiment_id):
+    """loads the objectlist.txt file for the current segmentation run, then "cleans" the column names and returns a dataframe
+
+    Arguments:
+        experiment_id {[int]} -- 9 digit unique identifier for the experiment
+
+    Returns:
+        dataframe -- dataframe with the following columns: (from http://confluence.corp.alleninstitute.org/display/IT/Ophys+Segmentation)
+            trace_index:The index to the corresponding trace plot computed  (order of the computed traces in file _somaneuropiltraces.h5)
+            center_x: The x coordinate of the centroid of the object in image pixels
+            center_y:The y coordinate of the centroid of the object in image pixels
+            frame_of_max_intensity_masks_file: The frame the object mask is in maxInt_masks2.tif
+            frame_of_enhanced_movie: The frame in the movie enhimgseq.tif that best shows the object
+            layer_of_max_intensity_file: The layer of the maxInt file where the object can be seen
+            bbox_min_x: coordinates delineating a bounding box that contains the object, in image pixels (upper left corner)
+            bbox_min_y: coordinates delineating a bounding box that contains the object, in image pixels (upper left corner)
+            bbox_max_x: coordinates delineating a bounding box that contains the object, in image pixels (bottom right corner)
+            bbox_max_y: coordinates delineating a bounding box that contains the object, in image pixels (bottom right corner)
+            area: Total area of the segmented object
+            ellipseness: The "ellipticalness" of the object, i.e. length of long axis divided by length of short axis
+            compactness: Compactness :  perimeter^2 divided by area
+            exclude_code: A non-zero value indicates the object should be excluded from further analysis.  Based on measurements in objectlist.txt
+                        0 = not excluded
+                        1 = doublet cell
+                        2 = boundary cell
+                        Others = classified as not complete soma, apical dendrite, ....
+            mean_intensity: Correlates with delta F/F.  Mean brightness of the object
+            mean_enhanced_intensity: Mean enhanced brightness of the object
+            max_intensity: Max brightness of the object
+            max_enhanced_intensity: Max enhanced brightness of the object
+            intensity_ratio: (max_enhanced_intensity - mean_enhanced_intensity) / mean_enhanced_intensity, for detecting dendrite objects
+            soma_minus_np_mean: mean of (soma trace – its neuropil trace)
+            soma_minus_np_std: 1-sided stdv of (soma trace – its neuropil trace)
+            sig_active_frames_2_5:# frames with significant detected activity (spiking)   : Sum ( soma_trace > (np_trace + Snpoffsetmean+ 2.5 * Snpoffsetstdv)   trace_38_soma.png  See example traces attached.
+            sig_active_frames_4: # frames with significant detected activity (spiking)   : Sum ( soma_trace > (np_trace + Snpoffsetmean+ 4.0 * Snpoffsetstdv)
+            overlap_count: 	Number of other objects the object overlaps with
+            percent_area_overlap: the percentage of total object area that overlaps with other objects
+            overlap_obj0_index: The index of the first object with which this object overlaps
+            overlap_obj1_index: The index of the second object with which this object overlaps
+            soma_obj0_overlap_trace_corr: trace correlation coefficient between soma and overlap soma0  (-1.0:  excluded cell,  0.0 : NA)
+            soma_obj1_overlap_trace_corr: trace correlation coefficient between soma and overlap soma1
+    """
+    current_segmentation_run_id = get_current_segmentation_run_id(experiment_id)
+    objectlist_location_info = get_objectlisttxt_location(current_segmentation_run_id)
+    objectlist_path = objectlist_location_info[0]['storage_directory']
+    objectlist_file = objectlist_location_info[0]["filename"]
+    full_name = os.path.join(objectlist_path, objectlist_file).replace('/allen',
+                                                                       '//allen')  # works with windows and linux filepaths
+    objectlist_dataframe = pd.read_csv(full_name)
+    objectlist_dataframe = clean_objectlist_col_labels(objectlist_dataframe)  # "clean" columns names to be more meaningful
+    return objectlist_dataframe
+
+
+def clean_objectlist_col_labels(objectlist_dataframe):
+    """take the roi metrics from the objectlist.txt file and renames them to be more explicit and descriptive.
+        -removes single blank space at the beginning of column names
+        -enforced naming scheme(no capitolization, added _)
+        -renamed columns to be more descriptive/reflect contents of column
+
+    Arguments:
+        objectlist_dataframe {pandas dataframe} -- [roi metrics dataframe or dataframe generated from the objectlist.txt file]
+
+    Returns:
+        [pandas dataframe] -- [same dataframe with same information but with more informative column names
+    """
+
+    objectlist_dataframe = objectlist_dataframe.rename(index=str, columns={' traceindex': "trace_index",
+                                                                           ' cx': 'center_x',
+                                                                           ' cy': 'center_y',
+                                                                           ' mask2Frame': 'frame_of_max_intensity_masks_file',
+                                                                           ' frame': 'frame_of_enhanced_movie',
+                                                                           ' object': 'layer_of_max_intensity_file',
+                                                                           ' minx': 'bbox_min_x',
+                                                                           ' miny': 'bbox_min_y',
+                                                                           ' maxx': 'bbox_max_x',
+                                                                           ' maxy': 'bbox_max_y',
+                                                                           ' area': 'area',
+                                                                           ' shape0': 'ellipseness',
+                                                                           ' shape1': "compactness",
+                                                                           ' eXcluded': "exclude_code",
+                                                                           ' meanInt0': "mean_intensity",
+                                                                           ' meanInt1': "mean_enhanced_intensity",
+                                                                           ' maxInt0': "max_intensity",
+                                                                           ' maxInt1': "max_enhanced_intensity",
+                                                                           ' maxMeanRatio': "intensity_ratio",
+                                                                           ' snpoffsetmean': "soma_minus_np_mean",
+                                                                           ' snpoffsetstdv': "soma_minus_np_std",
+                                                                           ' act2': "sig_active_frames_2_5",
+                                                                           ' act3': "sig_active_frames_4",
+                                                                           ' OvlpCount': "overlap_count",
+                                                                           ' OvlpAreaPer': "percent_area_overlap",
+                                                                           ' OvlpObj0': "overlap_obj0_index",
+                                                                           ' OvlpObj1': "overlap_obj1_index",
+                                                                           ' corcoef0': "soma_obj0_overlap_trace_corr",
+                                                                           ' corcoef1': "soma_obj1_overlap_trace_corr"})
+    return objectlist_dataframe
+
+
 def get_average_depth_image(experiment_id):
     """
     quick and dirty function to load 16x depth image from lims
@@ -1150,7 +1366,9 @@ def get_average_depth_image(experiment_id):
 
     expt_dir = utilities.get_ophys_experiment_dir(utilities.get_lims_data(experiment_id))
     session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
-    session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(experiment_id)
+    experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
+    session_id = experiment_table.loc[experiment_id].ophys_session_id
+    # session_id = utilities.get_ophys_session_id_from_ophys_experiment_id(experiment_id, cache)
 
     # try all combinations of potential file path locations...
     if os.path.isfile(os.path.join(session_dir, str(experiment_id) + '_averaged_depth.tif')):
@@ -1292,6 +1510,8 @@ def pmt_gain_from_timeseries_ini(timeseries_ini_path):
     Returns:
         int -- int of the pmt gain
     """
+    config = configp.ConfigParser()
+
     config.read(timeseries_ini_path)
     pmt_gain = int(float(config['_']['PMT.2']))
     return pmt_gain
@@ -1739,7 +1959,7 @@ def build_container_df():
             'cre_line': subset['cre_line'][0],
             'targeted_structure': subset['targeted_structure'].unique()[0],
             'imaging_depth': subset['imaging_depth'].unique()[0],
-            'exposure_number': subset['exposure_number'][0],
+            'session_type_exposure_number': subset['session_type_exposure_number'][0],
             'equipment_name': subset['equipment_name'].unique(),
             'specimen_id': subset['specimen_id'].unique()[0],
             'sex': subset['sex'].unique()[0],
@@ -1877,7 +2097,8 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
         experiments = experiments_table[(experiments_table.project_code == project_code)]
         if project_code == 'VisualBehaviorMultiscope':
             experiments = experiments[experiments.session_type != 'OPHYS_2_images_B_passive']
-        expts = experiments_table.reset_index()
+        # expts = experiments_table.reset_index()
+        expts = experiments_table.copy()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
                 filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
@@ -2174,3 +2395,20 @@ def get_cell_summary(search_dict={}):
         right_on='ophys_experiment_id'
     )
     return cell_table
+
+
+def get_remaining_crosstalk_amount_dict(experiment_id):
+    import allensdk.core.json_utilities as ju
+    import visual_behavior.data_access.utilities as utilities
+
+    session_dir = utilities.get_ophys_session_dir(utilities.get_lims_data(experiment_id))
+    candidate_folders = [folder for folder in os.listdir(os.path.join(session_dir, 'crosstalk')) if 'roi' in folder]
+    folder = [folder for folder in candidate_folders if str(experiment_id) in folder]
+    json_path = os.path.join(session_dir, 'crosstalk', folder[0], str(experiment_id) + '_crosstalk.json')
+    crosstalk_dict = ju.read(json_path)
+
+    remaining_crosstalk_dict = {}
+    for key in list(crosstalk_dict.keys()):
+        remaining_crosstalk_dict[int(key)] = crosstalk_dict[key][1]
+
+    return remaining_crosstalk_dict
