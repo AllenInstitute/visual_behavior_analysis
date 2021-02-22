@@ -257,7 +257,7 @@ def make_eye_matrix_plot(ophys_experiment_id, ax):
     return ax
 
 
-def make_pupil_area_plot(ophys_experiment_id, ax, label_x=True):
+def make_pupil_area_plot(ophys_experiment_id, ax=None, label_x=True):
     '''plot pupil area vs time'''
     try:
         # ophys_session_id = db.convert_id({'ophys_experiment_id': ophys_experiment_id}, 'ophys_session_id')
@@ -266,7 +266,9 @@ def make_pupil_area_plot(ophys_experiment_id, ax, label_x=True):
         ed = dataset.eye_tracking.copy()
         time = ed['timestamps'].values  # this might still be 'time'
         area = ed['pupil_area'].values  # this should be blink corrected - no giant spikes
-        ax.plot(time, area)
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(20, 4))
+            ax.plot(time, area)
         if label_x:
             ax.set_xlabel('time (minutes)')
         ax.set_ylabel('pupil diameter\n(pixels$^2$)')
