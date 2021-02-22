@@ -264,7 +264,7 @@ def make_pupil_area_plot(ophys_experiment_id, ax=None, label_x=True):
         # ed = EyeTrackingData(ophys_session_id)
         dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
         ed = dataset.eye_tracking.copy()
-        time = ed['timestamps'].values  # this might still be 'time'
+        time = ed['time'].values  # might need to be updated to timestamps in the future'
         area = ed['pupil_area'].values  # this should be blink corrected - no giant spikes
         if ax is None:
             fig, ax = plt.subplots(figsize=(20, 4))
