@@ -310,18 +310,19 @@ def make_pupil_area_plot_sdk(ophys_experiment_id, ax=None, label_x=True):
     return ax
 
 
-def make_pupil_position_plot(ophys_experiment_id, ax, label_x=True):
+def make_pupil_position_plot(ophys_experiment_id, ax=None, label_x=True):
     '''plot pupil position vs time'''
     try:
         dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
         ed = dataset.eye_tracking.copy()
 
-        time = ed['timestamps'].values / 60.  # could still be 'time'
+        time = ed['time'].values / 60.  # might need to be updated to timestamps in the future'
         x = ed['center_x'].values  # i actually have no idea what these are called
         y = ed['center_y'].values  # need to check eye_tracking table in SDK and replace with proper names
-
-        ax.plot(time, x, color='darkorange')
-        ax.plot(time, y, color='olive')
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(20, 4))
+            ax.plot(time, x, color='darkorange')
+            ax.plot(time, y, color='olive')
 
         if label_x:
             ax.set_xlabel('time (minutes)')
