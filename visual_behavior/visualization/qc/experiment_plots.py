@@ -366,17 +366,17 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     if xlim_seconds is None:
         xlim_seconds = [dataset.stimulus_timestamps[0], dataset.stimulus_timestamps[-1]]
 
-    lick_timestamps = dataset.licks.timestamps.values
+    lick_timestamps = dataset.licks["time"].values
     licks = np.ones(len(lick_timestamps))
 
-    reward_timestamps = dataset.rewards.timestamps.values
+    reward_timestamps = dataset.rewards.index.values  # the index is "timestamps"
     rewards = np.zeros(len(reward_timestamps))
 
-    running_speed = dataset.running_speed.speed.values
-    running_timestamps = dataset.running_speed.timestamps.values
+    running_speed = dataset.running_speed["speed"].values
+    running_timestamps = dataset.running_speed["timestamps"].values
 
-    pupil_area = dataset.eye_tracking.pupil_area.values
-    pupil_timestamps = dataset.eye_tracking.timestamps.values
+    pupil_area = dataset.eye_tracking["pupil_area"].values
+    pupil_timestamps = dataset.eye_tracking["time"].values
 
     # face_motion = dataset.behavior_movie_pc_activations[:, 0]
     # face_timestamps = dataset.timestamps['behavior_monitoring'].timestamps
