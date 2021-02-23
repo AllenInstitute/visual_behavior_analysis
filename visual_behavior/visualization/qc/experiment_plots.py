@@ -319,6 +319,7 @@ def make_pupil_position_plot(ophys_experiment_id, ax=None, label_x=True):
         time = ed['time'].values / 60.  # might need to be updated to timestamps in the future'
         x = ed['pupil_center_x'].values  # i actually have no idea what these are called
         y = ed['pupil_center_y'].values  # need to check eye_tracking table in SDK and replace with proper names
+        
         if ax is None:
             fig, ax = plt.subplots(figsize=(20, 4))
             ax.plot(time, x, color='darkorange')
