@@ -284,15 +284,17 @@ def make_pupil_area_plot(ophys_experiment_id, ax=None, label_x=True):
     return ax
 
 
-def make_pupil_area_plot_sdk(ophys_experiment_id, ax, label_x=True):
+def make_pupil_area_plot_sdk(ophys_experiment_id, ax=None, label_x=True):
     '''plot pupil area vs time'''
     try:
         dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
         et = dataset.eye_tracking.copy()
         # filtered = et[et.likely_blink == False]
-        time = et['timestamps'].values / 60.  # this might still be 'time'
+        time = et['time'].values / 60.  # might need to be updated to timestamps in the future'
         area = et['pupil_area_raw'].values  # this will have blink artifacts in it
-        ax.plot(time, area)
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(20, 4))
+            ax.plot(time, area)
         if label_x:
             ax.set_xlabel('time (seconds)')
         ax.set_ylabel('pupil diameter\n(pixels$^2$)')
