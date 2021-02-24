@@ -16,6 +16,7 @@ import h5py  # for loading motion corrected movie
 import numpy as np
 import pandas as pd
 import configparser as configp  # for parsing scientifica ini files
+config = configp.ConfigParser()
 
 import warnings
 
@@ -54,7 +55,7 @@ except Exception as e:
         e)
     warnings.warn(warn_string)
 
-config = configp.ConfigParser()
+
 
 
 # function inputs
