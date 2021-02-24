@@ -1452,6 +1452,74 @@ def get_lims_container_info(ophys_container_id):
 # FROM LIMS WELL KNOWN FILES
 
 
+def get_release_ophys_nwb_file_paths():
+    """"    --LIMS SQL to get behavior Ophys NWB files that are ready now
+    """
+    mixin = lims_engine
+    # build query
+    query = '''
+    SELECT wkf.storage_directory || wkf.filename AS nwb_file
+    FROM ophys_experiments oe
+    JOIN ophys_sessions os ON os.id=oe.ophys_session_id JOIN equipment e ON e.id=os.equipment_id
+    JOIN jobs j ON j.enqueued_object_id=oe.id AND j.archived = 'f' AND j.job_state_id = 3 --IN (1,2,4,5)
+    JOIN job_queues jq ON jq.id=j.job_queue_id AND jq.name = 'BEHAVIOR_OPHYS_WRITE_NWB_QUEUE_NO_STATE_CHANGE'
+    JOIN well_known_files wkf ON wkf.attachable_id=oe.id JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id AND wkft.name = 'BehaviorOphysNwb'
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec ON oevbec.ophys_experiment_id=oe.id
+    JOIN visual_behavior_experiment_containers vbec ON vbec.id=oevbec.visual_behavior_experiment_container_id
+    WHERE oe.workflow_state = 'passed' AND vbec.workflow_state = 'published'
+    '''
+    file_paths = mixin.select(query)
+    return file_paths
+
+def get_release_behavior_nwb_file_paths():
+    """"    --LIMS SQL to get behavior-only NWB files that are ready now
+
+    """
+    mixin = lims_engine
+    # build query
+    query = '''
+    SELECT wkf.storage_directory || wkf.filename
+    FROM behavior_sessions bs JOIN donors d ON d.id=bs.donor_id
+    LEFT JOIN ophys_sessions os ON os.id=bs.ophys_session_id AND os.stimulus_name NOT IN ('OPHYS_7_receptive_field_mapping')
+    LEFT JOIN equipment e ON e.id=bs.equipment_id
+    LEFT JOIN jobs j ON j.job_queue_id = 1071407587 AND j.archived = 'f' AND j.enqueued_object_id=bs.id AND j.job_state_id = 3
+    JOIN well_known_files wkf ON wkf.attachable_id=bs.id
+    JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id AND wkft.name = 'BehaviorNwb'
+    WHERE donor_id IN
+    (
+      SELECT sp.donor_id
+      FROM ophys_experiments_visual_behavior_experiment_containers oevbec
+      JOIN ophys_experiments oe ON oe.id=oevbec.ophys_experiment_id
+      JOIN visual_behavior_experiment_containers vbec ON vbec.id=oevbec.visual_behavior_experiment_container_id
+      JOIN specimens sp ON sp.id=vbec.specimen_id
+      WHERE vbec.workflow_state = 'published' AND oe.workflow_state = 'passed'
+    )
+    -- minus sessions from 1171 behavior ophys experiments
+    AND
+    (
+      bs.ophys_session_id IS NULL OR (
+        bs.ophys_session_id NOT IN (
+          SELECT oe.ophys_session_id
+          FROM ophys_experiments_visual_behavior_experiment_containers oevbec
+          JOIN ophys_experiments oe ON oe.id=oevbec.ophys_experiment_id
+          JOIN visual_behavior_experiment_containers vbec ON vbec.id=oevbec.visual_behavior_experiment_container_id
+          JOIN specimens sp ON sp.id=vbec.specimen_id
+          WHERE vbec.workflow_state = 'published' AND oe.workflow_state = 'passed'
+        )
+        AND bs.ophys_session_id NOT IN (
+          SELECT os.id
+          FROM ophys_sessions os
+          WHERE os.stimulus_name IN ('OPHYS_7_receptive_field_mapping')
+        )
+      )
+    )
+    ORDER BY 1;
+    Collapse
+    '''
+    file_paths = mixin.select(query)
+    return file_paths
+
+
 def get_timeseries_ini_wkf_info(ophys_session_id):
     """use SQL and the LIMS well known file system to get the timeseries_XYT.ini file
         for a given ophys session *from a Scientifica rig*
