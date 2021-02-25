@@ -451,25 +451,36 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         return cell_specimen_id
 
 
-def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, sdk_only=False, verbose=False):
-    """Gets behavior + ophys data for one experiment (single imaging plane), using the SDK LIMS API, then reformats & filters to compensate for bugs and missing SDK features.
-        This functionality should eventually be entirely replaced by the SDK when all requested features have been implemented.
+def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims=False, from_nwb=False):
+    """Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
+        SDK NWB API, or using BehaviorOphysDataset class that inherits the LIMS API BehaviorOphysSession object,
+        and adds functionality including invalid ROI filtering, extended stimulus_presentations and trials,
+        and behavior movie data
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
         include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
-        sdk_only -- if True, skips additional reformatting and returns data directly from LIMS using only SDK functionality (default = False)
-        verbose -- if True, prints info about session being loaded
+        from_lims -- if True, loads dataset from BehaviorOphysSession.from_lims()
+        from_nwb -- if True, loads dataset from BehaviorOphysSession.from_nwb_path()
 
     Returns:
         BehaviorOphysDataset {object} -- BehaviorOphysDataset instance, inherits attributes & methods from SDK BehaviorOphysSession class
     """
-    if sdk_only:
+    if from_lims:
         dataset = BehaviorOphysSession.from_lims(ophys_experiment_id)
+    elif from_nwb:
+        nwb_files = get_release_ophys_nwb_file_paths()
+        nwb_file = [file for file in nwb_files.nwb_file.values if str(ophys_experiment_id) in file]
+        if len(nwb_file)>0:
+            nwb_path = nwb_file[0]
+            if 'win' in sys.platform:
+                nwb_path = '\\' + os.path.abspath(nwb_path)[2:]
+            dataset = BehaviorOphysSession.from_nwb_path(nwb_path)
+        else:
+            print('no NWB file path found for', ophys_experiment_id)
     else:
         api = BehaviorOphysLimsApi(ophys_experiment_id)
         dataset = BehaviorOphysDataset(api, include_invalid_rois)
-        # print('loading data for {}'.format(dataset.analysis_folder)) if verbose else None  # required to ensure analysis folder is created before other methods are called
     return dataset
 
 
