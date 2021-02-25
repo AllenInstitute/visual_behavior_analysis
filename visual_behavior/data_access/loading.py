@@ -404,10 +404,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def behavior_movie_timestamps(self):
         lims_data = utilities.get_lims_data(self.ophys_experiment_id)
-        ### this needs to pull from .h5 file in lims not analysis_dir ###
         timestamps = utilities.get_timestamps(lims_data)
-        # note that due to sync line label issues, 'eye_tracking' timestamps are loaded here instead of 'behavior_movie' timestamps
-        self._behavior_movie_timestamps = timestamps['eye_tracking']['timestamps'].copy()
+        self._behavior_movie_timestamps = timestamps['behavior_monitoring']['timestamps'].copy()
         return self._behavior_movie_timestamps
 
     @property
