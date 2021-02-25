@@ -11,6 +11,7 @@ from visual_behavior.data_access import utilities
 import visual_behavior.database as db
 
 import os
+import sys
 import glob
 import h5py  # for loading motion corrected movie
 import numpy as np
@@ -68,23 +69,23 @@ except Exception as e:
 #  RELEVANT DIRECTORIES
 
 def get_super_container_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
 
 
 def get_container_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
 
 
 def get_session_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
 
 
 def get_experiment_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 
 def get_single_cell_plots_dir():
-    return r'/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
 def get_analysis_cache_dir():
@@ -130,7 +131,7 @@ def get_visual_behavior_cache(manifest_path=None):
     return cache
 
 
-def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False):
+def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True):
     """get ophys experiments table from cache, filters based on a number of criteria
         and adds additional useful columns to the table
         Saves a reformatted version of the table with additional columns
@@ -190,8 +191,6 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
         experiments = filtering.limit_to_production_project_codes(experiments)
-        # experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in
-        #                              experiments.index.values]
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
         experiments = experiments.reset_index()
@@ -208,11 +207,14 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
                                                                    'VisualBehaviorMultiscope'])]
         experiments = experiments[experiments.container_workflow_state=='published']
         experiments = experiments[experiments.experiment_workflow_state == 'passed']
+    if exclude_ai94:
+        experiments = experiments[experiments.full_genotype!='Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
                                      experiments.session_type.values]
     # ensure cre_line includes Ai94 to prevent inclusion of GCaMP6s in anaysis
-    experiments['cre_line'] = [full_genotype.split('/')[0] if 'Ai94' not in full_genotype else full_genotype.split('/')[0] + ';Ai94'
-                               for full_genotype in experiments.full_genotype.values]
+    # experiments['cre_line'] = [full_genotype.split('/')[0] if 'Ai94' not in full_genotype else full_genotype.split('/')[0] + ';Ai94'
+    #                            for full_genotype in experiments.full_genotype.values]
+    experiments['cre_line'] = [full_genotype.split('/')[0] for full_genotype in experiments.full_genotype.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
     # filter one more time on load to restrict to data release experiments ###
