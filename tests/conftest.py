@@ -15,7 +15,6 @@ import uuid
 import matplotlib
 matplotlib.use('Agg')
 
-from visual_behavior.pizza import we_can_unpizza_that  # this is terrible but hopefully will be an external dependency very soon
 from visual_behavior.uuid_utils import make_deterministic_session_uuid
 
 
@@ -307,11 +306,6 @@ def trials_df_pickle_fixture():
 @pytest.fixture(scope="module")
 def annotated_trials_df_pickle_fixture():
     return os.path.join(TESTING_RES_DIR, "trials_annotated.pkl")
-
-
-@pytest.fixture(scope="session")
-def pizza_data_fixture():
-    return we_can_unpizza_that(os.path.join(TESTING_RES_DIR, "180215110844176000.h5"))
 
 
 @pytest.fixture(scope="session")
