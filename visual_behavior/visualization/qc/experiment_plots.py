@@ -23,7 +23,7 @@ bitdepth_16 = 65536
 def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     max_projection = dataset.max_projection.data
     ax.imshow(max_projection, cmap='gray', vmax=np.percentile(max_projection, 99))
     ax.axis('off')
@@ -33,7 +33,7 @@ def plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=None):
 def plot_average_image_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     average_projection = dataset.average_projection.data
     ax.imshow(average_projection, cmap='gray', vmax=np.amax(average_projection))
     ax.axis('off')
@@ -61,7 +61,7 @@ def plot_motion_correction_max_image_for_experiment(ophys_experiment_id, ax=None
 def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     segmentation_mask = dataset.segmentation_mask_image # i am not sure if this is correct, check relevant SDK issue to see what they did
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
@@ -89,7 +89,7 @@ def plot_all_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=No
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
     mask = np.zeros(segmentation_mask[0].shape)
     mask[:] = np.nan
@@ -116,7 +116,7 @@ def plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experime
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
     if len(cell_specimen_table) > 0:
         for cell_roi_id in cell_specimen_table.cell_roi_id.values:
@@ -131,7 +131,7 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     if ax is None:
         fig, ax = plt.subplots()
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     cell_specimen_table = dataset.cell_specimen_table.copy()
     exclusion_labels = loading.get_lims_cell_exclusion_labels(ophys_experiment_id)
     try:
@@ -158,7 +158,7 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
 
 
 def plot_traces_heatmap_for_experiment(ophys_experiment_id, ax=None):
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)  # this means it will have invalid traces
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)  # this means it will have invalid traces
     dff_traces = dataset.dff_traces.dff.values
     dff_traces = np.vstack(dff_traces)
     if ax is None:
@@ -216,7 +216,7 @@ def plot_average_intensity_timeseries_for_experiment(ophys_experiment_id, ax=Non
 
 def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None):
     # df = loading.load_rigid_motion_transform_csv(ophys_experiment_id)
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     df = dataset.motion_correction.copy()
     timestamps = dataset.ophys_timestamps
     if ax is None:
@@ -262,7 +262,7 @@ def make_pupil_area_plot(ophys_experiment_id, ax=None, label_x=True):
     try:
         # ophys_session_id = db.convert_id({'ophys_experiment_id': ophys_experiment_id}, 'ophys_session_id')
         # ed = EyeTrackingData(ophys_session_id)
-        dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
         ed = dataset.eye_tracking.copy()
         time = ed['time'].values  # might need to be updated to timestamps in the future'
         area = ed['pupil_area'].values  # this should be blink corrected - no giant spikes
@@ -287,7 +287,7 @@ def make_pupil_area_plot(ophys_experiment_id, ax=None, label_x=True):
 def make_pupil_area_plot_sdk(ophys_experiment_id, ax=None, label_x=True):
     '''plot pupil area vs time'''
     try:
-        dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
         et = dataset.eye_tracking.copy()
         # filtered = et[et.likely_blink == False]
         time = et['time'].values / 60.  # might need to be updated to timestamps in the future'
@@ -313,7 +313,7 @@ def make_pupil_area_plot_sdk(ophys_experiment_id, ax=None, label_x=True):
 def make_pupil_position_plot(ophys_experiment_id, ax=None, label_x=True):
     '''plot pupil position vs time'''
     try:
-        dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+        dataset = loading.get_ophys_dataset(ophys_experiment_id)
         ed = dataset.eye_tracking.copy()
 
         time = ed['time'].values / 60.  # might need to be updated to timestamps in the future'
@@ -361,7 +361,7 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     """
     import visual_behavior.visualization.ophys.summary_figures as sf
 
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     if xlim_seconds is None:
         xlim_seconds = [dataset.stimulus_timestamps[0], dataset.stimulus_timestamps[-1]]
@@ -482,7 +482,7 @@ def plot_motion_correction_and_population_average(experiment_id, ax=None):
         figsize = (20, 10)
         fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
 
-    dataset = loading.get_ophys_dataset(experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(experiment_id)
     timestamps = dataset.ophys_timestamps
     corrected_traces = dataset.corrected_fluorescence_traces.corrected_fluorescence.values
     corrected_traces = np.vstack(corrected_traces)
@@ -540,7 +540,7 @@ def plot_event_detection_for_experiment(ophys_experiment_id, save_figure=True):
     :param save_figure:
     :return:
     """
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
     metadata_string = dataset.metadata_string
     colors = sns.color_palette()
     ophys_timestamps = dataset.ophys_timestamps.copy()
@@ -573,7 +573,7 @@ def plot_dff_trace_and_behavior_for_experiment(ophys_experiment_id, save_figure=
     Plots the full dFF trace for each cell, along with licking behavior, rewards, running speed, pupil area, and face motion.
     Useful to visualize whether the dFF trace tracks the behavior variables
     """
-    dataset = loading.get_ophys_dataset(ophys_experiment_id, sdk_only=True)
+    dataset = loading.get_ophys_dataset(ophys_experiment_id)
 
     for cell_specimen_id in dataset.cell_specimen_ids:
         scp.plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figure=save_figure)
