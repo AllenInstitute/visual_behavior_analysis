@@ -41,7 +41,7 @@ jobs:
             pip install -r requirements.txt
             pip install -r requirements_dev.txt
             pip install .
-            pip uninstall allensdk
+            pip uninstall --yes allensdk
             pip install git+https://github.com/AllenInstitute/AllenSDK
           name: install dependencies
       - run:
