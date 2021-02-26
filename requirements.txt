@@ -1,7 +1,7 @@
 --extra-index-url https://aibs.jfrog.io/aibs/api/pypi/ni-pypi-local/simple
 allensdk==2.7.0
 six>=1.11.0
-numpy>=1.15.4
+numpy>=1.15.4,<1.19.0
 pandas==0.25.3
 scipy>=1.0.0
 matplotlib>=2.1.1
