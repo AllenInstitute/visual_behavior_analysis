@@ -49,7 +49,9 @@ def plot_across_session_responses(container_id, cell_specimen_id, use_events=Fal
                                      conditions=['cell_specimen_id', 'go', 'hit', 'change_image_name'], flashes=False, omitted=False,
                                      get_reliability=False, get_pref_stim=True, exclude_omitted_from_pref_stim=True)
 
-                ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_specimen_id,
+                ct = dataset.cell_specimen_table.copy()
+                cell_roi_id = ct.loc[cell_specimen_id].cell_roi_id
+                ax[i] = sf.plot_cell_zoom(dataset.roi_masks, dataset.max_projection, cell_roi_id,
                                           spacex=20, spacey=20, show_mask=True, ax=ax[i])
                 ax[i].set_title(container_expts.loc[ophys_experiment_id].session_type[6:])
 
@@ -65,7 +67,7 @@ def plot_across_session_responses(container_id, cell_specimen_id, use_events=Fal
                 ax[i + n] = sf.plot_flashes_on_trace(ax[i + n], analysis, window=window, trial_type=None, omitted=False, alpha=0.15, facecolor='gray')
                 ax[i + n].set_title(container_expts.loc[ophys_experiment_id].session_type[6:] + '\n image response')
 
-                analysis = ResponseAnalysis(dataset, use_events=False, use_extended_stimulus_presentations=True)
+                analysis = ResponseAnalysis(dataset, use_events=False, use_extended_stimulus_presentations=False)
                 tmp = analysis.get_response_df(df_name='stimulus_response_df')
                 tmp['running'] = [True if run_speed > 2 else False for run_speed in tmp.mean_running_speed.values]
                 sdf = ut.get_mean_df(tmp, analysis=analysis,
@@ -146,7 +148,7 @@ def plot_single_cell_activity_and_behavior(dataset, cell_specimen_id, save_figur
 
     try:
         pupil_area = dataset.eye_tracking.pupil_area.values
-        pupil_timestamps = dataset.eye_tracking.time.values
+        pupil_timestamps = dataset.eye_tracking.timestamps.values
         ax[3].plot(pupil_timestamps, pupil_area, label='pupil_area', color=colors[9])
     except Exception:
         print('no pupil for', dataset.ophys_experiment_id)

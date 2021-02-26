@@ -588,9 +588,13 @@ def container_cell_matching_percent_heatmap_df(ophys_container_id):
     stage_order = [valid_container_csid_df[valid_container_csid_df.ophys_experiment_id == expt].stage_name_lims.values[0] for expt
                    in expt_order]
     stage_order = ['None' if stage == np.nan else stage for stage in stage_order]
-    pivot_perc = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="perc_matched")
-    pivot_perc = pivot_perc.reindex(stage_order, axis=1)
-    pivot_perc = pivot_perc.reindex(stage_order)
+    # pivot_perc = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="perc_matched")
+    # pivot_perc = pivot_perc.reindex(stage_order, axis=1)
+    # pivot_perc = pivot_perc.reindex(stage_order)
+    pivot_perc = container_exp_pair_matching_df.pivot_table(index="exp1", columns="exp2",
+                                                            values="perc_matched")
+    pivot_perc = pivot_perc.reindex(expt_order, axis=1)
+    pivot_perc = pivot_perc.reindex(expt_order)
     return pivot_perc
 
 
@@ -609,11 +613,16 @@ def container_cell_matching_count_heatmap_df(ophys_container_id):
     """
     container_exp_pair_matching_df = container_experiment_pairs_valid_cell_matching(ophys_container_id)
     valid_container_csid_df = get_valid_csids_from_lims_for_container(ophys_container_id)
-    stage_order = stage_name_ordered_list(valid_container_csid_df, stage_name_column="stage_name_lims")
-    pivot_count = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="matched_count")
-    pivot_count = pivot_count.reindex(stage_order, axis=1)
-    pivot_count = pivot_count.reindex(stage_order)
-    return pivot_count
+    # stage_order = stage_name_ordered_list(valid_container_csid_df, stage_name_column="stage_name_lims")
+    expt_order = np.sort(valid_container_csid_df.ophys_experiment_id.unique())
+    # pivot_count = container_exp_pair_matching_df.pivot_table(index="exp1_stage_name", columns="exp2_stage_name", values="matched_count")
+    # pivot_count = pivot_count.reindex(stage_order, axis=1)
+    # pivot_count = pivot_count.reindex(stage_order)
+    pivot_perc = container_exp_pair_matching_df.pivot_table(index="exp1", columns="exp2",
+                                                            values="matched_count")
+    pivot_perc = pivot_perc.reindex(expt_order, axis=1)
+    pivot_perc = pivot_perc.reindex(expt_order)
+    return pivot_perc
 
 
 # ROI PROCESSING (EXP AND CONTAINER, SEG & CELL MATCHING, DFF)
