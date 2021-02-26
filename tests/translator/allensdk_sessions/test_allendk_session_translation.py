@@ -5,10 +5,9 @@ import numpy as np
 from visual_behavior.translator.allensdk_sessions import sdk_utils
 from visual_behavior.ophys.dataset import extended_stimulus_processing as esp
 
-CIRCLECI = os.environ.get('PYTHONPATH', '').startswith('/home/circleci')
 
 @pytest.fixture
-@pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
+@pytest.mark.onprem
 def sdk_session(tmp_path):
     # Get sdk session from cache
     from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache
@@ -17,7 +16,7 @@ def sdk_session(tmp_path):
     session = cache.get_session_data(oeid)
     return session
 
-@pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
+@pytest.mark.onprem
 def test_add_stimulus_presentations_analysis(sdk_session):
     '''
     Tests that we can add extended stim columns to session objects, and that the resulting session has
@@ -69,7 +68,7 @@ def test_add_licks_each_flash_mock(stimulus_onsets_df,
     _test_add_licks_each_flash(stimulus_onsets_df, mock_licks_df,
                                expected_stimulus_df_with_licks_and_rewards)
 
-@pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
+@pytest.mark.onprem
 def test_add_licks_each_flash_sfn(sfn_sdk_stimulus_presentations,
                                   sfn_sdk_licks,
                                   sfn_sdk_extended_stimulus_presentations):
@@ -102,7 +101,7 @@ def test_add_rewards_each_flash_mock(stimulus_onsets_df,
     _test_add_rewards_each_flash(stimulus_onsets_df, mock_rewards_df,
                                expected_stimulus_df_with_licks_and_rewards)
 
-@pytest.mark.skipif(CIRCLECI, reason='Cannot test against real files on CircleCI')
+@pytest.mark.onprem
 def test_add_rewards_each_flash_sfn(sfn_sdk_stimulus_presentations,
                                   sfn_sdk_rewards,
                                   sfn_sdk_extended_stimulus_presentations):
