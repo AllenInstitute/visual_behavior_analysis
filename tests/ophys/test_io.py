@@ -9,7 +9,7 @@ PLATFORM = 'scientifica'
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(os.environ.get('PYTHONPATH', '').startswith('/home/circleci'), reason='Cannot test against real files on CircleCI')
+@pytest.mark.onprem
 def test_convert_level_1_to_level_2(cache_dir):
     # import here to avoid errors on circleci
     from visual_behavior.ophys.io.convert_level_1_to_level_2 import convert_level_1_to_level_2
