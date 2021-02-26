@@ -1,13 +1,9 @@
 import os
 import warnings
-import pandas as pd
-import from_lims_utilities as utils
-import configparser as configp  # for parsing scientifica ini files
 from allensdk.internal.api import PostgresQueryMixin
 
 
-
-#### Accessing Lims Database ####
+# Accessing Lims Database
 try:
     lims_dbname = os.environ["LIMS_DBNAME"]
     lims_user = os.environ["LIMS_USER"]
@@ -30,9 +26,11 @@ except Exception as e:
 # building querys
 mixin = lims_engine
 
-#### ID TYPES ####
+# ID TYPES
 
 # mouse related IDS
+
+
 def get_donor_id_for_specimen_id(specimen_id):
     specimen_id = int(specimen_id)
     query = '''
@@ -144,6 +142,7 @@ def get_ophys_container_id_for_ophys_experiment_id(ophys_experiment_id):
     return ophys_container_id
 
 # def get_supercontainer_id_for_ophys_experiment_id(ophys_experiment_id):
+
 
 def get_all_ids_for_ophys_experiment_id(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
@@ -339,5 +338,3 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
 # def get_ophys_session_ids_for_supercontainer_id(ophys_supercontainer_id):
 # def get_behavior_session_id_for_supercontainer_id(behavior_session_id):
 # def get_ophys_container_ids_for_supercontainer_id(ophys_supercontainer_id):
-
-### TABLES ###

@@ -137,11 +137,11 @@ def plot_valid_and_invalid_segmentation_mask_overlay_per_cell_for_experiment(oph
     try:
         for cell_roi_id in cell_specimen_table[cell_specimen_table.valid_roi == False].cell_roi_id.values:
             mask = cell_specimen_table[cell_specimen_table.cell_roi_id == cell_roi_id].roi_mask.values[0]
-            excl_labels = exclusion_labels[exclusion_labels.cr_id==cell_roi_id].excl_label.values
+            excl_labels = exclusion_labels[exclusion_labels.cr_id == cell_roi_id].excl_label.values
             decrosstalk_in_labels = ['decrosstalk' in excl_label for excl_label in excl_labels]
-            if (True in decrosstalk_in_labels) and (len(excl_labels)==1):
+            if (True in decrosstalk_in_labels) and (len(excl_labels) == 1):
                 ax.contour(mask, levels=0, colors=['green'], linewidths=[2])
-            elif (True in decrosstalk_in_labels) and (len(excl_labels)>1):
+            elif (True in decrosstalk_in_labels) and (len(excl_labels) > 1):
                 ax.contour(mask, levels=0, colors=['cyan'], linewidths=[1])
             else:
                 ax.contour(mask, levels=0, colors=['blue'], linewidths=[1])
