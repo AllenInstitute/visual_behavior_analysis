@@ -32,23 +32,6 @@ jobs:
       name: python/default
       tag: "3.6.12"
 
-  test-allensdk_head:
-    <<: *linux-template
-    steps:
-      - checkout
-      - run:
-          command: |
-            pip install -r requirements.txt
-            pip install -r requirements_dev.txt
-            pip install .
-            pip uninstall --yes allensdk
-            pip install git+https://github.com/AllenInstitute/AllenSDK
-          name: install dependencies
-      - run:
-          command: |
-            python -m pytest -m "not onprem"
-          name: run tests
-
 orbs:
   python: circleci/python@1.3.2
 version: 2.1
@@ -58,4 +41,3 @@ workflows:
       - lint
       - test-36-pinned-allensdk
       - test-37-pinned-allensdk
-      - test-allensdk_head
