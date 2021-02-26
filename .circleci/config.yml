@@ -23,7 +23,7 @@ jobs:
           name: install dependencies
       - run:
           command: |
-            python -m pytest
+            python -m pytest -m "not onprem"
           name: run tests
 
   test-36-pinned-allensdk:
@@ -46,7 +46,7 @@ jobs:
           name: install dependencies
       - run:
           command: |
-            python -m pytest
+            python -m pytest -m "not onprem"
           name: run tests
 
 orbs:
