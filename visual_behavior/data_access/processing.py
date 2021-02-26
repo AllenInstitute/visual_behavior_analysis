@@ -820,6 +820,7 @@ def dff_robust_noise(dff_trace):
 
     sigma_MAD_conversion_factor = 1.4826
 
+    dff_trace = np.asarray(dff_trace)
     # first pass removing big pos peaks
     dff_trace = dff_trace[dff_trace < 1.5 * np.abs(dff_trace.min())]
     MAD = np.median(np.abs(dff_trace - np.median(dff_trace)))  # MAD = median absolute deviation
@@ -842,6 +843,7 @@ def dff_robust_signal(dff_trace, robust_standard_deviation):
     Returns:
         [type] -- [description]
     """
+    dff_trace = np.asarray(dff_trace)
     median_deviation = np.median(dff_trace[(dff_trace - np.median(dff_trace)) > robust_standard_deviation])
     return median_deviation
 

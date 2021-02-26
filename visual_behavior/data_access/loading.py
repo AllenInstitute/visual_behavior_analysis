@@ -281,13 +281,16 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         """
 
     def __init__(self, api, include_invalid_rois=False,
-                 eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2):
+                 eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2,
+                 events_filter_scale: float = 2.0, events_filter_n_time_steps: int = 20):
         """
         :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
         :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
         """
         super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold,
-                         eye_tracking_dilation_frames=eye_tracking_dilation_frames)
+                         eye_tracking_dilation_frames=eye_tracking_dilation_frames,
+                         events_filter_scale=events_filter_scale,
+                         events_filter_n_time_steps=events_filter_n_time_steps)
 
         self._include_invalid_rois = include_invalid_rois
 
@@ -331,8 +334,8 @@ class BehaviorOphysDataset(BehaviorOphysSession):
             valid_cells = cell_specimen_table.cell_roi_id.values
             self._events = events[events.cell_roi_id.isin(valid_cells)]
         else:
-            self.events = super().events
-        return self.events
+            self._events = super().events
+        return self._events
 
     @property
     def metadata(self):
@@ -347,7 +350,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     @property
     def metadata_string(self):
         # for figure titles & filenames
-        m = self.meatadata
+        m = self.metadata
         rig_name = m['equipment_name'].split('.')[0] + m['equipment_name'].split('.')[1]
         self._metadata_string = str(m['mouse_id']) + '_' + str(m['ophys_experiment_id']) + '_' + m['driver_line'][
             0] + '_' + m['targeted_structure'] + '_' + str(m['imaging_depth']) + '_' + m['session_type'] + '_' + rig_name
