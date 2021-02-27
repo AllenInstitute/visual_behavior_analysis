@@ -1,6 +1,3 @@
-import os
-import pandas as pd
-
 def get_filepath_from_wkf_realdict_object(wkf_realdict_object):
     """takes a RealDictRow object returned when loading well known files
        from lims and parses it to return the filepath to the well known file.
@@ -62,5 +59,3 @@ def update_objectlist_column_labels(objectlist_df):
                                                              ' corcoef0': "soma_obj0_overlap_trace_corr",
                                                              ' corcoef1': "soma_obj1_overlap_trace_corr"})
     return objectlist_df
-
-
