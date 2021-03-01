@@ -2,7 +2,7 @@ import warnings
 from allensdk.internal.api import PostgresQueryMixin
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
-from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache
 from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadable
 # from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
 from visual_behavior.ophys.response_analysis import response_processing as rp
@@ -121,10 +121,11 @@ def get_manifest_path():
 
 
 def get_visual_behavior_cache(manifest_path=None):
-    """Get cache using default QC manifest path"""
+    """Get cache using manifest path"""
+    ### i think this manifest caching is now disabled, so providing the path to the manifest does nothing in this case ###
     if manifest_path is None:
         manifest_path = get_manifest_path()
-    cache = bpc.from_lims(manifest=get_manifest_path())
+    cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())
     return cache
 
 
@@ -184,7 +185,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     else:
         print('generating filtered_ophys_experiment_table')
-        cache = get_visual_behavior_cache()
+        cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())
         experiments = cache.get_experiment_table()
         experiments = reformat.reformat_experiments_table(experiments)
         experiments = filtering.limit_to_production_project_codes(experiments)
@@ -208,9 +209,6 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = experiments[experiments.full_genotype!='Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
                                      experiments.session_type.values]
-    # ensure cre_line includes Ai94 to prevent inclusion of GCaMP6s in anaysis
-    # experiments['cre_line'] = [full_genotype.split('/')[0] if 'Ai94' not in full_genotype else full_genotype.split('/')[0] + ';Ai94'
-    #                            for full_genotype in experiments.full_genotype.values]
     experiments['cre_line'] = [full_genotype.split('/')[0] for full_genotype in experiments.full_genotype.values]
     experiments = experiments.drop_duplicates(subset='ophys_experiment_id')
     experiments = experiments.set_index('ophys_experiment_id')
@@ -264,7 +262,33 @@ def get_filtered_ophys_session_table():
     return sessions
 
 
-# INSERT get_filtered_behavior_sessions_table() FUNCTION HERE #####
+def get_filtered_behavior_session_table(release_data_only=True):
+    """
+    Loads list of behavior sessions from BehaviorProjectCache, changes mouse_id to int, adds project code.
+    Optionally filters to limit to mice in the data release
+    """
+    cache = BehaviorProjectCache.from_lims()
+    behavior_sessions = cache.get_behavior_session_table()
+    behavior_sessions = behavior_sessions.reset_index()
+    # make mouse_id an int not string
+    behavior_sessions['mouse_id'] = [int(mouse_id) for mouse_id in behavior_sessions.mouse_id.values]
+    # add project code from experiments table
+    all_experiments = cache.get_experiment_table()
+    all_experiments['mouse_id'] = [int(mouse_id) for mouse_id in all_experiments.mouse_id.values]
+    behavior_sessions = behavior_sessions.merge(all_experiments[['mouse_id','project_code']], on='mouse_id')
+    if release_data_only:
+        # limit to mice that are in the data release & have a valid session_type
+        release_experiments = get_filtered_ophys_experiment_table(release_data_only=True)
+        release_mice = release_experiments.mouse_id.unique()
+        behavior_sessions = behavior_sessions[behavior_sessions.mouse_id.isin(release_mice)]
+        behavior_sessions = behavior_sessions[behavior_sessions.session_type.isnull()==False]
+        behavior_sessions = behavior_sessions[behavior_sessions.session_type!='OPHYS_7_receptive_field_mapping']
+        behavior_sessions['has_passing_ophys_data'] = [True if behavior_session_id in release_experiments.behavior_session_id.values
+                                                       else False for behavior_session_id in behavior_sessions.behavior_session_id]
+    behavior_sessions = behavior_sessions.drop_duplicates(subset=['behavior_session_id'])
+    behavior_sessions = behavior_sessions.set_index('behavior_session_id')
+    return behavior_sessions
+
 
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
@@ -1907,12 +1931,12 @@ def get_mtrain_stage_name(dataframe):
     return dataframe
 
 
-def build_container_df():
+def build_container_df(experiment_table):
     '''
     build dataframe with one row per container
     '''
-
-    table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition', ascending=False).reset_index()
+    table = experiment_table.copy()
+    # table = get_filtered_ophys_experiment_table().sort_values(by='date_of_acquisition', ascending=False).reset_index()
     container_ids = table['container_id'].unique()
     list_of_dicts = []
     for container_id in container_ids:
@@ -1921,27 +1945,59 @@ def build_container_df():
             'ophys_session_id').reset_index()
         temp_dict = {
             'container_id': container_id,
-            'container_workflow_state': table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
-            'first_acquisition_date': subset['date_of_acquisition'].min().split(' ')[0],
+            # 'container_workflow_state': table.query('container_id == @container_id')['container_workflow_state'].unique()[0],
             'project_code': subset['project_code'].unique()[0],
-            'driver_line': subset['driver_line'][0],
+            'mouse_id': subset['mouse_id'].unique()[0],
+            'sex': subset['sex'].unique()[0],
+            'age_in_days': subset['age_in_days'].min(),
+            'full_genotype': subset['full_genotype'][0],
             'cre_line': subset['cre_line'][0],
             'targeted_structure': subset['targeted_structure'].unique()[0],
             'imaging_depth': subset['imaging_depth'].unique()[0],
-            'session_type_exposure_number': subset['session_type_exposure_number'][0],
+            'first_acquisition_date': subset['date_of_acquisition'].min().split(' ')[0],
             'equipment_name': subset['equipment_name'].unique(),
-            'specimen_id': subset['specimen_id'].unique()[0],
-            'sex': subset['sex'].unique()[0],
-            'age_in_days': subset['age_in_days'].min(),
         }
         for idx, row in subset.iterrows():
             temp_dict.update(
-                {'session_{}'.format(idx): '{} {}'.format(row['session_type'], row['ophys_experiment_id'])})
+                {'session_{}'.format(idx): '{} experiment_id:{}'.format(row['session_type'], row['ophys_experiment_id'])})
 
         list_of_dicts.append(temp_dict)
+    container_df = pd.DataFrame(list_of_dicts).sort_values(by='container_id', ascending=False)
+    container_df = container_df.set_index(['container_id'])
+    return container_df
 
-    return pd.DataFrame(list_of_dicts).sort_values(by='container_id', ascending=False)
 
+# def build_mouse_df(experiment_table):
+#     '''
+#     build dataframe with one row per mouse
+#     '''
+#     table = experiment_table.copy()
+#     mouse_ids = table['mouse_id'].unique()
+#     list_of_dicts = []
+#     for mouse_id in mouse_ids:
+#         subset = table.query('mouse_id == @mouse_id').sort_values(by='date_of_acquisition',
+#                                             ascending=True).drop_duplicates('container_id').reset_index()
+#         temp_dict = {
+#             'mouse_id': mouse_id,
+#             'project_code': subset['project_code'].unique()[0],
+#             # 'container_id': subset['container_id'].unique()[0],
+#             'full_genotype': subset['full_genotype'][0],
+#             'cre_line': subset['cre_line'][0],
+#             'targeted_structure': subset['targeted_structure'].unique()[0],
+#             'imaging_depth': subset['imaging_depth'].unique()[0],
+#             'sex': subset['sex'].unique()[0],
+#             'age_in_days': subset['age_in_days'].min(),
+#             'first_acquisition_date': subset['date_of_acquisition'].min().split(' ')[0],
+#             'equipment_name': subset['equipment_name'].unique(),
+#         }
+#         for idx, row in subset.iterrows():
+#             temp_dict.update(
+#                 {'session_{}'.format(idx): '{} container_id:{}'.format(row['session_type'], row['ophys_session_id'])})
+#
+#         list_of_dicts.append(temp_dict)
+#     mouse_df = pd.DataFrame(list_of_dicts).sort_values(by=['project_code', 'mouse_id', 'container_id'], ascending=False)
+#     mouse_df = mouse_df.set_index(['mouse_id', 'container_id'])
+#     return mouse_df
 
 # multi session summary data #########
 
