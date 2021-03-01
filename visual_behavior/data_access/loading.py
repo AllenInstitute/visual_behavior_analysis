@@ -206,7 +206,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = experiments[experiments.container_workflow_state == 'published']
         experiments = experiments[experiments.experiment_workflow_state == 'passed']
     if exclude_ai94:
-        experiments = experiments[experiments.full_genotype!='Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
+        experiments = experiments[experiments.full_genotype != 'Slc17a7-IRES2-Cre/wt;Camk2a-tTA/wt;Ai94(TITL-GCaMP6s)/wt']
     experiments['session_number'] = [int(session_type[6]) if 'OPHYS' in session_type else None for session_type in
                                      experiments.session_type.values]
     experiments['cre_line'] = [full_genotype.split('/')[0] for full_genotype in experiments.full_genotype.values]
@@ -275,20 +275,19 @@ def get_filtered_behavior_session_table(release_data_only=True):
     # add project code from experiments table
     all_experiments = cache.get_experiment_table()
     all_experiments['mouse_id'] = [int(mouse_id) for mouse_id in all_experiments.mouse_id.values]
-    behavior_sessions = behavior_sessions.merge(all_experiments[['mouse_id','project_code']], on='mouse_id')
+    behavior_sessions = behavior_sessions.merge(all_experiments[['mouse_id', 'project_code']], on='mouse_id')
     if release_data_only:
         # limit to mice that are in the data release & have a valid session_type
         release_experiments = get_filtered_ophys_experiment_table(release_data_only=True)
         release_mice = release_experiments.mouse_id.unique()
         behavior_sessions = behavior_sessions[behavior_sessions.mouse_id.isin(release_mice)]
-        behavior_sessions = behavior_sessions[behavior_sessions.session_type.isnull()==False]
-        behavior_sessions = behavior_sessions[behavior_sessions.session_type!='OPHYS_7_receptive_field_mapping']
+        behavior_sessions = behavior_sessions[behavior_sessions.session_type.isnull() == False]
+        behavior_sessions = behavior_sessions[behavior_sessions.session_type != 'OPHYS_7_receptive_field_mapping']
         behavior_sessions['has_passing_ophys_data'] = [True if behavior_session_id in release_experiments.behavior_session_id.values
                                                        else False for behavior_session_id in behavior_sessions.behavior_session_id]
     behavior_sessions = behavior_sessions.drop_duplicates(subset=['behavior_session_id'])
     behavior_sessions = behavior_sessions.set_index('behavior_session_id')
     return behavior_sessions
-
 
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
@@ -314,7 +313,6 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                          events_filter_n_time_steps=events_filter_n_time_steps)
 
         self._include_invalid_rois = include_invalid_rois
-
 
     @property
     def cell_specimen_table(self):
@@ -503,7 +501,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
     elif from_nwb:
         nwb_files = get_release_ophys_nwb_file_paths()
         nwb_file = [file for file in nwb_files.nwb_file.values if str(ophys_experiment_id) in file]
-        if len(nwb_file)>0:
+        if len(nwb_file) > 0:
             nwb_path = nwb_file[0]
             if 'win' in sys.platform:
                 nwb_path = '\\' + os.path.abspath(nwb_path)[2:]

@@ -103,8 +103,8 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id, behavior
     pre_expts = cdf[(cdf.date_of_acquisition < date)]
     # check how many behavior sessions prior to this date had omissions
     import datetime
-    #### THIS IS A HACK, NEED TO REPLACE THIS WITH REFERENCE TO MTRAIN REGIMENS COMMIT HASH FOR WHEN THE CHANGE TO
-    #### REMOVE OMISSIONS FROM HABITUATION SESSIONS OCCURED
+    # THIS IS A HACK, NEED TO REPLACE THIS WITH REFERENCE TO MTRAIN REGIMENS COMMIT HASH FOR WHEN THE CHANGE TO
+    # REMOVE OMISSIONS FROM HABITUATION SESSIONS OCCURED
     date_of_change = 'Feb 15 2019 12:00AM'
     date_of_change = datetime.datetime.strptime(date_of_change, '%b %d %Y %I:%M%p')
     if date < date_of_change:

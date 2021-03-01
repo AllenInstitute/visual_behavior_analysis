@@ -62,7 +62,7 @@ def plot_segmentation_mask_for_experiment(ophys_experiment_id, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
     dataset = loading.get_ophys_dataset(ophys_experiment_id)
-    segmentation_mask = dataset.segmentation_mask_image # i am not sure if this is correct, check relevant SDK issue to see what they did
+    segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
     ax.imshow(segmentation_mask, cmap='gray', vmin=0, vmax=1)
     ax.axis('off')
     return ax
@@ -74,7 +74,7 @@ def plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=
     ax = plot_max_intensity_projection_for_experiment(ophys_experiment_id, ax=ax)
     try:
         dataset = loading.get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False)
-        segmentation_mask = dataset.segmentation_mask_image # i am not sure if this is correct, check relevant SDK issue to see what they did
+        segmentation_mask = dataset.segmentation_mask_image  # i am not sure if this is correct, check relevant SDK issue to see what they did
         mask = np.zeros(segmentation_mask[0].shape)
         mask[:] = np.nan
         mask[segmentation_mask[0] == 1] = 1

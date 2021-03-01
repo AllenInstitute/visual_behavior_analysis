@@ -34,7 +34,7 @@ def plot_max_projection_image(dataset, save_dir=None, folder='max_projection'):
 
 
 def plot_cell_zoom(roi_mask_dict, max_projection, cell_specimen_id, spacex=10, spacey=10, show_mask=False, ax=None):
-    if type(list(roi_mask_dict.keys())[0]) == str:
+    if isinstance(list(roi_mask_dict.keys())[0], str):
         m = roi_mask_dict[str(cell_specimen_id)]
     else:
         m = roi_mask_dict[int(cell_specimen_id)]
