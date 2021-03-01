@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import json
-import shutil
 from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset

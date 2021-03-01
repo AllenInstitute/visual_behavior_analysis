@@ -1,11 +1,10 @@
 import warnings
 from allensdk.internal.api import PostgresQueryMixin
+from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLimsApi
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache
-from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadable
 # from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
-from visual_behavior.ophys.response_analysis import response_processing as rp
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import utilities
@@ -122,7 +121,7 @@ def get_manifest_path():
 
 def get_visual_behavior_cache(manifest_path=None):
     """Get cache using manifest path"""
-    ### i think this manifest caching is now disabled, so providing the path to the manifest does nothing in this case ###
+    # i think this manifest caching is now disabled, so providing the path to the manifest does nothing in this case ###
     if manifest_path is None:
         manifest_path = get_manifest_path()
     cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())

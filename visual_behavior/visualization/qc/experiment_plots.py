@@ -378,9 +378,6 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     pupil_area = dataset.eye_tracking["pupil_area"].values
     pupil_timestamps = dataset.eye_tracking["time"].values
 
-    # face_motion = dataset.behavior_movie_pc_activations[:, 0]
-    # face_timestamps = dataset.timestamps['behavior_monitoring'].timestamps
-    plot_face_motion_energy = False
 
     if ax is None:
         if plot_face_motion_energy:
@@ -403,6 +400,8 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     ax[1].set_xlim(pupil_timestamps[0], pupil_timestamps[-1])
     if plot_face_motion_energy:
         try:
+            face_motion = dataset.behavior_movie_pc_activations[:, 0]
+            face_timestamps = dataset.timestamps['behavior_monitoring'].timestamps
             ax[3].plot(face_timestamps, face_motion, label='face_motion_PC0', color=colors[3])
             ax[3].set_ylabel('face motion\n PC0 activation')
             i = 3
