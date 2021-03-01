@@ -572,7 +572,6 @@ class BehaviorDataset(BehaviorSession):
         return self._extended_trials
 
 
-
 def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
     """
     Gets behavior data for one session, either using the SDK LIMS API, SDK NWB API, or using BehaviorDataset wrapper which inherits the LIMS API BehaviorSession object, and adds access to extended stimulus_presentations and trials.
