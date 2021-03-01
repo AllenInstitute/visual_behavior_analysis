@@ -1,6 +1,6 @@
 import warnings
 from allensdk.internal.api import PostgresQueryMixin
-from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLimsApi
+# from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLimsApi
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache

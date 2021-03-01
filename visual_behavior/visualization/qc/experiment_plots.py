@@ -378,7 +378,6 @@ def plot_behavior_timeseries_for_experiment(ophys_experiment_id, xlim_seconds=No
     pupil_area = dataset.eye_tracking["pupil_area"].values
     pupil_timestamps = dataset.eye_tracking["time"].values
 
-
     if ax is None:
         if plot_face_motion_energy:
             figsize = (20, 8)

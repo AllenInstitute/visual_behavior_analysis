@@ -364,7 +364,7 @@ def plot_image_change_response(analysis, cell_index, cell_order, legend=False, s
         figsize = (5, 3)
         fig, ax = plt.subplots(figsize=figsize)
     for c, change_image_name in enumerate(images):
-        color = get_color_for_image_name(dataset.stimulus_presentations, change_image_name)
+        color = get_color_for_image_name(analysis.dataset.stimulus_presentations, change_image_name)
         selected_trials = trials[(trials.change_image_name == change_image_name)].trial.values
         traces = df[(df.cell == cell_index) & (df.trial.isin(selected_trials))].trace.values
         ax = plot_mean_trace(traces, analysis.ophys_frame_rate, legend_label=None, color=color,
