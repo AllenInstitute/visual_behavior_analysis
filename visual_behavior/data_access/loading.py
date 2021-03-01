@@ -1,6 +1,7 @@
 import warnings
 from allensdk.internal.api import PostgresQueryMixin
-# from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLimsApi
+from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLimsApi
+from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache
@@ -486,6 +487,120 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
     else:
         api = BehaviorOphysLimsApi(ophys_experiment_id)
         dataset = BehaviorOphysDataset(api, include_invalid_rois)
+    return dataset
+
+
+class BehaviorDataset(BehaviorSession):
+    """
+    Loads SDK behavior session object and adds extended_stimulus_presentations and extended trials tables.
+
+    Returns:
+        BehaviorDataset {class} -- object with attributes & methods to access behavior data associated with a behavior_session_id
+    """
+
+    def __init__(self, api):
+        """
+        :param session: BehaviorSession {class} -- instance of allenSDK BehaviorSession object for one behavior_session_id
+        """
+        super().__init__(api)
+
+    @property
+    def metadata(self):
+        metadata = super().metadata
+        metadata['mouse_id'] = metadata['LabTracks_ID']
+        metadata['equipment_name'] = metadata['rig_name']
+        metadata['date_of_acquisition'] = metadata['experiment_datetime']
+        self._metadata = metadata
+        return self._metadata
+
+    @property
+    def metadata_string(self):
+        # for figure titles & filenames
+        m = self.metadata
+        rig_name = m['equipment_name'].split('.')[0] + m['equipment_name'].split('.')[1]
+        self._metadata_string = str(m['mouse_id']) + '_' + str(m['behavior_session_id']) + '_' + m['driver_line'][
+            0] + '_' + m['session_type'] + '_' + rig_name
+        return self._metadata_string
+
+    @property
+    def extended_stimulus_presentations(self):
+        stimulus_presentations = self.stimulus_presentations.copy()
+        stimulus_presentations = reformat.add_change_each_flash(stimulus_presentations)
+        stimulus_presentations['pre_change'] = stimulus_presentations['change'].shift(-1)
+        stimulus_presentations = reformat.add_epoch_times(stimulus_presentations)
+        stimulus_presentations = reformat.add_mean_running_speed(stimulus_presentations, self.running_speed)
+        stimulus_presentations = reformat.add_licks_each_flash(stimulus_presentations, self.licks)
+        stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
+        stimulus_presentations = reformat.add_rewards_each_flash(stimulus_presentations, self.rewards)
+        stimulus_presentations['licked'] = [True if len(licks) > 0 else False for licks in
+                                            stimulus_presentations.licks.values]
+        stimulus_presentations['lick_rate'] = stimulus_presentations['licked'].rolling(window=320, min_periods=1,
+                                                                                       win_type='triang').mean() / .75
+        stimulus_presentations['rewarded'] = [True if len(rewards) > 0 else False for rewards in
+                                              stimulus_presentations.rewards.values]
+        stimulus_presentations['reward_rate'] = stimulus_presentations['rewarded'].rolling(window=320, min_periods=1,
+                                                                                           win_type='triang').mean()
+        stimulus_presentations = reformat.add_response_latency(stimulus_presentations)
+        stimulus_presentations = reformat.add_image_contrast_to_stimulus_presentations(stimulus_presentations)
+        stimulus_presentations = reformat.add_time_from_last_lick(stimulus_presentations, self.licks)
+        stimulus_presentations = reformat.add_time_from_last_reward(stimulus_presentations, self.rewards)
+        stimulus_presentations = reformat.add_time_from_last_change(stimulus_presentations)
+        stimulus_presentations['flash_after_change'] = stimulus_presentations['change'].shift(1)
+        stimulus_presentations['image_name_next_flash'] = stimulus_presentations['image_name'].shift(-1)
+        stimulus_presentations['image_index_next_flash'] = stimulus_presentations['image_index'].shift(-1)
+        stimulus_presentations['image_name_previous_flash'] = stimulus_presentations['image_name'].shift(1)
+        stimulus_presentations['image_index_previous_flash'] = stimulus_presentations['image_index'].shift(1)
+        stimulus_presentations['lick_on_next_flash'] = stimulus_presentations['licked'].shift(-1)
+        stimulus_presentations['lick_rate_next_flash'] = stimulus_presentations['lick_rate'].shift(-1)
+        stimulus_presentations['lick_on_previous_flash'] = stimulus_presentations['licked'].shift(1)
+        stimulus_presentations['lick_rate_previous_flash'] = stimulus_presentations['lick_rate'].shift(1)
+        if check_if_model_output_available(self.metadata['behavior_session_id']):
+            stimulus_presentations = add_model_outputs_to_stimulus_presentations(
+                stimulus_presentations, self.metadata['behavior_session_id'])
+        else:
+            print('model outputs not available')
+        self._extended_stimulus_presentations = stimulus_presentations
+        return self._extended_stimulus_presentations
+
+    @property
+    def extended_trials(self):
+        trials = super().trials.copy()
+        trials = reformat.add_epoch_times(trials)
+        trials = reformat.add_trial_type_to_trials_table(trials)
+        trials = reformat.add_reward_rate_to_trials_table(trials)
+        self._extended_trials = trials
+        return self._extended_trials
+
+
+
+def get_behavior_dataset(behavior_session_id, from_lims=False, from_nwb=False):
+    """
+    Gets behavior data for one session, either using the SDK LIMS API, SDK NWB API, or using BehaviorDataset wrapper which inherits the LIMS API BehaviorSession object, and adds access to extended stimulus_presentations and trials.
+
+    Arguments:
+        behavior_session_id {int} -- 9 digit behavior session ID
+        from_lims -- if True, loads dataset directly from BehaviorSession.from_lims()
+        from_nwb -- if True, loads dataset directly from BehaviorSession.from_nwb_path(), after converting behavior_session_id to nwb_path via lims query
+
+        If both from_lims and from_nwb are set to False, data will be loaded using the LIMS API then passed to the BehaviorDataset class which allows access to extended_stimulus_presentations and trials.
+
+    Returns:
+        object -- BehaviorSession or BehaviorDataset instance
+    """
+    if from_lims:
+        dataset = BehaviorSession.from_lims(behavior_session_id)
+    elif from_nwb:
+        nwb_file = get_release_behavior_nwb_file_path(behavior_session_id).values[0]
+        if len(nwb_file) > 0:
+            nwb_path = nwb_file[0]
+            if 'win' in sys.platform:
+                nwb_path = '\\' + os.path.abspath(nwb_path)[2:]
+            dataset = BehaviorSession.from_nwb_path(nwb_path)
+        else:
+            print('no NWB file path found for', behavior_session_id)
+    else:
+        api = BehaviorLimsApi(behavior_session_id)
+        dataset = BehaviorDataset(api)
     return dataset
 
 
@@ -1347,6 +1462,20 @@ def get_lims_container_info(ophys_container_id):
 
 
 # FROM LIMS WELL KNOWN FILES
+
+def get_release_behavior_nwb_file_path(behavior_session_id):
+    """"    --LIMS SQL to get behavior Ophys NWB files that are ready now
+    """
+    mixin = lims_engine
+    # build query
+    query = '''
+    SELECT wkfb.storage_directory || wkfb.filename
+    FROM behavior_sessions bs
+    JOIN well_known_files wkfb ON wkfb.attachable_id=bs.id AND wkfb.attachable_type = 'BehaviorSession' AND wkfb.well_known_file_type_id = (SELECT id FROM well_known_file_types WHERE name = 'BehaviorNwb')
+    WHERE bs.id = {0}
+    '''.format(behavior_session_id)
+    file_path = mixin.select(query)
+    return file_path
 
 
 def get_release_ophys_nwb_file_paths():
