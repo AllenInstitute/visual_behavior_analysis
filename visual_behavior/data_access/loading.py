@@ -130,56 +130,23 @@ def get_visual_behavior_cache(manifest_path=None):
 
 
 def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_only=False, exclude_ai94=True):
-    """get ophys experiments table from cache, filters based on a number of criteria
-        and adds additional useful columns to the table
-        Saves a reformatted version of the table with additional columns
-        added for future loading speed.
-            filtering criteria:
-                 project codes: VisualBehavior, VisualBehaviorTask1B,
-                                visualBheaviorMultiscope, VisualBheaviorMultiscope4areasx2d
-                experiment_workflow_state: "passed"
-                "session_type": OPHYS_1_images_A', 'OPHYS_1_images_B',  'OPHYS_1_images_G',
-                            'OPHYS_2_images_A_passive',  'OPHYS_2_images_B_passive',  'OPHYS_2_images_G_passive'
-                            'OPHYS_3_images_A',  'OPHYS_3_images_B', 'OPHYS_3_images_G',
-                            'OPHYS_4_images_A', 'OPHYS_4_images_B',  'OPHYS_4_images_H'
-                            'OPHYS_5_images_A_passive', 'OPHYS_5_images_B_passive', 'OPHYS_5_images_H_passive'
-                            'OPHYS_6_images_A',  'OPHYS_6_images_B',   'OPHYS_6_images_H'
-
+    """
+    Loads a list of available ophys experiments and adds additional useful columns to the table. By default, loads from a saved cached file.
+    If cached file does not exist, loads list of available experiments directly from lims using SDK BehaviorProjectCache, and saves the reformatted table to the default Visual Behavior data cache location.
 
     Keyword Arguments:
-        include_failed_data {bool} -- If True, return all experiments including those from
-                                        failed containers and receptive field mapping
-                                        experiments. (default: {False})
+
+        include_failed_data {bool} -- If True, return all experiments including those from failed containers and receptive field mapping experiments.
+                                      If False, returns only experiments that have passed experiment level QC.
+
+        release_data_only {bool} -- If True, return only experiments that have been reprocessed, passed experiment and container level QC, and are slated for release in March.
+                                    Release data includes project_codes = ['VisualBehavior', 'VisualBehaviorTask1B', 'VisualBehaviorMultiscope'].
+                                    If False, return all Visual Behavior ophys experiments that have been collected, including data from project_code = 'VisualBehaviorMultiscope4areasx2d'. There is no guarantee on data quality or reprocessing for these experiments.
+
+        exclude_ai94 {bool} -- If True, exclude data from mice with Ai94(GCaMP6s) as the reporter line. (default: {True})
 
     Returns:
-        dataframe -- returns a dataframe with the following columns:
-                    "ophys_experiment_id":
-                    "ophys_session_id":
-                    "ophys_behavior_session_id":
-                    "container_id":
-                    "project_code":
-                    "container_workflow_state":
-                    "experiment_workflow_state":
-                    "session_name":
-                    "session_number":
-                    "equipment_name":
-                    "date_of_acquisition":
-                    "isi_experiment_id":
-                    "specimen_id":
-                    "sex":
-                    "age_in_days":
-                    "full_genotype":
-                    "reporter_line":
-                    "driver_line":
-                    "imaging_depth":
-                    "targeted_structure":
-                    "published_at":
-                    "super_container_id":
-                    "cre_line":
-                    "session_tags":
-                    "failure_tags":
-                    "exposure_number":
-                    "location":
+        experiment_table -- returns a dataframe with ophys_experiment_id as the index and metadata as columns.
     """
     if 'filtered_ophys_experiment_table.csv' in os.listdir(get_cache_dir()):
         experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
@@ -264,8 +231,14 @@ def get_filtered_ophys_session_table():
 
 def get_filtered_behavior_session_table(release_data_only=True):
     """
-    Loads list of behavior sessions from BehaviorProjectCache, changes mouse_id to int, adds project code.
-    Optionally filters to limit to mice in the data release
+    Loads list of behavior sessions from SDK BehaviorProjectCache, and does some basic filtering and addition of columns, such as changing mouse_id from str to int and adding project code.
+
+    Keyword Arguments:
+        release_data_only {bool} -- If True, only return behavior sessions for mice with ophys data that will be included in the March data release.
+        This does not include OPHYS_7_receptive_field_mapping or sessions with an unexpected session_type (i.e. where session_type is NaN)
+
+    Returns:
+        behavior_sessions -- Dataframe with behavior_session_id as the index and metadata as columns.
     """
     cache = BehaviorProjectCache.from_lims()
     behavior_sessions = cache.get_behavior_session_table()
@@ -293,12 +266,13 @@ def get_filtered_behavior_session_table(release_data_only=True):
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
 class BehaviorOphysDataset(BehaviorOphysSession):
-    """Takes SDK ophys session object and 1) filters out invalid ROIs, 2) adds extended_stimulus_presentations table,
-        3) extended_trials table, 4) behavior movie PCs and timestamps
-        Returns:
-            BehaviorOphysDataset object -- class with attributes & methods to access ophys and behavior data
-                                                associated with an ophys_experiment_id (single imaging plane)
-        """
+    """
+    Loads SDK ophys session object and 1) optionally filters out invalid ROIs, 2) adds extended_stimulus_presentations table, 3) adds extended_trials table, 4) adds behavior movie PCs and timestamps
+
+    Returns:
+        BehaviorOphysDataset {class} -- object with attributes & methods to access ophys and behavior data
+                                            associated with an ophys_experiment_id (single imaging plane)
+    """
 
     def __init__(self, api, include_invalid_rois=False,
                  eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2,
@@ -482,19 +456,21 @@ class BehaviorOphysDataset(BehaviorOphysSession):
 
 
 def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims=False, from_nwb=False):
-    """Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
-        SDK NWB API, or using BehaviorOphysDataset class that inherits the LIMS API BehaviorOphysSession object,
-        and adds functionality including invalid ROI filtering, extended stimulus_presentations and trials,
-        and behavior movie data
+    """
+    Gets behavior + ophys data for one experiment (single imaging plane), either using the SDK LIMS API,
+    SDK NWB API, or using BehaviorOphysDataset wrapper which inherits the LIMS API BehaviorOphysSession object,
+    and adds functionality including invalid ROI filtering, extended stimulus_presentations and trials, and behavior movie data.
 
     Arguments:
         ophys_experiment_id {int} -- 9 digit ophys experiment ID
         include_invalid_rois {Boolean} -- if True, return all ROIs including invalid. If False, filter out invalid ROIs
-        from_lims -- if True, loads dataset from BehaviorOphysSession.from_lims()
-        from_nwb -- if True, loads dataset from BehaviorOphysSession.from_nwb_path()
+        from_lims -- if True, loads dataset directly from BehaviorOphysSession.from_lims(). Invalid ROIs will be included.
+        from_nwb -- if True, loads dataset directly from BehaviorOphysSession.from_nwb_path(). Invalid ROIs will not be included.
+
+        If both from_lims and from_nwb are set to False, data will be loaded using the LIMS API then passed to the BehaviorOphysDataset class which allows invalid ROIs to be filtered out, and allows access to extended_stimulus_presentations, and face movie data.
 
     Returns:
-        BehaviorOphysDataset {object} -- BehaviorOphysDataset instance, inherits attributes & methods from SDK BehaviorOphysSession class
+        object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
     """
     if from_lims:
         dataset = BehaviorOphysSession.from_lims(ophys_experiment_id)
