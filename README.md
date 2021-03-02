@@ -106,7 +106,6 @@ The `not onprem` argument will skip all tests that can only be run on internal A
 
 CircleCI also tests that all files meet Pep 8 style requirements using the Flake8 module - a process referred to as 'linting'. Linting can be performed locally before commiting using Flake8 as follows:
 
-    pip install flake8
     flake8 {FILE_TO_CHECK}
 
 ## Contributing
