@@ -92,17 +92,15 @@ Before committing and/or submitting a pull request, it is ideal to run tests.
 
 Tests are currently run against Python 3.6.12 and 3.7.7 on github using CircleCI. You can replicate those tests locally as follows:  
 
-'''
-conda create -n test_36 python=3.6.12
-conda activate test_36
-pip install .[DEV]
-pytest -m "not onprem"
+    conda create -n test_36 python=3.6.12
+    conda activate test_36
+    pip install .[DEV]
+    pytest -m "not onprem"
 
-conda create -n test_37 python=3.7.7
-conda activate test_37
-pip install .[DEV]
-pytest -m "not onprem"
-'''
+    conda create -n test_37 python=3.7.7
+    conda activate test_37
+    pip install .[DEV]
+    pytest -m "not onprem"
 
 The `not onprem` argument will skip all tests that can only be run on internal Allen Institute servers and are marked as `onprem`. Alternatively, for internal Allen Institute users, the call to pytest could be called without an argument, which would run all tests.
 
