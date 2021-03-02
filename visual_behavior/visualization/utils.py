@@ -6,16 +6,16 @@ import seaborn as sns
 
 
 def get_container_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots_sdk_test'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/container_plots'
 
 def get_session_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots_sdk_test'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/session_plots'
 
 def get_experiment_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots_sdk_test'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/experiment_plots'
 
 def get_single_cell_plots_dir():
-    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots_sdk_test'
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
 def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
