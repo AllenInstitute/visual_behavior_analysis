@@ -862,8 +862,12 @@ def compute_robust_snr_on_dataframe(dataframe):
                         "robust_signal"
                         "robust_snr"
     """
-    dataframe["robust_noise"] = dataframe["dff"].apply(lambda x: dff_robust_noise(x))
-    dataframe["robust_signal"] = dataframe.apply(lambda x: dff_robust_signal(x["dff"], x["robust_noise"]), axis=1 )
+    if 'dff' in dataframe.columns:
+        column = 'dff'
+    elif 'filtered_events' in dataframe.columns:
+        column = 'filtered_events'
+    dataframe["robust_noise"] = dataframe[column].apply(lambda x: dff_robust_noise(x))
+    dataframe["robust_signal"] = dataframe.apply(lambda x: dff_robust_signal(x[column], x["robust_noise"]), axis=1 )
     dataframe["robust_snr"] = dataframe["robust_signal"] / dataframe["robust_noise"]
     return dataframe
 
