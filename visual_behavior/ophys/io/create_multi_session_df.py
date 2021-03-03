@@ -6,7 +6,7 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
 
 
-def get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False):
+def get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, use_extended_stimulus_presentations=True):
     if 'stimulus' in df_name:
         flashes = True
         omitted = False
@@ -24,7 +24,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
     if ('run_speed' in df_name) or ('pupil_area' in df_name):
         get_pref_stim = False
 
-    experiments_table = loading.get_filtered_ophys_experiment_table()
+    experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
     experiments = experiments_table[(experiments_table.project_code == project_code) &
                                     (experiments_table.session_number == session_number)].copy()
     print('session_types:', experiments.session_type.unique(), ' - there should only be one!')
@@ -35,7 +35,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
         try:
             print(experiment_id)
             dataset = loading.get_ophys_dataset(experiment_id)
-            analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=True)
+            analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=use_extended_stimulus_presentations)
             df = analysis.get_response_df(df_name)
             df['ophys_experiment_id'] = experiment_id
             if 'passive' in dataset.metadata['session_type']:
