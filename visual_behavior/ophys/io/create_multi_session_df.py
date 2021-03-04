@@ -32,39 +32,39 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
 
     mega_mdf = pd.DataFrame()
     for experiment_id in experiments.index:
-        # try:
-        print(experiment_id)
-        dataset = loading.get_ophys_dataset(experiment_id)
-        analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=use_extended_stimulus_presentations)
-        df = analysis.get_response_df(df_name)
-        df['ophys_experiment_id'] = experiment_id
-        if 'passive' in dataset.metadata['session_type']:
-            df['lick_on_next_flash'] = False
-            df['engagement_state'] = 'disengaged'
-        if ('engagement_state' in conditions) and ('passive' not in dataset.metadata['session_type']) and \
-                ('engagement_state' not in df.keys()):
-            df['engagement_state'] = ['engaged' if reward_rate > 2 else 'disengaged' for reward_rate in df.reward_rate.values]
-        if 'running' in conditions:
-            df['running'] = [True if mean_running_speed > 2 else False for mean_running_speed in df.mean_running_speed.values]
-        if 'large_pupil' in conditions:
-            if 'mean_pupil_area' in df.keys():
-                df = df[df.mean_pupil_area.isnull() == False]
-                if len(df) > 100:
-                    median_pupil_area = df.mean_pupil_area.median()
-                    df['large_pupil'] = [True if mean_pupil_area > median_pupil_area else False for mean_pupil_area in
-                                         df.mean_pupil_area.values]
-        mdf = ut.get_mean_df(df, analysis, conditions=conditions, get_pref_stim=get_pref_stim,
-                             flashes=flashes, omitted=omitted, get_reliability=True,
-                             exclude_omitted_from_pref_stim=True)
-        if 'correlation_values' in mdf.keys():
-            mdf = mdf.drop(columns=['correlation_values'])
-        mdf['ophys_experiment_id'] = experiment_id
-        # mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
-        print('mean df created for', experiment_id)
-        mega_mdf = pd.concat([mega_mdf, mdf])
-        # except Exception as e:  # flake8: noqa: E722
-        #     print(e)
-        #     print('problem for', experiment_id)
+        try:
+            print(experiment_id)
+            dataset = loading.get_ophys_dataset(experiment_id)
+            analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=use_extended_stimulus_presentations)
+            df = analysis.get_response_df(df_name)
+            df['ophys_experiment_id'] = experiment_id
+            if 'passive' in dataset.metadata['session_type']:
+                df['lick_on_next_flash'] = False
+                df['engagement_state'] = 'disengaged'
+            if ('engagement_state' in conditions) and ('passive' not in dataset.metadata['session_type']) and \
+                    ('engagement_state' not in df.keys()):
+                df['engagement_state'] = ['engaged' if reward_rate > 2 else 'disengaged' for reward_rate in df.reward_rate.values]
+            if 'running' in conditions:
+                df['running'] = [True if mean_running_speed > 2 else False for mean_running_speed in df.mean_running_speed.values]
+            if 'large_pupil' in conditions:
+                if 'mean_pupil_area' in df.keys():
+                    df = df[df.mean_pupil_area.isnull() == False]
+                    if len(df) > 100:
+                        median_pupil_area = df.mean_pupil_area.median()
+                        df['large_pupil'] = [True if mean_pupil_area > median_pupil_area else False for mean_pupil_area in
+                                             df.mean_pupil_area.values]
+            mdf = ut.get_mean_df(df, analysis, conditions=conditions, get_pref_stim=get_pref_stim,
+                                 flashes=flashes, omitted=omitted, get_reliability=True,
+                                 exclude_omitted_from_pref_stim=True)
+            if 'correlation_values' in mdf.keys():
+                mdf = mdf.drop(columns=['correlation_values'])
+            mdf['ophys_experiment_id'] = experiment_id
+            # mdf = ut.add_metadata_to_mean_df(mdf, dataset.metadata)
+            print('mean df created for', experiment_id)
+            mega_mdf = pd.concat([mega_mdf, mdf])
+        except Exception as e:  # flake8: noqa: E722
+            print(e)
+            print('problem for', experiment_id)
 
     # suffix is unused. Commenting out for now
     # if use_events:

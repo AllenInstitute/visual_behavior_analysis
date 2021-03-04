@@ -65,6 +65,10 @@ except Exception as e:
 
 #  RELEVANT DIRECTORIES
 
+def get_qc_plots_dir():
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
+
+
 def get_super_container_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
 
