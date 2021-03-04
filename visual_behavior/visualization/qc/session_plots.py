@@ -34,7 +34,7 @@ def plot_lick_raster(ophys_session_id, ax=None, response_window=[0.15, 0.75]):
     if ax is None:
         figsize = (5, 10)
         fig, ax = plt.subplots(figsize=figsize)
-    for trial in trials.trials_id.values:
+    for trial in trials.index.values:
         trial_data = trials.iloc[trial]
         # get times relative to change time
         trial_start = trial_data.start_time - trial_data.change_time

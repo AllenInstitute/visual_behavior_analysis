@@ -25,9 +25,9 @@ def limit_to_experiments_with_final_qc_state(table):
 def limit_to_passed_containers(table):
     """
            :param table: experiments_table or sessions_table from SDK manifest with column 'container_workflow_state'
-           :return: table rows where container_workflow_state is 'passed.
+           :return: table rows where container_workflow_state is in one of the states indicating passing QC.
            """
-    table = table[table.container_workflow_state.isin(['container_qc', 'completed'])]
+    table = table[table.container_workflow_state.isin(['container_qc', 'completed', 'published'])]
     return table
 
 

@@ -494,6 +494,7 @@ def get_image_names(mean_df):
 
 
 def get_color_for_image_name(image_names, image_name):
+    image_names = np.sort(image_names)
     if 'omitted' in image_names:
         if image_name == 'omitted':
             color = 'gray'
