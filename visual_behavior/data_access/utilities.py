@@ -84,7 +84,9 @@ def get_all_session_ids(ophys_experiment_id=None, ophys_session_id=None, behavio
             bs.id as behavior_session_id,
             bs.foraging_id as foraging_id,
             os.id as ophys_session_id,
-            oe.id as ophys_experiment_id
+            oe.id as ophys_experiment_id,
+            oe.experiment_container_id as experiment_container_id,
+            os.visual_behavior_supercontainer_id as supercontainer_id
         from behavior_sessions as bs
         join ophys_sessions as os on os.id = bs.ophys_session_id
         join ophys_experiments as oe on os.id = oe.ophys_session_id
