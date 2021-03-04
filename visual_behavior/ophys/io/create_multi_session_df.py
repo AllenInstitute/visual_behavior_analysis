@@ -24,7 +24,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
     if ('run_speed' in df_name) or ('pupil_area' in df_name):
         get_pref_stim = False
 
-    experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+    experiments_table = loading.get_filtered_ophys_experiment_table()
     experiments = experiments_table[(experiments_table.project_code == project_code) &
                                     (experiments_table.session_number == session_number)].copy()
     print('session_types:', experiments.session_type.unique(), ' - there should only be one!')

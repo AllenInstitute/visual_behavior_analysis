@@ -20,7 +20,7 @@ job_settings = {'queue': 'braintv',
                 'jobdir': jobdir,
                 }
 
-experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+experiments_table = loading.get_filtered_ophys_experiment_table()
 
 for project_code in experiments_table.project_code.unique():
     for session_number in experiments_table.session_number.unique():
