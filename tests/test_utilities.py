@@ -21,7 +21,7 @@ def test_find_nearest_index():
 
 @pytest.mark.skipif(not os.path.exists('//allen/programs/braintv'), reason="no access to network path, skipping test on network PKL files")
 def test_movie_load():
-    movie_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/853773937_video-0.avi"
+    movie_path = "//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/test_fixtures/853773937_video-0.avi"
     movie = Movie(movie_path)
 
     # get frame by timestamp
