@@ -1,11 +1,8 @@
 import os
 import pandas as pd
 import json
-<<<<<<< HEAD
 import shutil
-=======
 import numpy as np
->>>>>>> d3fefa52... add options for lims queries in data_access.utilities
 from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
