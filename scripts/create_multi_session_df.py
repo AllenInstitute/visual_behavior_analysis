@@ -14,9 +14,9 @@ if __name__ == '__main__':
     session_number = int(sys.argv[2][:-1])
     print(project_code, session_number)
 
-    df_name = 'stimulus_response_df'
-    # conditions = ['cell_specimen_id', 'go', 'hit', 'image_name']
-    conditions = ['cell_specimen_id', 'change', 'image_name', 'licked', 'hit_bout']
+    df_name = 'trials_response_df'
+    conditions = ['cell_specimen_id', 'go', 'hit', 'image_name']
+    # conditions = ['cell_specimen_id', 'change', 'image_name', 'licked', 'hit_bout']
     # conditions = ['cell_specimen_id', 'change', 'image_name', 'epoch']
 
     # df_name = 'trials_pupil_area_df'
