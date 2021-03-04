@@ -19,7 +19,7 @@ if __name__ == '__main__':
     conditions = ['cell_specimen_id', 'change', 'image_name', 'licked', 'hit_bout']
     # conditions = ['cell_specimen_id', 'change', 'image_name', 'epoch']
 
-    df_name = 'trials_pupil_area_df'
+    df_name = 'stimulus_pupil_area_df'
     # conditions = ['ophys_experiment_id', 'go', 'hit', 'change_image_name']
     conditions = ['ophys_experiment_id', 'change', 'change_image_name', 'licked', 'hit_bout']
 
