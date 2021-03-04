@@ -58,7 +58,7 @@ def get_all_session_ids(ophys_experiment_id=None, ophys_session_id=None, behavio
         ophys_session_id {int} -- unique identifier for an ophys_session
         behavior_session_id {int} -- unique identifier for a behavior_session
         foraging_id {int} -- unique identifier for a behavior_session (1:1 with behavior session ID)
-        
+
     Only one experiment ID type should be passed
     Returns:
         dataframe with one column for each ID type (potentially multiple rows)
@@ -80,10 +80,10 @@ def get_all_session_ids(ophys_experiment_id=None, ophys_session_id=None, behavio
         search_key = 'foraging_id'
         id_to_search = "'{}'".format(foraging_id)
     lims_query = '''
-        select 
-            bs.id as behavior_session_id, 
-            bs.foraging_id as foraging_id, 
-            os.id as ophys_session_id, 
+        select
+            bs.id as behavior_session_id,
+            bs.foraging_id as foraging_id,
+            os.id as ophys_session_id,
             oe.id as ophys_experiment_id
         from behavior_sessions as bs
         join ophys_sessions as os on os.id = bs.ophys_session_id
@@ -119,7 +119,7 @@ def get_behavior_session_id_from_ophys_session_id(ophys_session_id, cache=None):
             from behavior_sessions as bs
             where bs.ophys_session_id = {}
         '''
-        return db.lims_query(lims_query_string.format(behavior_session_id)).astype(int)
+        return db.lims_query(lims_query_string.format(ophys_session_id)).astype(int)
 
 
 def get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache=None):
@@ -315,8 +315,8 @@ def get_donor_id_from_specimen_id(specimen_id, cache=None):
     else:
         # if cache not passed, go to lims
         lims_query_string = '''
-            select donor_id 
-            from specimens 
+            select donor_id
+            from specimens
             where specimens.id = '{}'
         '''
         return db.lims_query(lims_query_string.format(specimen_id)).astype(int)
