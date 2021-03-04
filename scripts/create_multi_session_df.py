@@ -19,7 +19,7 @@ if __name__ == '__main__':
     # conditions = ['cell_specimen_id', 'change', 'image_name', 'epoch']
 
     df_name = 'trials_pupil_area_df'
-    conditions = ['cell_specimen_id', 'go', 'hit', 'image_name']
+    conditions = ['ophys_experiment_id', 'go', 'hit', 'image_name']
     # conditions = ['ophys_experiment_id', 'change', 'image_name', 'licked', 'hit_bout']
 
     df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=True, use_extended_stimulus_presentations=True)
