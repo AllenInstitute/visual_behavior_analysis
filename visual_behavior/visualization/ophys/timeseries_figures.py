@@ -77,26 +77,29 @@ def plot_behavior(ophys_experiment_id, xlim_seconds=None, plot_stimuli=True, ax=
     return ax
 
 
-def plot_traces(dataset, include_cell_traces=True, plot_stimuli=True, xlim_seconds=None, use_events=False, ax=None):
+def plot_traces(dataset, include_cell_traces=True, plot_stimuli=True, xlim_seconds=None, use_events=False,
+                                                label='population average', color=None, ax=None):
     colors = sns.color_palette()
     if ax is None:
         fig, ax = plt.subplots(figsize=(15,3))
     if xlim_seconds is None:
         xlim_seconds = [dataset.ophys_timestamps[0], dataset.ophys_timestamps[-1]]
     if use_events:
-        color = colors[3]
+        if color is None:
+            color = colors[3]
         multiplier = 1000
         column = 'filtered_events'
         dff_traces = dataset.events.copy()
     else:
-        color = colors[0]
+        if color is None:
+            color = colors[0]
         multiplier = 100
         column = 'dff'
         dff_traces = dataset.dff_traces.copy()
     dff_traces = processing.compute_robust_snr_on_dataframe(dff_traces)
     highest_snr = np.argsort(dff_traces[dff_traces.robust_snr.isnull() == False].robust_snr.values)[-10:]
     highest_cells = dff_traces[dff_traces.robust_snr.isnull() == False].index.values[highest_snr]
-    ax.plot(dataset.ophys_timestamps, dff_traces[column].mean()*multiplier, color=color, zorder=100, label='population average')
+    ax.plot(dataset.ophys_timestamps, dff_traces[column].mean()*multiplier, color=color, zorder=100, label=label)
     if include_cell_traces:
         for cell_specimen_id in highest_cells:
             ax.plot(dataset.ophys_timestamps, dff_traces.loc[cell_specimen_id][column]*multiplier) #, color='gray')
