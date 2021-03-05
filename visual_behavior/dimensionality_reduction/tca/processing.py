@@ -1,10 +1,11 @@
 from visual_behavior.ophys.response_analysis import response_processing as rp
 import xarray as xr
 import numpy as np
-import os
-import tensortools
+# import os
+# import tensortools
 import visual_behavior.data_access.loading as loading
 import pandas as pd
+
 
 def zscore_scaler(group):
     return (group - np.mean(group)) / np.std(group)
@@ -51,6 +52,7 @@ def create_container_tensor(oeids, use_events=True, filter_events=True):
             response_xrs = xr.concat([response_xrs, response_xr], dim='trial_id')
     return response_xrs
 
+
 def create_session_tensor(oeids, use_events=True, filter_events=True):
     '''
     Creates tensor from datasets in one session.
@@ -82,9 +84,10 @@ def get_cells_df(oeids):
         imaging_depth = dataset.metadata['imaging_depth']
         for i in range(0, len(cell_specimen_ids)):
             cells_df = cells_df.append({'cell_specimen_id': cell_specimen_ids[i],
-                                   'targeted_structure': targeted_structure,
-                                   'imaging_depth': imaging_depth}, ignore_index = True)
+                                        'targeted_structure': targeted_structure,
+                                        'imaging_depth': imaging_depth}, ignore_index=True)
     return cells_df
+
 
 def get_matched_specimen_id(oeids):
     for i, oeid in enumerate(oeids):
@@ -97,6 +100,7 @@ def get_matched_specimen_id(oeids):
             same_ids = df.cell_specimen_id[index].values
     return same_ids
 
+
 def get_stimulus_df(oeids):
     for i, oeid in enumerate(oeids):
         dataset = loading.get_ophys_dataset(oeid)
@@ -105,7 +109,5 @@ def get_stimulus_df(oeids):
         if i == 0:
             stim_df = df.copy()
         else:
-            stim_df = stim_df.append(df, ignore_index = True)
+            stim_df = stim_df.append(df, ignore_index=True)
     return stim_df
-
-

@@ -1,11 +1,12 @@
 import numpy as np
 from matplotlib import pyplot as plt
-from matplotlib.lines import Line2D
+# from matplotlib.lines import Line2D
 import seaborn as sns
 import pandas as pd
 import tensortools
 
-def plot_TCA_factors(U_r, cells_df = [], cells_color_label=None, stim_df = [], trials_color_label="", cmap=None, psth_timebase=None):
+
+def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trials_color_label="", cmap=None, psth_timebase=None):
     '''
     Plots TCA output. If specified, colors cells and trials by specified category.
 
@@ -61,22 +62,22 @@ def plot_TCA_factors(U_r, cells_df = [], cells_color_label=None, stim_df = [], t
 
         # Plot cell factors, sorted
         cell_ax = axes[ind_rank, 0]
-        sns.barplot(data = cells,
-                    x = 'index',
-                    y = cells[ind_rank],
-                    hue = cells_color_label,
-                    palette = "Spectral",
-                    ax =  cell_ax)
+        sns.barplot(data=cells,
+                    x='index',
+                    y=cells[ind_rank],
+                    hue=cells_color_label,
+                    palette="Spectral",
+                    ax=cell_ax)
         change_width(cell_ax, .7)
-        cell_ax.set_ylim(0, cells[0].max()*.5)#cells[0].median())
+        cell_ax.set_ylim(0, cells[0].max() * .5)  # cells[0].median())
 
-        if i ==0:
-            cell_ax.legend(fontsize = 10)
+        if i == 0:
+            cell_ax.legend(fontsize=10)
         else:
             cell_ax.legend('')
-        if i == len(factors_order)-1:
+        if i == len(factors_order) - 1:
             cell_ax.set_xlabel('cells')
-            cell_ax.set_xticks(np.arange(1,cells.shape[0], np.round(cells.shape[0]*.20)))
+            cell_ax.set_xticks(np.arange(1, cells.shape[0], np.round(cells.shape[0] * .20)))
         else:
             cell_ax.set_xlabel('')
             cell_ax.set_xticks([])
@@ -86,24 +87,24 @@ def plot_TCA_factors(U_r, cells_df = [], cells_color_label=None, stim_df = [], t
         psth_fac = U_r.factors.factors[1][:, ind_rank]
         psth_ax.plot(psth_timebase, psth_fac, color='k')
         psth_ax.set_ylim(psth_range)
-        if i == len(factors_order)-1:
+        if i == len(factors_order) - 1:
             psth_ax.set_xlabel('time (s)')
         else:
             psth_ax.set_xticks([])
 
         # Plot trial factors
         trial_ax = axes[ind_rank, 2]
-        sns.scatterplot(data = trials,
-                        x = "index",
-                        y = trials[ind_rank],
-                        hue = trials_color_label,
+        sns.scatterplot(data=trials,
+                        x="index",
+                        y=trials[ind_rank],
+                        hue=trials_color_label,
                         palette=cmap,
-                        ax = trial_ax)
+                        ax=trial_ax)
         if i == 0:
-            trial_ax.legend(fontsize = 10)
+            trial_ax.legend(fontsize=10)
         else:
             trial_ax.legend('')
-        if i == len(factors_order)-1:
+        if i == len(factors_order) - 1:
             trial_ax.set_xlabel('trials')
         else:
             trial_ax.set_xticks([])
@@ -147,8 +148,9 @@ def plot_responses(xr, title=''):
 
     return fig
 
-def change_width(ax, new_value) :
-    for patch in ax.patches :
+
+def change_width(ax, new_value):
+    for patch in ax.patches:
         current_width = patch.get_width()
         diff = current_width - new_value
 
@@ -158,7 +160,8 @@ def change_width(ax, new_value) :
         # we recenter the bar
         patch.set_x(patch.get_x() + diff * .5)
 
-def plot_fit_error(X, ranks = [1,2,3,4,5,10,15,20]):
+
+def plot_fit_error(X, ranks=[1, 2, 3, 4, 5, 10, 15, 20]):
     print('this may take awhile....')
     fits = []
     errs = []
@@ -181,7 +184,8 @@ def plot_fit_error(X, ranks = [1,2,3,4,5,10,15,20]):
 
     return fig
 
-def plot_similarity_score(X, ranks= [1, 2, 3, 4, 5, 10, 20, 40, 60], n_runs = 5):
+
+def plot_similarity_score(X, ranks=[1, 2, 3, 4, 5, 10, 20, 40, 60], n_runs=5):
     print('this may take awhile....')
     rank_similarity_scores = []
     for rank in ranks:
@@ -202,8 +206,7 @@ def plot_similarity_score(X, ranks= [1, 2, 3, 4, 5, 10, 20, 40, 60], n_runs = 5)
     sem = rank_similarity_scores.std(axis=1) / np.sqrt(rank_similarity_scores.shape[1])
     plt.errorbar(x, rank_similarity_scores.mean(axis=1), yerr=sem)
     plt.xticks(ticks=x, labels=ranks)
-    plt.xlabel('N factors');
+    plt.xlabel('N factors')
     plt.ylabel('similarity mean+/-SEM')
 
     return fig
-
