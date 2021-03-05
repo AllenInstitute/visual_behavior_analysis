@@ -35,7 +35,4 @@ if __name__ == '__main__':
     tf.plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=None, save_figure=True)
 
 
-    xlim_seconds = [3500, 3600]
-    plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=None, save_figure=True):
-
 
