@@ -20,19 +20,19 @@ if __name__ == '__main__':
     tf.plot_behavior_and_pop_avg(dataset, xlim_seconds, save_figure=True)
     xlim_seconds = [500, 600]
     tf.plot_behavior_and_cell_traces_pop_avg(dataset, xlim_seconds, save_figure=True)
-    tf.plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=xlim_seconds, save_figure=True):
+    tf.plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=xlim_seconds, save_figure=True)
 
     xlim_seconds = [3400, 3450]
     tf.plot_behavior_and_pop_avg(dataset, xlim_seconds, save_figure=True)
     xlim_seconds = [3500, 3600]
     tf.plot_behavior_and_cell_traces_pop_avg(dataset, xlim_seconds, save_figure=True)
-    tf.plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=xlim_seconds, save_figure=True):
+    tf.plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=xlim_seconds, save_figure=True)
 
 
     xlim_seconds = None
     tf.plot_behavior_and_pop_avg(dataset, xlim_seconds, save_figure=True)
     tf.plot_behavior_and_cell_traces_pop_avg(dataset, xlim_seconds, save_figure=True)
-    tf.plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=None, save_figure=True):
+    tf.plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=None, save_figure=True)
 
 
     xlim_seconds = [3500, 3600]
