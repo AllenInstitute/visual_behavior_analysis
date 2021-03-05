@@ -4,27 +4,30 @@ from visual_behavior.data_access import loading as data_loading
 
 # BEHAVIOR
 
-def plot_running_speed(ophys_session_id, ax=None):
+def plot_running_speed(dataset, ax=None):
     """
-    plot running speed for a given session
-    will create a new fig/ax if no axis is passed
+    takes a BehaviorOphysSession or BehaviorSession
+    dataset and plots running speed.
+    Will create a new fig/ax if no axis is passed.
 
     Arguments:
         ophys_session_id {int} -- ophys session ID
 
     Keyword Arguments:
-        ax {matplotlib figure axis} -- axis to plot on. Will create new if none is passed (default: {None})
+        ax {matplotlib figure axis} -- axis to plot on. Will create new
+                                       if none is passed (default: {None})
 
     Returns:
         matplotlib figure axis -- ax
     """
-    running_speed = data_loading.get_sdk_running_speed(ophys_session_id)
+    running_speed = dataset.running_speed['speed']
+    ophys_session_id = dataset.metadata['ophys_session_id']
     if ax is None:
         fig, ax = plt.subplots(figsize=(15, 3))
     ax.plot(running_speed)
     ax.set_xlabel('time (s)')
     ax.set_ylabel('running speed\n(cm/s)')
-    ax.set_title('running speed for ophys_session_id {}'.format(ophys_session_id))
+    ax.set_title('running speed for ophys_session_id: {}'.format(ophys_session_id))
 
     return ax
 
