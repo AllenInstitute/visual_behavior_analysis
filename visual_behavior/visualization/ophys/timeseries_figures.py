@@ -102,10 +102,11 @@ def plot_traces(dataset, include_cell_traces=True, plot_stimuli=True, xlim_secon
     ax.plot(dataset.ophys_timestamps, dff_traces[column].mean()*multiplier, color=color, zorder=100, label=label)
     if include_cell_traces:
         for cell_specimen_id in highest_cells:
-            ax.plot(dataset.ophys_timestamps, dff_traces.loc[cell_specimen_id][column]*multiplier) #, color='gray')
-        ax.plot(dataset.ophys_timestamps, dff_traces.loc[cell_specimen_id][column]*multiplier, label='cell traces') #color='gray',
+            ax.plot(dataset.ophys_timestamps, dff_traces.loc[cell_specimen_id][column]*multiplier, label=str(cell_specimen_id)) #, color='gray')
+        ax.plot(dataset.ophys_timestamps, dff_traces.loc[cell_specimen_id][column]*multiplier) #color='gray',
     ax.set_ylabel('dF/F')
     ax.set_xlabel('time (sec)')
+    ax.legend(fontsize='xx-small', loc='upper left')
     if plot_stimuli:
         ax = sf.add_stim_color_span(dataset, ax, xlim=xlim_seconds)
     ax.set_xlim(xlim_seconds)
@@ -148,8 +149,8 @@ def plot_behavior_and_cell_traces_pop_avg(dataset, xlim_seconds=None, save_figur
     except:
         print('no behavior model output for', dataset.ophys_experiment_id)
     ax[1] = plot_behavior(dataset.ophys_experiment_id, xlim_seconds=xlim_seconds, plot_stimuli=True, ax=ax[1])
-    ax[1] = plot_traces(dataset, include_cell_traces=False, plot_stimuli=False, xlim_seconds=xlim_seconds, ax=ax[1])
-    ax[1] = plot_traces(dataset, include_cell_traces=False, plot_stimuli=False, xlim_seconds=xlim_seconds,
+    ax[1] = plot_traces(dataset, include_cell_traces=False, plot_stimuli=False, xlim_seconds=xlim_seconds, label='pop. avg. dFF', ax=ax[1])
+    ax[1] = plot_traces(dataset, include_cell_traces=False, plot_stimuli=False, xlim_seconds=xlim_seconds, label='pop. avg. events'
                         use_events=True, ax=ax[1])
     ax[2] = plot_traces(dataset, include_cell_traces=True, plot_stimuli=True, xlim_seconds=xlim_seconds, ax=ax[2])
     plt.subplots_adjust(wspace=0, hspace=0.1)
@@ -186,5 +187,41 @@ def plot_behavior_and_pop_avg(dataset, xlim_seconds=None, save_figure=True):
                           dataset.metadata_string + '_' + suffix)
 
 
+def plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=None, save_figure=True):
+    if xlim_seconds == None:
+        suffix = ''
+    elif xlim_seconds[1] < 2000:
+        suffix = 'early'
+    elif xlim_seconds[1] > -2000:
+        suffix = 'late'
 
+    experiments_table = loading.get_filtered_ophys_experiment_table()
+    experiment_ids = experiments_table[experiments_table.ophys_session_id==ophys_session_id].sort_values(by='date_of_acquisition').index.values
+    experiment_id = experiment_ids[0]
+
+    dataset = loading.get_ophys_dataset(experiment_id)
+
+    colors = sns.color_palette()
+    figsize = (15, 8)
+    fig, ax = plt.subplots(3, 1, figsize=figsize, sharex=True)
+    try:
+        ax[0] = plot_behavior_model_weights(dataset, xlim_seconds=xlim_seconds, plot_stimuli=True, ax=ax[0])
+    except:
+        print('no behavior model output for', dataset.ophys_experiment_id)
+    ax[1] = plot_behavior(dataset.ophys_experiment_id, xlim_seconds=xlim_seconds, plot_stimuli=True, ax=ax[1])
+
+    label = dataset.metadata['targeted_structure']+', '+str(dataset.metadata['imaging_depth'])
+    ax[2] = plot_traces(dataset, include_cell_traces=False, plot_stimuli=True, xlim_seconds=xlim_seconds, label=label, color=colors[0], ax=ax[2])
+    for i,experiment_id in enumerate(experiment_ids[1:]):
+        dataset = loading.get_ophys_dataset(experiment_id)
+        label = dataset.metadata['targeted_structure']+', '+str(dataset.metadata['imaging_depth'])
+        ax[2] = plot_traces(dataset, include_cell_traces=False, plot_stimuli=False, xlim_seconds=xlim_seconds, label=label, color=colors[i+1], ax=ax[2])
+    ax[2].legend(fontsize='x-small', loc='upper left')
+    plt.subplots_adjust(wspace=0, hspace=0.1)
+    ax[0].set_title(dataset.metadata_string)
+
+    if save_figure:
+        save_dir = os.path.abspath(os.path.join(loading.get_qc_plots_dir(), 'timeseries_plots'))
+        utils.save_figure(fig, figsize, save_dir, 'behavior_traces_population_average_mesoscope',
+                          dataset.metadata_string + '_' + suffix)
 
