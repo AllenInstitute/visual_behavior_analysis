@@ -23,7 +23,7 @@ from general_funs import *
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 
-def svm_images_main_post(session_id, data_list, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, use_events=False, doPlots=0):
+def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, use_events=False, doPlots=0):
     
     num_classes = 8 # decoding 8 images
     num_planes = 8
@@ -83,15 +83,20 @@ def svm_images_main_post(session_id, data_list, iblock, dir_svm, frames_svm, tim
 #             if same_num_neuron_all_planes:
 #                 nown = 'sameNumNeuronsAllPlanes_' + nown
 #             name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{nown}'
-
+        
             ending = ''
             if same_num_neuron_all_planes:
                 ending = 'sameNumNeuronsAllPlanes_'
 
             if ~np.isnan(iblock): # svm ran on the trial blocks
-                ending = f'{ending}block{iblock}_'
+                if svm_blocks==-1: # divide trials into blocks based on the engagement state
+                    word = 'engaged'
+                else:
+                    word = 'block'
+                ending = f'{ending}{word}{iblock}_'
 
             name = f'(.*)_s-{session_id}_e-{lims_id}_{svmn}_frames{frames_svm[0]}to{frames_svm[-1]}_{ending}{nown}'
+        
         
             svmName ,_ = all_sess_set_h5_fileName(name, dir_svm, all_files=0)
             

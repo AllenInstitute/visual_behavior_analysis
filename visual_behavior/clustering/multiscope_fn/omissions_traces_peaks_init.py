@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+USE this code for the population-average analysis.
+Use omissions_traces_peaks_init_pbs.py for the correlation analysis.
+
+
+
 # This is the initial script to be called for most analyses. It creates df/f traces 
 # for the session, also aligned on omission.
 
@@ -29,28 +34,29 @@ from def_funs import *
 import pickle
 import os
 import socket
+import datetime
 
-controlSingleBeam_oddFrPlanes = [1, [0,2,5,7]] # if 1st element is 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope # 2nd element: odd_fr_planes = [0,2,5,7] # if the plane index is among these, we will take df/f from odd frame indices         
+#%%
+controlSingleBeam_oddFrPlanes = [0, []] #[1, [0,2,5,7]] # if 1st element is 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope # 2nd element: odd_fr_planes = [0,2,5,7] # if the plane index is among these, we will take df/f from odd frame indices         
 
-use_ct_traces = 1 #1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
+use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
 use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 
-saveResults = 1 # save the all_sess pandas at the end
+saveResults = 1  # save the all_sess pandas at the end
 
-doCorrs = 1 # -1 #0 #1 # if -1, only get the traces (entire session, also omission-aligned), dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
+doCorrs = 0  #-1 #0 #1 # if -1, only get the traces, dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
 # note: when doCorrs=1, run this code on the cluster: omissions_traces_peaks_init_pbs.py (this will call omissions_traces_peaks_pbs.py) 
-num_shfl_corr = 0 #2 #50 # set to 0 if you dont want to compute corrs for shuffled data # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
+num_shfl_corr = 2 #50 # set to 0 if you dont want to compute corrs for shuffled data # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
 subtractSigCorrs = 1 # if 1, compute average response to each image, and subtract it out from all trials of that image. Then compute correlations; ie remove signal correlations.
 
 # To align on omissions, get 40 frames before omission and 39 frames after omission
-samps_bef = 16 # 40 # 40 is a lot especially for correlation analysis which takes a long time; the advantage of 40 thouth is that bl_preOmit and bl_preFlash will be more accurate as they use 10th percentile of frames before omission (or flash), so more frames means better accuracy.
-samps_aft = 24 # 40 # 
+samps_bef = 16 #40 # 40 is a lot especially for correlation analysis which takes a long time; the advantage of 40 thouth is that bl_preOmit and bl_preFlash will be more accurate as they use 10th percentile of frames before omission (or flash), so more frames means better accuracy.
+samps_aft = 24 #40
 
 
 # remember the following two were 1, for autoencoder analuysis you changed them to 0.
-doScale = 1  # 1 # Scale the traces by baseline std
-doShift = 1  # 1 # Shift the y values so baseline mean is at 0 at time 0
-
+doScale = 0  # 1 # Scale the traces by baseline std
+doShift = 0  # 1 # Shift the y values so baseline mean is at 0 at time 0
 doShift_again = 0 # 0 # this is a second shift just to make sure the pre-omit activity has baseline at 0. (it is after we normalize the traces by baseline ave and sd... but because the traces are median of trials (or computed from the initial gray screen activity), and the baseline is mean of trials, the traces wont end up at baseline of 0)
 bl_gray_screen = 1 # 1 # if 1, baseline will be computed on the initial gray screen at the beginning of the session
 # if 0, get the lowest 20 percentile values of the median trace preceding omission and then compute their mean and sd
@@ -67,7 +73,6 @@ mean_notPeak = 1  # set to 1, so mean is computed; it is preferred because SST a
 # Note sure of the following: if mean_notPeak is 1, it makes sense to go with a conservative (short) peak_win so the results are not contaminated by the responses to the flash that follows the omission
 # set mean_notPeak to 0 if you want to measure trough (on traces with decreased response after the omission)
 
-### Note: the windows below will be used when doCorrs=0. For doCorrs=1, windows will be set in omissions_traces_peaks_plots_setVars_corr.py
 # you should totally not go beyond 0.75!!! # go with 0.75ms if you don't want the responses to be contaminated by the next flash
 peak_win = [0, .5] #[0, .75] # this should be named omit_win
 # [0,2] # flashes are 250ms and gray screen is 500ms # sec # time window to find peak activity, seconds relative to omission onset
@@ -80,7 +85,7 @@ flash_win_timing = [-.875, -.25] # this is not needed anymore bc we are using di
 # one solution is to go with flash_win (for non-vip and vip, B1 session) and flash_win_vip (for vip sessions except B1); use those same windows for both amp and timing computation. 
 # the other solution is what currently we are using which is a wider window for flash_timing so it takes care of vip responses; and a flash_win that is non-optimal for vip responses (bc it doesnt precede the image; although now that i extended it to 0 (previously it was [-.75, -.25]) it will include vip ramping activity too, so perhaps non-optimality is less of a problem).
 
-bl_percentile = 10 # 20 # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
+bl_percentile = 10 #20  # for peak measurements, we subtract pre-omit baseline from the peak. bl_percentile determines what pre-omit values will be used.      
 
 norm_to_max = 0  # normalize each neuron trace by its max
 # In this case doScale is automatically set to zero, because:
@@ -105,58 +110,123 @@ if doROC:
     from sklearn.metrics import roc_curve, auc
 
 
-#%% Change directory to analysis directory
 
-from def_paths import * 
-'''
-if socket.gethostname() == 'OSXLT1JHD5.local':  # allen mac
-    dirAna = "/Users/farzaneh.najafi/Documents/analysis_codes/"
-    dir0 = '/Users/farzaneh.najafi/OneDrive - Allen Institute/Analysis'
-
-elif socket.gethostname() == 'ibs-farzaneh-ux2':  # allen pc
-    dirAna = "/home/farzaneh/Documents/analysis_codes/"
-    dir0 = '/home/farzaneh/OneDrive/Analysis'
-
-elif socket.gethostname() == 'hpc-login.corp.alleninstitute.org':  # hpc server
-    dirAna = "/home/farzaneh.najafi/analysis_codes/"
-
-dirMs = os.path.join(dirAna, 'multiscope_fn')
-
-os.chdir(dirMs)
-
-
-#%% Load vars related to list_all_sessions_valid
+#%% Load vars related to list_all_sessions_valid 
 # (read the pickle file saved in the script: set_valid_sessions.py)
 
+# below is not needed anymore since we are using data release sessions
+
+import pickle
+
 dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
-'''
+
 # validSessName = os.path.join(dir_valid_sess, 'valid_sessions' + '.pkl')
+'''
 dir_valid_sess = os.path.join(dir_server_me, 'ValidSessions')
 
-npkl = 'valid_sessions_(.*)' + '.pkl'
-validSessName, _ = all_sess_set_h5_fileName(npkl, dir_valid_sess, all_files=0)
-# print(validSessName)
+regex = re.compile('valid_sessions_(.*)' + '.pkl')
+l = os.listdir(dir_valid_sess)
+files = [string for string in l if re.match(regex, string)]
 
+# NOTE: # get the latest file (make sure this is correct)
+files = files[-1]
+validSessName = os.path.join(dir_valid_sess, files)
+
+print(validSessName)
+    
+    
 pkl = open(validSessName, 'rb')
 dictNow = pickle.load(pkl)
 
 for k in list(dictNow.keys()):
     exec(k + '= dictNow[k]')
-    
-print(f'\n{len(list_all_sessions_valid)} : Number of sessions for analysis')
-# ['list_all_sessions0',
+
+#['list_all_sessions0',
 # 'list_sessions_date0',
 # 'list_sessions_experiments0',
-# 'validity_log_all0',
 # 'validity_log_all',
 # 'list_all_sessions_valid',
 # 'list_all_experiments_valid',
-# 'list_all_experiments']
+# 'list_all_experiments']  
+'''
+
+validity_log_all = [] # defining it here because we commented above. The right thing is to just remove it from the function input, but for now leaving it...
+    
+    
+###############################################
+# set sessions and get the metadata
+###############################################
+
+# Use the new list of sessions that are de-crosstalked and will be released in March 2021
+import pandas as pd
+import numpy as np
+import visual_behavior.data_access.loading as loading
+
+# metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
+# metadata_valid = pd.read_csv(metadata_meso_dir)
+experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+experiments_table = experiments_table.reset_index('ophys_experiment_id')
+metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
+
+sessions_ctDone = metadata_valid['ophys_session_id'].unique()
+print(sessions_ctDone.shape)
 
 
+#%% remove some problematic sessions
+
+sess2rmv = 873720614
+
+
+list_all_sessions_valid = sessions_ctDone
+
+print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
+
+
+# get the list of 8 experiments for all sessions
+experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+experiments_table = experiments_table.reset_index('ophys_experiment_id')
+
+metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
+
+
+# set the list of experiments for each session in list_all_sessions_valid
+try:
+    list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
+
+except Exception as E:
+    print(E)
+    
+    list_all_experiments = []
+    for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
+        es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
+        list_all_experiments.append(es)
+    list_all_experiments = np.array(list_all_experiments)
+
+    list_all_experiments.shape
+
+    b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
+    no8 = list_all_sessions_valid[b!=8]
+    if len(no8)>0:
+        print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
+        list_all_sessions_valid = list_all_sessions_valid[b==8]
+        list_all_experiments = list_all_experiments[b==8]
+
+        print(list_all_sessions_valid.shape, list_all_experiments.shape)
+
+    list_all_experiments = np.vstack(list_all_experiments)
+
+
+list_all_experiments = np.sort(list_all_experiments)
+print(list_all_experiments.shape)
+
+
+
+
+    
+    
 #%% crosstalk-corrected sessions
-if use_ct_traces:
 
+if 0: #use_ct_traces: # lims now contains decrosstalked traces (2/11/2021)
     '''
     # Later when we call load_session_data_new, it will load the ct traces if use_ct_traces is 1; otherwise it will seet dataset which loads the original dff traces using vb codes.
 
@@ -167,7 +237,7 @@ if use_ct_traces:
     lims_done = lims_done.session_id.drop_duplicates()
     lims_done.values
     '''
-    
+
     # remove these sessions; because: 
     # ct dff files dont exist (843871999)
     # one depth is nan, so dataset cannot be set: 958772311
@@ -175,19 +245,28 @@ if use_ct_traces:
     
     # this is resolved by using loading dataset: there is no common ROI between VB and CT traces: 843871999, 882674040, 884451806, 914728054, 944888114, 952430817, 971922380, 974486549, 976167513, 976382032, 977760370, 978201478, 981705001, 982566889, 986130604, 988768058, 988903485, 989267296, 990139534, 990464099, 991958444, 993253587, 
     
-    sessions_ctDone = np.array([839514418, 840490733, 841303580, 841682738, 841778484, 842023261, 842364341, 842623907, 844469521, 845235947, 846871218, 847758278, 848401585, 849304162, 850667270, 850894918, 852794141, 853416532, 854060305, 855711263, 863815473, 864458864, 865024413, 865854762, 866197765, 867027875, 868688430, 869117575, 870352564, 870762788, 871526950, 871906231, 872592724, 873247524, 874616920, 875259383, 876303107, 880498009, 880709154, 882674040, 884451806, 886130638, 886806800, 888009781, 889944877, 902884228, 903621170, 903813946, 904418381, 904771513, 906299056, 906521029, 906968227, 907177554, 907753304, 907991198, 908441202, 911719666, 913564409, 914161594, 914639324, 914728054, 915306390, 916650386, 917498735, 918889065, 919041767, 919888953, 920695792, 921636320, 921922878, 922564930, 923705570, 925478114, 926488384, 927787876, 928414538, 929255311, 929686773, 931687751, 933439847, 933604359, 935559843, 937162622, 937682841, 938140092, 938898514, 939526443, 940145217, 940775208, 941676716, 946015345, 947199653, 947358663, 948042811, 948252173, 949217880, 950031363, 951410079, 952430817, 954954402, 955775716, 957020350, 958105827, 959458018, 971632311, 971922380, 973384292, 973701907, 974167263, 974486549, 975452945, 976167513, 976382032, 977760370, 978201478, 980062339, 981705001, 981845703, 982566889, 985609503, 985888070, 986130604, 987352048, 988768058, 988903485, 989267296, 990139534, 990464099, 991639544, 991958444, 992393325, 993253587, 993420347, 993738515, 993962221, 1000439105, 1002120640, 1005374186])
+    # used for nature methods and nature communications submissions    
+#     sessions_ctDone = np.array([839514418, 840490733, 841303580, 841682738, 841778484, 842023261, 842364341, 842623907, 844469521, 845235947, 846871218, 847758278, 848401585, 849304162, 850667270, 850894918, 852794141, 853416532, 854060305, 855711263, 863815473, 864458864, 865024413, 865854762, 866197765, 867027875, 868688430, 869117575, 870352564, 870762788, 871526950, 871906231, 872592724, 873247524, 874616920, 875259383, 876303107, 880498009, 880709154, 882674040, 884451806, 886130638, 886806800, 888009781, 889944877, 902884228, 903621170, 903813946, 904418381, 904771513, 906299056, 906521029, 906968227, 907177554, 907753304, 907991198, 908441202, 911719666, 913564409, 914161594, 914639324, 914728054, 915306390, 916650386, 917498735, 918889065, 919041767, 919888953, 920695792, 921636320, 921922878, 922564930, 923705570, 925478114, 926488384, 927787876, 928414538, 929255311, 929686773, 931687751, 933439847, 933604359, 935559843, 937162622, 937682841, 938140092, 938898514, 939526443, 940145217, 940775208, 941676716, 946015345, 947199653, 947358663, 948042811, 948252173, 949217880, 950031363, 951410079, 952430817, 954954402, 955775716, 957020350, 958105827, 959458018, 971632311, 971922380, 973384292, 973701907, 974167263, 974486549, 975452945, 976167513, 976382032, 977760370, 978201478, 980062339, 981705001, 981845703, 982566889, 985609503, 985888070, 986130604, 987352048, 988768058, 988903485, 989267296, 990139534, 990464099, 991639544, 991958444, 992393325, 993253587, 993420347, 993738515, 993962221, 1000439105, 1002120640, 1005374186])
+    
+#     sessions_ctDone = np.array([839514418,  841778484, 842623907, 844469521, 847758278, 848401585, 848983781, 849304162, 850667270, 850894918, 851428829, 852070825, 852794141, 853416532, 855711263, 863815473, 864458864, 865024413, 865854762, 866197765, 868688430, 869117575])
+    
+    # old ct:    
+#     np.array([839208243, 839514418, 840490733, 841303580, 841682738, 841778484,
+#                                842023261, 842364341, 842623907, 843059122, 843871999, 844469521,
+#                                845444695, 846652517, 846871218, 847758278, 848401585, 848983781,
+#                                849304162, 850667270, 850894918, 851428829, 851740017, 852070825,
+#                                852794141, 853177377, 853416532, 854060305, 856201876, 857040020,
+#                                863815473, 864458864, 865024413, 865854762, 866197765, 867027875,
+#                                868688430, 869117575, 870352564, 870762788, 871526950, 871906231,
+#                                872592724, 873720614, 874070091, 874616920, 875259383, 876303107,
+#                                880498009, 882674040, 884451806, 885303356, 886806800, 888009781,
+#                                889944877, 906299056, 906521029])
 
-#     sessions_ctDone = np.array([839514418, 840490733, 841303580, 841682738, 841778484, 842023261, 842364341, 842623907, 844469521, 845235947, 846871218, 847758278, 848401585, 849304162, 850667270, 850894918, 852794141, 853416532, 854060305, 855711263, 863815473, 864458864, 865024413, 865854762, 866197765, 867027875, 868688430, 869117575, 870352564, 870762788, 871526950, 871906231, 872592724, 873247524, 874616920, 875259383, 876303107, 880498009, 880709154, 886130638, 886806800, 888009781, 889944877, 902884228, 903621170, 903813946, 904418381, 904771513, 906299056, 906521029, 906968227, 907177554, 907753304, 907991198, 908441202, 911719666, 913564409, 914161594, 914639324, 915306390, 916650386, 917498735, 918889065, 919041767, 919888953, 920695792, 921636320, 921922878, 922564930, 923705570, 925478114, 926488384, 927787876, 928414538, 929255311, 929686773, 931687751, 933439847, 933604359, 935559843, 937162622, 937682841, 938140092, 938898514, 939526443, 940145217, 940775208, 941676716, 944888114, 946015345, 947199653, 947358663, 948042811, 948252173, 949217880, 950031363, 951410079, 954954402, 955775716, 957020350, 958105827, 959458018, 971632311, 991639544, 
-#                                 973384292, 973701907, 974167263, 975452945, 980062339, 981845703, 985609503, 985888070, 986767503, 987352048, 
-#                                 992393325, 993420347, 993738515, 993962221, 1000439105, 1002120640, 1005374186])        
-
-
-#     old ct:        
-#     [839514418,  841778484, 842623907, 844469521, 847758278, 848401585, 848983781, 849304162, 850667270, 850894918, 851428829, 852070825, 852794141, 853416532, 855711263, 863815473, 864458864, 865024413, 865854762, 866197765, 868688430, 869117575]    
-#     [839208243, 839514418, 840490733, 841303580, 841682738, 841778484, 842023261, 842364341, 842623907, 843059122, 843871999, 844469521, 845444695, 846652517, 846871218, 847758278, 848401585, 848983781, 849304162, 850667270, 850894918, 851428829, 851740017, 852070825, 852794141, 853177377, 853416532, 854060305, 856201876, 857040020, 863815473, 864458864, 865024413, 865854762, 866197765, 867027875, 868688430, 869117575, 870352564, 870762788, 871526950, 871906231, 872592724, 873720614, 874070091, 874616920, 875259383, 876303107, 880498009, 882674040, 884451806, 885303356, 886806800, 888009781, 889944877, 906299056, 906521029]
 
     print(sessions_ctDone.shape)
-
+    
+    
+    
     # Copy ct folders to allen server (nc-ophys/Farzaneh):
     # ssh to the analysis computer by running: ssh -L 8888:ibs-is-analysis-ux1.corp.alleninstitute.org:8889 farzaneh.najafi@ibs-is-analysis-ux1.corp.alleninstitute.org
     # then on the analysis computer, in your folder (Farzaneh), run the notebook below
@@ -212,19 +291,9 @@ if use_ct_traces:
     list_all_sessions_valid = list_all_sessions_valid_ct
     list_all_experiments_valid = list_all_experiments_valid_ct
     list_all_experiments = list_all_experiments_ct
-
-
-#%% Remove sessions with unusual frame duration (you added it to set_valid_session, but in case you got the session list from a previously saved file)    
-# now, you are identigying these sessions in omission_ttraces_peaks_plots_setVars. Then adding them to set_valid_sessions.
-# sess2rmv = 873720614
-
-
-#%%
-########################################################################################################
-################################# Analysis starts here  ################################################
-########################################################################################################
-
-#from svm_funs import *
+    
+    
+    
 
 #%% Initiate all_sess panda table
 
@@ -243,7 +312,8 @@ elif doCorrs==-1:
     
 cols = np.concatenate((cols_basic, colsa))
 
-cols_this_sess_l = np.array(['valid', 'local_fluo_traces', 'local_time_traces', 'roi_ids', 'local_fluo_allOmitt', 'local_fluo_flashBefOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
+cols_this_sess_l = np.array(['valid', 'local_fluo_traces', 'local_time_traces', 'roi_ids', 'local_fluo_allOmitt', 'list_flashes', 'list_omitted', 'running_speed', 'licks', 'rewards'])
+
 
 #%% problematic sessions: (5/16/20) ... related to segmentation.
 # 923469780 experiment 924211430
@@ -266,26 +336,31 @@ all_sess = pd.DataFrame([], columns=cols) # size: 8*len(num_sessions)
 
 cnt_sess = -1
 
-for isess in np.arange(0, len(list_all_sessions_valid)): # isess=0 #
+for isess in np.arange(0, len(list_all_sessions_valid)): # isess=0 # 24
 
-#     isess = np.argwhere(list_all_sessions_valid==1005374186).squeeze()
-    session_id = int(list_all_sessions_valid[isess])
-#    experiment_ids = list_all_experiments_valid[isess]
-    # we want to have the list of all experiments for each session regardless of whethere they were valid or not... this way we can find the same plane across all sessions.
-    experiment_ids = list_all_experiments[isess]
-#    experiment_ids = list_all_experiments_valid[np.squeeze(np.argwhere(np.in1d(list_all_sessions_valid, session_id)))]
+    session_id = list_all_sessions_valid[isess] #session_id = int(list_all_sessions_valid[isess]) # experiment_ids = list_all_experiments_valid[isess]
+    experiment_ids = list_all_experiments[isess] # we want to have the list of all experiments for each session regardless of whethere they were valid or not... this way we can find the same plane across all sessions.
 
-    cnt_sess = cnt_sess + 1
-    sess_date = validity_log_all[validity_log_all['session_id'].values ==
-                                 session_id]['date'].iloc[0]
-    print('\n\n__________________________________________________')
-    print('%d: session %d out of %d sessions, date: %s\n' %
-          (session_id, isess, len(list_all_sessions_valid), sess_date)) # cnt_sess+1
+    # Note: we cant use metadata from allensdk because it doesnt include all experiments of a session, it only includes the valid experiments, so it wont allow us to set the metadata for all experiments.
+    # session_id = sessions_ctDone[isess]
+    metadata_now = metadata_valid[metadata_valid['ophys_session_id']==session_id]
+    experiment_ids_valid = metadata_now['ophys_experiment_id'].values # the problem is that this wont give us the list of all experiments for a session ... it only includes the valid experiments.
+    experiment_ids_valid = np.sort(experiment_ids_valid)
+    print(f'\n{sum(np.in1d(experiment_ids, experiment_ids_valid)==False)} of the experiments are invalid!\n')
 
-    #%% Run the function
-    this_sess = omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median,
+
+    #cnt_sess = cnt_sess + 1
+    print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
+    # print('%d: session %d out of %d sessions' %(session_id, cnt_sess+1, len(list_all_sessions_valid)))
+
+
+    
+    #%% Call the main function
+
+    this_sess = omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_ids_valid, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median,
        doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces, use_np_corr, use_common_vb_roi, controlSingleBeam_oddFrPlanes, doPlots, doROC)
 
+    
 #     mouse_all.append(this_sess)
     all_sess = all_sess.append(this_sess)
 

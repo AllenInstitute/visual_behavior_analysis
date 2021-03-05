@@ -18,15 +18,16 @@ Created on Wed May  8 15:25:18 2019
 
 # %load_ext autoreload
 # %autoreload 2
- 
+
 
 from def_funs import *
 from def_funs_general import *
 from omissions_traces_peaks_quantify import *
 from omissions_traces_peaks_quantify_flashAl import *
-                
+
+
 #%%
-def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1, controlSingleBeam_oddFrPlanes=[0], doPlots=0, doROC=0):    
+def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_ids_valid, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median, doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces=1, use_np_corr=1, use_common_vb_roi=1, controlSingleBeam_oddFrPlanes=[0], doPlots=0, doROC=0):    
     
     '''
     doCorrs = 1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm 
@@ -98,8 +99,11 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
     ################################################################################
 
     # load the traces, behavioral and metadata for the session
-    [whole_data, data_list, table_stim, behav_data] = load_session_data_new(session_id, experiment_ids, use_ct_traces, use_np_corr, use_common_vb_roi)    
+    [whole_data, data_list, table_stim, behav_data] = load_session_data_new(metadata_all, session_id, experiment_ids, use_ct_traces, use_np_corr, use_common_vb_roi)    
+
 #    [whole_data, data_list, table_stim] = load_session_data(session_id) # data_list is similar to whole_data but sorted by area and depth
+
+
 
     if any(np.isnan(data_list['depth'].values.astype(float))):
         session_exclude = 1
@@ -127,13 +131,13 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
         # vip, except for B1, needs a different timewindow for computing image-triggered average (because its response precedes the image).
         # sst, slc, and vip B1 sessions all need a timewindow that immediately follows the images.
-        if np.logical_and(cre.find('Vip')==1 , session_novel) or cre.find('Vip')==-1: # VIP B1, SST, SLC: window after images (response follows the image)
+        if np.logical_and(cre.find('Vip')==0 , session_novel) or cre.find('Vip')==-1: # VIP B1, SST, SLC: window after images (response follows the image)
             flash_win_final = flash_win # [0, .75]
 
         else: # VIP (non B1,familiar sessions): window precedes the image (pre-stimulus ramping activity)
             flash_win_final = flash_win_vip # [-.25, .5] 
         
-
+        
         #####################################################################################
         #%% Set stimulus and behavioral variables
         #####################################################################################
@@ -275,6 +279,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
             index = l[0]; # plane index
             lims_id = l[1] # experiment id 
             '''
+            
             depth = whole_data[lims_id]['imaging_depth']
             area = whole_data[lims_id]['targeted_structure']
             
@@ -290,7 +295,11 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
             # samps_aft - 1 (=39) frames after omission ; index: 41:79
 
             # Do the analysis only if the experiment is valid
-            if validity_log_all.iloc[validity_log_all.lims_id.values == int(lims_id)]['valid'].bool() == False:
+            ### NOTE: commenting below and instead using the list of experiments in March 2021 data release to identify valid experiments
+#             if validity_log_all.iloc[validity_log_all.lims_id.values == int(lims_id)]['valid'].bool() == False:
+                
+            if sum(np.in1d(experiment_ids_valid, int(lims_id)))==0: # make sure lims_id is among the experiments in the data release
+                
                 # num_neurons = 1
                 local_fluo_allOmitt = np.full((samps_bef + samps_aft, 1, len(list_omitted)), np.nan) # just a nan array as if there was 1 neuron, so this experiment index is not empty in this_sess_l.
                 this_sess_l.at[index, 'local_fluo_allOmitt'] = local_fluo_allOmitt
@@ -302,6 +311,10 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
                 # Get traces of all neurons for the entire session
                 local_fluo_traces = whole_data[lims_id]['fluo_traces'] # neurons x frames
+                # added below after using data release sessions; the traces that we get from allensdk dataset object are 1 dimensional, so we make them 2 dim
+                if np.ndim(local_fluo_traces)==1 and local_fluo_traces.shape[0]>0:
+                    local_fluo_traces = np.vstack(whole_data[lims_id]['fluo_traces'])
+                    
                 local_time_traces = whole_data[lims_id]['time_trace']  # frame times in sec. Volume rate is 10 Hz. Are these the time of frame onsets?? (I think yes... double checking with Jerome/ Marina.) # dataset.timestamps['ophys_frames'][0]             
                 roi_ids = whole_data[lims_id]['roi_ids']
                 
@@ -329,6 +342,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                     num_omissions = 0
                     this_sess.at[index, ['n_omissions', 'n_neurons', 'frame_dur']] = num_omissions, num_neurons, frame_dur
                              
+                    
+                    
                     
             if doCorrs==-1: # in case an experiment is invalid or there are no omissions we make sure we set this_sess
                 this_sess = this_sess.iloc[:,range(len(cols_basic))].join(this_sess_l) # len(cols_basic) = 13
@@ -482,18 +497,19 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
                         
     #                     if len(image_names_surr_omit) < 3:
     #                         print(f'There are two alternating omissions: {image_names_surr_omit0}')
-                        if len(image_names_surr_omit)>0 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
-                            print('image after omission is different from image before omission! uncanny!') # sys.exit
 
                         # set to nan the omission trace if it was not preceded by another image in the repetitive structure that we expect to see.
                         if len(image_names_surr_omit) == 0: # session_id: 839514418; there is a last omission after 5.23sec of previous image
                             print(f'Omission {iomit} is uncanny! no images around it! so removing it!')
                             local_fluo_allOmitt[:,:, iomit] = np.nan
                             
-                        if len(image_names_surr_omit) == 1: # session_id: 47758278; there is a last omission after 1.48sec of previous image and no images after that!
+                        elif len(image_names_surr_omit) == 1: # session_id: 47758278; there is a last omission after 1.48sec of previous image and no images after that!
                             print(f'Omission {iomit} is uncanny! no images after it! so removing it!')
                             local_fluo_allOmitt[:,:, iomit] = np.nan
-                            
+                          
+                        elif len(image_names_surr_omit)>0 and len(np.unique(image_names_surr_omit[[0,1]]))>1: # the 2nd image after omission could be a different type, but the first after omission should be the same as the one before omission.
+                            print('image after omission is different from image before omission! uncanny!') # sys.exit
+                            local_fluo_allOmitt[:,:, iomit] = np.nan
                         else:
                             
                             '''
@@ -544,7 +560,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
                     except Exception as e:
                         print(f'Omission alignment failed; omission index: {iomit}, omission frame: {local_index}, starting and ending frames: {be, af}') # indiv_time, 
-    #                     print(e)
+                        print(e)
 
 
                 flash_omit_dur_all = np.array(flash_omit_dur_all)
@@ -1101,6 +1117,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
     #                       'cc_cols_area12', 'cc_cols_areaSame', \
     #                       'cc_a12', 'cc_a11', 'cc_a22', 'p_a12', 'p_a11', 'p_a22', \
     #                       'cc_a12_shfl', 'cc_a11_shfl', 'cc_a22_shfl', 'p_a12_shfl', 'p_a11_shfl', 'p_a22_shfl'])
+
         this_sess_allExp = pd.DataFrame([], columns = colsn)
 
         this_sess_allExp.at[0, 'session_id'] = this_sess['session_id'].values[0]
@@ -1125,7 +1142,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
         this_sess_allExp.at[0, 'frame_dur'] = this_sess['frame_dur'].values
 
 
-        if np.logical_and(len(list_omitted)>0, doCorrs==1):                
+        if np.logical_and(len(list_omitted)>0, doCorrs==1):
+            
             #%% Compute correlation coefficient (also try this without shifting and scaling the traces!)
             # between a layer of area1 and and a layer of area2
             # do this on all pairs of neurons
@@ -1173,7 +1191,7 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
             valid_a1 = this_sess_l.iloc[inds_lm]['valid'].values # 4
             valid_a2 = this_sess_l.iloc[inds_v1]['valid'].values # 4
 
-            nfrs = local_fluo_allOmitt_a1[0].shape[0]
+            nfrs = samps_bef + samps_aft #local_fluo_allOmitt_a1[0].shape[0]
     #         n_neurs_a1 = [local_fluo_allOmitt_a1[iexp].shape[1] for iexp in range(len(local_fluo_allOmitt_a1))] # number of neurons for each depth of area 1
     #         n_neurs_a2 = [local_fluo_allOmitt_a2[iexp].shape[1] for iexp in range(len(local_fluo_allOmitt_a2))] # number of neurons for each depth of area 2
             # since de-crosstalking may give planes with 0 neurons, we need to run the following instead of above:
@@ -1196,8 +1214,8 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
 
             # in cols_a1a2: rows are area1 (LM) layers; colums are area2 (V1) layers
             '''
-    #            cols = cc_a1_a2.columns.values
-    #            cols_a1a2 = np.reshape(cols, (4,4), order='C')
+#            cols = cc_a1_a2.columns.values
+#            cols_a1a2 = np.reshape(cols, (4,4), order='C')
             cols_a1a2 = [['l00', 'l01', 'l02', 'l03'],
                         ['l10', 'l11', 'l12', 'l13'],
                         ['l20', 'l21', 'l22', 'l23'],
@@ -1562,9 +1580,10 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
             this_sess = this_sess_allExp
 
 
-
-        #%% Save the output of the analysis (for each session)
+            
         #####################################################################################
+        #####################################################################################
+        #%% Save the output of the analysis (for each session)
         #####################################################################################
         #####################################################################################
 
@@ -1767,54 +1786,4 @@ def omissions_traces_peaks(session_id, experiment_ids, validity_log_all, norm_to
     #    else:
     #        return this_sess_allExp, cc_a1_a2, cc_a1_a1, cc_a2_a2, p_a1_a2, p_a1_a1, p_a2_a2
 
-
-
-
-        #%% Concatanate values for all sessions, once done with all planes of a session
-
-    #    all_sess = all_sess.append(this_sess)
-    #    all_sess = all_sess.rename(columns={"mouse":"mouse_id"})
-    #    all_sess = all_sess.rename(columns={"peak_timing_eachN_trMed":"peak_timing_eachN_traceMed", "peak_amp_eachN_trMed":"peak_amp_eachN_traceMed"})
-
-
-
-
-    #%% 
-    #print(sess_no_omission)
-    # list_all_sessions = list_all_sessions[~np.in1d(list_all_sessions, sess_no_omission)]
-    '''
-    # plt.hist(all_sess.auc_peak_h1_h2.values) #, bins=60)
-    # all_sess.auc_peak_h1_h2
-    print(np.mean(all_sess.auc_peak_h1_h2.values))
-    # fraction of experiments where h1 > h2
-    print(np.mean(all_sess.auc_peak_h1_h2.values < .5))
-    # fraction of experiments where h1 < h2 
-    print(np.mean(all_sess.auc_peak_h1_h2.values > .5))
-    print(np.shape(all_sess.auc_peak_h1_h2))
-    '''
-
-
-    ##%% Save all_sess
-    #
-    #svmn = 'omit_traces_peaks'
-    #now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
-    #name = 'all_sess_%s_%s' %(svmn, now) 
-    #    
-    #    
-    #if saveResults:
-    #    print('Saving .h5 file')
-    #    allSessName = os.path.join(dir_server_me , name + '.h5') # os.path.join(d, svmn+os.path.basename(pnevFileName))
-    #    print(allSessName)
-    #
-    #    # Save to a h5 file                    
-    #    all_sess.to_hdf(allSessName, key='all_sess', mode='w')
-    #    # save input_vars
-    #    input_vars.to_hdf(allSessName, key='input_vars', mode='a')    
-    #    
-    #
-    ##%%
-    ##all_sess = pd.read_hdf('/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/all_sess_omit_traces_peaks_20190826_130759.h5', key='all_sess')
-    ##input_vars = pd.read_hdf('/allen/programs/braintv/workgroups/nc-ophys/Farzaneh/all_sess_omit_traces_peaks_20190826_130759.h5', key='input_vars')
-    #    
-    #    
 

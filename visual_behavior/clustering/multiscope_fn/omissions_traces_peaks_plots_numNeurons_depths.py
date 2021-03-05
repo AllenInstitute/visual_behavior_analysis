@@ -144,12 +144,13 @@ for icre in range(len(cres)):
         plt.subplot(3,4, icre*4 + ip+1)
         plt.hist(nn_plane_now[ip]) # nn_plane_now
         
-        plt.title(f'{cre}\nplane {ip+1}', fontsize=10)        
+        plt.title(f'{cre}\nplane {ip+1}, {avnt} μm', fontsize=10)   
 #         plt.title(f'{arean}, depth {ip+1}\n{avnt} neurons', fontsize=10)        
 #         plt.vlines(avn, 0, 10, 'r',':')
         plt.plot(avn, 0, color='r', marker='*', markersize=10)
         if ip==0:
             plt.ylabel('num sessions', fontsize=10)
+        plt.xlabel('Depth (μm)', fontsize=10)
         makeNicePlots(plt.gca())
         plt.gca().tick_params(labelsize=10)
         

@@ -31,11 +31,11 @@ from svm_images_main_post import *
     
 #%% Get SVM output for each cell type, and each frames_svm.
 
-svm_blocks = np.nan #np.nan #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = -1 #np.nan #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = False #True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
-to_decode = 'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
+trial_type = 'images' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
 time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 
@@ -66,7 +66,13 @@ else:
     cols = np.concatenate((cols0, ['av_w_data', 'av_b_data']))
 
 if ~np.isnan(svm_blocks):
-    br = range(svm_blocks)
+    if svm_blocks==-1: # divide trials into blocks based on the engagement state
+        svmb = 2
+    else:
+        svmb = svm_blocks
+
+    br = range(svmb)    
+
 else:
     br = [np.nan]
 
@@ -126,7 +132,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
                 session_id = int(list_all_sessions_valid[isess])
                 data_list = metadata_basic[metadata_basic['session_id'].values==session_id]
 
-                this_sess = svm_images_main_post(session_id, data_list, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, use_events, doPlots=0)
+                this_sess = svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, frames_svm, time_win, trial_type, to_decode, same_num_neuron_all_planes, cols, analysis_dates, use_events, doPlots=0)
 
                 all_sess = all_sess.append(this_sess) 
 
@@ -161,8 +167,15 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 
             b = '_'.join(project_codes)
             a = f'{cre2ana}_frames{frames_svm[0]}to{frames_svm[-1]}'  # b = '_'.join([str(session_numbers[i]) for i in range(len(session_numbers))])
+
             if ~np.isnan(svm_blocks):
-                a = f'{a}_block{iblock}'
+                if svm_blocks==-1: # divide trials into blocks based on the engagement state
+                    word = 'engaged'
+                else:
+                    word = 'block'
+                
+                a = f'{a}_{word}{iblock}'
+            
             name = f'{name}_{a}_{b}_{now}'
             # print(name)
 

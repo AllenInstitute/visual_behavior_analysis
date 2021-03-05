@@ -13,7 +13,7 @@ Here, we set the following vars:
 trace_peak_allMice_sessPooled : includes vars pooled across all sessions of all mice (for each plane, each area, and each depth); use this to make summary mouse plots, by averaging across pooled sessions of all mice.
 trace_peak_allMice_sessAvSd : includes vars averaged across all sessions of all mice (for each plane, each area, and each depth); use this to make summary mouse plots, by averaging across mice (each mouse is here averaged across sessions).
 
-If all_ABtransit_AbefB_Aall is 1 (analyzing A to B transition), we compute average and standard error traces and peaks, across mice for each cre line. Done for each plane separately (and each session).
+If all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1 is 1 (analyzing A to B transition), we compute average and standard error traces and peaks, across mice for each cre line. Done for each plane separately (and each session).
     # final vars will have size:  num_cre x (8 x num_sessions).
     # remember num_sessions = 2 (last A and first B).
 
@@ -248,7 +248,8 @@ for im in range(len(all_mice_id)): # im=0
         areas = all_sess_2an_this_mouse['area'] # (8*num_sessions)
         depths = all_sess_2an_this_mouse['depth'] # (8*num_sessions)
         planes = all_sess_2an_this_mouse.index.values # (8*num_sessions)
-        
+#         print(len(depths))
+
         #### replicate cre to the number of sessions ####
         cre_exp = np.full((num_planes*num_sessions), cre) # (8*num_sessions)
         
@@ -328,7 +329,7 @@ for im in range(len(all_mice_id)): # im=0
 #%% Remember each row of trace_peak_allMice is for each mouse        
 print(len(trace_peak_allMice)) 
 
-if all_ABtransit_AbefB_Aall == 1: 
+if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1 == 1: 
     session_labs = trace_peak_allMice.iloc[0]['session_labs'] # take it from the 1st mouse, this info is the same for all mice
     num_sessions = len(session_labs) #np.shape(trace_peak_allMice['session_stages'].iloc[icre])[0]
 else:
@@ -414,7 +415,7 @@ for im in range(len(trace_peak_allMice)): # im = 0
 
 #%% Take average across mice of the same cre line, do it for all the columns in trace_peak_allMice
         
-if all_ABtransit_AbefB_Aall==1: # take average across mice for A sessions, and B sessions, separately.
+if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==1: # take average across mice for A sessions, and B sessions, separately.
     
     # groupby below doesnt work in jupyterlab (apparently due to memory issues)!!
     '''       
@@ -505,10 +506,10 @@ if all_ABtransit_AbefB_Aall==1: # take average across mice for A sessions, and B
 
         ###### depth ######
         aa = trace_peak_allMice.iloc[cre_i]['depth'].values 
-    #    aa.shape # num_mice_this_cre
+#         aa.shape # num_mice_this_cre        
         y_thisCre_allMice = np.vstack(aa).T # data from the mice are concatenated vertically: the 1st 16 rows are for one mouse, and the next 16 rows are for the other mouse
-    #    y_thisCre_allMice.shape # (num_sessions*num_planes) x num_mice_this_cre    
-        # compute std across mice (of the same cre line) for each plane     
+#         y_thisCre_allMice.shape # (num_sessions*num_planes) x num_mice_this_cre    
+        # compute std across mice (of the same cre line) for each plane
         d = np.nanmean(y_thisCre_allMice.astype(float), axis=1).squeeze()  # (num_sessions*num_planes)
         ds = np.nanstd(y_thisCre_allMice.astype(float), axis=1).squeeze() / np.sqrt(sum(cre_i))  # (8 x num_sessions)
     

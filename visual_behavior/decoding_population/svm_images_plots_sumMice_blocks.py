@@ -38,7 +38,13 @@ cre_lineso = copy.deepcopy(cre_lines)
 
 
 if ~np.isnan(svm_blocks):
-    br = np.unique(blocks_all)
+    if svm_blocks==-1: # divide trials into blocks based on the engagement state
+        svmb = 2
+    else:
+        svmb = svm_blocks
+
+    br = range(svmb)    
+
 else:
     br = [np.nan]
     
@@ -58,7 +64,8 @@ if ~np.isnan(svm_blocks):
     for istage in np.unique(stages_all): # istage=4
         a = svm_allMice_sessPooled0[stages_allp==istage]
         if len(a) != svm_blocks:
-            sys.exit('data from both blocks dont exist for this stage!')
+            print(f'data from both blocks dont exist for stage {istage}!')
+#             sys.exit(f'data from both blocks dont exist for stage {istage}!')
 
         else:
             mice_blocks = []
@@ -188,7 +195,16 @@ for istage in np.unique(stages_all): # istage=1
             thisCre_mice_num = len(np.unique(thisCre_mice))
 
     
-            if thisCre_pooledSessNum > 0:
+            if svm_blocks==-1:
+                lab_b = f'e{iblock}' # engagement
+            else:
+                lab_b = f'b{iblock}' # block
+
+                    
+            if thisCre_pooledSessNum < 1:
+                print(f'There are no sessions for stage {istage}, mouse {cre}, block {iblock}')
+                
+            else:
                 ###############################
                 #%% Set vars
                 a_all = svm_allMice_sessPooled['area_allPlanes'].values[0]  # 8 x pooledSessNum 
@@ -246,7 +262,7 @@ for istage in np.unique(stages_all): # istage=1
                     depth = depths[iplane] # num_sess
                     lab = '%dum' %(np.mean(depth))
                     if ~np.isnan(svm_blocks):
-                        lab = f'{lab},b{iblock}'
+                        lab = f'{lab},{lab_b}'
 
                     h1_0 = plt.plot(time_trace, av_ts_eachPlane[iplane], color=cols_depth[iplane-num_planes], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]
                     h2 = plt.plot(time_trace, av_sh_eachPlane[iplane], color='gray', label='shfl', markersize=3.5)[0]
@@ -270,7 +286,7 @@ for istage in np.unique(stages_all): # istage=1
                     depth = depths[iplane] # num_sess             
                     lab = '%dum' %(np.mean(depth))
                     if ~np.isnan(svm_blocks):
-                        lab = f'{lab},b{iblock}'
+                        lab = f'{lab},{lab_b}'
 
                     h1_0 = plt.plot(time_trace, av_ts_eachPlane[iplane], color=cols_depth[iplane], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]            
                     h2 = plt.plot(time_trace, av_sh_eachPlane[iplane], color='gray', label='shfl', markersize=3.5)[0]            
@@ -307,7 +323,7 @@ for istage in np.unique(stages_all): # istage=1
                 for iarea in [1,0]: # first plot V1 then LM  #range(a.shape[0]):
                     lab = '%s' %(distinct_areas[iarea])
                     if ~np.isnan(svm_blocks):
-                        lab = f'{lab},b{iblock}'
+                        lab = f'{lab},{lab_b}'
 
                     h1_0 = plt.plot(time_trace, av_ts_pooled_eachArea[iarea], color = cols_area_now[iarea], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]        
                     h2 = plt.plot(time_trace, av_sh_pooled_eachArea[iarea], color='gray', label='shfl', markersize=3.5)[0]
@@ -354,7 +370,7 @@ for istage in np.unique(stages_all): # istage=1
                 for idepth in range(a.shape[0]):
                     lab = '%d um' %(depth_ave[idepth])
                     if ~np.isnan(svm_blocks):
-                        lab = f'{lab},b{iblock}'
+                        lab = f'{lab},{lab_b}'
 
                     h1_0 = plt.plot(time_trace, av_ts_pooled_eachDepth[idepth], color = cols_depth[idepth], label=(lab), markersize=3.5, linestyle=linestyle_now)[0]        
                     h2 = plt.plot(time_trace, av_sh_pooled_eachDepth[idepth], color='gray', label='shfl', markersize=3.5)[0] # gray
@@ -397,10 +413,10 @@ for istage in np.unique(stages_all): # istage=1
             #        x = np.arange(num_depth)
                 lab1 = 'V1'
                 if ~np.isnan(svm_blocks):
-                    lab1 = f'{lab1},b{iblock}'
+                    lab1 = f'{lab1},{lab_b}'
                 lab2 = 'LM'
                 if ~np.isnan(svm_blocks):
-                    lab2 = f'{lab2},b{iblock}'
+                    lab2 = f'{lab2},{lab_b}'
 
                 top = np.nanmean(pa_all[:, cre_all[0,:]==cre], axis=1)
                 top_sd = np.nanstd(pa_all[:, cre_all[0,:]==cre], axis=1) / np.sqrt(sum(cre_all[0,:]==cre))        
@@ -415,7 +431,7 @@ for istage in np.unique(stages_all): # istage=1
                 ax1.errorbar(x, top[inds_v1, 2], yerr=top_sd[inds_v1, 2], fmt=fmt_now, markersize=3, capsize=3, color='gainsboro') # label='V1',  # gray
                 ax1.errorbar(x + xgap_areas, top[inds_lm, 2], yerr=top_sd[inds_lm, 2], fmt=fmt_now, markersize=3, capsize=3, color='gainsboro') # label='LM', # skyblue
 
-                plt.hlines(0, 0, len(x)-1, linestyle=':')
+#                 plt.hlines(0, 0, len(x)-1, linestyle=':')
                 ax1.set_xticks(x)
                 ax1.set_xticklabels(xticklabs, rotation=45)
                 ax1.tick_params(labelsize=10)
@@ -460,9 +476,9 @@ for istage in np.unique(stages_all): # istage=1
             #        x = np.arange(len(distinct_areas))
             #        xticklabs = xticklabs
                 lab = 'data'
-    #             lab = f'{lab},b{iblock}'
+    #             lab = f'{lab},{lab_b}'
                 if ~np.isnan(svm_blocks):
-                    lab = f'b{iblock}'
+                    lab = f'{lab_b}'
 
                 top = np.nanmean(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]]
                 top_sd = np.nanstd(pa_eachArea[:, cre_eachArea[0,:]==cre], axis=1)[[1,0]] / np.sqrt(sum(cre_eachArea[0,:]==cre))   
@@ -475,7 +491,7 @@ for istage in np.unique(stages_all): # istage=1
                 # shuffled data
                 ax1.errorbar(x, top[:,2], yerr=top_sd[:,2], fmt=fmt_now, markersize=3, capsize=3, color='gainsboro') # gray  # , label='shfl'
 
-                plt.hlines(0, 0, len(x)-1, linestyle=':')
+#                 plt.hlines(0, 0, len(x)-1, linestyle=':')
                 ax1.set_xticks(x)
                 ax1.set_xticklabels(xticklabs, rotation=45)
                 ax1.tick_params(labelsize=10)
@@ -498,14 +514,14 @@ for istage in np.unique(stages_all): # istage=1
 
 
 
-            ################################################################
-            ################################################################            
-
+        ################################################################
+        ################################################################            
+        if thisCre_pooledSessNum > 0:
             plt.suptitle('%s, %d mice, %d total sessions: %s' %(cre, thisCre_mice_num, thisCre_pooledSessNum, session_labs_all), fontsize=14)
 
 
             #%% Add title, lines, ticks and legend to all plots
-            
+
             plt.subplot(gs1[0])
             a = areas[[inds_v1[0], inds_lm[0]], 0]
     #         lims = lims_v1lm
@@ -584,7 +600,11 @@ for istage in np.unique(stages_all): # istage=1
                 #         if ~np.isnan(svm_blocks):
                 #             fgn = fgn + f'_block{iblock}'
 
-                fgn = f'{fgn}_blocks_frames{frames_svm[0]}to{frames_svm[-1]}'                        
+                if svm_blocks==-1:
+                    word = 'engagement'
+                else:
+                    word = 'blocks'
+                fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
                 fgn = fgn + '_ClassAccur'
 
                 nam = f'{cre[:3]}_aveMice_aveSessPooled{fgn}_{now}'

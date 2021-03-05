@@ -17,7 +17,7 @@ Created on Thu Sep 12 18:37:08 2019
 ##########################################################################################
 
 #%%
-if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B sessions, separately.
+if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==1: # plot average across mice for A sessions, and B sessions, separately.
 
     #%% Decide if you want to plot interpolated or original traces
     #(because I am using linear interpolation it makes no difference really!)
@@ -38,7 +38,7 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
 #    xlim = [-1.2, 2.25] # [-13, 24]
     frame_dur_new = np.diff(xnow)[0]
     r = np.round(np.array(xlim) / frame_dur_new).astype(int)
-    xlim_frs = np.arange(int(np.argwhere(xnow==0).squeeze()) + r[0], int(np.argwhere(xnow==0).squeeze()) + r[1] + 1)
+    xlim_frs = np.arange(int(np.argwhere(xnow==0).squeeze()) + r[0], min(trace_now.shape[-1], int(np.argwhere(xnow==0).squeeze()) + r[1] + 1))
     
     #num_depth = 4
     bbox_to_anchor = (.92, .72)
@@ -497,9 +497,10 @@ if all_ABtransit_AbefB_Aall==1: # plot average across mice for A sessions, and B
         # each shows resp modulation for 4 depths.
                 
         # depth_ave_allCre[icre].shape  # (8 x num_sessions)
-        d = np.reshape(depth_ave_allCre[icre], (num_planes, num_sessions), order='F') # 8 x num_sessions
-        depth_ave = np.mean(d, axis=1) # 8 # average across A,B sessions
-
+#         d = np.reshape(depth_ave_allCre[icre], (num_planes, num_sessions), order='F') # 8 x num_sessions
+#         depth_ave = np.mean(d, axis=1) # 8 # average across A,B sessions
+        depth_ave = np.mean(np.reshape(depth_ave_allCre[icre], (num_depth, 2, num_sessions), order='F'), axis=(1,2))
+                                                                                             
         # same ylim for all layers and areas
         mn = np.min(top - top_sd)
         mx = np.max(top + top_sd)

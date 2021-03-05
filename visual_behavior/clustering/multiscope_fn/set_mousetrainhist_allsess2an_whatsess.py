@@ -168,6 +168,9 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
     # 6B --> blank!!! --> 1A
 
 
+    
+    
+    
     #%% Set all_sess_transit_AB: a subset of all_sess that includes data only for consecutive A-B transitions    
     # Also set all_sess_transit_A: a subset of all_sess that includes data only for A sessions (preceding any B session).    
         # 0 : Ah
@@ -185,6 +188,9 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
     # B to A (4 to 1)
     # all B to all A (4/5 to 1/2)
 
+    
+    each_row_is_one_exp = type(all_sess.iloc[0]['experiment_id'])=='str' or type(all_sess.iloc[0]['experiment_id'])==str
+
     all_sess_transit_AB = pd.DataFrame([]) # similar to all_sess, except it only includes data for consecutive A-B transitions
     all_sess_A_befB = pd.DataFrame([]) # only A sessions (A, Ap) that happened before a B session.
     all_sess_A_all = pd.DataFrame([]) # all A (A, Ap), regardless of whethere they happened before or after B sessions.
@@ -192,7 +198,7 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
     all_sess_B_first = pd.DataFrame([]) # first B (B or Bp)
     all_sess_AB_all_NotB1 = pd.DataFrame([]) # all A and B (A, Ap, B, Bp), except for the 1st B session.
     
-    for im in range(len(all_mice_id)): # im=7
+    for im in range(len(all_mice_id)): # im=0
 
         print(f'\n===========================================================\n')
         mouse_id = all_mice_id[im]
@@ -241,7 +247,10 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
         strs = trainHist_this_mouse.iloc[all_A_inds]['date'].values
         a = np.in1d(strm, strs) # rows in all_sess_this_mouse that have the desired stage transitions 
         # remember strs may not exist in all_sess ... either because convert code is not run yet, or because the session is not valid
-        print(f'\nImaging data includes {sum(a)} total A sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        if each_row_is_one_exp:
+            print(f'\nImaging data includes {sum(a)/num_planes} total A sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        else:
+            print(f'\nImaging data includes {sum(a)} total A sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
         all_sess_A_all = all_sess_A_all.append(all_sess_this_mouse[a])
 
 
@@ -269,7 +278,10 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
         strs = trainHist_this_mouse.iloc[all_B_inds]['date'].values
         a = np.in1d(strm, strs) # rows in all_sess_this_mouse that have the desired stage transitions 
         # remember strs may not exist in all_sess ... either because convert code is not run yet, or because the session is not valid
-        print(f'\nImaging data includes {sum(a)} total B sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        if each_row_is_one_exp:
+            print(f'\nImaging data includes {sum(a)/num_planes} total B sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        else:
+            print(f'\nImaging data includes {sum(a)} total B sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
         all_sess_B_all = all_sess_B_all.append(all_sess_this_mouse[a])
 
 
@@ -299,7 +311,10 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
         strs = trainHist_this_mouse.iloc[all_B_inds]['date'].values
         a = np.in1d(strm, strs) # rows in all_sess_this_mouse that have the desired stage transitions 
         # remember strs may not exist in all_sess ... either because convert code is not run yet, or because the session is not valid
-        print(f'\nImaging data includes {sum(a)} B1 sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        if each_row_is_one_exp:
+            print(f'\nImaging data includes {sum(a)/num_planes} B1 sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!            
+        else:
+            print(f'\nImaging data includes {sum(a)} B1 sessions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
         all_sess_B_first = all_sess_B_first.append(all_sess_this_mouse[a])
         
         
@@ -339,7 +354,10 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
         strs = trainHist_this_mouse.iloc[all_B_inds]['date'].values
         a = np.in1d(strm, strs) # rows in all_sess_this_mouse that have the desired stage transitions 
         # remember strs may not exist in all_sess ... either because convert code is not run yet, or because the session is not valid
-        print(f'\nImaging data includes {sum(a)} total A & B sessions excluding B1.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        if each_row_is_one_exp:
+            print(f'\nImaging data includes {sum(a)/num_planes} total A & B sessions excluding B1.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        else:
+            print(f'\nImaging data includes {sum(a)} total A & B sessions excluding B1.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!            
         all_sess_AB_all_NotB1 = all_sess_AB_all_NotB1.append(all_sess_this_mouse[a])
 
         
@@ -364,7 +382,10 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
         strs = trainHist_this_mouse.iloc[A_inds]['date'].values
         a = np.in1d(strm, strs) # rows in all_sess_this_mouse that have the desired stage transitions 
         # remember strs may not exist in all_sess ... either because convert code is not run yet, or because the session is not valid
-        print(f'\nImaging data includes {sum(a)} A sessions before any B session.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        if each_row_is_one_exp:
+            print(f'\nImaging data includes {sum(a)/num_planes} A sessions before any B session.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+        else:
+            print(f'\nImaging data includes {sum(a)} A sessions before any B session.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
         all_sess_A_befB = all_sess_A_befB.append(all_sess_this_mouse[a])
 
 
@@ -405,21 +426,29 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
             a = np.in1d(strm, strs) # rows in all_sess_this_mouse that have the desired stage transitions 
             # remember strs may not exist in all_sess ... either because convert code is not run yet, or because the session is not valid
             if sum(a)>0: 
-                print(f'\nImaging data includes {sum(a)-1} A-B transitions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+                if each_row_is_one_exp:
+                    print(f'\nImaging data includes {sum(a)/num_planes} A-B transitions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
+                else:   
+                    print(f'\nImaging data includes {sum(a)-1} A-B transitions.\n') # for each transition, we expect to have 16 True elements in a. (8 for session A planes, 8 for session B planes); if it is only 8, then it means one of the sessions is not valid!
             else:
                 print(f'\nImaging data includes no A-B transitions.\n')
     #        print(all_sess_this_mouse[a].loc[0].iloc[0], all_sess_this_mouse[a].loc[0].iloc[1])
     
             ### NOTE: double check below
-            if len(all_sess['experiment_id'].iloc[0])==1: # each row of all_sess is for 1 experiment
-                if 0 < sum(a) < 2*num_planes: # we need at least 2 sessions! (hence data from 16 planes) when studying transitions
+            if each_row_is_one_exp: # each row of all_sess is for 1 experiment
+                if ~(sum(a) >= 2*num_planes): # we need at least 2 sessions! (hence data from 16 planes) when studying transitions
                     print('At least one of the sessions is not valid, hence excluding!')
+                else:
+                    all_sess_transit_AB = all_sess_transit_AB.append(all_sess_this_mouse[a])
             else:            
                 all_sess_transit_AB = all_sess_transit_AB.append(all_sess_this_mouse[a])
 
                 
                 
-    if type(all_sess.iloc[0]['experiment_id'])=='str' or type(all_sess.iloc[0]['experiment_id'])==str: # svm analysis: each row of all_sess is one experiment, so we divide the numbers below by 8 to reflect number of sessions.
+                
+    print(f'======================== Summary ==========================')            
+
+    if each_row_is_one_exp: # svm analysis: each row of all_sess is one experiment, so we divide the numbers below by 8 to reflect number of sessions.
         print('\nnumber of all A sessions (before or after B): %d' %(len(all_sess_A_all)/num_planes))
         print('number of all B sessions (before or after A): %d' %(len(all_sess_B_all)/num_planes))        
         print('number of first B sessions: %d' %(len(all_sess_B_first)/num_planes))        
@@ -489,6 +518,8 @@ def set_mousetrainhist_allsess2an_whatsess(all_sess, dir_server_me, all_mice_id,
         whatSess = '_Bfirst'
     elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==6:       
         whatSess = '_ABallButB1'
+    
+    
     
     
     return all_sess_2an, whatSess

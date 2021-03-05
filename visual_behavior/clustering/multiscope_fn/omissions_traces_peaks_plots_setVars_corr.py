@@ -126,6 +126,8 @@ def set_flash_win_final(cre, session_novel, flash_win, flash_win_vip):
     return flash_win_final
 
 
+
+
 #%% Quantify corr after flash, and after omission (to get the heatmap of corrs!)
 
 def quant_cc(cc_sessAv, fo_dur, list_times, list_times_flash, samps_bef, flash_win_final0, frame_dur, num_depth, sameBl_allLayerPairs): # cc_sessAv = cc11_sessAv

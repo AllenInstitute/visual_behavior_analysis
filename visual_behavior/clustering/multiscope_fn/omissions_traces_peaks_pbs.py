@@ -130,7 +130,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
 
         # vip, except for B1, needs a different timewindow for computing image-triggered average (because its response precedes the image).
         # sst, slc, and vip B1 sessions all need a timewindow that immediately follows the images.
-        if np.logical_and(cre.find('Vip')==1 , session_novel) or cre.find('Vip')==-1: # VIP B1, SST, SLC: window after images (response follows the image)
+        if np.logical_and(cre.find('Vip')==0 , session_novel) or cre.find('Vip')==-1: # VIP B1, SST, SLC: window after images (response follows the image)
             flash_win_final = flash_win # [0, .75]
 
         else: # VIP (non B1,familiar sessions): window precedes the image (pre-stimulus ramping activity)
@@ -1810,7 +1810,7 @@ use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will l
 
 saveResults = 1  # save the all_sess pandas at the end
 
-doCorrs = 1  # -1 #0 #1 # if -1, only get the traces, dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
+doCorrs = 1  #-1 #0 #1 # if -1, only get the traces, dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
 # note: when doCorrs=1, run this code on the cluster: omissions_traces_peaks_init_pbs.py (this will call omissions_traces_peaks_pbs.py) 
 num_shfl_corr = 2 #50 # set to 0 if you dont want to compute corrs for shuffled data # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
 subtractSigCorrs = 1 # if 1, compute average response to each image, and subtract it out from all trials of that image. Then compute correlations; ie remove signal correlations.
@@ -1915,6 +1915,7 @@ for k in list(dictNow.keys()):
 # 'list_all_experiments_valid',
 # 'list_all_experiments']  
 '''
+
 validity_log_all = [] # defining it here because we commented above. The right thing is to just remove it from the function input, but for now leaving it...
     
     
@@ -1927,24 +1928,60 @@ import pandas as pd
 import numpy as np
 import visual_behavior.data_access.loading as loading
 
-metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
-metadata_valid = pd.read_csv(metadata_meso_dir)
+# metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
+# metadata_valid = pd.read_csv(metadata_meso_dir)
+experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+experiments_table = experiments_table.reset_index('ophys_experiment_id')
+metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
+
 sessions_ctDone = metadata_valid['ophys_session_id'].unique()
 print(sessions_ctDone.shape)
 
 
 list_all_sessions_valid = sessions_ctDone
 
+print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
+
+
+# get the list of 8 experiments for all sessions
 experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
-i = np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)
-metadata_all = experiments_table[i]
-list_all_experiments = np.reshape(experiments_table[i]['ophys_experiment_id'].values, (8, len(sessions_ctDone)), order='F').T    
-list_all_experiments = np.sort(list_all_experiments)
+metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
 
-print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
+
+# set the list of experiments for each session in list_all_sessions_valid
+try:
+    list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
+
+except Exception as E:
+    print(E)
     
+    list_all_experiments = []
+    for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
+        es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
+        list_all_experiments.append(es)
+    list_all_experiments = np.array(list_all_experiments)
+
+    list_all_experiments.shape
+
+    b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
+    no8 = list_all_sessions_valid[b!=8]
+    if len(no8)>0:
+        print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
+        list_all_sessions_valid = list_all_sessions_valid[b==8]
+        list_all_experiments = list_all_experiments[b==8]
+
+        print(list_all_sessions_valid.shape, list_all_experiments.shape)
+
+    list_all_experiments = np.vstack(list_all_experiments)
+
+
+list_all_experiments = np.sort(list_all_experiments)
+print(list_all_experiments.shape)
+
+
+
 
     
     
@@ -2054,7 +2091,7 @@ isess = int(sys.argv[1])
 
 
 #%% Run the main function
-    
+
 session_id = list_all_sessions_valid[isess] #session_id = int(list_all_sessions_valid[isess]) # experiment_ids = list_all_experiments_valid[isess]
 experiment_ids = list_all_experiments[isess] # we want to have the list of all experiments for each session regardless of whethere they were valid or not... this way we can find the same plane across all sessions.
 
@@ -2068,12 +2105,12 @@ print(f'\n{sum(np.in1d(experiment_ids, experiment_ids_valid)==False)} of the exp
 
 #cnt_sess = cnt_sess + 1
 print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
-#print('%d: session %d out of %d sessions' %(session_id, cnt_sess+1, len(list_all_sessions_valid)))
+# print('%d: session %d out of %d sessions' %(session_id, cnt_sess+1, len(list_all_sessions_valid)))
 
 
 
 
-# call the main function
+#%% Call the main function
 
 this_sess = omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_ids_valid, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median,
    doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, cols_basic, colsa, cols_this_sess_l, use_ct_traces, use_np_corr, use_common_vb_roi, controlSingleBeam_oddFrPlanes, doPlots, doROC)
@@ -2081,6 +2118,7 @@ this_sess = omissions_traces_peaks(metadata_all, session_id, experiment_ids, exp
 # this_sess = omissions_traces_peaks_pbs(session_id, experiment_ids, validity_log_all, norm_to_max, mean_notPeak, peak_win, flash_win, flash_win_timing, flash_win_vip, bl_percentile, num_shfl_corr, trace_median,
 #        doScale, doShift, doShift_again, bl_gray_screen, samps_bef, samps_aft, doCorrs, subtractSigCorrs, saveResults, cols, use_ct_traces, doPlots, doROC)
     
+
 
 
 

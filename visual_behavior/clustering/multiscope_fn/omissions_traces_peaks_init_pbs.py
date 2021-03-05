@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+UUSE this code for the correlation analysis.
+USE omissions_traces_peaks_init.py for the population-average analysis.
+
+
 Created on Wed Jul 31 13:24:19 2019
 
 @author: farzaneh
@@ -14,8 +18,7 @@ import visual_behavior.data_access.loading as loading
 # data release sessions
 # experiments_table = loading.get_filtered_ophys_experiment_table()
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
-# multiscope sessions
-metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope']
+metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
 
 
 # Use the new list of sessions that are de-crosstalked and will be released in March 2021
@@ -86,36 +89,52 @@ sessions_ctDone = aa
 #%%
 # print(sessions_ctDone.shape)
 
-
 list_all_sessions_valid = sessions_ctDone
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
 
-
+# get the list of 8 experiments for all sessions
 experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
 experiments_table = experiments_table.reset_index('ophys_experiment_id')
 
 metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
+metadata_all.shape
+metadata_all.shape[0]/8
+# cache = loading.get_visual_behavior_cache()
+# experiments = cache.get_experiment_table()    
+# experiments_table = experiments
 
-# set the list of experiments for each session
-list_all_experiments = np.reshape(experiments_table[i]['ophys_experiment_id'].values, (8, len(sessions_ctDone)), order='F').T    
+
+# set the list of experiments for each session in list_all_sessions_valid
+try:
+    list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
+
+except Exception as E:
+    print(E)
+    
+    list_all_experiments = []
+    for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
+        es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
+        list_all_experiments.append(es)
+    list_all_experiments = np.array(list_all_experiments)
+
+    list_all_experiments.shape
+
+    b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
+    no8 = list_all_sessions_valid[b!=8]
+    if len(no8)>0:
+        print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
+        list_all_sessions_valid = list_all_sessions_valid[b==8]
+        list_all_experiments = list_all_experiments[b==8]
+
+        print(list_all_sessions_valid.shape, list_all_experiments.shape)
+
+    list_all_experiments = np.vstack(list_all_experiments)
+
+
 list_all_experiments = np.sort(list_all_experiments)
+print(list_all_experiments.shape)
 
 
-
-list_all_experiments = []
-for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
-    es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
-    list_all_experiments.append(es)
-list_all_experiments = np.array(list_all_experiments)
-
-b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
-no8 = list_all_sessions_valid[b!=8]
-if len(no8)>0:
-    print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
-
-    
-    
-    
     
 #########################################################################################################
 #%%

@@ -40,7 +40,7 @@ Created on Mon Aug 26 12:23:25 2019
 
     
 #%%
-doCorrs = 1 #1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
+doCorrs = 0 #1 # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm. If -1, only get the omisstion-aligned traces, dont compute peaks, mean, etc.  
 analysis_dates = ['20210215'] #['20210211'] #['20201119'] #['20200731'] #(subtractSigCorrs=1) #['20200804'] #(subtractSigCorrs=0) #['20200508_23'] #['20200424'] # will be used if doCorrs=1; the dates that correlation outputs (pkl files) were saved; we will only load pkl files saved on these dates. # normally it will be only 1 date, but in case the analysis lasted more than a day.  
 # note: analysis_dates must not include the entire date_time (eg '20200508_233842'), because the code below assumes it is followed by some wildcard characters.
 control_single_beam = 0 #1 # if 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope 
@@ -49,7 +49,7 @@ subtractSigCorrs = 1 # only applicable to doCorrs=1; # if 1, the corr files were
 
 use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 
-all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1 = 3 # a number between 0 to 6 # 0: analyze all sessions;  1: analyze AB transitions;  2: analyze only A sessions (before any B);  3: analyze all A sessions (before or after B);   4: analyze all B sessions (before or after A)    ;   5: analyze the first B session;   6: analyze all A and B sessions except for B1
+all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1 = 3 #5 #3 # a number between 0 to 6 # 0: analyze all sessions;  1: analyze AB transitions;  2: analyze only A sessions (before any B);  3: analyze all A sessions (before or after B);   4: analyze all B sessions (before or after A)    ;   5: analyze the first B session;   6: analyze all A and B sessions except for B1
 only_1st_transit = 1 # relevant only if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1=1 # if 1, only include data from the 1st A-->B transition even if a mouse has more than one (safer, since in the subsequent transitions, B has been already introduced, so they are not like the 1st A-->B transition)
 
 same_y_fo = 1 # in summary mice plots, use the same ylim for image- and omission-evoked responses.
@@ -203,15 +203,17 @@ print(np.shape(all_sess))
 frame_durs = np.array([all_sess.iloc[i]['frame_dur'] for i in range(len(all_sess))])
 if doCorrs==1:
     frame_durs = frame_durs[:,0] # take it only for one of the experiments
-    
+
 rmv = np.logical_or(frame_durs < .093, frame_durs > .094)
 if sum(rmv)>0:
-    print(f'{sum(rmv)} sessions have unusual frame duration. Take a look at these sessions, and add them to set_sessions_valid, line 178 to be excluded.')
-    print(f"session ids: {all_sess['session_id'].values[rmv]}")
+    s = np.unique(all_sess['session_id'].values[rmv])
+    print(f'{len(s)} sessions have unusual frame duration. Take a look at these sessions, and add them to set_sessions_valid, line 178 to be excluded.')
+    print(f"session ids: {s}")
     print(f'frame durations: {frame_durs[rmv]}')
 
-    print(f'\n\nRemoving {sum(rmv)} sessions with unexpected frame duration!!\n\n')
-    all_sess = all_sess[~rmv]
+    print(f'\n\nRemoving {len(s)} sessions with unexpected frame duration!!\n\n')
+    all_sess = all_sess[~all_sess['session_id'].isin(s)]
+#     all_sess = all_sess[~rmv]
 
         
 #%%    
@@ -302,6 +304,8 @@ time_trace, time_trace_new, xmjn, flashes_win_trace_index_unq_time, grays_win_tr
         set_timetrace_flashesind_allmice_areas(samps_bef, samps_aft, frame_dur, doCorrs, all_sess)
 
 
+
+
 #%% Set sessions for analysis based on the desired stage (A, B, transition, etc)
 
 print(f"\n\nIMPORTANT NOTE: make sure 'mouse_trainHist_all2' file is up to date; To do so, set_mouse_trainHist_all2.py needs to have the updated list of all_mice_id, and set_mouse_trainHist_init_pbs.py (which calls the xxxall2 function) needs to be run on the cluster.")
@@ -359,31 +363,34 @@ fgn, ylabel, ylab_short, lab_peakMean, lab_med = set_figname_labels(peak_win, fl
 
 # Path for saving figures
 if doCorrs==1:
-    dir_now = 'corr_omit_flash'
+    dir_now = 'correlations_omit_flash'
     if control_single_beam==1:
-        dir_now = os.path.join(dir_now, 'control_single_beam')
-        
-    if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==0:
-        dir_now = os.path.join(dir_now, 'A_B_all')
-    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==1: 
-        dir_now = os.path.join(dir_now, 'AB_transit')
-    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==2: 
-        dir_now = os.path.join(dir_now, 'A_beforeB')
-    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==3: 
-        dir_now = os.path.join(dir_now, 'A_all')
-    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==4:       
-        dir_now = os.path.join(dir_now, 'B_all')
-    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==5:       
-        dir_now = os.path.join(dir_now, 'B_first')
-    elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==6:       
-        dir_now = os.path.join(dir_now, 'A_B_all_notB1')
-        
-        
+        dir_now = os.path.join(dir_now, 'control_single_beam')                
 elif doCorrs==0:
-    dir_now = 'omit_across_sess'
+    dir_now = 'averages_omit_across_sess'
 elif doCorrs==-1:
     dir_now = 'umap_cluster'
 
+    
+if all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==0:
+    dir_now = os.path.join(dir_now, 'A_B_all')
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==1: 
+    if only_1st_transit:
+        dir_now = os.path.join(dir_now, 'AB_transit_first')
+    else:
+        dir_now = os.path.join(dir_now, 'AB_transit')
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==2: 
+    dir_now = os.path.join(dir_now, 'A_beforeB')
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==3: 
+    dir_now = os.path.join(dir_now, 'A_all')
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==4:       
+    dir_now = os.path.join(dir_now, 'B_all')
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==5:       
+    dir_now = os.path.join(dir_now, 'B_first')
+elif all_ABtransit_AbefB_Aall_Ball_Bfirst_ABallButB1==6:       
+    dir_now = os.path.join(dir_now, 'A_B_all_notB1')
+
+        
 fmt = '.pdf'
 if not os.path.exists(os.path.join(dir0, dir_now)):
     os.makedirs(os.path.join(dir0, dir_now))

@@ -1659,6 +1659,7 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
     # Go through data from each plane (experiment)
     for indiv_id in list_mesoscope_exp: # indiv_id = list_mesoscope_exp[0] # indiv_id = experiment_ids[0]
         
+        print(f'\n============ experiment_id:{indiv_id} ============\n')
         indiv_id = int(indiv_id)
         
         ##### Set whole_data #### 
@@ -1673,6 +1674,12 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
     
             indiv_id_with_dataset = indiv_id
             
+            try:
+                table_stim = dataset.stimulus_presentations
+            except Exception as e:
+                print(f'Cannot get dataset.stimulus_presentations; will try again on for a different experiment!')
+                print(e)
+                
             ###
             if 0: #use_ct_traces: # now (2/10/2021 decrosstalked traces are part of lims; so we get them from dataset object)
                 print('Using crosstalk-corrected dff traces.')
@@ -1844,6 +1851,7 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
             print('\t%s' %e)
 
             
+            
         # We have to get depth from Mouse-seeks database
         db_cursor = DB.find({"lims_id":indiv_id})
         indiv_data['imaging_depth'] = db_cursor[0]['lims_ophys_experiment']['depth']       
@@ -1898,8 +1906,8 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
     '''
     
     ####### use allensdk instead of above
-    dataset = loading.get_ophys_dataset(indiv_id_with_dataset, include_invalid_rois=False)
-    table_stim = dataset.stimulus_presentations
+#     dataset = loading.get_ophys_dataset(indiv_id_with_dataset, include_invalid_rois=False)
+#     table_stim = dataset.stimulus_presentations
     
     
     
@@ -1920,9 +1928,18 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
     
     ### allensdk
     behav_data['running_speed'] = dataset.running_speed['speed']
-    behav_data['licks'] = dataset.rewards['timestamps']
-    behav_data['rewards'] = dataset.licks['timestamps']    
-    
+    try:
+        behav_data['licks'] = dataset.rewards['timestamps']
+    except Exception as e:
+        print(e)
+        behav_data['licks'] = np.nan
+        
+    try:
+        behav_data['rewards'] = dataset.licks['timestamps']    
+    except Exception as e:
+        print(e)
+        behav_data['rewards'] = np.nan
+        
     # below needs work
 #     behavior_data = dataset.get_rolling_performance_df()
 #     behavior_data['rolling_dprime']
