@@ -150,7 +150,7 @@ def plot_behavior_and_cell_traces_pop_avg(dataset, xlim_seconds=None, save_figur
         print('no behavior model output for', dataset.ophys_experiment_id)
     ax[1] = plot_behavior(dataset.ophys_experiment_id, xlim_seconds=xlim_seconds, plot_stimuli=True, ax=ax[1])
     ax[1] = plot_traces(dataset, include_cell_traces=False, plot_stimuli=False, xlim_seconds=xlim_seconds, label='pop. avg. dFF', ax=ax[1])
-    ax[1] = plot_traces(dataset, include_cell_traces=False, plot_stimuli=False, xlim_seconds=xlim_seconds, label='pop. avg. events'
+    ax[1] = plot_traces(dataset, include_cell_traces=False, plot_stimuli=False, xlim_seconds=xlim_seconds, label='pop. avg. events',
                         use_events=True, ax=ax[1])
     ax[2] = plot_traces(dataset, include_cell_traces=True, plot_stimuli=True, xlim_seconds=xlim_seconds, ax=ax[2])
     plt.subplots_adjust(wspace=0, hspace=0.1)
