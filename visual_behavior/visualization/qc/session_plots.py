@@ -21,23 +21,40 @@ def plot_running_speed(dataset, ax=None):
         matplotlib figure axis -- ax
     """
     running_speed = dataset.running_speed['speed']
-    ophys_session_id = dataset.metadata['ophys_session_id']
+    behavior_session_id = dataset.metadata['behavior_session_id']
     if ax is None:
         fig, ax = plt.subplots(figsize=(15, 3))
     ax.plot(running_speed)
     ax.set_xlabel('time (s)')
     ax.set_ylabel('running speed\n(cm/s)')
-    ax.set_title('running speed for ophys_session_id: {}'.format(ophys_session_id))
+    ax.set_title('running speed for behavior_session_id: {}'.format(behavior_session_id))
 
     return ax
 
 
-def plot_lick_raster(ophys_session_id, ax=None, response_window=[0.15, 0.75]):
-    trials = data_loading.get_sdk_trials(ophys_session_id)
+def plot_lick_raster(dataset, ax=None):
+    """takes a BehaviorOphysSession or BehaviorSession
+    dataset and plots a lick raster.
+
+    Parameters
+    ----------
+    dataset : [type]
+        [description]
+    ax : [type], optional
+        [description], by default None
+
+    Returns
+    -------
+    [type]
+        [description]
+    """
+    trials = dataset.trials.reset_index()
+    response_window = dataset.task_parameters['response_window_sec']
+    behavior_session_id = dataset.metadata['behavior_session_id']  
     if ax is None:
         figsize = (5, 10)
         fig, ax = plt.subplots(figsize=figsize)
-    for trial in trials.trials_id.values:
+    for trial in trials.index.values:
         trial_data = trials.iloc[trial]
         # get times relative to change time
         trial_start = trial_data.start_time - trial_data.change_time
@@ -59,5 +76,5 @@ def plot_lick_raster(ophys_session_id, ax=None, response_window=[0.15, 0.75]):
     ax.set_xlim([-1, 4])
     ax.set_ylabel('trials')
     ax.set_xlabel('time (sec)')
-    ax.set_title('lick raster')
+    ax.set_title('lick raster for behavior_session_id: {}'.format(behavior_session_id))
     return ax
