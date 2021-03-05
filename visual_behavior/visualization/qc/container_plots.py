@@ -250,9 +250,10 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         ax[i].set_title(str(ophys_experiment_id) + '\n' + session_type)
 
         try:
-         ax[i + n] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i + n])
-        except:
+            ax[i + n] = ep.plot_valid_segmentation_mask_outlines_per_cell_for_experiment(ophys_experiment_id, ax=ax[i + n])
+        except Exception as e:
             print('cant plot valid masks for', ophys_experiment_id)
+            print('error: {}'.format(e))
         # try:
         #     ax[i + (n * 2)] = ep.plot_valid_segmentation_mask_overlay_for_experiment(ophys_experiment_id, ax=ax[i + (n * 2)])
         #     ax[i + (n * 2)].set_title('valid ROI masks')
@@ -265,8 +266,9 @@ def plot_segmentation_mask_overlays_for_container(ophys_container_id, save_figur
         try:
             ax[i + (n * 3)] = ep.plot_remaining_decrosstalk_masks_for_experiment(ophys_experiment_id, ax=ax[i + (n * 3)])
             ax[i + (n * 3)].set_title('remaining crosstalk')
-        except:
+        except Exception as e:
             print('cant plot remaining decrosstalk for', ophys_experiment_id)
+            print('error: {}'.format(e))
 
     if save_figure:
         ut.save_figure(fig, figsize, loading.get_container_plots_dir(), 'segmentation_mask_overlays', 'container_' + str(ophys_container_id))

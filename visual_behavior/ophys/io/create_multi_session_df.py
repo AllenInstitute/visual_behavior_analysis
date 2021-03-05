@@ -6,7 +6,7 @@ import visual_behavior.ophys.response_analysis.utilities as ut
 from visual_behavior.data_access import loading
 
 
-def get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False):
+def get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, use_extended_stimulus_presentations=True):
     if 'stimulus' in df_name:
         flashes = True
         omitted = False
@@ -35,7 +35,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
         try:
             print(experiment_id)
             dataset = loading.get_ophys_dataset(experiment_id)
-            analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=True)
+            analysis = ResponseAnalysis(dataset, use_events=use_events, use_extended_stimulus_presentations=use_extended_stimulus_presentations)
             df = analysis.get_response_df(df_name)
             df['ophys_experiment_id'] = experiment_id
             if 'passive' in dataset.metadata['session_type']:

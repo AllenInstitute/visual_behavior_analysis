@@ -56,15 +56,13 @@ def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavio
     :param behavior_session_id:
     :return:
     """
-    # cache = loading.get_visual_behavior_cache()
-    # behavior_session_table = cache.get_behavior_session_table()
     behavior_session_table = behavior_session_table[behavior_session_table.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
-    donor_id = behavior_session_table.loc[behavior_session_id].donor_id
+    mouse_id = behavior_session_table.loc[behavior_session_id].mouse_id
     session_type = behavior_session_table.loc[behavior_session_id].session_type
     image_set = session_type.split('_')[3]
     date = behavior_session_table.loc[behavior_session_id].date_of_acquisition
     # check how many behavior sessions prior to this date had the same image set
-    cdf = behavior_session_table[(behavior_session_table.donor_id == donor_id)].copy()
+    cdf = behavior_session_table[(behavior_session_table.mouse_id == mouse_id)].copy()
     pre_expts = cdf[(cdf.date_of_acquisition < date)]
     image_set_exposures = int(len([session_type for session_type in pre_expts.session_type if 'images_' + image_set in session_type]))
     return image_set_exposures
@@ -97,16 +95,16 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id, behavior
     :param behavior_session_id:
     :return: The number of behavior sessions where omitted flashes were present, prior to the current session
     """
-    # cache = loading.get_visual_behavior_cache()
-    # behavior_session_table = cache.get_behavior_session_table()
     behavior_session_table = behavior_session_table[behavior_session_table.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
-    donor_id = behavior_session_table.loc[behavior_session_id].donor_id
+    mouse_id = behavior_session_table.loc[behavior_session_id].mouse_id
     date = behavior_session_table.loc[behavior_session_id].date_of_acquisition
     # check how many behavior sessions prior to this date had the same image set
-    cdf = behavior_session_table[(behavior_session_table.donor_id == donor_id)].copy()
+    cdf = behavior_session_table[(behavior_session_table.mouse_id == mouse_id)].copy()
     pre_expts = cdf[(cdf.date_of_acquisition < date)]
     # check how many behavior sessions prior to this date had omissions
     import datetime
+    # THIS IS A HACK, NEED TO REPLACE THIS WITH REFERENCE TO MTRAIN REGIMENS COMMIT HASH FOR WHEN THE CHANGE TO
+    # REMOVE OMISSIONS FROM HABITUATION SESSIONS OCCURED
     date_of_change = 'Feb 15 2019 12:00AM'
     date_of_change = datetime.datetime.strptime(date_of_change, '%b %d %Y %I:%M%p')
     if date < date_of_change:

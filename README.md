@@ -70,7 +70,7 @@ Then, we create the "core" data structure: a dictionary with licks, rewards, tri
 ``` Python
 from visual_behavior.translator.foraging2 import data_to_change_detection_core
 
-core_data = foraging2.data_to_change_detection_core(data)
+core_data = data_to_change_detection_core(data)
 ```
 
 Finally, we create an "extended" dataframe for use in generating trial-level plots and analysis.
@@ -85,6 +85,28 @@ extended_trials = create_extended_dataframe(
     time=core_data['time'],
 )
 ```
+
+## Testing
+
+Before committing and/or submitting a pull request, it is ideal to run tests.  
+
+Tests are currently run against Python 3.6.12 and 3.7.7 on github using CircleCI. You can replicate those tests locally as follows:  
+
+    conda create -n test_36 python=3.6.12
+    conda activate test_36
+    pip install .[DEV]
+    pytest -m "not onprem"
+
+    conda create -n test_37 python=3.7.7
+    conda activate test_37
+    pip install .[DEV]
+    pytest -m "not onprem"
+
+The `not onprem` argument will skip all tests that can only be run on internal Allen Institute servers and are marked as `onprem`. Alternatively, for internal Allen Institute users, the call to pytest could be called without an argument, which would run all tests.
+
+CircleCI also tests that all files meet Pep 8 style requirements using the Flake8 module - a process referred to as 'linting'. Linting can be performed locally before commiting using Flake8 as follows:
+
+    flake8 {FILE_TO_CHECK}
 
 ## Contributing
 
