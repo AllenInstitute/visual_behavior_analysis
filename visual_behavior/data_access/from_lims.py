@@ -338,3 +338,34 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
 # def get_ophys_session_ids_for_supercontainer_id(ophys_supercontainer_id):
 # def get_behavior_session_id_for_supercontainer_id(behavior_session_id):
 # def get_ophys_container_ids_for_supercontainer_id(ophys_supercontainer_id):
+
+
+### WELL KNOWN FILE FILEPATHS ###
+
+def get_timeseries_ini_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the 
+       timeseries_XYT.ini file for a given ophys session.
+       Notes: only Scientifca microscopes prodice timeseries.ini files
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session id
+
+    Returns:
+
+    """
+    ophys_session_id = int(ophys_session_id)
+    mixin = lims_engine
+    mixin = lims_engine
+    QUERY = '''
+    SELECT wkf.storage_directory || wkf.filename
+    FROM well_known_files wkf
+    JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
+    JOIN specimens sp ON sp.id=wkf.attachable_id
+    JOIN ophys_sessions os ON os.specimen_id=sp.id
+    WHERE wkft.name = 'SciVivoMetadata'
+    AND wkf.storage_directory LIKE '%ophys_session_{0}%'
+    AND os.id = {0}
+    '''.format(ophys_session_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
