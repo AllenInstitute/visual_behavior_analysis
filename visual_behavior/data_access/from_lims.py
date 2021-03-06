@@ -458,3 +458,16 @@ def get_demixed_traces_filepath(ophys_experiment_id):
     RealDict_object = mixin.select(query)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
+
+
+def get_neuropil_traces_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 514173078 AND
+    attachable_id = {0}'''.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
