@@ -387,3 +387,31 @@ def get_dff_traces_filepath(ophys_experiment_id):
     RealDict_object = mixin.select(query)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
+
+
+def get_rigid_motion_transform_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    # build query
+    query = '''
+    SELECT
+    wkf.storage_directory || wkf.filename AS transform_file
+
+    FROM
+    ophys_experiments oe
+
+    JOIN well_known_files wkf
+    ON wkf.attachable_id = oe.id
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    w`kf.attachable_type = 'OphysExperiment'
+    AND
+    wkft.name = 'OphysMotionXyOffsetData'
+    AND oe.id = {}
+    '''.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
