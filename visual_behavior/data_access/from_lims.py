@@ -415,3 +415,28 @@ def get_rigid_motion_transform_filepath(ophys_experiment_id):
     RealDict_object = mixin.select(query)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
+
+
+    def get_objectlist_filepath(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to get the location information
+       for the objectlist.txt file for a given cell segmentation run
+
+    Arguments:
+        segmentation_run_id {int} -- 9 digit segmentation run id
+
+    Returns:
+        list -- list with storage directory and filename
+    """
+    current_segmentation_run_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
+    mixin = lims_engine
+    query = '''
+    SELECT wkf.storage_directory, wkf.filename
+    FROM well_known_files wkf
+    JOIN well_known_file_types wkft on wkf.well_known_file_type_id = wkft.id
+    JOIN ophys_cell_segmentation_runs ocsr on wkf.attachable_id = ocsr.id
+    WHERE wkft.name = 'OphysSegmentationObjects'
+    AND wkf.attachable_type = 'OphysCellSegmentationRun'
+    AND ocsr.id = {0}'''.format(current_segmentation_run_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
