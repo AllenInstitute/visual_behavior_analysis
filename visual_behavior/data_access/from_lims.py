@@ -556,3 +556,33 @@ def get_session_h5_filepath(ophys_session_id):
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
+
+
+def get_behavior_avi_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        video-0 avi (behavior video) file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    mixin = lims_engine
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 695808672 AND
+    attachable_id = {0}
+
+    '''.format(ophys_session_id)
+    RealDict_object = mixin.select(QUERY)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_behavior_h5_filepath(ophys_session_id):
+    avi_filepath = get_behavior_avi_filepath(ophys_session_id)
+    h5_filepath = avi_filepath[:-3] + "h5"
+    return h5_filepath
