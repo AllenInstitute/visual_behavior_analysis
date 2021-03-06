@@ -751,3 +751,18 @@ def load_demixed_traces_array(ophys_experiment_id):
     return demixed_traces_array
 
 
+def load_neuropil_traces_array(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to find and load
+            "neuropil_traces.h5" then return the traces as an array
+
+        Arguments:
+            ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+        Returns:
+            neuropil_traces_array -- mxn array where m = rois and n = time
+        """
+    filepath = get_neuropil_traces_filepath(ophys_experiment_id)
+    f = h5py.File(filepath, 'r')
+    neuropil_traces_array = np.asarray(f['data'])
+    f.close()
+    return neuropil_traces_array
