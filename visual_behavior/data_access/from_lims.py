@@ -1,5 +1,8 @@
 import os
 import warnings
+import numpy as np
+import pandas as pd
+
 import from_lims_utilities as utils
 from allensdk.internal.api import PostgresQueryMixin
 
@@ -711,7 +714,7 @@ def get_deepcut_h5_filepath(ophys_session_id):
 ### WELL KNOWN FILES ###
 
 
-def get_average_intensity_projection(ophys_experiment_id):
+def load_average_intensity_projection(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
     mixin = lims_engine
     # build query
@@ -729,3 +732,22 @@ def get_average_intensity_projection(ophys_experiment_id):
     AND oe.id = {}'''.format(ophys_experiment_id)
     average_intensity_projection = mixin.select(query)
     return average_intensity_projection
+
+
+def load_demixed_traces_array(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to find and load
+            "demixed_traces.h5" then return the traces as an array
+
+        Arguments:
+            ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+        Returns:
+            demixed_traces_array -- mxn array where m = rois and n = time
+        """
+    filepath = get_demixed_traces_filepath(ophys_experiment_id)
+    demix_file = h5py.File(filepath, 'r')
+    demixed_traces_array = np.asarray(demix_file['data'])
+    demix_file.close()
+    return demixed_traces_array
+
+
