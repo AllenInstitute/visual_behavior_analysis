@@ -1,4 +1,5 @@
 import os
+import h5py
 import warnings
 import numpy as np
 import pandas as pd
@@ -766,3 +767,24 @@ def load_neuropil_traces_array(ophys_experiment_id):
     neuropil_traces_array = np.asarray(f['data'])
     f.close()
     return neuropil_traces_array
+
+
+def load_motion_corrected_movie(ophys_experiment_id):
+    """uses well known file system to get motion_corrected_movie.h5
+        filepath and then loads the h5 file with h5py function.
+        Gets the motion corrected movie array in the h5 from the only
+        datastream/key 'data' and returns it.
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+    Returns:
+        HDF5 dataset -- 3d array-like  (z, y, x) dimensions
+                        z: timeseries/frame number
+                        y: single frame y axis
+                        x: single frame x axis
+    """
+    filepath = get_motion_corrected_movie_filepath(ophys_experiment_id)
+    motion_corrected_movie_file = h5py.File(filepath, 'r')
+    motion_corrected_movie = motion_corrected_movie_file['data']
+    return motion_corrected_movie
