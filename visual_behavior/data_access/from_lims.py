@@ -471,3 +471,27 @@ def get_neuropil_traces_filepath(ophys_experiment_id):
     RealDict_object = mixin.select(query)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
+
+
+def get_motion_corrected_movie_filepath(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to get the
+        "motion_corrected_movie.h5" information for a given
+        ophys_experiment_id
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+    Returns:
+        [type] -- [description]
+    """
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 886523092 AND
+     attachable_id = {0}
+    '''.format(ophys_experiment_id)
+    RealDict_object = mixin.select(QUERY)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
