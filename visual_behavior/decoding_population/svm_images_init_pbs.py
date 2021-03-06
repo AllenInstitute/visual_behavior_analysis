@@ -7,24 +7,97 @@ Created on Thu Oct 9 12:29:43 2020
 @author: farzaneh
 """
 
+import numpy as np
+import visual_behavior.data_access.loading as loading
+import numpy as np
+# import os
+# import pickle
+
 
 #%% Define vars for svm_images analysis
 
-cre2ana = 'slc' # slc, sst, vip # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
 to_decode = 'current' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image. # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!
 trial_type = 'images' # 'images_omissions', 'images', 'changes', 'omissions' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 #### NOTE: svm codes will result in decoding 9 classes (8 images + omissions) when to_decode='previous' and trial_type='images'. (it wont happen when to_decode='current' because above we only include images for trial_type='images'; it also wont happen when trial_type='omissions' or 'changes', because changes and omissions are not preceded by omissions (although rarely we do see double omissions))
 # if you want to also decode omissions (in addition to the 8 images) when to_decode='current', you should set trial_type='images_omissions'; HOWEVER, I dont think it's a good idea to mix image and omission aligned traces because omission aligned traces may have prediction/error signal, so it wont be easy to interpret the results bc we wont know if the decoding reflects image-evoked or image-prediciton/error related signals.
 
-project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+use_events = True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
+svm_blocks = -1 #np.nan # 2 #np.nan # -1: divide trials based on engagement # 2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+engagement_pupil_running = 1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? only effective if svm_blocks=-1
+
+# cre2ana = 'slc' # slc, sst, vip # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
+# project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
+
+
+
+
+#%% Use March 2021 data release sessions
+
+# experiments_table = loading.get_filtered_ophys_experiment_table()
+experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
+
+
+# Use the new list of sessions that are de-crosstalked and will be released in March 2021
+# metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
+# metadata_valid = pd.read_csv(metadata_meso_dir)
+
+sessions_ctDone = metadata_valid['ophys_session_id'].unique()
+# sessions_ctDone.shape
+
+list_all_sessions_valid = sessions_ctDone
+print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
+
+
+#%% Get the list of all 8 experiments for each session, regardless of being valid
+
+experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
+experiments_table = experiments_table.reset_index('ophys_experiment_id')
+
+metadata_all = experiments_table[experiments_table['ophys_session_id'].isin(list_all_sessions_valid)==True] # metadata_all = experiments_table[np.in1d(experiments_table['ophys_session_id'].values, list_all_sessions_valid)]
+metadata_all.shape
+metadata_all.shape[0]/8
+
+
+
+# set the list of experiments for each session in list_all_sessions_valid
+try:
+    list_all_experiments = np.reshape(metadata_all['ophys_experiment_id'].values, (8, len(list_all_sessions_valid)), order='F').T    
+
+except Exception as E:
+    print(E)
+    
+    list_all_experiments = []
+    for sess in list_all_sessions_valid: # sess = list_all_sessions_valid[0]
+        es = metadata_all[metadata_all['ophys_session_id']==sess]['ophys_experiment_id'].values
+        list_all_experiments.append(es)
+    list_all_experiments = np.array(list_all_experiments)
+
+    list_all_experiments.shape
+
+    b = np.array([len(list_all_experiments[i]) for i in range(len(list_all_experiments))])
+    no8 = list_all_sessions_valid[b!=8]
+    if len(no8)>0:
+        print(f'The following sessions dont have all the 8 experiments, excluding them! {no8}')    
+        list_all_sessions_valid = list_all_sessions_valid[b==8]
+        list_all_experiments = list_all_experiments[b==8]
+
+        print(list_all_sessions_valid.shape, list_all_experiments.shape)
+
+    list_all_experiments = np.vstack(list_all_experiments)
+
+
+list_all_experiments = np.sort(list_all_experiments)
+print(list_all_experiments.shape)
+
+
 
 
 #%%
-import os
-import pickle
-
+'''
 # below is not needed anymore; just set session_numbers to a negative value so we load stim response df for cre lines (not the concat version that does not exist for all mice)
 session_numbers = [-10] #[4] # for slc, set to a value <0 (because for slc the concatenated stim response dfs could not be saved, so we have to load a different metadata file below)
+
 
 #%% Load the pickle file which includes session and metadata information.
 
@@ -50,7 +123,7 @@ else:
     pkl = open(filen, 'rb')
     metadata_basic = pickle.load(pkl)
     list_all_sessions_valid = metadata_basic[metadata_basic['valid']]['session_id'].unique()
-
+'''
 
 
 
@@ -91,7 +164,7 @@ job_settings.update({
 
 cnt_sess = -1     
 
-for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
+for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
     
     session_id = int(list_all_sessions_valid[isess])
 
@@ -115,10 +188,12 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # sessio
     '''
 
     python_arg1 = '%s ' %isess
-    python_arg2 = '%s ' %filen
+    python_arg2 = '%s ' %use_events
     python_arg3 = '%s ' %to_decode
-    python_arg4 = '%s' %trial_type
-    print(python_arg1 + python_arg2 + python_arg3 + python_arg4)
+    python_arg4 = '%s ' %trial_type
+    python_arg5 = '%s ' %svm_blocks    
+    python_arg6 = '%s' %engagement_pupil_running
+    print(python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6)
     
     
     #%%    
@@ -129,7 +204,7 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -5 # sessio
     PythonJob(
         python_file,
         python_executable = '/home/farzaneh.najafi/anaconda3/envs/visbeh/bin/python',
-        python_args = python_arg1 + python_arg2 + python_arg3 + python_arg4,
+        python_args = python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6,
 #         python_args = str(session_data) + str(session_trials), # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
 #         python_args = isess, # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
         conda_env = None,
