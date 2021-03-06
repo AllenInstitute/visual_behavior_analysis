@@ -508,3 +508,51 @@ def get_extracted_trace_filepath(ophys_experiment_id):
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
+
+
+def get_session_pkl_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        session pkl file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    mixin = lims_engine
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 610487715 AND
+     attachable_id = {0}
+
+    '''.format(ophys_session_id)
+    RealDict_object = mixin.select(QUERY)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_session_h5_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        session h5 file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    mixin = lims_engine
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 610487713 AND
+     attachable_id = {0}
+
+    '''.format(ophys_session_id)
+    RealDict_object = mixin.select(QUERY)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
