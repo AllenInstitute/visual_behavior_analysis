@@ -682,3 +682,26 @@ def get_screen_mapping_h5_filepath(ophys_session_id):
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
+
+
+def get_deepcut_h5_filepath(ophys_session_id):
+    """use SQL and the LIMS well known file system to get the
+        screen mapping .h5 file information for a given
+        ophys_session_id
+
+    Arguments:
+        ophys_session_id {int} -- 9 digit ophys session ID
+
+    Returns:
+        [type] -- [description]
+    """
+    QUERY = '''
+     SELECT storage_directory || filename
+     FROM well_known_files
+     WHERE well_known_file_type_id = 990460508 AND
+     attachable_id = {0}
+
+    '''.format(ophys_session_id)
+    RealDict_object = mixin.select(QUERY)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
