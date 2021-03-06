@@ -10,7 +10,7 @@ Created on Thu Oct 9 12:29:43 2020
 import numpy as np
 import visual_behavior.data_access.loading as loading
 import numpy as np
-# import os
+import os
 # import pickle
 
 
