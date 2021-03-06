@@ -705,3 +705,27 @@ def get_deepcut_h5_filepath(ophys_session_id):
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
+
+
+
+### WELL KNOWN FILES ###
+
+
+def get_average_intensity_projection(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    # build query
+    query = '''
+    SELECT wkf.storage_directory || wkf.filename AS avgint_file
+    FROM ophys_experiments oe
+    JOIN ophys_cell_segmentation_runs ocsr
+    ON ocsr.ophys_experiment_id = oe.id
+    JOIN well_known_files wkf ON wkf.attachable_id=ocsr.id
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+    WHERE ocsr.current = 't'
+    AND wkf.attachable_type = 'OphysCellSegmentationRun'
+    AND wkft.name = 'OphysAverageIntensityProjectionImage'
+    AND oe.id = {}'''.format(ophys_experiment_id)
+    average_intensity_projection = mixin.select(query)
+    return average_intensity_projection
