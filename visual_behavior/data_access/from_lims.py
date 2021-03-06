@@ -417,9 +417,10 @@ def get_rigid_motion_transform_filepath(ophys_experiment_id):
     return filepath
 
 
-    def get_objectlist_filepath(ophys_experiment_id):
-    """use SQL and the LIMS well known file system to get the location information
-       for the objectlist.txt file for a given cell segmentation run
+def get_objectlist_filepath(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to get the location 
+       information for the objectlist.txt file for a given cell 
+       segmentation run
 
     Arguments:
         segmentation_run_id {int} -- 9 digit segmentation run id
@@ -437,6 +438,23 @@ def get_rigid_motion_transform_filepath(ophys_experiment_id):
     WHERE wkft.name = 'OphysSegmentationObjects'
     AND wkf.attachable_type = 'OphysCellSegmentationRun'
     AND ocsr.id = {0}'''.format(current_segmentation_run_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_demixed_traces_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT wkf.storage_directory || wkf.filename AS demix_file
+    FROM ophys_experiments oe
+    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+    WHERE wkf.attachable_type = 'OphysExperiment'
+    AND wkft.name = 'DemixedTracesFile'
+    AND oe.id = {};""".format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
