@@ -344,6 +344,22 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
 # def get_behavior_session_id_for_supercontainer_id(behavior_session_id):
 # def get_ophys_container_ids_for_supercontainer_id(ophys_supercontainer_id):
 
+### TABLES ###
+
+### ROI ### 
+
+def get_lims_cell_exclusion_labels(experiment_id):
+    mixin = lims_engine
+    query = '''
+    SELECT oe.id AS oe_id, cr.id AS cr_id , rel.name AS excl_label
+    FROM ophys_experiments oe
+    JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id=oe.id AND ocsr.current = 't'
+    JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id
+    JOIN cell_rois_roi_exclusion_labels crrel ON crrel.cell_roi_id=cr.id
+    JOIN roi_exclusion_labels rel ON rel.id=crrel.roi_exclusion_label_id
+    WHERE oe.id = {} '''.format(experiment_id)
+    return mixin.select(query)
+
 
 ### WELL KNOWN FILE FILEPATHS ###
 
@@ -712,8 +728,7 @@ def get_deepcut_h5_filepath(ophys_session_id):
 
 
 
-### WELL KNOWN FILES ###
-
+### WELL KNOWN FILES ###   # noqa: F841
 
 def load_average_intensity_projection(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
@@ -820,7 +835,7 @@ def load_objectlist(ophys_experiment_id):
         experiment_id {[int]} -- 9 digit unique identifier for the experiment
 
     Returns:
-        dataframe -- dataframe with the following columns: 
+        dataframe -- dataframe with the following columns:
                     (from http://confluence.corp.alleninstitute.org/display/IT/Ophys+Segmentation)
             trace_index:The index to the corresponding trace plot computed
                         (order of the computed traces in file _somaneuropiltraces.h5)
@@ -851,14 +866,14 @@ def load_objectlist(ophys_experiment_id):
             mean_enhanced_intensity: Mean enhanced brightness of the object
             max_intensity: Max brightness of the object
             max_enhanced_intensity: Max enhanced brightness of the object
-            intensity_ratio: (max_enhanced_intensity - mean_enhanced_intensity) 
+            intensity_ratio: (max_enhanced_intensity - mean_enhanced_intensity)
                              / mean_enhanced_intensity, for detecting dendrite objects
             soma_minus_np_mean: mean of (soma trace – its neuropil trace)
             soma_minus_np_std: 1-sided stdv of (soma trace – its neuropil trace)
-            sig_active_frames_2_5:# frames with significant detected activity (spiking) : 
+            sig_active_frames_2_5:# frames with significant detected activity (spiking):
                                   Sum ( soma_trace > (np_trace + Snpoffsetmean+ 2.5 * Snpoffsetstdv)
                                   trace_38_soma.png  See example traces attached.
-            sig_active_frames_4: # frames with significant detected activity (spiking): 
+            sig_active_frames_4: # frames with significant detected activity (spiking):
                                  Sum ( soma_trace > (np_trace + Snpoffsetmean+ 4.0 * Snpoffsetstdv)
             overlap_count: 	Number of other objects the object overlaps with
             percent_area_overlap: the percentage of total object area that overlaps with other objects
