@@ -495,3 +495,16 @@ def get_motion_corrected_movie_filepath(ophys_experiment_id):
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
+
+
+def get_extracted_trace_filepath(ophys_experiment_id):
+    mixin = lims_engine
+    QUERY = '''
+    SELECT storage_directory || filename
+    FROM well_known_files
+    WHERE well_known_file_type_id = 486797213 AND
+    attachable_id = {0}
+    '''.format(ophys_experiment_id)
+    RealDict_object = mixin.select(QUERY)
+    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    return filepath
