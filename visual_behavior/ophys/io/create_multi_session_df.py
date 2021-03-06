@@ -66,11 +66,7 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
             print(e)
             print('problem for', experiment_id)
 
-    # suffix is unused. Commenting out for now
-    # if use_events:
-    #     suffix = '_events'
-    # else:
-    #     suffix = ''
+
     if 'level_0' in mega_mdf.keys():
         mega_mdf = mega_mdf.drop(columns='level_0')
     if 'index' in mega_mdf.keys():

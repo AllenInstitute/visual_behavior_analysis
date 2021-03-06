@@ -7,7 +7,6 @@ import visual_behavior.data_access.loading as loading
 from visual_behavior.visualization.ophys import timeseries_figures as tf
 
 
-
 if __name__ == '__main__':
     import sys
     experiment_id = sys.argv[1]
@@ -28,11 +27,7 @@ if __name__ == '__main__':
     tf.plot_behavior_and_cell_traces_pop_avg(dataset, xlim_seconds, save_figure=True)
     tf.plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=xlim_seconds, save_figure=True)
 
-
     xlim_seconds = None
     tf.plot_behavior_and_pop_avg(dataset, xlim_seconds, save_figure=True)
     tf.plot_behavior_and_cell_traces_pop_avg(dataset, xlim_seconds, save_figure=True)
     tf.plot_behavior_and_pop_avg_mesoscope(ophys_session_id, xlim_seconds=None, save_figure=True)
-
-
-
