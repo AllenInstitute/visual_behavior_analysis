@@ -361,7 +361,7 @@ def get_timeseries_ini_filepath(ophys_session_id):
     ophys_session_id = int(ophys_session_id)
     mixin = lims_engine
     mixin = lims_engine
-    QUERY = '''
+    query = '''
     SELECT wkf.storage_directory || wkf.filename
     FROM well_known_files wkf
     JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
@@ -422,9 +422,9 @@ def get_rigid_motion_transform_filepath(ophys_experiment_id):
 
 
 def get_objectlist_filepath(ophys_experiment_id):
-    """use SQL and the LIMS well known file system to get the location 
-       information for the objectlist.txt file for a given cell 
-       segmentation run
+    """use SQL and the LIMS well known file system to get the
+       location information for the objectlist.txt file for a
+       given cell segmentation run
 
     Arguments:
         segmentation_run_id {int} -- 9 digit segmentation run id
@@ -810,3 +810,67 @@ def load_rigid_motion_transform(ophys_experiment_id):
     filepath = get_rigid_motion_transform_filepath(ophys_experiment_id)
     rigid_motion_transform_df = pd.read_csv(filepath)
     return rigid_motion_transform_df
+
+
+def load_objectlist(ophys_experiment_id):
+    """loads the objectlist.txt file for the current segmentation run,
+       then "cleans" the column names and returns a dataframe
+
+    Arguments:
+        experiment_id {[int]} -- 9 digit unique identifier for the experiment
+
+    Returns:
+        dataframe -- dataframe with the following columns: 
+                    (from http://confluence.corp.alleninstitute.org/display/IT/Ophys+Segmentation)
+            trace_index:The index to the corresponding trace plot computed
+                        (order of the computed traces in file _somaneuropiltraces.h5)
+            center_x: The x coordinate of the centroid of the object in image pixels
+            center_y:The y coordinate of the centroid of the object in image pixels
+            frame_of_max_intensity_masks_file: The frame the object mask is in maxInt_masks2.tif
+            frame_of_enhanced_movie: The frame in the movie enhimgseq.tif that best shows the object
+            layer_of_max_intensity_file: The layer of the maxInt file where the object can be seen
+            bbox_min_x: coordinates delineating a bounding box that
+                        contains the object, in image pixels (upper left corner)
+            bbox_min_y: coordinates delineating a bounding box that
+                        contains the object, in image pixels (upper left corner)
+            bbox_max_x: coordinates delineating a bounding box that
+                        contains the object, in image pixels (bottom right corner)
+            bbox_max_y: coordinates delineating a bounding box that
+                        contains the object, in image pixels (bottom right corner)
+            area: Total area of the segmented object
+            ellipseness: The "ellipticalness" of the object, i.e. length of
+                         long axis divided by length of short axis
+            compactness: Compactness :  perimeter^2 divided by area
+            exclude_code: A non-zero value indicates the object should be excluded from
+                         further analysis.  Based on measurements in objectlist.txt
+                        0 = not excluded
+                        1 = doublet cell
+                        2 = boundary cell
+                        Others = classified as not complete soma, apical dendrite, ....
+            mean_intensity: Correlates with delta F/F.  Mean brightness of the object
+            mean_enhanced_intensity: Mean enhanced brightness of the object
+            max_intensity: Max brightness of the object
+            max_enhanced_intensity: Max enhanced brightness of the object
+            intensity_ratio: (max_enhanced_intensity - mean_enhanced_intensity) 
+                             / mean_enhanced_intensity, for detecting dendrite objects
+            soma_minus_np_mean: mean of (soma trace – its neuropil trace)
+            soma_minus_np_std: 1-sided stdv of (soma trace – its neuropil trace)
+            sig_active_frames_2_5:# frames with significant detected activity (spiking) : 
+                                  Sum ( soma_trace > (np_trace + Snpoffsetmean+ 2.5 * Snpoffsetstdv)
+                                  trace_38_soma.png  See example traces attached.
+            sig_active_frames_4: # frames with significant detected activity (spiking): 
+                                 Sum ( soma_trace > (np_trace + Snpoffsetmean+ 4.0 * Snpoffsetstdv)
+            overlap_count: 	Number of other objects the object overlaps with
+            percent_area_overlap: the percentage of total object area that overlaps with other objects
+            overlap_obj0_index: The index of the first object with which this object overlaps
+            overlap_obj1_index: The index of the second object with which this object overlaps
+            soma_obj0_overlap_trace_corr: trace correlation coefficient
+                                          between soma and overlap soma0
+                                          (-1.0:  excluded cell,  0.0 : NA)
+            soma_obj1_overlap_trace_corr: trace correlation coefficient
+                                          between soma and overlap soma1
+    """
+    filepath = get_objectlist_filepath(ophys_experiment_id)
+    objectlist_dataframe = pd.read_csv(filepath)
+    objectlist_dataframe = utils.update_objectlist_column_labels(objectlist_dataframe)
+    return objectlist_dataframe
