@@ -24,14 +24,14 @@ try:
         port=lims_port)
 
 except Exception as e:
-    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up environment variables appropriately\nfunctions requiring database access will fail'.format(
-        e)
+    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up \
+                   environment variables appropriately\nfunctions requiring database access will fail'.format(e)
     warnings.warn(warn_string)
 
 # building querys
 mixin = lims_engine
 
-# ID TYPES
+### ID TYPES ###
 
 # mouse related IDS
 
@@ -344,9 +344,9 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
 # def get_behavior_session_id_for_supercontainer_id(behavior_session_id):
 # def get_ophys_container_ids_for_supercontainer_id(ophys_supercontainer_id):
 
-### TABLES ###
+### TABLES ###    # noqa: E266
 
-### ROI ### 
+### ROI ###       # noqa: E266
 
 def get_lims_cell_exclusion_labels(experiment_id):
     mixin = lims_engine
@@ -361,10 +361,10 @@ def get_lims_cell_exclusion_labels(experiment_id):
     return mixin.select(query)
 
 
-### WELL KNOWN FILE FILEPATHS ###
+### WELL KNOWN FILE FILEPATHS ###      # noqa: E266
 
 def get_timeseries_ini_filepath(ophys_session_id):
-    """use SQL and the LIMS well known file system to get the 
+    """use SQL and the LIMS well known file system to get the
        timeseries_XYT.ini file for a given ophys session.
        Notes: only Scientifca microscopes prodice timeseries.ini files
 
@@ -727,8 +727,7 @@ def get_deepcut_h5_filepath(ophys_session_id):
     return filepath
 
 
-
-### WELL KNOWN FILES ###   # noqa: F841
+### WELL KNOWN FILES ###      # noqa: E303, E266
 
 def load_average_intensity_projection(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
