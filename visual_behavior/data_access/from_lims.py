@@ -788,3 +788,25 @@ def load_motion_corrected_movie(ophys_experiment_id):
     motion_corrected_movie_file = h5py.File(filepath, 'r')
     motion_corrected_movie = motion_corrected_movie_file['data']
     return motion_corrected_movie
+
+
+def load_rigid_motion_transform(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to locate
+        and load the rigid_motion_transform.csv file for
+        a given ophys_experiment_id
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+    Returns:
+        dataframe -- dataframe with the following columns:
+                        "framenumber":
+                                  "x":
+                                  "y":
+                        "correlation":
+                           "kalman_x":
+                           "kalman_y":
+    """
+    filepath = get_rigid_motion_transform_filepath(ophys_experiment_id)
+    rigid_motion_transform_df = pd.read_csv(filepath)
+    return rigid_motion_transform_df
