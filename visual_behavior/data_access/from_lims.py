@@ -31,7 +31,7 @@ except Exception as e:
 # building querys
 mixin = lims_engine
 
-### ID TYPES ###
+### ID TYPES ###      # noqa: E266
 
 # mouse related IDS
 
@@ -249,7 +249,28 @@ def get_supercontainer_id_for_ophys_session_id(ophys_session_id):
     return supercontainer_id
 
 
-# def get_all_ids_for_ophys_session_id(ophys_session_id):
+def get_all_ids_for_ophys_session_id(ophys_session_id):
+    ophys_session_id = int(ophys_session_id)
+    query = '''
+    SELECT
+    experiments.id as ophys_experiment_id,
+    experiments.ophys_session_id,
+    behavior.id as behavior_session_id,
+    container.visual_behavior_experiment_container_id as ophys_container_id,
+    sessions.visual_behavior_supercontainer_id as supercontainer_id
+
+    FROM
+    ophys_experiments experiments
+
+    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
+    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
+    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+
+    WHERE
+    experiments.ophys_session_id = {}
+    '''.format(ophys_session_id)
+    all_ids = mixin.select(query)
+    return all_ids
 
 # for behavior_session_id
 
