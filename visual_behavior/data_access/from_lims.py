@@ -381,7 +381,25 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
     ophys_session_ids = mixin.select(query)
     return ophys_session_ids
 
-# def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
+
+def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
+    ophys_container_id = int(ophys_container_id)
+    query = '''
+    SELECT
+    sessions.visual_behavior_supercontainer_id as super_container_id
+
+    FROM
+    ophys_experiments experiments
+
+    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
+    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
+    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+
+    WHERE
+    container.visual_behavior_experiment_container_id = {}
+    '''.format(ophys_container_id)
+    container_id = mixin.select(query)
+    return container_id
 
 def get_all_ids_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
@@ -407,7 +425,27 @@ def get_all_ids_for_ophys_container_id(ophys_container_id):
     return all_ids
 
 # for supercontainer_id
-# def get_ophys_experiment_ids_for_supercontainer_id(supercontainer_id):
+def get_ophys_experiment_ids_for_supercontainer_id(supercontainer_id):
+    supercontainer_id = int(supercontainer_id)
+    query = '''
+    SELECT
+    experiments.id as ophys_experiment_id
+
+    FROM
+    ophys_experiments experiments
+
+    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
+    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
+    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+
+    WHERE
+    sessions.visual_behavior_supercontainer_id = {}
+    '''.format(supercontainer_id)
+    all_ids = mixin.select(query)
+    return all_ids
+
+
+
 def get_ophys_session_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
