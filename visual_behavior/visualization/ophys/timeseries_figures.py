@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -54,8 +53,8 @@ def plot_behavior(ophys_experiment_id, xlim_seconds=None, plot_stimuli=True, ax=
     ax2.set_ylabel('pupil area\n(pixels)')
     #     ax2.set_ylim(0, 200)
 
-    lns = ln0 + ln1 + ln2 + ln3  # +ln4
-    labels = [l.get_label() for l in lns]
+    labels = ln0 + ln1 + ln2 + ln3  # +ln4
+    labels = [label.get_label() for label in labels]
     ax.legend(lns, labels, loc='upper left', fontsize='x-small')
 
     #     try:
