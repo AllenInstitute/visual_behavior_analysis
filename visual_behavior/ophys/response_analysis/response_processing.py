@@ -732,7 +732,7 @@ def get_omission_licks_df(dataset, frame_rate=None):
 
 
 def get_lick_triggered_response_xr(dataset, use_events=False, filter_events=False, frame_rate=None):
-    import visual_behavior.data_access.processing as processing 
+    import visual_behavior.data_access.processing as processing
     if use_events:
         if filter_events:
             traces = np.stack(dataset.events['filtered_events'].values)
@@ -745,7 +745,7 @@ def get_lick_triggered_response_xr(dataset, use_events=False, filter_events=Fals
     licks = dataset.licks.copy()
     licks = processing.add_bouts_to_licks(licks)
     # only use the first lick in a bout to trigger averaging
-    licks = licks[licks.lick_in_bout==False]
+    licks = licks[licks.lick_in_bout == False]
     event_times = licks.timestamps.values
     event_ids = licks.index.values
     response_analysis_params = get_default_lick_response_params()
@@ -765,7 +765,6 @@ def get_lick_triggered_response_df(dataset, use_events=False, filter_events=Fals
     df = df.rename(
         columns={'trial_id': 'lick_id', 'trace_id': 'cell_specimen_id'})
     return df
-
 
 
 if __name__ == "__main__":

@@ -66,7 +66,6 @@ def get_multi_session_df(project_code, session_number, df_name, conditions, use_
             print(e)
             print('problem for', experiment_id)
 
-
     if 'level_0' in mega_mdf.keys():
         mega_mdf = mega_mdf.drop(columns='level_0')
     if 'index' in mega_mdf.keys():

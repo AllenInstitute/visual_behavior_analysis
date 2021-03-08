@@ -243,7 +243,7 @@ def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None)
         title = title + '\n outlier for: '
         for col in row_data.values_over_threshold:
             title = title + col + ', '
-    ax.set_title(title);
+    ax.set_title(title)
     return ax
 
 # BEHAVIOR

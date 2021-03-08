@@ -1213,7 +1213,7 @@ def add_hits_to_licks(licks, trials):
     :return: annotated licks dataframe
     """
     licks['hit'] = False
-    hit_licks = [lick_time[0] for lick_time in trials[trials.hit==True].lick_times.values]
+    hit_licks = [lick_time[0] for lick_time in trials[trials.hit == True].lick_times.values]
     indices = licks[licks.timestamps.isin(hit_licks)].index.values
     licks.at[indices, 'hit'] = True
     return licks
@@ -1225,7 +1225,7 @@ def add_bouts_to_licks(licks):
     :param licks: BehaviorOphysSession or BehaviorSession licks dataframe
     :return: annotated licks dataframe
     """
-    licks['inter_flash_lick_diff'] = [licks.iloc[row].timestamps - licks.iloc[row-1].timestamps if row!=0 else np.nan for row in range(len(licks))]
+    licks['inter_flash_lick_diff'] = [licks.iloc[row].timestamps - licks.iloc[row - 1].timestamps if row != 0 else np.nan for row in range(len(licks))]
     lick_times = licks.timestamps.values
     median_inter_lick_interval = np.median(np.diff(np.hstack(list(lick_times))))
     licks['lick_in_bout'] = False
