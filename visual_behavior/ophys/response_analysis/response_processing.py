@@ -64,6 +64,25 @@ def get_default_omission_response_params():
     return omission_response_params
 
 
+def get_default_lick_response_params():
+    '''
+        Get default parameters for computing lick triggered average dFF or events
+        including the window around each lick time to take a snippet of the dF/F trace for each cell,
+        the duration of time after each lick time to take the mean_response,
+        and the duration of time before each lick time to take the baseline_response.
+        Args:
+            None
+        Returns
+            (dict) dict of response window params for computing lick_response_df
+        '''
+    lick_response_params = {
+        "window_around_timepoint_seconds": [-5, 5],
+        "response_window_duration_seconds": 0.75,
+        "baseline_window_duration_seconds": 0.25
+    }
+    return lick_response_params
+
+
 def index_of_nearest_value(sample_times, event_times):
     '''
     The index of the nearest sample time for each event time.
@@ -710,6 +729,43 @@ def get_omission_licks_df(dataset, frame_rate=None):
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
     df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
     return df
+
+
+def get_lick_triggered_response_xr(dataset, use_events=False, filter_events=False, frame_rate=None):
+    import visual_behavior.data_access.processing as processing 
+    if use_events:
+        if filter_events:
+            traces = np.stack(dataset.events['filtered_events'].values)
+        else:
+            traces = np.stack(dataset.events['events'].values)
+    else:
+        traces = np.stack(dataset.dff_traces['dff'].values)
+    trace_ids = dataset.dff_traces.index.values
+    timestamps = dataset.ophys_timestamps
+    licks = dataset.licks.copy()
+    licks = processing.add_bouts_to_licks(licks)
+    # only use the first lick in a bout to trigger averaging
+    licks = licks[licks.lick_in_bout==False]
+    event_times = licks.timestamps.values
+    event_ids = licks.index.values
+    response_analysis_params = get_default_lick_response_params()
+
+    response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
+                                  response_analysis_params, frame_rate)
+    return response_xr
+
+
+def get_lick_triggered_response_df(dataset, use_events=False, filter_events=False, frame_rate=None, df_format='wide'):
+    response_xr = get_lick_triggered_response_xr(dataset, use_events, filter_events, frame_rate)
+
+    if df_format == 'wide':
+        df = response_df(response_xr)
+    elif df_format == 'tidy' or df_format == 'long':
+        df = response_xr.to_dataframe().reset_index()
+    df = df.rename(
+        columns={'trial_id': 'lick_id', 'trace_id': 'cell_specimen_id'})
+    return df
+
 
 
 if __name__ == "__main__":
