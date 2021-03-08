@@ -698,3 +698,43 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
         melted['event_number'] = melted['variable'].map(lambda s: s.split('event_')[1].split('_')[0])
         melted['event_time'] = melted['variable'].map(lambda s: s.split('t=')[1])
         return melted.drop(columns=['variable']).rename(columns={'value': parameter})
+
+
+def annotate_licks(licks, inplace=False, lick_bout_ili=2):
+    '''
+    annotates the licks dataframe with some additional columns
+
+    arguments:
+        licks (pandas.DataFrame): lick dataframe with columns 'timestamps' and 'frame'
+        inplace (boolean): If True, operates in place (default = False)
+        lick_bout_ili (float): interval between licks required to label a lick as the start/end of a licking bout
+
+    returns (only if inplace=False):
+        pandas.DataFrame with columns:
+            timestamps (float): timestamp of every lick
+            frame (int): frame of every lick
+            pre_ili (float): time without any licks before current lick
+            post_ili (float): time without any licks after current lick
+            bout_start (boolean): True if licks is first in bout, False otherwise
+            bout_end (boolean): True if licks is last in bout, False otherwise
+            licks_in_bout (int): Number of licks in current lick bout
+    '''
+    if inplace:
+        licks_df = licks
+    else:
+        licks_df = licks.copy()
+
+    licks_df['pre_ili'] = licks_df['timestamps'] - licks_df['timestamps'].shift(fill_value=-10)
+    licks_df['post_ili'] = licks_df['timestamps'].shift(periods=-1, fill_value=5000) - licks['timestamps']
+    licks_df['bout_start'] = licks_df['pre_ili'] > lick_bout_ILI
+    licks_df['bout_end'] = licks_df['post_ili'] > lick_bout_ILI
+
+    # count licks in every bout
+    licks_df['licks_in_bout'] = np.nan
+    for bout_start_index, row in licks_df.query('bout_start').iterrows():
+        bout_end_index = licks_df.iloc[bout_start_index:].query('bout_end').index[0]
+        licks_df.at[bout_start_index, 'licks_in_bout'] = bout_end_index - bout_start_index + 1
+    licks_df['licks_in_bout'] = licks_df['licks_in_bout'].fillna(method='ffill').astype(int)
+
+    if inplace == False:
+        return licks_df
