@@ -741,8 +741,8 @@ def annotate_licks(dataset, inplace=False, lick_bout_ili=2):
         licks_df.at[bout_start_index, 'lick_bout_number'] = lick_bout_number
         lick_bout_number += 1
 
-        bout_start_time = licks_df.loc[bout_start_index]['timestamps']
-        bout_end_time = licks_df.loc[bout_end_index]['timestamps']
+        bout_start_time = licks_df.loc[bout_start_index]['timestamps']  # NOQA F841
+        bout_end_time = licks_df.loc[bout_end_index]['timestamps']  # NOQA F841
         licks_df.at[bout_start_index, 'bout_rewarded'] = float(len(dataset.rewards.query('timestamps >= @bout_start_time and timestamps <= @bout_end_time')) >= 1)
 
     licks_df['licks_in_bout'] = licks_df['licks_in_bout'].fillna(method='ffill').astype(int)
