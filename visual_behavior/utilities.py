@@ -700,12 +700,12 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
         return melted.drop(columns=['variable']).rename(columns={'value': parameter})
 
 
-def annotate_licks(licks, inplace=False, lick_bout_ili=2):
+def annotate_licks(dataset, inplace=False, lick_bout_ili=2):
     '''
     annotates the licks dataframe with some additional columns
 
     arguments:
-        licks (pandas.DataFrame): lick dataframe with columns 'timestamps' and 'frame'
+        dataset (BehaviorSession or BehaviorOphysSession object): an SDK session object
         inplace (boolean): If True, operates in place (default = False)
         lick_bout_ili (float): interval between licks required to label a lick as the start/end of a licking bout
 
@@ -720,21 +720,34 @@ def annotate_licks(licks, inplace=False, lick_bout_ili=2):
             licks_in_bout (int): Number of licks in current lick bout
     '''
     if inplace:
-        licks_df = licks
+        licks_df = dataset.licks
     else:
-        licks_df = licks.copy()
+        licks_df = dataset.licks.copy()
 
-    licks_df['pre_ili'] = licks_df['timestamps'] - licks_df['timestamps'].shift(fill_value=-10)
-    licks_df['post_ili'] = licks_df['timestamps'].shift(periods=-1, fill_value=5000) - licks['timestamps']
+    licks_df['pre_ili'] = licks_df['timestamps'] - licks_df['timestamps'].shift(fill_value=0)
+    licks_df['post_ili'] = licks_df['timestamps'].shift(periods=-1, fill_value=np.inf) - licks_df['timestamps']
     licks_df['bout_start'] = licks_df['pre_ili'] > lick_bout_ili
     licks_df['bout_end'] = licks_df['post_ili'] > lick_bout_ili
 
-    # count licks in every bout
+    # count licks in every bout, add a lick bout number
     licks_df['licks_in_bout'] = np.nan
+    licks_df['lick_bout_number'] = np.nan
+    licks_df['bout_rewarded'] = np.nan
+    lick_bout_number = 0
     for bout_start_index, row in licks_df.query('bout_start').iterrows():
         bout_end_index = licks_df.iloc[bout_start_index:].query('bout_end').index[0]
         licks_df.at[bout_start_index, 'licks_in_bout'] = bout_end_index - bout_start_index + 1
+
+        licks_df.at[bout_start_index, 'lick_bout_number'] = lick_bout_number
+        lick_bout_number += 1
+
+        bout_start_time = licks_df.loc[bout_start_index]['timestamps']
+        bout_end_time = licks_df.loc[bout_end_index]['timestamps']
+        licks_df.at[bout_start_index, 'bout_rewarded'] = float(len(dataset.rewards.query('timestamps >= @bout_start_time and timestamps <= @bout_end_time')) >= 1)
+
     licks_df['licks_in_bout'] = licks_df['licks_in_bout'].fillna(method='ffill').astype(int)
+    licks_df['lick_bout_number'] = licks_df['lick_bout_number'].fillna(method='ffill').astype(int)
+    licks_df['bout_rewarded'] = licks_df['bout_rewarded'].fillna(method='ffill').astype(bool)
 
     if inplace == False:
         return licks_df
