@@ -726,8 +726,8 @@ def annotate_licks(licks, inplace=False, lick_bout_ili=2):
 
     licks_df['pre_ili'] = licks_df['timestamps'] - licks_df['timestamps'].shift(fill_value=-10)
     licks_df['post_ili'] = licks_df['timestamps'].shift(periods=-1, fill_value=5000) - licks['timestamps']
-    licks_df['bout_start'] = licks_df['pre_ili'] > lick_bout_ILI
-    licks_df['bout_end'] = licks_df['post_ili'] > lick_bout_ILI
+    licks_df['bout_start'] = licks_df['pre_ili'] > lick_bout_ili
+    licks_df['bout_end'] = licks_df['post_ili'] > lick_bout_ili
 
     # count licks in every bout
     licks_df['licks_in_bout'] = np.nan
