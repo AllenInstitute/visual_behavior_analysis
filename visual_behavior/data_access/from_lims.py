@@ -608,27 +608,99 @@ def get_cell_segmentation_runs_table(ophys_experiment_id):
                         created_at{timestamp}:
                         updated_at{timestamp}:
     """
-
-    mixin = lims_engine
+    ophys_experiment_id = int(ophys_experiment_id)
     query = '''
     select *
+
     FROM ophys_cell_segmentation_runs
-    WHERE ophys_experiment_id = {} '''.format(ophys_experiment_id)
+
+    WHERE
+    ophys_experiment_id = {}
+    '''.format(ophys_experiment_id)
     return mixin.select(query)
 
 
+def get_ophys_experiments_table(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    query = '''
+    SELECT
+    oe.id as ophys_experiment_id,
+    oe.workflow_state,
+    oe.storage_directory,
+    oe.ophys_session_id,
+    structures.acronym as targeted_structure,
+    imaging_depths.depth as imaging_depth,
+    oe.calculated_depth,
+    container.visual_behavior_experiment_container_id as ophys_container_id,
+    oe.raw_movie_number_of_frames, 
+    oe.raw_movie_width,
+    oe.raw_movie_height,
+    oe.movie_frame_rate_hz,
+    oe.ophys_imaging_plane_group_id
+
+    FROM
+    ophys_experiments_visual_behavior_experiment_containers container
+    JOIN ophys_experiments oe on oe.id = container.ophys_experiment_id
+    JOIN structures on structures.id = oe.targeted_structure_id
+    JOIN imaging_depths on imaging_depths.id = oe.imaging_depth_id
+
+    WHERE
+    oe.id = {}
+    '''.format(ophys_experiment_id)
+    ophys_experiments_table = mixin.select(query)
+    return ophys_experiments_table
+
+
+def get_ophys_sessions_table(ophys_session_id):
+    ophys_session_id = int(ophys_session_id)
+    query = '''
+    SELECT
+    os.id as ophys_session_id,
+    os.storage_directory,
+    os.workflow_state,
+    os.specimen_id,
+    os.isi_experiment_id,
+    os.parent_session_id,
+    os.date_of_acquisition,
+    equipment.name as equipment_name,
+    projects.code as project,
+    os.stimulus_name as session_type,
+    os.foraging_id,
+    os.stim_delay,
+    os.visual_behavior_supercontainer_id as supercontainer_id
+
+    FROM
+    ophys_sessions os
+    JOIN equipment on equipment.id = os.equipment_id
+    JOIN projects on projects.id = os.project_id
+
+    WHERE
+    os.id = {}
+    '''.format(ophys_session_id)
+    ophys_sessions_table = mixin.select(query)
+    return ophys_sessions_table
+
 ### ROI ###       # noqa: E266
 
-def get_lims_cell_exclusion_labels(experiment_id):
+
+def get_cell_exclusion_labels(ophys_experiment_id):
     mixin = lims_engine
     query = '''
-    SELECT oe.id AS oe_id, cr.id AS cr_id , rel.name AS excl_label
+    SELECT
+    oe.id AS oe_id,
+    cr.id AS cr_id, 
+    rel.name AS excl_label
+
     FROM ophys_experiments oe
+
     JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id=oe.id AND ocsr.current = 't'
     JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id
     JOIN cell_rois_roi_exclusion_labels crrel ON crrel.cell_roi_id=cr.id
     JOIN roi_exclusion_labels rel ON rel.id=crrel.roi_exclusion_label_id
-    WHERE oe.id = {} '''.format(experiment_id)
+
+    WHERE
+    oe.id = {}
+    '''.format(ophys_experiment_id)
     return mixin.select(query)
 
 
@@ -649,12 +721,16 @@ def get_timeseries_ini_filepath(ophys_session_id):
     mixin = lims_engine
     mixin = lims_engine
     query = '''
-    SELECT wkf.storage_directory || wkf.filename
+    SELECT
+    wkf.storage_directory || wkf.filename
+
     FROM well_known_files wkf
     JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
     JOIN specimens sp ON sp.id=wkf.attachable_id
     JOIN ophys_sessions os ON os.specimen_id=sp.id
-    WHERE wkft.name = 'SciVivoMetadata'
+
+    WHERE
+    wkft.name = 'SciVivoMetadata'
     AND wkf.storage_directory LIKE '%ophys_session_{0}%'
     AND os.id = {0}
     '''.format(ophys_session_id)
@@ -668,12 +744,15 @@ def get_dff_traces_filepath(ophys_experiment_id):
     mixin = lims_engine
     # build query
     query = '''
-    SELECT wkf.storage_directory || wkf.filename AS dff_file
+    SELECT
+    wkf.storage_directory || wkf.filename AS dff_file
+
     FROM ophys_experiments oe
     JOIN well_known_files wkf ON wkf.attachable_id = oe.id
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-    WHERE wkft.name = 'OphysDffTraceFile'
+    JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysDffTraceFile'
     AND oe.id = {}'''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -690,17 +769,13 @@ def get_rigid_motion_transform_filepath(ophys_experiment_id):
 
     FROM
     ophys_experiments oe
+    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
 
-    JOIN well_known_files wkf
-    ON wkf.attachable_id = oe.id
-
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
+    JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
 
     WHERE
     w`kf.attachable_type = 'OphysExperiment'
-    AND
-    wkft.name = 'OphysMotionXyOffsetData'
+    AND wkft.name = 'OphysMotionXyOffsetData'
     AND oe.id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
@@ -722,11 +797,15 @@ def get_objectlist_filepath(ophys_experiment_id):
     current_segmentation_run_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
     mixin = lims_engine
     query = '''
-    SELECT wkf.storage_directory, wkf.filename
+    SELECT
+    wkf.storage_directory, wkf.filename
+
     FROM well_known_files wkf
     JOIN well_known_file_types wkft on wkf.well_known_file_type_id = wkft.id
     JOIN ophys_cell_segmentation_runs ocsr on wkf.attachable_id = ocsr.id
-    WHERE wkft.name = 'OphysSegmentationObjects'
+
+    WHERE
+    wkft.name = 'OphysSegmentationObjects'
     AND wkf.attachable_type = 'OphysCellSegmentationRun'
     AND ocsr.id = {0}'''.format(current_segmentation_run_id)
     RealDict_object = mixin.select(query)
@@ -738,11 +817,13 @@ def get_demixed_traces_filepath(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
     mixin = lims_engine
     query = """
-    SELECT wkf.storage_directory || wkf.filename AS demix_file
+    SELECT
+    wkf.storage_directory || wkf.filename AS demix_file
+
     FROM ophys_experiments oe
     JOIN well_known_files wkf ON wkf.attachable_id = oe.id
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
+    JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
+
     WHERE wkf.attachable_type = 'OphysExperiment'
     AND wkft.name = 'DemixedTracesFile'
     AND oe.id = {};""".format(ophys_experiment_id)
@@ -755,10 +836,15 @@ def get_neuropil_traces_filepath(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
     mixin = lims_engine
     query = '''
-    SELECT storage_directory || filename
+    SELECT
+    storage_directory || filename
+
     FROM well_known_files
-    WHERE well_known_file_type_id = 514173078 AND
-    attachable_id = {0}'''.format(ophys_experiment_id)
+
+    WHERE
+    well_known_file_type_id = 514173078
+    AND attachable_id = {0}
+    '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
