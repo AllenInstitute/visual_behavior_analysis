@@ -294,6 +294,7 @@ def get_all_ids_for_ophys_session_id(ophys_session_id):
 
 # for behavior_session_id
 
+
 def get_ophys_experiment_ids_for_behavior_session_id(behavior_session_id):
     behavior_session_id = int(behavior_session_id)
     query = '''
@@ -584,7 +585,6 @@ def get_all_ids_for_supercontainer_id(supercontainer_id):
     '''.format(supercontainer_id)
     all_ids = mixin.select(query)
     return all_ids
-
 
 
 ### TABLES ###    # noqa: E266
