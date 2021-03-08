@@ -53,9 +53,9 @@ def plot_behavior(ophys_experiment_id, xlim_seconds=None, plot_stimuli=True, ax=
     ax2.set_ylabel('pupil area\n(pixels)')
     #     ax2.set_ylim(0, 200)
 
-    labels = ln0 + ln1 + ln2 + ln3  # +ln4
-    labels = [label.get_label() for label in labels]
-    ax.legend(lns, labels, loc='upper left', fontsize='x-small')
+    axes_to_label = ln0 + ln1 + ln2 + ln3  # +ln4
+    labels = [label.get_label() for label in axes_to_label]
+    ax.legend(axes_to_label, labels, loc='upper left', fontsize='x-small')
 
     #     try:
     #         face_motion = dataset.behavior_movie_pc_activations[:, 0]
