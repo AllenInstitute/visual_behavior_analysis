@@ -207,8 +207,7 @@ def get_ophys_experiment_ids_for_ophys_session_id(ophys_session_id):
     SELECT
     id
 
-    FROM
-    ophys_experiments
+    FROM ophys_experiments
 
     WHERE
     ophys_session_id = {}
@@ -224,8 +223,7 @@ def get_behavior_session_id_for_ophys_session_id(ophys_session_id):
     SELECT
     id
 
-    FROM
-    behavior_sessions
+    FROM behavior_sessions
 
     WHERE
     ophys_session_id = {}
@@ -241,11 +239,8 @@ def get_ophys_container_ids_for_ophys_session_id(ophys_session_id):
     SELECT
     container.visual_behavior_experiment_container_id
 
-    FROM
-    ophys_experiments_visual_behavior_experiment_containers container
-
-    JOIN
-    ophys_experiments oe on oe.id = container.ophys_experiment_id
+    FROM ophys_experiments_visual_behavior_experiment_containers container
+    JOIN ophys_experiments oe on oe.id = container.ophys_experiment_id
 
     WHERE
     oe.ophys_session_id = {}
@@ -301,11 +296,8 @@ def get_ophys_experiment_ids_for_behavior_session_id(behavior_session_id):
     SELECT
     oe.id
 
-    FROM
-    behavior_sessions behavior
-
-    JOIN
-    ophys_experiments oe on oe.ophys_session_id = behavior.ophys_session_id
+    FROM behavior_sessions behavior
+    JOIN ophys_experiments oe on oe.ophys_session_id = behavior.ophys_session_id
 
     WHERE
     behavior.id = {}
@@ -328,8 +320,7 @@ def get_ophys_session_id_for_behavior_session_id(behavior_session_id):
     SELECT
     ophys_session_id
 
-    FROM
-    behavior_sessions
+    FROM behavior_sessions
 
     WHERE id = {}'''.format(behavior_session_id)
     ophys_session_id = mixin.select(query)
@@ -342,9 +333,7 @@ def get_ophys_container_id_for_behavior_session_id(behavior_session_id):
     SELECT
     container.visual_behavior_experiment_container_id as ophys_container_id
 
-    FROM
-    ophys_experiments experiments
-
+    FROM ophys_experiments experiments
     JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
     JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
@@ -362,9 +351,7 @@ def get_super_container_id_for_behavior_session_id(behavior_session_id):
     SELECT
     sessions.visual_behavior_supercontainer_id as super_container_id
 
-    FROM
-    ophys_experiments experiments
-
+    FROM ophys_experiments experiments
     JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
     JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
@@ -428,8 +415,7 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
     FROM
     ophys_experiments_visual_behavior_experiment_containers container
 
-    JOIN
-    ophys_experiments oe on oe.id = container.ophys_experiment_id
+    JOIN ophys_experiments oe on oe.id = container.ophys_experiment_id
 
     WHERE
     container.visual_behavior_experiment_container_id = {}
@@ -632,7 +618,7 @@ def get_ophys_experiments_table(ophys_experiment_id):
     imaging_depths.depth as imaging_depth,
     oe.calculated_depth,
     container.visual_behavior_experiment_container_id as ophys_container_id,
-    oe.raw_movie_number_of_frames, 
+    oe.raw_movie_number_of_frames,
     oe.raw_movie_width,
     oe.raw_movie_height,
     oe.movie_frame_rate_hz,
@@ -688,7 +674,7 @@ def get_cell_exclusion_labels(ophys_experiment_id):
     query = '''
     SELECT
     oe.id AS oe_id,
-    cr.id AS cr_id, 
+    cr.id AS cr_id,
     rel.name AS excl_label
 
     FROM ophys_experiments oe
@@ -724,7 +710,9 @@ def get_timeseries_ini_filepath(ophys_session_id):
     SELECT
     wkf.storage_directory || wkf.filename
 
-    FROM well_known_files wkf
+    FROM
+    well_known_files wkf
+
     JOIN well_known_file_types wkft ON wkft.id=wkf.well_known_file_type_id
     JOIN specimens sp ON sp.id=wkf.attachable_id
     JOIN ophys_sessions os ON os.specimen_id=sp.id
@@ -747,13 +735,16 @@ def get_dff_traces_filepath(ophys_experiment_id):
     SELECT
     wkf.storage_directory || wkf.filename AS dff_file
 
-    FROM ophys_experiments oe
+    FROM
+    ophys_experiments oe
+
     JOIN well_known_files wkf ON wkf.attachable_id = oe.id
     JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
 
     WHERE
     wkft.name = 'OphysDffTraceFile'
-    AND oe.id = {}'''.format(ophys_experiment_id)
+    AND oe.id = {}
+    '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
@@ -769,8 +760,8 @@ def get_rigid_motion_transform_filepath(ophys_experiment_id):
 
     FROM
     ophys_experiments oe
-    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
 
+    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
     JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
 
     WHERE
@@ -800,14 +791,17 @@ def get_objectlist_filepath(ophys_experiment_id):
     SELECT
     wkf.storage_directory, wkf.filename
 
-    FROM well_known_files wkf
+    FROM
+    well_known_files wkf
+
     JOIN well_known_file_types wkft on wkf.well_known_file_type_id = wkft.id
     JOIN ophys_cell_segmentation_runs ocsr on wkf.attachable_id = ocsr.id
 
     WHERE
     wkft.name = 'OphysSegmentationObjects'
     AND wkf.attachable_type = 'OphysCellSegmentationRun'
-    AND ocsr.id = {0}'''.format(current_segmentation_run_id)
+    AND ocsr.id = {0}
+    '''.format(current_segmentation_run_id)
     RealDict_object = mixin.select(query)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
@@ -820,13 +814,16 @@ def get_demixed_traces_filepath(ophys_experiment_id):
     SELECT
     wkf.storage_directory || wkf.filename AS demix_file
 
-    FROM ophys_experiments oe
+    FROM
+    ophys_experiments oe
+
     JOIN well_known_files wkf ON wkf.attachable_id = oe.id
     JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
 
     WHERE wkf.attachable_type = 'OphysExperiment'
     AND wkft.name = 'DemixedTracesFile'
-    AND oe.id = {};""".format(ophys_experiment_id)
+    AND oe.id = {};
+    """.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
     return filepath
@@ -839,7 +836,8 @@ def get_neuropil_traces_filepath(ophys_experiment_id):
     SELECT
     storage_directory || filename
 
-    FROM well_known_files
+    FROM
+    well_known_files
 
     WHERE
     well_known_file_type_id = 514173078
@@ -864,10 +862,14 @@ def get_motion_corrected_movie_filepath(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
     mixin = lims_engine
     QUERY = '''
-     SELECT storage_directory || filename
-     FROM well_known_files
-     WHERE well_known_file_type_id = 886523092 AND
-     attachable_id = {0}
+     SELECT
+     storage_directory || filename
+
+     FROM
+     well_known_files
+
+     WHERE well_known_file_type_id = 886523092
+     AND attachable_id = {0}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -877,10 +879,15 @@ def get_motion_corrected_movie_filepath(ophys_experiment_id):
 def get_extracted_trace_filepath(ophys_experiment_id):
     mixin = lims_engine
     QUERY = '''
-    SELECT storage_directory || filename
-    FROM well_known_files
-    WHERE well_known_file_type_id = 486797213 AND
-    attachable_id = {0}
+    SELECT
+    storage_directory || filename
+
+    FROM
+    well_known_files
+
+    WHERE
+    well_known_file_type_id = 486797213
+    AND attachable_id = {0}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -900,11 +907,15 @@ def get_session_pkl_filepath(ophys_session_id):
     """
     mixin = lims_engine
     QUERY = '''
-     SELECT storage_directory || filename
-     FROM well_known_files
-     WHERE well_known_file_type_id = 610487715 AND
-     attachable_id = {0}
+     SELECT
+     storage_directory || filename
 
+     FROM
+     well_known_files
+
+     WHERE
+     well_known_file_type_id = 610487715
+     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -924,11 +935,15 @@ def get_session_h5_filepath(ophys_session_id):
     """
     mixin = lims_engine
     QUERY = '''
-     SELECT storage_directory || filename
-     FROM well_known_files
-     WHERE well_known_file_type_id = 610487713 AND
-     attachable_id = {0}
+     SELECT
+     storage_directory || filename
 
+     FROM
+     well_known_files
+
+     WHERE
+     well_known_file_type_id = 610487713
+     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -948,11 +963,15 @@ def get_behavior_avi_filepath(ophys_session_id):
     """
     mixin = lims_engine
     QUERY = '''
-    SELECT storage_directory || filename
-    FROM well_known_files
-    WHERE well_known_file_type_id = 695808672 AND
-    attachable_id = {0}
+    SELECT
+    storage_directory || filename
 
+    FROM
+    well_known_files
+
+    WHERE
+    well_known_file_type_id = 695808672
+    AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -978,11 +997,15 @@ def get_eye_tracking_avi_filepath(ophys_session_id):
     """
     mixin = lims_engine
     QUERY = '''
-    SELECT storage_directory || filename
-    FROM well_known_files
-    WHERE well_known_file_type_id = 695808172 AND
-    attachable_id = {0}
+    SELECT
+    storage_directory || filename
 
+    FROM
+    well_known_files
+
+    WHERE
+    well_known_file_type_id = 695808172
+    AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -1002,11 +1025,14 @@ def get_ellipse_filepath(ophys_session_id):
     """
     mixin = lims_engine
     QUERY = '''
-    SELECT storage_directory || filename
-    FROM well_known_files
-    WHERE well_known_file_type_id = 914623492 AND
-    attachable_id = {0}
+    SELECT
+    storage_directory || filename
 
+    FROM well_known_files
+
+    WHERE
+    well_known_file_type_id = 914623492
+    AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -1026,11 +1052,14 @@ def get_platform_json_filepath(ophys_session_id):
     """
     mixin = lims_engine
     QUERY = '''
-    SELECT storage_directory || filename
-    FROM well_known_files
-    WHERE well_known_file_type_id = 746251277 AND
-    attachable_id = {0}
+    SELECT
+    storage_directory || filename
 
+    FROM well_known_files
+
+    WHERE
+    well_known_file_type_id = 746251277
+    AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -1050,11 +1079,14 @@ def get_screen_mapping_h5_filepath(ophys_session_id):
     """
     mixin = lims_engine
     QUERY = '''
-     SELECT storage_directory || filename
-     FROM well_known_files
-     WHERE well_known_file_type_id = 916857994 AND
-     attachable_id = {0}
+     SELECT
+     storage_directory || filename
 
+     FROM well_known_files
+
+     WHERE
+     well_known_file_type_id = 916857994
+     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -1073,11 +1105,14 @@ def get_deepcut_h5_filepath(ophys_session_id):
         [type] -- [description]
     """
     QUERY = '''
-     SELECT storage_directory || filename
-     FROM well_known_files
-     WHERE well_known_file_type_id = 990460508 AND
-     attachable_id = {0}
+     SELECT
+     storage_directory || filename
 
+     FROM well_known_files
+
+     WHERE
+     well_known_file_type_id = 990460508
+     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
@@ -1091,17 +1126,20 @@ def load_average_intensity_projection(ophys_experiment_id):
     mixin = lims_engine
     # build query
     query = '''
-    SELECT wkf.storage_directory || wkf.filename AS avgint_file
+    SELECT
+    wkf.storage_directory || wkf.filename AS avgint_file
+
     FROM ophys_experiments oe
-    JOIN ophys_cell_segmentation_runs ocsr
-    ON ocsr.ophys_experiment_id = oe.id
+    JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id = oe.id
     JOIN well_known_files wkf ON wkf.attachable_id=ocsr.id
-    JOIN well_known_file_types wkft
-    ON wkft.id = wkf.well_known_file_type_id
-    WHERE ocsr.current = 't'
+    JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    ocsr.current = 't'
     AND wkf.attachable_type = 'OphysCellSegmentationRun'
     AND wkft.name = 'OphysAverageIntensityProjectionImage'
-    AND oe.id = {}'''.format(ophys_experiment_id)
+    AND oe.id = {}
+    '''.format(ophys_experiment_id)
     average_intensity_projection = mixin.select(query)
     return average_intensity_projection
 
