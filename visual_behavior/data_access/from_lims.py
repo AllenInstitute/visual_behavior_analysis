@@ -589,6 +589,34 @@ def get_all_ids_for_supercontainer_id(supercontainer_id):
 
 ### TABLES ###    # noqa: E266
 
+def get_cell_segmentation_runs_table(ophys_experiment_id):
+    """Queries LIMS via AllenSDK PostgresQuery function to retrieve
+        information on all segmentations run in the
+        ophys_cell_segmenatation_runs table for a given experiment
+
+    Arguments:
+         ophys_experiment_id {int} -- 9 digit ophys experiment ID
+
+    Returns:
+        dataframe --  dataframe with the following columns:
+                        id {int}:  9 digit segmentation run id
+                        run_number {int}: segmentation run number
+                        ophys_experiment_id{int}: 9 digit ophys experiment id
+                        current{boolean}: True/False
+                                    True: most current segmentation run
+                                    False: not the most current segmentation run
+                        created_at{timestamp}:
+                        updated_at{timestamp}:
+    """
+
+    mixin = lims_engine
+    query = '''
+    select *
+    FROM ophys_cell_segmentation_runs
+    WHERE ophys_experiment_id = {} '''.format(ophys_experiment_id)
+    return mixin.select(query)
+
+
 ### ROI ###       # noqa: E266
 
 def get_lims_cell_exclusion_labels(experiment_id):
