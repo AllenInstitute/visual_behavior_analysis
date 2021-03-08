@@ -110,4 +110,5 @@ def get_stimulus_df(oeids):
             stim_df = df.copy()
         else:
             stim_df = stim_df.append(df, ignore_index=True)
+    # stim_df['engagement_binary'] = stim_df['engagement_state'].apply(lambda x: True if x == 'engaged' else False)
     return stim_df

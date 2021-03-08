@@ -3,6 +3,7 @@ from matplotlib import pyplot as plt
 # from matplotlib.lines import Line2D
 import seaborn as sns
 import pandas as pd
+import os
 import tensortools
 
 
@@ -25,7 +26,7 @@ def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trial
     '''
     num_factors = len(U_r.factors.factors)
     num_components = U_r.factors.rank
-    U_r, factors_order = sort_by_temporal(U_r)
+    factors_order = sort_by_temporal(U_r)
     print('factors sorted {}'.format(factors_order))
 
     fig, axes = plt.subplots(num_components, num_factors,
@@ -61,7 +62,7 @@ def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trial
     for i, ind_rank in enumerate(factors_order):
 
         # Plot cell factors, sorted
-        cell_ax = axes[ind_rank, 0]
+        cell_ax = axes[i, 0]
         sns.barplot(data=cells,
                     x='index',
                     y=cells[ind_rank],
@@ -71,42 +72,37 @@ def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trial
         change_width(cell_ax, .7)
         cell_ax.set_ylim(0, cells[0].max() * .5)  # cells[0].median())
 
-        if i == 0:
-            cell_ax.legend(fontsize=10)
-        else:
-            cell_ax.legend('')
-        if i == len(factors_order) - 1:
-            cell_ax.set_xlabel('cells')
-            cell_ax.set_xticks(np.arange(1, cells.shape[0], np.round(cells.shape[0] * .20)))
-        else:
-            cell_ax.set_xlabel('')
-            cell_ax.set_xticks([])
-
         # Plot PSTH factors, sorted
-        psth_ax = axes[ind_rank, 1]
+        psth_ax = axes[i, 1]
         psth_fac = U_r.factors.factors[1][:, ind_rank]
         psth_ax.plot(psth_timebase, psth_fac, color='k')
         psth_ax.set_ylim(psth_range)
-        if i == len(factors_order) - 1:
-            psth_ax.set_xlabel('time (s)')
-        else:
-            psth_ax.set_xticks([])
 
         # Plot trial factors
-        trial_ax = axes[ind_rank, 2]
+        trial_ax = axes[i, 2]
         sns.scatterplot(data=trials,
-                        x="index",
+                        x="level_0",
                         y=trials[ind_rank],
                         hue=trials_color_label,
                         palette=cmap,
                         ax=trial_ax)
         if i == 0:
+            cell_ax.legend(fontsize=10)
             trial_ax.legend(fontsize=10)
         else:
             trial_ax.legend('')
+            cell_ax.legend('')
+
         if i == len(factors_order) - 1:
+            cell_ax.set_xlabel('cells')
+            cell_ax.set_xticks(np.arange(1, cells.shape[0], np.round(cells.shape[0] * .20)))
+            psth_ax.set_xlabel('time (s)')
             trial_ax.set_xlabel('trials')
         else:
+            cell_ax.set_xlabel('')
+            trial_ax.set_xlabel('')
+            cell_ax.set_xticks([])
+            psth_ax.set_xticks([])
             trial_ax.set_xticks([])
 
         plt.suptitle('{}'.format(trials_color_label), fontsize=20)
@@ -126,10 +122,7 @@ def sort_by_temporal(U_r):
     x = U_r.factors[1]
     maxbins = np.argmax(x, axis=0)
     sortorder = np.argsort(maxbins)
-    U_r.factors[0] = U_r.factors[0][:, sortorder]
-    U_r.factors[1] = U_r.factors[1][:, sortorder]
-    U_r.factors[2] = U_r.factors[2][:, sortorder]
-    return U_r, sortorder
+    return sortorder
 
 
 def plot_responses(xr, title=''):
@@ -193,11 +186,14 @@ def plot_similarity_score(X, ranks=[1, 2, 3, 4, 5, 10, 20, 40, 60], n_runs=5):
         for n in range(n_runs):
             U_r = tensortools.ncp_bcd(X, rank=rank, verbose=False)
             U.append(U_r)
+
         similarity_scores = []
         for n in range(n_runs - 1):
             similarity = tensortools.kruskal_align(U[n].factors, U[n + 1].factors, permute_U=True, permute_V=True)
             similarity_scores.append(similarity)
+
         rank_similarity_scores.append(similarity_scores)
+
     rank_similarity_scores = np.array(rank_similarity_scores)
 
     # plot similarity scores
@@ -210,3 +206,16 @@ def plot_similarity_score(X, ranks=[1, 2, 3, 4, 5, 10, 20, 40, 60], n_runs=5):
     plt.ylabel('similarity mean+/-SEM')
 
     return fig
+
+
+def save_figure(fig, figsize=[10, 5], save_dir='', folder='', fig_name='', formats=['.png']):
+    fig_dir = os.path.join(save_dir, folder)
+    if not os.path.exists(fig_dir):
+        os.mkdir(fig_dir)
+
+    # mpl.rcParams['pdf.fonttype'] = 42
+    fig.set_size_inches(figsize)
+    fig.suptitle(fig_name)
+    filename = os.path.join(fig_dir, fig_name)
+    for f in formats:
+        fig.savefig(filename + f, transparent=True, orientation='landscape')
