@@ -700,14 +700,14 @@ def event_triggered_response(df, parameter, event_times, time_key=None, t_before
         return melted.drop(columns=['variable']).rename(columns={'value': parameter})
 
 
-def annotate_licks(dataset, inplace=False, lick_bout_ili=2):
+def annotate_licks(dataset, inplace=False, lick_bout_ili=0.7):
     '''
     annotates the licks dataframe with some additional columns
 
     arguments:
         dataset (BehaviorSession or BehaviorOphysSession object): an SDK session object
         inplace (boolean): If True, operates in place (default = False)
-        lick_bout_ili (float): interval between licks required to label a lick as the start/end of a licking bout
+        lick_bout_ili (float): interval between licks required to label a lick as the start/end of a licking bout (default = 0.7)
 
     returns (only if inplace=False):
         pandas.DataFrame with columns:
