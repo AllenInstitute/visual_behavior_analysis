@@ -26,10 +26,10 @@ from svm_funs import *
 #%%
 def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', svm_blocks= np.nan, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0):
     
-    def svm_run_save(traces_fut, image_labels, iblock_trials_blocks, svm_blocks, now, engagement_pupil_running, pupil_running_values): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
+    def svm_run_save(traces_fut_now, image_labels_now, iblock_trials_blocks, svm_blocks, now, engagement_pupil_running, pupil_running_values): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
         '''
-        traces_fut = traces_fut_0
-        image_labels = image_labels_0
+        #traces_fut_now = traces_fut_0
+        #image_labels_now = image_labels_0
         iblock_trials_blocks = [np.nan, []]
         iblock_trials_blocks = [iblock, trials_blocks]
         '''
@@ -39,14 +39,20 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
         
         #%% Normalize each neuron trace by its max (so if on a day a neuron has low FR in general, it will not be read as non responsive!)
         # we dont need this because we are z scoring the traces.
-        if norm_to_max_svm==1:
+        
+        traces_fut_orig = copy.deepcopy(traces_fut_now)
+
+        if 0: #norm_to_max_svm==1:
             print('Normalizing each neuron trace by its max.')
             # compute max on the entire trace of the session:
-            aa_mx = [np.max(traces_fut[:,i,:].flatten()) for i in range(n_neurons)] # neurons
-
-            a = np.transpose(traces_fut, (0,2,1)) # frames x trials x units
-            b = a / aa_mx
-            traces_fut = np.transpose(b, (0,2,1)) # frames x units x trials
+            aa_mx = [np.max(traces_fut_orig[:,i,:].flatten()) for i in range(n_neurons)] # neurons
+            if (np.array(aa_mx)==0).any():
+                print(aa_mx)
+                print('\n\nSome neurons have max=0; dividing will lead to NaN! STOP!\n\n')
+            else:
+                a = np.transpose(traces_fut_orig, (0,2,1)) # frames x trials x units
+                b = a / aa_mx
+                traces_fut_now = np.transpose(b, (0,2,1)) # frames x units x trials
 
 
 
@@ -104,7 +110,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
 
 
-        numTrials = traces_fut.shape[2]  # numDataPoints = X_svm.shape[1] # trials             
+        numTrials = traces_fut_now.shape[2]  # numDataPoints = X_svm.shape[1] # trials             
         len_test = numTrials - int((kfold-1.)/kfold*numTrials) # number of testing trials   
         numDataPoints = numTrials
         print(f'\n{len_test} testing trials in SVM. {numTrials} total number of trials.\n')
@@ -130,10 +136,10 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 print(f'\n===== BLOCK {iblock} : running SVM on frame {nAftOmit} relative to trial onset =====\n')
 
             # x
-            m = traces_fut[samps_bef + nAftOmit,:,:] # units x trials ; neural activity on the frame of omission
+            m = traces_fut_now[samps_bef + nAftOmit,:,:] # units x trials ; neural activity on the frame of omission
 
             # y
-            m_y = image_labels
+            m_y = image_labels_now
 
             # now set the x matrix for svm
             X_svm = m # units x trials
@@ -305,7 +311,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
         # svm output
         if same_num_neuron_all_planes:
             svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, kfold, regType, cvect, meanX_allFrs, stdX_allFrs, \
-                image_labels, image_indices, image_indices_previous_flash, image_indices_next_flash, \
+                image_labels_now, image_indices, image_indices_previous_flash, image_indices_next_flash, \
                 num_classes, iblock, trials_blocks, engagement_pupil_running, pupil_running_values, \
                 cbest_allFrs, w_data_allFrs, b_data_allFrs, \
                 perClassErrorTrain_data_allFrs, perClassErrorTest_data_allFrs, \
@@ -314,7 +320,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
         else:
             svm_vars.at[index, cols_svm] = frames_svm, to_decode, thAct, numSamples, softNorm, kfold, regType, cvect, meanX_allFrs, stdX_allFrs, \
-                image_labels, image_indices, image_indices_previous_flash, image_indices_next_flash, \
+                image_labels_now, image_indices, image_indices_previous_flash, image_indices_next_flash, \
                 num_classes, iblock, trials_blocks, engagement_pupil_running, pupil_running_values, \
                 cbest_allFrs, w_data_allFrs, b_data_allFrs, \
                 perClassErrorTrain_data_allFrs, perClassErrorTest_data_allFrs, \
@@ -350,7 +356,8 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
 
     
-    
+    ####################################################################################################
+    ####################################################################################################    
     ####################################################################################################
     ####################################################################################################
     #%% Set SVM vars
@@ -629,8 +636,18 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             traces_fut = np.reshape(traces, (n_frames,  n_neurons, n_trials), order='F')
 #             traces_fut.shape # frames x neurons x trials
 
-    
+            '''
+            aa_mx = np.array([np.max(traces_fut[:,i,:].flatten()) for i in range(traces_fut.shape[1])]) # neurons
+            if (aa_mx==0).any():
+#                 print(aa_mx)
+                print('\n\nSome neurons have max=0; excluding them!\n\n')
+                traces_fut = traces_fut[:, aa_mx!=0, :]
         
+            n_neurons = traces_fut.shape[1]
+        
+            print(f'n_frames, n_neurons, n_trials: {n_frames, n_neurons, n_trials}')
+            '''
+            
             #%% Take care of nan values in image_labels (it happens if we are decoding the previous or next image and trial_type is images), and remove them frome traces and image_labels
             if to_decode != 'current':
                 masknan = ~np.isnan(image_labels0)
@@ -761,11 +778,11 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                     
                     for iblock in blocks_int: # iblock=0
                             
-                        traces_fut = traces_fut_0[:,:,trials_blocks[iblock]]
-                        image_labels = image_labels_0[trials_blocks[iblock]]
-                        print(traces_fut.shape , image_labels.shape)
+                        traces_fut_now = traces_fut_0[:,:,trials_blocks[iblock]]
+                        image_labels_now = image_labels_0[trials_blocks[iblock]]
+                        print(traces_fut_now.shape , image_labels_now.shape)
                         
-                        svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                        svm_run_save(traces_fut_now, image_labels_now, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                         
         
         
@@ -998,11 +1015,9 @@ metadata_valid = experiments_table[experiments_table['project_code']=='VisualBeh
 # metadata_meso_dir = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/meso_decrosstalk/meso_experiments_in_release.csv'
 # metadata_valid = pd.read_csv(metadata_meso_dir)
 
-sessions_ctDone = metadata_valid['ophys_session_id'].unique()
+list_all_sessions_valid = metadata_valid['ophys_session_id'].unique()
 
 
-
-list_all_sessions_valid = sessions_ctDone
 print(f'{len(list_all_sessions_valid)}: Number of de-crosstalked sessions for analysis')
 
 # get the list of 8 experiments for all sessions
@@ -1048,11 +1063,6 @@ print(list_all_experiments.shape)
 
 
 
-
-
-
-
-
 '''
 pkl = open(filen, 'rb')
 metadata_basic = pickle.load(pkl)
@@ -1071,7 +1081,7 @@ print(list_all_sessions_valid.shape)
 '''
 
 
-#%% Set experiments_table
+#%% Set experiments_table to be merged with stim response df later
 
 # import visual_behavior.data_access.loading as loading
 from visual_behavior.ophys.response_analysis.response_analysis import ResponseAnalysis
@@ -1121,7 +1131,8 @@ print('\n\n======================== Analyzing session %d, %d/%d ================
 data_list = metadata_all[metadata_all['ophys_session_id']==session_id]
 data_list['valid'] = False
 data_list.loc[data_list['ophys_experiment_id'].isin(experiment_ids_valid), 'valid'] = True
-
+# sort by area and depth
+data_list = data_list.sort_values(by=['targeted_structure', 'imaging_depth'])
 
 experiment_ids_this_session = experiment_ids
 
@@ -1309,7 +1320,7 @@ else:
 
 #%% Run the SVM function
 
-print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess+1, len(list_all_sessions_valid)))
+print('\n\n======================== Analyzing session %d, %d/%d ========================\n' %(session_id, isess, len(list_all_sessions_valid)))
 
 # Use below if you set session_data and session_trials above: for VIP and SST
 svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode, svm_blocks, engagement_pupil_running, use_events, same_num_neuron_all_planes)

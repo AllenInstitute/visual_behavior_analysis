@@ -31,7 +31,7 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
     e = 'events_' if use_events else ''
     svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # 'svm_gray_omit'
         
-    exp_ids = data_list['experiment_id'].values
+    exp_ids = data_list['ophys_experiment_id'].values
 #     frame_dur = np.array([0.093]) # sec (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)    
     
     frames_svm = np.array(frames_svm)
@@ -58,8 +58,8 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
         
         print('\n=============== Analyzing experiment %s, plane %d/%d ===============\n' %(lims_id, index, num_planes))
         
-        area = data_list.iloc[index]['area']
-        depth = int(data_list.iloc[index]['depth'])
+        area = data_list.iloc[index]['targeted_structure']
+        depth = int(data_list.iloc[index]['imaging_depth'])
         valid = data_list.iloc[index]['valid']
     
         this_sess.at[index, ['session_id', 'experiment_id', 'area', 'depth']] = session_id, lims_id, area, depth

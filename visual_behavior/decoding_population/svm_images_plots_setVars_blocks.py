@@ -51,7 +51,7 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 #%%
 
 svm_blocks = -1 #2 # np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
-use_events = False #True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
+use_events = True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 use_same_experiments_dff_events = False #True # use the same set of experiments for both events and dff analysis (Note: for this to work you need to get both ea_evs and ev_dff; for this run the code until line ~300 twice once setting use_events to True and once to False.)
 
@@ -165,9 +165,7 @@ if ~np.isnan(svm_blocks):
         svmb = 2
     else:
         svmb = svm_blocks
-
     br = range(svmb)    
-
 else:
     br = [np.nan]
 
@@ -189,26 +187,26 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 #     a = f'(.*)_frames{frames_svm[0]}to{frames_svm[-1]}'    # {cre2ana}
 
     allSessName = []
-    for cre2ana in cre2ana_all: # cre2ana = cre2ana_all[0]
+#     for cre2ana in cre2ana_all: # cre2ana = cre2ana_all[0]
         
-        a = f'{cre2ana}_frames{frames_svm[0]}to{frames_svm[-1]}'
-        
-        if ~np.isnan(svm_blocks):
-            if svm_blocks==-1: # divide trials into blocks based on the engagement state
-                word = 'engaged'
-            else:
-                word = 'block'
+    a = f'frames{frames_svm[0]}to{frames_svm[-1]}'
+#         a = f'{cre2ana}_frames{frames_svm[0]}to{frames_svm[-1]}'
 
-            a = f'{a}_{word}{iblock}'
+    if ~np.isnan(svm_blocks):
+        if svm_blocks==-1: # divide trials into blocks based on the engagement state
+            word = 'engaged'
+        else:
+            word = 'block'
 
-        name = f'all_sess_{svmn}_{a}_.'
-    #     name = f'all_sess_{svmn}_{a}_(.*){analysis_date}_.' # analysis_date = 20210108
-        # print(name)
-    
-        allSessName_thisCre, h5_files = all_sess_set_h5_fileName(name, dir_svm, all_files=0) # all_files=1
-        allSessName.append(allSessName_thisCre)
-        
-        
+        a = f'{a}_{word}{iblock}'
+
+    name = f'all_sess_{svmn}_{a}_.'
+#     name = f'all_sess_{svmn}_{a}_(.*){analysis_date}_.' # analysis_date = 20210108
+    # print(name)
+
+    allSessName_thisCre, h5_files = all_sess_set_h5_fileName(name, dir_svm, all_files=0) # all_files=1
+    allSessName.append(allSessName_thisCre)
+              
     print(f'\n{len(allSessName)} all_sess files found!\n')
     
 #     exec(allSessName_block_name + " = allSessName") 
@@ -445,7 +443,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     ############################################################################################################################################################
     #%%
     for session_numbers in [[1],[2],[3],[4],[5],[6]]: # 1 to 6 # ophys session stage corresponding to project_codes that we will make plots for.
-#         session_numbers = [4]
+#         session_numbers = [1]
 
         #%% If analyzing novel sessions, only take sessions that include the 1st presentation of the novel session (ie the ones without a retake of session ophys-3)
         if np.in1d(4, session_numbers): # novel sessions
@@ -778,9 +776,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
                     print(f'mouse {im} doesnt have data!')
 
                 else: #sum((all_sess_2an['mouse_id']==mouse_id).values) > 0: # make sure there is data for this mouse, for the specific session: A, B, etc that you care about
-                    print(f'there is data for mouse {im}')
-
-
+#                     print(f'there is data for mouse {im}')
     #                 svm_this_plane_allsess.at[cntall, 'block'] = iblock
 
 

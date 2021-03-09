@@ -42,9 +42,7 @@ if ~np.isnan(svm_blocks):
         svmb = 2
     else:
         svmb = svm_blocks
-
     br = range(svmb)    
-
 else:
     br = [np.nan]
     
@@ -61,15 +59,15 @@ for istage in np.unique(stages_all): # istage=1
 
 if ~np.isnan(svm_blocks):
 
-    for istage in np.unique(stages_all): # istage=4
+    for istage in np.unique(stages_all): # istage=1
         a = svm_allMice_sessPooled0[stages_allp==istage]
-        if len(a) != svm_blocks:
+        if len(a) != len(br):
             print(f'data from both blocks dont exist for stage {istage}!')
 #             sys.exit(f'data from both blocks dont exist for stage {istage}!')
 
         else:
             mice_blocks = []
-            for iblock in range(svm_blocks):
+            for iblock in br:
                 b = np.unique(a[a['block_all']==iblock]['mouse_id_allPlanes'].values[0])
                 mice_blocks.append(b)
 
@@ -108,7 +106,7 @@ if ~np.isnan(svm_blocks):
                 svm_allMice_sessPooled0[stages_allp==istage].iloc[1]['av_test_data_allPlanes'][:, this_mouse_ind,:] = np.nan
                 svm_allMice_sessPooled0[stages_allp==istage].iloc[1]['av_test_shfl_allPlanes'][:, this_mouse_ind,:] = np.nan
                 
-            if svm_blocks>2:
+            if len(br)>2:
                 sys.exit('above needs work; setdiff1d works on 2 arrays; perhaps loop through arrays!')
 
 
@@ -604,11 +602,15 @@ for istage in np.unique(stages_all): # istage=1
                     word = 'engagement'
                 else:
                     word = 'blocks'
+                
+                if use_events:
+                    word = word + '_events'
+                    
                 fgn = f'{fgn}_{word}_frames{frames_svm[0]}to{frames_svm[-1]}'                        
                 fgn = fgn + '_ClassAccur'
 
                 nam = f'{cre[:3]}_aveMice_aveSessPooled{fgn}_{now}'
-                fign = os.path.join(dir0, dir_now, nam+fmt)
+                fign = os.path.join(dir0, 'svm', dir_now, nam+fmt)
 
                 plt.savefig(fign, bbox_inches='tight') # , bbox_extra_artists=(lgd,)    
 

@@ -35,6 +35,7 @@ engagement_pupil_running = 1 # np.nan or 0,1,2 for engagement, pupil, running: w
 
 # experiments_table = loading.get_filtered_ophys_experiment_table()
 experiments_table = loading.get_filtered_ophys_experiment_table(release_data_only=True)
+experiments_table = experiments_table.reset_index('ophys_experiment_id')
 metadata_valid = experiments_table[experiments_table['project_code']=='VisualBehaviorMultiscope'] # multiscope sessions
 
 
@@ -171,7 +172,7 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # sessi
     
     cnt_sess = cnt_sess + 1    
     print('\n\n======================== %d: session %d out of %d sessions ========================\n' %
-          (session_id, cnt_sess+1, len(list_all_sessions_valid)))    
+          (session_id, cnt_sess, len(list_all_sessions_valid)))    
 
     
     '''

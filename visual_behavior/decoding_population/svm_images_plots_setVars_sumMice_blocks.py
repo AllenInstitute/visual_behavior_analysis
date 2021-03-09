@@ -174,7 +174,7 @@ for istage in np.unique(stages_all): # istage=1
         ######################################################################
 
 
-        for im in range(len(svm_this_plane_allsess)): # im=5
+        for im in range(len(svm_this_plane_allsess)): # im=0
 
             cntall2 = cntall2 + 1
             
