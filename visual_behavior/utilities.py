@@ -718,6 +718,9 @@ def annotate_licks(dataset, inplace=False, lick_bout_ili=0.7):
             bout_start (boolean): True if licks is first in bout, False otherwise
             bout_end (boolean): True if licks is last in bout, False otherwise
             licks_in_bout (int): Number of licks in current lick bout
+            lick_bout_number (int): A count of the number of discrete lick bouts. All licks in a given bout share a value
+            bout_rewarded (bool): True if a reward was delivered within the current bout
+            hit (bool): True if the lick was a hit lick (lick that triggered a reward)
     '''
     if inplace:
         licks_df = dataset.licks
