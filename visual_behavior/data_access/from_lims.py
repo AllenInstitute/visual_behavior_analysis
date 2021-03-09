@@ -611,7 +611,7 @@ def get_ophys_experiments_table(ophys_experiment_id):
     query = '''
     SELECT
     oe.id as ophys_experiment_id,
-    oe.workflow_state,
+    oe.workflow_state as experiment_workflow_state,
     oe.storage_directory,
     oe.ophys_session_id,
     structures.acronym as targeted_structure,
@@ -643,7 +643,7 @@ def get_ophys_sessions_table(ophys_session_id):
     SELECT
     os.id as ophys_session_id,
     os.storage_directory,
-    os.workflow_state,
+    os.workflow_state as session_workflow_state,
     os.specimen_id,
     os.isi_experiment_id,
     os.parent_session_id,
@@ -665,6 +665,26 @@ def get_ophys_sessions_table(ophys_session_id):
     '''.format(ophys_session_id)
     ophys_sessions_table = mixin.select(query)
     return ophys_sessions_table
+
+
+def get_visual_behavior_experiment_containers_table(ophys_container_id):
+    ophys_container_id = int(ophys_container_id)
+    query = '''
+    SELECT
+    containers.id as container_id,
+    projects.code as project,
+    containers.specimen_id,
+    containers.storage_directory,
+    containers.workflow_state as container_workflow_state
+
+    FROM
+    visual_behavior_experiment_containers as containers
+    JOIN projects on projects.id = containers.project_id
+    WHERE
+    containers.id = {}
+    '''.format(ophys_container_id)
+    visual_behavior_experiment_containers_table = mixin.select(query)
+    return visual_behavior_experiment_containers_table
 
 ### ROI ###       # noqa: E266
 
