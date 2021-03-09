@@ -208,13 +208,12 @@ def plot_similarity_score(X, ranks=[1, 2, 3, 4, 5, 10, 20, 40, 60], n_runs=5):
     return fig
 
 
-def save_figure(fig, figsize=[10, 5], save_dir='', folder='', fig_name='', formats=['.png']):
+def save_figure(fig, figsize=None, save_dir='', folder='', fig_name='', formats=['.png']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
-
-    # mpl.rcParams['pdf.fonttype'] = 42
-    fig.set_size_inches(figsize)
+    if figsize is not None:
+        fig.set_size_inches(figsize)
     fig.suptitle(fig_name)
     filename = os.path.join(fig_dir, fig_name)
     plt.tight_layout()
