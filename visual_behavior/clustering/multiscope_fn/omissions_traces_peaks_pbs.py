@@ -299,8 +299,12 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
                 
             if sum(np.in1d(experiment_ids_valid, int(lims_id)))==0: # make sure lims_id is among the experiments in the data release
                 
+                num_frs_control = samps_bef + samps_aft
+                if controlSingleBeam_oddFrPlanes[0]==1:
+                    num_frs_control = int(num_frs_control/2)
+                    
                 # num_neurons = 1
-                local_fluo_allOmitt = np.full((samps_bef + samps_aft, 1, len(list_omitted)), np.nan) # just a nan array as if there was 1 neuron, so this experiment index is not empty in this_sess_l.
+                local_fluo_allOmitt = np.full((num_frs_control, 1, len(list_omitted)), np.nan) # just a nan array as if there was 1 neuron, so this experiment index is not empty in this_sess_l.
                 this_sess_l.at[index, 'local_fluo_allOmitt'] = local_fluo_allOmitt
                 this_sess_l.at[index, 'valid'] = 0
                 print('Skipping invalid experiment %d, index %d' %(int(lims_id), index))
@@ -1191,6 +1195,9 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
             valid_a2 = this_sess_l.iloc[inds_v1]['valid'].values # 4
 
             nfrs = samps_bef + samps_aft #local_fluo_allOmitt_a1[0].shape[0]
+            if controlSingleBeam_oddFrPlanes[0]==1:
+                nfrs = int(nfrs/2)
+                
     #         n_neurs_a1 = [local_fluo_allOmitt_a1[iexp].shape[1] for iexp in range(len(local_fluo_allOmitt_a1))] # number of neurons for each depth of area 1
     #         n_neurs_a2 = [local_fluo_allOmitt_a2[iexp].shape[1] for iexp in range(len(local_fluo_allOmitt_a2))] # number of neurons for each depth of area 2
             # since de-crosstalking may give planes with 0 neurons, we need to run the following instead of above:
