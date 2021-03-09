@@ -1807,7 +1807,7 @@ def load_session_data_new(metadata_all, session_id, list_mesoscope_exp, use_ct_t
 
         
         try:
-            indiv_data['time_trace'] =  dataset.timestamps['ophys_frames'][0]
+            indiv_data['time_trace'] =  dataset.ophys_timestamps #dataset.timestamps['ophys_frames'][0]
         except Exception as e:
             print('session: %d' %session_id)
             print('experiment: %d' %indiv_id)

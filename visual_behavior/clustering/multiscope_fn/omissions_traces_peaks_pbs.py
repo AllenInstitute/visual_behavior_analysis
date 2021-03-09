@@ -1803,10 +1803,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
 ###########################################################################################
 
 #%%
-controlSingleBeam_oddFrPlanes = [0, []] #[1, [0,2,5,7]] # if 1st element is 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope # 2nd element: odd_fr_planes = [0,2,5,7] # if the plane index is among these, we will take df/f from odd frame indices         
-
-use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
-use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
+controlSingleBeam_oddFrPlanes = [1, [0,2,5,7]] # [0, []] #if 1st element is 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope # 2nd element: odd_fr_planes = [0,2,5,7] # if the plane index is among these, we will take df/f from odd frame indices         
 
 saveResults = 1  # save the all_sess pandas at the end
 
@@ -1819,6 +1816,8 @@ subtractSigCorrs = 1 # if 1, compute average response to each image, and subtrac
 samps_bef = 16 #40 # 40 is a lot especially for correlation analysis which takes a long time; the advantage of 40 thouth is that bl_preOmit and bl_preFlash will be more accurate as they use 10th percentile of frames before omission (or flash), so more frames means better accuracy.
 samps_aft = 24 #40
 
+use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
+use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
 
 # remember the following two were 1, for autoencoder analuysis you changed them to 0.
 doScale = 0  # 1 # Scale the traces by baseline std

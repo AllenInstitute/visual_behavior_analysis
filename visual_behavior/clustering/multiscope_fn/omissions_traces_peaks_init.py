@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-USE this code for the population-average analysis.
+Use this code for the population-average analysis.
 Use omissions_traces_peaks_init_pbs.py for the correlation analysis.
 
 
@@ -39,9 +39,6 @@ import datetime
 #%%
 controlSingleBeam_oddFrPlanes = [0, []] #[1, [0,2,5,7]] # if 1st element is 1, make control data to remove the simultaneous aspect of dual beam mesoscope (ie the coupled planes) to see if the correlation results require the high temporal resolution (11Hz) of dual beam vs. 5Hz of single beam mesoscope # 2nd element: odd_fr_planes = [0,2,5,7] # if the plane index is among these, we will take df/f from odd frame indices         
 
-use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
-use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
-
 saveResults = 1  # save the all_sess pandas at the end
 
 doCorrs = 0  #-1 #0 #1 # if -1, only get the traces, dont compute peaks, mean, etc. # if 0, compute omit-aligned trace median, peaks, etc. If 1, compute corr coeff between neuron pairs in each layer of v1 and lm
@@ -49,14 +46,17 @@ doCorrs = 0  #-1 #0 #1 # if -1, only get the traces, dont compute peaks, mean, e
 num_shfl_corr = 2 #50 # set to 0 if you dont want to compute corrs for shuffled data # shuffle trials, then compute corrcoeff... this serves as control to evaluate the values of corrcoeff of actual data    
 subtractSigCorrs = 1 # if 1, compute average response to each image, and subtract it out from all trials of that image. Then compute correlations; ie remove signal correlations.
 
+use_ct_traces = 1 # if 0, we go with dff traces saved in analysis_dir (visual behavior production analysis); if 1, we go with crosstalk corrected dff traces on rd-storage
+use_np_corr = 1 # will be used when use_ct_traces=1; if use_np_corr=1, we will load the manually neuropil corrected traces; if 0, we will load the soma traces.
+
 # To align on omissions, get 40 frames before omission and 39 frames after omission
 samps_bef = 16 #40 # 40 is a lot especially for correlation analysis which takes a long time; the advantage of 40 thouth is that bl_preOmit and bl_preFlash will be more accurate as they use 10th percentile of frames before omission (or flash), so more frames means better accuracy.
 samps_aft = 24 #40
 
 
 # remember the following two were 1, for autoencoder analuysis you changed them to 0.
-doScale = 0  # 1 # Scale the traces by baseline std
-doShift = 0  # 1 # Shift the y values so baseline mean is at 0 at time 0
+doScale = 1 # 0  # Scale the traces by baseline std
+doShift = 1 # 0  # Shift the y values so baseline mean is at 0 at time 0
 doShift_again = 0 # 0 # this is a second shift just to make sure the pre-omit activity has baseline at 0. (it is after we normalize the traces by baseline ave and sd... but because the traces are median of trials (or computed from the initial gray screen activity), and the baseline is mean of trials, the traces wont end up at baseline of 0)
 bl_gray_screen = 1 # 1 # if 1, baseline will be computed on the initial gray screen at the beginning of the session
 # if 0, get the lowest 20 percentile values of the median trace preceding omission and then compute their mean and sd
