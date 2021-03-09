@@ -749,5 +749,9 @@ def annotate_licks(dataset, inplace=False, lick_bout_ili=2):
     licks_df['lick_bout_number'] = licks_df['lick_bout_number'].fillna(method='ffill').astype(int)
     licks_df['bout_rewarded'] = licks_df['bout_rewarded'].fillna(method='ffill').astype(bool)
 
+    # add a column that designates hit licks (lick that triggers reward)
+    licks_df['hit'] = False
+    licks_df.loc[licks_df.query('bout_rewarded').drop_duplicates(subset='lick_bout_number').index, 'hit'] = True
+
     if inplace == False:
         return licks_df
