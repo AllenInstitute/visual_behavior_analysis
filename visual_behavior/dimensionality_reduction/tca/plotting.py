@@ -217,5 +217,6 @@ def save_figure(fig, figsize=[10, 5], save_dir='', folder='', fig_name='', forma
     fig.set_size_inches(figsize)
     fig.suptitle(fig_name)
     filename = os.path.join(fig_dir, fig_name)
+    plt.tight_layout()
     for f in formats:
         fig.savefig(filename + f, transparent=True, orientation='landscape')
