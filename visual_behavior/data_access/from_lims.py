@@ -790,6 +790,54 @@ def get_all_ids_for_supercontainer_id(supercontainer_id):
     return all_ids
 
 
+def get_general_info_for_supercontainer_id(supercontainer_id):
+    supercontainer_id = int(supercontainer_id)
+    query = '''
+    SELECT
+    oe.id AS ophys_experiment_id,
+    oe.ophys_session_id,
+    bs.id AS behavior_session_id,
+    os.foraging_id,
+    containers.id AS ophys_container_id,
+    os.visual_behavior_supercontainer_id AS supercontainer_id,
+
+    oe.workflow_state AS experiment_workflow_state,
+    os.workflow_state AS session_workflow_state,
+    containers.workflow_state AS container_workflow_state,
+
+    os.specimen_id,
+    specimens.donor_id,
+    specimens.name AS mouse_name,
+
+    os.date_of_acquisition,
+    os.stimulus_name AS session_type,
+    structures.acronym AS targeted_structure,
+    imaging_depths.depth,
+    equipment.name AS rig
+
+    FROM
+    ophys_experiments oe
+
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
+    JOIN behavior_sessions bs
+    ON bs.foraging_id = os.foraging_id
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oe.id = oevbec.ophys_experiment_id
+    JOIN visual_behavior_experiment_containers containers
+    ON containers.id = oevbec.visual_behavior_experiment_container_id
+    JOIN specimens ON specimens.id = os.specimen_id
+    JOIN structures ON structures.id = oe.targeted_structure_id
+    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
+    JOIN equipment ON equipment.id = os.equipment_id
+
+    WHERE
+    os.visual_behavior_supercontainer_id = {}
+    '''.format(supercontainer_id)
+    general_info = mixin.select(query)
+    return general_info
+
+
 ### TABLES ###    # noqa: E266
 
 def get_cell_segmentation_runs_table(ophys_experiment_id):
