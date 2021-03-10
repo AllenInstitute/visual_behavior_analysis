@@ -246,7 +246,7 @@ def get_general_info_for_ophys_experiment_id(ophys_experiment_id):
 
     WHERE
     oe.id ={}
-    '''.format(ophys_experiment_it)
+    '''.format(ophys_experiment_id)
     general_info = mixin.select(query)
     return general_info
 
@@ -343,6 +343,7 @@ def get_all_ids_for_ophys_session_id(ophys_session_id):
     '''.format(ophys_session_id)
     all_ids = mixin.select(query)
     return all_ids
+
 
 def get_general_info_for_ophys_session_id(ophys_session_id):
     ophys_session_id = int(ophys_session_id)
@@ -496,7 +497,7 @@ def get_all_ids_for_behavior_session_id(behavior_session_id):
     return all_ids
 
 
-def get_general_info_for_ophys_session_id(behavior_session_id):
+def get_general_info_for_behavior_session_id(behavior_session_id):
     behavior_session_id = int(behavior_session_id)
     query = '''
     SELECT
@@ -542,7 +543,7 @@ def get_general_info_for_ophys_session_id(behavior_session_id):
     JOIN equipment ON equipment.id = os.equipment_id
 
     WHERE
-    os.id = {}
+    bs.id = {}
     '''.format(behavior_session_id)
     general_info = mixin.select(query)
     return general_info
@@ -628,6 +629,53 @@ def get_all_ids_for_ophys_container_id(ophys_container_id):
     return all_ids
 
 
+def get_general_info_for_ophys_container_id(ophys_container_id):
+    ophys_container_id = int(ophys_container_id)
+    query = '''
+    SELECT
+    oe.id AS ophys_experiment_id,
+    oe.ophys_session_id,
+    bs.id AS behavior_session_id,
+    os.foraging_id,
+    containers.id AS ophys_container_id,
+    os.visual_behavior_supercontainer_id AS supercontainer_id,
+
+    oe.workflow_state AS experiment_workflow_state,
+    os.workflow_state AS session_workflow_state,
+    containers.workflow_state AS container_workflow_state,
+
+    os.specimen_id,
+    specimens.donor_id,
+    specimens.name AS mouse_name,
+
+    os.date_of_acquisition,
+    os.stimulus_name AS session_type,
+    structures.acronym AS targeted_structure,
+    imaging_depths.depth,
+    equipment.name AS rig
+
+    FROM
+    ophys_experiments oe
+
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
+    JOIN behavior_sessions bs
+    ON bs.foraging_id = os.foraging_id
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oe.id = oevbec.ophys_experiment_id
+    JOIN visual_behavior_experiment_containers containers
+    ON containers.id = oevbec.visual_behavior_experiment_container_id
+    JOIN specimens ON specimens.id = os.specimen_id
+    JOIN structures ON structures.id = oe.targeted_structure_id
+    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
+    JOIN equipment ON equipment.id = os.equipment_id
+
+    WHERE
+    container.id ={}
+    '''.format(ophys_container_id)
+    general_info = mixin.select(query)
+    return general_info
+
 # for supercontainer_id
 def get_ophys_experiment_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
@@ -693,18 +741,18 @@ def get_ophys_container_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    container.visual_behavior_experiment_container_id 
+    container.visual_behavior_experiment_container_id
     AS ophys_container_id
 
     FROM
     ophys_experiments experiments
 
-    JOIN behavior_sessions behavior 
+    JOIN behavior_sessions behavior
     ON behavior.ophys_session_id = experiments.ophys_session_id
-    
+
     JOIN ophys_experiments_visual_behavior_experiment_containers container
     ON container.ophys_experiment_id = experiments.id
-    
+
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
 
     WHERE
@@ -729,10 +777,10 @@ def get_all_ids_for_supercontainer_id(supercontainer_id):
 
     JOIN behavior_sessions behavior
     ON behavior.ophys_session_id = experiments.ophys_session_id
-    
+
     JOIN ophys_experiments_visual_behavior_experiment_containers container
     ON container.ophys_experiment_id = experiments.id
-    
+
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
 
     WHERE
@@ -895,7 +943,7 @@ def get_cell_exclusion_labels(ophys_experiment_id):
 
     FROM ophys_experiments oe
 
-    JOIN ophys_cell_segmentation_runs ocsr 
+    JOIN ophys_cell_segmentation_runs ocsr
     ON ocsr.ophys_experiment_id=oe.id AND ocsr.current = 't'
 
     JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id
