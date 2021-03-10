@@ -693,13 +693,18 @@ def get_ophys_container_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    container.visual_behavior_experiment_container_id as ophys_container_id
+    container.visual_behavior_experiment_container_id 
+    AS ophys_container_id
 
     FROM
     ophys_experiments experiments
 
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
+    JOIN behavior_sessions behavior 
+    ON behavior.ophys_session_id = experiments.ophys_session_id
+    
+    JOIN ophys_experiments_visual_behavior_experiment_containers container
+    ON container.ophys_experiment_id = experiments.id
+    
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
 
     WHERE
@@ -722,8 +727,12 @@ def get_all_ids_for_supercontainer_id(supercontainer_id):
     FROM
     ophys_experiments experiments
 
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
+    JOIN behavior_sessions behavior
+    ON behavior.ophys_session_id = experiments.ophys_session_id
+    
+    JOIN ophys_experiments_visual_behavior_experiment_containers container
+    ON container.ophys_experiment_id = experiments.id
+    
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
 
     WHERE
@@ -857,11 +866,11 @@ def get_visual_behavior_experiment_containers_table(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
-    containers.id as container_id,
-    projects.code as project,
+    containers.id AS container_id,
+    projects.code AS project,
     containers.specimen_id,
     containers.storage_directory,
-    containers.workflow_state as container_workflow_state
+    containers.workflow_state AS container_workflow_state
 
     FROM
     visual_behavior_experiment_containers as containers
@@ -886,7 +895,9 @@ def get_cell_exclusion_labels(ophys_experiment_id):
 
     FROM ophys_experiments oe
 
-    JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id=oe.id AND ocsr.current = 't'
+    JOIN ophys_cell_segmentation_runs ocsr 
+    ON ocsr.ophys_experiment_id=oe.id AND ocsr.current = 't'
+
     JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id
     JOIN cell_rois_roi_exclusion_labels crrel ON crrel.cell_roi_id=cr.id
     JOIN roi_exclusion_labels rel ON rel.id=crrel.roi_exclusion_label_id
@@ -1001,8 +1012,8 @@ def get_objectlist_filepath(ophys_experiment_id):
     FROM
     well_known_files wkf
 
-    JOIN well_known_file_types wkft on wkf.well_known_file_type_id = wkft.id
-    JOIN ophys_cell_segmentation_runs ocsr on wkf.attachable_id = ocsr.id
+    JOIN well_known_file_types wkft ON wkf.well_known_file_type_id = wkft.id
+    JOIN ophys_cell_segmentation_runs ocsr ON wkf.attachable_id = ocsr.id
 
     WHERE
     wkft.name = 'OphysSegmentationObjects'
@@ -1315,7 +1326,8 @@ def get_deepcut_h5_filepath(ophys_session_id):
      SELECT
      storage_directory || filename
 
-     FROM well_known_files
+     FROM
+     well_known_files
 
      WHERE
      well_known_file_type_id = 990460508
