@@ -4,8 +4,9 @@ import warnings
 import numpy as np
 import pandas as pd
 
-import from_lims_utilities as utils
+
 from allensdk.internal.api import PostgresQueryMixin
+from visual_behavior.data_access import from_lims_utilities as utils
 
 
 # Accessing Lims Database
@@ -67,8 +68,6 @@ def get_specimen_id_for_donor_id(donor_id):
     specimen_ids = mixin.select(query)
     return specimen_ids
 
-# def get_mouse_ids_for_experiment_id(ophys_experiment_id):
-
 
 # for ophys_experimnt_id
 def get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id):
@@ -127,7 +126,7 @@ def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
     query = '''
     SELECT
-    behavior.id
+    behavior.id as behavior_session_id
 
     FROM
     behavior_sessions behavior
@@ -139,6 +138,7 @@ def get_behavior_session_id_for_ophys_experiment_id(ophys_experiment_id):
     oe.id = {}
     '''.format(ophys_experiment_id)
     behavior_session_id = mixin.select(query)
+    behavior_session_id = behavior_session_id["ophys_session_id"][0]
     return behavior_session_id
 
 
