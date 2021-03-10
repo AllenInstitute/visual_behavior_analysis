@@ -39,9 +39,14 @@ mixin = lims_engine
 def get_donor_id_for_specimen_id(specimen_id):
     specimen_id = int(specimen_id)
     query = '''
-    SELECT donor_id
-    FROM specimens
-    WHERE id = {}
+    SELECT
+    donor_id
+
+    FROM
+    specimens
+
+    WHERE
+    id = {}
     '''.format(specimen_id)
     donor_ids = mixin.select(query)
     return donor_ids
@@ -50,9 +55,14 @@ def get_donor_id_for_specimen_id(specimen_id):
 def get_specimen_id_for_donor_id(donor_id):
     donor_id = int(donor_id)
     query = '''
-    SELECT id
-    FROM specimens
-    WHERE donor_id = {}
+    SELECT
+    id
+
+    FROM
+    specimens
+
+    WHERE
+    donor_id = {}
     '''.format(donor_id)
     specimen_ids = mixin.select(query)
     return specimen_ids
@@ -136,7 +146,7 @@ def get_ophys_container_id_for_ophys_experiment_id(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
     query = '''
     SELECT
-    visual_behavior_experiment_container_id
+    visual_behavior_experiment_container_id as ophys_container_id
 
     FROM
     ophys_experiments_visual_behavior_experiment_containers
@@ -192,6 +202,53 @@ def get_all_ids_for_ophys_experiment_id(ophys_experiment_id):
     all_ids = mixin.select(query)
     return all_ids
 
+
+def get_general_info_for_ophys_experiment_id(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    query = '''
+    SELECT
+    oe.id AS ophys_experiment_id,
+    oe.ophys_session_id,
+    bs.id AS behavior_session_id,
+    os.foraging_id,
+    containers.id AS ophys_container_id,
+    os.visual_behavior_supercontainer_id AS supercontainer_id,
+
+    oe.workflow_state AS experiment_workflow_state,
+    os.workflow_state AS session_workflow_state,
+    containers.workflow_state AS container_workflow_state,
+
+    os.specimen_id,
+    specimens.donor_id,
+    specimens.name AS mouse_name,
+
+    os.date_of_acquisition,
+    os.stimulus_name AS session_type,
+    structures.acronym AS targeted_structure,
+    imaging_depths.depth,
+    equipment.name AS rig
+
+    FROM
+    ophys_experiments oe
+
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
+    JOIN behavior_sessions bs
+    ON bs.foraging_id = os.foraging_id
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oe.id = oevbec.ophys_experiment_id
+    JOIN visual_behavior_experiment_containers containers
+    ON containers.id = oevbec.visual_behavior_experiment_container_id
+    JOIN specimens ON specimens.id = os.specimen_id
+    JOIN structures ON structures.id = oe.targeted_structure_id
+    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
+    JOIN equipment ON equipment.id = os.equipment_id
+
+    WHERE
+    oe.id ={}
+    '''.format(ophys_experiment_it)
+    general_info = mixin.select(query)
+    return general_info
 
 # for ophys_session_id
 
@@ -286,6 +343,58 @@ def get_all_ids_for_ophys_session_id(ophys_session_id):
     '''.format(ophys_session_id)
     all_ids = mixin.select(query)
     return all_ids
+
+def get_general_info_for_ophys_session_id(ophys_session_id):
+    ophys_session_id = int(ophys_session_id)
+    query = '''
+    SELECT
+    oe.id AS ophys_experiment_id,
+    oe.ophys_session_id,
+    bs.id AS behavior_session_id,
+    os.foraging_id,
+    containers.id AS ophys_container_id,
+    os.visual_behavior_supercontainer_id AS supercontainer_id,
+
+    oe.workflow_state AS experiment_workflow_state,
+    os.workflow_state AS session_workflow_state,
+    containers.workflow_state AS container_workflow_state,
+
+    os.specimen_id,
+    specimens.donor_id,
+    specimens.name AS mouse_name,
+
+    os.date_of_acquisition,
+    os.stimulus_name AS session_type,
+    structures.acronym AS targeted_structure,
+    imaging_depths.depth,
+    equipment.name AS rig
+
+    FROM
+    ophys_experiments oe
+
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
+
+    JOIN behavior_sessions bs
+    ON bs.foraging_id = os.foraging_id
+
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oe.id = oevbec.ophys_experiment_id
+
+    JOIN visual_behavior_experiment_containers containers
+    ON containers.id = oevbec.visual_behavior_experiment_container_id
+
+    JOIN specimens ON specimens.id = os.specimen_id
+    JOIN structures ON structures.id = oe.targeted_structure_id
+    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
+    JOIN equipment ON equipment.id = os.equipment_id
+
+    WHERE
+    os.id = {}
+    '''.format(ophys_session_id)
+    general_info = mixin.select(query)
+    return general_info
+
 
 # for behavior_session_id
 
@@ -386,6 +495,57 @@ def get_all_ids_for_behavior_session_id(behavior_session_id):
     all_ids = mixin.select(query)
     return all_ids
 
+
+def get_general_info_for_ophys_session_id(behavior_session_id):
+    behavior_session_id = int(behavior_session_id)
+    query = '''
+    SELECT
+    oe.id AS ophys_experiment_id,
+    oe.ophys_session_id,
+    bs.id AS behavior_session_id,
+    os.foraging_id,
+    containers.id AS ophys_container_id,
+    os.visual_behavior_supercontainer_id AS supercontainer_id,
+
+    oe.workflow_state AS experiment_workflow_state,
+    os.workflow_state AS session_workflow_state,
+    containers.workflow_state AS container_workflow_state,
+
+    os.specimen_id,
+    specimens.donor_id,
+    specimens.name AS mouse_name,
+
+    os.date_of_acquisition,
+    os.stimulus_name AS session_type,
+    structures.acronym AS targeted_structure,
+    imaging_depths.depth,
+    equipment.name AS rig
+
+    FROM
+    ophys_experiments oe
+
+    JOIN ophys_sessions os
+    ON os.id = oe.ophys_session_id
+
+    JOIN behavior_sessions bs
+    ON bs.foraging_id = os.foraging_id
+
+    JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
+    ON oe.id = oevbec.ophys_experiment_id
+
+    JOIN visual_behavior_experiment_containers containers
+    ON containers.id = oevbec.visual_behavior_experiment_container_id
+
+    JOIN specimens ON specimens.id = os.specimen_id
+    JOIN structures ON structures.id = oe.targeted_structure_id
+    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
+    JOIN equipment ON equipment.id = os.equipment_id
+
+    WHERE
+    os.id = {}
+    '''.format(behavior_session_id)
+    general_info = mixin.select(query)
+    return general_info
 
 # for ophys_container_id
 
@@ -596,9 +756,11 @@ def get_cell_segmentation_runs_table(ophys_experiment_id):
     """
     ophys_experiment_id = int(ophys_experiment_id)
     query = '''
-    select *
+    select
+    *
 
-    FROM ophys_cell_segmentation_runs
+    FROM
+    ophys_cell_segmentation_runs
 
     WHERE
     ophys_experiment_id = {}
@@ -626,9 +788,9 @@ def get_ophys_experiments_table(ophys_experiment_id):
 
     FROM
     ophys_experiments_visual_behavior_experiment_containers container
-    JOIN ophys_experiments oe on oe.id = container.ophys_experiment_id
-    JOIN structures on structures.id = oe.targeted_structure_id
-    JOIN imaging_depths on imaging_depths.id = oe.imaging_depth_id
+    JOIN ophys_experiments oe ON oe.id = container.ophys_experiment_id
+    JOIN structures ON structures.id = oe.targeted_structure_id
+    JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
 
     WHERE
     oe.id = {}
@@ -657,14 +819,38 @@ def get_ophys_sessions_table(ophys_session_id):
 
     FROM
     ophys_sessions os
-    JOIN equipment on equipment.id = os.equipment_id
-    JOIN projects on projects.id = os.project_id
+    JOIN equipment ON equipment.id = os.equipment_id
+    JOIN projects ON projects.id = os.project_id
 
     WHERE
     os.id = {}
     '''.format(ophys_session_id)
     ophys_sessions_table = mixin.select(query)
     return ophys_sessions_table
+
+
+def get_behavior_sessions_table(behavior_session_id):
+    behavior_session_id = int(behavior_session_id)
+    query = '''
+    SELECT
+    bs.id as behavior_session_id,
+    bs.ophys_session_id,
+    bs.behavior_training_id,
+    bs.foraging_id,
+    bs.donor_id,
+    equipment.name as equipment_name,
+    bs.created_at,
+    bs.date_of_acquisition
+
+    FROM
+    behavior_sessions bs
+    JOIN equipment ON equipment.id = bs.equipment_id
+
+    WHERE
+    bs.id = {}
+    '''.format(behavior_session_id)
+    behavior_sessions_table = mixin.select(query)
+    return behavior_sessions_table
 
 
 def get_visual_behavior_experiment_containers_table(ophys_container_id):
@@ -685,6 +871,7 @@ def get_visual_behavior_experiment_containers_table(ophys_container_id):
     '''.format(ophys_container_id)
     visual_behavior_experiment_containers_table = mixin.select(query)
     return visual_behavior_experiment_containers_table
+
 
 ### ROI ###       # noqa: E266
 
