@@ -631,10 +631,10 @@ def get_behavior_session_ids_for_ophys_container_id(ophys_container_id):
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
 
     WHERE
-    bcontainer.visual_behavior_experiment_container_id = {}
-    '''.format(behavior_session_id)
-    container_id = mixin.select(query)
-    return container_id
+    container.visual_behavior_experiment_container_id = {}
+    '''.format(ophys_container_id)
+    behavior_session_id = mixin.select(query)
+    return behavior_session_id
 
 
 def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
@@ -646,33 +646,42 @@ def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
     FROM
     ophys_experiments experiments
 
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
+    JOIN behavior_sessions behavior
+    ON behavior.ophys_session_id = experiments.ophys_session_id
+
+    JOIN ophys_experiments_visual_behavior_experiment_containers container
+    ON container.ophys_experiment_id = experiments.id
+
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
 
     WHERE
     container.visual_behavior_experiment_container_id = {}
     '''.format(ophys_container_id)
-    container_id = mixin.select(query)
-    return container_id
+    super_container_id = mixin.select(query)
+    super_container_id = int(super_container_id['super_container_id'][0])
+    return super_container_id
 
 
 def get_all_ids_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
     SELECT
-    experiments.id as ophys_experiment_id,
+    experiments.id AS ophys_experiment_id,
     experiments.ophys_session_id,
-    behavior.id as behavior_session_id,
-    container.visual_behavior_experiment_container_id as ophys_container_id,
-    sessions.visual_behavior_supercontainer_id as super_container_id
+    behavior.id AS behavior_session_id,
+    container.visual_behavior_experiment_container_id AS ophys_container_id,
+    sessions.visual_behavior_supercontainer_id AS super_container_id
 
     FROM
     ophys_experiments experiments
 
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+    JOIN behavior_sessions behavior
+    ON behavior.ophys_session_id = experiments.ophys_session_id
+
+    JOIN ophys_experiments_visual_behavior_experiment_containers container
+    ON container.ophys_experiment_id = experiments.id
+
+    JOIN ophys_sessions sessions ON sessions.id = experiments.ophys_session_id
 
     WHERE
     container.visual_behavior_experiment_container_id = {}
@@ -723,7 +732,7 @@ def get_general_info_for_ophys_container_id(ophys_container_id):
     JOIN equipment ON equipment.id = os.equipment_id
 
     WHERE
-    container.id ={}
+    containers.id = {}
     '''.format(ophys_container_id)
     general_info = mixin.select(query)
     return general_info
@@ -735,37 +744,31 @@ def get_ophys_experiment_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    experiments.id as ophys_experiment_id
+    experiments.id AS ophys_experiment_id
 
     FROM
     ophys_experiments experiments
 
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+    JOIN ophys_sessions sessions ON sessions.id = experiments.ophys_session_id
 
     WHERE
     sessions.visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
-    all_ids = mixin.select(query)
-    return all_ids
+    ophys_experiment_ids = mixin.select(query)
+    return ophys_experiment_ids
 
 
 def get_ophys_session_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    experiments.ophys_session_id
+    id AS ophys_session_id
 
     FROM
-    ophys_experiments experiments
-
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+    ophys_sessions
 
     WHERE
-    sessions.visual_behavior_supercontainer_id = {}
+    visual_behavior_supercontainer_id = {}
     '''.format(supercontainer_id)
     ophys_session_ids = mixin.select(query)
     return ophys_session_ids
@@ -775,14 +778,13 @@ def get_behavior_session_id_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
     SELECT
-    behavior.id as behavior_session_id
+    behavior.id AS behavior_session_id
 
     FROM
-    ophys_experiments experiments
+    ophys_sessions sessions
 
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+    JOIN behavior_sessions behavior
+    ON behavior.ophys_session_id = sessions.id
 
     WHERE
     sessions.visual_behavior_supercontainer_id = {}
@@ -801,13 +803,10 @@ def get_ophys_container_ids_for_supercontainer_id(supercontainer_id):
     FROM
     ophys_experiments experiments
 
-    JOIN behavior_sessions behavior
-    ON behavior.ophys_session_id = experiments.ophys_session_id
-
     JOIN ophys_experiments_visual_behavior_experiment_containers container
     ON container.ophys_experiment_id = experiments.id
 
-    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+    JOIN ophys_sessions sessions ON sessions.id = experiments.ophys_session_id
 
     WHERE
     sessions.visual_behavior_supercontainer_id = {}
@@ -931,14 +930,14 @@ def get_ophys_experiments_table(ophys_experiment_id):
     ophys_experiment_id = int(ophys_experiment_id)
     query = '''
     SELECT
-    oe.id as ophys_experiment_id,
-    oe.workflow_state as experiment_workflow_state,
+    oe.id AS ophys_experiment_id,
+    oe.workflow_state AS experiment_workflow_state,
     oe.storage_directory,
     oe.ophys_session_id,
-    structures.acronym as targeted_structure,
-    imaging_depths.depth as imaging_depth,
+    structures.acronym AS targeted_structure,
+    imaging_depths.depth AS imaging_depth,
     oe.calculated_depth,
-    container.visual_behavior_experiment_container_id as ophys_container_id,
+    container.visual_behavior_experiment_container_id AS ophys_container_id,
     oe.raw_movie_number_of_frames,
     oe.raw_movie_width,
     oe.raw_movie_height,
@@ -1039,14 +1038,15 @@ def get_cell_exclusion_labels(ophys_experiment_id):
     mixin = lims_engine
     query = '''
     SELECT
-    oe.id AS oe_id,
-    cr.id AS cr_id,
-    rel.name AS excl_label
+    oe.id AS ophys_experiment_id,
+    cr.id AS cell_roi_id,
+    rel.name AS exclusion_label
 
     FROM ophys_experiments oe
 
     JOIN ophys_cell_segmentation_runs ocsr
-    ON ocsr.ophys_experiment_id=oe.id AND ocsr.current = 't'
+    ON ocsr.ophys_experiment_id=oe.id 
+    AND ocsr.current = 't'
 
     JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id
     JOIN cell_rois_roi_exclusion_labels crrel ON crrel.cell_roi_id=cr.id
@@ -1090,9 +1090,13 @@ def get_timeseries_ini_filepath(ophys_session_id):
     AND wkf.storage_directory LIKE '%ophys_session_{0}%'
     AND os.id = {0}
     '''.format(ophys_session_id)
-    RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
-    return filepath
+
+    try:
+        RealDict_object = mixin.select(query)
+        filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+        return filepath
+    except KeyError:
+        print("Must be collected on a scientifica microscope to have timeseries ini. \n Check that equipment_name = CAM2P.2, CAM2P.3, CAM2P.4, CAM2P.5 or CAM2P.6")
 
 
 def get_dff_traces_filepath(ophys_experiment_id):
@@ -1153,7 +1157,9 @@ def get_objectlist_filepath(ophys_experiment_id):
     Returns:
         list -- list with storage directory and filename
     """
-    current_segmentation_run_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
+    current_segmentation_run_id = \
+    int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
+    
     mixin = lims_engine
     query = '''
     SELECT
