@@ -1045,7 +1045,7 @@ def get_cell_exclusion_labels(ophys_experiment_id):
     FROM ophys_experiments oe
 
     JOIN ophys_cell_segmentation_runs ocsr
-    ON ocsr.ophys_experiment_id=oe.id 
+    ON ocsr.ophys_experiment_id=oe.id
     AND ocsr.current = 't'
 
     JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id
@@ -1096,30 +1096,31 @@ def get_timeseries_ini_filepath(ophys_session_id):
         filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
         return filepath
     except KeyError:
-        print("Must be collected on a scientifica microscope to have timeseries ini. \n Check that equipment_name = CAM2P.2, CAM2P.3, CAM2P.4, CAM2P.5 or CAM2P.6")
+        print("Error: Must be collected on a scientifica microscope to have timeseries ini. \n Check that equipment_name = CAM2P.2, CAM2P.3, CAM2P.4, CAM2P.5 or CAM2P.6")
 
 
-def get_dff_traces_filepath(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
-    mixin = lims_engine
-    # build query
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename AS dff_file
+# def get_dff_traces_filepath(ophys_experiment_id):
+#     ophys_experiment_id = int(ophys_experiment_id)
+#     mixin = lims_engine
+#     # build query
+#     query = '''
+#     SELECT
+#     wkf.storage_directory || wkf.filename AS dff_file
 
-    FROM
-    ophys_experiments oe
+#     FROM
+#     ophys_experiments oe
 
-    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
-    JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
+#     JOIN well_known_files wkf ON wkf.attachable_id = oe.id
+#     JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
 
-    WHERE
-    wkft.name = 'OphysDffTraceFile'
-    AND oe.id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
-    return filepath
+#     WHERE
+#     wkft.name = 'OphysDffTraceFile'
+#     AND oe.id = {}
+#     '''.format(ophys_experiment_id)
+#     RealDict_object = mixin.select(query)
+#     filepath = RealDict_object['?column?'][0]  # idk why it's ?column? but it is :(
+#     filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
+#     return filepath
 
 
 def get_rigid_motion_transform_filepath(ophys_experiment_id):
@@ -1137,12 +1138,13 @@ def get_rigid_motion_transform_filepath(ophys_experiment_id):
     JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
 
     WHERE
-    w`kf.attachable_type = 'OphysExperiment'
+    wkf.attachable_type = 'OphysExperiment'
     AND wkft.name = 'OphysMotionXyOffsetData'
     AND oe.id = {}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['transform_file'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1157,9 +1159,7 @@ def get_objectlist_filepath(ophys_experiment_id):
     Returns:
         list -- list with storage directory and filename
     """
-    current_segmentation_run_id = \
-    int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
-    
+    current_segmentation_run_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
     mixin = lims_engine
     query = '''
     SELECT
@@ -1177,7 +1177,8 @@ def get_objectlist_filepath(ophys_experiment_id):
     AND ocsr.id = {0}
     '''.format(current_segmentation_run_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['storage_directory'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1199,7 +1200,8 @@ def get_demixed_traces_filepath(ophys_experiment_id):
     AND oe.id = {};
     """.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['demix_file'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1218,7 +1220,8 @@ def get_neuropil_traces_filepath(ophys_experiment_id):
     AND attachable_id = {0}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['?column?'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1246,26 +1249,27 @@ def get_motion_corrected_movie_filepath(ophys_experiment_id):
      AND attachable_id = {0}
     '''.format(ophys_experiment_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['?column?'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
-def get_extracted_trace_filepath(ophys_experiment_id):
-    mixin = lims_engine
-    QUERY = '''
-    SELECT
-    storage_directory || filename
+# def get_extracted_trace_filepath(ophys_experiment_id):
+#     mixin = lims_engine
+#     QUERY = '''
+#     SELECT
+#     storage_directory || filename
 
-    FROM
-    well_known_files
+#     FROM
+#     well_known_files
 
-    WHERE
-    well_known_file_type_id = 486797213
-    AND attachable_id = {0}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
-    return filepath
+#     WHERE
+#     well_known_file_type_id = 486797213
+#     AND attachable_id = {0}
+#     '''.format(ophys_experiment_id)
+#     RealDict_object = mixin.select(QUERY)
+#     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+#     return filepath
 
 
 def get_session_pkl_filepath(ophys_session_id):
@@ -1292,7 +1296,8 @@ def get_session_pkl_filepath(ophys_session_id):
      AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['?column?'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1320,7 +1325,8 @@ def get_session_h5_filepath(ophys_session_id):
      AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['?column?'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1348,7 +1354,8 @@ def get_behavior_avi_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['?column?'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1382,7 +1389,8 @@ def get_eye_tracking_avi_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['?column?'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1409,7 +1417,9 @@ def get_ellipse_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    RealDict_object = mixin.select(QUERY)
+    filepath = RealDict_object['?column?'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1436,7 +1446,8 @@ def get_platform_json_filepath(ophys_session_id):
     AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['?column?'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1463,7 +1474,8 @@ def get_screen_mapping_h5_filepath(ophys_session_id):
      AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['?column?'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
@@ -1490,7 +1502,8 @@ def get_deepcut_h5_filepath(ophys_session_id):
      AND attachable_id = {0}
     '''.format(ophys_session_id)
     RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+    filepath = RealDict_object['?column?'][0]
+    filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
 
