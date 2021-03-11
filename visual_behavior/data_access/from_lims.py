@@ -278,7 +278,7 @@ def get_behavior_session_id_for_ophys_session_id(ophys_session_id):
     ophys_session_id = int(ophys_session_id)
     query = '''
     SELECT
-    id
+    id AS behavior_session_id
 
     FROM behavior_sessions
 
@@ -286,7 +286,7 @@ def get_behavior_session_id_for_ophys_session_id(ophys_session_id):
     ophys_session_id = {}
     '''.format(ophys_session_id)
     behavior_session_id = mixin.select(query)
-    behavior_session_id = behavior_session_id.rename(columns={"id": "behavior_session_id"})
+    behavior_session_id = behavior_session_id["behavior_session_id"][0]
     return behavior_session_id
 
 
@@ -295,9 +295,10 @@ def get_ophys_container_ids_for_ophys_session_id(ophys_session_id):
     query = '''
     SELECT
     container.visual_behavior_experiment_container_id
+    AS ophys_container_id
 
     FROM ophys_experiments_visual_behavior_experiment_containers container
-    JOIN ophys_experiments oe on oe.id = container.ophys_experiment_id
+    JOIN ophys_experiments oe ON oe.id = container.ophys_experiment_id
 
     WHERE
     oe.ophys_session_id = {}
@@ -311,6 +312,7 @@ def get_super_container_id_for_ophys_session_id(ophys_session_id):
     query = '''
     SELECT
     visual_behavior_supercontainer_id
+    AS super_container_id
 
     FROM
     ophys_sessions
@@ -318,6 +320,7 @@ def get_super_container_id_for_ophys_session_id(ophys_session_id):
     WHERE id = {}
     '''.format(ophys_session_id)
     super_container_id = mixin.select(query)
+    super_container_id = super_container_id["super_container_id"][0]
     return super_container_id
 
 
@@ -334,8 +337,10 @@ def get_all_ids_for_ophys_session_id(ophys_session_id):
     FROM
     ophys_experiments experiments
 
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
+    JOIN behavior_sessions behavior
+    ON behavior.ophys_session_id = experiments.ophys_session_id
+    JOIN ophys_experiments_visual_behavior_experiment_containers container
+    ON container.ophys_experiment_id = experiments.id
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
 
     WHERE
@@ -405,9 +410,12 @@ def get_ophys_experiment_ids_for_behavior_session_id(behavior_session_id):
     query = '''
     SELECT
     oe.id
+    AS ophys_experiment_id
 
     FROM behavior_sessions behavior
-    JOIN ophys_experiments oe on oe.ophys_session_id = behavior.ophys_session_id
+
+    JOIN ophys_experiments oe
+    ON oe.ophys_session_id = behavior.ophys_session_id
 
     WHERE
     behavior.id = {}
@@ -434,18 +442,26 @@ def get_ophys_session_id_for_behavior_session_id(behavior_session_id):
 
     WHERE id = {}'''.format(behavior_session_id)
     ophys_session_id = mixin.select(query)
+    ophys_session_id = ophys_session_id["ophys_session_id"][0]
     return ophys_session_id
 
 
-def get_ophys_container_id_for_behavior_session_id(behavior_session_id):
+def get_ophys_container_ids_for_behavior_session_id(behavior_session_id):
     behavior_session_id = int(behavior_session_id)
     query = '''
     SELECT
-    container.visual_behavior_experiment_container_id as ophys_container_id
+    container.visual_behavior_experiment_container_id
+    AS ophys_container_id
 
-    FROM ophys_experiments experiments
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
+    FROM
+    ophys_experiments experiments
+
+    JOIN behavior_sessions behavior
+    ON behavior.ophys_session_id = experiments.ophys_session_id
+
+    JOIN ophys_experiments_visual_behavior_experiment_containers container
+    ON container.ophys_experiment_id = experiments.id
+
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
 
     WHERE
@@ -459,17 +475,24 @@ def get_super_container_id_for_behavior_session_id(behavior_session_id):
     behavior_session_id = int(behavior_session_id)
     query = '''
     SELECT
-    sessions.visual_behavior_supercontainer_id as super_container_id
+    sessions.visual_behavior_supercontainer_id AS super_container_id
 
-    FROM ophys_experiments experiments
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
+    FROM
+    ophys_experiments experiments
+
+    JOIN behavior_sessions behavior
+    ON behavior.ophys_session_id = experiments.ophys_session_id
+
+    JOIN ophys_experiments_visual_behavior_experiment_containers container
+    ON container.ophys_experiment_id = experiments.id
+
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
 
     WHERE
     behavior.id = {}
     '''.format(behavior_session_id)
     super_container_id = mixin.select(query)
+    super_container_id = super_container_id["super_container_id"][0]
     return super_container_id
 
 
@@ -477,17 +500,21 @@ def get_all_ids_for_behavior_session_id(behavior_session_id):
     behavior_session_id = int(behavior_session_id)
     query = '''
     SELECT
-    experiments.id as ophys_experiment_id,
+    experiments.id AS ophys_experiment_id,
     experiments.ophys_session_id,
-    behavior.id as behavior_session_id,
-    container.visual_behavior_experiment_container_id as ophys_container_id,
-    sessions.visual_behavior_supercontainer_id as super_container_id
+    behavior.id AS behavior_session_id,
+    container.visual_behavior_experiment_container_id AS ophys_container_id,
+    sessions.visual_behavior_supercontainer_id AS super_container_id
 
     FROM
     ophys_experiments experiments
 
-    JOIN behavior_sessions behavior on behavior.ophys_session_id = experiments.ophys_session_id
-    JOIN ophys_experiments_visual_behavior_experiment_containers container on container.ophys_experiment_id = experiments.id
+    JOIN behavior_sessions behavior
+    ON behavior.ophys_session_id = experiments.ophys_session_id
+
+    JOIN ophys_experiments_visual_behavior_experiment_containers container
+    ON container.ophys_experiment_id = experiments.id
+
     JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
 
     WHERE
@@ -585,6 +612,31 @@ def get_ophys_session_ids_for_ophys_container_id(ophys_container_id):
     return ophys_session_ids
 
 
+def get_behavior_session_ids_for_ophys_container_id(ophys_container_id):
+    ophys_container_id = int(ophys_container_id)
+    query = '''
+    SELECT
+    behavior.id
+    AS behavior_session_id
+
+    FROM
+    ophys_experiments experiments
+
+    JOIN behavior_sessions behavior
+    ON behavior.ophys_session_id = experiments.ophys_session_id
+
+    JOIN ophys_experiments_visual_behavior_experiment_containers container
+    ON container.ophys_experiment_id = experiments.id
+
+    JOIN ophys_sessions sessions on sessions.id = experiments.ophys_session_id
+
+    WHERE
+    bcontainer.visual_behavior_experiment_container_id = {}
+    '''.format(behavior_session_id)
+    container_id = mixin.select(query)
+    return container_id
+
+
 def get_supercontainer_id_for_ophys_container_id(ophys_container_id):
     ophys_container_id = int(ophys_container_id)
     query = '''
@@ -677,6 +729,8 @@ def get_general_info_for_ophys_container_id(ophys_container_id):
     return general_info
 
 # for supercontainer_id
+
+
 def get_ophys_experiment_ids_for_supercontainer_id(supercontainer_id):
     supercontainer_id = int(supercontainer_id)
     query = '''
