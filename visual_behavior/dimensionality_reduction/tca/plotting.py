@@ -57,7 +57,6 @@ def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trial
     else:
         trials = df.copy()
     trials = trials.reset_index()
-
     # iterate through factors and plot
     for i, ind_rank in enumerate(factors_order):
 

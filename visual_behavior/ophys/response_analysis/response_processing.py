@@ -457,7 +457,7 @@ def get_trials_response_df(dataset, use_events=False, filter_events=False, frame
     return df
 
 
-def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, frame_rate=None):
+def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, frame_rate=None,time_window = None):
     if use_events:
         if filter_events:
             traces = np.stack(dataset.events['filtered_events'].values)
@@ -469,7 +469,11 @@ def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, fram
     timestamps = dataset.ophys_timestamps
     event_times = dataset.stimulus_presentations['start_time'].values
     event_ids = dataset.stimulus_presentations.index.values
-    response_analysis_params = get_default_stimulus_response_params()
+    if time_window is None:
+        response_analysis_params = get_default_stimulus_response_params()
+    else:
+        response_analysis_params = get_default_stimulus_response_params()
+        response_analysis_params['window_around_timepoint_seconds'] = time_window
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)

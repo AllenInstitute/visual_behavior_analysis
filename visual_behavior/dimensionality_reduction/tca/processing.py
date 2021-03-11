@@ -53,7 +53,7 @@ def create_container_tensor(oeids, use_events=True, filter_events=True):
     return response_xrs
 
 
-def create_session_tensor(oeids, use_events=True, filter_events=True):
+def create_session_tensor(oeids, use_events=True, filter_events=True, time_window=[-.5, .75]):
     '''
     Creates tensor from datasets in one session.
     Concatinate across cortical layers and areas.
@@ -65,7 +65,7 @@ def create_session_tensor(oeids, use_events=True, filter_events=True):
 
     for i, oeid in enumerate(oeids):
         dataset = loading.get_ophys_dataset(oeid)
-        response_xr = rp.get_stimulus_response_xr(dataset, use_events=use_events, filter_events=filter_events)
+        response_xr = rp.get_stimulus_response_xr(dataset, use_events=use_events, filter_events=filter_events, time_window=time_window )
         response_xr.coords['eventlocked_timestamps'] = response_xr.coords['eventlocked_timestamps'].round(3)
 
         if i == 0:
