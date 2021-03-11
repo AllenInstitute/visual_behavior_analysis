@@ -457,7 +457,7 @@ def get_trials_response_df(dataset, use_events=False, filter_events=False, frame
     return df
 
 
-def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, frame_rate=None,time_window = None):
+def get_stimulus_response_xr(dataset, use_events=False, filter_events=True, frame_rate=None, time_window=None):
     if use_events:
         if filter_events:
             traces = np.stack(dataset.events['filtered_events'].values)
