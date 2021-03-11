@@ -8,7 +8,7 @@ def get_filepath_from_wkf_realdict_object(wkf_realdict_object):
     Returns:
         filepath: [description]
     """
-    filepath = wkf_realdict_object[0]['?column?']  # idk why it's ?column? but it is :(
+    filepath = wkf_realdict_object['?column?'][0]  # idk why it's ?column? but it is :(
     filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 
