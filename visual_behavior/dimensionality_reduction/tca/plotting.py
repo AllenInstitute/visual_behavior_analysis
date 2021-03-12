@@ -43,6 +43,10 @@ def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trial
     df = pd.DataFrame(U_r.factors.factors[0])
     if cells_color_label is not None:
         cells = cells_df.join(df)
+        if cells_color_label == "targeted_structure":
+            cells_colormap = "nipy_spectral"
+        else:
+            cells_colormap = "Spectral"
     else:
         cells = df.copy()
 
@@ -69,7 +73,7 @@ def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trial
                     x='cell_index',
                     y=cells[ind_rank],
                     hue=cells_color_label,
-                    palette="nipy_spectral",
+                    palette=cells_colormap,
                     ax=cell_ax)
         change_width(cell_ax, .7)
         cell_ax.set_ylim(0, cells[0].max() * .5)  # cells[0].median())
