@@ -8,7 +8,7 @@ def get_filepath_from_realdict_object(realdict_object):
     Returns:
         filepath: [description]
     """
-    filepath = realdict_object['filepath'][0]  # idk why it's ?column? but it is :(
+    filepath = realdict_object['filepath'][0]
     filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 

@@ -1058,7 +1058,496 @@ def get_cell_exclusion_labels(ophys_experiment_id):
     return mixin.select(query)
 
 
-### WELL KNOWN FILE FILEPATHS ###      # noqa: E266
+### FILEPATHS FOR WELL KNOWN FILES###      # noqa: E266
+
+## for ophys_experiment_id ##              # noqa: E266
+
+def get_BehaviorOphysNWB_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'BehaviorOphysNwb'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_demixed_traces_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'DemixedTracesFile'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_motion_corrected_movie_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'MotionCorrectedImageStack'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_neuropil_correction_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'NeuropilCorrection'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_average_intensity_projection_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysAverageIntensityProjectionImage'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_dff_traces_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysDffTraceFile'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_event_trace_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysEventTraceFile'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_extracted_traces_input_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysExtractedTracesInputJson'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_motion_preview_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysMotionPreview'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_motion_xy_offset_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysMotionXyOffsetData'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_neuropil_traces_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysNeuropilTraces'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_ophys_registration_summary_image_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysRegistrationSummaryImage'
+    AND wkf.attachable_id = {}
+    """.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_roi_traces_filepath(ophys_experiment_id):
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = '''
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysRoiTraces'
+    AND wkf.attachable_id = {}
+    '''.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_time_syncronization_filepath(ophys_experiment_id):
+    """for scientifica experiments only
+
+    Parameters
+    ----------
+    ophys_experiment_id : [type]
+        [description]
+
+    Returns
+    -------
+    [type]
+        [description]
+    """
+    ophys_experiment_id = int(ophys_experiment_id)
+    mixin = lims_engine
+    query = '''
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysTimeSynchronization'
+    AND wkf.attachable_id = {}
+    '''.format(ophys_experiment_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+## for segmentation_id via ophys_experiment_id ##              # noqa: E266
+
+def get_segmentation_objects_filepath(ophys_experiment_id):
+    """use SQL and the LIMS well known file system to get the
+       location information for the objectlist.txt file for a
+       given cell segmentation run
+
+    Arguments:
+        segmentation_run_id {int} -- 9 digit segmentation run id
+
+    Returns:
+        list -- list with storage directory and filename
+    """
+    current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysSegmentationObjects'
+    AND wkf.attachable_id = {}
+    """.format(current_seg_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_lo_segmentation_mask_filepath(ophys_experiment_id):
+    current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysLoSegmentationMaskData'
+    AND wkf.attachable_id = {}
+    """.format(current_seg_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_segmentation_mask_filepath(ophys_experiment_id):
+    current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysSegmentationMaskData'
+    AND wkf.attachable_id = {}
+    """.format(current_seg_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_segmentation_mask_image_filepath(ophys_experiment_id):
+    current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysSegmentationMaskImage'
+    AND wkf.attachable_id = {}
+    """.format(current_seg_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_ave_intensity_projection_filepath(ophys_experiment_id):
+    current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
+    mixin = lims_engine
+    query = """
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysAverageIntensityProjectionImage'
+    AND wkf.attachable_id = {}
+    """.format(current_seg_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+def get_max_intensity_projection_filepath(ophys_experiment_id):
+    current_seg_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
+    mixin = lims_engine
+    query = '''
+    SELECT
+    wkf.storage_directory || wkf.filename
+    AS filepath
+
+    FROM
+    well_known_files wkf
+
+    JOIN well_known_file_types wkft
+    ON wkft.id = wkf.well_known_file_type_id
+
+    WHERE
+    wkft.name = 'OphysMaxIntImage'
+    AND wkf.attachable_id = {}
+    '''.format(current_seg_id)
+    RealDict_object = mixin.select(query)
+    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
+    return filepath
+
+
+## for ophys_session_id ##              # noqa: E266
+
 
 def get_timeseries_ini_filepath(ophys_session_id):
     """use SQL and the LIMS well known file system to get the
@@ -1094,181 +1583,13 @@ def get_timeseries_ini_filepath(ophys_session_id):
 
     try:
         RealDict_object = mixin.select(query)
-        filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
+        filepath = utils.get_filepath_from_realdict_object(RealDict_object)
         return filepath
     except KeyError:
         print("Error: Must be collected on a scientifica microscope to have timeseries ini. \n Check that equipment_name = CAM2P.2, CAM2P.3, CAM2P.4, CAM2P.5 or CAM2P.6")
 
 
-# def get_dff_traces_filepath(ophys_experiment_id):
-#     ophys_experiment_id = int(ophys_experiment_id)
-#     mixin = lims_engine
-#     # build query
-#     query = '''
-#     SELECT
-#     wkf.storage_directory || wkf.filename AS dff_file
-
-#     FROM
-#     ophys_experiments oe
-
-#     JOIN well_known_files wkf ON wkf.attachable_id = oe.id
-#     JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
-
-#     WHERE
-#     wkft.name = 'OphysDffTraceFile'
-#     AND oe.id = {}
-#     '''.format(ophys_experiment_id)
-#     RealDict_object = mixin.select(query)
-#     filepath = RealDict_object['?column?'][0]  # idk why it's ?column? but it is :(
-#     filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
-#     return filepath
-
-
-def get_rigid_motion_transform_filepath(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
-    mixin = lims_engine
-    # build query
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename AS transform_file
-
-    FROM
-    ophys_experiments oe
-
-    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
-    JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    wkf.attachable_type = 'OphysExperiment'
-    AND wkft.name = 'OphysMotionXyOffsetData'
-    AND oe.id = {}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
-    return filepath
-
-
-def get_objectlist_filepath(ophys_experiment_id):
-    """use SQL and the LIMS well known file system to get the
-       location information for the objectlist.txt file for a
-       given cell segmentation run
-
-    Arguments:
-        segmentation_run_id {int} -- 9 digit segmentation run id
-
-    Returns:
-        list -- list with storage directory and filename
-    """
-    current_segmentation_run_id = int(get_current_segmentation_run_id_for_ophys_experiment_id(ophys_experiment_id))
-    mixin = lims_engine
-    query = '''
-    SELECT
-    wkf.storage_directory, wkf.filename
-
-    FROM
-    well_known_files wkf
-
-    JOIN well_known_file_types wkft ON wkf.well_known_file_type_id = wkft.id
-    JOIN ophys_cell_segmentation_runs ocsr ON wkf.attachable_id = ocsr.id
-
-    WHERE
-    wkft.name = 'OphysSegmentationObjects'
-    AND wkf.attachable_type = 'OphysCellSegmentationRun'
-    AND ocsr.id = {0}
-    '''.format(current_segmentation_run_id)
-    RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
-    return filepath
-
-
-def get_demixed_traces_filepath(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
-    mixin = lims_engine
-    query = """
-    SELECT
-    wkf.storage_directory || wkf.filename AS demix_file
-
-    FROM
-    ophys_experiments oe
-
-    JOIN well_known_files wkf ON wkf.attachable_id = oe.id
-    JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE wkf.attachable_type = 'OphysExperiment'
-    AND wkft.name = 'DemixedTracesFile'
-    AND oe.id = {};
-    """.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
-    return filepath
-
-
-def get_neuropil_traces_filepath(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
-    mixin = lims_engine
-    query = '''
-    SELECT
-    storage_directory || filename
-
-    FROM
-    well_known_files
-
-    WHERE
-    well_known_file_type_id = 514173078
-    AND attachable_id = {0}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(query)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
-    return filepath
-
-
-def get_motion_corrected_movie_filepath(ophys_experiment_id):
-    """use SQL and the LIMS well known file system to get the
-        "motion_corrected_movie.h5" information for a given
-        ophys_experiment_id
-
-    Arguments:
-        ophys_experiment_id {int} -- 9 digit ophys experiment ID
-
-    Returns:
-        [type] -- [description]
-    """
-    ophys_experiment_id = int(ophys_experiment_id)
-    mixin = lims_engine
-    QUERY = '''
-    SELECT
-    storage_directory || filename
-
-    FROM
-    well_known_files
-
-    WHERE well_known_file_type_id = 886523092
-    AND attachable_id = {0}
-    '''.format(ophys_experiment_id)
-    RealDict_object = mixin.select(QUERY)
-    filepath = utils.get_filepath_from_realdict_object(RealDict_object)
-    return filepath
-
-
-# def get_extracted_trace_filepath(ophys_experiment_id):
-#     mixin = lims_engine
-#     QUERY = '''
-#     SELECT
-#     storage_directory || filename
-
-#     FROM
-#     well_known_files
-
-#     WHERE
-#     well_known_file_type_id = 486797213
-#     AND attachable_id = {0}
-#     '''.format(ophys_experiment_id)
-#     RealDict_object = mixin.select(QUERY)
-#     filepath = utils.get_filepath_from_wkf_realdict_object(RealDict_object)
-#     return filepath
-
-
-def get_session_pkl_filepath(ophys_session_id):
+def get_stimulus_pkl_filepath(ophys_session_id):
     """use SQL and the LIMS well known file system to get the
         session pkl file information for a given
         ophys_session_id
@@ -1504,29 +1825,6 @@ def get_deepcut_h5_filepath(ophys_session_id):
 
 ### WELL KNOWN FILES ###      # noqa: E303, E266
 
-def load_average_intensity_projection(ophys_experiment_id):
-    ophys_experiment_id = int(ophys_experiment_id)
-    mixin = lims_engine
-    # build query
-    query = '''
-    SELECT
-    wkf.storage_directory || wkf.filename
-    AS avgint_file
-
-    FROM ophys_experiments oe
-    JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id = oe.id
-    JOIN well_known_files wkf ON wkf.attachable_id=ocsr.id
-    JOIN well_known_file_types wkft ON wkft.id = wkf.well_known_file_type_id
-
-    WHERE
-    ocsr.current = 't'
-    AND wkf.attachable_type = 'OphysCellSegmentationRun'
-    AND wkft.name = 'OphysAverageIntensityProjectionImage'
-    AND oe.id = {}
-    '''.format(ophys_experiment_id)
-    average_intensity_projection = mixin.select(query)
-    return average_intensity_projection
-
 
 def load_demixed_traces_array(ophys_experiment_id):
     """use SQL and the LIMS well known file system to find and load
@@ -1600,7 +1898,7 @@ def load_rigid_motion_transform(ophys_experiment_id):
                            "kalman_x":
                            "kalman_y":
     """
-    filepath = get_rigid_motion_transform_filepath(ophys_experiment_id)
+    filepath = get_motion_xy_offset_filepath(ophys_experiment_id)
     rigid_motion_transform_df = pd.read_csv(filepath)
     return rigid_motion_transform_df
 
@@ -1663,7 +1961,7 @@ def load_objectlist(ophys_experiment_id):
             soma_obj1_overlap_trace_corr: trace correlation coefficient
                                           between soma and overlap soma1
     """
-    filepath = get_objectlist_filepath(ophys_experiment_id)
+    filepath = get_segmentation_objects_filepath(ophys_experiment_id)
     objectlist_dataframe = pd.read_csv(filepath)
     objectlist_dataframe = utils.update_objectlist_column_labels(objectlist_dataframe)
     return objectlist_dataframe
