@@ -56,14 +56,14 @@ def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trial
         trials = stim_df.join(df)
     else:
         trials = df.copy()
-    trials = trials.reset_index()
+    trials['trial_index'] = np.arange(0, len(trials))
     # iterate through factors and plot
     for i, ind_rank in enumerate(factors_order):
 
         # Plot cell factors, sorted
         cell_ax = axes[i, 0]
         sns.barplot(data=cells,
-                    x='index',
+                    x='trial_index',
                     y=cells[ind_rank],
                     hue=cells_color_label,
                     palette="Spectral",
