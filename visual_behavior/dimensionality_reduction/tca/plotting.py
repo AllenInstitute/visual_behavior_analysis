@@ -49,24 +49,27 @@ def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trial
     cells.sort_values(by=factors_order[0], inplace=True)
     cells = cells.reset_index(drop=True)
     cells = cells.reset_index()
+    cells['cell_index'] = np.arange(0, cells.shape[0])
 
     # create trials df with factors and trials description #
     if trials_color_label is not None:
         df = pd.DataFrame(U_r.factors.factors[2])
+        stim_df = stim_df.reset_index()
         trials = stim_df.join(df)
     else:
         trials = df.copy()
-    trials['trial_index'] = np.arange(0, len(trials))
+    trials['trial_index'] = np.arange(0, trials.shape[0])
+
     # iterate through factors and plot
     for i, ind_rank in enumerate(factors_order):
 
         # Plot cell factors, sorted
         cell_ax = axes[i, 0]
         sns.barplot(data=cells,
-                    x='trial_index',
+                    x='cell_index',
                     y=cells[ind_rank],
                     hue=cells_color_label,
-                    palette="Spectral",
+                    palette="nipy_spectral",
                     ax=cell_ax)
         change_width(cell_ax, .7)
         cell_ax.set_ylim(0, cells[0].max() * .5)  # cells[0].median())
@@ -80,7 +83,7 @@ def plot_TCA_factors(U_r, cells_df=[], cells_color_label=None, stim_df=[], trial
         # Plot trial factors
         trial_ax = axes[i, 2]
         sns.scatterplot(data=trials,
-                        x="level_0",
+                        x="trial_index",
                         y=trials[ind_rank],
                         hue=trials_color_label,
                         palette=cmap,
