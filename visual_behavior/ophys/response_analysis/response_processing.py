@@ -687,6 +687,8 @@ def get_omission_pupil_area_df(dataset, frame_rate=30, df_format='wide'):
     # event_indices = index_of_nearest_value(timestamps, event_times)
     event_ids = omission_presentations.index.values[:-1]
     response_analysis_params = get_default_omission_response_params()
+    if frame_rate is None:
+        frame_rate = 1 / np.diff(timestamps).mean()
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
@@ -711,7 +713,49 @@ def get_lick_binary(dataset):
     return lick_binary
 
 
-def get_omission_licks_df(dataset, frame_rate=None):
+def get_stimulus_licks_df(dataset, frame_rate=None, df_format='wide'):
+    licks = get_lick_binary(dataset)
+    traces = np.vstack((licks, licks))
+    trace_ids = [0, 1]
+    timestamps = dataset.stimulus_timestamps
+    event_times = dataset.stimulus_presentations['start_time'].values[:-1]  # last one can get truncated
+    event_ids = dataset.stimulus_presentations.index.values[:-1]
+    response_analysis_params = get_default_stimulus_response_params()
+
+    response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
+                                  response_analysis_params, frame_rate)
+    if df_format == 'wide':
+        df = response_df(response_xr)
+    elif df_format == 'tidy' or df_format == 'long':
+        df = response_xr.to_dataframe().reset_index()
+
+    df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
+    df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
+    return df
+
+
+def get_trials_licks_df(dataset, frame_rate=None, df_format='wide'):
+    licks = get_lick_binary(dataset)
+    traces = np.vstack((licks, licks))
+    trace_ids = [0, 1]
+    timestamps = dataset.stimulus_timestamps
+    change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])][:-1]  # last trial can get cut off
+    event_times = change_trials['change_time'].values
+    event_ids = change_trials.index.values
+    response_analysis_params = get_default_trial_response_params()
+
+    response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
+                                  response_analysis_params, frame_rate)
+    if df_format == 'wide':
+        df = response_df(response_xr)
+    elif df_format == 'tidy' or df_format == 'long':
+        df = response_xr.to_dataframe().reset_index()
+    df = df.rename(columns={'trial_id': 'trials_id', 'trace_id': 'tmp'})
+    df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
+    return df
+
+
+def get_omission_licks_df(dataset, frame_rate=None, df_format='wide'):
     licks = get_lick_binary(dataset)
     traces = np.vstack((licks, licks))
     trace_ids = [0, 1]
@@ -725,10 +769,15 @@ def get_omission_licks_df(dataset, frame_rate=None):
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
-    df = response_df(response_xr)
+    if df_format == 'wide':
+        df = response_df(response_xr)
+    elif df_format == 'tidy' or df_format == 'long':
+        df = response_xr.to_dataframe().reset_index()
+
     df = df.rename(columns={'trial_id': 'stimulus_presentations_id', 'trace_id': 'tmp'})
     df = df[df['tmp'] == 0].drop(columns=['tmp']).reset_index()
     return df
+
 
 
 def get_lick_triggered_response_xr(dataset, use_events=False, filter_events=False, frame_rate=None):
