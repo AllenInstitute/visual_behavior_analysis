@@ -14,13 +14,13 @@ if __name__ == '__main__':
     print(project_code, session_number)
 
     df_name = 'trials_licks_df'
-    conditions = ['trials_id', 'go', 'hit', 'change_image_name']
+    conditions = ['trials_id', 'go', 'hit']
 
     df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False, use_extended_stimulus_presentations=True)
     print('done')
 
     df_name = 'omission_licks_df'
-    conditions = ['stimulus_presentations_id', 'lick_on_next_flash']
+    conditions = ['stimulus_presentations_id']
 
     df = io.get_multi_session_df(project_code, session_number, df_name, conditions, use_events=False,
                                  use_extended_stimulus_presentations=True)
