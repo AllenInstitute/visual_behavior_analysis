@@ -18,7 +18,7 @@ def get_single_cell_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/single_cell_plots'
 
 
-def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png']):
+def save_figure(fig, figsize, save_dir, folder, fig_title, formats=['.png','.pdf']):
     fig_dir = os.path.join(save_dir, folder)
     if not os.path.exists(fig_dir):
         os.mkdir(fig_dir)
@@ -170,3 +170,36 @@ def placeAxesOnGrid(fig, dim=[1, 1], xspan=[0, 1], yspan=[0, 1], wspace=None, hs
     inner_ax = np.array(inner_ax).squeeze().tolist()  # remove redundant dimension
     return inner_ax
 
+
+
+def plot_flashes_on_trace(ax, timestamps, change=None, omitted=False, alpha=0.15, facecolor='gray'):
+    """
+    plot stimulus flash durations on the given axis according to the provided timestamps
+    """
+    stim_duration = 0.2502
+    blank_duration = 0.5004
+    change_time = 0
+    start_time = timestamps[0]
+    end_time = timestamps[-1]
+    interval = (blank_duration + stim_duration)
+    # after time 0
+    if omitted:
+        array = np.arange((change_time + interval), end_time, interval)
+    else:
+        array = np.arange(change_time, end_time, interval)
+    for i, vals in enumerate(array):
+        amin = array[i]
+        amax = array[i] + stim_duration
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    if change == True:
+        alpha = alpha * 3
+    else:
+        alpha
+    # before time 0
+    array = np.arange(change_time, start_time - interval, -interval)
+    array = array[1:]
+    for i, vals in enumerate(array):
+        amin = array[i]
+        amax = array[i] + stim_duration
+        ax.axvspan(amin, amax, facecolor=facecolor, edgecolor='none', alpha=alpha, linewidth=0, zorder=1)
+    return ax
