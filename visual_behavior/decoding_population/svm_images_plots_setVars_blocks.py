@@ -50,13 +50,13 @@ dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 #%%
 
-svm_blocks = -1 #2 # np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = np.nan #2 # np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 use_same_experiments_dff_events = False #True # use the same set of experiments for both events and dff analysis (Note: for this to work you need to get both ea_evs and ev_dff; for this run the code until line ~300 twice once setting use_events to True and once to False.)
 
 to_decode = 'current' # 'current' : decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'images' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+trial_type = 'changes_vs_nochanges' # 'omissions', 'images', 'changes', 'changes_vs_nochanges' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
 time_win = [0, .55] # 'frames_svm' # time_win = [0, .55] # [0., 0.093, 0.186, 0.279, 0.372, 0.465]  # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 frames_svm = np.arange(-5,8) #[-3,-2,-1] # [0,1,2,3,4,5] # svm was run on how what frames relative to image onset
@@ -81,7 +81,11 @@ frames_svm = np.array(frames_svm)
 
 
 e = 'events_' if use_events else ''
-svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # 'svm_gray_omit'
+if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
+    svmn = f'{e}svm_decode_changes_from_nochanges' # 'svm_gray_omit'
+else:
+    svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
+
 
 dir_now = svmn #'omit_across_sess'
 if use_events:

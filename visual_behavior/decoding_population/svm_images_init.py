@@ -6,7 +6,7 @@ This script calls the function: svm_main_images_post
 
 SVM files are already saved (by running the svm_image_main_pbs code).
 
-Follow this script by svm_images_plots_setVars.py to make plots.
+Follow this script by svm_images_plots_setVars_blocks.py to make plots.
 If making plots for the block-block analysis, follow it by svm_images_plots_setVars_blocks.py to make plots.
 
 
@@ -32,11 +32,11 @@ from svm_images_main_post import *
     
 #%% Get SVM output for each cell type, and each frames_svm.
 
-svm_blocks = -1 #np.nan #np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
+svm_blocks = np.nan # np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'images' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+trial_type = 'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
 time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 
@@ -207,7 +207,11 @@ for iblock in br: # iblock=0; iblock=np.nan
 
     # Set the name of the h5 file for saving all_sess
     e = 'events_' if use_events else ''
-    svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images'
+    if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
+        svmn = f'{e}svm_decode_changes_from_nochanges' # 'svm_gray_omit'
+    else:
+        svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
+    
     now = (datetime.datetime.now()).strftime("%Y%m%d_%H%M%S")
 
     if same_num_neuron_all_planes:

@@ -29,7 +29,11 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
     num_planes = 8
     
     e = 'events_' if use_events else ''
-    svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_images' # 'svm_gray_omit'
+    
+    if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
+        svmn = f'{e}svm_decode_changes_from_nochanges' # 'svm_gray_omit'
+    else:
+        svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
         
     exp_ids = data_list['ophys_experiment_id'].values
 #     frame_dur = np.array([0.093]) # sec (~10.7 Hz; each pair of planes that are recorded simultaneously have time resolution frame_dur)    
@@ -390,6 +394,8 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
             #%% Plot the mean and std of each neuron (across trials: half omission, half gray)
 
             if doPlots:
+                import seaborn #as sns
+                
                 plt.figure(figsize=(4.8,6))
                 # mean
                 plt.subplot(211)
