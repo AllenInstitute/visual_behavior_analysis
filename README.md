@@ -1,7 +1,7 @@
 Allen Institute Visual Behavior Analysis package
 ==============================
 
-This repository contains code for analyzing behavioral data from the Allen Institute BrainTV Visual Behavior Project.
+This repository contains code for analyzing behavioral data from the Allen Brain Observatory: Visual Behavior 2P Project.
 
 This code is an important part of the internal Allen Institute code base and we are actively using and maintaining it. Issues are encouraged, but because this tool is so central to our mission pull requests might not be accepted if they conflict with our existing plans.
 
@@ -135,6 +135,9 @@ Pull requests are welcome.
 - Nick Ponvert - @nickponvert
 - Kate Roll - kater@alleninstitute.org, @downtoncrabby
 - Ryan Valenza - @ryval
+- Farzaneh Najafi - farzaneh.najafi@alleninstitute.org
+- Iryna Yavorska - iryna.yavorska@alleninstitute.org
+
 
 ## Additional Links
 
