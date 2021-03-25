@@ -338,9 +338,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def metadata(self):
         # for figure titles & filenames
         metadata = super().metadata
-        metadata['mouse_id'] = metadata['LabTracks_ID']
-        metadata['equipment_name'] = metadata['rig_name']
-        metadata['date_of_acquisition'] = metadata['experiment_datetime']
+        # metadata['mouse_id'] = metadata['LabTracks_ID']
+        # metadata['equipment_name'] = metadata['rig_name']
+        # metadata['date_of_acquisition'] = metadata['experiment_datetime']
         self._metadata = metadata
         return self._metadata
 
@@ -511,9 +511,9 @@ class BehaviorDataset(BehaviorSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        metadata['mouse_id'] = metadata['LabTracks_ID']
-        metadata['equipment_name'] = metadata['rig_name']
-        metadata['date_of_acquisition'] = metadata['experiment_datetime']
+        # metadata['mouse_id'] = metadata['LabTracks_ID']
+        # metadata['equipment_name'] = metadata['rig_name']
+        # metadata['date_of_acquisition'] = metadata['experiment_datetime']
         self._metadata = metadata
         return self._metadata
 
