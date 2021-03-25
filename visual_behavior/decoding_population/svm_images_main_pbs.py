@@ -24,7 +24,7 @@ from svm_funs import *
 
 
 #%%
-def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', svm_blocks= np.nan, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0):
+def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials, trial_type, dir_svm, kfold, frames_svm, numSamples, saveResults, cols_basic, cols_svm, to_decode='current', svm_blocks=-100, engagement_pupil_running = np.nan, use_events=False, same_num_neuron_all_planes=0):
     
     def svm_run_save(traces_fut_now, image_labels_now, iblock_trials_blocks, svm_blocks, now, engagement_pupil_running, pupil_running_values): #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults):
         '''
@@ -684,11 +684,11 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 traces2 = np.concatenate((image_data_this_exp2['trace'].values)) # (frames x neurons x trials)
                 traces_fut2 = np.reshape(traces2, (n_frames,  n_neurons, n_trials), order='F')
                 
-                plt.figure(); plt.plot(np.nanmean(traces_fut2, axis=(1,2))); plt.plot(np.nanmean(traces_fut, axis=(1,2)), color='r')
+                #plt.figure(); plt.plot(np.nanmean(traces_fut2, axis=(1,2))); plt.plot(np.nanmean(traces_fut, axis=(1,2)), color='r')
                 
                 # concatenate change and no-change trials
                 traces_fut = np.concatenate((traces_fut, traces_fut2), axis=2)
-                traces_fut.shape
+                #traces_fut.shape
 
             
             '''
@@ -779,7 +779,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 pupil_running_values = np.nan
                 
                 #### run svm analysis on the whole session
-                if np.isnan(svm_blocks):
+                if svm_blocks==-100:
                     svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
                     
@@ -957,7 +957,7 @@ if use_events:
     print(f'Using events')
 else:
     print(f'Using DF/F')
-if np.isnan(svm_blocks):
+if svm_blocks==-100:
     print(f'Running SVM on the whole session.')
 elif svm_blocks==-1:
     print(f'Dividing trials based on engagement state.')
@@ -975,7 +975,7 @@ dir_svm = os.path.join(dir_server_me, 'SVM')
 if same_num_neuron_all_planes:
     dir_svm = os.path.join(dir_svm, 'same_n_neurons_all_planes')
 
-if ~np.isnan(svm_blocks):
+if svm_blocks!=-100:
     dir_svm = os.path.join(dir_svm, f'trial_blocks')
                 
 if not os.path.exists(dir_svm):
