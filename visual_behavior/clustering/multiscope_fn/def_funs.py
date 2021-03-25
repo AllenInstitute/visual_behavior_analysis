@@ -231,6 +231,10 @@ def med_perc_each_exp(all_exp_traces):
 #%% Determine if a session is the 1st novel session or not
 # match the session date ("date") with all the dates in mouse_trainHist_all2, to find the stage of the current and the previous sessions.
 
+# NOTE: below you call a session novel if its BA: A and preceded by B, or AB: B and preceded by A. 
+# It perhaps makes more sense to only call the 1st B session (after A sessions) (or the 1st A session after B sessions) a novel session. 
+# for this from mouse training history figure out the date of the 1st novel session, and then see if the current experiment date matches that.
+# to figure out the date of the 1st novel session, look for the 1st B after a row of A (or 1st A after a row of B); you have these pieces of code in set_mousetrainhist_allsess2an_whatsess.py
 def is_session_novel(dir_server_me, mouse, date):
 
     # set file name: mouse_trainHist_all2

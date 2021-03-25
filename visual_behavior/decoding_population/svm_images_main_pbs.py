@@ -370,7 +370,11 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 #    saveResults = 1    
     
     e = 'events_' if use_events else ''  
-    svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
+    
+    if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
+        svmn = f'{e}svm_decode_changes_from_nochanges' # 'svm_gray_omit'
+    else:
+        svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
         
 #     kfold = 5 #2 #10 # KFold divides all the samples in  groups of samples, called folds (if , this is equivalent to the Leave One Out strategy), of equal sizes (if possible). The prediction function is learned using  folds, and the fold left out is used for test.
     regType = 'l2'
@@ -443,25 +447,53 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
         image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices!=8]
         image_indices_next_flash = all_stim_indices_next_flash[all_stim_indices!=8]
         
-    elif trial_type=='changes': # image changes:
+    elif trial_type=='changes' or trial_type=='changes_vs_nochanges': # image changes:
         image_data = df_data[df_data['change']==True]
         image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_trials['change']==True]
         image_indices_next_flash = all_stim_indices_next_flash[all_stim_trials['change']==True]
         
         
+    if trial_type=='changes_vs_nochanges': # decode image change vs no image change
+        #image_data = df_data[df_data['change']==True] # change
+        image_data2 = df_data[df_data['image_name']!='omitted'] # all images for now; below we will only get the image preceding the change
+
+        
+        
     #%% Set the vector of image indices for each trial (current flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
     u, u_i = np.unique(image_data['stimulus_presentations_id'].values, return_index=True) # u_i is the index of the first occurrence of unique values in image_data['stimulus_presentations_id']
-    image_trials = image_data.iloc[u_i,:] # image_trials is the same as image_data, except in includes only data from one neuron (yet all trials) # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
+    image_trials = image_data.iloc[u_i,:] # image_trials is the same as image_data, except it includes only data from one neuron (yet all trials) # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
     image_indices = image_trials['image_index'].values
 
+    if trial_type=='changes_vs_nochanges': # decode image change vs no image change
+        u, u_i = np.unique(image_data2['stimulus_presentations_id'].values, return_index=True) # u_i is the index of the first occurrence of unique values in image_data['stimulus_presentations_id']
+        image_trials2 = image_data2.iloc[u_i,:] # image_trials is the same as image_data, except it includes only data from one neuron (yet all trials) # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
+
+        rel2image_change = - 1
+        # set image_data2 only for images right preceding the image change
+        image_data2_n = image_data2[image_data2['stimulus_presentations_id'].isin(image_trials['stimulus_presentations_id'].values + rel2image_change)]
+        
+        # find those rows of image_trials2 that belong to the image right preceding the image change        
+#         image_trials2_n = image_trials2[image_trials2['stimulus_presentations_id'].isin(image_trials['stimulus_presentations_id'].values + rel2image_change)]
+#         if (image_trials2_n.shape == image_trials.shape) == False:
+#             print('doesnt make sense! imagetrials and imagetrials2 must be the same shape')
+    
+    
     
     #%% Set the vector of image labels which will be used for decoding
-    if to_decode == 'current':
-        image_labels = image_indices
-    elif to_decode == 'previous':
-        image_labels = image_indices_previous_flash
-    elif to_decode == 'next':
-        image_labels = image_indices_next_flash 
+    if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
+        a = np.full((len(image_indices)), 0)
+        b = np.full((len(image_indices)), 1)
+        image_labels = np.concatenate((a,b))
+
+    else:
+        
+        if to_decode == 'current':
+            image_labels = image_indices
+        elif to_decode == 'previous':
+            image_labels = image_indices_previous_flash
+        elif to_decode == 'next':
+            image_labels = image_indices_next_flash 
+          
     
     image_labels0 = copy.deepcopy(image_labels)
     #len(image_labels0)
@@ -550,6 +582,11 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             '''
             # get data for a single experiment
             image_data_this_exp = image_data[image_data['ophys_experiment_id']==lims_id] # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc            
+            
+            if trial_type=='changes_vs_nochanges':
+                # image preceding image change
+                image_data_this_exp2 = image_data2_n[image_data2_n['ophys_experiment_id']==lims_id] # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc            
+                
             n_neurons = image_data_this_exp['cell_specimen_id'].unique().shape[0]        
             
             n_neurons_all_planes.append(n_neurons)
@@ -601,6 +638,11 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
             # get data for a single experiment
             image_data_this_exp = image_data[image_data['ophys_experiment_id']==lims_id]
+            
+            if trial_type=='changes_vs_nochanges':
+                # image preceding image change
+                image_data_this_exp2 = image_data2_n[image_data2_n['ophys_experiment_id']==lims_id] # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc            
+
     #         image_data_this_exp.shape # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc
         
             '''
@@ -636,6 +678,19 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             traces_fut = np.reshape(traces, (n_frames,  n_neurons, n_trials), order='F')
 #             traces_fut.shape # frames x neurons x trials
 
+            
+            if trial_type=='changes_vs_nochanges':
+                # image preceding image change
+                traces2 = np.concatenate((image_data_this_exp2['trace'].values)) # (frames x neurons x trials)
+                traces_fut2 = np.reshape(traces2, (n_frames,  n_neurons, n_trials), order='F')
+                
+                plt.figure(); plt.plot(np.nanmean(traces_fut2, axis=(1,2))); plt.plot(np.nanmean(traces_fut, axis=(1,2)), color='r')
+                
+                # concatenate change and no-change trials
+                traces_fut = np.concatenate((traces_fut, traces_fut2), axis=2)
+                traces_fut.shape
+
+            
             '''
             aa_mx = np.array([np.max(traces_fut[:,i,:].flatten()) for i in range(traces_fut.shape[1])]) # neurons
             if (aa_mx==0).any():

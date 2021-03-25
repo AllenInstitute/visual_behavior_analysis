@@ -712,7 +712,7 @@ def plot_heatmap_peak_cc_ccShfl_p(f_top0, o_top0, f_top1, o_top1, f_top2, o_top2
 
     yl = 'cc amplitude'
     lims0_fo = np.squeeze([np.nanmin([f_top0, o_top0]) , np.nanmax([f_top0, o_top0])])
-#     lims0_fo = [-.01, .035] # [-.012, .035] # use a customized range of colors (colorbar axis)
+#     lims0_fo = [-.01, .03] # [-.002, .006] # [-.01, .02] # # use a customized range of colors (colorbar axis)
 
     ###### Flash ######
     ax1 = plt.subplot(gs[0])    

@@ -1158,7 +1158,7 @@ def omissions_traces_peaks(metadata_all, session_id, experiment_ids, experiment_
             # we want to see if the occurance of flash or omission, changes the coactivation pattern of 
             # neurons across specific layers of the 2 areas.
 
-            print('Computing pairwise correaltions...')
+            print('Computing pairwise correlations...')
 
             num_depth = int(num_planes/2)
             inds_lm = np.arange(num_depth) # we can get these from the following vars: distinct_areas and i_areas[range(num_planes)]

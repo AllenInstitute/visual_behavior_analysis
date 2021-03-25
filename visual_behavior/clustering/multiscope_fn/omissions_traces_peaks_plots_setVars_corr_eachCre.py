@@ -20,11 +20,11 @@ Created on Mon Sep 23 15:58:29 2019
 """
 
 # vars below apply to average-mouse plots
-plot_cc_traces = 1
-plot_cc_peaks = 1 
+plot_cc_traces = 0
+plot_cc_peaks = 0
 plot_cc_peaks_heatmaps = 1
-plot_cc_pooled = 1 
-plot_cc_pooled_superimposed = 1 
+plot_cc_pooled = 0
+plot_cc_pooled_superimposed = 0
 
 
 #%% 
