@@ -65,6 +65,10 @@ except Exception as e:
 
 #  RELEVANT DIRECTORIES
 
+def get_qc_plots_dir():
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
+
+
 def get_super_container_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
 
@@ -334,9 +338,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def metadata(self):
         # for figure titles & filenames
         metadata = super().metadata
-        metadata['mouse_id'] = metadata['LabTracks_ID']
-        metadata['equipment_name'] = metadata['rig_name']
-        metadata['date_of_acquisition'] = metadata['experiment_datetime']
+        # metadata['mouse_id'] = metadata['LabTracks_ID']
+        # metadata['equipment_name'] = metadata['rig_name']
+        # metadata['date_of_acquisition'] = metadata['experiment_datetime']
         self._metadata = metadata
         return self._metadata
 
@@ -507,9 +511,9 @@ class BehaviorDataset(BehaviorSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        metadata['mouse_id'] = metadata['LabTracks_ID']
-        metadata['equipment_name'] = metadata['rig_name']
-        metadata['date_of_acquisition'] = metadata['experiment_datetime']
+        # metadata['mouse_id'] = metadata['LabTracks_ID']
+        # metadata['equipment_name'] = metadata['rig_name']
+        # metadata['date_of_acquisition'] = metadata['experiment_datetime']
         self._metadata = metadata
         return self._metadata
 
@@ -2225,15 +2229,18 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
         expts = experiments_table.copy()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
-                filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
-                                                              use_events)
-                filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
-                df = pd.read_hdf(filepath, key='df')
-                df = df.merge(expts, on='ophys_experiment_id')
-                if remove_outliers:
-                    outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
-                    df = df[df.cell_specimen_id.isin(outlier_cells) == False]
-                multi_session_df = pd.concat([multi_session_df, df])
+                try:
+                    filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
+                                                                  use_events)
+                    filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
+                    df = pd.read_hdf(filepath, key='df')
+                    df = df.merge(expts, on='ophys_experiment_id')
+                    if remove_outliers:
+                        outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
+                        df = df[df.cell_specimen_id.isin(outlier_cells) == False]
+                    multi_session_df = pd.concat([multi_session_df, df])
+                except BaseException:
+                    print('no multi_session_df for', session_type)
         else:
             filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events)
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)

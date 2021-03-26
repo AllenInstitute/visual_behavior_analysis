@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -227,6 +228,22 @@ def plot_motion_correction_xy_shift_for_experiment(ophys_experiment_id, ax=None)
     ax.legend(fontsize='x-small', loc='upper right')
     ax.set_xlabel('time (sec)')
     ax.set_ylabel('pixels')
+    # get metrics from saved file and add to plot title
+    save_dir = r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/motion_correction'
+    # motion_df = pd.read_csv(os.path.join(save_dir, 'motion_correction_values_passing_experiments.csv'))
+    motion_df = pd.read_hdf(os.path.join(save_dir, 'motion_correction_values_all_experiments.h5'), key='df')
+    motion_df = motion_df.set_index('ophys_experiment_id')
+    cols_to_plot = ['x_mean', 'x_min', 'x_max', 'x_range', 'x_std',
+                    'y_mean', 'y_min', 'y_max', 'y_range', 'y_std']
+    row_data = motion_df.loc[ophys_experiment_id]
+    title = str(ophys_experiment_id) + ' - '
+    for col in cols_to_plot:  # plot all metric values
+        title = title + col + ': ' + str(np.round(row_data[col], 2)) + ', '
+    if len(row_data.values_over_threshold) > 0:
+        title = title + '\n outlier for: '
+        for col in row_data.values_over_threshold:
+            title = title + col + ', '
+    ax.set_title(title)
     return ax
 
 # BEHAVIOR
