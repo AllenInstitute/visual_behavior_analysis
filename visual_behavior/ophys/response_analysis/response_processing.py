@@ -458,9 +458,9 @@ def get_trials_response_xr(dataset, use_events=False, filter_events=False, frame
     event_times = change_trials['change_time'].values
     event_ids = change_trials.index.values
     if time_window is None:
-        response_analysis_params = get_default_stimulus_response_params()
+        response_analysis_params = get_default_trial_response_params()
     else:
-        response_analysis_params = get_default_stimulus_response_params()
+        response_analysis_params = get_default_trial_response_params()
         response_analysis_params['window_around_timepoint_seconds'] = time_window
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
@@ -560,9 +560,9 @@ def get_trials_run_speed_df(dataset, frame_rate=None, df_format='wide', time_win
     event_times = change_trials['change_time'].values
     event_ids = change_trials.index.values
     if time_window is None:
-        response_analysis_params = get_default_stimulus_response_params()
+        response_analysis_params = get_default_trial_response_params()
     else:
-        response_analysis_params = get_default_stimulus_response_params()
+        response_analysis_params = get_default_trial_response_params()
         response_analysis_params['window_around_timepoint_seconds'] = time_window
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
@@ -635,7 +635,7 @@ def get_omission_run_speed_df(dataset, frame_rate=None, df_format='wide', time_w
     return df
 
 
-def get_trials_pupil_area_df(dataset, frame_rate=None, df_format='wide'):
+def get_trials_pupil_area_df(dataset, frame_rate=None, df_format='wide', time_window=None):
     pupil_area = dataset.eye_tracking.pupil_area.values
     traces = np.vstack((pupil_area, pupil_area))
     trace_ids = [0, 1]
@@ -643,7 +643,11 @@ def get_trials_pupil_area_df(dataset, frame_rate=None, df_format='wide'):
     change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])][:-1]  # last trial can get cut off
     event_times = change_trials['change_time'].values
     event_ids = change_trials.index.values
-    response_analysis_params = get_default_trial_response_params()
+    if time_window is None:
+        response_analysis_params = get_default_trial_response_params()
+    else:
+        response_analysis_params = get_default_trial_response_params()
+        response_analysis_params['window_around_timepoint_seconds'] = time_window
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
@@ -750,7 +754,11 @@ def get_omission_licks_df(dataset, frame_rate=None, time_window=None):
     timestamps = dataset.stimulus_timestamps
     event_times = dataset.stimulus_presentations['start_time'].values[:-1]  # last one can get truncated
     event_ids = dataset.stimulus_presentations.index.values[:-1]
-    response_analysis_params = get_default_stimulus_response_params()
+    if time_window is None:
+        response_analysis_params = get_default_omission_response_params()
+    else:
+        response_analysis_params = get_default_omission_response_params()
+        response_analysis_params['window_around_timepoint_seconds'] = time_window
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
@@ -764,7 +772,7 @@ def get_omission_licks_df(dataset, frame_rate=None, time_window=None):
     return df
 
 
-def get_trials_licks_df(dataset, frame_rate=None, df_format='wide'):
+def get_trials_licks_df(dataset, frame_rate=None, df_format='wide', time_window=None):
     licks = get_lick_binary(dataset)
     traces = np.vstack((licks, licks))
     trace_ids = [0, 1]
@@ -772,7 +780,11 @@ def get_trials_licks_df(dataset, frame_rate=None, df_format='wide'):
     change_trials = dataset.trials[~pd.isnull(dataset.trials['change_time'])][:-1]  # last trial can get cut off
     event_times = change_trials['change_time'].values
     event_ids = change_trials.index.values
-    response_analysis_params = get_default_trial_response_params()
+    if time_window is None:
+        response_analysis_params = get_default_trial_response_params()
+    else:
+        response_analysis_params = get_default_trial_response_params()
+        response_analysis_params['window_around_timepoint_seconds'] = time_window
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
@@ -785,7 +797,7 @@ def get_trials_licks_df(dataset, frame_rate=None, df_format='wide'):
     return df
 
 
-def get_omission_licks_df(dataset, frame_rate=None, df_format='wide'):
+def get_omission_licks_df(dataset, frame_rate=None, df_format='wide', time_window=None):
     licks = get_lick_binary(dataset)
     traces = np.vstack((licks, licks))
     trace_ids = [0, 1]
@@ -814,7 +826,7 @@ def get_omission_licks_df(dataset, frame_rate=None, df_format='wide'):
 
 
 
-def get_lick_triggered_response_xr(dataset, use_events=False, filter_events=False, frame_rate=None):
+def get_lick_triggered_response_xr(dataset, use_events=False, filter_events=False, frame_rate=None, time_window=None):
     import visual_behavior.data_access.processing as processing
     if use_events:
         if filter_events:
@@ -831,7 +843,11 @@ def get_lick_triggered_response_xr(dataset, use_events=False, filter_events=Fals
     licks = licks[licks.lick_in_bout == False]
     event_times = licks.timestamps.values
     event_ids = licks.index.values
-    response_analysis_params = get_default_lick_response_params()
+    if time_window is None:
+        response_analysis_params = get_default_lick_response_params()
+    else:
+        response_analysis_params = get_default_lick_response_params()
+        response_analysis_params['window_around_timepoint_seconds'] = time_window
 
     response_xr = get_response_xr(dataset, traces, timestamps, event_times, event_ids, trace_ids,
                                   response_analysis_params, frame_rate)
