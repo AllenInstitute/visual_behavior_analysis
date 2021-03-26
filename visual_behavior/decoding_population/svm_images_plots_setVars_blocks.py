@@ -37,6 +37,8 @@ import re
 import datetime
 import copy
 import sys
+import numpy.ma as ma
+import seaborn as sns
 
 from general_funs import *
 
@@ -47,9 +49,7 @@ dir_server_me = '/allen/programs/braintv/workgroups/nc-ophys/Farzaneh'
 dir0 = '/home/farzaneh/OneDrive/Analysis'
 
 
-
 #%%
-
 svm_blocks = np.nan #2 # np.nan # -1: divide trials based on engagement #2 # number of trial blocks to divide the session to, and run svm on. # set to np.nan to run svm analysis on the whole session
 use_events = True # False #whether to run the analysis on detected events (inferred spikes) or dff traces.
 
@@ -385,7 +385,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
     ##############################################################################
     #%% Set the exposure_number (or better to call "retake_number") for each experiment
 
-    experiments_table = loading.get_filtered_ophys_experiment_table()
+    experiments_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
 
     estbl = experiments_table.index
     es = all_sess0['experiment_id'].values
@@ -436,6 +436,127 @@ for iblock in br: # iblock=0 ; iblock=np.nan
 
     
     
+    #%% correlate classification accuracy with behavioral strategy
+    
+#     loading.get_behavior_model_summary_table()
+    directory = '/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/behavior_model_output/'
+    model_table = pd.read_csv(directory+'_summary_table.csv')
+
+    # strategy dropout
+    model_table_allsess = model_table[model_table['ophys_session_id'].isin(all_sess0['session_id'])]    
+    cn = 'strategy_dropout_index'  # 'visual_only_dropout_index' # 'timing_only_dropout_index'  # 'strategy_dropout_index'
+    sdi = model_table_allsess[cn].values
+    
+    # testing data class accuracy
+    all_sess0_modeltable = all_sess0[all_sess0['session_id'].isin(model_table['ophys_session_id'])]
+    peak_amp_test = np.vstack(all_sess0_modeltable['peak_amp_trainTestShflChance'].values)[:,1]
+    # compute average of the 8 planes
+    a = np.reshape(peak_amp_test, (num_planes, len(model_table_allsess)), order='F')
+    testing_accur_ave_planes = np.nanmean(a, axis=0)
+
+    # compute, for each session, corrcoef between strategy dropout index and average testing_class_accuracy across the 8 planes
+    c, p = ma.corrcoef(ma.masked_invalid(sdi), ma.masked_invalid(testing_accur_ave_planes))
+
+    # scatter plot
+    plt.figure()
+    plt.plot(sdi, testing_accur_ave_planes, '.')
+    plt.xlabel(f'{cn}')
+    plt.ylabel('average decoder accuracy of 8 planes\n change vs no change')
+    plt.title(f'corrcoef = {p[0]}');
+    
+    
+    #################################
+    # color code cre lines
+    df = pd.DataFrame([], columns=['Decoder accuracy (average of 8 planes)', f'{cn}', 'cre'])
+    df['Decoder accuracy (average of 8 planes)'] = testing_accur_ave_planes
+    df[f'{cn}'] = sdi
+    df['cre'] = cre_mt
+    
+    sns.lmplot(f'{cn}', 'Decoder accuracy (average of 8 planes)', data=df, hue='cre', fit_reg=False)
+    
+    
+    # cre line for each session
+    cre_mt = all_sess0_modeltable['cre'].values
+    cre_mt = np.reshape(cre_mt, (num_planes, len(model_table_allsess)), order='F')[0,:] # len sessions
+
+    # cre names
+    a = np.unique(cre_mt.astype(str)); cren = a[a!='nan']
+    print(cren)
+    
+    # compute corrcoeff for each cre line
+    c_allcre = []
+    plt.figure(figsize=(3,6))
+    for icremt in range(len(cren)):
+        sdin = sdi[cre_mt == cren[icremt]]
+        tan = testing_accur_ave_planes[cre_mt == cren[icremt]]
+
+        c, p = ma.corrcoef(ma.masked_invalid(sdin), ma.masked_invalid(tan))    
+        c_allcre.append(p[0])
+    
+        plt.subplot(3,1,icremt+1)
+        plt.plot(sdin, tan, '.')
+        if icremt==2:
+            plt.xlabel(f'{cn}')
+        if icremt==1:
+            plt.ylabel('average decoder accuracy of 8 planes\n change vs no change')
+        plt.title(f'{cren[icremt]}: corrcoef = {p[0]:.2f}')
+
+    plt.subplots_adjust(hspace=0.5)
+    
+    
+    #################################
+    # color code by area
+    
+    # repeat strategy index for each plane
+    a = np.tile(sdi, (num_planes,1)) # 8 x num_sess
+    sdi_rep = np.reshape(a, (num_planes*a.shape[1]), order='F')
+#     a.shape
+
+    cre_rep = all_sess0_modeltable['cre'].values
+    area_rep = all_sess0_modeltable['area'].values
+#     peak_amp_test.shape
+
+
+    ##### plot all cre lines
+    df = pd.DataFrame([], columns=['Decoder accuracy (each plane)', f'{cn}', 'cre', 'area'])
+    df['Decoder accuracy (each plane)'] = peak_amp_test
+    df[f'{cn}'] = sdi_rep
+    df['cre'] = cre_rep
+    df['area'] = area_rep
+    
+    # all cre lines
+    dfn = df
+    # a single cre line
+#     dfn = df[df['cre']==cren[2]]    
+    sns.lmplot(f'{cn}', 'Decoder accuracy (each plane)', data=dfn, hue='area', fit_reg=False)
+
+    
+    ##### plot each cre line separately
+    plt.figure(figsize=(3,6))
+    for icremt in range(len(cren)):
+        sdin = sdi_rep[cre_rep == cren[icremt]]
+        tan = peak_amp_test[cre_rep == cren[icremt]]
+        aan = area_rep[cre_rep == cren[icremt]]
+        
+        plt.subplot(3,1,icremt+1)
+        plt.plot(sdin[aan=='VISl'], tan[aan=='VISl'], 'b.', label='VISl')
+        plt.plot(sdin[aan=='VISp'], tan[aan=='VISp'], 'r.', label='VISp')
+        if icremt==0:
+            plt.legend(loc='center left', bbox_to_anchor=(1, .7), frameon=False)
+        if icremt==2:
+            plt.xlabel(f'{cn}')
+        if icremt==1:
+            plt.ylabel('Decoder accuracy of each plane\n change vs no change')
+
+    plt.subplots_adjust(hspace=0.5)
+    
+    
+    #################################
+    # color code by depth
+
+    
+    
+    
     
     
     ############################################################################################################################################################
@@ -470,7 +591,7 @@ for iblock in br: # iblock=0 ; iblock=np.nan
         '''
 
         print(f'\nFor now including all sessions with any exposure_number!\n')
-    #     all_sess = copy.deepcopy(all_sess0)
+#         all_sess = copy.deepcopy(all_sess0)
 
 
         ##############################################################################
