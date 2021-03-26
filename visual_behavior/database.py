@@ -190,12 +190,12 @@ def get_value_from_table(search_key, search_value, target_table, target_key):
     '''
     api = (credential_injector(LIMS_DB_CREDENTIAL_MAP)
            (PostgresQueryMixin)())
-    query = f'''
-    select {target_key}
-    from {target_table}
-    where {search_key} = '{search_value}'
+    query = '''
+        select {}
+        from {}
+        where {} = '{}'
     '''
-    result = pd.read_sql(query, api.get_connection())
+    result = pd.read_sql(query.format(target_key, target_table, search_key, search_value), api.get_connection())
     if len(result) == 1:
         return result[target_key].iloc[0]
     else:
