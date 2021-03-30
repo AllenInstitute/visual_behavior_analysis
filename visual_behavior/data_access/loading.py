@@ -184,7 +184,7 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
     else:
         print('generating filtered_ophys_experiment_table')
         cache = get_visual_behavior_cache()
-        experiments = cache.get_experiment_table()
+        experiments = cache.get_ophys_experiment_table()
         behavior_session_table = cache.get_behavior_session_table()
         experiments = reformat.reformat_experiments_table(experiments, behavior_session_table)
         experiments = filtering.limit_to_production_project_codes(experiments)
@@ -252,7 +252,7 @@ def get_filtered_ophys_session_table():
                         "container_workflow_state":
     """
     cache = get_visual_behavior_cache()
-    sessions = cache.get_session_table()
+    sessions = cache.get_ophys_session_table()
     experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
     sessions = filtering.limit_to_production_project_codes(sessions)
     sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions, experiment_table)
