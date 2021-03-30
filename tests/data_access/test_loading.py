@@ -1,6 +1,8 @@
 import os
 import pytest
 
+def test_basic_import():
+    from visual_behavior.data_access import loading
 
 @pytest.mark.onprem
 def test_get_filtered_ophys_session_table():
