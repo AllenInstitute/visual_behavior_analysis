@@ -55,8 +55,6 @@ def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavio
     :param behavior_session_id:
     :return:
     """
-    # cache = loading.get_visual_behavior_cache()
-    # behavior_session_table = cache.get_behavior_session_table()
     behavior_session_table = behavior_session_table[behavior_session_table.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
     donor_id = behavior_session_table.loc[behavior_session_id].donor_id
     session_type = behavior_session_table.loc[behavior_session_id].session_type
@@ -69,9 +67,7 @@ def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavio
     return image_set_exposures
 
 
-def add_image_set_exposure_number_to_experiments_table(experiments):
-    cache = loading.get_visual_behavior_cache()
-    behavior_session_table = cache.get_behavior_session_table()
+def add_image_set_exposure_number_to_experiments_table(experiments, behavior_session_table):
     exposures = []
     for row in range(len(experiments)):
         try:
@@ -116,7 +112,7 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id, behavior
 
 
 def add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table):
-    
+
     exposures = []
     for row in range(len(experiments)):
         try:
@@ -141,20 +137,6 @@ def add_model_outputs_availability_to_table(table):
     return table
 
 
-def add_has_cell_matching_to_table(table):
-    """
-    Evaluates wither a given experiment_id is in a saved list of experiments where cell matching failed.
-    :param table: table of experiment level metadata
-    :return: table with added column 'has_cell_matching', values are Boolean
-    """
-    save_dir = loading.get_cache_dir()
-    df = pd.read_csv(os.path.join(save_dir, 'experiments_with_missing_cell_specimen_ids.csv'))
-    no_cell_matching = list(df.ophys_experiment_id.values)
-    print(len(no_cell_matching))
-    table['has_cell_matching'] = [False if expt in no_cell_matching else True for expt in table.ophys_experiment_id.values]
-    return table
-
-
 def reformat_experiments_table(experiments, behavior_session_table):
     experiments = experiments.reset_index()
     experiments['super_container_id'] = experiments['specimen_id'].values
@@ -170,10 +152,9 @@ def reformat_experiments_table(experiments, behavior_session_table):
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
     experiments = add_session_type_exposure_number_to_experiments_table(experiments)
-    experiments = add_image_set_exposure_number_to_experiments_table(experiments)
+    experiments = add_image_set_exposure_number_to_experiments_table(experiments, behavior_session_table)
     experiments = add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table)
     experiments = add_model_outputs_availability_to_table(experiments)
-    # experiments = add_has_cell_matching_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
     if 'index' in experiments.columns:
@@ -182,12 +163,11 @@ def reformat_experiments_table(experiments, behavior_session_table):
     return experiments
 
 
-def add_all_qc_states_to_ophys_session_table(session_table):
+def add_all_qc_states_to_ophys_session_table(session_table, experiment_table):
     """ Add 'experiment_workflow_state', 'container_workflow_state', and 'session_workflow_state' to session_table.
             :param session_table: session_table from SDK cache
             :return: session_table: with additional columns added
             """
-    experiment_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
     session_table = add_session_workflow_state_to_ophys_session_table(session_table, experiment_table)
     session_table = add_container_workflow_state_to_ophys_session_table(session_table, experiment_table)
     return session_table

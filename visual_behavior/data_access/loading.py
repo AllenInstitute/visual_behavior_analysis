@@ -253,8 +253,9 @@ def get_filtered_ophys_session_table():
     """
     cache = get_visual_behavior_cache()
     sessions = cache.get_session_table()
+    experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
     sessions = filtering.limit_to_production_project_codes(sessions)
-    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
+    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions, experiment_table)
     sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
