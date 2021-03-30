@@ -4,7 +4,8 @@ from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLim
 from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
-from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
+from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadable
 # from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
@@ -152,9 +153,10 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     else:
         print('generating filtered_ophys_experiment_table')
-        cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())
-        experiments = cache.get_experiment_table()
-        experiments = reformat.reformat_experiments_table(experiments)
+        cache = get_visual_behavior_cache()
+        experiments = cache.get_ophys_experiment_table()
+        behavior_session_table = cache.get_behavior_session_table()
+        experiments = reformat.reformat_experiments_table(experiments, behavior_session_table)
         experiments = filtering.limit_to_production_project_codes(experiments)
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
@@ -218,9 +220,10 @@ def get_filtered_ophys_session_table():
                         "container_workflow_state":
     """
     cache = get_visual_behavior_cache()
-    sessions = cache.get_session_table()
+    sessions = cache.get_ophys_session_table()
+    experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
     sessions = filtering.limit_to_production_project_codes(sessions)
-    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
+    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions, experiment_table)
     sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
