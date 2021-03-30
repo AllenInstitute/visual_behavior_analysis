@@ -5,8 +5,6 @@ from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
-from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadable
-# from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import utilities
@@ -126,7 +124,7 @@ def get_visual_behavior_cache(manifest_path=None):
     # i think this manifest caching is now disabled, so providing the path to the manifest does nothing in this case ###
     if manifest_path is None:
         manifest_path = get_manifest_path()
-    cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())
+    cache = bpc.from_lims(manifest=get_manifest_path())
     return cache
 
 
@@ -243,7 +241,7 @@ def get_filtered_behavior_session_table(release_data_only=True):
     Returns:
         behavior_sessions -- Dataframe with behavior_session_id as the index and metadata as columns.
     """
-    cache = BehaviorProjectCache.from_lims()
+    cache = bpc.from_lims()
     behavior_sessions = cache.get_behavior_session_table()
     behavior_sessions = behavior_sessions.reset_index()
     # make mouse_id an int not string
