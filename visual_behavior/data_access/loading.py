@@ -2,7 +2,7 @@ import warnings
 from allensdk.internal.api import PostgresQueryMixin
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
-from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 from visual_behavior.ophys.response_analysis.response_analysis import LazyLoadable
 # from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
 from visual_behavior.ophys.response_analysis import response_processing as rp
@@ -185,7 +185,8 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         print('generating filtered_ophys_experiment_table')
         cache = get_visual_behavior_cache()
         experiments = cache.get_experiment_table()
-        experiments = reformat.reformat_experiments_table(experiments)
+        behavior_session_table = cache.get_behavior_session_table()
+        experiments = reformat.reformat_experiments_table(experiments, behavior_session_table)
         experiments = filtering.limit_to_production_project_codes(experiments)
         # experiments['has_events'] = [check_for_events_file(ophys_experiment_id) for ophys_experiment_id in
         #                              experiments.index.values]

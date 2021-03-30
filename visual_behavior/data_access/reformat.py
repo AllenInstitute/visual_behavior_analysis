@@ -2,7 +2,6 @@ import os
 import numpy as np
 import pandas as pd
 
-from visual_behavior.data_access import loading
 from visual_behavior.data_access import utilities
 import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
@@ -97,8 +96,7 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id, behavior
     :param behavior_session_id:
     :return: The number of behavior sessions where omitted flashes were present, prior to the current session
     """
-    # cache = loading.get_visual_behavior_cache()
-    # behavior_session_table = cache.get_behavior_session_table()
+
     behavior_session_table = behavior_session_table[behavior_session_table.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
     donor_id = behavior_session_table.loc[behavior_session_id].donor_id
     date = behavior_session_table.loc[behavior_session_id].date_of_acquisition
@@ -117,9 +115,8 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id, behavior
     return omission_exposures
 
 
-def add_omission_exposure_number_to_experiments_table(experiments):
-    cache = loading.get_visual_behavior_cache()
-    behavior_session_table = cache.get_behavior_session_table()
+def add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table):
+    
     exposures = []
     for row in range(len(experiments)):
         try:
@@ -158,7 +155,7 @@ def add_has_cell_matching_to_table(table):
     return table
 
 
-def reformat_experiments_table(experiments):
+def reformat_experiments_table(experiments, behavior_session_table):
     experiments = experiments.reset_index()
     experiments['super_container_id'] = experiments['specimen_id'].values
     # clean up cre_line naming
@@ -174,7 +171,7 @@ def reformat_experiments_table(experiments):
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
     experiments = add_session_type_exposure_number_to_experiments_table(experiments)
     experiments = add_image_set_exposure_number_to_experiments_table(experiments)
-    experiments = add_omission_exposure_number_to_experiments_table(experiments)
+    experiments = add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table)
     experiments = add_model_outputs_availability_to_table(experiments)
     # experiments = add_has_cell_matching_to_table(experiments)
     if 'level_0' in experiments.columns:
