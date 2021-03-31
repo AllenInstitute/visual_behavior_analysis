@@ -1,9 +1,7 @@
 import os
 import json
 import shutil
-import pandas as pd
-import configparser as configp
-
+import numpy as np
 from visual_behavior.data_access import loading
 from allensdk.internal.api import PostgresQueryMixin
 from visual_behavior.ophys.io.lims_database import LimsDatabase
@@ -11,7 +9,7 @@ from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
 from visual_behavior.ophys.sync.process_sync import filter_digital, calculate_delay
 from visual_behavior import database as db
 
-from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache as bpc
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
 
@@ -90,8 +88,53 @@ def check_for_model_outputs(behavior_session_id):
     return len(model_output_file) > 0
 
 
-# retrieve data from cache
-def get_behavior_session_id_from_ophys_session_id(ophys_session_id, cache):
+def get_all_session_ids(ophys_experiment_id=None, ophys_session_id=None, behavior_session_id=None, foraging_id=None):
+    '''
+    a function to get all ID types for a given experiment ID
+    Arguments:
+        ophys_experiment_id {int} -- unique identifier for an ophys_experiment
+        ophys_session_id {int} -- unique identifier for an ophys_session
+        behavior_session_id {int} -- unique identifier for a behavior_session
+        foraging_id {int} -- unique identifier for a behavior_session (1:1 with behavior session ID)
+
+    Only one experiment ID type should be passed
+    Returns:
+        dataframe with one column for each ID type (potentially multiple rows)
+    '''
+    if ophys_experiment_id:
+        table = 'oe'
+        search_key = 'id'
+        id_to_search = ophys_experiment_id
+    elif ophys_session_id:
+        table = 'os'
+        search_key = 'id'
+        id_to_search = ophys_session_id
+    elif behavior_session_id:
+        table = 'bs'
+        search_key = 'id'
+        id_to_search = behavior_session_id
+    elif foraging_id:
+        table = 'bs'
+        search_key = 'foraging_id'
+        id_to_search = "'{}'".format(foraging_id)
+    lims_query = '''
+        select
+            bs.id as behavior_session_id,
+            bs.foraging_id as foraging_id,
+            os.id as ophys_session_id,
+            oe.id as ophys_experiment_id,
+            oevbec.visual_behavior_experiment_container_id as container_id,
+            os.visual_behavior_supercontainer_id as supercontainer_id
+        from behavior_sessions as bs
+        join ophys_sessions as os on os.id = bs.ophys_session_id
+        join ophys_experiments as oe on os.id = oe.ophys_session_id
+        join ophys_experiments_visual_behavior_experiment_containers AS oevbec on oevbec.ophys_experiment_id=oe.id
+        where {}.{} = {}
+    '''
+    return db.lims_query(lims_query.format(table, search_key, id_to_search))
+
+
+def get_behavior_session_id_from_ophys_session_id(ophys_session_id, cache=None):
     """finds the behavior_session_id assocciated with an ophys_session_id
 
     Arguments:
@@ -105,18 +148,27 @@ def get_behavior_session_id_from_ophys_session_id(ophys_session_id, cache):
         int -- behavior_session_id : 9 digit, unique identifier for a
                 behavior_session
     """
-    ophys_sessions_table = cache.get_session_table()
-    if ophys_session_id not in ophys_sessions_table.index:
-        raise Exception('ophys_session_id not in session table')
-    return ophys_sessions_table.loc[ophys_session_id].behavior_session_id
+    if cache:
+        ophys_sessions_table = cache.get_session_table()
+        if ophys_session_id not in ophys_sessions_table.index:
+            raise Exception('ophys_session_id not in session table')
+        return ophys_sessions_table.loc[ophys_session_id].behavior_session_id
+    else:
+        # if cache not passed, go to lims
+        lims_query_string = '''
+            select bs.id
+            from behavior_sessions as bs
+            where bs.ophys_session_id = {}
+        '''
+        return db.lims_query(lims_query_string.format(ophys_session_id)).astype(int)
 
 
-def get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache):
+def get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache=None):
     """Finds the behavior_session_id associated with an ophys_session_id
 
     Arguments:
         behavior_session_id {int} -- 9 digit, unique identifier for a behavior_session
-        cache {object} -- cache from BehaviorProjectCache
+        cache {object} -- cache from BehaviorProjectCache (optional)
 
     Raises:
         Exception: [description]
@@ -124,13 +176,22 @@ def get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache):
     Returns:
         int -- ophys_session_id: 9 digit, unique identifier for an ophys_session
     """
-    behavior_sessions = cache.get_behavior_session_table()
-    if behavior_session_id not in behavior_sessions.index:
-        raise Exception('behavior_session_id not in behavior session table')
-    return behavior_sessions.loc[behavior_session_id].ophys_session_id.astype(int)
+    if cache:
+        behavior_sessions = cache.get_behavior_session_table()
+        if behavior_session_id not in behavior_sessions.index:
+            raise Exception('behavior_session_id not in behavior session table')
+        return behavior_sessions.loc[behavior_session_id].ophys_session_id.astype(int)
+    else:
+        # if cache not passed, go to lims
+        lims_query_string = '''
+            select bs.ophys_session_id
+            from behavior_sessions as bs
+            where bs.id = {}
+        '''
+        return db.lims_query(lims_query_string.format(behavior_session_id)).astype(int)
 
 
-def get_ophys_experiment_id_from_behavior_session_id(behavior_session_id, cache, exp_num=0):
+def get_ophys_experiment_id_from_behavior_session_id(behavior_session_id, cache=None, exp_num=0):
     """Finds the ophys_experiment_id associated with an behavior_session_id. It is possible
     that there are multiple ophys_experiments for a single behavior session- as is the case
     for data collected on the multiscope microscopes
@@ -150,12 +211,28 @@ def get_ophys_experiment_id_from_behavior_session_id(behavior_session_id, cache,
         int -- ophys_experiment_id(s), 9 digit unique identifier for an ophys_experiment
                 possible that there are multip ophys_experiments for one behavior_session
     """
-    ophys_session_id = get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache)
-    ophys_experiment_id = get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_num=exp_num)
-    return ophys_experiment_id
+    if cache:
+        ophys_session_id = get_ophys_session_id_from_behavior_session_id(behavior_session_id, cache)
+        ophys_experiment_id = get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_num=exp_num)
+        return ophys_experiment_id
+    else:
+        # if cache not passed, go to lims
+        lims_query_string = '''
+            select oe.id
+            from behavior_sessions as bs
+            join ophys_sessions as os on os.id = bs.ophys_session_id
+            join ophys_experiments as oe on os.id = oe.ophys_session_id
+            where bs.id = {}
+
+        '''
+        result = db.lims_query(lims_query_string.format(behavior_session_id))
+        if isinstance(result, (int, np.int64)):
+            return result.astype(int)
+        else:
+            return result['id'].astype(int).to_list()
 
 
-def get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_num=0):
+def get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache=None, exp_num=0):
     """finds the ophys_experiment_id associated with an ophys_session_id
 
     Arguments:
@@ -176,14 +253,29 @@ def get_ophys_experiment_id_from_ophys_session_id(ophys_session_id, cache, exp_n
         int -- ophys_experiment_id(s), 9 digit unique identifier for an ophys_experiment
         possible that there are multip ophys_experiments for one ophys_session
     """
-    ophys_sessions = cache.get_session_table()
-    if ophys_session_id not in ophys_sessions.index:
-        raise Exception('ophys_session_id not in session table')
-    experiments = ophys_sessions.loc[ophys_session_id].ophys_experiment_id
-    return experiments[0]
+    if cache:
+        ophys_sessions = cache.get_session_table()
+        if ophys_session_id not in ophys_sessions.index:
+            raise Exception('ophys_session_id not in session table')
+        experiments = ophys_sessions.loc[ophys_session_id].ophys_experiment_id
+        return experiments[0]
+    else:
+        # if cache not passed, go to lims
+        lims_query_string = '''
+            select oe.id
+            from ophys_sessions as os
+            join ophys_experiments as oe on os.id = oe.ophys_session_id
+            where os.id = {}
+
+        '''
+        result = db.lims_query(lims_query_string.format(ophys_session_id))
+        if isinstance(result, (int, np.int64)):
+            return result.astype(int)
+        else:
+            return result['id'].astype(int).to_list()
 
 
-def get_behavior_session_id_from_ophys_experiment_id(ophys_experiment_id, cache):
+def get_behavior_session_id_from_ophys_experiment_id(ophys_experiment_id, cache=None):
     """finds the behavior_session_id associated with an ophys_experiment_id
 
     Arguments:
@@ -196,13 +288,25 @@ def get_behavior_session_id_from_ophys_experiment_id(ophys_experiment_id, cache)
     Returns:
         int -- behavior_session_id, 9 digit, unique identifier for a behavior_session
     """
-    ophys_experiments = cache.get_experiment_table()
-    if ophys_experiment_id not in ophys_experiments.index:
-        raise Exception('ophys_experiment_id not in experiment table')
-    return ophys_experiments.loc[ophys_experiment_id].behavior_session_id
+    if cache:
+        ophys_experiments = cache.get_experiment_table()
+        if ophys_experiment_id not in ophys_experiments.index:
+            raise Exception('ophys_experiment_id not in experiment table')
+        return ophys_experiments.loc[ophys_experiment_id].behavior_session_id
+    else:
+        # if cache not passed, go to lims
+        lims_query_string = '''
+            select bs.id
+            from behavior_sessions as bs
+            join ophys_sessions as os on os.id = bs.ophys_session_id
+            join ophys_experiments as oe on os.id = oe.ophys_session_id
+            where oe.id = {}
+
+        '''
+        return db.lims_query(lims_query_string.format(ophys_experiment_id)).astype(int)
 
 
-def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id):
+def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id, cache=None):
     """finds the ophys_session_id associated with an ophys_experiment_id
 
     Arguments:
@@ -215,14 +319,24 @@ def get_ophys_session_id_from_ophys_experiment_id(ophys_experiment_id):
     Returns:
         int -- ophys_session_id: 9 digit, unique identifier for an ophys_session
     """
-    cache = loading.get_visual_behavior_cache()
-    ophys_experiments = cache.get_experiment_table()
-    if ophys_experiment_id not in ophys_experiments.index:
-        raise Exception('ophys_experiment_id not in experiment table')
-    return ophys_experiments.loc[ophys_experiment_id].ophys_session_id
+    if cache:
+        ophys_experiments = cache.get_experiment_table()
+        if ophys_experiment_id not in ophys_experiments.index:
+            raise Exception('ophys_experiment_id not in experiment table')
+        return ophys_experiments.loc[ophys_experiment_id].ophys_session_id
+    else:
+        # if cache not passed, go to lims
+        lims_query_string = '''
+            select os.id
+            from ophys_sessions as os
+            join ophys_experiments as oe on os.id = oe.ophys_session_id
+            where oe.id = {}
+
+        '''
+        return db.lims_query(lims_query_string.format(ophys_experiment_id)).astype(int)
 
 
-def get_donor_id_from_specimen_id(specimen_id, cache):
+def get_donor_id_from_specimen_id(specimen_id, cache=None):
     """gets a donor_id associated with a specimen_id. Both donor_id
         and specimen_id are identifiers for a mouse.
 
@@ -233,11 +347,20 @@ def get_donor_id_from_specimen_id(specimen_id, cache):
     Returns:
         int -- donor id
     """
-    ophys_sessions = cache.get_session_table()
-    behavior_sessions = cache.get_behavior_session_table()
-    ophys_session_id = ophys_sessions.query('specimen_id == @specimen_id').iloc[0].name  # noqa: F841
-    donor_id = behavior_sessions.query('ophys_session_id ==@ophys_session_id')['donor_id'].values[0]
-    return donor_id
+    if cache:
+        ophys_sessions = cache.get_session_table()
+        behavior_sessions = cache.get_behavior_session_table()
+        ophys_session_id = ophys_sessions.query('specimen_id == @specimen_id').iloc[0].name  # noqa: F841
+        donor_id = behavior_sessions.query('ophys_session_id ==@ophys_session_id')['donor_id'].values[0]
+        return donor_id
+    else:
+        # if cache not passed, go to lims
+        lims_query_string = '''
+            select donor_id
+            from specimens
+            where specimens.id = '{}'
+        '''
+        return db.lims_query(lims_query_string.format(specimen_id)).astype(int)
 
 
 def model_outputs_available_for_behavior_session(behavior_session_id):
@@ -512,8 +635,7 @@ def get_sdk_session(behavior_session_id, is_ophys):
     else:
         return BehaviorSession.from_lims(behavior_session_id)
 
-
-#getting filepaths for well known files from LIMS
+# getting filepaths for well known files from LIMS
 
 
 def get_filepath_from_wkf_info(wkf_info):
@@ -561,20 +683,21 @@ def get_wkf_timeseries_ini_filepath(ophys_session_id):
     filepath = get_filepath_from_wkf_info(wkf_storage_info)
     return filepath
 
+#
+# def pmt_gain_from_timeseries_ini(timeseries_ini_path):
+#     """parses the timeseries ini file (scientifica experiments only)
+#         and extracts the pmt gain setting
+#
+#     Arguments:
+#         timeseries_ini_path {[type]} -- [description]
+#
+#     Returns:
+#         int -- int of the pmt gain
+#     """
+#     config.read(timeseries_ini_path)
+#     pmt_gain = int(float(config['_']['PMT.2']))
+#     return pmt_gain
 
-def pmt_gain_from_timeseries_ini(timeseries_ini_path):
-    """parses the timeseries ini file (scientifica experiments only)
-        and extracts the pmt gain setting
-
-    Arguments:
-        timeseries_ini_path {[type]} -- [description]
-
-    Returns:
-        int -- int of the pmt gain
-    """
-    config.read(timeseries_ini_path)
-    pmt_gain = int(float(config['_']['PMT.2']))
-    return pmt_gain
 
 def get_wkf_dff_h5_filepath(ophys_experiment_id):
     """uses well known file system to query lims
@@ -714,6 +837,35 @@ def get_wkf_demixed_traces_h5_filepath(ophys_experiment_id):
     attachable_id = {0}
 
     '''.format(ophys_experiment_id)
+
+    lims_cursor = db.get_psql_dict_cursor()
+    lims_cursor.execute(QUERY)
+
+    wkf_storage_info = (lims_cursor.fetchall())
+    filepath = get_filepath_from_wkf_info(wkf_storage_info)
+    return filepath
+
+
+def get_wkf_events_h5_filepath(ophys_experiment_id):
+    """uses well known file system to query lims
+        and get the directory and filename for the
+        _event.h5 for a given ophys experiment
+
+    Arguments:
+        ophys_experiment_id {int} -- 9 digit unique identifier for
+                                    an ophys experiment
+
+    Returns:
+        string -- filepath (directory and filename) for the event.h5 file
+        for the given ophys_experiment_id
+    """
+    QUERY = '''
+        SELECT storage_directory || filename
+        FROM well_known_files
+        WHERE well_known_file_type_id = 1074961818 AND
+        attachable_id = {0}
+
+        '''.format(ophys_experiment_id)
 
     lims_cursor = db.get_psql_dict_cursor()
     lims_cursor.execute(QUERY)
@@ -896,6 +1048,12 @@ def get_wkf_eye_tracking_avi_filepath(ophys_session_id):
     return filepath
 
 
+def get_eye_tracking_h5_filepath(ophys_session_id):
+    avi_filepath = get_wkf_eye_tracking_avi_filepath(ophys_session_id)
+    h5_filepath = avi_filepath[:-3] + "h5"
+    return h5_filepath
+
+
 def get_wkf_ellipse_h5_filepath(ophys_session_id):
     """use SQL and the LIMS well known file system to get the
         ellipse.h5 file information for a given
@@ -1007,8 +1165,54 @@ def get_wkf_deepcut_h5_filepath(ophys_session_id):
     return filepath
 
 
-def get_sync_timestamps(ophys_experiment_id):
-    lims_data = get_lims_data(ophys_experiment_id)
-    dataset = get_ophys_dataset(ophys_experiment_id)
-    timestamps = get_timestamps(lims_data, dataset.analysis_dir)
-    return timestamps
+def get_cell_timeseries_dict(session, cell_specimen_id):
+    '''
+    for a given cell_specimen ID, this function creates a dictionary with the following keys
+    * timestamps: ophys timestamps
+    * cell_roi_id
+    * cell_specimen_id
+    * dff
+    * events
+    * filtered events
+    This is useful for generating a tidy dataframe
+
+    arguments:
+        session object
+        cell_specimen_id
+
+    returns
+        dict
+
+    '''
+    cell_dict = {
+        'timestamps': session.ophys_timestamps,
+        'cell_roi_id': [session.dff_traces.loc[cell_specimen_id]['cell_roi_id']] * len(session.ophys_timestamps),
+        'cell_specimen_id': [cell_specimen_id] * len(session.ophys_timestamps),
+        'dff': session.dff_traces.loc[cell_specimen_id]['dff'],
+        'events': session.events.loc[cell_specimen_id]['events'],
+        'filtered_events': session.events.loc[cell_specimen_id]['filtered_events'],
+
+    }
+
+    return cell_dict
+
+
+def build_tidy_cell_df(session):
+    '''
+    builds a tidy dataframe describing activity for every cell in session containing the following columns
+    * timestamps: the ophys timestamps
+    * cell_roi_id: the cell roi id
+    * cell_specimen_id: the cell specimen id
+    * dff: measured deltaF/F for every timestep
+    * events: extracted events for every timestep
+    * filtered events: filtered events for every timestep
+
+    Takes a few seconds to build
+
+    arguments:
+        session
+
+    returns:
+        pandas dataframe
+    '''
+    return pd.concat([pd.DataFrame(get_cell_timeseries_dict(session, cell_specimen_id)) for cell_specimen_id in session.dff_traces.reset_index()['cell_specimen_id']]).reset_index(drop=True)

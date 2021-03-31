@@ -2,7 +2,6 @@ import os
 import numpy as np
 import pandas as pd
 
-from visual_behavior.data_access import loading
 from visual_behavior.data_access import utilities
 import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
@@ -40,7 +39,7 @@ def add_location_to_expts(expts):
 
 def get_exposure_number_for_group(group):
     order = np.argsort(group['date_of_acquisition'].values)
-    group['session_type_exposure_number'] = order
+    group['prior_exposures_to_session_type'] = order
     return group
 
 
@@ -50,32 +49,30 @@ def add_session_type_exposure_number_to_experiments_table(experiments):
     return experiments
 
 
-def get_image_set_exposures_for_behavior_session_id(behavior_session_id):
+def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavior_session_table):
     """
     Gets the number of sessions an image set has been presented in prior to the date of the given behavior_session_id
     :param behavior_session_id:
     :return:
     """
-    cache = loading.get_visual_behavior_cache()
-    sessions = cache.get_behavior_session_table()
-    sessions = sessions[sessions.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
-    donor_id = sessions.loc[behavior_session_id].donor_id
-    session_type = sessions.loc[behavior_session_id].session_type
+    behavior_session_table = behavior_session_table[behavior_session_table.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
+    donor_id = behavior_session_table.loc[behavior_session_id].donor_id
+    session_type = behavior_session_table.loc[behavior_session_id].session_type
     image_set = session_type.split('_')[3]
-    date = sessions.loc[behavior_session_id].date_of_acquisition
+    date = behavior_session_table.loc[behavior_session_id].date_of_acquisition
     # check how many behavior sessions prior to this date had the same image set
-    cdf = sessions[(sessions.donor_id == donor_id)].copy()
+    cdf = behavior_session_table[(behavior_session_table.donor_id == donor_id)].copy()
     pre_expts = cdf[(cdf.date_of_acquisition < date)]
     image_set_exposures = int(len([session_type for session_type in pre_expts.session_type if 'images_' + image_set in session_type]))
     return image_set_exposures
 
 
-def add_image_set_exposure_number_to_experiments_table(experiments):
+def add_image_set_exposure_number_to_experiments_table(experiments, behavior_session_table):
     exposures = []
     for row in range(len(experiments)):
         try:
             behavior_session_id = experiments.iloc[row].behavior_session_id
-            image_set_exposures = get_image_set_exposures_for_behavior_session_id(behavior_session_id)
+            image_set_exposures = get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavior_session_table)
             exposures.append(image_set_exposures)
         except Exception:
             exposures.append(np.nan)
@@ -83,7 +80,7 @@ def add_image_set_exposure_number_to_experiments_table(experiments):
     return experiments
 
 
-def get_omission_exposures_for_behavior_session_id(behavior_session_id):
+def get_omission_exposures_for_behavior_session_id(behavior_session_id, behavior_session_table):
     """
     Gets the number of sessions that had omitted stimuli prior to the date of the given behavior_session_id
     Note: Omitted flashes were accidentally included in OPHYS_0_images_X_habituation prior to Feb 14, 2019
@@ -95,19 +92,18 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id):
     :param behavior_session_id:
     :return: The number of behavior sessions where omitted flashes were present, prior to the current session
     """
-    cache = loading.get_visual_behavior_cache()
-    sessions = cache.get_behavior_session_table()
-    sessions = sessions[sessions.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
-    donor_id = sessions.loc[behavior_session_id].donor_id
-    date = sessions.loc[behavior_session_id].date_of_acquisition
+
+    behavior_session_table = behavior_session_table[behavior_session_table.session_type.isnull() == False]  # FIX THIS - SHOULD NOT BE ANY NaNs!
+    donor_id = behavior_session_table.loc[behavior_session_id].donor_id
+    date = behavior_session_table.loc[behavior_session_id].date_of_acquisition
     # check how many behavior sessions prior to this date had the same image set
-    cdf = sessions[(sessions.donor_id == donor_id)].copy()
+    cdf = behavior_session_table[(behavior_session_table.donor_id == donor_id)].copy()
     pre_expts = cdf[(cdf.date_of_acquisition < date)]
     # check how many behavior sessions prior to this date had omissions
     import datetime
     date_of_change = 'Feb 15 2019 12:00AM'
     date_of_change = datetime.datetime.strptime(date_of_change, '%b %d %Y %I:%M%p')
-    if date < str(date_of_change):
+    if date < date_of_change:
         omission_exposures = len([session_type for session_type in pre_expts.session_type if 'OPHYS' in session_type])
     else:
         omission_exposures = len([session_type for session_type in pre_expts.session_type if
@@ -115,12 +111,13 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id):
     return omission_exposures
 
 
-def add_omission_exposure_number_to_experiments_table(experiments):
+def add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table):
+
     exposures = []
     for row in range(len(experiments)):
         try:
             behavior_session_id = experiments.iloc[row].behavior_session_id
-            omission_exposures = get_omission_exposures_for_behavior_session_id(behavior_session_id)
+            omission_exposures = get_omission_exposures_for_behavior_session_id(behavior_session_id, behavior_session_table)
             exposures.append(omission_exposures)
         except Exception:
             exposures.append(np.nan)
@@ -140,35 +137,24 @@ def add_model_outputs_availability_to_table(table):
     return table
 
 
-def add_has_cell_matching_to_table(table):
-    """
-    Evaluates wither a given experiment_id is in a saved list of experiments where cell matching failed.
-    :param table: table of experiment level metadata
-    :return: table with added column 'has_cell_matching', values are Boolean
-    """
-    save_dir = loading.get_cache_dir()
-    df = pd.read_csv(os.path.join(save_dir, 'experiments_with_missing_cell_specimen_ids.csv'))
-    no_cell_matching = list(df.ophys_experiment_id.values)
-    print(len(no_cell_matching))
-    table['has_cell_matching'] = [False if expt in no_cell_matching else True for expt in table.ophys_experiment_id.values]
-    return table
-
-
-def reformat_experiments_table(experiments):
+def reformat_experiments_table(experiments, behavior_session_table):
     experiments = experiments.reset_index()
     experiments['super_container_id'] = experiments['specimen_id'].values
     # clean up cre_line naming
-    experiments['cre_line'] = [driver_line[1] if driver_line[0] == 'Camk2a-tTA' else driver_line[0] for driver_line in
-                               experiments.driver_line.values]
+    # experiments['cre_line'] = [driver_line[1] if driver_line[0] == 'Camk2a-tTA' else driver_line[0] for driver_line in
+    #                            experiments.driver_line.values]
+    experiments['cre_line'] = [
+        full_genotype.split('/')[0] if 'Ai94' not in full_genotype else full_genotype.split('/')[0] + ';Ai94' for
+        full_genotype in
+        experiments.full_genotype.values]
     experiments = experiments[experiments.cre_line != 'Cux2-CreERT2']  # why is this here?
     # replace session types that are NaN with string None
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
     experiments = add_session_type_exposure_number_to_experiments_table(experiments)
-    experiments = add_image_set_exposure_number_to_experiments_table(experiments)
-    experiments = add_omission_exposure_number_to_experiments_table(experiments)
+    experiments = add_image_set_exposure_number_to_experiments_table(experiments, behavior_session_table)
+    experiments = add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table)
     experiments = add_model_outputs_availability_to_table(experiments)
-    experiments = add_has_cell_matching_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
     if 'index' in experiments.columns:
@@ -177,12 +163,11 @@ def reformat_experiments_table(experiments):
     return experiments
 
 
-def add_all_qc_states_to_ophys_session_table(session_table):
+def add_all_qc_states_to_ophys_session_table(session_table, experiment_table):
     """ Add 'experiment_workflow_state', 'container_workflow_state', and 'session_workflow_state' to session_table.
             :param session_table: session_table from SDK cache
             :return: session_table: with additional columns added
             """
-    experiment_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
     session_table = add_session_workflow_state_to_ophys_session_table(session_table, experiment_table)
     session_table = add_container_workflow_state_to_ophys_session_table(session_table, experiment_table)
     return session_table
