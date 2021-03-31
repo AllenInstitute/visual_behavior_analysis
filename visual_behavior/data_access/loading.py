@@ -3,7 +3,7 @@ from allensdk.internal.api import PostgresQueryMixin
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLimsApi
 from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
-from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
+from allensdk.brain_observatory.behavior.behavior_ophys_experiment import BehaviorOphysExperiment
 from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
@@ -63,6 +63,10 @@ except Exception as e:
 
 
 #  RELEVANT DIRECTORIES
+
+def get_qc_plots_dir():
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
+
 
 def get_super_container_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
@@ -266,9 +270,9 @@ def get_filtered_behavior_session_table(release_data_only=True):
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
-class BehaviorOphysDataset(BehaviorOphysSession):
+class BehaviorOphysDataset(BehaviorOphysExperiment):
     """
-    Loads SDK ophys session object and 1) optionally filters out invalid ROIs, 2) adds extended_stimulus_presentations table, 3) adds extended_trials table, 4) adds behavior movie PCs and timestamps
+    Loads SDK ophys experiment object and 1) optionally filters out invalid ROIs, 2) adds extended_stimulus_presentations table, 3) adds extended_trials table, 4) adds behavior movie PCs and timestamps
 
     Returns:
         BehaviorOphysDataset {class} -- object with attributes & methods to access ophys and behavior data
@@ -279,7 +283,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                  eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2,
                  events_filter_scale: float = 2.0, events_filter_n_time_steps: int = 20):
         """
-        :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
+        :param session: BehaviorOphysExperiment {class} -- instance of allenSDK BehaviorOphysExperiment object for one ophys_experiment_id
         :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
         """
         super().__init__(
@@ -338,9 +342,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def metadata(self):
         # for figure titles & filenames
         metadata = super().metadata
-        metadata['mouse_id'] = metadata['LabTracks_ID']
-        metadata['equipment_name'] = metadata['rig_name']
-        metadata['date_of_acquisition'] = metadata['experiment_datetime']
+        # metadata['mouse_id'] = metadata['LabTracks_ID']
+        # metadata['equipment_name'] = metadata['rig_name']
+        # metadata['date_of_acquisition'] = metadata['experiment_datetime']
         self._metadata = metadata
         return self._metadata
 
@@ -477,7 +481,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
     """
     if from_lims:
-        dataset = BehaviorOphysSession.from_lims(ophys_experiment_id)
+        dataset = BehaviorOphysExperiment.from_lims(ophys_experiment_id)
     elif from_nwb:
         nwb_files = get_release_ophys_nwb_file_paths()
         nwb_file = [file for file in nwb_files.nwb_file.values if str(ophys_experiment_id) in file]
@@ -485,7 +489,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
             nwb_path = nwb_file[0]
             if 'win' in sys.platform:
                 nwb_path = '\\' + os.path.abspath(nwb_path)[2:]
-            dataset = BehaviorOphysSession.from_nwb_path(nwb_path)
+            dataset = BehaviorOphysExperiment.from_nwb_path(nwb_path)
         else:
             print('no NWB file path found for', ophys_experiment_id)
     else:
@@ -511,9 +515,9 @@ class BehaviorDataset(BehaviorSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        metadata['mouse_id'] = metadata['LabTracks_ID']
-        metadata['equipment_name'] = metadata['rig_name']
-        metadata['date_of_acquisition'] = metadata['experiment_datetime']
+        # metadata['mouse_id'] = metadata['LabTracks_ID']
+        # metadata['equipment_name'] = metadata['rig_name']
+        # metadata['date_of_acquisition'] = metadata['experiment_datetime']
         self._metadata = metadata
         return self._metadata
 
@@ -2229,15 +2233,18 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
         expts = experiments_table.copy()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
-                filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
-                                                              use_events)
-                filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
-                df = pd.read_hdf(filepath, key='df')
-                df = df.merge(expts, on='ophys_experiment_id')
-                if remove_outliers:
-                    outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
-                    df = df[df.cell_specimen_id.isin(outlier_cells) == False]
-                multi_session_df = pd.concat([multi_session_df, df])
+                try:
+                    filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
+                                                                  use_events)
+                    filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
+                    df = pd.read_hdf(filepath, key='df')
+                    df = df.merge(expts, on='ophys_experiment_id')
+                    if remove_outliers:
+                        outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
+                        df = df[df.cell_specimen_id.isin(outlier_cells) == False]
+                    multi_session_df = pd.concat([multi_session_df, df])
+                except BaseException:
+                    print('no multi_session_df for', session_type)
         else:
             filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events)
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
