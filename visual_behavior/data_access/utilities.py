@@ -27,6 +27,7 @@ gen_depr_str = 'this function is deprecated and will be removed in a future vers
 
 # put functions here such as get_ophys_experiment_id_for_ophys_session_id()
 
+
 class LazyLoadable(object):
     def __init__(self, name, calculate):
         ''' Wrapper for attributes intended to be computed or loaded once, then held in memory by a containing object.
