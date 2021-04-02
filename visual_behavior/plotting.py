@@ -204,9 +204,8 @@ def event_triggered_raster(df, x_value, event_times, fig=None, ax_index=0, var_n
         fig, ax = get_fig_ax(fig, ax_index)
 
         for ii, event_time in enumerate(event_times):
-            query_string = "{0} > (@event_time - @t_before) and {0} < (@event_time + @t_after)".format(
-                x_value)
-            events = df.query(query_string).values - event_time
+            query_string = "{0} > (@event_time - @t_before) and {0} < (@event_time + @t_after)".format(x_value)
+            events = df.query(query_string)[x_value].values - event_time
             ax.plot(
                 events,
                 ii * np.ones_like(events),
@@ -214,7 +213,7 @@ def event_triggered_raster(df, x_value, event_times, fig=None, ax_index=0, var_n
                 color=color,
                 linestyle='none'
             )
-
+        # assert False
         ax.set_xlabel(var_name)
         ax.set_ylabel(value_name)
 

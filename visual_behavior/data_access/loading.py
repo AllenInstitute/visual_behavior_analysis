@@ -3,9 +3,8 @@ from allensdk.internal.api import PostgresQueryMixin
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLimsApi
 from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
-from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
-from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache
-# from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
+from allensdk.brain_observatory.behavior.behavior_ophys_experiment import BehaviorOphysExperiment
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import utilities
@@ -64,6 +63,10 @@ except Exception as e:
 
 
 #  RELEVANT DIRECTORIES
+
+def get_qc_plots_dir():
+    return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots'
+
 
 def get_super_container_plots_dir():
     return r'//allen/programs/braintv/workgroups/nc-ophys/visual_behavior/qc_plots/super_container_plots'
@@ -125,7 +128,7 @@ def get_visual_behavior_cache(manifest_path=None):
     # i think this manifest caching is now disabled, so providing the path to the manifest does nothing in this case ###
     if manifest_path is None:
         manifest_path = get_manifest_path()
-    cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())
+    cache = bpc.from_lims(manifest=get_manifest_path())
     return cache
 
 
@@ -152,9 +155,10 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     else:
         print('generating filtered_ophys_experiment_table')
-        cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())
-        experiments = cache.get_experiment_table()
-        experiments = reformat.reformat_experiments_table(experiments)
+        cache = get_visual_behavior_cache()
+        experiments = cache.get_ophys_experiment_table()
+        behavior_session_table = cache.get_behavior_session_table()
+        experiments = reformat.reformat_experiments_table(experiments, behavior_session_table)
         experiments = filtering.limit_to_production_project_codes(experiments)
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
@@ -218,9 +222,10 @@ def get_filtered_ophys_session_table():
                         "container_workflow_state":
     """
     cache = get_visual_behavior_cache()
-    sessions = cache.get_session_table()
+    sessions = cache.get_ophys_session_table()
+    experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
     sessions = filtering.limit_to_production_project_codes(sessions)
-    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
+    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions, experiment_table)
     sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
@@ -240,7 +245,7 @@ def get_filtered_behavior_session_table(release_data_only=True):
     Returns:
         behavior_sessions -- Dataframe with behavior_session_id as the index and metadata as columns.
     """
-    cache = BehaviorProjectCache.from_lims()
+    cache = bpc.from_lims()
     behavior_sessions = cache.get_behavior_session_table()
     behavior_sessions = behavior_sessions.reset_index()
     # make mouse_id an int not string
@@ -265,9 +270,9 @@ def get_filtered_behavior_session_table(release_data_only=True):
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
-class BehaviorOphysDataset(BehaviorOphysSession):
+class BehaviorOphysDataset(BehaviorOphysExperiment):
     """
-    Loads SDK ophys session object and 1) optionally filters out invalid ROIs, 2) adds extended_stimulus_presentations table, 3) adds extended_trials table, 4) adds behavior movie PCs and timestamps
+    Loads SDK ophys experiment object and 1) optionally filters out invalid ROIs, 2) adds extended_stimulus_presentations table, 3) adds extended_trials table, 4) adds behavior movie PCs and timestamps
 
     Returns:
         BehaviorOphysDataset {class} -- object with attributes & methods to access ophys and behavior data
@@ -278,13 +283,16 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                  eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2,
                  events_filter_scale: float = 2.0, events_filter_n_time_steps: int = 20):
         """
-        :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
+        :param session: BehaviorOphysExperiment {class} -- instance of allenSDK BehaviorOphysExperiment object for one ophys_experiment_id
         :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
         """
-        super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold,
-                         eye_tracking_dilation_frames=eye_tracking_dilation_frames,
-                         events_filter_scale=events_filter_scale,
-                         events_filter_n_time_steps=events_filter_n_time_steps)
+        super().__init__(
+            api=api,
+            eye_tracking_z_threshold=eye_tracking_z_threshold,
+            eye_tracking_dilation_frames=eye_tracking_dilation_frames,
+            events_filter_scale=events_filter_scale,
+            events_filter_n_time_steps=events_filter_n_time_steps
+        )
 
         self._include_invalid_rois = include_invalid_rois
 
@@ -334,9 +342,9 @@ class BehaviorOphysDataset(BehaviorOphysSession):
     def metadata(self):
         # for figure titles & filenames
         metadata = super().metadata
-        metadata['mouse_id'] = metadata['LabTracks_ID']
-        metadata['equipment_name'] = metadata['rig_name']
-        metadata['date_of_acquisition'] = metadata['experiment_datetime']
+        # metadata['mouse_id'] = metadata['LabTracks_ID']
+        # metadata['equipment_name'] = metadata['rig_name']
+        # metadata['date_of_acquisition'] = metadata['experiment_datetime']
         self._metadata = metadata
         return self._metadata
 
@@ -473,7 +481,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
     """
     if from_lims:
-        dataset = BehaviorOphysSession.from_lims(ophys_experiment_id)
+        dataset = BehaviorOphysExperiment.from_lims(ophys_experiment_id)
     elif from_nwb:
         nwb_files = get_release_ophys_nwb_file_paths()
         nwb_file = [file for file in nwb_files.nwb_file.values if str(ophys_experiment_id) in file]
@@ -481,7 +489,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
             nwb_path = nwb_file[0]
             if 'win' in sys.platform:
                 nwb_path = '\\' + os.path.abspath(nwb_path)[2:]
-            dataset = BehaviorOphysSession.from_nwb_path(nwb_path)
+            dataset = BehaviorOphysExperiment.from_nwb_path(nwb_path)
         else:
             print('no NWB file path found for', ophys_experiment_id)
     else:
@@ -507,9 +515,9 @@ class BehaviorDataset(BehaviorSession):
     @property
     def metadata(self):
         metadata = super().metadata
-        metadata['mouse_id'] = metadata['LabTracks_ID']
-        metadata['equipment_name'] = metadata['rig_name']
-        metadata['date_of_acquisition'] = metadata['experiment_datetime']
+        # metadata['mouse_id'] = metadata['LabTracks_ID']
+        # metadata['equipment_name'] = metadata['rig_name']
+        # metadata['date_of_acquisition'] = metadata['experiment_datetime']
         self._metadata = metadata
         return self._metadata
 
@@ -764,8 +772,6 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
 def get_behavior_model_summary_table():
     data_dir = get_behavior_model_outputs_dir()
     data = pd.read_csv(os.path.join(data_dir, '_summary_table.csv'))
-    data2 = pd.read_csv(os.path.join(data_dir, '_meso_summary_table.csv'))
-    data = data.append(data2)
     return data
 
 
@@ -2235,15 +2241,18 @@ def get_multi_session_df(cache_dir, df_name, conditions, experiments_table, remo
         expts = experiments_table.copy()
         if use_session_type:
             for session_type in np.sort(experiments.session_type.unique()):
-                filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
-                                                              use_events)
-                filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
-                df = pd.read_hdf(filepath, key='df')
-                df = df.merge(expts, on='ophys_experiment_id')
-                if remove_outliers:
-                    outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
-                    df = df[df.cell_specimen_id.isin(outlier_cells) == False]
-                multi_session_df = pd.concat([multi_session_df, df])
+                try:
+                    filename = get_file_name_for_multi_session_df(df_name, project_code, session_type, conditions,
+                                                                  use_events)
+                    filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)
+                    df = pd.read_hdf(filepath, key='df')
+                    df = df.merge(expts, on='ophys_experiment_id')
+                    if remove_outliers:
+                        outlier_cells = df[df.mean_response > 5].cell_specimen_id.unique()
+                        df = df[df.cell_specimen_id.isin(outlier_cells) == False]
+                    multi_session_df = pd.concat([multi_session_df, df])
+                except BaseException:
+                    print('no multi_session_df for', session_type)
         else:
             filename = get_file_name_for_multi_session_df_no_session_type(df_name, project_code, conditions, use_events)
             filepath = os.path.join(cache_dir, 'multi_session_summary_dfs', filename)

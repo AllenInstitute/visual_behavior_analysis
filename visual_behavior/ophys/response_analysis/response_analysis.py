@@ -178,15 +178,22 @@ class ResponseAnalysis(object):
             df = rp.get_stimulus_pupil_area_df(self.dataset, df_format=df_format)
         elif df_name == 'omission_pupil_area_df':
             df = rp.get_omission_pupil_area_df(self.dataset, df_format=df_format)
+        elif df_name == 'stimulus_licks_df':
+            df = rp.get_stimulus_licks_df(self.dataset, df_format=df_format)
+        elif df_name == 'trials_licks_df':
+            df = rp.get_trials_licks_df(self.dataset, df_format=df_format)
         elif df_name == 'omission_licks_df':
             df = rp.get_omission_licks_df(self.dataset, df_format=df_format)
+        elif df_name == 'lick_triggered_response_df':
+            df = rp.get_lick_triggered_response_df(self.dataset, df_format=df_format)
         return df
 
     def get_response_df_types(self):
         return ['trials_response_df', 'stimulus_response_df', 'omission_response_df',
                 'trials_run_speed_df', 'stimulus_run_speed_df', 'omission_run_speed_df',
                 'trials_pupil_area_df', 'stimulus_pupil_area_df', 'omission_pupil_area_df',
-                'omission_licks_df']
+                'trials_licks_df', 'stimulus_licks_df', 'omission_licks_df',
+                'lick_triggered_response_df']
 
     def get_response_df(self, df_name='trials_response_df', df_format=None):
         if self.load_from_cache:  # get saved response df

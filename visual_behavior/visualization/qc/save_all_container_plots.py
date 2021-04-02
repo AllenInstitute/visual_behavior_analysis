@@ -4,13 +4,13 @@ import argparse
 
 def main():
     possible_plots = {
-        "ophys_session_sequence": cp.plot_container_session_sequence,
-        "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
-        "average_images": cp.plot_sdk_average_images_for_container,
-        "dff_traces_heatmaps": cp.plot_dff_traces_heatmaps_for_container,
-        "running_speed": cp.plot_running_speed_for_container,
-        "lick_rasters": cp.plot_lick_rasters_for_container,
-        "average_intensity_timeseries": cp.plot_average_intensity_timeseries_for_container,
+        # "ophys_session_sequence": cp.plot_container_session_sequence,
+        # "max_projection_images": cp.plot_sdk_max_projection_images_for_container,
+        # "average_images": cp.plot_sdk_average_images_for_container,
+        # "dff_traces_heatmaps": cp.plot_dff_traces_heatmaps_for_container,
+        # "running_speed": cp.plot_running_speed_for_container,
+        # "lick_rasters": cp.plot_lick_rasters_for_container,
+        # "average_intensity_timeseries": cp.plot_average_intensity_timeseries_for_container,
         "motion_correction_xy_shift": cp.plot_motion_correction_xy_shift_for_container,
         "OphysRegistrationSummaryImage": cp.plot_OphysRegistrationSummaryImage,
         "number_matched_cells": cp.plot_number_matched_cells_for_container,
