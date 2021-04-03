@@ -372,7 +372,9 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
     e = 'events_' if use_events else ''  
     
     if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
-        svmn = f'{e}svm_decode_changes_from_nochanges' # 'svm_gray_omit'
+        svmn = f'{e}svm_decode_changes_from_nochanges'
+    elif trial_type=='hits_vs_misses': # 
+        svmn = f'{e}svm_decode_hits_from_misses'        
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
         
@@ -409,97 +411,126 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
     
     
-    #%% Set cell responses and trial types, using dataframe stimulus_response_df_allexp
-    # NOTE: image_index indicates the image identity. It's NOT about the index of elements in an array!
-    
-    #%% Set image_indices of the current and previous flash (including all stimuli in the session) (image_indices is the image index of the flash that occurred at time 0; all_stim_indices_previous_flash is the image index of the flash that occurred 750ms before.)    
-    # note: we do this on df_data which includes all images and omissions. We cannot do this after we exclude some trials (eg omissions), because then image index of the previous flash wont be simply a shift of image index of the current flash (becasue image index of the current flash doesnt have some stimuli anymore)!
-    u, u_i = np.unique(df_data['stimulus_presentations_id'].values, return_index=True)
-    all_stim_trials = df_data.iloc[u_i,:] # images and omissions # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
-    all_stim_indices = all_stim_trials['image_index'].values
-
-    all_stim_indices_previous_flash = np.concatenate(([np.nan], all_stim_indices))[:-1] # shift all_stim_indices 1 row down, and add nan to the begining of it
-    all_stim_indices_next_flash = np.concatenate((all_stim_indices[1:], [np.nan])) # shift all_stim_indices 1 row up, and add nan to the end of it
-
-#     all_stim_indices.shape, all_stim_indices_previous_flash.shape, all_stim_indices_next_flash.shape
-#     np.equal(all_stim_indices[:-1], all_stim_indices_previous_flash[1:]).sum(), all_stim_indices[:-1].shape
-#     np.equal(all_stim_indices[1:], all_stim_indices_next_flash[:-1]).sum(), all_stim_indices[:-1].shape
-
-
-    #%% Set data only including trials that will be used for analysis. Also set image index of the previous flash
-    if trial_type=='images_omissions': # all images and omissions # i dont think it's a good idea to mix image and omission aligned traces because omission aligned traces may have prediction/error signal, so it wont be easy to interpret the results bc we wont know if the decoding reflects image-evoked or image-prediciton/error related signals.
-        image_data = df_data
-        image_indices_previous_flash = all_stim_indices_previous_flash
-        image_indices_next_flash = all_stim_indices_next_flash
-    
-    elif trial_type=='omissions': # omissions:
-        image_data = df_data[df_data['image_name']=='omitted']
-        image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices==8]
-        image_indices_next_flash = all_stim_indices_next_flash[all_stim_indices==8]
-        do = sum(image_indices_previous_flash==8)
-        if do>0:
-            print(f'Number of double omissions: {do}')
-        if (image_indices_previous_flash - image_indices_next_flash).any():
-            print(f'UNEXPECTED: the images before and after the omission are different!!')
-            
-    elif trial_type=='images': # all images excluding omissions:
-        image_data = df_data[df_data['image_name']!='omitted']
-        image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices!=8]
-        image_indices_next_flash = all_stim_indices_next_flash[all_stim_indices!=8]
+    #%%
+    if trial_type=='hits_vs_misses':
+        image_data = pd.concat((df_data[df_data['hit']==1.0], df_data[df_data['miss']==1.0]))
         
-    elif trial_type=='changes' or trial_type=='changes_vs_nochanges': # image changes:
-        image_data = df_data[df_data['change']==True]
-        image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_trials['change']==True]
-        image_indices_next_flash = all_stim_indices_next_flash[all_stim_trials['change']==True]
+        tr_id = 'trials_id'
+        
+        #%% Set the vector of image indices for each trial (current flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
+        u, u_i = np.unique(image_data[tr_id].values, return_index=True) # u_i is the index of the first occurrence of unique values in image_data[tr_id]
+        image_trials = image_data.iloc[u_i,:] # image_trials is the same as image_data, except it includes only data from one neuron (yet all trials) # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
+        
+        image_indices = image_trials['initial_image_name'].values
+        image_indices_previous_flash = image_indices
+        image_indices_next_flash = image_trials['change_image_name'].values
+        
+        hit_sum = sum(image_trials['hit']==1)
+        miss_sum = sum(image_trials['miss']==1)
+        print(f"\n{hit_sum} hit trials ; {miss_sum} miss trials\n")
         
         
-    if trial_type=='changes_vs_nochanges': # decode image change vs no image change
-        #image_data = df_data[df_data['change']==True] # change
-        image_data2 = df_data[df_data['image_name']!='omitted'] # all images for now; below we will only get the image preceding the change
-
+        a = np.full((hit_sum), 1)
+        b = np.full((miss_sum), 0)
+        image_labels = np.concatenate((a,b)) # whether it was a hit or not
         
+    else:    
         
-    #%% Set the vector of image indices for each trial (current flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
-    u, u_i = np.unique(image_data['stimulus_presentations_id'].values, return_index=True) # u_i is the index of the first occurrence of unique values in image_data['stimulus_presentations_id']
-    image_trials = image_data.iloc[u_i,:] # image_trials is the same as image_data, except it includes only data from one neuron (yet all trials) # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
-    image_indices = image_trials['image_index'].values
-
-    if trial_type=='changes_vs_nochanges': # decode image change vs no image change
-        u, u_i = np.unique(image_data2['stimulus_presentations_id'].values, return_index=True) # u_i is the index of the first occurrence of unique values in image_data['stimulus_presentations_id']
-        image_trials2 = image_data2.iloc[u_i,:] # image_trials is the same as image_data, except it includes only data from one neuron (yet all trials) # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
-
-        rel2image_change = - 1
-        # set image_data2 only for images right preceding the image change
-        image_data2_n = image_data2[image_data2['stimulus_presentations_id'].isin(image_trials['stimulus_presentations_id'].values + rel2image_change)]
+        tr_id = 'stimulus_presentations_id'
         
-        # find those rows of image_trials2 that belong to the image right preceding the image change        
-#         image_trials2_n = image_trials2[image_trials2['stimulus_presentations_id'].isin(image_trials['stimulus_presentations_id'].values + rel2image_change)]
-#         if (image_trials2_n.shape == image_trials.shape) == False:
-#             print('doesnt make sense! imagetrials and imagetrials2 must be the same shape')
-    
-    
-    
-    #%% Set the vector of image labels which will be used for decoding
-    if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
-        a = np.full((len(image_indices)), 0)
-        b = np.full((len(image_indices)), 1)
-        image_labels = np.concatenate((a,b))
+        #%% Set cell responses and trial types, using dataframe stimulus_response_df_allexp
+        # NOTE: image_index indicates the image identity. It's NOT about the index of elements in an array!
 
-    else:
-        
-        if to_decode == 'current':
-            image_labels = image_indices
-        elif to_decode == 'previous':
-            image_labels = image_indices_previous_flash
-        elif to_decode == 'next':
-            image_labels = image_indices_next_flash 
-          
-    
+        #%% Set image_indices of the current and previous flash (including all stimuli in the session) (image_indices is the image index of the flash that occurred at time 0; all_stim_indices_previous_flash is the image index of the flash that occurred 750ms before.)    
+        # note: we do this on df_data which includes all images and omissions. We cannot do this after we exclude some trials (eg omissions), because then image index of the previous flash wont be simply a shift of image index of the current flash (becasue image index of the current flash doesnt have some stimuli anymore)!
+        u, u_i = np.unique(df_data[tr_id].values, return_index=True)
+        all_stim_trials = df_data.iloc[u_i,:] # images and omissions # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
+        all_stim_indices = all_stim_trials['image_index'].values
+
+        all_stim_indices_previous_flash = np.concatenate(([np.nan], all_stim_indices))[:-1] # shift all_stim_indices 1 row down, and add nan to the begining of it
+        all_stim_indices_next_flash = np.concatenate((all_stim_indices[1:], [np.nan])) # shift all_stim_indices 1 row up, and add nan to the end of it
+
+    #     all_stim_indices.shape, all_stim_indices_previous_flash.shape, all_stim_indices_next_flash.shape
+    #     np.equal(all_stim_indices[:-1], all_stim_indices_previous_flash[1:]).sum(), all_stim_indices[:-1].shape
+    #     np.equal(all_stim_indices[1:], all_stim_indices_next_flash[:-1]).sum(), all_stim_indices[:-1].shape
+
+
+        #%% Set data only including trials that will be used for analysis. Also set image index of the previous flash
+        if trial_type=='images_omissions': # all images and omissions # i dont think it's a good idea to mix image and omission aligned traces because omission aligned traces may have prediction/error signal, so it wont be easy to interpret the results bc we wont know if the decoding reflects image-evoked or image-prediciton/error related signals.
+            image_data = df_data
+            image_indices_previous_flash = all_stim_indices_previous_flash
+            image_indices_next_flash = all_stim_indices_next_flash
+
+        elif trial_type=='omissions': # omissions:
+            image_data = df_data[df_data['image_name']=='omitted']
+            image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices==8]
+            image_indices_next_flash = all_stim_indices_next_flash[all_stim_indices==8]
+            do = sum(image_indices_previous_flash==8)
+            if do>0:
+                print(f'Number of double omissions: {do}')
+            if (image_indices_previous_flash - image_indices_next_flash).any():
+                print(f'UNEXPECTED: the images before and after the omission are different!!')
+
+        elif trial_type=='images': # all images excluding omissions:
+            image_data = df_data[df_data['image_name']!='omitted']
+            image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_indices!=8]
+            image_indices_next_flash = all_stim_indices_next_flash[all_stim_indices!=8]
+
+        elif trial_type=='changes' or trial_type=='changes_vs_nochanges': # image changes:
+            image_data = df_data[df_data['change']==True]
+            image_indices_previous_flash = all_stim_indices_previous_flash[all_stim_trials['change']==True]
+            image_indices_next_flash = all_stim_indices_next_flash[all_stim_trials['change']==True]
+
+
+        if trial_type=='changes_vs_nochanges': # decode image change vs no image change
+            #image_data = df_data[df_data['change']==True] # change
+            image_data2 = df_data[df_data['image_name']!='omitted'] # all images for now; below we will only get the image preceding the change
+
+
+
+        #%% Set the vector of image indices for each trial (current flash) (at time 0 of trial_data.iloc[0]['trace_timestamps'])
+        u, u_i = np.unique(image_data[tr_id].values, return_index=True) # u_i is the index of the first occurrence of unique values in image_data[tr_id]
+        image_trials = image_data.iloc[u_i,:] # image_trials is the same as image_data, except it includes only data from one neuron (yet all trials) # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
+        image_indices = image_trials['image_index'].values
+
+        if trial_type=='changes_vs_nochanges': # decode image change vs no image change
+            u, u_i = np.unique(image_data2[tr_id].values, return_index=True) # u_i is the index of the first occurrence of unique values in image_data[tr_id]
+            image_trials2 = image_data2.iloc[u_i,:] # image_trials is the same as image_data, except it includes only data from one neuron (yet all trials) # get the first row for each stimulus_presentations_id (multiple rows belong to the same stimulus_presentations_id, but different cells) 
+
+            rel2image_change = - 1
+            # set image_data2 only for images right preceding the image change
+            image_data2_n = image_data2[image_data2[tr_id].isin(image_trials[tr_id].values + rel2image_change)]
+
+            # find those rows of image_trials2 that belong to the image right preceding the image change        
+    #         image_trials2_n = image_trials2[image_trials2[tr_id].isin(image_trials[tr_id].values + rel2image_change)]
+    #         if (image_trials2_n.shape == image_trials.shape) == False:
+    #             print('doesnt make sense! imagetrials and imagetrials2 must be the same shape')
+
+
+
+        #%% Set the vector of image labels which will be used for decoding
+        if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
+            a = np.full((len(image_indices)), 0)
+            b = np.full((len(image_indices)), 1)
+            image_labels = np.concatenate((a,b))
+
+        else:
+
+            if to_decode == 'current':
+                image_labels = image_indices
+            elif to_decode == 'previous':
+                image_labels = image_indices_previous_flash
+            elif to_decode == 'next':
+                image_labels = image_indices_next_flash 
+
+
+                
     image_labels0 = copy.deepcopy(image_labels)
     #len(image_labels0)
     print(f'Unique image labels: {np.unique(image_labels0)}')
-    
 
+
+    
     
     #### NOTE: codes above will result in decoding 9 classes (8 images + omissions) when to_decode='previous' and trial_type='images'. (it wont happen when to_decode='current' because above we only include images for trial_type='images'; it also wont happen when trial_type='omissions' or 'changes', because changes and omissions are not preceded by omissions (although rarely we do see double omissions))
     # if you want to also decode omissions (in addition to the 8 images) when to_decode='current', you should change trial_type='images' to trial_type='images_omissions'
@@ -670,7 +701,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             # create traces_fut, ie the traces in shape f x u x t: frames x units x trials, for each experiment of a given session
             n_frames = image_data_this_exp['trace'].values[0].shape[0]
             n_neurons = image_data_this_exp['cell_specimen_id'].unique().shape[0]
-            n_trials = image_data_this_exp['stimulus_presentations_id'].unique().shape[0]
+            n_trials = image_data_this_exp[tr_id].unique().shape[0]
             print(f'n_frames, n_neurons, n_trials: {n_frames, n_neurons, n_trials}')
 
             # image_data_this_exp['trace'].values.shape # (neurons x trials) # all neurons for trial 1, then all neurons for trial 2, etc
@@ -721,8 +752,8 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             # double check reshape above worked fine.
             '''
             c_all = []
-            for itr in image_data_this_exp['stimulus_presentations_id'].unique():
-                this_data = image_data_this_exp[image_data_this_exp['stimulus_presentations_id']==itr]
+            for itr in image_data_this_exp[tr_id].unique():
+                this_data = image_data_this_exp[image_data_this_exp[tr_id]==itr]
                 c = np.vstack(this_data['trace'].values)
             #     c.shape # neurons x frames
                 c_all.append(c) # trials x neurons x frames
@@ -734,8 +765,8 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             '''
 
             # image_indices = []
-            # for itr in image_data_this_exp['stimulus_presentations_id'].unique():
-            #     image_index = image_trials[image_trials['stimulus_presentations_id']==itr]['image_index'].values[0]
+            # for itr in image_data_this_exp[tr_id].unique():
+            #     image_index = image_trials[image_trials[tr_id]==itr]['image_index'].values[0]
             #     image_indices.append(image_index)
 
             
@@ -782,6 +813,10 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 if svm_blocks==-100:
                     svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
+
+                #### run svm analysis only on engaged trials
+#                 if svm_blocks==-101:
+                    # only take the engaged trials
                     
                 
                 #### divide trials based on the engagement state
@@ -951,7 +986,12 @@ saveResults = 1 # 0 #
 
 project_codes = ['VisualBehaviorMultiscope'] # session_numbers = [4]
 
-print(f'Decoding *{to_decode}* image from *{trial_type}* activity at {time_win} ms!')
+if trial_type=='changes_vs_nochanges':
+    print(f'Decoding changs from no-changes, activity at {time_win} ms!')
+elif trial_type=='hits_vs_misses':
+    print(f'Decoding hits from misses, activity at {time_win} ms!')    
+else:    
+    print(f'Decoding *{to_decode}* image from *{trial_type}* activity at {time_win} ms!')
 print(f'kfold = {kfold}')    
 if use_events:
     print(f'Using events')
@@ -1206,7 +1246,8 @@ experiment_ids_this_session = data_list['experiment_id'].values
 # from set_trialsdf_existing_in_stimdf import *
 
 # set columns of stim_response_df to keep
-c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name', 'change', 'engagement_state', 'mean_running_speed', 'mean_pupil_area'] 
+if trial_type != 'hits_vs_misses':
+    c = ['stimulus_presentations_id', 'cell_specimen_id', 'trace', 'trace_timestamps', 'image_index', 'image_name', 'change', 'engagement_state', 'mean_running_speed', 'mean_pupil_area'] 
 
 stimulus_response_df_allexp = pd.DataFrame()
 
@@ -1220,7 +1261,13 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
         dataset = loading.get_ophys_dataset(ophys_experiment_id)
 #         analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True) # False # use_extended_stimulus_presentations flag is set to False, meaning that only the main stimulus metadata will be present (image name, whether it is a change or omitted, and a few other things). If you need other columns (like engagement_state or anything from the behavior strategy model), you have to set that to True        
         analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events)        
-        stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
+        
+        if trial_type == 'hits_vs_misses':
+            trials_response_df = analysis.trials_response_df
+            stim_response_df = trials_response_df # so it matches the naming of the rest of the code down here
+            c = stim_response_df.keys().values # get all the columns
+        else:
+            stim_response_df = analysis.get_response_df(df_name='stimulus_response_df')
 
 #         dataset.running_speed['speed'].values
 #         dataset.eye_tracking['pupil_area'] # dataset.eye_tracking['time']
@@ -1259,9 +1306,10 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
 
             # reset stim_response_df
             stim_response_df = stim_response_df_new    
-        ###########    
+        ############################################    
             
-        stim_response_df0 = stim_response_df # stim_response_df.keys()        
+        stim_response_df0 = stim_response_df # stim_response_df.keys()       
+        # only get certain columns of stim_response_df
         stim_response_df = stim_response_df0.loc[:,c]
         
     else:
@@ -1284,7 +1332,7 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
     
     stim_response_data_this_exp = stim_response_df.merge(experiments_table_sub, on=['ophys_experiment_id', 'ophys_session_id']) # add to stim_response_df columns with info on cre, date, etc        
     # reorder columns, so metadata columns come first then stimulus and cell data
-    stim_response_data_this_exp = stim_response_data_this_exp.iloc[:, np.concatenate((np.arange(len(c), stim_response_data_this_exp.shape[-1]), np.arange(0, len(c))))]
+    stim_response_data_this_exp = stim_response_data_this_exp.iloc[:, np.concatenate((np.arange(len(c), stim_response_data_this_exp.shape[-1]),    np.arange(0, len(c))))]
         
     #### keep data from all experiments    
     stimulus_response_df_allexp = pd.concat([stimulus_response_df_allexp, stim_response_data_this_exp])
