@@ -56,6 +56,8 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
     '''
     extended_stimulus_presentations = extended_stimulus_presentations
 
+    # for each trial, find the stimulus index that is closest to the trial start
+    # add to a new column called 'first_stim_presentation_index'
     for idx, trial in trials.iterrows():
         start_time = trial['start_time']
         query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
@@ -66,8 +68,15 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
         )
         trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
 
+    # define the columns from extended_stimulus_presentations that we want to merge into trials
+    cols_to_merge = [
+        'engaged', 
+        'engagement_state'
+    ]
+
+    # merge the desired columns into trials on the stimulus_presentations_id indices
     trials = trials = trials.merge(
-        extended_stimulus_presentations[['engaged', 'engagement_state']].reset_index(),
+        extended_stimulus_presentations[].reset_index(),
         left_on='first_stim_presentation_index',
         right_on='stimulus_presentations_id',
     )
