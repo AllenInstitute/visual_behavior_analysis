@@ -70,13 +70,13 @@ def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations
 
     # define the columns from extended_stimulus_presentations that we want to merge into trials
     cols_to_merge = [
-        'engaged', 
+        'engaged',
         'engagement_state'
     ]
 
     # merge the desired columns into trials on the stimulus_presentations_id indices
     trials = trials = trials.merge(
-        extended_stimulus_presentations[].reset_index(),
+        extended_stimulus_presentations[cols_to_merge].reset_index(),
         left_on='first_stim_presentation_index',
         right_on='stimulus_presentations_id',
     )
