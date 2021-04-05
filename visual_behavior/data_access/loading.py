@@ -4,7 +4,7 @@ from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLim
 from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
 from allensdk.brain_observatory.behavior.behavior_ophys_experiment import BehaviorOphysExperiment
-from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import utilities
@@ -128,7 +128,7 @@ def get_visual_behavior_cache(manifest_path=None):
     # i think this manifest caching is now disabled, so providing the path to the manifest does nothing in this case ###
     if manifest_path is None:
         manifest_path = get_manifest_path()
-    cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())
+    cache = bpc.from_lims(manifest=get_manifest_path())
     return cache
 
 
@@ -155,9 +155,10 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     else:
         print('generating filtered_ophys_experiment_table')
-        cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())
-        experiments = cache.get_experiment_table()
-        experiments = reformat.reformat_experiments_table(experiments)
+        cache = get_visual_behavior_cache()
+        experiments = cache.get_ophys_experiment_table()
+        behavior_session_table = cache.get_behavior_session_table()
+        experiments = reformat.reformat_experiments_table(experiments, behavior_session_table)
         experiments = filtering.limit_to_production_project_codes(experiments)
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
@@ -221,9 +222,10 @@ def get_filtered_ophys_session_table():
                         "container_workflow_state":
     """
     cache = get_visual_behavior_cache()
-    sessions = cache.get_session_table()
+    sessions = cache.get_ophys_session_table()
+    experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
     sessions = filtering.limit_to_production_project_codes(sessions)
-    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
+    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions, experiment_table)
     sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
@@ -243,7 +245,7 @@ def get_filtered_behavior_session_table(release_data_only=True):
     Returns:
         behavior_sessions -- Dataframe with behavior_session_id as the index and metadata as columns.
     """
-    cache = BehaviorProjectCache.from_lims()
+    cache = bpc.from_lims()
     behavior_sessions = cache.get_behavior_session_table()
     behavior_sessions = behavior_sessions.reset_index()
     # make mouse_id an int not string
@@ -284,10 +286,13 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         :param session: BehaviorOphysExperiment {class} -- instance of allenSDK BehaviorOphysExperiment object for one ophys_experiment_id
         :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
         """
-        super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold,
-                         eye_tracking_dilation_frames=eye_tracking_dilation_frames,
-                         events_filter_scale=events_filter_scale,
-                         events_filter_n_time_steps=events_filter_n_time_steps)
+        super().__init__(
+            api=api,
+            eye_tracking_z_threshold=eye_tracking_z_threshold,
+            eye_tracking_dilation_frames=eye_tracking_dilation_frames,
+            events_filter_scale=events_filter_scale,
+            events_filter_n_time_steps=events_filter_n_time_steps
+        )
 
         self._include_invalid_rois = include_invalid_rois
 

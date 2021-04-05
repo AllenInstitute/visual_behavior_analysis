@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import json
-import shutil
 import numpy as np
 from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
