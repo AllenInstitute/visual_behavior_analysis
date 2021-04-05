@@ -412,6 +412,7 @@ class BehaviorOphysDataset(BehaviorOphysExperiment):
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
         trials = reformat.add_reward_rate_to_trials_table(trials)
+        trials = reformat.add_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
         self._extended_trials = trials
         return self._extended_trials
 
@@ -576,6 +577,7 @@ class BehaviorDataset(BehaviorSession):
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
         trials = reformat.add_reward_rate_to_trials_table(trials)
+        trials = reformat.add_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
         self._extended_trials = trials
         return self._extended_trials
 

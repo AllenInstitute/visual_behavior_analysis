@@ -49,6 +49,27 @@ def add_session_type_exposure_number_to_experiments_table(experiments):
     return experiments
 
 
+def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations):
+    '''
+    adds `engaged` and `engagement_state` fields to the trial table
+    both are pulled from the value of the stimulus table that is closest to the time at the start of each trial
+    '''
+    extended_stimulus_presentations = extended_stimulus_presentations
+
+    for idx,trial in trials.iterrows():
+        start_time = trial['start_time']
+        first_stim_presentation_index = np.argmin(np.abs(start_time - extended_stimulus_presentations.query('start_time > @start_time - 1 and start_time < @start_time + 1')['start_time']))
+        trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+
+    trials = trials = trials.merge(
+        extended_stimulus_presentations[['engaged','engagement_state']].reset_index(),
+        left_on = 'first_stim_presentation_index',
+        right_on = 'stimulus_presentations_id',
+    )
+
+    return trials
+
+
 def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavior_session_table):
     """
     Gets the number of sessions an image set has been presented in prior to the date of the given behavior_session_id
