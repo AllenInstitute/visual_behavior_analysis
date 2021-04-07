@@ -123,23 +123,23 @@ def trial_number_limit(p, N):
     return p
 
 
-def dprime(hit_rate = None, fa_rate = None, go_trials = None, catch_trials = None, limits=False):
+def dprime(hit_rate=None, fa_rate=None, go_trials=None, catch_trials=None, limits=False):
     """ calculates the d-prime for a given hit rate and false alarm rate
 
     https://en.wikipedia.org/wiki/Sensitivity_index
 
     Parameters
     ----------
-    hit_rate : float
+    hit_rate : float or vector of floats
         rate of hits in the True class
-    fa_rate : float
+    fa_rate : float or vector of floats
         rate of false alarms in the False class
     go_trials: vector of booleans
         responses on all go trials (hit = True, miss = False)
     catch_trials: vector of booleans
         responses on all catch trials (false alarm = True, correct reject = False)
     limits : boolean or tuple, optional
-        limits on extreme values, which can cause d' to overestimate on low trial counts. 
+        limits on extreme values, which can cause d' to overestimate on low trial counts.
         False (default) results in limits of (0.01,0.99) to avoid infinite calculations
         True results in limits being calculated based on trial count (only applicable if go_trials and catch_trials are passed)
         (limits[0], limits[1]) results in specified limits being applied
@@ -155,11 +155,11 @@ def dprime(hit_rate = None, fa_rate = None, go_trials = None, catch_trials = Non
     assert hit_rate is not None or go_trials is not None, 'must either a specify `hit_rate` or pass a boolean vector of `go_trials`'
     assert fa_rate is not None or catch_trials is not None, 'must either a specify `fa_rate` or pass a boolean vector of `catch_trials`'
 
-    assert not (hit_rate and go_trials), 'do not pass both `hit_rate` and a boolean vector of `go_trials`'
-    assert not (fa_rate and catch_trials), 'do not pass both `fa_rate` and a boolean vector of `catch_trials`'
+    assert hit_rate is None or go_trials is None, 'do not pass both `hit_rate` and a boolean vector of `go_trials`'
+    assert fa_rate is None or catch_trials is None, 'do not pass both `fa_rate` and a boolean vector of `catch_trials`'
 
-    assert not (hit_rate and limits == True), 'limits can only be calculated if a go_trials vector is passed, not a hit_rate'
-    assert not (fa_rate and limits == True), 'limits can only be calculated if a catch_trials vector is passed, not a fa_rate'
+    assert not (hit_rate is not None and limits == True), 'limits can only be calculated if a go_trials vector is passed, not a hit_rate'
+    assert not (fa_rate is not None and limits == True), 'limits can only be calculated if a catch_trials vector is passed, not a fa_rate'
 
     # calculate hit and fa rates as mean of boolean vectors
     if hit_rate is None:
@@ -176,7 +176,7 @@ def dprime(hit_rate = None, fa_rate = None, go_trials = None, catch_trials = Non
         # clip the hit and fa rate based on trial count
         hit_rate = trial_number_limit(hit_rate, len(go_trials))
         fa_rate = trial_number_limit(fa_rate, len(catch_trials))
-    
+
     if limits != True:
         # Limit values in order to avoid d' infinity
         hit_rate = np.clip(hit_rate, limits[0], limits[1])
