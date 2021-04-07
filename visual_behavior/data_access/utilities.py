@@ -1,7 +1,10 @@
 import os
-import pandas as pd
 import json
+import shutil
+import warnings
 import numpy as np
+import pandas as pd
+
 from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
 from visual_behavior.ophys.sync.sync_dataset import Dataset as SyncDataset
@@ -16,9 +19,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# warning
+gen_depr_str = 'this function is deprecated and will be removed in a future version, ' \
+               + 'please use {}.{} instead'
+
 # CONVENIENCE FUNCTIONS TO GET VARIOUS INFORMATION #
 
 # put functions here such as get_ophys_experiment_id_for_ophys_session_id()
+
 
 class LazyLoadable(object):
     def __init__(self, name, calculate):
@@ -548,6 +556,10 @@ def bsid_to_oeid(behavior_session_id):
     '''
     convert a behavior_session_id to an ophys_experiment_id
     '''
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_ophys_experiment_ids_for_behavior_session_id')
+    warnings.warn(warn_str)
+
     oeid = db.lims_query(
         '''
         select oe.id
@@ -597,6 +609,10 @@ def get_filepath_from_wkf_info(wkf_info):
     Returns:
         [type]: [description]
     """
+    warn_str = gen_depr_str.format('from_lims_utilities',
+                                   'get_filepath_from_realdict_object')
+    warnings.warn(warn_str)
+
     filepath = wkf_info[0]['?column?']  # idk why it's ?column? but it is :(
     filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
@@ -612,6 +628,9 @@ def get_wkf_timeseries_ini_filepath(ophys_session_id):
     Returns:
 
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_timeseries_ini_filepath')
+    warnings.warn(warn_str)
 
     QUERY = '''
     SELECT wkf.storage_directory || wkf.filename
@@ -661,6 +680,10 @@ def get_wkf_dff_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the dff.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_dff_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -690,6 +713,10 @@ def get_wkf_roi_trace_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the roi_traces.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_roi_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -719,6 +746,10 @@ def get_wkf_neuropil_trace_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the neuropil_traces.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_neuropil_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -749,6 +780,10 @@ def get_wkf_extracted_trace_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the neuropil_traces.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_extracted_traces_input_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -779,6 +814,11 @@ def get_wkf_demixed_traces_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the roi_traces.h5 file
                     for the given ophys_experiment_id
     """
+
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_demixed_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -808,6 +848,10 @@ def get_wkf_events_h5_filepath(ophys_experiment_id):
         string -- filepath (directory and filename) for the event.h5 file
         for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_event_trace_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
         SELECT storage_directory || filename
         FROM well_known_files
@@ -835,7 +879,9 @@ def get_wkf_motion_corrected_movie_h5_filepath(ophys_experiment_id):
     Returns:
         [type] -- [description]
     """
-
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_motion_corrected_movie_filepath')
+    warnings.warn(warn_str)
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -863,6 +909,10 @@ def get_wkf_rigid_motion_transform_csv_filepath(ophys_experiment_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'load_rigid_motion_transform')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -890,6 +940,10 @@ def get_wkf_session_pkl_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_stimulus_pkl_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -918,6 +972,10 @@ def get_wkf_session_h5_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_session_h5_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -946,6 +1004,10 @@ def get_wkf_behavior_avi_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_behavior_avi_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -964,6 +1026,10 @@ def get_wkf_behavior_avi_filepath(ophys_session_id):
 
 
 def get_behavior_h5_filepath(ophys_session_id):
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_behavior_h5_filepath')
+    warnings.warn(warn_str)
+
     avi_filepath = get_wkf_behavior_avi_filepath(ophys_session_id)
     h5_filepath = avi_filepath[:-3] + "h5"
     return h5_filepath
@@ -980,6 +1046,10 @@ def get_wkf_eye_tracking_avi_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_eye_tracking_avi_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1014,6 +1084,10 @@ def get_wkf_ellipse_h5_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_ellipse_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1042,6 +1116,10 @@ def get_wkf_platform_json_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_platform_json_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1070,6 +1148,10 @@ def get_wkf_screen_mapping_h5_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_screen_mapping_h5_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -1098,6 +1180,10 @@ def get_wkf_deepcut_h5_filepath(ophys_session_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_deepcut_h5_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
