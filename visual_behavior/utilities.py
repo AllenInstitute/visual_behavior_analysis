@@ -123,7 +123,7 @@ def trial_number_limit(p, N):
     return p
 
 
-def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
+def dprime(hit_rate = None, fa_rate = None, go_trials = None, catch_trials = None, limits=False):
     """ calculates the d-prime for a given hit rate and false alarm rate
 
     https://en.wikipedia.org/wiki/Sensitivity_index
@@ -134,19 +134,53 @@ def dprime(hit_rate, fa_rate, limits=(0.01, 0.99)):
         rate of hits in the True class
     fa_rate : float
         rate of false alarms in the False class
-    limits : tuple, optional
-        limits on extreme values, which distort. default: (0.01,0.99)
+    go_trials: vector of booleans
+        responses on all go trials (hit = True, miss = False)
+    catch_trials: vector of booleans
+        responses on all catch trials (false alarm = True, correct reject = False)
+    limits : boolean or tuple, optional
+        limits on extreme values, which can cause d' to overestimate on low trial counts. 
+        False (default) results in limits of (0.01,0.99) to avoid infinite calculations
+        True results in limits being calculated based on trial count (only applicable if go_trials and catch_trials are passed)
+        (limits[0], limits[1]) results in specified limits being applied
+
+    Note: user must pass EITHER hit_rate and fa_rate OR go_trials and catch trials
 
     Returns
     -------
     d_prime
 
     """
+
+    assert hit_rate is not None or go_trials is not None, 'must either a specify `hit_rate` or pass a boolean vector of `go_trials`'
+    assert fa_rate is not None or catch_trials is not None, 'must either a specify `fa_rate` or pass a boolean vector of `catch_trials`'
+
+    assert not (hit_rate and go_trials), 'do not pass both `hit_rate` and a boolean vector of `go_trials`'
+    assert not (fa_rate and catch_trials), 'do not pass both `fa_rate` and a boolean vector of `catch_trials`'
+
+    assert not (hit_rate and limits == True), 'limits can only be calculated if a go_trials vector is passed, not a hit_rate'
+    assert not (fa_rate and limits == True), 'limits can only be calculated if a catch_trials vector is passed, not a fa_rate'
+
+    # calculate hit and fa rates as mean of boolean vectors
+    if hit_rate is None:
+        hit_rate = np.mean(go_trials)
+    if fa_rate is None:
+        fa_rate = np.mean(catch_trials)
+
     Z = norm.ppf
 
-    # Limit values in order to avoid d' infinity
-    hit_rate = np.clip(hit_rate, limits[0], limits[1])
-    fa_rate = np.clip(fa_rate, limits[0], limits[1])
+    if limits == False:
+        # if limits are False, apply default
+        limits = (0.01, 0.99)
+    elif limits == True:
+        # clip the hit and fa rate based on trial count
+        hit_rate = trial_number_limit(hit_rate, len(go_trials))
+        fa_rate = trial_number_limit(fa_rate, len(catch_trials))
+    
+    if limits != True:
+        # Limit values in order to avoid d' infinity
+        hit_rate = np.clip(hit_rate, limits[0], limits[1])
+        fa_rate = np.clip(fa_rate, limits[0], limits[1])
 
     # keep track of nan locations
     hit_rate = pd.Series(hit_rate)
