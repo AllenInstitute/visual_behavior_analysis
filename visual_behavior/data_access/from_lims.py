@@ -25,8 +25,9 @@ try:
         port=lims_port)
 
 except Exception as e:
-    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\ninternal AIBS users should set up \
-                   environment variables appropriately\nfunctions requiring database access will fail'.format(e)
+    warn_string = 'failed to set up LIMS/mtrain credentials\n{}\n\n \
+        internal AIBS users should set up environment variables \
+        appropriately\nfunctions requiring database access will fail'.format(e)
     warnings.warn(warn_string)
 
 # building querys
@@ -226,7 +227,10 @@ def get_general_info_for_ophys_experiment_id(ophys_experiment_id):
     os.stimulus_name AS session_type,
     structures.acronym AS targeted_structure,
     imaging_depths.depth,
-    equipment.name AS rig
+    equipment.name AS equipment_name,
+
+    oe.storage_directory AS experiment_storage_directory,
+    os.storage_directory AS session_storage_directory
 
     FROM
     ophys_experiments oe
@@ -374,7 +378,10 @@ def get_general_info_for_ophys_session_id(ophys_session_id):
     os.stimulus_name AS session_type,
     structures.acronym AS targeted_structure,
     imaging_depths.depth,
-    equipment.name AS rig
+    equipment.name AS equipment_name,
+
+    oe.storage_directory AS experiment_storage_directory,
+    os.storage_directory AS session_storage_directory
 
     FROM
     ophys_experiments oe
@@ -548,7 +555,10 @@ def get_general_info_for_behavior_session_id(behavior_session_id):
     os.stimulus_name AS session_type,
     structures.acronym AS targeted_structure,
     imaging_depths.depth,
-    equipment.name AS rig
+    equipment.name AS equipment_name,
+
+    oe.storage_directory AS experiment_storage_directory,
+    os.storage_directory AS session_storage_directory
 
     FROM
     ophys_experiments oe
@@ -714,19 +724,26 @@ def get_general_info_for_ophys_container_id(ophys_container_id):
     os.stimulus_name AS session_type,
     structures.acronym AS targeted_structure,
     imaging_depths.depth,
-    equipment.name AS rig
+    equipment.name AS equipment_name,
+
+    oe.storage_directory AS experiment_storage_directory,
+    os.storage_directory AS session_storage_directory
 
     FROM
     ophys_experiments oe
 
     JOIN ophys_sessions os
     ON os.id = oe.ophys_session_id
+
     JOIN behavior_sessions bs
     ON bs.foraging_id = os.foraging_id
+
     JOIN ophys_experiments_visual_behavior_experiment_containers oevbec
     ON oe.id = oevbec.ophys_experiment_id
+
     JOIN visual_behavior_experiment_containers containers
     ON containers.id = oevbec.visual_behavior_experiment_container_id
+
     JOIN specimens ON specimens.id = os.specimen_id
     JOIN structures ON structures.id = oe.targeted_structure_id
     JOIN imaging_depths ON imaging_depths.id = oe.imaging_depth_id
@@ -867,7 +884,10 @@ def get_general_info_for_supercontainer_id(supercontainer_id):
     os.stimulus_name AS session_type,
     structures.acronym AS targeted_structure,
     imaging_depths.depth,
-    equipment.name AS rig
+    equipment.name AS equipment_name,
+
+    oe.storage_directory AS experiment_storage_directory,
+    os.storage_directory AS session_storage_directory
 
     FROM
     ophys_experiments oe
