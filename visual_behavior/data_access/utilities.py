@@ -4,6 +4,7 @@ import shutil
 import warnings
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 from visual_behavior.data_access import loading
 from visual_behavior.ophys.io.lims_database import LimsDatabase
@@ -1263,3 +1264,14 @@ def build_tidy_cell_df(session):
         pandas dataframe
     '''
     return pd.concat([pd.DataFrame(get_cell_timeseries_dict(session, cell_specimen_id)) for cell_specimen_id in session.dff_traces.reset_index()['cell_specimen_id']]).reset_index(drop=True)
+
+
+def correct_filepaths(filepath):
+    filepath = filepath.replace('/allen', '//allen')
+    corrected_path = Path(filepath)
+    return corrected_path
+
+
+def correct_dataframe_filepath(dataframe, column_string):
+    dataframe[column_string] = dataframe[column_string].apply(lambda x: correct_filepaths(x))
+    return dataframe
