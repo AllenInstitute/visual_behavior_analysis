@@ -208,7 +208,7 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # sessi
     PythonJob(
         python_file,
         python_executable = '/home/farzaneh.najafi/anaconda3/envs/visbeh/bin/python',
-        python_args = python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6,
+        python_args = python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6 + python_arg7,
 #         python_args = str(session_data) + str(session_trials), # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
 #         python_args = isess, # session_id experiment_ids validity_log_all dir_svm frames_svm numSamples saveResults use_ct_traces same_num_neuron_all_planes',
         conda_env = None,
