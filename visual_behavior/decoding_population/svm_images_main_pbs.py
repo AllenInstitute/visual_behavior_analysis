@@ -19,6 +19,7 @@ import datetime
 import re
 import pandas as pd
 import copy
+import numpy.random as rnd
 from svm_funs import *
 # get_ipython().magic(u'matplotlib inline') # %matplotlib inline
 
@@ -354,7 +355,10 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             svm_vars.to_hdf(svmName, key='svm_vars', mode='w')
 
 
-
+        return svmName
+    
+    
+    
     
     ####################################################################################################
     ####################################################################################################    
@@ -373,7 +377,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
     
     if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
         svmn = f'{e}svm_decode_changes_from_nochanges'
-    elif trial_type=='hits_vs_misses': # 
+    elif trial_type=='hits_vs_misses':
         svmn = f'{e}svm_decode_hits_from_misses'        
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
@@ -740,8 +744,6 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 # remove the nan from labels and traces
                 image_labels = image_labels0[masknan]
                 traces_fut = traces_fut[:,:,masknan]
-                # reset n_trials
-                n_trials = traces_fut.shape[2] 
             else:
                 image_labels = copy.deepcopy(image_labels0)
         
@@ -749,6 +751,46 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
             print(f'Number of classes in SVM: {num_classes}')
 
             
+            
+            ######################################################
+            # use balanced trials; same number of trials for each class 
+            if num_classes==2 and use_balanced_trials==1: # if 1, use same number of trials for each class
+                
+                hrn = (image_labels==1).sum() # hit
+                lrn = (image_labels==0).sum() # miss
+                if hrn > lrn:
+                    print('\nSubselecting hit trials so both classes have the same number of trials!\n')
+                elif lrn > hrn:
+                    print ('\nSubselecting miss trials so both classes have the same number of trials!\n')
+                
+                mn_n_trs = np.min([sum(image_labels==0) , sum(image_labels==1)])
+                ind_mn_n_trs = np.argmin([sum(image_labels==0) , sum(image_labels==1)]) # class with fewer trials
+                # which class has more trials; this is the class that we want to resample
+                ind_mx_n_trs = np.argmax([sum(image_labels==0) , sum(image_labels==1)])
+
+                # get random order of trials from the class with more trials
+    #             rnd.permutation(sum(image_labels==ind_mx_n_trs)) # then get the first mn_n_trs trials from the class with more trials
+                tr_inds = rnd.permutation(sum(image_labels==ind_mx_n_trs))[:mn_n_trs]
+
+                traces_larger_class = traces_fut[:,:,image_labels==ind_mx_n_trs][:,:,tr_inds]
+                labels_larger_class = image_labels[image_labels==ind_mx_n_trs][tr_inds]
+
+                # get the traces and labels for the smaller class
+                traces_smaller_class = traces_fut[:,:,image_labels==ind_mn_n_trs]
+                labels_smaller_class = image_labels[image_labels==ind_mn_n_trs]
+
+                # concatenate the 2 classes
+                traces_fut = np.concatenate((traces_smaller_class, traces_larger_class), axis=2)
+                image_labels = np.concatenate((labels_smaller_class, labels_larger_class))
+            
+                print(traces_fut.shape , image_labels.shape)
+            
+            
+            
+            ######################################################
+            # reset n_trials
+            n_trials = traces_fut.shape[2] 
+                
             # double check reshape above worked fine.
             '''
             c_all = []
@@ -776,6 +818,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
 
             
             
+            ######################################################
             #%% Do not continue the analysis if neurons or trials are too few, or if there are not enough unique classes in the data            
             
             continue_analysis = True
@@ -811,7 +854,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                 
                 #### run svm analysis on the whole session
                 if svm_blocks==-100:
-                    svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                    svmName = svm_run_save(traces_fut_0, image_labels_0, [np.nan, []], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numShufflesN, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
 
                 #### run svm analysis only on engaged trials
@@ -872,7 +915,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                         image_labels_now = image_labels_0[trials_blocks[iblock]]
                         print(traces_fut_now.shape , image_labels_now.shape)
                         
-                        svm_run_save(traces_fut_now, image_labels_now, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                        svmName = svm_run_save(traces_fut_now, image_labels_now, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                         
         
         
@@ -902,7 +945,7 @@ def svm_main_images_pbs(data_list, experiment_ids_valid, df_data, session_trials
                         image_labels = image_labels_0[trials_blocks[iblock]]
                         print(traces_fut.shape , image_labels.shape)
                         
-                        svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
+                        svmName = svm_run_save(traces_fut, image_labels, [iblock, trials_blocks], svm_blocks, now, engagement_pupil_running, pupil_running_values) #, same_num_neuron_all_planes, norm_to_max_svm, svm_total_frs, n_neurons, numSamples, num_classes, samps_bef, regType, kfold, cre, saveResults)
                     
                 
                 
@@ -918,19 +961,25 @@ get_ipython().magic(u'matplotlib inline')
 a = pd.read_hdf(svmName, key='svm_vars')
    
 # make plots
-a_train = np.mean(a.iloc[0]['perClassErrorTrain_data_allFrs'], axis=0)
-a_test = np.mean(a.iloc[0]['perClassErrorTest_data_allFrs'], axis=0)
-a_shfl = np.mean(a.iloc[0]['perClassErrorTest_shfl_allFrs'], axis=0)
-a_chance = np.mean(a.iloc[0]['perClassErrorTest_chance_allFrs'], axis=0)
+a_train = 100-np.mean(a.iloc[0]['perClassErrorTrain_data_allFrs'], axis=0)
+a_test = 100-np.mean(a.iloc[0]['perClassErrorTest_data_allFrs'], axis=0)
+a_shfl = 100-np.mean(a.iloc[0]['perClassErrorTest_shfl_allFrs'], axis=0)
+a_chance = 100-np.mean(a.iloc[0]['perClassErrorTest_chance_allFrs'], axis=0)
+
+x = trace_time[samps_bef+frames_svm]
 
 plt.figure()
-plt.plot(a_train, color='k', label='train') 
-plt.plot(a_test, color='r', label='test') 
-plt.plot(a_shfl, color='y', label='shfl')
-plt.plot(a_chance, color='b', label='chance')
+plt.plot(x, a_train, color='k', marker='.', label='train') 
+plt.plot(x, a_test, color='r', marker='.', label='test') 
+plt.plot(x, a_shfl, color='y', marker='.', label='shfl')
+plt.plot(x, a_chance, color='b', marker='.', label='chance')
+
 plt.legend(loc='center left', bbox_to_anchor=(1, .7))                
-plt.ylabel('% Classification error')
-plt.xlabel('Frame after trial onset')  
+plt.ylabel('% Classification accuracy')
+plt.xlabel('Frame after trial onset');
+plt.vlines(0, np.min(a_chance), np.max(a_train))
+
+
 """
 
 
@@ -963,6 +1012,7 @@ to_decode = str(sys.argv[3])
 trial_type = str(sys.argv[4])
 svm_blocks = int(sys.argv[5]) 
 engagement_pupil_running = int(sys.argv[6]) 
+use_balanced_trials = int(sys.argv[7]) 
 
 # trial_type = 'images' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 # to_decode = 'previous' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image. # remember for omissions, you cant do "current", bc there is no current image, it has to be previous or next!

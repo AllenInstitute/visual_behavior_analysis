@@ -32,6 +32,8 @@ def svm_images_main_post(session_id, data_list, svm_blocks, iblock, dir_svm, fra
     
     if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
         svmn = f'{e}svm_decode_changes_from_nochanges' # 'svm_gray_omit'
+    elif trial_type=='hits_vs_misses': # 
+        svmn = f'{e}svm_decode_hits_from_misses'                
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
         

@@ -36,11 +36,15 @@ svm_blocks = np.nan # np.nan # -1: divide trials based on engagement #2 # number
 use_events = True #False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 
 to_decode = 'current' #'next' # 'current' (default): decode current image.    'previous': decode previous image.    'next': decode next image.
-trial_type = 'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
+trial_type = 'hits_vs_misses' #'changes_vs_nochanges' #'omissions' # 'omissions', 'images', 'changes' # what trials to use for SVM analysis # the population activity of these trials at time time_win will be used to decode the image identity of flashes that occurred at their time 0 (if to_decode='current') or 750ms before (if to_decode='previous').
 
 time_win = [0, .55] # 'frames_svm' # set time_win to a string (any string) to use frames_svm as the window of quantification. # time window relative to trial onset to quantify image signal. Over this window class accuracy traces will be averaged.
 
-frames_svm_all = [np.arange(-5,8)] #[[-3,-2,-1], [0,1,2,3,4,5]]
+if trial_type=='hits_vs_misses':
+    frames_svm_all = [np.arange(-5,9)]
+else:
+    frames_svm_all = [np.arange(-5,8)] #[[-3,-2,-1], [0,1,2,3,4,5]]
+
 same_num_neuron_all_planes = 0
 
 saveResults = 1
@@ -209,6 +213,8 @@ for iblock in br: # iblock=0; iblock=np.nan
     e = 'events_' if use_events else ''
     if trial_type=='changes_vs_nochanges': # change, then no-change will be concatenated
         svmn = f'{e}svm_decode_changes_from_nochanges' # 'svm_gray_omit'
+    elif trial_type=='hits_vs_misses': # 
+        svmn = f'{e}svm_decode_hits_from_misses'                
     else:
         svmn = f'{e}svm_decode_{to_decode}_image_from_{trial_type}' # 'svm_gray_omit'
     

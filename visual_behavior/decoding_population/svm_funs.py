@@ -329,7 +329,8 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
     #%%    
     ########################################## Train SVM numSamples times to get numSamples cross-validated datasets.    
     for s in range(numSamples): # s=0
-        print('Iteration %d' %(s))
+        if s==0 or s==numSamples-1:
+            print('Iteration %d' %(s))
         
         ############ Make sure both classes have the same number of trials when training the classifier
         # set trsnow: # index of trials (out of Y0) after picking random hr (or lr) in order to make sure both classes have the same number in the final Y (on which svm was run)
@@ -366,7 +367,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
 #            print('FINAL: %d trials; %d neurons' %(numTrials, numNeurons)                        
             
     
-        ######################## Setting chance Y: same length as Y for testing data, and with equal number of classes 0 and 1.
+        ######################## Setting indices for shuffled data; also setting chance Y: same length as Y for testing data, and with equal number of classes 0 and 1.
 #        no = Y.shape[0]
 #        len_test = numTrials - int((kfold-1.)/kfold*numTrials)    
         permIxs = rng.permutation(len_test) # needed to set perClassErrorTest_shfl   
@@ -490,8 +491,9 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
 #            print('\tFrame %d' %(ifr)  
         #%%######################## Loop over different values of regularization
         for i in range(nCvals): # i = 0 # train SVM using different values of regularization parameter
-            print(f'\tc = {cvect[i]}')
-            
+#             print(f'\tc = {cvect[i]}')
+
+            # to train the classifier on shuffled data, use Y[rng.permutation(len(Y))]
             if regType == 'l1':                               
                 summary,_ =  crossValidateModel(X.transpose(), Y, linearSVM, kfold = kfold, l1 = cvect[i], shflTrs = shuffleTrs)
                 
@@ -625,7 +627,7 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
         else:
             cbestAll = cvect[ix]
 #        print('\tFrame %d: %f' %(ifr,cbestAll))
-        print('\t%f' %(cbestAll))
+        print('\t%f, index %d' %(cbestAll, ix))
 #        cbestAllFrs[ifr] = cbestAll
         cbestAllFrs = cbestAll
         
@@ -692,9 +694,10 @@ def set_best_c(X,Y,regType,kfold,numDataPoints,numSamples,doPlots,useEqualTrNums
             plt.plot(cvect, meanPerClassErrorTest_shfl, 'y', label = 'cv-shfl')            
         
             plt.plot(cvect[cvect==cbest], meanPerClassErrorTest[cvect==cbest], 'bo')
+            plt.title(f'{cvect[cvect==cbest]}, {meanPerClassErrorTest[cvect==cbest]}')
             
-            plt.xlim([cvect[1], cvect[-1]])
             plt.xscale('log')
+#             plt.xlim([cvect[0], cvect[-1]])
             plt.xlabel('c (inverse of regularization parameter)')
             plt.ylabel('classification error (%)')
             plt.legend(loc='center left', bbox_to_anchor=(1, .7))

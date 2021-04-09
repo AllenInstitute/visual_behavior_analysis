@@ -965,6 +965,7 @@ def all_sess_set_h5_fileName(name, dir_now, all_files=0):
     if len(h5_files)==0:
         print('Error: no h5 file exists!!!')
         allSessName = ''
+        print(regex)
         
     if all_files==0: # only get the latest file, otherwise get all file names
         # Get the modification times of the existing analysis folders

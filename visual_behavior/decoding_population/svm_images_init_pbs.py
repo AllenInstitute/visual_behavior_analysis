@@ -24,7 +24,8 @@ trial_type = 'hits_vs_misses' #'changes_vs_nochanges' # 'images_omissions', 'ima
 use_events = True # False # whether to run the analysis on detected events (inferred spikes) or dff traces.
 svm_blocks = -100 #-100 # 2 #np.nan # -101: run the analysis only on engaged trials # -1: divide trials based on engagement # 2 # number of trial blocks to divide the session to, and run svm on. # set to -100 to run svm analysis on the whole session
 engagement_pupil_running = 1 # np.nan or 0,1,2 for engagement, pupil, running: which metric to use to define engagement? only effective if svm_blocks=-1
-
+use_balanced_trials = 1 # if 1, use same number of trials for each class; only applicable when we have 2 classes (binary classification).
+    
 # cre2ana = 'slc' # slc, sst, vip # will be used if session_numbers[0]<0 (we will use dataset and responseAnalysis (instead of the concatenated dfs) to set stim_response_df)
 # project_codes = ['VisualBehaviorMultiscope'] # ['VisualBehaviorMultiscope', 'VisualBehaviorTask1B', 'VisualBehavior', 'VisualBehaviorMultiscope4areasx2d']
 
@@ -193,8 +194,10 @@ for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # sessi
     python_arg3 = '%s ' %to_decode
     python_arg4 = '%s ' %trial_type
     python_arg5 = '%s ' %svm_blocks    
-    python_arg6 = '%s' %engagement_pupil_running
-    print(python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6)
+    python_arg6 = '%s ' %engagement_pupil_running
+    python_arg7 = '%s' %use_balanced_trials
+    
+    print(python_arg1 + python_arg2 + python_arg3 + python_arg4 + python_arg5 + python_arg6 + python_arg7)
     
     
     #%%    

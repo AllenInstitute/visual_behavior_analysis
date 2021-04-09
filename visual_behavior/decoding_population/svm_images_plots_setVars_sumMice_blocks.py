@@ -25,14 +25,14 @@ blocks_all = svm_this_plane_allsess0['block'].values # weird: 70 block 0s, and 6
 
 #%% Loop through svm_this_plane_allsess0 and get those rows of it that belong to a given session stage and block; for each one set svm_allMice_sessPooled and svm_allMice_sessAvSd
 
-indexes = ['cre_allPlanes', 'mouse_id_allPlanes', 'area_allPlanes', 'depth_allPlanes', 'block_all', 'session_labs', \
+indexes = ['cre_allPlanes', 'mouse_id_allPlanes', 'session_ids', 'area_allPlanes', 'depth_allPlanes', 'block_all', 'session_labs', \
            'av_test_data_allPlanes', 'av_test_shfl_allPlanes', 'peak_amp_allPlanes', \
            'cre_eachArea', 'av_test_data_eachArea', 'av_test_shfl_eachArea', 'peak_amp_eachArea', \
            'cre_eachDepth', 'depth_eachDepth', 'av_test_data_eachDepth', 'av_test_shfl_eachDepth', 'peak_amp_eachDepth']
 svm_allMice_sessPooled = pd.DataFrame([], columns=indexes)
 
 
-cols0 = ['mouse_id', 'cre', 'block', 'session_stages', 'session_labs', 'area', 'depth', 'plane', \
+cols0 = ['mouse_id', 'cre', 'block', 'session_ids', 'session_stages', 'session_labs', 'area', 'depth', 'plane', \
         'av_depth_avSess_eachP', 'sd_depth_avSess_eachP', 'av_n_neurons_avSess_eachP', 'sd_n_neurons_avSess_eachP', \
         'av_n_trials_avSess_eachP', 'sd_n_trials_avSess_eachP', 'av_test_data_avSess_eachP', 'sd_test_data_avSess_eachP', 'av_test_shfl_avSess_eachP', 'sd_test_shfl_avSess_eachP', \
         'av_peak_amp_trTsShCh_avSess_eachP', 'sd_peak_amp_trTsShCh_avSess_eachP', \
@@ -86,7 +86,11 @@ for istage in np.unique(stages_all): # istage=1
         a0 = np.concatenate((svm_this_plane_allsess['mouse_id_exp']).values) # (8*sum(num_sess_per_mouse)) # 8 planes of 1 session, then 8 planes of next session, and so on 
         mouse_id_all = np.reshape(a0, (num_planes, int(a0.shape[0]/num_planes)), order='F') # 8 x sum(num_sess_per_mouse) # each row is one plane, all sessions        
 
-
+        
+        a0 = np.concatenate((svm_this_plane_allsess['session_ids']).values)
+        session_ids_all = np.reshape(a0, (num_planes, int(a0.shape[0]/num_planes)), order='F') # 8 x sum(num_sess_per_mouse) # each row is one plane, all sessions        
+        
+        
         aa = svm_this_plane_allsess['area_this_plane_allsess_allp'].values
         #    aa.shape # num_all_mice; # size of each element : 8 x num_sessions x 1
         # For each element of aa, make array sizes similar to those in omissions_traces_peaks_plots_setVars_ave.py:
@@ -154,7 +158,7 @@ for istage in np.unique(stages_all): # istage=1
            index=indexes)
         '''
 
-        svm_allMice_sessPooled.at[cntall, indexes] = cre_all, mouse_id_all, area_all, depth_all, block_all, session_labs_all, \
+        svm_allMice_sessPooled.at[cntall, indexes] = cre_all, mouse_id_all, session_ids_all, area_all, depth_all, block_all, session_labs_all, \
            ts_all, sh_all, pa_all, \
            cre_all_eachArea, ts_all_eachArea, sh_all_eachArea, pao_all_eachArea, \
            cre_all_eachDepth, depth_all_eachDepth, ts_all_eachDepth, sh_all_eachDepth, pao_all_eachDepth
@@ -185,7 +189,7 @@ for istage in np.unique(stages_all): # istage=1
             session_labs = svm_this_plane_allsess.iloc[im]['session_labs']
             num_sessions = len(session_stages)
             block = svm_this_plane_allsess.iloc[im]['block']
-
+            session_ids_now = svm_this_plane_allsess.iloc[im]['session_ids']
 
             ################################################################
             #%% Session-averaged, each plane ; omission-aligned traces
@@ -302,7 +306,7 @@ for istage in np.unique(stages_all): # istage=1
             #%% Keep vars (session averaged, each plane, also eachArea, eachDepth vars) for all mice
 
             svm_allMice_sessAvSd.at[cntall2, cols0] = \
-                mouse_id, cre, block,session_stages, session_labs, areas, depths, planes, \
+                mouse_id, cre, block, session_ids_now, session_stages, session_labs, areas, depths, planes, \
                 av_depth_avSess_eachP, sd_depth_avSess_eachP, av_n_neurons_avSess_eachP, sd_n_neurons_avSess_eachP, \
                 av_n_trials_avSess_eachP, sd_n_trials_avSess_eachP, av_test_data_avSess_eachP, sd_test_data_avSess_eachP, av_test_shfl_avSess_eachP, sd_test_shfl_avSess_eachP, \
                 av_peak_amp_trTsShCh_avSess_eachP, sd_peak_amp_trTsShCh_avSess_eachP, \
