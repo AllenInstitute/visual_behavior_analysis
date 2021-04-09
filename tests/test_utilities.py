@@ -1,5 +1,7 @@
 from visual_behavior.utilities import local_time
 from visual_behavior.utilities import find_nearest_index
+from visual_behavior.utilities import dprime
+from visual_behavior.utilities import trial_number_limit
 from visual_behavior.utilities import Movie
 import numpy as np
 import pytest
@@ -31,3 +33,51 @@ def test_movie_load():
     # get frame by frame number
     frame2 = movie.get_frame(frame=1000)
     assert frame2[100, 100, 0] == 150
+
+
+def test_trial_number_limit():
+    assert trial_number_limit(1, 5) == 0.9
+
+    assert trial_number_limit(1, 50) == 0.99
+
+    assert trial_number_limit(1, 100) == 0.995
+
+    assert trial_number_limit(0.5, 100) == 0.5
+
+    assert trial_number_limit(0, 100) == 0.005
+
+
+def test_dprime():
+
+    d_prime = dprime(1.0, 0.0)
+    assert d_prime == 4.6526957480816815
+
+    d_prime = dprime(1.0, 0.0, limits=False)
+    assert d_prime == 4.6526957480816815
+
+    d_prime = dprime(1.0, 0.0, limits=(0.01, 0.99))
+    assert d_prime == 4.6526957480816815
+
+    d_prime = dprime(1.0, 0.0, limits=(0.0, 1.0))
+    assert d_prime == np.inf
+
+    d_prime = dprime(
+        go_trials=[1, 1, 1, 1, 1, 1, 1],
+        catch_trials=[0, 0],
+        limits=True
+    )
+    assert d_prime == 2.1397235428816046
+
+    d_prime = dprime(
+        go_trials=[1, 1, 1, 1, 1, 1, 1],
+        catch_trials=[0, 0],
+        limits=False
+    )
+    assert d_prime == 4.6526957480816815
+
+    d_prime = dprime(
+        go_trials=[0, 1, 0, 1],
+        catch_trials=[0, 1],
+        limits=False
+    )
+    assert d_prime == 0.0
