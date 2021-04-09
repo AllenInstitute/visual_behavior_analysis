@@ -2,7 +2,6 @@ import os
 import numpy as np
 import pandas as pd
 
-from visual_behavior.data_access import loading
 from visual_behavior.data_access import utilities
 import visual_behavior.ophys.dataset.extended_stimulus_processing as esp
 
@@ -50,6 +49,41 @@ def add_session_type_exposure_number_to_experiments_table(experiments):
     return experiments
 
 
+def add_engagement_state_to_trials_table(trials, extended_stimulus_presentations):
+    '''
+    adds `engaged` and `engagement_state` fields to the trial table
+    both are pulled from the value of the stimulus table that is closest to the time at the start of each trial
+    '''
+    extended_stimulus_presentations = extended_stimulus_presentations
+
+    # for each trial, find the stimulus index that is closest to the trial start
+    # add to a new column called 'first_stim_presentation_index'
+    for idx, trial in trials.iterrows():
+        start_time = trial['start_time']
+        query_string = 'start_time > @start_time - 1 and start_time < @start_time + 1'
+        first_stim_presentation_index = np.argmin(
+            np.abs(
+                start_time - extended_stimulus_presentations.query(query_string)['start_time']
+            )
+        )
+        trials.at[idx, 'first_stim_presentation_index'] = first_stim_presentation_index
+
+    # define the columns from extended_stimulus_presentations that we want to merge into trials
+    cols_to_merge = [
+        'engaged',
+        'engagement_state'
+    ]
+
+    # merge the desired columns into trials on the stimulus_presentations_id indices
+    trials = trials = trials.merge(
+        extended_stimulus_presentations[cols_to_merge].reset_index(),
+        left_on='first_stim_presentation_index',
+        right_on='stimulus_presentations_id',
+    )
+
+    return trials
+
+
 def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavior_session_table):
     """
     Gets the number of sessions an image set has been presented in prior to the date of the given behavior_session_id
@@ -68,9 +102,7 @@ def get_image_set_exposures_for_behavior_session_id(behavior_session_id, behavio
     return image_set_exposures
 
 
-def add_image_set_exposure_number_to_experiments_table(experiments):
-    cache = loading.get_visual_behavior_cache()
-    behavior_session_table = cache.get_behavior_session_table()
+def add_image_set_exposure_number_to_experiments_table(experiments, behavior_session_table):
     exposures = []
     for row in range(len(experiments)):
         try:
@@ -115,9 +147,8 @@ def get_omission_exposures_for_behavior_session_id(behavior_session_id, behavior
     return omission_exposures
 
 
-def add_omission_exposure_number_to_experiments_table(experiments):
-    cache = loading.get_visual_behavior_cache()
-    behavior_session_table = cache.get_behavior_session_table()
+def add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table):
+
     exposures = []
     for row in range(len(experiments)):
         try:
@@ -142,21 +173,7 @@ def add_model_outputs_availability_to_table(table):
     return table
 
 
-def add_has_cell_matching_to_table(table):
-    """
-    Evaluates wither a given experiment_id is in a saved list of experiments where cell matching failed.
-    :param table: table of experiment level metadata
-    :return: table with added column 'has_cell_matching', values are Boolean
-    """
-    save_dir = loading.get_cache_dir()
-    df = pd.read_csv(os.path.join(save_dir, 'experiments_with_missing_cell_specimen_ids.csv'))
-    no_cell_matching = list(df.ophys_experiment_id.values)
-    print(len(no_cell_matching))
-    table['has_cell_matching'] = [False if expt in no_cell_matching else True for expt in table.ophys_experiment_id.values]
-    return table
-
-
-def reformat_experiments_table(experiments):
+def reformat_experiments_table(experiments, behavior_session_table):
     experiments = experiments.reset_index()
     experiments['super_container_id'] = experiments['specimen_id'].values
     # clean up cre_line naming
@@ -171,10 +188,9 @@ def reformat_experiments_table(experiments):
     experiments.at[experiments[experiments.session_type.isnull()].index.values, 'session_type'] = 'None'
     experiments = add_mouse_seeks_fail_tags_to_experiments_table(experiments)
     experiments = add_session_type_exposure_number_to_experiments_table(experiments)
-    experiments = add_image_set_exposure_number_to_experiments_table(experiments)
-    experiments = add_omission_exposure_number_to_experiments_table(experiments)
+    experiments = add_image_set_exposure_number_to_experiments_table(experiments, behavior_session_table)
+    experiments = add_omission_exposure_number_to_experiments_table(experiments, behavior_session_table)
     experiments = add_model_outputs_availability_to_table(experiments)
-    # experiments = add_has_cell_matching_to_table(experiments)
     if 'level_0' in experiments.columns:
         experiments = experiments.drop(columns='level_0')
     if 'index' in experiments.columns:
@@ -183,12 +199,11 @@ def reformat_experiments_table(experiments):
     return experiments
 
 
-def add_all_qc_states_to_ophys_session_table(session_table):
+def add_all_qc_states_to_ophys_session_table(session_table, experiment_table):
     """ Add 'experiment_workflow_state', 'container_workflow_state', and 'session_workflow_state' to session_table.
             :param session_table: session_table from SDK cache
             :return: session_table: with additional columns added
             """
-    experiment_table = loading.get_filtered_ophys_experiment_table(include_failed_data=True)
     session_table = add_session_workflow_state_to_ophys_session_table(session_table, experiment_table)
     session_table = add_container_workflow_state_to_ophys_session_table(session_table, experiment_table)
     return session_table

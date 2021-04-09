@@ -1,4 +1,4 @@
-def get_filepath_from_wkf_realdict_object(wkf_realdict_object):
+def get_filepath_from_realdict_object(realdict_object):
     """takes a RealDictRow object returned when loading well known files
        from lims and parses it to return the filepath to the well known file.
 
@@ -8,7 +8,7 @@ def get_filepath_from_wkf_realdict_object(wkf_realdict_object):
     Returns:
         filepath: [description]
     """
-    filepath = wkf_realdict_object[0]['?column?']  # idk why it's ?column? but it is :(
+    filepath = realdict_object['filepath'][0]
     filepath = filepath.replace('/allen', '//allen')  # works with windows and linux filepaths
     return filepath
 

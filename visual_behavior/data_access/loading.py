@@ -3,9 +3,8 @@ from allensdk.internal.api import PostgresQueryMixin
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorLimsApi
 from allensdk.brain_observatory.behavior.behavior_session import BehaviorSession
 from allensdk.brain_observatory.behavior.session_apis.data_io import BehaviorOphysLimsApi
-from allensdk.brain_observatory.behavior.behavior_ophys_session import BehaviorOphysSession
-from allensdk.brain_observatory.behavior.behavior_project_cache import BehaviorProjectCache
-# from allensdk.core.lazy_property import LazyProperty, LazyPropertyMixin
+from allensdk.brain_observatory.behavior.behavior_ophys_experiment import BehaviorOphysExperiment
+from allensdk.brain_observatory.behavior.behavior_project_cache import VisualBehaviorOphysProjectCache as bpc
 from visual_behavior.data_access import filtering
 from visual_behavior.data_access import reformat
 from visual_behavior.data_access import utilities
@@ -129,7 +128,7 @@ def get_visual_behavior_cache(manifest_path=None):
     # i think this manifest caching is now disabled, so providing the path to the manifest does nothing in this case ###
     if manifest_path is None:
         manifest_path = get_manifest_path()
-    cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())
+    cache = bpc.from_lims(manifest=get_manifest_path())
     return cache
 
 
@@ -156,9 +155,10 @@ def get_filtered_ophys_experiment_table(include_failed_data=False, release_data_
         experiments = pd.read_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
     else:
         print('generating filtered_ophys_experiment_table')
-        cache = BehaviorProjectCache.from_lims(manifest=get_manifest_path())
-        experiments = cache.get_experiment_table()
-        experiments = reformat.reformat_experiments_table(experiments)
+        cache = get_visual_behavior_cache()
+        experiments = cache.get_ophys_experiment_table()
+        behavior_session_table = cache.get_behavior_session_table()
+        experiments = reformat.reformat_experiments_table(experiments, behavior_session_table)
         experiments = filtering.limit_to_production_project_codes(experiments)
         experiments = experiments.set_index('ophys_experiment_id')
         experiments.to_csv(os.path.join(get_cache_dir(), 'filtered_ophys_experiment_table.csv'))
@@ -222,9 +222,10 @@ def get_filtered_ophys_session_table():
                         "container_workflow_state":
     """
     cache = get_visual_behavior_cache()
-    sessions = cache.get_session_table()
+    sessions = cache.get_ophys_session_table()
+    experiment_table = get_filtered_ophys_experiment_table(include_failed_data=True)
     sessions = filtering.limit_to_production_project_codes(sessions)
-    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions)
+    sessions = reformat.add_all_qc_states_to_ophys_session_table(sessions, experiment_table)
     sessions = filtering.limit_to_valid_ophys_session_types(sessions)
     sessions = filtering.limit_to_passed_ophys_sessions(sessions)
     sessions = filtering.remove_failed_containers(sessions)
@@ -244,13 +245,13 @@ def get_filtered_behavior_session_table(release_data_only=True):
     Returns:
         behavior_sessions -- Dataframe with behavior_session_id as the index and metadata as columns.
     """
-    cache = BehaviorProjectCache.from_lims()
+    cache = bpc.from_lims()
     behavior_sessions = cache.get_behavior_session_table()
     behavior_sessions = behavior_sessions.reset_index()
     # make mouse_id an int not string
     behavior_sessions['mouse_id'] = [int(mouse_id) for mouse_id in behavior_sessions.mouse_id.values]
     # add project code from experiments table
-    all_experiments = cache.get_experiment_table()
+    all_experiments = cache.get_ophys_experiment_table()
     all_experiments['mouse_id'] = [int(mouse_id) for mouse_id in all_experiments.mouse_id.values]
     behavior_sessions = behavior_sessions.merge(all_experiments[['mouse_id', 'project_code']], on='mouse_id')
     if release_data_only:
@@ -269,9 +270,9 @@ def get_filtered_behavior_session_table(release_data_only=True):
 
 # LOAD OPHYS DATA FROM SDK AND EDIT OR ADD METHODS/ATTRIBUTES WITH BUGS OR INCOMPLETE FEATURES #
 
-class BehaviorOphysDataset(BehaviorOphysSession):
+class BehaviorOphysDataset(BehaviorOphysExperiment):
     """
-    Loads SDK ophys session object and 1) optionally filters out invalid ROIs, 2) adds extended_stimulus_presentations table, 3) adds extended_trials table, 4) adds behavior movie PCs and timestamps
+    Loads SDK ophys experiment object and 1) optionally filters out invalid ROIs, 2) adds extended_stimulus_presentations table, 3) adds extended_trials table, 4) adds behavior movie PCs and timestamps
 
     Returns:
         BehaviorOphysDataset {class} -- object with attributes & methods to access ophys and behavior data
@@ -282,13 +283,16 @@ class BehaviorOphysDataset(BehaviorOphysSession):
                  eye_tracking_z_threshold: float = 3.0, eye_tracking_dilation_frames: int = 2,
                  events_filter_scale: float = 2.0, events_filter_n_time_steps: int = 20):
         """
-        :param session: BehaviorOphysSession {class} -- instance of allenSDK BehaviorOphysSession object for one ophys_experiment_id
+        :param session: BehaviorOphysExperiment {class} -- instance of allenSDK BehaviorOphysExperiment object for one ophys_experiment_id
         :param _include_invalid_rois: if True, do not filter out invalid ROIs from cell_specimens_table and dff_traces
         """
-        super().__init__(api, eye_tracking_z_threshold=eye_tracking_z_threshold,
-                         eye_tracking_dilation_frames=eye_tracking_dilation_frames,
-                         events_filter_scale=events_filter_scale,
-                         events_filter_n_time_steps=events_filter_n_time_steps)
+        super().__init__(
+            api=api,
+            eye_tracking_z_threshold=eye_tracking_z_threshold,
+            eye_tracking_dilation_frames=eye_tracking_dilation_frames,
+            events_filter_scale=events_filter_scale,
+            events_filter_n_time_steps=events_filter_n_time_steps
+        )
 
         self._include_invalid_rois = include_invalid_rois
 
@@ -408,6 +412,7 @@ class BehaviorOphysDataset(BehaviorOphysSession):
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
         trials = reformat.add_reward_rate_to_trials_table(trials)
+        trials = reformat.add_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
         self._extended_trials = trials
         return self._extended_trials
 
@@ -477,7 +482,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
         object -- BehaviorOphysSession or BehaviorOphysDataset instance, which inherits attributes & methods from SDK BehaviorOphysSession
     """
     if from_lims:
-        dataset = BehaviorOphysSession.from_lims(ophys_experiment_id)
+        dataset = BehaviorOphysExperiment.from_lims(ophys_experiment_id)
     elif from_nwb:
         nwb_files = get_release_ophys_nwb_file_paths()
         nwb_file = [file for file in nwb_files.nwb_file.values if str(ophys_experiment_id) in file]
@@ -485,7 +490,7 @@ def get_ophys_dataset(ophys_experiment_id, include_invalid_rois=False, from_lims
             nwb_path = nwb_file[0]
             if 'win' in sys.platform:
                 nwb_path = '\\' + os.path.abspath(nwb_path)[2:]
-            dataset = BehaviorOphysSession.from_nwb_path(nwb_path)
+            dataset = BehaviorOphysExperiment.from_nwb_path(nwb_path)
         else:
             print('no NWB file path found for', ophys_experiment_id)
     else:
@@ -572,6 +577,7 @@ class BehaviorDataset(BehaviorSession):
         trials = reformat.add_epoch_times(trials)
         trials = reformat.add_trial_type_to_trials_table(trials)
         trials = reformat.add_reward_rate_to_trials_table(trials)
+        trials = reformat.add_engagement_state_to_trials_table(trials, self.extended_stimulus_presentations)
         self._extended_trials = trials
         return self._extended_trials
 
@@ -963,10 +969,12 @@ def get_stim_metrics_summary(behavior_session_id, load_location='from_file'):
             'from_database' loads from a Mongo database
 
     returns:
-        a pandas dataframe containing columns describing stimulus information for each stimulus presentation
+        a pandas dataframe containing columns describing stimulus
+        information for each stimulus presentation
     '''
     if load_location == 'from_file':
-        stim_metrics_summary_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/flashwise_metric_summary_2020.04.14.csv"
+        stim_metrics_summary_path = "/allen/programs/braintv/workgroups/nc-ophys/visual_behavior/" \
+                                    + "flashwise_metric_summary_2020.04.14.csv"
         stim_metrics_summary = pd.read_csv(stim_metrics_summary_path)
         return stim_metrics_summary.query('behavior_session_id == @behavior_session_id').copy()
     elif load_location == 'from_database':
@@ -978,7 +986,9 @@ def get_stim_metrics_summary(behavior_session_id, load_location='from_file'):
 
 
 # FROM LIMS DATABASE
-
+# this portion is depreciated, please use functions in from_lims.py instead
+gen_depr_str = 'this function is deprecated and will be removed in a future version, ' \
+               + 'please use {}.{} instead'
 
 # EXPERIMENT LEVEL
 
@@ -1006,6 +1016,10 @@ def get_lims_experiment_info(ophys_experiment_id):
                     "rig":
 
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_general_info_for_ophys_experiment_id')
+    warnings.warn(warn_str)
+
     ophys_experiment_id = int(ophys_experiment_id)
     mixin = lims_engine
     # build query
@@ -1055,6 +1069,9 @@ def get_current_segmentation_run_id(ophys_experiment_id):
     Returns:
         int -- current cell segmentation run id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_current_segmentation_run_id_for_ophys_experiment_id')
+    warnings.warn(warn_str)
 
     segmentation_run_table = get_lims_cell_segmentation_run_info(ophys_experiment_id)
     current_segmentation_run_id = segmentation_run_table.loc[segmentation_run_table["current"] == True, ["id"][0]].values[0]
@@ -1062,18 +1079,24 @@ def get_current_segmentation_run_id(ophys_experiment_id):
 
 
 def get_lims_cell_segmentation_run_info(experiment_id):
-    """Queries LIMS via AllenSDK PostgresQuery function to retrieve information on all segmentations run in the
-        ophys_cell_segmenatation_runs table for a given experiment
+    """Queries LIMS via AllenSDK PostgresQuery function to
+    retrieve information on all segmentations run in the
+    ophys_cell_segmenatation_runs table for a given experiment
 
     Returns:
         dataframe -- dataframe with the following columns:
             id {int}:  9 digit segmentation run id
             run_number {int}: segmentation run number
             ophys_experiment_id{int}: 9 digit ophys experiment id
-            current{boolean}: True/False True: most current segmentation run; False: not the most current segmentation run
+            current{boolean}: True/False True: most current segmentation run;
+                              False: not the most current segmentation run
             created_at{timestamp}:
             updated_at{timestamp}:
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_cell_segmentation_runs_table')
+    warnings.warn(warn_str)
+
     mixin = lims_engine
     query = '''
     select *
@@ -1083,11 +1106,16 @@ def get_lims_cell_segmentation_run_info(experiment_id):
 
 
 def get_lims_cell_exclusion_labels(experiment_id):
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_cell_exclusion_labels')
+    warnings.warn(warn_str)
+
     mixin = lims_engine
     query = '''
     SELECT oe.id AS oe_id, cr.id AS cr_id , rel.name AS excl_label
     FROM ophys_experiments oe
-    JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id=oe.id AND ocsr.current = 't'
+    JOIN ophys_cell_segmentation_runs ocsr ON ocsr.ophys_experiment_id=oe.id
+    AND ocsr.current = 't'
     JOIN cell_rois cr ON cr.ophys_cell_segmentation_run_id=ocsr.id
     JOIN cell_rois_roi_exclusion_labels crrel ON crrel.cell_roi_id=cr.id
     JOIN roi_exclusion_labels rel ON rel.id=crrel.roi_exclusion_label_id
@@ -1127,16 +1155,19 @@ def get_lims_cell_rois_table(ophys_experiment_id):
 
     """
     # query from AllenSDK
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_cell_segmentation_runs_table')
+    warnings.warn(warn_str)
 
     mixin = lims_engine
-    query = '''select cell_rois.*
-
-    from
+    query = '''
+    select cell_rois.*
+    FROM
 
     ophys_experiments oe
-    join cell_rois on oe.id = cell_rois.ophys_experiment_id
+    JOIN cell_rois on oe.id = cell_rois.ophys_experiment_id
 
-    where oe.id = {}'''.format(ophys_experiment_id)
+    WHERE oe.id = {}'''.format(ophys_experiment_id)
     lims_cell_rois_table = mixin.select(query)
     return lims_cell_rois_table
 
@@ -1185,6 +1216,10 @@ def get_failed_roi_exclusion_labels(experiment_id):
             valid_roi: boolean true/false, should be false for all entries, since dataframe should only list failed/invalid rois
             exclusion_label_name: label/tag for why the roi was deemed invalid
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_cell_exclusion_labels')
+    warnings.warn(warn_str)
+
     # query from AllenSDK
     experiment_id = int(experiment_id)
     mixin = lims_engine
@@ -1254,6 +1289,9 @@ def get_objectlisttxt_location(segmentation_run_id):
     Returns:
         list -- list with storage directory and filename
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_segmentation_objects_filepath')
+    warnings.warn(warn_str)
 
     QUERY = '''
     SELECT wkf.storage_directory, wkf.filename
@@ -1279,19 +1317,30 @@ def load_current_objectlisttxt_file(experiment_id):
     Returns:
         dataframe -- dataframe with the following columns: (from http://confluence.corp.alleninstitute.org/display/IT/Ophys+Segmentation)
             trace_index:The index to the corresponding trace plot computed  (order of the computed traces in file _somaneuropiltraces.h5)
-            center_x: The x coordinate of the centroid of the object in image pixels
-            center_y:The y coordinate of the centroid of the object in image pixels
-            frame_of_max_intensity_masks_file: The frame the object mask is in maxInt_masks2.tif
-            frame_of_enhanced_movie: The frame in the movie enhimgseq.tif that best shows the object
-            layer_of_max_intensity_file: The layer of the maxInt file where the object can be seen
-            bbox_min_x: coordinates delineating a bounding box that contains the object, in image pixels (upper left corner)
-            bbox_min_y: coordinates delineating a bounding box that contains the object, in image pixels (upper left corner)
-            bbox_max_x: coordinates delineating a bounding box that contains the object, in image pixels (bottom right corner)
-            bbox_max_y: coordinates delineating a bounding box that contains the object, in image pixels (bottom right corner)
+            center_x: The x coordinate of the centroid of the object
+                      in image pixels
+            center_y: The y coordinate of the centroid of the object
+                      in image pixels
+            frame_of_max_intensity_masks_file: The frame the object
+                                               mask is in maxInt_masks2.tif
+            frame_of_enhanced_movie: The frame in the movie enhimgseq.tif
+                                      that best shows the object
+            layer_of_max_intensity_file: The layer of the maxInt file
+                                         where the object can be seen
+            bbox_min_x: coordinates delineating a bounding box that
+                        contains the object, in image pixels (upper left corner)
+            bbox_min_y: coordinates delineating a bounding box that
+                        contains the object, in image pixels (upper left corner)
+            bbox_max_x: coordinates delineating a bounding box that
+                        contains the object, in image pixels (bottom right corner)
+            bbox_max_y: coordinates delineating a bounding box that
+                        contains the object, in image pixels (bottom right corner)
             area: Total area of the segmented object
-            ellipseness: The "ellipticalness" of the object, i.e. length of long axis divided by length of short axis
+            ellipseness: The "ellipticalness" of the object, i.e.
+                        length of long axis divided by length of short axis
             compactness: Compactness :  perimeter^2 divided by area
-            exclude_code: A non-zero value indicates the object should be excluded from further analysis.  Based on measurements in objectlist.txt
+            exclude_code: A non-zero value indicates the object should be excluded from further analysis.
+                        Based on measurements in objectlist.txt
                         0 = not excluded
                         1 = doublet cell
                         2 = boundary cell
@@ -1303,15 +1352,22 @@ def load_current_objectlisttxt_file(experiment_id):
             intensity_ratio: (max_enhanced_intensity - mean_enhanced_intensity) / mean_enhanced_intensity, for detecting dendrite objects
             soma_minus_np_mean: mean of (soma trace – its neuropil trace)
             soma_minus_np_std: 1-sided stdv of (soma trace – its neuropil trace)
-            sig_active_frames_2_5:# frames with significant detected activity (spiking)   : Sum ( soma_trace > (np_trace + Snpoffsetmean+ 2.5 * Snpoffsetstdv)   trace_38_soma.png  See example traces attached.
-            sig_active_frames_4: # frames with significant detected activity (spiking)   : Sum ( soma_trace > (np_trace + Snpoffsetmean+ 4.0 * Snpoffsetstdv)
+            sig_active_frames_2_5:# frames with significant detected activity (spiking):
+                                  Sum ( soma_trace > (np_trace + Snpoffsetmean+ 2.5 * Snpoffsetstdv)
+            sig_active_frames_4: # frames with significant detected activity (spiking)
+                                 Sum ( soma_trace > (np_trace + Snpoffsetmean+ 4.0 * Snpoffsetstdv)
             overlap_count: 	Number of other objects the object overlaps with
             percent_area_overlap: the percentage of total object area that overlaps with other objects
             overlap_obj0_index: The index of the first object with which this object overlaps
             overlap_obj1_index: The index of the second object with which this object overlaps
-            soma_obj0_overlap_trace_corr: trace correlation coefficient between soma and overlap soma0  (-1.0:  excluded cell,  0.0 : NA)
+            soma_obj0_overlap_trace_corr: trace correlation coefficient between soma and overlap soma0
+                                          (-1.0:  excluded cell,  0.0 : NA)
             soma_obj1_overlap_trace_corr: trace correlation coefficient between soma and overlap soma1
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'load_objectlist')
+    warnings.warn(warn_str)
+
     current_segmentation_run_id = get_current_segmentation_run_id(experiment_id)
     objectlist_location_info = get_objectlisttxt_location(current_segmentation_run_id)
     objectlist_path = objectlist_location_info[0]['storage_directory']
@@ -1335,6 +1391,9 @@ def clean_objectlist_col_labels(objectlist_dataframe):
     Returns:
         [pandas dataframe] -- [same dataframe with same information but with more informative column names
     """
+    warn_str = gen_depr_str.format('from_lims_utilities',
+                                   'update_objectlist_column_labels')
+    warnings.warn(warn_str)
 
     objectlist_dataframe = objectlist_dataframe.rename(index=str, columns={' traceindex': "trace_index",
                                                                            ' cx': 'center_x',
@@ -1425,6 +1484,10 @@ def get_lims_container_info(ophys_container_id):
                     "rig":
                     "date_of_acquisition":
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_general_info_for_ophys_container_id')
+    warnings.warn(warn_str)
+
     ophys_container_id = int(ophys_container_id)
 
     mixin = lims_engine
@@ -1503,6 +1566,10 @@ def get_release_behavior_nwb_file_paths():
     """"    --LIMS SQL to get behavior-only NWB files that are ready now
 
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_BehaviorOphysNWB_filepath')
+    warnings.warn(warn_str)
+
     mixin = lims_engine
     # build query
     query = '''
@@ -1549,8 +1616,9 @@ def get_release_behavior_nwb_file_paths():
 
 
 def get_timeseries_ini_wkf_info(ophys_session_id):
-    """use SQL and the LIMS well known file system to get the timeseries_XYT.ini file
-        for a given ophys session *from a Scientifica rig*
+    """use SQL and the LIMS well known file system to get the
+    timeseries_XYT.ini file for a given ophys session
+    *from a Scientifica rig*
 
     Arguments:
         ophys_session_id {int} -- 9 digit ophys session id
@@ -1558,6 +1626,9 @@ def get_timeseries_ini_wkf_info(ophys_session_id):
     Returns:
 
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_timeseries_ini_filepath')
+    warnings.warn(warn_str)
 
     QUERY = '''
     SELECT wkf.storage_directory || wkf.filename
@@ -1590,6 +1661,10 @@ def get_timeseries_ini_location(ophys_session_id):
     Returns:
         filepath -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_timeseries_ini_filepath')
+    warnings.warn(warn_str)
+
     timeseries_ini_wkf_info = get_timeseries_ini_wkf_info(ophys_session_id)
     timeseries_ini_path = timeseries_ini_wkf_info[0]['?column?']  # idk why it's ?column? but it is :(
     timeseries_ini_path = timeseries_ini_path.replace('/allen', '//allen')  # works with windows and linux filepaths
@@ -1665,6 +1740,10 @@ def get_wkf_dff_h5_location(ophys_experiment_id):
         string -- filepath (directory and filename) for the dff.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_dff_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1696,6 +1775,10 @@ def get_wkf_roi_trace_h5_location(ophys_experiment_id):
         string -- filepath (directory and filename) for the roi_traces.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_roi_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1744,6 +1827,10 @@ def get_wkf_neuropil_trace_h5_location(ophys_experiment_id):
         string -- filepath (directory and filename) for the neuropil_traces.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_neuropil_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1772,6 +1859,10 @@ def get_neuropil_traces_array(ophys_experiment_id):
         Returns:
             neuropil_traces_array -- mxn array where m = rois and n = time
         """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'load_neuropil_traces_array')
+    warnings.warn(warn_str)
+
     filepath = get_wkf_neuropil_trace_h5_location(ophys_experiment_id)
     f = h5py.File(filepath, 'r')
     neuropil_traces_array = np.asarray(f['data'])
@@ -1792,6 +1883,10 @@ def get_wkf_extracted_trace_h5_location(ophys_experiment_id):
         string -- filepath (directory and filename) for the neuropil_traces.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_extracted_traces_input_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1823,6 +1918,10 @@ def get_wkf_demixed_traces_h5_location(ophys_experiment_id):
         string -- filepath (directory and filename) for the roi_traces.h5 file
                     for the given ophys_experiment_id
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_demixed_traces_filepath')
+    warnings.warn(warn_str)
+
     QUERY = '''
     SELECT storage_directory || filename
     FROM well_known_files
@@ -1850,7 +1949,11 @@ def get_demixed_traces_array(ophys_experiment_id):
 
         Returns:
             demixed_traces_array -- mxn array where m = rois and n = time
-        """
+    """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'load_demixed_traces_array')
+    warnings.warn(warn_str)
+
     filepath = get_wkf_demixed_traces_h5_location(ophys_experiment_id)
     f = h5py.File(filepath, 'r')
     demixed_traces_array = np.asarray(f['data'])
@@ -1869,6 +1972,9 @@ def get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_motion_corrected_movie_filepath')
+    warnings.warn(warn_str)
 
     QUERY = '''
      SELECT storage_directory || filename
@@ -1896,6 +2002,10 @@ def get_motion_corrected_movie_h5_location(ophys_experiment_id):
     Returns:
         filepath -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_motion_xy_offset_filepath')
+    warnings.warn(warn_str)
+
     motion_corrected_movie_h5_wkf_info = get_motion_corrected_movie_h5_wkf_info(ophys_experiment_id)
     motion_corrected_movie_h5_path = motion_corrected_movie_h5_wkf_info[0][
         '?column?']  # idk why it's ?column? but it is :(
@@ -1919,6 +2029,10 @@ def load_motion_corrected_movie(ophys_experiment_id):
                         y: single frame y axis
                         x: single frame x axis
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'load_motion_corrected_movie')
+    warnings.warn(warn_str)
+
     motion_corrected_movie_h5_path = get_motion_corrected_movie_h5_location(ophys_experiment_id)
     motion_corrected_movie_h5 = h5py.File(motion_corrected_movie_h5_path, 'r')
     motion_corrected_movie = motion_corrected_movie_h5['data']
@@ -1937,6 +2051,10 @@ def get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id):
     Returns:
         [type] -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'load_rigid_motion_transform')
+    warnings.warn(warn_str)
+
     QUERY = '''
      SELECT storage_directory || filename
      FROM well_known_files
@@ -1963,6 +2081,10 @@ def get_rigid_motion_transform_csv_location(ophys_experiment_id):
     Returns:
         filepath -- [description]
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'get_motion_xy_offset_filepath')
+    warnings.warn(warn_str)
+
     rigid_motion_transform_csv_wkf_info = get_rigid_motion_transform_csv_wkf_info(ophys_experiment_id)
     rigid_motion_transform_csv_path = rigid_motion_transform_csv_wkf_info[0][
         '?column?']  # idk why it's ?column? but it is :(
@@ -1988,6 +2110,9 @@ def load_rigid_motion_transform_csv(ophys_experiment_id):
                            "kalman_x":
                            "kalman_y":
     """
+    warn_str = gen_depr_str.format('from_lims',
+                                   'load_rigid_motion_transform')
+    warnings.warn(warn_str)
     rigid_motion_transform_csv_path = get_rigid_motion_transform_csv_location(ophys_experiment_id)
     rigid_motion_transform_df = pd.read_csv(rigid_motion_transform_csv_path)
     return rigid_motion_transform_df
