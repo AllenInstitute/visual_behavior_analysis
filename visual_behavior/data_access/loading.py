@@ -765,7 +765,7 @@ def add_model_outputs_to_stimulus_presentations(stimulus_presentations, behavior
 
 def get_behavior_model_summary_table():
     data_dir = get_behavior_model_outputs_dir()
-    data = pd.read_csv(os.path.join(data_dir, '_summary_table.csv'))
+    data = pd.read_pkl(os.path.join(data_dir, '_summary_table.pkl'))
     return data
 
 
