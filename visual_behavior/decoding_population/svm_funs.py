@@ -232,9 +232,8 @@ def crossValidateModel(X, Y, modelFn, **options):
             XTrain = Xs[np.arange(0, int((kfold-1.)/kfold*numObservations)), :]
             XTest = Xs[np.arange(int((kfold-1.)/kfold*numObservations), numObservations), :]
 
-
-    #         print(f'YTrain: n_trials of each class: {[sum(YTrain==irng) for irng in range(num_classes)]}')
-    #         print(f'YTest: n_trials of each class: {[sum(YTest==irng) for irng in range(num_classes)]}')
+            print(f'YTrain: n_trials of each class: {[sum(YTrain==irng) for irng in range(num_classes)]}')
+            print(f'YTest: n_trials of each class: {[sum(YTest==irng) for irng in range(num_classes)]}')
 
 
             # Fit the classifier
