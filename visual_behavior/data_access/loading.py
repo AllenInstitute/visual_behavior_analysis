@@ -251,9 +251,9 @@ def get_filtered_behavior_session_table(release_data_only=True):
     # make mouse_id an int not string
     behavior_sessions['mouse_id'] = [int(mouse_id) for mouse_id in behavior_sessions.mouse_id.values]
     # add project code from experiments table
-    all_experiments = cache.get_experiment_table()
+    all_experiments = cache.get_ophys_experiment_table()
     all_experiments['mouse_id'] = [int(mouse_id) for mouse_id in all_experiments.mouse_id.values]
-    behavior_sessions = behavior_sessions.merge(all_experiments[['mouse_id', 'project_code']], on='mouse_id')
+    behavior_sessions = behavior_sessions.merge(all_experiments[['mouse_id']], on='mouse_id')
     if release_data_only:
         # limit to mice that are in the data release & have a valid session_type
         release_experiments = get_filtered_ophys_experiment_table(release_data_only=True)
