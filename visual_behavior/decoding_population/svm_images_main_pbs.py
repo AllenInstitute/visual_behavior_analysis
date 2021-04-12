@@ -1260,7 +1260,7 @@ else:
 
     
 ############################################################################################    
-####################### Set vars for the sessions to be analyzed #######################
+####################### Set vars for the session to be analyzed #######################
 ############################################################################################
 
 #%% Set the session to be analyzed, and its metada
@@ -1325,7 +1325,7 @@ for ophys_experiment_id in experiment_ids_this_session: # ophys_experiment_id = 
         analysis = ResponseAnalysis(dataset, use_extended_stimulus_presentations=True, use_events=use_events)        
         
         if trial_type == 'hits_vs_misses':
-            trials_response_df = analysis.trials_response_df
+            trials_response_df = analysis.trials_response_df #(use_extended_stimulus_presentations=True)
             stim_response_df = trials_response_df # so it matches the naming of the rest of the code down here
 #             c = stim_response_df.keys().values # get all the columns
         else:

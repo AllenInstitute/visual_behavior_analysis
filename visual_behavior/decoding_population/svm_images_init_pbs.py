@@ -167,7 +167,7 @@ job_settings.update({
 
 #%% Loop through valid sessions to perform the analysis
 
-# example active session: isess = -2; session_id = 914639324
+# example active session: isess = -2; session_id = 914639324; isess = -30; session_id = 981845703
 cnt_sess = -1     
 for isess in range(len(list_all_sessions_valid)): # [0,1]: # isess = -35 # session_id = list_all_sessions_valid[0] #[num_valid_exps_each_sess == 8][0]
     
