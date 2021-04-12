@@ -1057,6 +1057,12 @@ if svm_blocks==-100:
     print(f'Running SVM on the whole session.')
 elif svm_blocks==-1:
     print(f'Dividing trials based on engagement state.')
+    if engagement_pupil_running==0:
+        print(f"Using 'engagement' to define engagement state.")
+    elif engagement_pupil_running==1:
+        print(f"Using pupil to define engagement state.")        
+    elif engagement_pupil_running==2:
+        print(f"Using running to define engagement state.")                
 else:    
     print(f'Doing block-by-block analysis.')
 if use_balanced_trials==1:
